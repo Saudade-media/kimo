@@ -1,0 +1,25 @@
+{
+  "name": "@kimo/sync",
+  "version": "0.0.0",
+  "private": true,
+  "description": "DocStore persistence/sync providers (local now, network later)",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./file": "./src/file.ts",
+    "./indexeddb": "./src/indexeddb.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test test"
+  },
+  "dependencies": {
+    "@kimo/editor-state": "workspace:*",
+    "y-indexeddb": "^9.0.12",
+    "yjs": "^13.6.33"
+  },
+  "devDependencies": {
+    "@kimo/core-schema": "workspace:*"
+  }
+}

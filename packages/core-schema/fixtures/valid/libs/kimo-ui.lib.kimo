@@ -1,0 +1,26 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Kimo UI","library":true},
+"themes": {"mode":["light","dark"]},
+"variables": {
+"accent": {"type":"color","value":[{"value":"#4F46E5","when":{"mode":"light"}},{"value":{"space":"oklch","l":0.7,"c":0.15,"h":275},"when":{"mode":"dark"}}]}
+
+, "on-accent": {"type":"color","value":"#FFFFFF"}
+
+, "radius-pill": {"type":"number","value":999}
+},
+"nodes": {
+"BtnGhost01": {"type":"instance","parent":null,"order":"a1","name":"Button/Ghost","of":"BtnPrimary","component":true,"x":200,"y":0,"props":{"fill":[],"stroke":{"paint":{"$ref":"accent"}}},"overrides":{"BtnLabel01":{"set":{"fill":{"$ref":"accent"}}}}}
+
+, "BtnLabel01": {"type":"text","parent":"BtnPrimary","order":"a0","name":"Label","content":"Button","style":{"font":"Inter","size":14,"weight":600},"fill":{"$ref":"on-accent"}}
+
+, "BtnPrimary": {"type":"frame","parent":null,"order":"a0","name":"Button/Primary","component":{"props":{"label":{"type":"text","target":"BtnLabel01","field":"content","default":"Button"}}},"x":0,"y":0,"radius":{"$ref":"radius-pill"},"fill":{"$ref":"accent"},"layout":{"dir":"row","pad":[10,20],"justify":"center","align":"center"}}
+
+, "CardActns1": {"type":"frame","parent":"CardBase01","order":"a1","name":"Actions","layout":{"dir":"row","gap":8},"slot":{"suggested":["BtnPrimary","BtnGhost01"]}}
+
+, "CardBase01": {"type":"frame","parent":null,"order":"a2","name":"Card","component":{"props":{"actions":{"type":"slot","target":"CardActns1"}}},"x":0,"y":100,"w":360,"radius":16,"fill":"#FFFFFF","layout":{"dir":"column","gap":12,"pad":24}}
+
+, "CardTitle1": {"type":"text","parent":"CardBase01","order":"a0","name":"Title","content":"Card title","style":{"size":20,"weight":600}}
+}
+}

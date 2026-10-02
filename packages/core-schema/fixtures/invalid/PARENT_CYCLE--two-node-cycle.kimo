@@ -1,0 +1,9 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"nodes": {
+"FrameA0001": {"type":"frame","parent":"FrameB0001","order":"a0"}
+
+, "FrameB0001": {"type":"frame","parent":"FrameA0001","order":"a0"}
+}
+}

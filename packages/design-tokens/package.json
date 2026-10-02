@@ -1,0 +1,20 @@
+{
+  "name": "@kimo/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Kimo editor design tokens (from desing.pen) and token build pipeline",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./editor.css": "./src/generated/editor.css",
+    "./tailwind-theme.css": "./src/generated/tailwind-theme.css",
+    "./tokens.json": "./src/tokens.json"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build:tokens": "bun run scripts/build-tokens.ts",
+    "check:generated": "bun run scripts/build-tokens.ts --check",
+    "test": "bun test ./test"
+  }
+}

@@ -1,0 +1,3 @@
+/* @kimo/ui component styles. Load after "@kimo/design-tokens/editor.css". */
+@import "./button/Button.css";
+@import "./icon-button/IconButton.css";

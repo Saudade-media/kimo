@@ -1,0 +1,32 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["layout/wrap"],
+"meta": {"name":"Kimo landing"},
+"themes": {"mode":["light","dark"]},
+"imports": {"ui":"./libs/kimo-ui.lib.kimo"},
+"variables": {
+"ink": {"type":"color","value":[{"value":"#111111","when":{"mode":"light"}},{"value":"#F4F4F5","when":{"mode":"dark"}}]}
+
+, "radius-m": {"type":"number","value":8}
+
+, "space-m": {"type":"number","value":16}
+
+, "surface": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":{"space":"oklch","l":0.18,"c":0.01,"h":270},"when":{"mode":"dark"}}]}
+},
+"nodes": {
+"A1hero0001": {"type":"frame","parent":null,"order":"a0","name":"Hero","x":0,"y":0,"w":1440,"h":{"mode":"fit","fallback":900},"clip":true,"fill":{"$ref":"surface"},"layout":{"dir":"column","gap":24,"pad":[96,120],"align":"center"}}
+
+, "B2title001": {"type":"text","parent":"A1hero0001","order":"a0","name":"Title","content":"Design next to your code","style":{"font":"Inter","size":64,"weight":700,"lineHeight":1.1},"fill":{"$ref":"ink"}}
+
+, "C3row00001": {"type":"frame","parent":"A1hero0001","order":"a1","name":"Actions","layout":{"dir":"row","gap":{"$ref":"space-m"},"wrap":true}}
+
+, "D4cta00001": {"type":"instance","parent":"C3row00001","order":"a0","name":"Primary CTA","of":"ui:BtnPrimary","overrides":{"ui:BtnLabel01":{"set":{"content":"Get Kimo — $49/mo"}}}}
+
+, "E5card0001": {"type":"instance","parent":"A1hero0001","order":"a2","name":"Feature card","of":"ui:CardBase01","theme":{"mode":"dark"},"props":{"w":{"mode":"fill"}},"overrides":{"ui:CardActns1":{"slot":true}}}
+
+, "F6btn00001": {"type":"instance","parent":"E5card0001","at":"ui:CardActns1","order":"a0","of":"ui:BtnGhost01","overrides":{"ui:BtnLabel01":{"set":{"content":"Learn more"}}}}
+
+, "G7img00001": {"type":"rect","parent":"A1hero0001","order":"a3","name":"Screenshot","w":1200,"h":720,"radius":{"$ref":"radius-m"},"fill":{"kind":"image","src":"./assets/9f2c1ab04e7d3c55.png"},"effects":[{"kind":"shadow","x":0,"y":24,"blur":48,"spread":-12,"color":"#0000003D"}]}
+}
+}

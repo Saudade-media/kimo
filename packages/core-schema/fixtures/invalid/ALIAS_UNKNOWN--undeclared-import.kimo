@@ -1,0 +1,7 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"nodes": {
+"Inst000001": {"type":"instance","parent":null,"order":"a0","of":"ui:Button0001"}
+}
+}

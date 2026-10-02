@@ -1,0 +1,8 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["fill/mesh"],
+"nodes": {
+"Rect000001": {"type":"rect","parent":null,"order":"a0","w":10,"h":10,"fill":{"kind":"mesh","cols":2,"rows":2,"colors":["#000","#FFF"],"points":[[0,0],[1,0],[0,1],[1,1]]}}
+}
+}

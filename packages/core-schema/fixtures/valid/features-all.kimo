@@ -1,0 +1,26 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["fill/mesh","fill/shader","layout/stretch-baseline","layout/wrap","node/browser","node/script","size/min-max","text/runs","tokens/composite"],
+"themes": {"mode":["light","dark"]},
+"variables": {
+"elevation": {"type":"shadow","value":[{"value":[{"kind":"shadow","x":0,"y":4,"blur":12,"color":"#0000001F"}],"when":{"mode":"light"}},{"value":{"kind":"shadow","x":0,"y":0,"blur":0,"color":"#00000000"},"when":{"mode":"dark"}}]}
+
+, "space-s": {"type":"dimension","value":{"value":8,"unit":"px"}}
+
+, "type-body": {"type":"typography","value":{"font":"Inter","size":16,"lineHeight":{"px":24}}}
+},
+"nodes": {
+"Browser001": {"type":"browser","parent":null,"order":"a2","name":"Docs","x":400,"y":400,"w":1280,"h":800,"url":"https://kimo.design","device":"desktop","zoom":0.5,"scrollY":120,"radius":8,"stroke":{"paint":"#E4E4E7"}}
+
+, "Cell000001": {"type":"frame","parent":"Grid000001","order":"a0","w":{"mode":"fill","weight":2,"min":100},"h":100,"fill":{"kind":"mesh","cols":2,"rows":1,"colors":["#F00","#00F"],"points":[[0,0],[1,0]]}}
+
+, "Cell000002": {"type":"frame","parent":"Grid000001","order":"a1","w":{"mode":"fill"},"h":100,"fill":{"kind":"shader","src":"./shaders/noise.glsl","uniforms":{"scale":3,"tint":"#FF00FF"}}}
+
+, "Grid000001": {"type":"frame","parent":null,"order":"a0","name":"Grid","x":0,"y":0,"w":{"mode":"fit","min":320,"max":1200},"effects":{"$ref":"elevation"},"layout":{"dir":"row","gap":{"$ref":"space-s"},"crossGap":16,"align":"stretch","wrap":true}}
+
+, "Rich000001": {"type":"text","parent":"Grid000001","order":"a2","w":200,"content":[{"text":"Hello "},{"text":"world","style":{"weight":700,"decoration":["underline"]},"href":"https://kimo.design"}],"grow":"fixed-width","style":{"align":"justify","features":{"cv11":1,"liga":false,"ss01":true},"typography":{"$ref":"type-body"}}}
+
+, "Script0001": {"type":"script","parent":null,"order":"a1","name":"Bars","x":0,"y":400,"w":300,"h":200,"src":"./scripts/bars.js","inputs":{"color":{"$ref":"elevation"},"count":5},"clip":true}
+}
+}

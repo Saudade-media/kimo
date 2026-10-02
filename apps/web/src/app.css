@@ -1,0 +1,62 @@
+/* Placeholder home. All values come from @kimo/design-tokens (editor.css), which also handles dark mode. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--kimo-bg-canvas);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+.home {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: var(--kimo-space-6) var(--kimo-space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--kimo-space-3);
+  text-align: center;
+}
+
+.home__wordmark {
+  margin: 0;
+  font-size: var(--kimo-text-3xl);
+  font-weight: var(--kimo-font-weight-semibold);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.home__status {
+  margin: 0;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  color: var(--kimo-text-secondary);
+}
+
+.home__link {
+  margin-top: var(--kimo-space-2);
+  padding: var(--kimo-space-2) var(--kimo-space-4);
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-medium);
+  text-decoration: none;
+}
+
+.home__link:hover {
+  background: var(--kimo-accent-hover);
+}
+
+.home__link:focus-visible {
+  outline: 2px solid var(--kimo-selection);
+  outline-offset: 2px;
+}

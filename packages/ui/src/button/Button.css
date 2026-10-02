@@ -1,0 +1,81 @@
+/*
+ * Button: desing.pen 02 Components > Actions > Button/* (W2lra, kv3Fk, sqJv4, vyI3D).
+ * frame: layout horizontal, alignItems center, gap 6, padding [0, 14], height 32, radius-pill
+ *   ├ icon  16 × 16 (lucide), fill = label color
+ *   └ text  font-sans, text-base (13), weight 500
+ */
+.kimo-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--kimo-button-gap);
+  height: var(--kimo-button-height);
+  margin: 0;
+  padding: 0 var(--kimo-button-padding-x);
+  border: 0;
+  border-radius: var(--kimo-button-radius);
+  background: transparent;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-button-font-size);
+  font-weight: var(--kimo-button-font-weight);
+  line-height: normal;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-button:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-button:disabled {
+  cursor: default;
+}
+
+.kimo-button__icon {
+  display: inline-flex;
+  flex: none;
+  width: var(--kimo-button-icon-size);
+  height: var(--kimo-button-icon-size);
+}
+
+.kimo-button__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Button/Primary: fill accent, content on-accent. */
+.kimo-button--primary {
+  background: var(--kimo-button-primary-bg);
+  color: var(--kimo-button-primary-fg);
+}
+
+.kimo-button--primary:hover:not(:disabled) {
+  background: var(--kimo-button-primary-bg-hover);
+}
+
+/* Button/Secondary: fill bg-muted, inside stroke border-strong (does not affect layout), content text-primary. */
+.kimo-button--secondary {
+  background: var(--kimo-button-secondary-bg);
+  box-shadow: inset 0 0 0 var(--kimo-button-border-width) var(--kimo-button-secondary-border);
+  color: var(--kimo-button-secondary-fg);
+}
+
+/* Button/Ghost: no fill, content text-secondary. */
+.kimo-button--ghost {
+  background: transparent;
+  color: var(--kimo-button-ghost-fg);
+}
+
+.kimo-button--ghost:hover:not(:disabled) {
+  background: var(--kimo-button-ghost-bg-hover);
+}
+
+/* Button/Soft: fill accent-soft, content accent-text. */
+.kimo-button--soft {
+  background: var(--kimo-button-soft-bg);
+  color: var(--kimo-button-soft-fg);
+}

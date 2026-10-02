@@ -1,0 +1,13 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"nodes": {
+"Btn0000001": {"type":"frame","parent":null,"order":"a0","name":"Button","component":{"props":{"flag":{"type":"boolean","target":"BtnLabel01","field":"visible"},"label":{"type":"text","target":"BtnLabel01","field":"content"}}},"layout":{"dir":"row"}}
+
+, "BtnLabel01": {"type":"text","parent":"Btn0000001","order":"a0","content":"Label"}
+
+, "Kid0000001": {"type":"instance","parent":"Row0000001","order":"a0","of":"Btn0000001","props":{"w":{"mode":"fill"}}}
+
+, "Row0000001": {"type":"frame","parent":null,"order":"a1","layout":{"dir":"row"}}
+}
+}

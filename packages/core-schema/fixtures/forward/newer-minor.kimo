@@ -1,0 +1,12 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.2.json",
+"format": "0.2.0",
+"pages": {"Page000001":{"name":"Home","order":"a0"}},
+"nodes": {
+"Frame00001": {"type":"frame","parent":null,"order":"a0","name":"Hero","x":0,"y":0,"fill":"#FFFFFF","cornerSmoothing":0.6,"zIndex":{"auto":true,"value":2}}
+
+, "Sticker001": {"type":"sticker","parent":"Frame00001","order":"a0","w":40,"h":40,"emoji":"🎉"}
+
+, "Text000001": {"type":"text","parent":"Frame00001","order":"a1","content":"Hi","style":{"size":12,"textWrap":"balance"}}
+}
+}

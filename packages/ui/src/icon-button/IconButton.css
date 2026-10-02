@@ -1,0 +1,49 @@
+/*
+ * IconButton: desing.pen 02 Components > Actions > IconButton (ZMxjt), IconButton/Active (l44gB).
+ * frame: 28 × 28, justifyContent center, alignItems center, radius-md
+ *   └ icon 16 × 16 (lucide)
+ */
+.kimo-icon-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: var(--kimo-icon-button-size);
+  height: var(--kimo-icon-button-size);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-icon-button-radius);
+  background: var(--kimo-icon-button-bg);
+  color: var(--kimo-icon-button-fg);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-icon-button:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-icon-button:disabled {
+  cursor: default;
+}
+
+.kimo-icon-button--active {
+  background: var(--kimo-icon-button-active-bg);
+  color: var(--kimo-icon-button-active-fg);
+}
+
+.kimo-icon-button__icon {
+  display: inline-flex;
+  flex: none;
+  width: var(--kimo-icon-button-icon-size);
+  height: var(--kimo-icon-button-icon-size);
+}
+
+.kimo-icon-button__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

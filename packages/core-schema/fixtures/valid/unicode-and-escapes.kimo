@@ -1,0 +1,10 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Ünïcødé \"quotes\" and \\ backslashes","createdWith":"kimo 0.1.0"},
+"nodes": {
+"Txt0000001": {"type":"text","parent":null,"order":"a0","name":"Price","x":0,"y":0,"content":"$49/mo — line one\nline two\t🎨   sep","meta":{"acme.trace":{"id":7,"tags":["x"]},"kimo.export.tag":"h1"}}
+
+, "Txt0000002": {"type":"text","parent":null,"order":"a1","name":"Tie","x":0,"y":40,"content":"{\"$ref\":\"not-a-binding\"}"}
+}
+}

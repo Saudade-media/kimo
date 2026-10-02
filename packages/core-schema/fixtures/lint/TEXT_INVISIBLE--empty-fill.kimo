@@ -1,0 +1,7 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"nodes": {
+"Text000001": {"type":"text","parent":null,"order":"a0","content":"ghost","fill":[]}
+}
+}

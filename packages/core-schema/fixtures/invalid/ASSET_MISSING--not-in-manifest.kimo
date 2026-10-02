@@ -1,0 +1,10 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"assets": {
+"0123456789abcdef.png": {"mime":"image/png"}
+},
+"nodes": {
+"Rect000001": {"type":"rect","parent":null,"order":"a0","w":10,"h":10,"fill":[{"kind":"image","src":"./assets/0123456789abcdef.png"},{"kind":"image","src":"./assets/fedcba9876543210.jpg"}]}
+}
+}

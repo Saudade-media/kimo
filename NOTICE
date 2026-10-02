@@ -1,0 +1,119 @@
+Kimo
+Copyright (c) 2026 Kimo contributors
+
+Kimo is licensed under the MIT License; see the LICENSE file.
+
+"pen.dev" and "Pencil" are trademarks of their respective owners. Kimo is not
+affiliated with or endorsed by them. Kimo contains no code from pen.dev.
+
+-------------------------------------------------------------------------------
+Third-party software
+-------------------------------------------------------------------------------
+
+Scope of this list: the DIRECT dependencies of this repository as of
+2026-10-02 (milestone M0), both the JavaScript packages installed by bun and
+the Rust crates declared in apps/desktop/src-tauri/Cargo.toml (versions from
+Cargo.lock). Licence identifiers were read from each package's package.json /
+Cargo.toml "license" field and copyright lines from its licence file.
+Transitive dependencies are not listed yet; per docs/teardown.md section
+13.4, this file will be generated from an SBOM (bun.lock for JavaScript,
+cargo-about for the Tauri/Rust side) before the first release.
+
+Components that land in later milestones (CanvasKit/Skia with FreeType,
+HarfBuzz, ICU, expat, libpng and zlib; Yoga; icon sets; fonts;
+@modelcontextprotocol/server; LLM SDKs) are NOT installed yet and will be
+added here when they are.
+
+Runtime dependencies (shipped in the editor, desktop app or packages)
+-------------------------------------------------------------------------------
+
+typebox 1.3.34                  MIT
+  Copyright (c) 2017-2026 Haydn Paterson
+  https://github.com/sinclairzx81/typebox
+  Used by: @kimo/core-schema
+
+yjs 13.6.33                     MIT
+  Copyright (c) 2023 Kevin Jahns; Chair of Computer Science 5 (Databases &
+  Information Systems), RWTH Aachen University, Germany
+  https://github.com/yjs/yjs
+  Used by: @kimo/editor-state, @kimo/sync
+
+y-indexeddb 9.0.12              MIT
+  Copyright (c) 2014 Kevin Jahns; Chair of Computer Science 5 (Databases &
+  Information Systems), RWTH Aachen University, Germany
+  https://github.com/yjs/y-indexeddb
+  Used by: @kimo/sync
+
+zustand 5.0.15                  MIT
+  Copyright (c) 2019 Paul Henschel
+  https://github.com/pmndrs/zustand
+  Used by: @kimo/editor-state
+
+react 19.3.0                    MIT
+react-dom 19.3.0                MIT
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+  https://github.com/facebook/react
+  Used by: @kimo/web, @kimo/ui
+
+@tauri-apps/api 2.12.1          Apache-2.0 OR MIT
+  Copyright (c) 2017 - Present Tauri Apps Contributors
+  https://github.com/tauri-apps/tauri
+  Used by: @kimo/desktop
+
+Rust dependencies (apps/desktop/src-tauri; compiled into the desktop binary)
+-------------------------------------------------------------------------------
+
+tauri 2.12.1                    Apache-2.0 OR MIT
+  Copyright (c) 2017 - Present Tauri Apps Contributors
+  https://github.com/tauri-apps/tauri
+  Used by: @kimo/desktop (dependency)
+
+tauri-build 2.7.1               Apache-2.0 OR MIT
+  Copyright (c) 2017 - Present Tauri Apps Contributors
+  https://github.com/tauri-apps/tauri
+  Used by: @kimo/desktop (build-dependency; runs at build time)
+
+Development dependencies (build, test and tooling; not shipped)
+-------------------------------------------------------------------------------
+
+vite 8.3.2                      MIT
+  Copyright (c) 2019-present, VoidZero Inc. and Vite contributors
+  https://github.com/vitejs/vite
+
+@vitejs/plugin-react 6.1.1      MIT
+  Copyright (c) 2019-present, Yuxi (Evan) You and Vite contributors
+  https://github.com/vitejs/vite-plugin-react
+
+@tauri-apps/cli 2.12.1          Apache-2.0 OR MIT
+  Copyright (c) 2017 - Present Tauri Apps Contributors
+  https://github.com/tauri-apps/tauri
+
+fast-check 4.10.2               MIT
+  Copyright (c) 2017 Nicolas DUBIEN
+  https://github.com/dubzzz/fast-check
+
+typescript 7.0.2                Apache-2.0
+  Copyright (c) Microsoft Corporation
+  https://github.com/microsoft/TypeScript
+
+@types/react 19.3.0             MIT
+@types/react-dom 19.3.0         MIT
+  Copyright (c) Microsoft Corporation
+  https://github.com/DefinitelyTyped/DefinitelyTyped
+
+@biomejs/biome 2.5.15           MIT OR Apache-2.0
+  Copyright (c) 2023 Biome Developers and Contributors
+  https://github.com/biomejs/biome
+
+bun-types 1.4.2                 MIT
+  https://github.com/oven-sh/bun
+
+Notes
+-------------------------------------------------------------------------------
+
+- No Kimo binary is built with `bun build --compile`, so no JavaScriptCore /
+  WebKit (LGPL-2) relinking obligation applies (see docs/adr/0008). If that
+  ever changes, JavaScriptCore/WebKit and the relinking materials must be
+  listed here.
+- For dual-licensed packages (Apache-2.0 OR MIT), Kimo uses them under the
+  MIT option.

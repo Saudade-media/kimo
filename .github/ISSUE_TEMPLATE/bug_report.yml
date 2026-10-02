@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in Kimo is broken or behaves unexpectedly.
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report. Please search existing issues first.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a .kimo file with ...
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Desktop app
+        - Web app
+        - MCP server / agent
+        - CLI
+        - .kimo file format
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Kimo version / commit
+  - type: input
+    id: os
+    attributes:
+      label: OS and browser (if web)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots or a minimal .kimo file
+      description: Remove anything private before attaching files.

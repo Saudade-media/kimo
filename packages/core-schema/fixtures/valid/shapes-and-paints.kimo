@@ -1,0 +1,28 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"assets": {
+"9f2c1ab04e7d3c55.png": {"name":"screenshot.png","mime":"image/png","bytes":48211,"width":2400,"height":1440}
+},
+"nodes": {
+"Board00001": {"type":"frame","parent":null,"order":"a0","name":"Board","x":0,"y":0,"w":800,"h":600,"radius":[12,12,0,0],"fill":[{"kind":"linear","stops":[{"at":0,"color":"#FF0080"},{"at":1,"color":{"space":"display-p3","r":0.2,"g":0.4,"b":1,"alpha":0.8}}],"rotation":45,"interpolation":"oklab"},{"kind":"solid","color":"#00000010","blend":"multiply"}],"stroke":{"paint":"#E4E4E7","width":{"b":1},"align":"center","dash":[4,2]}}
+
+, "Donut00001": {"type":"ellipse","parent":"Board00001","order":"a0","name":"Donut","x":20,"y":20,"w":120,"h":120,"innerRadius":0.6,"startAngle":90,"sweepAngle":-270,"fill":{"kind":"angular","stops":[{"at":0,"color":"#22C55E"},{"at":1,"color":"#3B82F6"}]}}
+
+, "Group00001": {"type":"group","parent":"Board00001","order":"a4","name":"Pair","locked":true,"effects":[{"kind":"shadow","x":0,"y":1,"blur":2,"spread":1,"color":"#0000001A","blend":"overlay"}]}
+
+, "GrpRect001": {"type":"rect","parent":"Group00001","order":"a0","x":400,"y":180,"w":40,"h":40,"visible":false,"fill":"#FACC15"}
+
+, "GrpRect002": {"type":"rect","parent":"Group00001","order":"a1","x":450,"y":180,"w":40,"h":40,"fill":{"kind":"radial","stops":[{"at":0,"color":"#FFF"},{"at":1,"color":"#000"}],"size":[0.5,0.5],"visible":false}}
+
+, "Note000001": {"type":"note","parent":null,"order":"a1","name":"Note","placeholder":{"by":"agent:layout","since":"2026-10-02T10:00:00Z"},"x":900,"y":0,"w":240,"content":"Check contrast in dark mode"}
+
+, "Photo00001": {"type":"rect","parent":"Board00001","order":"a3","name":"Photo","x":20,"y":180,"w":360,"h":216,"opacity":0.9,"fill":{"kind":"image","src":"./assets/9f2c1ab04e7d3c55.png","fit":"tile","crop":[1,0,0,1,0.1,0],"opacity":0.5},"effects":[{"kind":"shadow","inner":true,"x":0,"y":2,"blur":4,"color":"#00000033"},{"kind":"blur","radius":2},{"kind":"backdrop-blur","radius":10.5}]}
+
+, "Prompt0001": {"type":"prompt","parent":null,"order":"a2","name":"Prompt","x":900,"y":200,"content":"Make the hero more playful","style":{"size":14},"model":"claude-opus-5-5"}
+
+, "Star000001": {"type":"polygon","parent":"Board00001","order":"a1","name":"Hexagon","x":160,"y":20,"w":100,"h":100,"rotation":15,"flipX":true,"sides":6,"radius":4,"fill":{"space":"oklch","l":0.7,"c":0.2,"h":30}}
+
+, "Wave000001": {"type":"path","parent":"Board00001","order":"a2","name":"Wave","x":280,"y":20,"w":200,"h":60,"d":"M0 30 C50 0 150 60 200 30","fillRule":"evenodd","viewBox":[0,0,200,60],"stroke":{"paint":[{"kind":"solid","color":"#0EA5E9"}],"width":3,"cap":"round","join":"round"}}
+}
+}

@@ -1,0 +1,9 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"themes": {"mode":["light"]},
+"variables": {
+"gap": {"type":"number","value":[{"value":"8px","when":{"mode":"light"}}]}
+},
+"nodes": {}
+}

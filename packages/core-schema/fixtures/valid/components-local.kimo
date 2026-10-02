@@ -1,0 +1,30 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Local components","acme.review":{"reviewers":["ana","bo"],"status":"draft"}},
+"nodes": {
+"Badge00001": {"type":"ellipse","parent":"IconBtn001","order":"a1","name":"Badge","x":28,"y":4,"position":"absolute","w":8,"h":8,"fill":"#DC2626"}
+
+, "IconBtn001": {"type":"frame","parent":null,"order":"a0","name":"IconButton","component":{"props":{"showBadge":{"type":"boolean","target":"Badge00001","field":"visible","default":false},"tone":{"type":"enum","target":"IconGlyph1","field":"color","options":{"danger":"#DC2626","neutral":"#18181B"}}}},"x":0,"y":0,"w":40,"h":40,"radius":20,"fill":"#F4F4F5","layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "IconGlyph1": {"type":"icon","parent":"IconBtn001","order":"a0","name":"Glyph","w":20,"h":20,"set":"lucide","icon":"bell","color":"#18181B"}
+
+, "NewLabel01": {"type":"text","parent":"UseTb00001","at":"TbLabel001","order":"a0","name":"Title","content":"Inbox","style":{"size":17,"weight":600}}
+
+, "Screen0001": {"type":"frame","parent":null,"order":"a2","name":"Screen","x":0,"y":200,"w":390,"h":{"mode":"fit","fallback":844},"clip":true,"fill":"#FFFFFF","layout":{"dir":"column","gap":16,"pad":16}}
+
+, "SlotBtn001": {"type":"instance","parent":"UseTb00001","at":"TbSlot0001","order":"a0","name":"Search","of":"IconBtn001","args":{"tone":"danger"}}
+
+, "SlotBtn002": {"type":"instance","parent":"UseTb00001","at":"TbSlot0001","order":"a1","name":"Share","of":"IconBtn001"}
+
+, "TbFirst001": {"type":"instance","parent":"Toolbar001","order":"a0","name":"First","of":"IconBtn001","args":{"showBadge":true}}
+
+, "TbLabel001": {"type":"text","parent":"Toolbar001","order":"a2","name":"Label","content":"Toolbar"}
+
+, "TbSlot0001": {"type":"frame","parent":"Toolbar001","order":"a1","name":"Extra","layout":{"dir":"row","gap":4},"slot":{"suggested":["IconBtn001"]}}
+
+, "Toolbar001": {"type":"frame","parent":null,"order":"a1","name":"Toolbar","component":{"props":{"extra":{"type":"slot","target":"TbSlot0001"},"primary":{"type":"instance","target":"TbFirst001","default":"IconBtn001"}}},"x":0,"y":100,"layout":{"dir":"row","gap":8,"pad":8}}
+
+, "UseTb00001": {"type":"instance","parent":"Screen0001","order":"a0","name":"Toolbar","of":"Toolbar001","props":{"w":{"mode":"fill"}},"args":{"primary":"IconBtn001"},"overrides":{"TbFirst001/Badge00001":{"set":{"visible":false}},"TbFirst001/IconGlyph1":{"set":{"icon":"settings","color":"#2563EB"}},"TbLabel001":{"replace":true},"TbSlot0001":{"slot":true}}}
+}
+}

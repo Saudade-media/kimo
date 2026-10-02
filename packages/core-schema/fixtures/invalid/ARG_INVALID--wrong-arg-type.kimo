@@ -1,0 +1,13 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"nodes": {
+"Comp000001": {"type":"frame","parent":null,"order":"a0","name":"Card","component":{"props":{"title":{"type":"text","target":"CompText01","field":"content"}}},"layout":{"dir":"column"}}
+
+, "CompSlot01": {"type":"frame","parent":"Comp000001","order":"a1","slot":{}}
+
+, "CompText01": {"type":"text","parent":"Comp000001","order":"a0","content":"Title"}
+
+, "Inst000001": {"type":"instance","parent":null,"order":"a1","of":"Comp000001","args":{"title":42}}
+}
+}

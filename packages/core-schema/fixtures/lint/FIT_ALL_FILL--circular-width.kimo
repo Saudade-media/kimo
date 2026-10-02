@@ -1,0 +1,11 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"nodes": {
+"Kid0000001": {"type":"frame","parent":"Row0000001","order":"a0","w":{"mode":"fill"},"h":10}
+
+, "Kid0000002": {"type":"frame","parent":"Row0000001","order":"a1","w":{"mode":"fill"},"h":10}
+
+, "Row0000001": {"type":"frame","parent":null,"order":"a0","layout":{"dir":"row"}}
+}
+}

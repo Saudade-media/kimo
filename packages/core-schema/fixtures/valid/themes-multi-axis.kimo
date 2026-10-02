@@ -1,0 +1,25 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"themes": {"brand":["kimo","acme"],"density":["regular","compact"],"mode":["light","dark"]},
+"variables": {
+"bg": {"type":"color","value":[{"value":"#FFFFFF"},{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#0B0B0F","when":{"mode":"dark"}},{"value":"#FFF8F0","when":{"brand":"acme","mode":"light"}}],"description":"Page background","group":"color.surface"}
+
+, "bg-alias": {"type":"color","value":{"$ref":"bg"}}
+
+, "headline": {"type":"string","value":[{"value":"Hello"},{"value":"Howdy","when":{"brand":"acme"}},{"value":"Hello","when":{"brand":"kimo"}}]}
+
+, "pad": {"type":"number","value":[{"value":24,"when":{"density":"regular"}},{"value":12,"when":{"density":"compact"}}]}
+
+, "show-promo": {"type":"boolean","value":[{"value":false},{"value":true,"when":{"brand":"acme"}}]}
+},
+"nodes": {
+"Dark000001": {"type":"frame","parent":"Page000001","order":"a0","name":"Dark compact","theme":{"density":"compact","mode":"dark"},"fill":{"$ref":"bg"},"layout":{"dir":"column","pad":{"$ref":"pad"}}}
+
+, "Head000001": {"type":"text","parent":"Dark000001","order":"a0","name":"Headline","content":{"$ref":"headline"},"fill":"#F4F4F5"}
+
+, "Page000001": {"type":"frame","parent":null,"order":"a0","name":"Page","x":0,"y":0,"w":1280,"fill":{"$ref":"bg-alias"},"layout":{"dir":"column","gap":{"$ref":"pad"},"pad":{"$ref":"pad"}}}
+
+, "Promo00001": {"type":"frame","parent":"Page000001","order":"a1","name":"Promo","w":200,"h":80,"theme":{"brand":"acme"},"visible":{"$ref":"show-promo"},"fill":{"$ref":"bg"}}
+}
+}

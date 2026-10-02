@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>Kimo</title>
+  <circle cx="512" cy="512" r="512" fill="#000"/>
+  <g fill="#fff">
+    <rect x="352" y="232" width="104" height="560" rx="8"/>
+    <polygon points="456,566 456,452 618,352 744,352"/>
+    <polygon points="456,566 456,452 744,792 618,792"/>
+  </g>
+</svg>

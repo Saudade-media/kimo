@@ -1,0 +1,671 @@
+# The `.kimo` File Format — Draft v0.1
+
+| | |
+|---|---|
+| **Status** | **Draft v0.1** (format version `0.1.0`). Not frozen; breaking changes are allowed until 1.0 and are delivered through migrations (§16). |
+| **Schema** | `https://kimo.design/schema/kimo-0.1.json` (JSON Schema draft 2020-12), generated into `packages/core-schema/schema/kimo-0.1.schema.json` |
+| **Reference implementation** | `@kimo/core-schema` (`packages/core-schema`). Where this document and the implementation disagree, that is a bug in one of them; file an issue. |
+| **Plan of record** | `docs/teardown.md` §10. Every place where this spec resolves an ambiguity in, or deviates from, that section is listed in §20. |
+| **License** | MIT |
+
+## 1. Introduction and conformance
+
+A `.kimo` file is a plain UTF-8 JSON document describing a design: a flat table of nodes (frames, shapes, text, component instances, …), design variables with multi-axis themes, imported libraries and content-addressed assets. It is designed to be diffable and mergeable with plain git, editable by agents through tools, and convertible to code deterministically.
+
+The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY** and **OPTIONAL** are to be interpreted as described in RFC 2119 and RFC 8174 when, and only when, they appear in all capitals.
+
+Conformance classes:
+
+- A **writer** produces `.kimo` files. A conforming writer MUST produce the canonical serialization (§15) of a document that is valid (§17).
+- A **reader** consumes `.kimo` files. A conforming reader MUST accept every valid document of a format version it supports, MUST apply the defaults (§14) and resolution rules (§9, §10), and MUST follow the forward-compatibility rules (§16.3).
+- A **validator** reports the issues of §17.
+
+Terms: *node* — an entry of the `nodes` table; *component* — a node whose `component` is truthy; *instance* — a node of type `instance`; *binding* — a `{ "$ref": … }` object standing for a variable's value; *record* — a JSON object whose keys are data (ids, names, axis names) rather than property names; *struct* — a JSON object whose keys are property names defined by this spec.
+
+## 2. Container
+
+1. The canonical working form is **one UTF-8 `.kimo` JSON file** plus an `assets/` folder next to it. Files MUST NOT be encrypted or compressed.
+2. Writers MUST NOT emit a byte-order mark and MUST use LF line endings. Readers MUST ignore a leading BOM and MUST accept CRLF (it is JSON whitespace).
+3. A library is an ordinary `.kimo` document with `meta.library: true`; its file name SHOULD end in `.lib.kimo`.
+4. `.kimoz` is a ZIP used only for transport ("Export as package"): it holds the `.kimo`, its `assets/` and imported libraries. It is never the working form.
+5. Every relative path in a document (imports, assets, shaders, scripts) resolves against the directory of the `.kimo` file.
+
+## 3. Value types
+
+| Name | Grammar / shape | Notes |
+|---|---|---|
+| **Id** | `^[A-Za-z0-9]{6,24}$` | Node id; never contains `/` or `:`. Unique per document (it is the key in `nodes`). Kimo generates 10-character base62 ids. Importers keep matching ids and re-key others. |
+| **Alias** | `^[A-Za-z][A-Za-z0-9_-]{0,31}$` | Import alias (§11). |
+| **QId** | `Id` or `alias:Id` | A local node, or a node of the library imported as `alias`. |
+| **IdPath** | QIds joined by `/` | One segment per instance boundary (§9.5). Override keys are id paths only, never names. |
+| **Name** | `^[^\s:$][^\s:]{0,127}$` | Variable and theme-axis names: no whitespace, no `:` (reserved for library namespaces), not starting with `$`. `/` and `.` are allowed (`text/default`, `color.surface`). |
+| **Axis key** | `Name` or `alias:Name` | Key of a theme pin or of a `when` condition. |
+| **Order key** | `^[0-9A-Za-z]{1,64}$` | Fractional index. Writers SHOULD generate keys with random jitter so concurrent inserts rarely collide. |
+| **Ref** (binding) | `{ "$ref": "name" }` or `{ "$ref": "alias:name" }` | Exactly one member. A binding is the only way to reference a variable: a plain string is always literal (`"$49/mo"` is text). |
+| **Num** | number or Ref | |
+| **Hex color** | `^#([0-9A-Fa-f]{3}\|[0-9A-Fa-f]{6}\|[0-9A-Fa-f]{8})$` | sRGB `#RGB`, `#RRGGBB`, `#RRGGBBAA`. `#RGBA` is not allowed. |
+| **OKLCH color** | `{ "space": "oklch", "l": 0–1, "c": ≥0, "h": [0,360), "alpha"?: 0–1 }` | `alpha` defaults to 1. |
+| **Display-P3 color** | `{ "space": "display-p3", "r": 0–1, "g": 0–1, "b": 0–1, "alpha"?: 0–1 }` | `alpha` defaults to 1. |
+| **Color** | hex, OKLCH, Display-P3, or Ref | |
+| **BlendMode** | `normal`, `darken`, `multiply`, `color-burn`, `linear-burn`, `lighten`, `screen`, `color-dodge`, `linear-dodge`, `overlay`, `soft-light`, `hard-light`, `difference`, `exclusion`, `hue`, `saturation`, `color`, `luminosity` | |
+| **Relative path** | `^\.{1,2}/(?:[^\\/\s]+/)*[^\\/\s]+$` | `./x` or `../x`; no scheme, no absolute path, no backslash. |
+| **Asset reference** | `^\./assets/[0-9a-f]{16}\.[a-z0-9]{1,8}$` | First 16 lowercase hex digits of the file's SHA-256, plus extension. |
+| **Meta key** | `^[a-z][a-z0-9-]*(\.[A-Za-z0-9_-]+)+$` | Namespaced extension key, e.g. `kimo.export.tag`. |
+| **Prop name** | `^[A-Za-z_][A-Za-z0-9_]{0,63}$` | Declared component property (usable as a React prop). |
+
+Numbers MUST be finite. Colors are specified in their own space; renderers and exporters map them deterministically, gamut-mapping out-of-gamut values with the CSS Color 4 algorithm, and CSS emitters SHOULD write the original `oklch()` / `color(display-p3 …)` value.
+
+## 4. Document root
+
+| Member | Required | Type | Meaning |
+|---|---|---|---|
+| `$schema` | yes | string | `https://kimo.design/schema/kimo-<major>.<minor>.json` for the document's format. For 0.1: `https://kimo.design/schema/kimo-0.1.json`. |
+| `format` | yes | `major.minor.patch` | Format version (§16). This spec defines `0.1.x`. |
+| `features` | no | string[] (unique) | Feature flags used by the document (§13). Writers MUST list every feature they use and MUST sort the list by code unit. |
+| `meta` | no | struct | `name` (string), `library` (boolean: this is a library), `createdWith` (string), plus namespaced keys (Meta key grammar) with any JSON value. |
+| `themes` | no | record axis → string[] | Theme axes. Each list is non-empty with unique values; **the first value is the axis default**. |
+| `imports` | no | record alias → relative path | Imported libraries (§11). |
+| `variables` | no | record Name → Variable | §10. |
+| `assets` | no | record asset file name → AssetEntry | Optional asset manifest (§12). |
+| `components` | no | Id[] (unique) | Optional index of component node ids. Derived data; when present every entry MUST be a component. |
+| `nodes` | yes | record Id → Node | The flat node table (§5). |
+
+No other members are defined in 0.1. A 0.1 validator reports any other member as `UNKNOWN_PROPERTY`; every reader MUST nevertheless preserve it (§16.3).
+
+The published JSON Schema accepts any `$schema` of the form `https://kimo.design/schema/kimo-<major>.<minor>.json`; that the URL names the document's own format version is checked by validators only (`SCHEMA_URL_MISMATCH`, a warning), so JSON Schema tooling and `validate()` agree.
+
+## 5. Nodes
+
+### 5.1 Tree model
+
+The document is a forest stored as a flat table. Each node names its parent; readers rebuild children lists.
+
+1. `parent` is a node id or `null` (a root node). It is always an id in `nodes`, never a path.
+2. Only `frame` and `group` nodes have children, plus instances through `at` (§9.4). A node whose parent has another type is invalid.
+3. **Sibling order is normatively (`order`, then id), both compared by UTF-16 code unit** (not locale-aware). Siblings are the nodes with the same `parent` and the same `at` (absent counts as its own group). Equal `order` keys are legal (they arise from concurrent inserts) and are linted.
+4. Parent links MUST NOT form a cycle. When a cycle appears only after a CRDT or git merge, the editor repairs it: the node whose move has the later timestamp (ties: larger id) is reparented to its previous parent, or to the root if that is also in the cycle.
+5. Children paint in sibling order: later siblings on top.
+
+### 5.2 Placement fields (every node, including instances)
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `type` | node type | — (required) | One of §5.5. |
+| `parent` | Id \| null | — (required) | §5.1. |
+| `at` | IdPath | absent | Only when `parent` is an instance: the descendant of that instance this node attaches to (§9.4). |
+| `order` | Order key | — (required) | §5.1. |
+| `name` | string | absent | Human-readable layer name. Never used for referencing. |
+| `x`, `y` | number | absent = 0 | Position relative to the parent's top-left, y down. Ignored in a parent with `layout` unless `position` is `"absolute"`. Not part of the defaults table: an explicit `0` is kept (§14). |
+| `position` | `"auto"` \| `"absolute"` | `"auto"` | `"absolute"` takes the node out of the parent's flex flow. |
+| `theme` | record axis key → value | absent | Per-axis theme pins for this subtree (§10.3). |
+| `locked` | boolean | `false` | Editor state: not selectable on canvas. |
+| `meta` | record Meta key → any | absent | Namespaced extension data. Readers MUST preserve it and MUST NOT interpret keys of namespaces they do not own. Bindings inside `meta` are not bindings. |
+
+### 5.3 Base fields (every node except instances)
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `rotation` | number | `0` | Degrees, counter-clockwise, around the node's top-left corner. |
+| `opacity` | Num in [0,1] | `1` | |
+| `visible` | boolean \| Ref | `true` | Hidden nodes take no space in layout. Also how a descendant is "removed" inside an instance (`set: {visible: false}`). |
+| `flipX`, `flipY` | boolean | `false` | Mirror around the node's center. |
+| `component` | boolean \| ComponentDef | `false` | Makes the node a component; the object form declares a prop API (§9.6). |
+| `placeholder` | `true` \| `{ by?: string, since?: string }` | absent | In-progress marker (e.g. an agent is working on it; `since` is an ISO 8601 timestamp). |
+
+### 5.4 Graphics fields
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `fill` | Paint \| Paint[] | absent = no fill (text: §8.3) | A list paints in order, last on top. `[]` means explicitly no paint. |
+| `stroke` | Stroke | absent | §7.2. |
+| `effects` | Effect[] \| Ref | absent | A Ref binds a `shadow` variable (feature `tokens/composite`). |
+
+### 5.5 Node types
+
+Required fields are marked **req**. Every type also has the Placement fields; every type but `instance` has the Base fields.
+
+| `type` | Fields (besides Placement/Base) | Notes |
+|---|---|---|
+| `frame` | Graphics; `w`, `h`: Size, default `{mode:"fit"}`; `radius`: Radius, default 0; `clip`: boolean \| Ref, default `false`; `layout`: Layout (absent = no flex layout); `slot`: `{ suggested?: QId[] }` | Container. `slot` marks the frame as a slot of its component; `suggested` is advisory (slot content is not restricted to it), but every entry MUST name a component (`REF_MISSING`, `REF_NOT_COMPONENT`, `ALIAS_UNKNOWN`). |
+| `group` | `effects` | Container without size, paint or layout; its bounds are its children's. |
+| `rect` | Graphics; `w` **req**, `h` **req**: Size; `radius`: Radius, default 0 | Images are image paints on rects or frames; there is no image node. |
+| `ellipse` | Graphics; `w` **req**, `h` **req**; `innerRadius`: [0,1), default 0 (ring hole as a fraction); `startAngle`: degrees CCW from the positive x axis, default 0; `sweepAngle`: [-360,360], default 360 | Arcs and rings. |
+| `polygon` | Graphics; `w` **req**, `h` **req**; `sides` **req**: integer ≥ 3; `radius`: Num, default 0 | Regular polygon inscribed in the box. |
+| `path` | Graphics; `w`, `h`: Size (absent = the `viewBox` size, else the geometry's bounds); `d` **req**: SVG path data; `fillRule`: `"nonzero"`\|`"evenodd"`, default `"nonzero"`; `viewBox`: `[x, y, w, h]` (absent = the geometry's bounding box) | The geometry is scaled from `viewBox` to `w`×`h`. Writers SHOULD set `viewBox`. |
+| `text` | Graphics; `w`, `h`: Size; `content` **req**: string \| Ref \| TextSpan[]; `grow`: `"auto"`\|`"fixed-width"`\|`"fixed"`, default `"auto"`; `style`: TextStyle | §8. |
+| `icon` | `w` **req**, `h` **req**; `set` **req**: string; `icon` **req**: string \| Ref (glyph name); `weight`: Num 100–700 (Material sets only); `color`: Color; `effects` | Known sets: `lucide`, `feather`, `phosphor`, `material-outlined`, `material-rounded`, `material-sharp`. Other values are allowed and render as a missing glyph. Icons are rendered as paths from the set at the given weight. |
+| `note` | `w`, `h`: Size (absent = fit content); `content` **req**: string; `style`: TextStyle | Sticky note. |
+| `prompt` | as `note`, plus `model`: string | A runnable AI prompt on the canvas. |
+| `script` | `w` **req**, `h` **req**; `src` **req**: relative path to a `.js` file; `inputs`: record name → any (literals or Refs); `clip`: boolean \| Ref, default `false` | **Feature `node/script`.** Generated children are derived state and are not stored. The script protocol is out of scope for 0.1. |
+| `browser` | `w` **req**, `h` **req**; `url` **req**: string; `device`: string; `zoom`: > 0, default 1; `scrollX`, `scrollY`: default 0; `radius`, default 0; `stroke`; `effects` | **Feature `node/browser`.** A live web page on the canvas. |
+| `instance` | `of` **req**: QId; `props`: struct; `args`: record; `overrides`: record IdPath → Override; `component`: boolean \| ComponentDef, default `false` | §9. Has no Base fields at its top level. |
+
+Any other `type` is invalid in 0.1 (`UNKNOWN_NODE_TYPE`) and MUST be preserved by readers.
+
+## 6. Sizing and layout
+
+### 6.1 Size
+
+A Size is one of:
+
+- **a number ≥ 0 or a number binding** — a fixed size in px;
+- **`{ "mode": "fit", "fallback"?: n, "min"?: n, "max"?: n }`** — size to the content. A frame fits its children (with layout: the flex content size; without: their bounding box). When there is nothing to fit (no children), `fallback` is used, else 0;
+- **`{ "mode": "fill", "fallback"?: n, "weight"?: n, "min"?: n, "max"?: n }`** — take the free space of a parent with `layout` along the relevant axis (main axis: share free space by `weight`, default 1, like `flex-grow`; cross axis: stretch). When the parent has no layout or the node is `absolute`, `fallback` is used, else the content size.
+
+`min` / `max` clamp the result and need feature **`size/min-max`**. Exporters map `fallback` to `min-width`/`min-height` or document it as ignored.
+
+A frame whose size on an axis is `fit` and whose flowing children all `fill` that axis is circular (lint `FIT_ALL_FILL`); readers SHOULD resolve it by sizing those children as `fit` on that axis.
+
+Text sizes follow `grow` (§8.1). An instance has no size fields; it takes its component root's size unless `props` overrides `w`/`h`.
+
+### 6.2 Layout (frames)
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `dir` | `"row"` \| `"column"` | — (required) | Main axis. |
+| `gap` | Num | `0` | Space between children on the main axis (may be negative). |
+| `crossGap` | Num | `0` | Space between wrapped lines. **Feature `layout/wrap`.** |
+| `pad` | Num \| `[v, h]` \| `[t, r, b, l]` | `0` | Padding; entries are non-negative. |
+| `justify` | `start` `center` `end` `between` `around` `evenly` | `"start"` | Main-axis distribution. |
+| `align` | `start` `center` `end` `stretch` `baseline` | `"start"` | Cross-axis alignment. `stretch` and `baseline` need **feature `layout/stretch-baseline`**. |
+| `wrap` | boolean | `false` | Wrap onto several lines. **Feature `layout/wrap`.** |
+| `includeStroke` | boolean | `false` | Include the frame's stroke width in its padding box. |
+
+Absent `layout` means children are placed by `x`/`y`. Children with `position: "absolute"` or `visible: false` do not take part in the flow. A property equal to its default never requires its feature (e.g. `wrap: false`).
+
+### 6.3 Radius
+
+`radius` is one Num ≥ 0 or `[topLeft, topRight, bottomRight, bottomLeft]`.
+
+## 7. Paints, strokes and effects
+
+### 7.1 Paint
+
+A Paint is a **Color** (hex, OKLCH, P3 or Ref — a solid paint) or one of:
+
+| `kind` | Fields | Defaults |
+|---|---|---|
+| `"solid"` | `color` **req**, `blend`, `visible` | `blend: "normal"`, `visible: true` |
+| `"linear"` \| `"radial"` \| `"angular"` | `stops` **req**: ≥ 2 × `{ color, at ∈ [0,1] }`; `center`: [x, y] normalized; `size`: [w, h] normalized (for linear, `h` is the length); `rotation`: degrees CCW, 0 = up; `interpolation`: `"srgb"` \| `"oklab"`; `opacity`: Num [0,1]; `blend`; `visible` | `center [0.5,0.5]`, `size [1,1]`, `rotation 0`, `interpolation "srgb"`, `opacity 1`, `blend "normal"`, `visible true` |
+| `"image"` | `src` **req**: asset reference; `fit`: `cover` `contain` `stretch` `tile`; `crop`: affine `[a, b, c, d, tx, ty]` in normalized image space; `opacity`; `blend`; `visible` | `fit "cover"`, `opacity 1`, `blend "normal"`, `visible true` |
+| `"mesh"` | `cols` **req**, `rows` **req** (integers ≥ 1); `colors` **req**: Color[]; `points` **req**: array | **Feature `fill/mesh`.** `colors` and `points` are row-major with exactly `cols × rows` entries; the point format is reserved for a later version. |
+| `"shader"` | `src` **req**: relative path; `uniforms`: record name → any | **Feature `fill/shader`.** The shader protocol is out of scope for 0.1. |
+
+### 7.2 Stroke
+
+| Field | Type | Default |
+|---|---|---|
+| `paint` | Paint \| Paint[] — **required** | |
+| `width` | Num ≥ 0, or `{ t?, r?, b?, l? }` (per side; an absent side is 0) | `1` |
+| `align` | `"inside"` \| `"center"` \| `"outside"` | `"inside"` |
+| `cap` | `"butt"` \| `"round"` \| `"square"` | `"butt"` |
+| `join` | `"miter"` \| `"bevel"` \| `"round"` | `"miter"` |
+| `dash` | number[] (≥ 0) | absent = solid |
+
+### 7.3 Effects
+
+| `kind` | Fields | Defaults |
+|---|---|---|
+| `"shadow"` | `x` **req**, `y` **req**: Num; `blur` **req**: Num ≥ 0; `color` **req**; `inner`: boolean; `spread`: Num; `blend` | `inner false`, `spread 0`, `blend "normal"` |
+| `"blur"` | `radius` **req**: Num ≥ 0 | |
+| `"backdrop-blur"` | `radius` **req**: Num ≥ 0 | |
+
+Effects apply in list order.
+
+## 8. Text
+
+### 8.1 Content and growth
+
+- `content` is a **string** (always literal), a **binding** to a string variable, or (feature **`text/runs`**) an array of spans `{ text: string, style?: TextStyle, href?: string }`. A span's style applies on top of the node's `style`. Spans are a delta sequence (they map onto `Y.Text` attributes), not offsets.
+- `grow: "auto"` — both dimensions come from the content (single line unless the content has line breaks); `w`/`h` are ignored and SHOULD be omitted. `"fixed-width"` — `w` is used and text wraps; `h` comes from the content. `"fixed"` — both are used; overflow is clipped by an ancestor's `clip` only.
+
+### 8.2 TextStyle
+
+| Field | Type | Meaning (absent = the reader's default) |
+|---|---|---|
+| `font` | string \| Ref | Family name. |
+| `size` | Num > 0 | px. |
+| `weight` | Num 1–1000 | |
+| `italic` | boolean | |
+| `lineHeight` | Num ≥ 0 (multiplier of `size`) \| `{ px: n }` | Absent = the font's default line height. |
+| `letterSpacing` | Num | px. |
+| `align` | `left` `center` `right` `justify` | |
+| `valign` | `top` `middle` `bottom` | |
+| `decoration` | (`"underline"` \| `"strike"`)[] (unique) | |
+| `case` | `upper` `lower` `title` | |
+| `features` | record 4-char OpenType tag → boolean \| number | |
+| `href` | string | Link. |
+| `typography` | Ref | Binds a `typography` variable (feature **`tokens/composite`**): its fields apply first, inline fields override them. |
+
+### 8.3 Default text fill
+
+A text node without `fill` paints with the color variable **`text/default`** when the document declares it, otherwise opaque black (`#000000`). Text is never invisible by omission. An explicit `fill: []` (or only invisible paints) is honored and linted (`TEXT_INVISIBLE`).
+
+## 9. Components, instances, overrides and slots
+
+### 9.1 Components
+
+Any non-instance node with a truthy `component` is a component; its subtree (every node whose parent chain reaches it) is the component's content. An instance MAY also carry `component` — a **derived component** (e.g. a variant: `Button/Ghost` = an instance of `Button/Primary` with overrides, marked as a component). Paths into a derived component resolve through to the component it instantiates (§9.5).
+
+A component MUST NOT contain, directly or through nested instances or derived components, an instance of itself (`INSTANCE_CYCLE`).
+
+### 9.2 Instances
+
+- `of` names a component: a local id, or `alias:id` for a library component. The target MUST exist and MUST be a component.
+- An instance has only Placement fields at its top level (plus `of`, `props`, `args`, `overrides`, `component`). **Every visual property of the component root (`w`, `h`, `fill`, `opacity`, `visible`, `rotation`, `flipX`, `layout`, …) MAY appear only inside `props`**, never at the instance's top level (`INSTANCE_VISUAL_FIELD`). `props` MUST NOT contain Placement fields or `component`; applying `props` to the root MUST yield a valid node.
+- `args` holds values for the component's declared props (§9.6).
+- An instance has no children of its own: its subtree is the component's, plus instance-owned nodes (§9.4).
+
+### 9.3 Overrides
+
+`overrides` maps an IdPath (§9.5) to exactly one of:
+
+| Override | Meaning |
+|---|---|
+| `{ "set": { … } }` | **Property override.** Each key replaces the target's property wholesale (shallow: `set: {layout: …}` replaces the whole layout). Keys `type`, `parent`, `at`, `order`, `component` and `overrides` MUST NOT appear. Applying `set` to the target MUST yield a valid node of the target's type. When the target is an instance, `set` uses instance fields (`of` swaps the component, `props`, `args`, `theme`, `name`, `x`, `y`, `position`); visual fields go inside `set.props`. |
+| `{ "slot": true }` | **Children replacement.** The target MUST be a frame with `slot`. Its children become exactly the nodes with `parent` = this instance and `at` = this key, in sibling order. Zero nodes = an empty slot. |
+| `{ "replace": true }` | **Full replacement.** Exactly one node with `parent` = this instance and `at` = this key replaces the target (and its subtree). |
+
+Overrides are explicitly tagged; their meaning never depends on which keys a value happens to contain.
+
+**Precedence** (later wins): the component as authored → a derived component's own `props`/`args`/`overrides` → the instance's `props` (root) → the instance's `args` (declared props) → the instance's `overrides`. For nested instances, an outer instance's override of a deep path wins over the nested instance's own overrides. Overrides do not cascade to other instances of the same component.
+
+To hide a descendant inside an instance, set `visible: false`; descendants of an instance cannot be deleted.
+
+### 9.4 Instance-owned nodes (`at`)
+
+Slot content and replacement nodes live in the flat node table like any other node, so they diff, merge and sync the same way:
+
+- `parent` = the instance id (a real Id), `at` = the IdPath of the descendant they attach to.
+- A node whose parent is an instance MUST have `at`, and `at` MUST equal a key of that instance's `overrides` whose value is `slot` or `replace` (`AT_WITHOUT_OVERRIDE`). A node whose parent is not an instance MUST NOT have `at`.
+- The override entry is only a marker: the child list's single source of truth is the set of nodes pointing at it.
+
+### 9.5 Id path resolution
+
+An IdPath is resolved relative to a component C (for an override or `at`: the instance's component; for a declared prop target: the declaring component):
+
+1. Split the path at `/`. For each segment, in order:
+   1. The segment is looked up **among the descendants of C** (nodes whose parent chain reaches C, including instance-owned nodes inside C), **in C's namespace**: written as a bare Id when C is a node of this document, and as `alias:Id` when C belongs to the library imported as `alias`.
+   2. If not found and C is a derived component (an instance), C is replaced by the component it instantiates and the lookup is repeated (derived components are transparent).
+   3. If it is not the last segment, the found node MUST be an instance, and C becomes its component; the next segment crosses that instance boundary.
+2. The node found for the last segment is the target. Any failure is `OVERRIDE_PATH_UNRESOLVED`.
+
+So `"ui:CardActns1/ui:BtnLabel01"` crosses from a library card into a library button. Paths never use names, so renames cannot break them. In 0.1, a path segment that would enter a library imported *by a library* (rather than by this document) is not resolved by validators (reported as not checked).
+
+### 9.6 Declared component props
+
+`component: { "props": { <name>: PropDef } }` declares a typed prop API (used by the React exporter: typed props for declared props only; every other override is inlined).
+
+| PropDef `type` | Fields | Target requirement | An `args` value… |
+|---|---|---|---|
+| `"text"` | `target`, `field: "content"`, `default?: string` | a `text` node | string or string binding; sets `content` |
+| `"boolean"` | `target`, `field: "visible"`, `default?: boolean` | any non-instance node | boolean or boolean binding; sets `visible` |
+| `"instance"` | `target`, `default?: QId` | an `instance` | a component QId; swaps the target's `of` |
+| `"enum"` | `target`, `field`, `options` (record option → value, ≥ 1) | a node that has `field` (not `type`/`parent`/`at`/`order`/`component`/`overrides`); every option value MUST be valid for `field` | an option name; sets `field` to that option's value |
+| `"slot"` | `target` | a frame with `slot` | not allowed: slot content is given by nodes with `at` (§9.4); exporters emit `children` or a named `ReactNode` prop |
+
+`target` is an IdPath resolved from the declaring component (§9.5). `default` is informative for exporters (the generated prop's default); an instance without the arg renders the component as authored. `args` keys MUST be declared props (`ARG_UNKNOWN`).
+
+**Derived components inherit the prop API.** The declared props of a derived component are those of the component it instantiates (recursively), with its own `component.props` declarations merged over them by name. Inherited targets resolve through the derived component (§9.5), so an instance of `Button/Ghost` takes the same `args` as an instance of `Button/Primary`.
+
+The same rules apply to `set.props` and `set.args` of a `set` override on a nested instance: they are checked against that instance's effective component (the one named by `set.of`, if present) exactly like an instance's own `props` and `args`.
+
+## 10. Variables and themes
+
+### 10.1 Variables
+
+```jsonc
+"variables": {
+  "surface": { "type": "color", "value": [ { "value": "#FFFFFF", "when": { "mode": "light" } },
+                                           { "value": { "$ref": "ink-900" }, "when": { "mode": "dark" } } ],
+               "group": "color.surface", "description": "Page background" }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `type` | `color`, `number`, `string`, `boolean`; composite (feature **`tokens/composite`**): `typography`, `shadow`, `dimension`. |
+| `value` | A **plain value** used under every theme, or a **themed value**: a non-empty array of entries `{ value, when?: record axis key → value }`. An array is themed exactly when every element is an object with a `value` member (shadow arrays and plain values never qualify). |
+| `description` | Free text. |
+| `group` | Dotted group path for DTCG export (e.g. `color.surface`). |
+
+Plain values by type: `color` → Color; `number` → Num; `string` → string \| Ref; `boolean` → boolean \| Ref; `typography` → a TextStyle without `typography`, or Ref; `shadow` → a shadow Effect or an array of them, or Ref; `dimension` → `{ value: number, unit: "px" }` (px only in 0.x and 1.x), or Ref. **A value that is a binding is an alias**; an alias MUST name a variable of the same type.
+
+### 10.2 Bindings and types
+
+A binding MUST name an existing variable (`VARIABLE_MISSING`); `alias:name` names a variable of an imported library, which is never copied into the consumer. The bound variable's type MUST fit the property:
+
+| Property | Accepted variable types |
+|---|---|
+| `fill`, `color`, `colors`, stroke `paint`, gradient stop `color` | `color` |
+| `opacity`, `gap`, `crossGap`, `pad`, `radius`, stroke `width` / `t` `r` `b` `l`, shadow `x` `y` `blur` `spread`, effect `radius`, `w`, `h`, text `size` `weight` `lineHeight` `letterSpacing`, icon `weight` | `number`, `dimension` |
+| `visible`, `clip` | `boolean` |
+| `content`, `icon`, `font` | `string` |
+| `effects` | `shadow` |
+| `typography` | `typography` |
+| `args` of a text / boolean prop | `string` / `boolean` |
+| script `inputs`, shader `uniforms`, enum `options` | any |
+
+### 10.3 Themes
+
+`themes` declares axes, each with its values; the first value is the default. A node's `theme` pins axes for its subtree; keys are axis keys (`alias:axis` for a library's axis) and values MUST be declared values of that axis (`THEME_AXIS_UNKNOWN`, `THEME_VALUE_UNKNOWN`). The same applies to `when` keys and values.
+
+### 10.4 Resolution (normative)
+
+1. **Effective theme of a node.** Start from the defaults: the first value of every local axis, and for every *loaded* imported library `alias`, the first value of each of its axes under the key `alias:axis`. Walk from the root to the node along its **placement path** (`parent` links, which include instance placement and `at` nodes), so instances inherit from where they sit. At each node with `theme`, overwrite only the named axes.
+2. **Library axes** are namespaced `alias:axis` and default from the library.
+3. **Variable value.** A plain value applies under every theme. For a themed value, an entry **matches** when every axis named in its `when` equals the effective value of that axis; axes it does not name are ignored (partial `when` is allowed). **Entries without `when`, or with `when: {}`, are fallbacks only and never candidates.** Among matching entries **the last one in list order wins** (no specificity ranking).
+4. **No candidate.** Use the fallback entry — the *last* entry without `when` (or with `when: {}`) — if there is one, otherwise the *first* entry. In both cases emit the lint `THEME_NO_MATCH(variable, effectiveTheme)`.
+5. **Aliases** resolve recursively with cycle detection: a cycle is the error `VARIABLE_CYCLE`.
+6. **Library variables** (`{ "$ref": "alias:name" }`) resolve inside the library: a `when` key `axis` of the library reads the consumer's effective value of `alias:axis`, or the library's default for that axis. Paste-without-import copies the variables, with a "use existing" / "add renamed" choice.
+
+## 11. Imports and libraries
+
+`imports` maps an alias to a relative path of a library `.kimo` file. Library node ids, variables and axes are referenced with the alias prefix everywhere (`of`, override path segments, `at`, bindings, theme pins, `when`, `slot.suggested`, instance prop defaults); consumer-owned ids are never prefixed. An alias used anywhere MUST be declared (`ALIAS_UNKNOWN`). Libraries are linked read-only and loaded when the consumer is opened; validators check references into a library only when the library is supplied (otherwise `LIBRARY_NOT_LOADED`, a warning).
+
+## 12. Assets
+
+1. Binary assets live in `assets/` next to the `.kimo` file, **content-addressed**: `assets/<sha256-16>.<ext>` where `<sha256-16>` is the first 16 lowercase hex digits of the SHA-256 of the file bytes. They are referenced as `./assets/<hash>.<ext>`, deduplicate, never collide across branches and merge as add-only. `kimo gc` removes unreferenced files; the docs recommend Git LFS above a size threshold.
+2. The optional header member `assets` is a manifest: asset file name → `{ mime: string, bytes?: integer, width?: integer, height?: integer, name?: string }` (`name` is the original file name, informative). When the manifest is present, every asset reference MUST be listed (`ASSET_MISSING`) and unreferenced entries are linted (`ASSET_UNUSED`). A validator given the folder listing MUST also report references to missing files.
+3. Fonts fetched from a font service SHOULD be stored as document assets so the file renders offline.
+
+## 13. Feature flags
+
+A document MUST list in `features` every gated construct it uses (`FEATURE_NOT_DECLARED` otherwise). A property equal to its default never needs its feature.
+
+| Feature | Unlocks |
+|---|---|
+| `layout/wrap` | `layout.wrap`, `layout.crossGap` |
+| `layout/stretch-baseline` | `layout.align` `"stretch"` and `"baseline"` |
+| `size/min-max` | `min` / `max` in `fit` / `fill` sizes |
+| `text/runs` | `content` as TextSpan[] |
+| `tokens/composite` | variable types `typography`, `shadow`, `dimension`; `style.typography`; `effects` as a binding |
+| `fill/mesh` | `kind: "mesh"` paints |
+| `fill/shader` | `kind: "shader"` paints |
+| `node/script` | `script` nodes |
+| `node/browser` | `browser` nodes |
+
+Feature gates apply wherever the construct appears, including instance `props` and `set` overrides. Opaque records (script `inputs`, shader `uniforms`, `args`; Appendix B) hold data, not document constructs, and are never gated. Enum option values are gated as values of the prop's `field` (an option `{dir:"row", wrap:true}` for `field: "layout"` needs `layout/wrap`). `style.typography` is gated wherever a TextStyle appears (node `style`, TextSpan `style`). A reader that does not support a listed feature MUST open the file read-only (§16.3); validators report it as `FEATURE_UNKNOWN` (warning). Feature names have the form `area/name` (`^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$`).
+
+## 14. Defaults
+
+A property equal to its default means exactly the same as the absent property. **Canonical writers omit it** (§15). The table is data in `@kimo/core-schema` (`DEFAULTS`); the JSON Schema `default` keywords and the writer's omit logic are generated from it.
+
+| Scope | Field | Default | `.pen` default, if different |
+|---|---|---|---|
+| every node but instance | `visible`, `opacity`, `rotation`, `flipX` / `flipY` | `true`, `1`, `0`, `false` | |
+| every node | `position`, `locked`, `component` | `"auto"`, `false`, `false` | |
+| frame | `layout` | absent = no flex layout | `layout: horizontal` (importer writes `dir: "row"`) |
+| frame | `w` / `h` | `{ "mode": "fit" }` | `fit_content` |
+| frame | `clip`, `radius` | `false`, `0` | |
+| rect, polygon, browser | `radius` | `0` | |
+| ellipse | `innerRadius`, `startAngle`, `sweepAngle` | `0`, `0`, `360` | |
+| path | `fillRule` | `"nonzero"` | |
+| text | `grow` | `"auto"` | |
+| text | `style.lineHeight` | absent = the font's default | same |
+| script | `clip` | `false` | |
+| browser | `zoom`, `scrollX`, `scrollY` | `1`, `0`, `0` | |
+| layout | `gap`, `crossGap`, `pad` | `0` | gap 0; padding undocumented |
+| layout | `justify`, `align` | `"start"` | |
+| layout | `wrap`, `includeStroke` | `false` | |
+| Size `fill` | `fallback` / `weight` | none / `1` | |
+| stroke | `width`, `align`, `cap`, `join` | `1`, `"inside"`, `"butt"`, `"miter"` | (to be checked by the importer) |
+| solid paint | `blend`, `visible` | `"normal"`, `true` | |
+| gradient | `center`, `size`, `rotation`, `interpolation`, `opacity`, `blend`, `visible` | `[0.5,0.5]`, `[1,1]`, `0`, `"srgb"`, `1`, `"normal"`, `true` | |
+| image paint | `fit`, `opacity`, `blend`, `visible` | `"cover"`, `1`, `"normal"`, `true` | `cover` |
+| shadow | `inner`, `spread`, `blend` | `false`, `0`, `"normal"` | |
+| OKLCH / P3 color | `alpha` | `1` | |
+
+Not defaulted: `x` and `y` (absent means 0, but an explicit 0 is kept so positions stay visible in diffs), and every field without a row above.
+
+**Where defaults do not apply.** The top-level keys of an instance's `props` and of a `set` override are never omitted or filled in, because there they override a component value (`opacity: 1` restores full opacity over a component's 0.5). Values nested below those keys are normalized, because each such value replaces the target's value wholesale.
+
+## 15. Canonical serialization
+
+The canonical serialization is a pure function of the document's data. Writers MUST produce it; for every canonical text `s`, `serialize(parse(s)) === s`.
+
+### 15.1 Layout
+
+```
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["layout/wrap"],
+"meta": {"name":"Kimo landing"},
+"variables": {
+"ink": {"type":"color","value":"#111111"}
+
+, "space-m": {"type":"number","value":16}
+},
+"nodes": {
+"A1hero0001": {"type":"frame","parent":null,"order":"a0","name":"Hero"}
+
+, "B2title001": {"type":"text","parent":"A1hero0001","order":"a0","content":"Hi"}
+}
+}
+```
+
+1. The first line is `{`; the file ends with `}` and one LF.
+2. Each root member is written on its own line as `"key": <value>` — one space after the colon — followed by `,` except for the last member. Members appear in canonical order (§15.2); **`nodes` is always last**; unknown root members follow the known ones (sorted by code unit) and precede `nodes`. Only the members defined in §4 are ranked at the root; an unknown root member is not ranked even when its name appears in Appendix A, and its value is opaque (§15.2).
+3. **Tables** — `nodes`, `variables` and `assets` — are written as `"key": {`, then one line per entry, then `}`. Entries are sorted by key (code unit). Each entry is `"<key>": <value>` on a single line; **the separating comma is written at the start of every entry line after the first (`, "<key>": …`)**, and **one blank line separates consecutive entries**. An empty table is written `{}` on the member's line. (Appending or removing the last entry never edits a neighbouring line; the blank line keeps unrelated neighbours out of one conflict hunk in a line-based merge.)
+4. Every other value (root members, table entries) is written as **compact JSON**: no insignificant whitespace.
+5. Strings are written as by ECMAScript `JSON.stringify` (minimal escaping; non-ASCII as UTF-8; U+2028/U+2029 unescaped). A value never spans lines.
+6. Numbers are written in the shortest form that round-trips (ECMAScript `Number.prototype.toString`), e.g. `0.30000000000000004`, `1e+21`. Negative zero is written `0`. NaN and infinities cannot be written.
+7. Properties equal to their default are omitted (§14). Top-level `features` is sorted by code unit. Arrays otherwise keep their order. Properties whose value is undefined do not exist.
+
+### 15.2 Key order
+
+- **Structs** (schema-defined objects: the root, nodes, paints, layout, …): keys listed in Appendix A come first, in that order; all other keys follow, sorted by code unit. The order is a single global ranking that does not depend on the object's kind.
+- **Records** (keys are data): keys sorted by code unit. Record-valued properties are listed in Appendix B. Their values are structs, except where Appendix B says *opaque*.
+- **Opaque values** — anything below an unknown key, and the values of the opaque records — are ordered purely by code unit at every depth.
+
+This rule is part of the versioning contract (§16.4): because keys introduced by later versions sort after all 0.1 keys and their subtrees are ordered purely by code unit, a 0.1 reader re-serializes a newer document byte-identically.
+
+### 15.3 Parsing
+
+Readers MUST reject: malformed JSON; **duplicate keys in any object** (a duplicated node id would otherwise be silently dropped); a root that is not an object. A `__proto__` key is ordinary data. Parsing does not validate (§17).
+
+## 16. Versioning, migration and forward compatibility
+
+### 16.1 Version numbers
+
+`format` is `major.minor.patch`. Major and minor identify the format; a **patch** release is editorial and never changes what a document may contain (a 0.1 reader treats `0.1.7` as current). A **minor** release may add optional fields, node types, paint kinds and features. A **major** release may change or remove anything. Before 1.0, any minor release may be breaking. Defaults MUST NOT change within a major version.
+
+### 16.2 Migrations
+
+- A migration is a pure function from one format line (`major.minor`) to the next, registered in `@kimo/core-schema` (`MIGRATIONS`, e.g. `migrations/1.0→1.1`), tested with fixtures. Format 0.1 is the first format, so the 0.1 registry is empty.
+- Readers open an older file **migrated in memory**. Autosave of a migrated file goes to a recovery file (`~/.kimo/recovery/<hash>`), never to the working file, **until the user accepts a one-time "Upgrade file format" prompt or saves explicitly**. The upgrade then changes the `format` and `$schema` header lines, plus whatever the migration itself must rewrite.
+- Migrations MUST preserve every property they do not understand.
+- A file with no migration path to the reader's version opens read-only.
+
+### 16.3 Forward compatibility
+
+- A file whose `format` major or minor is newer than the reader's, or whose `features` include one the reader does not support, **opens read-only**: saves are refused with a "newer Kimo needed" message. A validator does not validate a newer document beyond its version (`FORMAT_NEWER`).
+- **Readers MUST preserve unknown properties, unknown root members, unknown node fields and unknown node types on round-trip.**
+- Conformance test (in `@kimo/core-schema`): a newer file is byte-identical after open and re-serialization, and an edit to one node changes only that node's line.
+- A store that failed to load is read-only and cannot be saved. Editors SHOULD also open documents with validation errors read-only unless the user chooses to repair them.
+
+### 16.4 Rules for future versions
+
+- Appendix A is frozen for the 0.x and 1.x lines: keys introduced by later versions are never ranked, so they sort after all ranked keys by code unit, and everything below them is ordered purely by code unit (§15.2). This is what lets an older reader re-serialize a newer document byte-identically. At the root this holds for every new member (§15.1 rule 2). Below the root, ranking is by name, so later versions MUST NOT introduce a property whose name is already in Appendix A on an object that does not define it in 0.1; they pick an unranked name instead.
+- New record-valued properties are opaque to older readers, so their subtrees are ordered purely by code unit in every version.
+- New semantics MUST be introduced through new properties, node types, paint kinds or feature flags, never by changing the meaning or default of an existing property within a major version.
+
+## 17. Validation
+
+A validator checks, in order: the format version; the structure (the JSON Schema, with clear errors for unions); feature declarations; then the semantic rules. Every issue has a JSON Pointer `path`, a `code` and a message. **Errors** make the document invalid; **warnings** are lints. The table is normative.
+
+| Code | Severity | Meaning |
+|---|---|---|
+| `NOT_AN_OBJECT` | error | The document root is not a JSON object. |
+| `SCHEMA` | error | A value does not match the structural schema. |
+| `UNKNOWN_PROPERTY` | error | A property not defined by this format version (preserved, but invalid). |
+| `UNKNOWN_NODE_TYPE` | error | A node `type` not defined by this format version. |
+| `FORMAT_INVALID` | error | `format` is not a `major.minor.patch` version. |
+| `FORMAT_NEWER` | error | The document's format is newer than this reader; it opens read-only. |
+| `FORMAT_OLDER` | error | The document's format is older; migrate it before validating. |
+| `SCHEMA_URL_MISMATCH` | warning | `$schema` does not name the document's format version. |
+| `FEATURE_UNKNOWN` | warning | `features` lists a feature this reader does not know; the file opens read-only. |
+| `FEATURE_NOT_DECLARED` | error | A feature-gated construct is used but its feature is not listed in `features`. |
+| `PARENT_MISSING` | error | `parent` names a node that does not exist. |
+| `PARENT_CYCLE` | error | Following `parent` links leads back to the node. |
+| `PARENT_NOT_CONTAINER` | error | The parent's type cannot have children. |
+| `AT_WITHOUT_INSTANCE` | error | `at` is set but the parent is not an instance. |
+| `INSTANCE_CHILD_WITHOUT_AT` | error | A node whose parent is an instance has no `at`. |
+| `AT_WITHOUT_OVERRIDE` | error | `at` does not name a `slot` or `replace` override of the parent instance. |
+| `REPLACE_COUNT` | error | A `replace` override does not have exactly one replacement node. |
+| `ORDER_DUPLICATE` | warning | Two siblings share an `order` key (legal; ties sort by id). |
+| `INSTANCE_VISUAL_FIELD` | error | A visual field at an instance's top level; it belongs in `props`. |
+| `REF_MISSING` | error | A component reference (`of`, `set.of`, an instance prop's `default` or `args` value, `slot.suggested`) names a node that does not exist. |
+| `REF_NOT_COMPONENT` | error | A component reference names a node that is not a component. |
+| `INSTANCE_CYCLE` | error | A component contains (directly or transitively, including through `set.of`, instance-prop `args` and instance-prop `default`s) an instance of itself. |
+| `OVERRIDE_PATH_UNRESOLVED` | error | An override key, `at` or prop target does not resolve to a descendant. |
+| `OVERRIDE_INVALID` | error | A `set` override or instance `props` would make the target invalid. |
+| `SLOT_TARGET_INVALID` | error | A `slot` override or slot prop targets a node that is not a slot frame. |
+| `PROP_TARGET_INVALID` | error | A declared component prop targets a node of the wrong kind. |
+| `ARG_UNKNOWN` | error | An instance `args` key is not a declared prop of the component. |
+| `ARG_INVALID` | error | An instance `args` value does not fit the declared prop. |
+| `COMPONENTS_INDEX_INVALID` | error | The `components` index lists a node that is not a component. |
+| `VARIABLE_MISSING` | error | A binding names a variable that does not exist. |
+| `VARIABLE_TYPE_MISMATCH` | error | A binding's variable type does not fit the bound property. |
+| `VARIABLE_CYCLE` | error | Variable aliases form a cycle. |
+| `THEME_AXIS_UNKNOWN` | error | A theme pin or `when` names an undeclared axis. |
+| `THEME_VALUE_UNKNOWN` | error | A theme pin or `when` names a value its axis does not declare. |
+| `THEME_NO_MATCH` | warning | A bound variable has no themed entry for the node's effective theme. |
+| `ALIAS_UNKNOWN` | error | A qualified id, id path segment, binding or axis uses an alias not declared in `imports`. |
+| `LIBRARY_NOT_LOADED` | warning | References into a library were not checked because it was not supplied. |
+| `ASSET_MISSING` | error | An asset reference is not in the asset manifest / asset folder. |
+| `ASSET_UNUSED` | warning | An asset manifest entry is not referenced. |
+| `MESH_SIZE` | error | A mesh paint's `colors` / `points` length is not `cols * rows`. |
+| `TEXT_INVISIBLE` | warning | A text node's fill paints nothing. |
+| `FIT_ALL_FILL` | warning | A `fit` frame whose children all `fill` the same axis (circular sizing). |
+| `VARIABLE_UNUSED` | warning | A variable is not referenced (not reported for library documents). |
+
+Parse-level failures (`PARSE_ERROR`, `DUPLICATE_KEY`, `NOT_AN_OBJECT`) are raised by the reader before validation. Planned lints not in 0.1: clipped content (needs layout), unused components.
+
+## 18. Merge behaviour (measured)
+
+The table layout targets clean results from plain line-based `git merge` (merge drivers only run where configured locally; GitHub/GitLab and CI ignore `merge=kimo`). Measured with `git merge-file` (git 2.50; myers, histogram and patience agree) on canonical files, in `test/git-merge.test.ts`:
+
+| Concurrent change (ours / theirs) | Result |
+|---|---|
+| Insert nodes at different positions | clean |
+| Edit adjacent nodes | clean |
+| Delete a node / edit the node before it, or two entries below it | clean |
+| Reparent a node / edit another | clean |
+| Edit a variable / add a node | clean |
+| Append after the last node / edit the first | clean |
+| Remove the last node / edit another | clean |
+| **Delete a node / edit the node right after it** | conflict (git removes the deleted line with the blank line after it, so the hunks touch) |
+| **Both append different nodes after the last node** | conflict (same insertion point) |
+| Both edit the same node | conflict (true conflict) |
+
+Independent edits: 8 of 10 scenarios merge cleanly, and every clean result is the canonical serialization of both changes applied. A `.gitattributes` template ships with `*.kimo merge=kimo diff=kimo`; `kimo merge` (semantic, three-way) can also run as a pre-merge step in CI.
+
+## 19. Examples
+
+### 19.1 The teardown example (§10.5), canonical
+
+`packages/core-schema/fixtures/valid/example-10-5.kimo` (with its library `fixtures/valid/libs/kimo-ui.lib.kimo`). The node lines are byte-identical to the teardown's, except that `"fit":"cover"` is omitted because it is the default:
+
+```
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["layout/wrap"],
+"meta": {"name":"Kimo landing"},
+"themes": {"mode":["light","dark"]},
+"imports": {"ui":"./libs/kimo-ui.lib.kimo"},
+"variables": {
+"ink": {"type":"color","value":[{"value":"#111111","when":{"mode":"light"}},{"value":"#F4F4F5","when":{"mode":"dark"}}]}
+
+, "radius-m": {"type":"number","value":8}
+
+, "space-m": {"type":"number","value":16}
+
+, "surface": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":{"space":"oklch","l":0.18,"c":0.01,"h":270},"when":{"mode":"dark"}}]}
+},
+"nodes": {
+"A1hero0001": {"type":"frame","parent":null,"order":"a0","name":"Hero","x":0,"y":0,"w":1440,"h":{"mode":"fit","fallback":900},"clip":true,"fill":{"$ref":"surface"},"layout":{"dir":"column","gap":24,"pad":[96,120],"align":"center"}}
+
+, "B2title001": {"type":"text","parent":"A1hero0001","order":"a0","name":"Title","content":"Design next to your code","style":{"font":"Inter","size":64,"weight":700,"lineHeight":1.1},"fill":{"$ref":"ink"}}
+
+, "C3row00001": {"type":"frame","parent":"A1hero0001","order":"a1","name":"Actions","layout":{"dir":"row","gap":{"$ref":"space-m"},"wrap":true}}
+
+, "D4cta00001": {"type":"instance","parent":"C3row00001","order":"a0","name":"Primary CTA","of":"ui:BtnPrimary","overrides":{"ui:BtnLabel01":{"set":{"content":"Get Kimo — $49/mo"}}}}
+
+, "E5card0001": {"type":"instance","parent":"A1hero0001","order":"a2","name":"Feature card","of":"ui:CardBase01","theme":{"mode":"dark"},"props":{"w":{"mode":"fill"}},"overrides":{"ui:CardActns1":{"slot":true}}}
+
+, "F6btn00001": {"type":"instance","parent":"E5card0001","at":"ui:CardActns1","order":"a0","of":"ui:BtnGhost01","overrides":{"ui:BtnLabel01":{"set":{"content":"Learn more"}}}}
+
+, "G7img00001": {"type":"rect","parent":"A1hero0001","order":"a3","name":"Screenshot","w":1200,"h":720,"radius":{"$ref":"radius-m"},"fill":{"kind":"image","src":"./assets/9f2c1ab04e7d3c55.png"},"effects":[{"kind":"shadow","x":0,"y":24,"blur":48,"spread":-12,"color":"#0000003D"}]}
+}
+}
+```
+
+Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's path). `"$49/mo"` is literal text. `ui:BtnGhost01` is a derived component (an instance of `ui:BtnPrimary` marked `component`), which is why the same path `ui:BtnLabel01` resolves in both `D4cta00001` and `F6btn00001`. The effective theme of `F6btn00001` is `{mode: dark, ui:mode: light}`: it inherits `mode` from where it is placed.
+
+### 19.2 More fixtures
+
+`packages/core-schema/fixtures/` holds the normative examples: `valid/` (components with declared props, args, `set`/`slot`/`replace`, nested paths; multi-axis themes with partial `when`, fallbacks and aliases; every paint, stroke, effect and shape; every feature; Unicode and escaping), `invalid/` (one file per error code, named `<CODE>--<case>.kimo`), `lint/` (one per warning), `forward/` (newer minor/major/patch, unknown features) and `parse-errors/`.
+
+## 20. Decisions relative to the teardown (§10)
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Version | The draft format is `0.1.0` with `$schema` `…/kimo-0.1.json` (the teardown sketch says `1.0.0`; 1.0 is reserved for the frozen spec). The teardown example is therefore a *newer* file for a 0.1 reader; its 0.1 form is §19.1, and a 1.0-labelled file opens read-only (fixture `forward/newer-major.kimo`). |
+| 2 | Icon glyph field | Renamed from `name` to **`icon`**: in the sketch `Icon.name` collided with the node's `name` (layer name) from `Placement`. |
+| 3 | Derived components | Instances MAY carry `component`. The 10.5 example needs this: `ui:BtnLabel01` is overridden through both `ui:BtnPrimary` and `ui:BtnGhost01`, and ids are unique, so `ui:BtnGhost01` must be an instance of `ui:BtnPrimary`. Paths look through derived components (§9.5). |
+| 4 | Undetailed node types | `group`, `rect`, `ellipse`, `polygon`, `path`, `note`, `prompt`, `script`, `browser` get fields based on teardown §4.7 under Kimo naming (`d`, `fillRule`, `viewBox`, `sides`, `innerRadius`, `startAngle`, `sweepAngle`, `model`, `src`, `inputs`, `url`, `device`, `zoom`, `scrollX`, `scrollY`). `w`/`h` are required where nothing else determines the size (rect, ellipse, polygon, icon, script, browser). The script and browser feature flags are named `node/script` and `node/browser`. |
+| 5 | Key order | The teardown requires a "canonical key order" without defining it. This spec uses one global ranking (Appendix A) chosen so the example's node lines are reproduced, plus code-unit order for records and unknown data (§15.2), which keeps newer files byte-stable in older readers. |
+| 6 | Table layout | The one-entry-per-line, leading-comma, blank-line layout (rule 2) also applies to `variables` and `assets`. Inline values are compact JSON; the example's spaced header (`{ "name": … }`) is illustrative jsonc. |
+| 7 | Defaults table | Extended with the rows marked in `DEFAULTS_ADDED_IN_SPEC` (e.g. `locked`, `component`, radii, ellipse angles, `fillRule`, paint `opacity`/`blend`/`visible`, shadow `blend`, color `alpha`, browser fields). `x`/`y` are not defaulted. The example writes `"fit":"cover"`, a default, which canonical writers omit. |
+| 8 | Defaults and overrides | Defaults are never stripped or applied at the top level of `props` and `set` (they override); nested values are normalized (§14). |
+| 9 | Asset manifest | New optional header member `assets` (§12), so asset references can be checked without the folder. Header order: `…, variables, assets, components, nodes`. |
+| 10 | Override details | `set` is shallow and cannot change identity/tree fields; a `slot` override MUST target a frame with `slot`; on a nested instance, `set` uses instance fields; precedence is defined (§9.3). |
+| 11 | Declared props | `boolean` props cannot target instances; `enum` options are validated against the target field; `slot` props take no `args`; `default` is informative (§9.6). |
+| 12 | Themed values | "Themed" is defined structurally (non-empty array of objects that all have `value`), which disambiguates shadow-array values (§10.1). |
+| 13 | Feature gates | Apply inside `props`/`set` too; a default-valued property never needs its feature (so `applyDefaults` keeps documents valid). |
+| 14 | Upgrade diff | Rule 6 says `format` is "the single header line that changes"; `$schema` embeds the version, so it changes too. |
+| 15 | Rule 7 conformance | Newer files open read-only, so "open, edit elsewhere, save" is tested at the library level (re-serialization after an edit), not through the app's save path. |
+| 16 | Validation of other versions | Newer documents are not validated beyond the version; older ones must be migrated first. |
+| 17 | Library-of-library | References that cross into a library imported *by a library* are not resolved by 0.1 validators. |
+| 18 | Colors | `#RGBA` is not allowed (sketch lists `#RGB`, `#RRGGBB`, `#RRGGBBAA`); OKLCH hue is [0, 360). |
+| 19 | JSON details | Duplicate keys are rejected; `-0` is written `0`; `features` are sorted. |
+| 20 | Text fill | The default text fill rule (§8.3) is a resolution rule, not a serialized default; `fill: []` is respected and linted. |
+| 21 | Merge results | Measured, not inferred: two independent-edit patterns still conflict in plain `git merge` (§18). |
+| 22 | Clipped-content lint | Teardown §10.6 lists a "clipped content" lint; it needs computed layout, so it is deferred until the layout engine exists (§17). |
+| 23 | Derived component props | Not covered by the teardown: a derived component inherits the declared props of the component it instantiates, its own declarations merged over them (§9.6). |
+| 24 | Slot suggestions | `slot.suggested` stays advisory for content, but each entry must name a component, like every other QId (§5.5, §11). |
+
+## Appendix A — canonical key order
+
+`$schema`, `format`, `type`, `kind`, `space`, `mode`, `$ref`, `stops`, `parent`, `at`, `order`, `name`, `library`, `createdWith`, `of`, `component`, `placeholder`, `by`, `since`, `locked`, `text`, `inner`, `x`, `y`, `position`, `w`, `t`, `r`, `g`, `b`, `l`, `c`, `h`, `alpha`, `fallback`, `font`, `center`, `size`, `weight`, `min`, `max`, `italic`, `lineHeight`, `px`, `letterSpacing`, `rotation`, `flipX`, `flipY`, `theme`, `props`, `args`, `overrides`, `content`, `grow`, `style`, `set`, `icon`, `d`, `fillRule`, `viewBox`, `sides`, `innerRadius`, `startAngle`, `sweepAngle`, `src`, `inputs`, `url`, `device`, `zoom`, `scrollX`, `scrollY`, `model`, `radius`, `clip`, `cols`, `rows`, `colors`, `points`, `interpolation`, `fit`, `crop`, `uniforms`, `blur`, `spread`, `color`, `opacity`, `blend`, `visible`, `fill`, `stroke`, `effects`, `dir`, `gap`, `crossGap`, `pad`, `justify`, `mime`, `bytes`, `paint`, `width`, `height`, `align`, `valign`, `cap`, `join`, `dash`, `wrap`, `includeStroke`, `layout`, `slot`, `suggested`, `replace`, `decoration`, `case`, `features`, `href`, `typography`, `value`, `unit`, `when`, `description`, `group`, `target`, `field`, `default`, `options`, `meta`, `themes`, `imports`, `variables`, `assets`, `components`, `nodes`
+
+(The root `meta` is a struct; a node's `meta` is a record.)
+
+## Appendix B — record-valued properties
+
+| Property | Values |
+|---|---|
+| root `themes`, `imports`, `variables`, `assets`, `nodes` | struct (or string / string[]) |
+| `theme`, `when` | strings |
+| `overrides` | struct (Override) |
+| `props` directly under `component` (declared props) | struct (PropDef) |
+| text style `features` | numbers / booleans |
+| node `meta`, `args`, script `inputs`, shader `uniforms`, enum `options` | **opaque** |
+
+An instance's `props` and a `set` override are structs (their keys are node property names).
+
+## Appendix C — reference implementation map
+
+| Concern | `@kimo/core-schema` export |
+|---|---|
+| Schemas and static types | `KimoDocument`, `Node`, `FrameNode`, …, `Variable`, `Paint`, `Size`, … (TypeBox; `Static<>` types of the same names) |
+| JSON Schema | `buildJsonSchema()`, `schema/kimo-0.1.schema.json` (`bun run build:schema`; `check:generated` fails when stale) |
+| Validation | `validate(doc, { libraries, assetFiles, supportedFeatures, lints })`, `ISSUE_CODES` |
+| Defaults | `DEFAULTS`, `applyDefaults`, `stripDefaults` |
+| Serialization | `serialize`, `parse`, `canonicalize`, `isCanonical`, `KEY_ORDER`, `parseJson`, `KimoParseError` |
+| Versioning | `FORMAT_VERSION`, `SCHEMA_URL`, `formatStatus`, `MIGRATIONS`, `migrate`, `openDocument` |
+| Resolution (§10.4) | `effectiveTheme`, `defaultTheme`, `resolveVariable`, `selectThemedValue`, `defaultTextFill` |
+| Tree | `buildTree`, `compareSiblings` |

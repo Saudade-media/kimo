@@ -6,16 +6,19 @@
 import { compareSiblings, type KimoDocument, type Variable } from "@kimo/core-schema"
 import { generateId, isNodeId } from "./ids"
 import { cloneJson, isPlainObject, NotJsonError, setOwn } from "./json"
-import type {
-  DeleteOp,
-  InsertOp,
-  MoveOp,
-  NodeData,
-  NormalizedOp,
-  Op,
-  SetThemesOp,
-  SetVariablesOp,
-  UpdateOp,
+import {
+  type DeleteOp,
+  HEADER_OP_KEYS,
+  type HeaderOpKey,
+  type InsertOp,
+  type MoveOp,
+  type NodeData,
+  type NormalizedOp,
+  type Op,
+  type SetHeaderOp,
+  type SetThemesOp,
+  type SetVariablesOp,
+  type UpdateOp,
 } from "./ops"
 import { isOrderKey, type OrderKeyOptions, planInsertKeys } from "./order-key"
 import type { MoveRecord } from "./repair"
@@ -83,6 +86,8 @@ export class Draft {
   readonly moves = new Map<string, MoveRecord>()
   readonly created: string[] = []
   readonly deleted: string[] = []
+  /** Header member → new value, or null when removed ({@link HEADER_OP_KEYS} only). */
+  readonly header = new Map<HeaderOpKey, unknown>()
   variablesTouched = false
   themesTouched = false
 
@@ -133,6 +138,8 @@ export class Draft {
         return this.setVariables(op)
       case "setThemes":
         return this.setThemes(op)
+      case "setHeader":
+        return this.setHeader(op)
       default:
         throw new OpFailure(
           "INVALID_OP",
@@ -352,7 +359,57 @@ export class Draft {
     return { forward: [{ op: "setThemes", set, unset }], inverse: [inv] }
   }
 
+  private setHeader(op: SetHeaderOp): DraftStep {
+    const allowed = new Set<string>(HEADER_OP_KEYS)
+    const set: Partial<Record<HeaderOpKey, unknown>> = {}
+    const unset: HeaderOpKey[] = []
+    const inv = {
+      op: "setHeader" as const,
+      set: {} as Partial<Record<HeaderOpKey, unknown>>,
+      unset: [] as HeaderOpKey[],
+    }
+    const check = (key: string): HeaderOpKey => {
+      if (!allowed.has(key)) {
+        throw new OpFailure(
+          "INVALID_OP",
+          `setHeader cannot change "${key}" (allowed: ${HEADER_OP_KEYS.join(", ")})`,
+        )
+      }
+      return key as HeaderOpKey
+    }
+    const remember = (key: HeaderOpKey) => {
+      if (Object.hasOwn(inv.set, key) || inv.unset.includes(key)) return
+      const old = this.headerValue(key)
+      if (old === undefined) inv.unset.push(key)
+      else setOwn(inv.set, key, cloneJson(old))
+    }
+    for (const [k, v] of Object.entries(record(op.set, "set"))) {
+      if (v === undefined) continue
+      const key = check(k)
+      remember(key)
+      const c = json(v, `set/${key}`)
+      setOwn(set, key, c)
+      this.header.set(key, c)
+    }
+    for (const k of stringList(op.unset, "unset")) {
+      const key = check(k)
+      if (Object.hasOwn(set, key)) {
+        throw new OpFailure("INVALID_OP", `Header member "${key}" is both set and unset`)
+      }
+      remember(key)
+      unset.push(key)
+      this.header.set(key, null)
+    }
+    return { forward: [{ op: "setHeader", set, unset }], inverse: [inv] }
+  }
+
   // --- Helpers ----------------------------------------------------------------------------
+
+  /** Current header member (overlay first). */
+  headerValue(key: string): unknown {
+    if (this.header.has(key as HeaderOpKey)) return this.header.get(key as HeaderOpKey) ?? undefined
+    return this.base.header()[key]
+  }
 
   /** Current variable value (overlay first). */
   variable(name: string): unknown {
@@ -368,7 +425,9 @@ export class Draft {
 
   /** True when any change is pending. */
   get touched(): boolean {
-    return this.nodes.size > 0 || this.variablesTouched || this.themesTouched
+    return (
+      this.nodes.size > 0 || this.variablesTouched || this.themesTouched || this.header.size > 0
+    )
   }
 
   /**
@@ -378,6 +437,10 @@ export class Draft {
   toDocument(): KimoDocument {
     const doc: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(this.base.header())) setOwn(doc, k, v)
+    for (const [k, v] of this.header) {
+      if (v === null) delete doc[k]
+      else setOwn(doc, k, v)
+    }
     const themes: Record<string, unknown> = {}
     for (const axis of this.base.themeAxes()) {
       if (!this.themes.has(axis)) setOwn(themes, axis, this.base.getThemeAxis(axis))

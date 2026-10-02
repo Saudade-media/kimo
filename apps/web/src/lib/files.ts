@@ -13,7 +13,10 @@ import {
   serialize,
 } from "@kimo/editor-state"
 import { IndexedDbProvider } from "@kimo/sync/indexeddb"
+import { assetRefs } from "./asset-manifest"
+import { type AssetStore, createAssetStore, deleteAssetDb, type ManifestEntry } from "./assets"
 import { buildSampleDocument, newDocument } from "./sample"
+import { isZip, readZip, writeZip } from "./zip"
 
 /** One entry of the recent-files grid. */
 export interface FileMeta {
@@ -81,6 +84,7 @@ export async function deleteFile(id: string): Promise<void> {
     const req = indexedDB.deleteDatabase(docDbName(id))
     req.onsuccess = req.onerror = req.onblocked = () => resolve()
   })
+  await deleteAssetDb(id)
 }
 
 /** Root-frame count of a store. */
@@ -115,8 +119,23 @@ export class OpenFileError extends Error {
   override readonly name = "OpenFileError"
 }
 
-/** Imports `.kimo` text as a new local file. */
-export async function importKimo(text: string, fileName: string): Promise<string> {
+/** Result of importing a file: the new file id and asset references whose bytes were not found. */
+export interface ImportResult {
+  id: string
+  missingAssets: string[]
+}
+
+/**
+ * Imports `.kimo` text as a new local file. Asset bytes come from `packaged` (a `.kimoz`
+ * package's `assets/`), else from any other file in this browser's library that stored the
+ * same content-addressed asset (a plain `.kimo` saved and reopened here). References found
+ * nowhere are returned in `missingAssets` (they render as missing images).
+ */
+export async function importKimoFile(
+  text: string,
+  fileName: string,
+  packaged: ReadonlyMap<string, Uint8Array> = new Map(),
+): Promise<ImportResult> {
   let result: ReturnType<typeof openDocument>
   try {
     result = openDocument(text)
@@ -127,13 +146,85 @@ export async function importKimo(text: string, fileName: string): Promise<string
     throw new OpenFileError(
       `${fileName} can't be edited here: ${result.readOnlyReasons.map((r) => r.message).join("; ")}`,
     )
-  const name = result.doc.meta?.name ?? fileName.replace(/\.kimo$/i, "")
+  const name = result.doc.meta?.name ?? fileName.replace(/\.kimoz?$/i, "")
   const store = createDocStore(result.doc)
+  let id: string
   try {
-    return await persistNew(store, name)
+    id = await persistNew(store, name)
   } finally {
     store.destroy()
   }
+  const refs = assetRefs(result.doc.nodes)
+  const missingAssets = refs.size
+    ? await copyAssets(
+        id,
+        refs,
+        packaged,
+        (result.doc.assets ?? {}) as Record<string, ManifestEntry>,
+      )
+    : []
+  if (missingAssets.length)
+    console.warn(`Kimo: ${fileName}: images not found: ${missingAssets.join(", ")}`)
+  return { id, missingAssets }
+}
+
+/** {@link importKimoFile} returning only the new file id. */
+export async function importKimo(text: string, fileName: string): Promise<string> {
+  return (await importKimoFile(text, fileName)).id
+}
+
+/** Opens a picked `.kimo` (JSON text) or `.kimoz` (package with `assets/`) file. */
+export async function importFile(file: File): Promise<ImportResult> {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  if (!isZip(bytes)) return importKimoFile(new TextDecoder().decode(bytes), file.name)
+  let entries: Awaited<ReturnType<typeof readZip>>
+  try {
+    entries = await readZip(bytes)
+  } catch (e) {
+    throw new OpenFileError(`Could not read ${file.name}: ${e instanceof Error ? e.message : e}`)
+  }
+  const docs = entries.filter((e) => /\.kimo$/i.test(e.name))
+  const main = docs.find((e) => !e.name.includes("/")) ?? docs[0]
+  if (!main) throw new OpenFileError(`${file.name} has no .kimo document`)
+  const base = main.name.includes("/") ? main.name.slice(0, main.name.lastIndexOf("/") + 1) : ""
+  const packaged = new Map<string, Uint8Array>()
+  for (const e of entries) {
+    const m = /^assets\/([0-9a-f]{16}\.[a-z0-9]{1,8})$/.exec(e.name.slice(base.length))
+    if (m && e.name.startsWith(base)) packaged.set(m[1] as string, e.data)
+  }
+  return importKimoFile(new TextDecoder().decode(main.data), file.name, packaged)
+}
+
+/** Writes the referenced assets into file `id`'s asset store; returns the keys not found. */
+async function copyAssets(
+  id: string,
+  refs: ReadonlySet<string>,
+  packaged: ReadonlyMap<string, Uint8Array>,
+  manifest: Record<string, ManifestEntry>,
+): Promise<string[]> {
+  const target = createAssetStore(id)
+  const missing: string[] = []
+  const others: AssetStore[] = []
+  try {
+    let library: FileMeta[] | null = null
+    for (const key of refs) {
+      let bytes = packaged.get(key) ?? null
+      if (!bytes) {
+        library ??= (await listFiles()).filter((f) => f.id !== id)
+        if (!others.length) for (const f of library) others.push(createAssetStore(f.id))
+        for (const o of others) {
+          bytes = await o.bytes(key).catch(() => null)
+          if (bytes) break
+        }
+      }
+      const stored = bytes ? await target.putKey(key, bytes, manifest[key]) : null
+      if (!stored) missing.push(key)
+    }
+  } finally {
+    target.dispose()
+    for (const o of others) o.dispose()
+  }
+  return missing
 }
 
 /** Canonical `.kimo` text of a store, with `meta.name` set to the file name. */
@@ -141,6 +232,63 @@ export function exportKimo(store: DocStore, name: string): string {
   const doc: KimoDocument = store.toDocument()
   doc.meta = { ...doc.meta, name }
   return serialize(doc)
+}
+
+/** A file ready to save: `.kimo` text, or a `.kimoz` package when the design has images. */
+export interface ExportedFile {
+  fileName: string
+  data: Blob
+  /** Asset references whose bytes this browser does not have (left out of the package). */
+  missingAssets: string[]
+}
+
+const safeName = (name: string) => name.replace(/[\\/:*?"<>|]+/g, "-") || "Untitled"
+
+/**
+ * Exports a file for saving (spec §1 rule 4, §12). Without asset references: the canonical
+ * `.kimo`. With them: a `.kimoz` package holding `<name>.kimo` and `assets/<hash>.<ext>`;
+ * the document gets the §12 `assets` manifest (entries for every reference) when all bytes are
+ * present, so the package can be checked without the folder.
+ */
+export async function exportFile(
+  store: DocStore,
+  name: string,
+  assets: AssetStore,
+): Promise<ExportedFile> {
+  const doc: KimoDocument = store.toDocument()
+  doc.meta = { ...doc.meta, name }
+  const refs = assetRefs(doc.nodes)
+  if (!refs.size)
+    return {
+      fileName: `${safeName(name)}.kimo`,
+      data: new Blob([serialize(doc)], { type: "application/json" }),
+      missingAssets: [],
+    }
+  const files: { name: string; data: Uint8Array }[] = []
+  const entries: Record<string, ManifestEntry> = {}
+  const missingAssets: string[] = []
+  for (const key of [...refs].sort()) {
+    const [bytes, info] = await Promise.all([assets.bytes(key), assets.info(`./assets/${key}`)])
+    if (!bytes || !info) {
+      missingAssets.push(key)
+      continue
+    }
+    files.push({ name: `assets/${key}`, data: bytes })
+    const e: ManifestEntry = { mime: info.mime, bytes: info.bytes }
+    if (info.width !== undefined) e.width = info.width
+    if (info.height !== undefined) e.height = info.height
+    if (info.name !== undefined) e.name = info.name
+    entries[key] = e
+  }
+  if (!missingAssets.length)
+    doc.assets = { ...((doc.assets ?? {}) as Record<string, ManifestEntry>), ...entries }
+  const text = new TextEncoder().encode(serialize(doc))
+  const zip = writeZip([{ name: `${safeName(name)}.kimo`, data: text }, ...files])
+  return {
+    fileName: `${safeName(name)}.kimoz`,
+    data: new Blob([zip as Uint8Array<ArrayBuffer>], { type: "application/zip" }),
+    missingAssets,
+  }
 }
 
 // --- File pickers -------------------------------------------------------------------------
@@ -152,9 +300,15 @@ interface PickerWindow {
   }>
 }
 
-const KIMO_TYPES = [{ description: "Kimo document", accept: { "application/json": [".kimo"] } }]
+const KIMO_TYPES = [
+  {
+    description: "Kimo document",
+    accept: { "application/json": [".kimo"], "application/zip": [".kimoz"] },
+  },
+]
+const KIMOZ_TYPES = [{ description: "Kimo package", accept: { "application/zip": [".kimoz"] } }]
 
-/** Lets the user pick a `.kimo` file. Resolves null on cancel. */
+/** Lets the user pick a `.kimo` or `.kimoz` file. Resolves null on cancel. */
 export async function pickKimoFile(): Promise<File | null> {
   const w = window as unknown as PickerWindow
   if (w.showOpenFilePicker) {
@@ -169,7 +323,7 @@ export async function pickKimoFile(): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input")
     input.type = "file"
-    input.accept = ".kimo,application/json"
+    input.accept = ".kimo,.kimoz,application/json,application/zip"
     input.style.display = "none"
     let done = false
     const finish = (file: File | null) => {
@@ -192,20 +346,31 @@ export async function pickKimoFile(): Promise<File | null> {
 
 /** Saves `text` as `<name>.kimo` (save picker, or a download). */
 export async function saveKimoFile(text: string, name: string): Promise<void> {
-  const fileName = `${name.replace(/[\\/:*?"<>|]+/g, "-") || "Untitled"}.kimo`
+  await saveFile({
+    fileName: `${safeName(name)}.kimo`,
+    data: new Blob([text], { type: "application/json" }),
+    missingAssets: [],
+  })
+}
+
+/** Saves an exported file (save picker, or a download). */
+export async function saveFile(file: ExportedFile): Promise<void> {
   const w = window as unknown as PickerWindow
   if (w.showSaveFilePicker) {
     try {
-      const handle = await w.showSaveFilePicker({ suggestedName: fileName, types: KIMO_TYPES })
+      const handle = await w.showSaveFilePicker({
+        suggestedName: file.fileName,
+        types: file.fileName.endsWith(".kimoz") ? KIMOZ_TYPES : KIMO_TYPES.slice(0, 1),
+      })
       const out = await handle.createWritable()
-      await out.write(text)
+      await out.write(file.data)
       await out.close()
       return
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return
     }
   }
-  downloadBlob(new Blob([text], { type: "application/json" }), fileName)
+  downloadBlob(file.data, file.fileName)
 }
 
 /** Triggers a browser download. */

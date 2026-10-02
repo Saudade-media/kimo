@@ -93,6 +93,21 @@ export interface SetThemesOp {
   unset?: readonly string[]
 }
 
+/**
+ * Root members an op may set as whole values through {@link SetHeaderOp}: the feature list
+ * (spec §13: a construct and its feature are declared in the same edit) and the asset manifest
+ * (spec §12: a new asset reference and its entry are added in the same edit).
+ */
+export const HEADER_OP_KEYS = ["features", "assets"] as const
+export type HeaderOpKey = (typeof HEADER_OP_KEYS)[number]
+
+/** Sets and/or removes header members ({@link HEADER_OP_KEYS}), as whole values. */
+export interface SetHeaderOp {
+  op: "setHeader"
+  set?: Readonly<Partial<Record<HeaderOpKey, unknown>>>
+  unset?: readonly HeaderOpKey[]
+}
+
 /** Several ops applied atomically, in order. Batches may nest; they are flattened. */
 export interface BatchOp {
   op: "batch"
@@ -100,7 +115,15 @@ export interface BatchOp {
 }
 
 /** Any op accepted by {@link DocStore.apply}. */
-export type Op = InsertOp | UpdateOp | MoveOp | DeleteOp | SetVariablesOp | SetThemesOp | BatchOp
+export type Op =
+  | InsertOp
+  | UpdateOp
+  | MoveOp
+  | DeleteOp
+  | SetVariablesOp
+  | SetThemesOp
+  | SetHeaderOp
+  | BatchOp
 
 /** A normalized insert: the full node, including `parent`, `order` and (optional) `at`. */
 export interface NormalizedInsert {
@@ -146,6 +169,13 @@ export interface NormalizedSetThemes {
   unset: string[]
 }
 
+/** A normalized header change. */
+export interface NormalizedSetHeader {
+  op: "setHeader"
+  set: Partial<Record<HeaderOpKey, unknown>>
+  unset: HeaderOpKey[]
+}
+
 /** Fully explicit op, as returned in results and recorded in the op log. Replayable as input. */
 export type NormalizedOp =
   | NormalizedInsert
@@ -154,6 +184,7 @@ export type NormalizedOp =
   | NormalizedDelete
   | NormalizedSetVariables
   | NormalizedSetThemes
+  | NormalizedSetHeader
 
 /** Flattens nested batches into a list of leaf ops, each with its path (`ops[1].ops[0]`). */
 export function flattenOps(

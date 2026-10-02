@@ -62,7 +62,9 @@ async function saveViaShortcut(page: Page): Promise<{ name: string; text: string
 }
 
 const prefix = (page: Page, label: string) =>
-  page.locator(".kimo-prop-field", { has: field(page, label) }).locator(".kimo-prop-field__prefix")
+  page
+    .locator(".kimo-prop-field, .kimo-size-field", { has: field(page, label) })
+    .locator(".kimo-prop-field__prefix, .kimo-size-field__prefix")
 
 export const scenarios: Scenario[] = [
   {

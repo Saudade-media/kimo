@@ -86,3 +86,10 @@
 .kimo-select__option[aria-selected="true"] .kimo-menu-item__icon {
   color: var(--kimo-text-primary);
 }
+
+/* M2 dense list (Menu/Dense G7A3Aj): 4px below the trigger, left-aligned, trigger width. */
+.kimo-select__list--dense {
+  width: 100%;
+  min-width: 100%;
+  max-height: none;
+}

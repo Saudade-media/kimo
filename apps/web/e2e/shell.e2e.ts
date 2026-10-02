@@ -106,10 +106,23 @@ export const scenarios: Scenario[] = [
       await row(page, "Hero").click()
       await page.getByTestId("selection-name").filter({ hasText: "Hero" }).waitFor()
       expect((await row(page, "Hero").getAttribute("aria-selected")) === "true", "row selected")
-      expect((await field(page, "Width").inputValue()) === "Fill", "Hero W = Fill")
-      expect((await field(page, "Height").inputValue()) === "Hug", "Hero H = Hug")
+      // M2 SizeField (G6R6IX): the laid-out number plus the sizing mode "Fill".
+      const wField = page.locator(".kimo-size-field", { has: field(page, "Width") })
+      expect(
+        /^\d+(\.\d+)?$/.test(await field(page, "Width").inputValue()) &&
+          ((await wField.textContent()) ?? "").includes("Fill"),
+        "Hero W = <n> Fill",
+      )
+      const hField = page.locator(".kimo-size-field", { has: field(page, "Height") })
+      expect(((await hField.textContent()) ?? "").includes("Hug"), "Hero H = <n> Hug")
       expect((await field(page, "Gap").inputValue()) === "18", "Hero gap 18")
-      expect((await field(page, "Padding").inputValue()) === "48 40 40 40", "Hero pad")
+      // Board 08: 4-sided padding shows the Individual padding fields T R B L.
+      const pads = await Promise.all(
+        ["top", "right", "bottom", "left"].map((side) =>
+          field(page, `Padding ${side}`).inputValue(),
+        ),
+      )
+      expect(pads.join(" ") === "48 40 40 40", `Hero pad ${pads.join(" ")}`)
       // Multi-select with mixed widths.
       await row(page, "Home — Mobile").click({ modifiers: ["Shift"] })
       await page.getByTestId("selection-name").filter({ hasText: "layers" }).waitFor()
@@ -140,7 +153,11 @@ export const scenarios: Scenario[] = [
       await w.fill("hug")
       await w.press("Enter")
       const fit = await nodeField(page, "Home — Mobile", "w")
-      expect(JSON.stringify(fit) === '{"mode":"fit"}', `W hug → ${JSON.stringify(fit)}`)
+      // Hug is a frame's default size (spec defaults): stored canonically as absent.
+      expect(
+        fit === undefined || JSON.stringify(fit) === '{"mode":"fit"}',
+        `W hug → ${JSON.stringify(fit)}`,
+      )
       await blur(page)
       await page.keyboard.press("ControlOrMeta+z")
       // Autosave: reload restores 320.

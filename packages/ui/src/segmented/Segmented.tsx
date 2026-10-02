@@ -4,10 +4,13 @@ import { cx, nextEnabled } from "../internal/util"
 /** One segment of a {@link Segmented} control. */
 export interface SegmentedOption<V extends string = string> {
   value: V
-  /** Accessible name (segments are icon-only). */
+  /** Accessible name of an icon segment; the visible text of a text segment. */
   label: string
-  /** 14 × 14 icon (Lucide). */
-  icon: ReactNode
+  /**
+   * 14 × 14 icon (Lucide). Omit for a text segment (M2: gradient Type `WpK9W`, icon Library
+   * `CSNC1` / Style `w5XAy`): label sans 11 / 500, text-secondary, selected text-primary.
+   */
+  icon?: ReactNode
   disabled?: boolean
 }
 
@@ -19,6 +22,8 @@ export interface SegmentedProps<V extends string = string>
   onChange?: (value: V) => void
   /** Accessible name of the group. */
   label: string
+  /** M2 `fill_container` variant: the frame fills its parent and segments share it equally. */
+  fill?: boolean
 }
 
 /**
@@ -31,6 +36,7 @@ export function Segmented<V extends string = string>({
   value,
   onChange,
   label,
+  fill = false,
   className,
   ...rest
 }: SegmentedProps<V>) {
@@ -55,7 +61,12 @@ export function Segmented<V extends string = string>({
   }
 
   return (
-    <div {...rest} role="radiogroup" aria-label={label} className={cx("kimo-segmented", className)}>
+    <div
+      {...rest}
+      role="radiogroup"
+      aria-label={label}
+      className={cx("kimo-segmented", fill && "kimo-segmented--fill", className)}
+    >
       {options.map((o, i) => {
         const checked = o.value === value
         return (
@@ -68,20 +79,25 @@ export function Segmented<V extends string = string>({
             type="button"
             role="radio"
             aria-checked={checked}
-            aria-label={o.label}
-            title={o.label}
+            aria-label={o.icon != null ? o.label : undefined}
+            title={o.icon != null ? o.label : undefined}
             disabled={o.disabled}
             tabIndex={i === focusable ? 0 : -1}
             className={cx(
               "kimo-segmented__segment",
+              o.icon == null && "kimo-segmented__segment--text",
               checked && "kimo-segmented__segment--selected",
             )}
             onClick={() => !checked && onChange?.(o.value)}
             onKeyDown={(e) => onKeyDown(e, i)}
           >
-            <span className="kimo-segmented__icon" aria-hidden="true">
-              {o.icon}
-            </span>
+            {o.icon != null ? (
+              <span className="kimo-segmented__icon" aria-hidden="true">
+                {o.icon}
+              </span>
+            ) : (
+              <span className="kimo-segmented__label">{o.label}</span>
+            )}
           </button>
         )
       })}

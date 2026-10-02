@@ -1,0 +1,63 @@
+/*
+ * M2 canvas chrome (desing.pen board 10 "Canvas Overlays (M2)", nzfXx). DOM only; everything
+ * that sits on document pixels is drawn by the renderer from `Overlay`.
+ */
+
+/*
+ * Tooltip/Hint (u0dQ1): fill text-primary, radius-pill, shadow outer 0 4 blur 12 shadow,
+ * layout horizontal, gap 8, padding [6, 12, 6, 10], alignItems center
+ *   ├ Icon  12 × 12, text-inverse
+ *   └ Label font-sans, text-sm (12), weight 500, text-inverse (text box 15 high)
+ */
+/*
+ * Tooltip/Hint (u0dQ1) visuals come from @kimo/ui `.kimo-tooltip-hint`; here only placement.
+ */
+.canvas-hint {
+  position: absolute;
+  z-index: 3;
+  white-space: nowrap;
+  transition: opacity 160ms ease;
+}
+
+/* Pencil text box for Inter 12/500 is 15 high (pill 27 high). */
+.canvas-hint .kimo-tooltip-hint__label {
+  line-height: 15px;
+}
+
+/* Pen hint (#7 EW0tj): 12px above the floating toolbar, centered; fades after the first anchor */
+.canvas-hint--toolbar {
+  left: 50%;
+  bottom: calc(24px + var(--floating-toolbar-h, 50px) + 12px);
+  transform: translateX(-50%);
+}
+
+.canvas-hint--hidden {
+  opacity: 0;
+}
+
+/* Path edit mode pill (#6 SzSzZ): top of the canvas, centered */
+.canvas-hint--top {
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Close path (#5 Dl8Vz): next to the cursor; left/top set inline */
+.canvas-hint--cursor {
+  transition: none;
+}
+
+/* ⌥ Measuring (#3a/#3b CneCx): the Tooltip bubble near the pointer; left/top set inline */
+.canvas-measuring {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* SizeBadge/Zoom (L5GCtM) at (16, 16); visuals from @kimo/ui `.kimo-zoom-badge`. */
+.canvas-zoom-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+}

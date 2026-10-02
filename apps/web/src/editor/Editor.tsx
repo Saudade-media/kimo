@@ -6,26 +6,34 @@
  */
 
 import { createLayoutEngine, type LayoutResult } from "@kimo/layout"
-import { type AssetSource, googleFontsSource, type OverlayTheme } from "@kimo/renderer"
-import { createRenderer } from "@kimo/renderer/browser"
+import { googleFontsSource, type OverlayTheme } from "@kimo/renderer"
+import { browserIconProvider, createRenderer } from "@kimo/renderer/browser"
 import { EmptyState } from "@kimo/ui"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { CanvasHost } from "../canvas/CanvasHost"
-import { CANVAS_TOOLS, type CanvasHandle, type CanvasToolId } from "../canvas/contract"
-import { exportKimo, importKimo, patchFile, pickKimoFile, saveKimoFile } from "../lib/files"
+import {
+  CANVAS_TOOLS,
+  type CanvasHandle,
+  type CanvasToolId,
+  type IconPickerRequest,
+} from "../canvas/contract"
+import { createAssetStore, manifestEntry } from "../lib/assets"
+import { exportFile, importFile, patchFile, pickKimoFile, saveFile } from "../lib/files"
+import { useDocHeader } from "../lib/header"
 import { createBus, isTyping } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { useWebFonts } from "../lib/settings"
 import { cssToken, useTheme } from "../lib/theme"
 import { navigate } from "../router"
 import { FloatingToolbar } from "./FloatingToolbar"
+import { useEditor } from "./fields"
 import { LeftPanel } from "./LeftPanel"
+import { PanelContext } from "./panel-context"
+import { IconPickerPopover } from "./popovers/IconPicker"
 import { RightPanel } from "./RightPanel"
 import { type FileSession, useFileSession, useSyncStatus } from "./session"
 import { Topbar } from "./Topbar"
 
-/** Image assets are not stored on web yet (image tool lands with the asset store): missing. */
-const NO_ASSETS: AssetSource = { load: async () => null }
 /**
  * Google Fonts for families the document uses beyond the bundled Inter / JetBrains Mono. Off
  * when the user disables web fonts (File menu): the renderer then runs with `offlineFonts`.
@@ -46,8 +54,26 @@ function useOverlayTheme(): OverlayTheme {
       handleFill: "#FFFFFF",
       onSelection: cssToken("--kimo-on-accent") || "#FFFFFF",
       monoFamily: mono || "JetBrains Mono",
+      // M2 overlays (board 10); empty → the renderer's light defaults.
+      ...tokenColors({
+        measure: "--kimo-measure",
+        measureSoft: "--kimo-measure-soft",
+        onAccent: "--kimo-on-accent",
+        selectionSoft: "--kimo-selection-soft",
+        accentText: "--kimo-accent-text",
+        accent: "--kimo-accent",
+      }),
     }
   }, [mode])
+}
+
+function tokenColors<K extends string>(vars: Record<K, string>): Partial<Record<K, string>> {
+  const out: Partial<Record<K, string>> = {}
+  for (const [k, v] of Object.entries(vars) as [K, string][]) {
+    const c = cssToken(v)
+    if (c) out[k] = c
+  }
+  return out
 }
 
 function debugHookEnabled(): boolean {
@@ -93,6 +119,28 @@ function EditorShell({ session }: { session: FileSession }) {
   const syncStatus = useSyncStatus(session.provider)
   const overlayTheme = useOverlayTheme()
   const webFonts = useWebFonts()
+  // Image fills and the Image tool store content-addressed assets per file (IndexedDB).
+  const assets = useMemo(() => createAssetStore(session.id), [session.id])
+  useEffect(() => () => assets.dispose(), [assets])
+  const icons = useMemo(() => browserIconProvider(), [])
+  const importImage = useCallback(
+    async (file: File) => {
+      const info = await assets.put(file)
+      return info.width && info.height
+        ? { src: info.src, width: info.width, height: info.height, entry: manifestEntry(info) }
+        : null
+    },
+    [assets],
+  )
+  // Edits adding an asset reference also add its manifest entry (spec §12; see session).
+  useEffect(() => {
+    session.assetEntry = assets.entrySync
+    return () => {
+      session.assetEntry = () => null
+    }
+  }, [session, assets])
+  // I key (board 09 icon picker at the pointer).
+  const [iconRequest, setIconRequest] = useState<IconPickerRequest | null>(null)
 
   // Test/debug hook: e2e and perf scripts read the store through it. On in dev; in a
   // production build only when opted in with `?kimo-debug` in the URL (or VITE_KIMO_DEBUG=1 at build time).
@@ -113,14 +161,19 @@ function EditorShell({ session }: { session: FileSession }) {
     [session.id],
   )
   const download = useCallback(
-    () => void saveKimoFile(exportKimo(session.store, name), name),
-    [session.store, name],
+    () =>
+      void exportFile(session.store, name, assets).then((file) => {
+        if (file.missingAssets.length)
+          console.warn(`Kimo: images not in this browser: ${file.missingAssets.join(", ")}`)
+        return saveFile(file)
+      }),
+    [session.store, name, assets],
   )
   const openFile = useCallback(async () => {
     const file = await pickKimoFile()
     if (!file) return
     try {
-      navigate(`/file/${await importKimo(await file.text(), file.name)}`)
+      navigate(`/file/${(await importFile(file)).id}`)
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e))
     }
@@ -144,6 +197,15 @@ function EditorShell({ session }: { session: FileSession }) {
       const ui = session.ui.getState()
       // A canvas gesture owns the undo stack until it ends (its steps collapse into one entry).
       if (mod && (key === "z" || key === "y") && canvas.current?.isGesturing()) {
+        e.preventDefault()
+        return
+      }
+      // The pen's points are not in the document yet: ⌘Z removes the last one (Figma).
+      if (
+        mod &&
+        (key === "z" || key === "y") &&
+        canvas.current?.penUndo(key === "y" || e.shiftKey)
+      ) {
         e.preventDefault()
         return
       }
@@ -221,7 +283,10 @@ function EditorShell({ session }: { session: FileSession }) {
             uiStore={session.ui}
             createRenderer={createRenderer}
             createLayoutEngine={createLayoutEngine}
-            assets={NO_ASSETS}
+            assets={assets.source}
+            icons={icons}
+            onImportImage={importImage}
+            onIconPicker={setIconRequest}
             fontSources={FONT_SOURCES}
             offlineFonts={!webFonts}
             overlayTheme={overlayTheme}
@@ -231,9 +296,80 @@ function EditorShell({ session }: { session: FileSession }) {
             }
           />
           <FloatingToolbar ui={session.ui} onActivate={activate} />
+          {iconRequest && (
+            <CanvasIconPicker
+              session={session}
+              request={iconRequest}
+              icons={icons}
+              onPick={(set, name) => {
+                canvas.current?.insertIcon({ set, name })
+                setIconRequest(null)
+              }}
+              onClose={() => setIconRequest(null)}
+            />
+          )}
         </main>
-        <RightPanel session={session} layout={layout} />
+        <RightPanel session={session} layout={layout} assets={assets} icons={icons} />
       </div>
     </div>
   )
 }
+
+/**
+ * The icon picker opened by the I key (board 09 `jKClR`), anchored at the pointer. The pick
+ * inserts one icon node (one undo step) where the key was pressed.
+ */
+function CanvasIconPicker({
+  session,
+  request,
+  icons,
+  onPick,
+  onClose,
+}: {
+  session: FileSession
+  request: IconPickerRequest
+  icons: ReturnType<typeof browserIconProvider>
+  onPick(set: string, name: string): void
+  onClose(): void
+}) {
+  const host = useRef<HTMLSpanElement>(null)
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const editor = useEditor(session, "canvas-icon-picker")
+  const header = useDocHeader(session.store)
+  useEffect(() => setAnchor(host.current), [])
+  return (
+    <>
+      <span
+        ref={host}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: request.screen.x,
+          top: request.screen.y,
+          width: 0,
+          height: 0,
+        }}
+      />
+      {anchor && (
+        <PanelContext.Provider
+          value={{ session, editor, header, layout: NULL_LAYOUT, assets: null, icons }}
+        >
+          <IconPickerPopover
+            anchor={anchor}
+            placement={{ side: "right", align: "start", offset: 8 }}
+            provider={icons}
+            set="lucide"
+            name=""
+            weight={400}
+            onPick={onPick}
+            onWeight={() => {}}
+            onClose={onClose}
+            focusSearch
+          />
+        </PanelContext.Provider>
+      )}
+    </>
+  )
+}
+
+const NULL_LAYOUT = createBus<LayoutResult | null>(null)

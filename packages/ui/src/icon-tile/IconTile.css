@@ -1,0 +1,49 @@
+/*
+ * IconTile: desing.pen 02b > IconTile (D4Fvc), IconTile/Hover (Nv0eZ), IconTile/Selected (cJZRB).
+ * frame: 32 × 32, radius-sm, justifyContent center, alignItems center
+ *   └ Icon 16 × 16, text-secondary
+ * Hover: fill bg-hover, icon text-primary. Selected: fill accent, icon on-accent.
+ */
+.kimo-icon-tile {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-sm);
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+}
+
+.kimo-icon-tile:hover:not(.kimo-icon-tile--selected),
+.kimo-icon-tile[data-highlighted]:not(.kimo-icon-tile--selected) {
+  background: var(--kimo-bg-hover);
+  color: var(--kimo-text-primary);
+}
+
+/* Keyboard focus ring of the active option, only while its listbox has focus (not in the design:
+   an accessibility addition; the highlighted look itself is the Hover state Nv0eZ). */
+[role="listbox"]:focus-visible .kimo-icon-tile[data-highlighted] {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-icon-tile--selected {
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+}
+
+.kimo-icon-tile__icon {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-icon-tile__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

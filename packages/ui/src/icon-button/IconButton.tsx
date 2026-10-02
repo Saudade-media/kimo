@@ -13,6 +13,13 @@ export interface IconButtonProps extends Omit<ComponentPropsWithRef<"button">, "
    * by `PanelHeader` > Action (TidcK) in desing.pen.
    */
   size?: "md" | "sm"
+  /**
+   * `"default"`: bg-app, icon text-secondary. The M2 instances override the fill to
+   * `#00000000`: `"ghost"` keeps the icon text-secondary (color picker Eyedropper/Close
+   * `hcAM8`/`W3Ijc`, gradient Rotate/Flip/Remove); `"quiet"` uses text-tertiary (Popover Close
+   * `gKfsp`, FillRow Eye/Remove `r3MBc`/`FFtaO`). Hover bg-hover in every tone.
+   */
+  tone?: "default" | "ghost" | "quiet"
 }
 
 /**
@@ -25,6 +32,7 @@ export function IconButton({
   icon,
   active,
   size = "md",
+  tone = "default",
   className,
   type = "button",
   ...rest
@@ -32,6 +40,7 @@ export function IconButton({
   const classes = [
     "kimo-icon-button",
     size === "sm" && "kimo-icon-button--sm",
+    tone !== "default" && `kimo-icon-button--${tone}`,
     active && "kimo-icon-button--active",
     className,
   ]

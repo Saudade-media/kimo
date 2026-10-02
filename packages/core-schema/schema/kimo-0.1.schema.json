@@ -110,6 +110,10 @@
         },
         "radius": {
           "$ref": "#/$defs/NonNegNum"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false
@@ -147,6 +151,10 @@
         },
         "radius": {
           "$ref": "#/$defs/NonNegNum"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false
@@ -273,6 +281,31 @@
         "flipY": {
           "type": "boolean",
           "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
         },
         "component": {
           "anyOf": [
@@ -588,6 +621,31 @@
           "type": "boolean",
           "default": false
         },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
         "component": {
           "anyOf": [
             {
@@ -705,6 +763,31 @@
         "flipY": {
           "type": "boolean",
           "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
         },
         "component": {
           "anyOf": [
@@ -911,6 +994,31 @@
           "type": "boolean",
           "default": false
         },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
         "component": {
           "anyOf": [
             {
@@ -1006,6 +1114,31 @@
           "type": "boolean",
           "default": false
         },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
         "component": {
           "anyOf": [
             {
@@ -1044,7 +1177,20 @@
             {
               "$ref": "#/$defs/Ref"
             }
-          ]
+          ],
+          "description": "Material sets: the wght axis. phosphor: nearest of thin/light/regular/bold."
+        },
+        "strokeWidth": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            }
+          ],
+          "description": "Stroke sets (lucide, feather): stroke width in the set's 24-unit grid."
         },
         "color": {
           "$ref": "#/$defs/Color"
@@ -1423,6 +1569,31 @@
         "flipY": {
           "type": "boolean",
           "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
         },
         "component": {
           "anyOf": [
@@ -1902,6 +2073,31 @@
           "type": "boolean",
           "default": false
         },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
         "component": {
           "anyOf": [
             {
@@ -2055,6 +2251,31 @@
           "type": "boolean",
           "default": false
         },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
         "component": {
           "anyOf": [
             {
@@ -2164,6 +2385,31 @@
         "flipY": {
           "type": "boolean",
           "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
         },
         "component": {
           "anyOf": [
@@ -2473,6 +2719,31 @@
           "type": "boolean",
           "default": false
         },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
         "component": {
           "anyOf": [
             {
@@ -2591,6 +2862,31 @@
           "type": "boolean",
           "default": false
         },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
         "component": {
           "anyOf": [
             {
@@ -2680,6 +2976,10 @@
         "blend": {
           "$ref": "#/$defs/BlendMode",
           "default": "normal"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false
@@ -2946,6 +3246,12 @@
           "enum": ["miter", "bevel", "round"],
           "default": "miter"
         },
+        "miterLimit": {
+          "type": "number",
+          "minimum": 1,
+          "default": 4,
+          "description": "Miter length / stroke width above which a miter join is beveled (SVG)."
+        },
         "dash": {
           "type": "array",
           "items": {
@@ -3059,6 +3365,31 @@
         "flipY": {
           "type": "boolean",
           "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
         },
         "component": {
           "anyOf": [

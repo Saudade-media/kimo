@@ -1,12 +1,13 @@
 /**
  * Field adapters over `@kimo/ui` controls for the Design tab: numeric fields with keyword /
- * multi-value text input, enum fields, and color swatches backed by a native color picker.
- * Every edit goes through `session.apply` (origin "user"); scrubs and picker drags are grouped
- * into one undo step per gesture.
+ * unit / multi-value text input and toggle rows. Every edit goes through
+ * `session.apply` (origin "user"); scrubs, drags and live previews are grouped into one undo
+ * step per gesture.
  */
 import type { Op } from "@kimo/editor-state"
-import { ColorField, PropField } from "@kimo/ui"
-import { type ReactNode, useEffect, useRef } from "react"
+import { PropField, Toggle } from "@kimo/ui"
+import { useEffect, useId, useRef } from "react"
+import { Icon } from "../lib/icons"
 import { MIXED, MIXED_LABEL, type Mixed } from "./props"
 import type { FileSession, Gesture } from "./session"
 
@@ -24,42 +25,63 @@ export function useEditor(session: FileSession, resetKey: string) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: resetKey is the trigger
   useEffect(() => end, [resetKey])
   return {
+    /**
+     * Applies `ops` (one undo step), or replaces the current gesture's previous step. Ops must
+     * be absolute (the target state), since a gesture step reverts the previous one first.
+     */
     apply(ops: readonly Op[], label: string) {
       if (ops.length === 0) return
       if (gesture.current && !gesture.current.done) gesture.current.apply(ops, label)
       else session.apply(ops, label)
     },
+    /** Starts a gesture: every `apply` until `end` collapses into one undo step. */
     begin() {
       end()
       gesture.current = session.gesture()
     },
     end,
+    /** True while a gesture is open. */
+    get active() {
+      return gesture.current !== null && !gesture.current.done
+    },
   }
 }
 export type Editor = ReturnType<typeof useEditor>
 
+/**
+ * Gesture bracketing for `@kimo/ui` controls with `onChangeStart` / `onChangeEnd` (sliders,
+ * color area, stop bar, popovers): every change between them is one undo step.
+ */
+export function gestureProps(editor: Editor) {
+  return {
+    onChangeStart: () => editor.begin(),
+    onChangeEnd: () => editor.end(),
+  }
+}
+
 export interface NumberFieldProps {
-  prefix: string
+  /** Text prefix (`X`, `Gap`), or use `icon`. */
+  prefix?: string
+  /** Lucide icon prefix (12, text-tertiary), e.g. `rotate-cw`. */
+  icon?: string
   label: string
-  /** Number, a keyword/compound display string, or MIXED. */
+  /** Number, a keyword/compound display string (`Hug`, `100%`, `0°`), or MIXED. */
   value: number | string | Mixed
   editor: Editor
   /** Ops for a numeric value (typed, arrow-nudged or scrubbed). */
   onNumber(n: number): readonly Op[]
   /**
-   * For a keyword value (Mixed, Hug, Fill): snapshots the selection's current numbers and
-   * returns ops shifting each by a delta, so arrows/scrubs step every node from its own
-   * value. Without it, arrows and scrubs do nothing on Mixed.
+   * For a keyword value (Mixed, Hug, `100%`): snapshots the selection's current numbers and
+   * returns ops shifting each by a delta, so arrows/scrubs step every node from its own value.
    */
   relative?(): (delta: number) => readonly Op[]
-  /**
-   * Ops for non-numeric text (`fill`, `hug`, `64 96`, `120+24`); null = invalid, ignored.
-   * Without it, only plain numbers are accepted.
-   */
+  /** Ops for non-numeric text (`fill`, `64 96`, `45°`, `80%`); null = invalid, ignored. */
   onText?(text: string): readonly Op[] | null
   min?: number
+  max?: number
   step?: number
   disabled?: boolean
+  className?: string
 }
 
 /**
@@ -90,7 +112,7 @@ export function NumberField(p: NumberFieldProps) {
   }
   return (
     <div
-      className="field"
+      className={p.className ? `rp-field ${p.className}` : "rp-field"}
       onKeyDownCapture={(e) => {
         if (e.key === "Enter" && e.target instanceof HTMLInputElement) handleText(e.target)
       }}
@@ -99,11 +121,14 @@ export function NumberField(p: NumberFieldProps) {
       }}
     >
       <PropField
-        prefix={p.prefix}
+        // Icon prefixes (blend, rotate-cw, …): the design's PropField Prefix slot holds a 12px
+        // lucide icon (`kimo-prop-field__prefix--icon`).
+        prefix={p.icon ? <Icon name={p.icon} size={12} /> : (p.prefix ?? "")}
         inputLabel={p.label}
         value={display}
         step={p.step ?? 1}
         min={p.min}
+        max={p.max}
         disabled={p.disabled}
         onChange={(n) => p.editor.apply(p.onNumber(n), label)}
         onDelta={onDelta}
@@ -120,117 +145,31 @@ export function NumberField(p: NumberFieldProps) {
   )
 }
 
-export interface EnumFieldProps<V extends string> {
-  prefix: string
+/** ToggleRow (board 08 `goYoe`/`LYzIZ`/`Ax1CJ`/`PMh7z`): h 28, gap 8: label · Spacer · Toggle. */
+export function ToggleRow({
+  label,
+  checked,
+  onChange,
+  disabled,
+}: {
   label: string
-  value: V | Mixed | undefined
-  options: readonly { value: V; label: string }[]
-  onChange(value: V): void
+  checked: boolean | Mixed
+  onChange(on: boolean): void
   disabled?: boolean
-}
-
-/**
- * An enum shown as the design's `PropField` ("Align · Center") with a transparent native
- * `<select>` on top, so the field keeps the node's look and gets the platform picker.
- */
-export function EnumField<V extends string>(p: EnumFieldProps<V>) {
-  const current = p.value === MIXED ? undefined : p.value
-  const text =
-    p.value === MIXED ? MIXED_LABEL : (p.options.find((o) => o.value === current)?.label ?? "—")
+}) {
+  const id = useId()
   return (
-    <div className="field field--enum">
-      <div className="field__face" inert>
-        <PropField prefix={p.prefix} value={text} disabled={p.disabled} />
-      </div>
-      <select
-        className="field__select"
-        aria-label={p.label}
-        value={current ?? ""}
-        disabled={p.disabled}
-        onChange={(e) => p.onChange(e.currentTarget.value as V)}
-      >
-        {current === undefined && <option value="">{text}</option>}
-        {p.options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
-export interface ColorRowProps {
-  /** Swatch CSS color. */
-  swatch: string
-  value: string
-  opacity?: string
-  label: string
-  /** `#RRGGBB` for the picker's initial value; null = the swatch is not editable. */
-  pickerValue: string | null
-  /** Ops for a picked color (`#RRGGBB`). */
-  onPick?(rgb: string): readonly Op[]
-  editor: Editor
-  /**
-   * Trailing control (remove button): overlaid on the field's right end and revealed on
-   * hover / keyboard focus, so the field keeps the design's full width (fill_container) at rest.
-   */
-  children?: ReactNode
-}
-
-/** A `ColorField` whose swatch opens the native color picker (one undo step per pick). */
-export function ColorRow(p: ColorRowProps) {
-  const input = useRef<HTMLInputElement>(null)
-  const picking = useRef(false)
-  const { editor } = p
-  const end = useRef(() => {})
-  end.current = () => {
-    if (picking.current) editor.end()
-    picking.current = false
-  }
-
-  useEffect(() => {
-    const el = input.current
-    if (!el) return
-    const onChange = () => end.current()
-    el.addEventListener("change", onChange)
-    return () => {
-      el.removeEventListener("change", onChange)
-      // The row went away mid-pick (selection changed): close the undo group.
-      end.current()
-    }
-  }, [])
-
-  return (
-    <div className="color-row">
-      <ColorField
-        className="color-row__field"
-        color={p.swatch}
-        value={p.value}
-        opacity={p.opacity}
-        swatchLabel={`Edit ${p.label}`}
-        onSwatchClick={() => p.pickerValue && input.current?.click()}
+    <div className="rp-toggle-row">
+      <span className="rp-toggle-row__label" id={id}>
+        {label}
+      </span>
+      <span className="rp-spacer" />
+      <Toggle
+        aria-labelledby={id}
+        checked={checked === true}
+        disabled={disabled}
+        onChange={(c) => onChange(checked === MIXED ? true : c)}
       />
-      {p.pickerValue && (
-        <input
-          ref={input}
-          className="color-row__picker"
-          type="color"
-          tabIndex={-1}
-          aria-label={`${p.label} color`}
-          value={p.pickerValue.slice(0, 7).toLowerCase()}
-          onChange={(e) => {
-            if (!p.onPick) return
-            if (!picking.current) {
-              picking.current = true
-              editor.begin()
-            }
-            editor.apply(p.onPick(e.currentTarget.value.toUpperCase()), `Set ${p.label}`)
-          }}
-          onBlur={() => end.current()}
-        />
-      )}
-      {p.children && <span className="color-row__actions">{p.children}</span>}
     </div>
   )
 }

@@ -5,7 +5,8 @@
  * "Artboard Label": 12/500 text-tertiary, 22 px above each root frame, constant screen size)
  * and the inline text editor.
  */
-import { RendererError } from "@kimo/renderer"
+import { type AssetSource, RendererError } from "@kimo/renderer"
+import { TooltipContent } from "@kimo/ui"
 import {
   type Ref,
   useCallback,
@@ -16,9 +17,19 @@ import {
   useRef,
   useState,
 } from "react"
+import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
 import { useTreeRevision, useUi } from "../lib/hooks"
-import { CANVAS_TOOLS, type CanvasHandle, type CanvasHostProps } from "./contract"
-import { CanvasController, type TextEditState } from "./controller"
+import "./canvas-m2.css"
+import {
+  CANVAS_TOOLS,
+  type CanvasHandle,
+  type CanvasHint,
+  type CanvasHostProps,
+  type ImagePlacement,
+} from "./contract"
+import { CanvasController, MEASURING_OFFSET, type TextEditState } from "./controller"
+import { HintPill, ZoomBadge } from "./hints"
+import { canvasToolStore } from "./tool-state"
 
 /** Board 03: label baseline box sits 22 px above the frame (label y 40, frame y 62). */
 const LABEL_OFFSET = 22
@@ -31,7 +42,13 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
   const [ready, setReady] = useState(false)
   const [textEdit, setTextEdit] = useState<TextEditState | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
+  const [hint, setHint] = useState<CanvasHint | null>(null)
+  const [gridOn, setGridOn] = useState(false)
+  const measuringRef = useRef<HTMLDivElement | null>(null)
   const labels = useRef<HTMLDivElement | null>(null)
+  // Images imported by the Image tool when the shell has no asset store (`onImportImage`):
+  // kept in memory for this session and served to the renderer ahead of `props.assets`.
+  const localAssets = useRef(new Map<string, Uint8Array>())
   // React renders the label set only when the tree's shape or names change; positions follow
   // pans, zooms and layout passes imperatively (no React work per frame).
   const shape = useTreeRevision(store)
@@ -78,6 +95,35 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
   const cb = useRef(props)
   cb.current = props
 
+  /** Image tool: file picker → asset → armed placement (click places it at natural size). */
+  const pickImage = useCallback(() => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = IMAGE_ACCEPT
+    input.style.display = "none"
+    input.addEventListener("change", () => {
+      const file = input.files?.[0]
+      input.remove()
+      if (!file) return
+      void (async () => {
+        try {
+          const imported = cb.current.onImportImage
+            ? await cb.current.onImportImage(file)
+            : await importLocal(file, localAssets.current)
+          if (!imported) return
+          ctl.current?.armPlacement({ kind: "image", ...imported })
+        } catch (e) {
+          cb.current.onError?.({
+            kind: "op",
+            message: `Could not import image: ${e instanceof Error ? e.message : String(e)}`,
+          })
+        }
+      })()
+    })
+    document.body.append(input)
+    input.click()
+  }, [])
+
   useImperativeHandle(
     ref,
     (): CanvasHandle => ({
@@ -85,6 +131,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         return ctl.current?.renderer ?? null
       },
       isGesturing: () => ctl.current?.isGesturing() ?? false,
+      penUndo: (redo) => ctl.current?.penUndo(redo) ?? false,
       layout: () => {
         ctl.current?.flush()
         return ctl.current?.layout ?? null
@@ -92,9 +139,22 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       activateTool(id) {
         const spec = CANVAS_TOOLS.find((t) => t.id === id)
         if (!spec?.enabled) return
+        if (spec.placement === "image") {
+          pickImage()
+          return
+        }
+        ctl.current?.armPlacement(null)
         if (spec.tool) uiStore.getState().setTool(spec.tool)
-        // Image tool (file picker → image-filled rect) lands with the asset store: TODO(M1.x).
       },
+      armPlacement(placement: ImagePlacement | null) {
+        ctl.current?.armPlacement(placement)
+      },
+      placement: () => ctl.current?.placement ?? null,
+      editPath(nodeId) {
+        ctl.current?.editPath(nodeId)
+      },
+      editingPath: () => ctl.current?.editingPath ?? null,
+      insertIcon: (icon, at, parent) => ctl.current?.insertIcon(icon, at, parent) ?? null,
       zoomToFit(ids, padding) {
         ctl.current?.zoomToFit(ids, padding)
       },
@@ -117,7 +177,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       stats: () => ctl.current?.renderer.stats() ?? null,
       focus: () => hostRef.current?.focus({ preventScroll: true }),
     }),
-    [uiStore],
+    [uiStore, pickImage],
   )
 
   // Pipeline lifetime: one renderer + engine per store.
@@ -133,6 +193,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       let engineFailed = false
       try {
         const init: Parameters<typeof renderer.init>[0] = { overlayTheme: p.overlayTheme }
+        if (p.icons) init.icons = p.icons
         if (p.canvaskitWasmUrl) init.canvaskitWasmUrl = p.canvaskitWasmUrl
         if (p.fontSources) init.fontSources = p.fontSources
         if (p.offlineFonts) init.offlineFonts = true
@@ -165,12 +226,29 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         engine.dispose()
         return
       }
+      const assets: AssetSource = {
+        load: (src) => {
+          const local = localAssets.current.get(src)
+          return local ? Promise.resolve(local) : cb.current.assets.load(src)
+        },
+      }
+      const toolStore = canvasToolStore(uiStore)
       const c = new CanvasController({
         store,
         ui: uiStore,
         renderer,
         engine,
-        assets: p.assets,
+        assets,
+        snapping: () => cb.current.snapping ?? true,
+        pixelGrid: () => cb.current.pixelGrid ?? true,
+        onHint: (h) => {
+          if (cb.current.onHint) cb.current.onHint(h)
+          else setHint(h)
+        },
+        onPixelGrid: setGridOn,
+        onPlacementChange: (pl) => cb.current.onPlacementChange?.(pl),
+        onIconPicker: (r) => cb.current.onIconPicker?.(r),
+        toolStore,
         origin: p.origin ?? "user",
         onLayout: (l) => {
           placeLabels()
@@ -193,6 +271,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     })()
     return () => {
       cancelled = true
+      canvasToolStore(uiStore).set({ placement: null, penHint: false })
       ctl.current?.dispose()
       ctl.current = null
       if (hostRef.current) delete hostRef.current.dataset.ready
@@ -205,6 +284,13 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     if (!r) return
     void r.init({ overlayTheme: props.overlayTheme }).then(() => r.requestFrame())
   }, [props.overlayTheme])
+
+  // View settings apply live.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-evaluate when the settings change
+  useEffect(() => {
+    ctl.current?.updateGrid()
+    ctl.current?.requestOverlay()
+  }, [props.pixelGrid, props.snapping])
 
   // The web-fonts setting applies live (families already loaded stay).
   useEffect(() => {
@@ -222,6 +308,15 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       tabIndex={0}
       role="application"
       aria-label="Design canvas"
+      onPointerMove={(e) => {
+        // The ⌥ "Measuring" tooltip follows the pointer (positioned without React renders).
+        const m = measuringRef.current
+        const host = hostRef.current
+        if (!m || !host) return
+        const r = host.getBoundingClientRect()
+        m.style.left = `${e.clientX - r.left + MEASURING_OFFSET.x}px`
+        m.style.top = `${e.clientY - r.top + MEASURING_OFFSET.y}px`
+      }}
     >
       <canvas ref={canvasRef} className="canvas-host__canvas" />
       <div ref={labels} className="canvas-host__labels">
@@ -241,6 +336,39 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
           onCommit={(v) => ctl.current?.commitText(v)}
         />
       )}
+      {ready && gridOn && <ZoomBadge ui={uiStore} />}
+      {hint?.kind === "path-edit" && (
+        <HintPill icon={hint.icon} className="canvas-hint--top">
+          {hint.text}
+        </HintPill>
+      )}
+      {hint?.kind === "pen-close" && (
+        <HintPill
+          icon={hint.icon}
+          className="canvas-hint--cursor"
+          style={{ left: hint.screen.x, top: hint.screen.y }}
+        >
+          {hint.text}
+        </HintPill>
+      )}
+      {hint?.kind === "measuring" && (
+        <div
+          ref={(el) => {
+            measuringRef.current = el
+            const p = ctl.current?.lastPointer
+            if (el && p) {
+              el.style.left = `${p.x + MEASURING_OFFSET.x}px`
+              el.style.top = `${p.y + MEASURING_OFFSET.y}px`
+            }
+          }}
+          className="canvas-measuring"
+          data-canvas-overlay=""
+        >
+          <TooltipContent role="status" shortcut={hint.keys}>
+            {hint.text}
+          </TooltipContent>
+        </div>
+      )}
       {failed && (
         <div className="canvas-host__error" role="alert">
           Canvas failed to start: {failed}
@@ -248,6 +376,49 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       )}
     </div>
   )
+}
+
+/**
+ * Fallback import without a shell asset store: content-addressed `./assets/<16 hex>.<ext>`
+ * (spec §12, the same hashing and format sniffing as the web asset store), bytes kept in
+ * `store`, natural size decoded.
+ */
+async function importLocal(
+  file: File,
+  store: Map<string, Uint8Array>,
+): Promise<Omit<ImagePlacement, "kind"> | null> {
+  if (file.size > MAX_ASSET_BYTES) return null
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  const mime = sniffImage(bytes)
+  const ext = mime ? extensionFor(mime) : null
+  if (!mime || !ext) return null
+  const src = `./assets/${await contentHash(bytes)}.${ext}`
+  const size = await naturalSize(new Blob([bytes], { type: mime }))
+  if (!size) return null
+  store.set(src, bytes)
+  return { src, ...size, entry: { mime, bytes: bytes.byteLength, ...size } }
+}
+
+async function naturalSize(file: Blob): Promise<{ width: number; height: number } | null> {
+  try {
+    const bmp = await createImageBitmap(file)
+    const out = { width: bmp.width, height: bmp.height }
+    bmp.close()
+    return out
+  } catch {
+    // SVG and some formats: decode through an <img>.
+    const url = URL.createObjectURL(file)
+    try {
+      const img = new Image()
+      img.src = url
+      await img.decode()
+      return img.naturalWidth ? { width: img.naturalWidth, height: img.naturalHeight } : null
+    } catch {
+      return null
+    } finally {
+      URL.revokeObjectURL(url)
+    }
+  }
 }
 
 /** The renderer's own error, or a WASM_LOAD_FAILED wrapper for anything else it threw. */

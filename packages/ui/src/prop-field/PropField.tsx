@@ -2,6 +2,7 @@ import {
   type ComponentPropsWithRef,
   type KeyboardEvent,
   type PointerEvent,
+  type ReactNode,
   useEffect,
   useRef,
   useState,
@@ -11,8 +12,11 @@ import { clamp, cx } from "../internal/util"
 /** Props for {@link PropField}. Remaining `<div>` props go to the frame. */
 export interface PropFieldProps
   extends Omit<ComponentPropsWithRef<"div">, "onChange" | "children" | "prefix"> {
-  /** Prefix label (`W`, `H`, `X`, …). Drag it horizontally to scrub the value. */
-  prefix: string
+  /**
+   * Prefix label (`W`, `H`, `X`, …) or a 12 × 12 icon (board 08 replaces the Prefix text with a
+   * lucide icon, e.g. Opacity `blend`, Rotation `rotate-cw`). Drag it horizontally to scrub.
+   */
+  prefix: ReactNode
   /** Current value. A string shows a keyword (`Hug`, `Mixed`) instead of a number. */
   value: number | string
   /** Called with the new value: on Enter/blur commit, arrow keys and every scrub step. */
@@ -193,7 +197,10 @@ export function PropField({
       )}
     >
       <span
-        className="kimo-prop-field__prefix"
+        className={cx(
+          "kimo-prop-field__prefix",
+          typeof prefix !== "string" && "kimo-prop-field__prefix--icon",
+        )}
         aria-hidden="true"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -210,7 +217,7 @@ export function PropField({
         inputMode="decimal"
         spellCheck={false}
         autoComplete="off"
-        aria-label={inputLabel ?? prefix}
+        aria-label={inputLabel ?? (typeof prefix === "string" ? prefix : undefined)}
         disabled={disabled}
         value={draft ?? display}
         onFocus={(e) => {

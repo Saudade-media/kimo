@@ -8,11 +8,14 @@
  * faces from packages/renderer/assets/fonts, then compares every mapped node's box
  * (getBoundingClientRect, relative to its component root) and computed style
  * (getComputedStyle: fill/color, font size/weight, radius) with the values in
- * test/fixtures/pen-components.json. Exits 1 when any check drifts beyond tolerance.
+ * test/fixtures/pen-components.json, and the M2 board "02b Components — Styling (M2)" against
+ * test/fixtures/pen-components-m2.json (map in measure-map-m2.ts; opacity checked too).
+ * Exits 1 when any check drifts beyond tolerance.
  */
 import { copyFile, mkdtemp, readdir, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { FLEX_WIDTH_M2, MAP_M2 } from "./measure-map-m2"
 
 const pkg = join(import.meta.dir, "..")
 const repo = join(pkg, "..", "..")
@@ -34,6 +37,7 @@ type PenRow = [
   number | null,
   string | null,
   number | null,
+  (number | null)?,
 ]
 
 /** pen root id → DOM selector of the root (default `[data-pen=id]`) and of each descendant. */
@@ -208,6 +212,8 @@ MAP.PufcL = {
 const FLEX_WIDTH = new Set(["BwYzP", "vpMpD", "Q8GqQ/vpMpD", "OIMmF/vpMpD", "t9cQaK"])
 /** The gallery board grows past the design: it appends a "States & interactions" section. */
 const EXTENDED_HEIGHT = new Set(["PufcL"])
+Object.assign(MAP, MAP_M2)
+for (const id of FLEX_WIDTH_M2) FLEX_WIDTH.add(id)
 
 // --- Build the page --------------------------------------------------------------------------
 
@@ -255,6 +261,12 @@ await writeFile(
 const fixture = (await Bun.file(join(pkg, "test", "fixtures", "pen-components.json")).json()) as {
   nodes: Record<string, PenRow[]>
 }
+const fixtureM2 = (await Bun.file(
+  join(pkg, "test", "fixtures", "pen-components-m2.json"),
+).json()) as {
+  nodes: Record<string, PenRow[]>
+}
+Object.assign(fixture.nodes, fixtureM2.nodes)
 const { chromium } = (await import(Bun.resolveSync("playwright", join(repo, "apps", "web")))) as {
   chromium: import("playwright").BrowserType
 }
@@ -288,6 +300,8 @@ type Measured = {
   radius: string
   display: string
   font: string
+  opacity: string
+  bgImage: string
 }
 const measured = (await page.evaluate(
   ({ map }) => {
@@ -315,6 +329,8 @@ const measured = (await page.evaluate(
           radius: cs.borderTopLeftRadius,
           display: cs.display,
           font: cs.fontFamily.split(",")[0] ?? "",
+          opacity: cs.opacity,
+          bgImage: cs.backgroundImage,
         }
       }
       const entries: Record<string, Measured | null> = { [rootId]: one(root) }
@@ -329,6 +345,10 @@ const measured = (await page.evaluate(
 
 const shot = flag("--screenshot")
 if (shot) await page.locator('[data-pen="PufcL"]').screenshot({ path: shot })
+const shotM2 = flag("--screenshot-m2")
+if (shotM2) await page.locator('[data-pen="mj1CX"]').screenshot({ path: shotM2 })
+// Element screenshots scroll the page; the pointer interactions below use viewport coordinates.
+await page.evaluate(() => window.scrollTo(0, 0))
 
 // --- Interactions (keyboard / pointer behavior of the stateful components) --------------------
 
@@ -478,6 +498,138 @@ await expectThat("Composer: Enter sends and clears", async () => {
   const v = await input.inputValue()
   return (log === "Sent: Add a footer" && v === "") || `${log} / ${v}`
 })
+
+// --- M2 interactions -------------------------------------------------------------------------
+const pen = (id: string) => page.locator(`[data-pen="${id}"]`)
+const focused = () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? "")
+await expectThat("AlignmentGrid: → then ↓ moves the bars, roving tab stop follows", async () => {
+  await pen("i1pQK").locator('[aria-checked="true"]').focus()
+  await page.keyboard.press("ArrowRight")
+  await page.keyboard.press("ArrowDown")
+  const on = await pen("i1pQK").locator('[aria-checked="true"]').getAttribute("aria-label")
+  const bars = await pen("i1pQK").locator(".kimo-alignment-grid__bars").count()
+  return (on === "Center" && bars === 1 && (await focused()) === "Center") || `${on} bars ${bars}`
+})
+await expectThat("Slider: → +1%, End = max", async () => {
+  const sl = pen("UWiq1")
+  await sl.focus()
+  await page.keyboard.press("End")
+  const v = await sl.getAttribute("aria-valuenow")
+  return v === "1" || `value ${v}`
+})
+await expectThat("HueSlider: click at the right end sets hue 360", async () => {
+  await pen("weqLa").scrollIntoViewIfNeeded()
+  const box = await pen("weqLa").boundingBox()
+  if (!box) return "no box"
+  await page.mouse.click(box.x + box.width - 1, box.y + 7)
+  const v = await pen("weqLa").getAttribute("aria-valuenow")
+  return v === "360" || `hue ${v}`
+})
+await expectThat(
+  "ColorArea: click at (75%, 25%) = s 75 v 75; Shift+← lowers saturation 10",
+  async () => {
+    await pen("H5QKDe").scrollIntoViewIfNeeded()
+    const box = await pen("H5QKDe").boundingBox()
+    if (!box) return "no box"
+    await page.mouse.click(box.x + box.width * 0.75, box.y + box.height * 0.25)
+    const a = await pen("H5QKDe").getAttribute("aria-valuetext")
+    await page.keyboard.press("Shift+ArrowLeft")
+    const b = await pen("H5QKDe").getAttribute("aria-valuetext")
+    return (
+      (a === "Saturation 75%, brightness 75%" && b === "Saturation 65%, brightness 75%") ||
+      `${a} → ${b}`
+    )
+  },
+)
+await expectThat("GradientStopBar: click adds a stop, Delete removes it", async () => {
+  const bar = pen("rbnJS").locator(".kimo-gradient-stop-bar__bar")
+  await bar.scrollIntoViewIfNeeded()
+  const box = await bar.boundingBox()
+  if (!box) return "no bar"
+  await page.mouse.click(box.x + box.width * 0.25, box.y + 6)
+  const n1 = await pen("rbnJS").locator('[role="slider"]').count()
+  await pen("rbnJS").locator('[aria-current="true"]').focus()
+  await page.keyboard.press("Delete")
+  const n2 = await pen("rbnJS").locator('[role="slider"]').count()
+  return (n1 === 4 && n2 === 3) || `${n1} → ${n2}`
+})
+await expectThat("SizeField: mode menu opens 4px below, picks Hug", async () => {
+  const field = pen("G6R6IX")
+  await field.locator(".kimo-size-field__mode").click()
+  const menu = page.locator('[role="menu"]', {
+    has: page.locator('[role="menuitemradio"]', { hasText: "Hug" }),
+  })
+  const fb = await field.boundingBox()
+  const mb = await menu.boundingBox()
+  await menu.locator('[role="menuitemradio"]', { hasText: "Hug" }).click()
+  const mode = await field.locator(".kimo-size-field__mode").innerText()
+  const gap = fb && mb ? Math.round(mb.y - (fb.y + fb.height)) : -1
+  const left = fb && mb ? Math.round(mb.x - fb.x) : -1
+  return (mode === "Hug" && gap === 4 && left === 0) || `mode ${mode} gap ${gap} left ${left}`
+})
+await expectThat("EffectRow: Type menu switches to Layer blur (droplet icon)", async () => {
+  await pen("Q6vwp").locator(".kimo-effect-row__type").click()
+  await page.locator('[role="menuitemradio"]', { hasText: "Layer blur" }).click()
+  const t = await pen("Q6vwp").locator(".kimo-effect-row__type").innerText()
+  return t === "Layer blur" || t
+})
+await expectThat("Popover: Tab is trapped inside the color picker", async () => {
+  const pop = pen("jNAqx").locator(".kimo-popover")
+  await pop.locator('[role="tab"]').first().focus()
+  for (let i = 0; i < 30; i++) await page.keyboard.press("Tab")
+  const inside = await pop.evaluate((el) => el.contains(document.activeElement))
+  return inside || "focus escaped"
+})
+await expectThat(
+  "ColorPicker: HSL format shows converted channels; hex commit updates",
+  async () => {
+    const pop = pen("jNAqx")
+    await pop.locator(".kimo-color-picker__hex input").fill("2F6BFF")
+    await page.keyboard.press("Enter")
+    await pop.locator(".kimo-select__trigger").click()
+    await page.locator('[role="option"]', { hasText: "HSL" }).click()
+    const v = await pop.locator(".kimo-color-picker__hex input").inputValue()
+    return v === "223 100 59" || v
+  },
+)
+await expectThat("BlendModeMenu: ↓ previews, Enter commits Darken", async () => {
+  const menu = pen("YFOTX").locator(".kimo-menu-dense")
+  await menu.locator('[role="menuitemradio"]', { hasText: "Normal" }).focus()
+  await page.keyboard.press("ArrowDown")
+  const preview = await page.locator(".kimo-gallery__m2-log").innerText()
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("Enter")
+  const checked = await menu.locator('[aria-checked="true"]').innerText()
+  return (
+    (preview === "Preview pass-through" && checked.trim() === "Darken") || `${preview} / ${checked}`
+  )
+})
+await expectThat("IconPicker: search filters, ↓ + Enter picks", async () => {
+  const pop = pen("b1gaD")
+  await pop.locator("input").fill("ca")
+  const names = await pop
+    .locator(".kimo-icon-picker__rows [role=option]")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")))
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("Enter")
+  const footer = await pop.locator(".kimo-icon-picker__name").innerText()
+  return (names.join(",") === "calendar,camera" && footer === "calendar") || `${names} / ${footer}`
+})
+await expectThat("IconPicker: Clear search leaves the empty state", async () => {
+  const pop = pen("r6tBTD")
+  await pop.getByRole("button", { name: "Clear search" }).click()
+  const empty = await pop.locator(".kimo-icon-picker__empty").count()
+  return empty === 0 || "still empty"
+})
+await expectThat("ImageFillPopover: mode menu → Contain", async () => {
+  const pop = pen("Kgfrv")
+  await pop.locator(".kimo-select__trigger").click()
+  await page.locator('[role="option"]', { hasText: "Contain" }).click()
+  const bg = await pop
+    .locator(".kimo-image-fill__image")
+    .evaluate((e) => getComputedStyle(e).backgroundSize)
+  return bg === "contain" || bg
+})
 await browser.close()
 server.stop(true)
 
@@ -498,6 +650,24 @@ const hex = (rgb: string): string | null => {
 type Diff = { node: string; prop: string; pen: string; dom: string; delta?: number }
 const diffs: Diff[] = []
 /**
+ * Deliberate deviations (reported, not failing), keyed `<root>/<id>:<prop>`. Each one is a design
+ * value that cannot be correct at runtime; the reason is printed with the report.
+ */
+const ACCEPTED: Record<string, string> = {
+  "H5QKDe/H5QKDe:fill":
+    "ColorArea base must be the pure hue (HSV area math); the node's #FF7A1A is not a pure hue (s 0.9)",
+  "xvOvm/CtzSh:fill": "same ColorArea instance (pure hue)",
+  "u0aiz/CtzSh:fill": "same ColorArea instance (pure hue)",
+  "jNAqx/BEI3g:fill": "same ColorArea instance (pure hue)",
+  "jNAqx/BEI3g/phbmP:x":
+    "ring follows the value: #F4A261 is s 0.60 / v 0.96; the node's ring sits at s 0.64 / v 0.88",
+  "jNAqx/BEI3g/phbmP:y": "same (ring position is data, the node's is not #F4A261)",
+  "jNAqx/BVfN2/o6DokA:x":
+    "alpha thumb follows the value: the node shows 100% but draws the thumb at 93%",
+  "b2Y0pD/CAjFK:fill": "same ColorArea instance (pure hue of the selected stop #E76F51)",
+}
+const accepted: (Diff & { reason: string })[] = []
+/**
  * x/w deltas up to 2px that come only from text advance widths: Pencil ceil-rounds every text
  * node's width (`accent` mono 12 = 43.2 → 44), which shifts hug widths and following siblings.
  * Reported separately; they are font-measurement rounding, not layout drift.
@@ -510,7 +680,7 @@ const TEXT_W_TOL = 1.5
 
 for (const [rootId, rows] of Object.entries(fixture.nodes)) {
   const m = measured[rootId] ?? {}
-  for (const [id, name, type, x, y, w, h, fill, fontSize, fontWeight, radius] of rows) {
+  for (const [id, name, type, x, y, w, h, fill, fontSize, fontWeight, radius, opacity] of rows) {
     const label = `${rootId === id ? "" : `${rootId} › `}${name} (${id})`
     const d = m[id]
     if (!d) {
@@ -533,13 +703,26 @@ for (const [rootId, rows] of Object.entries(fixture.nodes)) {
       if ((prop === "x" || prop === "w") && Math.abs(delta) <= TEXT_ROUNDING) rounding.push(diff)
       else diffs.push(diff)
     }
+    if (opacity != null) {
+      checks++
+      if (Math.abs(Number(d.opacity) - opacity) > 0.005)
+        diffs.push({ node: label, prop: "opacity", pen: String(opacity), dom: d.opacity })
+    }
     if (d.display === "none")
       diffs.push({ node: label, prop: "display", pen: "visible", dom: "none" })
-    if (fill && fill !== "gradient") {
+    if (fill && type === "path") {
+      // Pattern paths (alpha checkers) are CSS background images: the fill color must be in it.
+      checks++
+      const colors = [...d.bgImage.matchAll(/rgba?\([^)]+\)/g)].map((m) => hex(m[0]))
+      if (!colors.includes(fill.toUpperCase()))
+        diffs.push({ node: label, prop: "pattern fill", pen: fill, dom: d.bgImage.slice(0, 60) })
+    } else if (fill && fill !== "gradient" && fill !== "image") {
       const isFrame = type === "frame" || type === "rectangle" || type === "ellipse"
       const domColor = hex(isFrame ? d.bg : d.color)
+      // A fully transparent design fill (#00000000) is "no background" in CSS.
+      const want = /^#[0-9A-F]{6}00$/i.test(fill) ? null : fill.toUpperCase()
       checks++
-      if (domColor !== fill.toUpperCase())
+      if (domColor !== want)
         diffs.push({
           node: label,
           prop: isFrame ? "fill" : "color",
@@ -569,8 +752,18 @@ for (const [rootId, rows] of Object.entries(fixture.nodes)) {
   }
 }
 
+for (let i = diffs.length - 1; i >= 0; i--) {
+  const d = diffs[i] as Diff
+  const m = d.node.match(/^(?:(\S+) › )?.*\((\S+)\)$/)
+  const root = m?.[1] ?? m?.[2]
+  const reason = ACCEPTED[`${root}/${m?.[2]}:${d.prop}`]
+  if (reason) {
+    accepted.unshift({ ...d, reason })
+    diffs.splice(i, 1)
+  }
+}
 console.log(
-  `theme=${theme}  checks=${checks}  drift=${diffs.length}  text-rounding=${rounding.length}  page errors=${errors.length}`,
+  `theme=${theme}  checks=${checks}  drift=${diffs.length}  accepted=${accepted.length}  text-rounding=${rounding.length}  page errors=${errors.length}`,
 )
 for (const e of errors) console.log(`  page error: ${e}`)
 if (diffs.length) {
@@ -578,6 +771,11 @@ if (diffs.length) {
   console.log("|---|---|---|---|---|")
   for (const d of diffs)
     console.log(`| ${d.node} | ${d.prop} | ${d.pen} | ${d.dom} | ${d.delta?.toFixed(2) ?? ""} |`)
+}
+if (accepted.length) {
+  console.log("\naccepted deviations:")
+  for (const d of accepted)
+    console.log(`| ${d.node} | ${d.prop} | ${d.pen} | ${d.dom} | ${d.reason} |`)
 }
 if (rounding.length && args.includes("--verbose")) {
   console.log("\ntext-width rounding (x/w within 2px):")

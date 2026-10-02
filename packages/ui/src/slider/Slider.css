@@ -1,0 +1,121 @@
+/*
+ * Slider: desing.pen 02b > Slider (UWiq1), Slider/Hue (weqLa), Slider/Alpha (qpmcK).
+ * frame: 224 × 14, layout none (absolute children)
+ *   Slider:
+ *   ├ Track (Y9KX4) rectangle y 5, 224 × 4, radius-pill, bg-muted
+ *   ├ Fill  (sBcG4) rectangle y 5, h 4, radius-pill, accent (to the thumb center)
+ *   └ Thumb (g0Ask) ellipse 14 × 14, #FFFFFF, stroke border-strong 1, shadow 0 1 3 shadow-strong
+ *   Slider/Hue:
+ *   ├ Track (kakaj) rectangle y 1, 224 × 12, radius-pill, stroke chip-edge 1, hue gradient
+ *   └ Thumb (I4582f) ellipse 14 × 14, fill = color, stroke #FFFFFF 2.5, shadow 0 1 3 #0A0A0A40
+ *   Slider/Alpha:
+ *   ├ Track (A62mZE) frame y 1, 224 × 12, clip, #FFFFFF, radius-pill, stroke chip-edge 1
+ *   │   ├ Checker  (rp05o) #E4E2DE, 4px squares
+ *   │   └ Gradient (C4KYVj) color @ 0 → color, left → right
+ *   └ Thumb (o6DokA) as Hue
+ * The thumb stays inside the frame: center = 7 + f × (width − 14).
+ */
+.kimo-slider {
+  --kimo-slider-f: 0;
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  flex: none;
+  width: 224px;
+  height: 14px;
+  touch-action: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.kimo-slider__track,
+.kimo-slider__fill {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  height: 4px;
+  border-radius: var(--kimo-radius-pill);
+}
+
+.kimo-slider__track {
+  width: 100%;
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-slider__fill {
+  width: calc(7px + var(--kimo-slider-f) * (100% - 14px));
+  background: var(--kimo-accent);
+}
+
+.kimo-slider__thumb {
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: calc(var(--kimo-slider-f) * (100% - 14px));
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff; /* pen-literal: g0Ask fill */
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border-strong),
+    0 1px 3px 0 var(--kimo-shadow-strong);
+}
+
+/* Hue / Alpha share the 12px framed track and the white-ringed color thumb. */
+.kimo-slider--hue .kimo-slider__track,
+.kimo-slider--alpha .kimo-slider__track {
+  top: 1px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.kimo-slider--hue .kimo-slider__track::after,
+.kimo-slider--alpha .kimo-slider__track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--kimo-chip-edge);
+  pointer-events: none;
+}
+
+.kimo-slider--hue .kimo-slider__track {
+  background: linear-gradient(
+    to right,
+    #ff0000 0%,
+    #ffff00 17%,
+    #00ff00 33%,
+    #00ffff 50%,
+    #0000ff 67%,
+    #ff00ff 83%,
+    #ff0000 100%
+  ); /* pen-literal: kakaj gradient */
+}
+
+.kimo-slider--alpha .kimo-slider__track {
+  background: #ffffff; /* pen-literal: A62mZE fill */
+}
+
+.kimo-slider__checker,
+.kimo-slider__gradient {
+  position: absolute;
+  inset: 0;
+}
+
+/* rp05o: #E4E2DE squares 4 × 4 on a 8 × 8 tile, top-left and bottom-right colored. */
+.kimo-slider__checker {
+  background:
+    repeating-conic-gradient(transparent 0% 25%, #e4e2de 0% 50%) 0 0 / 8px 8px; /* pen-literal: rp05o fill */
+}
+
+.kimo-slider--hue .kimo-slider__thumb,
+.kimo-slider--alpha .kimo-slider__thumb {
+  box-shadow:
+    inset 0 0 0 2.5px #ffffff,
+    0 1px 3px 0 #0a0a0a40; /* pen-literal: I4582f stroke + shadow */
+}
+
+.kimo-slider:focus-visible .kimo-slider__thumb {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}

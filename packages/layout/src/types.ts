@@ -1,5 +1,6 @@
 /**
- * M1 layout contracts (ADR 0009). The engine turns the flat `.kimo` node table into boxes:
+ * Layout contracts: M1 (ADR 0009); M2 additions (`NodeLayout.sizing`/`inFlow`/`content`,
+ * ADR 0010). The engine turns the flat `.kimo` node table into boxes:
  * Yoga for frames with `layout`, x/y for everything else, text sized through a
  * {@link TextMeasurer} that the renderer implements with CanvasKit Paragraph (ADR 0004 §2).
  *
@@ -171,7 +172,27 @@ export interface NodeLayout {
   visible: boolean
   /** Laid-out text metrics for text/note/prompt nodes. */
   text?: TextMetrics
+  /**
+   * M2 (ADR 0010): the sizing mode actually applied per axis, after fallbacks (a `fill` child
+   * of a parent without layout, or an absolute one, is `fixed`/`fit` here; `FIT_ALL_FILL`
+   * children report `fit`). Feeds SizingBadge ("Fixed 48", "Fill ↔", "Hug") and SizeField.
+   * Filled by the engine for every node; the objects are shared and frozen (compare by value).
+   */
+  sizing?: { readonly w: AppliedSizing; readonly h: AppliedSizing }
+  /**
+   * M2: true when the node takes part in its parent's flex flow (parent has `layout`, node is
+   * visible and not `position: "absolute"`). Moving a flow child reorders instead of snapping.
+   */
+  inFlow?: boolean
+  /**
+   * M2: for frames with `layout`, the content box (local, inside padding and, with
+   * `includeStroke`, the stroke) — used for padding/gap overlays and the alignment grid.
+   */
+  content?: Rect
 }
+
+/** Sizing mode applied on one axis (`fit` is shown as "Hug" in the editor). */
+export type AppliedSizing = "fixed" | "fit" | "fill"
 
 /** Severity of a layout diagnostic. */
 export type LayoutIssueSeverity = "error" | "warning"

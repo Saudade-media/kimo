@@ -58,3 +58,23 @@
   color: var(--kimo-text-tertiary);
   opacity: 1;
 }
+
+/*
+ * Dense (M2 popover search, board 09 tub8E / SrSfb): fill_container × 28, bg-muted, radius-sm,
+ * gap 8, padding [0, 10]; icon 14 text-tertiary; text font-sans text-sm (12).
+ * Typed (jOl4f): text text-primary. Its stroke border-strong has no strokeWidth, so Pencil
+ * draws none (same rule as Button/Secondary).
+ */
+.kimo-input--dense {
+  height: 28px;
+  border-radius: var(--kimo-radius-sm);
+}
+
+.kimo-input--dense .kimo-input__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-input--dense .kimo-input__field {
+  font-size: var(--kimo-text-sm);
+}

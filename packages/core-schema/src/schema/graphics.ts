@@ -173,6 +173,13 @@ export const Stroke = Strict({
   align: opt(StringEnum(["inside", "center", "outside"] as const, { default: D.stroke.align })),
   cap: opt(StringEnum(["butt", "round", "square"] as const, { default: D.stroke.cap })),
   join: opt(StringEnum(["miter", "bevel", "round"] as const, { default: D.stroke.join })),
+  miterLimit: opt(
+    Type.Number({
+      minimum: 1,
+      default: D.stroke.miterLimit,
+      description: "Miter length / stroke width above which a miter join is beveled (SVG).",
+    }),
+  ),
   dash: opt(Type.Array(Type.Number({ minimum: 0 }))),
 })
 export type Stroke = Static<typeof Stroke>
@@ -188,11 +195,20 @@ export const ShadowEffect = Strict({
   spread: opt(Type.Union(Num.anyOf, { default: D.shadow.spread })),
   color: Color,
   blend: opt(StringEnum(BLEND_MODES, { default: D.shadow.blend })),
+  visible: opt(Type.Boolean({ default: D.shadow.visible })),
 })
 export type ShadowEffect = Static<typeof ShadowEffect>
 
-export const BlurEffect = Strict({ kind: Type.Literal("blur"), radius: NonNegNum })
-export const BackdropBlurEffect = Strict({ kind: Type.Literal("backdrop-blur"), radius: NonNegNum })
+export const BlurEffect = Strict({
+  kind: Type.Literal("blur"),
+  radius: NonNegNum,
+  visible: opt(Type.Boolean({ default: D.blur.visible })),
+})
+export const BackdropBlurEffect = Strict({
+  kind: Type.Literal("backdrop-blur"),
+  radius: NonNegNum,
+  visible: opt(Type.Boolean({ default: D.blur.visible })),
+})
 
 export const Effect = Type.Union([ShadowEffect, BlurEffect, BackdropBlurEffect])
 export type Effect = Static<typeof Effect>

@@ -141,3 +141,72 @@
   font-family: var(--kimo-font-mono);
   font-size: var(--kimo-text-xs);
 }
+
+/*
+ * M2 board "02b Components — Styling (M2)" (mj1CX): same board frame; Section Header (u6VIu)
+ * gap 12, alignItems end, with a Section Note (sans 12 text-tertiary); columns vertical gap 12
+ * with a Caption (mono 11 text-tertiary) and Notes (sans 11 text-tertiary).
+ */
+.kimo-gallery__section-header--note {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.kimo-gallery__section-note,
+.kimo-gallery__caption,
+.kimo-gallery__note {
+  color: var(--kimo-text-tertiary);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.kimo-gallery__section-note {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-gallery__caption {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}
+
+.kimo-gallery__note {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+}
+
+.kimo-gallery__m2-column {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* fill_container children of a fixed-width column (FillRow, SizeField, PropSection …). */
+.kimo-gallery__m2-column[style] > :not(.kimo-gallery__caption):not(.kimo-gallery__note) {
+  align-self: stretch;
+}
+
+.kimo-gallery__row {
+  display: flex;
+  flex-direction: row;
+}
+
+.kimo-gallery__row--fill {
+  align-self: stretch;
+}
+
+.kimo-gallery__row--fill > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.kimo-gallery__m2-log {
+  min-height: 15px;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  margin: 0;
+}

@@ -42,6 +42,7 @@ import {
 } from "./geometry"
 import { resolveText } from "./resolve"
 import type {
+  AppliedSizing,
   DirtySet,
   LayoutEngine,
   LayoutEngineOptions,
@@ -111,7 +112,26 @@ interface Entry {
   originX: number
   originY: number
   layout: NodeLayout | null
+  // M2 (ADR 0010): inputs of NodeLayout.sizing/content, set by applyStyle()
+  /** Sizing mode written per axis, after the text/path rules (`fixed` when a size is set). */
+  specW: SpecMode
+  specH: SpecMode
+  /** Padding (with `includeStroke`) of a frame with layout, t/r/b/l. */
+  pad: [number, number, number, number]
+  /** Set by emit(): applied sizing, and the FIT_ALL_FILL flags its children were emitted with. */
+  applied: Sizing | null
+  kidsAllFill: string
 }
+
+type Sizing = { readonly w: AppliedSizing; readonly h: AppliedSizing }
+const MODES: readonly AppliedSizing[] = ["fixed", "fit", "fill"]
+/** Shared, frozen `NodeLayout.sizing` values (no allocation per emitted node). */
+const SIZING = Object.fromEntries(
+  MODES.map((w) => [w, Object.fromEntries(MODES.map((h) => [h, Object.freeze({ w, h })]))]),
+) as Record<AppliedSizing, Record<AppliedSizing, Sizing>>
+
+/** What applyStyle() saw on one axis: `fill+` = fill with a fallback. */
+type SpecMode = "fixed" | "fit" | "fill" | "fill+"
 
 const TEXT_TYPES = new Set(["text", "note", "prompt"])
 const LEAF_TYPES = new Set(["rect", "ellipse", "polygon", "path", "icon", "script", "browser"])
@@ -244,6 +264,11 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       originX: 0,
       originY: 0,
       layout: null,
+      specW: "fixed",
+      specH: "fixed",
+      pad: [0, 0, 0, 0],
+      applied: null,
+      kidsAllFill: "",
     }
     readFlags(e)
     return e
@@ -424,6 +449,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       let size: number | "auto" = "auto"
       let min: number | undefined
       let max: number | undefined
+      let mode: SpecMode = "fit"
       if (e.kind === "group") {
         // Groups have no size: updateContent() sets their children's bounds.
         size = (a === "w" ? e.style.w : e.style.h) as number | "auto"
@@ -438,6 +464,10 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
           min = spec.min
           max = spec.max
         }
+        mode =
+          spec.mode === "fill" && spec.fallback !== undefined
+            ? "fill+"
+            : (spec.mode as "fixed" | "fit" | "fill")
         if (spec.mode === "fixed") size = spec.v
         else if (spec.mode === "fill" && flow) {
           if (isMain) {
@@ -458,6 +488,8 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
           } else if (e.kind === "text") needsMeasure = true
         }
       }
+      if (a === "w") e.specW = mode
+      else e.specH = mode
       if (a === "w") {
         put(e, "w", size, (v) => y.setWidth(v))
         put(e, "minW", min, (v) => y.setMinWidth(v))
@@ -482,6 +514,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     let mainGap = 0
     let crossGap = 0
     let pad: [number, number, number, number] = [0, 0, 0, 0]
+    e.pad = pad
     if (e.kind === "layout" && isObject(n.layout)) {
       const L = n.layout
       fd = e.dir === "row" ? FlexDirection.Row : FlexDirection.Column
@@ -492,6 +525,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
         issue(e, "UNSUPPORTED_FEATURE", "negative crossGap is treated as 0", "/layout/crossGap")
       crossGap = Math.max(0, cg)
       pad = padding(e, L)
+      e.pad = pad
       if (typeof L.justify === "string" && L.justify in JUSTIFY)
         justify = JUSTIFY[L.justify] as Justify
       if (typeof L.align === "string" && L.align in ALIGN) align = ALIGN[L.align] as Align
@@ -620,6 +654,39 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     only: Set<Entry> | null
   }
 
+  /**
+   * FIT_ALL_FILL (spec §6): `e` is `fit` on `axis` and every flowing child fills it, so the
+   * children are sized as `fit` there (Yoga gives them no free space; the result is the same).
+   */
+  const allFill = (e: Entry, axis: Axis): boolean => {
+    if (e.kind !== "layout" || e.attached.length === 0 || e.applied?.[axis] !== "fit") return false
+    for (const c of e.attached) {
+      const m = axis === "w" ? c.specW : c.specH
+      if (m !== "fill" && m !== "fill+") return false
+    }
+    return true
+  }
+
+  /** NodeLayout.sizing: the mode applied per axis after the fallbacks (ADR 0010). */
+  const appliedSizing = (e: Entry): Sizing => {
+    const one = (axis: Axis): AppliedSizing => {
+      const m = axis === "w" ? e.specW : e.specH
+      if (m === "fixed" || m === "fit") return m
+      // fill: only inside a flex flow; outside, the fallback is a fixed size, else content.
+      if (!e.flow) return m === "fill+" ? "fixed" : "fit"
+      // The parent was emitted first: its kidsAllFill flags are current ("wh").
+      return e.parent?.kidsAllFill[axis === "w" ? 0 : 1] === "1" ? "fit" : "fill"
+    }
+    return SIZING[one("w")][one("h")]
+  }
+
+  /** NodeLayout.content: the box inside the padding of a frame with layout (local). */
+  const contentBox = (e: Entry, w: number, h: number): Rect | undefined => {
+    if (e.kind !== "layout") return undefined
+    const [t, r, b, l] = e.pad
+    return { x: l, y: t, w: Math.max(0, w - l - r), h: Math.max(0, h - t - b) }
+  }
+
   const emit = (e: Entry, parentT: Matrix, parentVisible: boolean, force: boolean, out: Emit) => {
     const prev = e.layout
     if (!force && prev && out.only && !out.only.has(e) && !e.y.hasNewLayout()) return
@@ -647,6 +714,10 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     const visible = parentVisible && e.visibleSelf
     let text: TextMetrics | undefined
     if (e.kind === "text") text = measure(e, e.autoText ? undefined : w)
+    const sizing = appliedSizing(e)
+    e.applied = sizing
+    const inFlow = e.flow
+    const content = contentBox(e, w, h)
     let next: NodeLayout
     if (
       prev &&
@@ -654,12 +725,16 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       rectEquals(prev.local, local) &&
       rectEquals(prev.world, world) &&
       matrixEquals(prev.transform, T) &&
-      textEquals(prev.text, text)
+      textEquals(prev.text, text) &&
+      prev.inFlow === inFlow &&
+      prev.sizing === sizing &&
+      (prev.content && content ? rectEquals(prev.content, content) : prev.content === content)
     )
       next = prev
     else {
-      next = { id: e.id, local, world, transform: T, visible }
+      next = { id: e.id, local, world, transform: T, visible, sizing, inFlow }
       if (text) next.text = text
+      if (content) next.content = content
       out.changed.add(e.id)
     }
     e.layout = next
@@ -668,9 +743,18 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     // own box changing (e.g. a hidden child sets no bounds).
     const ox = e.kind === "group" ? e.content.minX : 0
     const oy = e.kind === "group" ? e.content.minY : 0
-    const childForce = force || next !== prev || ox !== e.originX || oy !== e.originY
+    // Children's applied sizing depends on their siblings (FIT_ALL_FILL), not only on their box.
+    const kidsAllFill =
+      e.kind === "layout" ? `${allFill(e, "w") ? 1 : 0}${allFill(e, "h") ? 1 : 0}` : ""
+    const childForce =
+      force ||
+      next !== prev ||
+      ox !== e.originX ||
+      oy !== e.originY ||
+      kidsAllFill !== e.kidsAllFill
     e.originX = ox
     e.originY = oy
+    e.kidsAllFill = kidsAllFill
     for (const c of e.children) emit(c, T, visible, childForce, out)
   }
 

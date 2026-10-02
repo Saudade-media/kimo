@@ -184,11 +184,16 @@ export function resizeOps(
 
 export type ShapeKind = "frame" | "rect" | "ellipse"
 
-const SHAPE_NAME: Record<ShapeKind | "text", string> = {
+/** Kinds that get "Name N" names. */
+export type NameKind = ShapeKind | "text" | "path" | "image"
+
+const SHAPE_NAME: Record<NameKind, string> = {
   frame: "Frame",
   rect: "Rectangle",
   ellipse: "Ellipse",
   text: "Text",
+  path: "Path",
+  image: "Image",
 }
 
 /**
@@ -202,7 +207,7 @@ export const SHAPE_FILL: Record<ShapeKind, string> = {
 }
 
 /** Next free "Rectangle 3"-style name. */
-export function nextName(doc: DocReader, kind: ShapeKind | "text"): string {
+export function nextName(doc: DocReader, kind: NameKind): string {
   const base = SHAPE_NAME[kind]
   const re = new RegExp(`^${base} (\\d+)$`)
   let max = 0
@@ -258,6 +263,94 @@ export function createShapeOp(
     h: round2(Math.max(1, r.h)),
     fill: SHAPE_FILL[kind],
   }
+  return { op: "insert", id, parent, node }
+}
+
+// --- M2: pen paths, images, icons ---------------------------------------------------------
+
+/** Variable that paints text without a fill (spec §5.5); reused for the pen's default stroke. */
+const TEXT_DEFAULT = "text/default"
+
+/**
+ * Insert op for a pen contour (ADR 0010 commit rule): `fields` from `pathGeometry.toNode`
+ * (already in the parent's space), a 1px centered stroke in `text/default` when the document
+ * declares it (else #000000); closed contours get the shape fill, open ones none.
+ */
+export function createPathOp(
+  doc: DocReader,
+  parent: string | null,
+  fields: { x: number; y: number; w: number; h: number; d: string; viewBox: readonly number[] },
+  closed: boolean,
+  hasTextDefault: boolean,
+  id: string = generateId(),
+): Op {
+  const node: Record<string, unknown> = {
+    type: "path",
+    name: nextName(doc, "path"),
+    x: fields.x,
+    y: fields.y,
+    w: fields.w,
+    h: fields.h,
+    d: fields.d,
+    viewBox: [...fields.viewBox],
+    stroke: {
+      paint: hasTextDefault ? { $ref: TEXT_DEFAULT } : "#000000",
+      width: 1,
+      align: "center",
+    },
+  }
+  if (closed) node.fill = SHAPE_FILL.rect
+  return { op: "insert", id, parent, node }
+}
+
+/** Insert op for an image placed as a frame with an image fill (cover) covering world `r`. */
+export function createImageFrameOp(
+  doc: DocReader,
+  layout: LayoutResult,
+  parent: string | null,
+  r: Rect,
+  src: string,
+  id: string = generateId(),
+): Op {
+  const tl = toLocal(layout, parent, r)
+  return {
+    op: "insert",
+    id,
+    parent,
+    node: {
+      type: "frame",
+      name: nextName(doc, "image"),
+      x: round2(tl.x),
+      y: round2(tl.y),
+      w: round2(Math.max(1, r.w)),
+      h: round2(Math.max(1, r.h)),
+      fill: { kind: "image", src, fit: "cover" },
+    },
+  }
+}
+
+/** Insert op for an icon node centered on world point `c`. */
+export function createIconOp(
+  layout: LayoutResult,
+  parent: string | null,
+  c: Point,
+  icon: { set: string; name: string; weight?: number; strokeWidth?: number; size?: number },
+  id: string = generateId(),
+): Op {
+  const size = icon.size ?? 24
+  const tl = toLocal(layout, parent, { x: c.x - size / 2, y: c.y - size / 2 })
+  const node: Record<string, unknown> = {
+    type: "icon",
+    name: icon.name,
+    x: round2(tl.x),
+    y: round2(tl.y),
+    w: size,
+    h: size,
+    set: icon.set,
+    icon: icon.name,
+  }
+  if (icon.weight !== undefined) node.weight = icon.weight
+  if (icon.strokeWidth !== undefined) node.strokeWidth = icon.strokeWidth
   return { op: "insert", id, parent, node }
 }
 

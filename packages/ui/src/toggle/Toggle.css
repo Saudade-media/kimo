@@ -3,7 +3,7 @@
  * frame: 28 × 16, radius-pill, padding 2, alignItems center
  *   on:  fill accent, justifyContent end
  *   off: fill border-strong, justifyContent start
- *   └ Knob ellipse 12 × 12, fill #FFFFFF (a literal in the design, not a variable)
+ *   └ Knob ellipse 12 × 12: on → fill $on-accent (SM9sk), off → literal #FFFFFF (JaEms)
  */
 .kimo-toggle {
   box-sizing: border-box;
@@ -47,5 +47,10 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #ffffff; /* pen-literal: Knob fill #FFFFFF */
+  background: #ffffff; /* pen-literal: Toggle/Off Knob fill #FFFFFF */
+}
+
+/* Toggle/On knob is $on-accent so it stays visible on the light ink track in dark mode. */
+.kimo-toggle--on .kimo-toggle__knob {
+  background: var(--kimo-on-accent);
 }

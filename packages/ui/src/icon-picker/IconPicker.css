@@ -1,0 +1,169 @@
+/*
+ * IconPicker: desing.pen 09 > Icon picker · Lucide (jKClR › b1gaD), · Material, empty search
+ * (Vr0Sk › r6tBTD). Popover/Wide 296 "Icon"; Body (NfvcI) vertical, gap 12, padding 12:
+ *   ├ Search (SrSfb) Input dense, "Search 1,600 icons"
+ *   ├ Library (CSNC1) Segmented fill: Lucide · Phosphor · Material · Feather
+ *   ├ Style (w5XAy, Material only) Segmented fill: Outlined · Rounded · Sharp
+ *   ├ Weight Row (byL5l, Material only) fill_container, gap 8, center:
+ *   │   Label (zmSfL) width 40, sans 12 text-secondary · Weight (g6yTx) Slider 224
+ *   ├ Grid (wiMy8) fill_container, vertical, gap 8
+ *   │   └ Recent (Jnqwo) / All icons (K1fpj): vertical, gap 4
+ *   │       ├ Label (HdtiO) sans 11 / 500 text-tertiary
+ *   │       └ Row (JweM3 …) gap 2 → IconTile 32 × 32 (×8, 270 wide); rows 4 apart
+ *   ├ Footer (UJ0xj) fill_container, gap 8, padding [8, 0, 0, 0], stroke border top 1, center:
+ *   │   name (cD0BM) mono 11 text-primary · Spacer · license (axW82) mono 11 text-tertiary
+ *   └ Empty State (BmLk7) fill_container, vertical, gap 6, padding [28, 16], center,
+ *       bg-subtle, radius-md: Icon search-x 20 text-tertiary · Label sans 12 / 500 text-primary ·
+ *       Label sans 11 text-tertiary · Clear search (ibzGa) Button ghost h 28
+ * All icons is virtualized: a 4-row viewport (4 × 32 + 3 × 4 = 140) with rows at r × 36.
+ */
+.kimo-icon-picker__weight-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-icon-picker__weight-label {
+  flex: none;
+  width: 40px;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.kimo-icon-picker__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-icon-picker__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.kimo-icon-picker__label {
+  align-self: flex-start;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-icon-picker__row {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+}
+
+.kimo-icon-picker__viewport {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+  scrollbar-width: none;
+}
+
+.kimo-icon-picker__viewport:focus-visible {
+  box-shadow: 0 0 0 2px var(--kimo-accent);
+  border-radius: var(--kimo-radius-sm);
+}
+
+.kimo-icon-picker__rows {
+  position: relative;
+  width: 100%;
+}
+
+.kimo-icon-picker__row--virtual {
+  position: absolute;
+  left: 0;
+}
+
+.kimo-icon-picker__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 0 0 0;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.kimo-icon-picker__name,
+.kimo-icon-picker__license {
+  overflow: hidden;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-icon-picker__name {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-icon-picker__license {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-icon-picker__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-icon-picker__empty {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 28px 16px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  text-align: center;
+}
+
+.kimo-icon-picker__empty-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-icon-picker__empty-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-icon-picker__empty-title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+.kimo-icon-picker__empty-hint {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}

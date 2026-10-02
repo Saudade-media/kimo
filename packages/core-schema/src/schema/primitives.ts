@@ -187,6 +187,14 @@ export const BLEND_MODES = [
 export const BlendMode = StringEnum(BLEND_MODES)
 export type BlendMode = Static<typeof BlendMode>
 
+/**
+ * Layer (node) blend modes: every paint blend mode plus `"pass-through"` (spec §5.3): a frame
+ * or group whose children blend directly with the backdrop instead of being composited as an
+ * isolated group first. On other node types `"pass-through"` means `"normal"`.
+ */
+export const LAYER_BLEND_MODES = [...BLEND_MODES, "pass-through"] as const
+export type LayerBlendMode = (typeof LAYER_BLEND_MODES)[number]
+
 /** Namespaced extension data (`meta` on nodes; extra keys of the document `meta`). */
 export const Meta = RecordOf(META_KEY_PATTERN, Type.Unknown(), {
   description: "Namespaced extension data, e.g. 'kimo.export.tag'.",

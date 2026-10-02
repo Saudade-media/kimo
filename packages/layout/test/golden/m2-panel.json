@@ -1,0 +1,126 @@
+[
+  {
+    "id": "panel",
+    "local": [0, 0, 280, 176],
+    "world": [0, 0, 280, 176],
+    "sizing": {
+      "w": "fixed",
+      "h": "fit"
+    },
+    "inFlow": false,
+    "content": [0, 0, 280, 160]
+  },
+  {
+    "id": "head",
+    "local": [0, 0, 280, 40],
+    "world": [0, 0, 280, 40],
+    "sizing": {
+      "w": "fill",
+      "h": "fit"
+    },
+    "inFlow": true,
+    "content": [16, 12, 248, 20]
+  },
+  {
+    "id": "title",
+    "local": [16, 12, 48, 20],
+    "world": [16, 12, 48, 20],
+    "sizing": {
+      "w": "fit",
+      "h": "fit"
+    },
+    "inFlow": true
+  },
+  {
+    "id": "add",
+    "local": [248, 14, 16, 16],
+    "world": [248, 14, 16, 16],
+    "sizing": {
+      "w": "fixed",
+      "h": "fixed"
+    },
+    "inFlow": true
+  },
+  {
+    "id": "body",
+    "local": [0, 40, 280, 64],
+    "world": [0, 40, 280, 64],
+    "sizing": {
+      "w": "fill",
+      "h": "fit"
+    },
+    "inFlow": true,
+    "content": [16, 0, 248, 64]
+  },
+  {
+    "id": "w1",
+    "local": [16, 0, 120, 28],
+    "world": [16, 40, 120, 28],
+    "sizing": {
+      "w": "fill",
+      "h": "fixed"
+    },
+    "inFlow": true
+  },
+  {
+    "id": "w2",
+    "local": [144, 0, 120, 28],
+    "world": [144, 40, 120, 28],
+    "sizing": {
+      "w": "fill",
+      "h": "fixed"
+    },
+    "inFlow": true
+  },
+  {
+    "id": "w3",
+    "local": [16, 36, 120, 28],
+    "world": [16, 76, 120, 28],
+    "sizing": {
+      "w": "fill",
+      "h": "fixed"
+    },
+    "inFlow": true
+  },
+  {
+    "id": "badge",
+    "local": [230, -7, 30, 14],
+    "world": [230, 33, 30, 14],
+    "sizing": {
+      "w": "fixed",
+      "h": "fixed"
+    },
+    "inFlow": false
+  },
+  {
+    "id": "foot",
+    "local": [0, 104, 280, 56],
+    "world": [0, 104, 280, 56],
+    "sizing": {
+      "w": "fill",
+      "h": "fit"
+    },
+    "inFlow": true,
+    "content": [16, 16, 248, 24]
+  },
+  {
+    "id": "f1",
+    "local": [66, 16, 24, 24],
+    "world": [66, 120, 24, 24],
+    "sizing": {
+      "w": "fixed",
+      "h": "fixed"
+    },
+    "inFlow": true
+  },
+  {
+    "id": "f2",
+    "local": [190, 16, 24, 24],
+    "world": [190, 120, 24, 24],
+    "sizing": {
+      "w": "fixed",
+      "h": "fixed"
+    },
+    "inFlow": true
+  }
+]

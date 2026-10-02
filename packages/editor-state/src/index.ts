@@ -33,6 +33,7 @@ export { generateId, isNodeId } from "./ids"
 export type {
   BatchOp,
   DeleteOp,
+  HeaderOpKey,
   InsertOp,
   MoveOp,
   NodeData,
@@ -41,16 +42,18 @@ export type {
   NormalizedInsert,
   NormalizedMove,
   NormalizedOp,
+  NormalizedSetHeader,
   NormalizedSetThemes,
   NormalizedSetVariables,
   NormalizedUpdate,
   Op,
   Placement,
+  SetHeaderOp,
   SetThemesOp,
   SetVariablesOp,
   UpdateOp,
 } from "./ops"
-export { flattenOps } from "./ops"
+export { flattenOps, HEADER_OP_KEYS } from "./ops"
 export {
   type InsertKeyPlan,
   isFractionalKey,

@@ -1,13 +1,16 @@
 /**
  * App root: hash routing between Home (`#/`), the editor (`#/file/:id`) and the @kimo/ui
- * component gallery (`#/gallery`).
+ * component gallery (`#/gallery`). The gallery (and its demo boards/icons) is a lazy chunk so
+ * it never ships in the editor's main bundle.
  */
-import { Gallery } from "@kimo/ui"
+import { lazy, Suspense } from "react"
 import { Editor } from "./editor/Editor"
 import { Home } from "./home/Home"
 import { useHash } from "./lib/hooks"
 import { useTheme } from "./lib/theme"
 import { parseRoute } from "./router"
+
+const Gallery = lazy(() => import("@kimo/ui/gallery").then((m) => ({ default: m.Gallery })))
 
 export function App() {
   const route = parseRoute(useHash())
@@ -20,7 +23,9 @@ export function App() {
     case "gallery":
       return (
         <div className="gallery-route">
-          <Gallery theme={theme} />
+          <Suspense fallback={null}>
+            <Gallery theme={theme} />
+          </Suspense>
         </div>
       )
     default:

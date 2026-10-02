@@ -56,6 +56,8 @@ async function main() {
         const page = await context.newPage()
         const errors: string[] = []
         page.on("pageerror", (e) => errors.push(e.message))
+        if (process.env.KIMO_E2E_CONSOLE)
+          page.on("console", (m) => console.log("    [console]", m.type(), m.text()))
         const t0 = performance.now()
         try {
           await s.run({

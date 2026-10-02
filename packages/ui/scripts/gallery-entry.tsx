@@ -2,7 +2,7 @@
 import "@kimo/design-tokens/editor.css"
 import "../src/styles.css"
 import { createRoot } from "react-dom/client"
-import { Gallery } from "../src/index"
+import { Gallery } from "../src/gallery/Gallery"
 
 const container = document.getElementById("root")
 if (!container) throw new Error("#root missing")

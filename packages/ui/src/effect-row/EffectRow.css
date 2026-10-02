@@ -1,0 +1,125 @@
+/*
+ * EffectRow: desing.pen 02b > EffectRow (Q6vwp).
+ * frame: fill_container, layout horizontal, gap 2, alignItems center
+ *   ├ Field (gLR6X) fill_container × 28, fill bg-subtle, radius-sm, gap 6, padding [0, 8, 0, 4],
+ *   │               alignItems center
+ *   │   ├ Settings (upS17) 20 × 20, fill bg-app, radius-xs, stroke border 1, center/center
+ *   │   │   └ Icon (bPqpB) 12 × 12, text-secondary (open, board 08 lvQHn: fill + stroke accent,
+ *   │   │                   icon on-accent)
+ *   │   ├ Type    (q0Vgql) font-sans, text-sm (12), normal, text-primary
+ *   │   ├ Spacer  (l3oJno) fill_container × 1
+ *   │   └ Chevron (Gh1AU)  lucide chevron-down 14, text-tertiary
+ *   ├ Eye    (nYSHl)  IconButton 24, fill #00000000, eye 14 text-tertiary
+ *   └ Remove (M0titT) IconButton 24, fill #00000000, minus 14 text-tertiary
+ * Hidden (board 08 bkMKT): Field opacity 0.5, Eye eye-off.
+ */
+.kimo-effect-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.kimo-effect-row__field {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px 0 4px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-effect-row--hidden .kimo-effect-row__field {
+  opacity: 0.5;
+}
+
+.kimo-effect-row__settings {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-effect-row__settings > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-effect-row__settings--open {
+  background: var(--kimo-accent);
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+  color: var(--kimo-on-accent);
+}
+
+.kimo-effect-row__settings:focus-visible,
+.kimo-effect-row__type:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-effect-row__type {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-effect-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-effect-row__chevron {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+
+.kimo-effect-row__chevron > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-effect-row__remove--hidden {
+  opacity: 0;
+  pointer-events: none;
+}

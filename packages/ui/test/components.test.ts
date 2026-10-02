@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { createElement as h, type ReactElement } from "react"
 import { renderToString } from "react-dom/server"
+import { Gallery } from "../src/gallery/Gallery"
 import {
   AgentStep,
   Avatar,
@@ -9,7 +10,6 @@ import {
   Composer,
   EmptyState,
   FileCard,
-  Gallery,
   IconButton,
   Input,
   initialsOf,

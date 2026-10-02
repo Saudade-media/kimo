@@ -1,0 +1,42 @@
+/*
+ * Tooltip/Hint: desing.pen 02b > Tooltip/Hint (u0dQ1).
+ * frame: hug, fill text-primary, radius-pill, shadow outer 0 4 blur 12 shadow, layout horizontal,
+ *        gap 8, padding [6, 12, 6, 10], alignItems center
+ *   ├ Icon  (A8BzSa) 12 × 12, text-inverse
+ *   └ Label (Zlv3i)  font-sans, text-sm (12), weight 500, text-inverse
+ */
+.kimo-tooltip-hint {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 10px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-text-primary);
+  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
+  color: var(--kimo-text-inverse);
+  pointer-events: none;
+}
+
+.kimo-tooltip-hint__icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-tooltip-hint__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-tooltip-hint__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  white-space: nowrap;
+}

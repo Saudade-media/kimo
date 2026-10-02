@@ -1,0 +1,96 @@
+/*
+ * AlignmentGrid: desing.pen 02b > AlignmentGrid (i1pQK).
+ * frame: fill_container × 64, fill bg-subtle, radius-sm, layout vertical, padding [4, 8],
+ *        justifyContent space_between
+ *   └ Row ×3 (xdx2v, q0HLow, S6hP0) fill_container, justifyContent space_between, alignItems center
+ *       └ Cell ×3 (XKNOk …) 24 × 16, radius-xs, justifyContent center, alignItems center
+ *           ├ Dot  (C2gPgq …) ellipse 3 × 3, text-tertiary
+ *           └ Bars (tkeBE …)  height 12, gap 2; alignItems: top row start, middle center,
+ *                             bottom end → Bar rects 2 × 6 / 2 × 10 / 2 × 6, radius 1, accent
+ */
+.kimo-alignment-grid {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  height: 64px;
+  padding: 4px 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-alignment-grid__row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.kimo-alignment-grid__cell {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-alignment-grid__cell:hover:not(.kimo-alignment-grid__cell--on) {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-alignment-grid__cell:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 0;
+}
+
+.kimo-alignment-grid__dot {
+  display: block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--kimo-text-tertiary);
+}
+
+.kimo-alignment-grid__bars {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2px;
+  height: 12px;
+}
+
+.kimo-alignment-grid__bars--center {
+  align-items: center;
+}
+
+.kimo-alignment-grid__bars--end {
+  align-items: flex-end;
+}
+
+.kimo-alignment-grid__bar {
+  display: block;
+  flex: none;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--kimo-accent);
+}
+
+.kimo-alignment-grid__bar--short {
+  height: 6px;
+}
+
+.kimo-alignment-grid__bar--long {
+  height: 10px;
+}

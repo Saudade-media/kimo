@@ -1,0 +1,253 @@
+/*
+ * ColorPicker: desing.pen 09 Popovers (M2) > Color picker · Custom (E1jsd › jNAqx) and
+ * · Variables (MoN4J › nim6l). Popover (xvOvm) 248 with:
+ *   Header Leading → Tabs (YaEK9 / h08Kr2) gap 2, alignItems center; Custom state padding-left −6
+ *   Header actions → Actions (U21Ts) gap 2: Eyedropper pipette + Close x (24, #00000000,
+ *                    icon 14 text-secondary)
+ *   Custom Body (aV4J8) vertical, gap 12, padding 12:
+ *   ├ ColorArea (BEI3g)
+ *   ├ Sliders (Lcpbt) fill_container, vertical, gap 10 → Hue (WBLRZ), Alpha (BVfN2)
+ *   ├ Value Row (v0Mnm) fill_container, gap 6, alignItems center
+ *   │   ├ Format (xothp) Select width 68 ("HEX")
+ *   │   ├ Hex (AqBJI) PropField fill_container, prefix "#"
+ *   │   └ Opacity (aaHXu) PropField width 60, no prefix ("100%")
+ *   ├ Divider (s28qjJ) fill_container × 1, border
+ *   └ Document colors (cuPjC) fill_container, vertical, gap 8
+ *       ├ Header (Gf0ES) fill_container, gap 8, center → Label (EisL5) sans 11 / 500 text-tertiary
+ *       └ Swatches (Nmc4H) gap 6 → SwatchTile ×n
+ *   Variables Body (gAWcP) vertical, gap 12, padding 12:
+ *   ├ Search (tub8E) Input dense
+ *   ├ List (rYitk) fill_container, vertical, gap 2
+ *   │   ├ Group (qLcop) gap 8, padding [0, 6, 4, 6] (next groups i92eU: [8, 6, 4, 6]), center:
+ *   │   │   Label mono 11 text-tertiary · Spacer · count mono 11 text-tertiary
+ *   │   └ Variable (P4Q35R) fill_container × 28, gap 8, padding [0, 6], center, radius-sm
+ *   │       (selected WfQjY: fill accent-soft, name 500):
+ *   │       Swatch 18 (padding 1) · Name sans 12 text-primary · Spacer ·
+ *   │       Modes (gap 3: chip 10 × 10, radius 3, stroke 1 #0A0A0A1F) ·
+ *   │       Check 14 (text-primary when selected, else #00000000)
+ *   └ Footer (Uy64L) fill_container, gap 8, padding [8, 6, 0, 6], stroke border top 1, center:
+ *       "Modes" sans 11 text-tertiary · Spacer · "light · dark" mono 11 text-tertiary
+ */
+.kimo-color-picker__tabs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Custom state (YaEK9): padding-left −6 — the frame stays at the header inset (x 12) and its
+   first tab starts 6px to the left of it. */
+.kimo-color-picker__tabs--inset > :first-child {
+  margin-left: -6px;
+}
+
+.kimo-color-picker__sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.kimo-color-picker__sliders > .kimo-slider {
+  width: 100%;
+}
+
+.kimo-color-picker__value-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kimo-color-picker__format {
+  flex: none;
+  width: 68px;
+}
+
+.kimo-color-picker__hex {
+  flex: 1 1 0;
+}
+
+.kimo-color-picker__opacity {
+  flex: none;
+  width: 60px;
+}
+
+.kimo-color-picker__divider {
+  flex: none;
+  width: 100%;
+  height: 1px;
+  background: var(--kimo-border);
+}
+
+.kimo-color-picker__document {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-color-picker__document-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-color-picker__caption {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-color-picker__swatches {
+  display: flex;
+  align-self: flex-start; /* Swatches (Nmc4H) hugs its tiles */
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kimo-color-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.kimo-color-picker__group {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0 6px 4px 6px;
+}
+
+.kimo-color-picker__group--next {
+  padding-top: 8px;
+}
+
+.kimo-color-picker__group-label,
+.kimo-color-picker__footer-modes {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-color-picker__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-color-picker__variable {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: var(--kimo-radius-sm);
+  cursor: pointer;
+  outline: none;
+}
+
+.kimo-color-picker__variable:hover:not(.kimo-color-picker__variable--selected) {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-color-picker__variable:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-color-picker__variable--selected {
+  background: var(--kimo-accent-soft);
+}
+
+.kimo-color-picker__variable .kimo-swatch-tile {
+  pointer-events: none;
+}
+
+.kimo-color-picker__variable-name {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-color-picker__variable--selected .kimo-color-picker__variable-name {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-color-picker__modes {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+}
+
+.kimo-color-picker__mode-chip {
+  box-sizing: border-box;
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px #0a0a0a1f; /* pen-literal: P4ocE stroke */
+}
+
+.kimo-color-picker__check {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: transparent;
+}
+
+.kimo-color-picker__check--on {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-color-picker__check > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-color-picker__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 6px 0 6px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.kimo-color-picker__footer-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}

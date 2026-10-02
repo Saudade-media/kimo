@@ -15,7 +15,10 @@ import { IndexedDbProvider } from "@kimo/sync/indexeddb"
 import { useEffect, useState } from "react"
 import type { UiStore } from "../canvas/contract"
 import { startGesture } from "../canvas/gesture"
+import { manifestOps } from "../lib/asset-manifest"
+import type { ManifestEntry } from "../lib/assets"
 import { countFrames, docDbName, type FileMeta, getFile, patchFile } from "../lib/files"
+import { currentHeader } from "../lib/header"
 
 export interface FileSession {
   id: string
@@ -27,6 +30,13 @@ export interface FileSession {
   apply(ops: Op | readonly Op[], label?: string): boolean
   /** Undo grouping for continuous gestures (scrubbing): see {@link Gesture}. */
   gesture(): Gesture
+  /**
+   * Manifest entries of assets known to this session (the editor's asset store). With a
+   * document manifest, edits that add an asset reference also add its entry (spec §12).
+   */
+  assetEntry: (src: string) => ManifestEntry | null
+  /** Rejected edits (the shell may surface them; they are always logged). */
+  onReject: Set<(message: string) => void>
 }
 
 export type SessionState =
@@ -47,9 +57,18 @@ export interface Gesture {
 }
 
 function makeSession(id: string, store: DocStore, provider: IndexedDbProvider, meta: FileMeta) {
+  const reject = (message: string) => {
+    console.warn("Kimo: edit rejected", message)
+    for (const l of [...session.onReject]) l(message)
+  }
+  /** `ops` plus the manifest entries for asset references they add (same undo step). */
+  const withManifest = (ops: Op | readonly Op[]): Op | readonly Op[] => {
+    const extra = manifestOps(currentHeader(store).assets, ops, (src) => session.assetEntry(src))
+    return extra.length ? [...extra, ...(Array.isArray(ops) ? ops : [ops as Op])] : ops
+  }
   const apply = (ops: Op | readonly Op[], label?: string) => {
-    const r = store.apply(ops, label ? { origin: "user", label } : { origin: "user" })
-    if (!r.ok) console.warn("Kimo: edit rejected", r.errors)
+    const r = store.apply(withManifest(ops), label ? { origin: "user", label } : { origin: "user" })
+    if (!r.ok) reject(r.errors.map((e) => e.message).join("; "))
     return r.ok
   }
   const session: FileSession = {
@@ -59,12 +78,12 @@ function makeSession(id: string, store: DocStore, provider: IndexedDbProvider, m
     provider,
     meta,
     apply,
+    assetEntry: () => null,
+    onReject: new Set(),
     gesture() {
-      const g = startGesture(store, "user", "Edit", (message) =>
-        console.warn("Kimo: edit rejected", message),
-      )
+      const g = startGesture(store, "user", "Edit", reject)
       return {
-        apply: (ops, label) => g.set(ops, label),
+        apply: (ops, label) => g.set(withManifest(ops) as readonly Op[], label),
         end: () => g.end(),
         get done() {
           return g.done

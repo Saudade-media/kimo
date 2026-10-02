@@ -1,0 +1,86 @@
+/*
+ * Popover: desing.pen 02b Components — Styling (M2) > Popover (xvOvm), Popover/Wide (u0aiz).
+ * frame: width 248 (wide 296), clip, fill bg-overlay, radius-lg, stroke border 1 (inside),
+ *        shadow outer 0 8 blur 24 shadow-strong, layout vertical
+ *   ├ Header (Am1eq) fill_container × 40, stroke border bottom 1, padding [0, 6, 0, 12],
+ *   │        justifyContent space_between, alignItems center
+ *   │   ├ Leading (lSGG7) gap 6, alignItems center
+ *   │   │   └ Title (cNBKW) font-sans, text-sm (12), weight 600, text-primary
+ *   │   └ Close (gKfsp) IconButton 24 × 24, fill #00000000, icon x 14 text-tertiary
+ *   └ Body (LjbJY) fill_container, vertical, gap 12, padding 12
+ */
+.kimo-popover {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 248px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow: 0 8px 24px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  outline: none;
+  z-index: 20;
+}
+
+/* The inside stroke is drawn above the clipped content, like Pencil's inside stroke. */
+.kimo-popover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  pointer-events: none;
+}
+
+.kimo-popover--wide {
+  width: 296px;
+}
+
+.kimo-popover__header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+  padding: 0 6px 0 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-popover__leading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.kimo-popover__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.kimo-popover__body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+}
+
+/* Header actions group (color picker U21Ts): gap 2, alignItems center. */
+.kimo-popover__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}

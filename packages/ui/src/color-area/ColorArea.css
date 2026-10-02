@@ -1,0 +1,56 @@
+/*
+ * ColorArea: desing.pen 02b > ColorArea (H5QKDe).
+ * frame: 224 × 160, layout none, clip, radius-sm, fill = pure hue
+ *   ├ Saturation  (P4xJV) 224 × 160, gradient #FFFFFF → #FFFFFF00, left → right
+ *   ├ Brightness  (h99I2) 224 × 160, gradient #00000000 → #000000, top → bottom
+ *   └ Picker Ring (phbmP) ellipse 14 × 14, fill = color, stroke #FFFFFF 2.5,
+ *                         shadow 0 1 3 #0A0A0A59, centered on (s, 1 − v)
+ */
+.kimo-color-area {
+  --kimo-color-area-x: 0;
+  --kimo-color-area-y: 0;
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  flex: none;
+  width: 224px;
+  height: 160px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-sm);
+  touch-action: none;
+  cursor: crosshair;
+  outline: none;
+}
+
+.kimo-color-area:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-color-area__saturation,
+.kimo-color-area__brightness {
+  position: absolute;
+  inset: 0;
+}
+
+.kimo-color-area__saturation {
+  background: linear-gradient(to right, #ffffff, #ffffff00); /* pen-literal: P4xJV fill */
+}
+
+.kimo-color-area__brightness {
+  background: linear-gradient(to bottom, #00000000, #000000); /* pen-literal: h99I2 fill */
+}
+
+.kimo-color-area__ring {
+  box-sizing: border-box;
+  position: absolute;
+  top: calc(var(--kimo-color-area-y) * 100% - 7px);
+  left: calc(var(--kimo-color-area-x) * 100% - 7px);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2.5px #ffffff,
+    0 1px 3px 0 #0a0a0a59; /* pen-literal: phbmP stroke + shadow */
+  pointer-events: none;
+}

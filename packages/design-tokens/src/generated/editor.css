@@ -13,6 +13,8 @@
   --kimo-space-8: 32px;
   --kimo-space-10: 40px;
   --kimo-space-12: 48px;
+  --kimo-radius-2xs: 2px;
+  --kimo-radius-xs: 4px;
   --kimo-radius-sm: 6px;
   --kimo-radius-md: 10px;
   --kimo-radius-lg: 16px;
@@ -60,6 +62,9 @@
   --kimo-agent: #0093A3;
   --kimo-agent-soft: #E3F5F7;
   --kimo-agent-2: #3860BE;
+  --kimo-measure: #E5177E;
+  --kimo-measure-soft: #E5177E1F;
+  --kimo-chip-edge: #0A0A0A14;
   --kimo-type-display-font-family: var(--kimo-font-sans);
   --kimo-type-display-font-size: var(--kimo-text-3xl);
   --kimo-type-display-font-weight: var(--kimo-font-weight-medium);
@@ -156,6 +161,9 @@
   --kimo-agent: #0093A3;
   --kimo-agent-soft: #E3F5F7;
   --kimo-agent-2: #3860BE;
+  --kimo-measure: #E5177E;
+  --kimo-measure-soft: #E5177E1F;
+  --kimo-chip-edge: #0A0A0A14;
   --kimo-elevation-popover: 0px 4px 16px 0px var(--kimo-shadow);
   --kimo-elevation-dialog: 0px 2px 6px 0px var(--kimo-shadow), 0px 16px 40px 0px var(--kimo-shadow-strong);
   --kimo-button-primary-bg: var(--kimo-accent);
@@ -208,6 +216,9 @@
   --kimo-agent: #2BC4D4;
   --kimo-agent-soft: #0F2A2E;
   --kimo-agent-2: #6C8FE6;
+  --kimo-measure: #FF5CAB;
+  --kimo-measure-soft: #FF5CAB2E;
+  --kimo-chip-edge: #FFFFFF24;
   --kimo-elevation-popover: 0px 4px 16px 0px var(--kimo-shadow);
   --kimo-elevation-dialog: 0px 2px 6px 0px var(--kimo-shadow), 0px 16px 40px 0px var(--kimo-shadow-strong);
   --kimo-button-primary-bg: var(--kimo-accent);
@@ -261,6 +272,9 @@
     --kimo-agent: #2BC4D4;
     --kimo-agent-soft: #0F2A2E;
     --kimo-agent-2: #6C8FE6;
+    --kimo-measure: #FF5CAB;
+    --kimo-measure-soft: #FF5CAB2E;
+    --kimo-chip-edge: #FFFFFF24;
     --kimo-elevation-popover: 0px 4px 16px 0px var(--kimo-shadow);
     --kimo-elevation-dialog: 0px 2px 6px 0px var(--kimo-shadow), 0px 16px 40px 0px var(--kimo-shadow-strong);
     --kimo-button-primary-bg: var(--kimo-accent);

@@ -1,0 +1,311 @@
+/*
+ * Design tab (board 08 right panel hgQkJ) and the panel popovers composed in the app
+ * (board 09). Values are the nodes' own: Body = column gap 8; Row = row gap 8 center, children
+ * fill; ToggleRow h 28 gap 8 center. Leaf components come from @kimo/ui.
+ */
+
+/* The tabs stay; the Design tab scrolls when taller than the viewport. */
+.right-panel:has(> .design-tab) {
+  overflow: hidden;
+}
+
+.right-panel > .design-tab {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* PropSection > Body (y5Lz1A override): fill, vertical, gap 8 */
+.rp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* PropSection > Row: fill, gap 8, alignItems center; children fill_container */
+.rp-row {
+  align-items: center;
+}
+
+.rp-row > *,
+.rp-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.rp-field {
+  display: flex;
+}
+
+.rp-field > .kimo-prop-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Opacity (V8HJTF) / Weight (Q8tT5v): width 96 */
+.rp-field.rp-field--w96 {
+  flex: none;
+  width: 96px;
+}
+
+.rp-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.rp-label,
+.rp-toggle-row__label,
+.rp-labeled-row__label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Toggle rows (goYoe, LYzIZ, Ax1CJ, PMh7z): fill, h 28, gap 8, center */
+.rp-toggle-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+}
+
+/* Select (gP276) with a Menu/Dense: fill × 28, bg-subtle, radius-sm, padding [0, 8], gap 8,
+   space-between, center; value sans 12 text-primary; chevron-down 14 text-tertiary */
+.rp-select {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rp-select:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.rp-select:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.rp-select__value {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rp-select__chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.rp-select__chevron svg {
+  display: block;
+}
+
+/* UI Selects inside rows fill (Align ftHDU, Distribution p8M99). */
+.rp-select-fill {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* --- Auto layout -------------------------------------------------------------------------- */
+
+/* Direction Row (e3GOh): fill, h 28, gap 8, center */
+.rp-direction-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+}
+
+/* Align Row (XBXjF): fill, gap 8 (no alignItems: start) */
+.rp-align-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Spacing Column (yh40W): fill, vertical, gap 8 */
+.rp-align-row__spacing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rp-align-row__spacing > * {
+  width: 100%;
+}
+
+/* Both children fill_container (124 + 8 + 124): a 0 flex-basis would let the grid's own
+   padding [4, 8] count outside the split (132 / 116), so each gets half the row explicitly. */
+.rp-align-row > .rp-align-row__grid,
+.rp-align-row > .rp-align-row__spacing {
+  flex: 1 1 calc((100% - 8px) / 2);
+  min-width: 0;
+}
+
+/* Individual padding: four PropFields T R B L, like StrokeSideFields (YMKcJ): row, gap 4 */
+.rp-sides {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  width: 100%;
+}
+
+.rp-sides > .rp-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* --- Stroke ------------------------------------------------------------------------------- */
+
+/* Cap Row (mZczZ) / Join Row (BonkB): fill, gap 8, center; label fixed 36 */
+.rp-labeled-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.rp-labeled-row__label {
+  flex: none;
+  width: 36px;
+}
+
+.rp-labeled-row > .kimo-segmented {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* --- Effects ------------------------------------------------------------------------------ */
+
+/* Drop shadow details (eq3UU): fill, vertical, gap 8 */
+.rp-effect-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* --- Icon section (CVMdd) ------------------------------------------------------------------ */
+
+/* Icon Field (RrRtL): fill × 28, padding [0, 8], gap 8, center, radius-sm; idle bg-subtle,
+   open bg-hover + stroke 1 border-strong */
+.rp-icon-field {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rp-icon-field--open {
+  background: var(--kimo-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.rp-icon-field:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.rp-icon-field__glyph {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-primary);
+}
+
+.rp-icon-field__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rp-icon-field__library {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  /* bozY2 text box is 15 high (Pencil: round(11 × 1.32) for JetBrains Mono, as PropField's
+     prefix); `normal` measured 14. */
+  line-height: 15px;
+}
+
+.rp-icon-field__glyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Row remove buttons (board 08) ---------------------------------------------------------
+   The panel's FillRow / EffectRow instances carry Remove at opacity 0 (ft6J5, ZQNco, oMuCL,
+   lvQHn, bkMKT, OlIjm, gbEs5 → FFtaO / M0titT opacity 0); only the row being worked on shows
+   it (G0vhJM: field active → Remove opacity 1). Size is kept, so nothing shifts. Revealed on
+   hover, keyboard focus inside the row and while the row's popover is open. */
+.design-tab .kimo-fill-row__remove,
+.design-tab .kimo-effect-row__remove {
+  opacity: 0;
+}
+
+.design-tab .kimo-fill-row:hover .kimo-fill-row__remove:not(.kimo-fill-row__remove--hidden),
+.design-tab .kimo-fill-row:focus-within .kimo-fill-row__remove:not(.kimo-fill-row__remove--hidden),
+.design-tab
+  .kimo-fill-row:has(.kimo-color-field--active)
+  .kimo-fill-row__remove:not(.kimo-fill-row__remove--hidden),
+.design-tab .kimo-effect-row:hover .kimo-effect-row__remove:not(.kimo-effect-row__remove--hidden),
+.design-tab
+  .kimo-effect-row:focus-within
+  .kimo-effect-row__remove:not(.kimo-effect-row__remove--hidden) {
+  opacity: 1;
+}

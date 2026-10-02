@@ -22,9 +22,16 @@
  *   KIMO_PERF_JSON=out.json …            # also write the raw results
  *   KIMO_PERF_HEADED=1 …                 # headed browser
  *   KIMO_PERF_NO_RASTER=1 …              # A/B: renderer raster cache off
+ *   KIMO_PERF_NO_MOTION=1 …              # A/B: motion raster cache off (filtered roots replay)
  *   KIMO_PERF_SHOTS=dir …                # zoom-to-fit screenshots (raster cache vs pictures)
  *   KIMO_PERF_PROD=1 …                   # production build (vite build + preview, the test
  *                                        # hook opted in with ?kimo-debug): no React dev cost
+ *   KIMO_PERF_M2=1 …                     # M2 stress document (./gen.ts `m2`): dashed strokes,
+ *                                        # shadows with spread, blurs, background blur, blend
+ *                                        # modes, icon and path nodes
+ *   KIMO_PERF_M2_SKIP=backdrop,blur,…    # M2 doc minus features (cost attribution; ./gen.ts)
+ *   KIMO_PERF_PHASES=sweeps              # only import + pan/zoom sweeps (skip the rest)
+ *   KIMO_PERF_VERBOSE=1 …                # slowest sweep frames: record / raster ms + counts
  *
  * Package script: `bun run e2e:perf` (apps/web).
  *
@@ -47,13 +54,26 @@ const PROFILE = process.env.KIMO_PERF_PROFILE === "1"
 const DPR = Number(process.env.KIMO_PERF_DPR ?? 1)
 const SWEEP_MS = Number(process.env.KIMO_PERF_SWEEP_MS ?? 3000)
 const PROD = process.env.KIMO_PERF_PROD === "1"
+const M2 = process.env.KIMO_PERF_M2 === "1"
+const SWEEPS_ONLY = process.env.KIMO_PERF_PHASES === "sweeps"
 const LATENCY_SAMPLES = 20
 
 // --- in-page probe ------------------------------------------------------------------------------
 
 /** Installed in the page: wraps `renderer.render` to time-stamp every frame. */
 interface Probe {
-  frames: { end: number; ms: number; drawn: number; culled: number; draws: number }[]
+  frames: {
+    end: number
+    ms: number
+    drawn: number
+    culled: number
+    draws: number
+    /** Renderer diagnostics: CPU ms recording / rasterizing in this frame, and counts. */
+    recMs: number
+    rasMs: number
+    rec: number
+    ras: number
+  }[]
   install(): void
 }
 
@@ -104,7 +124,16 @@ function installProbe() {
     install() {
       type R = {
         render(): void
-        stats(): { frameMs: number; nodesDrawn: number; nodesCulled: number; drawCalls: number }
+        stats(): {
+          frameMs: number
+          nodesDrawn: number
+          nodesCulled: number
+          drawCalls: number
+          recordMs?: number
+          rasterMs?: number
+          recorded?: number
+          rasterized?: number
+        }
         __probed?: boolean
       }
       const r = w.__kimo?.canvas()?.renderer as unknown as R | null | undefined
@@ -113,6 +142,8 @@ function installProbe() {
       // A/B: KIMO_PERF_NO_RASTER=1 measures with the zoomed-out raster cache off.
       if ((w as unknown as { __perfNoRaster?: boolean }).__perfNoRaster)
         (r as unknown as { rasterCache: boolean }).rasterCache = false
+      if ((w as unknown as { __perfNoMotion?: boolean }).__perfNoMotion)
+        (r as unknown as { motionRasterCache: boolean }).motionRasterCache = false
       const orig = r.render.bind(r)
       r.render = () => {
         orig()
@@ -123,6 +154,10 @@ function installProbe() {
           drawn: s.nodesDrawn,
           culled: s.nodesCulled,
           draws: s.drawCalls,
+          recMs: s.recordMs ?? 0,
+          rasMs: s.rasterMs ?? 0,
+          rec: s.recorded ?? 0,
+          ras: s.rasterized ?? 0,
         })
       }
     },
@@ -335,6 +370,14 @@ async function sweep(page: Page, kind: SweepKind, ms: number) {
       return {
         deltas: deltas.slice(2),
         renderMs: frames.map((f) => f.ms),
+        // Slowest frames: what they spent on recording / rasterizing.
+        slow: [...frames]
+          .sort((a, b) => b.ms - a.ms)
+          .slice(0, 6)
+          .map(
+            (f) =>
+              `${f.ms.toFixed(0)}ms(rec ${f.rec}/${f.recMs.toFixed(0)}ms ras ${f.ras}/${f.rasMs.toFixed(0)}ms)`,
+          ),
         drawn: Math.max(...frames.map((f) => f.drawn)),
         draws: Math.max(...frames.map((f) => f.draws)),
         frames: frames.length,
@@ -607,10 +650,14 @@ async function editLatency(page: Page, doc: PerfDoc, kind: "paint" | "layout" | 
 
 // --- main -----------------------------------------------------------------------------------
 
+/** `KIMO_PERF_PHASES=sweeps`: stop after the pan/zoom sweeps. */
+class SweepsDone extends Error {}
+
 async function main() {
-  const doc = generatePerfDoc(NODES)
+  const skip = process.env.KIMO_PERF_M2_SKIP?.split(",").filter(Boolean)
+  const doc = generatePerfDoc(NODES, 1, { m2: M2, skip })
   console.log(
-    `Kimo perf gate — ${doc.count} nodes (${doc.roots.length} screens), GL ${GL}, dpr ${DPR}, ${PROD ? "production build" : "dev server"}`,
+    `Kimo perf gate${M2 ? ` (M2 stress${skip?.length ? `, without ${skip.join(", ")}` : ""})` : ""} — ${doc.count} nodes (${doc.roots.length} screens), GL ${GL}, dpr ${DPR}, ${PROD ? "production build" : "dev server"}`,
   )
   const configFile = join(root, "vite.config.ts")
   let url: string
@@ -642,7 +689,7 @@ async function main() {
     server = dev
   }
   let browser: Browser | null = null
-  const results: Record<string, unknown> = { nodes: doc.count, gl: GL, dpr: DPR }
+  const results: Record<string, unknown> = { nodes: doc.count, gl: GL, dpr: DPR, m2: M2 }
   let failed = false
   try {
     const args =
@@ -665,6 +712,10 @@ async function main() {
       await page.addInitScript(() => {
         ;(window as unknown as { __perfNoRaster: boolean }).__perfNoRaster = true
       })
+    if (process.env.KIMO_PERF_NO_MOTION === "1")
+      await page.addInitScript(() => {
+        ;(window as unknown as { __perfNoMotion: boolean }).__perfNoMotion = true
+      })
     await page.addInitScript(installProbe)
     const cdp = PROFILE ? await context.newCDPSession(page) : null
 
@@ -675,12 +726,14 @@ async function main() {
       `  import (apply ${doc.count} inserts → first frame): apply ${f1(imp.applyMs)} ms, first frame at ${f1(imp.firstFrameMs)} ms (render ${f1(imp.frameMs)} ms, ${imp.drawn} nodes drawn); all ${doc.count} drawn at ${f1(imp.completeMs)} ms after ${imp.frames} frame(s), longest render ${f1(imp.maxFrameMs)} ms`,
     )
     // Let y-indexeddb persist before reloading.
-    await page.waitForTimeout(2500)
-    const cold = await profiled(cdp, "cold open", () => coldOpen(page))
-    results.coldOpen = cold
-    console.log(
-      `  cold open (reload → canvas ready): ${f1(cold.ready)} ms (DOMContentLoaded ${f1(cold.domContentLoaded)} ms, first render ${f1(cold.firstFrameMs)} ms, ${cold.drawn} drawn, ${cold.backend})`,
-    )
+    if (!SWEEPS_ONLY) await page.waitForTimeout(2500)
+    if (!SWEEPS_ONLY) {
+      const cold = await profiled(cdp, "cold open", () => coldOpen(page))
+      results.coldOpen = cold
+      console.log(
+        `  cold open (reload → canvas ready): ${f1(cold.ready)} ms (DOMContentLoaded ${f1(cold.domContentLoaded)} ms, first render ${f1(cold.firstFrameMs)} ms, ${cold.drawn} drawn, ${cold.backend})`,
+      )
+    }
     // Zoom to fit right after opening: most roots were never recorded at 100 %.
     const fit = await page.evaluate(async (count) => {
       const w = window as unknown as Win
@@ -708,7 +761,9 @@ async function main() {
 
     const sweeps: Record<string, unknown> = {}
     for (const kind of ["pan-fit", "pan-100", "zoom"] as const) {
-      await sweep(page, kind, 500) // warm-up (records pictures, JIT)
+      // Warm-up (records pictures, JIT; `KIMO_PERF_WARM_MS` longer to separate one-time costs
+      // such as GPU shader compiles from steady state).
+      await sweep(page, kind, Number(process.env.KIMO_PERF_WARM_MS ?? 500))
       const s = await profiled(cdp, kind, () => sweep(page, kind, SWEEP_MS))
       const raf = summary(s.deltas)
       const ren = summary(s.renderMs)
@@ -717,9 +772,12 @@ async function main() {
       console.log(
         `  ${"".padEnd(8)} render ms  ${line(ren)}  frames ${s.frames}, ≤${s.drawn} nodes / ${s.draws} draws`,
       )
+      if (process.env.KIMO_PERF_VERBOSE === "1")
+        console.log(`  ${"".padEnd(8)} slowest   ${s.slow.join(" ")}`)
       if (raf.p95 > 16.7 * 1.25) failed = true
     }
     results.sweeps = sweeps
+    if (SWEEPS_ONLY) throw new SweepsDone()
     const fid = await rasterFidelity(page, process.env.KIMO_PERF_SHOTS ?? null)
     results.rasterFidelity = fid
     console.log(
@@ -758,6 +816,8 @@ async function main() {
       console.log(`  page errors:\n    ${errors.slice(0, 10).join("\n    ")}`)
       failed = true
     }
+  } catch (e) {
+    if (!(e instanceof SweepsDone)) throw e
   } finally {
     await browser?.close()
     await server.close()

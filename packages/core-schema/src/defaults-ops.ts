@@ -85,7 +85,13 @@ const paints = (v: unknown, op: Op) =>
   Array.isArray(v) ? v.map((p) => paint(p, op)) : paint(v, op)
 
 function effect(v: unknown, op: Op): unknown {
-  if (!isObject(v) || v.kind !== "shadow") return v
+  if (!isObject(v)) return v
+  if (v.kind === "blur" || v.kind === "backdrop-blur") {
+    const o: Obj = { ...v }
+    withDefaults(o, DEFAULTS.blur, op)
+    return o
+  }
+  if (v.kind !== "shadow") return v
   const o: Obj = { ...v, color: color(v.color, op) }
   withDefaults(o, DEFAULTS.shadow, op)
   return o

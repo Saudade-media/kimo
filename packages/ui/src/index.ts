@@ -13,14 +13,110 @@ export {
   Message,
   type MessageProps,
 } from "./agent/Agent"
+// --- M2: Layout and styling (boards 02b, 09) ---------------------------------------------
+export {
+  AlignmentGrid,
+  type AlignmentGridProps,
+  alignmentCell,
+  cellAlignment,
+  type GridAlign,
+  type GridJustify,
+} from "./alignment-grid/AlignmentGrid"
 export { Avatar, type AvatarProps, initialsOf } from "./avatar/Avatar"
 export { Badge, type BadgeProps } from "./badge/Badge"
+export {
+  BLEND_MODE_GROUPS,
+  BlendModeMenu,
+  type BlendModeMenuProps,
+  blendModeLabel,
+  type LayerBlendMode,
+} from "./blend-mode-menu/BlendModeMenu"
 export { Button, type ButtonProps, type ButtonVariant } from "./button/Button"
+export * as color from "./color/color"
+export {
+  COLOR_FORMATS,
+  type ColorFormat,
+  channels,
+  editColor,
+  formatColor,
+  fromChannels,
+  type Hsl,
+  type Hsv,
+  hexDigits,
+  hslToRgb,
+  hsvToRgb,
+  type Oklch,
+  oklchToRgb,
+  parseColor,
+  parseHex,
+  parsePercent,
+  percent,
+  type Rgba,
+  rgbToHsl,
+  rgbToHsv,
+  rgbToOklch,
+  toHex,
+} from "./color/color"
+export { type Hsva, hexToHsva, hsvaToHex, useHsva } from "./color/useHsva"
+export { ColorArea, type ColorAreaProps } from "./color-area/ColorArea"
 export { ColorField, type ColorFieldProps } from "./color-field/ColorField"
+export {
+  ColorPicker,
+  type ColorPickerProps,
+  type ColorPickerTab,
+  type ColorVariable,
+  type ColorVariableGroup,
+} from "./color-picker/ColorPicker"
+export {
+  DirectionControl,
+  type DirectionControlProps,
+} from "./direction-control/DirectionControl"
+export {
+  EFFECT_KINDS,
+  type EffectKind,
+  EffectRow,
+  type EffectRowProps,
+} from "./effect-row/EffectRow"
 export { EmptyState, type EmptyStateProps } from "./empty-state/EmptyState"
 export { FileCard, FileCardMiniFrame, type FileCardProps } from "./file-card/FileCard"
-export { Gallery, type GalleryProps } from "./gallery/Gallery"
+export { FillRow, type FillRowProps } from "./fill-row/FillRow"
+export {
+  colorAt,
+  GradientEditor,
+  type GradientEditorProps,
+  type GradientKind,
+} from "./gradient-editor/GradientEditor"
+export {
+  type GradientStop,
+  GradientStopBar,
+  type GradientStopBarProps,
+  stopsGradient,
+} from "./gradient-stop-bar/GradientStopBar"
 export { IconButton, type IconButtonProps } from "./icon-button/IconButton"
+export {
+  filterIcons,
+  ICON_GRID,
+  ICON_LICENSES,
+  IconGlyphSvg,
+  type IconIndexProvider,
+  type IconLibraryId,
+  IconPicker,
+  type IconPickerGlyph,
+  type IconPickerProps,
+  iconSetOf,
+  libraryOf,
+  type MaterialStyle,
+  visibleRows,
+} from "./icon-picker/IconPicker"
+export { IconTile, type IconTileProps } from "./icon-tile/IconTile"
+export {
+  IMAGE_FILL_MODES,
+  type ImageFillMode,
+  ImageFillPopover,
+  type ImageFillPopoverProps,
+  imageFillBackground,
+  imageFillModeLabel,
+} from "./image-fill-popover/ImageFillPopover"
 export { Input, type InputProps } from "./input/Input"
 export { Kbd, type KbdProps } from "./kbd/Kbd"
 export {
@@ -31,11 +127,36 @@ export {
 } from "./layer-row/LayerRow"
 export { Menu, MenuItem, type MenuItemProps, type MenuProps } from "./menu/Menu"
 export {
+  MenuDense,
+  type MenuDenseProps,
+  MenuDivider,
+  type MenuDividerProps,
+  MenuItemDense,
+  type MenuItemDenseProps,
+} from "./menu-dense/MenuDense"
+export {
   PanelHeader,
   type PanelHeaderAction,
   type PanelHeaderProps,
 } from "./panel-header/PanelHeader"
+export { Popover, type PopoverProps } from "./popover/Popover"
+export {
+  type Align,
+  anchoredPosition,
+  type Placement,
+  type PlacementOptions,
+  type Rect,
+  type Side,
+} from "./popover/position"
+export {
+  focusables,
+  type PopoverAnchor,
+  useAnchoredPosition,
+  useDismiss,
+  useFocusTrap,
+} from "./popover/usePopover"
 export { PropField, type PropFieldProps } from "./prop-field/PropField"
+export { PropTextField, type PropTextFieldProps } from "./prop-field/PropTextField"
 export {
   PropRow,
   type PropRowProps,
@@ -49,6 +170,22 @@ export {
   type SegmentedProps,
 } from "./segmented/Segmented"
 export { Select, type SelectOption, type SelectProps } from "./select/Select"
+export { SIZE_MODES, SizeField, type SizeFieldProps, type SizeMode } from "./size-field/SizeField"
+export {
+  AlphaSlider,
+  type AlphaSliderProps,
+  type GestureProps,
+  HueSlider,
+  type HueSliderProps,
+  Slider,
+  type SliderProps,
+} from "./slider/Slider"
+export {
+  type StrokeSide,
+  StrokeSideFields,
+  type StrokeSideFieldsProps,
+} from "./stroke-side-fields/StrokeSideFields"
+export { SwatchTile, type SwatchTileProps } from "./swatch-tile/SwatchTile"
 export { Tab, type TabProps, Tabs, type TabsItem, type TabsProps } from "./tabs/Tabs"
 export { Toast, type ToastProps } from "./toast/Toast"
 export { Toggle, type ToggleProps } from "./toggle/Toggle"
@@ -59,3 +196,5 @@ export {
   type TooltipContentProps,
   type TooltipProps,
 } from "./tooltip/Tooltip"
+export { TooltipHint, type TooltipHintProps } from "./tooltip-hint/TooltipHint"
+export { ZoomBadge, type ZoomBadgeProps, zoomLabel } from "./zoom-badge/ZoomBadge"

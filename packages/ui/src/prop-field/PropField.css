@@ -61,3 +61,22 @@
 .kimo-prop-field__value:disabled {
   color: var(--kimo-text-tertiary);
 }
+
+/* PropTextField: the prefix is a plain label (no scrubbing). */
+.kimo-prop-field__prefix--static {
+  cursor: default;
+}
+
+/* Icon prefix (board 08 instances, e.g. Opacity V8HJTF: jXquz → icon 12 × 12 text-tertiary). */
+.kimo-prop-field__prefix--icon {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  line-height: 0;
+}
+
+.kimo-prop-field__prefix--icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

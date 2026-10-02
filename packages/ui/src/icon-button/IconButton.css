@@ -62,3 +62,25 @@
 .kimo-icon-button:hover:not(:disabled):not(.kimo-icon-button--active) {
   background: var(--kimo-bg-hover);
 }
+
+/*
+ * M2 instances (02b / 09): fill overridden to #00000000.
+ *   ghost: icon text-secondary (Eyedropper hcAM8, Close W3Ijc, Rotate hssZQ, Flip p2vIye).
+ *   quiet: icon text-tertiary (Popover Close gKfsp, FillRow Eye r3MBc / Remove FFtaO).
+ */
+.kimo-icon-button--ghost,
+.kimo-icon-button--quiet {
+  background: transparent;
+}
+
+.kimo-icon-button--ghost {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-icon-button--quiet {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-icon-button--quiet:hover:not(:disabled) {
+  color: var(--kimo-text-secondary);
+}

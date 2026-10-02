@@ -1,0 +1,89 @@
+/*
+ * GradientStopBar: desing.pen 02b > GradientStopBar (rbnJS).
+ * frame: 224 × 36, layout none
+ *   ├ Bar (i6ppu) frame 224 × 24 at (0, 0), clip, #FFFFFF, radius-sm, stroke border-strong 1
+ *   │   ├ Checker  (a99w5) #E4E2DE (4 × 4 squares; ADR 0010: the node stretches them to 4 × 8)
+ *   │   └ Gradient (mvEk6) stops left → right
+ *   └ Stop (ZcnQu …) frame 16 × 16 at (at × 208, 18), #FFFFFF, radius-xs, stroke border-strong 1
+ *       (selected cnamv: stroke selection 2), shadow 0 1 3 shadow-strong, padding 3
+ *       └ Color (K4HkL) fill_container, radius-2xs
+ */
+.kimo-gradient-stop-bar {
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  flex: none;
+  width: 224px;
+  height: 36px;
+  touch-action: none;
+}
+
+.kimo-gradient-stop-bar__bar {
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-sm);
+  background: #ffffff; /* pen-literal: i6ppu fill */
+  cursor: copy;
+}
+
+.kimo-gradient-stop-bar__bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+  pointer-events: none;
+}
+
+.kimo-gradient-stop-bar__checker,
+.kimo-gradient-stop-bar__gradient {
+  position: absolute;
+  inset: 0;
+}
+
+.kimo-gradient-stop-bar__checker {
+  background:
+    repeating-conic-gradient(transparent 0% 25%, #e4e2de 0% 50%) 0 0 / 8px 8px; /* pen-literal: a99w5 fill */
+}
+
+.kimo-gradient-stop-bar__stop {
+  box-sizing: border-box;
+  position: absolute;
+  top: 18px;
+  display: flex;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: #ffffff; /* pen-literal: ZcnQu fill */
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border-strong),
+    0 1px 3px 0 var(--kimo-shadow-strong);
+  cursor: grab;
+  appearance: none;
+  outline: none;
+}
+
+.kimo-gradient-stop-bar__stop--selected {
+  box-shadow:
+    inset 0 0 0 2px var(--kimo-selection),
+    0 1px 3px 0 var(--kimo-shadow-strong);
+}
+
+.kimo-gradient-stop-bar__stop:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-gradient-stop-bar__color {
+  display: block;
+  flex: 1 1 auto;
+  border-radius: var(--kimo-radius-2xs);
+}

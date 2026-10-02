@@ -1,0 +1,141 @@
+/*
+ * Menu/Dense: desing.pen 02b > Menu/Dense (G7A3Aj).
+ * frame: fill_container (instances 208), fill bg-overlay, radius-lg, stroke border 1 (inside),
+ *        shadow outer 0 8 blur 24 shadow-strong, layout vertical, gap 1, padding 4
+ *   └ Items (ksc3x) fill_container, vertical, gap 1
+ *       └ MenuItem/Dense (EAGNC) fill_container × 28, radius-sm, gap 8, padding [0, 8], center
+ *           ├ Check Slot (Hl922) 14 × 14 center/center → Check (RmOTH) lucide check 14 text-primary
+ *           ├ Label (BRxvS) font-sans, text-sm (12), normal, text-primary (checked: 500)
+ *           ├ Spacer (g602J) fill_container × 1
+ *           └ Meta (T4CD1) font-mono, text-xs (11), normal, text-tertiary
+ *       Checked (bkJJG): fill bg-hover.
+ *   Menu/Divider (fYNDQ): fill_container, padding [4, 8] → Line (eTfCQ) fill_container × 1 border.
+ */
+.kimo-menu-dense {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  margin: 0;
+  padding: 4px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+  outline: none;
+  z-index: 30;
+}
+
+.kimo-menu-dense__items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+}
+
+.kimo-menu-item-dense {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-primary);
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+}
+
+.kimo-menu-item-dense:hover:not([aria-disabled="true"]),
+.kimo-menu-item-dense:focus,
+.kimo-menu-item-dense[data-highlighted],
+.kimo-menu-item-dense--checked {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-menu-item-dense[aria-disabled="true"] {
+  cursor: default;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-menu-item-dense__check {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-primary);
+}
+
+.kimo-menu-item-dense__check > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-menu-item-dense__label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-menu-item-dense__label--mono {
+  font-family: var(--kimo-font-mono);
+}
+
+.kimo-menu-item-dense--checked .kimo-menu-item-dense__label {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-menu-item-dense__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-menu-item-dense__meta {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-menu-item-dense__meta--sans {
+  font-family: var(--kimo-font-sans);
+  line-height: normal;
+}
+
+.kimo-menu-divider {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  width: 100%;
+  padding: 4px 8px;
+}
+
+.kimo-menu-divider__line {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: var(--kimo-border);
+}

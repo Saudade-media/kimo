@@ -10,7 +10,7 @@ import {
   editedLabel,
   type FileMeta,
   framesLabel,
-  importKimo,
+  importFile,
   listFiles,
   pickKimoFile,
 } from "../lib/files"
@@ -59,7 +59,7 @@ export function Home() {
     const file = await pickKimoFile()
     if (!file) return
     try {
-      navigate(`/file/${await importKimo(await file.text(), file.name)}`)
+      navigate(`/file/${(await importFile(file)).id}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }

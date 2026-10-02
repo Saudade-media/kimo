@@ -1,0 +1,42 @@
+/*
+ * SwatchTile: desing.pen 02b > SwatchTile (rg74x), SwatchTile/Selected (Jr3U1).
+ * frame: 20 × 20, radius-sm, stroke 1.5 #00000000 (selected: accent), padding 2
+ *   └ Color (A4ord9) fill_container, radius-xs, stroke chip-edge 1 (inside)
+ * Variables list instance (Hvp8a): 18 × 18, padding 1.
+ */
+.kimo-swatch-tile {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-swatch-tile--18 {
+  width: 18px;
+  height: 18px;
+  padding: 1px;
+}
+
+.kimo-swatch-tile--selected {
+  box-shadow: inset 0 0 0 1.5px var(--kimo-accent);
+}
+
+.kimo-swatch-tile:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-swatch-tile__color {
+  display: block;
+  flex: 1 1 auto;
+  border-radius: var(--kimo-radius-xs);
+  box-shadow: inset 0 0 0 1px var(--kimo-chip-edge);
+}

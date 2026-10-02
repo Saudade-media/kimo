@@ -14,6 +14,12 @@ export interface SelectOption<V extends string = string> {
   value: V
   label: string
   disabled?: boolean
+  /** Dense menus only: right-hand Meta text (`244 162 97`, `fill, crop`). */
+  meta?: string
+  /** Dense menus only: Meta font. Default `"mono"`. */
+  metaFont?: "mono" | "sans"
+  /** Dense menus only: label in font-mono (format names). */
+  mono?: boolean
 }
 
 /** Props for {@link Select}. Remaining `<div>` props go to the wrapper. */
@@ -27,6 +33,13 @@ export interface SelectProps<V extends string = string>
   /** Accessible name of the combobox. */
   label: string
   disabled?: boolean
+  /**
+   * M2 right-panel look: the list is a `Menu/Dense` (G7A3Aj) with `MenuItem/Dense` (EAGNC) rows
+   * (28 tall, check slot, optional Meta), 4px below the trigger, left-aligned (board 09).
+   */
+  dense?: boolean
+  /** Dense list width in px (format menu 188); default: the trigger's width. */
+  menuWidth?: number
 }
 
 /**
@@ -43,6 +56,8 @@ export function Select<V extends string = string>({
   placeholder = "",
   label,
   disabled = false,
+  dense = false,
+  menuWidth,
   className,
   ...rest
 }: SelectProps<V>) {
@@ -139,7 +154,7 @@ export function Select<V extends string = string>({
           <ChevronDown />
         </span>
       </button>
-      {open && (
+      {open && !dense && (
         <div id={listId} role="listbox" aria-label={label} className="kimo-menu kimo-select__list">
           {options.map((o, i) => (
             <div
@@ -162,6 +177,60 @@ export function Select<V extends string = string>({
               <span className="kimo-menu-item__label">{o.label}</span>
             </div>
           ))}
+        </div>
+      )}
+      {open && dense && (
+        <div
+          id={listId}
+          role="listbox"
+          aria-label={label}
+          className="kimo-menu-dense kimo-select__list kimo-select__list--dense"
+          style={menuWidth !== undefined ? { width: menuWidth, minWidth: 0 } : undefined}
+        >
+          <div className="kimo-menu-dense__items">
+            {options.map((o, i) => (
+              <div
+                key={o.value}
+                id={`${id}-opt-${i}`}
+                role="option"
+                tabIndex={-1}
+                aria-selected={o.value === value}
+                aria-disabled={o.disabled || undefined}
+                data-highlighted={i === active || undefined}
+                className={cx(
+                  "kimo-menu-item-dense kimo-select__option",
+                  o.value === value && "kimo-menu-item-dense--checked",
+                )}
+                onPointerDown={(e) => e.preventDefault()}
+                onPointerMove={() => !o.disabled && setActive(i)}
+                onClick={() => choose(i)}
+                onKeyDown={() => {}}
+              >
+                <span className="kimo-menu-item-dense__check" aria-hidden="true">
+                  {o.value === value && <Check />}
+                </span>
+                <span
+                  className={cx(
+                    "kimo-menu-item-dense__label",
+                    o.mono && "kimo-menu-item-dense__label--mono",
+                  )}
+                >
+                  {o.label}
+                </span>
+                <span className="kimo-menu-item-dense__spacer" aria-hidden="true" />
+                {o.meta != null && (
+                  <span
+                    className={cx(
+                      "kimo-menu-item-dense__meta",
+                      o.metaFont === "sans" && "kimo-menu-item-dense__meta--sans",
+                    )}
+                  >
+                    {o.meta}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

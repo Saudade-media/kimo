@@ -5,6 +5,12 @@
  * layout (image rect, title, wrapped body text) and a footer row (avatar ellipse, fill spacer,
  * pill button with a label). Mixed node kinds: frames, rects, ellipses, text (fixed-width
  * wrapping and auto-width), gradients, strokes, shadows, clipping. Deterministic for a seed.
+ *
+ * `{ m2: true }` (perf run `KIMO_PERF_M2=1`): the M2 stress variant — same tree shape and node
+ * count, with the M2 styling features spread over it: dashed strokes (uniform and per side),
+ * shadows with spread (drop + inner, several per node), layer blur, background blur, layer and
+ * paint blend modes, icon nodes (lucide / phosphor / feather / material) in place of avatars,
+ * and path nodes (sparklines, stroked + filled) in place of footer spacers.
  */
 
 type Body = Record<string, unknown>
@@ -53,7 +59,57 @@ function rng(seed: number) {
   }
 }
 
-export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
+export interface PerfDocOptions {
+  /** M2 stress variant (strokes w/ dashes, shadows w/ spread, blurs, icons, paths, blends). */
+  m2?: boolean
+  /**
+   * Diagnostics (`KIMO_PERF_M2_SKIP=backdrop,blur,…`): strip M2 features after generating, to
+   * attribute cost — `backdrop` / `blur` (effects of that kind), `shadow` (all shadows),
+   * `blend` (layer + paint blends), `dash` (stroke dashes).
+   */
+  skip?: readonly string[]
+}
+
+function strip(node: Body, skip: ReadonlySet<string>): void {
+  if (Array.isArray(node.effects)) {
+    node.effects = (node.effects as Body[]).filter(
+      (e) =>
+        !(
+          (skip.has("backdrop") && e.kind === "backdrop-blur") ||
+          (skip.has("blur") && e.kind === "blur") ||
+          (skip.has("shadow") && e.kind === "shadow")
+        ),
+    )
+    if (skip.has("blend")) for (const e of node.effects as Body[]) delete e.blend
+  }
+  if (skip.has("blend")) {
+    delete node.blend
+    const paints = Array.isArray(node.fill) ? node.fill : [node.fill]
+    for (const p of paints) if (p && typeof p === "object") delete (p as Body).blend
+  }
+  if (skip.has("dash") && node.stroke && typeof node.stroke === "object")
+    delete (node.stroke as Body).dash
+}
+
+const ICONS: readonly [string, string][] = [
+  ["lucide", "star"],
+  ["lucide", "heart"],
+  ["lucide", "bookmark"],
+  ["lucide", "bell"],
+  ["phosphor", "lightning"],
+  ["feather", "share-2"],
+  ["material-outlined", "home"],
+]
+const LAYER_BLENDS = ["multiply", "screen", "overlay", "darken", "luminosity"] as const
+/** Sparkline path data in a 0 0 100 24 viewBox. */
+function sparkline(pick: () => number): string {
+  let d = "M0 18"
+  for (let i = 1; i <= 10; i++) d += ` L${i * 10} ${(4 + pick() * 16).toFixed(1)}`
+  return d
+}
+
+export function generatePerfDoc(count = 5000, seed = 1, opts: PerfDocOptions = {}): PerfDoc {
+  const m2 = opts.m2 === true
   const rand = rng(seed)
   const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)] as T
   const words = (n: number) => Array.from({ length: n }, () => pick(WORDS)).join(" ")
@@ -85,7 +141,12 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
       w: ROOT_W,
       clip: true,
       fill: pick(FILLS),
-      effects: [{ kind: "shadow", x: 0, y: 1, blur: 3, color: "#0A0A0A0F" }],
+      effects: m2
+        ? [
+            { kind: "shadow", x: 0, y: 1, blur: 3, color: "#0A0A0A0F" },
+            { kind: "shadow", x: 0, y: 12, blur: 32, spread: -4, color: "#0A0A0A1F" },
+          ]
+        : [{ kind: "shadow", x: 0, y: 1, blur: 3, color: "#0A0A0A0F" }],
       layout: { dir: "column", gap: 24, pad: [0, 0, 40, 0] },
     })
     roots.push(root)
@@ -99,6 +160,11 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
       name: "Navbar",
       w: { mode: "fill" },
       layout: { dir: "row", gap: 28, pad: [18, 40], align: "center" },
+      ...(m2 && {
+        fill: "#FFFFFFB3",
+        stroke: { paint: "#E6E2DC", width: { b: 1 }, dash: [6, 4] },
+        effects: [{ kind: "backdrop-blur", radius: 16 }],
+      }),
     })
     add(nav, {
       type: "text",
@@ -128,6 +194,9 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
       content: `${words(3)}\n${words(2)}`,
       fill: pick(INKS),
       style: { size: 44, weight: 600, lineHeight: 1.05, letterSpacing: -1 },
+      ...(m2 && {
+        effects: [{ kind: "shadow", x: 0, y: 2, blur: 6, spread: 1, color: "#0000001F" }],
+      }),
     })
     add(hero, {
       type: "rect",
@@ -142,7 +211,9 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
           { color: "#F4B183", at: 0 },
           { color: accent, at: 1 },
         ],
+        ...(m2 && { blend: "multiply" }),
       },
+      ...(m2 && { blend: pick(LAYER_BLENDS) }),
     })
     // Card rows.
     let rowFrame: string | null = null
@@ -169,8 +240,31 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
         fill: "#FFFFFF",
         radius: 12,
         clip: true,
-        stroke: { paint: "#E6E2DC", width: 1 },
+        stroke: m2
+          ? inRow % 2
+            ? { paint: "#C9C2B8", width: 1, dash: [4, 3], align: "center" }
+            : { paint: "#C9C2B8", width: { t: 2, r: 1, b: 2, l: 1 }, dash: [8, 4], cap: "round" }
+          : { paint: "#E6E2DC", width: 1 },
         layout: { dir: "column", gap: 10, pad: 14 },
+        ...(m2 && {
+          effects: [
+            { kind: "shadow", x: 0, y: 4, blur: 12, spread: -2, color: "#0A0A0A14" },
+            { kind: "shadow", x: 0, y: 1, blur: 2, spread: 1, color: "#0A0A0A0F" },
+            ...(rows === 2
+              ? [
+                  {
+                    kind: "shadow",
+                    inner: true,
+                    x: 0,
+                    y: 1,
+                    blur: 4,
+                    spread: 1,
+                    color: "#FFFFFF80",
+                  },
+                ]
+              : []),
+          ],
+        }),
       })
       if (first) cards.push(card)
       add(card, {
@@ -180,6 +274,12 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
         h: 96,
         radius: 8,
         fill: pick(FILLS),
+        ...(m2 &&
+          inRow === 1 && { effects: [{ kind: "blur", radius: 6 }], blend: pick(LAYER_BLENDS) }),
+        ...(m2 &&
+          inRow === 3 && {
+            fill: [pick(FILLS), { kind: "solid", color: accent, blend: "overlay" }],
+          }),
       })
       const title = add(card, {
         type: "text",
@@ -204,14 +304,44 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
         w: { mode: "fill" },
         layout: { dir: "row", gap: 8, align: "center" },
       })
-      add(footer, { type: "ellipse", name: "Avatar", w: 24, h: 24, fill: accent })
-      add(footer, { type: "frame", name: "Spacer", w: { mode: "fill" }, h: 1 })
+      if (m2) {
+        const [set, icon] = pick(ICONS)
+        add(footer, { type: "icon", name: "Icon", w: 20, h: 20, set, icon, color: accent })
+        add(footer, {
+          type: "path",
+          name: "Sparkline",
+          w: { mode: "fill" },
+          h: 16,
+          d: sparkline(rand),
+          viewBox: [0, 0, 100, 24],
+          fill: [],
+          stroke: { paint: accent, width: 1.5, cap: "round", join: "round", align: "center" },
+        })
+      } else {
+        add(footer, { type: "ellipse", name: "Avatar", w: 24, h: 24, fill: accent })
+        add(footer, { type: "frame", name: "Spacer", w: { mode: "fill" }, h: 1 })
+      }
       const pill = add(footer, {
         type: "frame",
         name: "Pill",
         fill: accent,
         radius: 999,
         layout: { dir: "row", pad: [4, 10] },
+        ...(m2 && {
+          fill: `${accent}CC`,
+          effects: [
+            { kind: "backdrop-blur", radius: 8 },
+            {
+              kind: "shadow",
+              x: 0,
+              y: 2,
+              blur: 4,
+              spread: 0,
+              color: "#00000026",
+              blend: "multiply",
+            },
+          ],
+        }),
       })
       add(pill, {
         type: "text",
@@ -223,6 +353,10 @@ export function generatePerfDoc(count = 5000, seed = 1): PerfDoc {
       first = false
       inRow++
     }
+  }
+  if (opts.skip?.length) {
+    const skip = new Set(opts.skip)
+    for (const o of ops) strip(o.node, skip)
   }
   return { ops, roots, cards, texts, count: ops.length }
 }

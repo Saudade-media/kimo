@@ -573,6 +573,10 @@ export class YjsDocStore implements DocStore {
       if (v === null) this.yThemes.delete(axis)
       else this.yThemes.set(axis, cloneJson(v))
     }
+    for (const [k, v] of draft.header) {
+      if (v === null) this.yHeader.delete(k)
+      else this.yHeader.set(k, cloneJson(v))
+    }
     if (draft.variablesTouched) setFlag(this.yFlags, "variables", this.yVars.size > 0)
     if (draft.themesTouched) setFlag(this.yFlags, "themes", this.yThemes.size > 0)
   }
@@ -645,7 +649,7 @@ export class YjsDocStore implements DocStore {
    * needs a full validation (see {@link crossTree}).
    */
   private scopeOf(draft: Draft): Set<string> | null {
-    if (draft.variablesTouched || draft.themesTouched) return null
+    if (draft.variablesTouched || draft.themesTouched || draft.header.size > 0) return null
     const oldGet = (k: string) => this.mirror.get(k)
     const newGet = (k: string) => draft.get(k)
     const scope = new Set<string>()

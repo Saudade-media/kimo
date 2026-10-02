@@ -1,0 +1,20 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["layout/wrap"],
+"nodes": {
+"Bell000002": {"type":"icon","parent":"Board00002","order":"a3","name":"Bell","w":24,"h":24,"weight":700,"set":"phosphor","icon":"bell"}
+
+, "Board00002": {"type":"frame","parent":null,"order":"a0","name":"Styling M2","x":0,"y":0,"w":720,"blend":"pass-through","fill":"#FFF7EE","layout":{"dir":"row","gap":12,"crossGap":8,"pad":[40,40,40,40],"justify":"between","align":"center","wrap":true}}
+
+, "HeroImg002": {"type":"frame","parent":"Board00002","order":"a0","name":"Hero Image","w":{"mode":"fill"},"h":220,"radius":16,"clip":true,"fill":[{"kind":"linear","stops":[{"at":0,"color":"#F4A261"},{"at":0.55,"color":"#E76F51"},{"at":1,"color":"#6D2E46"}],"rotation":-90,"opacity":0.8}],"stroke":{"paint":"#0A0A0A","width":{"t":1,"b":1},"cap":"round","dash":[4,2]},"effects":[{"kind":"shadow","x":0,"y":8,"blur":24,"color":"#0A0A0A1F"},{"kind":"shadow","inner":true,"x":0,"y":2,"blur":4,"color":"#00000033","visible":false},{"kind":"blur","radius":4,"visible":false},{"kind":"backdrop-blur","radius":10.5}]}
+
+, "Home000002": {"type":"icon","parent":"Board00002","order":"a4","name":"Home","w":24,"h":24,"weight":300,"set":"material-rounded","icon":"home"}
+
+, "Mult000002": {"type":"rect","parent":"Board00002","order":"a1","name":"Multiply","x":560,"y":20,"position":"absolute","w":120,"h":120,"blend":"multiply","fill":"#F4A261","stroke":{"paint":"#2B2118","width":2,"miterLimit":10}}
+
+, "Pen0000002": {"type":"path","parent":"Board00002","order":"a5","name":"Pen path","w":260,"h":150,"d":"M0 150C40 50 60 0 120 0 180 0 210 110 260 110","viewBox":[0,0,260,150],"stroke":{"paint":"#2B2118","width":2,"cap":"round","join":"round"}}
+
+, "Star000002": {"type":"icon","parent":"Board00002","order":"a2","name":"Star","w":24,"h":24,"strokeWidth":2,"set":"lucide","icon":"star","color":"#2B2118"}
+}
+}

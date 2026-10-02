@@ -1,0 +1,113 @@
+/*
+ * SizeField: desing.pen 02b > SizeField (G6R6IX).
+ * frame: fill_container × 28, fill bg-subtle, radius-sm, layout horizontal, gap 8,
+ *        padding [0, 8], alignItems center
+ *   ├ Prefix  (t111tE) font-mono, text-xs (11), normal, text-tertiary
+ *   ├ Value   (WCAAf)  font-sans, text-sm (12), normal, text-primary (Hug QvUEC: text-secondary)
+ *   ├ Spacer  (jl5qQ)  fill_container × 1
+ *   ├ Mode    (aC4BS)  font-sans, text-xs (11), weight 500, text-secondary
+ *   └ Chevron (n908B)  lucide chevron-down 12 × 12, text-tertiary
+ */
+.kimo-size-field {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-size-field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-size-field__prefix {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  user-select: none;
+}
+
+.kimo-size-field__value {
+  flex: 0 1 auto;
+  field-sizing: content;
+  min-width: 1ch;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.kimo-size-field--hug .kimo-size-field__value {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-size-field__value:disabled {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-size-field__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+  cursor: text;
+}
+
+.kimo-size-field__mode {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter (aC4BS h 13) */
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-size-field__mode:hover:not(:disabled) {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-size-field__mode:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+  border-radius: var(--kimo-radius-2xs);
+}
+
+.kimo-size-field__chevron {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+
+.kimo-size-field__chevron > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-size-field--disabled .kimo-size-field__chevron,
+.kimo-size-field__mode:disabled {
+  cursor: default;
+}

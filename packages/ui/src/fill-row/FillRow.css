@@ -1,0 +1,32 @@
+/*
+ * FillRow: desing.pen 02b > FillRow (xYqbE).
+ * frame: fill_container, layout horizontal, gap 2, alignItems center
+ *   ├ Field  (chrvk) ColorField (GOaBx) fill_container × 28
+ *   ├ Eye    (r3MBc) IconButton 24 × 24, fill #00000000, eye / eye-off 14 text-tertiary
+ *   └ Remove (FFtaO) IconButton 24 × 24, fill #00000000, minus 14 text-tertiary
+ *                    (panel instances with one paint: opacity 0, size kept)
+ * Hidden (X5R2J): Field opacity 0.45, Eye eye-off.
+ */
+.kimo-fill-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.kimo-fill-row__field {
+  flex: 1 1 0;
+  cursor: pointer;
+}
+
+.kimo-fill-row--hidden .kimo-fill-row__field {
+  opacity: 0.45;
+}
+
+.kimo-fill-row__remove--hidden {
+  opacity: 0;
+  pointer-events: none;
+}

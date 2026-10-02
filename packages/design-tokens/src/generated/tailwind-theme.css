@@ -14,6 +14,8 @@
   --spacing-8: var(--kimo-space-8);
   --spacing-10: var(--kimo-space-10);
   --spacing-12: var(--kimo-space-12);
+  --radius-2xs: var(--kimo-radius-2xs);
+  --radius-xs: var(--kimo-radius-xs);
   --radius-sm: var(--kimo-radius-sm);
   --radius-md: var(--kimo-radius-md);
   --radius-lg: var(--kimo-radius-lg);
@@ -61,6 +63,9 @@
   --color-agent: var(--kimo-agent);
   --color-agent-soft: var(--kimo-agent-soft);
   --color-agent-2: var(--kimo-agent-2);
+  --color-measure: var(--kimo-measure);
+  --color-measure-soft: var(--kimo-measure-soft);
+  --color-chip-edge: var(--kimo-chip-edge);
   --text-display: var(--kimo-type-display-font-size);
   --text-display--font-weight: var(--kimo-type-display-font-weight);
   --text-display--letter-spacing: var(--kimo-type-display-letter-spacing);

@@ -17,10 +17,13 @@ import { isBrowser, loadCanvasKit } from "./ck"
 import { parseColor } from "./color"
 import { type DrawCounters, type PaintContext, Painter } from "./draw"
 import { CkFontProvider } from "./fonts"
-import { intersects, union } from "./geometry"
+import { intersection, intersects, union } from "./geometry"
 import { HitIndex } from "./hit-test"
+import { packageIconSource, packIconSource, SourceIconProvider } from "./icons/provider"
+import { IconRegistry } from "./icons/registry"
 import { DEFAULT_OVERLAY_THEME, OverlayPainter } from "./overlay"
-import { ImageCache, PaintFactory } from "./paint"
+import { ImageCache, PaintFactory, releaseBlenders, retainBlenders } from "./paint"
+import { StrokeGeometry } from "./stroke"
 import { TextEngine } from "./text"
 import {
   type AttachOptions,
@@ -28,6 +31,7 @@ import {
   type FontProvider,
   type HitTestOptions,
   type HitTestRectOptions,
+  type IconProvider,
   type Overlay,
   type OverlayTheme,
   type Point,
@@ -49,6 +53,10 @@ interface RootEntry {
   bounds: Rect | null
   nodes: number
   draws: number
+  /** Filtered / blended layers in the picture ({@link DrawCounters.layers}). */
+  layers: number
+  /** The picture skipped icon glyphs that were still loading. */
+  pendingIcons: boolean
   /** Zoomed-out raster of `picture` (see {@link RASTER_MAX_SCALE}); dropped with it. */
   raster: RootRaster | null
   /** Frame number this root was last drawn (raster cache eviction). */
@@ -87,6 +95,16 @@ const RASTER_FRAME_MS = 6
  * surfaces record everything (one `render()` must produce the full image for snapshots).
  */
 const RECORD_FRAME_MS = 10
+/**
+ * Motion raster cache: while the viewport is moving (pan/zoom within the last `MOTION_MS`),
+ * roots whose pictures hold filtered layers (background / layer blur, layer shadows, blend
+ * layers) are drawn from a raster at any zoom — replaying them costs GPU time every frame
+ * (and a shader compile per new blur sigma while zooming). Once the viewport rests they are
+ * replayed crisp again.
+ */
+const MOTION_MS = 160
+/** A picture cull rect this wide (world px) is Skia's "unbounded" (recorded at ±1e7). */
+const UNBOUNDED_CULL = 1e6
 /** Raster scales are powers of two ≥ the device scale, so a raster is downsampled ≤ 2×. */
 const rasterBucket = (s: number) => 2 ** Math.max(-8, Math.ceil(Math.log2(s)))
 
@@ -130,17 +148,45 @@ export class CanvasKitRenderer implements Renderer {
    * surface (tests: CPU surfaces otherwise never use it).
    */
   rasterCache: boolean | "always" = true
+  /** Motion raster cache (see {@link MOTION_MS}); only where `rasterCache` applies. */
+  motionRasterCache = true
   private rasterPx = 0
+  /** Timestamp until which the viewport counts as moving (motion raster cache). */
+  private motionUntil = 0
+  /** Zoom of the previous frame (a zooming viewport reuses rasters instead of making them). */
+  private prevZoom = 0
+  private settleTimer: ReturnType<typeof setTimeout> | null = null
 
   private frameTimes: number[] = []
   private frameStamps: number[] = []
   private frames = 0
-  private last = { frameMs: 0, drawCalls: 0, nodesDrawn: 0, nodesCulled: 0 }
+  private last = {
+    frameMs: 0,
+    drawCalls: 0,
+    nodesDrawn: 0,
+    nodesCulled: 0,
+    /** Diagnostics (perf harness): CPU ms recording pictures / creating rasters, counts. */
+    recordMs: 0,
+    rasterMs: 0,
+    rasterized: 0,
+    recorded: 0,
+  }
+
+  private iconProvider: IconProvider | null = null
+  private iconRegistry: IconRegistry | null = null
+  private unsubscribeIcons: (() => void) | null = null
 
   constructor(
     private readonly options: CreateRendererOptions = {},
     private readonly defaultWasmUrl?: string,
+    /** Default icon source when `init({ icons })` passes none (the browser entry's packs). */
+    private readonly defaultIcons?: () => IconProvider,
   ) {}
+
+  /** Icon glyph source (available after `init()`). */
+  get icons(): IconProvider | undefined {
+    return this.iconProvider ?? undefined
+  }
 
   // --- lifecycle ----------------------------------------------------------------------------
 
@@ -175,10 +221,21 @@ export class CanvasKitRenderer implements Renderer {
       const images = new ImageCache(ck, () => this.dropAll(false))
       if (this.scene) images.assets = this.scene.assets
       this.ck = ck
+      retainBlenders(ck)
       this.fontProvider = fonts
       this.textEngine = text
       this.images = images
-      this.painter = new Painter(ck, new PaintFactory(ck, images), text)
+      const provider =
+        options.icons ??
+        this.defaultIcons?.() ??
+        new SourceIconProvider(isBrowser() ? packIconSource({}) : packageIconSource())
+      const registry = new IconRegistry(ck, provider, new StrokeGeometry(ck))
+      this.iconProvider = provider
+      this.iconRegistry = registry
+      // Only pictures that skipped a still-loading glyph need re-recording (dropping every
+      // root per arriving glyph re-recorded a whole 5k-node document several times on open).
+      this.unsubscribeIcons = provider.onIconLoaded(() => this.dropPendingIcons())
+      this.painter = new Painter(ck, new PaintFactory(ck, images), text, registry)
       this.overlayPainter = new OverlayPainter(ck, text)
       fonts.onFontLoaded(() => {
         text.invalidate()
@@ -313,6 +370,8 @@ export class CanvasKitRenderer implements Renderer {
   }
 
   detach(): void {
+    if (this.settleTimer) clearTimeout(this.settleTimer)
+    this.settleTimer = null
     this.removeListeners?.()
     this.removeListeners = null
     this.dropRasters()
@@ -328,6 +387,12 @@ export class CanvasKitRenderer implements Renderer {
     this.textEngine?.dispose()
     this.images?.clear()
     this.fontProvider?.dispose()
+    this.unsubscribeIcons?.()
+    this.unsubscribeIcons = null
+    this.iconRegistry?.clear()
+    this.iconRegistry = null
+    this.iconProvider = null
+    if (this.ck) releaseBlenders(this.ck)
     this.ck = null
     this.painter = null
     this.textEngine = null
@@ -407,6 +472,8 @@ export class CanvasKitRenderer implements Renderer {
           bounds: null,
           nodes: ids.length,
           draws: 0,
+          layers: 0,
+          pendingIcons: false,
           raster: null,
           used: 0,
         })
@@ -416,8 +483,28 @@ export class CanvasKitRenderer implements Renderer {
   }
 
   setViewport(viewport: Viewport): void {
+    const v = this.viewport
+    if (v.x !== viewport.x || v.y !== viewport.y || v.zoom !== viewport.zoom) this.moved()
     this.viewport = { ...viewport }
     this.requestFrame()
+  }
+
+  /** Viewport moved: rasters may stand in for filtered roots until it rests for `MOTION_MS`. */
+  private moved(): void {
+    const t = (globalThis.performance ?? Date).now()
+    this.motionUntil = t + MOTION_MS
+    if (this.settleTimer) return
+    const settle = () => {
+      const left = this.motionUntil - (globalThis.performance ?? Date).now()
+      if (left > 0) {
+        this.settleTimer = setTimeout(settle, left + 1)
+        return
+      }
+      this.settleTimer = null
+      // Redraw crisp (pictures) at rest.
+      this.requestFrame()
+    }
+    this.settleTimer = setTimeout(settle, MOTION_MS + 1)
   }
 
   setOverlay(overlay: Overlay): void {
@@ -495,6 +582,16 @@ export class CanvasKitRenderer implements Renderer {
     }
   }
 
+  private dropPendingIcons(): void {
+    let any = false
+    for (const e of this.roots.values())
+      if (e.picture && e.pendingIcons) {
+        this.drop(e)
+        any = true
+      }
+    if (any && this.surface) this.requestFrame()
+  }
+
   private dropAll(frame: boolean): void {
     for (const e of this.roots.values()) this.drop(e)
     if (frame || this.surface) this.requestFrame()
@@ -524,6 +621,8 @@ export class CanvasKitRenderer implements Renderer {
     }
     e.nodes = counters.nodes
     e.draws = counters.draws
+    e.layers = counters.layers ?? 0
+    e.pendingIcons = (counters.pendingIcons ?? 0) > 0
     e.data = e.ids.map((id) => ctx.nodes.getNode(id))
     const cull = e.picture.cullRect()
     let bounds: Rect | null = null
@@ -533,6 +632,12 @@ export class CanvasKitRenderer implements Renderer {
         y: cull[1] ?? 0,
         w: (cull[2] ?? 0) - (cull[0] ?? 0),
         h: (cull[3] ?? 0) - (cull[1] ?? 0),
+      }
+      // Skia records some layers (background blur: a backdrop-filtered saveLayer) as
+      // unbounded, which would disable culling and the raster cache for the whole root.
+      if (bounds.w >= UNBOUNDED_CULL || bounds.h >= UNBOUNDED_CULL) {
+        const ink = painter.inkBounds(ctx, e.ids)
+        bounds = ink ? intersection(bounds, ink) : bounds
       }
     } else
       for (const id of e.ids) {
@@ -561,14 +666,18 @@ export class CanvasKitRenderer implements Renderer {
       const visible: Rect = { x: v.x, y: v.y, w: this.cssW / v.zoom, h: this.cssH / v.zoom }
       const scale = v.zoom * this.dpr
       // GPU only: on CPU surfaces blitting a filtered image costs more than replaying the ops.
-      const bucket =
-        (this.rasterCache === "always" || (this.rasterCache && this.backend === "webgl")) &&
-        scale <= RASTER_MAX_SCALE
-          ? rasterBucket(scale)
-          : 0
+      const rasters =
+        this.rasterCache === "always" || (this.rasterCache && this.backend === "webgl")
+      const bucket = rasters && scale <= RASTER_MAX_SCALE ? rasterBucket(scale) : 0
       const now = () => (globalThis.performance ?? Date).now()
+      const inMotion = rasters && this.motionRasterCache && now() < this.motionUntil
+      const moving = inMotion && !bucket
+      const zooming = v.zoom !== this.prevZoom
+      this.prevZoom = v.zoom
       let rasterMs = 0
       let recordMs = 0
+      this.last.recorded = 0
+      this.last.rasterized = 0
       // Progressive only once something is on screen: an opening document draws completely
       // in its first frame (the fastest path to a full canvas).
       let progressive = false
@@ -612,6 +721,7 @@ export class CanvasKitRenderer implements Renderer {
           const t = now()
           pic = this.picture(ctx, root, e)
           recordMs += now() - t
+          this.last.recorded++
         }
         if (!pic) continue
         if (e.bounds && !intersects(e.bounds, visible)) {
@@ -620,43 +730,86 @@ export class CanvasKitRenderer implements Renderer {
         }
         e.used = this.frames + 1
         drawn += e.nodes
-        if (bucket && e.bounds) {
-          let r = e.raster
-          if (r?.scale !== bucket) {
+        // Zoomed out: every root from its raster. Moving above that: filtered roots only, at
+        // the bucket scale capped to the largest raster that fits (upsampled ≤ 2× in motion).
+        // Raster to draw this root from: zoomed out, every root at the bucket scale; in motion
+        // above that, filtered roots only (see MOTION_MS).
+        let target = bucket
+        /** Lowest stale raster scale acceptable when this frame's raster budget is spent. */
+        let staleMin = bucket
+        let r: RootRaster | null = null
+        // Zooming out/in below RASTER_MAX_SCALE: a filtered root keeps its current raster while
+        // within 2× of the bucket (re-rasterizing one costs a full GPU replay of its filters);
+        // the frame after the viewport rests re-rasterizes at the exact bucket.
+        if (bucket && inMotion && zooming && e.layers > 0) {
+          const cur = e.raster
+          if (cur && cur.scale >= bucket / 2 && cur.scale <= bucket * 2) r = cur
+        }
+        if (!bucket && moving && e.layers > 0 && e.bounds) {
+          const want = rasterBucket(scale)
+          // Largest power-of-two scale whose raster fits RASTER_MAX_SIDE.
+          const cap =
+            2 ** Math.floor(Math.log2((RASTER_MAX_SIDE - 2) / Math.max(e.bounds.w, e.bounds.h, 1)))
+          const cur = e.raster
+          if (zooming) {
+            // Zooming crosses scale buckets every few frames: reuse any raster within 4×
+            // (soft or aliased only while the zoom moves) and make missing ones at half
+            // resolution (a quarter of the GPU work).
+            if (cur && cur.scale >= want / 4 && cur.scale <= want * 4) r = cur
+            else if (Math.min(want / 2, cap) >= want / 8) target = Math.min(want / 2, cap)
+            staleMin = Number.POSITIVE_INFINITY
+          } else if (Math.min(want, cap) >= want / 2) {
+            // Panning: a raster at the bucket scale, reused frame to frame.
+            target = Math.min(want, cap)
+            staleMin = target / 2
+          }
+        }
+        if (!r && target && e.bounds) {
+          r = e.raster
+          if (r?.scale !== target) {
             if (rasterMs < RASTER_FRAME_MS) {
               const t = now()
-              r = this.rasterize(e, pic, e.bounds, bucket) ?? null
+              r = this.rasterize(e, pic, e.bounds, target) ?? null
               rasterMs += now() - t
+              this.last.rasterized++
             } else {
-              // Over this frame's budget: a sharper stale raster is fine; otherwise replay.
-              if (!r || r.scale < bucket) r = null
+              // Over this frame's budget: an acceptable stale raster (zoomed out: a sharper
+              // one); otherwise replay.
+              if (!r || r.scale < staleMin) r = null
               behind = true
             }
           }
-          if (r) {
-            canvas.drawImageRectOptions(
-              r.image,
-              ck.XYWHRect(0, 0, r.image.width(), r.image.height()),
-              ck.XYWHRect(r.x, r.y, r.w, r.h),
-              ck.FilterMode.Linear,
-              ck.MipmapMode.None,
-              null,
-            )
-            draws += 1
-            continue
-          }
+        }
+        if (r) {
+          canvas.drawImageRectOptions(
+            r.image,
+            ck.XYWHRect(0, 0, r.image.width(), r.image.height()),
+            ck.XYWHRect(r.x, r.y, r.w, r.h),
+            ck.FilterMode.Linear,
+            ck.MipmapMode.None,
+            null,
+          )
+          draws += 1
+          continue
         }
         canvas.drawPicture(pic)
         draws += e.draws
       }
       canvas.restore()
+      this.last.recordMs = recordMs
+      this.last.rasterMs = rasterMs
       if (behind) this.requestFrame()
     }
     if (this.overlayPainter) {
       canvas.save()
       canvas.scale(this.dpr, this.dpr)
       const oc = { draws: 0 }
-      this.overlayPainter.draw(canvas, this.overlay, this.layout, v, this.theme, oc)
+      this.overlayPainter.draw(canvas, this.overlay, this.layout, v, this.theme, oc, {
+        dpr: this.dpr,
+        width: this.cssW,
+        height: this.cssH,
+        scene: this.scene,
+      })
       draws += oc.draws
       canvas.restore()
     }
@@ -781,13 +934,52 @@ export class CanvasKitRenderer implements Renderer {
     await Promise.all(jobs)
   }
 
+  samplePixel(world: Point): [number, number, number, number] | null {
+    const ctx = this.context()
+    if (!ctx || !this.ck) return null
+    const { ck } = this.need()
+    const px = Math.floor(world.x)
+    const py = Math.floor(world.y)
+    const cell: Rect = { x: px, y: py, w: 1, h: 1 }
+    const surface = ck.MakeSurface(1, 1)
+    if (!surface) return null
+    try {
+      const c = surface.getCanvas()
+      c.clear(ck.TRANSPARENT)
+      c.translate(-px, -py)
+      for (const root of this.rootOrder) {
+        const e = this.roots.get(root)
+        const l = ctx.layout.nodes.get(root)
+        if (!e || (l && !l.visible)) continue
+        const pic = this.picture(ctx, root, e)
+        if (!pic || (e.bounds && !intersects(e.bounds, cell))) continue
+        c.drawPicture(pic)
+      }
+      surface.flush()
+      const px4 = c.readPixels(0, 0, {
+        width: 1,
+        height: 1,
+        colorType: ck.ColorType.RGBA_8888,
+        alphaType: ck.AlphaType.Unpremul,
+        colorSpace: ck.ColorSpace.SRGB,
+      })
+      if (!px4 || px4.length < 4) return null
+      return [px4[0] as number, px4[1] as number, px4[2] as number, px4[3] as number]
+    } finally {
+      surface.delete()
+    }
+  }
+
   async exportRaster(nodeId: string, options: RasterExportOptions = {}): Promise<Uint8Array> {
     const { ck, painter, images } = this.need()
     const ctx0 = this.context()
     const l = ctx0?.layout.nodes.get(nodeId)
     if (!ctx0 || !l) throw new RendererError("NODE_NOT_FOUND", `node ${nodeId} is not laid out`)
     await this.ensureFonts(nodeId)
-    await Promise.all([...painter.imagesOf(ctx0, nodeId)].map((src) => images.load(src)))
+    await Promise.all([
+      ...[...painter.imagesOf(ctx0, nodeId)].map((src) => images.load(src)),
+      this.iconRegistry?.ensure(painter.iconsOf(ctx0, nodeId)),
+    ])
     const ctx = this.context() ?? ctx0
     const box = ctx.layout.nodes.get(nodeId)?.world ?? l.world
     const scale = options.scale ?? 1
@@ -830,6 +1022,10 @@ export class CanvasKitRenderer implements Renderer {
       nodesDrawn: this.last.nodesDrawn,
       nodesCulled: this.last.nodesCulled,
       backend: this.backend,
+      recordMs: this.last.recordMs,
+      rasterMs: this.last.rasterMs,
+      recorded: this.last.recorded,
+      rasterized: this.last.rasterized,
     }
   }
 }

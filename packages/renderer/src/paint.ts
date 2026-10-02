@@ -4,9 +4,9 @@
  */
 import { isObject, isRef } from "@kimo/core-schema"
 import type { Matrix, Resolver } from "@kimo/layout"
-import type { BlendMode, CanvasKit, Image, Paint, Shader } from "canvaskit-wasm"
+import type { Blender, BlendMode, CanvasKit, Image, Paint, Shader } from "canvaskit-wasm"
 import { oklabToSrgb, parseColor, type RGBA, srgbToOklab, withAlpha } from "./color"
-import { multiply, toCk } from "./geometry"
+import { invert, multiply, toCk } from "./geometry"
 import type { AssetSource } from "./types"
 
 export const BLEND_NAMES = [
@@ -30,7 +30,10 @@ export const BLEND_NAMES = [
   "luminosity",
 ] as const
 
-/** Spec blend mode → Skia. Skia has no linear-burn; it maps to multiply (closest). */
+/**
+ * Spec blend mode → Skia. Skia has no linear-burn mode: {@link applyBlend} draws it with an
+ * SkSL blender; this mapping (multiply) is only the fallback when runtime effects are absent.
+ */
 export function blendMode(ck: CanvasKit, name: unknown): BlendMode {
   const B = ck.BlendMode
   switch (name) {
@@ -70,6 +73,75 @@ export function blendMode(ck: CanvasKit, name: unknown): BlendMode {
     default:
       return B.SrcOver
   }
+}
+
+/**
+ * Linear burn ("Plus darker") as a premultiplied W3C separable blend:
+ * `co = cs·(1−αb) + cb·(1−αs) + max(0, cs·αb + cb·αs − αs·αb)`, `αo = αs + αb − αs·αb`.
+ */
+const LINEAR_BURN_SKSL = `half4 main(half4 src, half4 dst) {
+  half3 c = src.rgb * (1 - dst.a) + dst.rgb * (1 - src.a) +
+    max(half3(0), src.rgb * dst.a + dst.rgb * src.a - half3(src.a * dst.a));
+  return half4(c, src.a + dst.a - src.a * dst.a);
+}`
+
+const linearBurn = new WeakMap<CanvasKit, Blender | null>()
+/** Live renderers per CanvasKit instance (the shared blender is freed with the last one). */
+const blenderUsers = new WeakMap<CanvasKit, number>()
+
+/** The linear-burn blender (shared per CanvasKit instance), or null without runtime effects. */
+export function linearBurnBlender(ck: CanvasKit): Blender | null {
+  if (linearBurn.has(ck)) return linearBurn.get(ck) ?? null
+  let b: Blender | null = null
+  try {
+    const fx = ck.RuntimeEffect?.MakeForBlender(LINEAR_BURN_SKSL)
+    if (fx) {
+      try {
+        b = fx.makeBlender([])
+      } finally {
+        // The blender keeps its own reference to the compiled effect.
+        fx.delete()
+      }
+    }
+  } catch {
+    b = null
+  }
+  linearBurn.set(ck, b)
+  return b
+}
+
+/** A renderer starts using `ck`'s shared blenders (pair with {@link releaseBlenders}). */
+export function retainBlenders(ck: CanvasKit): void {
+  blenderUsers.set(ck, (blenderUsers.get(ck) ?? 0) + 1)
+}
+
+/** A renderer stops using `ck`; the last one frees the shared blenders. */
+export function releaseBlenders(ck: CanvasKit): void {
+  const n = (blenderUsers.get(ck) ?? 1) - 1
+  if (n > 0) {
+    blenderUsers.set(ck, n)
+    return
+  }
+  blenderUsers.delete(ck)
+  linearBurn.get(ck)?.delete()
+  linearBurn.delete(ck)
+}
+
+/** True for a blend that differs from source-over (`pass-through` counts as normal). */
+export const isNonNormalBlend = (name: unknown): boolean =>
+  typeof name === "string" && name !== "normal" && name !== "pass-through"
+
+/** Sets `name`'s blend on `paint` (blender for linear-burn, else a Skia blend mode). */
+export function applyBlend(ck: CanvasKit, paint: Paint, name: unknown): void {
+  if (!isNonNormalBlend(name)) return
+  if (name === "linear-burn") {
+    const b = linearBurnBlender(ck)
+    if (b) {
+      paint.setBlender(b)
+      return
+    }
+  }
+  paint.setBlendMode(blendMode(ck, name))
 }
 
 const TRANSLATE = (x: number, y: number): Matrix => [1, 0, 0, 1, x, y]
@@ -234,7 +306,7 @@ export class PaintFactory {
     if (v.visible === false) return null
     const paint = new ck.Paint()
     paint.setAntiAlias(true)
-    paint.setBlendMode(blendMode(ck, v.blend))
+    applyBlend(ck, paint, v.blend)
     switch (v.kind) {
       case "solid": {
         const c = this.resolveColor(resolve, nodeId, v.color)
@@ -338,6 +410,22 @@ export class PaintFactory {
     if (iw <= 0 || ih <= 0 || w <= 0 || h <= 0) return null
     let m: Matrix
     let tile = ck.TileMode.Clamp
+    const crop = cropMatrix(v.crop)
+    if (crop) {
+      // `crop` maps the paint box (normalized) to the image (normalized), like Figma's
+      // imageTransform; the shader needs image px → box px: S(w,h)·crop⁻¹·S(1/iw,1/ih).
+      const inv = invert(crop)
+      if (!inv) return null
+      m = multiply(SCALE(w, h), multiply(inv, SCALE(1 / iw, 1 / ih)))
+      // Clamp: a crop that ends exactly on the image edge must not fade into transparency.
+      return img.makeShaderOptions(
+        ck.TileMode.Clamp,
+        ck.TileMode.Clamp,
+        ck.FilterMode.Linear,
+        ck.MipmapMode.Linear,
+        toCk(m),
+      )
+    }
     switch (v.fit) {
       case "stretch":
         m = SCALE(w / iw, h / ih)
@@ -359,6 +447,13 @@ export class PaintFactory {
     }
     return img.makeShaderOptions(tile, tile, ck.FilterMode.Linear, ck.MipmapMode.Linear, toCk(m))
   }
+}
+
+/** A valid `crop` affine `[a, b, c, d, tx, ty]`, or null. */
+function cropMatrix(v: unknown): Matrix | null {
+  if (!Array.isArray(v) || v.length !== 6) return null
+  if (!v.every((x) => typeof x === "number" && Number.isFinite(x))) return null
+  return v as unknown as Matrix
 }
 
 /** Inserts intermediate stops so Skia's sRGB interpolation approximates OKLab. */

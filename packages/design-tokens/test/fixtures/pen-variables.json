@@ -234,7 +234,30 @@
         { "value": "#6C8FE6", "theme": { "mode": "dark" } }
       ]
     },
-    "radius-2xl": { "type": "number", "value": 32 }
+    "radius-2xl": { "type": "number", "value": 32 },
+    "measure": {
+      "type": "color",
+      "value": [
+        { "value": "#E5177E", "theme": { "mode": "light" } },
+        { "value": "#FF5CAB", "theme": { "mode": "dark" } }
+      ]
+    },
+    "measure-soft": {
+      "type": "color",
+      "value": [
+        { "value": "#E5177E1F", "theme": { "mode": "light" } },
+        { "value": "#FF5CAB2E", "theme": { "mode": "dark" } }
+      ]
+    },
+    "radius-xs": { "type": "number", "value": 4 },
+    "radius-2xs": { "type": "number", "value": 2 },
+    "chip-edge": {
+      "type": "color",
+      "value": [
+        { "value": "#0A0A0A14", "theme": { "mode": "light" } },
+        { "value": "#FFFFFF24", "theme": { "mode": "dark" } }
+      ]
+    }
   },
   "themes": { "mode": ["light", "dark"] }
 }

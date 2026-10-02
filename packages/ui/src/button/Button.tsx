@@ -11,6 +11,12 @@ export interface ButtonProps extends ComponentPropsWithRef<"button"> {
   icon?: ReactNode
   /** Label text. */
   children?: ReactNode
+  /**
+   * `"md"` (default): the 02 Components size. `"sm"`: the M2 instances on board 09 (image fill
+   * Replace `MByca` / Remove `R4Aey`, icon picker Clear search `ibzGa`): height 28, icon 14,
+   * label sans 12 / 500; padding [0, 14] and gap 6 unchanged.
+   */
+  size?: "md" | "sm"
 }
 
 /**
@@ -22,11 +28,19 @@ export function Button({
   variant = "secondary",
   icon,
   children,
+  size = "md",
   className,
   type = "button",
   ...rest
 }: ButtonProps) {
-  const classes = ["kimo-button", `kimo-button--${variant}`, className].filter(Boolean).join(" ")
+  const classes = [
+    "kimo-button",
+    `kimo-button--${variant}`,
+    size === "sm" && "kimo-button--sm",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ")
   return (
     <button {...rest} type={type} className={classes}>
       {icon != null && (

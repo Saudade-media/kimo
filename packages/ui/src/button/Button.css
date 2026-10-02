@@ -79,3 +79,14 @@
   background: var(--kimo-button-soft-bg);
   color: var(--kimo-button-soft-fg);
 }
+
+/* M2 sm instances (board 09 MByca, R4Aey, ibzGa): height 28, icon 14, label text-sm (12). */
+.kimo-button--sm {
+  height: 28px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-button--sm .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}

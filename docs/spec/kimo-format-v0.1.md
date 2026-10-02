@@ -47,7 +47,8 @@ Terms: *node* — an entry of the `nodes` table; *component* — a node whose `c
 | **OKLCH color** | `{ "space": "oklch", "l": 0–1, "c": ≥0, "h": [0,360), "alpha"?: 0–1 }` | `alpha` defaults to 1. |
 | **Display-P3 color** | `{ "space": "display-p3", "r": 0–1, "g": 0–1, "b": 0–1, "alpha"?: 0–1 }` | `alpha` defaults to 1. |
 | **Color** | hex, OKLCH, Display-P3, or Ref | |
-| **BlendMode** | `normal`, `darken`, `multiply`, `color-burn`, `linear-burn`, `lighten`, `screen`, `color-dodge`, `linear-dodge`, `overlay`, `soft-light`, `hard-light`, `difference`, `exclusion`, `hue`, `saturation`, `color`, `luminosity` | |
+| **BlendMode** | `normal`, `darken`, `multiply`, `color-burn`, `linear-burn`, `lighten`, `screen`, `color-dodge`, `linear-dodge`, `overlay`, `soft-light`, `hard-light`, `difference`, `exclusion`, `hue`, `saturation`, `color`, `luminosity` | Paints and shadows. Editor labels: `linear-burn` is "Plus darker", `linear-dodge` is "Plus lighter". |
+| **LayerBlendMode** | BlendMode or `pass-through` | Node `blend` (§5.3). |
 | **Relative path** | `^\.{1,2}/(?:[^\\/\s]+/)*[^\\/\s]+$` | `./x` or `../x`; no scheme, no absolute path, no backslash. |
 | **Asset reference** | `^\./assets/[0-9a-f]{16}\.[a-z0-9]{1,8}$` | First 16 lowercase hex digits of the file's SHA-256, plus extension. |
 | **Meta key** | `^[a-z][a-z0-9-]*(\.[A-Za-z0-9_-]+)+$` | Namespaced extension key, e.g. `kimo.export.tag`. |
@@ -109,6 +110,7 @@ The document is a forest stored as a flat table. Each node names its parent; rea
 | `opacity` | Num in [0,1] | `1` | |
 | `visible` | boolean \| Ref | `true` | Hidden nodes take no space in layout. Also how a descendant is "removed" inside an instance (`set: {visible: false}`). |
 | `flipX`, `flipY` | boolean | `false` | Mirror around the node's center. |
+| `blend` | LayerBlendMode | `"normal"` | How the node (with its subtree) composites onto what is behind it. On a `frame` or `group`, every mode but `"pass-through"` composites the subtree as an isolated group first, then blends it with that mode; `"pass-through"` composites no group, so descendants blend directly with the backdrop (CSS: no `isolation`). On other node types `"pass-through"` means `"normal"`; writers SHOULD write `"normal"` there. The isolated group matters only when a descendant uses a non-`normal` blend, so exporters MAY omit `isolation: isolate` otherwise. |
 | `component` | boolean \| ComponentDef | `false` | Makes the node a component; the object form declares a prop API (§9.6). |
 | `placeholder` | `true` \| `{ by?: string, since?: string }` | absent | In-progress marker (e.g. an agent is working on it; `since` is an ISO 8601 timestamp). |
 
@@ -133,7 +135,7 @@ Required fields are marked **req**. Every type also has the Placement fields; ev
 | `polygon` | Graphics; `w` **req**, `h` **req**; `sides` **req**: integer ≥ 3; `radius`: Num, default 0 | Regular polygon inscribed in the box. |
 | `path` | Graphics; `w`, `h`: Size (absent = the `viewBox` size, else the geometry's bounds); `d` **req**: SVG path data; `fillRule`: `"nonzero"`\|`"evenodd"`, default `"nonzero"`; `viewBox`: `[x, y, w, h]` (absent = the geometry's bounding box) | The geometry is scaled from `viewBox` to `w`×`h`. Writers SHOULD set `viewBox`. |
 | `text` | Graphics; `w`, `h`: Size; `content` **req**: string \| Ref \| TextSpan[]; `grow`: `"auto"`\|`"fixed-width"`\|`"fixed"`, default `"auto"`; `style`: TextStyle | §8. |
-| `icon` | `w` **req**, `h` **req**; `set` **req**: string; `icon` **req**: string \| Ref (glyph name); `weight`: Num 100–700 (Material sets only); `color`: Color; `effects` | Known sets: `lucide`, `feather`, `phosphor`, `material-outlined`, `material-rounded`, `material-sharp`. Other values are allowed and render as a missing glyph. Icons are rendered as paths from the set at the given weight. |
+| `icon` | `w` **req**, `h` **req**; `set` **req**: string; `icon` **req**: string \| Ref (glyph name); `weight`: Num 100–700; `strokeWidth`: Num > 0; `color`: Color; `effects` | Known sets: `lucide`, `feather`, `phosphor`, `material-outlined`, `material-rounded`, `material-sharp`. Other values are allowed and render as a missing glyph. Icons are rendered as paths from the set, scaled from the set's grid to `w`×`h`. `weight` applies to Material sets (the `wght` axis; absent = 400) and to `phosphor` (nearest of thin 100, light 300, regular 400, bold 700; absent = regular); other sets ignore it. `strokeWidth` applies to stroke sets (`lucide`, `feather`) in the set's 24-unit grid units (absent = the set's own width, 2); other sets ignore it. |
 | `note` | `w`, `h`: Size (absent = fit content); `content` **req**: string; `style`: TextStyle | Sticky note. |
 | `prompt` | as `note`, plus `model`: string | A runnable AI prompt on the canvas. |
 | `script` | `w` **req**, `h` **req**; `src` **req**: relative path to a `.js` file; `inputs`: record name → any (literals or Refs); `clip`: boolean \| Ref, default `false` | **Feature `node/script`.** Generated children are derived state and are not stored. The script protocol is out of scope for 0.1. |
@@ -200,17 +202,20 @@ A Paint is a **Color** (hex, OKLCH, P3 or Ref — a solid paint) or one of:
 | `align` | `"inside"` \| `"center"` \| `"outside"` | `"inside"` |
 | `cap` | `"butt"` \| `"round"` \| `"square"` | `"butt"` |
 | `join` | `"miter"` \| `"bevel"` \| `"round"` | `"miter"` |
-| `dash` | number[] (≥ 0) | absent = solid |
+| `miterLimit` | number ≥ 1 | `4` (SVG `stroke-miterlimit`; a miter longer than `miterLimit × width` is beveled) |
+| `dash` | number[] (≥ 0) | absent = solid. Alternating dash and gap lengths in px, as SVG `stroke-dasharray` (an odd-length list repeats). `cap` applies to every dash. |
+
+Per-side widths (`{ t, r, b, l }`) draw each side as its own segment, with the given `align`, `cap` and `dash`; corners are joined only where both adjacent sides are non-zero.
 
 ### 7.3 Effects
 
 | `kind` | Fields | Defaults |
 |---|---|---|
-| `"shadow"` | `x` **req**, `y` **req**: Num; `blur` **req**: Num ≥ 0; `color` **req**; `inner`: boolean; `spread`: Num; `blend` | `inner false`, `spread 0`, `blend "normal"` |
-| `"blur"` | `radius` **req**: Num ≥ 0 | |
-| `"backdrop-blur"` | `radius` **req**: Num ≥ 0 | |
+| `"shadow"` | `x` **req**, `y` **req**: Num; `blur` **req**: Num ≥ 0; `color` **req**; `inner`: boolean; `spread`: Num; `blend`; `visible`: boolean | `inner false`, `spread 0`, `blend "normal"`, `visible true` |
+| `"blur"` | `radius` **req**: Num ≥ 0 (layer blur); `visible`: boolean | `visible true` |
+| `"backdrop-blur"` | `radius` **req**: Num ≥ 0 (background blur); `visible`: boolean | `visible true` |
 
-Effects apply in list order.
+Effects apply in list order. An effect with `visible: false` is kept but not rendered or exported (the eye toggle). `blur` is the CSS blur radius (`filter: blur(r)`, standard deviation `r / 2`); a shadow's `blur` is the CSS shadow blur radius (standard deviation `blur / 2`), and `spread` grows (inner: shrinks the hole of) the shadow shape before blurring.
 
 ## 8. Text
 
@@ -393,7 +398,7 @@ A property equal to its default means exactly the same as the absent property. *
 
 | Scope | Field | Default | `.pen` default, if different |
 |---|---|---|---|
-| every node but instance | `visible`, `opacity`, `rotation`, `flipX` / `flipY` | `true`, `1`, `0`, `false` | |
+| every node but instance | `visible`, `opacity`, `rotation`, `flipX` / `flipY`, `blend` | `true`, `1`, `0`, `false`, `"normal"` | |
 | every node | `position`, `locked`, `component` | `"auto"`, `false`, `false` | |
 | frame | `layout` | absent = no flex layout | `layout: horizontal` (importer writes `dir: "row"`) |
 | frame | `w` / `h` | `{ "mode": "fit" }` | `fit_content` |
@@ -409,11 +414,12 @@ A property equal to its default means exactly the same as the absent property. *
 | layout | `justify`, `align` | `"start"` | |
 | layout | `wrap`, `includeStroke` | `false` | |
 | Size `fill` | `fallback` / `weight` | none / `1` | |
-| stroke | `width`, `align`, `cap`, `join` | `1`, `"inside"`, `"butt"`, `"miter"` | (to be checked by the importer) |
+| stroke | `width`, `align`, `cap`, `join`, `miterLimit` | `1`, `"inside"`, `"butt"`, `"miter"`, `4` | (to be checked by the importer) |
 | solid paint | `blend`, `visible` | `"normal"`, `true` | |
 | gradient | `center`, `size`, `rotation`, `interpolation`, `opacity`, `blend`, `visible` | `[0.5,0.5]`, `[1,1]`, `0`, `"srgb"`, `1`, `"normal"`, `true` | |
 | image paint | `fit`, `opacity`, `blend`, `visible` | `"cover"`, `1`, `"normal"`, `true` | `cover` |
-| shadow | `inner`, `spread`, `blend` | `false`, `0`, `"normal"` | |
+| shadow | `inner`, `spread`, `blend`, `visible` | `false`, `0`, `"normal"`, `true` | |
+| blur, backdrop-blur | `visible` | `true` | |
 | OKLCH / P3 color | `alpha` | `1` | |
 
 Not defaulted: `x` and `y` (absent means 0, but an explicit 0 is kept so positions stay visible in diffs), and every field without a row above.
@@ -607,7 +613,7 @@ Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's 
 
 ### 19.2 More fixtures
 
-`packages/core-schema/fixtures/` holds the normative examples: `valid/` (components with declared props, args, `set`/`slot`/`replace`, nested paths; multi-axis themes with partial `when`, fallbacks and aliases; every paint, stroke, effect and shape; every feature; Unicode and escaping), `invalid/` (one file per error code, named `<CODE>--<case>.kimo`), `lint/` (one per warning), `forward/` (newer minor/major/patch, unknown features) and `parse-errors/`.
+`packages/core-schema/fixtures/` holds the normative examples: `valid/` (components with declared props, args, `set`/`slot`/`replace`, nested paths; multi-axis themes with partial `when`, fallbacks and aliases; every paint, stroke, effect and shape; every feature; Unicode and escaping; `styling-m2.kimo` for the M2 styling fields: layer blend incl. `pass-through`, per-side dashed strokes, `miterLimit`, hidden effects, icon `strokeWidth`/`weight`), `invalid/` (one file per error code, named `<CODE>--<case>.kimo`), `lint/` (one per warning), `forward/` (newer minor/major/patch, unknown features) and `parse-errors/`.
 
 ## 20. Decisions relative to the teardown (§10)
 
@@ -637,10 +643,11 @@ Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's 
 | 22 | Clipped-content lint | Teardown §10.6 lists a "clipped content" lint; it needs computed layout, so it is deferred until the layout engine exists (§17). |
 | 23 | Derived component props | Not covered by the teardown: a derived component inherits the declared props of the component it instantiates, its own declarations merged over them (§9.6). |
 | 24 | Slot suggestions | `slot.suggested` stays advisory for content, but each entry must name a component, like every other QId (§5.5, §11). |
+| 25 | M2 styling (ADR 0010) | Additive, still format `0.1.0` (draft): node `blend` (LayerBlendMode, default `normal`, with `pass-through` for containers), stroke `miterLimit` (default 4), `visible` on every effect (default `true`), icon `strokeWidth` (stroke sets) and `weight` for `phosphor`. The teardown's Graphics sketch has no layer blend or effect visibility; the editor's Layer and Effects sections need both. No new feature flag: a reader that predates these fields reports `UNKNOWN_PROPERTY` and preserves them (§16.3). |
 
 ## Appendix A — canonical key order
 
-`$schema`, `format`, `type`, `kind`, `space`, `mode`, `$ref`, `stops`, `parent`, `at`, `order`, `name`, `library`, `createdWith`, `of`, `component`, `placeholder`, `by`, `since`, `locked`, `text`, `inner`, `x`, `y`, `position`, `w`, `t`, `r`, `g`, `b`, `l`, `c`, `h`, `alpha`, `fallback`, `font`, `center`, `size`, `weight`, `min`, `max`, `italic`, `lineHeight`, `px`, `letterSpacing`, `rotation`, `flipX`, `flipY`, `theme`, `props`, `args`, `overrides`, `content`, `grow`, `style`, `set`, `icon`, `d`, `fillRule`, `viewBox`, `sides`, `innerRadius`, `startAngle`, `sweepAngle`, `src`, `inputs`, `url`, `device`, `zoom`, `scrollX`, `scrollY`, `model`, `radius`, `clip`, `cols`, `rows`, `colors`, `points`, `interpolation`, `fit`, `crop`, `uniforms`, `blur`, `spread`, `color`, `opacity`, `blend`, `visible`, `fill`, `stroke`, `effects`, `dir`, `gap`, `crossGap`, `pad`, `justify`, `mime`, `bytes`, `paint`, `width`, `height`, `align`, `valign`, `cap`, `join`, `dash`, `wrap`, `includeStroke`, `layout`, `slot`, `suggested`, `replace`, `decoration`, `case`, `features`, `href`, `typography`, `value`, `unit`, `when`, `description`, `group`, `target`, `field`, `default`, `options`, `meta`, `themes`, `imports`, `variables`, `assets`, `components`, `nodes`
+`$schema`, `format`, `type`, `kind`, `space`, `mode`, `$ref`, `stops`, `parent`, `at`, `order`, `name`, `library`, `createdWith`, `of`, `component`, `placeholder`, `by`, `since`, `locked`, `text`, `inner`, `x`, `y`, `position`, `w`, `t`, `r`, `g`, `b`, `l`, `c`, `h`, `alpha`, `fallback`, `font`, `center`, `size`, `weight`, `strokeWidth`, `min`, `max`, `italic`, `lineHeight`, `px`, `letterSpacing`, `rotation`, `flipX`, `flipY`, `theme`, `props`, `args`, `overrides`, `content`, `grow`, `style`, `set`, `icon`, `d`, `fillRule`, `viewBox`, `sides`, `innerRadius`, `startAngle`, `sweepAngle`, `src`, `inputs`, `url`, `device`, `zoom`, `scrollX`, `scrollY`, `model`, `radius`, `clip`, `cols`, `rows`, `colors`, `points`, `interpolation`, `fit`, `crop`, `uniforms`, `blur`, `spread`, `color`, `opacity`, `blend`, `visible`, `fill`, `stroke`, `effects`, `dir`, `gap`, `crossGap`, `pad`, `justify`, `mime`, `bytes`, `paint`, `width`, `height`, `align`, `valign`, `cap`, `join`, `miterLimit`, `dash`, `wrap`, `includeStroke`, `layout`, `slot`, `suggested`, `replace`, `decoration`, `case`, `features`, `href`, `typography`, `value`, `unit`, `when`, `description`, `group`, `target`, `field`, `default`, `options`, `meta`, `themes`, `imports`, `variables`, `assets`, `components`, `nodes`
 
 (The root `meta` is a struct; a node's `meta` is a record.)
 

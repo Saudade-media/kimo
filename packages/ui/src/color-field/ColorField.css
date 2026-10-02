@@ -66,3 +66,26 @@
   font-weight: var(--kimo-font-weight-regular);
   line-height: normal;
 }
+
+/* M2: kind labels / variable names in sans (FillRow vBwVv "Linear", a16BW6 "Image · Cover"). */
+.kimo-color-field__value--sans {
+  font-family: var(--kimo-font-sans);
+}
+
+/* M2 active (popover open, H3Grs): fill bg-hover, stroke border-strong 1 (inside). */
+.kimo-color-field--active {
+  background: var(--kimo-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+/* M2 selected gradient stop (KaNVU): fill bg-hover, stroke selection 1 (inside). */
+.kimo-color-field--selected {
+  background: var(--kimo-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--kimo-selection);
+}
+
+/* Swatch backgrounds may be url() images (image fills): cover the 16 × 16 chip. */
+.kimo-color-field__swatch {
+  background-size: cover;
+  background-position: center;
+}

@@ -12,6 +12,7 @@ import {
   ID_PATH_PATTERN,
   Id,
   IdPath,
+  LAYER_BLEND_MODES,
   Meta,
   OrderKey,
   PROP_NAME_PATTERN,
@@ -104,6 +105,7 @@ export const baseProps = {
   visible: opt(Type.Union(BoolOrRef.anyOf, { default: D.node.visible })),
   flipX: opt(Type.Boolean({ default: D.node.flipX })),
   flipY: opt(Type.Boolean({ default: D.node.flipY })),
+  blend: opt(StringEnum(LAYER_BLEND_MODES, { default: D.node.blend })),
   component: opt(Type.Union([Type.Boolean(), ComponentDef], { default: D.node.component })),
   placeholder: opt(Placeholder),
 }
@@ -218,7 +220,16 @@ export const IconNode = Strict({
   h: Size,
   set: Type.String({ minLength: 1, description: `Icon set, e.g. ${ICON_SETS.join(", ")}.` }),
   icon: StringOrRef,
-  weight: opt(Type.Union([Type.Number({ minimum: 100, maximum: 700 }), Ref])),
+  weight: opt(
+    Type.Union([Type.Number({ minimum: 100, maximum: 700 }), Ref], {
+      description: "Material sets: the wght axis. phosphor: nearest of thin/light/regular/bold.",
+    }),
+  ),
+  strokeWidth: opt(
+    Type.Union([Type.Number({ exclusiveMinimum: 0 }), Ref], {
+      description: "Stroke sets (lucide, feather): stroke width in the set's 24-unit grid.",
+    }),
+  ),
   color: opt(Color),
   effects: opt(Effects),
 })

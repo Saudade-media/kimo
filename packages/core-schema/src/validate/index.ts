@@ -101,6 +101,7 @@ for (const k of [
   "lineHeight",
   "letterSpacing",
   "weight",
+  "strokeWidth",
   "w",
   "h",
 ])

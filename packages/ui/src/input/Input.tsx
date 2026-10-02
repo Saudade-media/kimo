@@ -7,6 +7,11 @@ export interface InputProps extends Omit<ComponentPropsWithRef<"input">, "size">
   icon?: ReactNode
   /** Props of the outer frame (`<label>`): class, style, data attributes. */
   frameProps?: Omit<ComponentPropsWithoutRef<"label">, "children">
+  /**
+   * M2 popover search (board 09 `tub8E` / `SrSfb` / `jOl4f`): h 28, radius-sm, icon 14, text
+   * sans 12.
+   */
+  dense?: boolean
 }
 
 /**
@@ -14,9 +19,12 @@ export interface InputProps extends Omit<ComponentPropsWithRef<"input">, "size">
  * radius-md, padding [0, 10], gap 8; icon 16 text-tertiary; text 13 (placeholder text-tertiary).
  * Without an `aria-label`/`aria-labelledby`, pass `placeholder` and a label for accessibility.
  */
-export function Input({ icon, frameProps, className, ...rest }: InputProps) {
+export function Input({ icon, frameProps, dense = false, className, ...rest }: InputProps) {
   return (
-    <label {...frameProps} className={cx("kimo-input", frameProps?.className)}>
+    <label
+      {...frameProps}
+      className={cx("kimo-input", dense && "kimo-input--dense", frameProps?.className)}
+    >
       {icon != null && (
         <span className="kimo-input__icon" aria-hidden="true">
           {icon}

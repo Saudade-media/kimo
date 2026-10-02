@@ -106,19 +106,18 @@ export function useNodes(store: DocStore, ids: readonly string[]): readonly Node
   const cache = useRef<readonly NodeEntry[]>([])
   const snapshot = () => {
     const prev = cache.current
-    let same = prev.length === ids.length
     const next: NodeEntry[] = []
     for (const id of ids) {
       const node = store.getNode(id)
-      if (!node) {
-        same = false
-        continue
-      }
-      const i = next.length
-      next.push({ id, node })
-      if (same && (prev[i]?.id !== id || prev[i]?.node !== node)) same = false
+      if (node) next.push({ id, node })
     }
-    if (same && next.length === prev.length) return prev
+    // Same entries → same array (missing ids, e.g. a selection whose node was deleted
+    // remotely, must not produce a fresh array per call: React would loop).
+    if (
+      next.length === prev.length &&
+      next.every((e, i) => prev[i]?.id === e.id && prev[i]?.node === e.node)
+    )
+      return prev
     cache.current = next
     return next
   }

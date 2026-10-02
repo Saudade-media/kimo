@@ -21,4 +21,24 @@
 @import "./empty-state/EmptyState.css";
 @import "./file-card/FileCard.css";
 @import "./agent/Agent.css";
+
+/* M2: Layout and styling (boards 02b, 09). */
+@import "./menu-dense/MenuDense.css";
+@import "./popover/Popover.css";
+@import "./size-field/SizeField.css";
+@import "./alignment-grid/AlignmentGrid.css";
+@import "./fill-row/FillRow.css";
+@import "./effect-row/EffectRow.css";
+@import "./stroke-side-fields/StrokeSideFields.css";
+@import "./slider/Slider.css";
+@import "./color-area/ColorArea.css";
+@import "./gradient-stop-bar/GradientStopBar.css";
+@import "./swatch-tile/SwatchTile.css";
+@import "./icon-tile/IconTile.css";
+@import "./tooltip-hint/TooltipHint.css";
+@import "./zoom-badge/ZoomBadge.css";
+@import "./color-picker/ColorPicker.css";
+@import "./gradient-editor/GradientEditor.css";
+@import "./icon-picker/IconPicker.css";
+@import "./image-fill-popover/ImageFillPopover.css";
 @import "./gallery/Gallery.css";

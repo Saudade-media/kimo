@@ -17,6 +17,7 @@ export const DEFAULTS = {
     position: "auto",
     locked: false,
     component: false,
+    blend: "normal",
   },
   frame: { w: { mode: "fit" }, h: { mode: "fit" }, clip: false, radius: 0 },
   rect: { radius: 0 },
@@ -37,7 +38,7 @@ export const DEFAULTS = {
   },
   /** `{ mode: "fill" }` sizes. `fallback` has no default (absent = none). */
   sizeFill: { weight: 1 },
-  stroke: { width: 1, align: "inside", cap: "butt", join: "miter" },
+  stroke: { width: 1, align: "inside", cap: "butt", join: "miter", miterLimit: 4 },
   solid: { blend: "normal", visible: true },
   gradient: {
     center: [0.5, 0.5],
@@ -49,7 +50,9 @@ export const DEFAULTS = {
     visible: true,
   },
   image: { fit: "cover", opacity: 1, blend: "normal", visible: true },
-  shadow: { inner: false, spread: 0, blend: "normal" },
+  shadow: { inner: false, spread: 0, blend: "normal", visible: true },
+  /** `blur` and `backdrop-blur` effects. */
+  blur: { visible: true },
   /** OKLCH and Display-P3 color objects. */
   color: { alpha: 1 },
 } as const
@@ -86,4 +89,9 @@ export const DEFAULTS_ADDED_IN_SPEC: readonly string[] = [
   "image.visible",
   "shadow.blend",
   "color.alpha",
+  // Added for M2 styling (ADR 0010): layer blend, miter limit, effect visibility.
+  "node.blend",
+  "stroke.miterLimit",
+  "shadow.visible",
+  "blur.visible",
 ]

@@ -183,3 +183,26 @@ Document fonts as assets land (M4), the 5k-node perf gate fails on the main-thre
   (`kimo.webFonts`, default on). When it is off, the CanvasHost passes `offlineFonts`, so an
   imported document cannot make the editor fetch from fonts.googleapis.com. TODO (M1.x): ask the
   first time an imported file uses non-bundled families, and add the same setting on desktop.
+
+## Amendments (M2)
+
+- **Cached images of filtered roots.** Roots with filters (background blur, layer blur, shadows
+  on layers, blend modes) are drawn from a cached image while the view moves (motion raster
+  cache, 160 ms after the last viewport change) and when zoomed out below 0.5 (raster cache). A
+  cached image is the root rendered alone, so a **background blur in it blurs only that root's
+  own content, not other roots overlapping behind it**. The view is redrawn exactly from the
+  vector pictures once it rests above zoom 0.5. Turn the motion cache off with
+  `motionRasterCache = false` (perf: `KIMO_PERF_NO_MOTION=1`).
+- **Unbounded pictures are culled by ink bounds.** Skia records a backdrop-filtered layer as
+  unbounded; the renderer then intersects the picture's cull rect with `Painter.inkBounds()`
+  (node boxes grown by outer shadows, layer blur, the outside part of strokes and text
+  overflow). Whoever adds a new way of drawing outside a node's box in `draw.ts` must extend
+  `inkBounds` with it, or that ink is culled at the screen edge.
+- **Icon glyphs re-record only what skipped them.** A picture recorded while a glyph was still
+  loading counts it (`pendingIcons`); an arriving glyph drops only those pictures. A failed
+  glyph load (network) is retried with backoff and never cached as missing.
+- **Frame diagnostics** (`recordMs`, `rasterMs`, `recorded`, `rasterized`) are part of
+  `RenderStats` (optional fields), read by the perf harness.
+- **Pixel readout.** `Renderer.samplePixel(world)` replays the root pictures into a 1×1 CPU
+  surface (transparent background) to read the document's own color and alpha of one document
+  pixel (board 10 #4 "Pixel readout"); the host calls it on hover above the pixel-grid zoom.

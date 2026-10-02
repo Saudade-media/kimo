@@ -41,8 +41,23 @@ try {
   })
   console.log(JSON.stringify(out, null, 2))
   await page.screenshot({ path: process.env.SCREENSHOT ?? join(root, "smoke.png") })
-  const res = out.result as { stats?: { backend?: string; frames?: number } } | undefined
-  failed = !!out.error || res?.stats?.backend !== "webgl" || !res?.stats?.frames
+  const res = out.result as
+    | {
+        stats?: { backend?: string; frames?: number }
+        icons?: { requestsAtInit: number; loaded: (number | null)[]; requests: string[] }
+      }
+    | undefined
+  const ic = res?.icons
+  // 4 real glyphs + 1 missing one (its shard is still fetched once): ≤ 5 shard files, no catalog.
+  const iconsOk =
+    !!ic &&
+    ic.requestsAtInit === 0 &&
+    ic.loaded.slice(0, 4).every((n) => typeof n === "number" && n > 0) &&
+    ic.loaded[4] === null &&
+    ic.requests.length <= 5 &&
+    !ic.requests.some((p) => p.includes("catalog"))
+  if (!iconsOk) console.error("icon lazy-load check failed")
+  failed = !!out.error || res?.stats?.backend !== "webgl" || !res?.stats?.frames || !iconsOk
 } finally {
   await browser.close()
   await server.close()

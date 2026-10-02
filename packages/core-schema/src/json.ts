@@ -38,6 +38,8 @@ const NUMBER_RE = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y
 
 /** Escapes one JSON Pointer reference token (RFC 6901). */
 export function escapePointer(token: string): string {
+  // Fast path: ids and property names almost never need escaping.
+  if (!token.includes("~") && !token.includes("/")) return token
   return token.replace(/~/g, "~0").replace(/\//g, "~1")
 }
 

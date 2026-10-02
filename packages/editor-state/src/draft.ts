@@ -394,9 +394,14 @@ export class Draft {
     if (Object.keys(vars).length > 0 || (this.base.hasVariables() && !this.variablesTouched)) {
       doc.variables = vars
     }
+    // Plain assignment is much faster than defineProperty; only "__proto__" needs the latter.
     const nodes: Record<string, unknown> = {}
-    for (const [id, n] of this.base.nodeEntries()) if (!this.nodes.has(id)) setOwn(nodes, id, n)
-    for (const [id, n] of this.nodes) if (n !== null) setOwn(nodes, id, n)
+    const put = (id: string, n: unknown) => {
+      if (id === "__proto__") setOwn(nodes, id, n)
+      else nodes[id] = n
+    }
+    for (const [id, n] of this.base.nodeEntries()) if (!this.nodes.has(id)) put(id, n)
+    for (const [id, n] of this.nodes) if (n !== null) put(id, n)
     doc.nodes = nodes
     return doc as unknown as KimoDocument
   }

@@ -1,0 +1,26 @@
+/*
+ * Avatar: desing.pen 02 Components > Inputs > Tags > Avatar (FVhW0).
+ * frame: 24 × 24, radius-pill, justifyContent center, alignItems center,
+ *        fill linear gradient rotation 225: agent (0) → agent-2 (1), agent at the top-left
+ *   └ Initials font-sans, 10, weight 600, #FFFFFF (literal in the design)
+ */
+.kimo-avatar {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--kimo-radius-pill);
+  background: linear-gradient(135deg, var(--kimo-agent) 0%, var(--kimo-agent-2) 100%);
+}
+
+.kimo-avatar__initials {
+  color: #ffffff; /* pen-literal: Initials fill #FFFFFF */
+  font-family: var(--kimo-font-sans);
+  font-size: 10px;
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+  white-space: nowrap;
+}

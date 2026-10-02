@@ -1,0 +1,55 @@
+/*
+ * ToolButton: desing.pen 02 Components > Actions > ToolButton (N0cHp), ToolButton/Active (l6HCd).
+ * frame: 36 × 36, radius-pill, justifyContent center, alignItems center (no fill)
+ *   └ icon 18 × 18 (lucide), text-secondary; active: frame accent, icon on-accent
+ */
+.kimo-tool-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-tool-button:hover:not(:disabled):not(.kimo-tool-button--active) {
+  background: var(--kimo-bg-hover);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-tool-button:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-tool-button:disabled {
+  color: var(--kimo-text-tertiary);
+  cursor: default;
+}
+
+.kimo-tool-button--active {
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+}
+
+.kimo-tool-button__icon {
+  display: inline-flex;
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.kimo-tool-button__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

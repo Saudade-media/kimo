@@ -1,0 +1,78 @@
+/*
+ * PropSection: desing.pen 02 Components > Panels & Layers > PropSection (fWrGA).
+ * frame: width 260, stroke border bottom 1 (inside), layout vertical, gap 8,
+ *        padding [12, 12, 16, 12]
+ *   ├ Header fill_container, justifyContent space_between, alignItems center
+ *   │   ├ Title  font-sans, text-sm (12), weight 600, text-primary
+ *   │   └ Action 14 × 14 (lucide plus), text-tertiary
+ *   └ Row    fill_container, horizontal, gap 8 (children fill_container)
+ */
+.kimo-prop-section {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 12px 16px 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-prop-section__header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.kimo-prop-section__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.kimo-prop-section__action {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-prop-section__action:hover {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-prop-section__action:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-prop-section__action > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-prop-row {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-prop-row > * {
+  flex: 1 1 0;
+  min-width: 0;
+}

@@ -11,10 +11,12 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "bun test ./test"
+    "test": "bun test ./test",
+    "measure:gallery": "bun run scripts/measure-gallery.ts"
   },
   "dependencies": {
     "@kimo/design-tokens": "workspace:*",
+    "lucide-react": "^1.49.0",
     "react": "^19.3.0"
   },
   "devDependencies": {

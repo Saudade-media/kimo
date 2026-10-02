@@ -1,4 +1,11 @@
-/* Placeholder home. All values come from @kimo/design-tokens (editor.css), which also handles dark mode. */
+/*
+ * Kimo web app shell. Every value is copied from desing.pen (boards 03 Editor — Light,
+ * 05 Editor — Agent — Dark, 06 Home); colors, radii and type sizes come from
+ * @kimo/design-tokens (editor.css switches them on [data-theme]). Pencil strokes are "inside":
+ * a full stroke is an inset box-shadow, a single-side stroke a border on that side. A `stroke`
+ * declared without a `strokeWidth` renders nothing in Pencil (measured on exports: the edge pixel
+ * equals the fill), so those nodes get no stroke here.
+ */
 html,
 body,
 #root {
@@ -7,56 +14,1037 @@ body,
 }
 
 body {
-  background: var(--kimo-bg-canvas);
+  background: var(--kimo-bg-app);
   color: var(--kimo-text-primary);
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-base);
+  line-height: normal;
   -webkit-font-smoothing: antialiased;
 }
 
-.home {
+button {
+  font: inherit;
+}
+
+/* --- Shared ------------------------------------------------------------------------------- */
+
+.menu-popover {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.menu-popover__menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+}
+
+.menu-popover__menu--start {
+  left: 0;
+}
+
+.menu-popover__menu--end {
+  right: 0;
+}
+
+.not-found,
+.editor-status {
   box-sizing: border-box;
-  min-height: 100%;
-  padding: var(--kimo-space-6) var(--kimo-space-4);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--kimo-space-3);
-  text-align: center;
+  gap: 12px;
+  height: 100%;
+  background: var(--kimo-bg-canvas);
 }
 
-.home__wordmark {
+.not-found__label,
+.editor-status__label {
   margin: 0;
-  font-size: var(--kimo-text-3xl);
-  font-weight: var(--kimo-font-weight-semibold);
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.home__status {
-  margin: 0;
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-sm);
   color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-base);
 }
 
-.home__link {
-  margin-top: var(--kimo-space-2);
-  padding: var(--kimo-space-2) var(--kimo-space-4);
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-accent);
-  color: var(--kimo-on-accent);
+.not-found__link,
+.editor-status__link {
+  color: var(--kimo-text-primary);
   font-size: var(--kimo-text-base);
   font-weight: var(--kimo-font-weight-medium);
+}
+
+.gallery-route {
+  min-height: 100%;
+  background: var(--kimo-bg-canvas);
+}
+
+/* --- Editor (ewttY: vertical, fill bg-canvas) --------------------------------------------- */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--kimo-bg-canvas);
+}
+
+/* Topbar (fYEz3): fill × 48, bg-app, bottom stroke 1 border, gap 8, padding [0, 12], center */
+.topbar {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+/* Logo (HOU7D): 28 × 28, accent, radius-pill, centered; Mark 17 / 700, ls -0.5, on-accent */
+.topbar__logo {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+  cursor: pointer;
+}
+
+.topbar__mark {
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-sans);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: normal;
+}
+
+/* File (wb5ft): gap 6, padding [0, 6], center; name 13 / 600 primary; chevron-down 14 tertiary */
+.topbar__file {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.topbar__file-name {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.topbar__file-icon,
+.topbar__saved-icon,
+.topbar__zoom-icon {
+  display: inline-flex;
+  color: var(--kimo-text-tertiary);
+}
+
+.topbar__file-input {
+  width: 180px;
+  height: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+  background: var(--kimo-bg-app);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+/* Sep (G1pUUt) 13 tertiary; Page (TvvEr) 13 secondary */
+.topbar__sep {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-base);
+}
+
+.topbar__page {
+  flex: none;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-base);
+}
+
+/* Spacer (EQ66S): fill_container × 1 */
+.topbar__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Saved (GwjIf): gap 6, padding [0, 8], center; cloud-check 14 tertiary; label 12 tertiary */
+.topbar__saved {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.topbar__saved-label {
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-sm);
+  white-space: nowrap;
+}
+
+/* Zoom (sqcDW): 28 high, radius-sm, gap 4, padding [0, 8], center; value 12 secondary; chevron 12 */
+.topbar__zoom {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.topbar__zoom:hover,
+.topbar__file:hover {
+  background: var(--kimo-bg-hover);
+  border-radius: var(--kimo-radius-sm);
+}
+
+.topbar__zoom-value {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+}
+
+.topbar svg {
+  display: block;
+}
+
+/* Body (jcodq): fill × fill, horizontal */
+.editor__body {
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Left Panel (CgPBW): 256, bg-app, right stroke 1 border, vertical */
+.left-panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 256px;
+  height: 100%;
+  min-height: 0;
+  background: var(--kimo-bg-app);
+  box-shadow: inset -1px 0 0 0 var(--kimo-border);
+}
+
+/* Search (zUGSM): padding [4, 8, 8, 8]; Input instance height 30 */
+.left-panel__search {
+  box-sizing: border-box;
+  flex: none;
+  width: 100%;
+  padding: 4px 8px 8px 8px;
+}
+
+.left-panel__search .left-panel__search-input {
+  height: 30px;
+}
+
+.left-panel__search input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* Layer Tree (lZmOH): fill, vertical, gap 1, padding [0, 6] */
+/* Virtualized-out rows of the Layer Tree (row pitch 28 + gap 1). */
+.layer-tree__spacer {
+  flex: none;
+}
+
+.layer-tree {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  gap: 1px;
+  width: 100%;
+  min-height: 0;
+  padding: 0 6px;
+  overflow-y: auto;
+}
+
+/* Spacer (YFU0e): fill × fill */
+.left-panel__spacer {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.left-panel__empty,
+.right-panel__empty {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.left-panel__empty .kimo-empty-state,
+.right-panel__empty .kimo-empty-state {
+  width: 100%;
+}
+
+/* Footer (N7JwLH): top stroke 1, gap 8, padding [10, 12], center */
+.left-panel__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.left-panel__footer-icon {
+  display: inline-flex;
+  color: var(--kimo-text-tertiary);
+}
+
+.left-panel__footer-icon svg {
+  display: block;
+}
+
+.left-panel__footer-label {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+}
+
+.left-panel__footer-spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* Canvas (Ir253): fill × fill, bg-canvas, clip */
+.editor__canvas {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--kimo-bg-canvas);
+}
+
+.canvas-host {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  outline: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.canvas-host__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Artboard Label (E6w1s): 12 / 500 text-tertiary, 22 above the frame; constant screen size */
+/* Label set wrapper (positions are set imperatively): no box of its own. */
+.canvas-host__labels {
+  display: contents;
+}
+
+.canvas-host__label {
+  position: absolute;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: 12px;
+  font-weight: var(--kimo-font-weight-medium);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+/* Inline text editor: transparent, sized to the content, drawn over the hidden canvas text */
+.canvas-host__text-editor {
+  position: absolute;
+  box-sizing: content-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 1.5px solid var(--kimo-selection);
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+  field-sizing: content;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.canvas-host__error {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-app);
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+}
+
+/* Floating Toolbar (sFtrg): bg-app, radius-pill, stroke 1 border, shadow 0 4 20 shadow-strong,
+   gap 2, padding 6, center; bottom-centered (x 226 of 904, y 780 of 852 → 24 from bottom) */
+.floating-toolbar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-app);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 4px 20px 0 var(--kimo-shadow-strong);
+}
+
+/* Divider (Q6nhnZ): 1 × 20, border */
+.floating-toolbar__divider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  background: var(--kimo-border);
+}
+
+/* Ask Kimo (BPRPi): 36 high, accent-soft, radius-pill, gap 6, padding [0, 12, 0, 10], center */
+.floating-toolbar__ask {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  margin: 0;
+  padding: 0 12px 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent-soft);
+  cursor: default;
+}
+
+.floating-toolbar__ask-icon {
+  display: inline-flex;
+  color: var(--kimo-accent-text);
+}
+
+.floating-toolbar__ask-icon svg {
+  display: block;
+}
+
+.floating-toolbar__ask-label {
+  color: var(--kimo-accent-text);
+  font-size: 13px;
+  font-weight: var(--kimo-font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* Right Panel (GCzRl): 280, bg-app, left stroke 1 border, vertical */
+.right-panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 280px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--kimo-bg-app);
+  box-shadow: inset 1px 0 0 0 var(--kimo-border);
+}
+
+/* Board 05 (EHux2 > G7oYyd): the right panel is 360 wide while the Agent tab is open. */
+.right-panel--agent {
+  width: 360px;
+}
+
+.design-tab {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Selection (h4TIEG): bottom stroke 1, gap 8, padding [8, 12, 12, 12], center */
+.selection-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px 12px 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.selection-header__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-accent-text);
+}
+
+.selection-header__icon svg {
+  display: block;
+}
+
+.selection-header__name {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.selection-header__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* PropSection > Row children fill */
+.field {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.field__face {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Enum fields: the PropField face with a transparent native select on top */
+.field__select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.field--enum:focus-within .kimo-prop-field {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+/* Direction Row (Gih4R): fill, gap 8, center: Segmented, Spacer, Toggle, "Wrap" 12 secondary */
+.auto-layout__direction {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.auto-layout__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+.auto-layout__wrap-label {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+}
+
+.color-row {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.color-row__field {
+  flex: 1 1 0;
+}
+
+/* Remove button: over the field's right end (opacity label), shown on hover / focus only. */
+.color-row__actions {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  opacity: 0;
+}
+
+.color-row:hover .color-row__actions,
+.color-row:focus-within .color-row__actions {
+  opacity: 1;
+}
+
+.color-row__picker {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Home (J3yxNC): horizontal, bg-app ---------------------------------------------------- */
+
+.home {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--kimo-bg-app);
+}
+
+/* Sidebar (lGmKI): 248 × fill, bg-app, vertical, gap 4, padding [16, 12]
+   (stroke border has no strokeWidth: no stroke) */
+.home-sidebar {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 4px;
+  width: 248px;
+  height: 100%;
+  padding: 16px 12px;
+  background: var(--kimo-bg-app);
+  overflow-y: auto;
+}
+
+/* Brand (G6nz2I): hug width, gap 10, padding [4, 8, 16, 8], center */
+.home-sidebar__brand {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 16px 8px;
+}
+
+.home-sidebar__logo {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+}
+
+/* Mark (ja2Dx): 17 / 700 on-accent */
+.home-sidebar__mark {
+  color: var(--kimo-on-accent);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Wordmark (ugiBG): text-lg / 700, ls -0.3, primary */
+.home-sidebar__wordmark {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* Nav items (Lsf2o …): fill × 32, radius-md, gap 10, padding [0, 10], center */
+.home-nav {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-md);
+  color: var(--kimo-text-secondary);
   text-decoration: none;
 }
 
-.home__link:hover {
-  background: var(--kimo-accent-hover);
+a.home-nav:hover {
+  background: var(--kimo-bg-hover);
 }
 
-.home__link:focus-visible {
-  outline: 2px solid var(--kimo-selection);
-  outline-offset: 2px;
+.home-nav__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.home-nav__icon svg {
+  display: block;
+}
+
+.home-nav__label {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-base);
+  white-space: nowrap;
+}
+
+.home-nav__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+.home-nav__count {
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+}
+
+/* Recents (FUnYG): bg-muted, radius-pill (stroke without width: none); icon accent-text;
+   label 600 primary */
+.home-nav--active {
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+a.home-nav--active:hover {
+  background: var(--kimo-bg-muted);
+}
+
+.home-nav--active .home-nav__icon {
+  color: var(--kimo-accent-text);
+}
+
+.home-nav--active .home-nav__label {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+/* Folders Header (CttNG): fill width, padding [20, 10, 6, 10]; label text-xs 600 ls 0.6
+   text-tertiary */
+.home-folders-header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  width: 100%;
+  padding: 20px 10px 6px 10px;
+}
+
+.home-folders-header__label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+}
+
+/* Spacer (cRQdW): fill × fill */
+.home-sidebar__spacer {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* OSS Card (iwnrg): bg-muted, radius-lg, vertical, gap 8, padding 12 (stroke without width: none) */
+.home-oss {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-muted);
+}
+
+.home-oss__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-oss__icon {
+  display: inline-flex;
+  color: var(--kimo-text-primary);
+}
+
+.home-oss__icon svg {
+  display: block;
+}
+
+.home-oss__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.home-oss__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  line-height: 1.45;
+}
+
+/* Main (zvVAX): fill × fill, clip, vertical, gap 28, padding [28, 40] */
+.home-main {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  gap: 28px;
+  min-width: 0;
+  height: 100%;
+  padding: 28px 40px;
+  overflow-y: auto;
+}
+
+/* Header (JJP4I): fill, gap 12, center */
+.home-header {
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Title (MdZ5X): text-2xl / 500, ls -0.6, primary */
+.home-header__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-2xl);
+  font-weight: var(--kimo-font-weight-medium);
+  letter-spacing: -0.6px;
+  line-height: normal;
+}
+
+.home-header__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* Search (vFpRB): Input instance, width 260 */
+.home-header .home-header__search {
+  flex: none;
+  width: 260px;
+}
+
+/* Start With AI (LKOqL): fill, bg-subtle, radius-2xl, vertical, gap 16, padding 28
+   (stroke without width: none) */
+.home-ai {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 16px;
+  width: 100%;
+  padding: 28px;
+  border-radius: var(--kimo-radius-2xl);
+  background: var(--kimo-bg-subtle);
+}
+
+/* Heading (GnwlC): fill, vertical, gap 4; Title / Desc hug their text (Pencil alignItems start) */
+.home-ai__heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.home-ai__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-2xl);
+  font-weight: var(--kimo-font-weight-medium);
+  letter-spacing: -0.6px;
+  line-height: normal;
+}
+
+.home-ai__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-base);
+}
+
+/* Composer (deES7): fill_container */
+.home-ai .kimo-tooltip-anchor {
+  display: flex;
+  width: 100%;
+}
+
+.home-ai .home-ai__composer {
+  width: 100%;
+}
+
+/* Chips (y5Si79): hug, gap 8; chip bg-app, pill, stroke 1 border, gap 6, padding [6, 12], center */
+.home-ai__chips {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home-chip {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+.home-chip:disabled {
+  cursor: default;
+}
+
+.home-chip__icon {
+  display: inline-flex;
+  color: var(--kimo-text-secondary);
+}
+
+.home-chip__icon svg {
+  display: block;
+}
+
+.home-chip__label {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+/* Files Header (Y0m0n): fill, gap 8, center; title text-lg / 600 */
+.home-files-header {
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.home-files-header__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-lg);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.home-files-header__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* Grid (DVL3B): fill, vertical, gap 24; Row (WmA5g): fill, gap 20; cards fill_container */
+.home-grid {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 24px;
+  width: 100%;
+}
+
+.home-grid__row {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 100%;
+}
+
+.home-grid .home-grid__card,
+.home-grid__filler {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+.home-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-list__item {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  cursor: pointer;
+}
+
+.home-list__item:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.home-list__name {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.home-list__info,
+.home-empty {
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-sm);
+}
+
+.home-error {
+  margin: 0;
+  color: var(--kimo-danger);
+  font-size: var(--kimo-text-sm);
 }

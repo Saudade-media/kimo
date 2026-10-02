@@ -49,6 +49,21 @@ export interface ValidateOptions {
   supportedFeatures?: Iterable<string>
   /** Run the lints (warnings) of 10.6. Default true. */
   lints?: boolean
+  /**
+   * Incremental mode: run only the rules that belong to these node ids, for editors that
+   * re-check the nodes an edit touched instead of the whole document. Per-node rules run for
+   * the listed nodes; cross-node rules run where a listed node takes part (sibling order ties in
+   * its sibling group, parent cycles through it, the fit lint of a listed frame). Document-level
+   * checks (header, `features`, `variables`, the components index, prop declarations, instance
+   * cycles, unused variables and assets) are skipped.
+   *
+   * The caller owns the scope: it must list every node whose issues can change (the edited
+   * nodes, their old and new parents, their children) and run a full validation instead when
+   * the edit involves components, instances, slot children, theme pins, variables, themes or
+   * header members, whose rules reach across the tree. Ids missing from the document are
+   * ignored.
+   */
+  nodes?: Iterable<string>
 }
 
 type Obj = Record<string, unknown>
@@ -161,6 +176,8 @@ class Validation {
   private readonly usedAssets = new Set<string>()
   private readonly assetFiles: Set<string> | null
   private readonly themeCache = new Map<string, Theme>()
+  /** Node ids of an incremental run (see {@link ValidateOptions.nodes}); null = everything. */
+  private readonly scope: ReadonlySet<string> | null
 
   constructor(
     raw: Obj,
@@ -183,6 +200,18 @@ class Validation {
     )
     this.lints = options.lints !== false
     this.assetFiles = options.assetFiles ? new Set(options.assetFiles) : null
+    this.scope = options.nodes ? new Set(options.nodes) : null
+  }
+
+  /** Node entries in scope: every node, or the listed ones in an incremental run. */
+  private scoped(): [string, Obj][] {
+    if (!this.scope) return Object.entries(this.nodes)
+    const out: [string, Obj][] = []
+    for (const id of this.scope) {
+      const n = Object.hasOwn(this.nodes, id) ? this.nodes[id] : undefined
+      if (n) out.push([id, n])
+    }
+    return out
   }
 
   run(): void {
@@ -208,6 +237,11 @@ class Validation {
 
   private structure(): void {
     const raw = this.doc as unknown as Obj
+    if (this.scope) {
+      const all = isObject(raw.nodes) ? raw.nodes : {}
+      for (const id of this.scope) if (Object.hasOwn(all, id)) this.nodeStructure(id, all[id])
+      return
+    }
     const url = raw.$schema
     if (typeof url === "string" && url !== SCHEMA_URL && new RegExp(SCHEMA_URL_PATTERN).test(url)) {
       this.sink.add(
@@ -220,27 +254,30 @@ class Validation {
     for (const [name, v] of Object.entries(isObject(raw.variables) ? raw.variables : {})) {
       schemaIssues(Variable, v, ptr("variables", name), this.sink)
     }
-    for (const [id, n] of Object.entries(isObject(raw.nodes) ? raw.nodes : {})) {
-      const path = ptr("nodes", id)
-      if (!isObject(n)) {
-        this.sink.add("SCHEMA", path, "A node must be an object")
-        continue
-      }
-      if (!isNodeType(n.type)) {
-        this.sink.add(
-          "UNKNOWN_NODE_TYPE",
-          `${path}/type`,
-          typeof n.type === "string" ? `Unknown node type "${n.type}"` : "Missing node type",
-        )
-        continue
-      }
-      const isInstance = n.type === "instance"
-      schemaIssues(NODE_SCHEMAS[n.type], n, path, this.sink, (p, name) => {
-        if (!isInstance || !VISUAL_KEYS.has(name)) return false
-        this.sink.add("INSTANCE_VISUAL_FIELD", p, `"${name}" is a visual field; put it in "props"`)
-        return true
-      })
+    for (const [id, n] of Object.entries(isObject(raw.nodes) ? raw.nodes : {}))
+      this.nodeStructure(id, n)
+  }
+
+  private nodeStructure(id: string, n: unknown): void {
+    const path = ptr("nodes", id)
+    if (!isObject(n)) {
+      this.sink.add("SCHEMA", path, "A node must be an object")
+      return
     }
+    if (!isNodeType(n.type)) {
+      this.sink.add(
+        "UNKNOWN_NODE_TYPE",
+        `${path}/type`,
+        typeof n.type === "string" ? `Unknown node type "${n.type}"` : "Missing node type",
+      )
+      return
+    }
+    const isInstance = n.type === "instance"
+    schemaIssues(NODE_SCHEMAS[n.type], n, path, this.sink, (p, name) => {
+      if (!isInstance || !VISUAL_KEYS.has(name)) return false
+      this.sink.add("INSTANCE_VISUAL_FIELD", p, `"${name}" is a visual field; put it in "props"`)
+      return true
+    })
   }
 
   // --- Features -------------------------------------------------------------------------------
@@ -248,6 +285,7 @@ class Validation {
   private featureFlags(): void {
     const supported = new Set(this.options.supportedFeatures ?? KNOWN_FEATURES)
     ;[...this.features].forEach((f, i) => {
+      if (this.scope) return
       if (!isKnownFeature(f) || !supported.has(f)) {
         this.sink.add(
           "FEATURE_UNKNOWN",
@@ -261,7 +299,7 @@ class Validation {
         this.sink.add("FEATURE_NOT_DECLARED", path, `${what} needs feature "${feature}"`)
       }
     }
-    for (const [id, n] of Object.entries(this.nodes)) {
+    for (const [id, n] of this.scoped()) {
       const base = ptr("nodes", id)
       if (n.type === "script") need("node/script", `${base}/type`, "A script node")
       if (n.type === "browser") need("node/browser", `${base}/type`, "A browser node")
@@ -300,6 +338,7 @@ class Validation {
       }
       walk(n, base, null, gate)
     }
+    if (this.scope) return
     for (const [name, v] of Object.entries(this.variables)) {
       if (COMPOSITE_VARIABLE_TYPES.has(v.type as never))
         need("tokens/composite", ptr("variables", name, "type"), `A "${v.type}" variable`)
@@ -310,7 +349,11 @@ class Validation {
 
   private tree(): void {
     const groups = new Map<string, Map<string, string[]>>()
-    for (const [id, n] of Object.entries(this.nodes)) {
+    const groupKey = (n: Obj) =>
+      typeof n.order === "string" && (n.parent === null || typeof n.parent === "string")
+        ? `${n.parent ?? ""}\u0000${typeof n.at === "string" ? n.at : ""}`
+        : null
+    for (const [id, n] of this.scoped()) {
       const base = ptr("nodes", id)
       const at = n.at
       if (n.parent === null) {
@@ -354,14 +397,33 @@ class Validation {
           }
         }
       }
-      if (typeof n.order === "string" && (n.parent === null || typeof n.parent === "string")) {
-        const key = `${n.parent ?? ""}\u0000${typeof at === "string" ? at : ""}`
-        getOrInit(
-          getOrInit(groups, key, () => new Map<string, string[]>()),
-          n.order,
-          () => [],
-        ).push(id)
+    }
+    // Sibling groups: all of them, or the groups of the scoped nodes.
+    // Incremental: only siblings that share a parent and an order key with a scoped node.
+    let wanted: Set<string> | null = null
+    let parents: Set<unknown> | null = null
+    let orders: Set<unknown> | null = null
+    if (this.scope) {
+      wanted = new Set()
+      parents = new Set()
+      orders = new Set()
+      for (const [, n] of this.scoped()) {
+        const key = groupKey(n)
+        if (key === null) continue
+        wanted.add(key)
+        parents.add(n.parent)
+        orders.add(n.order)
       }
+    }
+    for (const [id, n] of Object.entries(this.nodes)) {
+      if (parents && !(orders?.has(n.order) && parents.has(n.parent))) continue
+      const key = groupKey(n)
+      if (key === null || (wanted && !wanted.has(key))) continue
+      getOrInit(
+        getOrInit(groups, key, () => new Map<string, string[]>()),
+        n.order as string,
+        () => [],
+      ).push(id)
     }
     for (const byOrder of groups.values()) {
       for (const [order, ids] of byOrder) {
@@ -378,7 +440,7 @@ class Validation {
     }
     // Cycles: colour nodes while walking parent links.
     const state = new Map<string, 1 | 2>()
-    for (const start of Object.keys(this.nodes)) {
+    for (const start of this.scope ?? Object.keys(this.nodes)) {
       const path: string[] = []
       let id: string | undefined = start
       while (id !== undefined && this.nodes[id] && !state.has(id)) {
@@ -400,7 +462,7 @@ class Validation {
       for (const p of path) state.set(p, 2)
     }
     // Replace overrides: exactly one replacement node.
-    for (const [id, n] of Object.entries(this.nodes)) {
+    for (const [id, n] of this.scoped()) {
       if (n.type !== "instance" || !isObject(n.overrides)) continue
       for (const [key, ov] of Object.entries(n.overrides)) {
         if (!isObject(ov) || ov.replace !== true) continue
@@ -627,6 +689,10 @@ class Validation {
   }
 
   private components(): void {
+    if (this.scope) {
+      this.slotSuggestions()
+      return
+    }
     // Component prop declarations.
     for (const [id, n] of Object.entries(this.nodes)) {
       const def = n.component
@@ -696,8 +762,12 @@ class Validation {
       })
     }
     this.instanceCycles()
-    // Slot suggestions must name components (aliases declared, local ids existing).
-    for (const [id, n] of Object.entries(this.nodes)) {
+    this.slotSuggestions()
+  }
+
+  /** Slot suggestions must name components (aliases declared, local ids existing). */
+  private slotSuggestions(): void {
+    for (const [id, n] of this.scoped()) {
       if (n.type !== "frame" || !isObject(n.slot) || !Array.isArray(n.slot.suggested)) continue
       n.slot.suggested.forEach((qid, i) => {
         this.component(qid, ptr("nodes", id, "slot", "suggested", String(i)))
@@ -795,7 +865,7 @@ class Validation {
   // --- Instances ------------------------------------------------------------------------------
 
   private instances(): void {
-    for (const [id, n] of Object.entries(this.nodes)) {
+    for (const [id, n] of this.scoped()) {
       if (n.type !== "instance") continue
       const base = ptr("nodes", id)
       const c = this.component(n.of, `${base}/of`)
@@ -948,7 +1018,8 @@ class Validation {
       }
       return true
     }
-    for (const [id, n] of Object.entries(this.nodes)) walk(n, ptr("nodes", id), null, visit(id))
+    for (const [id, n] of this.scoped()) walk(n, ptr("nodes", id), null, visit(id))
+    if (this.scope) return
     for (const [name, v] of Object.entries(this.variables)) {
       const base = ptr("variables", name)
       const value = v.value
@@ -1065,6 +1136,7 @@ class Validation {
 
   /** Local alias cycles (10.4 rule 5): reported on every variable of the cycle. */
   private variableAliases(): void {
+    if (this.scope) return
     const targets = (name: string): string[] => {
       const v = this.variables[name]
       if (!v) return []
@@ -1116,7 +1188,7 @@ class Validation {
 
   private assets(): void {
     const manifest = (this.doc as unknown as Obj).assets
-    if (!this.lints || !isObject(manifest)) return
+    if (!this.lints || this.scope || !isObject(manifest)) return
     for (const file of Object.keys(manifest)) {
       if (!this.usedAssets.has(file))
         this.sink.add("ASSET_UNUSED", ptr("assets", file), `Asset "${file}" is not referenced`)
@@ -1152,7 +1224,7 @@ class Validation {
 
   private runLints(): void {
     const isLibrary = isObject(this.doc.meta) && this.doc.meta.library === true
-    if (!isLibrary) {
+    if (!isLibrary && !this.scope) {
       for (const name of Object.keys(this.variables)) {
         if (!this.usedVariables.has(name)) {
           this.sink.add(
@@ -1166,11 +1238,12 @@ class Validation {
     const kids = new Map<string, Obj[]>()
     for (const n of Object.values(this.nodes)) {
       if (typeof n.parent !== "string" || n.at !== undefined) continue
+      if (this.scope && !this.scope.has(n.parent)) continue
       const list = kids.get(n.parent) ?? []
       list.push(n)
       kids.set(n.parent, list)
     }
-    for (const [id, n] of Object.entries(this.nodes)) {
+    for (const [id, n] of this.scoped()) {
       if (n.type === "text" && "fill" in n) {
         const f = n.fill
         const list = Array.isArray(f) ? f : [f]

@@ -1,0 +1,143 @@
+/*
+ * Gallery: desing.pen board "02 Components" (PufcL), the visual-QA page.
+ * board: width 1440, fill bg-app, layout vertical, gap 48, padding 64
+ *   ├ Header (L5Q4E) vertical, gap 12
+ *   │   ├ Eyebrow font-mono, text-sm (12), accent-text, letterSpacing 0.5
+ *   │   ├ Title   font-sans, 56, weight 500, text-primary, letterSpacing -1.2
+ *   │   └ Intro   fill_container, font-sans, text-lg (16), text-secondary
+ *   └ Section ×6 vertical, gap 20
+ *       ├ Section Header fill_container, padding [0, 0, 12, 0], stroke border bottom 1
+ *       │   └ Section Title font-sans, text-xl (20), weight 600, text-primary
+ *       └ Items fill_container, horizontal, gap 32
+ * Columns: Fields (Pxhns) width 240 vertical gap 12; Controls/Tags/Tab Column vertical gap 16;
+ * Layer Column (ga43X) width 260, bg-app, radius-lg, stroke border 1, vertical, gap 2, padding 4;
+ * Chat Column (Vtkpe) width 340, vertical, gap 16.
+ */
+.kimo-gallery {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  width: 100%;
+  max-width: 1440px;
+  padding: 64px;
+  background: var(--kimo-bg-app);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.kimo-gallery__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.kimo-gallery__eyebrow,
+.kimo-gallery__title,
+.kimo-gallery__intro,
+.kimo-gallery__section-title,
+.kimo-gallery__log {
+  margin: 0;
+  line-height: normal;
+}
+
+.kimo-gallery__eyebrow {
+  color: var(--kimo-accent-text);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  letter-spacing: 0.5px;
+}
+
+.kimo-gallery__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: 56px;
+  font-weight: var(--kimo-font-weight-medium);
+  letter-spacing: -1.2px;
+}
+
+.kimo-gallery__intro {
+  align-self: stretch;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-lg);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 19px; /* Pencil text box: round(16 × 1.21) */
+}
+
+.kimo-gallery__section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.kimo-gallery__section-header {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  padding: 0 0 12px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-gallery__section-title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xl);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-gallery__items {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+}
+
+.kimo-gallery__column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.kimo-gallery__column--fields {
+  gap: 12px;
+  width: 240px;
+}
+
+.kimo-gallery__layer-column {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 260px;
+  padding: 4px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+.kimo-gallery__prop-section {
+  width: 260px;
+}
+
+.kimo-gallery__chat-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 340px;
+}
+
+.kimo-gallery__log {
+  min-height: 15px;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}

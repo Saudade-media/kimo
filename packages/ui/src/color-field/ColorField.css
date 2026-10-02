@@ -1,0 +1,68 @@
+/*
+ * ColorField: desing.pen 02 Components > Inputs > Fields > ColorField (GOaBx).
+ * frame: fill_container × 28, fill bg-subtle, radius-sm, layout horizontal, gap 8,
+ *        padding [0, 6], alignItems center
+ *   ├ Swatch  rectangle 16 × 16, radius 4, stroke border 1 (inside)
+ *   ├ Value   text font-mono, text-sm (12), text-primary
+ *   ├ Spacer  fill_container × 1
+ *   └ Opacity text font-sans, text-sm (12), text-tertiary
+ */
+.kimo-color-field {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-color-field__swatch {
+  box-sizing: border-box;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-color-field__swatch:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-color-field__value {
+  flex: none;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-color-field__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-color-field__opacity {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}

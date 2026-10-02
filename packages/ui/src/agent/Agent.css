@@ -1,0 +1,342 @@
+/*
+ * AI Agent components: desing.pen 02 Components > AI Agent.
+ *
+ * Message/User (ROG0x): fill_container, justifyContent end
+ *   └ Bubble width 260, fill accent, radius-lg, padding [10, 14]
+ *       └ Text fill_container, font-sans, text-base (13), on-accent, lineHeight 1.45
+ * Message/Agent (QqwyN): fill_container, gap 10
+ *   ├ Mark 24 × 24, radius-pill, gradient 225 agent → agent-2, center
+ *   │   └ Icon 13 × 13 (lucide sparkles), #FFFFFF (literal)
+ *   └ Bubble fill_container, fill bg-muted, radius-lg, padding [10, 14]
+ *       └ Text fill_container, font-sans, text-base (13), text-primary, lineHeight 1.5
+ */
+.kimo-message {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.kimo-message--user {
+  justify-content: flex-end;
+}
+
+.kimo-message--agent {
+  gap: 10px;
+}
+
+.kimo-message__mark {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--kimo-radius-pill);
+  background: linear-gradient(135deg, var(--kimo-agent) 0%, var(--kimo-agent-2) 100%);
+}
+
+.kimo-message__mark-icon {
+  display: inline-flex;
+  width: 13px;
+  height: 13px;
+  color: #ffffff; /* pen-literal: Mark > Icon fill #FFFFFF */
+}
+
+.kimo-message__mark-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-message__bubble {
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border-radius: var(--kimo-radius-lg);
+}
+
+.kimo-message--user .kimo-message__bubble {
+  flex: none;
+  width: 260px;
+  max-width: 100%;
+  background: var(--kimo-accent);
+}
+
+.kimo-message--agent .kimo-message__bubble {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-message__text {
+  width: 100%;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.kimo-message--user .kimo-message__text {
+  color: var(--kimo-on-accent);
+  line-height: 19px; /* lineHeight 1.45 × 13 = 18.85, rendered as whole-px lines (19) */
+}
+
+.kimo-message--agent .kimo-message__text {
+  color: var(--kimo-text-primary);
+  line-height: 20px; /* lineHeight 1.5 × 13 = 19.5, rendered as whole-px lines (20) */
+}
+
+/*
+ * AgentStep (lNM1U) / AgentStep/Running (jOrxb): fill_container, gap 8,
+ * padding [0, 0, 0, 34], alignItems center
+ *   ├ Status 14 × 14: circle-check success / loader-circle agent
+ *   └ Label  font-sans, text-sm (12): text-secondary / weight 500 text-primary
+ */
+.kimo-agent-step {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0 0 0 34px;
+}
+
+.kimo-agent-step__status {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-agent-step__status > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-agent-step--done .kimo-agent-step__status {
+  color: var(--kimo-success);
+}
+
+.kimo-agent-step--running .kimo-agent-step__status {
+  color: var(--kimo-agent);
+}
+
+.kimo-agent-step__label {
+  min-width: 0;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: normal;
+}
+
+.kimo-agent-step--done .kimo-agent-step__label {
+  color: var(--kimo-text-secondary);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-agent-step--running .kimo-agent-step__label {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+/*
+ * Composer (JvIbi): width 340, fill bg-app, radius-xl, stroke border-strong 1 (inside),
+ *   layout vertical, gap 10, padding [12, 12, 10, 16]
+ *   ├ Placeholder fill_container, font-sans, text-base (13), text-tertiary
+ *   └ Bar fill_container, gap 6, alignItems center
+ *       ├ Context Chip fill bg-muted, radius-pill, gap 4, padding [2, 8], center
+ *       │   ├ Icon  12 × 12 (lucide frame), text-secondary
+ *       │   └ Label font-sans, text-xs (11), weight 500, text-secondary
+ *       ├ Model gap 4, padding [2, 6], center
+ *       │   ├ Label font-sans, text-xs (11), text-tertiary
+ *       │   └ Icon  12 × 12 (lucide chevron-down), text-tertiary
+ *       ├ Spacer fill_container × 1
+ *       └ Send 28 × 28, fill accent, radius-pill, center
+ *           └ Icon 16 × 16 (lucide arrow-up), on-accent
+ */
+.kimo-composer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 340px;
+  margin: 0;
+  padding: 12px 12px 10px 16px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-composer:has(.kimo-composer__input:focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-composer__input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 0;
+  max-height: 160px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  resize: none;
+  field-sizing: content;
+}
+
+.kimo-composer__input::placeholder {
+  color: var(--kimo-text-tertiary);
+  opacity: 1;
+}
+
+.kimo-composer__bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kimo-composer__chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-composer__chip-icon,
+.kimo-composer__model-icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-composer__chip-icon > svg,
+.kimo-composer__model-icon > svg,
+.kimo-composer__send-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-composer__chip-icon {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-composer__chip-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-composer__model {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-composer__model:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-composer__model:focus-visible,
+.kimo-composer__send:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-composer__model-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-composer__model-icon {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-composer__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-composer__send {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-composer__send:hover:not(:disabled) {
+  background: var(--kimo-accent-hover);
+}
+
+/* The design shows the idle (empty) composer with the same Send look; only the cursor changes. */
+.kimo-composer__send:disabled {
+  cursor: default;
+}
+
+.kimo-composer__send-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+/* AgentStep/Running: the loader spins (kept last: highest specificity). */
+.kimo-agent-step--running .kimo-agent-step__status > svg {
+  animation: kimo-spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-agent-step--running .kimo-agent-step__status > svg {
+    animation: none;
+  }
+}
+
+@keyframes kimo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

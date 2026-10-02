@@ -1,0 +1,121 @@
+/*
+ * FileCard: desing.pen 02 Components > Content > FileCard (byua1).
+ * frame: width 260, layout vertical, gap 10
+ *   ├ Thumbnail fill_container × 164, fill bg-muted, radius-xl (stroke without strokeWidth: none),
+ *   │           layout vertical, padding 24, justifyContent center, alignItems center
+ *   │   └ Mini Frame fill × fill, fill bg-app, radius-sm, shadow outer 0 2 blur 6 shadow,
+ *   │                layout vertical, gap 6, padding 12
+ *   │       ├ Line A 80 × 8, radius 4, accent-soft
+ *   │       ├ Line B fill_container × 6, radius 3, bg-muted
+ *   │       └ Line C 120 × 6, radius 3, bg-muted
+ *   └ Meta fill_container, layout vertical, gap 2
+ *       ├ Name font-sans, text-base (13), weight 500, text-primary
+ *       └ Info font-sans, text-sm (12), text-tertiary
+ */
+.kimo-file-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 260px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-file-card:focus-visible {
+  outline: none;
+}
+
+.kimo-file-card__thumbnail {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  align-self: stretch;
+  height: 164px;
+  padding: 24px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-file-card:focus-visible .kimo-file-card__thumbnail {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-file-card:hover .kimo-file-card__thumbnail {
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-file-card__mini-frame {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  align-self: stretch;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 0;
+  padding: 12px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  box-shadow: 0 2px 6px 0 var(--kimo-shadow);
+}
+
+.kimo-file-card__line {
+  display: block;
+  flex: none;
+}
+
+.kimo-file-card__line--a {
+  width: 80px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--kimo-accent-soft);
+}
+
+.kimo-file-card__line--b {
+  align-self: stretch;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-file-card__line--c {
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-file-card__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  align-self: stretch;
+}
+
+.kimo-file-card__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+.kimo-file-card__info {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}

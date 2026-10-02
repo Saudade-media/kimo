@@ -49,25 +49,55 @@ describe("IconButton", () => {
 })
 
 describe("component CSS", () => {
-  const files = ["button/Button.css", "icon-button/IconButton.css"]
+  const stylesPath = "styles.css"
+  const filesOf = async () =>
+    [...(await src(stylesPath)).matchAll(/@import "\.\/([^"]+)";/g)].map((m) => m[1] as string)
 
   test("styles.css imports every component stylesheet", async () => {
-    const styles = await src("styles.css")
-    for (const f of files) expect(styles).toContain(`@import "./${f}";`)
+    const files = await filesOf()
+    const glob = new Bun.Glob("**/*.css")
+    const all = [...glob.scanSync(join(import.meta.dir, "..", "src"))].filter(
+      (f) => f !== stylesPath,
+    )
+    expect(files.sort()).toEqual(all.sort())
   })
 
-  for (const f of files) {
-    test(`${f} uses only defined --kimo-* tokens and no raw colors`, async () => {
-      const css = (await src(f)).replace(/\/\*[\s\S]*?\*\//g, "")
+  test("every stylesheet uses only defined --kimo-* tokens; raw colors only as pen literals", async () => {
+    for (const f of await filesOf()) {
+      const raw = await src(f)
+      // A raw color is allowed only on a line annotated as a literal copied from the .pen node.
+      const lines = raw.split("\n").filter((l) => !l.includes("/* pen-literal:"))
+      const css = lines.join("\n").replace(/\/\*[\s\S]*?\*\//g, "")
       const used = [...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1])
       expect(used.length).toBeGreaterThan(0)
       for (const v of used) {
         expect(v?.startsWith("--kimo-")).toBe(true)
         expect(tokens[v?.slice("--kimo-".length) ?? ""]).toBeDefined()
       }
-      expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i)
-    })
-  }
+      expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|[:\s](white|black)\s*[;)]/i)
+    }
+  })
+
+  test("pen literals are exactly the design's non-variable fills", async () => {
+    const literals: string[] = []
+    for (const f of await filesOf())
+      for (const l of (await src(f)).split("\n"))
+        if (l.includes("/* pen-literal:")) literals.push(`${f}: ${l.trim().split(";")[0]}`)
+    expect(literals).toEqual([
+      "toggle/Toggle.css: background: #ffffff",
+      "avatar/Avatar.css: color: #ffffff",
+      "tooltip/Tooltip.css: background: #ffffff26",
+      "agent/Agent.css: color: #ffffff",
+    ])
+  })
+
+  test("focus-visible rings use a token", async () => {
+    for (const f of await filesOf()) {
+      const css = (await src(f)).replace(/\/\*[\s\S]*?\*\//g, "")
+      for (const m of css.matchAll(/:focus-visible[^{]*\{([^}]*)\}/g))
+        expect(m[1]).toMatch(/var\(--kimo-[a-z-]+\)|outline: none/)
+    }
+  })
 
   test("tokens behind the CSS resolve to the .pen node values", () => {
     const v = (n: string) => tokens[n]?.value.light

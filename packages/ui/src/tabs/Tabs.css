@@ -1,0 +1,58 @@
+/*
+ * Tab: desing.pen 02 Components > Panels & Layers > Tab (GfneW), Tab/Active (P3e7Mp).
+ * frame: hug, radius-pill, padding [5, 12]
+ *   └ Label font-sans, text-sm (12), weight 500, text-secondary
+ * Active: fill bg-muted, label weight 600, text-primary.
+ *
+ * Tabs: board 03 "Tabs" frames (Qlofe, f4IxO): fill_container, horizontal, gap 2,
+ * padding [8, 8, 4, 8], alignItems center.
+ */
+.kimo-tabs {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 8px 4px 8px;
+}
+
+.kimo-tab {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  margin: 0;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-tab:hover:not(.kimo-tab--active) {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-tab:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-tab--active {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-tab__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.kimo-tab--active .kimo-tab__label {
+  font-weight: var(--kimo-font-weight-semibold);
+}

@@ -1,0 +1,22 @@
+/*
+ * Badge: desing.pen 02 Components > Inputs > Tags > Badge (jrIWa).
+ * frame: hug, fill bg-muted, radius-pill, padding [2, 8]
+ *   └ Label font-sans, text-xs (11), weight 500, text-secondary
+ */
+.kimo-badge {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-badge__label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}

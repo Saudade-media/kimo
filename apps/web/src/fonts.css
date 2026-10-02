@@ -1,0 +1,54 @@
+/*
+ * Bundled UI fonts (the same static TTFs the renderer ships, ADR 0009 "fonts"): Inter for the UI,
+ * JetBrains Mono for values. Served from the app bundle, so the chrome never fetches fonts from
+ * a third party. Licenses: packages/renderer/assets/fonts/OFL-*.txt.
+ */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../packages/renderer/assets/fonts/Inter-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../packages/renderer/assets/fonts/Inter-Italic.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../../../packages/renderer/assets/fonts/Inter-Medium.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../../../packages/renderer/assets/fonts/Inter-SemiBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../../../packages/renderer/assets/fonts/Inter-Bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../packages/renderer/assets/fonts/JetBrainsMono-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../../../packages/renderer/assets/fonts/JetBrainsMono-Medium.ttf") format("truetype");
+}

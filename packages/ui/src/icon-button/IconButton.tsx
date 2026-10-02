@@ -8,6 +8,11 @@ export interface IconButtonProps extends Omit<ComponentPropsWithRef<"button">, "
   icon: ReactNode
   /** Toggled-on state (`IconButton/Active`); sets `aria-pressed` when defined. */
   active?: boolean
+  /**
+   * `"md"` (default): 28 × 28, 16px icon. `"sm"`: 24 × 24, 14px icon, the instance override used
+   * by `PanelHeader` > Action (TidcK) in desing.pen.
+   */
+  size?: "md" | "sm"
 }
 
 /**
@@ -19,11 +24,17 @@ export function IconButton({
   label,
   icon,
   active,
+  size = "md",
   className,
   type = "button",
   ...rest
 }: IconButtonProps) {
-  const classes = ["kimo-icon-button", active && "kimo-icon-button--active", className]
+  const classes = [
+    "kimo-icon-button",
+    size === "sm" && "kimo-icon-button--sm",
+    active && "kimo-icon-button--active",
+    className,
+  ]
     .filter(Boolean)
     .join(" ")
   return (

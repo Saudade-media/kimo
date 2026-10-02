@@ -184,6 +184,12 @@ export interface DocStore {
   redo(origin: LocalOrigin): UndoResult
   canUndo(origin: LocalOrigin): boolean
   canRedo(origin: LocalOrigin): boolean
+  /**
+   * An opaque handle of the entry on top of `origin`'s undo stack (null when empty). It is
+   * stable while the entry stays on the stack, so a continuous gesture can check that the
+   * entry it pushed is still the top one before collapsing it with `undo`.
+   */
+  topUndo(origin: LocalOrigin): object | null
   /** Clears one origin's undo/redo stacks, or every origin's. */
   clearHistory(origin?: LocalOrigin): void
   /** The op log, oldest first (bounded). */
@@ -214,8 +220,17 @@ export interface DocStore {
 export interface DocStoreOptions {
   /** Options passed to core-schema `validate` for every op group (libraries, asset files). */
   validateOptions?: ValidateOptions
-  /** `"full"` (default): validate the candidate document per op group. `"none"`: skip. */
-  validation?: "full" | "none"
+  /**
+   * How each op group is validated before it commits:
+   * - `"incremental"` (default): only the nodes the group can affect (the touched nodes, their
+   *   parents and children) are checked against the rest of the document; groups that involve
+   *   components, instances, slots, theme pins, variables or themes are checked in full. Same
+   *   accept/reject decisions as `"full"`, at a cost independent of document size.
+   * - `"full"`: the whole candidate document per op group (O(document) per edit).
+   * - `"none"`: no validation.
+   * Loading a document (`loadDocument`) always validates it in full.
+   */
+  validation?: "incremental" | "full" | "none"
   /** Max op-log entries kept in memory. Default 1000. */
   logLimit?: number
   /** Clock for move timestamps (cycle repair) and the log. Default `Date.now`. */

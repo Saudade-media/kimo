@@ -1,0 +1,79 @@
+/*
+ * Tooltip: desing.pen 02 Components > Overlays > Tooltip (xbtkW).
+ * frame: hug, fill text-primary, radius-sm, shadow outer 0 4 blur 12 shadow,
+ *        layout horizontal, gap 8, padding [5, 6, 5, 8], alignItems center
+ *   ├ Label font-sans, text-sm (12), weight 500, text-inverse
+ *   └ Key   fill #FFFFFF26 (literal), radius 3, padding [0, 4]
+ *       └ Keys font-mono, text-xs (11), text-inverse
+ */
+.kimo-tooltip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-text-primary);
+  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.kimo-tooltip__label {
+  color: var(--kimo-text-inverse);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+.kimo-tooltip__key {
+  display: inline-flex;
+  flex: none;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #ffffff26; /* pen-literal: Key fill #FFFFFF26 */
+}
+
+.kimo-tooltip__keys {
+  color: var(--kimo-text-inverse);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.kimo-tooltip--floating {
+  position: absolute;
+  z-index: 20;
+}
+
+.kimo-tooltip--bottom {
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.kimo-tooltip--top {
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.kimo-tooltip--right {
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.kimo-tooltip--left {
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+}

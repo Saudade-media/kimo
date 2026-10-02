@@ -1,0 +1,23 @@
+{
+  "name": "@kimo/layout",
+  "version": "0.0.0",
+  "private": true,
+  "description": "LayoutEngine interface + Yoga implementation (flex auto-layout for .kimo nodes)",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test",
+    "bench": "bun bench/layout.bench.ts"
+  },
+  "dependencies": {
+    "@kimo/core-schema": "workspace:*",
+    "yoga-layout": "^3.2.1"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2"
+  }
+}

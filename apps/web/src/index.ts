@@ -1,1 +1,2 @@
-export { App, DOCS_URL, STATUS } from "./App"
+export { App } from "./App"
+export { parseRoute, type Route } from "./router"

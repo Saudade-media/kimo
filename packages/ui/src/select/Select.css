@@ -1,0 +1,88 @@
+/*
+ * Select: desing.pen 02 Components > Inputs > Fields > Select (gP276).
+ * frame: fill_container × 28, fill bg-subtle, radius-sm, layout horizontal, gap 8,
+ *        padding [0, 8], justifyContent space_between, alignItems center
+ *   ├ Value   text font-sans, text-sm (12), text-primary
+ *   └ Chevron 14 × 14 (lucide chevron-down), text-tertiary
+ * The open list reuses .kimo-menu / .kimo-menu-item (Menu MPsxN / MenuItem JMW2O).
+ */
+.kimo-select {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.kimo-select__trigger {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  color: var(--kimo-text-primary);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-select__trigger:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-select__trigger:disabled {
+  cursor: default;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-select__value {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-select__value--placeholder {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-select__chevron {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-select__chevron > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-select__list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  width: auto;
+  min-width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.kimo-select__option[aria-selected="true"] .kimo-menu-item__icon {
+  color: var(--kimo-text-primary);
+}

@@ -1,0 +1,62 @@
+/*
+ * Toast: desing.pen 02 Components > Content > Toast (XB33E).
+ * frame: hug, fill text-primary, radius-lg, shadow outer 0 8 blur 24 shadow-strong,
+ *        layout horizontal, gap 10, padding [10, 12], alignItems center
+ *   ├ Icon   16 × 16 (lucide circle-check), success
+ *   ├ Label  font-sans, text-sm (12), weight 500, text-inverse
+ *   └ Action font-sans, text-sm (12), weight 600, accent-soft
+ */
+.kimo-toast {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-text-primary);
+  box-shadow: 0 8px 24px 0 var(--kimo-shadow-strong);
+}
+
+.kimo-toast__icon {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--kimo-success);
+}
+
+.kimo-toast__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-toast__label {
+  color: var(--kimo-text-inverse);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+.kimo-toast__action {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-accent-soft);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-toast__action:focus-visible {
+  outline: 2px solid var(--kimo-accent-soft);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

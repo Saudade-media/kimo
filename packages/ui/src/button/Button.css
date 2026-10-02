@@ -57,10 +57,10 @@
   background: var(--kimo-button-primary-bg-hover);
 }
 
-/* Button/Secondary: fill bg-muted, inside stroke border-strong (does not affect layout), content text-primary. */
+/* Button/Secondary: fill bg-muted, content text-primary. Its stroke border-strong has no
+   strokeWidth in desing.pen, so Pencil draws no stroke (measured: edge pixel = fill). */
 .kimo-button--secondary {
   background: var(--kimo-button-secondary-bg);
-  box-shadow: inset 0 0 0 var(--kimo-button-border-width) var(--kimo-button-secondary-border);
   color: var(--kimo-button-secondary-fg);
 }
 

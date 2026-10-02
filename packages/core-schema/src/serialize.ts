@@ -180,7 +180,12 @@ type Mode = "struct" | "record" | "opaque"
 
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
-function structOrder(keys: string[]): string[] {
+/**
+ * Orders the member names of a schema-defined object (a node, a paint, …) canonically: known
+ * keys by their rank, then unknown ones by code unit. Exposed so in-memory replicas can present
+ * nodes in one order whatever their CRDT history (Yjs map iteration order is not stable).
+ */
+export function structOrder(keys: string[]): string[] {
   const known: string[] = []
   const unknown: string[] = []
   for (const k of keys) (RANK.has(k) ? known : unknown).push(k)

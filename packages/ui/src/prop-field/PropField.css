@@ -1,0 +1,63 @@
+/*
+ * PropField: desing.pen 02 Components > Inputs > Fields > PropField (A9DDs).
+ * frame: fill_container × 28, fill bg-subtle, radius-sm, layout horizontal, gap 8,
+ *        padding [0, 8], alignItems center
+ *   ├ Prefix text font-mono, text-xs (11), text-tertiary
+ *   └ Value  text font-sans, text-sm (12), text-primary
+ */
+.kimo-prop-field {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-prop-field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-prop-field__prefix {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.kimo-prop-field--scrubbing .kimo-prop-field__prefix {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-prop-field--disabled .kimo-prop-field__prefix {
+  cursor: default;
+}
+
+.kimo-prop-field__value {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.kimo-prop-field__value:disabled {
+  color: var(--kimo-text-tertiary);
+}

@@ -1,0 +1,224 @@
+{
+  "$comment": "desing.pen 02 Components, read via the Pencil MCP (resolveVariables + resolveInstances, hidden layers skipped). Per component root: [id, name, type, x, y, w, h, fill, fontSize, fontWeight, cornerRadius], x/y relative to the root. Light theme.",
+  "nodes": {
+    "PufcL": [
+      ["PufcL", "02 Components", "frame", 0, 0, 1440, 1690, "#FFFFFF", null, null, null],
+      ["L5Q4E", "Header", "frame", 64, 64, 1312, 127, null, null, null, null],
+      ["uvBjr", "Eyebrow", "text", 64, 64, 193, 16, "#0A0A0A", 12, null, null],
+      ["VB7Vm", "Title", "text", 64, 92, 331, 68, "#0A0A0A", 56, "500", null],
+      ["jbns1", "Intro", "text", 64, 172, 1312, 19, "#6B6F75", 16, null, null],
+      ["zKqmo", "Actions", "frame", 64, 239, 1312, 92, null, null, null, null],
+      ["cgZpc", "Section Header", "frame", 64, 239, 1312, 36, null, null, null, null],
+      ["JK30T", "Section Title", "text", 64, 239, 74, 24, "#0A0A0A", 20, "600", null],
+      ["dRT85", "Inputs", "frame", 64, 379, 1312, 208, null, null, null, null],
+      ["khbGv", "Panels & Layers", "frame", 64, 635, 1312, 156, null, null, null, null],
+      ["Koj3v", "Overlays", "frame", 64, 839, 1312, 156, null, null, null, null],
+      ["IWkR9", "AI Agent", "frame", 64, 1043, 1312, 272, null, null, null, null],
+      ["Qv3iW", "Content", "frame", 64, 1363, 1312, 263, null, null, null, null]
+    ],
+    "W2lra": [
+      ["W2lra", "Button/Primary", "frame", 0, 0, 91, 32, "#0A0A0A", null, null, 999],
+      ["r5v5W", "Icon", "icon", 14, 8, 16, 16, "#FFFFFF", null, null, null],
+      ["bzZjb", "Label", "text", 36, 8, 41, 16, "#FFFFFF", 13, "500", null]
+    ],
+    "kv3Fk": [
+      ["kv3Fk", "Button/Secondary", "frame", 0, 0, 91, 32, "#F2F1EF", null, null, 999],
+      ["hfife", "Icon", "icon", 14, 8, 16, 16, "#0A0A0A", null, null, null],
+      ["D5Dhjk", "Label", "text", 36, 8, 41, 16, "#0A0A0A", 13, "500", null]
+    ],
+    "sqJv4": [
+      ["sqJv4", "Button/Ghost", "frame", 0, 0, 91, 32, null, null, null, 999],
+      ["zAVGx", "Icon", "icon", 14, 8, 16, 16, "#6B6F75", null, null, null],
+      ["e5j2wK", "Label", "text", 36, 8, 41, 16, "#6B6F75", 13, "500", null]
+    ],
+    "vyI3D": [
+      ["vyI3D", "Button/Soft", "frame", 0, 0, 91, 32, "#F2F1EF", null, null, 999],
+      ["NDClH", "Icon", "icon", 14, 8, 16, 16, "#0A0A0A", null, null, null],
+      ["VpBIt", "Label", "text", 36, 8, 41, 16, "#0A0A0A", 13, "500", null]
+    ],
+    "ZMxjt": [
+      ["ZMxjt", "IconButton", "frame", 0, 0, 28, 28, "#FFFFFF", null, null, 10],
+      ["nd1MZ", "Icon", "icon", 6, 6, 16, 16, "#6B6F75", null, null, null]
+    ],
+    "l44gB": [
+      ["l44gB", "IconButton/Active", "frame", 0, 0, 28, 28, "#F2F1EF", null, null, 10],
+      ["N5sZTj", "Icon", "icon", 6, 6, 16, 16, "#0A0A0A", null, null, null]
+    ],
+    "N0cHp": [
+      ["N0cHp", "ToolButton", "frame", 0, 0, 36, 36, null, null, null, 999],
+      ["N1b0T", "Icon", "icon", 9, 9, 18, 18, "#6B6F75", null, null, null]
+    ],
+    "l6HCd": [
+      ["l6HCd", "ToolButton/Active", "frame", 0, 0, 36, 36, "#0A0A0A", null, null, 999],
+      ["WQXS9", "Icon", "icon", 9, 9, 18, 18, "#FFFFFF", null, null, null]
+    ],
+    "Zs05d": [
+      ["Zs05d", "Input", "frame", 0, 0, 240, 32, "#F2F1EF", null, null, 10],
+      ["mU4b8", "Icon", "icon", 10, 8, 16, 16, "#9A9DA2", null, null, null],
+      ["BwYzP", "Placeholder", "text", 34, 8, 84, 16, "#9A9DA2", 13, null, null]
+    ],
+    "A9DDs": [
+      ["A9DDs", "PropField", "frame", 0, 0, 240, 28, "#F9F8F6", null, null, 6],
+      ["jXquz", "Prefix", "text", 8, 6.5, 7, 15, "#9A9DA2", 11, null, null],
+      ["vpMpD", "Value", "text", 23, 6.5, 28, 15, "#0A0A0A", 12, null, null]
+    ],
+    "GOaBx": [
+      ["GOaBx", "ColorField", "frame", 0, 0, 240, 28, "#F9F8F6", null, null, 6],
+      ["cBpdy", "Swatch", "rectangle", 6, 6, 16, 16, "#0A0A0A", null, null, 4],
+      ["mEuTa", "Value", "text", 30, 6, 44, 16, "#0A0A0A", 12, null, null],
+      ["T0lqqG", "Spacer", "frame", 82, 13.5, 112, 1, null, null, null, null],
+      ["nHpYT", "Opacity", "text", 202, 6.5, 32, 15, "#9A9DA2", 12, null, null]
+    ],
+    "gP276": [
+      ["gP276", "Select", "frame", 0, 0, 240, 28, "#F9F8F6", null, null, 6],
+      ["LWF8n", "Value", "text", 8, 6.5, 26, 15, "#0A0A0A", 12, null, null],
+      ["VLDHF", "Chevron", "icon", 218, 7, 14, 14, "#9A9DA2", null, null, null]
+    ],
+    "hx0Wg": [
+      ["hx0Wg", "Segmented", "frame", 0, 0, 104, 28, "#F2F1EF", null, null, 999],
+      ["FC69Q", "Segment 1", "frame", 2, 2, 32, 24, "#FFFFFF", null, null, 999],
+      ["zzmWn", "Icon", "icon", 11, 7, 14, 14, "#0A0A0A", null, null, null],
+      ["au7em", "Segment 2", "frame", 36, 2, 32, 24, null, null, null, 999],
+      ["w5nk2", "Icon", "icon", 45, 7, 14, 14, "#9A9DA2", null, null, null],
+      ["MPP8X", "Segment 3", "frame", 70, 2, 32, 24, null, null, null, 999],
+      ["S87m3", "Icon", "icon", 79, 7, 14, 14, "#9A9DA2", null, null, null]
+    ],
+    "y893S": [
+      ["y893S", "Toggle/On", "frame", 0, 0, 28, 16, "#0A0A0A", null, null, 999],
+      ["SM9sk", "Knob", "ellipse", 14, 2, 12, 12, "#FFFFFF", null, null, null]
+    ],
+    "CSYQj": [
+      ["CSYQj", "Toggle/Off", "frame", 0, 0, 28, 16, "#DDDBD7", null, null, 999],
+      ["JaEms", "Knob", "ellipse", 2, 2, 12, 12, "#FFFFFF", null, null, null]
+    ],
+    "jrIWa": [
+      ["jrIWa", "Badge", "frame", 0, 0, 78, 17, "#F2F1EF", null, null, 999],
+      ["C5gcz", "Label", "text", 8, 2, 62, 13, "#6B6F75", 11, "500", null]
+    ],
+    "Eo5JW": [
+      ["Eo5JW", "Kbd", "frame", 0, 0, 24, 17, "#F9F8F6", null, null, 4],
+      ["tbBcG", "Keys", "text", 5, 1, 14, 15, "#6B6F75", 11, null, null]
+    ],
+    "FVhW0": [
+      ["FVhW0", "Avatar", "frame", 0, 0, 24, 24, "gradient", null, null, 999],
+      ["b90ktr", "Initials", "text", 5, 6, 14, 12, "#FFFFFF", 10, "600", null]
+    ],
+    "ga43X": [
+      ["ga43X", "Layer Column", "frame", 0, 0, 260, 100, "#FFFFFF", null, null, 16],
+      ["LWjoa", "PanelHeader", "frame", 4, 4, 252, 32, null, null, null, null],
+      ["b2gRfh", "Title", "text", 12, 12.5, 39, 15, "#0A0A0A", 12, "600", null],
+      ["TidcK", "Action", "frame", 228, 8, 24, 24, "#FFFFFF", null, null, 10],
+      ["nd1MZ", "Icon", "icon", 233, 13, 14, 14, "#6B6F75", null, null, null],
+      ["GXnBT", "LayerRow", "frame", 4, 38, 252, 28, null, null, null, 6],
+      ["ujm25", "Disclosure", "icon", 12, 46, 12, 12, "#9A9DA2", null, null, null],
+      ["wGB3Q", "Type Icon", "icon", 30, 45, 14, 14, "#9A9DA2", null, null, null],
+      ["UrqCz", "Name", "text", 50, 44.5, 42, 15, "#0A0A0A", 12, null, null],
+      ["TZNCu", "Spacer", "frame", 98, 51.5, 130, 1, null, null, null, null],
+      ["UHDvX", "Visibility", "icon", 234, 45, 14, 14, "#9A9DA2", null, null, null],
+      ["dArBD", "LayerRow/Selected", "frame", 4, 68, 252, 28, "#F2F1EF", null, null, 6],
+      ["B1hXK", "Disclosure", "icon", 12, 76, 12, 12, "#9A9DA2", null, null, null],
+      ["Nhzdo", "Type Icon", "icon", 30, 75, 14, 14, "#0A0A0A", null, null, null],
+      ["VsAPn", "Name", "text", 50, 74.5, 28, 15, "#0A0A0A", 12, "500", null],
+      ["i67C1", "Spacer", "frame", 84, 81.5, 144, 1, null, null, null, null],
+      ["FO8c8", "Visibility", "icon", 234, 75, 14, 14, "#0A0A0A", null, null, null]
+    ],
+    "GfneW": [
+      ["GfneW", "Tab", "frame", 0, 0, 64, 25, null, null, null, 999],
+      ["vznhI", "Label", "text", 12, 5, 40, 15, "#6B6F75", 12, "500", null]
+    ],
+    "P3e7Mp": [
+      ["P3e7Mp", "Tab/Active", "frame", 0, 0, 65, 25, "#F2F1EF", null, null, 999],
+      ["nREvy", "Label", "text", 12, 5, 41, 15, "#0A0A0A", 12, "600", null]
+    ],
+    "fWrGA": [
+      ["fWrGA", "PropSection", "frame", 0, 0, 260, 79, null, null, null, null],
+      ["WQLZ0", "Header", "frame", 12, 12, 236, 15, null, null, null, null],
+      ["UB7fP", "Title", "text", 12, 12, 40, 15, "#0A0A0A", 12, "600", null],
+      ["c3QSj", "Action", "icon", 234, 12.5, 14, 14, "#9A9DA2", null, null, null],
+      ["y5Lz1A", "Row", "frame", 12, 35, 236, 28, null, null, null, null],
+      ["Q8GqQ", "W", "frame", 12, 35, 114, 28, "#F9F8F6", null, null, 6],
+      ["Q8GqQ/jXquz", "Prefix", "text", 20, 41.5, 7, 15, "#9A9DA2", 11, null, null],
+      ["Q8GqQ/vpMpD", "Value", "text", 35, 41.5, 28, 15, "#0A0A0A", 12, null, null],
+      ["OIMmF", "H", "frame", 134, 35, 114, 28, "#F9F8F6", null, null, 6],
+      ["OIMmF/jXquz", "Prefix", "text", 142, 41.5, 7, 15, "#9A9DA2", 11, null, null],
+      ["OIMmF/vpMpD", "Value", "text", 157, 41.5, 24, 15, "#0A0A0A", 12, null, null]
+    ],
+    "xbtkW": [
+      ["xbtkW", "Tooltip", "frame", 0, 0, 73, 25, "#0A0A0A", null, null, 6],
+      ["R0bUSU", "Label", "text", 8, 5, 36, 15, "#FFFFFF", 12, "500", null],
+      ["kcXxn", "Key", "frame", 52, 5, 15, 15, "#FFFFFF26", null, null, 3],
+      ["je9gE", "Keys", "text", 56, 5, 7, 15, "#FFFFFF", 11, null, null]
+    ],
+    "MPsxN": [
+      ["MPsxN", "Menu", "frame", 0, 0, 232, 100, "#FFFFFF", null, null, 16],
+      ["JMW2O", "MenuItem", "frame", 4, 4, 224, 30, null, null, null, 6],
+      ["JMW2O/FGr88", "Icon", "icon", 12, 12, 14, 14, "#6B6F75", null, null, null],
+      ["JMW2O/W1zCOY", "Label", "text", 34, 11, 58, 16, "#0A0A0A", 13, null, null],
+      ["JMW2O/c0Q54m", "Spacer", "frame", 100, 18.5, 98, 1, null, null, null, null],
+      ["JMW2O/C4eW4c", "Shortcut", "text", 206, 11.5, 14, 15, "#9A9DA2", 11, null, null],
+      ["ExHXe", "Group selection", "frame", 4, 35, 224, 30, "#F4F3F1", null, null, 6],
+      ["ExHXe/FGr88", "Icon", "icon", 12, 43, 14, 14, "#6B6F75", null, null, null],
+      ["ExHXe/W1zCOY", "Label", "text", 34, 42, 97, 16, "#0A0A0A", 13, null, null],
+      ["ExHXe/C4eW4c", "Shortcut", "text", 206, 42.5, 14, 15, "#9A9DA2", 11, null, null],
+      ["MRZFM", "Create component", "frame", 4, 66, 224, 30, null, null, null, 6],
+      ["MRZFM/FGr88", "Icon", "icon", 12, 74, 14, 14, "#6B6F75", null, null, null],
+      ["MRZFM/W1zCOY", "Label", "text", 34, 73, 115, 16, "#0A0A0A", 13, null, null],
+      ["MRZFM/C4eW4c", "Shortcut", "text", 200, 73.5, 20, 15, "#9A9DA2", 11, null, null]
+    ],
+    "Vtkpe": [
+      ["Vtkpe", "Chat Column", "frame", 0, 0, 340, 216, null, null, null, null],
+      ["ROG0x", "Message/User", "frame", 0, 0, 340, 58, null, null, null, null],
+      ["s9lNfk", "Bubble", "frame", 80, 0, 260, 58, "#0A0A0A", null, null, 16],
+      ["U0ugt", "Text", "text", 94, 10, 232, 38, "#FFFFFF", 13, null, null],
+      ["QqwyN", "Message/Agent", "frame", 0, 74, 340, 80, null, null, null, null],
+      ["CJO7L", "Mark", "frame", 0, 74, 24, 24, "gradient", null, null, 999],
+      ["xk3D6", "Icon", "icon", 5.5, 79.5, 13, 13, "#FFFFFF", null, null, null],
+      ["Q285wt", "Bubble", "frame", 34, 74, 306, 80, "#F2F1EF", null, null, 16],
+      ["U8u5Kz", "Text", "text", 48, 84, 278, 60, "#0A0A0A", 13, null, null],
+      ["lNM1U", "AgentStep", "frame", 0, 170, 340, 15, null, null, null, null],
+      ["U7skge", "Status", "icon", 34, 170.5, 14, 14, "#1E8E3E", null, null, null],
+      ["Q2pb2", "Label", "text", 56, 170, 147, 15, "#6B6F75", 12, null, null],
+      ["jOrxb", "AgentStep/Running", "frame", 0, 201, 340, 15, null, null, null, null],
+      ["FGgcT", "Status", "icon", 34, 201.5, 14, 14, "#0093A3", null, null, null],
+      ["qQWQd", "Label", "text", 56, 201, 140, 15, "#0A0A0A", 12, "500", null]
+    ],
+    "JvIbi": [
+      ["JvIbi", "Composer", "frame", 0, 0, 340, 76, "#FFFFFF", null, null, 24],
+      ["t9cQaK", "Placeholder", "text", 16, 12, 312, 16, "#9A9DA2", 13, null, null],
+      ["i8k4tr", "Bar", "frame", 16, 38, 312, 28, null, null, null, null],
+      ["GBIhd", "Context Chip", "frame", 16, 43.5, 58, 17, "#F2F1EF", null, null, 999],
+      ["mXR7R", "Icon", "icon", 24, 46, 12, 12, "#6B6F75", null, null, null],
+      ["boibm", "Label", "text", 40, 45.5, 26, 13, "#6B6F75", 11, "500", null],
+      ["jGuSy", "Model", "frame", 80, 43.5, 124, 17, null, null, null, null],
+      ["ACpa9", "Label", "text", 86, 45.5, 96, 13, "#9A9DA2", 11, null, null],
+      ["fEqJU", "Icon", "icon", 186, 46, 12, 12, "#9A9DA2", null, null, null],
+      ["GkhOw", "Spacer", "frame", 210, 51.5, 84, 1, null, null, null, null],
+      ["N2pdpC", "Send", "frame", 300, 38, 28, 28, "#0A0A0A", null, null, 999],
+      ["P1Fjqx", "Icon", "icon", 306, 44, 16, 16, "#FFFFFF", null, null, null]
+    ],
+    "byua1": [
+      ["byua1", "FileCard", "frame", 0, 0, 260, 207, null, null, null, null],
+      ["cnqrK", "Thumbnail", "frame", 0, 0, 260, 164, "#F2F1EF", null, null, 24],
+      ["fBMds", "Mini Frame", "frame", 24, 24, 212, 116, "#FFFFFF", null, null, 6],
+      ["GjweV", "Line A", "rectangle", 36, 36, 80, 8, "#F2F1EF", null, null, 4],
+      ["XCwxC", "Line B", "rectangle", 36, 50, 188, 6, "#F2F1EF", null, null, 3],
+      ["LVgU0", "Line C", "rectangle", 36, 62, 120, 6, "#F2F1EF", null, null, 3],
+      ["auR7e", "Meta", "frame", 0, 174, 260, 33, null, null, null, null],
+      ["PJMqM", "Name", "text", 0, 174, 89, 16, "#0A0A0A", 13, "500", null],
+      ["upTZI", "Info", "text", 0, 192, 168, 15, "#9A9DA2", 12, null, null]
+    ],
+    "XB33E": [
+      ["XB33E", "Toast", "frame", 0, 0, 301, 36, "#0A0A0A", null, null, 16],
+      ["d82EN", "Icon", "icon", 12, 10, 16, 16, "#1E8E3E", null, null, null],
+      ["B5hQu", "Label", "text", 38, 10.5, 210, 15, "#FFFFFF", 12, "500", null],
+      ["FTVGD", "Action", "text", 258, 10.5, 31, 15, "#F2F1EF", 12, "600", null]
+    ],
+    "lUDi2": [
+      ["lUDi2", "EmptyState", "frame", 0, 0, 280, 154, "#F9F8F6", null, null, 24],
+      ["uJ3fp", "Icon Wrap", "frame", 120, 24, 40, 40, "#FFFFFF", null, null, 999],
+      ["PTnSp", "Icon", "icon", 131, 35, 18, 18, "#0A0A0A", null, null, null],
+      ["DlzmW", "Title", "text", 98.5, 72, 83, 16, "#0A0A0A", 13, "600", null],
+      ["sGDcC", "Desc", "text", 24, 96, 232, 34, "#6B6F75", 12, null, null]
+    ]
+  }
+}

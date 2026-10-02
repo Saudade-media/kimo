@@ -1,0 +1,104 @@
+/*
+ * Menu: desing.pen 02 Components > Overlays > Menu (MPsxN).
+ * frame: width 232, fill bg-overlay, radius-lg, stroke border 1 (inside),
+ *        shadow outer 0 8 blur 24 shadow-strong, layout vertical, gap 1, padding 4
+ *   └ MenuItem (JMW2O): fill_container × 30, radius-sm, gap 8, padding [0, 8], alignItems center
+ *       ├ Icon     14 × 14 (lucide), text-secondary
+ *       ├ Label    font-sans, text-base (13), text-primary
+ *       ├ Spacer   fill_container × 1
+ *       └ Shortcut font-mono, text-xs (11), text-tertiary
+ *   Highlighted instance ("Group selection", ExHXe): fill bg-hover.
+ */
+.kimo-menu {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 232px;
+  margin: 0;
+  padding: 4px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+  outline: none;
+  list-style: none;
+}
+
+.kimo-menu-item {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-primary);
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+}
+
+.kimo-menu-item:hover:not([aria-disabled="true"]),
+.kimo-menu-item:focus,
+.kimo-menu-item[data-highlighted] {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-menu-item[aria-disabled="true"] {
+  cursor: default;
+}
+
+.kimo-menu-item__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-menu-item__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-menu-item__label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-menu-item__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-menu-item__shortcut {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-menu-item[aria-disabled="true"] .kimo-menu-item__label,
+.kimo-menu-item[aria-disabled="true"] .kimo-menu-item__icon {
+  color: var(--kimo-text-tertiary);
+}

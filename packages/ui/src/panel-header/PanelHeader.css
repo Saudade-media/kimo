@@ -1,0 +1,29 @@
+/*
+ * PanelHeader: desing.pen 02 Components > Panels & Layers > PanelHeader (LWjoa).
+ * frame: fill_container × 32, padding [0, 4, 0, 8], justifyContent space_between,
+ *        alignItems center
+ *   ├ Title  font-sans, text-sm (12), weight 600, text-primary
+ *   └ Action IconButton (ZMxjt) instance 24 × 24, icon plus 14 × 14
+ */
+.kimo-panel-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 0 4px 0 8px;
+}
+
+.kimo-panel-header__title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

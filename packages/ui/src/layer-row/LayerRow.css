@@ -1,0 +1,160 @@
+/*
+ * LayerRow: desing.pen 02 Components > Panels & Layers > LayerRow (GXnBT), LayerRow/Selected (dArBD).
+ * frame: fill_container × 28, radius-sm, layout horizontal, gap 6, padding [0, 8], alignItems center
+ *   ├ Disclosure 12 × 12 (lucide chevron-down / chevron-right), text-tertiary
+ *   ├ Type Icon  14 × 14 (lucide), text-tertiary
+ *   ├ Name       font-sans, text-sm (12), text-primary
+ *   ├ Spacer     fill_container × 1
+ *   └ Visibility 14 × 14 (lucide eye), text-tertiary
+ * Selected: fill accent-soft; type icon, name (weight 500), visibility accent-text.
+ * Board 03 Layer Tree (lZmOH): left padding 8 / 22 / 36 by depth, leaf disclosure transparent,
+ * visibility disabled on unselected rows, roots and components name weight 500,
+ * component icons accent-text.
+ */
+.kimo-layer-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-primary);
+  cursor: default;
+  user-select: none;
+}
+
+.kimo-layer-row:hover:not(.kimo-layer-row--selected) {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-layer-row:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-layer-row--selected {
+  background: var(--kimo-accent-soft);
+}
+
+.kimo-layer-row__disclosure,
+.kimo-layer-row__affordance {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-layer-row__disclosure {
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-layer-row__disclosure--leaf {
+  visibility: hidden;
+  cursor: default;
+}
+
+.kimo-layer-row__affordance {
+  width: 14px;
+  height: 14px;
+  visibility: hidden;
+}
+
+.kimo-layer-row__disclosure > svg,
+.kimo-layer-row__affordance > svg,
+.kimo-layer-row__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-layer-row__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-layer-row__icon--accent,
+.kimo-layer-row--selected .kimo-layer-row__icon {
+  color: var(--kimo-accent-text);
+}
+
+.kimo-layer-row__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-layer-row__name--emphasized,
+.kimo-layer-row--selected .kimo-layer-row__name {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-layer-row--selected .kimo-layer-row__name {
+  color: var(--kimo-accent-text);
+}
+
+.kimo-layer-row--hidden .kimo-layer-row__name {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-layer-row__input {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  outline: none;
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.kimo-layer-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-layer-row--selected .kimo-layer-row__affordance {
+  color: var(--kimo-accent-text);
+}
+
+/* Affordances: hidden until hover or focus inside the row (focus on the row itself, which a click
+   gives it, must not reveal them: board 03 Hero row shows only the eye); visibility also on
+   selection; on-state always. */
+.kimo-layer-row:hover .kimo-layer-row__affordance,
+.kimo-layer-row:focus-within:not(:focus) .kimo-layer-row__affordance,
+.kimo-layer-row--selected .kimo-layer-row__visibility,
+.kimo-layer-row__affordance--on {
+  visibility: visible;
+}
+
+.kimo-layer-row__affordance:hover {
+  color: var(--kimo-text-primary);
+}

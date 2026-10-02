@@ -1,24 +1,36 @@
 /**
- * Public docs entry point linked from the placeholder home.
- * TODO(M0): point at the canonical repository once it is published.
+ * App root: hash routing between Home (`#/`), the editor (`#/file/:id`) and the @kimo/ui
+ * component gallery (`#/gallery`).
  */
-export const DOCS_URL = "https://github.com/kimo-design/kimo/tree/main/docs"
+import { Gallery } from "@kimo/ui"
+import { Editor } from "./editor/Editor"
+import { Home } from "./home/Home"
+import { useHash } from "./lib/hooks"
+import { useTheme } from "./lib/theme"
+import { parseRoute } from "./router"
 
-/** Current milestone label shown on the placeholder home. */
-export const STATUS = "M0 — foundations"
-
-/**
- * Placeholder home screen for M0. The real Home (board 06 in `desing.pen`)
- * replaces this at M1.
- */
 export function App() {
-  return (
-    <main className="home">
-      <h1 className="home__wordmark">Kimo</h1>
-      <p className="home__status">{STATUS}</p>
-      <a className="home__link" href={DOCS_URL} target="_blank" rel="noreferrer">
-        Read the docs
-      </a>
-    </main>
-  )
+  const route = parseRoute(useHash())
+  const theme = useTheme()
+  switch (route.name) {
+    case "home":
+      return <Home />
+    case "file":
+      return <Editor key={route.id} fileId={route.id} />
+    case "gallery":
+      return (
+        <div className="gallery-route">
+          <Gallery theme={theme} />
+        </div>
+      )
+    default:
+      return (
+        <main className="not-found">
+          <p className="not-found__label">Nothing at {route.path}</p>
+          <a className="not-found__link" href="#/">
+            Back to files
+          </a>
+        </main>
+      )
+  }
 }

@@ -16,6 +16,7 @@ import {
   formatStatus,
   jsonEqual,
   type KimoDocument,
+  structOrder,
   type ValidationIssue,
   type ValidationResult,
   validate,
@@ -48,6 +49,55 @@ import {
 const SPLIT_KEYS = new Set(["nodes", "variables", "themes"])
 
 const issueKey = (i: ValidationIssue) => `${i.code}\u0000${i.path}`
+
+/** Issues of the committed state, by {@link issueKey}. */
+interface Baseline {
+  errors: Map<string, ValidationIssue>
+  warnings: Map<string, ValidationIssue>
+}
+
+/**
+ * True when a change of node `n` can change issues outside its own neighbourhood (itself, its
+ * parents, its children), so incremental validation must not be used: instances, components
+ * and slot frames (override paths, props and slot rules reach across the tree), slot children
+ * (`at`), theme pins (the effective theme of the subtree), and anything inside a component or
+ * an instance.
+ */
+function crossTree(n: NodeData | undefined, get: (id: string) => NodeData | undefined): boolean {
+  if (!n) return false
+  if (
+    n.type === "instance" ||
+    n.component !== undefined ||
+    n.slot !== undefined ||
+    n.at !== undefined ||
+    n.theme !== undefined
+  )
+    return true
+  const seen = new Set<string>()
+  let p = n.parent
+  while (typeof p === "string" && !seen.has(p)) {
+    seen.add(p)
+    const a = get(p)
+    if (!a) break
+    if (a.type === "instance" || a.component !== undefined) return true
+    p = a.parent
+  }
+  return false
+}
+
+/** True when an ancestor of `n` (by `get`) pins a theme. */
+function themedAncestor(n: NodeData, get: (id: string) => NodeData | undefined): boolean {
+  const seen = new Set<string>()
+  let p = n.parent
+  while (typeof p === "string" && !seen.has(p)) {
+    seen.add(p)
+    const a = get(p)
+    if (!a) break
+    if (a.theme !== undefined) return true
+    p = a.parent
+  }
+  return false
+}
 
 /** Extracts the node id from a JSON Pointer such as `/nodes/<id>/fill`. */
 function nodeIdOf(pointer: string): string | undefined {
@@ -84,14 +134,22 @@ export class YjsDocStore implements DocStore {
   private tx: { origin: Origin; cause: ChangeCause } | null = null
   private pendingNodes = new Set<string>()
   private pendingHeader = false
-  private baseline: { key: string; errors: Set<string>; warnings: Set<string> } | null = null
+  /** Issues of the committed state, kept current incrementally (null = recompute fully). */
+  private baseline: Baseline | null = null
+  /**
+   * Nodes whose issues may be stale since the baseline was computed: the nodes changed since
+   * (undo/redo, remote updates) and their neighbourhoods.
+   */
+  private readonly dirty = new Set<string>()
+  /** A change since the baseline that needs a full validation (header, components, ...). */
+  private dirtyAll = false
 
   private readonly options: Required<Omit<DocStoreOptions, "validateOptions" | "random">> &
     Pick<DocStoreOptions, "validateOptions" | "random">
 
   constructor(options: DocStoreOptions = {}) {
     this.options = {
-      validation: options.validation ?? "full",
+      validation: options.validation ?? "incremental",
       logLimit: options.logLimit ?? 1000,
       now: options.now ?? Date.now,
       jitter: options.jitter ?? 3,
@@ -119,6 +177,7 @@ export class YjsDocStore implements DocStore {
     })
     const headerChanged = () => {
       this.pendingHeader = true
+      this.dirtyAll = true
     }
     this.yHeader.observe(headerChanged)
     this.yVars.observe(headerChanged)
@@ -170,7 +229,16 @@ export class YjsDocStore implements DocStore {
   }
 
   toDocument(): KimoDocument {
-    return cloneJson(new Draft(this.base(), this.draftOptions()).toDocument())
+    const doc = cloneJson(new Draft(this.base(), this.draftOptions()).toDocument())
+    // Yjs map iteration order depends on how updates arrived (e.g. after an IndexedDB reload),
+    // so data-keyed members are emitted in code-unit key order to keep the output deterministic.
+    const record = doc as unknown as Record<string, unknown>
+    for (const key of ["nodes", "variables", "themes"]) {
+      const value = record[key]
+      if (value && typeof value === "object")
+        record[key] = sortKeys(value as Record<string, unknown>)
+    }
+    return doc
   }
 
   // --- Writing --------------------------------------------------------------------------------
@@ -216,9 +284,14 @@ export class YjsDocStore implements DocStore {
 
     let warnings: ValidationIssue[] = []
     let candidateResult: ValidationResult | null = null
-    if (this.options.validation === "full" && draft.touched) {
+    let scope: Set<string> | null = null
+    if (this.options.validation !== "none" && draft.touched) {
       const base = this.baselineIssues()
-      candidateResult = validate(draft.toDocument(), this.options.validateOptions)
+      scope = this.options.validation === "incremental" ? this.scopeOf(draft) : null
+      candidateResult = validate(
+        draft.toDocument(),
+        scope ? { ...this.options.validateOptions, nodes: scope } : this.options.validateOptions,
+      )
       const errors = candidateResult.errors.filter((i) => !base.errors.has(issueKey(i)))
       if (errors.length > 0) {
         return fail(
@@ -254,7 +327,8 @@ export class YjsDocStore implements DocStore {
     this.managerFor(options.origin)
     this.transact(options.origin, "ops", () => this.commit(draft))
     const after = this.revision
-    if (candidateResult) this.baseline = this.baselineFrom(candidateResult, after)
+    // The candidate's issues are the committed state's now: no need to re-check those nodes.
+    if (candidateResult) this.absorb(candidateResult, scope)
     const entry: OpLogEntry = {
       kind: "ops",
       origin: options.origin,
@@ -320,8 +394,8 @@ export class YjsDocStore implements DocStore {
       this.epoch = randomToken(8)
       this.seq = 0
       this.clearHistory()
-      this.baseline = null
     }
+    this.baseline = null
     this.log_({ kind: "load", origin, revision: this.revision, time: this.options.now() })
   }
 
@@ -379,6 +453,11 @@ export class YjsDocStore implements DocStore {
 
   canRedo(origin: LocalOrigin): boolean {
     return this.managers.get(origin)?.canRedo() ?? false
+  }
+
+  topUndo(origin: LocalOrigin): object | null {
+    const stack = this.managers.get(origin)?.undoStack
+    return stack?.[stack.length - 1] ?? null
   }
 
   clearHistory(origin?: LocalOrigin): void {
@@ -518,8 +597,15 @@ export class YjsDocStore implements DocStore {
     const old = this.mirror.get(id)
     if (old) this.byParent.get(parentKey(old))?.delete(id)
     const y = this.yNodes.get(id)
+    let next: NodeData | undefined
     if (y instanceof Y.Map) {
-      const n = deepFreeze(y.toJSON()) as NodeData
+      // Canonical member order: Yjs iterates map keys in an order that depends on the update
+      // history, so the same node would otherwise read differently after a reload.
+      const raw = y.toJSON() as Record<string, unknown>
+      const ordered: Record<string, unknown> = {}
+      for (const k of structOrder(Object.keys(raw))) setOwn(ordered, k, raw[k])
+      const n = deepFreeze(ordered) as NodeData
+      next = n
       this.mirror.set(id, n)
       const key = parentKey(n)
       let set = this.byParent.get(key)
@@ -532,6 +618,65 @@ export class YjsDocStore implements DocStore {
       this.mirror.delete(id)
     }
     this.pendingNodes.add(id)
+    this.markDirty(id, old, next)
+  }
+
+  /** Records that node `id` changed from `old` to `next` (validation baseline upkeep). */
+  private markDirty(id: string, old: NodeData | undefined, next: NodeData | undefined): void {
+    if (this.dirtyAll || this.baseline === null) return
+    const get = (k: string) => this.mirror.get(k)
+    if (
+      crossTree(old, get) ||
+      crossTree(next, get) ||
+      (old &&
+        next &&
+        old.parent !== next.parent &&
+        (themedAncestor(old, get) || themedAncestor(next, get)))
+    ) {
+      this.dirtyAll = true
+      return
+    }
+    const empty: ReadonlySet<string> = new Set()
+    this.neighbourhood(this.dirty, id, old, next, (p) => this.byParent.get(p) ?? empty)
+  }
+
+  /**
+   * Node ids whose issues an op group can change (see {@link neighbourhood}), or null when it
+   * needs a full validation (see {@link crossTree}).
+   */
+  private scopeOf(draft: Draft): Set<string> | null {
+    if (draft.variablesTouched || draft.themesTouched) return null
+    const oldGet = (k: string) => this.mirror.get(k)
+    const newGet = (k: string) => draft.get(k)
+    const scope = new Set<string>()
+    for (const [id, n] of draft.nodes) {
+      const old = this.mirror.get(id)
+      const next = n ?? undefined
+      if (crossTree(old, oldGet) || crossTree(next, newGet)) return null
+      if (old && next && old.parent !== next.parent) {
+        if (themedAncestor(old, oldGet) || themedAncestor(next, newGet)) return null
+      }
+      this.neighbourhood(scope, id, old, next, (p) => draft.childIds(p))
+    }
+    return scope
+  }
+
+  /**
+   * Adds the nodes whose issues a change of node `id` from `old` to `next` can affect: itself,
+   * its old and new parents (sibling order, parent rules, fit lint), and, when it appears,
+   * disappears or changes type, its children (parent existence and container rules).
+   */
+  private neighbourhood(
+    scope: Set<string>,
+    id: string,
+    old: NodeData | undefined,
+    next: NodeData | undefined,
+    childIds: (parent: string) => Iterable<string>,
+  ): void {
+    scope.add(id)
+    if (old && typeof old.parent === "string") scope.add(old.parent)
+    if (next && typeof next.parent === "string") scope.add(next.parent)
+    if (!old || !next || old.type !== next.type) for (const c of childIds(id)) scope.add(c)
   }
 
   private afterTransaction(tr: Y.Transaction): void {
@@ -588,21 +733,54 @@ export class YjsDocStore implements DocStore {
     return { ok: true, stale: false, revision: this.revision, repairs }
   }
 
-  private baselineIssues(): { errors: Set<string>; warnings: Set<string> } {
-    const rev = this.revision
-    const key = `${rev.epoch}:${rev.seq}`
-    if (this.baseline?.key !== key) {
+  /**
+   * Issues of the committed state. Recomputed fully when there is none yet or a change needed
+   * it; otherwise only the nodes changed since (undo/redo, remote updates) are re-checked.
+   */
+  private baselineIssues(): Baseline {
+    const full =
+      this.baseline === null ||
+      this.dirtyAll ||
+      this.options.validation === "full" ||
+      this.dirty.size > Math.max(256, this.mirror.size / 4)
+    if (full || this.dirty.size > 0) {
       const doc = new Draft(this.base(), this.draftOptions()).toDocument()
-      this.baseline = this.baselineFrom(validate(doc, this.options.validateOptions), rev)
+      const scope = full ? null : new Set(this.dirty)
+      const r = validate(
+        doc,
+        scope ? { ...this.options.validateOptions, nodes: scope } : this.options.validateOptions,
+      )
+      this.absorb(r, scope)
     }
-    return this.baseline as { errors: Set<string>; warnings: Set<string> }
+    return this.baseline as Baseline
   }
 
-  private baselineFrom(r: ValidationResult, rev: Revision) {
-    return {
-      key: `${rev.epoch}:${rev.seq}`,
-      errors: new Set(r.errors.map(issueKey)),
-      warnings: new Set(r.warnings.map(issueKey)),
+  /**
+   * Makes `r` part of the baseline: the whole of it (`scope` null), or, for an incremental
+   * result, in place of the previous issues of the nodes in `scope`. Clears their dirt.
+   */
+  private absorb(r: ValidationResult, scope: ReadonlySet<string> | null): void {
+    const into = (prev: Map<string, ValidationIssue> | undefined, list: ValidationIssue[]) => {
+      const out = new Map<string, ValidationIssue>()
+      if (prev && scope) {
+        for (const [k, i] of prev) {
+          const id = nodeIdOf(i.path)
+          if (id === undefined || !scope.has(id)) out.set(k, i)
+        }
+      }
+      for (const i of list) out.set(issueKey(i), i)
+      return out
+    }
+    if (scope && this.baseline) {
+      this.baseline = {
+        errors: into(this.baseline.errors, r.errors),
+        warnings: into(this.baseline.warnings, r.warnings),
+      }
+      for (const id of scope) this.dirty.delete(id)
+    } else {
+      this.baseline = { errors: into(undefined, r.errors), warnings: into(undefined, r.warnings) }
+      this.dirty.clear()
+      this.dirtyAll = false
     }
   }
 
@@ -652,4 +830,11 @@ export function createDocStore(
   const store = new YjsDocStore(options)
   if (doc) store.loadDocument(doc, options.load)
   return store
+}
+
+/** Copy of `rec` with keys in code-unit order (`__proto__`-safe via `setOwn`). */
+function sortKeys(rec: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const k of Object.keys(rec).sort()) setOwn(out, k, rec[k])
+  return out
 }

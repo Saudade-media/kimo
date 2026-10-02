@@ -56,6 +56,7 @@ export {
   parse,
   type SerializeOptions,
   serialize,
+  structOrder,
 } from "./serialize"
 export { buildTree, compareCodeUnits, compareSiblings, type Tree } from "./tree"
 export {

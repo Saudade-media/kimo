@@ -16,10 +16,12 @@
  */
 import {
   compareSiblings,
+  DOCUMENT_LEVEL_CODES,
   formatStatus,
   jsonEqual,
   type KimoDocument,
   structOrder,
+  type ValidateOptions,
   type ValidationIssue,
   type ValidationResult,
   validate,
@@ -94,7 +96,8 @@ interface Baseline {
 }
 
 /**
- * True when a change of node `n` can change issues outside its own neighbourhood (itself, its
+ * True when a structural change of node `n` (an insert, a delete, or a change of one of the
+ * {@link REACHING_FIELDS}) can change issues outside its own neighbourhood (itself, its
  * parents, its children), so incremental validation must not be used: instances, components
  * and slot frames (override paths, props and slot rules reach across the tree), slot children
  * (`at`), theme pins (the effective theme of the subtree), and anything inside a component or
@@ -122,6 +125,99 @@ function crossTree(n: NodeData | undefined, get: (id: string) => NodeData | unde
   return false
 }
 
+/**
+ * Node fields other nodes' rules read across the tree: tree placement and slot attachment,
+ * type (override and prop targets, containers), the component / instance definitions (override
+ * paths, props, args, swaps, instance cycles, slot rules). A change of any other field (fills,
+ * geometry, name, visibility, …) of a node that is not a main component can only change the
+ * issues of its neighbourhood, wherever the node sits: override and prop checks look at a
+ * target's type and the patch, never at the target's other values, and the validator checks
+ * real nodes only (never an instance's expansion). `theme` reaches the node's subtree
+ * (effective theme of the bindings below it).
+ */
+const REACHING_FIELDS: ReadonlySet<string> = new Set([
+  "type",
+  "parent",
+  "at",
+  "component",
+  "slot",
+  "of",
+  "overrides",
+  "args",
+  "props",
+])
+
+/** Fields whose values differ between `old` and `next` (added and removed ones included). */
+function changedFields(old: NodeData, next: NodeData): Set<string> {
+  const out = new Set<string>()
+  for (const k of Object.keys(old))
+    if (!Object.hasOwn(next, k) || !jsonEqual(old[k], next[k])) out.add(k)
+  for (const k of Object.keys(next)) if (!Object.hasOwn(old, k)) out.add(k)
+  return out
+}
+
+/**
+ * How far the issues a change of one node (`old` → `next`) can move reach: its neighbourhood
+ * (`near`), its neighbourhood and its whole subtree (`subtree`: a theme pin changed), or the
+ * whole document (`all`, see {@link crossTree} and {@link REACHING_FIELDS}).
+ */
+function reachOf(
+  old: NodeData | undefined,
+  next: NodeData | undefined,
+  oldGet: (id: string) => NodeData | undefined,
+  newGet: (id: string) => NodeData | undefined,
+): "near" | "subtree" | "all" {
+  if (old && next) {
+    const changed = changedFields(old, next)
+    let reaching = false
+    for (const k of changed)
+      if (REACHING_FIELDS.has(k)) {
+        reaching = true
+        break
+      }
+    if (!reaching) {
+      // A main component's own visuals are what its instances show (the fit lint of an
+      // instance's parent reads them; prop declarations live on it).
+      if (old.component !== undefined) return "all"
+      return changed.has("theme") ? "subtree" : "near"
+    }
+    // An instance's overrides (not a derived component's) are read by its own checks and by
+    // its `at` children (slot / replace content); only swaps and instance-prop args in them
+    // (`set.of`, `set.args`) reach other components (instance cycles).
+    let overridesOnly = changed.has("overrides")
+    for (const k of changed)
+      if (k !== "overrides" && (REACHING_FIELDS.has(k) || k === "theme")) overridesOnly = false
+    if (
+      overridesOnly &&
+      old.type === "instance" &&
+      old.component === undefined &&
+      next.component === undefined &&
+      jsonEqual(swapsIn(old.overrides), swapsIn(next.overrides))
+    )
+      return "subtree"
+  }
+  if (crossTree(old, oldGet) || crossTree(next, newGet)) return "all"
+  if (
+    old &&
+    next &&
+    old.parent !== next.parent &&
+    (themedAncestor(old, oldGet) || themedAncestor(next, newGet))
+  )
+    return "all"
+  return "near"
+}
+
+/** The `set.of` / `set.args` entries of an instance's overrides, by key (cycle edges). */
+function swapsIn(overrides: unknown): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  if (!isRecord(overrides)) return out
+  for (const [k, ov] of Object.entries(overrides)) {
+    if (!isRecord(ov) || !isRecord(ov.set)) continue
+    if ("of" in ov.set || "args" in ov.set) out[k] = [ov.set.of ?? null, ov.set.args ?? null]
+  }
+  return out
+}
+
 /** True when an ancestor of `n` (by `get`) pins a theme. */
 function themedAncestor(n: NodeData, get: (id: string) => NodeData | undefined): boolean {
   const seen = new Set<string>()
@@ -134,6 +230,41 @@ function themedAncestor(n: NodeData, get: (id: string) => NodeData | undefined):
     p = a.parent
   }
   return false
+}
+
+/** Nodes (and variables) an incremental validation re-checks. */
+interface Scope {
+  nodes: Set<string>
+  /** Variables whose own rules re-run (a header edit), or null (nodes only). */
+  variables: Set<string> | null
+}
+
+/** Binding targets (`$ref`) anywhere in `v`, in walk order (`meta` skipped). */
+function refTargets(v: unknown): string[] {
+  const out: string[] = []
+  const walk = (x: unknown, depth: number) => {
+    if (depth > 64 || x === null || typeof x !== "object") return
+    if (Array.isArray(x)) {
+      for (const y of x) walk(y, depth + 1)
+      return
+    }
+    const r = x as Record<string, unknown>
+    if (typeof r.$ref === "string" && Object.keys(r).length === 1) {
+      out.push(r.$ref)
+      return
+    }
+    for (const k in r) if (k !== "meta") walk(r[k], depth + 1)
+  }
+  walk(v, 0)
+  return out
+}
+
+/** True when `pointer` is under `/variables/<name>` for a name in `names`. */
+function inVariables(pointer: string, names: ReadonlySet<string> | null): boolean {
+  if (!names || names.size === 0 || !pointer.startsWith("/variables/")) return false
+  const end = pointer.indexOf("/", "/variables/".length)
+  const raw = pointer.slice("/variables/".length, end < 0 ? undefined : end)
+  return names.has(raw.replace(/~1/g, "/").replace(/~0/g, "~"))
 }
 
 /** Extracts the node id from a JSON Pointer such as `/nodes/<id>/fill`. */
@@ -178,6 +309,24 @@ export class YjsDocStore implements DocStore {
   private pendingHeader = false
   /** Issues of the committed state, kept current incrementally (null = recompute fully). */
   private baseline: Baseline | null = null
+  /**
+   * Diagnostics: validation runs of op groups and baseline upkeep, whole-document (`full`) or
+   * incremental (`scoped`), with the number of nodes the scoped runs covered (perf tests).
+   *
+   * @internal Test and perf diagnostics only; not part of the {@link DocStore} contract and may
+   * change or disappear without notice.
+   */
+  readonly validationRuns = { full: 0, scoped: 0, scopedNodes: 0 }
+  private countRun(scope: Scope | null): void {
+    if (scope) {
+      this.validationRuns.scoped++
+      this.validationRuns.scopedNodes += scope.nodes.size
+    } else this.validationRuns.full++
+  }
+  /** Binding targets (`$ref`) of every node that has any (header-scoped validation). */
+  private readonly refsOf = new Map<string, readonly string[]>()
+  /** Set when node upkeep (not the header) asked for a full re-validation (see apply). */
+  private nodesDirtyAll = false
   /**
    * Nodes whose issues may be stale since the baseline was computed: the nodes changed since
    * (undo/redo, remote updates) and their neighbourhoods.
@@ -347,14 +496,12 @@ export class YjsDocStore implements DocStore {
 
     let warnings: ValidationIssue[] = []
     let candidateResult: ValidationResult | null = null
-    let scope: Set<string> | null = null
+    let scope: Scope | null = null
     if (this.options.validation !== "none" && draft.touched) {
       const base = this.baselineIssues()
       scope = this.options.validation === "incremental" ? this.scopeOf(draft) : null
-      candidateResult = validate(
-        draft.toDocument(),
-        scope ? { ...this.options.validateOptions, nodes: scope } : this.options.validateOptions,
-      )
+      this.countRun(scope)
+      candidateResult = validate(draft.toDocument(), this.scopedOptions(scope))
       const errors = candidateResult.errors.filter((i) => !base.errors.has(issueKey(i)))
       if (errors.length > 0) {
         return fail(
@@ -388,10 +535,15 @@ export class YjsDocStore implements DocStore {
     if (!draft.touched) return success(before, false)
 
     this.managerFor(options.origin)
+    const wasAll = this.dirtyAll
+    this.nodesDirtyAll = false
     this.transact(options.origin, "ops", () => this.commit(draft))
     const after = this.revision
     // The candidate's issues are the committed state's now: no need to re-check those nodes.
     if (candidateResult) this.absorb(candidateResult, scope)
+    // A header edit marks everything dirty (its observer cannot tell what changed); one the
+    // scoped run covered (variable values, theme order) leaves the baseline exact.
+    if (scope?.variables && !wasAll && !this.nodesDirtyAll) this.dirtyAll = false
     const entry: OpLogEntry = {
       kind: "ops",
       origin: options.origin,
@@ -712,6 +864,9 @@ export class YjsDocStore implements DocStore {
       const n = deepFreeze(ordered) as NodeData
       next = n
       this.mirror.set(id, n)
+      const refs = refTargets(n)
+      if (refs.length > 0) this.refsOf.set(id, refs)
+      else this.refsOf.delete(id)
       const key = parentKey(n)
       this.sortedKids.delete(key)
       let set = this.byParent.get(key)
@@ -722,6 +877,7 @@ export class YjsDocStore implements DocStore {
       set.add(id)
     } else {
       this.mirror.delete(id)
+      this.refsOf.delete(id)
     }
     this.pendingNodes.add(id)
     this.markDirty(id, old, next)
@@ -731,40 +887,127 @@ export class YjsDocStore implements DocStore {
   private markDirty(id: string, old: NodeData | undefined, next: NodeData | undefined): void {
     if (this.dirtyAll || this.baseline === null) return
     const get = (k: string) => this.mirror.get(k)
-    if (
-      crossTree(old, get) ||
-      crossTree(next, get) ||
-      (old &&
-        next &&
-        old.parent !== next.parent &&
-        (themedAncestor(old, get) || themedAncestor(next, get)))
-    ) {
+    const empty: ReadonlySet<string> = new Set()
+    const reach = reachOf(old, next, get, get)
+    if (reach === "all") {
       this.dirtyAll = true
+      this.nodesDirtyAll = true
       return
     }
-    const empty: ReadonlySet<string> = new Set()
-    this.neighbourhood(this.dirty, id, old, next, (p) => this.byParent.get(p) ?? empty)
+    const kids = (p: string) => this.byParent.get(p) ?? empty
+    this.neighbourhood(this.dirty, id, old, next, kids)
+    if (reach === "subtree") this.subtree(this.dirty, id, kids)
   }
 
   /**
    * Node ids whose issues an op group can change (see {@link neighbourhood}), or null when it
    * needs a full validation (see {@link crossTree}).
    */
-  private scopeOf(draft: Draft): Set<string> | null {
-    if (draft.variablesTouched || draft.themesTouched || draft.header.size > 0) return null
+  private scopeOf(draft: Draft): Scope | null {
+    if (draft.header.size > 0) return null
+    const scope = new Set<string>()
+    let variables: Set<string> | null = null
+    if (draft.variablesTouched || draft.themesTouched) {
+      const h = this.headerScope(draft)
+      if (!h) return null
+      for (const id of h.nodes) scope.add(id)
+      variables = h.variables
+    }
     const oldGet = (k: string) => this.mirror.get(k)
     const newGet = (k: string) => draft.get(k)
-    const scope = new Set<string>()
+    const kids = (p: string) => draft.childIds(p)
     for (const [id, n] of draft.nodes) {
       const old = this.mirror.get(id)
       const next = n ?? undefined
-      if (crossTree(old, oldGet) || crossTree(next, newGet)) return null
-      if (old && next && old.parent !== next.parent) {
-        if (themedAncestor(old, oldGet) || themedAncestor(next, newGet)) return null
-      }
-      this.neighbourhood(scope, id, old, next, (p) => draft.childIds(p))
+      const reach = reachOf(old, next, oldGet, newGet)
+      if (reach === "all") return null
+      this.neighbourhood(scope, id, old, next, kids)
+      if (reach === "subtree") this.subtree(scope, id, kids)
     }
-    return scope
+    return { nodes: scope, variables }
+  }
+
+  /**
+   * What a variables / themes edit can change, when it keeps every variable name, type and
+   * alias edge, and every theme axis with the same values (a default-mode switch reorders
+   * them): the edited variables' own rules, and the theme lints of the nodes binding them (a
+   * reorder: of every bound node). Null otherwise (full validation).
+   */
+  private headerScope(draft: Draft): { nodes: Set<string>; variables: Set<string> } | null {
+    const changed = new Set<string>()
+    for (const [name, next] of draft.variables) {
+      const old = plain(this.yVars.get(name))
+      if (old === undefined || next === null || next === undefined) return null
+      if (jsonEqual(old, next)) continue
+      if (!isRecord(old) || !isRecord(next) || old.type !== next.type) return null
+      const a = refTargets(old.value)
+      const b = refTargets(next.value)
+      if (a.length !== b.length || a.some((t, i) => t !== b[i])) return null
+      changed.add(name)
+    }
+    let reordered = false
+    for (const [axis, next] of draft.themes) {
+      const old = plain(this.yThemes.get(axis))
+      if (!Array.isArray(old) || !Array.isArray(next)) return null
+      if (jsonEqual(old, next)) continue
+      const set = new Set(old)
+      if (
+        old.length !== next.length ||
+        set.size !== old.length ||
+        new Set(next).size !== next.length ||
+        !next.every((v) => typeof v === "string" && set.has(v))
+      )
+        return null
+      reordered = true
+    }
+    const nodes = new Set<string>()
+    if (reordered) {
+      // The default theme changed: every binding may now match a different entry.
+      for (const id of this.refsOf.keys()) nodes.add(id)
+      return { nodes, variables: changed }
+    }
+    if (changed.size === 0) return { nodes, variables: changed }
+    // Bindings resolve through aliases: the edited variables and every alias of them.
+    const reach = new Set(changed)
+    for (let grew = true; grew; ) {
+      grew = false
+      for (const name of this.yVars.keys()) {
+        if (reach.has(name)) continue
+        const v = draft.variables.get(name) ?? plain(this.yVars.get(name))
+        if (isRecord(v) && refTargets(v.value).some((t) => reach.has(t))) {
+          reach.add(name)
+          grew = true
+        }
+      }
+    }
+    for (const [id, refs] of this.refsOf) if (refs.some((t) => reach.has(t))) nodes.add(id)
+    return { nodes, variables: changed }
+  }
+
+  private scopedOptions(scope: Scope | null): ValidateOptions | undefined {
+    if (!scope) return this.options.validateOptions
+    const o: ValidateOptions = { ...this.options.validateOptions, nodes: scope.nodes }
+    if (scope.variables) o.variables = scope.variables
+    return o
+  }
+
+  /** Adds every descendant of `id` (instance-owned nodes included) to `scope`. */
+  private subtree(
+    scope: Set<string>,
+    id: string,
+    childIds: (parent: string) => Iterable<string>,
+  ): void {
+    const seen = new Set<string>([id])
+    const queue = [id]
+    while (queue.length > 0) {
+      const p = queue.pop() as string
+      for (const c of childIds(p)) {
+        if (seen.has(c)) continue
+        seen.add(c)
+        scope.add(c)
+        queue.push(c)
+      }
+    }
   }
 
   /**
@@ -851,11 +1094,9 @@ export class YjsDocStore implements DocStore {
       this.dirty.size > Math.max(256, this.mirror.size / 4)
     if (full || this.dirty.size > 0) {
       const doc = new Draft(this.base(), this.draftOptions()).toDocument()
-      const scope = full ? null : new Set(this.dirty)
-      const r = validate(
-        doc,
-        scope ? { ...this.options.validateOptions, nodes: scope } : this.options.validateOptions,
-      )
+      const scope: Scope | null = full ? null : { nodes: new Set(this.dirty), variables: null }
+      this.countRun(scope)
+      const r = validate(doc, this.scopedOptions(scope))
       this.absorb(r, scope)
     }
     return this.baseline as Baseline
@@ -865,13 +1106,18 @@ export class YjsDocStore implements DocStore {
    * Makes `r` part of the baseline: the whole of it (`scope` null), or, for an incremental
    * result, in place of the previous issues of the nodes in `scope`. Clears their dirt.
    */
-  private absorb(r: ValidationResult, scope: ReadonlySet<string> | null): void {
+  private absorb(r: ValidationResult, scope: Scope | null): void {
     const into = (prev: Map<string, ValidationIssue> | undefined, list: ValidationIssue[]) => {
       const out = new Map<string, ValidationIssue>()
       if (prev && scope) {
         for (const [k, i] of prev) {
           const id = nodeIdOf(i.path)
-          if (id === undefined || !scope.has(id)) out.set(k, i)
+          // Document-level lints survive: scoped runs never report them (nor their absence).
+          if (
+            DOCUMENT_LEVEL_CODES.has(i.code) ||
+            (id !== undefined ? !scope.nodes.has(id) : !inVariables(i.path, scope.variables))
+          )
+            out.set(k, i)
         }
       }
       for (const i of list) out.set(issueKey(i), i)
@@ -882,7 +1128,7 @@ export class YjsDocStore implements DocStore {
         errors: into(this.baseline.errors, r.errors),
         warnings: into(this.baseline.warnings, r.warnings),
       }
-      for (const id of scope) this.dirty.delete(id)
+      for (const id of scope.nodes) this.dirty.delete(id)
     } else {
       this.baseline = { errors: into(undefined, r.errors), warnings: into(undefined, r.warnings) }
       this.dirty.clear()

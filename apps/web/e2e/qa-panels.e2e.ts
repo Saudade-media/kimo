@@ -6,6 +6,7 @@
  */
 import type { Page } from "playwright"
 import {
+  armFileChooser,
   blur,
   box,
   centerOf,
@@ -14,6 +15,7 @@ import {
   field,
   type Hook,
   idOf,
+  nextFileChooser,
   node,
   openEditor,
   pixel,
@@ -29,7 +31,7 @@ import {
   undo,
   waitCanvas,
 } from "./qa-helpers"
-import { expect, type Scenario } from "./run"
+import { expect, newE2EContext, type Scenario } from "./run"
 
 async function openLeft(page: Page, url: string) {
   await openEditor(page, url)
@@ -42,6 +44,7 @@ const canRedo = (page: Page) =>
 
 /** Forces the download / <input type=file> paths of saveKimoFile / pickKimoFile. */
 async function noPickers(page: Page) {
+  armFileChooser(page)
   await page.addInitScript(() => {
     const w = window as unknown as Record<string, unknown>
     delete w.showSaveFilePicker
@@ -355,10 +358,9 @@ export const scenarios: Scenario[] = [
       expect(again.text === first.text, "two saves identical")
       // ⌘O the saved file.
       const fileUrl = page.url()
-      const [chooser] = await Promise.all([
-        page.waitForEvent("filechooser", { timeout: 10_000 }),
-        page.keyboard.press("ControlOrMeta+o"),
-      ])
+      const pending = nextFileChooser(page)
+      await page.keyboard.press("ControlOrMeta+o")
+      const chooser = await pending
       await chooser.setFiles({
         name: first.name,
         mimeType: "application/json",
@@ -473,7 +475,8 @@ export const scenarios: Scenario[] = [
         "dark persisted",
       )
       // Fresh profile with a dark system preference starts dark.
-      const ctx2 = await page.context().browser()?.newContext({ colorScheme: "dark" })
+      const darkBrowser = page.context().browser()
+      const ctx2 = darkBrowser ? await newE2EContext(darkBrowser, { colorScheme: "dark" }) : null
       if (ctx2) {
         const p2 = await ctx2.newPage()
         await p2.goto(url)

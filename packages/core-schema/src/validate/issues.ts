@@ -89,6 +89,15 @@ export const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "VARIABLE_UNUSED",
 ])
 
+/**
+ * Codes only a whole-document run reports (usage lints): incremental runs (`nodes` in
+ * ValidateOptions) never emit them, so an incremental result says nothing about them.
+ */
+export const DOCUMENT_LEVEL_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
+  "ASSET_UNUSED",
+  "VARIABLE_UNUSED",
+])
+
 /** Collects issues while validating. */
 export class IssueSink {
   readonly errors: ValidationIssue[] = []

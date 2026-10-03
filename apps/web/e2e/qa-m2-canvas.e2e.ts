@@ -5,7 +5,17 @@
  * so a failure maps to one finding.
  */
 import type { Page } from "playwright"
-import { docJson, node, nodeCount, openEditor, settle, toPage, ui } from "./qa-helpers"
+import {
+  armFileChooser,
+  docJson,
+  nextFileChooser,
+  node,
+  nodeCount,
+  openEditor,
+  settle,
+  toPage,
+  ui,
+} from "./qa-helpers"
 import {
   board,
   collectWarnings,
@@ -285,17 +295,28 @@ export const scenarios: Scenario[] = [
       await board(page, [])
       await spyOverlay(page)
       const badge = page.locator(".canvas-zoom-badge")
+      // setViewport decides grid visibility synchronously (controller onUi → updateGrid) and
+      // vp() settles two frames, so React has committed the badge state by now.
       await vp(page, { x: 0, y: 0, zoom: 4 })
-      await page.waitForTimeout(250)
       const at4 = await overlay(page)
       expect(!at4?.pixelGrid && (await badge.count()) === 0, "no grid / badge at exactly 400%")
       await vp(page, { x: 0, y: 0, zoom: 4.5 })
-      await page.waitForTimeout(250)
       await badge.waitFor({ timeout: 2000 })
       const text = await badge.textContent()
       log("badge", text)
       expect(/450%/.test(text ?? ""), `badge reads 450% (${text})`)
-      expect((await overlay(page))?.pixelGrid === 1, "grid fully faded in")
+      // The grid fades in over GRID_FADE_MS (150 ms) of rAF steps: wait for the last step.
+      const faded = await page
+        .waitForFunction(
+          () => (window as unknown as { __ov?: { pixelGrid?: unknown } }).__ov?.pixelGrid === 1,
+          null,
+          { timeout: 5000 },
+        )
+        .then(
+          () => true,
+          () => false,
+        )
+      expect(faded, `grid fully faded in (pixelGrid ${(await overlay(page))?.pixelGrid})`)
     },
   },
   {
@@ -648,6 +669,7 @@ export const scenarios: Scenario[] = [
   {
     name: "qa-m2: image — Esc cancels an armed placement; drag keeps the aspect ratio in a frame",
     async run({ page, url, log }) {
+      armFileChooser(page)
       await openEditor(page, url)
       await board(page, [
         {
@@ -656,7 +678,7 @@ export const scenarios: Scenario[] = [
         },
       ])
       const arm = async () => {
-        const chooser = page.waitForEvent("filechooser")
+        const chooser = nextFileChooser(page)
         await page.keyboard.press("ControlOrMeta+Shift+k")
         await (await chooser).setFiles({ name: "img.png", mimeType: "image/png", buffer: PNG_3x2 })
         await page.waitForFunction(

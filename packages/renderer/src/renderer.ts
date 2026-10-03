@@ -75,6 +75,8 @@ interface RootEntry {
   wrap: { sp: SharedPicture; key: string; T: Matrix } | null
   /** Zoomed-out raster of `picture` (see {@link RASTER_MAX_SCALE}); dropped with it. */
   raster: RootRaster | null
+  /** Rasters of `picture` at other scales made before (see {@link RASTER_LEVELS}). */
+  levels?: RootRaster[]
   /** Frame number this root was last drawn (raster cache eviction). */
   used: number
 }
@@ -101,9 +103,14 @@ interface SharedPicture {
   bounds: Rect | null
   /** Zoomed-out raster in local space, shared by every root drawing this picture. */
   raster: RootRaster | null
+  /** Rasters at other scales made before (see {@link RASTER_LEVELS}). */
+  levels?: RootRaster[]
   /** Frame number this raster was last drawn (raster eviction). */
   rasterUsed: number
 }
+
+/** Something holding rasters of one picture: the current one and earlier scales. */
+type Rasters = { raster: RootRaster | null; levels?: RootRaster[] }
 
 /** The content key of one top-level instance and what it was computed from. */
 interface InstanceKey {
@@ -201,6 +208,13 @@ const RECORD_FRAME_MS = 10
 const MOTION_MS = 160
 /** A picture cull rect this wide (world px) is Skia's "unbounded" (recorded at ±1e7). */
 const UNBOUNDED_CULL = 1e6
+/**
+ * Rasters kept per picture, at distinct scales (the current one included). Zooming back across
+ * a scale step already visited reuses that raster instead of replaying every root while the
+ * per-frame raster budget fills them in again (perf: zoom spikes); the pixel budget still
+ * bounds them (older levels go first).
+ */
+const RASTER_LEVELS = 3
 /** Raster scales are powers of two ≥ the device scale, so a raster is downsampled ≤ 2×. */
 const rasterBucket = (s: number) => 2 ** Math.max(-8, Math.ceil(Math.log2(s)))
 
@@ -246,6 +260,8 @@ export class CanvasKitRenderer implements Renderer {
   private readonly topTokens = new WeakMap<object, string>()
   /** JSON of nested values, per object (data is immutable). */
   private readonly jsons = new WeakMap<object, string>()
+  /** Sorted `axis=value` string of each resolved theme object (see {@link instanceKey}). */
+  private readonly themeKeys = new WeakMap<object, string>()
   /** Paint token of each layout object (see {@link layoutToken}). */
   private readonly layoutTokens = new WeakMap<object, string>()
   /** Header use of the recording in progress (see {@link tracked}). */
@@ -266,6 +282,8 @@ export class CanvasKitRenderer implements Renderer {
   private contextLosses = 0
   private removeListeners: (() => void) | null = null
   private framePending = false
+  /** Bumps when a pending frame is drawn early ({@link renderPending}): stale callbacks skip. */
+  private frameToken = 0
 
   /**
    * Zoomed-out raster cache: `true` (default) on WebGL only, `false` off, `"always"` on every
@@ -537,6 +555,7 @@ export class CanvasKitRenderer implements Renderer {
     this.grouping = null
     this.headerKey = null
     this.instanceKeys.clear()
+    this.sharedMemo.byId.clear()
     if (this.images) this.images.assets = scene.assets
     this.textEngine?.invalidate()
     this.dropAll(false)
@@ -545,6 +564,7 @@ export class CanvasKitRenderer implements Renderer {
 
   invalidate(nodeIds?: Iterable<string>): void {
     this.hitIndex = null
+    this.sharedMemo.byId.clear()
     if (!nodeIds) {
       // Everything may have changed, but node data and layout are compared on `setLayout`
       // (identity / `changed`), so only what read a changed header is dropped here: pictures
@@ -579,6 +599,7 @@ export class CanvasKitRenderer implements Renderer {
   setLayout(layout: LayoutResult): void {
     if (this.layout === layout) return
     this.layout = layout
+    this.sharedMemo.byId.clear()
     this.hitIndex = null
     const nodes = this.scene?.nodes
     // Group paint order into root subtrees (order is depth-first, parents first). The engine
@@ -683,11 +704,39 @@ export class CanvasKitRenderer implements Renderer {
     this.dropRaster(e)
   }
 
-  private dropRaster(e: { raster: RootRaster | null }): void {
+  private dropRaster(e: Rasters): void {
+    this.dropLevels(e)
     if (!e.raster) return
     e.raster.image.delete()
     this.rasterPx -= e.raster.px
     e.raster = null
+  }
+
+  /** Frees the rasters of `e` at other scales than the current one. */
+  private dropLevels(e: Rasters): void {
+    const levels = e.levels
+    if (!levels) return
+    for (const l of levels) {
+      l.image.delete()
+      this.rasterPx -= l.px
+    }
+    e.levels = undefined
+  }
+
+  /**
+   * The raster of `e` at exactly `scale`, made current when it was kept as an earlier level;
+   * null when there is none (same pixels as making it again: same picture, same scale).
+   */
+  private levelAt(e: Rasters, scale: number): RootRaster | null {
+    if (e.raster?.scale === scale) return e.raster
+    const levels = e.levels
+    const i = levels ? levels.findIndex((l) => l.scale === scale) : -1
+    if (!levels || i < 0) return null
+    // Levels stay in least-recently-drawn order (the oldest goes first, see `rasterize`).
+    const [found] = levels.splice(i, 1) as [RootRaster]
+    if (e.raster) levels.push(e.raster)
+    e.raster = found
+    return found
   }
 
   /** Rasters belong to the surface's GPU context: dropped when the surface changes. */
@@ -698,12 +747,7 @@ export class CanvasKitRenderer implements Renderer {
   }
 
   /** Rasterizes `pic` at device scale `scale` into an image compatible with the surface. */
-  private rasterize(
-    e: { raster: RootRaster | null },
-    pic: SkPicture,
-    bounds: Rect,
-    scale: number,
-  ): RootRaster | null {
+  private rasterize(e: Rasters, pic: SkPicture, bounds: Rect, scale: number): RootRaster | null {
     const { ck } = this.need()
     const surface = this.surface
     if (!surface) return null
@@ -734,7 +778,26 @@ export class CanvasKitRenderer implements Renderer {
     } finally {
       off.delete()
     }
-    this.dropRaster(e)
+    // The previous raster stays as a level (another scale; see RASTER_LEVELS).
+    const prev = e.raster
+    if (prev) {
+      if (!e.levels) e.levels = []
+      const levels = e.levels
+      const same = levels.findIndex((l) => l.scale === prev.scale)
+      if (same >= 0) {
+        const [old] = levels.splice(same, 1)
+        if (old) {
+          old.image.delete()
+          this.rasterPx -= old.px
+        }
+      }
+      levels.push(prev)
+      while (levels.length > RASTER_LEVELS - 1) {
+        const old = levels.shift() as RootRaster
+        old.image.delete()
+        this.rasterPx -= old.px
+      }
+    }
     e.raster = { image, scale, x, y, w: W / scale, h: H / scale, px: W * H }
     this.rasterPx += W * H
     return e.raster
@@ -743,7 +806,16 @@ export class CanvasKitRenderer implements Renderer {
   /** Evicts least recently drawn rasters (never this frame's) above the pixel budget. */
   private evictRasters(): void {
     if (this.rasterPx <= RASTER_BUDGET_PX) return
-    const old: { e: { raster: RootRaster | null }; used: number }[] = []
+    // Earlier scales go first (least recently drawn first), then whole rasters.
+    const kept: { e: Rasters; used: number }[] = []
+    for (const e of this.roots.values()) if (e.levels) kept.push({ e, used: e.used })
+    for (const sp of this.shared.values()) if (sp.levels) kept.push({ e: sp, used: sp.rasterUsed })
+    kept.sort((a, b) => a.used - b.used)
+    for (const { e } of kept) {
+      if (this.rasterPx <= RASTER_BUDGET_PX) return
+      this.dropLevels(e)
+    }
+    const old: { e: Rasters; used: number }[] = []
     for (const e of this.roots.values())
       if (e.raster && e.used !== this.frames) old.push({ e, used: e.used })
     for (const sp of this.shared.values())
@@ -869,6 +941,7 @@ export class CanvasKitRenderer implements Renderer {
 
   /** Frees a shared picture and its raster (roots that recorded it keep their own reference). */
   private deleteShared(sp: SharedPicture): void {
+    this.sharedMemo.byId.clear()
     sp.picture.delete()
     this.dropRaster(sp)
   }
@@ -879,6 +952,34 @@ export class CanvasKitRenderer implements Renderer {
    */
   private sharedFor(ctx: PaintContext, id: string): NonNullable<RootEntry["wrap"]> | null {
     if (!this.sharedInstances || id.includes("/")) return null
+    // One answer per frame and layout (perf: recording a parent of 500 instances asks once
+    // for its isolation check and once to draw each of them).
+    const memo = this.sharedMemo
+    if (memo.frame !== this.frames || memo.layout !== ctx.layout || memo.nodes !== ctx.nodes) {
+      memo.frame = this.frames
+      memo.layout = ctx.layout
+      memo.nodes = ctx.nodes
+      memo.byId.clear()
+    }
+    const hit = memo.byId.get(id)
+    if (hit !== undefined) {
+      if (hit) hit.sp.used = this.frames
+      return hit
+    }
+    const w = this.sharedForUncached(ctx, id)
+    memo.byId.set(id, w)
+    return w
+  }
+
+  /** Per-frame answers of {@link sharedFor} (cleared when shared pictures are dropped). */
+  private sharedMemo: {
+    frame: number
+    layout: LayoutResult | null
+    nodes: unknown
+    byId: Map<string, NonNullable<RootEntry["wrap"]> | null>
+  } = { frame: -1, layout: null, nodes: null, byId: new Map() }
+
+  private sharedForUncached(ctx: PaintContext, id: string): NonNullable<RootEntry["wrap"]> | null {
     const l = ctx.layout.nodes.get(id)
     if (!l?.visible) return null
     // An expanded top-level instance: its children are composite ids `<id>/<IdPath>`.
@@ -1088,10 +1189,15 @@ export class CanvasKitRenderer implements Renderer {
       walk(id)
     }
     const th = ctx.resolve.theme(id)
-    const theme = Object.keys(th)
-      .sort()
-      .map((k) => `${k}=${th[k]}`)
-      .join(",")
+    let theme = this.themeKeys.get(th)
+    if (theme === undefined) {
+      theme = Object.keys(th)
+        .sort()
+        .map((k) => `${k}=${th[k]}`)
+        .join(",")
+      // Resolved themes are not mutated once handed out (the resolver memoizes them).
+      this.themeKeys.set(th, theme)
+    }
     const data: unknown[] = new Array(ids.length)
     const layouts: unknown[] = new Array(ids.length)
     let same = !!prev && prev.theme === theme && prev.ids.length === ids.length
@@ -1183,7 +1289,7 @@ export class CanvasKitRenderer implements Renderer {
           else if (Math.min(want, cap) >= want / 2) target = Math.min(want, cap)
         }
         if (!sr && target && sp.bounds) {
-          sr = sp.raster
+          sr = this.levelAt(sp, target) ?? sp.raster
           if (sr?.scale !== target) {
             if (rasterMs < RASTER_FRAME_MS || !sr) {
               const t = now()
@@ -1318,7 +1424,7 @@ export class CanvasKitRenderer implements Renderer {
         const wrap = e.wrap
         if (!r && target && wrap?.sp.bounds && this.shared.get(wrap.key) === wrap.sp) {
           const sp = wrap.sp
-          let sr = sp.raster
+          let sr = this.levelAt(sp, target) ?? sp.raster
           if (sr?.scale !== target) {
             if (rasterMs < RASTER_FRAME_MS) {
               const t = now()
@@ -1348,7 +1454,7 @@ export class CanvasKitRenderer implements Renderer {
           }
         }
         if (!r && target && e.bounds) {
-          r = e.raster
+          r = this.levelAt(e, target) ?? e.raster
           if (r?.scale !== target) {
             if (rasterMs < RASTER_FRAME_MS) {
               const t = now()
@@ -1426,10 +1532,20 @@ export class CanvasKitRenderer implements Renderer {
       isBrowser() && typeof globalThis.requestAnimationFrame === "function"
         ? globalThis.requestAnimationFrame.bind(globalThis)
         : (cb: () => void) => setTimeout(cb, 0)
+    const token = this.frameToken
     raf(() => {
+      if (token !== this.frameToken) return
       this.framePending = false
       this.render()
     })
+  }
+
+  renderPending(): boolean {
+    if (!this.framePending) return false
+    this.frameToken++
+    this.framePending = false
+    this.render()
+    return true
   }
 
   /** PNG of the current raster/software surface (headless snapshots, debugging). */

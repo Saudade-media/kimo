@@ -30,6 +30,7 @@ import {
   type NodeOrigin,
   type NodeRecord,
   parseVirtualId,
+  shapesExpansion,
   type Theme,
   type ViewLocation,
 } from "@kimo/core-schema"
@@ -57,6 +58,16 @@ export interface InstanceView extends ExpandedView {
    * is dropped.
    */
   invalidateInstances(instances: Iterable<string>, changed?: Iterable<string>): void
+  /**
+   * Patches the cached expansions after real nodes `ids` changed in ways that do not shape an
+   * expansion (core `shapesExpansion`: a fill or a size inside a main, not its structure):
+   * every expansion that read one of them re-merges, in place, the view nodes emitted from it
+   * (perf: editing a main with 1k instances re-merges 1k nodes instead of re-expanding 31k).
+   * Returns, per id patched in every expansion that read it, those expansions' keys (outermost
+   * top-level instances) and the view ids whose data changed. Ids left out (or any id, while a
+   * full {@link invalidate} is pending) need {@link invalidateInstances} as before.
+   */
+  patchNodes(ids: Iterable<string>): Map<string, { keys: string[]; ids: string[] }>
   /** The real ids whose expansions are currently cached (outermost top-level instances). */
   cachedInstances(): readonly string[]
   /**
@@ -373,6 +384,36 @@ export function createInstanceView(
         vroutes = new Map()
       }
       for (const k of keys) dropView(k)
+    },
+    patchNodes(ids) {
+      const out = new Map<string, { keys: string[]; ids: string[] }>()
+      if (suspects.size > 0) return out
+      for (const id of ids) {
+        if (isVirtualId(id)) continue
+        const next = lookup.getNode(id)
+        const got = { keys: [] as string[], ids: [] as string[] }
+        let ok = next !== undefined
+        for (const [key, r] of reads) {
+          if (!ok) break
+          if (!r.nodes.has(id)) continue
+          const old = r.nodes.get(id)
+          const v = views.get(key)
+          if (old !== next && shapesExpansion(old, next)) ok = false
+          else if (!v?.patchNode) ok = false
+          else {
+            const vids = v.patchNode(id)
+            if (vids === null) ok = false
+            else {
+              r.nodes.set(id, next)
+              stamps.set(key, ++stampSeq)
+              got.keys.push(key)
+              for (const x of vids) got.ids.push(x)
+            }
+          }
+        }
+        if (ok) out.set(id, got)
+      }
+      return out
     },
     cachedInstances: () => [...views.keys()],
     stamp(id) {

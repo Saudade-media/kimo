@@ -2,7 +2,7 @@
  * Shared helpers for the adversarial QA scenarios (`qa-*.e2e.ts`). Not a scenario file itself
  * (the runner only loads `*.e2e.ts`).
  */
-import type { Page } from "playwright"
+import type { FileChooser, Page } from "playwright"
 
 export type Box = { x: number; y: number; w: number; h: number }
 export type Pt = { x: number; y: number }
@@ -34,6 +34,29 @@ export interface Hook {
   } | null
 }
 
+/**
+ * Keeps file-chooser interception on for the whole page. Playwright turns interception on only
+ * when the first "filechooser" listener is added, and sends that request without waiting for it
+ * (`updateSubscription` is fire-and-forget), then turns it off again when the last listener goes.
+ * `Promise.all([page.waitForEvent("filechooser"), page.keyboard.press("ControlOrMeta+o")])` can
+ * therefore reach Chromium's keydown before `Page.setInterceptFileChooserDialog` takes effect;
+ * headless Chromium then cancels the un-intercepted picker and the wait times out. Arm before
+ * the page loads (before `openEditor`), so interception is on long before any trigger.
+ */
+export function armFileChooser(page: Page) {
+  if (armed.has(page)) return
+  armed.add(page)
+  page.on("filechooser", () => {})
+}
+const armed = new WeakSet<Page>()
+
+/** The next file chooser; the page must be {@link armFileChooser armed} first. */
+export function nextFileChooser(page: Page, timeout = 10_000): Promise<FileChooser> {
+  if (!armed.has(page))
+    throw new Error("nextFileChooser: call armFileChooser(page) before the trigger")
+  return page.waitForEvent("filechooser", { timeout })
+}
+
 export async function openEditor(page: Page, url: string) {
   await page.goto(url)
   await page.getByRole("button", { name: "New file" }).click()
@@ -47,18 +70,20 @@ export async function waitCanvas(page: Page) {
 }
 
 /**
- * Two animation frames, so pending renders and overlay updates land. Falls back to a 500 ms
- * timer: headless Chromium can skip rAF under load, and a bare rAF promise then never settles.
+ * Two animation frames, so pending renders and overlay updates land. Rejects if no frame comes
+ * within 5 s: a stalled rAF is a real failure, not something to wait out. (An earlier silent
+ * 500 ms timer fallback was added for "rAF hangs" that were really the Bun-hosted driver losing
+ * its pipe to Chromium; see run.ts. It let tests read state before the frame they waited for.)
  */
 export const settle = (page: Page) =>
   page.evaluate(
     () =>
-      new Promise<void>((r) => {
-        const t = setTimeout(r, 500)
+      new Promise<void>((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error("settle: no animation frame in 5 s")), 5000)
         requestAnimationFrame(() =>
           requestAnimationFrame(() => {
             clearTimeout(t)
-            r()
+            resolve()
           }),
         )
       }),

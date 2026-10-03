@@ -59,11 +59,22 @@ export interface ValidateOptions {
    *
    * The caller owns the scope: it must list every node whose issues can change (the edited
    * nodes, their old and new parents, their children) and run a full validation instead when
-   * the edit involves components, instances, slot children, theme pins, variables, themes or
-   * header members, whose rules reach across the tree. Ids missing from the document are
-   * ignored.
+   * the edit changes how components, instances or slot children are put together (type,
+   * placement, `component`, `of`, overrides, props, args, slots), a main component itself,
+   * variables, themes or header members, whose rules reach across the tree. A theme pin
+   * reaches the pinned node's subtree (effective theme of its bindings). Other fields of nodes
+   * inside components and instances are checked per node: override and prop checks read a
+   * target's type, never its other values. Ids missing from the document are ignored.
    */
   nodes?: Iterable<string>
+  /**
+   * With `nodes` (incremental mode): variables whose own rules also run — their schema, the
+   * composite-type feature flag, the bindings and `when` pins in their values — plus alias
+   * cycles over all variables. For a header edit that keeps every variable's name and type and
+   * every alias edge (the caller checks that), these and the nodes binding them (in `nodes`)
+   * are all the issues it can change.
+   */
+  variables?: Iterable<string>
 }
 
 type Obj = Record<string, unknown>
@@ -202,7 +213,11 @@ class Validation {
     this.lints = options.lints !== false
     this.assetFiles = options.assetFiles ? new Set(options.assetFiles) : null
     this.scope = options.nodes ? new Set(options.nodes) : null
+    this.scopeVars = this.scope && options.variables ? new Set(options.variables) : null
   }
+
+  /** Variables re-checked in an incremental run (ValidateOptions `variables`). */
+  private readonly scopeVars: ReadonlySet<string> | null
 
   /** Node entries in scope: every node, or the listed ones in an incremental run. */
   private scoped(): [string, Obj][] {
@@ -211,6 +226,17 @@ class Validation {
     for (const id of this.scope) {
       const n = Object.hasOwn(this.nodes, id) ? this.nodes[id] : undefined
       if (n) out.push([id, n])
+    }
+    return out
+  }
+
+  /** Variable entries in scope: every variable, the listed ones, or none (incremental). */
+  private scopedVariables(): [string, Obj][] {
+    if (!this.scope) return Object.entries(this.variables)
+    const out: [string, Obj][] = []
+    for (const name of this.scopeVars ?? []) {
+      const v = Object.hasOwn(this.variables, name) ? this.variables[name] : undefined
+      if (v) out.push([name, v])
     }
     return out
   }
@@ -241,6 +267,10 @@ class Validation {
     if (this.scope) {
       const all = isObject(raw.nodes) ? raw.nodes : {}
       for (const id of this.scope) if (Object.hasOwn(all, id)) this.nodeStructure(id, all[id])
+      const vars = isObject(raw.variables) ? raw.variables : {}
+      for (const name of this.scopeVars ?? [])
+        if (Object.hasOwn(vars, name))
+          schemaIssues(Variable, vars[name], ptr("variables", name), this.sink)
       return
     }
     const url = raw.$schema
@@ -339,8 +369,7 @@ class Validation {
       }
       walk(n, base, null, gate)
     }
-    if (this.scope) return
-    for (const [name, v] of Object.entries(this.variables)) {
+    for (const [name, v] of this.scopedVariables()) {
       if (COMPOSITE_VARIABLE_TYPES.has(v.type as never))
         need("tokens/composite", ptr("variables", name, "type"), `A "${v.type}" variable`)
     }
@@ -1127,8 +1156,7 @@ class Validation {
       return true
     }
     for (const [id, n] of this.scoped()) walk(n, ptr("nodes", id), null, visit(id))
-    if (this.scope) return
-    for (const [name, v] of Object.entries(this.variables)) {
+    for (const [name, v] of this.scopedVariables()) {
       const base = ptr("variables", name)
       const value = v.value
       const own = typeof v.type === "string" ? [v.type] : null
@@ -1244,7 +1272,7 @@ class Validation {
 
   /** Local alias cycles (10.4 rule 5): reported on every variable of the cycle. */
   private variableAliases(): void {
-    if (this.scope) return
+    if (this.scope && !this.scopeVars) return
     const targets = (name: string): string[] => {
       const v = this.variables[name]
       if (!v) return []

@@ -205,6 +205,9 @@ describe("expanded instances render through the shared view", () => {
     same()
     l.set("inst00001", { props: { rotation: 15 } })
     same()
+    // A main edit an override hides in one instance (patched expansions).
+    l.set("btnBar001", { w: 10 })
+    same()
   })
 
   test("editing a main re-renders every instance (and only the edit redraws otherwise)", () => {
@@ -228,12 +231,16 @@ describe("expanded instances render through the shared view", () => {
     for (const id of ["inst00001/cardTitl1", "inst00002/cardTitl1", "inst00003/cardTitl1"])
       expect(l.layout.nodes.get(id)?.local.w).toBe(60)
     // Button main edit: every card holds a button → the card main and the button main are
-    // re-recorded, the three instances re-attach.
+    // re-recorded. Instances 1 and 3 re-attach; instance 2 overrides the bar's width (80), so
+    // its expanded content is unchanged (patched in place, same node objects) and it keeps
+    // its picture.
     l.set("btnBar001", { w: 10 })
     r.render()
     st = r.stats()
-    expect(st.wrapped).toBe(3)
+    expect(st.wrapped).toBe(2)
     expect(st.recorded).toBe(2 + (st.sharedRecorded ?? 0))
+    expect(l.layout.nodes.get("inst00002/cardCta01/btnBar001")?.local.w).toBe(80)
+    expect(l.layout.nodes.get("inst00001/cardCta01/btnBar001")?.local.w).toBe(10)
     r.detach()
   })
 })

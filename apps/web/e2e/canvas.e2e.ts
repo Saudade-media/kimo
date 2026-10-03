@@ -5,6 +5,7 @@
  */
 import { join } from "node:path"
 import type { Page } from "playwright"
+import { settle } from "./qa-helpers"
 import { type E2EContext, expect, type Scenario } from "./run"
 
 type Box = { x: number; y: number; w: number; h: number }
@@ -42,22 +43,6 @@ async function openEditor(page: Page, url: string) {
   await page.locator('.canvas-host[data-ready="true"]').waitFor({ timeout: 30_000 })
   await settle(page)
 }
-
-/** Waits two animation frames (coalesced layout/render). */
-const settle = (page: Page) =>
-  page.evaluate(
-    () =>
-      new Promise<void>((r) => {
-        // Timer fallback: headless Chromium can skip rAF under load (see qa-helpers settle).
-        const t = setTimeout(r, 500)
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            clearTimeout(t)
-            r()
-          }),
-        )
-      }),
-  )
 
 const idOf = (page: Page, name: string) =>
   page.evaluate((n) => {

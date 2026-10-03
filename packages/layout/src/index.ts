@@ -20,6 +20,7 @@ export {
 export { pathBounds } from "./geometry"
 export {
   createResolver,
+  paintOnlyHeaderChange,
   type ResolverOptions,
   resolveText,
   resolveTextStyle,

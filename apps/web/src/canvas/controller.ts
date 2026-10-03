@@ -7,7 +7,14 @@
  * pan (space-drag, middle mouse, wheel), zoom (⌘/ctrl-wheel, pinch, keys) and canvas commands.
  * Every document edit goes through `store.apply` with the host origin; one gesture = one undo step.
  */
-import { declaredProps, isLocated, type Libraries, locate, splitQualified } from "@kimo/core-schema"
+import {
+  declaredProps,
+  isLocated,
+  jsonEqual,
+  type Libraries,
+  locate,
+  splitQualified,
+} from "@kimo/core-schema"
 import type { DocStore, LocalOrigin, NodeData, Op, Tool, UiState } from "@kimo/editor-state"
 import { generateId } from "@kimo/editor-state"
 import {
@@ -19,6 +26,7 @@ import {
   type LayoutNodeData,
   type LayoutResult,
   type NodeSource,
+  paintOnlyHeaderChange,
   type Rect,
   type ResolvedTextStyle,
   type ResolveHeader,
@@ -478,6 +486,8 @@ export class CanvasController {
       this.store.onChange((c) => {
         for (const id of c.nodes) this.dirty.add(id)
         if (c.header || c.cause === "load") this.dirtyHeader = true
+        // A load replaces everything: re-read it all (expansions included).
+        if (c.cause === "load") this.fullPending = true
         this.schedule()
       }),
       this.ui.subscribe((s, prev) => this.onUi(s, prev)),
@@ -517,6 +527,9 @@ export class CanvasController {
     this.raf = requestAnimationFrame(() => {
       this.raf = 0
       this.flush()
+      // Draw what the flush changed in this frame, not one vsync later (the renderer would
+      // otherwise schedule its draw from inside this callback, for the next frame).
+      if (!this.disposed) this.renderer.renderPending()
     })
   }
 
@@ -550,22 +563,56 @@ export class CanvasController {
     this.dirty.clear()
     this.dirtyHeader = false
     this.fullPending = false
-    if (header) this.header = this.readHeader()
-    if (full || header) {
+    let paintOnly = false
+    let valuesOnly = false
+    if (header) {
+      const prev = this.header
+      this.header = this.readHeader()
+      // A color variable's value edited (variables dialog): no layout reads it, so the layout
+      // stays; only pictures that read a binding re-record (perf: no whole-document refresh).
+      paintOnly = !full && paintOnlyHeaderChange(prev, this.header)
+      // Other variable / theme changes alone (a mode switch): expansions read no variables or
+      // themes, only `imports`, so they all stay and the engine re-resolves bound nodes only.
+      valuesOnly =
+        !full &&
+        !paintOnly &&
+        ids.length === 0 &&
+        jsonEqual(prev.imports ?? null, this.header.imports ?? null)
+    }
+    if (full || (header && !paintOnly && !valuesOnly)) {
       this.computeFull()
-    } else {
-      // The engine re-expands only the instances the edit affects (its dependency index).
+    } else if (valuesOnly) {
       this.resolver.invalidate()
       try {
-        this.layoutResult = this.engine.update(this.input(), { nodes: ids })
+        this.layoutResult = this.engine.update(this.input(), {
+          nodes: [],
+          header: true,
+          valuesOnly: true,
+        })
       } catch {
         this.computeFull()
         this.updateOverlay()
         return
       }
-      this.renderer.invalidate(ids)
+      this.renderer.invalidate()
       this.renderer.setLayout(this.layoutResult)
       this.opts.onLayout?.(this.layoutResult)
+    } else {
+      this.resolver.invalidate()
+      if (paintOnly) this.renderer.invalidate()
+      if (ids.length > 0) {
+        // The engine re-expands only the instances the edit affects (its dependency index).
+        try {
+          this.layoutResult = this.engine.update(this.input(), { nodes: ids })
+        } catch {
+          this.computeFull()
+          this.updateOverlay()
+          return
+        }
+        this.renderer.invalidate(ids)
+        this.renderer.setLayout(this.layoutResult)
+        this.opts.onLayout?.(this.layoutResult)
+      }
     }
     if (this.editing?.id && !this.src.getNode(this.editing.id)) this.cancelText()
     this.syncPathEdit()

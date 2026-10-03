@@ -3,7 +3,7 @@
  * (the runner only loads `*.e2e.ts`).
  */
 import type { Page } from "playwright"
-import { docJson, type Hook, settle } from "./qa-helpers"
+import { armFileChooser, docJson, type Hook, settle } from "./qa-helpers"
 
 export type Ops = Record<string, unknown>[]
 
@@ -204,8 +204,12 @@ export const PNG_3x2 = Buffer.from(
   "base64",
 )
 
-/** Forces the download / <input type=file> paths of saveKimoFile / pickKimoFile. */
+/**
+ * Forces the download / <input type=file> paths of saveKimoFile / pickKimoFile, and arms file
+ * chooser interception (see armFileChooser). Call before openEditor.
+ */
 export async function noPickers(page: Page) {
+  armFileChooser(page)
   await page.addInitScript(() => {
     const w = window as unknown as Record<string, unknown>
     delete w.showSaveFilePicker

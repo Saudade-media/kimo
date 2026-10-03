@@ -8,7 +8,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { validate } from "@kimo/core-schema"
 import type { Page } from "playwright"
-import { docJson, node, openEditor, settle, waitCanvas } from "./qa-helpers"
+import { docJson, nextFileChooser, node, openEditor, settle, waitCanvas } from "./qa-helpers"
 import {
   board,
   type M2Hook,
@@ -33,10 +33,9 @@ const sel = async (page: Page, s: string[]) => {
 
 async function openText(page: Page, name: string, text: string | Buffer) {
   const from = page.url()
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser", { timeout: 10_000 }),
-    page.keyboard.press("ControlOrMeta+o"),
-  ])
+  const pending = nextFileChooser(page)
+  await page.keyboard.press("ControlOrMeta+o")
+  const chooser = await pending
   await chooser.setFiles({
     name,
     mimeType: name.endsWith(".kimoz") ? "application/zip" : "application/json",
@@ -189,7 +188,7 @@ export const scenarios: Scenario[] = [
         { id: "imgRect00001", node: { type: "rect", name: "Img", x: 40, y: 40, w: 100, h: 100 } },
       ])
       await sel(page, ["imgRect00001"])
-      const chooser = page.waitForEvent("filechooser")
+      const chooser = nextFileChooser(page)
       await section(page, "Fill").getByRole("button", { name: "Add fill" }).click()
       await page.getByRole("menuitem", { name: "Image…" }).click()
       await (await chooser).setFiles({ name: "dot.png", mimeType: "image/png", buffer: PNG_2x2 })

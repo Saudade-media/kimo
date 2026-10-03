@@ -1097,6 +1097,22 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     return finish(out.nodes, paintOrder(), changed)
   }
 
+  /**
+   * Variable values or theme axes changed, nothing else (DirtySet `valuesOnly`): every entry's
+   * data and every expansion are as they were, so only bound entries re-resolve (a full
+   * {@link refresh} would re-verify every expansion and re-walk the document).
+   */
+  const rebind = (inp: LayoutInput): LayoutResult => {
+    const gen = inp.measureText.generation
+    // Fonts changed too (text must re-measure): the full path handles it.
+    if (gen === undefined || gen !== textGeneration) return compute(inp)
+    healthy = false
+    begin(inp)
+    const ids: string[] = []
+    for (const e of entries.values()) if (e.alive && isBound(e.data)) ids.push(e.id)
+    return pass(ids, new Set(), (_e, n) => isBound(n), null)
+  }
+
   /** Re-reads every node through a freshly invalidated view and diffs it (see compute). */
   const refresh = (inp: LayoutInput): LayoutResult => {
     healthy = false
@@ -1153,22 +1169,28 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     return pass(ids, new Set(), force, kept)
   }
 
+  /** Edits larger than this re-expand what they touch instead of patching (see update). */
+  const PATCH_MAX = 64
+
   const update = (inp: LayoutInput, dirty: DirtySet): LayoutResult => {
     if (!current) return compute(inp)
-    if (dirty.header) return compute(inp)
+    const dirtyIds = [...dirty.nodes]
+    if (dirty.header) {
+      if (dirty.valuesOnly && dirtyIds.length === 0 && healthy && entries.size > 0)
+        return rebind(inp)
+      return compute(inp)
+    }
     healthy = false
     begin(inp)
-    const dirtyIds = [...dirty.nodes]
     if (dirtyIds.length === 0) {
       if (isInstanceView(src)) src.invalidateInstances([], [])
       healthy = true
       return current
     }
 
-    // M3: every top-level instance the edit may change is re-expanded and diffed node by node
-    // (its old and new subtrees join the dirty set). Editing a main re-lays out every instance.
-    const tops = affectedTops(dirtyIds)
-    if (isInstanceView(src)) src.invalidateInstances(tops, dirtyIds)
+    // M3: an edit inside a main that does not shape the expansions (a fill, a size) patches
+    // the view nodes made from the edited nodes in every cached expansion (InstanceView
+    // `patchNodes`); those view nodes are diffed, nothing is re-expanded.
     const ids = [...dirtyIds]
     const explicit = new Set(dirtyIds)
     const listed = new Set(dirtyIds)
@@ -1177,6 +1199,31 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       listed.add(id)
       ids.push(id)
     }
+    let rest = dirtyIds
+    if (isInstanceView(src) && depTops.size > 0 && dirtyIds.length <= PATCH_MAX) {
+      const read = dirtyIds.filter((id) => depTops.has(id))
+      const patched = read.length > 0 ? src.patchNodes(read) : null
+      if (patched && patched.size > 0) {
+        rest = []
+        for (const id of dirtyIds) {
+          const p = patched.get(id)
+          const keys = p ? new Set(p.keys) : null
+          // Every top whose expansion read `id` must have been patched (else re-expand).
+          let all = !!keys
+          if (keys) for (const t of depTops.get(id) ?? []) if (!keys.has(t)) all = false
+          if (!p || !all) {
+            rest.push(id)
+            continue
+          }
+          for (const v of p.ids) add(v)
+          for (const k of p.keys) if (topStamp.has(k)) topStamp.set(k, src.stamp(k))
+        }
+      }
+    }
+    // Every other top-level instance the edit may change is re-expanded and diffed node by
+    // node (its old and new subtrees join the dirty set).
+    const tops = affectedTops(rest)
+    if (isInstanceView(src)) src.invalidateInstances(tops, rest)
     for (const t of tops) {
       const old = entries.get(t)
       if (old) {

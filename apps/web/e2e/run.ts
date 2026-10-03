@@ -11,11 +11,24 @@
  *   bun run e2e "qa-m3"              # scenarios whose name contains the filter
  *   KIMO_E2E_SHOTS=dir bun run e2e   # also write screenshots to dir
  *   KIMO_E2E_DEV=1 bun run e2e       # against the Vite dev server instead (slower, for HMR debugging)
+ *   KIMO_E2E_RETRIES=0 bun run e2e   # retries per failing scenario (default 1; 0 = none)
+ *
+ * The Playwright driver runs under Node (via tsx), not Bun: under Bun 1.3.5 the pipe to
+ * Chromium (child fds 3/4) is intermittently closed mid-session, Chromium exits cleanly and
+ * Playwright never notices, so the running scenario hangs until its timeout. Bun stays the
+ * package manager and script runner. A lost transport is detected by {@link watchTransport}
+ * and reported as "[infra]".
  */
-import { readdirSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { readdirSync, realpathSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { type Browser, chromium, type Page } from "playwright"
+import {
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  chromium,
+  type Page,
+} from "playwright"
 import { build, createServer, type PreviewServer, preview, type ViteDevServer } from "vite"
 
 export interface E2EContext {
@@ -33,6 +46,32 @@ const SCENARIO_TIMEOUT_MS = 120_000
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, "..")
 
+/** True when `moduleUrl` is the script node / tsx / bun was started with. */
+export function isEntry(moduleUrl: string): boolean {
+  const arg = process.argv[1]
+  if (!arg) return false
+  try {
+    return realpathSync(resolve(arg)) === realpathSync(fileURLToPath(moduleUrl))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * `browser.newContext` for every e2e / perf page. tsx compiles this driver with esbuild's
+ * `keepNames`, which wraps named functions in a `__name(fn, "name")` helper; functions passed to
+ * `page.evaluate` / `waitForFunction` / `addInitScript` are serialized into the page, where that
+ * helper doesn't exist. Define it (as the identity) before any page script runs.
+ */
+export async function newE2EContext(
+  browser: Browser,
+  options: BrowserContextOptions = {},
+): Promise<BrowserContext> {
+  const context = await browser.newContext(options)
+  await context.addInitScript({ content: "globalThis.__name ??= (fn) => fn" })
+  return context
+}
+
 export function expect(cond: unknown, message: string): asserts cond {
   if (!cond) throw new Error(`Expectation failed: ${message}`)
 }
@@ -41,18 +80,91 @@ export function expect(cond: unknown, message: string): asserts cond {
 const launch = () =>
   chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] })
 
+/**
+ * Retries per failing scenario (`KIMO_E2E_RETRIES`, default 1; 0 disables). A pass on retry is
+ * reported as flaky, never hidden.
+ */
+const RETRIES = (() => {
+  const raw = process.env.KIMO_E2E_RETRIES
+  if (raw === undefined || raw === "") return 1
+  const n = Number(raw)
+  if (!Number.isInteger(n) || n < 0) throw new Error(`KIMO_E2E_RETRIES must be an integer ≥ 0`)
+  return n
+})()
+
+/** Browser liveness probe period and its own deadline (see {@link watchTransport}). */
+const HEARTBEAT_MS = 5_000
+const HEARTBEAT_TIMEOUT_MS = 10_000
+
+/** A failure of the browser / driver connection, not of the scenario under test. */
+class InfraError extends Error {}
+
+/**
+ * Rejects when the browser connection dies: a `disconnected` event, a page crash, or a
+ * browser-level CDP round trip (`Browser.getVersion`, independent of the page's main thread)
+ * that gets no answer. Without this a dead transport leaves every pending Playwright call
+ * hanging until the scenario timeout and the failure looks like a test bug.
+ */
+export function watchTransport(browser: Browser, page: Page) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let stopped = false
+  const cleanups: (() => void)[] = []
+  const dead = new Promise<never>((_, reject) => {
+    const fail = (why: string) => reject(new InfraError(`browser transport lost (infra): ${why}`))
+    const onDisconnect = () => fail("browser disconnected")
+    const onCrash = () => fail("page crashed")
+    browser.on("disconnected", onDisconnect)
+    page.on("crash", onCrash)
+    cleanups.push(() => browser.off("disconnected", onDisconnect))
+    cleanups.push(() => page.off("crash", onCrash))
+    // One browser-level round trip (session open + Browser.getVersion + detach), bounded as a
+    // whole: on a frozen transport even opening the session never settles.
+    const probe = async () => {
+      const cdp = await browser.newBrowserCDPSession()
+      await cdp.send("Browser.getVersion")
+      await cdp.detach()
+    }
+    const beat = async () => {
+      if (stopped) return
+      let deadline: ReturnType<typeof setTimeout> | undefined
+      const ok = await Promise.race([
+        probe().then(
+          () => true,
+          () => false,
+        ),
+        new Promise<false>((r) => {
+          deadline = setTimeout(() => r(false), HEARTBEAT_TIMEOUT_MS)
+        }),
+      ])
+      clearTimeout(deadline)
+      if (stopped) return
+      if (!ok) return fail(`no browser CDP reply within ${HEARTBEAT_TIMEOUT_MS} ms`)
+      timer = setTimeout(beat, HEARTBEAT_MS)
+    }
+    timer = setTimeout(beat, HEARTBEAT_MS)
+  })
+  dead.catch(() => {})
+  return {
+    dead,
+    stop() {
+      stopped = true
+      clearTimeout(timer)
+      for (const c of cleanups) c()
+    },
+  }
+}
+
+type Outcome = { error: string | null; infra: boolean; ms: number }
+
 /** Runs one scenario in a fresh context, bounded by {@link SCENARIO_TIMEOUT_MS}. */
-async function attempt(
-  browser: Browser,
-  s: Scenario,
-  url: string,
-): Promise<{ error: string | null; ms: number }> {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+async function attempt(browser: Browser, s: Scenario, url: string): Promise<Outcome> {
+  const context = await newE2EContext(browser, { viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
   const errors: string[] = []
   page.on("pageerror", (e) => errors.push(e.message))
   if (process.env.KIMO_E2E_CONSOLE)
     page.on("console", (m) => console.log("    [console]", m.type(), m.text()))
+  const watch = watchTransport(browser, page)
   const t0 = performance.now()
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
@@ -63,6 +175,7 @@ async function attempt(
         shots: process.env.KIMO_E2E_SHOTS ?? null,
         log: (...a) => console.log("   ", ...a),
       }),
+      watch.dead,
       new Promise<never>((_, reject) => {
         timer = setTimeout(
           () => reject(new Error(`scenario timed out after ${SCENARIO_TIMEOUT_MS} ms`)),
@@ -71,10 +184,15 @@ async function attempt(
       }),
     ])
     if (errors.length) throw new Error(`page errors: ${errors.join(" | ")}`)
-    return { error: null, ms: Math.round(performance.now() - t0) }
+    return { error: null, infra: false, ms: Math.round(performance.now() - t0) }
   } catch (e) {
-    return { error: e instanceof Error ? e.message : String(e), ms: 0 }
+    return {
+      error: e instanceof Error ? e.message : String(e),
+      infra: e instanceof InfraError,
+      ms: Math.round(performance.now() - t0),
+    }
   } finally {
+    watch.stop()
     clearTimeout(timer)
     // A hung page can also hang close(); don't let it block the suite.
     await Promise.race([context.close(), new Promise((r) => setTimeout(r, 5000))])
@@ -112,6 +230,7 @@ async function main() {
   let browser: Browser | null = null
   let failed = 0
   const flaky: string[] = []
+  const infra: string[] = []
   try {
     const files = readdirSync(here).filter((f) => f.endsWith(".e2e.ts"))
     const only = process.argv[2]
@@ -124,34 +243,61 @@ async function main() {
       await browser?.close()
       browser = await launch()
       for (const s of picked) {
-        const first = await attempt(browser, s, url)
-        if (!first.error) {
-          console.log(`  ✓ ${s.name} (${first.ms} ms)`)
-          continue
+        let result = await attempt(browser, s, url)
+        const firstErrors: string[] = []
+        for (let retry = 0; result.error && retry < RETRIES; retry++) {
+          firstErrors.push(`${result.infra ? "[infra] " : ""}${result.error}`)
+          // Each retry in a fresh browser.
+          await Promise.race([
+            browser.close().catch(() => {}),
+            new Promise((r) => setTimeout(r, 5000)),
+          ])
+          browser = await launch()
+          result = await attempt(browser, s, url)
         }
-        // One retry in a fresh browser; a pass on retry is reported as flaky, not hidden.
-        await Promise.race([
-          browser.close().catch(() => {}),
-          new Promise((r) => setTimeout(r, 5000)),
-        ])
-        browser = await launch()
-        const second = await attempt(browser, s, url)
-        if (!second.error) {
-          flaky.push(s.name)
-          console.log(`  ↻ ${s.name} (flaky: passed on retry; first run: ${first.error})`)
-          continue
+        if (!result.error && firstErrors.length === 0) {
+          console.log(`  ✓ ${s.name} (${result.ms} ms)`)
+        } else if (!result.error) {
+          const onlyInfra = firstErrors.every((e) => e.startsWith("[infra]"))
+          ;(onlyInfra ? infra : flaky).push(s.name)
+          const kind = onlyInfra ? "infra" : "flaky"
+          console.log(
+            `  ↻ ${s.name} (${kind}: passed on retry ${firstErrors.length}; earlier: ${firstErrors.join(" / ")})`,
+          )
+        } else {
+          failed++
+          console.log(
+            `  ✗ ${s.name} (${result.ms} ms)\n    ${result.infra ? "[infra] " : ""}${result.error}`,
+          )
+          // A dead browser would fail every later scenario in this file too.
+          if (result.infra || !browser.isConnected()) {
+            await Promise.race([
+              browser.close().catch(() => {}),
+              new Promise((r) => setTimeout(r, 5000)),
+            ])
+            browser = await launch()
+          }
         }
-        failed++
-        console.log(`  ✗ ${s.name}\n    ${second.error}`)
       }
     }
   } finally {
     await browser?.close()
     await server.close()
   }
+  if (infra.length)
+    console.log(
+      `\n${infra.length} scenario(s) hit a browser transport failure: ${infra.join("; ")}`,
+    )
   if (flaky.length) console.log(`\n${flaky.length} flaky scenario(s): ${flaky.join("; ")}`)
   console.log(failed ? `\n${failed} scenario(s) failed` : "\nall scenarios passed")
   process.exit(failed ? 1 : 0)
 }
 
-if (import.meta.main) await main()
+// `import.meta.main` is Bun-only (Node ≥ 24.2); compare the entry script instead. Not awaited:
+// the scenario files import this module, and a top-level await here would leave it evaluating,
+// so under Node their dynamic import() would wait on it forever (ESM cycle + TLA).
+if (isEntry(import.meta.url))
+  main().catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })

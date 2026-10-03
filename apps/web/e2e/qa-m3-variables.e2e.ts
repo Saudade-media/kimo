@@ -6,7 +6,7 @@
  */
 import { validate } from "@kimo/core-schema"
 import type { Page } from "playwright"
-import { docJson, openEditor, pixel, settle, waitCanvas } from "./qa-helpers"
+import { docJson, nextFileChooser, openEditor, pixel, settle, waitCanvas } from "./qa-helpers"
 import { noPickers, saveViaShortcut } from "./qa-m2-helpers"
 import {
   apply,
@@ -386,10 +386,9 @@ async function themePinsInstances({ page, url, log }: E2EContext) {
 
 async function openText(page: Page, name: string, text: string) {
   const from = page.url()
-  const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser", { timeout: 10_000 }),
-    page.keyboard.press("ControlOrMeta+o"),
-  ])
+  const pending = nextFileChooser(page)
+  await page.keyboard.press("ControlOrMeta+o")
+  const chooser = await pending
   await chooser.setFiles({ name, mimeType: "application/json", buffer: Buffer.from(text, "utf8") })
   await page.waitForURL((u) => u.toString() !== from && /#\/file\//.test(u.toString()))
   await waitCanvas(page)

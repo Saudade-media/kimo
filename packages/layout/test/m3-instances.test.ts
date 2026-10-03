@@ -15,6 +15,7 @@ import {
   type LayoutNodeData,
   nodeSourceFromDocument,
   type ResolveHeader,
+  type TextMeasurer,
 } from "../src/index"
 import { fakeMeasurer, lay, nodes, snapshot } from "./helpers"
 
@@ -293,6 +294,71 @@ describe("M3 incremental updates", () => {
     const r5 = (await full()).compute(input(live.table))
     expect(snapshot(r4)).toEqual(snapshot(r5))
     void r1
+    e.dispose()
+  })
+
+  /** Edits inside mains that do not shape the expansions (patched in place, see patchNodes). */
+  const visualSteps: [string, (t: Table) => [Table, string[]]][] = [
+    ["main fill", (t) => [patch(t, "ico", { fill: "#FF0000" }), ["ico"]]],
+    ["main size", (t) => [patch(t, "ico", { w: 17 }), ["ico"]]],
+    ["main text style", (t) => [patch(t, "title", { style: { size: 14 } }), ["title"]]],
+    ["slot placeholder size", (t) => [patch(t, "ph", { h: 12 }), ["ph"]]],
+    ["hidden in main", (t) => [patch(t, "ph", { visible: false }), ["ph"]]],
+    ["shown again", (t) => [patch(t, "ph", { visible: true }), ["ph"]]],
+    ["slot frame gap", (t) => [patch(t, "body", { layout: { dir: "row", gap: 5 } }), ["body"]]],
+    ["main pin", (t) => [patch(t, "title", { theme: { mode: "dark" } }), ["title"]]],
+    ["text overridden in i2", (t) => [patch(t, "lbl", { content: "Go" }), ["lbl"]]],
+  ]
+
+  test("random live edits over a shared view (property): patched update ≡ compute", async () => {
+    const f = await full()
+    const all = [...steps, ...visualSteps, ...visualSteps]
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(fc.integer({ min: 0, max: all.length - 1 }), { minLength: 1, maxLength: 8 }),
+        async (picks) => {
+          const inc = createLayoutEngine()
+          await inc.init()
+          const live = liveInput(base())
+          inc.compute(live.input)
+          for (const k of picks) {
+            const t = live.table
+            const [next, dirty] = (all[k] as (typeof all)[number])[1](t)
+            if (dirty.some((id) => !(id in t) && !(id in next))) continue
+            live.set(next)
+            expect(snapshot(inc.update(live.input, { nodes: dirty }))).toEqual(
+              snapshot(f.compute(input(next))),
+            )
+          }
+          inc.dispose()
+        },
+      ),
+      { numRuns: 120 },
+    )
+  })
+
+  test("a visual edit inside a main patches every instance without re-expanding", async () => {
+    const e = createLayoutEngine()
+    await e.init()
+    const live = liveInput(base())
+    e.compute(live.input)
+    const count = live.view.instanceCount
+    const title = live.view.getNode("i1/title")
+    const cta = live.view.getNode("i1/cta/lbl")
+    live.set(patch(live.table, "ico", { fill: "#00FF00" }))
+    const r = e.update(live.input, { nodes: ["ico"] })
+    // No expansion ran again; untouched view nodes keep their objects.
+    expect(live.view.instanceCount).toBe(count)
+    expect(live.view.getNode("i1/title")).toBe(title)
+    expect(live.view.getNode("i1/cta/lbl")).toBe(cta)
+    expect(live.view.getNode("i1/cta/ico")?.fill).toBe("#00FF00")
+    expect(live.view.getNode("g1/ico")?.fill).toBe("#00FF00")
+    expect(snapshot(r)).toEqual(snapshot((await full()).compute(input(live.table))))
+    // A structural edit still re-expands (and still matches a full compute).
+    live.set(patch(live.table, "ico", { order: "zz" }))
+    const r2 = e.update(live.input, { nodes: ["ico"] })
+    expect(live.view.children("i1/cta")).toEqual(["i1/cta/lbl", "i1/cta/ico"])
+    expect(snapshot(r2)).toEqual(snapshot((await full()).compute(input(live.table))))
     e.dispose()
   })
 
@@ -583,7 +649,12 @@ describe("refresh (compute on a live engine) over a shared view", () => {
     }
     const view = createInstanceView(store, { header: () => header as never })
     const resolve = createResolver(() => header, view)
-    const inp: LayoutInput = { nodes: store, expanded: view, resolve, measureText: fakeMeasurer }
+    // A measurer with a font generation (as the renderer's): refreshes skip re-measuring.
+    const measureText: TextMeasurer = {
+      generation: 0,
+      measure: (t, w) => fakeMeasurer.measure(t, w),
+    }
+    const inp: LayoutInput = { nodes: store, expanded: view, resolve, measureText }
     const e = createLayoutEngine()
     await e.init()
     const f = createLayoutEngine()
@@ -620,6 +691,28 @@ describe("refresh (compute on a live engine) over a shared view", () => {
       header,
       patch(patch(table, "i4", { type: "instance", parent: null, of: "card" }), "i1", null),
     )
+    // Values-only header changes (DirtySet `valuesOnly`): no view invalidation, bound entries
+    // re-resolve, interleaved with node updates (patched main edits included).
+    const values = (h: ResolveHeader) => {
+      header = h
+      resolve.invalidate()
+      expect(snapshot(e.update(inp, { nodes: [], header: true, valuesOnly: true }))).toEqual(
+        fresh(),
+      )
+    }
+    const edit = (t: Table, ids: string[]) => {
+      table = t
+      src = nodeSourceFromDocument({ nodes: table as never })
+      resolve.invalidate()
+      expect(snapshot(e.update(inp, { nodes: ids }))).toEqual(fresh())
+    }
+    values({ ...header, themes: { mode: ["light", "dark"] } })
+    values({ ...header, variables: { pad: themed(9, 1), gap: themed(0, 12) } as never })
+    edit(patch(table, "a1", { h: 9 }), ["a1"])
+    values({ ...header, themes: { mode: ["dark", "light"] } })
+    edit(patch(table, "box", { theme: { mode: "light" } }), ["box"])
+    values({ ...header, variables: { pad: themed(3, 3), gap: themed(5, 7) } as never })
+    values({ ...header, themes: { mode: ["light", "dark"] } })
     e.dispose()
     f.dispose()
   })

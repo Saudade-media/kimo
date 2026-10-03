@@ -6,6 +6,8 @@ import {
   defaultTheme,
   isObject,
   isRef,
+  isThemedValue,
+  jsonEqual,
   type KimoDocument,
   type Libraries,
   resolveVariable,
@@ -22,6 +24,81 @@ import {
   TEXT_STYLE_DEFAULTS,
   type TextMeasureInput,
 } from "./types"
+
+// --- Header changes ---------------------------------------------------------------------------
+
+/**
+ * True when a header change from `prev` to `next` can change painted colors only, never a
+ * layout result: themes and imports are the same, the same variables exist, and every changed
+ * variable is a `color` before and after with the same entry structure — the same `when`
+ * conditions in the same order and no binding (`$ref`) added, removed or retargeted — so every
+ * binding still resolves exactly where it did, to a color. Layout reads no colors (sizes, gaps,
+ * padding, stroke widths, visibility and text metrics come from other types), so the previous
+ * layout stays valid; only pictures that read a binding need re-recording (renderer
+ * `invalidate()`).
+ */
+export function paintOnlyHeaderChange(prev: ResolveHeader, next: ResolveHeader): boolean {
+  if (!jsonEqual(prev.themes ?? null, next.themes ?? null)) return false
+  if (!jsonEqual(prev.imports ?? null, next.imports ?? null)) return false
+  const a = (prev.variables ?? {}) as Record<string, unknown>
+  const b = (next.variables ?? {}) as Record<string, unknown>
+  const keys = Object.keys(a)
+  if (keys.length !== Object.keys(b).length) return false
+  const changed = new Set<string>()
+  for (const k of keys) {
+    if (!Object.hasOwn(b, k)) return false
+    const va = a[k]
+    const vb = b[k]
+    if (va === vb || jsonEqual(va, vb)) continue
+    if (!isObject(va) || !isObject(vb)) return false
+    if (va.type !== "color" || vb.type !== "color") return false
+    for (const f of new Set([...Object.keys(va), ...Object.keys(vb)]))
+      if (f !== "value" && !jsonEqual(va[f], vb[f])) return false
+    if (!sameEntryShape(va.value, vb.value)) return false
+    changed.add(k)
+  }
+  if (changed.size === 0) return true
+  // Anything that aliases a changed variable must be a color as well (it repaints only).
+  for (const [k, v] of Object.entries(b)) {
+    if (changed.has(k) || !isObject(v) || v.type === "color") continue
+    if (refsAny(v.value, changed)) return false
+  }
+  return true
+}
+
+/** Same themed/plain form, same `when` per entry, bindings in the same places to the same targets. */
+function sameEntryShape(a: unknown, b: unknown): boolean {
+  const ta = isThemedValue(a)
+  if (ta !== isThemedValue(b)) return false
+  if (!ta) return sameRefs(a, b)
+  const ea = a as { value: unknown; when?: unknown }[]
+  const eb = b as { value: unknown; when?: unknown }[]
+  if (ea.length !== eb.length) return false
+  for (let i = 0; i < ea.length; i++) {
+    const x = ea[i] as { value: unknown; when?: unknown }
+    const y = eb[i] as { value: unknown; when?: unknown }
+    if (!jsonEqual(x.when ?? null, y.when ?? null)) return false
+    for (const f of new Set([...Object.keys(x), ...Object.keys(y)]))
+      if (f !== "value" && f !== "when" && !jsonEqual((x as never)[f], (y as never)[f]))
+        return false
+    if (!sameRefs(x.value, y.value)) return false
+  }
+  return true
+}
+
+/** Both plain (non-binding) values, or the same binding. */
+function sameRefs(a: unknown, b: unknown): boolean {
+  if (isRef(a) || isRef(b)) return isRef(a) && isRef(b) && a.$ref === b.$ref
+  return true
+}
+
+function refsAny(v: unknown, names: ReadonlySet<string>, depth = 0): boolean {
+  if (depth > 32 || v === null || typeof v !== "object") return false
+  if (isRef(v)) return names.has(v.$ref)
+  for (const x of Array.isArray(v) ? v : Object.values(v as Record<string, unknown>))
+    if (refsAny(x, names, depth + 1)) return true
+  return false
+}
 
 // --- Resolver -----------------------------------------------------------------------------
 

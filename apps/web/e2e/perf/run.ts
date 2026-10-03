@@ -51,6 +51,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { type Browser, type CDPSession, chromium, type Page } from "playwright"
 import { build, createServer, preview } from "vite"
+import { isEntry, newE2EContext } from "../run"
 import { generateM3Ops, generatePerfDoc, type PerfDoc } from "./gen"
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -899,7 +900,7 @@ async function main() {
         ? ["--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=metal"]
         : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
     browser = await chromium.launch({ args, headless: process.env.KIMO_PERF_HEADED !== "1" })
-    const context = await browser.newContext({
+    const context = await newE2EContext(browser, {
       viewport: { width: 1440, height: 900 },
       deviceScaleFactor: DPR,
     })
@@ -1089,4 +1090,5 @@ async function main() {
   process.exit(failed && gate ? 1 : 0)
 }
 
-if (import.meta.main) await main()
+// `import.meta.main` is Bun-only; see ../run.ts isEntry.
+if (isEntry(import.meta.url)) await main()

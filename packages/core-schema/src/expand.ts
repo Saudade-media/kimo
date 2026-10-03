@@ -33,6 +33,7 @@ import {
   qualify,
   qualifyPath,
 } from "./components"
+import { jsonEqual } from "./defaults-ops"
 import { isObject, setOwn } from "./json"
 import { defaultTheme, isRef, type Libraries, splitQualified, type Theme } from "./resolve"
 import type { KimoDocument } from "./schema/document"
@@ -229,6 +230,50 @@ export interface ExpandedView extends NodeLookup {
    *   still need the no-argument form.
    */
   invalidate(changed?: Iterable<string>): void
+  /**
+   * Re-merges, in place, the cached view nodes emitted from real node `realId` (with the
+   * overrides that apply to each) after a change of `realId` that does not shape expansion
+   * ({@link shapesExpansion} false). Cheaper than {@link invalidate}: the expansions stay, only
+   * those nodes get new data objects. Returns the view ids whose data changed (`[]` when no
+   * cached node came from `realId`, or overrides hide the change), or null when one of them cannot be patched (an instance, a main
+   * component, a shaping field changed): invalidate instead.
+   */
+  patchNode?(realId: string): readonly string[] | null
+}
+
+/**
+ * Node fields that shape an expansion — which nodes it holds, where, and which overrides,
+ * props and slots apply: type, tree placement (parent, order, slot attachment), the component
+ * and instance definitions (`component`, `of`, `overrides`, `args`, `props`) and `slot`.
+ */
+export const SHAPING_FIELDS: readonly string[] = [
+  "type",
+  "parent",
+  "order",
+  "at",
+  "component",
+  "slot",
+  "of",
+  "overrides",
+  "args",
+  "props",
+]
+
+/**
+ * True when a change of a node from `old` to `next` can change an expansion beyond the
+ * re-merged data of that node's own view nodes ({@link ExpandedView.patchNode}): it appeared
+ * or disappeared, is an instance or a main component, or a {@link SHAPING_FIELDS} value changed.
+ */
+export function shapesExpansion(
+  old: NodeRecord | undefined,
+  next: NodeRecord | undefined,
+): boolean {
+  if (!old || !next) return true
+  if (old === next) return false
+  if (old.type === "instance" || next.type === "instance") return true
+  if (old.component !== undefined || next.component !== undefined) return true
+  for (const k of SHAPING_FIELDS) if (!jsonEqual(old[k], next[k])) return true
+  return false
 }
 
 /** Options for {@link createExpandedView}. */
@@ -424,6 +469,19 @@ export function createExpandedView(
   const local: Ns = { alias: null, src: recording }
   const libNs = new Map<string, Ns | null>()
   let data = new Map<string, NodeRecord>()
+  /**
+   * How each plain (non-instance) view node of the local namespace was merged, for
+   * {@link ExpandedView.patchNode}: its source node object, the override sets that applied and
+   * its view parent; and the view ids emitted from each real id.
+   */
+  interface Recipe {
+    srcId: string
+    raw: NodeRecord
+    sets: LayerEntry["sets"] | undefined
+    parent: string
+  }
+  let recipes = new Map<string, Recipe>()
+  let bySrc = new Map<string, string[]>()
   let kids = new Map<string, string[]>()
   let origins = new Map<string, NodeOrigin>()
   let issueMap = new Map<string, ExpansionIssue[]>()
@@ -821,6 +879,12 @@ export function createExpandedView(
     delete out.at
     emitted(outId)
     data.set(outId, out as NodeRecord)
+    if (ctx.ns.alias === null) {
+      recipes.set(outId, { srcId, raw: n, sets: entry?.sets, parent: outParent })
+      const list = bySrc.get(srcId)
+      if (!list) bySrc.set(srcId, [outId])
+      else if (!list.includes(outId)) list.push(outId)
+    }
     const origin: NodeOrigin = {
       virtual,
       top,
@@ -917,6 +981,17 @@ export function createExpandedView(
     settled.add(id)
   }
 
+  const forgetRecipe = (id: string) => {
+    const r = recipes.get(id)
+    if (!r) return
+    recipes.delete(id)
+    const list = bySrc.get(r.srcId)
+    if (!list) return
+    const i = list.indexOf(id)
+    if (i >= 0) list.splice(i, 1)
+    if (list.length === 0) bySrc.delete(r.srcId)
+  }
+
   /** Drops one root's expansion (every cache key it wrote) and its dependency entries. */
   const dropRoot = (r: string) => {
     const info = rootInfo.get(r)
@@ -929,6 +1004,7 @@ export function createExpandedView(
     }
     for (const id of info.emitted) {
       data.delete(id)
+      forgetRecipe(id)
       kids.delete(id)
       origins.delete(id)
       issueMap.delete(id)
@@ -1018,6 +1094,8 @@ export function createExpandedView(
       depIndex = new Map()
       rootInfo = new Map()
       data = new Map()
+      recipes = new Map()
+      bySrc = new Map()
       kids = new Map()
       origins = new Map()
       issueMap = new Map()
@@ -1026,8 +1104,44 @@ export function createExpandedView(
       libNs.clear()
       count = 0
     },
+    patchNode(realId) {
+      const outs = bySrc.get(realId)
+      if (!outs || outs.length === 0) return []
+      const n = local.src.getNode(realId)
+      if (!n) return null
+      for (const id of outs) {
+        const r = recipes.get(id)
+        if (!r || !data.has(id) || shapesExpansion(r.raw, n)) return null
+      }
+      const changed: string[] = []
+      for (const id of outs) {
+        const r = recipes.get(id) as Recipe
+        if (r.raw === n) continue
+        r.raw = n
+        // Same merge as `emitNode` (plain branch), with the overrides recorded then.
+        const out: Record<string, unknown> = {
+          ...applySets(qualifyNodeData({ ...n }, null), r.sets),
+          parent: r.parent,
+        }
+        delete out.at
+        // An override that sets every changed field leaves the node as it was: keep it.
+        const prev = data.get(id)
+        if (prev && sameFields(prev, out)) continue
+        data.set(id, out as NodeRecord)
+        changed.push(id)
+      }
+      return changed
+    },
   }
   return view
+}
+
+/** Same own keys with identical (===) values. */
+function sameFields(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const ka = Object.keys(a)
+  if (ka.length !== Object.keys(b).length) return false
+  for (const k of ka) if (!Object.hasOwn(b, k) || a[k] !== b[k]) return false
+  return true
 }
 
 /** `args` value → the `set` it contributes (§9.6); `of` is reported for namespacing. */

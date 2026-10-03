@@ -92,6 +92,29 @@ describe("raster cache", () => {
     r.dispose()
   })
 
+  test("zooming back across a scale step reuses the rasters made there (same pixels)", async () => {
+    const { r } = await make("always")
+    const at = (zoom: number) => {
+      r.setViewport({ x: -20, y: -20, zoom })
+      const png = r.snapshot()
+      return { png, rasterized: (r.stats() as { rasterized?: number }).rasterized ?? 0 }
+    }
+    const a = at(0.25)
+    expect(a.rasterized).toBe(4)
+    expect(at(0.125).rasterized).toBe(4)
+    // Back at 0.25 (and 0.125 again): every raster is still there, nothing is redrawn.
+    const b = at(0.25)
+    expect(b.rasterized).toBe(0)
+    expect(at(0.125).rasterized).toBe(0)
+    expect(Buffer.from(b.png).equals(Buffer.from(a.png))).toBe(true)
+    // A third scale keeps three levels; a fourth drops the oldest.
+    expect(at(0.0625).rasterized).toBe(4)
+    expect(at(0.25).rasterized).toBe(0)
+    expect(at(0.03125).rasterized).toBe(4)
+    expect(at(0.125).rasterized).toBe(4)
+    r.dispose()
+  })
+
   test("an edit re-rasterizes only its root; the image follows the change", async () => {
     const ck = await loadCanvasKit()
     const { r, scene } = await make("always")

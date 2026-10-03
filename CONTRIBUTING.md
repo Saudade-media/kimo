@@ -41,6 +41,15 @@ Node, Bun, browsers and workers. Only `apps/*` may depend on React or Tauri, wit
 Run a single package with `bun test packages/<name>` and
 `bunx tsc -p packages/<name>/tsconfig.json`.
 
+Browser end-to-end and perf runs are separate from `check`: `bun run --filter @kimo/web e2e` and
+`bun run --filter @kimo/web e2e:perf`. **Exception to bun-only:** these two scripts run their
+Playwright driver under Node through `tsx` (an `apps/web` devDependency), because under Bun 1.3.5
+the pipe to Chromium is intermittently closed mid-session and the scenario hangs until its timeout
+(details in `apps/web/e2e/run.ts`). Bun remains the package manager and the script runner, and
+nothing that ships runs under Node. Perf numbers from before this switch (Bun-driven) are not
+comparable with Node-driven ones: compare baseline and candidate with the same driver, interleaved,
+and record `uptime` load averages with every run.
+
 Code expectations: well-typed TypeScript, JSDoc on public APIs, tests next to the behaviour they
 cover (property tests with fast-check where an invariant exists), and comments that explain *why*
 rather than restating code.

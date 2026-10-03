@@ -275,6 +275,13 @@ export interface DirtySet {
   nodes: Iterable<string>
   /** True when variables/themes changed: everything bound must be re-resolved. */
   header?: boolean
+  /**
+   * With `header` and no `nodes`: only variable values or theme axes changed (not `imports`,
+   * not linked libraries, no node), so every cached instance expansion still holds. The
+   * engine then re-resolves the bound nodes it has instead of re-reading the whole document
+   * (perf: a variable mode switch). Without it a header change is a full refresh.
+   */
+  valuesOnly?: boolean
 }
 
 /** Keys whose change can affect geometry. Anything else is paint-only (renderer redraws). */

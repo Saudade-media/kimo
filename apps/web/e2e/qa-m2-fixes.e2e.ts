@@ -4,7 +4,7 @@
  * reopened in the same browser finding its images.
  */
 import type { Page } from "playwright"
-import { node, openEditor, settle, toPage } from "./qa-helpers"
+import { armFileChooser, nextFileChooser, node, openEditor, settle, toPage } from "./qa-helpers"
 import {
   board,
   type M2Hook,
@@ -38,6 +38,16 @@ const sel = async (page: Page, s: string[]) => {
 
 const MODULES = { files: "/src/lib/files.ts", assets: "/src/lib/assets.ts" }
 
+/** Waits (≤ 5 s) for the overlay's size badge to read `want`; the caller asserts afterwards. */
+const sizeLabel = (page: Page, want: string) =>
+  page
+    .waitForFunction(
+      (w) => (window as unknown as { __ov?: { sizeLabel?: string } }).__ov?.sizeLabel === w,
+      want,
+      { timeout: 5000 },
+    )
+    .catch(() => {})
+
 export const scenarios: Scenario[] = [
   {
     name: "qa-m2 fix: moving shows `X … Y …` in the badge and keeps the corner handles (O68JG1)",
@@ -55,13 +65,14 @@ export const scenarios: Scenario[] = [
       await page.mouse.move(a.x, a.y)
       await page.mouse.down()
       for (let i = 1; i <= 6; i++) await page.mouse.move(a.x + i * 5, a.y + i * 3)
-      await settle(page)
+      // Pointer moves are applied in the controller's rAF flush; wait for that overlay.
+      await sizeLabel(page, "X 70  Y 58")
       const o = await ov(page)
       log("badge", o?.sizeLabel, "handles", o?.handles)
       expect(o?.sizeLabel === "X 70  Y 58", `position badge (${o?.sizeLabel})`)
       expect(o?.handles !== false, "corner handles stay while moving")
       await page.mouse.up()
-      await settle(page)
+      await sizeLabel(page, "100 × 80")
       const after = await ov(page)
       expect(after?.sizeLabel === "100 × 80", `size badge after the move (${after?.sizeLabel})`)
     },
@@ -205,12 +216,13 @@ export const scenarios: Scenario[] = [
   {
     name: "qa-m2 fix: a plain .kimo reopened in the same browser finds its images",
     async run({ page, url, log }) {
+      armFileChooser(page)
       await openEditor(page, url)
       await board(page, [
         { id: "plainImg0001", node: { type: "rect", name: "I", x: 40, y: 40, w: 100, h: 100 } },
       ])
       await sel(page, ["plainImg0001"])
-      const chooser = page.waitForEvent("filechooser")
+      const chooser = nextFileChooser(page)
       await section(page, "Fill").getByRole("button", { name: "Add fill" }).click()
       await page.getByRole("menuitem", { name: "Image…" }).click()
       await (await chooser).setFiles({ name: "dot.png", mimeType: "image/png", buffer: PNG_2x2 })

@@ -7,6 +7,7 @@
  */
 import { join } from "node:path"
 import type { Page } from "playwright"
+import { armFileChooser, nextFileChooser, settle } from "./qa-helpers"
 import { type E2EContext, expect, type Scenario } from "./run"
 
 type Box = { x: number; y: number; w: number; h: number }
@@ -40,21 +41,6 @@ interface Hook {
     zoomTo(z: number, anchor?: P): void
   } | null
 }
-
-const settle = (page: Page) =>
-  page.evaluate(
-    () =>
-      new Promise<void>((r) => {
-        // Timer fallback: headless Chromium can skip rAF under load (see qa-helpers settle).
-        const t = setTimeout(r, 500)
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            clearTimeout(t)
-            r()
-          }),
-        )
-      }),
-  )
 
 async function openEditor(page: Page, url: string) {
   await page.goto(url)
@@ -427,10 +413,11 @@ export const scenarios: Scenario[] = [
     name: "M2 image tool: file picker → frame with an image fill at natural size",
     async run(ctx) {
       const { page, url } = ctx
+      armFileChooser(page)
       await openEditor(page, url)
       await board(page, [])
       const before = await nodeIds(page)
-      const chooser = page.waitForEvent("filechooser")
+      const chooser = nextFileChooser(page)
       await page.locator('.floating-toolbar [data-tool="image"]').click()
       const fc = await chooser
       await fc.setFiles({ name: "dot.png", mimeType: "image/png", buffer: PNG_3x2 })

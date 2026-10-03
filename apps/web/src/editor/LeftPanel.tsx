@@ -11,7 +11,7 @@ import type { UiStore } from "../canvas/contract"
 import { useNode, useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { AssetsTab } from "./m3/AssetsTab"
-import { type M3Controller, useComponentRev } from "./m3/controller"
+import { type M3Controller, useComponentRev, useLayerTreeRev } from "./m3/controller"
 import { ChildMenu } from "./m3/menus"
 import { isOverridden, layerKind, replacedName } from "./m3/model"
 import { VariablesTab } from "./m3/VariablesTab"
@@ -109,6 +109,8 @@ function LayerTree({
   const shape = useTreeRevision(store)
   // M3: instances mirror their main's full child list through the expanded view (composite ids).
   const compRev = useComponentRev(m3)
+  // Row lists change only with structure (not with fills / geometry inside a main).
+  const treeRev = useLayerTreeRev(m3)
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
   const selection = useUi(ui, (s) => s.selection)
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
@@ -131,7 +133,7 @@ function LayerTree({
 
   const rows = useMemo(() => {
     void shape
-    void compRev
+    void treeRev
     const view = m3.view()
     const out: Row[] = []
     const q = query.trim().toLowerCase()
@@ -158,7 +160,7 @@ function LayerTree({
     }
     walk(null, 0)
     return out
-  }, [m3, shape, compRev, query, isOpen])
+  }, [m3, shape, treeRev, query, isOpen])
 
   const index = useMemo(() => new Map(rows.map((r, i) => [r.id, i])), [rows])
   const selected = useMemo(() => new Set(selection), [selection])

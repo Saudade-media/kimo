@@ -141,6 +141,27 @@ describe("frames, caching, culling", () => {
     r.dispose()
   })
 
+  test("renderPending draws a pending frame now, once (the scheduled callback skips)", async () => {
+    const r = new CanvasKitRenderer()
+    await r.init({ offlineFonts: true })
+    setup(r, { root000001: { type: "rect", parent: null, order: "a", w: 10, h: 10, fill: "#000" } })
+    r.attachRaster(10, 10)
+    await tick()
+    const before = r.stats().frames
+    expect(r.renderPending()).toBe(false)
+    r.requestFrame()
+    expect(r.renderPending()).toBe(true)
+    expect(r.stats().frames).toBe(before + 1)
+    expect(r.renderPending()).toBe(false)
+    await tick()
+    expect(r.stats().frames).toBe(before + 1)
+    // A frame requested after the early draw is scheduled normally.
+    r.requestFrame()
+    await tick()
+    expect(r.stats().frames).toBe(before + 2)
+    r.dispose()
+  })
+
   test("image fills appear once the asset decodes", async () => {
     const ck = await loadCanvasKit()
     const r = new CanvasKitRenderer()

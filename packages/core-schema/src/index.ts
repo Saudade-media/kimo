@@ -54,6 +54,8 @@ export {
   type OverrideLayer,
   parseVirtualId,
   qualifyNodeData,
+  SHAPING_FIELDS,
+  shapesExpansion,
   type ViewLocation,
   virtualId,
 } from "./expand"
@@ -106,6 +108,7 @@ export {
 } from "./serialize"
 export { buildTree, compareCodeUnits, compareSiblings, type Tree } from "./tree"
 export {
+  DOCUMENT_LEVEL_CODES,
   ISSUE_CODES,
   type IssueCode,
   type ValidateOptions,

@@ -458,3 +458,27 @@ describe("libraries", () => {
     ])
   })
 })
+
+describe("layer tree revision (perf: fill / geometry edits inside a main keep the rows)", () => {
+  test("sameRow ignores visual fields and changes with structure", async () => {
+    const { sameRow } = await import("../src/editor/m3/controller")
+    const base = card().nodes as Record<string, Record<string, unknown>>
+    const title = base.title00001 as Record<string, unknown>
+    const inst = base.inst000001 as Record<string, unknown>
+    expect(sameRow(title, { ...title, fill: "#FF0000", w: 12, h: 30, x: 4, visible: false })).toBe(
+      true,
+    )
+    expect(sameRow(title, { ...title, name: "Heading" })).toBe(false)
+    expect(sameRow(title, { ...title, parent: "actions001" })).toBe(false)
+    expect(sameRow(title, { ...title, order: "b0" })).toBe(false)
+    expect(sameRow(inst, { ...inst, overrides: { title00001: { set: { content: "Max" } } } })).toBe(
+      false,
+    )
+    expect(sameRow(inst, { ...inst, of: "other00001" })).toBe(false)
+    // Re-read (not identical) but equal object fields keep the rows.
+    expect(sameRow(inst, structuredClone(inst))).toBe(true)
+    expect(sameRow(title, { ...title, at: null })).toBe(sameRow(title, { ...title }))
+    expect(sameRow(undefined, title)).toBe(false)
+    expect(sameRow(undefined, undefined)).toBe(true)
+  })
+})

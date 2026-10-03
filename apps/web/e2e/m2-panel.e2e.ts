@@ -5,7 +5,15 @@
  * assets, scrolling).
  */
 import type { Page } from "playwright"
-import { docJson, type Hook, node, openEditor, settle } from "./qa-helpers"
+import {
+  armFileChooser,
+  docJson,
+  type Hook,
+  nextFileChooser,
+  node,
+  openEditor,
+  settle,
+} from "./qa-helpers"
 import { type E2EContext, expect, type Scenario } from "./run"
 
 type Store = Hook["session"]["store"] & {
@@ -363,6 +371,7 @@ export const scenarios: Scenario[] = [
     name: "m2 panel: stroke dashed / sides / cap, effects, gradient, image asset",
     async run(ctx) {
       const { page, url } = ctx
+      armFileChooser(page)
       await openEditor(page, url)
       await fixture(page)
       const before = await docJson(page)
@@ -430,7 +439,7 @@ export const scenarios: Scenario[] = [
         "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR4nGN4nh+4AoQZYAwAVOQJPdIwj3IAAAAASUVORK5CYII=",
         "base64",
       )
-      const chooser = page.waitForEvent("filechooser")
+      const chooser = nextFileChooser(page)
       await section(page, "Fill").getByRole("button", { name: "Add fill" }).click()
       await page.getByRole("menuitem", { name: "Image…" }).click()
       await (await chooser).setFiles({ name: "dot.png", mimeType: "image/png", buffer: png })

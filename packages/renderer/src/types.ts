@@ -729,6 +729,13 @@ export interface Renderer {
   render(): void
   /** Schedules one coalesced draw on the next animation frame. */
   requestFrame(): void
+  /**
+   * Draws now when a frame is pending (the scheduled callback then does nothing) and returns
+   * true; false when nothing was pending. Call it at the end of an animation-frame callback
+   * that changed the scene (layout flush), so the change lands in this frame instead of the
+   * next one.
+   */
+  renderPending(): boolean
 
   /** Node ids under a screen point, top-most (last painted) first. */
   hitTest(screen: Point, options?: HitTestOptions): string[]

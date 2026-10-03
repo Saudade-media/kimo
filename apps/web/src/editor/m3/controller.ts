@@ -7,6 +7,7 @@
 import {
   createExpandedView,
   type ExpandedView,
+  jsonEqual,
   type KimoDocument,
   type Libraries,
   type NodeLookup,
@@ -64,6 +65,45 @@ export type M3RunResult =
   | { ok: true; notes: readonly PlanNote[]; select?: string[] }
   | { ok: false; refused?: PlanError; rejected?: readonly { message: string }[] }
 
+/**
+ * The fields of a node that the layers tree's rows can depend on, through the expanded view:
+ * placement in the tree (parent, order, slot attachment), type, name, main-component and
+ * instance definition (`component`, `of`, `overrides`, `args`, `props`, `slot`). Everything
+ * else (fills, geometry, visibility) leaves every row list as it was.
+ */
+const ROW_FIELDS = [
+  "type",
+  "parent",
+  "order",
+  "at",
+  "name",
+  "component",
+  "of",
+  "overrides",
+  "args",
+  "props",
+  "slot",
+] as const
+
+type RowNode = Readonly<Record<string, unknown>>
+
+/**
+ * True when `a` and `b` give the same layers-tree rows (equal {@link ROW_FIELDS}; absent and
+ * null alike). Identity first: store nodes are frozen and an unchanged node is the same object,
+ * strings and numbers compare by value, so a deep comparison runs only for object fields that
+ * were re-read (no stringify on the gesture path).
+ */
+export function sameRow(a: RowNode | undefined, b: RowNode | undefined): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  for (const k of ROW_FIELDS) {
+    const x = a[k] ?? null
+    const y = b[k] ?? null
+    if (x !== y && !jsonEqual(x, y)) return false
+  }
+  return true
+}
+
 /** Commands whose planners read only the header (variables / themes), never nodes. */
 const HEADER_ONLY_COMMANDS: ReadonlySet<M3Command["cmd"]> = new Set([
   "setCell",
@@ -86,6 +126,18 @@ export class M3Controller {
    * and Assets re-walk on it (not on every geometry edit; perf gate).
    */
   readonly compRev: Bus<number>
+  /**
+   * Bumps only when the layers tree's rows (expanded child lists, names, kinds) may have
+   * changed: a structural field of a node changed ({@link sameRow}), or the libraries did. A
+   * fill or geometry edit inside a main bumps {@link compRev} (thumbnails, row glyphs) but not
+   * this, so the tree does not re-expand every collapsed instance to count its children.
+   */
+  readonly treeRev: Bus<number>
+  /**
+   * Every node as last seen (the store's frozen objects, shared with it: no copy), compared with
+   * {@link sameRow} on change.
+   */
+  private rowNodes = new Map<string, RowNode>()
   private view_: ExpandedView
   private libVersion = -1
   private doc_: { rev: string; doc: KimoDocument } | null = null
@@ -109,6 +161,7 @@ export class M3Controller {
     this.previewTheme = createBus<Theme | null>(null)
     this.rev = createBus(0)
     this.compRev = createBus(0)
+    this.treeRev = createBus(0)
     this.view_ = this.makeView()
   }
 
@@ -134,6 +187,8 @@ export class M3Controller {
         this.view_.invalidate(all ? undefined : c.nodes)
         this.rev.set(this.rev.get() + 1)
         if (all || this.touchesComponents(c.nodes)) this.compRev.set(this.compRev.get() + 1)
+        if (all) this.scanRows()
+        if (all || this.rowsChanged(c.nodes)) this.treeRev.set(this.treeRev.get() + 1)
         if (importsChanged) void this.libs.sync(this.imports())
         // Composite ids (not store nodes) leave the selection when their view node is gone.
         const ui = session.ui.getState()
@@ -154,6 +209,7 @@ export class M3Controller {
         this.view_ = this.makeView()
         this.rev.set(this.rev.get() + 1)
         this.compRev.set(this.compRev.get() + 1)
+        this.treeRev.set(this.treeRev.get() + 1)
       }),
     )
     // Panel edits on composite ids / instance roots become overrides (route.ts).
@@ -165,6 +221,7 @@ export class M3Controller {
     session.onReject.add(onReject)
     this.disposers.push(() => session.onReject.delete(onReject))
     this.importsKey = JSON.stringify(this.imports())
+    this.scanRows()
     void this.libs.sync(this.imports())
     return () => this.dispose()
   }
@@ -175,6 +232,32 @@ export class M3Controller {
 
   /** `imports` as last seen (header changes that leave it alone keep the expansions). */
   private importsKey = ""
+
+  private scanRows(): void {
+    const store = this.session.store
+    this.rowNodes.clear()
+    for (const id of store.nodeIds()) {
+      const n = store.getNode(id)
+      if (n) this.rowNodes.set(id, n)
+    }
+  }
+
+  /** Updates {@link rowNodes} for `ids`; true when the rows of one of them changed. */
+  private rowsChanged(ids: ReadonlySet<string>): boolean {
+    const store = this.session.store
+    let changed = false
+    for (const id of ids) {
+      const n = store.getNode(id)
+      if (!n) {
+        if (this.rowNodes.delete(id)) changed = true
+        continue
+      }
+      const prev = this.rowNodes.get(id)
+      this.rowNodes.set(id, n)
+      if (!sameRow(prev, n)) changed = true
+    }
+    return changed
+  }
 
   private touchesComponents(ids: ReadonlySet<string>): boolean {
     if (ids.size > 256) return true
@@ -432,6 +515,11 @@ export function useBusValue<T>(bus: Bus<T>): T {
 /** Library entries, kept current. */
 export function useLibraries(m3: M3Controller) {
   return useSyncExternalStore(m3.libs.subscribe, m3.libs.entries)
+}
+
+/** Re-renders only when layer rows may change ({@link M3Controller.treeRev}). */
+export function useLayerTreeRev(m3: M3Controller): number {
+  return useSyncExternalStore(m3.treeRev.subscribe, m3.treeRev.get)
 }
 
 /** Re-renders only on component-structure changes ({@link M3Controller.compRev}). */

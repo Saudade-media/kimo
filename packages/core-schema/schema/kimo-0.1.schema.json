@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kimo.design/schema/kimo-0.1.json",
-  "description": "Structural schema of the .kimo file format 0.1.0 (Draft). Semantic rules (referential integrity, override paths, variable types, …) are checked by validate() in @kimo/core-schema; see docs/spec/kimo-format-v0.1.md. Known features: layout/wrap, layout/stretch-baseline, size/min-max, text/runs, tokens/composite, fill/mesh, fill/shader, node/script, node/browser.",
+  "description": "Structural schema of the .kimo file format 0.1.0 (Draft). Semantic rules (referential integrity, override paths, variable types, …) are checked by validate() in @kimo/core-schema; see docs/spec/kimo-format-v0.1.md. Known features: layout/wrap, layout/stretch-baseline, size/min-max, text/runs, tokens/composite, fill/mesh, fill/shader, node/script, node/browser, merge/conflicts.",
   "type": "object",
   "required": ["$schema", "format", "nodes"],
   "properties": {
@@ -50,6 +50,19 @@
       },
       "uniqueItems": true,
       "description": "Optional index of component node ids."
+    },
+    "merge": {
+      "$ref": "#/$defs/MergeInfo"
+    },
+    "conflicts": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9]{6,24}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Conflict"
+      },
+      "minProperties": 1
     },
     "nodes": {
       "type": "object",
@@ -434,6 +447,25 @@
         }
       },
       "additionalProperties": false
+    },
+    "Conflict": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PropConflict"
+        },
+        {
+          "$ref": "#/$defs/NodeConflict"
+        },
+        {
+          "$ref": "#/$defs/MoveConflict"
+        },
+        {
+          "$ref": "#/$defs/VariableConflict"
+        },
+        {
+          "$ref": "#/$defs/HeaderConflict"
+        }
+      ]
     },
     "DimensionValue": {
       "type": "object",
@@ -1039,6 +1071,42 @@
       },
       "additionalProperties": false
     },
+    "HeaderConflict": {
+      "type": "object",
+      "required": ["kind", "path", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "header"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^(?:/(?:[^~/]|~[01])*)+$",
+          "description": "Pointer from the document root."
+        },
+        "base": {
+          "description": "Base value."
+        },
+        "ours": {
+          "description": "Our value."
+        },
+        "theirs": {
+          "description": "Their value."
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "HeaderConflict"
+    },
     "HexColor": {
       "type": "string",
       "pattern": "^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
@@ -1409,6 +1477,33 @@
       },
       "additionalProperties": false
     },
+    "MergeInfo": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Base label, e.g. a short commit."
+        },
+        "ours": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Our label, e.g. the current branch."
+        },
+        "theirs": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Their label, e.g. the merged branch."
+        },
+        "changes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Changes applied without conflict."
+        }
+      },
+      "additionalProperties": false,
+      "title": "MergeInfo"
+    },
     "MeshPaint": {
       "type": "object",
       "required": ["kind", "cols", "rows", "colors", "points"],
@@ -1445,6 +1540,40 @@
       },
       "additionalProperties": {},
       "description": "Namespaced extension data, e.g. 'kimo.export.tag'."
+    },
+    "MoveConflict": {
+      "type": "object",
+      "required": ["kind", "node", "base", "ours", "theirs", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "move"
+        },
+        "node": {
+          "$ref": "#/$defs/Id"
+        },
+        "base": {
+          "$ref": "#/$defs/Placement"
+        },
+        "ours": {
+          "$ref": "#/$defs/Placement"
+        },
+        "theirs": {
+          "$ref": "#/$defs/Placement"
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "MoveConflict"
     },
     "Node": {
       "anyOf": [
@@ -1488,6 +1617,49 @@
           "$ref": "#/$defs/BrowserNode"
         }
       ]
+    },
+    "NodeConflict": {
+      "type": "object",
+      "required": ["kind", "node", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "node"
+        },
+        "node": {
+          "$ref": "#/$defs/Id"
+        },
+        "base": {
+          "$ref": "#/$defs/Node"
+        },
+        "ours": {
+          "$ref": "#/$defs/Node"
+        },
+        "theirs": {
+          "$ref": "#/$defs/Node"
+        },
+        "restored": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9]{6,24}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Node"
+          }
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "NodeConflict"
     },
     "NonNegNum": {
       "anyOf": [
@@ -2181,6 +2353,30 @@
         }
       ]
     },
+    "Placement": {
+      "type": "object",
+      "required": ["parent", "order"],
+      "properties": {
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        }
+      },
+      "additionalProperties": false,
+      "title": "Placement"
+    },
     "PolygonNode": {
       "type": "object",
       "required": ["type", "parent", "order", "w", "h", "sides"],
@@ -2443,6 +2639,45 @@
         }
       },
       "additionalProperties": false
+    },
+    "PropConflict": {
+      "type": "object",
+      "required": ["kind", "node", "path", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "prop"
+        },
+        "node": {
+          "$ref": "#/$defs/Id"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^(?:/(?:[^~/]|~[01])*)+$",
+          "description": "Property path inside the node."
+        },
+        "base": {
+          "description": "Value in the merge base (absent = unset)."
+        },
+        "ours": {
+          "description": "Value on our side (absent = unset)."
+        },
+        "theirs": {
+          "description": "Value on their side (absent = unset)."
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "PropConflict"
     },
     "PropDef": {
       "anyOf": [
@@ -3786,6 +4021,45 @@
           "$ref": "#/$defs/DimensionVariable"
         }
       ]
+    },
+    "VariableConflict": {
+      "type": "object",
+      "required": ["kind", "variable", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "variable"
+        },
+        "variable": {
+          "type": "string",
+          "pattern": "^[^\\s:$][^\\s:]{0,127}$",
+          "description": "Local variable."
+        },
+        "when": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "base": {
+          "description": "Base definition / themed value."
+        },
+        "ours": {
+          "description": "Our definition / themed value."
+        },
+        "theirs": {
+          "description": "Their definition / themed value."
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "VariableConflict"
     }
   }
 }

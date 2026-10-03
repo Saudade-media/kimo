@@ -6,6 +6,7 @@ import Type, { type Static, type TSchema } from "typebox"
 import { FEATURE_PATTERN } from "../features"
 import { SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
 import { ShadowEffect } from "./graphics"
+import { Conflicts, MergeInfo } from "./merge"
 import { Node } from "./nodes"
 import {
   ALIAS_PATTERN,
@@ -157,6 +158,8 @@ export const KimoDocument = Strict(
     components: opt(
       Type.Array(Id, { uniqueItems: true, description: "Optional index of component node ids." }),
     ),
+    merge: opt(MergeInfo),
+    conflicts: opt(Conflicts),
     nodes: RecordOf(ID_PATTERN, Node),
   },
   { title: "Kimo document (.kimo), format 0.1" },

@@ -32,6 +32,7 @@ import {
 import { compareCodeUnits, getOrInit } from "../tree"
 import { formatStatus, SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
 import { IssueSink, type ValidationResult } from "./issues"
+import { checkConflicts } from "./merge"
 import { schemaIssues } from "./structural"
 
 export * from "./issues"
@@ -250,6 +251,12 @@ class Validation {
     this.bindingsAndValues()
     this.variableAliases()
     this.assets()
+    if (!this.scope) {
+      checkConflicts(this.doc as unknown as Obj, this.sink, this.lints, (feature, path, what) => {
+        if (!this.features.has(feature))
+          this.sink.add("FEATURE_NOT_DECLARED", path, `${what} needs feature "${feature}"`)
+      })
+    }
     for (const alias of [...this.libsNotLoaded].sort(compareCodeUnits)) {
       this.sink.add(
         "LIBRARY_NOT_LOADED",

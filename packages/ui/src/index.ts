@@ -158,6 +158,9 @@ export {
 export { type LayerKind, LayerRowM3, type LayerRowM3Props } from "./layer-row-m3/LayerRowM3"
 export { LibraryManager, type LibraryManagerProps } from "./library-manager/LibraryManager"
 export { LibraryRow, type LibraryRowProps } from "./library-row/LibraryRow"
+export * from "./m4-files"
+export * from "./m4-fonts"
+export * from "./m4-merge"
 export { Menu, MenuItem, type MenuItemProps, type MenuProps } from "./menu/Menu"
 export {
   MenuDense,

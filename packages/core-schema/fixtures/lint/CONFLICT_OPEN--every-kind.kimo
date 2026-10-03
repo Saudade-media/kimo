@@ -1,0 +1,43 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["merge/conflicts"],
+"meta": {"name":"Marketing"},
+"themes": {"mode":["light","dark"]},
+"variables": {
+"brand": {"type":"color","value":[{"value":"#E8590C","when":{"mode":"light"}},{"value":"#FF8A3D","when":{"mode":"dark"}}]}
+},
+"merge": {"base":"4e1a9c2","changes":3,"ours":"main","theirs":"feat/pricing-v2"},
+"conflicts": {
+"CfHead0001": {"kind":"header","applied":"ours","base":"Site","ours":"Marketing","path":"/meta/name","theirs":"Marketing site"}
+
+, "CfMove0001": {"kind":"move","applied":"ours","base":{"order":"a1","parent":"Hero000001"},"node":"CtaRow0001","ours":{"order":"a1","parent":"Hero000001"},"theirs":{"order":"a1","parent":"Footer0001"}}
+
+, "CfNode0001": {"kind":"node","applied":"ours","base":{"h":24,"name":"Legal","order":"a0","parent":"Footer0001","type":"frame","w":600},"node":"Legal00001","ours":{"fill":"#F4F4F2","h":24,"name":"Legal","order":"a0","parent":"Footer0001","type":"frame","w":640},"restored":{"LegalLink1":{"content":"Terms","order":"a0","parent":"Legal00001","type":"text"}}}
+
+, "CfProp0001": {"kind":"prop","applied":"ours","base":"#FFF7EE","node":"Hero000001","ours":"#FFF4E8","path":"/fill","theirs":"#FFFFFF"}
+
+, "CfVarW0001": {"kind":"variable","when":{"mode":"light"},"applied":"ours","base":"#F76707","ours":"#E8590C","theirs":"#D9480F","variable":"brand"}
+},
+"nodes": {
+"BtnLabel01": {"type":"text","parent":"BtnPrim001","order":"a0","content":"Button"}
+
+, "BtnPrim001": {"type":"frame","parent":null,"order":"a2","name":"Button / Primary","component":{"props":{"label":{"type":"text","target":"BtnLabel01","field":"content","default":"Button"}}},"w":120,"h":40,"fill":"#0A0A0A"}
+
+, "CtaBtn0001": {"type":"instance","parent":"CtaRow0001","order":"a0","of":"BtnPrim001","args":{"label":"Start free"}}
+
+, "CtaRow0001": {"type":"frame","parent":"Hero000001","order":"a1","name":"CTA Row","layout":{"dir":"row","gap":12}}
+
+, "Footer0001": {"type":"frame","parent":"HomeDesk01","order":"a2","name":"Footer","w":1440,"h":120}
+
+, "Headline01": {"type":"text","parent":"Hero000001","order":"a0","name":"Headline","content":"Plan less. Ship more together."}
+
+, "Hero000001": {"type":"frame","parent":"HomeDesk01","order":"a0","name":"Hero","w":720,"fill":"#FFF4E8"}
+
+, "HomeDesk01": {"type":"frame","parent":null,"order":"a0","name":"Home — Desktop","w":1440,"h":900,"fill":{"$ref":"brand"}}
+
+, "Legal00001": {"type":"frame","parent":"Footer0001","order":"a0","name":"Legal","w":640,"h":24,"fill":"#F4F4F2"}
+
+, "LegalLink1": {"type":"text","parent":"Legal00001","order":"a0","content":"Terms"}
+}
+}

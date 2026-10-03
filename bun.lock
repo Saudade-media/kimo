@@ -32,6 +32,7 @@
         "@kimo/design-tokens": "workspace:*",
         "@kimo/editor-state": "workspace:*",
         "@kimo/layout": "workspace:*",
+        "@kimo/platform": "workspace:*",
         "@kimo/renderer": "workspace:*",
         "@kimo/sync": "workspace:*",
         "@kimo/ui": "workspace:*",
@@ -85,6 +86,10 @@
       "devDependencies": {
         "fast-check": "^4.10.2",
       },
+    },
+    "packages/platform": {
+      "name": "@kimo/platform",
+      "version": "0.0.0",
     },
     "packages/renderer": {
       "name": "@kimo/renderer",
@@ -212,6 +217,8 @@
     "@kimo/editor-state": ["@kimo/editor-state@workspace:packages/editor-state"],
 
     "@kimo/layout": ["@kimo/layout@workspace:packages/layout"],
+
+    "@kimo/platform": ["@kimo/platform@workspace:packages/platform"],
 
     "@kimo/renderer": ["@kimo/renderer@workspace:packages/renderer"],
 

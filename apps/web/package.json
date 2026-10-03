@@ -22,6 +22,7 @@
     "@kimo/design-tokens": "workspace:*",
     "@kimo/editor-state": "workspace:*",
     "@kimo/layout": "workspace:*",
+    "@kimo/platform": "workspace:*",
     "@kimo/renderer": "workspace:*",
     "@kimo/sync": "workspace:*",
     "@kimo/ui": "workspace:*",

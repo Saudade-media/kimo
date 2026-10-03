@@ -15,6 +15,8 @@ export const FEATURES = {
   "fill/shader": 'Shader paints (`kind: "shader"`).',
   "node/script": 'Script nodes (`type: "script"`).',
   "node/browser": 'Browser nodes (`type: "browser"`).',
+  "merge/conflicts":
+    "Stored merge conflicts: root `conflicts` table and `merge` labels (written by `kimo merge`).",
 } as const
 
 /** A feature flag known to format 0.1. */

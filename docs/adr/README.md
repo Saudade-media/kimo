@@ -7,7 +7,7 @@ cites the sections of the [teardown](../teardown.md) (the plan of record) it imp
 |---|---|---|
 | [0000](0000-template.md) | Template | n/a |
 | [0001](0001-monorepo-and-server-readiness.md) | One bun monorepo, server-ready from day one | Accepted |
-| [0002](0002-document-authority-in-tauri.md) | Document authority inside Tauri: a dedicated document host context (Option A) | Accepted |
+| [0002](0002-document-authority-in-tauri.md) | Document authority inside Tauri: a dedicated document host context (Option A) | Accepted, amended by [0012](0012-m4-desktop-and-files.md) |
 | [0003](0003-crdt-yjs-behind-docstore.md) | Yjs as the document CRDT, behind a `DocStore` interface | Accepted |
 | [0004](0004-renderer-canvaskit-layout-yoga.md) | CanvasKit for rendering and text, Yoga for layout, both behind interfaces | Accepted |
 | [0005](0005-kimo-file-format.md) | `.kimo` format: flat node table, canonical serialization, semver with migrations, never encrypted | Accepted |
@@ -17,6 +17,7 @@ cites the sections of the [teardown](../teardown.md) (the plan of record) it imp
 | [0009](0009-m1-render-pipeline.md) | M1 render pipeline: CanvasKit renderer, Yoga layout, bundled fonts, host-driven updates | Accepted |
 | [0010](0010-m2-styling-and-tools.md) | M2 styling, canvas overlays and tools: format additions and contracts | Accepted |
 | [0011](0011-m3-components-and-variables.md) | M3 components, instances, variables and libraries: format additions, expansion and contracts | Accepted |
+| [0012](0012-m4-desktop-and-files.md) | M4 desktop and files: stored merge conflicts, `@kimo/platform`, the document session and the Tauri command surface | Accepted |
 
 ## Process
 

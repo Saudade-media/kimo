@@ -69,6 +69,8 @@ Numbers MUST be finite. Colors are specified in their own space; renderers and e
 | `variables` | no | record Name → Variable | §10. |
 | `assets` | no | record asset file name → AssetEntry | Optional asset manifest (§12). |
 | `components` | no | Id[] (unique) | Optional index of component node ids. Derived data; when present every entry MUST be a component. |
+| `merge` | no | struct MergeInfo | Labels of an in-progress semantic merge (§21). Only with `conflicts`. Feature `merge/conflicts`. |
+| `conflicts` | no | record Id → Conflict (non-empty) | Stored merge conflicts written by `kimo merge` (§21). Feature `merge/conflicts`. |
 | `nodes` | yes | record Id → Node | The flat node table (§5). |
 
 No other members are defined in 0.1. A 0.1 validator reports any other member as `UNKNOWN_PROPERTY`; every reader MUST nevertheless preserve it (§16.3).
@@ -409,6 +411,7 @@ A document MUST list in `features` every gated construct it uses (`FEATURE_NOT_D
 | `fill/shader` | `kind: "shader"` paints |
 | `node/script` | `script` nodes |
 | `node/browser` | `browser` nodes |
+| `merge/conflicts` | root `merge` and `conflicts` (stored merge conflicts, §21) |
 
 Feature gates apply wherever the construct appears, including instance `props` and `set` overrides. Opaque records (script `inputs`, shader `uniforms`, `args`; Appendix B) hold data, not document constructs, and are never gated. Enum option values are gated as values of the prop's `field` (an option `{dir:"row", wrap:true}` for `field: "layout"` needs `layout/wrap`). `style.typography` is gated wherever a TextStyle appears (node `style`, TextSpan `style`). A reader that does not support a listed feature MUST open the file read-only (§16.3); validators report it as `FEATURE_UNKNOWN` (warning). Feature names have the form `area/name` (`^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$`).
 
@@ -473,7 +476,7 @@ The canonical serialization is a pure function of the document's data. Writers M
 
 1. The first line is `{`; the file ends with `}` and one LF.
 2. Each root member is written on its own line as `"key": <value>` — one space after the colon — followed by `,` except for the last member. Members appear in canonical order (§15.2); **`nodes` is always last**; unknown root members follow the known ones (sorted by code unit) and precede `nodes`. Only the members defined in §4 are ranked at the root; an unknown root member is not ranked even when its name appears in Appendix A, and its value is opaque (§15.2).
-3. **Tables** — `nodes`, `variables` and `assets` — are written as `"key": {`, then one line per entry, then `}`. Entries are sorted by key (code unit). Each entry is `"<key>": <value>` on a single line; **the separating comma is written at the start of every entry line after the first (`, "<key>": …`)**, and **one blank line separates consecutive entries**. An empty table is written `{}` on the member's line. (Appending or removing the last entry never edits a neighbouring line; the blank line keeps unrelated neighbours out of one conflict hunk in a line-based merge.)
+3. **Tables** — `nodes`, `variables`, `assets` and `conflicts` (§21) — are written as `"key": {`, then one line per entry, then `}`. Entries are sorted by key (code unit). Each entry is `"<key>": <value>` on a single line; **the separating comma is written at the start of every entry line after the first (`, "<key>": …`)**, and **one blank line separates consecutive entries**. An empty table is written `{}` on the member's line. (Appending or removing the last entry never edits a neighbouring line; the blank line keeps unrelated neighbours out of one conflict hunk in a line-based merge.)
 4. Every other value (root members, table entries) is written as **compact JSON**: no insignificant whitespace.
 5. Strings are written as by ECMAScript `JSON.stringify` (minimal escaping; non-ASCII as UTF-8; U+2028/U+2029 unescaped). A value never spans lines.
 6. Numbers are written in the shortest form that round-trips (ECMAScript `Number.prototype.toString`), e.g. `0.30000000000000004`, `1e+21`. Negative zero is written `0`. NaN and infinities cannot be written.
@@ -566,6 +569,13 @@ A validator checks, in order: the format version; the structure (the JSON Schema
 | `TEXT_INVISIBLE` | warning | A text node's fill paints nothing. |
 | `FIT_ALL_FILL` | warning | A `fit` frame whose children all `fill` the same axis (circular sizing). |
 | `VARIABLE_UNUSED` | warning | A variable is not referenced (not reported for library documents). |
+| `MERGE_WITHOUT_CONFLICTS` | error | `merge` labels are present but there is no `conflicts` table. |
+| `CONFLICT_PATH_INVALID` | error | A conflict `path` addresses what another kind owns (`type`/`parent`/`order`/`at`, or a root member other than meta/themes/imports/assets/components). |
+| `CONFLICT_DUPLICATE` | error | Two conflicts address the same target, or one contains the other. |
+| `CONFLICT_OPEN` | warning | A merge conflict is not resolved yet. |
+| `CONFLICT_STALE` | warning | The document body no longer holds the conflict's `applied` side (edited by hand); editors mark it `edited`. |
+
+The five conflict codes (§21.3) are reported by whole-document runs only, like the usage lints.
 
 Parse-level failures (`PARSE_ERROR`, `DUPLICATE_KEY`, `NOT_AN_OBJECT`) are raised by the reader before validation. Planned lints not in 0.1: clipped content (needs layout), unused components.
 
@@ -667,6 +677,57 @@ Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's 
 | 24 | Slot suggestions | `slot.suggested` stays advisory for content, but each entry must name a component, like every other QId (§5.5, §11). |
 | 25 | M2 styling (ADR 0010) | Additive, still format `0.1.0` (draft): node `blend` (LayerBlendMode, default `normal`, with `pass-through` for containers), stroke `miterLimit` (default 4), `visible` on every effect (default `true`), icon `strokeWidth` (stroke sets) and `weight` for `phosphor`. The teardown's Graphics sketch has no layer blend or effect visibility; the editor's Layer and Effects sections need both. No new feature flag: a reader that predates these fields reports `UNKNOWN_PROPERTY` and preserves them (§16.3). |
 | 26 | M3 components and tokens (ADR 0011) | Additive, still `0.1.0`: PropDef `order` (declaration order of a record-valued `component.props`); a prop `target` may name the declaring component itself (the root; board 12's `size` enum sets the root's padding); node meta key `kimo.component.description` and root meta key `kimo.themes.order` (axis display order, string[]; the `themes` record is sorted by name) in the `kimo` namespace; expansion rules (§9.8) incl. the component root's theme pins and library-namespace rewriting. Known limit kept: one override per path, so an instance cannot restyle a slot frame *and* fill it (no M3 design needs it). |
+| 27 | M4 stored merge conflicts (ADR 0012) | Additive, still `0.1.0`, behind feature `merge/conflicts`: root members `merge` and `conflicts` (§21). They are root-only and **not** added to Appendix A (which stays frozen); the serializer ranks them after `components` and lays `conflicts` out as a table. A reader without the feature opens such a file read-only, so it never re-serializes it. The teardown (§10.2 rule 8) only says `kimo merge` is semantic; the board 18 design needs conflicts the editor can load, so they are stored in the file rather than as text markers. |
+
+## 21. Stored merge conflicts (feature `merge/conflicts`)
+
+`kimo merge` (the git merge driver, `*.kimo merge=kimo`, and the editor's merge of external changes) is semantic and three-way. It **never drops a side silently**: every disagreement it cannot settle becomes a *stored conflict*, and the file stays valid JSON that validates, renders and round-trips byte-stably. The editor loads it, lists the conflicts (board 18), applies sides live, and saving with open conflicts keeps them.
+
+### 21.1 Root members
+
+- `merge` (struct MergeInfo, optional): `base`, `ours`, `theirs` — display labels (≤ 200 chars; git's `%S`/`%X`/`%Y`, e.g. `"4e1a9c2"`, `"main"`, `"feat/pricing-v2"`) — and `changes` (integer ≥ 0: changes applied without conflict). Present only together with `conflicts`.
+- `conflicts` (record Id → Conflict, at least one entry): conflict ids use the node-id grammar. Serialized as a **table** (§15.1 rule 3) between `merge` and `nodes`: root order is `…, assets, components, merge, conflicts, nodes`.
+- Both require feature `merge/conflicts`. `merge`, `conflicts` and the feature are removed together when the merge is finished ("Mark resolved & save").
+
+### 21.2 Conflict entries
+
+Every entry has `kind`, `applied` and optional `resolved`, plus `base` / `ours` / `theirs`. **A missing side means the value is absent on that side** (property unset, node or variable deleted, themed entry missing): JSON has no `undefined`, so absence is encoded by omitting the key.
+
+| `kind` | Target fields | Sides hold | Board 18 row |
+|---|---|---|---|
+| `prop` | `node` (Id), `path` (JSON Pointer inside the node, ≥ 1 token: `/fill`, `/layout/gap`, `/args/label`, `/component/props/size`) | the property value | "fill · both changed" |
+| `node` | `node` (Id), `restored` (optional record Id → Node) | the whole node (Node schema) | "node · deleted vs edited" |
+| `move` | `node` (Id) | Placement `{ parent, order, at? }` — all three sides required | "parent · moved twice" |
+| `variable` | `variable` (local name), `when` (optional ThemeSelection) | without `when`: the whole Variable; with `when`: the `value` of the themed entry whose `when` equals it exactly | "$brand · light · both changed" |
+| `header` | `path` (JSON Pointer from the root into `meta`, `themes`, `imports`, `assets` or `components`) | the value at `path` | — |
+
+- `applied` (required): which side the **document body currently holds** — `"ours"`, `"theirs"`, `"base"`, or `"edited"` when the user changed the target by hand after the merge.
+- `resolved` (boolean, default `false`): the user picked a side (or edited the target). Open conflicts are those not resolved.
+- A `prop` conflict MUST NOT address `type` (a type change is a `node` conflict) or `parent`/`order`/`at` (a `move` conflict).
+- `node` conflicts cover delete vs edit (one side absent) and type changes. `restored` holds snapshots of the other nodes that are in the body only because the target is kept — its descendants and any ancestors the deleting side removed — so that applying a side is reversible.
+- Entries are structs: `kind` is ranked (Appendix A); the other keys are not, so they follow by code unit and their subtrees are ordered purely by code unit (§15.2). This is deterministic and needs no change to Appendix A.
+
+### 21.3 Validation
+
+Structure: the Conflict union and MergeInfo are part of the JSON Schema (`$defs/Conflict`, `$defs/MergeInfo`, …). Semantic rules (whole-document runs only):
+
+- `FEATURE_NOT_DECLARED` when `merge` or `conflicts` is present without `merge/conflicts`;
+- `MERGE_WITHOUT_CONFLICTS` (error); `CONFLICT_PATH_INVALID` (error); `CONFLICT_DUPLICATE` (error: two entries on the same target, a `node` conflict and a `prop`/`move` conflict on the same node, a whole-variable and a themed-entry conflict on the same variable, or nested pointers);
+- whole-variable sides MUST be Variables (`SCHEMA`);
+- `CONFLICT_OPEN` (warning) for each unresolved entry — `kimo validate` in CI flags unfinished merges;
+- `CONFLICT_STALE` (warning) when the body no longer holds `applied` (including a `prop`/`move` target whose node is gone). This is deliberately a warning: a hand edit must never make the file open read-only.
+
+### 21.4 Writing and resolving (normative)
+
+1. **Body.** The merged body holds `ours` for every conflict, except delete vs edit, where it holds the edited side (and `restored`); `applied` says so. The result MUST validate (no errors).
+2. **Applying a side** (`applyConflictSide`): `prop` sets or unsets the pointer (creating intermediate objects); `node` puts the side's node and every `restored` node back, or removes the node, its `restored` nodes and all their descendants; `move` sets `parent`/`order`/`at`; `variable` sets/deletes the variable, or sets/adds/removes the matching themed entry (never the last one); `header` sets/unsets the pointer. Then `applied` = the side and `resolved` = true. Applying another side afterwards restores that side exactly.
+3. **Take all ours/theirs** applies to unresolved entries only.
+4. **Finishing** (`finishMerge`) is refused while any entry is open; it removes `merge`, `conflicts` and the feature. The body already holds every choice.
+5. **Saving with open conflicts** writes them as they are. Editors keep autosave paused while any conflict is open; ⌘S writes.
+6. **The three-way merge** (contract `ThreeWayMerge` in `@kimo/core-schema`): inputs are the base, ours and theirs documents at the reader's format. Header members, variables (per themed entry when both sides kept the variable themed) and nodes (per property, by JSON Pointer into structs; records such as `overrides`, `args`, `props`, `imports` merge per key; arrays are atomic values) merge independently. A change on one side wins; equal changes on both sides are not conflicts; different changes become entries per 21.2. Placement changes (`parent`, `order`, `at`) merge as one unit (`move`). After merging, cycles are repaired per teardown §9.2 (the node whose move is later — ties: larger id — returns to its previous parent, or the root), and orphans whose parent was deleted on the other side become `node` conflicts on the parent with the orphans in `restored`. Asset manifests merge add-only.
+7. **Git driver exit codes** (`MERGE_EXIT`): 0 clean, 1 merged with stored conflicts (git marks the path conflicted), 2 not mergeable semantically (an input unparsable, invalid or newer): the driver leaves git's textual result, and the editor's failed-load banner explains the markers.
+
+Fixtures: `lint/CONFLICT_OPEN--board-18.kimo` (board 18: 5 conflicts, 3 resolved), `lint/CONFLICT_OPEN--every-kind.kimo`, `lint/CONFLICT_STALE--edited-by-hand.kimo`, `valid/merge-conflicts-resolved.kimo`, and one `invalid/` file per error code.
 
 ## Appendix A — canonical key order
 
@@ -678,7 +739,7 @@ Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's 
 
 | Property | Values |
 |---|---|
-| root `themes`, `imports`, `variables`, `assets`, `nodes` | struct (or string / string[]) |
+| root `themes`, `imports`, `variables`, `assets`, `conflicts`, `nodes` | struct (or string / string[]) |
 | `theme`, `when` | strings |
 | `overrides` | struct (Override) |
 | `props` directly under `component` (declared props) | struct (PropDef) |
@@ -701,4 +762,5 @@ An instance's `props` and a `set` override are structs (their keys are node prop
 | Tree | `buildTree`, `compareSiblings` |
 | Components (§9) | `locate`, `derivedChain`, `baseRoot`, `resolveIdPath`, `declaredProps`, `argEffect`, `instancesOf`, `localComponents`, `COMPONENT_DESCRIPTION_META_KEY` |
 | Expansion (§9.8) | `createExpandedView`, `documentLookup`, `virtualId`, `parseVirtualId`, `qualifyNodeData` |
+| Merge conflicts (§21) | `Conflict`, `MergeInfo`, `listConflicts`, `conflictCounts`, `applyConflictSide`, `applyAllConflicts`, `markConflictEdited`, `finishMerge`, `attachConflicts`, `conflictMatchesBody`, `ThreeWayMerge` (contract), `MERGE_EXIT` |
 | Edit planners (M3) | `plan*` (components, instances, overrides, props, slots, variables, themes, pins, imports), `applyPlan`, `libraryUsage` |

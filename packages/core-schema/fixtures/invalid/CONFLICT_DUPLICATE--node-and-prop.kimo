@@ -1,0 +1,13 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["merge/conflicts"],
+"conflicts": {
+"CfNode0001": {"kind":"node","applied":"ours","base":{"order":"a0","parent":null,"type":"frame"},"node":"Frame00001","ours":{"fill":"#FFFFFF","h":10,"order":"a0","parent":null,"type":"frame","w":10}}
+
+, "CfProp0001": {"kind":"prop","applied":"ours","node":"Frame00001","ours":"#FFFFFF","path":"/fill","theirs":"#000000"}
+},
+"nodes": {
+"Frame00001": {"type":"frame","parent":null,"order":"a0","w":10,"h":10,"fill":"#FFFFFF"}
+}
+}

@@ -1,5 +1,6 @@
 export * from "./document"
 export * from "./graphics"
+export * from "./merge"
 export * from "./nodes"
 export * from "./primitives"
 export * from "./text"

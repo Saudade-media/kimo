@@ -1,0 +1,18 @@
+{
+  "name": "@kimo/platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Host abstraction for the editor: files, dialogs, watch, leases, recovery, git, fonts, updater, window, settings, deep links (desktop via Tauri, browser, in-memory)",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts",
+    "./memory": "./src/memory.ts",
+    "./tauri": "./src/tauri.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test test"
+  }
+}

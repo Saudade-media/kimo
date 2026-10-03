@@ -18,3 +18,17 @@ export type {
   PresenceState,
 } from "./network"
 export { BaseProvider, type SyncProvider, type SyncStatus, type SyncStatusEvent } from "./provider"
+export {
+  type AtomicFileStore,
+  type AtomicWriteResult,
+  type AutosavePauseReason,
+  classifySaveError,
+  type ExternalChangeOutcome,
+  type FileSessionProvider,
+  type RecoveryReason,
+  type RecoveryWrite,
+  type ReloadUndoToken,
+  SAVE_RETRY_MS,
+  type SaveFailure,
+  type SaveFailureCode,
+} from "./types"

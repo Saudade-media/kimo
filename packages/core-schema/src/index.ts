@@ -72,6 +72,37 @@ export {
 } from "./json"
 export { buildJsonSchema, jsonSchemaText } from "./json-schema"
 export {
+  type ApplyConflictOptions,
+  applyAllConflicts,
+  applyConflictSide,
+  attachConflicts,
+  type ConflictEntry,
+  ConflictError,
+  type ConflictErrorCode,
+  conflictCounts,
+  conflictMatchesBody,
+  conflictTargetKey,
+  conflictTargetsOverlap,
+  finishMerge,
+  hasConflicts,
+  listConflicts,
+  MERGE_FEATURE,
+  markConflictEdited,
+  mergeInfo,
+  pointerTokens,
+  readPointer,
+  type SideValue,
+  sideValue,
+} from "./merge/conflicts"
+export {
+  type CycleRepair,
+  MERGE_EXIT,
+  type ThreeWayMerge,
+  type ThreeWayMergeInput,
+  type ThreeWayMergeOptions,
+  type ThreeWayMergeResult,
+} from "./merge/types"
+export {
   MIGRATIONS,
   type MigrateOptions,
   type MigrateResult,

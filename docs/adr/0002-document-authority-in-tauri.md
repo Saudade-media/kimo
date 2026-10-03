@@ -1,6 +1,6 @@
 # 0002. Document authority inside Tauri: a dedicated document host context (Option A)
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [0012](0012-m4-desktop-and-files.md) §2 (Option A confirmed; in M4 the host runs co-located in the editor window, and the hidden-webview host arrives with M5)
 - **Date:** 2026-10-02
 - **Teardown refs:** 9.4 (document lives in the app; document authority ADR; single writer per file; failed loads are terminal), 9.3, 11.1 (`docId` lifetime, revisions), 11.2 (error codes), 6.3 (where pen.dev's bugs cluster)
 

@@ -7,6 +7,7 @@ import type { TSchema } from "typebox"
 import { FEATURES } from "./features"
 import * as Doc from "./schema/document"
 import * as G from "./schema/graphics"
+import * as M from "./schema/merge"
 import * as N from "./schema/nodes"
 import * as P from "./schema/primitives"
 import * as T from "./schema/text"
@@ -16,6 +17,14 @@ type Json = Record<string, unknown>
 
 /** Shared definitions, most composite first so larger sub-trees are matched first. */
 const DEFS: [string, TSchema][] = [
+  ["Conflict", M.Conflict],
+  ["PropConflict", M.PropConflict],
+  ["NodeConflict", M.NodeConflict],
+  ["MoveConflict", M.MoveConflict],
+  ["VariableConflict", M.VariableConflict],
+  ["HeaderConflict", M.HeaderConflict],
+  ["Placement", M.Placement],
+  ["MergeInfo", M.MergeInfo],
   ["Node", N.Node],
   ["FrameNode", N.FrameNode],
   ["GroupNode", N.GroupNode],

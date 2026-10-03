@@ -2,7 +2,7 @@
  * Canonical serialization (teardown 10.2, spec section "Serialization").
  *
  * Output is a pure function of the document's data: object keys in canonical order, one
- * line per header member, one line per table entry (`variables`, `assets`, `nodes`) with the
+ * line per header member, one line per table entry (`variables`, `assets`, `conflicts`, `nodes`) with the
  * separating comma at the start of the line and a blank line between entries, LF line
  * endings and a trailing newline. `serialize(parse(s)) === s` for every canonical `s`.
  */
@@ -176,7 +176,7 @@ const RECORD_KEYS = new Set([
 const OPAQUE_VALUE_RECORDS = new Set(["meta", "args", "inputs", "uniforms", "options"])
 
 /** Header members laid out as one-entry-per-line tables. */
-const TABLES = new Set(["variables", "assets", "nodes"])
+const TABLES = new Set(["variables", "assets", "conflicts", "nodes"])
 
 type Mode = "struct" | "record" | "opaque"
 
@@ -196,8 +196,13 @@ export function structOrder(keys: string[]): string[] {
   return known.concat(unknown)
 }
 
-/** Root members defined by format 0.1 (§4); any other root member is unknown and opaque. */
-const ROOT_MEMBERS: ReadonlySet<string> = new Set([
+/**
+ * Root members defined by format 0.1 (§4), in canonical order (`nodes` is always last). Any
+ * other root member is unknown and opaque. `merge` and `conflicts` (feature "merge/conflicts",
+ * §21) are root-only: their names are not in {@link KEY_ORDER} (Appendix A stays frozen), so
+ * they never rank keys below the root.
+ */
+const ROOT_ORDER: readonly string[] = [
   "$schema",
   "format",
   "features",
@@ -207,13 +212,23 @@ const ROOT_MEMBERS: ReadonlySet<string> = new Set([
   "variables",
   "assets",
   "components",
+  "merge",
+  "conflicts",
   "nodes",
+]
+const ROOT_MEMBERS: ReadonlySet<string> = new Set(ROOT_ORDER)
+const ROOT_RANK = new Map(ROOT_ORDER.map((k, i) => [k, i]))
+
+/** Child modes of root members that Appendix A does not rank (§21). */
+const ROOT_ONLY_MODES: ReadonlyMap<string, Mode> = new Map<string, Mode>([
+  ["merge", "struct"],
+  ["conflicts", "record"],
 ])
 
 /** Root order (§15.1 rule 2): defined members by rank, then unknown ones by code unit, `nodes` last. */
 function rootOrder(keys: string[]): string[] {
   const known = keys.filter((k) => ROOT_MEMBERS.has(k) && k !== "nodes")
-  known.sort((a, b) => (RANK.get(a) as number) - (RANK.get(b) as number))
+  known.sort((a, b) => (ROOT_RANK.get(a) as number) - (ROOT_RANK.get(b) as number))
   const unknown = keys.filter((k) => !ROOT_MEMBERS.has(k)).sort(byCodeUnit)
   return [...known, ...unknown, ...(keys.includes("nodes") ? ["nodes"] : [])]
 }
@@ -271,7 +286,9 @@ function order(
         ? childMode("record", k, parentKey, false)
         : root && !ROOT_MEMBERS.has(k)
           ? "opaque"
-          : childMode(mode, k, parentKey, topLevel)
+          : root && ROOT_ONLY_MODES.has(k)
+            ? (ROOT_ONLY_MODES.get(k) as Mode)
+            : childMode(mode, k, parentKey, topLevel)
     const v = order(obj[k], cm, mode === "record" ? parentKey : k, false, `${path}/${k}`)
     setOwn(out, k, v)
   }
@@ -318,7 +335,7 @@ function table(entries: Record<string, JsonValue>): string {
  * Serializes a document to canonical `.kimo` text.
  *
  * Layout: `{` on the first line; each header member on its own line as `"key": <compact JSON>`
- * in canonical order with a trailing comma; tables (`variables`, `assets`, `nodes`) span
+ * in canonical order with a trailing comma; tables (`variables`, `assets`, `conflicts`, `nodes`) span
  * several lines with one entry per line; `nodes` is always the last member; `}` and a
  * trailing newline end the file.
  *

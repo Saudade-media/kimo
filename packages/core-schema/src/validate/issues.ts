@@ -51,6 +51,14 @@ export const ISSUE_CODES = {
   ASSET_MISSING: "An asset reference is not in the asset manifest / asset folder.",
   ASSET_UNUSED: "An asset manifest entry is not referenced.",
   MESH_SIZE: "A mesh paint's `colors` / `points` length is not `cols * rows`.",
+  // Merge conflicts (feature "merge/conflicts", spec §21)
+  MERGE_WITHOUT_CONFLICTS: "`merge` labels are present but there is no `conflicts` table.",
+  CONFLICT_PATH_INVALID:
+    "A conflict `path` addresses what another kind owns (`type`/`parent`/`order`/`at`, or a root member other than meta/themes/imports/assets/components).",
+  CONFLICT_DUPLICATE: "Two conflicts address the same target, or one contains the other.",
+  CONFLICT_OPEN: "A merge conflict is not resolved yet.",
+  CONFLICT_STALE:
+    "The document body no longer holds the conflict's `applied` side (edited by hand); editors mark it `edited`.",
   // Lints
   TEXT_INVISIBLE: "A text node's fill paints nothing.",
   FIT_ALL_FILL: "A `fit` frame whose children all `fill` the same axis (circular sizing).",
@@ -87,15 +95,22 @@ export const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "TEXT_INVISIBLE",
   "FIT_ALL_FILL",
   "VARIABLE_UNUSED",
+  "CONFLICT_OPEN",
+  "CONFLICT_STALE",
 ])
 
 /**
- * Codes only a whole-document run reports (usage lints): incremental runs (`nodes` in
+ * Codes only a whole-document run reports (usage lints, stored merge conflicts): incremental runs (`nodes` in
  * ValidateOptions) never emit them, so an incremental result says nothing about them.
  */
 export const DOCUMENT_LEVEL_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "ASSET_UNUSED",
   "VARIABLE_UNUSED",
+  "MERGE_WITHOUT_CONFLICTS",
+  "CONFLICT_PATH_INVALID",
+  "CONFLICT_DUPLICATE",
+  "CONFLICT_OPEN",
+  "CONFLICT_STALE",
 ])
 
 /** Collects issues while validating. */

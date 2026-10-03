@@ -22,7 +22,12 @@ that designers can iterate on visually while code stays in sync without hand-cop
 3. **Color is reserved for meaning:**
    - `selection` (blue): canvas selection and related affordances;
    - `agent` (teal plus a gradient orb): anything the AI is doing;
-   - status colors (success, warning, danger).
+   - status colors (success, warning, danger);
+   - `measure` (magenta, M2 / [ADR 0010](0010-m2-styling-and-tools.md)): snap lines, spacing
+     and ⌥-measurement overlays only;
+   - `component` (violet, M3 / [ADR 0011](0011-m3-components-and-variables.md)): component and
+     instance identity only — component/instance glyphs, canvas outlines, slot outlines and
+     badges, the override dot, the component-tone selection and slot drop hints.
    Nothing else in the chrome uses hue.
 4. **Token architecture:** primitive → semantic → component layers with a **single theme axis,
    `mode`** (`light` / `dark`). No brand or density axes in the editor's own tokens.
@@ -35,6 +40,18 @@ that designers can iterate on visually while code stays in sync without hand-cop
    change is only caught once the snapshot is refreshed (see CONTRIBUTING, "Design changes").
 6. Canvas selection semantics follow pen.dev's convention (normal, component origin, instance)
    but use Kimo's own palette (3.1).
+
+### Amendment (2026-10-02, M2 and M3)
+
+The design added two meaning colors after this ADR was accepted; the rule "color is reserved
+for meaning" is unchanged, the list in decision 3 now names them:
+
+| Token | Light | Dark | Meaning |
+|---|---|---|---|
+| `measure` / `measure-soft` | #E5177E / #E5177E1F | #FF5CAB / #FF5CAB2E | measurement and snapping overlays (ADR 0010) |
+| `component` / `component-soft` | #7C3AED / #7C3AED14 | #A78BFA / #A78BFA24 | component and instance identity (ADR 0011; approved by the maintainer for this use only) |
+
+Both are transcribed from `desing.pen` into `tokens.json` like every other token (decision 5).
 
 ## Consequences
 

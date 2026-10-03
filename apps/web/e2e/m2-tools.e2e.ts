@@ -43,7 +43,17 @@ interface Hook {
 
 const settle = (page: Page) =>
   page.evaluate(
-    () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+    () =>
+      new Promise<void>((r) => {
+        // Timer fallback: headless Chromium can skip rAF under load (see qa-helpers settle).
+        const t = setTimeout(r, 500)
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            clearTimeout(t)
+            r()
+          }),
+        )
+      }),
   )
 
 async function openEditor(page: Page, url: string) {

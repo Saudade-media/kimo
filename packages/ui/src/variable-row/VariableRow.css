@@ -1,0 +1,230 @@
+/*
+ * VariableRow: desing.pen 02c > VariableRow (ejBTe).
+ * frame: 880 × 36, row, padding [0, 8, 0, 0], alignItems center, stroke bottom 1 border
+ *   ├ Name Cell (F2PpG) width 240 (dialog 216), row, gap 8, padding [0, 8, 0, 12], center
+ *   │   ├ Disclosure (esuNz) chevron-down 12 text-tertiary (enabled false → open rows only)
+ *   │   ├ Type Glyph (ug3QR) TypeGlyph 18
+ *   │   ├ Name (PVpHs) mono 11 text-primary
+ *   │   └ Lint (SqNTB) triangle-alert 12 warning (enabled false → lint only)
+ *   ├ Values (vqZcj) row, center (uniform rows: gap 8, width 600, height 36)
+ *   ├ Spacer (viM9y) fill × 1
+ *   └ Menu (Z2AwH) ellipsis 14 text-tertiary, opacity 0 (hover: 1)
+ * Hover (Koxnr) / open (Or4ix): fill bg-hover, Menu opacity 1.
+ */
+.kimo-variable-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0 8px 0 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-variable-row:hover,
+.kimo-variable-row--expanded {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-variable-row__name-cell {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 12px;
+  min-width: 0;
+}
+
+.kimo-variable-row__disclosure,
+.kimo-variable-row__menu,
+.kimo-mode-column-header__menu {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-variable-row__disclosure {
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-variable-row__menu,
+.kimo-mode-column-header__menu {
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-variable-row__disclosure > svg,
+.kimo-variable-row__menu > svg,
+.kimo-mode-column-header__menu > svg,
+.kimo-axis-group-header__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-variable-row__menu {
+  opacity: 0;
+}
+
+.kimo-variable-row--expanded .kimo-variable-row__menu {
+  opacity: 1;
+}
+
+.kimo-variable-row__menu:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-variable-row:hover .kimo-variable-row__menu {
+  opacity: 1;
+}
+
+.kimo-variable-row__menu:hover,
+.kimo-mode-column-header__menu:hover {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-variable-row__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-variable-row__lint {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-warning);
+}
+
+.kimo-variable-row__values {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+}
+
+.kimo-variable-row__values--uniform {
+  gap: 8px;
+  height: 36px;
+}
+
+.kimo-variable-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/*
+ * ModeColumnHeader (MhpFW): 150 × 32, row, gap 6, padding [0, 8], center, stroke bottom 1
+ * border. Value (dnWjO) sans 11 / 600 text-primary · Default Tag (VhSDT) padding [0, 4], fill
+ * bg-muted, radius-xs; Label mono 11 text-tertiary · Spacer · Menu (tf2C4) ellipsis 14.
+ */
+.kimo-mode-column-header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 150px;
+  height: 32px;
+  padding: 0 8px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-mode-column-header__value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-mode-column-header__default {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 0 4px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-mode-column-header__default-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-mode-column-header__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/*
+ * AxisGroupHeader (E6DjdE): 300 × 24, row, gap 6, padding [0, 8], center. Icon (h6b7o)
+ * layers-2 12 text-tertiary · Axis (VEB5T) mono 11 / 500 text-secondary · Count (a3UcT) sans 11
+ * text-tertiary.
+ */
+.kimo-axis-group-header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+}
+
+.kimo-axis-group-header__icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-axis-group-header__axis {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-axis-group-header__count {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}

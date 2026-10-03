@@ -1,0 +1,86 @@
+/*
+ * AliasChip (bEYCg): row, gap 4, padding [2, 8, 2, 6], center, fill bg-muted, stroke 1 border
+ * (inside), radius-pill; Icon (UCO47) link-2 10 text-secondary; Name (HanrP) mono 11 text-primary.
+ * WhenChip (FOOJI): row, gap 3, padding [1, 5], center, fill bg-muted, radius-xs; Axis (A3Ic6)
+ * mono 11 text-tertiary; Eq (n95i7v) mono 11 text-tertiary; Value (T20Nq) mono 11 / 500 text-primary.
+ */
+.kimo-alias-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 8px 2px 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-primary);
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-alias-chip:hover {
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-alias-chip:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-alias-chip__icon {
+  display: inline-flex;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-alias-chip__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-alias-chip__name {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-when-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-muted);
+  white-space: nowrap;
+}
+
+.kimo-when-chip__axis,
+.kimo-when-chip__eq,
+.kimo-when-chip__value {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-when-chip__axis,
+.kimo-when-chip__eq {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-when-chip__value {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-medium);
+}

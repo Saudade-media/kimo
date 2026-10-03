@@ -68,11 +68,12 @@ const hasImagePaint = (fill: unknown): boolean =>
 
 /**
  * Exact lucide icon name for a layer row, following the icons used in board 03's layer tree
- * (`frame`, `type`, `image`, `smartphone`, `diamond` for a component definition,
- * `component` for an instance).
+ * (`frame`, `type`, `image`, `smartphone`); M3 (board 02c legend): `component` for a main,
+ * `diamond` for an instance.
  */
 export function typeIcon(node: NodeData): string {
-  if (node.component === true || isObj(node.component)) return "diamond"
+  // M3 legend (board 02c `M5DvY3`): `component` glyph = main, `diamond` = instance.
+  if (node.component === true || isObj(node.component)) return "component"
   switch (node.type) {
     case "frame": {
       const w = node.w
@@ -96,7 +97,7 @@ export function typeIcon(node: NodeData): string {
     case "group":
       return "group"
     case "instance":
-      return "component"
+      return "diamond"
     case "path":
       return "spline"
     case "polygon":

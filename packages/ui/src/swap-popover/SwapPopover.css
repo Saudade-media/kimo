@@ -1,0 +1,110 @@
+/*
+ * SwapPopover: board 13 > Swap instance popover > Swap Popover (jFlfP), Popover (xvOvm) width 296.
+ *   Body (UFzU3) fill, column (replaces the Popover body: no padding, no gap)
+ *   ├ Search (P4yRG) fill, padding [8, 8, 4, 8] → Input (GktPK) h 30
+ *   ├ List (FQCYh) fill, column, gap 1, padding [0, 4, 8, 4]
+ *   │   ├ Group header (H8XZH) fill, row, gap 6, padding [8, 8, 4, 8], center
+ *   │   │   Title sans 11 / 600 text-tertiary · Meta mono 11 text-tertiary
+ *   │   └ AssetRow / AssetRow/Selected
+ *   └ Footer (EUTC7) fill, stroke top 1 border, row, gap 8, padding 12, center
+ *       Info info 14 text-tertiary · Hint sans 11 text-tertiary
+ */
+.kimo-popover__body.kimo-swap-popover__body,
+.kimo-popover__body.kimo-library-manager__body {
+  gap: 0;
+  padding: 0;
+}
+
+.kimo-swap-popover__search {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  padding: 8px 8px 4px 8px;
+}
+
+.kimo-input.kimo-swap-popover__input {
+  height: 30px;
+}
+
+.kimo-swap-popover__list {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 0 4px 8px 4px;
+}
+
+.kimo-swap-popover__group-header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 8px 4px 8px;
+}
+
+.kimo-swap-popover__group-title,
+.kimo-swap-popover__hint,
+.kimo-swap-popover__empty {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-swap-popover__group-title {
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-swap-popover__group-meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-swap-popover__list .kimo-asset-row {
+  flex: none;
+}
+
+.kimo-swap-popover__empty {
+  margin: 0;
+  padding: 8px;
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-swap-popover__footer,
+.kimo-library-manager__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.kimo-swap-popover__info,
+.kimo-library-manager__info {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-swap-popover__hint {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--kimo-font-weight-regular);
+  text-overflow: ellipsis;
+}

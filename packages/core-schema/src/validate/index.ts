@@ -551,7 +551,11 @@ class Validation {
    * namespace (bare ids locally, `alias:id` inside a library); every segment but the last must
    * be an instance, whose component becomes the next namespace.
    */
-  private resolvePath(root: Located, path: string): PathResult {
+  private resolvePath(
+    root: Located,
+    path: string,
+    swaps?: ReadonlyMap<string, string>,
+  ): PathResult {
     let ctx = root
     const segments = path.split("/")
     for (let i = 0; i < segments.length; i++) {
@@ -593,9 +597,16 @@ class Validation {
           reason: `"${seg}" is not an instance, so the path cannot continue`,
         }
       }
-      const next = this.componentOf(found)
+      // A swap of this nested instance by the holder (`set.of`, instance-prop arg): the path
+      // continues in the swapped component (§9.8, last paragraph).
+      const swapped = swaps?.get(segments.slice(0, i + 1).join("/"))
+      const via: Located =
+        swapped === undefined
+          ? found
+          : { doc: this.doc, alias: null, id: "", node: { of: swapped } }
+      const next = this.componentOf(via)
       if (next === "unchecked")
-        return { status: "unchecked", alias: String(found.node.of).split(":")[0] as string }
+        return { status: "unchecked", alias: String(via.node.of).split(":")[0] as string }
       if (next === null)
         return { status: "unresolved", reason: `"${seg}" is an instance of a missing component` }
       ctx = next
@@ -639,7 +650,72 @@ class Validation {
     return cur
   }
 
-  private resolveOrReport(root: Located, path: string, at: string): Located | null {
+  /**
+   * Component swaps instance `n` (of component `c`) applies to its nested instances: IdPath →
+   * consumer QId, from instance-prop args, then `set.of` overrides (which win, §9.3).
+   */
+  private swapsOf(c: Located, n: Obj): Map<string, string> {
+    const out = new Map<string, string>()
+    if (isObject(n.args)) {
+      const props = this.declaredProps(c)
+      for (const [name, value] of Object.entries(n.args)) {
+        const prop = Object.hasOwn(props, name) ? props[name] : undefined
+        if (prop?.type !== "instance" || typeof prop.target !== "string") continue
+        if (typeof value !== "string") continue
+        const target =
+          c.alias === null
+            ? prop.target
+            : prop.target
+                .split("/")
+                .map((seg) => (seg.includes(":") ? seg : `${c.alias}:${seg}`))
+                .join("/")
+        out.set(target, value)
+      }
+    }
+    if (isObject(n.overrides))
+      for (const [k, ov] of Object.entries(n.overrides))
+        if (isObject(ov) && isObject(ov.set) && typeof ov.set.of === "string") out.set(k, ov.set.of)
+    return out
+  }
+
+  /**
+   * Local components holding the node at `path` of an instance of `c`: `c`'s derived chain
+   * and the (possibly swapped) component of every instance the path crosses.
+   */
+  private holders(c: Located, path: string, swaps: ReadonlyMap<string, string>): string[] {
+    const out: string[] = []
+    const chain = (l: Located | null | "unchecked") => {
+      const seen = new Set<string>()
+      let cur = l
+      while (cur && cur !== "unchecked" && cur.alias === null && !seen.has(cur.id)) {
+        seen.add(cur.id)
+        out.push(cur.id)
+        if (cur.node.type !== "instance") break
+        cur = this.componentOf(cur)
+      }
+    }
+    chain(c)
+    const segs = path.split("/")
+    for (let i = 1; i < segs.length; i++) {
+      const prefix = segs.slice(0, i).join("/")
+      const r = this.resolvePath(c, prefix, swaps)
+      if (r.status !== "ok") break
+      const sw = swaps.get(prefix)
+      chain(
+        this.componentOf(
+          sw === undefined ? r.target : { doc: this.doc, alias: null, id: "", node: { of: sw } },
+        ),
+      )
+    }
+    return out
+  }
+
+  private resolveOrReport(
+    root: Located,
+    path: string,
+    at: string,
+    swaps?: ReadonlyMap<string, string>,
+  ): Located | null {
     for (const seg of path.split("/")) {
       const { alias } = splitQualified(seg)
       if (alias !== null && !(this.doc.imports && Object.hasOwn(this.doc.imports, alias))) {
@@ -647,7 +723,7 @@ class Validation {
         return null
       }
     }
-    const r = this.resolvePath(root, path)
+    const r = this.resolvePath(root, path, swaps)
     if (r.status === "ok") return r.target
     if (r.status === "unchecked") {
       const imported = this.doc.imports && Object.hasOwn(this.doc.imports, r.alias)
@@ -702,7 +778,12 @@ class Validation {
       for (const [name, prop] of Object.entries(def.props)) {
         if (!isObject(prop) || typeof prop.target !== "string") continue
         const base = ptr("nodes", id, "component", "props", name)
-        const t = this.resolveOrReport(self, prop.target, `${base}/target`)
+        // M3 (ADR 0011, spec §9.6): a target equal to the declaring component's own id names
+        // the component root (through derived components, the base root).
+        const t =
+          prop.target === id
+            ? this.baseRoot(self)
+            : this.resolveOrReport(self, prop.target, `${base}/target`)
         if (!t) continue
         const tt = t.node.type
         const bad = (msg: string) => this.sink.add("PROP_TARGET_INVALID", `${base}/target`, msg)
@@ -795,12 +876,26 @@ class Validation {
       if (typeof to !== "string" || to.includes(":") || !this.nodes[to]) return
       if (from.length > 0) sites.push({ from, to, path })
     }
-    const instanceArgs = (c: Located | null, args: unknown, base: string, from: string[]) => {
+    // An instance-prop arg places a component at the prop's target, inside the components
+    // that hold that target (the declaring chain and the instances the path crosses).
+    const instanceArgs = (
+      c: Located | null,
+      args: unknown,
+      base: string,
+      from: string[],
+      swaps: ReadonlyMap<string, string>,
+    ) => {
       if (!c || !isObject(args)) return
       const props = this.declaredProps(c)
       for (const [name, value] of Object.entries(args)) {
-        if (Object.hasOwn(props, name) && props[name]?.type === "instance")
-          add(from, value, `${base}/${escapePointer(name)}`)
+        const prop = Object.hasOwn(props, name) ? props[name] : undefined
+        if (prop?.type !== "instance") continue
+        const target = typeof prop.target === "string" ? prop.target : ""
+        add(
+          [...new Set([...from, ...this.holders(c, target, swaps)])],
+          value,
+          `${base}/${escapePointer(name)}`,
+        )
       }
     }
     const local = (qid: unknown): Located | null => {
@@ -824,16 +919,27 @@ class Validation {
       const from = enclosing(id)
       add(from, n.of, ptr("nodes", id, "of"))
       const c = local(n.of)
-      instanceArgs(c, n.args, ptr("nodes", id, "args"), from)
-      if (!c || !isObject(n.overrides)) continue
+      if (!c) continue
+      const swaps = this.swapsOf(c, n)
+      instanceArgs(c, n.args, ptr("nodes", id, "args"), from, swaps)
+      if (!isObject(n.overrides)) continue
       for (const [key, ov] of Object.entries(n.overrides)) {
         if (!isObject(ov) || !isObject(ov.set)) continue
         const at = ptr("nodes", id, "overrides", key)
-        add(from, ov.set.of, `${at}/set/of`)
-        const r = this.resolvePath(c, key)
+        // The nested instance at `key` sits inside the components holding it (§9.1).
+        const holders = [...new Set([...from, ...this.holders(c, key, swaps)])]
+        add(holders, ov.set.of, `${at}/set/of`)
+        const r = this.resolvePath(c, key, swaps)
         if (r.status !== "ok" || r.target.node.type !== "instance") continue
         const swapped = "of" in ov.set ? local(ov.set.of) : this.componentOf(r.target)
-        instanceArgs(swapped === "unchecked" ? null : swapped, ov.set.args, `${at}/set/args`, from)
+        const sc = swapped === "unchecked" ? null : swapped
+        instanceArgs(
+          sc,
+          ov.set.args,
+          `${at}/set/args`,
+          sc ? [...holders, sc.id] : holders,
+          new Map(),
+        )
       }
     }
     const edges = new Map<string, Set<string>>()
@@ -876,10 +982,11 @@ class Validation {
         this.checkPatch(root.node, n.props, `${base}/props`, PROPS_FORBIDDEN)
       if (isObject(n.args)) this.checkArgs(c, n.args, `${base}/args`, id)
       if (!isObject(n.overrides)) continue
+      const swaps = this.swapsOf(c, n)
       for (const [key, ov] of Object.entries(n.overrides)) {
         if (!isObject(ov)) continue
         const at = ptr("nodes", id, "overrides", key)
-        const t = this.resolveOrReport(c, key, at)
+        const t = this.resolveOrReport(c, key, at, swaps)
         if (!t) continue
         if (isObject(ov.set)) {
           this.checkPatch(t.node, ov.set, `${at}/set`, SET_FORBIDDEN)

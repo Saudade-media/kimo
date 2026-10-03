@@ -41,4 +41,27 @@
 @import "./gradient-editor/GradientEditor.css";
 @import "./icon-picker/IconPicker.css";
 @import "./image-fill-popover/ImageFillPopover.css";
+
+/* M3: Components and tokens (boards 02c, 11–15). */
+@import "./override-dot/OverrideDot.css";
+@import "./layer-row-m3/LayerRowM3.css";
+@import "./slot-badge/SlotBadge.css";
+@import "./asset-tile/AssetTile.css";
+@import "./asset-row/AssetRow.css";
+@import "./type-glyph/TypeGlyph.css";
+@import "./prop-def-row/PropDefRow.css";
+@import "./instance-swap-field/InstanceSwapField.css";
+@import "./instance-prop-row/InstancePropRow.css";
+@import "./alias-chip/AliasChip.css";
+@import "./var-cell/VarCell.css";
+@import "./entry-row/EntryRow.css";
+@import "./variable-row/VariableRow.css";
+@import "./theme-pin-row/ThemePinRow.css";
+@import "./variable-list-row/VariableListRow.css";
+@import "./status-pill/StatusPill.css";
+@import "./library-row/LibraryRow.css";
+@import "./confirm-dialog/ConfirmDialog.css";
+@import "./swap-popover/SwapPopover.css";
+@import "./library-manager/LibraryManager.css";
+@import "./variables-dialog/VariablesDialog.css";
 @import "./gallery/Gallery.css";

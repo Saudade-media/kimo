@@ -1,0 +1,626 @@
+/**
+ * M3 (ADR 0011): layout over the core-schema expanded view — per-instance incremental updates,
+ * placeholders, effective themes (multi-axis) through instances, library namespacing.
+ */
+import { describe, expect, test } from "bun:test"
+import type { KimoDocument } from "@kimo/core-schema"
+import fc from "fast-check"
+import {
+  createInstanceView,
+  createLayoutEngine,
+  createResolver,
+  INSTANCE_PLACEHOLDER_SIZE,
+  type LayoutEngine,
+  type LayoutInput,
+  type LayoutNodeData,
+  nodeSourceFromDocument,
+  type ResolveHeader,
+} from "../src/index"
+import { fakeMeasurer, lay, nodes, snapshot } from "./helpers"
+
+type Table = Record<string, LayoutNodeData>
+
+const label = (parent: string, content: string, extra: Record<string, unknown> = {}) => ({
+  type: "text",
+  parent,
+  content,
+  style: { size: 10 },
+  ...extra,
+})
+
+/** A card component with a slot, a nested button instance and a derived component. */
+const base = () =>
+  nodes({
+    btn: {
+      type: "frame",
+      parent: null,
+      x: 400,
+      component: { props: { text: { type: "text", target: "lbl", field: "content" } } },
+      layout: { dir: "row", gap: 4, pad: [2, 6] },
+    },
+    ico: { type: "rect", parent: "btn", w: 10, h: 10 },
+    lbl: label("btn", "OK"),
+    card: {
+      type: "frame",
+      parent: null,
+      x: 600,
+      component: true,
+      layout: { dir: "column", gap: 2, pad: 4 },
+    },
+    title: label("card", "Title"),
+    body: { type: "frame", parent: "card", slot: {}, layout: { dir: "column" } },
+    ph: { type: "rect", parent: "body", w: 30, h: 8 },
+    cta: { type: "instance", parent: "card", of: "btn" },
+    ghost: {
+      type: "instance",
+      parent: null,
+      x: 800,
+      of: "btn",
+      component: true,
+      overrides: { lbl: { set: { content: "Ghost" } } },
+    },
+    page: { type: "frame", parent: null, y: 300, layout: { dir: "row", gap: 8 } },
+    i1: { type: "instance", parent: "page", of: "card" },
+    i2: {
+      type: "instance",
+      parent: "page",
+      of: "card",
+      overrides: { body: { slot: true }, "cta/lbl": { set: { content: "Buy now" } } },
+    },
+    s1: { type: "rect", parent: "i2", at: "body", w: 50, h: 5 },
+    g1: { type: "instance", parent: "page", of: "ghost", args: { text: "Hi" } },
+    plain: { type: "rect", parent: null, y: 600, w: 5, h: 5 },
+  })
+
+function input(table: Table, header: ResolveHeader = {}): LayoutInput {
+  const src = nodeSourceFromDocument({ nodes: table as never })
+  return { nodes: src, resolve: createResolver(header, src), measureText: fakeMeasurer }
+}
+
+/** A store-like mutable source + shared view, as the web host wires it. */
+function liveInput(start: Table, header: ResolveHeader = {}) {
+  let table = start
+  let src = nodeSourceFromDocument({ nodes: table as never })
+  const store = {
+    getNode: (id: string) => src.getNode(id),
+    children: (p: string | null, at?: string | null) => src.children(p, at),
+  }
+  const view = createInstanceView(store, { header: () => header as never })
+  const resolve = createResolver(header, view)
+  const inp: LayoutInput = { nodes: store, expanded: view, resolve, measureText: fakeMeasurer }
+  return {
+    view,
+    input: inp,
+    get table() {
+      return table
+    },
+    set(next: Table) {
+      table = next
+      src = nodeSourceFromDocument({ nodes: table as never })
+      resolve.invalidate()
+    },
+  }
+}
+
+let fullEngine: LayoutEngine | null = null
+async function full() {
+  if (!fullEngine) {
+    fullEngine = createLayoutEngine()
+    await fullEngine.init()
+  }
+  return fullEngine
+}
+
+const patch = (table: Table, id: string, p: Record<string, unknown> | null): Table => {
+  const next = { ...table }
+  if (p === null) delete next[id]
+  else next[id] = { ...(table[id] ?? {}), ...p } as LayoutNodeData
+  return next
+}
+
+describe("M3 instance expansion in layout", () => {
+  test("instances, slots, nested and derived instances lay out through the shared view", async () => {
+    const e = await full()
+    const r = e.compute(input(base()))
+    const box = (id: string) => {
+      const l = r.nodes.get(id)
+      if (!l) throw new Error(`no ${id}`)
+      return [l.local.x, l.local.y, l.local.w, l.local.h]
+    }
+    // btn: 6 + 10 + 4 + 10 + 6 = 36 × 16.5; card: 4 + max(25 title, 30 body, 36 cta) + 4
+    expect(box("i1")).toEqual([0, 0, 44, 4 + 12.5 + 2 + 8 + 2 + 16.5 + 4])
+    expect(box("i1/cta")).toEqual([4, 4 + 12.5 + 2 + 8 + 2, 36, 16.5])
+    expect(box("i2/body")).toEqual([4, 18.5, 50, 5])
+    expect(box("s1")).toEqual([0, 0, 50, 5])
+    // "Buy now" = 7 × 5
+    expect(box("i2/cta/lbl")[2]).toBe(35)
+    expect(r.nodes.has("i2/ph")).toBe(false)
+    // derived: args beat the derived component's override (Hi = 10)
+    expect(box("g1/lbl")[2]).toBe(10)
+    expect(r.issues).toEqual([])
+  })
+
+  test("an unresolved instance is a placeholder with INSTANCE_UNRESOLVED", async () => {
+    const l = await lay({
+      a: { type: "instance", parent: null, of: "nothere" },
+      b: { type: "instance", parent: null, of: "ui:card", props: { w: 30 } },
+    })
+    expect(l.box("a")).toEqual([0, 0, INSTANCE_PLACEHOLDER_SIZE.w, INSTANCE_PLACEHOLDER_SIZE.h])
+    expect(l.box("b")).toEqual([0, 0, 30, INSTANCE_PLACEHOLDER_SIZE.h])
+    expect(l.result.issues.map((i) => `${i.nodeId}:${i.code}:${i.path}`).sort()).toEqual([
+      "a:INSTANCE_UNRESOLVED:/of",
+      "b:INSTANCE_UNRESOLVED:/of",
+    ])
+  })
+
+  test("adding the missing component resolves the placeholder incrementally", async () => {
+    const inc = createLayoutEngine()
+    await inc.init()
+    let t = nodes({ a: { type: "instance", parent: null, of: "late" } })
+    inc.compute(input(t))
+    t = {
+      ...t,
+      late: { type: "rect", parent: null, order: "b", x: 50, w: 7, h: 3, component: true } as never,
+    }
+    const r = inc.update(input(t), { nodes: ["late"] })
+    expect(snapshot(r)).toEqual(snapshot((await full()).compute(input(t))))
+    expect(r.nodes.get("a")?.local).toEqual({ x: 0, y: 0, w: 7, h: 3 })
+    inc.dispose()
+  })
+})
+
+describe("M3 incremental updates", () => {
+  const steps: [string, (t: Table) => [Table, string[]]][] = [
+    ["main text", (t) => [patch(t, "lbl", { content: "longer" }), ["lbl"]]],
+    [
+      "main child added",
+      (t) => [
+        patch(t, "new1", { type: "rect", parent: "card", order: "z", w: 60, h: 2 }),
+        ["new1"],
+      ],
+    ],
+    ["main child deleted", (t) => [patch(t, "ph", null), ["ph"]]],
+    ["main layout", (t) => [patch(t, "card", { layout: { dir: "row", gap: 3 } }), ["card"]]],
+    ["main child reordered", (t) => [patch(t, "cta", { order: "0" }), ["cta"]]],
+    [
+      "override",
+      (t) => [patch(t, "i1", { overrides: { title: { set: { content: "X" } } } }), ["i1"]],
+    ],
+    [
+      "slot content added",
+      (t) => [
+        patch(t, "s2", { type: "rect", parent: "i2", at: "body", order: "z", w: 70, h: 9 }),
+        ["s2"],
+      ],
+    ],
+    ["slot content edited", (t) => [patch(t, "s1", { w: 3 }), ["s1"]]],
+    [
+      "replace",
+      (t) => [
+        patch(patch(t, "i1", { overrides: { title: { replace: true } } }), "r1", {
+          type: "ellipse",
+          parent: "i1",
+          at: "title",
+          w: 4,
+          h: 4,
+        }),
+        ["i1", "r1"],
+      ],
+    ],
+    ["swap", (t) => [patch(t, "i1", { of: "btn" }), ["i1"]]],
+    [
+      "derived base override",
+      (t) => [patch(t, "ghost", { overrides: { ico: { set: { w: 30 } } } }), ["ghost"]],
+    ],
+    [
+      "instance moved into slot",
+      (t) => [patch(t, "g1", { parent: "i2", at: "body", order: "zz" }), ["g1"]],
+    ],
+    ["instance deleted", (t) => [patch(t, "i2", null), ["i2", "s1"]]],
+    ["plain node", (t) => [patch(t, "plain", { w: 8 }), ["plain"]]],
+  ]
+
+  test("each instance edit matches a full compute (and the next step still does)", async () => {
+    const inc = createLayoutEngine()
+    await inc.init()
+    let t = base()
+    inc.compute(input(t))
+    const f = await full()
+    for (const [name, step] of steps) {
+      const [next, dirty] = step(t)
+      t = next
+      const a = inc.update(input(t), { nodes: dirty })
+      const b = f.compute(input(t))
+      expect({ name, snap: snapshot(a) }).toEqual({ name, snap: snapshot(b) })
+    }
+    inc.dispose()
+  })
+
+  test("random instance edits (property): update ≡ compute", async () => {
+    const inc = createLayoutEngine()
+    await inc.init()
+    const f = await full()
+    fc.assert(
+      fc.property(
+        fc.array(fc.integer({ min: 0, max: steps.length - 1 }), { minLength: 1, maxLength: 6 }),
+        (picks) => {
+          let t = base()
+          inc.compute(input(t))
+          for (const k of picks) {
+            const [next, dirty] = (steps[k] as (typeof steps)[number])[1](t)
+            // Steps assume ids exist; skip ones that no longer apply.
+            if (dirty.some((id) => !(id in t) && !(id in next))) continue
+            t = next
+            expect(snapshot(inc.update(input(t), { nodes: dirty }))).toEqual(
+              snapshot(f.compute(input(t))),
+            )
+          }
+        },
+      ),
+      { numRuns: 120 },
+    )
+    inc.dispose()
+  })
+
+  test("only affected instances re-expand: other instances keep their node objects", async () => {
+    const e = createLayoutEngine()
+    await e.init()
+    const live = liveInput(base())
+    const r1 = e.compute(live.input)
+    const i1lbl = live.view.getNode("i1/cta/lbl")
+    const g1 = live.view.getNode("g1/lbl")
+    // A plain edit re-expands nothing.
+    live.set(patch(live.table, "plain", { w: 9 }))
+    const r2 = e.update(live.input, { nodes: ["plain"] })
+    expect(live.view.getNode("i1/cta/lbl")).toBe(i1lbl)
+    expect([...r2.changed]).toEqual(["plain"])
+    // An override on i2 re-expands i2 only.
+    live.set(patch(live.table, "i2", { overrides: { body: { slot: true } } }))
+    const r3 = e.update(live.input, { nodes: ["i2"] })
+    expect(live.view.getNode("i1/cta/lbl")).toBe(i1lbl)
+    expect(live.view.getNode("g1/lbl")).toBe(g1)
+    expect(r3.nodes.get("i2/cta/lbl")?.local.w).toBe(10)
+    // Editing the button main re-lays out every instance that contains a button.
+    live.set(patch(live.table, "lbl", { content: "Okay!" }))
+    const r4 = e.update(live.input, { nodes: ["lbl"] })
+    expect(live.view.getNode("i1/cta/lbl")).not.toBe(i1lbl)
+    expect(r4.nodes.get("i1/cta/lbl")?.local.w).toBe(25)
+    expect(r4.nodes.get("i2/cta/lbl")?.local.w).toBe(25)
+    // g1 has args (Hi) so its label is unchanged: it was re-expanded (it uses btn), but an
+    // equal re-expanded node keeps its previous object (identity-stable re-expansion).
+    expect(live.view.getNode("g1/lbl")).toBe(g1)
+    expect(r4.nodes.get("g1/lbl")?.local.w).toBe(10)
+    const r5 = (await full()).compute(input(live.table))
+    expect(snapshot(r4)).toEqual(snapshot(r5))
+    void r1
+    e.dispose()
+  })
+
+  test("1k instances: a main edit re-lays out all of them, a plain edit none", async () => {
+    const spec: Record<string, Record<string, unknown>> = {
+      btn: {
+        type: "frame",
+        parent: null,
+        component: true,
+        layout: { dir: "row", gap: 4, pad: [2, 6] },
+      },
+      ico: { type: "rect", parent: "btn", w: 10, h: 10 },
+      lbl: label("btn", "OK"),
+      grid: {
+        type: "frame",
+        parent: null,
+        y: 100,
+        layout: { dir: "row", wrap: true, gap: 2 },
+        w: 2000,
+      },
+      plain: { type: "rect", parent: null, x: -100, w: 5, h: 5 },
+    }
+    for (let i = 0; i < 1000; i++) spec[`i${i}`] = { type: "instance", parent: "grid", of: "btn" }
+    const live = liveInput(nodes(spec as never))
+    const e = createLayoutEngine()
+    await e.init()
+    let t0 = performance.now()
+    e.compute(live.input)
+    const computeMs = performance.now() - t0
+    live.set(patch(live.table, "plain", { w: 6 }))
+    t0 = performance.now()
+    const r = e.update(live.input, { nodes: ["plain"] })
+    const plainMs = performance.now() - t0
+    expect([...r.changed]).toEqual(["plain"])
+    live.set(patch(live.table, "lbl", { content: "Okay" }))
+    t0 = performance.now()
+    const r2 = e.update(live.input, { nodes: ["lbl"] })
+    const mainMs = performance.now() - t0
+    expect(r2.nodes.get("i999/lbl")?.local.w).toBe(20)
+    expect(r2.changed.has("i500")).toBe(true)
+    // Plain edits stay far below a full pass even with 1k instances.
+    expect(plainMs).toBeLessThan(Math.max(5, computeMs / 4))
+    console.log(
+      `1k instances: compute ${computeMs.toFixed(1)} ms, plain update ${plainMs.toFixed(2)} ms, main edit ${mainMs.toFixed(1)} ms`,
+    )
+    e.dispose()
+  })
+})
+
+describe("M3 effective themes through instances (§10.4, multi-axis)", () => {
+  const header: ResolveHeader = {
+    themes: { mode: ["light", "dark"], density: ["comfortable", "compact"] },
+    variables: {
+      pad: {
+        type: "number",
+        value: [
+          { value: 10 },
+          { value: 4, when: { density: "compact" } },
+          { value: 20, when: { density: "compact", mode: "dark" } },
+        ],
+      },
+    } as never,
+  }
+  const doc = () =>
+    nodes({
+      chip: {
+        type: "frame",
+        parent: null,
+        component: true,
+        theme: { density: "compact" },
+        layout: { dir: "row", pad: { $ref: "pad" } },
+      },
+      dot: { type: "rect", parent: "chip", w: 2, h: 2 },
+      a: { type: "instance", parent: null, of: "chip" },
+      b: { type: "instance", parent: null, of: "chip", theme: { mode: "dark" } },
+      c: { type: "instance", parent: null, of: "chip", theme: { density: "comfortable" } },
+      dark: { type: "frame", parent: null, theme: { mode: "dark" } },
+      d: { type: "instance", parent: "dark", of: "chip" },
+    })
+
+  test("component root pins carry into instances; instance pins win axis by axis", async () => {
+    const live = liveInput(doc(), header)
+    const e = createLayoutEngine()
+    await e.init()
+    const r = e.compute(live.input)
+    const w = (id: string) => r.nodes.get(id)?.local.w
+    expect(w("chip")).toBe(2 + 2 * 4) // compact, light
+    expect(w("a")).toBe(2 + 2 * 4)
+    expect(w("b")).toBe(2 + 2 * 20) // compact (component) + dark (instance)
+    expect(w("c")).toBe(2 + 2 * 10) // instance overrides density
+    expect(w("d")).toBe(2 + 2 * 20) // dark from the placement path
+    expect(live.view.theme("d/dot")).toEqual({ mode: "dark", density: "compact" })
+    e.dispose()
+  })
+
+  test("changing an instance theme pin re-resolves its whole subtree incrementally", async () => {
+    const live = liveInput(doc(), header)
+    const e = createLayoutEngine()
+    await e.init()
+    e.compute(live.input)
+    live.set(patch(live.table, "a", { theme: { mode: "dark" } }))
+    const r = e.update(live.input, { nodes: ["a"] })
+    expect(r.nodes.get("a")?.local.w).toBe(42)
+    const f = createLayoutEngine()
+    await f.init()
+    expect(snapshot(r)).toEqual(snapshot(f.compute(liveInput(live.table, header).input)))
+    e.dispose()
+    f.dispose()
+  })
+
+  test("toggling a pin on a plain parent re-resolves the bound nodes below it", async () => {
+    // Only bound descendants are re-read (perf: a pin over 500 instances); unbound ones keep
+    // their state. Both directions must equal a full compute.
+    const live = liveInput(doc(), header)
+    const e = createLayoutEngine()
+    await e.init()
+    const f = createLayoutEngine()
+    await f.init()
+    e.compute(live.input)
+    for (const pin of [{ mode: "light" }, undefined, { density: "comfortable" }]) {
+      const next = { ...live.table }
+      const { theme: _, ...rest } = next.dark as Record<string, unknown>
+      next.dark = (pin ? { ...rest, theme: pin } : rest) as never
+      live.set(next)
+      const r = e.update(live.input, { nodes: ["dark"] })
+      expect(snapshot(r)).toEqual(snapshot(f.compute(liveInput(live.table, header).input)))
+    }
+    // The component root's own density pin wins over the parent's: compact, light.
+    expect(e.current?.nodes.get("d")?.local.w).toBe(2 + 2 * 4)
+    e.dispose()
+    f.dispose()
+  })
+
+  test("library content: bindings and pins are namespaced (alias:name)", async () => {
+    const lib = {
+      format: "0.1.0",
+      themes: { size: ["md", "lg"] },
+      variables: {
+        gap: { type: "number", value: [{ value: 3 }, { value: 9, when: { size: "lg" } }] },
+      },
+      nodes: nodes({
+        pill: {
+          type: "frame",
+          parent: null,
+          component: true,
+          theme: { size: "lg" },
+          layout: { dir: "row", gap: { $ref: "gap" } },
+        },
+        x1: { type: "rect", parent: "pill", w: 1, h: 1 },
+        x2: { type: "rect", parent: "pill", w: 1, h: 1 },
+      }),
+    } as unknown as KimoDocument
+    const libraries = { ui: lib }
+    const t = nodes({
+      p: { type: "instance", parent: null, of: "ui:pill" },
+      q: { type: "instance", parent: null, of: "ui:pill", theme: { "ui:size": "md" } },
+    })
+    const src = nodeSourceFromDocument({ nodes: t as never })
+    const hdr: ResolveHeader = { imports: { ui: "./ui.kimo" } }
+    const view = createInstanceView(src, { libraries, header: () => hdr as never })
+    const e = createLayoutEngine({ libraries })
+    await e.init()
+    const r = e.compute({
+      nodes: src,
+      expanded: view,
+      resolve: createResolver(hdr, view, { libraries }),
+      measureText: fakeMeasurer,
+    })
+    expect(r.nodes.get("p")?.local.w).toBe(11)
+    expect(r.nodes.get("q")?.local.w).toBe(5)
+    expect(r.issues).toEqual([])
+    e.dispose()
+  })
+})
+
+describe("InstanceView: a full invalidate keeps expansions whose reads still hold (perf)", () => {
+  /** `liveInput` plus a count of base reads (re-expansion reads the base again). */
+  function counted(start: Table, header: () => ResolveHeader = () => ({})) {
+    let table = start
+    let src = nodeSourceFromDocument({ nodes: table as never })
+    let reads = 0
+    const store = {
+      getNode: (id: string) => {
+        reads++
+        return src.getNode(id)
+      },
+      children: (p: string | null, at?: string | null) => src.children(p, at),
+    }
+    const view = createInstanceView(store, { header: header as never })
+    const walk = () => {
+      const out: Record<string, unknown> = {}
+      const go = (id: string) => {
+        out[id] = view.getNode(id)
+        for (const c of view.children(id)) go(c)
+      }
+      for (const r of view.children(null)) go(r)
+      return out
+    }
+    return {
+      view,
+      walk,
+      reads: () => reads,
+      set(next: Table) {
+        table = next
+        src = nodeSourceFromDocument({ nodes: table as never })
+      },
+      get table() {
+        return table
+      },
+    }
+  }
+
+  test("nothing changed: same node objects, no re-expansion", () => {
+    const c = counted(base())
+    const a = c.walk()
+    const expand = c.reads() // a first walk expands every instance
+    c.view.invalidate()
+    c.set({ ...c.table }) // a new source holding the same node objects
+    const before = c.reads()
+    const b = c.walk()
+    for (const [id, n] of Object.entries(a)) expect(b[id]).toBe(n)
+    // Verifying re-reads each node an expansion read once; re-expanding reads them again too.
+    expect(c.reads() - before).toBeLessThan(expand)
+  })
+
+  test("a change the expansion read (no invalidateInstances) is picked up after invalidate()", () => {
+    const c = counted(base())
+    c.walk()
+    c.set(patch(c.table, "lbl", { content: "Okay!" }))
+    c.view.invalidate()
+    const w = c.walk()
+    expect((w["i1/cta/lbl"] as { content: string }).content).toBe("Okay!")
+    // Same answer as a fresh view.
+    const fresh = counted(c.table)
+    expect(fresh.walk()).toEqual(w)
+  })
+
+  test("theme() walks the expanded placement path like the core view", () => {
+    const header: ResolveHeader = {
+      themes: { mode: ["light", "dark"], density: ["comfortable", "compact"] },
+    }
+    const t: Table = nodes({
+      chip: { type: "frame", parent: null, component: true, theme: { density: "compact" } },
+      dot: { type: "rect", parent: "chip", w: 2, h: 2 },
+      a: { type: "instance", parent: null, of: "chip", theme: { mode: "dark" } },
+      dark: { type: "frame", parent: null, theme: { mode: "dark" } },
+      d: { type: "instance", parent: "dark", of: "chip" },
+    })
+    const c = counted(t, () => header)
+    expect(c.view.theme("a/dot")).toEqual({ mode: "dark", density: "compact" })
+    expect(c.view.theme("d/dot")).toEqual({ mode: "dark", density: "compact" })
+    expect(c.view.theme("dark")).toEqual({ mode: "dark", density: "comfortable" })
+    expect(c.view.theme("chip")).toEqual({ mode: "light", density: "compact" })
+  })
+})
+
+describe("refresh (compute on a live engine) over a shared view", () => {
+  test("header and node changes since the last pass equal a fresh compute", async () => {
+    const themed = (light: number, dark: number) => ({
+      type: "number",
+      value: [
+        { value: light, when: { mode: "light" } },
+        { value: dark, when: { mode: "dark" } },
+      ],
+    })
+    let header: ResolveHeader = {
+      themes: { mode: ["light", "dark"] },
+      variables: { pad: themed(4, 8), gap: themed(2, 6) } as never,
+    }
+    let table: Table = nodes({
+      card: {
+        type: "frame",
+        parent: null,
+        component: true,
+        layout: { dir: "column", gap: { $ref: "gap" }, pad: { $ref: "pad" } },
+      },
+      a1: { type: "rect", parent: "card", w: 10, h: 4 },
+      a2: { type: "rect", parent: "card", w: 12, h: 4 },
+      i1: { type: "instance", parent: null, of: "card", x: 40 },
+      i2: { type: "instance", parent: null, of: "card", x: 80, theme: { mode: "dark" } },
+      box: { type: "frame", parent: null, x: 120, w: 30, h: 30 },
+      i3: { type: "instance", parent: "box", of: "card" },
+    })
+    let src = nodeSourceFromDocument({ nodes: table as never })
+    const store = {
+      getNode: (id: string) => src.getNode(id),
+      children: (p: string | null, at?: string | null) => src.children(p, at),
+    }
+    const view = createInstanceView(store, { header: () => header as never })
+    const resolve = createResolver(() => header, view)
+    const inp: LayoutInput = { nodes: store, expanded: view, resolve, measureText: fakeMeasurer }
+    const e = createLayoutEngine()
+    await e.init()
+    const f = createLayoutEngine()
+    await f.init()
+    const fresh = () => {
+      const s2 = nodeSourceFromDocument({ nodes: table as never })
+      const v2 = createInstanceView(s2, { header: () => header as never })
+      return snapshot(
+        f.compute({
+          nodes: s2,
+          expanded: v2,
+          resolve: createResolver(() => header, v2),
+          measureText: fakeMeasurer,
+        }),
+      )
+    }
+    e.compute(inp)
+    const step = (h: ResolveHeader, t: Table) => {
+      header = h
+      table = t
+      src = nodeSourceFromDocument({ nodes: table as never })
+      resolve.invalidate()
+      view.invalidate() // the host's full invalidation before a compute
+      expect(snapshot(e.compute(inp))).toEqual(fresh())
+    }
+    // Default mode switch (variables dialog "make default"): expansions kept, bound re-read.
+    step({ ...header, themes: { mode: ["dark", "light"] } }, table)
+    // A variable value edit.
+    step({ ...header, variables: { pad: themed(1, 2), gap: themed(3, 3) } as never }, table)
+    // A main edit and a pin made without an update in between (expansions must not be kept).
+    step(header, patch(patch(table, "a2", { w: 40 }), "box", { theme: { mode: "dark" } }))
+    // A new instance and a deleted one.
+    step(
+      header,
+      patch(patch(table, "i4", { type: "instance", parent: null, of: "card" }), "i1", null),
+    )
+    e.dispose()
+    f.dispose()
+  })
+})

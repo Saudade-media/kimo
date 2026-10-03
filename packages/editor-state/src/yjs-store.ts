@@ -3,8 +3,11 @@
  *
  * Shape of the Y.Doc (mirrors the `.kimo` file 1:1):
  * - `nodes`:  Y.Map<id, Y.Map<field, JSON>> — the flat node table; each top-level node field
- *   is one map entry, so concurrent edits of different fields merge;
- * - `header`: root members other than `nodes`, `variables` and `themes` (whole values);
+ *   is one map entry, so concurrent edits of different fields merge. Record-valued instance
+ *   fields (`overrides`, `args`, `props`) are nested Y.Maps keyed by IdPath / prop name, so
+ *   concurrent overrides of different paths of one instance both survive;
+ * - `header`: root members other than `nodes`, `variables` and `themes` (whole values, except
+ *   `imports`: a nested Y.Map by alias, so two concurrent library links both survive);
  * - `variables`: name → variable; `themes`: axis → values;
  * - `flags`: presence of empty `variables` / `themes` objects (exact round trips);
  * - `moves`: id → {@link MoveRecord} of the node's last reparenting, for cycle repair.
@@ -47,6 +50,40 @@ import {
 
 /** Root members stored outside the `header` map. */
 const SPLIT_KEYS = new Set(["nodes", "variables", "themes"])
+/** Record-valued node fields stored as nested Y.Maps (per-key last-writer-wins). */
+const MERGED_NODE_FIELDS = new Set(["overrides", "args", "props"])
+/** Record-valued header members stored as nested Y.Maps. */
+const MERGED_HEADER_KEYS = new Set(["imports"])
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v)
+
+/** A Y value for field `k`: a prelim nested Y.Map for merged record fields, else JSON. */
+function yValue(k: string, v: unknown, merged: ReadonlySet<string>): unknown {
+  if (merged.has(k) && isRecord(v))
+    return new Y.Map(Object.keys(v).map((kk) => [kk, cloneJson(v[kk])] as [string, unknown]))
+  return cloneJson(v)
+}
+
+/**
+ * Writes `v` at `y[k]`. A merged record field already held as a nested Y.Map is diffed key by
+ * key (only changed keys are written), so concurrent writes of other keys are kept.
+ */
+function putField(y: Y.Map<unknown>, k: string, v: unknown, merged: ReadonlySet<string>): void {
+  const cur = y.get(k)
+  if (merged.has(k) && isRecord(v) && cur instanceof Y.Map) {
+    for (const kk of [...cur.keys()]) if (!Object.hasOwn(v, kk)) cur.delete(kk)
+    for (const [kk, vv] of Object.entries(v))
+      if (!cur.has(kk) || !jsonEqual(plain(cur.get(kk)), vv)) cur.set(kk, cloneJson(vv))
+    return
+  }
+  y.set(k, yValue(k, v, merged))
+}
+
+/** Plain JSON of a stored value (nested Y types → JSON). */
+function plain(v: unknown): unknown {
+  return v instanceof Y.AbstractType ? v.toJSON() : v
+}
 
 const issueKey = (i: ValidationIssue) => `${i.code}\u0000${i.path}`
 
@@ -119,6 +156,11 @@ export class YjsDocStore implements DocStore {
   private readonly mirror = new Map<string, NodeData>()
   /** parent id (null = root) → child ids, any `at`. */
   private readonly byParent = new Map<string | null, Set<string>>()
+  /**
+   * Sorted child lists per parent and `at` (perf: `children()` is called for every node on
+   * every layout / expansion pass). Dropped for the old and new parent of each refreshed node.
+   */
+  private readonly sortedKids = new Map<string | null, Map<string, readonly string[]>>()
 
   private epoch = randomToken(8)
   private seq = 0
@@ -179,7 +221,7 @@ export class YjsDocStore implements DocStore {
       this.pendingHeader = true
       this.dirtyAll = true
     }
-    this.yHeader.observe(headerChanged)
+    this.yHeader.observeDeep(headerChanged)
     this.yVars.observe(headerChanged)
     this.yThemes.observe(headerChanged)
     this.yFlags.observe(headerChanged)
@@ -220,12 +262,22 @@ export class YjsDocStore implements DocStore {
 
   children(parent: string | null, at?: string | null): string[] {
     const want = at ?? undefined
+    let byAt = this.sortedKids.get(parent)
+    const cached = byAt?.get(want === undefined ? "\u0000" : want)
+    // A copy: callers own the returned array.
+    if (cached) return cached.slice()
     const list: { id: string; order: string }[] = []
     for (const id of this.byParent.get(parent) ?? []) {
       const n = this.mirror.get(id) as NodeData
       if ((n.at ?? undefined) === want) list.push({ id, order: String(n.order) })
     }
-    return list.sort(compareSiblings).map((e) => e.id)
+    const ids = list.sort(compareSiblings).map((e) => e.id)
+    if (!byAt) {
+      byAt = new Map()
+      this.sortedKids.set(parent, byAt)
+    }
+    byAt.set(want === undefined ? "\u0000" : want, ids)
+    return ids.slice()
   }
 
   toDocument(): KimoDocument {
@@ -239,6 +291,17 @@ export class YjsDocStore implements DocStore {
         record[key] = sortKeys(value as Record<string, unknown>)
     }
     return doc
+  }
+
+  toHeader(): Omit<KimoDocument, "nodes"> {
+    const doc = cloneJson(
+      new Draft(this.base(), this.draftOptions()).toDocument(false),
+    ) as unknown as Record<string, unknown>
+    for (const key of ["variables", "themes"]) {
+      const value = doc[key]
+      if (value && typeof value === "object") doc[key] = sortKeys(value as Record<string, unknown>)
+    }
+    return doc as unknown as Omit<KimoDocument, "nodes">
   }
 
   // --- Writing --------------------------------------------------------------------------------
@@ -371,7 +434,15 @@ export class YjsDocStore implements DocStore {
       for (const k of [...this.yHeader.keys()]) if (!Object.hasOwn(src, k)) this.yHeader.delete(k)
       for (const [k, v] of Object.entries(src)) {
         if (SPLIT_KEYS.has(k)) continue
-        if (!jsonEqual(this.yHeader.get(k), v)) this.yHeader.set(k, v)
+        if (!jsonEqual(plain(this.yHeader.get(k)), v))
+          putField(this.yHeader, k, v, MERGED_HEADER_KEYS)
+      }
+      // Merged header records exist (empty = absent) so the first concurrent writes merge.
+      for (const k of MERGED_HEADER_KEYS) {
+        const cur = this.yHeader.get(k)
+        if (Object.hasOwn(src, k)) continue
+        if (cur instanceof Y.Map) cur.clear()
+        else this.yHeader.set(k, new Y.Map())
       }
       syncRecord(this.yVars, asRecord(src.variables))
       syncRecord(this.yThemes, asRecord(src.themes))
@@ -535,7 +606,10 @@ export class YjsDocStore implements DocStore {
       themeAxes: () => this.yThemes.keys(),
       header: () => {
         const h: Record<string, unknown> = {}
-        for (const [k, v] of this.yHeader.entries()) setOwn(h, k, v)
+        for (const [k, v] of this.yHeader.entries()) {
+          if (v instanceof Y.Map && v.size === 0 && MERGED_HEADER_KEYS.has(k)) continue
+          setOwn(h, k, plain(v))
+        }
         return h
       },
       hasVariables: () => this.yFlags.get("variables") === true,
@@ -574,8 +648,11 @@ export class YjsDocStore implements DocStore {
       else this.yThemes.set(axis, cloneJson(v))
     }
     for (const [k, v] of draft.header) {
-      if (v === null) this.yHeader.delete(k)
-      else this.yHeader.set(k, cloneJson(v))
+      const cur = this.yHeader.get(k)
+      if (v === null) {
+        if (MERGED_HEADER_KEYS.has(k) && cur instanceof Y.Map) cur.clear()
+        else this.yHeader.delete(k)
+      } else putField(this.yHeader, k, v, MERGED_HEADER_KEYS)
     }
     if (draft.variablesTouched) setFlag(this.yFlags, "variables", this.yVars.size > 0)
     if (draft.themesTouched) setFlag(this.yFlags, "themes", this.yThemes.size > 0)
@@ -585,33 +662,58 @@ export class YjsDocStore implements DocStore {
   private writeNode(id: string, n: Readonly<Record<string, unknown>>): void {
     const y = this.yNodes.get(id)
     if (!y) {
-      const entries = Object.keys(n).map((k) => [k, cloneJson(n[k])] as [string, unknown])
+      const entries = Object.keys(n).map(
+        (k) => [k, yValue(k, n[k], MERGED_NODE_FIELDS)] as [string, unknown],
+      )
+      // An instance always holds its record fields as (possibly empty) nested maps, so the
+      // first overrides written concurrently by two peers merge instead of racing to create
+      // the map. An empty nested map reads as an absent field (see `refresh`).
+      if (n.type === "instance")
+        for (const k of MERGED_NODE_FIELDS) if (!Object.hasOwn(n, k)) entries.push([k, new Y.Map()])
       this.yNodes.set(id, new Y.Map(entries))
       return
     }
     const old = this.mirror.get(id) ?? (y.toJSON() as Record<string, unknown>)
-    for (const k of Object.keys(old)) if (!Object.hasOwn(n, k)) y.delete(k)
+    for (const k of Object.keys(old)) {
+      if (Object.hasOwn(n, k)) continue
+      const cur = y.get(k)
+      if (MERGED_NODE_FIELDS.has(k) && cur instanceof Y.Map) cur.clear()
+      else y.delete(k)
+    }
     for (const k of Object.keys(n)) {
-      if (!Object.hasOwn(old, k) || !jsonEqual(old[k], n[k])) y.set(k, cloneJson(n[k]))
+      if (!Object.hasOwn(old, k) || !jsonEqual(old[k], n[k]))
+        putField(y, k, n[k], MERGED_NODE_FIELDS)
     }
   }
 
   /** Re-reads one node from the Y.Doc into the mirror and the parent index. */
   private refresh(id: string): void {
     const old = this.mirror.get(id)
-    if (old) this.byParent.get(parentKey(old))?.delete(id)
+    if (old) {
+      this.byParent.get(parentKey(old))?.delete(id)
+      this.sortedKids.delete(parentKey(old))
+    }
     const y = this.yNodes.get(id)
     let next: NodeData | undefined
     if (y instanceof Y.Map) {
       // Canonical member order: Yjs iterates map keys in an order that depends on the update
       // history, so the same node would otherwise read differently after a reload.
       const raw = y.toJSON() as Record<string, unknown>
+      // Empty nested record maps (see `writeNode`) are absent fields.
+      for (const k of MERGED_NODE_FIELDS)
+        if (
+          isRecord(raw[k]) &&
+          Object.keys(raw[k] as object).length === 0 &&
+          y.get(k) instanceof Y.Map
+        )
+          delete raw[k]
       const ordered: Record<string, unknown> = {}
       for (const k of structOrder(Object.keys(raw))) setOwn(ordered, k, raw[k])
       const n = deepFreeze(ordered) as NodeData
       next = n
       this.mirror.set(id, n)
       const key = parentKey(n)
+      this.sortedKids.delete(key)
       let set = this.byParent.get(key)
       if (!set) {
         set = new Set()

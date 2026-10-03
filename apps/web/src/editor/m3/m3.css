@@ -1,0 +1,242 @@
+/*
+ * M3 components and panels — desing.pen boards 02c (SD9TU), 11 (Yf2Ax), 12 (M3150),
+ * 13 (XoUIl), 14 (JlaLY), 15 (qJRq1). Values are the node values (see m3-contract.md);
+ * `component` (violet) marks component / instance identity only (ADR 0007 amendment).
+ */
+
+/* --- Shared ------------------------------------------------------------------------------- */
+
+.m3-icon-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+.m3-icon-button:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+  color: var(--kimo-text-primary);
+}
+.m3-icon-button:disabled {
+  cursor: default;
+}
+.m3-icon-button:focus-visible,
+.m3-button:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+.m3-icon-button > svg,
+.m3-button__icon > svg {
+  display: block;
+}
+
+/* Button/* at panel sizes: padding and height come from each design instance. */
+.m3-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+}
+.m3-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.m3-button__icon {
+  display: inline-flex;
+  flex: none;
+}
+/* Button/Secondary (kv3Fk): its border-strong stroke has no strokeWidth in desing.pen, so no
+   stroke is drawn (measured in M1, see @kimo/ui Button.css). */
+.m3-button--secondary {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+.m3-button--secondary:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+.m3-button--ghost {
+  background: transparent;
+  color: var(--kimo-text-secondary);
+}
+.m3-button--ghost:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+.m3-button--primary {
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+}
+.m3-button--primary:hover:not(:disabled) {
+  background: var(--kimo-accent-hover);
+}
+.m3-button--danger {
+  background: var(--kimo-danger);
+  color: #ffffff;
+}
+
+/* --- LayerRow/* (ZcfUj, L3PiIW, oHsXi, N3AA7R, lAFda, Uh0kH, x5xNG) ------------------------ */
+
+/* A slot / replaced / plain row inside an instance selected: M1 LayerRow/Selected (dArBD). */
+/* Selection header kind pill (Badge jrIWa, component-soft). */
+.m3-kind-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-component-soft);
+}
+.m3-kind-pill__label {
+  color: var(--kimo-component);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+.m3-kind-pill--derived {
+  background: var(--kimo-bg-muted);
+}
+.m3-kind-pill--derived .m3-kind-pill__label {
+  color: var(--kimo-text-secondary);
+}
+.selection-header__icon.selection-header__icon--component {
+  color: var(--kimo-component);
+}
+
+/* --- AssetRow (h6gLx / Nugw3) -------------------------------------------------------------- */
+
+.m3-asset-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  cursor: default;
+}
+.m3-asset-row:hover {
+  background: var(--kimo-bg-hover);
+}
+.m3-asset-row--selected {
+  background: var(--kimo-bg-hover);
+}
+.m3-asset-row__glyph {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-component);
+}
+.m3-asset-row__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.m3-asset-row--selected .m3-asset-row__name {
+  font-weight: var(--kimo-font-weight-medium);
+}
+.m3-asset-row__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+.m3-asset-row__meta {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}
+.m3-asset-row__check {
+  display: inline-flex;
+  color: var(--kimo-text-primary);
+}
+
+/* --- Toasts (board 15 FVd5q / qINpv; placement b6PPwj) --------------------------------------- */
+
+.m3-toasts {
+  position: absolute;
+  z-index: 40;
+  left: 50%;
+  bottom: calc(24px + var(--floating-toolbar-h, 48px) + 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  /* Toasts hug one line (KLsV9: 454 × 36). An absolute box at left 50% shrink-wraps to the
+     remaining half of the canvas (452), which wrapped the rejected-edit toast to 2 lines. */
+  width: max-content;
+  max-width: calc(100% - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.m3-toasts > * {
+  pointer-events: auto;
+}
+.m3-toast--old {
+  opacity: 0.5;
+}
+/* --- Confirm dialog (i8PfIC / ysXyK / fmB2B) ------------------------------------------------- */
+
+.m3-scrim {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a4d;
+}
+
+/* --- Variables grid cells (VarCell from @kimo/ui) ---------------------------------------- */
+
+.m3-cell--editable {
+  cursor: pointer;
+}
+.m3-cell--editable:hover {
+  background: var(--kimo-bg-hover);
+}
+/* Out-of-sRGB OKLCH / P3 value: corner flag on the swatch (board 14 note PgVk9). */
+.m3-cell--gamut {
+  position: relative;
+}
+.m3-cell--gamut::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 22px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-warning);
+}
+.m3-var-list-row--no-match [class*="__value"] {
+  color: var(--kimo-warning);
+}

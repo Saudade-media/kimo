@@ -1,5 +1,6 @@
 /**
- * Renderer contracts: M1 (ADR 0004, ADR 0009), M2 overlays and icons (ADR 0010). One CanvasKit implementation serves the
+ * Renderer contracts: M1 (ADR 0004, ADR 0009), M2 overlays and icons (ADR 0010), M3 component
+ * overlays and expanded instances (ADR 0011). One CanvasKit implementation serves the
  * interactive WebGL canvas and the headless raster path (Bun/Node, MCP renders, PNG export).
  *
  * No React here, and no CanvasKit types in the public surface (ADR 0004 §5). DOM types appear
@@ -45,7 +46,10 @@ export interface AssetSource {
  * What the renderer paints. The renderer never subscribes to a store itself: the host (the
  * web app's CanvasHost, the CLI, the MCP server) owns the pipeline
  * `DocStore.onChange → LayoutEngine.update → setLayout + invalidate → requestFrame`.
- * `nodes` is read lazily at draw time, so a live `DocStore` can be passed directly.
+ * `nodes` is read lazily at draw time, so a live `DocStore` can be passed directly. M3: pass
+ * the shared expanded view (`@kimo/layout` `createInstanceView`) so instances draw expanded
+ * and hit testing returns composite ids (`<instance>/<IdPath>`, top-most first); the same
+ * view goes to the layout engine (`LayoutInput.expanded`) and the resolver.
  */
 export interface RenderScene {
   nodes: NodeSource
@@ -270,7 +274,51 @@ export interface Overlay {
   resize?: ResizeOverlay | null
   /** Pointer-following delta badge (#8 "Delta", #4 "Pixel readout"). */
   cursorBadge?: CursorBadge | null
+
+  // M3 (boards 02c / 11 / 12 / 13, ADR 0011). All optional: absent = not drawn.
+  /**
+   * Tone of the selection outline, handles and size badge: `"component"` when the selection is
+   * a main, a derived component or an instance (board 11 `Q4JWk`/`pjCl0`/`h7Uden`, board 12
+   * `cHDIO`: stroke / handle stroke / badge fill `component`). Default `"selection"` (blue).
+   */
+  selectionTone?: "selection" | "component"
+  /**
+   * Component identity outlines (02c "Canvas outlines", `sdBO5`): drawn under the selection.
+   * The host lists the hovered main/instance and, while a main or instance is selected, its
+   * slot frames (with their view ids, which may be composite). A hovered id listed here as
+   * `main`/`instance` gets no blue hover outline (the identity outline replaces it).
+   */
+  componentOutlines?: readonly ComponentOutline[]
+  /**
+   * Board 13 drag-and-drop onto an instance: the insertion bar inside a slot, or the replace
+   * target box around an instance descendant. Null hides.
+   */
+  instanceDrop?: InstanceDropOverlay | null
 }
+
+/**
+ * One component identity outline. Colors are `component` / `component-soft`
+ * ({@link OverlayTheme}); widths and dashes in {@link OVERLAY_SPEC_M3}.
+ */
+export interface ComponentOutline {
+  /** View id (real or composite `<instance>/<IdPath>`) whose layout box is outlined. */
+  id: string
+  /**
+   * `main`: 1.5 solid (02c `NENSo`); `instance`: 1 solid (02c `GTuxN`); `slot`: 1px dashed
+   * 4/3, filled `component-soft` when the slot shows no children (02c `te3fa`), drawn on the
+   * slot box offset per {@link OVERLAY_SPEC_M3}.slot (board 12 `f8MrUb`).
+   */
+  role: "main" | "instance" | "slot"
+  /** Slots only: true when the slot renders no children (soft fill). */
+  empty?: boolean
+}
+
+/** Board 13 drop feedback on instances (world coordinates). */
+export type InstanceDropOverlay =
+  /** Drop into a slot (`GMebs`): a 2px `component` bar, radius 1, across the slot's content box. */
+  | { kind: "slot"; slotId: string; bar: { x: number; y: number; w: number } }
+  /** Drop replaces a descendant (`d8kP2n`): its box outset, `component-soft` fill, 1.5 `component` stroke, radius 2. */
+  | { kind: "replace"; targetId: string }
 
 /** Colors for overlays, supplied by the host from design tokens (`--kimo-selection`, …). */
 export interface OverlayTheme {
@@ -294,6 +342,11 @@ export interface OverlayTheme {
   accentText?: string
   /** `accent` (#0A0A0A / #F5F5F4): SizeBadge/Delta fill. */
   accent?: string
+  // M3 (optional; light values are the fallback).
+  /** `component` (#7C3AED light / #A78BFA dark): component/instance identity only. */
+  component?: string
+  /** `component-soft` (#7C3AED14 / #A78BFA24): empty-slot fill, replace target fill. */
+  componentSoft?: string
 }
 
 /**
@@ -390,6 +443,48 @@ export const OVERLAY_SPEC_M2 = {
    * (dragged edge x + 4, pointer y + 12) (edge 560 → badge x 564; pointer 210 → badge y 222).
    */
   deltaBadge: { fill: "accent", text: "on-accent", edgeOffsetX: 4, pointerOffsetY: 12 },
+} as const
+
+/**
+ * M3 overlay geometry (desing.pen 02c `SD9TU`, board 12 `M3150`, board 13 `XoUIl`). Screen px
+ * at any zoom unless noted. Labels (CanvasLabel/Component `tl5O8`, /Instance `J3FKSK`), the
+ * SlotBadge (`kMGG0`), SlotQuickInsert (`AJSok`), drag chip and drop hint are DOM (host), not
+ * canvas: positions are listed here so the host and renderer agree.
+ */
+export const OVERLAY_SPEC_M3 = {
+  /** 02c `NENSo`: main outline 1.5 solid `component`, radius 2 (specimen). */
+  main: { width: 1.5, color: "component" },
+  /** 02c `GTuxN`: instance outline 1 solid `component`. */
+  instance: { width: 1, color: "component" },
+  /**
+   * 02c `te3fa` / board 12 `f8MrUb` / board 13 `mau05`: 1px `component`, dash 4 gap 3 (path
+   * `M0.5 0.5l4 0m3 0…`), `component-soft` fill when empty. Box = slot frame box moved by
+   * (dx, dy) and widened by dw, height unchanged — read from both boards: slot 188×39 →
+   * outline at (−4, +2) 196×39. (World units at 100%; the host scales the offsets by zoom.)
+   */
+  slot: { width: 1, dash: [4, 3] as const, fillWhenEmpty: "component-soft", dx: -4, dy: 2, dw: 8 },
+  /**
+   * Selection in component tone: same geometry as {@link OVERLAY_SPEC} (outline 1.5, handles
+   * 8 / stroke 1.5 / radius 2, badge pill) with `component` instead of `selection`.
+   */
+  selection: { color: "component" },
+  /** Board 13 `GMebs`: insertion bar 2 high, radius 1, fill `component`; 4 below the previous child. */
+  insertionBar: { height: 2, radius: 1, color: "component", gapBelowPrevious: 4 },
+  /** Board 13 `d8kP2n`: replace target, stroke 1.5 `component`, fill `component-soft`, radius 2, outset 2. */
+  replaceTarget: { strokeWidth: 1.5, radius: 2, outset: 2, fill: "component-soft" },
+  /** DOM positions (host). */
+  dom: {
+    /** CanvasLabel above a root main / root instance: like the artboard label, 22 above (board 12 `dfoWu`: y 448 vs 470). */
+    rootLabelOffset: 22,
+    /** CanvasLabel/Instance above a nested instance: 18 above its top-left (board 11 `B70Th`: y −18). */
+    nestedLabelOffset: 18,
+    /** SlotBadge (board 12 `LQoWJ`): left = outline left, top = outline bottom + 4. */
+    slotBadge: { gapBelowOutline: 4 },
+    /** SlotQuickInsert row (board 12 `g9pFd`): gap 4 between chips; 13 below the main, 12 from its left. */
+    quickInsert: { gap: 4, dx: 12, dy: 13 },
+    /** Size badge under a main showing quick insert (board 12 `F4JHL`): 4 below the quick-insert row. */
+    sizeBadgeBelowQuickInsert: 4,
+  },
 } as const
 
 // --- Icons ---------------------------------------------------------------------------------
@@ -579,8 +674,16 @@ export interface RenderStats {
    */
   recordMs?: number
   rasterMs?: number
+  /** Pictures recorded in the last frame: root pictures plus shared instance pictures. */
   recorded?: number
   rasterized?: number
+  /**
+   * M3: shared instance pictures recorded in the last frame (one per distinct expanded
+   * instance content; included in `recorded`), and top-level instance roots that re-attached
+   * to a shared picture instead of recording one of their own.
+   */
+  sharedRecorded?: number
+  wrapped?: number
 }
 
 /** Error thrown/reported by the renderer. */

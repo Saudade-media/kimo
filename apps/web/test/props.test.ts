@@ -133,8 +133,8 @@ describe("kinds, icons and ops", () => {
         node({ type: "rect", fill: { kind: "image", src: "./assets/0123456789abcdef.png" } }),
       ),
     ).toBe("image")
-    expect(typeIcon(node({ type: "frame", component: true }))).toBe("diamond")
-    expect(typeIcon(node({ type: "instance" }))).toBe("component")
+    expect(typeIcon(node({ type: "frame", component: true }))).toBe("component")
+    expect(typeIcon(node({ type: "instance" }))).toBe("diamond")
     expect(kindLabel(node({ type: "rect" }))).toBe("Rectangle")
   })
   test("set ops: one update per id, undefined unsets", () => {

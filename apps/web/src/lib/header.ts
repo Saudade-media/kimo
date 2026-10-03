@@ -17,8 +17,7 @@ interface Hub {
 const hubs = new WeakMap<DocStore, Hub>()
 
 function read(store: DocStore): DocHeader {
-  const { nodes: _, ...rest } = store.toDocument()
-  return { ...rest, nodes: {} } as DocHeader
+  return { ...store.toHeader(), nodes: {} } as DocHeader
 }
 
 function hubFor(store: DocStore): Hub {

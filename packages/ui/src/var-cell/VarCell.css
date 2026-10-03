@@ -1,0 +1,83 @@
+/*
+ * VarCell: desing.pen 02c > VarCell/Color (iCQwv), /Number (U8aZ2J), /String (MEKrO),
+ * /Boolean (pxZFa), /Alias (xn5O9), /Empty (OJlJp).
+ * frame: 150 × 36, row, gap 8, padding [0, 8], alignItems center
+ *   Color:   Swatch (b42Ypk) SwatchTile 18 × 18 padding 1 · Value (NHH8Y) mono 11 text-primary ·
+ *            Multi (JKic0) layers-2 10 text-tertiary (enabled false → multi-axis only)
+ *   Number:  Value (yepLf) mono 11 · Multi (u9Z1nq)
+ *   String:  Value (zTAYw) sans 12 text-primary
+ *   Boolean: Toggle (z9wRGc) · Value (cn6RE) mono 11 text-secondary
+ *   Alias:   AliasChip (f7H1e)
+ *   Empty:   Value (ql8o6) "—" sans 12 text-tertiary
+ * Editing (b8Koy): fill bg-app, stroke 1.5 selection (inside), radius-sm.
+ */
+.kimo-var-cell {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 150px;
+  height: 36px;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.kimo-var-cell--editing {
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1.5px var(--kimo-selection);
+}
+
+.kimo-var-cell__value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-var-cell__value--mono {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-var-cell__value--secondary {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-var-cell__value--empty {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-var-cell__multi {
+  display: block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-all-themes-tag {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 1px 5px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-all-themes-tag__label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: 10px;
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(10 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}

@@ -49,30 +49,41 @@ export const placementProps = {
   meta: opt(Meta),
 }
 
+/**
+ * M3 (ADR 0011): optional fractional order key of a declaration. `component.props` is a record
+ * (canonically sorted by name), so the editor's declaration order lives here: props list by
+ * (`order`, then name), an absent `order` counting as the empty string.
+ */
+const propOrder = opt(OrderKey)
+
 export const TextPropDef = Strict({
   type: Type.Literal("text"),
   target: IdPath,
   field: Type.Literal("content"),
   default: opt(Type.String()),
+  order: propOrder,
 })
 export const BooleanPropDef = Strict({
   type: Type.Literal("boolean"),
   target: IdPath,
   field: Type.Literal("visible"),
   default: opt(Type.Boolean()),
+  order: propOrder,
 })
 export const InstancePropDef = Strict({
   type: Type.Literal("instance"),
   target: IdPath,
   default: opt(QId),
+  order: propOrder,
 })
 export const EnumPropDef = Strict({
   type: Type.Literal("enum"),
   target: IdPath,
   field: Type.String({ minLength: 1 }),
   options: Type.Record(Type.String({ minLength: 1 }), Type.Unknown(), { minProperties: 1 }),
+  order: propOrder,
 })
-export const SlotPropDef = Strict({ type: Type.Literal("slot"), target: IdPath })
+export const SlotPropDef = Strict({ type: Type.Literal("slot"), target: IdPath, order: propOrder })
 
 export const PropDef = Type.Union([
   TextPropDef,

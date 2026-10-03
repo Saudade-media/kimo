@@ -1,0 +1,238 @@
+/*
+ * EntryRow: desing.pen 02c > EntryRow (H6Mdtf), EntryRow/Fallback (Ni5kJ).
+ * frame: fill_container × 32, row, gap 8, padding [0, 8, 0, 12], alignItems center,
+ *        stroke bottom 1 border
+ *   ├ Grip  (x8qPB) grip-vertical 12, text-tertiary
+ *   ├ Index (yafcc) mono 11, text-tertiary
+ *   ├ When  (ZXu86) width 300, row, gap 4, center — WhenChips | Fallback Tag (aKpIg: padding
+ *   │       [0, 5], stroke 1 border-strong, radius-xs; Label mono 11 text-secondary)
+ *   ├ Value (hjwZf) VarCell, height 32
+ *   ├ Spacer fill × 1
+ *   ├ State (bNimB) sans 11, text-tertiary (an empty State keeps its 13px text box)
+ *   └ Menu  (qyMH0) ellipsis 14, text-tertiary
+ * Winning (mFjXw): fill bg-subtle, State text-secondary.
+ */
+.kimo-entry-row {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px 0 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-entry-row--winning {
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-entry-row[data-drop="before"]::before,
+.kimo-entry-row[data-drop="after"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--kimo-selection);
+  pointer-events: none;
+}
+
+.kimo-entry-row[data-drop="before"]::before {
+  top: -1px;
+}
+
+.kimo-entry-row[data-drop="after"]::after {
+  bottom: -1px;
+}
+
+.kimo-entry-row__grip {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+  cursor: grab;
+}
+
+.kimo-entry-row__grip:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.kimo-entry-row__grip > svg,
+.kimo-entry-row__menu > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-entry-row__index,
+.kimo-entry-row__fallback-label {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-entry-row__index {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-entry-row__when {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 300px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.kimo-entry-row__fallback {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 0 5px;
+  border-radius: var(--kimo-radius-xs);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-entry-row__fallback-label {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-entry-row > .kimo-var-cell {
+  height: 32px;
+}
+
+.kimo-entry-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-entry-row__state {
+  flex: none;
+  min-height: 13px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-entry-row--winning .kimo-entry-row__state {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-entry-row__menu {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-entry-row__menu:hover {
+  color: var(--kimo-text-primary);
+}
+
+/*
+ * VariableEntries: Variables dialog > Entries · space/card-pad (akJGT).
+ * frame: fill_container, column, padding [0, 0, 0, 24], fill bg-subtle, stroke bottom 1 border
+ *   ├ Entries Header (E1sgyl) fill × 28, row, gap 8, padding [0, 12], center
+ *   │   Title sans 11 / 600 text-secondary · Count sans 11 text-tertiary · Spacer ·
+ *   │   Preview mono 11 text-tertiary
+ *   ├ EntryRow ×n
+ *   └ Entries Footer (bTPBP) fill × 36, row, gap 6, padding [0, 12], center
+ *       Button/Ghost h 24, padding [0, 8], plus 12, label 11 ("Add entry", "Add fallback")
+ */
+.kimo-variable-entries {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0 0 0 24px;
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-variable-entries__header,
+.kimo-variable-entries__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: 0 12px;
+}
+
+.kimo-variable-entries__header {
+  gap: 8px;
+  height: 28px;
+}
+
+.kimo-variable-entries__footer {
+  gap: 6px;
+  height: 36px;
+}
+
+.kimo-variable-entries__title,
+.kimo-variable-entries__count {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-variable-entries__title {
+  color: var(--kimo-text-secondary);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-variable-entries__count {
+  color: var(--kimo-text-tertiary);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-variable-entries__preview {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-variable-entries__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-button.kimo-variable-entries__add {
+  line-height: 13px; /* label sans 11: Pencil text box round(11 × 1.21) */
+  height: 24px;
+  padding: 0 8px;
+  font-size: var(--kimo-text-xs);
+}
+
+.kimo-variable-entries__add .kimo-button__icon {
+  width: 12px;
+  height: 12px;
+}

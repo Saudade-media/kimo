@@ -197,7 +197,14 @@ export class TextEngine {
   }
 
   measurer(): TextMeasurer {
-    return { measure: (input, maxWidth) => this.measure(input, maxWidth) }
+    const fonts = this.fonts
+    return {
+      measure: (input, maxWidth) => this.measure(input, maxWidth),
+      // Layout re-measures every text node on a full pass only when a font arrived.
+      get generation() {
+        return fonts.generation
+      },
+    }
   }
 
   dispose(): void {

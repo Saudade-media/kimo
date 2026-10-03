@@ -46,9 +46,22 @@ export async function waitCanvas(page: Page) {
   await settle(page)
 }
 
+/**
+ * Two animation frames, so pending renders and overlay updates land. Falls back to a 500 ms
+ * timer: headless Chromium can skip rAF under load, and a bare rAF promise then never settles.
+ */
 export const settle = (page: Page) =>
   page.evaluate(
-    () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+    () =>
+      new Promise<void>((r) => {
+        const t = setTimeout(r, 500)
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            clearTimeout(t)
+            r()
+          }),
+        )
+      }),
   )
 
 export const idOf = (page: Page, name: string) =>

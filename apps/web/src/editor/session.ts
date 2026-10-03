@@ -37,6 +37,11 @@ export interface FileSession {
   assetEntry: (src: string) => ManifestEntry | null
   /** Rejected edits (the shell may surface them; they are always logged). */
   onReject: Set<(message: string) => void>
+  /**
+   * M3: rewrites an op group before it is applied (edits on composite instance ids become
+   * overrides, see `m3/route.ts`). Null refuses the edit (the router reports why).
+   */
+  route?: (ops: readonly Op[]) => readonly Op[] | null
 }
 
 export type SessionState =
@@ -66,8 +71,19 @@ function makeSession(id: string, store: DocStore, provider: IndexedDbProvider, m
     const extra = manifestOps(currentHeader(store).assets, ops, (src) => session.assetEntry(src))
     return extra.length ? [...extra, ...(Array.isArray(ops) ? ops : [ops as Op])] : ops
   }
+  /** `ops` through the M3 router (instances); null = refused. */
+  const routed = (ops: Op | readonly Op[]): readonly Op[] | null => {
+    const list: readonly Op[] = Array.isArray(ops) ? ops : [ops as Op]
+    return session.route ? session.route(list) : list
+  }
   const apply = (ops: Op | readonly Op[], label?: string) => {
-    const r = store.apply(withManifest(ops), label ? { origin: "user", label } : { origin: "user" })
+    const list = routed(ops)
+    if (!list) return false
+    if (list.length === 0) return true
+    const r = store.apply(
+      withManifest(list),
+      label ? { origin: "user", label } : { origin: "user" },
+    )
     if (!r.ok) reject(r.errors.map((e) => e.message).join("; "))
     return r.ok
   }
@@ -83,7 +99,10 @@ function makeSession(id: string, store: DocStore, provider: IndexedDbProvider, m
     gesture() {
       const g = startGesture(store, "user", "Edit", reject)
       return {
-        apply: (ops, label) => g.set(withManifest(ops) as readonly Op[], label),
+        apply: (ops, label) => {
+          const list = routed(ops)
+          return list ? g.set(withManifest(list) as readonly Op[], label) : false
+        },
         end: () => g.end(),
         get done() {
           return g.done

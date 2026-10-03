@@ -2,6 +2,15 @@
  * Color parsing and conversion to sRGB (spec §3 "Colors"): hex, OKLCH and Display-P3.
  * Out-of-gamut colors are gamut-mapped with the CSS Color 4 algorithm (OKLCH chroma
  * reduction with a deltaEOK just-noticeable-difference of 0.02). Pure, no CanvasKit.
+ *
+ * Color spaces (M3, ADR 0011): CanvasKit 0.42 can tag a surface `ColorSpace.DISPLAY_P3` and
+ * convert per paint (`Paint.setColor(color, colorSpace)`), but every Kimo surface is sRGB: the
+ * WebGL canvas (default `MakeWebGLCanvasSurface`), the CPU raster path and PNG export, so the
+ * same document renders identically on every display and in exports. OKLCH and Display-P3
+ * values (literal or variable-bound, including aliases) are therefore converted here and
+ * gamut-mapped to sRGB once, before they reach Skia. Rendering wide-gamut on P3 displays would
+ * need a P3 surface plus paints that carry their source space end to end (gradients, shadows,
+ * blends); not in M3.
  */
 import { isObject } from "@kimo/core-schema"
 

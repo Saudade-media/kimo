@@ -10,14 +10,23 @@
  * and once something is on screen, picture recording and rasterizing are time-budgeted per
  * frame so never-drawn roots fill in over a few frames instead of blocking one.
  */
-import type { LayoutResult, ResolveHeader, TextMeasurer } from "@kimo/layout"
+import { isRef } from "@kimo/core-schema"
+import type {
+  LayoutNodeData,
+  LayoutResult,
+  Matrix,
+  NodeLayout,
+  ResolveHeader,
+  Resolver,
+  TextMeasurer,
+} from "@kimo/layout"
 import { resolveText } from "@kimo/layout"
 import type { Canvas, CanvasKit, Image, SkPicture, Surface } from "canvaskit-wasm"
 import { isBrowser, loadCanvasKit } from "./ck"
 import { parseColor } from "./color"
 import { type DrawCounters, type PaintContext, Painter } from "./draw"
 import { CkFontProvider } from "./fonts"
-import { intersection, intersects, union } from "./geometry"
+import { apply, intersection, intersects, invert, toCk, union } from "./geometry"
 import { HitIndex } from "./hit-test"
 import { packageIconSource, packIconSource, SourceIconProvider } from "./icons/provider"
 import { IconRegistry } from "./icons/registry"
@@ -57,11 +66,98 @@ interface RootEntry {
   layers: number
   /** The picture skipped icon glyphs that were still loading. */
   pendingIcons: boolean
+  /** What the recording read from the header (stale on a header change, see HeaderUse). */
+  header: HeaderUse
+  /**
+   * The root is a top-level instance drawn from a shared picture (its own picture is only
+   * `concat(T) + drawPicture`): zoomed out it is drawn from the shared picture's raster.
+   */
+  wrap: { sp: SharedPicture; key: string; T: Matrix } | null
   /** Zoomed-out raster of `picture` (see {@link RASTER_MAX_SCALE}); dropped with it. */
   raster: RootRaster | null
   /** Frame number this root was last drawn (raster cache eviction). */
   used: number
 }
+
+/**
+ * One recording of an expanded instance's subtree in the instance's local space (M3 perf),
+ * shared by every top-level instance whose expanded content, local layout and theme are the
+ * same: a main-component edit with 1k instances records one picture per distinct variant and
+ * re-records the roots as cheap wrappers (`concat(transform) + drawPicture`).
+ */
+interface SharedPicture {
+  picture: SkPicture
+  nodes: number
+  draws: number
+  layers: number
+  pendingIcons: boolean
+  /** What the recording read from the header (see {@link CanvasKitRenderer.invalidate}). */
+  header: HeaderUse
+  /** The subtree blends non-normally (answers the painter's isolation check). */
+  blends: boolean
+  /** Frame number of the last recording that used it (eviction). */
+  used: number
+  /** Cull rect of the picture in the instance's local space. */
+  bounds: Rect | null
+  /** Zoomed-out raster in local space, shared by every root drawing this picture. */
+  raster: RootRaster | null
+  /** Frame number this raster was last drawn (raster eviction). */
+  rasterUsed: number
+}
+
+/** The content key of one top-level instance and what it was computed from. */
+interface InstanceKey {
+  /** Paint order array of the layout the ids were walked in (same array: same tree). */
+  order: readonly string[]
+  ids: string[]
+  data: unknown[]
+  layouts: unknown[]
+  theme: string
+  key: string
+}
+
+/**
+ * Header reads of a recording: `refs` — it resolved a `{ $ref }` binding (stale whenever the
+ * variables, themes or imports change); `textDefault` — the default text fill it saw (whether
+ * `text/default` is a color variable; stale only when that answer changes).
+ */
+interface HeaderUse {
+  refs: boolean
+  textDefault: boolean | null
+}
+const NO_HEADER: HeaderUse = Object.freeze({ refs: false, textDefault: null }) as HeaderUse
+const hasTextDefault = (h: ResolveHeader): boolean => {
+  const v = (h.variables as Record<string, unknown> | undefined)?.["text/default"]
+  return typeof v === "object" && v !== null && (v as { type?: unknown }).type === "color"
+}
+
+/**
+ * `canvas` × `T`: a translation (the common instance placement) as two scalars, else the
+ * full matrix (perf: `concat` marshals a 9-float array into wasm on every call).
+ */
+function placeAt(canvas: Canvas, T: Matrix): void {
+  if (T[0] === 1 && T[1] === 0 && T[2] === 0 && T[3] === 1) canvas.translate(T[4], T[5])
+  else canvas.concat(toCk(T))
+}
+
+/** Shared instance pictures kept before the least recently used half is evicted. */
+const SHARED_MAX = 2048
+/** Data keys never painted (or factored out of a shared picture's local space). */
+const UNPAINTED = new Set(["parent", "order", "name", "meta", "locked"])
+/**
+ * Placement keys of an instance top: its transform carries them (local-space recording); its
+ * `theme` pins are part of the resolved theme in the key.
+ */
+const PLACEMENT = new Set([
+  ...UNPAINTED,
+  "x",
+  "y",
+  "rotation",
+  "flipX",
+  "flipY",
+  "position",
+  "theme",
+])
 
 /** A root picture rasterized at `scale` device px per world px, covering world `x,y,w,h`. */
 interface RootRaster {
@@ -131,6 +227,34 @@ export class CanvasKitRenderer implements Renderer {
   private overlay: Overlay = EMPTY_OVERLAY
   private roots = new Map<string, RootEntry>()
   private rootOrder: string[] = []
+  /** Root grouping of the last `setLayout` (reused while the paint order array is the same). */
+  private grouping: {
+    order: readonly string[]
+    nodes: unknown
+    next: Map<string, string[]>
+    roots: string[]
+  } | null = null
+  /**
+   * M3: draw top-level instances from {@link SharedPicture}s (default on; `false` records every
+   * instance into its root picture as before — A/B in the perf harness).
+   */
+  sharedInstances = true
+  private shared = new Map<string, SharedPicture>()
+  private instanceKeys = new Map<string, InstanceKey>()
+  /** Per data object: its paint token (see {@link token}). */
+  private readonly tokens = new WeakMap<object, string>()
+  private readonly topTokens = new WeakMap<object, string>()
+  /** JSON of nested values, per object (data is immutable). */
+  private readonly jsons = new WeakMap<object, string>()
+  /** Paint token of each layout object (see {@link layoutToken}). */
+  private readonly layoutTokens = new WeakMap<object, string>()
+  /** Header use of the recording in progress (see {@link tracked}). */
+  private recFlags: HeaderUse | null = null
+  /** Variables / themes / imports as of the last soft invalidation (what changed since). */
+  private headerKey: string | null = null
+  /** Root being recorded, and the shared picture it turned out to wrap (see RootEntry.wrap). */
+  private recRoot: string | null = null
+  private recWrap: RootEntry["wrap"] = null
   private hitIndex: HitIndex | null = null
 
   private surface: Surface | null = null
@@ -170,6 +294,8 @@ export class CanvasKitRenderer implements Renderer {
     rasterMs: 0,
     rasterized: 0,
     recorded: 0,
+    sharedRecorded: 0,
+    wrapped: 0,
   }
 
   private iconProvider: IconProvider | null = null
@@ -236,6 +362,8 @@ export class CanvasKitRenderer implements Renderer {
       // root per arriving glyph re-recorded a whole 5k-node document several times on open).
       this.unsubscribeIcons = provider.onIconLoaded(() => this.dropPendingIcons())
       this.painter = new Painter(ck, new PaintFactory(ck, images), text, registry)
+      this.painter.subtree = (c, ctx, id, counters) => this.drawShared(c, ctx, id, counters)
+      this.painter.knownBlends = (ctx, id) => this.sharedFor(ctx, id)?.sp.blends
       this.overlayPainter = new OverlayPainter(ck, text)
       fonts.onFontLoaded(() => {
         text.invalidate()
@@ -406,6 +534,9 @@ export class CanvasKitRenderer implements Renderer {
 
   setDocument(scene: RenderScene): void {
     this.scene = scene
+    this.grouping = null
+    this.headerKey = null
+    this.instanceKeys.clear()
     if (this.images) this.images.assets = scene.assets
     this.textEngine?.invalidate()
     this.dropAll(false)
@@ -415,8 +546,26 @@ export class CanvasKitRenderer implements Renderer {
   invalidate(nodeIds?: Iterable<string>): void {
     this.hitIndex = null
     if (!nodeIds) {
-      this.textEngine?.invalidate()
-      this.dropAll(true)
+      // Everything may have changed, but node data and layout are compared on `setLayout`
+      // (identity / `changed`), so only what read a changed header is dropped here: pictures
+      // with bindings, or whose default text fill changed (a variable mode switch over 1k
+      // instances re-records one shared picture per variant, not the whole document). Text
+      // caches are content-keyed (runs, width, fill, font generation) and stay valid.
+      const ctx = this.context()
+      const h = ctx?.header() ?? {}
+      const key = JSON.stringify([h.variables ?? null, h.themes ?? null, h.imports ?? null])
+      const changed = key !== this.headerKey
+      this.headerKey = key
+      const td = hasTextDefault(h)
+      const stale = (u: HeaderUse) =>
+        changed && (u.refs || (u.textDefault !== null && u.textDefault !== td))
+      for (const e of this.roots.values()) if (e.picture && stale(e.header)) this.drop(e)
+      for (const [k, sp] of this.shared)
+        if (stale(sp.header)) {
+          this.deleteShared(sp)
+          this.shared.delete(k)
+        }
+      this.requestFrame()
       return
     }
     const ids = [...nodeIds]
@@ -432,21 +581,31 @@ export class CanvasKitRenderer implements Renderer {
     this.layout = layout
     this.hitIndex = null
     const nodes = this.scene?.nodes
-    // Group paint order into root subtrees (order is depth-first, parents first).
-    const rootOf = new Map<string, string>()
-    const next = new Map<string, string[]>()
-    const order: string[] = []
-    for (const id of layout.order) {
-      const parent = nodes?.getNode(id)?.parent
-      const root = (typeof parent === "string" && rootOf.get(parent)) || id
-      rootOf.set(id, root)
-      let list = next.get(root)
-      if (!list) {
-        list = []
-        next.set(root, list)
-        order.push(root)
+    // Group paint order into root subtrees (order is depth-first, parents first). The engine
+    // hands back the same order array when no child list changed: reuse the grouping.
+    let next: Map<string, string[]>
+    let order: string[]
+    const g = this.grouping
+    if (g && g.order === layout.order && g.nodes === nodes) {
+      next = g.next
+      order = g.roots
+    } else {
+      const rootOf = new Map<string, string>()
+      next = new Map()
+      order = []
+      for (const id of layout.order) {
+        const parent = nodes?.getNode(id)?.parent
+        const root = (typeof parent === "string" && rootOf.get(parent)) || id
+        rootOf.set(id, root)
+        let list = next.get(root)
+        if (!list) {
+          list = []
+          next.set(root, list)
+          order.push(root)
+        }
+        list.push(id)
       }
-      list.push(id)
+      this.grouping = { order: layout.order, nodes, next, roots: order }
     }
     for (const [root, e] of this.roots)
       if (!next.has(root)) {
@@ -455,7 +614,7 @@ export class CanvasKitRenderer implements Renderer {
       }
     for (const [root, ids] of next) {
       const prev = this.roots.get(root)
-      if (prev?.picture) {
+      if (prev?.picture || prev?.wrap) {
         const same =
           prev.ids.length === ids.length &&
           prev.ids.every(
@@ -474,10 +633,14 @@ export class CanvasKitRenderer implements Renderer {
           draws: 0,
           layers: 0,
           pendingIcons: false,
+          header: NO_HEADER,
+          wrap: null,
           raster: null,
           used: 0,
         })
     }
+    for (const id of this.instanceKeys.keys())
+      if (!layout.nodes.has(id)) this.instanceKeys.delete(id)
     this.rootOrder = order
     this.requestFrame()
   }
@@ -516,10 +679,11 @@ export class CanvasKitRenderer implements Renderer {
     e.picture?.delete()
     e.picture = null
     e.bounds = null
+    e.wrap = null
     this.dropRaster(e)
   }
 
-  private dropRaster(e: RootEntry): void {
+  private dropRaster(e: { raster: RootRaster | null }): void {
     if (!e.raster) return
     e.raster.image.delete()
     this.rasterPx -= e.raster.px
@@ -529,11 +693,17 @@ export class CanvasKitRenderer implements Renderer {
   /** Rasters belong to the surface's GPU context: dropped when the surface changes. */
   private dropRasters(): void {
     for (const e of this.roots.values()) this.dropRaster(e)
+    for (const sp of this.shared.values()) this.dropRaster(sp)
     this.rasterPx = 0
   }
 
   /** Rasterizes `pic` at device scale `scale` into an image compatible with the surface. */
-  private rasterize(e: RootEntry, pic: SkPicture, bounds: Rect, scale: number): RootRaster | null {
+  private rasterize(
+    e: { raster: RootRaster | null },
+    pic: SkPicture,
+    bounds: Rect,
+    scale: number,
+  ): RootRaster | null {
     const { ck } = this.need()
     const surface = this.surface
     if (!surface) return null
@@ -573,10 +743,13 @@ export class CanvasKitRenderer implements Renderer {
   /** Evicts least recently drawn rasters (never this frame's) above the pixel budget. */
   private evictRasters(): void {
     if (this.rasterPx <= RASTER_BUDGET_PX) return
-    const old = [...this.roots.values()]
-      .filter((e) => e.raster && e.used !== this.frames)
-      .sort((a, b) => a.used - b.used)
-    for (const e of old) {
+    const old: { e: { raster: RootRaster | null }; used: number }[] = []
+    for (const e of this.roots.values())
+      if (e.raster && e.used !== this.frames) old.push({ e, used: e.used })
+    for (const sp of this.shared.values())
+      if (sp.raster && sp.rasterUsed !== this.frames) old.push({ e: sp, used: sp.rasterUsed })
+    old.sort((a, b) => a.used - b.used)
+    for (const { e } of old) {
       if (this.rasterPx <= RASTER_BUDGET_PX) break
       this.dropRaster(e)
     }
@@ -584,6 +757,11 @@ export class CanvasKitRenderer implements Renderer {
 
   private dropPendingIcons(): void {
     let any = false
+    for (const [k, sp] of this.shared)
+      if (sp.pendingIcons) {
+        this.deleteShared(sp)
+        this.shared.delete(k)
+      }
     for (const e of this.roots.values())
       if (e.picture && e.pendingIcons) {
         this.drop(e)
@@ -594,6 +772,7 @@ export class CanvasKitRenderer implements Renderer {
 
   private dropAll(frame: boolean): void {
     for (const e of this.roots.values()) this.drop(e)
+    this.dropShared()
     if (frame || this.surface) this.requestFrame()
   }
 
@@ -612,13 +791,23 @@ export class CanvasKitRenderer implements Renderer {
     const { ck, painter } = this.need()
     const rec = new ck.PictureRecorder()
     const counters: DrawCounters = { nodes: 0, draws: 0 }
+    const outer = this.recFlags
+    const flags: HeaderUse = { refs: false, textDefault: null }
+    this.recFlags = flags
+    this.recRoot = root
+    this.recWrap = null
     try {
       const c = rec.beginRecording(ck.LTRBRect(-1e7, -1e7, 1e7, 1e7), true)
-      painter.drawNode(c, ctx, root, counters)
+      painter.drawNode(c, this.tracked(ctx), root, counters)
       e.picture = rec.finishRecordingAsPicture()
     } finally {
       rec.delete()
+      this.recFlags = outer
+      this.recRoot = null
     }
+    e.header = flags
+    e.wrap = this.recWrap
+    this.recWrap = null
     e.nodes = counters.nodes
     e.draws = counters.draws
     e.layers = counters.layers ?? 0
@@ -646,6 +835,288 @@ export class CanvasKitRenderer implements Renderer {
       }
     e.bounds = bounds
     return e.picture
+  }
+
+  // --- shared instance pictures (M3) ----------------------------------------------------------
+
+  /** `ctx` reporting header reads (bindings, `header()`) to the recording in progress. */
+  private tracked(ctx: PaintContext): PaintContext {
+    const r = ctx.resolve
+    const resolve: Resolver = {
+      theme: (id) => r.theme(id),
+      value: (id, v) => {
+        if (this.recFlags && isRef(v)) this.recFlags.refs = true
+        return r.value(id, v)
+      },
+      invalidate: (ids) => r.invalidate(ids),
+    }
+    return {
+      ...ctx,
+      resolve,
+      // The painter reads the header for the default text fill only.
+      header: () => {
+        const h = ctx.header()
+        if (this.recFlags) this.recFlags.textDefault = hasTextDefault(h)
+        return h
+      },
+    }
+  }
+
+  private dropShared(): void {
+    for (const sp of this.shared.values()) this.deleteShared(sp)
+    this.shared.clear()
+  }
+
+  /** Frees a shared picture and its raster (roots that recorded it keep their own reference). */
+  private deleteShared(sp: SharedPicture): void {
+    sp.picture.delete()
+    this.dropRaster(sp)
+  }
+
+  /**
+   * The shared picture of top-level expanded instance `id` (recorded on first use), or null
+   * when `id` is not one. `ctx` should be {@link tracked} so header reads are attributed.
+   */
+  private sharedFor(ctx: PaintContext, id: string): NonNullable<RootEntry["wrap"]> | null {
+    if (!this.sharedInstances || id.includes("/")) return null
+    const l = ctx.layout.nodes.get(id)
+    if (!l?.visible) return null
+    // An expanded top-level instance: its children are composite ids `<id>/<IdPath>`.
+    const kids = ctx.nodes.children(id)
+    const first = kids[0]
+    if (first === undefined || !first.startsWith(`${id}/`)) return null
+    const T = l.transform
+    const inv = invert(T)
+    if (!inv) return null
+    const key = this.instanceKey(ctx, id)
+    let sp = this.shared.get(key)
+    if (!sp) {
+      const { ck, painter } = this.need()
+      const rec = new ck.PictureRecorder()
+      const c2: DrawCounters = { nodes: 0, draws: 0 }
+      const outer = this.recFlags
+      const flags: HeaderUse = { refs: false, textDefault: null }
+      this.recFlags = flags
+      const hook = painter.subtree
+      const known = painter.knownBlends
+      painter.subtree = null
+      painter.knownBlends = null
+      let picture: SkPicture
+      try {
+        const c = rec.beginRecording(ck.LTRBRect(-1e7, -1e7, 1e7, 1e7), true)
+        // Local space: the instance's own transform is applied where the picture is drawn.
+        c.concat(toCk(inv))
+        painter.drawNode(c, ctx, id, c2)
+        picture = rec.finishRecordingAsPicture()
+      } finally {
+        rec.delete()
+        painter.subtree = hook
+        painter.knownBlends = known
+        this.recFlags = outer
+      }
+      painter.knownBlends = null
+      const blends = painter.subtreeBlends(ctx, id)
+      painter.knownBlends = known
+      this.last.recorded++
+      this.last.sharedRecorded++
+      const cull = picture.cullRect()
+      const cw = (cull?.[2] ?? 0) - (cull?.[0] ?? 0)
+      const chh = (cull?.[3] ?? 0) - (cull?.[1] ?? 0)
+      sp = {
+        picture,
+        nodes: c2.nodes,
+        draws: c2.draws,
+        layers: c2.layers ?? 0,
+        pendingIcons: (c2.pendingIcons ?? 0) > 0,
+        header: flags,
+        blends,
+        used: this.frames,
+        // Unbounded (a background blur) or empty: no shared raster, roots raster themselves.
+        bounds:
+          cw > 0 && chh > 0 && cw < UNBOUNDED_CULL && chh < UNBOUNDED_CULL
+            ? { x: cull?.[0] ?? 0, y: cull?.[1] ?? 0, w: cw, h: chh }
+            : null,
+        raster: null,
+        rasterUsed: 0,
+      }
+      if (this.shared.size >= SHARED_MAX) this.evictShared()
+      this.shared.set(key, sp)
+    }
+    sp.used = this.frames
+    return { sp, key, T }
+  }
+
+  /** Painter hook: draws a top-level expanded instance from its shared picture. */
+  private drawShared(canvas: Canvas, ctx: PaintContext, id: string, counters: DrawCounters) {
+    const w = this.sharedFor(ctx, id)
+    if (!w) return false
+    const { sp, T } = w
+    if (id === this.recRoot) this.recWrap = w
+    canvas.save()
+    placeAt(canvas, T)
+    canvas.drawPicture(sp.picture)
+    canvas.restore()
+    counters.nodes += sp.nodes
+    counters.draws += sp.draws
+    if (sp.layers) counters.layers = (counters.layers ?? 0) + sp.layers
+    if (sp.pendingIcons) counters.pendingIcons = (counters.pendingIcons ?? 0) + 1
+    const f = this.recFlags
+    if (f) {
+      if (sp.header.refs) f.refs = true
+      if (sp.header.textDefault !== null) f.textDefault = sp.header.textDefault
+    }
+    return true
+  }
+
+  /**
+   * Makes root `e` (a top-level instance) draw straight from its shared picture, without a
+   * root picture of its own (perf: re-acquiring 1k wrappers after an edit costs a key check
+   * each, not a recording each). Null when the root is not a shareable instance.
+   */
+  private acquireWrap(ctx: PaintContext, root: string, e: RootEntry): RootEntry["wrap"] {
+    const flags: HeaderUse = { refs: false, textDefault: null }
+    const outer = this.recFlags
+    this.recFlags = flags
+    let w: RootEntry["wrap"]
+    try {
+      w = this.sharedFor(this.tracked(ctx), root)
+    } finally {
+      this.recFlags = outer
+    }
+    if (!w) return null
+    const { sp, T } = w
+    e.wrap = w
+    e.data = e.ids.map((id) => ctx.nodes.getNode(id))
+    e.nodes = sp.nodes
+    e.draws = sp.draws
+    e.layers = sp.layers
+    e.pendingIcons = sp.pendingIcons
+    e.header = sp.header
+    if (sp.bounds) {
+      const b = sp.bounds
+      let out: Rect | null = null
+      for (const p of [
+        { x: b.x, y: b.y },
+        { x: b.x + b.w, y: b.y },
+        { x: b.x, y: b.y + b.h },
+        { x: b.x + b.w, y: b.y + b.h },
+      ]) {
+        const q = apply(T, p)
+        out = union(out, { x: q.x, y: q.y, w: 0, h: 0 })
+      }
+      e.bounds = out
+    } else e.bounds = null
+    return w
+  }
+
+  /** Drops the least recently used half of the shared pictures (roots keep their own refs). */
+  private evictShared(): void {
+    const byUse = [...this.shared].sort((a, b) => a[1].used - b[1].used)
+    for (const [k, sp] of byUse.slice(0, byUse.length >> 1)) {
+      this.deleteShared(sp)
+      this.shared.delete(k)
+    }
+  }
+
+  private jsonOf(o: object): string {
+    let j = this.jsons.get(o)
+    if (j === undefined) {
+      j = JSON.stringify(o)
+      this.jsons.set(o, j)
+    }
+    return j
+  }
+
+  /**
+   * What a node paints, as a string of its values (nested objects as JSON, cached per object:
+   * node data is immutable). `top`: the instance root, whose placement is carried by its
+   * transform and whose pins by the resolved theme.
+   */
+  private token(n: LayoutNodeData, top: boolean): string {
+    const cache = top ? this.topTokens : this.tokens
+    let t = cache.get(n)
+    if (t !== undefined) return t
+    const skip = top ? PLACEMENT : UNPAINTED
+    const parts: string[] = []
+    for (const k in n) {
+      if (!Object.hasOwn(n, k) || skip.has(k)) continue
+      const v = (n as Record<string, unknown>)[k]
+      if (v === undefined) continue
+      parts.push(
+        typeof v === "object" && v !== null
+          ? `${k}:${this.jsonOf(v)}`
+          : `${k}=${typeof v === "string" ? JSON.stringify(v) : String(v)}`,
+      )
+    }
+    t = parts.join(",")
+    cache.set(n, t)
+    return t
+  }
+
+  /**
+   * What a node's layout paints, given its data: its box in its parent (`local`; a transform
+   * relative to the instance root is the product of these along the path, with rotation and
+   * flips from the data), visibility and text metrics. `top`: only the root's size (its
+   * position is the shared picture's placement). Cached per layout object.
+   */
+  private layoutToken(l: NodeLayout, top: boolean): string {
+    if (top) return `${l.local.w},${l.local.h},${l.visible ? 1 : 0}`
+    let t = this.layoutTokens.get(l)
+    if (t === undefined) {
+      const b = l.local
+      t = `${b.x},${b.y},${b.w},${b.h},${l.visible ? 1 : 0}`
+      const m = l.text
+      if (m) t += `;${m.w},${m.h},${m.lines ?? ""},${m.baseline ?? ""}`
+      this.layoutTokens.set(l, t)
+    }
+    return t
+  }
+
+  /** Content key of top-level instance `id` (see {@link SharedPicture}). */
+  private instanceKey(ctx: PaintContext, id: string): string {
+    const prev = this.instanceKeys.get(id)
+    // The engine hands back the same paint-order array while no child list changed: the
+    // subtree's ids are the ones walked last time.
+    let ids: string[]
+    if (prev && prev.order === ctx.layout.order) ids = prev.ids
+    else {
+      ids = []
+      const walk = (x: string) => {
+        ids.push(x)
+        for (const c of ctx.nodes.children(x)) if (ctx.layout.nodes.has(c)) walk(c)
+      }
+      walk(id)
+    }
+    const th = ctx.resolve.theme(id)
+    const theme = Object.keys(th)
+      .sort()
+      .map((k) => `${k}=${th[k]}`)
+      .join(",")
+    const data: unknown[] = new Array(ids.length)
+    const layouts: unknown[] = new Array(ids.length)
+    let same = !!prev && prev.theme === theme && prev.ids.length === ids.length
+    for (let i = 0; i < ids.length; i++) {
+      const x = ids[i] as string
+      data[i] = ctx.nodes.getNode(x)
+      layouts[i] = ctx.layout.nodes.get(x)
+      if (
+        same &&
+        (prev?.ids[i] !== x || prev.data[i] !== data[i] || prev.layouts[i] !== layouts[i])
+      )
+        same = false
+    }
+    if (same && prev) {
+      prev.order = ctx.layout.order
+      return prev.key
+    }
+    const parts: string[] = [theme]
+    for (let i = 0; i < ids.length; i++)
+      parts.push(
+        `${this.token(data[i] as LayoutNodeData, i === 0)}@${this.layoutToken(layouts[i] as NodeLayout, i === 0)}`,
+      )
+    const key = parts.join("\n")
+    this.instanceKeys.set(id, { order: ctx.layout.order, ids, data, layouts, theme, key })
+    return key
   }
 
   /** Draws document + overlays into `canvas` (device space = CSS px × dpr). */
@@ -678,6 +1149,8 @@ export class CanvasKitRenderer implements Renderer {
       let recordMs = 0
       this.last.recorded = 0
       this.last.rasterized = 0
+      this.last.sharedRecorded = 0
+      this.last.wrapped = 0
       // Progressive only once something is on screen: an opening document draws completely
       // in its first frame (the fastest path to a full canvas).
       let progressive = false
@@ -688,11 +1161,77 @@ export class CanvasKitRenderer implements Renderer {
             break
           }
       let behind = false
+      /** Draws a wrapper root: its variant's raster when zoomed out (one per variant), else
+       * the shared picture under the root's transform. */
+      const drawWrapped = (e: RootEntry, w: NonNullable<RootEntry["wrap"]>) => {
+        e.used = this.frames + 1
+        drawn += e.nodes
+        const sp = w.sp
+        // Rasters: zoomed out; and, while the viewport moves, at any zoom (one raster per
+        // variant is cheap, replaying hundreds of instance pictures per frame is not). The
+        // frame after the viewport rests replays the pictures crisp.
+        let target = bucket
+        let sr: RootRaster | null = null
+        if (!bucket && moving && sp.bounds) {
+          const want = rasterBucket(scale)
+          const cap =
+            2 **
+            Math.floor(Math.log2((RASTER_MAX_SIDE - 2) / Math.max(sp.bounds.w, sp.bounds.h, 1)))
+          const cur = sp.raster
+          // Zooming: any raster within 4× stands in until the zoom rests.
+          if (zooming && cur && cur.scale >= want / 4 && cur.scale <= want * 4) sr = cur
+          else if (Math.min(want, cap) >= want / 2) target = Math.min(want, cap)
+        }
+        if (!sr && target && sp.bounds) {
+          sr = sp.raster
+          if (sr?.scale !== target) {
+            if (rasterMs < RASTER_FRAME_MS || !sr) {
+              const t = now()
+              sr = this.rasterize(sp, sp.picture, sp.bounds, target) ?? sr
+              rasterMs += now() - t
+              this.last.rasterized++
+            } else behind = true
+          }
+        }
+        if (sr) {
+          sp.rasterUsed = this.frames + 1
+          canvas.save()
+          placeAt(canvas, w.T)
+          canvas.drawImageRectOptions(
+            sr.image,
+            ck.XYWHRect(0, 0, sr.image.width(), sr.image.height()),
+            ck.XYWHRect(sr.x, sr.y, sr.w, sr.h),
+            ck.FilterMode.Linear,
+            ck.MipmapMode.None,
+            null,
+          )
+          canvas.restore()
+          draws += 1
+          return
+        }
+        canvas.save()
+        placeAt(canvas, w.T)
+        canvas.drawPicture(sp.picture)
+        canvas.restore()
+        draws += e.draws
+      }
       for (const root of this.rootOrder) {
         const e = this.roots.get(root)
         if (!e) continue
         const l = ctx.layout.nodes.get(root)
         if (l && !l.visible) continue
+        // A top-level instance root draws from its shared picture (no root picture).
+        if (!e.picture && e.wrap) {
+          if (this.sharedInstances && this.shared.get(e.wrap.key) === e.wrap.sp) {
+            if (e.bounds && !intersects(e.bounds, visible)) {
+              culled += e.nodes
+              continue
+            }
+            drawWrapped(e, e.wrap)
+            continue
+          }
+          e.wrap = null
+        }
         if (!e.picture) {
           // Not recorded yet: cull by layout boxes (+ a margin for shadows/strokes) first.
           let lb: Rect | null = null
@@ -713,6 +1252,16 @@ export class CanvasKitRenderer implements Renderer {
           continue
         }
         let pic = e.picture
+        if (!pic && this.sharedInstances) {
+          const t = now()
+          const w = this.acquireWrap(ctx, root, e)
+          recordMs += now() - t
+          if (w) {
+            this.last.wrapped++
+            drawWrapped(e, w)
+            continue
+          }
+        }
         if (!pic) {
           if (progressive && recordMs >= RECORD_FRAME_MS) {
             behind = true
@@ -762,6 +1311,40 @@ export class CanvasKitRenderer implements Renderer {
             // Panning: a raster at the bucket scale, reused frame to frame.
             target = Math.min(want, cap)
             staleMin = target / 2
+          }
+        }
+        // A root wrapping a shared instance picture: one raster per variant, drawn under the
+        // root's transform (a 1k-instance grid zoomed out rasterizes a handful of images).
+        const wrap = e.wrap
+        if (!r && target && wrap?.sp.bounds && this.shared.get(wrap.key) === wrap.sp) {
+          const sp = wrap.sp
+          let sr = sp.raster
+          if (sr?.scale !== target) {
+            if (rasterMs < RASTER_FRAME_MS) {
+              const t = now()
+              sr = this.rasterize(sp, sp.picture, sp.bounds as Rect, target) ?? null
+              rasterMs += now() - t
+              this.last.rasterized++
+            } else {
+              if (!sr || sr.scale < staleMin) sr = null
+              behind = true
+            }
+          }
+          if (sr) {
+            sp.rasterUsed = this.frames + 1
+            canvas.save()
+            placeAt(canvas, wrap.T)
+            canvas.drawImageRectOptions(
+              sr.image,
+              ck.XYWHRect(0, 0, sr.image.width(), sr.image.height()),
+              ck.XYWHRect(sr.x, sr.y, sr.w, sr.h),
+              ck.FilterMode.Linear,
+              ck.MipmapMode.None,
+              null,
+            )
+            canvas.restore()
+            draws += 1
+            continue
           }
         }
         if (!r && target && e.bounds) {
@@ -1026,6 +1609,8 @@ export class CanvasKitRenderer implements Renderer {
       rasterMs: this.last.rasterMs,
       recorded: this.last.recorded,
       rasterized: this.last.rasterized,
+      sharedRecorded: this.last.sharedRecorded,
+      wrapped: this.last.wrapped,
     }
   }
 }

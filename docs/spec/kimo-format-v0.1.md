@@ -63,7 +63,7 @@ Numbers MUST be finite. Colors are specified in their own space; renderers and e
 | `$schema` | yes | string | `https://kimo.design/schema/kimo-<major>.<minor>.json` for the document's format. For 0.1: `https://kimo.design/schema/kimo-0.1.json`. |
 | `format` | yes | `major.minor.patch` | Format version (§16). This spec defines `0.1.x`. |
 | `features` | no | string[] (unique) | Feature flags used by the document (§13). Writers MUST list every feature they use and MUST sort the list by code unit. |
-| `meta` | no | struct | `name` (string), `library` (boolean: this is a library), `createdWith` (string), plus namespaced keys (Meta key grammar) with any JSON value. |
+| `meta` | no | struct | `name` (string), `library` (boolean: this is a library), `createdWith` (string), plus namespaced keys (Meta key grammar) with any JSON value. Kimo-owned root keys: `kimo.themes.order` (string[]: display order of theme axes; axes not listed follow by name). |
 | `themes` | no | record axis → string[] | Theme axes. Each list is non-empty with unique values; **the first value is the axis default**. |
 | `imports` | no | record alias → relative path | Imported libraries (§11). |
 | `variables` | no | record Name → Variable | §10. |
@@ -252,7 +252,7 @@ A text node without `fill` paints with the color variable **`text/default`** whe
 
 Any non-instance node with a truthy `component` is a component; its subtree (every node whose parent chain reaches it) is the component's content. An instance MAY also carry `component` — a **derived component** (e.g. a variant: `Button/Ghost` = an instance of `Button/Primary` with overrides, marked as a component). Paths into a derived component resolve through to the component it instantiates (§9.5).
 
-A component MUST NOT contain, directly or through nested instances or derived components, an instance of itself (`INSTANCE_CYCLE`).
+A component MUST NOT contain, directly or through nested instances or derived components, an instance of itself (`INSTANCE_CYCLE`). This includes what an instance places inside its component: a `set.of` swap of a nested instance and an `args` value of an `instance` prop put the named component inside every component that holds the target (the instance's component and the component of each instance the path crosses), so naming one of those is a cycle too.
 
 ### 9.2 Instances
 
@@ -309,11 +309,31 @@ So `"ui:CardActns1/ui:BtnLabel01"` crosses from a library card into a library bu
 | `"enum"` | `target`, `field`, `options` (record option → value, ≥ 1) | a node that has `field` (not `type`/`parent`/`at`/`order`/`component`/`overrides`); every option value MUST be valid for `field` | an option name; sets `field` to that option's value |
 | `"slot"` | `target` | a frame with `slot` | not allowed: slot content is given by nodes with `at` (§9.4); exporters emit `children` or a named `ReactNode` prop |
 
-`target` is an IdPath resolved from the declaring component (§9.5). `default` is informative for exporters (the generated prop's default); an instance without the arg renders the component as authored. `args` keys MUST be declared props (`ARG_UNKNOWN`).
+`target` is an IdPath resolved from the declaring component (§9.5). **A `target` equal to the declaring component's own id names the component root** (through derived components, the base root); its `args` apply at the root with the precedence of `args` (above `props`). Only declared prop targets may name the root: override keys and `at` MUST NOT (`OVERRIDE_PATH_UNRESOLVED`; the root is overridden through `props`). `default` is informative for exporters (the generated prop's default); an instance without the arg renders the component as authored; `enum` props have no `default`. `args` keys MUST be declared props (`ARG_UNKNOWN`).
+
+Every PropDef MAY carry **`order`** (an Order key): `component.props` is a record, so canonical serialization sorts it by name; editors list declared props by (`order`, then name), an absent `order` counting as the empty string, and SHOULD write an `order` on every declaration they create. A derived component's redeclaration without `order` keeps the base declaration's position.
 
 **Derived components inherit the prop API.** The declared props of a derived component are those of the component it instantiates (recursively), with its own `component.props` declarations merged over them by name. Inherited targets resolve through the derived component (§9.5), so an instance of `Button/Ghost` takes the same `args` as an instance of `Button/Primary`.
 
-The same rules apply to `set.props` and `set.args` of a `set` override on a nested instance: they are checked against that instance's effective component (the one named by `set.of`, if present) exactly like an instance's own `props` and `args`.
+### 9.7 Component metadata (namespace `kimo.component`)
+
+| Node meta key | Value | Meaning |
+|---|---|---|
+| `kimo.component.description` | string | The component's description (editor Component section; exporters MAY emit it as a doc comment). |
+
+### 9.8 Expansion (normative for readers that render or edit instances)
+
+Readers expand an instance to its component's content as follows; `@kimo/core-schema` `createExpandedView` is the reference.
+
+1. **Composite ids.** A node emitted from component content is addressed as `<instance id>/<IdPath>`, the IdPath being the node's path relative to the instance's component (§9.5) — exactly the key an override of that instance uses. Instance-owned nodes keep their own ids. Real ids never contain `/`.
+2. **Root.** The expanded root is the base component root with `props` (and root-targeting `args`) applied; its placement fields (`parent`, `at`, `order`, `x`, `y`, `position`, `locked`, `meta`, `name` when the instance has one) are the instance's. Its `theme` is the component root's pins (base first, then each derived component's own pins) overwritten by the instance's pins, so a component authored under a pinned theme keeps it unless the instance pins otherwise.
+3. **Library content** is read in the consumer's namespace: bindings, theme pin keys, `of` and `slot.suggested` values written inside library `alias` get the `alias:` prefix.
+4. **Theme of expanded nodes.** The placement path of an expanded node runs through the expanded tree (instance → component content → slot frame → slot content), so pins inside component content apply to slot content placed in it.
+
+The same rules apply to `set.props` and `set.args` of a `set` override on a nested instance: they are checked against that instance's effective component (the one named by `set.of`, if present) exactly like an instance's own `props` and `args`. Likewise an override key that crosses a nested instance continues in its effective component: when the holder swaps the nested instance (`set.of` on that path, else an `instance` prop arg targeting it), the remaining segments resolve in the swapped component, and keys that no longer resolve are `OVERRIDE_PATH_UNRESOLVED`.
+
+5. **Precedence of kinds across nesting levels.** When an outer instance overrides a deep path with `slot` or `replace`, it replaces the nested instance's own `slot` / `replace` on that path; an outer `set` on a path the nested instance replaced targets a node that is not there and is not applied.
+6. **Size.** Readers MAY bound the number of nodes one top-level expansion emits (the reference stops at 50 000 and reports `INSTANCE_TOO_LARGE`), since depth alone does not bound fan-out.
 
 ## 10. Variables and themes
 
@@ -357,7 +377,7 @@ A binding MUST name an existing variable (`VARIABLE_MISSING`); `alias:name` name
 
 ### 10.4 Resolution (normative)
 
-1. **Effective theme of a node.** Start from the defaults: the first value of every local axis, and for every *loaded* imported library `alias`, the first value of each of its axes under the key `alias:axis`. Walk from the root to the node along its **placement path** (`parent` links, which include instance placement and `at` nodes), so instances inherit from where they sit. At each node with `theme`, overwrite only the named axes.
+1. **Effective theme of a node.** Start from the defaults: the first value of every local axis, and for every *loaded* imported library `alias`, the first value of each of its axes under the key `alias:axis`. Walk from the root to the node along its **placement path** (`parent` links, which include instance placement and `at` nodes), so instances inherit from where they sit. At each node with `theme`, overwrite only the named axes. For nodes inside an expanded instance the placement path is the expanded one (§9.8 rules 2 and 4).
 2. **Library axes** are namespaced `alias:axis` and default from the library.
 3. **Variable value.** A plain value applies under every theme. For a themed value, an entry **matches** when every axis named in its `when` equals the effective value of that axis; axes it does not name are ignored (partial `when` is allowed). **Entries without `when`, or with `when: {}`, are fallbacks only and never candidates.** Among matching entries **the last one in list order wins** (no specificity ranking).
 4. **No candidate.** Use the fallback entry — the *last* entry without `when` (or with `when: {}`) — if there is one, otherwise the *first* entry. In both cases emit the lint `THEME_NO_MATCH(variable, effectiveTheme)`.
@@ -566,6 +586,8 @@ The table layout targets clean results from plain line-based `git merge` (merge 
 | **Both append different nodes after the last node** | conflict (same insertion point) |
 | Both edit the same node | conflict (true conflict) |
 
+**Live sync (CRDT).** Record-valued instance fields (`overrides`, `args`, `props`) and `imports` merge per key, so concurrent changes of different override paths, args or library aliases all survive. Semantic conflicts are not repaired automatically: two concurrent aliases that are each acyclic can merge into an alias cycle (`VARIABLE_CYCLE`); the resolver guards it, the document stays editable, and the user breaks the cycle by giving one variable a literal value.
+
 Independent edits: 8 of 10 scenarios merge cleanly, and every clean result is the canonical serialization of both changes applied. A `.gitattributes` template ships with `*.kimo merge=kimo diff=kimo`; `kimo merge` (semantic, three-way) can also run as a pre-merge step in CI.
 
 ## 19. Examples
@@ -613,7 +635,7 @@ Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's 
 
 ### 19.2 More fixtures
 
-`packages/core-schema/fixtures/` holds the normative examples: `valid/` (components with declared props, args, `set`/`slot`/`replace`, nested paths; multi-axis themes with partial `when`, fallbacks and aliases; every paint, stroke, effect and shape; every feature; Unicode and escaping; `styling-m2.kimo` for the M2 styling fields: layer blend incl. `pass-through`, per-side dashed strokes, `miterLimit`, hidden effects, icon `strokeWidth`/`weight`), `invalid/` (one file per error code, named `<CODE>--<case>.kimo`), `lint/` (one per warning), `forward/` (newer minor/major/patch, unknown features) and `parse-errors/`.
+`packages/core-schema/fixtures/` holds the normative examples: `valid/` (components with declared props, args, `set`/`slot`/`replace`, nested paths; multi-axis themes with partial `when`, fallbacks and aliases; every paint, stroke, effect and shape; every feature; Unicode and escaping; `styling-m2.kimo` for the M2 styling fields: layer blend incl. `pass-through`, per-side dashed strokes, `miterLimit`, hidden effects, icon `strokeWidth`/`weight`; `components-m3.kimo` for M3: every prop kind incl. a root-targeting enum, prop `order`, a derived component redeclaring a prop, slot suggestions, slot and replace overrides, a nested `set: { of, props }` swap, `kimo.component.description`, instance theme pins, multi-axis `when` with fallback and OKLCH / Display-P3 values), `invalid/` (one file per error code, named `<CODE>--<case>.kimo`), `lint/` (one per warning), `forward/` (newer minor/major/patch, unknown features) and `parse-errors/`.
 
 ## 20. Decisions relative to the teardown (§10)
 
@@ -644,6 +666,7 @@ Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's 
 | 23 | Derived component props | Not covered by the teardown: a derived component inherits the declared props of the component it instantiates, its own declarations merged over them (§9.6). |
 | 24 | Slot suggestions | `slot.suggested` stays advisory for content, but each entry must name a component, like every other QId (§5.5, §11). |
 | 25 | M2 styling (ADR 0010) | Additive, still format `0.1.0` (draft): node `blend` (LayerBlendMode, default `normal`, with `pass-through` for containers), stroke `miterLimit` (default 4), `visible` on every effect (default `true`), icon `strokeWidth` (stroke sets) and `weight` for `phosphor`. The teardown's Graphics sketch has no layer blend or effect visibility; the editor's Layer and Effects sections need both. No new feature flag: a reader that predates these fields reports `UNKNOWN_PROPERTY` and preserves them (§16.3). |
+| 26 | M3 components and tokens (ADR 0011) | Additive, still `0.1.0`: PropDef `order` (declaration order of a record-valued `component.props`); a prop `target` may name the declaring component itself (the root; board 12's `size` enum sets the root's padding); node meta key `kimo.component.description` and root meta key `kimo.themes.order` (axis display order, string[]; the `themes` record is sorted by name) in the `kimo` namespace; expansion rules (§9.8) incl. the component root's theme pins and library-namespace rewriting. Known limit kept: one override per path, so an instance cannot restyle a slot frame *and* fill it (no M3 design needs it). |
 
 ## Appendix A — canonical key order
 
@@ -676,3 +699,6 @@ An instance's `props` and a `set` override are structs (their keys are node prop
 | Versioning | `FORMAT_VERSION`, `SCHEMA_URL`, `formatStatus`, `MIGRATIONS`, `migrate`, `openDocument` |
 | Resolution (§10.4) | `effectiveTheme`, `defaultTheme`, `resolveVariable`, `selectThemedValue`, `defaultTextFill` |
 | Tree | `buildTree`, `compareSiblings` |
+| Components (§9) | `locate`, `derivedChain`, `baseRoot`, `resolveIdPath`, `declaredProps`, `argEffect`, `instancesOf`, `localComponents`, `COMPONENT_DESCRIPTION_META_KEY` |
+| Expansion (§9.8) | `createExpandedView`, `documentLookup`, `virtualId`, `parseVirtualId`, `qualifyNodeData` |
+| Edit planners (M3) | `plan*` (components, instances, overrides, props, slots, variables, themes, pins, imports), `applyPlan`, `libraryUsage` |

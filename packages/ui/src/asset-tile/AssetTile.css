@@ -1,0 +1,125 @@
+/*
+ * AssetTile: desing.pen 02c > Assets & props > AssetTile (Q4zkG), AssetTile/Hover (SGo9R).
+ * frame: width 112, column, gap 6, padding 4, stroke 1 #00000000 (inside), radius-md
+ *   ├ Preview (hwUNY) fill_container × 72, fill bg-subtle, radius-sm, clip, center/center
+ *   │   └ Grip (WhNv3) absolute 4,4, grip-vertical 12 text-tertiary (enabled false → hover)
+ *   └ Name Row (B0LqDC) fill_container, row, gap 4, padding [0, 2, 2, 2], alignItems center
+ *       ├ Glyph (fjQ56) component 12, component
+ *       └ Name  (eHHvU) fixed-width fill, sans 11 / 500 text-primary
+ * Hover: fill bg-hover, stroke border-strong, grip shown. Ghost (board 13 kVsm2): fill bg-overlay,
+ * stroke component, shadow 0 12 blur 32 shadow-strong. Drag source (a5C4Uc): opacity 0.5.
+ */
+.kimo-asset-tile {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 112px;
+  padding: 4px;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  color: var(--kimo-text-primary);
+  cursor: default;
+  user-select: none;
+}
+
+.kimo-asset-tile:hover,
+.kimo-asset-tile--hover {
+  background: var(--kimo-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-asset-tile:focus-visible {
+  outline: 2px solid var(--kimo-component);
+  outline-offset: 0;
+}
+
+.kimo-asset-tile--dragging {
+  opacity: 0.5;
+}
+
+.kimo-asset-tile--ghost {
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-component),
+    0 12px 32px 0 var(--kimo-shadow-strong);
+}
+
+.kimo-asset-tile__preview {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 72px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-asset-tile__image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.kimo-asset-tile__grip > svg,
+.kimo-asset-tile__glyph > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-asset-tile__grip {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+  cursor: grab;
+}
+
+.kimo-asset-tile--hover .kimo-asset-tile__grip,
+.kimo-asset-tile--ghost .kimo-asset-tile__grip {
+  display: inline-flex;
+}
+
+.kimo-asset-tile:hover .kimo-asset-tile__grip {
+  display: inline-flex;
+}
+
+.kimo-asset-tile__name-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 0 2px 2px 2px;
+}
+
+.kimo-asset-tile__glyph {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-component);
+}
+
+.kimo-asset-tile__name {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

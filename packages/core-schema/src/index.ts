@@ -3,6 +3,32 @@
  * the generated JSON Schema, validation, normative defaults, canonical serialization,
  * versioning and migrations. Spec: docs/spec/kimo-format-v0.1.md.
  */
+export {
+  argEffect,
+  baseRoot,
+  COMPONENT_DESCRIPTION_META_KEY,
+  type ComponentScope,
+  componentOfInstance,
+  type DeclaredProp,
+  declaredProps,
+  derivedChain,
+  enclosingComponent,
+  instanceSwaps,
+  instancesOf,
+  isComponentNode,
+  isDescendant,
+  isLocated,
+  type LocatedNode,
+  type LocateFailure,
+  libraryComponents,
+  localComponents,
+  locate,
+  nodesOf,
+  type PathResolution,
+  qualify,
+  qualifyPath,
+  resolveIdPath,
+} from "./components"
 export { DEFAULTS, DEFAULTS_ADDED_IN_SPEC, type DefaultScope } from "./defaults"
 export {
   applyDefaults,
@@ -11,6 +37,26 @@ export {
   stripDefaults,
   stripNodeDefaults,
 } from "./defaults-ops"
+export * from "./edit/index"
+export {
+  type AppliedOverride,
+  createExpandedView,
+  documentLookup,
+  type ExpandedView,
+  type ExpandedViewOptions,
+  type ExpansionIssue,
+  type ExpansionIssueCode,
+  type InstanceInfo,
+  MAX_EXPANDED_NODES,
+  type NodeLookup,
+  type NodeOrigin,
+  type NodeRecord,
+  type OverrideLayer,
+  parseVirtualId,
+  qualifyNodeData,
+  type ViewLocation,
+  virtualId,
+} from "./expand"
 export { FEATURE_PATTERN, FEATURES, type Feature, isKnownFeature, KNOWN_FEATURES } from "./features"
 export {
   escapePointer,

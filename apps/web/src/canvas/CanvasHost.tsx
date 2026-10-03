@@ -6,7 +6,7 @@
  * and the inline text editor.
  */
 import { type AssetSource, RendererError } from "@kimo/renderer"
-import { TooltipContent } from "@kimo/ui"
+import { SlotBadge, SlotQuickInsert, TooltipContent } from "@kimo/ui"
 import {
   type Ref,
   useCallback,
@@ -19,12 +19,14 @@ import {
 } from "react"
 import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
 import { useTreeRevision, useUi } from "../lib/hooks"
+import { Icon } from "../lib/icons"
 import "./canvas-m2.css"
 import {
   CANVAS_TOOLS,
   type CanvasHandle,
   type CanvasHint,
   type CanvasHostProps,
+  type ComponentDomOverlay,
   type ImagePlacement,
 } from "./contract"
 import { CanvasController, MEASURING_OFFSET, type TextEditState } from "./controller"
@@ -33,6 +35,8 @@ import { canvasToolStore } from "./tool-state"
 
 /** Board 03: label baseline box sits 22 px above the frame (label y 40, frame y 62). */
 const LABEL_OFFSET = 22
+/** Roots narrower than this on screen get no label (board 11 annex note icB1k, as in Figma). */
+const MIN_LABEL_WIDTH = 40
 
 export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> }) {
   const { store, uiStore, className, ref } = props
@@ -56,39 +60,111 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     void shape
     return store.children(null).flatMap((id) => {
       const n = store.getNode(id)
-      return n?.type === "frame"
-        ? [{ id, name: typeof n.name === "string" ? n.name : "Frame" }]
-        : []
+      if (n?.type !== "frame" && n?.type !== "instance") return []
+      // M3: root mains get CanvasLabel/Component (`tl5O8`), root instances
+      // CanvasLabel/Instance (`J3FKSK`); a derived component reads "… · from <base>" (`GtzU7`).
+      const isMain = n.component !== undefined && n.component !== false
+      const kind: "component" | "instance" | null = isMain
+        ? "component"
+        : n.type === "instance"
+          ? "instance"
+          : null
+      let name = typeof n.name === "string" ? n.name : n.type === "frame" ? "Frame" : "Instance"
+      if (isMain && n.type === "instance" && typeof n.of === "string") {
+        const base = store.getNode(n.of)
+        if (base && typeof base.name === "string") name = `${name} · from ${base.name}`
+      }
+      // Board 14 (HauJa `EnjCg`): a root frame pinned to a theme shows a pin chip after its name.
+      const pins =
+        typeof n.theme === "object" && n.theme !== null
+          ? Object.entries(n.theme as Record<string, unknown>)
+              .filter(([, v]) => typeof v === "string")
+              .map(([k, v]) => `${k}: ${v as string}`)
+              .join(" · ")
+          : ""
+      return [{ id, name, kind, pins }]
     })
   }, [store, shape])
+  const [compDom, setCompDom] = useState<ComponentDomOverlay | null>(null)
+  /** Root labels hidden because a nested component/instance label sits on them (note icB1k). */
+  const covered = useMemo(
+    () => new Set((compDom?.labels ?? []).flatMap((l) => (l.covers ? [l.covers] : []))),
+    [compDom],
+  )
+  const compKey = useRef("")
+  const refreshComponentDom = useCallback(() => {
+    const d = ctl.current?.componentDom() ?? null
+    const empty = !d || (d.labels.length === 0 && d.slots.length === 0 && !d.quickInsert)
+    const key = empty ? "" : JSON.stringify(d)
+    if (key === compKey.current) return
+    compKey.current = key
+    setCompDom(empty ? null : d)
+  }, [])
 
-  const placeLabels = useCallback(() => {
-    const box = labels.current
-    const layout = ctl.current?.layout
-    if (!box) return
-    const v = uiStore.getState().viewport
-    for (const el of box.children) {
-      if (!(el instanceof HTMLElement)) continue
-      const l = layout?.nodes.get(el.dataset.artboard ?? "")
-      if (!l?.visible) {
-        el.style.display = "none"
-        continue
+  // Labels are placed for one viewport (`placed`); a pan at the same zoom only translates the
+  // whole layer (one style write instead of one per label). Labels outside the placed area
+  // plus a one-screen margin are hidden; a pan past that margin, a zoom or a layout pass
+  // places them again. Display is toggled only when it changes.
+  const placed = useRef<{ x: number; y: number; zoom: number } | null>(null)
+  const placeLabels = useCallback(
+    (force = true) => {
+      const box = labels.current
+      const host = hostRef.current
+      const layout = ctl.current?.layout
+      if (!box) return
+      const v = uiStore.getState().viewport
+      const p = placed.current
+      const w = host?.clientWidth ?? 0
+      const h = host?.clientHeight ?? 0
+      if (!force && p && p.zoom === v.zoom) {
+        const dx = (p.x - v.x) * v.zoom
+        const dy = (p.y - v.y) * v.zoom
+        if (Math.abs(dx) < w && Math.abs(dy) < h) {
+          // While panning the layer is composited, so a pan frame only moves it.
+          if (box.style.willChange !== "transform") box.style.willChange = "transform"
+          box.style.transform = dx || dy ? `translate(${dx}px, ${dy}px)` : ""
+          return
+        }
       }
-      el.style.display = ""
-      el.style.left = `${(l.world.x - v.x) * v.zoom}px`
-      el.style.top = `${(l.world.y - v.y) * v.zoom - LABEL_OFFSET}px`
-      el.style.maxWidth = `${Math.max(0, l.world.w * v.zoom)}px`
-    }
-  }, [uiStore])
+      placed.current = { x: v.x, y: v.y, zoom: v.zoom }
+      box.style.transform = ""
+      box.style.willChange = ""
+      for (const el of box.children) {
+        if (!(el instanceof HTMLElement)) continue
+        const l = layout?.nodes.get(el.dataset.artboard ?? "")
+        const left = l ? (l.world.x - v.x) * v.zoom : 0
+        const top = l ? (l.world.y - v.y) * v.zoom - LABEL_OFFSET : 0
+        const width = l ? Math.max(0, l.world.w * v.zoom) : 0
+        const show =
+          !!l?.visible &&
+          width >= MIN_LABEL_WIDTH &&
+          (w === 0 || (left + width > -w && left < 2 * w && top + LABEL_OFFSET > -h && top < 2 * h))
+        const display = show ? "" : "none"
+        if (el.style.display !== display) el.style.display = display
+        if (!show) continue
+        // Style writes only for values that changed.
+        const lx = `${left}px`
+        const tp = `${top}px`
+        if (el.style.left !== lx) el.style.left = lx
+        if (el.style.top !== tp) el.style.top = tp
+        const mw = `${width}px`
+        if (el.style.maxWidth !== mw) el.style.maxWidth = mw
+      }
+    },
+    [uiStore],
+  )
   useLayoutEffect(() => {
     if (ready) placeLabels()
   })
   useEffect(
     () =>
       uiStore.subscribe((s, prev) => {
-        if (s.viewport !== prev.viewport) placeLabels()
+        if (s.viewport !== prev.viewport) {
+          placeLabels(false)
+          refreshComponentDom()
+        }
       }),
-    [uiStore, placeLabels],
+    [uiStore, placeLabels, refreshComponentDom],
   )
 
   // Latest callbacks without re-creating the pipeline.
@@ -176,6 +252,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
           : Promise.reject(new Error("Canvas is not ready")),
       stats: () => ctl.current?.renderer.stats() ?? null,
       focus: () => hostRef.current?.focus({ preventScroll: true }),
+      previewComponentDrop: (target) => ctl.current?.previewComponentDrop(target),
     }),
     [uiStore, pickImage],
   )
@@ -252,8 +329,10 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         origin: p.origin ?? "user",
         onLayout: (l) => {
           placeLabels()
+          refreshComponentDom()
           cb.current.onLayout?.(l)
         },
+        onOverlayChange: refreshComponentDom,
         onStats: (s) => cb.current.onStats?.(s),
         onError: (e) => {
           if (cb.current.onError) cb.current.onError(e)
@@ -261,6 +340,8 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         },
         onContextMenu: (i) => cb.current.onContextMenu?.(i),
         onTextEdit: setTextEdit,
+        libraries: () => cb.current.libraries ?? {},
+        route: (ops) => (cb.current.route ? cb.current.route(ops) : ops),
       })
       ctl.current = c
       c.start(el, canvas)
@@ -277,6 +358,12 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       if (hostRef.current) delete hostRef.current.dataset.ready
     }
   }, [store, uiStore])
+
+  // M3: linked libraries load / re-read / unlink → rebuild the expanded view.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-expand when the libraries change
+  useEffect(() => {
+    ctl.current?.setLibraries()
+  }, [props.libraries])
 
   // Overlay colors follow the theme.
   useEffect(() => {
@@ -322,11 +409,41 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       <div ref={labels} className="canvas-host__labels">
         {ready &&
           roots.map((r) => (
-            <div key={r.id} className="canvas-host__label" data-artboard={r.id}>
-              {r.name}
+            <div
+              key={r.id}
+              className={
+                r.kind
+                  ? "canvas-host__label canvas-host__label--component"
+                  : r.pins
+                    ? "canvas-host__label canvas-host__label--pinned"
+                    : "canvas-host__label"
+              }
+              data-artboard={r.id}
+              data-label-kind={r.kind ?? undefined}
+              style={covered.has(r.id) ? { visibility: "hidden" } : undefined}
+            >
+              {r.kind ? (
+                <>
+                  <Icon name={r.kind === "component" ? "component" : "diamond"} size={12} />
+                  <span className="canvas-host__label-name">{r.name}</span>
+                </>
+              ) : r.pins ? (
+                <>
+                  <span className="canvas-host__label-name">{r.name}</span>
+                  <span className="canvas-host__theme-chip" data-testid="theme-pin-chip">
+                    <Icon name="pin" size={10} />
+                    <span className="canvas-host__theme-chip-label">{r.pins}</span>
+                  </span>
+                </>
+              ) : (
+                r.name
+              )}
             </div>
           ))}
       </div>
+      {ready && compDom && (
+        <ComponentDom overlay={compDom} onQuickInsert={(q) => cb.current.onQuickInsert?.(q)} />
+      )}
       {textEdit && (
         <TextEditor
           key={textEdit.id ?? "new"}
@@ -489,5 +606,62 @@ function TextEditor({
         color: state.color || undefined,
       }}
     />
+  )
+}
+
+/**
+ * M3 DOM overlays (contract `ComponentDomOverlay`): CanvasLabel above a selected / hovered
+ * nested main or instance (`tl5O8` / `J3FKSK`, board 11 `B70Th`), SlotBadge (`kMGG0`, board 12
+ * `LQoWJ`) and the SlotQuickInsert row (`AJSok` chips + "+N", board 12 `g9pFd`).
+ */
+function ComponentDom({
+  overlay,
+  onQuickInsert,
+}: {
+  overlay: ComponentDomOverlay
+  onQuickInsert: (insert: { slot: string; of: string; name: string }) => void
+}) {
+  const q = overlay.quickInsert
+  return (
+    <div className="canvas-host__component-dom">
+      {overlay.labels.map((l) => (
+        <div
+          key={`label:${l.id}`}
+          className="canvas-host__label canvas-host__label--component canvas-host__label--nested"
+          data-label-kind={l.kind}
+          data-node-label={l.id}
+          style={{ left: l.screen.x, top: l.screen.y }}
+        >
+          <Icon name={l.kind === "component" ? "component" : "diamond"} size={12} />
+          <span className="canvas-host__label-name">{l.text}</span>
+        </div>
+      ))}
+      {overlay.slots.map((b) => (
+        <SlotBadge
+          key={`slot:${b.id}`}
+          name={b.name}
+          className="canvas-host__slot-badge"
+          data-slot-badge={b.id}
+          style={{ left: b.screen.x, top: b.screen.y }}
+        />
+      ))}
+      {q && (
+        <div
+          className="canvas-host__quick-insert"
+          data-testid="slot-quick-insert"
+          data-canvas-overlay=""
+          style={{ left: q.screen.x, top: q.screen.y }}
+        >
+          {q.items.map((it) => (
+            <SlotQuickInsert
+              key={it.of}
+              label={it.name}
+              onClick={() => onQuickInsert({ slot: q.slot, of: it.of, name: it.name })}
+            />
+          ))}
+          {q.more > 0 && <SlotQuickInsert more label={`+${q.more}`} tabIndex={-1} />}
+        </div>
+      )}
+    </div>
   )
 }

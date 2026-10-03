@@ -1,12 +1,22 @@
 /**
  * Contract between the editor shell and the canvas (M1, ADR 0009; M2 tools, snapping and
- * measurement, ADR 0010). The shell mounts
+ * measurement, ADR 0010; M3 components, instances, slots and libraries, ADR 0011). The shell mounts
  * `<CanvasHost {...CanvasHostProps} ref={handle} />`; CanvasHost owns the pipeline
  * `DocStore.onChange → LayoutEngine.update → Renderer.setLayout/invalidate → requestFrame`,
  * pointer/keyboard input for the active tool, and overlays. Everything document-related goes
  * through `store.apply(ops, { origin })`, never directly through the renderer.
  */
-import type { createUiStore, DocStore, LocalOrigin, Tool } from "@kimo/editor-state"
+import type { ExpandedView, Libraries, PlanError, PlanNote } from "@kimo/core-schema"
+import type {
+  CommandResult,
+  createUiStore,
+  DocStore,
+  LocalOrigin,
+  M3Command,
+  Op,
+  OpError,
+  Tool,
+} from "@kimo/editor-state"
 import type { LayoutEngine, LayoutEngineOptions, LayoutResult, Rect } from "@kimo/layout"
 import type {
   AssetSource,
@@ -63,6 +73,11 @@ export interface CanvasToolSpec {
    * tool).
    */
   placement?: "image"
+  /**
+   * M3: a one-shot action instead of a mode. `createComponent` runs Create component on the
+   * selection (⌥⌘K; board 12 note "Create component (⌥⌘K or toolbar ◇)").
+   */
+  action?: "createComponent"
   /** False = rendered disabled. */
   enabled: boolean
 }
@@ -112,7 +127,9 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
     icon: "component",
     shortcut: "⌥⌘K",
     tool: null,
-    enabled: false,
+    // M3: a one-shot action (the shell runs Create component on the selection).
+    action: "createComponent",
+    enabled: true,
   },
 ]
 
@@ -273,6 +290,135 @@ export type CanvasError =
   | { kind: "renderer"; error: RendererError }
   | { kind: "layout"; error: Error }
   | { kind: "op"; message: string }
+  /**
+   * M3: a command the planner refused (`refused`, keyed by `PlanError.code`) or the store
+   * rejected (`rejected`). The shell shows Toast/Danger (board 15 `FVd5q`) with the copy of
+   * {@link M3_TOAST_COPY}; nothing changed. `error.message` is a developer message (logs).
+   */
+  | {
+      kind: "command"
+      label: string
+      error: Error
+      refused?: PlanError
+      rejected?: readonly OpError[]
+    }
+
+/**
+ * M3 (board 15 `qJRq1`): a non-error notice after an applied command, e.g. "Can't delete
+ * Features inside an instance — hidden instead" (Toast/Danger with Undo), or "1 override no
+ * longer resolves — Marketing kit changed" (Toast/Warning `qINpv` with Review). Toasts stack
+ * bottom-center 12 px above the floating toolbar, newest at the bottom, at most 3; danger 6 s,
+ * warning 4 s, hover pauses.
+ */
+export interface CanvasNotice {
+  tone: "danger" | "warning"
+  text: string
+  action?: { label: string; run: () => void }
+  /** The plan notes behind it (for tests / logs). */
+  notes?: readonly PlanNote[]
+}
+
+/** Board 15 toast copy for refusals, by plan error code (`{name}` = the layer / item name). */
+export const M3_TOAST_COPY = {
+  HIDDEN_INSTEAD: "Can't delete {name} inside an instance — hidden instead",
+  LIBRARY_READ_ONLY: "{name} is from a linked library — edit it in its source file",
+  CYCLE: "Can't nest a main component inside its own instance",
+  ALIAS_CYCLE: "Can't alias {name} to itself — that would create a cycle",
+  OVERRIDE_UNRESOLVED: "{count} override no longer resolves — {library} changed",
+} as const
+
+// --- M3: instances on the canvas (boards 11, 12, 13) ------------------------------------------
+
+/**
+ * Where an edit of a selected view id lands. Selection MAY hold composite ids
+ * (`<instance>/<IdPath>`, `@kimo/core-schema` §9.8): property edits on them become
+ * `setOverride` commands on the top instance, deletes become `hideInInstance`, moves are
+ * refused unless the node is real slot content. Pure: `routeEdit(view, id)`.
+ */
+export type EditTarget =
+  /** A real node: edit it directly (update/move/delete ops). */
+  | { kind: "node"; id: string }
+  /** A descendant inside an instance: `setOverride(instance, path, …)`. */
+  | { kind: "override"; instance: string; path: string }
+  /** The root of an instance: `setOverride(instance, "", { kind: "set" })` (writes `props`). */
+  | { kind: "instance-root"; instance: string }
+
+/** Pure edit routing (implemented in `apps/web/src/canvas/instances.ts`, canvas builder). */
+export type RouteEdit = (view: ExpandedView, id: string) => EditTarget | null
+
+/**
+ * Click policy on instances (board 11): a click selects the top-level instance (its view id is
+ * its real id); double-click or ⌘-click enters it and selects the deepest composite id under
+ * the pointer, like groups. Layers rows of an instance's expanded children select composite ids.
+ */
+export type InstanceHitPolicy = (
+  view: ExpandedView,
+  hits: readonly string[],
+  deep: boolean,
+) => string | null
+
+/** A component being dragged from Assets (board 13) or chosen in the quick insert. */
+export interface ComponentDrag {
+  /** `of`: a local component id or `alias:id`. */
+  of: string
+  /** Name shown in the drag chip (`a0Jl0`: `component` glyph + name). */
+  name: string
+}
+
+/**
+ * Where a dragged component would land (board 13 drop rules). `alt` (⌥) drops beside the
+ * instance instead of into it.
+ */
+export type ComponentDropTarget =
+  /** Into a regular frame (drop hint `A3eub`, `selection` fill: "Insert into Cards · 2 of 4"). */
+  | { kind: "frame"; parent: string | null; index: number; label: string }
+  /** Into an instance's slot (`CTfcw`, `component` fill: "Insert into actions · slot · 2 of 2"). */
+  | { kind: "slot"; instance: string; path: string; index: number; label: string }
+  /** Replace an instance descendant (`orZ62`: "Replace Title in Card · Pro", icon `replace`). */
+  | { kind: "replace"; instance: string; path: string; label: string }
+
+/** Pure drop-target resolution (canvas builder; tested headless). */
+export type ResolveComponentDrop = (query: {
+  view: ExpandedView
+  layout: LayoutResult
+  /** View ids under the pointer, top-most first. */
+  hits: readonly string[]
+  world: Point
+  drag: ComponentDrag
+  alt: boolean
+}) => ComponentDropTarget | null
+
+/**
+ * DOM overlays the CanvasHost renders on top of the canvas for M3 (like artboard labels):
+ * CanvasLabel/Component (`tl5O8`) above every root main and the selected/hovered main,
+ * CanvasLabel/Instance (`J3FKSK`) above the selected/hovered instance, SlotBadge (`kMGG0`,
+ * "Slot · <name>") under each slot outline of the selected main/instance, and SlotQuickInsert
+ * chips (`AJSok`: the slot's `suggested` components, then "+N") under a selected main.
+ * Positions: `OVERLAY_SPEC_M3.dom` in `@kimo/renderer`.
+ */
+export interface ComponentDomOverlay {
+  labels: readonly {
+    id: string
+    kind: "component" | "instance"
+    /** "Card/Pricing", or "Card/Pricing/Featured · from Card/Pricing" for derived (board 12 `GtzU7`). */
+    text: string
+    /** Screen top-left of the label (CSS px). */
+    screen: Point
+    /**
+     * Root frame whose label this one would overlap (same top edge), so the host hides that
+     * root label while this one shows (board 11 annex note `icB1k`). `null` when no overlap.
+     */
+    covers: string | null
+  }[]
+  slots: readonly { id: string; name: string; screen: Point }[]
+  quickInsert: {
+    /** The slot view id the chips insert into (main: default children; instance: `at` nodes). */
+    slot: string
+    items: readonly ComponentDrag[]
+    more: number
+    screen: Point
+  } | null
+}
 
 /** What is under a pointer, for context menus and the shell's status UI. */
 export interface CanvasPointerInfo {
@@ -334,6 +480,28 @@ export interface CanvasHostProps {
    * the I key does nothing.
    */
   onIconPicker?: (request: IconPickerRequest) => void
+
+  // --- M3 -----------------------------------------------------------------------------------
+  /**
+   * Loaded libraries by alias (re-read from disk on open; the shell owns loading and the
+   * "changed since last open" snapshot). Passed to the expanded view, layout and commands.
+   */
+  libraries?: Libraries
+  /** A notice after an applied command (hidden instead of deleted, unresolved overrides…). */
+  onNotice?: (notice: CanvasNotice) => void
+  /**
+   * Rewrites canvas op groups before they are applied (the shell's `session.route`, M3
+   * `routeOps`): edits on composite ids become overrides, deletes inside instances hide.
+   * Null refuses the edit (the router reports why).
+   */
+  route?: (ops: readonly Op[]) => readonly Op[] | null
+  /** The selection is (inside) an instance / main: the shell scrolls the layers row into view. */
+  onComponentContext?: (context: { instance: string | null; main: string | null }) => void
+  /**
+   * A SlotQuickInsert chip was clicked: insert an instance of `of` into slot view id `slot`
+   * (a main's slot frame: default children; `<instance>/<path>`: `at` content).
+   */
+  onQuickInsert?: (insert: { slot: string; of: string; name: string }) => void
 }
 
 /** M2: where the I key asked for an icon. */
@@ -404,4 +572,26 @@ export interface CanvasHandle {
   exportPng(nodeId: string, scale?: number): Promise<Uint8Array>
   stats(): RenderStats | null
   focus(): void
+
+  // --- M3 (optional until the canvas builder lands them) ------------------------------------
+  /**
+   * The shared expanded view (layers panel mirrors instance children through it; panels read
+   * provenance: override dots, slot / replaced kinds). Null before `onReady`.
+   */
+  expanded?(): ExpandedView | null
+  /**
+   * Runs an M3 command with the host origin and libraries (one undo step), reports refusals
+   * through `onError` (`kind: "command"`) and notes through `onNotice`, and selects
+   * `result.select` when present.
+   */
+  runCommand?(command: M3Command, label: string): CommandResult
+  /** Arms a component drag (Assets tile / list row / swap): pointer moves show the drop target. */
+  armComponentDrag?(drag: ComponentDrag | null): void
+  /** ⌥⏎ "Go to main component": selects and zooms to the main of an instance (local only). */
+  goToMain?(instanceId: string): void
+  /**
+   * Board 13 drop feedback while a component is dragged over the canvas: the slot insertion bar
+   * (`GMebs`) or the replace target box (`d8kP2n`). Null hides it.
+   */
+  previewComponentDrop?(target: ComponentDropTarget | null): void
 }

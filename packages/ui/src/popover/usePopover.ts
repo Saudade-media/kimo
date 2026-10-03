@@ -59,6 +59,10 @@ export function useAnchoredPosition(
   return anchor ? pos : undefined
 }
 
+/** Focused elements that handle Escape themselves (never dismissed over). */
+const OWN_ESCAPE =
+  'input, textarea, select, [contenteditable="true"], [role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"]'
+
 /** Open dismissable surfaces, oldest first: Escape outside every surface closes the topmost. */
 const openSurfaces: RefObject<HTMLElement | null>[] = []
 
@@ -91,6 +95,9 @@ export function useDismiss(
       const active = document.activeElement
       // Focus inside some surface: its own handler decides (nested surfaces stop propagation).
       if (active && openSurfaces.some((s) => s.current?.contains(active))) return
+      // Focus in a control or widget that handles Escape itself (a text field reverting its
+      // draft, another menu or dialog): leave the key to it.
+      if (active instanceof HTMLElement && active.closest(OWN_ESCAPE)) return
       e.preventDefault()
       e.stopPropagation()
       close.current?.()

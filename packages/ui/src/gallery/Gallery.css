@@ -203,10 +203,93 @@
   min-width: 0;
 }
 
-.kimo-gallery__m2-log {
+.kimo-gallery__m2-log,
+.kimo-gallery__m3-log {
   min-height: 15px;
   color: var(--kimo-text-secondary);
   font-family: var(--kimo-font-mono);
   font-size: var(--kimo-text-xs);
   margin: 0;
+}
+
+/*
+ * M3 board "02c Components — Systems (M3)" (SD9TU): same board frame and section headers as 02b;
+ * Items gap 40 (HcHr6 …); columns vertical gap 12 (rows are direct children of the column).
+ */
+.kimo-gallery__items--m3 {
+  gap: 40px;
+}
+
+.kimo-gallery__m3-tree {
+  display: contents;
+}
+
+.kimo-gallery__m3-tiles {
+  gap: 12px;
+}
+
+.kimo-gallery__m3-glyphs {
+  gap: 6px;
+}
+
+.kimo-gallery__m3-glyph-note {
+  width: 150px;
+  line-height: 1.4;
+}
+
+.kimo-gallery__m3-renderer-note {
+  width: 200px;
+  margin: 0;
+}
+
+/* VariableRow Specimen (YPYbl): fill, column, gap 12; rows and Entries specimen 880 wide. */
+.kimo-gallery__m3-specimen {
+  align-self: stretch;
+}
+
+.kimo-gallery__m3-specimen > .kimo-variable-row,
+.kimo-gallery__m3-entries-caption,
+.kimo-gallery__m3-entries {
+  width: 880px;
+}
+
+.kimo-gallery__m3-entries {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Design placeholder thumbnail (txUC3): document content, so literal colors. */
+.kimo-gallery__thumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #0a0a0a; /* pen-literal: Thumb (txUC3) fill #0A0A0A */
+}
+
+.kimo-gallery__thumb-label {
+  color: #ffffff; /* pen-literal: Thumb Label (u0sQl3) fill #FFFFFF */
+  font-family: var(--kimo-font-sans);
+  font-size: 9px;
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* Confirms (Mjw9B): column, gap 12, width 496. */
+.kimo-gallery__m3-confirms {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 496px;
+}
+
+/* M3 columns (adLdC …): vertical, gap 12; children keep their own (hug / fill) width. */
+.kimo-gallery__m3-column {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 }

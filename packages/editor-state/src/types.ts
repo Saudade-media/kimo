@@ -168,6 +168,11 @@ export interface DocStore {
   children(parent: string | null, at?: string | null): string[]
   /** The whole document as plain data (fresh objects). */
   toDocument(): KimoDocument
+  /**
+   * The root members without `nodes` (variables, themes, imports, meta…) as plain data: a
+   * cheap read for header consumers (no copy of the node table).
+   */
+  toHeader(): Omit<KimoDocument, "nodes">
 
   // --- Writing ----------------------------------------------------------------------------
   /** Validates and applies an op group atomically (one transaction with `origin`). */
@@ -255,3 +260,17 @@ export class DocumentInvalidError extends Error {
     )
   }
 }
+
+// --- M3 (ADR 0011) -----------------------------------------------------------------------------
+// The M3 command API lives in ./ops (commands compile to the ops above); re-exported here so
+// the package entry (`export * from "./types"`) exposes it.
+export {
+  applyCommand,
+  type CommandContext,
+  type CommandResult,
+  type ComponentCommand,
+  type LibraryCommand,
+  type M3Command,
+  planCommand,
+  type VariableCommand,
+} from "./ops"

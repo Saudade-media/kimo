@@ -28,6 +28,12 @@ import {
 /** Options for {@link createResolver}. */
 export interface ResolverOptions {
   libraries?: Libraries
+  /**
+   * M3: the shared expanded view. Themes of composite ids (`<instance>/<IdPath>`) walk the
+   * expanded placement path through it (component root pins, §9.8). Not needed when `nodes`
+   * already is the view.
+   */
+  expanded?: Pick<NodeSource, "getNode">
   onIssue?: (issue: LayoutIssue) => void
 }
 
@@ -44,6 +50,7 @@ export function createResolver(
   const libs = options.libraries ?? {}
   const getHeader = typeof header === "function" ? header : () => header
   const themes = new Map<string, Theme>()
+  const tree: Pick<NodeSource, "getNode"> = options.expanded ?? nodes
   let base: Theme | null = null
 
   const baseTheme = (): Theme => {
@@ -53,7 +60,7 @@ export function createResolver(
   const theme = (nodeId: string): Theme => {
     const cached = themes.get(nodeId)
     if (cached) return cached
-    const n = nodes.getNode(nodeId)
+    const n = tree.getNode(nodeId)
     const parent = n && typeof n.parent === "string" ? theme(n.parent) : baseTheme()
     const pins = n?.theme
     const t = isObject(pins) ? { ...parent } : parent
@@ -63,12 +70,31 @@ export function createResolver(
     return t
   }
 
+  /** The header as a document (built once per invalidation, not per binding). */
+  let doc: KimoDocument | null = null
+  type Resolved = ReturnType<typeof resolveVariable>
+  /**
+   * Resolutions per effective theme object (perf): nodes without pins share their parent's
+   * theme object, so a binding read by 1k instance nodes resolves once per theme.
+   */
+  let memo = new WeakMap<Theme, Map<string, Resolved>>()
+
   return {
     theme,
     value(nodeId, value) {
       if (!isRef(value)) return value
-      const doc = { ...getHeader(), nodes: {} } as KimoDocument
-      const r = resolveVariable(doc, value.$ref, theme(nodeId), libs)
+      const t = theme(nodeId)
+      let m = memo.get(t)
+      if (!m) {
+        m = new Map()
+        memo.set(t, m)
+      }
+      let r = m.get(value.$ref)
+      if (!r) {
+        doc ??= { ...getHeader(), nodes: {} } as KimoDocument
+        r = resolveVariable(doc, value.$ref, t, libs)
+        m.set(value.$ref, r)
+      }
       if (r.ok) return r.value
       options.onIssue?.({
         code: "VARIABLE_UNRESOLVED",
@@ -82,6 +108,8 @@ export function createResolver(
       // A pin change affects every descendant; themes are cheap to rebuild, so drop them all.
       base = null
       themes.clear()
+      doc = null
+      memo = new WeakMap()
     },
   }
 }

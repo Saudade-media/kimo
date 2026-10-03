@@ -1,0 +1,41 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"M3 components and tokens"},
+"themes": {"density":["comfortable","compact"],"mode":["light","dark"]},
+"variables": {
+"ink-900": {"type":"color","value":{"space":"oklch","l":0.24,"c":0.03,"h":55}}
+
+, "space/card-pad": {"type":"number","value":[{"value":16},{"value":12,"when":{"density":"compact"}},{"value":20,"when":{"density":"comfortable"}}],"group":"space.card"}
+
+, "surface/card": {"type":"color","value":[{"value":"#FFFFFF"},{"value":"#FFFFFF","when":{"mode":"light"}},{"value":{"$ref":"ink-900"},"when":{"mode":"dark"}},{"value":{"space":"display-p3","r":0.98,"g":0.97,"b":0.95},"when":{"density":"compact","mode":"light"}}],"description":"Card background","group":"color.surface"}
+
+, "text/default": {"type":"color","value":[{"value":"#2A1E14","when":{"mode":"light"}},{"value":"#F5EEE6","when":{"mode":"dark"}}]}
+},
+"components": ["Card000001","CardFeat01","Arrow00001"],
+"nodes": {
+"Arrow00001": {"type":"frame","parent":null,"order":"a0","name":"Icon/Arrow","component":true,"w":12,"h":12}
+
+, "Card000001": {"type":"frame","parent":null,"order":"a1","name":"Card/Pricing","component":{"props":{"actions":{"type":"slot","order":"w","target":"CardActs01"},"icon":{"type":"instance","order":"u","target":"CardIcon01","default":"Arrow00001"},"label":{"type":"text","order":"V","target":"CardCta001","field":"content","default":"Call to action"},"showBadge":{"type":"boolean","order":"k","target":"CardBadge1","field":"visible","default":false},"size":{"type":"enum","order":"r","target":"Card000001","field":"layout","options":{"md":{"dir":"column","gap":10,"pad":[12,20]},"sm":{"dir":"column","gap":8,"pad":[8,16]}}}}},"x":640,"y":62,"w":220,"fill":{"$ref":"surface/card"},"layout":{"dir":"column","gap":10,"pad":{"$ref":"space/card-pad"}},"meta":{"kimo.component.description":"Pricing tier card — CTAs go in actions."}}
+
+, "CardActs01": {"type":"frame","parent":"Card000001","order":"a2","name":"Actions","layout":{"dir":"column","gap":6},"slot":{"suggested":["Arrow00001"]}}
+
+, "CardBadge1": {"type":"text","parent":"Card000001","order":"a0","name":"Badge","content":"Popular","visible":false}
+
+, "CardCta001": {"type":"text","parent":"CardActs01","order":"a0","name":"Label","content":"Call to action"}
+
+, "CardFeat01": {"type":"instance","parent":null,"order":"a2","name":"Card/Pricing/Featured","of":"Card000001","component":{"props":{"showBadge":{"type":"boolean","target":"CardBadge1","field":"visible","default":true}}},"x":900,"args":{"showBadge":true}}
+
+, "CardIcon01": {"type":"instance","parent":"Card000001","order":"a3","name":"Icon","of":"Arrow00001"}
+
+, "CardTitle1": {"type":"text","parent":"Card000001","order":"a1","name":"Title","content":"Plan name","fill":{"$ref":"text/default"}}
+
+, "InstPro001": {"type":"instance","parent":"Page000001","order":"a0","name":"Card · Pro","of":"CardFeat01","theme":{"density":"compact"},"props":{"fill":"#2A1E14"},"args":{"label":"Start free trial","size":"md"},"overrides":{"CardActs01":{"slot":true},"CardIcon01":{"set":{"of":"Arrow00001","props":{"visible":false}}},"CardTitle1":{"replace":true}}}
+
+, "InstProRp1": {"type":"text","parent":"InstPro001","at":"CardTitle1","order":"a0","name":"Price · Annual","content":"$490/yr"}
+
+, "InstProSl1": {"type":"text","parent":"InstPro001","at":"CardActs01","order":"a0","content":"Compare plans"}
+
+, "Page000001": {"type":"frame","parent":null,"order":"a3","name":"Home","theme":{"mode":"dark"},"layout":{"dir":"row","gap":24}}
+}
+}

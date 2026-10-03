@@ -102,12 +102,20 @@ export class Painter {
   /** Per top-level draw: does a subtree contain a non-normal blend (needs an isolated group)? */
   private readonly blendMemo = new Map<string, boolean>()
 
+  /**
+   * Optional hook tried before drawing each node: returns true when it drew `id` and its
+   * subtree itself (the renderer draws expanded instances from shared pictures, M3 perf).
+   */
+  subtree:
+    | ((canvas: Canvas, ctx: PaintContext, id: string, counters: DrawCounters) => boolean)
+    | null = null
+
   /** Draws `id` and its subtree. The canvas matrix must be the world → device matrix. */
   drawNode(canvas: Canvas, ctx: PaintContext, id: string, counters: DrawCounters): void {
     if (this.depth === 0) this.blendMemo.clear()
     this.depth++
     try {
-      this.drawOne(canvas, ctx, id, counters)
+      if (!this.subtree?.(canvas, ctx, id, counters)) this.drawOne(canvas, ctx, id, counters)
     } finally {
       this.depth--
     }
@@ -234,9 +242,28 @@ export class Painter {
     return false
   }
 
+  /**
+   * Optional hook: whether the subtree of `id` blends non-normally, when the host already
+   * knows (the renderer answers for expanded instances from their shared picture), else
+   * undefined. Saves walking every instance subtree when a frame of 500 instances is drawn.
+   */
+  knownBlends: ((ctx: PaintContext, id: string) => boolean | undefined) | null = null
+
+  /** {@link blendsInside} callable outside `drawNode` (its memo lives for one draw). */
+  subtreeBlends(ctx: PaintContext, id: string): boolean {
+    if (this.depth === 0) this.blendMemo.clear()
+    return this.blendsInside(ctx, id)
+  }
+
+  /** True when `id` or a descendant blends non-normally (see {@link needsIsolation}). */
   private blendsInside(ctx: PaintContext, id: string): boolean {
     const memo = this.blendMemo.get(id)
     if (memo !== undefined) return memo
+    const known = this.knownBlends?.(ctx, id)
+    if (known !== undefined) {
+      this.blendMemo.set(id, known)
+      return known
+    }
     const n = ctx.nodes.getNode(id)
     let r = false
     if (n && n.visible !== false) {

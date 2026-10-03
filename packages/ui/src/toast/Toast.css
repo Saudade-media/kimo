@@ -60,3 +60,16 @@
   outline-offset: 2px;
   border-radius: 2px;
 }
+
+/* M3 tones (02c Toast/Danger FVd5q, Toast/Warning qINpv; board 15 neutral PnSwW): icon only. */
+.kimo-toast--danger .kimo-toast__icon {
+  color: var(--kimo-danger);
+}
+
+.kimo-toast--warning .kimo-toast__icon {
+  color: var(--kimo-warning);
+}
+
+.kimo-toast--neutral .kimo-toast__icon {
+  color: var(--kimo-text-inverse);
+}

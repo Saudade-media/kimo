@@ -65,6 +65,8 @@
   --kimo-measure: #E5177E;
   --kimo-measure-soft: #E5177E1F;
   --kimo-chip-edge: #0A0A0A14;
+  --kimo-component: #7C3AED;
+  --kimo-component-soft: #7C3AED14;
   --kimo-type-display-font-family: var(--kimo-font-sans);
   --kimo-type-display-font-size: var(--kimo-text-3xl);
   --kimo-type-display-font-weight: var(--kimo-font-weight-medium);
@@ -164,6 +166,8 @@
   --kimo-measure: #E5177E;
   --kimo-measure-soft: #E5177E1F;
   --kimo-chip-edge: #0A0A0A14;
+  --kimo-component: #7C3AED;
+  --kimo-component-soft: #7C3AED14;
   --kimo-elevation-popover: 0px 4px 16px 0px var(--kimo-shadow);
   --kimo-elevation-dialog: 0px 2px 6px 0px var(--kimo-shadow), 0px 16px 40px 0px var(--kimo-shadow-strong);
   --kimo-button-primary-bg: var(--kimo-accent);
@@ -219,6 +223,8 @@
   --kimo-measure: #FF5CAB;
   --kimo-measure-soft: #FF5CAB2E;
   --kimo-chip-edge: #FFFFFF24;
+  --kimo-component: #A78BFA;
+  --kimo-component-soft: #A78BFA24;
   --kimo-elevation-popover: 0px 4px 16px 0px var(--kimo-shadow);
   --kimo-elevation-dialog: 0px 2px 6px 0px var(--kimo-shadow), 0px 16px 40px 0px var(--kimo-shadow-strong);
   --kimo-button-primary-bg: var(--kimo-accent);
@@ -275,6 +281,8 @@
     --kimo-measure: #FF5CAB;
     --kimo-measure-soft: #FF5CAB2E;
     --kimo-chip-edge: #FFFFFF24;
+    --kimo-component: #A78BFA;
+    --kimo-component-soft: #A78BFA24;
     --kimo-elevation-popover: 0px 4px 16px 0px var(--kimo-shadow);
     --kimo-elevation-dialog: 0px 2px 6px 0px var(--kimo-shadow), 0px 16px 40px 0px var(--kimo-shadow-strong);
     --kimo-button-primary-bg: var(--kimo-accent);

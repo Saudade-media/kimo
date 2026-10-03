@@ -90,15 +90,50 @@ export function writeZip(entries: readonly ZipEntry[]): Uint8Array {
   return out
 }
 
-async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
+async function inflateRaw(data: Uint8Array, maxBytes = Number.POSITIVE_INFINITY) {
   const stream = new Blob([data as Uint8Array<ArrayBuffer>])
     .stream()
     .pipeThrough(new DecompressionStream("deflate-raw"))
-  return new Uint8Array(await new Response(stream).arrayBuffer())
+  if (!Number.isFinite(maxBytes)) return new Uint8Array(await new Response(stream).arrayBuffer())
+  // Bounded: stop (and cancel the stream) as soon as the output passes the cap (zip bombs).
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel()
+      throw new Error(`ZIP entry inflates past ${maxBytes} bytes`)
+    }
+    chunks.push(value)
+  }
+  const out = new Uint8Array(total)
+  let o = 0
+  for (const c of chunks) {
+    out.set(c, o)
+    o += c.byteLength
+  }
+  return out
+}
+
+/** Limits for {@link readZip} on untrusted archives. */
+export interface ReadZipOptions {
+  /** Only entries whose name passes are read (others are skipped, never inflated). */
+  include?: (name: string) => boolean
+  /** Refuse archives with more central-directory entries. */
+  maxEntries?: number
+  /** Refuse an entry that inflates (or is stored) past this many bytes. */
+  maxEntryBytes?: number
 }
 
 /** Entries of a ZIP archive (directories skipped). @throws on a malformed archive. */
-export async function readZip(bytes: Uint8Array): Promise<ZipEntry[]> {
+export async function readZip(
+  bytes: Uint8Array,
+  options: ReadZipOptions = {},
+): Promise<ZipEntry[]> {
+  const maxEntryBytes = options.maxEntryBytes ?? Number.POSITIVE_INFINITY
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   let eocd = -1
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
@@ -109,6 +144,8 @@ export async function readZip(bytes: Uint8Array): Promise<ZipEntry[]> {
   }
   if (eocd < 0) throw new Error("Not a ZIP archive (no end of central directory)")
   const count = v.getUint16(eocd + 10, true)
+  if (options.maxEntries !== undefined && count > options.maxEntries)
+    throw new Error(`ZIP archive has more than ${options.maxEntries} entries`)
   let p = v.getUint32(eocd + 16, true)
   const dec = new TextDecoder()
   const out: ZipEntry[] = []
@@ -123,11 +160,14 @@ export async function readZip(bytes: Uint8Array): Promise<ZipEntry[]> {
     const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen))
     p += 46 + nameLen + extraLen + commentLen
     if (name.endsWith("/")) continue
+    if (options.include && !options.include(name)) continue
     if (v.getUint32(local, true) !== 0x04034b50) throw new Error("Malformed ZIP entry")
     const start = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true)
     const raw = bytes.subarray(start, start + size)
-    if (method === 0) out.push({ name, data: raw })
-    else if (method === 8) out.push({ name, data: await inflateRaw(raw) })
+    if (method === 0) {
+      if (raw.byteLength > maxEntryBytes) throw new Error(`ZIP entry ${name} is too large`)
+      out.push({ name, data: raw })
+    } else if (method === 8) out.push({ name, data: await inflateRaw(raw, maxEntryBytes) })
     else throw new Error(`Unsupported ZIP compression method ${method} (${name})`)
   }
   return out

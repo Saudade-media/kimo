@@ -66,6 +66,8 @@
   --color-measure: var(--kimo-measure);
   --color-measure-soft: var(--kimo-measure-soft);
   --color-chip-edge: var(--kimo-chip-edge);
+  --color-component: var(--kimo-component);
+  --color-component-soft: var(--kimo-component-soft);
   --text-display: var(--kimo-type-display-font-size);
   --text-display--font-weight: var(--kimo-type-display-font-weight);
   --text-display--letter-spacing: var(--kimo-type-display-letter-spacing);

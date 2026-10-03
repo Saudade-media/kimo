@@ -117,6 +117,10 @@ describe("component CSS", () => {
       "image-fill-popover/ImageFillPopover.css: background: #c9b8a6",
       "image-fill-popover/ImageFillPopover.css: background: #0a0a0a99",
       "image-fill-popover/ImageFillPopover.css: color: #ffffff",
+      // M3 (board 15): danger Confirm label #FFFFFF; 02c AssetTile placeholder thumbnail.
+      "confirm-dialog/ConfirmDialog.css: color: #ffffff",
+      "gallery/Gallery.css: background: #0a0a0a",
+      "gallery/Gallery.css: color: #ffffff",
     ])
   })
 

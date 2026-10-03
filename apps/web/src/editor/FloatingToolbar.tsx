@@ -54,23 +54,27 @@ export function FloatingToolbar({
         </HintPill>
       )}
       <div ref={bar} className="floating-toolbar" role="toolbar" aria-label="Tools">
-        {CANVAS_TOOLS.map((t) => (
-          <Tooltip
-            key={t.id}
-            side="top"
-            label={t.enabled ? t.label : `${t.label} · coming soon`}
-            shortcut={t.enabled ? t.shortcut : undefined}
-          >
-            <ToolButton
-              label={t.label}
-              icon={<Icon name={t.icon} size={18} />}
-              active={active === t.id}
-              disabled={!t.enabled}
-              data-tool={t.id}
-              onClick={() => onActivate(t.id)}
-            />
-          </Tooltip>
-        ))}
+        {CANVAS_TOOLS.map((t) => {
+          // M3: one-shot actions (Component, ⌥⌘K) are enabled even while the tool spec is not.
+          const enabled = t.enabled || t.action !== undefined
+          return (
+            <Tooltip
+              key={t.id}
+              side="top"
+              label={enabled ? t.label : `${t.label} · coming soon`}
+              shortcut={enabled ? t.shortcut : undefined}
+            >
+              <ToolButton
+                label={t.label}
+                icon={<Icon name={t.icon} size={18} />}
+                active={active === t.id}
+                disabled={!enabled}
+                data-tool={t.id}
+                onClick={() => onActivate(t.id)}
+              />
+            </Tooltip>
+          )
+        })}
         <span className="floating-toolbar__divider" aria-hidden="true" />
         <Tooltip side="top" label="Agent arrives in M6">
           <button type="button" className="floating-toolbar__ask" aria-disabled="true">

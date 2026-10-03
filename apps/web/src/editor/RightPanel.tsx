@@ -7,15 +7,27 @@
  * viewport.
  */
 
+import type { NodeData } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
 import { Badge, EmptyState, Tabs } from "@kimo/ui"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { AssetStore } from "../lib/assets"
 import { useDocHeader } from "../lib/header"
-import { type Bus, useNodes, useUi } from "../lib/hooks"
+import { type Bus, createBus, useNodes, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { useEditor } from "./fields"
+import { type M3Controller, useBusValue } from "./m3/controller"
+import { layerKind } from "./m3/model"
+import { OverrideFieldsContext, overrideFieldsOf } from "./m3/overrides"
+import {
+  ComponentSection,
+  InstanceSection,
+  PropertiesSection,
+  SlotSection,
+  ThemeSection,
+} from "./m3/sections"
+import { KindPill } from "./m3/ui"
 import { PanelContext, type Sel } from "./panel-context"
 import { kindLabel, MIXED, nodeName, shared, typeIcon } from "./props"
 import "./right-panel.css"
@@ -26,6 +38,8 @@ import { FillSection, StrokeSection } from "./sections/PaintSections"
 import type { FileSession } from "./session"
 
 type RightTab = "design" | "code" | "agent"
+const NO_REV = createBus(0)
+
 const TABS = [
   { value: "design", label: "Design" },
   { value: "code", label: "Code" },
@@ -40,9 +54,11 @@ export interface RightPanelProps {
   assets?: AssetStore | null
   /** Icon glyphs and catalogs (icon picker); null hides the grid. */
   icons?: IconProvider | null
+  /** M3 state (expanded view, commands). */
+  m3: M3Controller
 }
 
-export function RightPanel({ session, layout, assets = null, icons = null }: RightPanelProps) {
+export function RightPanel({ session, layout, assets = null, icons = null, m3 }: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>("design")
   return (
     // Board 05 (EHux2): the panel widens to 360 while the Agent tab is open.
@@ -52,7 +68,7 @@ export function RightPanel({ session, layout, assets = null, icons = null }: Rig
     >
       <Tabs label="Right panel" items={TABS} value={tab} onChange={setTab} />
       {tab === "design" && (
-        <DesignTab session={session} layout={layout} assets={assets} icons={icons} />
+        <DesignTab session={session} layout={layout} assets={assets} icons={icons} m3={m3} />
       )}
       {tab === "code" && (
         <div className="right-panel__empty">
@@ -93,15 +109,31 @@ function DesignTab({
   layout,
   assets,
   icons,
+  m3,
 }: {
   session: FileSession
   layout: Bus<LayoutResult | null>
   assets: AssetStore | null
   icons: IconProvider | null
+  m3: M3Controller
 }) {
   // Re-renders when the selection or a selected node changes, not on every document edit.
   const selection = useUi(session.ui, (s) => s.selection)
-  const sel: readonly Sel[] = useNodes(session.store, selection)
+  const realSel: readonly Sel[] = useNodes(session.store, selection)
+  // M3: instances and composite ids (`<instance>/<IdPath>`) read the expanded view (effective
+  // values); their edits are routed to overrides (m3/route.ts). Re-read on document changes
+  // only while such a node is selected.
+  const needsView =
+    selection.some((id) => id.includes("/")) || realSel.some((s) => s.node.type === "instance")
+  const viewRev = useBusValue(needsView ? m3.rev : NO_REV)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: viewRev = the view changed
+  const sel: readonly Sel[] = useMemo(() => {
+    if (!needsView) return realSel
+    const view = m3.view()
+    return selection
+      .map((id) => ({ id, node: view.getNode(id) as NodeData | undefined }))
+      .filter((s): s is Sel => !!s.node)
+  }, [needsView, realSel, selection, m3, viewRev])
   const key = selection.join("\u0000")
   const editor = useEditor(session, key)
   const header = useDocHeader(session.store)
@@ -123,28 +155,97 @@ function DesignTab({
   const all = (set: ReadonlySet<string>) => [...types].every((t) => set.has(t))
   const kind = shared(nodes, kindLabel)
   const instance = types.has("instance")
+  const view = m3.view()
+  const single = sel.length === 1 ? first.id : null
+  const m3kind = single ? layerKind(view, single) : null
+  const inInstance = single !== null && (view.isVirtual(single) || !!view.origin(single)?.owned)
+  const overrides = single && (inInstance || instance) ? overrideFieldsOf(m3, view, single) : null
+  const themeFirst =
+    single !== null &&
+    (first.node.type === "frame" || m3kind === "instance") &&
+    typeof first.node.theme === "object" &&
+    first.node.theme !== null &&
+    Object.keys(first.node.theme).length > 0
+      ? single
+      : null
+  const kindText =
+    m3kind === "instance"
+      ? "Instance"
+      : m3kind === "component"
+        ? "Component"
+        : m3kind === "derived"
+          ? "Derived"
+          : m3kind === "slot"
+            ? "Slot"
+            : null
+  const headerIcon =
+    m3kind === "instance"
+      ? "diamond"
+      : m3kind === "component" || m3kind === "derived"
+        ? "component"
+        : m3kind === "slot"
+          ? "square-dashed"
+          : null
 
   return (
-    <PanelContext.Provider value={{ session, editor, header, layout, assets, icons }}>
+    <PanelContext.Provider
+      value={{
+        session,
+        editor,
+        header,
+        layout,
+        assets,
+        icons,
+        theme: single ? view.theme(single) : undefined,
+      }}
+    >
       {/* Keyed by the selection: popovers, open effect rows and drafts reset with it. */}
       <div className="design-tab" key={key}>
         <div className="selection-header">
-          <span className="selection-header__icon">
-            <Icon name={sel.length === 1 ? typeIcon(first.node) : "layers"} size={14} />
+          <span
+            className={`selection-header__icon${headerIcon ? " selection-header__icon--component" : ""}`}
+          >
+            <Icon
+              name={headerIcon ?? (sel.length === 1 ? typeIcon(first.node) : "layers")}
+              size={14}
+            />
           </span>
           <span className="selection-header__name" data-testid="selection-name">
             {sel.length === 1 ? nodeName(first.node) : `${sel.length} layers`}
           </span>
           <span className="selection-header__spacer" />
-          <Badge>{kind === MIXED ? "Mixed" : kind}</Badge>
+          {kindText ? (
+            <KindPill label={kindText} derived={m3kind === "derived"} />
+          ) : (
+            <Badge>{kind === MIXED ? "Mixed" : kind}</Badge>
+          )}
         </div>
-        {!instance && <LayerSection sel={sel} />}
-        <PositionSection sel={sel} />
-        <AutoLayoutSection sel={sel} />
-        {all(new Set(["icon"])) && <IconSection sel={sel} />}
-        {(all(HAS_FILL) || all(new Set(["icon"]))) && <FillSection sel={sel} />}
-        {all(HAS_STROKE) && <StrokeSection sel={sel} />}
-        {!instance && <EffectsSection sel={sel} />}
+        <OverrideFieldsContext.Provider value={overrides}>
+          {/* Board 14 (PEcqt): a node with theme pins shows Theme first, under the header. */}
+          {themeFirst && <ThemeSection m3={m3} id={themeFirst} />}
+          {single && m3kind === "instance" && <InstanceSection m3={m3} id={single} />}
+          {single && m3kind === "instance" && !view.isVirtual(single) && (
+            <PropertiesSection m3={m3} id={single} />
+          )}
+          {single && (m3kind === "component" || m3kind === "derived") && (
+            <ComponentSection m3={m3} id={single} />
+          )}
+          {single && !inInstance && first.node.type === "frame" && (
+            <SlotSection m3={m3} id={single} />
+          )}
+          <LayerSection sel={sel} />
+          <PositionSection sel={sel} />
+          <AutoLayoutSection sel={sel} />
+          {all(new Set(["icon"])) && <IconSection sel={sel} />}
+          {(all(HAS_FILL) ||
+            all(new Set(["icon"])) ||
+            (instance && all(new Set(["instance"])))) && <FillSection sel={sel} />}
+          {all(HAS_STROKE) && <StrokeSection sel={sel} />}
+          <EffectsSection sel={sel} />
+          {single && !themeFirst && (first.node.type === "frame" || m3kind === "instance") && (
+            <ThemeSection m3={m3} id={single} />
+          )}
+        </OverrideFieldsContext.Provider>
       </div>
     </PanelContext.Provider>
   )

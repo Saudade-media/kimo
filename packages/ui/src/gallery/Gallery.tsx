@@ -44,6 +44,7 @@ import { Toggle } from "../toggle/Toggle"
 import { ToolButton } from "../tool-button/ToolButton"
 import { Tooltip, TooltipContent } from "../tooltip/Tooltip"
 import { GalleryM2 } from "./GalleryM2"
+import { GalleryM3 } from "./GalleryM3"
 
 /** Props for {@link Gallery}. */
 export interface GalleryProps {
@@ -336,6 +337,7 @@ export function Gallery({ theme }: GalleryProps) {
         </Section>
       </div>
       <GalleryM2 theme={theme} />
+      <GalleryM3 theme={theme} />
     </>
   )
 }

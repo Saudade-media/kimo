@@ -1,0 +1,221 @@
+/*
+ * ConfirmDialog: desing.pen board 15 > Confirms > Detach Confirm (i8PfIC), Remove Slot Confirm
+ * (ysXyK), Unlink Confirm (fmB2B).
+ * frame: column, gap 14, padding 20, fill bg-overlay, stroke 1 border (inside), radius-xl,
+ *        shadow outer 0 16 blur 48 shadow-strong
+ *   ├ Head (c79Dd0) fill, row, gap 12
+ *   │   ├ Icon Wrap (X2tlh) 32 × 32, radius-pill, center: component-soft / danger-soft
+ *   │   │   └ Icon 16 × 16: component / danger
+ *   │   └ Text (pp7dl) fill, column, gap 4
+ *   │       ├ Title (hogRh) sans 14 / 600, text-primary
+ *   │       └ Desc  (t3pTI) fixed-width fill, sans 12, text-secondary, lineHeight 1.45
+ *   ├ Impact (JRC2E) fill, column, gap 6, padding [10, 12], fill bg-subtle, radius-md
+ *   │   └ Item fill, row, gap 8, center: Icon 14 (component | text-tertiary) · Text sans 11
+ *   │       text-secondary
+ *   └ Footer (M4Y1f) fill, row, gap 8, center
+ *       Checkbox (VP63n) 14 × 14, radius 4, stroke 1.5 border-strong · Check Label sans 11
+ *       text-secondary · Spacer · Cancel Button/Ghost h 30, padding [0, 12], label 12 ·
+ *       Confirm Button/Primary h 30, padding [0, 14], label 12 (danger: fill danger, #FFFFFF)
+ */
+.kimo-confirm-dialog {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  padding: 20px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-confirm-dialog__head {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+.kimo-confirm-dialog__icon-wrap {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+}
+
+.kimo-confirm-dialog--component .kimo-confirm-dialog__icon-wrap {
+  background: var(--kimo-component-soft);
+  color: var(--kimo-component);
+}
+
+.kimo-confirm-dialog--danger .kimo-confirm-dialog__icon-wrap {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.kimo-confirm-dialog__icon-wrap > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-confirm-dialog__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kimo-confirm-dialog__title,
+.kimo-confirm-dialog__desc {
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+}
+
+.kimo-confirm-dialog__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 17px; /* Pencil text box: round(14 × 1.21) for Inter */
+}
+
+.kimo-confirm-dialog__desc {
+  align-self: stretch;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 17px; /* lineHeight 1.45 × 12 = 17.4, rendered as whole-px lines (17) */
+}
+
+.kimo-confirm-dialog__impact {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  list-style: none;
+}
+
+.kimo-confirm-dialog__item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-confirm-dialog__item-icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-confirm-dialog__item-icon--component {
+  color: var(--kimo-component);
+}
+
+.kimo-confirm-dialog__item-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-confirm-dialog__item-text,
+.kimo-confirm-dialog__check-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-confirm-dialog__item-text {
+  min-width: 0;
+}
+
+.kimo-confirm-dialog__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Checkbox (VP63n): 14 × 14, radius 4, stroke 1.5 border-strong. Checked state is not designed:
+   accent fill inside the same ring. */
+.kimo-confirm-dialog__checkbox {
+  box-sizing: border-box;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--kimo-border-strong);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-confirm-dialog__checkbox:checked {
+  background: var(--kimo-accent);
+  box-shadow:
+    inset 0 0 0 1.5px var(--kimo-accent),
+    inset 0 0 0 3.5px var(--kimo-bg-overlay);
+}
+
+.kimo-confirm-dialog__checkbox:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-confirm-dialog__check-label {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kimo-confirm-dialog__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-button.kimo-confirm-dialog__cancel,
+.kimo-button.kimo-confirm-dialog__confirm {
+  flex: none;
+  height: 30px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-button.kimo-confirm-dialog__cancel {
+  padding: 0 12px;
+}
+
+.kimo-button.kimo-confirm-dialog__confirm {
+  padding: 0 14px;
+}
+
+.kimo-confirm-dialog--danger .kimo-button.kimo-confirm-dialog__confirm {
+  background: var(--kimo-danger);
+  color: #ffffff; /* pen-literal: Confirm label fill #FFFFFF (Zrgbe / Vjika bzZjb) */
+}
+
+.kimo-confirm-dialog--danger .kimo-button.kimo-confirm-dialog__confirm:hover:not(:disabled) {
+  background: var(--kimo-danger);
+  filter: brightness(0.95);
+}

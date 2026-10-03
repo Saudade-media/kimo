@@ -12,10 +12,11 @@ cites the sections of the [teardown](../teardown.md) (the plan of record) it imp
 | [0004](0004-renderer-canvaskit-layout-yoga.md) | CanvasKit for rendering and text, Yoga for layout, both behind interfaces | Accepted |
 | [0005](0005-kimo-file-format.md) | `.kimo` format: flat node table, canonical serialization, semver with migrations, never encrypted | Accepted |
 | [0006](0006-llm-provider-interface.md) | A Kimo-owned LLM `Provider` interface, Claude by default | Accepted |
-| [0007](0007-editor-design-system.md) | Editor design system: monochrome, tokens transcribed from `desing.pen` | Accepted |
+| [0007](0007-editor-design-system.md) | Editor design system: monochrome, tokens transcribed from `desing.pen` (amended: `measure`, `component` meaning colors) | Accepted |
 | [0008](0008-mcp-sidecar-in-rust.md) | The desktop MCP sidecar is a small Rust binary, not `bun build --compile` | Accepted |
 | [0009](0009-m1-render-pipeline.md) | M1 render pipeline: CanvasKit renderer, Yoga layout, bundled fonts, host-driven updates | Accepted |
 | [0010](0010-m2-styling-and-tools.md) | M2 styling, canvas overlays and tools: format additions and contracts | Accepted |
+| [0011](0011-m3-components-and-variables.md) | M3 components, instances, variables and libraries: format additions, expansion and contracts | Accepted |
 
 ## Process
 

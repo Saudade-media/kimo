@@ -1,0 +1,187 @@
+/*
+ * LayerRow (M3): desing.pen 02c > Identity > LayerRow/Component (ZcfUj), /Component/Selected
+ * (L3PiIW), /Instance (oHsXi), /Instance/Selected (N3AA7R), /Slot (lAFda), /Replaced (Uh0kH),
+ * /Derived (x5xNG).
+ * frame: fill_container × 28, radius-sm, row, gap 6, padding [0, 8], alignItems center
+ *   ├ Disclosure 12 × 12 (chevron-right), text-tertiary
+ *   ├ Type Icon  14 × 14 (component / diamond / square-dashed / replace), component
+ *   ├ Name       sans 12, text-primary; weight 500 (component, derived, selected instance)
+ *   ├ Slot Tag   (Wep46) hug, padding [0, 4], stroke 1 component, radius-xs
+ *   │   └ Label  (zA2RQ) mono 11, component ("slot" / "replaced")
+ *   ├ Spacer     fill_container × 1 — Derived: Origin (TLTw8) fill, justify end, center
+ *   │                                   └ From (tBTsQ) sans 11, text-tertiary
+ *   ├ Override   OverrideDot (sFGDO, enabled false; on for Replaced / overridden)
+ *   └ Visibility eye 14 text-tertiary (GdbO7, enabled false → hover only)
+ * Selected: fill component-soft. Hover: bg-hover (M1 rule).
+ */
+.kimo-layer-row-m3 {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-primary);
+  cursor: default;
+  user-select: none;
+}
+
+.kimo-layer-row-m3:hover:not(.kimo-layer-row-m3--selected) {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-layer-row-m3:focus-visible {
+  outline: 2px solid var(--kimo-component);
+  outline-offset: -2px;
+}
+
+.kimo-layer-row-m3--selected {
+  background: var(--kimo-component-soft);
+}
+
+.kimo-layer-row-m3__disclosure,
+.kimo-layer-row-m3__visibility {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-layer-row-m3__disclosure {
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-layer-row-m3__disclosure--leaf {
+  visibility: hidden;
+  cursor: default;
+}
+
+.kimo-layer-row-m3__visibility {
+  display: none;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-layer-row-m3__visibility--on {
+  display: inline-flex;
+}
+
+.kimo-layer-row-m3:hover .kimo-layer-row-m3__visibility,
+.kimo-layer-row-m3:focus-within:not(:focus) .kimo-layer-row-m3__visibility {
+  display: inline-flex;
+}
+
+.kimo-layer-row-m3__visibility:hover {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-layer-row-m3__disclosure > svg,
+.kimo-layer-row-m3__visibility > svg,
+.kimo-layer-row-m3__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-layer-row-m3__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-component);
+}
+
+.kimo-layer-row-m3__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-layer-row-m3__name--emphasized {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-layer-row-m3--hidden .kimo-layer-row-m3__name {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-layer-row-m3__input {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  outline: none;
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-component);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+}
+
+.kimo-layer-row-m3__tag {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 0 4px;
+  border-radius: var(--kimo-radius-xs);
+  box-shadow: inset 0 0 0 1px var(--kimo-component);
+}
+
+.kimo-layer-row-m3__tag-label {
+  color: var(--kimo-component);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-layer-row-m3__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-layer-row-m3__origin {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.kimo-layer-row-m3__from {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

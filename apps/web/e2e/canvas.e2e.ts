@@ -46,7 +46,17 @@ async function openEditor(page: Page, url: string) {
 /** Waits two animation frames (coalesced layout/render). */
 const settle = (page: Page) =>
   page.evaluate(
-    () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+    () =>
+      new Promise<void>((r) => {
+        // Timer fallback: headless Chromium can skip rAF under load (see qa-helpers settle).
+        const t = setTimeout(r, 500)
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            clearTimeout(t)
+            r()
+          }),
+        )
+      }),
   )
 
 const idOf = (page: Page, name: string) =>
@@ -544,14 +554,16 @@ export const scenarios: Scenario[] = [
       await page.keyboard.press("Shift+ArrowRight")
       // Export through the app's serializer and import it back as a new file.
       const text = await page.evaluate(async (f) => {
-        const files = (await import(/* @vite-ignore */ f)) as FilesModule
+        const files = ((window as unknown as { __kimoModules?: Record<string, unknown> })
+          .__kimoModules?.[f] ?? (await import(/* @vite-ignore */ f))) as FilesModule
         const k = (window as unknown as { __kimo: KimoHook }).__kimo
         return files.exportKimo(k.session.store as never, "Roundtrip")
       }, FILES)
       expect(text.includes('"format"'), "serialized")
       const id = await page.evaluate(
         async ([f, t]) => {
-          const files = (await import(/* @vite-ignore */ f)) as FilesModule
+          const files = ((window as unknown as { __kimoModules?: Record<string, unknown> })
+            .__kimoModules?.[f] ?? (await import(/* @vite-ignore */ f))) as FilesModule
           return files.importKimo(t, "Roundtrip.kimo")
         },
         [FILES, text] as const,

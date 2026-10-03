@@ -1,0 +1,67 @@
+/*
+ * LibraryManager: board 13 > Library manager > Library Manager (KBZKl), Popover (xvOvm) width 600.
+ *   Body (SCB6r) fill, column (footer and body padding rules shared with SwapPopover.css)
+ *   ├ Intro (BUKMI) fill, padding [12, 12, 4, 12] → Text fixed-width fill, sans 11
+ *   │   text-secondary, lineHeight 1.45
+ *   ├ List (lKwPW) fill, column → LibraryRow fill (last: stroke #00000000)
+ *   └ Footer (gXVzr) stroke top 1 border, row, gap 8, padding 12, center
+ *       Info 14 text-tertiary · Hint sans 11 text-tertiary · Spacer · Link library Button/Primary
+ *       h 28, padding [0, 12], icon link-2 14, label 12
+ */
+.kimo-popover.kimo-library-manager {
+  width: 600px;
+}
+
+.kimo-library-manager__intro {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  padding: 12px 12px 4px 12px;
+}
+
+.kimo-library-manager__intro-text {
+  flex: 1 1 0;
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px; /* lineHeight 1.45 × 11 = 15.95, rendered as whole-px lines (16) */
+}
+
+.kimo-library-manager__list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.kimo-library-manager__list > .kimo-library-row:last-child {
+  box-shadow: none;
+}
+
+.kimo-library-manager__hint {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-library-manager__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-button.kimo-library-manager__link {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-library-manager__link .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}

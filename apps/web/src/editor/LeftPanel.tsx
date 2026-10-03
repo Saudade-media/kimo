@@ -4,12 +4,17 @@
  * Input 30 high), Layer Tree (vertical, gap 1, padding [0, 6]), Spacer, Footer
  * (top border, gap 8, padding [10, 12]: files icon, "N pages", spacer, Kbd ⌘P).
  */
-import type { DocStore, Op } from "@kimo/editor-state"
-import { EmptyState, Input, Kbd, LayerRow, Tabs } from "@kimo/ui"
+import type { DocStore, NodeData, Op } from "@kimo/editor-state"
+import { EmptyState, Input, Kbd, LayerRow, LayerRowM3, Tabs } from "@kimo/ui"
 import { type KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { UiStore } from "../canvas/contract"
 import { useNode, useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
+import { AssetsTab } from "./m3/AssetsTab"
+import { type M3Controller, useComponentRev } from "./m3/controller"
+import { ChildMenu } from "./m3/menus"
+import { isOverridden, layerKind, replacedName } from "./m3/model"
+import { VariablesTab } from "./m3/VariablesTab"
 import { kindLabel, nodeName, typeIcon } from "./props"
 import type { FileSession } from "./session"
 
@@ -20,7 +25,7 @@ const TABS = [
   { value: "variables", label: "Variables" },
 ] as const
 
-export function LeftPanel({ session }: { session: FileSession }) {
+export function LeftPanel({ session, m3 }: { session: FileSession; m3: M3Controller }) {
   const [tab, setTab] = useState<LeftTab>("layers")
   const [query, setQuery] = useState("")
   return (
@@ -39,27 +44,17 @@ export function LeftPanel({ session }: { session: FileSession }) {
               frameProps={{ className: "left-panel__search-input" }}
             />
           </div>
-          <LayerTree store={session.store} ui={session.ui} apply={session.apply} query={query} />
+          <LayerTree
+            store={session.store}
+            ui={session.ui}
+            apply={session.apply}
+            query={query}
+            m3={m3}
+          />
         </>
       )}
-      {tab === "assets" && (
-        <div className="left-panel__empty">
-          <EmptyState
-            icon={<Icon name="image" size={18} />}
-            title="No assets yet"
-            description="Images you add to this file show up here."
-          />
-        </div>
-      )}
-      {tab === "variables" && (
-        <div className="left-panel__empty">
-          <EmptyState
-            icon={<Icon name="variable" size={18} />}
-            title="No variables yet"
-            description="Colors, sizes and fonts you reuse across the file live here."
-          />
-        </div>
-      )}
+      {tab === "assets" && <AssetsTab session={session} m3={m3} />}
+      {tab === "variables" && <VariablesTab session={session} m3={m3} />}
       <div className="left-panel__spacer" />
       <div className="left-panel__footer">
         <span className="left-panel__footer-icon">
@@ -103,13 +98,18 @@ function LayerTree({
   ui,
   apply,
   query,
+  m3,
 }: {
   store: DocStore
   ui: UiStore
   apply: FileSession["apply"]
   query: string
+  m3: M3Controller
 }) {
   const shape = useTreeRevision(store)
+  // M3: instances mirror their main's full child list through the expanded view (composite ids).
+  const compRev = useComponentRev(m3)
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
   const selection = useUi(ui, (s) => s.selection)
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
@@ -120,40 +120,45 @@ function LayerTree({
   /** Set when keyboard navigation moved focus: the focused row takes DOM focus once mounted. */
   const moveFocus = useRef(false)
 
+  // Roots start open; instances start closed (board 11: instance rows collapsed until opened).
   const isOpen = useCallback(
     (id: string, depth: number) =>
-      query.trim() !== "" || expanded.has(id) || (depth === 0 && !collapsed.has(id)),
-    [query, expanded, collapsed],
+      query.trim() !== "" ||
+      expanded.has(id) ||
+      (depth === 0 && !collapsed.has(id) && store.getNode(id)?.type !== "instance"),
+    [query, expanded, collapsed, store],
   )
 
   const rows = useMemo(() => {
     void shape
+    void compRev
+    const view = m3.view()
     const out: Row[] = []
     const q = query.trim().toLowerCase()
     const memo = new Map<string, boolean>()
     const matches = (id: string): boolean => {
       const hit = memo.get(id)
       if (hit !== undefined) return hit
-      const n = store.getNode(id)
+      const n = view.getNode(id) as NodeData | undefined
       const ok =
         !!n &&
         (nodeName(n).toLowerCase().includes(q) ||
           kindLabel(n).toLowerCase().includes(q) ||
-          store.children(id).some(matches))
+          view.children(id).some(matches))
       memo.set(id, ok)
       return ok
     }
     const walk = (parent: string | null, depth: number) => {
-      for (const id of store.children(parent)) {
+      for (const id of view.children(parent)) {
         if (q && !matches(id)) continue
-        const kids = store.children(id).length > 0
+        const kids = view.children(id).length > 0
         out.push({ id, depth, hasChildren: kids, parent })
         if (kids && isOpen(id, depth)) walk(id, depth + 1)
       }
     }
     walk(null, 0)
     return out
-  }, [store, shape, query, isOpen])
+  }, [m3, shape, compRev, query, isOpen])
 
   const index = useMemo(() => new Map(rows.map((r, i) => [r.id, i])), [rows])
   const selected = useMemo(() => new Set(selection), [selection])
@@ -161,11 +166,12 @@ function LayerTree({
   // Reveal the selection: expand every ancestor of a selected node.
   useEffect(() => {
     const add = new Set<string>()
+    const view = m3.view()
     for (const id of selection) {
-      let p = store.getNode(id)?.parent ?? null
-      while (typeof p === "string") {
+      let p = view.getNode(id)?.parent ?? null
+      while (typeof p === "string" && !add.has(p)) {
         add.add(p)
-        p = store.getNode(p)?.parent ?? null
+        p = view.getNode(p)?.parent ?? null
       }
     }
     if (add.size === 0) return
@@ -173,7 +179,7 @@ function LayerTree({
       [...c].some((id) => add.has(id)) ? new Set([...c].filter((id) => !add.has(id))) : c,
     )
     setExpanded((e) => ([...add].every((id) => e.has(id)) ? e : new Set([...e, ...add])))
-  }, [selection, store])
+  }, [selection, m3])
 
   // Scroll a selection made elsewhere (canvas) into view, without layout reads per row.
   useEffect(() => {
@@ -269,6 +275,7 @@ function LayerTree({
       select,
       apply: (op, label) => latest.current.apply(op, label),
       hover: (id) => latest.current.ui.getState().setHovered(id),
+      menu: (id, x, y) => setMenu({ id, x, y }),
     }),
     [toggle, select],
   )
@@ -290,7 +297,7 @@ function LayerTree({
     const key = e.key
     if (mod && e.shiftKey && (key === "h" || key === "H")) {
       e.preventDefault()
-      const n = store.getNode(row.id)
+      const n = m3.view().getNode(row.id)
       if (n) apply(visibilityOp(row.id, n.visible === false), "Toggle visibility")
       return
     }
@@ -381,6 +388,8 @@ function LayerTree({
         <LayerItem
           key={r.id}
           store={store}
+          m3={m3}
+          rev={compRev}
           row={r}
           open={r.hasChildren ? isOpen(r.id, r.depth) : undefined}
           selected={selected.has(r.id)}
@@ -394,6 +403,7 @@ function LayerTree({
           style={{ height: (rows.length - end) * ROW_PITCH - ROW_GAP }}
         />
       )}
+      {menu && <ChildMenu m3={m3} id={menu.id} at={menu} onClose={() => setMenu(null)} />}
     </div>
   )
 }
@@ -403,6 +413,7 @@ interface RowActions {
   select(id: string, e: Mods): void
   apply: FileSession["apply"]
   hover(id: string | null): void
+  menu(id: string, x: number, y: number): void
 }
 
 const visibilityOp = (id: string, hidden: boolean): Op =>
@@ -413,6 +424,8 @@ const lockOp = (id: string, locked: boolean): Op =>
 /** One tree row; re-renders when its node, open/selected/tabbable state or depth change. */
 const LayerItem = memo(function LayerItem({
   store,
+  m3,
+  rev,
   row,
   open,
   selected,
@@ -420,21 +433,78 @@ const LayerItem = memo(function LayerItem({
   actions,
 }: {
   store: DocStore
+  m3: M3Controller
+  /** Component revision (virtual rows read the view). */
+  rev: number
   row: Row
   open: boolean | undefined
   selected: boolean
   tabbable: boolean
   actions: RowActions
 }) {
-  const n = useNode(store, row.id)
+  const real = useNode(store, row.id)
+  void rev
+  const view = m3.view()
+  const n = (real ? (view.getNode(row.id) ?? real) : view.getNode(row.id)) as NodeData | undefined
   if (!n) return null
   const { id, depth } = row
-  const special = n.type === "instance" || n.component === true || typeof n.component === "object"
   const hidden = n.visible === false
   const locked = n.locked === true
+  const kind = layerKind(view, id)
+  const inInstance = view.isVirtual(id) || !!view.origin(id)?.owned
+  const onContextMenu = (e: React.MouseEvent) => {
+    if (!inInstance && n.type !== "instance") return
+    e.preventDefault()
+    actions.select(id, { shiftKey: false, metaKey: false, ctrlKey: false })
+    actions.menu(id, e.clientX, e.clientY)
+  }
+  if (kind) {
+    const derivedFrom =
+      kind === "derived"
+        ? view.origin(id)?.instance?.of || String(real?.of ?? n.of ?? "")
+        : undefined
+    return (
+      <LayerRowM3
+        kind={kind}
+        name={
+          kind === "replaced"
+            ? (replacedName(view, m3.doc(), m3.libraries(), id) ?? nodeName(n))
+            : nodeName(n)
+        }
+        title={kind === "replaced" ? `Replaced by ${nodeName(n)}` : undefined}
+        from={
+          derivedFrom
+            ? nodeName((view.getNode(derivedFrom) ?? { type: derivedFrom }) as NodeData)
+            : ""
+        }
+        depth={depth}
+        expanded={open ?? null}
+        selected={selected}
+        overridden={
+          kind !== "instance" &&
+          kind !== "component" &&
+          kind !== "derived" &&
+          isOverridden(view, id)
+        }
+        visible={!hidden}
+        onToggle={() => actions.toggle(id, depth)}
+        onSelect={(e) => actions.select(id, { shiftKey: e.shift, metaKey: e.meta, ctrlKey: false })}
+        onToggleVisible={() =>
+          actions.apply(visibilityOp(id, hidden), hidden ? "Show layer" : "Hide layer")
+        }
+        onRename={(name) => actions.apply({ op: "update", id, set: { name } }, "Rename layer")}
+        onContextMenu={onContextMenu}
+        data-node-id={id}
+        tabIndex={tabbable ? 0 : -1}
+        onPointerEnter={() => actions.hover(id)}
+      />
+    )
+  }
+  const dot = inInstance && isOverridden(view, id)
   return (
     <LayerRow
       data-node-id={id}
+      data-overridden={dot || undefined}
       tabIndex={tabbable ? 0 : -1}
       name={nodeName(n)}
       icon={<Icon name={typeIcon(n)} size={14} />}
@@ -443,17 +513,19 @@ const LayerItem = memo(function LayerItem({
       onToggleExpanded={() => actions.toggle(id, depth)}
       selected={selected}
       emphasized={depth === 0}
-      accentIcon={special}
       visible={!hidden}
       onToggleVisible={() =>
         actions.apply(visibilityOp(id, hidden), hidden ? "Show layer" : "Hide layer")
       }
       locked={locked}
-      onToggleLocked={() =>
-        actions.apply(lockOp(id, locked), locked ? "Unlock layer" : "Lock layer")
+      onToggleLocked={
+        inInstance
+          ? undefined
+          : () => actions.apply(lockOp(id, locked), locked ? "Unlock layer" : "Lock layer")
       }
       onRename={(name) => actions.apply({ op: "update", id, set: { name } }, "Rename layer")}
       onClick={(e) => actions.select(id, e)}
+      onContextMenu={onContextMenu}
       onPointerEnter={() => actions.hover(id)}
     />
   )

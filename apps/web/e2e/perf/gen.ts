@@ -360,3 +360,105 @@ export function generatePerfDoc(count = 5000, seed = 1, opts: PerfDocOptions = {
   }
   return { ops, roots, cards, texts, count: ops.length }
 }
+
+/**
+ * M3 stress ops (perf run `KIMO_PERF_INSTANCES`): a `mode` axis (light, dark) and three themed
+ * variables; a 31-node main `perfMain01` (column of 10 rows, each a label + a swatch; fill,
+ * pad and every other swatch bound to the variables); a plain frame `perfGroupA` holding the
+ * first half of `count` instances in a grid (the theme-pin target); the rest at the root.
+ */
+export function generateM3Ops(count: number): { ops: Record<string, unknown>[]; ids: string[] } {
+  const themed = (light: unknown, dark: unknown) => [
+    { value: light, when: { mode: "light" } },
+    { value: dark, when: { mode: "dark" } },
+  ]
+  const ops: Record<string, unknown>[] = [
+    { op: "setThemes", set: { mode: ["light", "dark"] } },
+    {
+      op: "setVariables",
+      set: {
+        "perf/surface": { type: "color", value: themed("#FFFFFF", "#18181B") },
+        "perf/accent": { type: "color", value: themed("#7C3AED", "#A78BFA") },
+        "perf/pad": { type: "number", value: themed(8, 10) },
+      },
+    },
+    {
+      op: "insert",
+      id: "perfMain01",
+      parent: null,
+      node: {
+        type: "frame",
+        name: "Perf/Card",
+        x: -2000,
+        y: 0,
+        w: 160,
+        fill: { $ref: "perf/surface" },
+        component: true,
+        layout: { dir: "column", gap: 4, pad: { $ref: "perf/pad" } },
+      },
+    },
+  ]
+  for (let r = 0; r < 10; r++) {
+    const row = `perfRow${String(r).padStart(3, "0")}`
+    ops.push({
+      op: "insert",
+      id: row,
+      parent: "perfMain01",
+      node: { type: "frame", name: `Row ${r}`, layout: { dir: "row", gap: 4 } },
+    })
+    ops.push({
+      op: "insert",
+      id: `perfTxt${String(r).padStart(3, "0")}`,
+      parent: row,
+      node: { type: "text", name: "Label", content: `Item ${r}`, fill: "#222222" },
+    })
+    ops.push({
+      op: "insert",
+      id: `perfSw${String(r).padStart(4, "0")}`,
+      parent: row,
+      node: {
+        type: "rect",
+        name: "Swatch",
+        w: 12,
+        h: 12,
+        fill: r % 2 ? "#7C3AED" : { $ref: "perf/accent" },
+      },
+    })
+  }
+  const half = Math.ceil(count / 2)
+  const cols = 25
+  const rowsA = Math.ceil(half / cols)
+  ops.push({
+    op: "insert",
+    id: "perfGroupA",
+    parent: null,
+    node: {
+      type: "frame",
+      name: "Instances A",
+      x: -2000 - 200 * (cols + 1),
+      y: 0,
+      w: 200 * cols,
+      h: 260 * rowsA,
+      fill: "#F4F4F5",
+    },
+  })
+  const ids: string[] = []
+  for (let i = 0; i < count; i++) {
+    const id = `perfI${String(i).padStart(5, "0")}`
+    ids.push(id)
+    const inA = i < half
+    const k = inA ? i : i - half
+    ops.push({
+      op: "insert",
+      id,
+      parent: inA ? "perfGroupA" : null,
+      node: {
+        type: "instance",
+        of: "perfMain01",
+        x: (inA ? 0 : -2000 - 200 * (cols + 1)) + 200 * (k % cols),
+        y: (inA ? 0 : 260 * rowsA + 200) + 260 * Math.floor(k / cols),
+      },
+    })
+  }
+  return { ops, ids }
+}

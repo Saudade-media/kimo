@@ -16,6 +16,7 @@ import { copyFile, mkdtemp, readdir, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { FLEX_WIDTH_M2, MAP_M2 } from "./measure-map-m2"
+import { ACCEPTED_M3, FLEX_WIDTH_M3, MAP_M3 } from "./measure-map-m3"
 
 const pkg = join(import.meta.dir, "..")
 const repo = join(pkg, "..", "..")
@@ -214,6 +215,8 @@ const FLEX_WIDTH = new Set(["BwYzP", "vpMpD", "Q8GqQ/vpMpD", "OIMmF/vpMpD", "t9c
 const EXTENDED_HEIGHT = new Set(["PufcL"])
 Object.assign(MAP, MAP_M2)
 for (const id of FLEX_WIDTH_M2) FLEX_WIDTH.add(id)
+Object.assign(MAP, MAP_M3)
+for (const id of FLEX_WIDTH_M3) FLEX_WIDTH.add(id)
 
 // --- Build the page --------------------------------------------------------------------------
 
@@ -267,6 +270,12 @@ const fixtureM2 = (await Bun.file(
   nodes: Record<string, PenRow[]>
 }
 Object.assign(fixture.nodes, fixtureM2.nodes)
+const fixtureM3 = (await Bun.file(
+  join(pkg, "test", "fixtures", "pen-components-m3.json"),
+).json()) as {
+  nodes: Record<string, PenRow[]>
+}
+Object.assign(fixture.nodes, fixtureM3.nodes)
 const { chromium } = (await import(Bun.resolveSync("playwright", join(repo, "apps", "web")))) as {
   chromium: import("playwright").BrowserType
 }
@@ -285,6 +294,7 @@ const server = Bun.serve({
 const theme = flag("--theme") ?? "light"
 await page.goto(`http://localhost:${server.port}/?theme=${theme}`)
 await page.waitForSelector('[data-pen="PufcL"]')
+await page.waitForSelector('[data-pen="SD9TU"]')
 await page.evaluate(() => document.fonts.ready)
 
 type Measured = {
@@ -345,6 +355,8 @@ const measured = (await page.evaluate(
 
 const shot = flag("--screenshot")
 if (shot) await page.locator('[data-pen="PufcL"]').screenshot({ path: shot })
+const shotM3 = flag("--screenshot-m3")
+if (shotM3) await page.locator('[data-pen="SD9TU"]').screenshot({ path: shotM3 })
 const shotM2 = flag("--screenshot-m2")
 if (shotM2) await page.locator('[data-pen="mj1CX"]').screenshot({ path: shotM2 })
 // Element screenshots scroll the page; the pointer interactions below use viewport coordinates.
@@ -630,6 +642,84 @@ await expectThat("ImageFillPopover: mode menu → Contain", async () => {
     .evaluate((e) => getComputedStyle(e).backgroundSize)
   return bg === "contain" || bg
 })
+
+// --- M3 interactions -------------------------------------------------------------------------
+const m3log = () => page.locator(".kimo-gallery__m3-log").innerText()
+await expectThat("OverrideDot: hover shows the Reset hint, click resets", async () => {
+  const dot = pen("n2Q1FU").locator(".kimo-override-dot")
+  await dot.scrollIntoViewIfNeeded()
+  await dot.hover()
+  const hint = await pen("n2Q1FU").locator(".kimo-tooltip-hint").innerText()
+  await dot.click()
+  const log = await m3log()
+  return (
+    (hint === "Click to reset to main · “Get started”" && log === "Reset label") ||
+    `${hint} / ${log}`
+  )
+})
+await expectThat("InstancePropRow text: typed arg commits once on Enter", async () => {
+  const input = pen("n2Q1FU").locator("input")
+  await input.fill("Buy now")
+  await page.keyboard.press("Enter")
+  const v = await input.inputValue()
+  return v === "Buy now" || v
+})
+await expectThat("InstancePropRow enum: Select picks lg", async () => {
+  await pen("ztxNk").locator(".kimo-select__trigger").click()
+  await page.locator('[role="option"]', { hasText: "lg" }).click()
+  const t = await pen("ztxNk").locator(".kimo-select__value").innerText()
+  return t === "lg" || t
+})
+await expectThat("ThemePinRow: Inherit option unpins (reset hidden)", async () => {
+  await pen("fXNbV").locator(".kimo-select__trigger").click()
+  await page.locator('[role="option"]', { hasText: "Inherit · light" }).click()
+  const t = await pen("fXNbV").locator(".kimo-select__value").innerText()
+  return t === "dark" || t // the gallery re-pins dark: the change reached onChange(null)
+})
+await expectThat("LayerRowM3: double-click renames the overridden instance", async () => {
+  await pen("nn4zo").locator(".kimo-layer-row-m3__name").dblclick()
+  await pen("nn4zo").locator("input").fill("Card · Team")
+  await page.keyboard.press("Enter")
+  return (await m3log()) === "Renamed Card · Team" || (await m3log())
+})
+await expectThat("VariableEntries: Alt+↓ on a grip moves the entry", async () => {
+  const entries = pen("EIkIk").locator(".kimo-variable-entries")
+  await entries.locator(".kimo-entry-row__grip").first().focus()
+  await page.keyboard.press("Alt+ArrowDown")
+  const first = await entries
+    .locator(".kimo-entry-row")
+    .first()
+    .locator(".kimo-entry-row__when")
+    .innerText()
+  return first.replace(/\s+/g, "") === "density=compact" || first
+})
+await expectThat("VariablesDialog: → in the type filter selects Color", async () => {
+  const f = pen("EIkIk").locator(".kimo-variables-dialog__filter")
+  await f.locator('[aria-checked="true"]').focus()
+  await page.keyboard.press("ArrowRight")
+  const t = await f.locator('[aria-checked="true"]').innerText()
+  return t === "Color" || t
+})
+await expectThat("SwapPopover: typing filters, ↓ + Enter swaps", async () => {
+  const pop = pen("jFlfP")
+  await pop.locator("input").fill("ui")
+  const n = await pop.locator('[role="option"]').count()
+  await pop.locator("input").press("ArrowDown")
+  await pop.locator("input").press("Enter")
+  const log = await m3log()
+  await pop.locator("input").fill("")
+  return (n === 2 && log === "Swap ui:card-media") || `${n} / ${log}`
+})
+await expectThat("ConfirmDialog: Escape cancels, checkbox reaches onConfirm", async () => {
+  const d = pen("i8PfIC")
+  await d.locator(".kimo-confirm-dialog__checkbox").check()
+  await d.locator(".kimo-confirm-dialog__confirm").click()
+  const a = await m3log()
+  await d.locator(".kimo-confirm-dialog__cancel").focus()
+  await page.keyboard.press("Escape")
+  const b = await m3log()
+  return (a === "Detach (don't ask: true)" && b === "Detach cancelled") || `${a} / ${b}`
+})
 await browser.close()
 server.stop(true)
 
@@ -666,6 +756,7 @@ const ACCEPTED: Record<string, string> = {
     "alpha thumb follows the value: the node shows 100% but draws the thumb at 93%",
   "b2Y0pD/CAjFK:fill": "same ColorArea instance (pure hue of the selected stop #E76F51)",
 }
+Object.assign(ACCEPTED, ACCEPTED_M3)
 const accepted: (Diff & { reason: string })[] = []
 /**
  * x/w deltas up to 2px that come only from text advance widths: Pencil ceil-rounds every text

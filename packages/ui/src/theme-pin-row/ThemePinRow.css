@@ -1,0 +1,69 @@
+/*
+ * ThemePinRow: desing.pen 02c > ThemePinRow (Lamcg) · pinned (fXNbV) · library axis (EtIA3).
+ * frame: fill_container × 28, row, gap 8, alignItems center
+ *   ├ Axis Cell (blp2E) width 96, row, gap 6, center
+ *   │   ├ Icon (u4YUnh) 12, text-tertiary (sun-moon / rows-3 / library)
+ *   │   └ Axis (b5SeS) mono 11, text-secondary (pinned: text-primary)
+ *   ├ Value (Rvy1c) Select fill; LWF8n "Inherit · light" text-tertiary (pinned: text-primary)
+ *   └ Reset (COjHI) IconButton 24, #00000000, rotate-ccw 14 text-tertiary, opacity 0 (pinned: 1)
+ */
+.kimo-theme-pin-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+}
+
+.kimo-theme-pin-row__axis-cell {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 96px;
+  min-width: 0;
+}
+
+.kimo-theme-pin-row__icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-theme-pin-row__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-theme-pin-row__axis {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-theme-pin-row--pinned .kimo-theme-pin-row__axis {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-select.kimo-theme-pin-row__value {
+  flex: 1 1 0;
+  width: auto;
+}
+
+.kimo-icon-button.kimo-theme-pin-row__reset:disabled {
+  opacity: 0;
+  pointer-events: none;
+}

@@ -1,0 +1,222 @@
+/*
+ * PropDefRow: desing.pen 02c > PropDefRow (VqB97).
+ * frame: fill_container, column, gap 6, padding [8, 0], stroke bottom 1 border
+ *   ├ Head (ZnnUs) fill, row, gap 6, alignItems center
+ *   │   ├ Type Glyph (KBBi8) TypeGlyph 18
+ *   │   ├ Name Field (bhiaB) fill × 28, bg-subtle, radius-sm, padding [0, 8], center
+ *   │   │   └ Name (V2e4tP) mono 11, text-primary
+ *   │   ├ Type   (Y1b1v7) Select, width 92
+ *   │   └ Remove (E7ep1u) IconButton 24 × 24, #00000000, icon minus 14 text-tertiary
+ *   └ Binding (pVWiu) fill, row, gap 6, padding [0, 0, 0, 24], alignItems center
+ *       ├ Target  (Q6ffKn) PropField fill, prefix icon crosshair 12 text-tertiary
+ *       └ Default (LqiP8)  PropField fill, prefix "="
+ * Derived (board 12 PsEAB): inherited rows opacity 0.55 (Remove icon lock).
+ */
+.kimo-prop-def-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+/* An enum row followed by its Options block (board 12 size NqtqB): padding [8, 0, 4, 0]. */
+.kimo-prop-def-row:has(+ .kimo-prop-options) {
+  padding-bottom: 4px;
+}
+
+.kimo-prop-def-row--inherited {
+  opacity: 0.55;
+}
+
+.kimo-prop-def-row__head,
+.kimo-prop-def-row__binding {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kimo-prop-def-row__binding {
+  padding: 0 0 0 24px;
+}
+
+.kimo-prop-def-row__glyph[draggable="true"] {
+  cursor: grab;
+}
+
+.kimo-prop-def-row__name-field,
+.kimo-prop-options__name-field {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-prop-def-row__name-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.kimo-prop-def-row__name-field:focus-within,
+.kimo-prop-options__name-field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-prop-def-row__name,
+.kimo-prop-options__name {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 15px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-select.kimo-prop-def-row__type {
+  flex: none;
+  width: 92px;
+}
+
+.kimo-prop-def-row__target.kimo-prop-field,
+.kimo-prop-def-row__default.kimo-prop-field {
+  flex: 1 1 0;
+  width: auto;
+}
+
+/* The Target is a picker button styled as a PropField (A9DDs): neutralize <button> defaults. */
+.kimo-prop-def-row__target {
+  margin: 0;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-prop-def-row__target:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-prop-def-row__target:disabled {
+  cursor: default;
+}
+
+.kimo-prop-def-row__target .kimo-prop-field__prefix {
+  cursor: inherit;
+}
+
+.kimo-prop-def-row__target-value {
+  flex: 0 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/*
+ * PropOptions: board 12 ClRT2 "Options · size".
+ * frame: fill_container, column, gap 4, padding [0, 0, 8, 24], stroke bottom 1 border
+ *   ├ Options Header (Njt1D) fill × 20, row, gap 6, center: Title sans 11 / 600 text-tertiary ·
+ *   │   Spacer · Hint sans 11 text-tertiary · Add option IconButton 20, plus 12 text-tertiary
+ *   └ Option (MRqYG) fill × 28, row, gap 6, center: Name Field 56 × 28 · Arrow arrow-right 12
+ *       text-tertiary · Value PropField fill (prefix field, value mono 11) · Remove IconButton 24
+ */
+.kimo-prop-options {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0 0 8px 24px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-prop-options__header,
+.kimo-prop-options__option {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kimo-prop-options__header {
+  height: 20px;
+}
+
+.kimo-prop-options__option {
+  height: 28px;
+}
+
+.kimo-prop-options__title,
+.kimo-prop-options__hint {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-prop-options__title {
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-prop-options__hint {
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-prop-options__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-icon-button.kimo-prop-options__add {
+  width: 20px;
+  height: 20px;
+}
+
+.kimo-prop-options__add .kimo-icon-button__icon {
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-prop-options__name-field {
+  flex: none;
+  width: 56px;
+}
+
+.kimo-prop-options__arrow {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-prop-options__value.kimo-prop-field {
+  flex: 1 1 0;
+  width: auto;
+}
+
+.kimo-prop-options__value .kimo-prop-field__value {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}

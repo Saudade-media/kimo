@@ -7,6 +7,7 @@ import { ColorField, type EffectKind, EffectRow, PropRow, PropSection } from "@k
 import { Fragment, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { NumberField } from "../fields"
+import { SectionTitle } from "../m3/overrides"
 import { type Sel, useKeepPopoverFocus, usePanel, useResolver } from "../panel-context"
 import { ColorPickerPopover, type ColorValue } from "../popovers/ColorPicker"
 import { effectList, MIXED, setOps, shared, splitHex } from "../props"
@@ -75,7 +76,7 @@ export function EffectsSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title="Effects"
+      title={<SectionTitle label="Effects" fields={["effects"]} />}
       action={{ label: "Add effect", icon: <Icon name="plus" size={14} />, onClick: add }}
     >
       {(effects === MIXED || isRef(effects) || list.length > 0) && (

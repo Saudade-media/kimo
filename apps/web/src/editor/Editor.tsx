@@ -17,7 +17,9 @@ import {
   type CanvasToolId,
   type IconPickerRequest,
 } from "../canvas/contract"
+import * as assetsModule from "../lib/assets"
 import { createAssetStore, manifestEntry } from "../lib/assets"
+import * as filesModule from "../lib/files"
 import { exportFile, importFile, patchFile, pickKimoFile, saveFile } from "../lib/files"
 import { useDocHeader } from "../lib/header"
 import { createBus, isTyping } from "../lib/hooks"
@@ -28,6 +30,14 @@ import { navigate } from "../router"
 import { FloatingToolbar } from "./FloatingToolbar"
 import { useEditor } from "./fields"
 import { LeftPanel } from "./LeftPanel"
+import { createComponent, detachInstance, goToMain } from "./m3/actions"
+import { useCanvasDrop } from "./m3/CanvasDrop"
+import { M3Context, M3Controller, useBusValue, useLibraries } from "./m3/controller"
+import { ConfirmHost, ToastStack } from "./m3/feedback"
+import "./m3/m3.css"
+import "./m3/m3-panels.css"
+import { LibraryChanges, LibraryManager } from "./m3/popovers"
+import { VariablesDialog } from "./m3/VariablesDialog"
 import { PanelContext } from "./panel-context"
 import { IconPickerPopover } from "./popovers/IconPicker"
 import { RightPanel } from "./RightPanel"
@@ -62,6 +72,9 @@ function useOverlayTheme(): OverlayTheme {
         selectionSoft: "--kimo-selection-soft",
         accentText: "--kimo-accent-text",
         accent: "--kimo-accent",
+        // M3: component / instance identity (violet; 02c "Canvas outlines").
+        component: "--kimo-component",
+        componentSoft: "--kimo-component-soft",
       }),
     }
   }, [mode])
@@ -141,17 +154,29 @@ function EditorShell({ session }: { session: FileSession }) {
   }, [session, assets])
   // I key (board 09 icon picker at the pointer).
   const [iconRequest, setIconRequest] = useState<IconPickerRequest | null>(null)
+  // M3: libraries, expanded view, commands, toasts, confirms (one per open file).
+  const m3 = useMemo(() => new M3Controller(session, () => canvas.current), [session])
+  useEffect(() => m3.attach(), [m3])
+  useLibraries(m3)
+  const panels = useBusValue(m3.panels)
+  const drop = useCanvasDrop(m3)
 
   // Test/debug hook: e2e and perf scripts read the store through it. On in dev; in a
   // production build only when opted in with `?kimo-debug` in the URL (or VITE_KIMO_DEBUG=1 at build time).
   useEffect(() => {
     if (!debugHookEnabled()) return
     const w = window as unknown as { __kimo?: unknown }
-    w.__kimo = { session, canvas: () => canvas.current }
+    w.__kimo = { session, canvas: () => canvas.current, m3 }
+    // Source-path keyed modules for e2e scripts, which import them directly on the dev server
+    // and read them from here against a production bundle.
+    ;(window as unknown as { __kimoModules?: unknown }).__kimoModules = {
+      "/src/lib/files.ts": filesModule,
+      "/src/lib/assets.ts": assetsModule,
+    }
     return () => {
       if ((w.__kimo as { session?: unknown } | undefined)?.session === session) w.__kimo = undefined
     }
-  }, [session])
+  }, [session, m3])
 
   const rename = useCallback(
     (next: string) => {
@@ -182,11 +207,16 @@ function EditorShell({ session }: { session: FileSession }) {
   const activate = useCallback(
     (id: CanvasToolId) => {
       const spec = CANVAS_TOOLS.find((t) => t.id === id)
+      // M3: the Component button is a one-shot action (⌥⌘K), not a mode.
+      if (spec?.action === "createComponent") {
+        createComponent(m3, session.ui.getState().selection, canvas.current?.layout() ?? null)
+        return
+      }
       if (!spec?.enabled) return
       if (canvas.current) canvas.current.activateTool(id)
       else if (spec.tool) session.ui.getState().setTool(spec.tool)
     },
-    [session.ui],
+    [session.ui, m3],
   )
 
   useEffect(() => {
@@ -241,6 +271,32 @@ function EditorShell({ session }: { session: FileSession }) {
         activate("image")
         return
       }
+      // M3 shortcuts (boards 11/12/14): ⌥⌘K create component, ⌥⌘B detach, ⌥⏎ go to main,
+      // ⌘⇧V variables. `e.code` because ⌥ changes `e.key` on macOS.
+      if (mod && e.altKey && e.code === "KeyK") {
+        e.preventDefault()
+        createComponent(m3, ui.selection, canvas.current?.layout() ?? null)
+        return
+      }
+      if (mod && e.altKey && e.code === "KeyB") {
+        e.preventDefault()
+        const id = ui.selection[0]
+        if (id && session.store.getNode(id)?.type === "instance") void detachInstance(m3, id)
+        return
+      }
+      if (!mod && e.altKey && e.key === "Enter") {
+        const id = ui.selection[0]
+        if (id && m3.view().origin(id)?.instance) {
+          e.preventDefault()
+          goToMain(m3, id)
+        }
+        return
+      }
+      if (mod && e.shiftKey && e.code === "KeyV") {
+        e.preventDefault()
+        m3.openPanel({ variables: !m3.panels.get().variables })
+        return
+      }
       if (mod || e.altKey) return
       // Escape, Delete, arrows, ⌘D/⌘G and zoom keys are canvas commands (CanvasController).
       if (key === "h" && !e.shiftKey) {
@@ -257,61 +313,100 @@ function EditorShell({ session }: { session: FileSession }) {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [session, activate, download, openFile])
+  }, [session, activate, download, openFile, m3])
 
   return (
-    <div className="editor">
-      <Topbar
-        fileName={name}
-        pageName="Page 1"
-        syncStatus={syncStatus}
-        ui={session.ui}
-        canvas={() => canvas.current}
-        onRename={rename}
-        onDownload={download}
-        onOpenFile={() => void openFile()}
-        onHome={() => navigate("/")}
-        onExport={download}
-        onPreview={() => {}}
-      />
-      <div className="editor__body">
-        <LeftPanel session={session} />
-        <main className="editor__canvas" aria-label="Canvas">
-          <CanvasHost
-            ref={canvas}
-            store={session.store}
-            uiStore={session.ui}
-            createRenderer={createRenderer}
-            createLayoutEngine={createLayoutEngine}
-            assets={assets.source}
-            icons={icons}
-            onImportImage={importImage}
-            onIconPicker={setIconRequest}
-            fontSources={FONT_SOURCES}
-            offlineFonts={!webFonts}
-            overlayTheme={overlayTheme}
-            onLayout={layout.set}
-            onError={(e) =>
-              console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
-            }
-          />
-          <FloatingToolbar ui={session.ui} onActivate={activate} />
-          {iconRequest && (
-            <CanvasIconPicker
-              session={session}
-              request={iconRequest}
+    <M3Context.Provider value={m3}>
+      <div className="editor">
+        <Topbar
+          fileName={name}
+          pageName="Page 1"
+          syncStatus={syncStatus}
+          ui={session.ui}
+          canvas={() => canvas.current}
+          onRename={rename}
+          onDownload={download}
+          onOpenFile={() => void openFile()}
+          onHome={() => navigate("/")}
+          onExport={download}
+          onPreview={() => {}}
+        />
+        <div className="editor__body">
+          <LeftPanel session={session} m3={m3} />
+          <main className="editor__canvas" aria-label="Canvas" {...drop.handlers}>
+            <CanvasHost
+              ref={canvas}
+              store={session.store}
+              uiStore={session.ui}
+              createRenderer={createRenderer}
+              createLayoutEngine={createLayoutEngine}
+              assets={assets.source}
               icons={icons}
-              onPick={(set, name) => {
-                canvas.current?.insertIcon({ set, name })
-                setIconRequest(null)
+              onImportImage={importImage}
+              onIconPicker={setIconRequest}
+              fontSources={FONT_SOURCES}
+              offlineFonts={!webFonts}
+              overlayTheme={overlayTheme}
+              onLayout={layout.set}
+              libraries={m3.libraries()}
+              route={(ops) => (session.route ? session.route(ops) : ops)}
+              onNotice={(n) => m3.toast({ tone: n.tone, text: n.text, action: n.action })}
+              onQuickInsert={({ slot, of, name }) => {
+                // Board 12: a main's slot takes default children; an instance's slot `at` nodes.
+                const loc = m3.view().locate(slot)
+                const placement =
+                  loc?.instance && loc.path !== undefined
+                    ? { parent: loc.instance, at: loc.path, name }
+                    : { parent: slot, name }
+                m3.run({ cmd: "createInstance", of, placement }, "Insert instance")
               }}
-              onClose={() => setIconRequest(null)}
+              onError={(e) => {
+                if (e.kind === "command") {
+                  if (e.refused) m3.toastRefusal(e.refused)
+                  else m3.toastRejected(e.label, e.rejected ?? [{ message: e.error.message }])
+                  return
+                }
+                console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
+              }}
             />
-          )}
-        </main>
-        <RightPanel session={session} layout={layout} assets={assets} icons={icons} />
+            <FloatingToolbar ui={session.ui} onActivate={activate} />
+            {drop.hint}
+            <ToastStack m3={m3} />
+            {iconRequest && (
+              <CanvasIconPicker
+                session={session}
+                request={iconRequest}
+                icons={icons}
+                onPick={(set, name) => {
+                  canvas.current?.insertIcon({ set, name })
+                  setIconRequest(null)
+                }}
+                onClose={() => setIconRequest(null)}
+              />
+            )}
+          </main>
+          <RightPanel session={session} layout={layout} assets={assets} icons={icons} m3={m3} />
+        </div>
+        {panels.variables && (
+          <VariablesDialog
+            session={session}
+            m3={m3}
+            onClose={() => m3.openPanel({ variables: false })}
+          />
+        )}
+        {panels.libraryManager && (
+          <LibraryManager m3={m3} onClose={() => m3.openPanel({ libraryManager: false })} />
+        )}
+        {panels.libraryChanges && (
+          <LibraryChanges
+            m3={m3}
+            alias={panels.libraryChanges}
+            onClose={() => m3.openPanel({ libraryChanges: null })}
+          />
+        )}
+        <ConfirmHost m3={m3} />
       </div>
-    </div>
+    </M3Context.Provider>
   )
 }
 

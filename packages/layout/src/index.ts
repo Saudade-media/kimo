@@ -8,7 +8,15 @@ import type { LayoutNodeData, NodeSource } from "./types"
 
 export { createLayoutEngine } from "./engine"
 
-export { type ExpandedNodeSource, type ExpandOptions, expandInstances } from "./expand"
+export {
+  createInstanceView,
+  type ExpandedNodeSource,
+  type ExpandOptions,
+  expandInstances,
+  type InstanceView,
+  isExpandedView,
+  isInstanceView,
+} from "./expand"
 export { pathBounds } from "./geometry"
 export {
   createResolver,

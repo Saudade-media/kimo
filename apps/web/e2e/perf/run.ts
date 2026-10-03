@@ -12,6 +12,10 @@
  *  - hover and selection latency: input event timestamp → first rendered frame showing it
  *  - single-property edit → frame: paint-only (fill), layout (height in an auto-layout card),
  *    text content (re-measure)
+ *  - M3: a 30-node main (bound to themed variables) + 1,000 instances (500 in one frame):
+ *    insert → first frame, then override one instance / move one instance / edit the main
+ *    (every instance follows) / toggle a theme pin on the 500-instance parent / switch the
+ *    default variable mode / edit a variable → frame; pan and zoom with the instances
  *
  * Usage (from apps/web):
  *   bun e2e/perf/run.ts                  # SwiftShader WebGL (like the e2e suite; pessimistic)
@@ -31,19 +35,23 @@
  *                                        # modes, icon and path nodes
  *   KIMO_PERF_M2_SKIP=backdrop,blur,…    # M2 doc minus features (cost attribution; ./gen.ts)
  *   KIMO_PERF_PHASES=sweeps              # only import + pan/zoom sweeps (skip the rest)
+ *   KIMO_PERF_PHASES=m3                  # only import + the M3 phase
  *   KIMO_PERF_VERBOSE=1 …                # slowest sweep frames: record / raster ms + counts
+ *   KIMO_PERF_INSTANCES=1000 …           # M3 phase size (instances of one 30-node main; 0 = off)
+ *   KIMO_PERF_NO_LABELS=1 …              # A/B: DOM canvas labels hidden (cost attribution)
  *
  * Package script: `bun run e2e:perf` (apps/web).
  *
- * Exit code is non-zero when the gate fails (p95 pan/zoom/drag rAF delta > 16.7 ms × 1.25, or a
- * latency p95 > 100 ms); `KIMO_PERF_NO_GATE=1` only reports.
+ * Exit code is non-zero when the gate fails (p95 pan/zoom/drag rAF delta > 16.7 ms × 1.25, a
+ * latency p95 > 100 ms, or an M3 main-component edit p95 > 150 ms); `KIMO_PERF_NO_GATE=1` only
+ * reports.
  */
 import { writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { type Browser, type CDPSession, chromium, type Page } from "playwright"
 import { build, createServer, preview } from "vite"
-import { generatePerfDoc, type PerfDoc } from "./gen"
+import { generateM3Ops, generatePerfDoc, type PerfDoc } from "./gen"
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, "..", "..")
@@ -56,6 +64,13 @@ const SWEEP_MS = Number(process.env.KIMO_PERF_SWEEP_MS ?? 3000)
 const PROD = process.env.KIMO_PERF_PROD === "1"
 const M2 = process.env.KIMO_PERF_M2 === "1"
 const SWEEPS_ONLY = process.env.KIMO_PERF_PHASES === "sweeps"
+/** `KIMO_PERF_PHASES=m3`: import, then only the M3 phase (instances, themes, sweeps). */
+const M3_ONLY = process.env.KIMO_PERF_PHASES === "m3"
+/** Frame budget gate: p95 rAF delta ≤ 16.7 ms × 1.25 (= 20.9 ms). */
+const FRAME_GATE = 16.7 * 1.25
+/** Edit → frame gate; a main-component edit with every instance following gets 150 ms. */
+const EDIT_GATE = 100
+const MAIN_EDIT_GATE = 150
 const LATENCY_SAMPLES = 20
 
 // --- in-page probe ------------------------------------------------------------------------------
@@ -111,7 +126,7 @@ type Win = Window & {
         }
       } | null
       layout(): { nodes: Map<string, { world: { x: number; y: number; w: number; h: number } }> }
-      zoomToFit(): void
+      zoomToFit(ids?: string[]): void
     } | null
   }
   __probe: Probe
@@ -144,6 +159,28 @@ function installProbe() {
         (r as unknown as { rasterCache: boolean }).rasterCache = false
       if ((w as unknown as { __perfNoMotion?: boolean }).__perfNoMotion)
         (r as unknown as { motionRasterCache: boolean }).motionRasterCache = false
+      // Diagnostics: which roots get (re-)recorded (KIMO_PERF_VERBOSE).
+      const rr = r as unknown as {
+        picture(ctx: unknown, root: string, e: { picture: unknown }): unknown
+      }
+      const pic = rr.picture.bind(rr)
+      const w2 = w as unknown as { __recorded: Map<string, number> }
+      w2.__recorded = new Map()
+      rr.picture = (ctx, root, e) => {
+        if (!e.picture) w2.__recorded.set(root, (w2.__recorded.get(root) ?? 0) + 1)
+        return pic(ctx, root, e)
+      }
+      const rz = r as unknown as {
+        rasterize(e: { ids?: string[] }, pic: unknown, b: unknown, scale: number): unknown
+      }
+      const ras = rz.rasterize.bind(rz)
+      const w3 = w as unknown as { __rasterized: Map<string, number> }
+      w3.__rasterized = new Map()
+      rz.rasterize = (e, pic, b, scale) => {
+        const k = `${e.ids?.[0] ?? "shared"}@${scale}`
+        w3.__rasterized.set(k, (w3.__rasterized.get(k) ?? 0) + 1)
+        return ras(e, pic, b, scale)
+      }
       const orig = r.render.bind(r)
       r.render = () => {
         orig()
@@ -233,6 +270,12 @@ async function profiled<T>(cdp: CDPSession | null, label: string, fn: () => Prom
   )
   console.log("    top self time:")
   for (const [k, ms] of [...self.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14))
+    console.log(`      ${ms.toFixed(1).padStart(8)} ms  ${k}`)
+  console.log("    top self time in JS:")
+  for (const [k, ms] of [...self.entries()]
+    .filter(([k]) => !/\.wasm|^\(/.test(k))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 14))
     console.log(`      ${ms.toFixed(1).padStart(8)} ms  ${k}`)
   return out
 }
@@ -378,6 +421,29 @@ async function sweep(page: Page, kind: SweepKind, ms: number) {
             (f) =>
               `${f.ms.toFixed(0)}ms(rec ${f.rec}/${f.recMs.toFixed(0)}ms ras ${f.ras}/${f.rasMs.toFixed(0)}ms)`,
           ),
+        rasterized: (() => {
+          const m = (w as unknown as { __rasterized: Map<string, number> }).__rasterized
+          const top = [...m].sort((a, b) => b[1] - a[1]).slice(0, 6)
+          const n = [...m.values()].reduce((a, b) => a + b, 0)
+          m.clear()
+          return `${n}: ${top.map(([k, c]) => `${k}×${c}`).join(" ")}`
+        })(),
+        recorded: (() => {
+          const m = (w as unknown as { __recorded: Map<string, number> }).__recorded
+          const top = [...m].sort((a, b) => b[1] - a[1]).slice(0, 5)
+          m.clear()
+          return top.map(([k, n]) => `${k}×${n}`).join(" ")
+        })(),
+        // Renderer cache state (diagnostics, KIMO_PERF_VERBOSE).
+        cache: (() => {
+          const r = w.__kimo.canvas()?.renderer as unknown as {
+            roots?: Map<string, { picture: unknown; raster: unknown; wrap: unknown }>
+            shared?: Map<string, { raster: unknown; bounds: unknown }>
+          }
+          const roots = [...(r.roots?.values() ?? [])]
+          const shared = [...(r.shared?.values() ?? [])]
+          return `roots ${roots.length} (pictures ${roots.filter((e) => e.picture).length}, rasters ${roots.filter((e) => e.raster).length}, shared wrappers ${roots.filter((e) => e.wrap).length}); shared ${shared.length} (bounded ${shared.filter((x) => x.bounds).length}, rasters ${shared.filter((x) => x.raster).length})`
+        })(),
         drawn: Math.max(...frames.map((f) => f.drawn)),
         draws: Math.max(...frames.map((f) => f.draws)),
         frames: frames.length,
@@ -648,6 +714,142 @@ async function editLatency(page: Page, doc: PerfDoc, kind: "paint" | "layout" | 
   )
 }
 
+// --- M3: instances --------------------------------------------------------------------------
+
+const INSTANCES = Number(process.env.KIMO_PERF_INSTANCES ?? 1000)
+
+/**
+ * M3 stress: a 30-node main (rows of label + swatch, fill and pad bound to themed variables) and
+ * `count` instances — half inside one plain frame (`perfGroupA`, the theme-pin target), half at
+ * the root — then edit → frame latencies: override one instance, move one instance, edit the
+ * main (paint, layout; every instance follows), toggle a theme pin on the parent of half the
+ * instances, switch the document's default variable mode (`setThemes` "make default") and edit
+ * a variable's value.
+ */
+async function instanceSetup(page: Page, count: number) {
+  const { ops, ids } = generateM3Ops(count)
+  const insertMs = await page.evaluate(
+    async ({ ops, ids }) => {
+      const w = window as unknown as Win
+      w.__probe.install()
+      const { store } = w.__kimo.session
+      const n0 = w.__probe.frames.length
+      const t0 = performance.now()
+      const r0 = store.apply(ops, { origin: "user", label: "perf instances" })
+      if (!r0.ok) throw new Error(r0.errors.map((e) => e.message).join("; "))
+      for (;;) {
+        await new Promise((res) => requestAnimationFrame(res))
+        if (w.__probe.frames.length > n0) break
+      }
+      const ms = performance.now() - t0
+      store.clearHistory("user")
+      // Half of group A and the main on screen (≈ 0.4 zoom): edits re-record what is visible.
+      w.__kimo.canvas()?.zoomToFit(["perfMain01", ...ids.slice(0, 200)])
+      for (let i = 0; i < 30; i++) await new Promise((r) => requestAnimationFrame(r))
+      return ms
+    },
+    { ops, ids },
+  )
+  return { insertMs, ids }
+}
+
+type M3Case = "override" | "move" | "main" | "mainLayout" | "pin" | "mode" | "variable"
+
+/** `samples` edits of one kind, each `store.apply` → first frame rendered after it. */
+async function instanceCase(page: Page, ids: string[], kind: M3Case) {
+  return page.evaluate(
+    async ({ ids, kind, samples }) => {
+      const w = window as unknown as Win
+      w.__probe.install()
+      const { store } = w.__kimo.session
+      const mk = (i: number): Record<string, unknown>[] => {
+        switch (kind) {
+          case "override":
+            return [
+              {
+                op: "update",
+                id: ids[(i * 7) % ids.length],
+                set: {
+                  overrides: { perfSw0003: { set: { fill: `#00${(16 + i).toString(16)}FF` } } },
+                },
+              },
+            ]
+          case "move":
+            return [{ op: "update", id: ids[(i * 13) % ids.length], set: { x: -37 * i } }]
+          case "main":
+            return [
+              { op: "update", id: "perfSw0005", set: { fill: `#FF${(16 + i).toString(16)}00` } },
+            ]
+          case "mainLayout":
+            return [{ op: "update", id: "perfSw0002", set: { w: 12 + (i % 4) * 4 } }]
+          case "pin":
+            // Theme pin on the parent of half the instances: on (dark) / off (inherit).
+            return [
+              i % 2 === 0
+                ? { op: "update", id: "perfGroupA", set: { theme: { mode: "dark" } } }
+                : { op: "update", id: "perfGroupA", unset: ["theme"] },
+            ]
+          case "mode":
+            // Document default mode switch (variables dialog "Make default"): light ⇄ dark.
+            return [
+              {
+                op: "setThemes",
+                set: { mode: i % 2 === 0 ? ["dark", "light"] : ["light", "dark"] },
+              },
+            ]
+          case "variable":
+            // A variable's value edited (variables dialog cell): every bound swatch repaints.
+            return [
+              {
+                op: "setVariables",
+                set: {
+                  "perf/accent": {
+                    type: "color",
+                    value: [
+                      { value: `#7C${(32 + i).toString(16)}ED`, when: { mode: "light" } },
+                      { value: "#A78BFA", when: { mode: "dark" } },
+                    ],
+                  },
+                },
+              },
+            ]
+        }
+      }
+      const out: number[] = []
+      const applyMs: number[] = []
+      const renderMs: number[] = []
+      const recMs: number[] = []
+      const rasMs: number[] = []
+      for (let i = 0; i < samples; i++) {
+        const n = w.__probe.frames.length
+        const t = performance.now()
+        const r = store.apply(mk(i), { origin: "user" })
+        if (!r.ok) throw new Error(r.errors.map((e) => e.message).join("; "))
+        applyMs.push(performance.now() - t)
+        for (;;) {
+          await new Promise((res) => requestAnimationFrame(res))
+          const f = w.__probe.frames[n]
+          if (f) {
+            out.push(f.end - t)
+            renderMs.push(f.ms)
+            recMs.push(f.recMs)
+            rasMs.push(f.rasMs)
+            break
+          }
+          if (performance.now() - t > 5000) {
+            out.push(Number.NaN)
+            break
+          }
+        }
+        // Let progressive recording settle so samples do not overlap.
+        for (let k = 0; k < 4; k++) await new Promise((r) => requestAnimationFrame(r))
+      }
+      return { out, applyMs, renderMs, recMs, rasMs }
+    },
+    { ids, kind, samples: LATENCY_SAMPLES },
+  )
+}
+
 // --- main -----------------------------------------------------------------------------------
 
 /** `KIMO_PERF_PHASES=sweeps`: stop after the pan/zoom sweeps. */
@@ -716,6 +918,15 @@ async function main() {
       await page.addInitScript(() => {
         ;(window as unknown as { __perfNoMotion: boolean }).__perfNoMotion = true
       })
+    if (process.env.KIMO_PERF_NO_LABELS === "1")
+      await page.addInitScript(() => {
+        // A/B: the DOM artboard / instance labels (apps/web CanvasHost) hidden.
+        document.addEventListener("DOMContentLoaded", () => {
+          const st = document.createElement("style")
+          st.textContent = ".canvas-host__labels{display:none!important}"
+          document.head.append(st)
+        })
+      })
     await page.addInitScript(installProbe)
     const cdp = PROFILE ? await context.newCDPSession(page) : null
 
@@ -725,93 +936,142 @@ async function main() {
     console.log(
       `  import (apply ${doc.count} inserts → first frame): apply ${f1(imp.applyMs)} ms, first frame at ${f1(imp.firstFrameMs)} ms (render ${f1(imp.frameMs)} ms, ${imp.drawn} nodes drawn); all ${doc.count} drawn at ${f1(imp.completeMs)} ms after ${imp.frames} frame(s), longest render ${f1(imp.maxFrameMs)} ms`,
     )
-    // Let y-indexeddb persist before reloading.
-    if (!SWEEPS_ONLY) await page.waitForTimeout(2500)
-    if (!SWEEPS_ONLY) {
-      const cold = await profiled(cdp, "cold open", () => coldOpen(page))
-      results.coldOpen = cold
-      console.log(
-        `  cold open (reload → canvas ready): ${f1(cold.ready)} ms (DOMContentLoaded ${f1(cold.domContentLoaded)} ms, first render ${f1(cold.firstFrameMs)} ms, ${cold.drawn} drawn, ${cold.backend})`,
-      )
-    }
-    // Zoom to fit right after opening: most roots were never recorded at 100 %.
-    const fit = await page.evaluate(async (count) => {
-      const w = window as unknown as Win
-      w.__probe.install()
-      const n = w.__probe.frames.length
-      const t0 = performance.now()
-      w.__kimo.canvas()?.zoomToFit()
-      for (;;) {
-        await new Promise((r) => requestAnimationFrame(r))
-        const fs = w.__probe.frames.slice(n)
-        const done = fs.find((x) => x.drawn + x.culled >= count)
-        if (done)
-          return {
-            completeMs: done.end - t0,
-            frames: fs.indexOf(done) + 1,
-            maxFrameMs: Math.max(...fs.map((x) => x.ms)),
-          }
-        if (performance.now() - t0 > 30_000) throw new Error("fit never completed")
-      }
-    }, doc.count)
-    results.fitAfterOpen = fit
-    console.log(
-      `  zoom to fit after open: all drawn after ${fit.frames} frame(s) / ${f1(fit.completeMs)} ms, longest render ${f1(fit.maxFrameMs)} ms`,
-    )
-
     const sweeps: Record<string, unknown> = {}
-    for (const kind of ["pan-fit", "pan-100", "zoom"] as const) {
-      // Warm-up (records pictures, JIT; `KIMO_PERF_WARM_MS` longer to separate one-time costs
-      // such as GPU shader compiles from steady state).
-      await sweep(page, kind, Number(process.env.KIMO_PERF_WARM_MS ?? 500))
-      const s = await profiled(cdp, kind, () => sweep(page, kind, SWEEP_MS))
-      const raf = summary(s.deltas)
-      const ren = summary(s.renderMs)
-      sweeps[kind] = { raf, render: ren, frames: s.frames, maxDrawn: s.drawn, maxDraws: s.draws }
-      console.log(`  ${kind.padEnd(8)} rAF Δ ms   ${line(raf)}`)
-      console.log(
-        `  ${"".padEnd(8)} render ms  ${line(ren)}  frames ${s.frames}, ≤${s.drawn} nodes / ${s.draws} draws`,
-      )
-      if (process.env.KIMO_PERF_VERBOSE === "1")
-        console.log(`  ${"".padEnd(8)} slowest   ${s.slow.join(" ")}`)
-      if (raf.p95 > 16.7 * 1.25) failed = true
-    }
-    results.sweeps = sweeps
-    if (SWEEPS_ONLY) throw new SweepsDone()
-    const fid = await rasterFidelity(page, process.env.KIMO_PERF_SHOTS ?? null)
-    results.rasterFidelity = fid
-    console.log(
-      `  raster cache vs picture at fit: mean |Δ| ${fid.mean.toFixed(2)}, max ${fid.max} (0–255)`,
-    )
-    if (fid.mean > 2) failed = true
-    {
-      const d = await profiled(cdp, "drag", () => dragRoot(page, doc))
-      const raf = summary(d.deltas)
-      const ren = summary(d.renderMs)
-      sweeps.drag = { raf, render: ren }
-      console.log(`  ${"drag".padEnd(8)} rAF Δ ms   ${line(raf)}`)
-      console.log(`  ${"".padEnd(8)} render ms  ${line(ren)}  (move a 121-node screen)`)
-      if (raf.p95 > 16.7 * 1.25) failed = true
-    }
-
     const lat: Record<string, Summary> = {}
-    for (const kind of ["hover", "select"] as const) {
-      const xs = await profiled(cdp, kind, () => inputLatency(page, doc, kind))
-      lat[kind] = summary(xs)
-      console.log(`  ${`${kind} → frame`.padEnd(18)} ms ${line(lat[kind])}`)
-    }
-    for (const kind of ["paint", "layout", "text"] as const) {
-      const { out, applyMs, renderMs } = await profiled(cdp, `edit-${kind}`, () =>
-        editLatency(page, doc, kind),
-      )
-      lat[`edit-${kind}`] = summary(out.filter(Number.isFinite))
-      lat[`edit-${kind}-apply`] = summary(applyMs)
+    if (!M3_ONLY) {
+      // Let y-indexeddb persist before reloading.
+      if (!SWEEPS_ONLY) await page.waitForTimeout(2500)
+      if (!SWEEPS_ONLY) {
+        const cold = await profiled(cdp, "cold open", () => coldOpen(page))
+        results.coldOpen = cold
+        console.log(
+          `  cold open (reload → canvas ready): ${f1(cold.ready)} ms (DOMContentLoaded ${f1(cold.domContentLoaded)} ms, first render ${f1(cold.firstFrameMs)} ms, ${cold.drawn} drawn, ${cold.backend})`,
+        )
+      }
+      // Zoom to fit right after opening: most roots were never recorded at 100 %.
+      const fit = await page.evaluate(async (count) => {
+        const w = window as unknown as Win
+        w.__probe.install()
+        const n = w.__probe.frames.length
+        const t0 = performance.now()
+        w.__kimo.canvas()?.zoomToFit()
+        for (;;) {
+          await new Promise((r) => requestAnimationFrame(r))
+          const fs = w.__probe.frames.slice(n)
+          const done = fs.find((x) => x.drawn + x.culled >= count)
+          if (done)
+            return {
+              completeMs: done.end - t0,
+              frames: fs.indexOf(done) + 1,
+              maxFrameMs: Math.max(...fs.map((x) => x.ms)),
+            }
+          if (performance.now() - t0 > 30_000) throw new Error("fit never completed")
+        }
+      }, doc.count)
+      results.fitAfterOpen = fit
       console.log(
-        `  ${`edit ${kind} → frame`.padEnd(18)} ms ${line(lat[`edit-${kind}`] as Summary)}   [store.apply p50 ${f1(pct(applyMs, 0.5))}, render p50 ${f1(pct(renderMs, 0.5))}]`,
+        `  zoom to fit after open: all drawn after ${fit.frames} frame(s) / ${f1(fit.completeMs)} ms, longest render ${f1(fit.maxFrameMs)} ms`,
       )
+
+      for (const kind of ["pan-fit", "pan-100", "zoom"] as const) {
+        // Warm-up (records pictures, JIT; `KIMO_PERF_WARM_MS` longer to separate one-time costs
+        // such as GPU shader compiles from steady state).
+        await sweep(page, kind, Number(process.env.KIMO_PERF_WARM_MS ?? 500))
+        const s = await profiled(cdp, kind, () => sweep(page, kind, SWEEP_MS))
+        const raf = summary(s.deltas)
+        const ren = summary(s.renderMs)
+        sweeps[kind] = { raf, render: ren, frames: s.frames, maxDrawn: s.drawn, maxDraws: s.draws }
+        console.log(`  ${kind.padEnd(8)} rAF Δ ms   ${line(raf)}`)
+        console.log(
+          `  ${"".padEnd(8)} render ms  ${line(ren)}  frames ${s.frames}, ≤${s.drawn} nodes / ${s.draws} draws`,
+        )
+        if (process.env.KIMO_PERF_VERBOSE === "1")
+          console.log(`  ${"".padEnd(8)} slowest   ${s.slow.join(" ")}`)
+        if (raf.p95 > FRAME_GATE) failed = true
+      }
+      results.sweeps = sweeps
+      if (SWEEPS_ONLY) throw new SweepsDone()
+      const fid = await rasterFidelity(page, process.env.KIMO_PERF_SHOTS ?? null)
+      results.rasterFidelity = fid
+      console.log(
+        `  raster cache vs picture at fit: mean |Δ| ${fid.mean.toFixed(2)}, max ${fid.max} (0–255)`,
+      )
+      if (fid.mean > 2) failed = true
+      {
+        const d = await profiled(cdp, "drag", () => dragRoot(page, doc))
+        const raf = summary(d.deltas)
+        const ren = summary(d.renderMs)
+        sweeps.drag = { raf, render: ren }
+        console.log(`  ${"drag".padEnd(8)} rAF Δ ms   ${line(raf)}`)
+        console.log(`  ${"".padEnd(8)} render ms  ${line(ren)}  (move a 121-node screen)`)
+        if (raf.p95 > FRAME_GATE) failed = true
+      }
+
+      for (const kind of ["hover", "select"] as const) {
+        const xs = await profiled(cdp, kind, () => inputLatency(page, doc, kind))
+        lat[kind] = summary(xs)
+        console.log(`  ${`${kind} → frame`.padEnd(18)} ms ${line(lat[kind])}`)
+      }
+      for (const kind of ["paint", "layout", "text"] as const) {
+        const { out, applyMs, renderMs } = await profiled(cdp, `edit-${kind}`, () =>
+          editLatency(page, doc, kind),
+        )
+        lat[`edit-${kind}`] = summary(out.filter(Number.isFinite))
+        lat[`edit-${kind}-apply`] = summary(applyMs)
+        console.log(
+          `  ${`edit ${kind} → frame`.padEnd(18)} ms ${line(lat[`edit-${kind}`] as Summary)}   [store.apply p50 ${f1(pct(applyMs, 0.5))}, render p50 ${f1(pct(renderMs, 0.5))}]`,
+        )
+      }
+    } // !M3_ONLY
+    if (INSTANCES > 0) {
+      const { insertMs, ids } = await profiled(cdp, "m3-insert", () =>
+        instanceSetup(page, INSTANCES),
+      )
+      console.log(
+        `  M3 ${INSTANCES} instances of a 30-node main: insert → first frame ${f1(insertMs)} ms`,
+      )
+      const rows = [
+        ["override", "override", EDIT_GATE],
+        ["move", "move", EDIT_GATE],
+        ["main paint", "main", MAIN_EDIT_GATE],
+        ["main layout", "mainLayout", MAIN_EDIT_GATE],
+        ["theme pin (500)", "pin", EDIT_GATE],
+        ["mode switch", "mode", EDIT_GATE],
+        ["variable edit", "variable", EDIT_GATE],
+      ] as const
+      const m3: Record<string, unknown> = { insertMs }
+      for (const [k, kind, gate] of rows) {
+        const r = await profiled(cdp, `m3-${kind}`, () => instanceCase(page, ids, kind))
+        const sm = summary(r.out.filter(Number.isFinite))
+        console.log(
+          `  ${`M3 ${k} → frame`.padEnd(26)} ms ${line(sm)}   [store.apply p50 ${f1(pct(r.applyMs, 0.5))}, render p50 ${f1(pct(r.renderMs, 0.5))} (record ${f1(pct(r.recMs, 0.5))}, raster ${f1(pct(r.rasMs, 0.5))})]`,
+        )
+        if (!(sm.p95 <= gate)) failed = true
+        m3[k] = { frame: sm, apply: summary(r.applyMs), render: summary(r.renderMs) }
+      }
+      // Pan / zoom with the instances in the document (5k nodes + 1k × 31 expanded).
+      for (const kind of ["pan-fit", "pan-100", "zoom"] as const) {
+        await sweep(page, kind, Number(process.env.KIMO_PERF_WARM_MS ?? 500))
+        const s = await profiled(cdp, `m3-${kind}`, () => sweep(page, kind, SWEEP_MS))
+        const raf = summary(s.deltas)
+        const ren = summary(s.renderMs)
+        m3[kind] = { raf, render: ren, frames: s.frames, maxDrawn: s.drawn, maxDraws: s.draws }
+        console.log(`  M3 ${kind.padEnd(8)} rAF Δ ms   ${line(raf)}`)
+        console.log(
+          `  ${"".padEnd(11)} render ms  ${line(ren)}  frames ${s.frames}, ≤${s.drawn} nodes / ${s.draws} draws`,
+        )
+        if (process.env.KIMO_PERF_VERBOSE === "1") {
+          console.log(`  ${"".padEnd(11)} slowest   ${s.slow.join(" ")}`)
+          console.log(`  ${"".padEnd(11)} cache     ${s.cache}`)
+          console.log(`  ${"".padEnd(11)} recorded  ${s.recorded}`)
+          console.log(`  ${"".padEnd(11)} rasters   ${s.rasterized}`)
+        }
+        if (raf.p95 > FRAME_GATE) failed = true
+      }
+      results.m3 = m3
     }
     results.latency = lat
-    for (const s of Object.values(lat)) if (s.p95 > 100) failed = true
+    for (const s of Object.values(lat)) if (s.p95 > EDIT_GATE) failed = true
     if (errors.length) {
       console.log(`  page errors:\n    ${errors.slice(0, 10).join("\n    ")}`)
       failed = true

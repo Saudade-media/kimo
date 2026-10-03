@@ -1,0 +1,430 @@
+/*
+ * VariablesDialog: desing.pen board 14 > Editor · Variables dialog > Dialog (EIkIk).
+ * frame: 1040 × 780, clip, fill bg-app, radius-2xl, column,
+ *        shadows 0 2 blur 6 shadow + 0 24 blur 64 shadow-strong
+ *   ├ Header (DaqRQ) fill, stroke bottom 1 border, row, gap 12, padding [20, 20, 16, 24], center
+ *   │   ├ Titles (lbarU) fill, column, gap 4 (children hug)
+ *   │   │   ├ Title (kKsDQ) sans 20 / 500, letterSpacing -0.3, text-primary
+ *   │   │   └ Desc  (JDmQ0) sans 13, text-secondary
+ *   │   └ Close (GNzAW) IconButton 32 × 32, radius-pill, fill bg-muted, icon x 16
+ *   └ Body (p7LkYF) fill × fill, row
+ *       ├ Sidebar (M1fgkY) 184 × fill, fill bg-subtle, stroke right 1 border, column, gap 1,
+ *       │         padding [4, 8, 12, 8]
+ *       └ Main (Q2yzle) fill × fill, column
+ *           ├ Toolbar (zAPZ1) fill, row, gap 8, padding [12, 16], center
+ *           │   Search (Yuehw) Input 220 × 30 · Type Filter (GHEjw) fill bg-muted, radius-pill,
+ *           │   gap 2, padding 2 → Seg h 24, radius-pill, padding [0, 10], center; active
+ *           │   (jBpMt) fill bg-app, shadow 0 1 blur 2 shadow, label sans 11 / 600 text-primary;
+ *           │   others label sans 11 / 500 text-secondary · Spacer · New variable (jeJl2)
+ *           │   Button/Primary h 30, padding [0, 12], icon plus 14, label 12
+ *           ├ Table (sWH4c) fill × fill, clip, column, padding [0, 8, 0, 0]
+ *           │   ├ Axis Row (fgGA2) fill × 24, row: Pad (p0K90o) 216 × 1 · AxisGroupHeaders
+ *           │   ├ Column Row (G1NUwB) fill × 32, stroke bottom 1 border, row, center:
+ *           │   │   Name Header (S7bhHZ) 216 × 32, stroke bottom 1 border, padding [0, 12], center;
+ *           │   │   Label sans 11 / 600 text-secondary · ModeColumnHeaders
+ *           │   └ VariableRows (Name Cell 216) · Entries blocks
+ *           └ Footer (BVIIs) fill, stroke top 1 border, row, gap 8, padding [12, 16], center
+ *               Icon info 14 text-tertiary · Note sans 11 text-tertiary · Spacer ·
+ *               Export (bpnlM) Button/Secondary h 30, padding [0, 12], braces 14, label 12 ·
+ *               Done (axe9j) Button/Primary h 30, padding [0, 14], label 12 (no icon)
+ */
+.kimo-variables-dialog {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 1040px;
+  max-width: 100%;
+  height: 780px;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-2xl);
+  background: var(--kimo-bg-app);
+  box-shadow:
+    0 2px 6px 0 var(--kimo-shadow),
+    0 24px 64px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  outline: none;
+}
+
+.kimo-variables-dialog__header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 20px 20px 16px 24px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-variables-dialog__titles {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kimo-variables-dialog__title,
+.kimo-variables-dialog__desc {
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+}
+
+.kimo-variables-dialog__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-xl);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 24px; /* Pencil text box: round(20 × 1.21) for Inter */
+  letter-spacing: -0.3px;
+}
+
+.kimo-variables-dialog__desc {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
+}
+
+.kimo-icon-button.kimo-variables-dialog__close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-variables-dialog__body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  min-height: 0;
+  width: 100%;
+}
+
+.kimo-variables-dialog__sidebar {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 184px;
+  padding: 4px 8px 12px 8px;
+  overflow-y: auto;
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset -1px 0 0 0 var(--kimo-border);
+}
+
+.kimo-variables-dialog__main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.kimo-variables-dialog__toolbar,
+.kimo-variables-dialog__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+}
+
+.kimo-variables-dialog__footer {
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.kimo-input.kimo-variables-dialog__search {
+  flex: none;
+  width: 220px;
+  height: 30px;
+}
+
+.kimo-variables-dialog__filter {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-variables-dialog__seg {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-variables-dialog__seg--active {
+  background: var(--kimo-bg-app);
+  box-shadow: 0 1px 2px 0 var(--kimo-shadow);
+}
+
+.kimo-variables-dialog__seg:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-variables-dialog__seg-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-variables-dialog__seg--active .kimo-variables-dialog__seg-label {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-variables-dialog__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-button.kimo-variables-dialog__new,
+.kimo-button.kimo-variables-dialog__export,
+.kimo-button.kimo-variables-dialog__done {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-button.kimo-variables-dialog__done {
+  padding: 0 14px;
+}
+
+.kimo-variables-dialog__new .kimo-button__icon,
+.kimo-variables-dialog__export .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Table: the design clips; the code scrolls with the axis and column rows pinned. */
+.kimo-variables-dialog__table {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 8px 0 0;
+  overflow: auto;
+}
+
+.kimo-variables-dialog__table > * {
+  flex: none;
+  min-width: max-content;
+}
+
+.kimo-variables-dialog__axis-row,
+.kimo-variables-dialog__column-row {
+  position: sticky;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  background: var(--kimo-bg-app);
+}
+
+.kimo-variables-dialog__axis-row {
+  top: 0;
+  height: 24px;
+}
+
+.kimo-variables-dialog__column-row {
+  top: 24px;
+  align-items: center;
+  height: 32px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-variables-dialog__pad {
+  flex: none;
+  height: 1px;
+}
+
+.kimo-variables-dialog__name-header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-variables-dialog__name-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-variables-dialog__info {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-variables-dialog__note {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Sidebar section (uGSO4 / UzrRU / kkagf): fill, padding [12, 8, 4, 8]. */
+.kimo-variables-nav-section {
+  box-sizing: border-box;
+  display: flex;
+  align-self: stretch;
+  padding: 12px 8px 4px 8px;
+}
+
+.kimo-variables-nav-section__title {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* Sidebar row (btGbF …): fill × 28, radius-sm, row, gap 8, padding [0, 8], center. */
+.kimo-variables-nav-item {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-self: stretch;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-primary);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-variables-nav-item:hover:not(.kimo-variables-nav-item--selected) {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-variables-nav-item--selected {
+  background: var(--kimo-accent-soft);
+}
+
+.kimo-variables-nav-item:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-variables-nav-item__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-variables-nav-item--emphasized .kimo-variables-nav-item__icon {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-variables-nav-item__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-variables-nav-item__label {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-variables-nav-item__label--mono {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-variables-nav-item--emphasized .kimo-variables-nav-item__label {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-variables-nav-item--missing .kimo-variables-nav-item__label {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-variables-nav-item__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-variables-nav-item__count {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-variables-nav-item--missing .kimo-variables-nav-item__count {
+  color: var(--kimo-danger);
+}
+
+/* "Add axis" (G0u7wN): Button/Ghost h 28, padding [0, 8], plus 14, label 12. */
+.kimo-button.kimo-variables-nav-add {
+  flex: none;
+  height: 28px;
+  padding: 0 8px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-variables-nav-add .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}

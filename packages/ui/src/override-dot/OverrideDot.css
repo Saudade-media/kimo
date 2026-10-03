@@ -1,0 +1,52 @@
+/*
+ * OverrideDot: desing.pen 02c Components — Systems (M3) > OverrideDot (rqoRv).
+ * frame: 12 × 12, justifyContent center, alignItems center
+ *   └ Dot (T0yxdd) ellipse 6 × 6, fill component
+ * Reset hint (board 11 izW94): Tooltip/Hint (u0dQ1) with icon rotate-ccw and label text-xs (11).
+ */
+.kimo-override-dot {
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-override-dot--off {
+  opacity: 0;
+}
+
+.kimo-override-dot--interactive {
+  cursor: pointer;
+  border-radius: var(--kimo-radius-pill);
+}
+
+.kimo-override-dot--interactive:focus-visible {
+  outline: 2px solid var(--kimo-component);
+  outline-offset: 0;
+}
+
+.kimo-override-dot__dot {
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-component);
+}
+
+/* Board 11 Dot hover (Dtgm2): the hint sits below the row. */
+.kimo-override-dot__hint {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -2px;
+  z-index: 30;
+}
+
+.kimo-override-dot__hint .kimo-tooltip-hint__label {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter (izW94 label h 13) */
+}

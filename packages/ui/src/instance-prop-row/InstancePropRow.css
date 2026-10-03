@@ -1,0 +1,152 @@
+/*
+ * InstancePropRow: desing.pen 02c > InstancePropRow/Text (iYH5j), /Boolean (YSJLM), /Enum
+ * (ztxNk), /Instance (CpeMN), /Slot (ddT4A).
+ * frame: fill_container × 28, row, gap 8, alignItems center
+ *   ├ Label Cell (m1rQ5) width 84, row, gap 2, center
+ *   │   ├ Override OverrideDot, opacity 0 (overridden: 1)
+ *   │   └ Label    mono 11, text-secondary (overridden: text-primary)
+ *   └ Text:    Field (B4lmr) fill × 28, bg-subtle, radius-sm, row, gap 6, padding [0, 8], center
+ *                ├ Icon type 12 text-tertiary  └ Value sans 12 text-primary
+ *     Boolean: Spacer fill × 1 + Toggle (y893S)
+ *     Enum:    Select (gP276) fill
+ *     Instance: InstanceSwapField fill
+ *     Slot:    Content (Pdjps) fill × 28, row, gap 6, center
+ *                ├ Icon square-dashed 12 component ├ Meta sans 12 text-secondary ├ Spacer
+ *                ├ Select Button/Ghost h 24, padding [0, 6], label 11 (no icon)
+ *                └ Clear IconButton 24 × 24, #00000000, icon x 12 text-tertiary
+ */
+.kimo-instance-prop-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+}
+
+.kimo-instance-prop-row__label-cell {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  width: 84px;
+  min-width: 0;
+}
+
+.kimo-instance-prop-row__label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-instance-prop-row--overridden .kimo-instance-prop-row__label {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-instance-prop-row__field {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-instance-prop-row__field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.kimo-instance-prop-row__field-icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-instance-prop-row__value {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 15px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.kimo-instance-prop-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-select.kimo-instance-prop-row__select,
+.kimo-instance-swap-field.kimo-instance-prop-row__swap {
+  flex: 1 1 0;
+  width: auto;
+}
+
+.kimo-instance-prop-row__content {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+}
+
+.kimo-instance-prop-row__content-icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-component);
+}
+
+.kimo-instance-prop-row__meta {
+  flex: none;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* Select (PFIBa): Button/Ghost instance, height 24, padding [0, 6], icon off, label 11. */
+.kimo-button.kimo-instance-prop-row__select-content {
+  line-height: 13px; /* label sans 11: Pencil text box round(11 × 1.21) */
+  flex: none;
+  height: 24px;
+  padding: 0 6px;
+  font-size: var(--kimo-text-xs);
+}
+
+/* Clear (zhUx8): IconButton 24 with a 12px x. */
+.kimo-instance-prop-row__clear .kimo-icon-button__icon {
+  width: 12px;
+  height: 12px;
+}

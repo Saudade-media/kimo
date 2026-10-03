@@ -9,6 +9,11 @@
  * child outlines + sizing badges + ghost edge, hover, selection (outline, handles, size
  * badge), pen, path edit, cursor badge, marquee. 1px lines are snapped to the device pixel
  * grid so they stay crisp at any zoom and dpr.
+ *
+ * M3 (ADR 0011, `OVERLAY_SPEC_M3`): component identity outlines (main 1.5 / instance 1 solid
+ * `component`, slot 1px dashed 4/3 with a `component-soft` fill when empty) under the hover
+ * and selection, the selection chrome in `component` tone for mains/instances, and the board
+ * 13 drop feedback (slot insertion bar, replace target) on top of the selection.
  */
 import type { LayoutResult, Matrix } from "@kimo/layout"
 import type { Canvas, CanvasKit, Paint, Path } from "canvaskit-wasm"
@@ -16,11 +21,14 @@ import { parseHex } from "./color"
 import { apply, multiply, resolveRadii, toCk, union } from "./geometry"
 import type { TextEngine } from "./text"
 import {
+  type ComponentOutline,
   type CursorBadge,
+  type InstanceDropOverlay,
   type Measurement,
   type MeasureOutline,
   OVERLAY_SPEC,
   OVERLAY_SPEC_M2,
+  OVERLAY_SPEC_M3,
   type Overlay,
   type OverlayTheme,
   type PathContour,
@@ -51,6 +59,8 @@ export const DEFAULT_OVERLAY_THEME: OverlayTheme = {
   selectionSoft: "#2F6BFF1A",
   accentText: "#0A0A0A",
   accent: "#0A0A0A",
+  component: "#7C3AED",
+  componentSoft: "#7C3AED14",
 }
 
 /** Theme color of an `OVERLAY_SPEC_M2` token name (light fallbacks for M1 hosts). */
@@ -71,6 +81,10 @@ function themeColor(theme: OverlayTheme, token: string): string {
       return theme.accent ?? (d.accent as string)
     case "selection":
       return theme.selection
+    case "component":
+      return theme.component ?? (d.component as string)
+    case "component-soft":
+      return theme.componentSoft ?? (d.componentSoft as string)
     default:
       return token
   }
@@ -869,6 +883,130 @@ export class OverlayPainter {
     )
   }
 
+  // --- M3 -----------------------------------------------------------------------------------
+
+  /** Screen rect of a node's axis-aligned world box. */
+  private worldRect(layout: LayoutResult, id: string, v: Viewport): Rect | null {
+    const l = layout.nodes.get(id)
+    if (!l) return null
+    return {
+      x: (l.world.x - v.x) * v.zoom,
+      y: (l.world.y - v.y) * v.zoom,
+      w: l.world.w * v.zoom,
+      h: l.world.h * v.zoom,
+    }
+  }
+
+  /**
+   * 02c "Canvas outlines" (`sdBO5`): main `NENSo` 1.5 / instance `GTuxN` 1, solid `component`,
+   * inside the node's box (following its rotation like the hover outline); slot `te3fa` /
+   * `f8MrUb`: 1px dashed 4/3 starting at the top-left corner, clockwise, on the slot box moved
+   * by `OVERLAY_SPEC_M3.slot` (dx, dy, dw in world units), `component-soft` fill when empty.
+   */
+  private componentOutlines(
+    canvas: Canvas,
+    list: readonly ComponentOutline[],
+    layout: LayoutResult,
+    v: Viewport,
+    theme: OverlayTheme,
+    c: OverlayCounters,
+  ): void {
+    const ck = this.ck
+    const color = this.color(themeColor(theme, OVERLAY_SPEC_M3.main.color))
+    for (const o of list) {
+      if (o.role !== "slot") {
+        const q = this.quad(layout, o.id, v)
+        if (!q) continue
+        const width =
+          o.role === "main" ? OVERLAY_SPEC_M3.main.width : OVERLAY_SPEC_M3.instance.width
+        this.outline(canvas, q, width, color, c)
+        continue
+      }
+      const b = this.worldRect(layout, o.id, v)
+      if (!b) continue
+      const spec = OVERLAY_SPEC_M3.slot
+      const x = b.x + spec.dx * v.zoom
+      const y = b.y + spec.dy * v.zoom
+      const w = b.w + spec.dw * v.zoom
+      const h = b.h
+      if (w <= 0 || h <= 0) continue
+      if (o.empty) {
+        const f = this.paint(this.color(themeColor(theme, spec.fillWhenEmpty)))
+        canvas.drawRect(ck.XYWHRect(x, y, w, h), f)
+        f.delete()
+        c.draws++
+      }
+      // Path "M0.5 0.5l4 0m3 0…": the 1px line sits inside the box, dashes from the top-left.
+      const half = spec.width / 2
+      const l = this.snap(x + half, spec.width)
+      const t = this.snap(y + half, spec.width)
+      const r = this.snap(x + w - half, spec.width)
+      const btm = this.snap(y + h - half, spec.width)
+      const pb = new ck.PathBuilder()
+      pb.moveTo(l, t)
+      pb.lineTo(r, t)
+      pb.lineTo(r, btm)
+      pb.lineTo(l, btm)
+      pb.close()
+      const path = pb.detachAndDelete()
+      const p = this.paint(color, spec.width)
+      const dash = ck.PathEffect.MakeDash([...spec.dash], 0)
+      p.setPathEffect(dash)
+      p.setAntiAlias(false)
+      canvas.drawPath(path, p)
+      p.delete()
+      dash?.delete()
+      path.delete()
+      c.draws++
+    }
+  }
+
+  /** Board 13 drop feedback: insertion bar `GMebs`, replace target `d8kP2n`. */
+  private instanceDrop(
+    canvas: Canvas,
+    drop: InstanceDropOverlay,
+    layout: LayoutResult | null,
+    v: Viewport,
+    theme: OverlayTheme,
+    c: OverlayCounters,
+  ): void {
+    const ck = this.ck
+    if (drop.kind === "slot") {
+      const spec = OVERLAY_SPEC_M3.insertionBar
+      const a = this.ws(v, { x: drop.bar.x, y: drop.bar.y })
+      const p = this.paint(this.color(themeColor(theme, spec.color)))
+      const y = Math.round(a.y)
+      canvas.drawRRect(
+        ck.RRectXY(ck.XYWHRect(a.x, y, drop.bar.w * v.zoom, spec.height), spec.radius, spec.radius),
+        p,
+      )
+      p.delete()
+      c.draws++
+      return
+    }
+    if (!layout) return
+    const b = this.worldRect(layout, drop.targetId, v)
+    if (!b) return
+    const spec = OVERLAY_SPEC_M3.replaceTarget
+    const o = spec.outset
+    const r = ck.XYWHRect(b.x - o, b.y - o, b.w + 2 * o, b.h + 2 * o)
+    const fill = this.paint(this.color(themeColor(theme, spec.fill)))
+    canvas.drawRRect(ck.RRectXY(r, spec.radius, spec.radius), fill)
+    fill.delete()
+    const i = spec.strokeWidth / 2
+    const st = this.paint(this.color(themeColor(theme, "component")), spec.strokeWidth)
+    canvas.drawRRect(
+      ck.RRectXY(
+        ck.XYWHRect(b.x - o + i, b.y - o + i, b.w + 2 * o - 2 * i, b.h + 2 * o - 2 * i),
+        spec.radius - i,
+        spec.radius - i,
+      ),
+      st,
+    )
+    st.delete()
+    c.draws += 2
+  }
+
   /** Screen quad of the selection (single node, or the union box). */
   private selectionQuad(
     overlay: Overlay,
@@ -897,7 +1035,14 @@ export class OverlayPainter {
     const ck = this.ck
     this.env = env
     this.slot = 0
-    const sel = this.color(theme.selection)
+    // M3: mains / instances use the `component` tone for the whole selection chrome.
+    const selTheme: OverlayTheme =
+      overlay.selectionTone === "component"
+        ? { ...theme, selection: themeColor(theme, OVERLAY_SPEC_M3.selection.color) }
+        : theme
+    const sel = this.color(selTheme.selection)
+    /** Hover, marquee and guides stay `selection` blue. */
+    const hoverColor = this.color(theme.selection)
 
     // M2 marks under the selection (board 10 layer order).
     const grid = overlay.pixelGrid
@@ -912,24 +1057,33 @@ export class OverlayPainter {
     const selQuad = this.selectionQuad(overlay, layout, v)
     if (overlay.resize) this.resize(canvas, overlay.resize, layout, selQuad, v, theme, c)
 
+    if (layout && overlay.componentOutlines?.length)
+      this.componentOutlines(canvas, overlay.componentOutlines, layout, v, theme, c)
+
     const measured = new Set(overlay.measureOutlines?.map((o) => o.id))
+    const identity = new Set(
+      overlay.componentOutlines?.filter((o) => o.role !== "slot").map((o) => o.id),
+    )
     if (
       layout &&
       overlay.hovered &&
       !overlay.selection.includes(overlay.hovered) &&
-      !measured.has(overlay.hovered)
+      !measured.has(overlay.hovered) &&
+      !identity.has(overlay.hovered)
     ) {
       const q = this.quad(layout, overlay.hovered, v)
-      if (q) this.outline(canvas, q, OVERLAY_SPEC.hoverWidth, sel, c)
+      if (q) this.outline(canvas, q, OVERLAY_SPEC.hoverWidth, hoverColor, c)
     }
 
     // Path edit mode replaces the selection chrome with the path's own anchors.
     if (selQuad && !overlay.pathEdit) {
       const q = selQuad
       this.outline(canvas, q, OVERLAY_SPEC.outlineWidth, sel, c)
-      if (overlay.handles !== false) for (const p of q) this.handle(canvas, p, theme, c)
-      if (overlay.sizeLabel) this.badge(canvas, overlay.sizeLabel, q, theme, c)
+      if (overlay.handles !== false) for (const p of q) this.handle(canvas, p, selTheme, c)
+      if (overlay.sizeLabel) this.badge(canvas, overlay.sizeLabel, q, selTheme, c)
     }
+
+    if (overlay.instanceDrop) this.instanceDrop(canvas, overlay.instanceDrop, layout, v, theme, c)
 
     if (overlay.pen) this.pen(canvas, overlay.pen, v, theme, c)
     if (overlay.pathEdit) this.pathEdit(canvas, overlay.pathEdit, v, theme, c)
@@ -941,7 +1095,7 @@ export class OverlayPainter {
       const f = this.paint(this.color(theme.selection, MARQUEE_FILL_ALPHA))
       canvas.drawRect(r, f)
       f.delete()
-      const s = this.paint(sel, 1)
+      const s = this.paint(hoverColor, 1)
       canvas.drawRect(
         ck.XYWHRect(
           (m.x - v.x) * v.zoom + 0.5,
@@ -956,7 +1110,7 @@ export class OverlayPainter {
     }
 
     if (overlay.guides?.length) {
-      const p = this.paint(sel, 1)
+      const p = this.paint(hoverColor, 1)
       for (const g of overlay.guides) {
         const a = g.axis === "x" ? { x: g.at, y: g.from } : { x: g.from, y: g.at }
         const b = g.axis === "x" ? { x: g.at, y: g.to } : { x: g.to, y: g.at }

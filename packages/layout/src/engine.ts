@@ -14,7 +14,13 @@
  * child lists of their parents, lets Yoga's own dirty flags limit the recomputation, and
  * re-emits only the subtrees whose inputs or Yoga layout changed.
  */
-import { isObject, isRef } from "@kimo/core-schema"
+import {
+  type ExpandedView,
+  type ExpansionIssue,
+  isObject,
+  isRef,
+  parseVirtualId,
+} from "@kimo/core-schema"
 import {
   Align,
   Direction,
@@ -29,7 +35,7 @@ import {
   type Node as YNode,
   type Yoga,
 } from "yoga-layout/load"
-import { type ExpandedNodeSource, expandInstances } from "./expand"
+import { createInstanceView, type InstanceView, isExpandedView, isInstanceView } from "./expand"
 import {
   fromF32,
   IDENTITY,
@@ -58,6 +64,7 @@ import type {
   TextMeasureInput,
   TextMetrics,
 } from "./types"
+import { INSTANCE_PLACEHOLDER_SIZE } from "./types"
 
 // --- Entries ------------------------------------------------------------------------------
 
@@ -99,6 +106,8 @@ interface Entry {
   attached: Entry[]
   // set by applyStyle()
   measured: boolean
+  /** Kind whose measure function is installed (text or box). */
+  measureKind: Kind | null
   style: Record<string, unknown>
   emptyW: number | undefined
   emptyH: number | undefined
@@ -134,6 +143,8 @@ const SIZING = Object.fromEntries(
 type SpecMode = "fixed" | "fit" | "fill" | "fill+"
 
 const TEXT_TYPES = new Set(["text", "note", "prompt"])
+/** Data keys whose bound values the engine resolves (see `isBound`). */
+const BOUND_LAYOUT_KEYS = ["w", "h", "visible", "layout", "stroke", "content", "style", "props"]
 const LEAF_TYPES = new Set(["rect", "ellipse", "polygon", "path", "icon", "script", "browser"])
 const FIT_BY_DEFAULT = new Set(["frame", "group", "text", "note", "prompt", "instance"])
 
@@ -166,10 +177,31 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   let roots: Entry[] = []
   let current: LayoutResult | null = null
   let version = 0
-  let lastInstanceCount = 0
+  /** The engine's own view when the host passes neither `expanded` nor a view as `nodes`. */
+  let own: { base: unknown; view: InstanceView } | null = null
+  /**
+   * Dependency index of the last expansion of every top-level instance (M3): the real ids its
+   * expansion read (its own real subtree, every authored source node, every component in its
+   * chains). An edit of any of them, or of a node below one, re-expands that instance.
+   */
+  const topDeps = new Map<string, string[]>()
+  const depTops = new Map<string, Set<string>>()
+  /** Tops whose dependency entries must be rebuilt at the end of the pass. */
+  let reindex = new Set<string>()
+  /** `InstanceView.stamp` of each indexed top when it was indexed (kept expansion = same). */
+  const topStamp = new Map<string, number>()
+  /**
+   * False while a pass runs (and after one threw): the next `compute` rebuilds from scratch
+   * instead of refreshing entries that may be half-updated.
+   */
+  let healthy = false
+  /** `TextMeasurer.generation` of the last pass (undefined: unknown, re-measure all text). */
+  let textGeneration: number | undefined
+  /** Node data objects that hold a `{ $ref }` binding anywhere (perf: one deep scan each). */
+  const boundCache = new WeakMap<object, boolean>()
 
   // Per-pass state.
-  let src!: ExpandedNodeSource
+  let src!: ExpandedView
   let resolve!: Resolver
   let input!: LayoutInput
   let fresh = new Set<Entry>()
@@ -203,6 +235,24 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     value: (_id, v) => value(e, v, "/style"),
     invalidate: (ids) => resolve.invalidate(ids),
   })
+
+  /** Maps a core-schema expansion issue onto a layout issue of `e` (§9.8). */
+  const expansionIssue = (e: Entry, x: ExpansionIssue) => {
+    switch (x.code) {
+      case "INSTANCE_CYCLE":
+        issue(e, "CYCLE", x.message, "/of", "error")
+        return
+      case "COMPONENT_MISSING":
+      case "NOT_A_COMPONENT":
+      case "ALIAS_UNKNOWN":
+      case "LIBRARY_NOT_LOADED":
+        issue(e, "INSTANCE_UNRESOLVED", x.message, "/of")
+        return
+      default:
+        // OVERRIDE_PATH_UNRESOLVED: the validator reports it; layout is unaffected.
+        return
+    }
+  }
 
   // --- Building -----------------------------------------------------------------------------
 
@@ -253,6 +303,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       flowIndex: -1,
       attached: [],
       measured: false,
+      measureKind: null,
       style: {},
       emptyW: undefined,
       emptyH: undefined,
@@ -274,9 +325,14 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     return e
   }
 
-  /** True when `a` is `e` or one of its ancestors. */
-  const isAncestor = (a: Entry, e: Entry | null): boolean => {
-    for (let p = e; p; p = p.parent) if (p === a) return true
+  /** True when `a` is `from` or one of its ancestors in the current node data. */
+  const dataAncestor = (a: string, from: string): boolean => {
+    const seen = new Set<string>()
+    for (let p: unknown = from; typeof p === "string" && !seen.has(p); ) {
+      if (p === a) return true
+      seen.add(p)
+      p = src.getNode(p)?.parent
+    }
     return false
   }
 
@@ -287,7 +343,10 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   const build = (id: string, parent: Entry | null, reuse: boolean): Entry | null => {
     const existing = entries.get(id)
     if (existing) {
-      if (!reuse || (parent && isAncestor(existing, parent))) {
+      // Moved nodes are adopted; a cycle is judged on the new parent chain, not on entry
+      // parent pointers that may still be stale in this pass (a parent and child swapped in
+      // one change, or a refresh across documents).
+      if (!reuse || (parent && dataAncestor(id, parent.id))) {
         if (parent)
           issue(parent, "CYCLE", `node ${id} is reachable twice (cycle)`, undefined, "error")
         return null
@@ -310,7 +369,9 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   // --- Yoga configuration -----------------------------------------------------------------
 
   const setMeasure = (e: Entry, on: boolean) => {
-    if (on === e.measured) return
+    // A kind change (box ⇄ text, e.g. an id re-inserted with another type) swaps the function.
+    if (on === e.measured && (!on || e.measureKind === e.kind)) return
+    e.measureKind = on ? e.kind : null
     if (on) {
       if (e.kind === "text") e.y.setMeasureFunc((w, wm, h, hm) => measureTextFn(e, w, wm, h, hm))
       else e.y.setMeasureFunc((w, wm, h, hm) => measureBoxFn(e, w, wm, h, hm))
@@ -345,7 +406,11 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   const sizeSpec = (e: Entry, axis: Axis): SizeSpec => {
     const n = e.data
     let raw = n[axis]
-    if (n.type === "instance") raw = isObject(n.props) ? n.props[axis] : undefined
+    if (n.type === "instance") {
+      // Only an unresolved instance still reads as `instance` (a placeholder, §9.8).
+      raw = isObject(n.props) ? n.props[axis] : undefined
+      if (raw === undefined) return { mode: "fixed", v: INSTANCE_PLACEHOLDER_SIZE[axis] }
+    }
     if (raw === undefined) {
       if (n.type === "path") return { mode: "fixed", v: pathSize(e, axis) }
       if (FIT_BY_DEFAULT.has(n.type)) return { mode: "fit" }
@@ -414,7 +479,8 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   const applyStyle = (e: Entry) => {
     const n = e.data
     const y = e.y
-    e.issues = [...src.issues(e.id)]
+    e.issues = []
+    for (const x of src.issues(e.id)) expansionIssue(e, x)
     e.textCache.clear()
     if (isRef(n.visible)) value(e, n.visible, "/visible") // records an unresolved binding
     if (e.kind === "leaf" && !LEAF_TYPES.has(n.type) && n.type !== "instance")
@@ -791,8 +857,12 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       const e = entries.get(id)
       if (e) for (const i of e.issues) issues.push(i)
     }
-    lastInstanceCount = src.instanceCount
+    for (const t of reindex) indexTop(t)
+    reindex = new Set()
+    componentDeps = new Map()
     current = { version: ++version, nodes, order, bounds, issues, changed }
+    textGeneration = input.measureText.generation
+    healthy = true
     return current
   }
 
@@ -806,14 +876,172 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     if (!Y || !config) throw new Error("@kimo/layout: call init() before compute()/update()")
     input = inp
     resolve = inp.resolve
-    src = expandInstances(inp.nodes, {
-      ...(options.libraries ? { libraries: options.libraries } : {}),
-      ...(options.onIssue ? { onIssue: options.onIssue } : {}),
-    })
+    if (inp.expanded) src = inp.expanded
+    else if (isExpandedView(inp.nodes)) src = inp.nodes
+    else {
+      if (!own || own.base !== inp.nodes)
+        own = {
+          base: inp.nodes,
+          view: createInstanceView(
+            inp.nodes,
+            options.libraries ? { libraries: options.libraries } : {},
+          ),
+        }
+      src = own.view
+    }
     fresh = new Set()
   }
 
+  // --- Instance dependencies (M3) -------------------------------------------------------------
+
+  const isTop = (id: string): boolean => {
+    if (id.includes("/")) return false
+    const o = src.origin(id)
+    return !!o && o.top === id && !!o.instance
+  }
+
+  const unindex = (t: string) => {
+    for (const d of topDeps.get(t) ?? []) {
+      const s = depTops.get(d)
+      if (!s) continue
+      s.delete(t)
+      if (s.size === 0) depTops.delete(d)
+    }
+    topDeps.delete(t)
+    topStamp.delete(t)
+  }
+
+  /**
+   * Dependencies shared by every plain instance of one component in this pass (see
+   * {@link indexTop}); keyed by `of`, cleared at the end of each pass.
+   */
+  let componentDeps = new Map<string, string[]>()
+
+  /** What the current expansion of top-level instance `t` read (real ids). */
+  const depsOf = (e: Entry): string[] => {
+    const deps = new Set<string>()
+    const local = (q: string) => {
+      if (q && !q.includes(":")) deps.add(q)
+    }
+    const walk = (c: Entry) => {
+      if (!parseVirtualId(c.id)) deps.add(c.id)
+      const o = src.origin(c.id)
+      if (o?.source && o.source.alias === null) deps.add(o.source.id)
+      if (o?.instance) {
+        local(o.instance.of)
+        for (const q of o.instance.chain) local(q)
+      }
+      if (o?.owned) deps.add(o.owned.instance)
+      for (const k of c.children) walk(k)
+    }
+    walk(e)
+    return [...deps]
+  }
+
+  /**
+   * Records what the current expansion of top-level instance `t` read. A plain instance (no
+   * overrides, args or owned content: its expansion reads only its component) shares one
+   * walk per component per pass (perf: a main edit re-indexes 1k instances).
+   */
+  const indexTop = (t: string) => {
+    const e = entries.get(t)
+    if (!e?.alive || !isTop(t)) {
+      unindex(t)
+      return
+    }
+    const real = src.base.getNode(t)
+    const plain =
+      !!real &&
+      real.type === "instance" &&
+      typeof real.of === "string" &&
+      real.overrides === undefined &&
+      real.args === undefined &&
+      !e.children.some((c) => !parseVirtualId(c.id))
+    let list: string[]
+    if (plain) {
+      const of = real.of as string
+      let shared = componentDeps.get(of)
+      if (!shared) {
+        shared = depsOf(e).filter((d) => d !== t)
+        componentDeps.set(of, shared)
+      }
+      list = [t, ...shared]
+    } else list = depsOf(e)
+    if (isInstanceView(src)) topStamp.set(t, src.stamp(t))
+    const old = topDeps.get(t)
+    if (old && old.length === list.length && old.every((d, i) => d === list[i])) return
+    unindex(t)
+    topDeps.set(t, list)
+    for (const d of list) {
+      let s = depTops.get(d)
+      if (!s) {
+        s = new Set()
+        depTops.set(d, s)
+      }
+      s.add(t)
+    }
+  }
+
+  /** Top-level instances whose expansion an edit of `ids` may change (old and new state). */
+  const affectedTops = (ids: readonly string[]): Set<string> => {
+    const out = new Set<string>()
+    if (depTops.size === 0) return out
+    const hit = (id: string) => {
+      const s = depTops.get(id)
+      if (s) for (const t of s) out.add(t)
+    }
+    const base = src.base
+    for (const id of ids) {
+      const v = parseVirtualId(id)
+      if (v) {
+        hit(v.instance)
+        continue
+      }
+      hit(id)
+      const seen = new Set<string>([id])
+      for (let p = base.getNode(id)?.parent; typeof p === "string" && !seen.has(p); ) {
+        seen.add(p)
+        hit(p)
+        p = base.getNode(p)?.parent
+      }
+      for (let e = entries.get(id)?.parent ?? null; e; e = e.parent)
+        if (!parseVirtualId(e.id)) hit(e.id)
+    }
+    return out
+  }
+
   const rootIds = (): readonly string[] => input.roots ?? src.children(null)
+
+  /** True when `v` holds a `{ $ref }` binding at any depth. */
+  const hasRef = (v: unknown, depth = 0): boolean => {
+    if (v === null || typeof v !== "object" || depth > 32) return false
+    if (isRef(v)) return true
+    if (Array.isArray(v)) {
+      for (const x of v) if (hasRef(x, depth + 1)) return true
+      return false
+    }
+    for (const k in v as Record<string, unknown>)
+      if (hasRef((v as Record<string, unknown>)[k], depth + 1)) return true
+    return false
+  }
+  /**
+   * Node data whose layout reads a binding (sizes, visibility, layout gaps / padding, stroke
+   * width, text content and style, placeholder props). Paint-only bindings (fills, effects)
+   * never change a box, so a color variable or a pin over painted nodes restyles nothing.
+   */
+  const isBound = (n: LayoutNodeData): boolean => {
+    let b = boundCache.get(n)
+    if (b === undefined) {
+      b = false
+      for (const k of BOUND_LAYOUT_KEYS)
+        if (hasRef(n[k])) {
+          b = true
+          break
+        }
+      boundCache.set(n, b)
+    }
+    return b
+  }
 
   /** Configures fresh entries top-down: attach children, then style. */
   const configure = (e: Entry) => {
@@ -826,8 +1054,25 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
   // --- Public -------------------------------------------------------------------------------
 
+  /**
+   * A full pass re-reads everything. With a healthy previous pass it is done as a refresh:
+   * every node is re-read and diffed (unchanged nodes keep their Yoga state), bound nodes are
+   * re-resolved and text re-measured when fonts changed — the result equals a rebuild, at the
+   * cost of what changed (a variable mode switch over 36k nodes re-styles the bound ones only).
+   */
   const compute = (inp: LayoutInput): LayoutResult => {
+    if (healthy && current && entries.size > 0) return refresh(inp)
+    return rebuild(inp)
+  }
+
+  const rebuild = (inp: LayoutInput): LayoutResult => {
+    healthy = false
     begin(inp)
+    // A full pass re-reads everything: the view's caches may predate the change.
+    src.invalidate()
+    topDeps.clear()
+    depTops.clear()
+    reindex = new Set()
     const prevNodes = current?.nodes
     for (const e of entries.values()) freeEntry(e)
     entries = new Map()
@@ -837,6 +1082,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       if (e) roots.push(e)
     }
     for (const r of roots) configure(r)
+    for (const e of entries.values()) if (isTop(e.id)) reindex.add(e.id)
     for (const r of roots) calc(r, null)
     const out: Emit = { nodes: new Map(), changed: new Set(), only: null }
     for (const r of roots) emit(r, IDENTITY, true, true, out)
@@ -851,40 +1097,134 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     return finish(out.nodes, paintOrder(), changed)
   }
 
-  /** Whether a dirty id touches component content while instances are expanded. */
-  const touchesComponents = (ids: readonly string[]): boolean => {
-    for (const id of ids) {
-      if (id.includes("/")) return true
-      const n = src.base.getNode(id)
-      const old = entries.get(id)
-      if (n?.type === "instance" || old?.data.type === "instance") return true
-      if (typeof n?.at === "string") return true
-      if (lastInstanceCount === 0) continue
-      // Inside a component (old or new position)?
-      for (let p: LayoutNodeData | undefined = n, i = 0; p && i < 4096; i++) {
-        if (p.component) return true
-        p = typeof p.parent === "string" ? src.base.getNode(p.parent) : undefined
+  /** Re-reads every node through a freshly invalidated view and diffs it (see compute). */
+  const refresh = (inp: LayoutInput): LayoutResult => {
+    healthy = false
+    begin(inp)
+    // The view's caches may predate the change (header, libraries, load).
+    src.invalidate()
+    const gen = inp.measureText.generation
+    const remeasure = gen === undefined || gen !== textGeneration
+    const force = (e: Entry, n: LayoutNodeData) => isBound(n) || (remeasure && e.kind === "text")
+    // Instances whose expansion the view kept (everything it read still holds): their subtree
+    // is the same nodes, so only their bound / text entries are re-read (perf: a variable mode
+    // switch over 1k instances walks none of their 31k view nodes).
+    const kept = new Set<string>()
+    const forcedKept: string[] = []
+    if (isInstanceView(src)) {
+      const view = src
+      const mark = (e: Entry) => {
+        kept.add(e.id)
+        if (force(e, e.data)) forcedKept.push(e.id)
+        for (const c of e.children) mark(c)
       }
-      for (let p = old ?? null; p; p = p.parent) if (p.data.component) return true
+      for (const [t, st] of topStamp) {
+        const e = entries.get(t)
+        if (e?.alive && !kept.has(t) && view.stamp(t) === st) mark(e)
+      }
     }
-    return false
+    const ids: string[] = []
+    const listed = new Set<string>()
+    for (const id of entries.keys())
+      if (!kept.has(id)) {
+        listed.add(id)
+        ids.push(id)
+      }
+    let added = 0
+    const seen = new Set<string>()
+    const walk = (id: string) => {
+      if (seen.has(id) || kept.has(id)) return
+      seen.add(id)
+      if (!listed.has(id)) {
+        listed.add(id)
+        ids.push(id)
+        added++
+      }
+      for (const c of src.children(id)) walk(c)
+    }
+    for (const r of rootIds()) walk(r)
+    // Mostly new content (a document load, a large paste with a header change): building it
+    // fresh beats adopting it entry by entry.
+    if (added > entries.size) return rebuild(inp)
+    for (const id of forcedKept) ids.push(id)
+    // Re-index every top-level instance whose expansion may have been rebuilt (an unchanged
+    // dependency list is kept as is).
+    reindex = new Set()
+    return pass(ids, new Set(), force, kept)
   }
 
   const update = (inp: LayoutInput, dirty: DirtySet): LayoutResult => {
     if (!current) return compute(inp)
     if (dirty.header) return compute(inp)
+    healthy = false
     begin(inp)
-    const ids = [...dirty.nodes]
-    if (ids.length === 0) return current
-    if (touchesComponents(ids)) return compute(inp)
+    const dirtyIds = [...dirty.nodes]
+    if (dirtyIds.length === 0) {
+      if (isInstanceView(src)) src.invalidateInstances([], [])
+      healthy = true
+      return current
+    }
 
+    // M3: every top-level instance the edit may change is re-expanded and diffed node by node
+    // (its old and new subtrees join the dirty set). Editing a main re-lays out every instance.
+    const tops = affectedTops(dirtyIds)
+    if (isInstanceView(src)) src.invalidateInstances(tops, dirtyIds)
+    const ids = [...dirtyIds]
+    const explicit = new Set(dirtyIds)
+    const listed = new Set(dirtyIds)
+    const add = (id: string) => {
+      if (listed.has(id)) return
+      listed.add(id)
+      ids.push(id)
+    }
+    for (const t of tops) {
+      const old = entries.get(t)
+      if (old) {
+        const walk = (e: Entry) => {
+          add(e.id)
+          for (const c of e.children) walk(c)
+        }
+        walk(old)
+      }
+      if (src.getNode(t)) {
+        const seen = new Set<string>()
+        const walk = (id: string) => {
+          if (seen.has(id)) return
+          seen.add(id)
+          add(id)
+          for (const c of src.children(id)) walk(c)
+        }
+        walk(t)
+      }
+      reindex.add(t)
+    }
+    return pass(ids, explicit, null, null)
+  }
+
+  /**
+   * Diffs `ids` (explicitly dirty ones always restyle; others only when their data changed or
+   * `force` says so), re-syncs child lists, restyles, re-calculates the path-dirty Yoga trees
+   * and re-emits. `all` (refresh): every node is in `ids` except these (kept expansions) —
+   * every other top is re-indexed.
+   */
+  const pass = (
+    ids: readonly string[],
+    explicit: ReadonlySet<string>,
+    force: ((e: Entry, n: LayoutNodeData) => boolean) | null,
+    all: ReadonlySet<string> | null,
+  ): LayoutResult => {
+    const prevResult = current as LayoutResult
     const resync = new Set<Entry | null>()
     const restyle = new Set<Entry>()
     const seeds = new Set<Entry>()
     const parentEntry = (pid: unknown): Entry | null | undefined =>
       pid === null ? null : typeof pid === "string" ? entries.get(pid) : undefined
 
-    for (const id of ids) {
+    // Bound nodes below a changed theme pin are queued as changed (see below).
+    const queue = [...ids]
+    const rethemed = new Set<string>()
+    for (let qi = 0; qi < queue.length; qi++) {
+      const id = queue[qi] as string
       const old = entries.get(id)
       const n = src.getNode(id)
       if (!old) {
@@ -898,6 +1238,11 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
         continue
       }
       const prev = old.data
+      // Re-expanded instance nodes whose data did not change keep their layout state.
+      if (!explicit.has(id) && !rethemed.has(id) && shallowEqual(prev, n) && !force?.(old, n)) {
+        old.data = n
+        continue
+      }
       old.data = n
       const { kind, visibleSelf, absolute, gap, dir } = old
       readFlags(old)
@@ -913,6 +1258,20 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       seeds.add(old)
       if (old.kind !== kind || old.gap !== gap || old.dir !== dir)
         for (const c of old.children) restyle.add(c)
+      // A theme pin changes every bound value below (§10.4 rule 1): re-read the bound nodes
+      // of the subtree as changed (unbound ones read nothing from the theme).
+      if (!jsonEqualShallow(prev.theme, n.theme)) {
+        const all = (e: Entry) => {
+          for (const c of e.children) {
+            if (!rethemed.has(c.id) && isBound(c.data)) {
+              rethemed.add(c.id)
+              queue.push(c.id)
+            }
+            all(c)
+          }
+        }
+        all(old)
+      }
     }
 
     // Re-sync child lists: detach every affected Yoga child first, then rebuild and attach.
@@ -945,6 +1304,10 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     }
     for (const p of resync) if (p?.alive) attach(p)
     for (const e of fresh) if (!e.parent || !fresh.has(e.parent)) configure(e)
+    for (const e of fresh) if (isTop(e.id)) reindex.add(e.id)
+    if (all)
+      for (const e of entries.values())
+        if (e.alive && !all.has(e.id) && isTop(e.id)) reindex.add(e.id)
 
     // Dispose entries no longer attached anywhere.
     const removedIds: string[] = []
@@ -970,13 +1333,14 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     for (const e of fresh) mark(e)
 
     for (const r of roots) calc(r, only)
-    const out: Emit = { nodes: new Map(current.nodes), changed: new Set(), only }
+    const out: Emit = { nodes: new Map(prevResult.nodes), changed: new Set(), only }
     for (const id of removedIds) {
+      if (topDeps.has(id)) unindex(id)
       out.nodes.delete(id)
       out.changed.add(id)
     }
     for (const r of roots) emit(r, IDENTITY, true, false, out)
-    const order = resync.size > 0 ? paintOrder() : (current.order as string[])
+    const order = resync.size > 0 ? paintOrder() : (prevResult.order as string[])
     return finish(out.nodes, order, out.changed)
   }
 
@@ -1000,6 +1364,10 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       entries = new Map()
       roots = []
       current = null
+      healthy = false
+      own = null
+      topDeps.clear()
+      depTops.clear()
       config?.free()
       config = null
       Y = null
@@ -1011,3 +1379,19 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 const textEquals = (a: TextMetrics | undefined, b: TextMetrics | undefined): boolean =>
   a === b ||
   (!!a && !!b && a.w === b.w && a.h === b.h && a.lines === b.lines && a.baseline === b.baseline)
+
+/** Same own keys with identical (===) values. */
+function shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  if (a === b) return true
+  const ka = Object.keys(a)
+  if (ka.length !== Object.keys(b).length) return false
+  for (const k of ka) if (!Object.hasOwn(b, k) || a[k] !== b[k]) return false
+  return true
+}
+
+/** Equality of two theme pin maps (flat string records) or absent values. */
+function jsonEqualShallow(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (!isObject(a) || !isObject(b)) return false
+  return shallowEqual(a, b)
+}

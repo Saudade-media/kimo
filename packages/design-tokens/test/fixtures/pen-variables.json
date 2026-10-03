@@ -257,6 +257,20 @@
         { "value": "#0A0A0A14", "theme": { "mode": "light" } },
         { "value": "#FFFFFF24", "theme": { "mode": "dark" } }
       ]
+    },
+    "component": {
+      "type": "color",
+      "value": [
+        { "value": "#7C3AED", "theme": { "mode": "light" } },
+        { "value": "#A78BFA", "theme": { "mode": "dark" } }
+      ]
+    },
+    "component-soft": {
+      "type": "color",
+      "value": [
+        { "value": "#7C3AED14", "theme": { "mode": "light" } },
+        { "value": "#A78BFA24", "theme": { "mode": "dark" } }
+      ]
     }
   },
   "themes": { "mode": ["light", "dark"] }

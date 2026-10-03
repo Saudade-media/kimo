@@ -7,12 +7,13 @@
  * pan (space-drag, middle mouse, wheel), zoom (⌘/ctrl-wheel, pinch, keys) and canvas commands.
  * Every document edit goes through `store.apply` with the host origin; one gesture = one undo step.
  */
-import type { DocStore, LocalOrigin, Op, Tool, UiState } from "@kimo/editor-state"
+import { declaredProps, isLocated, type Libraries, locate, splitQualified } from "@kimo/core-schema"
+import type { DocStore, LocalOrigin, NodeData, Op, Tool, UiState } from "@kimo/editor-state"
 import { generateId } from "@kimo/editor-state"
 import {
+  createInstanceView,
   createResolver,
-  type ExpandedNodeSource,
-  expandInstances,
+  type InstanceView,
   type LayoutEngine,
   type LayoutInput,
   type LayoutNodeData,
@@ -28,8 +29,11 @@ import {
 import {
   type AnchorRef,
   type AssetSource,
+  type ComponentOutline,
   type CursorBadge,
+  type InstanceDropOverlay,
   OVERLAY_SPEC_M2,
+  OVERLAY_SPEC_M3,
   type Overlay,
   type PathAnchorPoint,
   type PathContour,
@@ -48,6 +52,7 @@ import {
   createPathOp,
   createShapeOp,
   createTextOp,
+  type DocReader,
   deleteOps,
   dropParent,
   duplicateOps,
@@ -71,6 +76,8 @@ import type {
   CanvasError,
   CanvasHint,
   CanvasPointerInfo,
+  ComponentDomOverlay,
+  ComponentDropTarget,
   IconPickerRequest,
   IconSpec,
   ImagePlacement,
@@ -201,6 +208,16 @@ export interface ControllerOptions {
   /** Image tool without a placement yet: the host opens the file picker. */
   onPickImage?: () => void
   toolStore?: CanvasToolStore
+  // --- M3 ---
+  /** Loaded libraries by alias (read on every view rebuild; see {@link CanvasController.setLibraries}). */
+  libraries?: () => Libraries
+  /**
+   * Rewrites an op group before it is applied (edits on composite instance ids become
+   * overrides; the shell's `session.route`). Null refuses the edit (the router reports why).
+   */
+  route?: (ops: readonly Op[]) => readonly Op[] | null
+  /** The overlay (selection, hover, layout) was recomputed: the host re-reads its DOM overlays. */
+  onOverlayChange?: () => void
 }
 
 type Drag =
@@ -311,8 +328,10 @@ export class CanvasController {
   readonly engine: LayoutEngine
   private readonly opts: ControllerOptions
 
-  private src: ExpandedNodeSource
+  private src: InstanceView
   private viewSrc: NodeSource
+  /** Read access through the expanded view (composite ids resolve; selection/hit policy). */
+  readonly vdoc: DocReader
   private resolver: Resolver
   private header: ResolveHeader
   private layoutResult: LayoutResult | null = null
@@ -356,13 +375,53 @@ export class CanvasController {
     this.renderer = opts.renderer
     this.engine = opts.engine
     this.header = this.readHeader()
-    this.src = expandInstances(this.store, {})
-    this.resolver = createResolver(() => this.header, this.src)
+    this.src = this.makeView()
+    this.resolver = this.makeResolver()
+    this.vdoc = {
+      getNode: (id: string) => this.src.getNode(id) as NodeData | undefined,
+      children: (parent: string | null) => this.src.children(parent) as string[],
+      hasNode: (id: string) => this.src.getNode(id) !== undefined,
+      nodeIds: () => this.store.nodeIds(),
+    } as DocReader
     // The renderer reads through this view so the node being text-edited draws empty (the
     // overlay textarea shows its text) while layout keeps measuring the real content.
     this.viewSrc = {
       getNode: (id) => (this.editingNode?.id === id ? this.editingNode.data : this.src.getNode(id)),
       children: (parent, at) => this.src.children(parent, at),
+    }
+  }
+
+  private makeView(): InstanceView {
+    return createInstanceView(this.store, {
+      libraries: this.opts.libraries?.() ?? {},
+      header: () => this.header as never,
+    })
+  }
+
+  private makeResolver(): Resolver {
+    return createResolver(() => this.header, this.src, {
+      libraries: this.opts.libraries?.() ?? {},
+    })
+  }
+
+  /** The shared expanded view (composite ids `<instance>/<IdPath>`), current after a flush. */
+  get expanded(): InstanceView {
+    return this.src
+  }
+
+  /** Linked libraries changed (loaded, re-read, unlinked): rebuild the view and re-lay out. */
+  setLibraries(): void {
+    this.src = this.makeView()
+    this.resolver = this.makeResolver()
+    if (this.el) {
+      this.renderer.setDocument({
+        nodes: this.viewSrc,
+        header: () => this.header,
+        resolve: this.resolver,
+        assets: this.opts.assets,
+      })
+      this.fullPending = true
+      this.schedule()
     }
   }
 
@@ -376,17 +435,23 @@ export class CanvasController {
   }
 
   private readHeader(): ResolveHeader {
-    const d = this.store.toDocument()
+    const d = this.store.toHeader()
     this.manifest = d.assets
     const h: ResolveHeader = {}
     if (d.variables) h.variables = d.variables
     if (d.themes) h.themes = d.themes
     if (d.imports) h.imports = d.imports
+    this.lastImports = d.imports as Record<string, string> | undefined
     return h
   }
 
   private input(): LayoutInput {
-    return { nodes: this.src, resolve: this.resolver, measureText: this.renderer.textMeasurer() }
+    return {
+      nodes: this.src,
+      expanded: this.src,
+      resolve: this.resolver,
+      measureText: this.renderer.textMeasurer(),
+    }
   }
 
   // --- lifecycle ----------------------------------------------------------------------------
@@ -489,7 +554,7 @@ export class CanvasController {
     if (full || header) {
       this.computeFull()
     } else {
-      this.src.invalidate()
+      // The engine re-expands only the instances the edit affects (its dependency index).
       this.resolver.invalidate()
       try {
         this.layoutResult = this.engine.update(this.input(), { nodes: ids })
@@ -502,7 +567,7 @@ export class CanvasController {
       this.renderer.setLayout(this.layoutResult)
       this.opts.onLayout?.(this.layoutResult)
     }
-    if (this.editing?.id && !this.store.hasNode(this.editing.id)) this.cancelText()
+    if (this.editing?.id && !this.src.getNode(this.editing.id)) this.cancelText()
     this.syncPathEdit()
     this.updateOverlay()
   }
@@ -586,8 +651,253 @@ export class CanvasController {
       resize: this.resizeView,
       cursorBadge: this.cursorBadge ?? (!busy && this.gridVisible() ? this.pixelBadge : null),
     }
+    // M3 (boards 02c / 11 / 12 / 13): violet identity for mains and instances.
+    const comp = this.componentOverlay(overlay.selection, overlay.hovered)
+    overlay.selectionTone = comp.tone
+    overlay.componentOutlines = comp.outlines
+    overlay.instanceDrop = this.dropPreview
     this.renderer.setOverlay(overlay)
     this.updateHint(m !== null)
+    this.opts.onOverlayChange?.()
+  }
+
+  /** `imports` of the last header read (kept by {@link readHeader}). */
+  private headerImports(): Record<string, string> | undefined {
+    return this.lastImports
+  }
+  private lastImports: Record<string, string> | undefined = undefined
+
+  /** Display name of a component QId (local id or `alias:id`). */
+  private componentName(qid: string): string {
+    const { alias, name } = splitQualified(qid)
+    const n =
+      alias === null
+        ? this.store.getNode(name)
+        : (this.opts.libraries?.()[alias]?.nodes as Record<string, NodeData> | undefined)?.[name]
+    return typeof n?.name === "string" && n.name ? n.name : qid
+  }
+
+  /**
+   * M3 DOM overlays (contract {@link ComponentDomOverlay}, positions `OVERLAY_SPEC_M3.dom`):
+   * CanvasLabel above the selected / hovered nested main or instance (root ones carry the
+   * artboard label), SlotBadges under the slot outlines of a single selected main or instance,
+   * and the SlotQuickInsert chips of the first slot with suggestions under a selected main.
+   * Screen CSS px for the current viewport.
+   */
+  componentDom(): ComponentDomOverlay {
+    const out: {
+      labels: ComponentDomOverlay["labels"][number][]
+      slots: ComponentDomOverlay["slots"][number][]
+      quickInsert: ComponentDomOverlay["quickInsert"]
+    } = { labels: [], slots: [], quickInsert: null }
+    const layout = this.layoutResult
+    if (!layout || this.editing || this.pen) return out
+    const { selection, hovered, viewport: v } = this.ui.getState()
+    if (selection.length > 50) return out
+    const dom = OVERLAY_SPEC_M3.dom
+    const sx = (x: number) => (x - v.x) * v.zoom
+    const sy = (y: number) => (y - v.y) * v.zoom
+    const ids = hovered && !selection.includes(hovered) ? [...selection, hovered] : selection
+    for (const id of ids) {
+      const role = this.componentRole(id)
+      const n = role ? this.src.getNode(id) : undefined
+      const box = layout.nodes.get(id)
+      if (!role || !n || !box?.visible || n.parent === null || n.parent === undefined) continue
+      let text: string
+      if (role === "main") {
+        const real = this.store.getNode(id)
+        text = typeof real?.name === "string" && real.name ? real.name : "Component"
+        if (real?.type === "instance" && typeof real.of === "string")
+          text = `${text} · from ${this.componentName(real.of)}`
+      } else text = this.componentName(this.src.origin(id)?.instance?.of ?? "")
+      let root = id
+      for (let p = this.src.getNode(root)?.parent; typeof p === "string"; ) {
+        root = p
+        p = this.src.getNode(p)?.parent
+      }
+      const rootBox = layout.nodes.get(root)
+      // Root labels sit 22 px above the root (CanvasHost LABEL_OFFSET); a nested label within
+      // that band of the root's top edge would collide with it.
+      const covers =
+        rootBox && Math.abs((box.world.y - rootBox.world.y) * v.zoom) < 22 ? root : null
+      out.labels.push({
+        id,
+        kind: role === "main" ? "component" : "instance",
+        text,
+        screen: { x: sx(box.world.x), y: sy(box.world.y) - dom.nestedLabelOffset },
+        covers,
+      })
+    }
+    const sel = selection.length === 1 ? (selection[0] as string) : null
+    const role = sel ? this.componentRole(sel) : null
+    if (!sel || !role) return out
+    // Slot prop names of the selected component name their badges ("Slot · actions").
+    const store = this.store
+    const docScope = {
+      doc: {
+        nodes: lookupRecord((id) => store.getNode(id)),
+        imports: this.headerImports() ?? {},
+      },
+      libraries: this.opts.libraries?.() ?? {},
+    } as unknown as Parameters<typeof declaredProps>[0]
+    let slotProps: { path: string; name: string }[] = []
+    const real = this.store.getNode(sel)
+    const qid = role === "main" ? sel : String(this.src.origin(sel)?.instance?.of ?? real?.of ?? "")
+    const comp = role === "main" && real ? { alias: null, id: sel, node: real } : null
+    const located = comp ?? (qid ? locate(docScope, qid) : null)
+    if (located && isLocated(located))
+      slotProps = declaredProps(docScope, located)
+        .filter((p) => p.def.type === "slot")
+        .map((p) => ({ path: p.path, name: p.name }))
+    const prefix = role === "main" ? "" : `${sel}/`
+    const spec = OVERLAY_SPEC_M3.slot
+    const comp2 = this.componentOverlay(selection, null)
+    for (const o of comp2.outlines) {
+      if (o.role !== "slot") continue
+      const b = layout.nodes.get(o.id)
+      const n = this.src.getNode(o.id)
+      if (!b?.visible || !n) continue
+      const key = prefix && o.id.startsWith(prefix) ? o.id.slice(prefix.length) : o.id
+      const name =
+        slotProps.find((p) => p.path === key)?.name ??
+        (typeof n.name === "string" && n.name ? n.name : "slot")
+      const left = sx(b.world.x + spec.dx)
+      const bottom = sy(b.world.y + spec.dy + b.world.h)
+      out.slots.push({
+        id: o.id,
+        name,
+        screen: { x: left, y: bottom + dom.slotBadge.gapBelowOutline },
+      })
+      if (role === "main" && !out.quickInsert && typeof n.slot === "object" && n.slot !== null) {
+        const suggested = (n.slot as { suggested?: unknown }).suggested
+        const list = Array.isArray(suggested)
+          ? suggested.filter((q): q is string => typeof q === "string")
+          : []
+        const mb = layout.nodes.get(sel)
+        if (list.length && mb) {
+          out.quickInsert = {
+            slot: o.id,
+            items: list.slice(0, 2).map((q) => ({ of: q, name: this.componentName(q) })),
+            more: Math.max(0, list.length - 2),
+            screen: {
+              x: sx(mb.world.x) + dom.quickInsert.dx,
+              y: sy(mb.world.y + mb.world.h) + dom.quickInsert.dy,
+            },
+          }
+        }
+      }
+    }
+    return out
+  }
+
+  // --- M3: component identity overlay -------------------------------------------------------
+
+  private compCache: {
+    selection: readonly string[]
+    layout: LayoutResult | null
+    tone: "selection" | "component"
+    base: ComponentOutline[]
+  } | null = null
+
+  private dropPreview: InstanceDropOverlay | null = null
+
+  /** Board 13 drop feedback (insertion bar in a slot / replace target box). */
+  previewComponentDrop(target: ComponentDropTarget | null): void {
+    let next: InstanceDropOverlay | null = null
+    const layout = this.layoutResult
+    if (target?.kind === "replace")
+      next = { kind: "replace", targetId: `${target.instance}/${target.path}` }
+    else if (target?.kind === "slot" && layout) {
+      const slotId = `${target.instance}/${target.path}`
+      const box = layout.nodes.get(slotId)?.world
+      const n = this.src.getNode(slotId)
+      if (box && n) {
+        const lay = (typeof n.layout === "object" && n.layout !== null ? n.layout : {}) as {
+          pad?: unknown
+          gap?: unknown
+        }
+        const pad = this.resolver.value(slotId, lay.pad)
+        const [pt, pr, , pl] = Array.isArray(pad)
+          ? pad.length === 2
+            ? [pad[0], pad[1], pad[0], pad[1]]
+            : [pad[0], pad[1], pad[2], pad[3]]
+          : [pad, pad, pad, pad]
+        const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0)
+        const gap = num(this.resolver.value(slotId, lay.gap))
+        const kids = this.src.children(slotId)
+        const last = kids.length ? layout.nodes.get(kids[kids.length - 1] as string)?.world : null
+        const y = last ? last.y + last.h + gap / 2 : box.y + num(pt)
+        next = {
+          kind: "slot",
+          slotId,
+          bar: { x: box.x + num(pl), y, w: Math.max(0, box.w - num(pl) - num(pr)) },
+        }
+      }
+    }
+    const prev = this.dropPreview
+    if (JSON.stringify(prev) === JSON.stringify(next)) return
+    this.dropPreview = next
+    this.updateOverlay()
+    this.renderer.requestFrame()
+  }
+
+  /** A main (local component root, also derived) or an instance, by view id. */
+  componentRole(id: string): "main" | "instance" | null {
+    // The view emits an expanded instance as its component's root shape: ask its origin.
+    const real = this.src.isVirtual(id) ? undefined : this.store.getNode(id)
+    if (real && real.component !== undefined && real.component !== false) return "main"
+    return this.src.origin(id)?.instance ? "instance" : null
+  }
+
+  /**
+   * Selection tone + identity outlines (renderer `ComponentOutline`): the hovered main/instance,
+   * the instance that holds a selected expanded child, and the slot frames of a selected
+   * main/instance (dashed; soft fill when empty).
+   */
+  private componentOverlay(
+    selection: readonly string[],
+    hovered: string | null,
+  ): { tone: "selection" | "component"; outlines: ComponentOutline[] } {
+    const layout = this.layoutResult
+    let c = this.compCache
+    if (!c || c.selection !== selection || c.layout !== layout) {
+      const base: ComponentOutline[] = []
+      const roles = selection.map((id) => this.componentRole(id))
+      const tone =
+        selection.length > 0 && roles.every((r) => r !== null) ? "component" : "selection"
+      const seen = new Set<string>()
+      for (const id of selection) {
+        // Inside an instance: its outline stays visible (board 11).
+        const path = pathOf(this.vdoc, id)
+        const o = this.ownerOf(path)
+        if (o >= 0 && o < path.length - 1 && !seen.has(path[o] as string)) {
+          seen.add(path[o] as string)
+          base.push({ id: path[o] as string, role: "instance" })
+        }
+      }
+      if (selection.length === 1 && roles[0]) {
+        let budget = 2000
+        const walk = (id: string) => {
+          for (const k of this.src.children(id)) {
+            if (--budget < 0) return
+            const n = this.src.getNode(k)
+            if (!n || n.visible === false) continue
+            if (n.type === "frame" && typeof n.slot === "object" && n.slot !== null)
+              base.push({ id: k, role: "slot", empty: this.src.children(k).length === 0 })
+            walk(k)
+          }
+        }
+        walk(selection[0] as string)
+      }
+      c = { selection, layout, tone, base }
+      this.compCache = c
+    }
+    const outlines = c.base
+    if (hovered) {
+      const r = this.componentRole(hovered)
+      if (r) return { tone: c.tone, outlines: [...outlines, { id: hovered, role: r }] }
+    }
+    return { tone: c.tone, outlines }
   }
 
   // --- M2: hints, grid, measuring -----------------------------------------------------------
@@ -806,7 +1116,10 @@ export class CanvasController {
   /** Applies one op group as one undo step. */
   apply(ops: readonly Op[], label: string): boolean {
     if (!ops.length) return false
-    const r = this.store.apply(ops, { origin: this.opts.origin, label })
+    const routed = this.opts.route ? this.opts.route(ops) : ops
+    if (!routed) return false
+    if (!routed.length) return true
+    const r = this.store.apply(routed, { origin: this.opts.origin, label })
     if (!r.ok) {
       this.report({ kind: "op", message: r.errors.map((e) => e.message).join("; ") })
       return false
@@ -815,9 +1128,26 @@ export class CanvasController {
   }
 
   private gesture(label: string): Gesture {
-    return startGesture(this.store, this.opts.origin, label, (message) =>
+    const g = startGesture(this.store, this.opts.origin, label, (message) =>
       this.report({ kind: "op", message }),
     )
+    const route = this.opts.route
+    if (!route) return g
+    // Gesture steps on instance content go through the M3 router too (overrides, not ops).
+    return {
+      get applied() {
+        return g.applied
+      },
+      get done() {
+        return g.done
+      },
+      set: (ops, stepLabel) => {
+        const routed = route(ops)
+        return routed ? g.set(routed, stepLabel) : false
+      },
+      cancel: () => g.cancel(),
+      end: () => g.end(),
+    }
   }
 
   // --- size ---------------------------------------------------------------------------------
@@ -866,7 +1196,7 @@ export class CanvasController {
   /** Real (stored) node for an expanded id: synthetic ids map to their top-level instance. */
   private real(id: string): string {
     let cur = id
-    while (this.src.isSynthetic(cur)) {
+    while (this.src.isVirtual(cur)) {
       const p = this.src.getNode(cur)?.parent
       if (typeof p !== "string") break
       cur = p
@@ -881,6 +1211,39 @@ export class CanvasController {
       if (!out.includes(r)) out.push(r)
     }
     return out
+  }
+
+  /** View ids under `p` (composite ids inside instances), top-most first. */
+  private viewHits(p: Point): string[] {
+    const out: string[] = []
+    for (const id of this.renderer.hitTest(p, { tolerance: HIT_TOLERANCE }))
+      if (!out.includes(id)) out.push(id)
+    return out
+  }
+
+  /**
+   * The real top-level instance that owns view id `id` (composite ids and slot content), or
+   * null when `id` is outside every instance expansion. Its index in `path` is returned too.
+   */
+  private ownerOf(path: readonly string[]): number {
+    const j = path.findIndex((id) => this.src.isVirtual(id))
+    return j > 0 ? j - 1 : -1
+  }
+
+  /**
+   * Click policy (board 11, contract `InstanceHitPolicy`): like groups, a click selects the
+   * top-level instance; once something inside it is selected (double-click / ⌘-click entered
+   * it), clicks keep that depth among its expanded children (composite ids).
+   */
+  private pick(hit: string, selection: readonly string[], deep: boolean): string {
+    const target = pickTarget(this.vdoc, hit, selection, deep)
+    if (deep) return target
+    const path = pathOf(this.vdoc, target)
+    const o = this.ownerOf(path)
+    if (o < 0 || o === path.length - 1) return target
+    const owner = path[o] as string
+    const entered = selection.some((s) => s !== owner && pathOf(this.vdoc, s).includes(owner))
+    return entered ? target : owner
   }
 
   private selectionScreenBox(): Rect | null {
@@ -1158,7 +1521,7 @@ export class CanvasController {
     }
 
     const artboard = this.artboardOf(e.target)
-    const hit = artboard ? [artboard] : this.hits(p)
+    const hit = artboard ? [artboard] : this.viewHits(p)
     const deepest = hit[0]
     const before = ui.selection
     if (!deepest) {
@@ -1175,7 +1538,7 @@ export class CanvasController {
       }
       return
     }
-    const target = artboard ?? pickTarget(this.store, deepest, before, e.metaKey || e.ctrlKey)
+    const target = artboard ?? this.pick(deepest, before, e.metaKey || e.ctrlKey)
     const isRoot = this.store.getNode(target)?.parent === null
     // Dragging on an unselected root frame's background draws a marquee over its children.
     const scope =
@@ -1243,9 +1606,9 @@ export class CanvasController {
     const artboard = this.artboardOf(target)
     let id: string | null = artboard
     if (!id) {
-      const hit = this.hits(p)[0]
-      id = hit ? pickTarget(this.store, hit, ui.selection, false) : null
-      if (ui.tool === "text" && id && this.store.getNode(id)?.type !== "text") id = null
+      const hit = this.viewHits(p)[0]
+      id = hit ? this.pick(hit, ui.selection, false) : null
+      if (ui.tool === "text" && id && this.src.getNode(id)?.type !== "text") id = null
     }
     if (id !== ui.hovered) ui.setHovered(id)
   }
@@ -1572,22 +1935,24 @@ export class CanvasController {
     if (this.isOverlayTarget(e.target) || this.ui.getState().tool !== "select") return
     if (this.pathEdit || this.armed) return
     const p = this.local(e)
-    const hit = this.hits(p)[0]
+    const hits = this.viewHits(p)
+    const hit = hits[0]
     if (!hit) return
     const ui = this.ui.getState()
     const sel = ui.selection.length === 1 ? ui.selection[0] : undefined
-    const selType = sel ? this.store.getNode(sel)?.type : undefined
-    if (sel && (selType === "text" || selType === "path") && this.hits(p).includes(sel)) {
+    const selType = sel ? this.src.getNode(sel)?.type : undefined
+    if (sel && (selType === "text" || selType === "path") && hits.includes(sel)) {
       if (selType === "text") this.beginTextEdit(sel)
-      else this.editPath(sel)
+      else if (!this.src.isVirtual(sel)) this.editPath(sel)
       return
     }
-    const next = enterTarget(this.store, hit, sel)
+    // Board 11: double-click enters an instance one level at a time (composite ids), like groups.
+    const next = enterTarget(this.vdoc, hit, sel)
     ui.select([next])
-    const t = next === hit ? this.store.getNode(hit)?.type : undefined
+    const t = next === hit ? this.src.getNode(hit)?.type : undefined
     if (t === "text") this.beginTextEdit(hit)
-    // Board 10 #6: double-click a vector to edit it.
-    else if (t === "path") this.editPath(hit)
+    // Board 10 #6: double-click a vector to edit it (not inside an instance: detach first).
+    else if (t === "path" && !this.src.isVirtual(hit)) this.editPath(hit)
   }
 
   private onWheel(e: WheelEvent): void {
@@ -1686,19 +2051,21 @@ export class CanvasController {
     if (key === "-" || key === "_") return run(() => this.zoomTo(ui.viewport.zoom / 2))
     if (key === "delete" || key === "backspace") {
       if (!ui.selection.length) return false
-      return run(() => this.apply(deleteOps(this.store, ui.selection), "Delete"))
+      // Composite ids delete through the router (hidden instead, board 15).
+      return run(() => this.apply(deleteOps(this.vdoc, ui.selection), "Delete"))
     }
     if (key === "enter" && ui.selection.length === 1) {
       const id = ui.selection[0] as string
-      if (this.store.getNode(id)?.type === "text") return run(() => this.beginTextEdit(id))
-      if (this.store.getNode(id)?.type === "path") return run(() => this.editPath(id))
-      const first = this.store.children(id)[0]
+      const t = this.src.getNode(id)?.type
+      if (t === "text") return run(() => this.beginTextEdit(id))
+      if (t === "path" && !this.src.isVirtual(id)) return run(() => this.editPath(id))
+      const first = this.src.children(id)[0]
       if (first) return run(() => ui.select([first]))
       return false
     }
     if (key === "escape" && ui.selection.length) {
       // Escape selects the parent (Figma); at the top level it clears the selection.
-      const parents = [...new Set(ui.selection.map((id) => this.store.getNode(id)?.parent ?? null))]
+      const parents = [...new Set(ui.selection.map((id) => this.src.getNode(id)?.parent ?? null))]
       e.preventDefault()
       if (parents.length === 1 && typeof parents[0] === "string") ui.select([parents[0]])
       else ui.clearSelection()
@@ -2467,7 +2834,7 @@ export class CanvasController {
     if (this.editing) this.commitText(null)
     let state: TextEditState
     if (id) {
-      const n = this.store.getNode(id)
+      const n = this.src.getNode(id) as LayoutNodeData | undefined
       const l = this.layoutResult?.nodes.get(id)
       if (!n || !l || n.type !== "text" || n.locked === true) return
       const input = resolveText(id, n, this.resolver)
@@ -2514,7 +2881,7 @@ export class CanvasController {
     this.closeText()
     const layout = this.layoutResult
     if (s.id) {
-      if (!this.store.hasNode(s.id)) return
+      if (!this.src.getNode(s.id)) return
       if (!text.trim()) this.apply([{ op: "delete", id: s.id }], "Delete text")
       else if (text !== s.value)
         this.apply([{ op: "update", id: s.id, set: { content: text } }], "Edit text")
@@ -2557,4 +2924,21 @@ export class CanvasController {
     this.flush()
     return this.renderer.exportRaster(nodeId, { scale })
   }
+}
+
+/** A read-only record over a node getter (the component helpers read `doc.nodes[id]`). */
+function lookupRecord(get: (id: string) => unknown): Record<string, unknown> {
+  return new Proxy(
+    {},
+    {
+      get: (_t, k) => (typeof k === "string" ? get(k) : undefined),
+      has: (_t, k) => typeof k === "string" && get(k) !== undefined,
+      getOwnPropertyDescriptor: (_t, k) => {
+        const v = typeof k === "string" ? get(k) : undefined
+        return v === undefined
+          ? undefined
+          : { value: v, enumerable: true, configurable: true, writable: false }
+      },
+    },
+  )
 }

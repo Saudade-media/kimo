@@ -1,0 +1,102 @@
+/*
+ * SlotBadge (kMGG0): row, gap 4, padding [2, 8, 2, 6], alignItems center, fill component,
+ * radius-pill; Icon (PCa4i) square-dashed 10 text-inverse; Label (VGs3v) mono 11 / 500 text-inverse.
+ * SlotQuickInsert (AJSok): row, gap 4, padding [3, 10, 3, 6], alignItems center, fill bg-subtle,
+ * stroke 1 border (inside), radius-pill; Icon (B93PCT) plus 12 text-secondary; Glyph (BSq4s)
+ * component 12 component; Label (x68rp1) sans 11 / 500 text-primary.
+ * More (board 12 nev4I): padding [3, 8], label text-secondary.
+ */
+.kimo-slot-badge {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-component);
+  color: var(--kimo-text-inverse);
+  white-space: nowrap;
+}
+
+.kimo-slot-badge__icon {
+  display: inline-flex;
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+
+.kimo-slot-badge__label {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-slot-quick-insert {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 3px 10px 3px 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-primary);
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-slot-quick-insert:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-slot-quick-insert:focus-visible {
+  outline: 2px solid var(--kimo-component);
+  outline-offset: 2px;
+}
+
+.kimo-slot-quick-insert--more {
+  padding: 3px 8px;
+}
+
+.kimo-slot-quick-insert__icon,
+.kimo-slot-quick-insert__glyph {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-slot-quick-insert__icon {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-slot-quick-insert__glyph {
+  color: var(--kimo-component);
+}
+
+.kimo-slot-badge__icon > svg,
+.kimo-slot-quick-insert__icon > svg,
+.kimo-slot-quick-insert__glyph > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-slot-quick-insert__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-slot-quick-insert--more .kimo-slot-quick-insert__label {
+  color: var(--kimo-text-secondary);
+}

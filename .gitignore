@@ -6,3 +6,4 @@ coverage/
 *.tsbuildinfo
 target/
 .env
+apps/web/e2e/.dist/

@@ -2463,6 +2463,9 @@
             },
             "default": {
               "type": "string"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
             }
           },
           "additionalProperties": false
@@ -2484,6 +2487,9 @@
             },
             "default": {
               "type": "boolean"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
             }
           },
           "additionalProperties": false
@@ -2501,6 +2507,9 @@
             },
             "default": {
               "$ref": "#/$defs/QId"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
             }
           },
           "additionalProperties": false
@@ -2526,6 +2535,9 @@
                 "^.*$": {}
               },
               "minProperties": 1
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
             }
           },
           "additionalProperties": false
@@ -2540,6 +2552,9 @@
             },
             "target": {
               "$ref": "#/$defs/IdPath"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
             }
           },
           "additionalProperties": false

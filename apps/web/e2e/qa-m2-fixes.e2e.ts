@@ -220,11 +220,13 @@ export const scenarios: Scenario[] = [
         ).includes("./assets/"),
       )
       const r = await page.evaluate(async (m) => {
-        const files = (await import(/* @vite-ignore */ m.files)) as {
+        const files = ((window as unknown as { __kimoModules?: Record<string, unknown> })
+          .__kimoModules?.[m.files] ?? (await import(/* @vite-ignore */ m.files))) as {
           exportKimo(s: unknown, n: string): string
           importKimoFile(t: string, n: string): Promise<{ id: string; missingAssets: string[] }>
         }
-        const assets = (await import(/* @vite-ignore */ m.assets)) as {
+        const assets = ((window as unknown as { __kimoModules?: Record<string, unknown> })
+          .__kimoModules?.[m.assets] ?? (await import(/* @vite-ignore */ m.assets))) as {
           createAssetStore(id: string): { keys(): Promise<string[]>; dispose(): void }
         }
         const k = (window as unknown as { __kimo: M2Hook }).__kimo

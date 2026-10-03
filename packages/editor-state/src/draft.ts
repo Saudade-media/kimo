@@ -434,7 +434,7 @@ export class Draft {
    * The candidate document (committed state + overlay) for validation. Shares (frozen) node
    * objects with the store; do not mutate.
    */
-  toDocument(): KimoDocument {
+  toDocument(withNodes = true): KimoDocument {
     const doc: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(this.base.header())) setOwn(doc, k, v)
     for (const [k, v] of this.header) {
@@ -457,6 +457,7 @@ export class Draft {
     if (Object.keys(vars).length > 0 || (this.base.hasVariables() && !this.variablesTouched)) {
       doc.variables = vars
     }
+    if (!withNodes) return doc as unknown as KimoDocument
     // Plain assignment is much faster than defineProperty; only "__proto__" needs the latter.
     const nodes: Record<string, unknown> = {}
     const put = (id: string, n: unknown) => {

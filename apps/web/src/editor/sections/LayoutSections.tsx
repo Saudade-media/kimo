@@ -22,6 +22,7 @@ import { featureOps } from "../../lib/header"
 import { useBus } from "../../lib/hooks"
 import { Icon } from "../../lib/icons"
 import { NumberField, ToggleRow } from "../fields"
+import { SectionTitle } from "../m3/overrides"
 import { type Sel, usePanel } from "../panel-context"
 import {
   formatNumber,
@@ -86,7 +87,7 @@ export function LayerSection({ sel }: { sel: readonly Sel[] }) {
     editor.apply(setOps(ids, "blend", blendValue(b)), "Set blend mode")
   }
   return (
-    <PropSection title="Layer">
+    <PropSection title={<SectionTitle label="Layer" fields={["opacity", "blend", "visible"]} />}>
       <div className="rp-body">
         <PropRow className="rp-row">
           {/* Blend mode (rx2Qn): Select look; opens BlendModeMenu (board 09 EdigD) */}
@@ -239,7 +240,14 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
   const absolute = shared(nodes, (n) => n.position === "absolute")
 
   return (
-    <PropSection title="Position">
+    <PropSection
+      title={
+        <SectionTitle
+          label="Position"
+          fields={["x", "y", "w", "h", "rotation", "position", "flipX", "flipY"]}
+        />
+      }
+    >
       <div className="rp-body">
         <PropRow className="rp-row">
           <NumberField
@@ -530,7 +538,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
     }
     return (
       <PropSection
-        title="Auto layout"
+        title={<SectionTitle label="Auto layout" fields={["layout"]} />}
         action={{
           label: mixed ? "Add auto layout to all" : "Add auto layout",
           icon: <Icon name="plus" size={14} />,
@@ -584,7 +592,7 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title="Auto layout"
+      title={<SectionTitle label="Auto layout" fields={["layout"]} />}
       action={{
         label: "Remove auto layout",
         icon: <Icon name="minus" size={14} />,

@@ -172,7 +172,7 @@ describe("instances (spec §9)", () => {
     })
     expect(l.box("a")).toEqual([0, 0, 30, 20])
     const codes = l.result.issues.map((i) => `${i.nodeId}:${i.code}`)
-    expect(codes).toContain("a:UNSUPPORTED_NODE")
+    expect(codes).toContain("a:INSTANCE_UNRESOLVED")
     expect(codes).toContain("self/self:CYCLE")
   })
   test("the expanded source is usable on its own (renderer/host)", () => {

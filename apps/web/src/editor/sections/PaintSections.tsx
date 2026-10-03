@@ -18,6 +18,7 @@ import {
 import { type MouseEvent, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { NumberField, ToggleRow } from "../fields"
+import { SectionTitle } from "../m3/overrides"
 import {
   type Sel,
   useAssetUrls,
@@ -353,7 +354,7 @@ export function FillSection({ sel }: { sel: readonly Sel[] }) {
     // Icon nodes: one solid color (`color`; absent = #000000).
     const color = shared(nodes, (n) => n.color ?? "#000000")
     return (
-      <PropSection title="Fill">
+      <PropSection title={<SectionTitle label="Fill" fields={["fill"]} />}>
         <div className="rp-body">
           {color === MIXED ? (
             <MixedRow name="Fill" />
@@ -374,7 +375,7 @@ export function FillSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title="Fill"
+      title={<SectionTitle label="Fill" fields={["fill"]} />}
       action={{ label: "Add fill", icon: <Icon name="plus" size={14} />, onClick: add.onClick }}
     >
       {(fill === MIXED || list.length > 0) && (
@@ -451,7 +452,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
     const some = nodes.some((n) => strokeObj(n.stroke) !== null)
     return (
       <PropSection
-        title="Stroke"
+        title={<SectionTitle label="Stroke" fields={["stroke"]} />}
         action={{ label: "Add stroke", icon: <Icon name="plus" size={14} />, onClick: add.onClick }}
       >
         {some && (
@@ -493,7 +494,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
 
   return (
     <PropSection
-      title="Stroke"
+      title={<SectionTitle label="Stroke" fields={["stroke"]} />}
       action={{ label: "Add stroke", icon: <Icon name="plus" size={14} />, onClick: add.onClick }}
     >
       <div className="rp-body">

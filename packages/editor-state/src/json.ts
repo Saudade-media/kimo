@@ -2,7 +2,10 @@
 
 /** Defines an own enumerable property (safe for keys such as `__proto__`). */
 export function setOwn(obj: object, key: string, value: unknown): void {
-  Object.defineProperty(obj, key, { value, enumerable: true, writable: true, configurable: true })
+  // Plain assignment is much faster; only the `__proto__` accessor needs defineProperty.
+  if (key === "__proto__")
+    Object.defineProperty(obj, key, { value, enumerable: true, writable: true, configurable: true })
+  else (obj as Record<string, unknown>)[key] = value
 }
 
 /** True for plain objects (not arrays, not null). */
@@ -27,27 +30,38 @@ export class NotJsonError extends TypeError {
  *   and `undefined` array items.
  */
 export function cloneJson<T>(value: T, path = ""): T {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return value
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new NotJsonError(path)
-    return value
+  // The path is only built for an error (perf: no string per property on the happy path).
+  const at: string[] = []
+  const fail = (): never => {
+    throw new NotJsonError(path + at.map((k) => `/${k}`).join(""))
   }
-  if (Array.isArray(value)) {
-    return value.map((v, i) => {
-      if (v === undefined) throw new NotJsonError(`${path}/${i}`)
-      return cloneJson(v, `${path}/${i}`)
-    }) as T
-  }
-  if (isPlainObject(value)) {
-    const out: Record<string, unknown> = {}
-    for (const k of Object.keys(value)) {
-      const v = value[k]
-      if (v === undefined) continue
-      setOwn(out, k, cloneJson(v, `${path}/${k}`))
+  const clone = (v: unknown): unknown => {
+    if (v === null || typeof v === "string" || typeof v === "boolean") return v
+    if (typeof v === "number") return Number.isFinite(v) ? v : fail()
+    if (Array.isArray(v)) {
+      const out = new Array(v.length)
+      for (let i = 0; i < v.length; i++) {
+        at.push(String(i))
+        if (v[i] === undefined) fail()
+        out[i] = clone(v[i])
+        at.pop()
+      }
+      return out
     }
-    return out as T
+    if (isPlainObject(v)) {
+      const out: Record<string, unknown> = {}
+      for (const k of Object.keys(v)) {
+        const x = v[k]
+        if (x === undefined) continue
+        at.push(k)
+        setOwn(out, k, clone(x))
+        at.pop()
+      }
+      return out
+    }
+    return fail()
   }
-  throw new NotJsonError(path)
+  return clone(value) as T
 }
 
 /** Freezes a JSON value recursively and returns it. */

@@ -1,0 +1,55 @@
+/*
+ * StatusPill: desing.pen 02c > StatusPill (SVobH), /Changed (n20iVc), /Missing (jwQVJ).
+ * frame: row, gap 5, padding [2, 8, 2, 6], alignItems center, radius-pill
+ *   ├ Dot   (dmG7C) ellipse 6 × 6
+ *   └ Label (tJyiu) sans 11 / 500
+ * linked: success-soft / success · changed: warning-soft / warning · missing: danger-soft / danger.
+ * Compact (board 13 MayJf / L9Gk5D): padding [1, 6, 1, 5]; the label keeps sans 11 (both
+ * instances override tJyiu fontSize to 11).
+ */
+.kimo-status-pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: var(--kimo-radius-pill);
+  white-space: nowrap;
+}
+
+.kimo-status-pill--linked {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
+.kimo-status-pill--changed {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
+.kimo-status-pill--missing {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.kimo-status-pill__dot {
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.kimo-status-pill__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-status-pill--compact {
+  padding: 1px 6px 1px 5px;
+}

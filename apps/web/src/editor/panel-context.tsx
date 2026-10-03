@@ -2,6 +2,7 @@
  * Shared state of the Design tab: the session, the undo-grouping editor, the document header
  * (variables), the asset store and the icon provider. Sections read it with {@link usePanel}.
  */
+import type { Theme } from "@kimo/core-schema"
 import type { NodeData } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
@@ -25,6 +26,11 @@ export interface PanelContextValue {
   layout: Bus<LayoutResult | null>
   assets: AssetStore | null
   icons: IconProvider | null
+  /**
+   * Effective theme of the single selected node (§10.4, its pins and its ancestors'); swatches
+   * of bindings resolve in it. Absent: the document defaults.
+   */
+  theme?: Theme
 }
 
 export const PanelContext = createContext<PanelContextValue | null>(null)
@@ -35,10 +41,10 @@ export function usePanel(): PanelContextValue {
   return v
 }
 
-/** Resolves a color binding for swatches (default theme). */
+/** Resolves a color binding for swatches, in the selection's effective theme. */
 export function useResolver(): (name: string) => string | null {
-  const { header } = usePanel()
-  return (name) => resolveColor(header, name)
+  const { header, theme } = usePanel()
+  return (name) => resolveColor(header, name, theme)
 }
 
 /**

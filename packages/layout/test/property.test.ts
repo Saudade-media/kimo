@@ -66,6 +66,65 @@ describe("layout properties", () => {
 })
 
 describe("incremental update", () => {
+  test("compute on a live engine (a refresh) equals a rebuild, then updates still agree", async () => {
+    // A live engine refreshes on compute (diffs every node, keeps Yoga state); its result and
+    // every following update must equal a fresh engine's full compute.
+    const inc = createLayoutEngine()
+    await inc.init()
+    const fresh = async (t: Table) => {
+      const f = createLayoutEngine()
+      await f.init()
+      const r = snapshot(f.compute(inputFor(t)))
+      f.dispose()
+      return r
+    }
+    await fc.assert(
+      fc.asyncProperty(
+        docs({ negativeGap: true, wrap: true }),
+        fc.array(fc.array(mutation, { minLength: 1, maxLength: 3 }), { maxLength: 4 }),
+        async (start, batches) => {
+          let table = start
+          expect(snapshot(inc.compute(inputFor(table)))).toEqual(await fresh(table))
+          for (const batch of batches) {
+            const dirty = new Set<string>()
+            for (const m of batch) {
+              const r = apply(table, m)
+              table = r.table
+              for (const id of r.dirty) dirty.add(id)
+            }
+            expect(snapshot(inc.update(inputFor(table), { nodes: dirty }))).toEqual(
+              await fresh(table),
+            )
+          }
+        },
+      ),
+      { numRuns: 300 },
+    )
+    inc.dispose()
+  }, 60_000)
+
+  test("a parent and its child swapped in one change (two moves) re-parent both", async () => {
+    const e = createLayoutEngine()
+    await e.init()
+    const r0 = { type: "frame", parent: null, order: "a2", x: 0, y: 0, w: 200, h: 200 } as const
+    const a: Table = {
+      r: r0,
+      g: { type: "group", parent: null, order: "a0", x: 70, y: 120 },
+      f: { type: "frame", parent: "g", order: "a1", x: 0, y: 0, w: 50, h: 40 },
+    }
+    const b: Table = {
+      r: r0,
+      f: { type: "frame", parent: "r", order: "a1", x: 0, y: 0, w: 50, h: 40 },
+      g: { type: "group", parent: "f", order: "a0", x: 5, y: 5 },
+    }
+    e.compute(inputFor(a))
+    // f's child list is rebuilt before f is re-attached under r: its entry still says g.
+    const r = e.update(inputFor(b), { nodes: ["g", "f"] })
+    expect(r.order).toEqual(["r", "f", "g"])
+    expect(r.issues).toEqual([])
+    e.dispose()
+  })
+
   test("update(dirty) yields the same layout as a full compute", async () => {
     const full = await eng()
     const inc = createLayoutEngine()

@@ -1,12 +1,14 @@
 /**
  * Layout contracts: M1 (ADR 0009); M2 additions (`NodeLayout.sizing`/`inFlow`/`content`,
- * ADR 0010). The engine turns the flat `.kimo` node table into boxes:
+ * ADR 0010); M3 (ADR 0011): instances are read through `@kimo/core-schema`
+ * `createExpandedView` — one shared view for layout, renderer and host (same composite ids
+ * `<instance>/<IdPath>`, §9.8), `LayoutInput.expanded`, `INSTANCE_UNRESOLVED`. The engine turns the flat `.kimo` node table into boxes:
  * Yoga for frames with `layout`, x/y for everything else, text sized through a
  * {@link TextMeasurer} that the renderer implements with CanvasKit Paragraph (ADR 0004 §2).
  *
  * No React, no DOM, no Yoga or CanvasKit types here (ADR 0004 §5): this file is the seam.
  */
-import type { KimoDocument, Libraries, Theme } from "@kimo/core-schema"
+import type { ExpandedView, KimoDocument, Libraries, Theme } from "@kimo/core-schema"
 
 // --- Input --------------------------------------------------------------------------------
 
@@ -56,11 +58,31 @@ export interface Resolver {
 
 /** Input of a full {@link LayoutEngine.compute}. */
 export interface LayoutInput {
+  /**
+   * The node table. M3: when {@link LayoutInput.expanded} is absent the engine wraps `nodes`
+   * in its own `createExpandedView` (today's `expandInstances` is the M1/M2 equivalent and is
+   * replaced by it); when present, `nodes` is ignored for reading instances.
+   */
   nodes: NodeSource
   /** Root ids to lay out (defaults to `nodes.children(null)`). */
   roots?: readonly string[]
   resolve: Resolver
   measureText: TextMeasurer
+  /**
+   * M3: the host's shared expanded view, also given to the renderer (`RenderScene.nodes`), the
+   * resolver and hit testing / layers. The engine reads every node (real and composite ids)
+   * through it and never builds a second one, so caches and ids agree. A `nodes` that already
+   * is an `ExpandedView` is used the same way.
+   *
+   * Prefer `createInstanceView(store, { libraries, header })` (this package): on `update` the
+   * engine itself calls `invalidateInstances(affected)` with the top-level instances the dirty
+   * ids may change (its dependency index of every expansion), so untouched instances keep
+   * their node objects and the renderer keeps their pictures; the host must NOT call
+   * `invalidate()` per edit (only before a full `compute`, which the engine also does). With a
+   * plain core-schema `createExpandedView`, the host calls `invalidate()` before every update
+   * (correct, but every instance re-expands lazily on the next read).
+   */
+  expanded?: ExpandedView
 }
 
 // --- Text measurement ---------------------------------------------------------------------
@@ -137,6 +159,12 @@ export interface TextMetrics {
  */
 export interface TextMeasurer {
   measure(text: TextMeasureInput, maxWidth: number | undefined): TextMetrics
+  /**
+   * Optional (perf): bumped whenever the same input may measure differently (a font arrived).
+   * A refreshing `compute` re-measures every text node only when it changed; without it every
+   * text node is re-measured on each `compute`.
+   */
+  readonly generation?: number
 }
 
 // --- Output -------------------------------------------------------------------------------
@@ -194,6 +222,9 @@ export interface NodeLayout {
 /** Sizing mode applied on one axis (`fit` is shown as "Hug" in the editor). */
 export type AppliedSizing = "fixed" | "fit" | "fill"
 
+/** M3: fallback size of an unresolved instance without `props.w`/`props.h` (house value, no design node). */
+export const INSTANCE_PLACEHOLDER_SIZE = { w: 100, h: 100 } as const
+
 /** Severity of a layout diagnostic. */
 export type LayoutIssueSeverity = "error" | "warning"
 
@@ -205,6 +236,13 @@ export type LayoutIssueCode =
   | "UNSUPPORTED_FEATURE"
   | "TEXT_MEASURE_FAILED"
   | "CYCLE"
+  /**
+   * M3: an instance whose component can't be expanded (missing, not a component, library not
+   * loaded, alias unknown). Reported once per instance (view id); the instance lays out as a
+   * placeholder sized by its `props.w`/`props.h`, else {@link INSTANCE_PLACEHOLDER_SIZE}.
+   * Instance cycles stay `CYCLE`.
+   */
+  | "INSTANCE_UNRESOLVED"
 
 /** A diagnostic. Layout never throws for document content; it reports and falls back. */
 export interface LayoutIssue {
@@ -241,6 +279,11 @@ export interface DirtySet {
 
 /** Keys whose change can affect geometry. Anything else is paint-only (renderer redraws). */
 export const LAYOUT_KEYS: ReadonlySet<string> = new Set([
+  // M3: instance fields re-expand the instance (its whole subtree may change).
+  "of",
+  "props",
+  "args",
+  "overrides",
   "type",
   "parent",
   "order",
@@ -293,3 +336,11 @@ export interface LayoutEngineOptions {
   /** Imported libraries by alias, for instances of `alias:id` components. */
   libraries?: Libraries
 }
+
+/*
+ * M3 Resolver note (no type change): `Resolver.theme(id)` and `Resolver.value(id, v)` accept
+ * composite ids. `createResolver(header, view, { libraries })` walks the expanded placement
+ * path through the view (component root pins, instance pins win axis by axis, §9.8) — pass
+ * the view as `nodes` or as `ResolverOptions.expanded` — and resolves the library-namespaced
+ * bindings (`alias:name`) the view writes into library content when `libraries` is given.
+ */

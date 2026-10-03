@@ -1,0 +1,268 @@
+/*
+ * Settings window (board 19 XmeDB) and its panes. Node values; see SettingsView.tsx / panes.tsx.
+ */
+.settings-window {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  background: var(--kimo-bg-app);
+  color: var(--kimo-text-primary);
+}
+
+/* Dialog (web): the 840 × 536 window frame. */
+.settings-window--dialog {
+  width: 840px;
+  height: 536px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  border-radius: var(--kimo-radius-md);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px 0 var(--kimo-shadow-strong);
+}
+
+/* Window (desktop): fills its own OS window, which is 840 × 536. */
+.settings-window--window {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Sidebar (h7qQD): 216, column, gap 2, padding [0, 12, 12, 12], bg-subtle, right stroke 1. */
+.settings-sidebar {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 216px;
+  height: 100%;
+  padding: 0 12px 12px 12px;
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset -1px 0 0 0 var(--kimo-border);
+}
+
+/* The tablist wrapper does not exist on the board: Nav items are Sidebar children. */
+.settings-nav {
+  display: contents;
+}
+
+/* Traffic Lights (L2zCG instance): 68 × 48, row, gap 8, padding [0, 0, 0, 4] (instance) so the
+   first light sits at x 16 (12 + 4), center y 24 → trafficLightPosition {16, 18}. */
+.settings-lights {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 68px;
+  height: 48px;
+  padding: 0 0 0 4px;
+  -webkit-app-region: drag;
+}
+
+/* Close / Minimize / Zoom ellipses: 12 × 12, stroke 0.5 #0000001F. */
+.settings-light {
+  box-sizing: border-box;
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px #0000001f;
+  appearance: none;
+  -webkit-app-region: no-drag;
+}
+.settings-light--close {
+  background: #ff5f57;
+  cursor: pointer;
+}
+.settings-light--close:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+.settings-light--minimize {
+  background: #febc2e;
+}
+.settings-light--zoom {
+  background: #28c840;
+}
+
+/* Nav · … (FN6V7 …): 32 tall, row, gap 10, padding [0, 10], center, radius-md. */
+.settings-nav-item {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+.settings-nav-item:hover:not(.settings-nav-item--active) {
+  background: var(--kimo-bg-hover);
+}
+.settings-nav-item:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+.settings-nav-item__icon {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--kimo-text-secondary);
+}
+.settings-nav-item__label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) */
+  white-space: nowrap;
+}
+
+/* Active (GDXwe): bg-muted, stroke 1 border, radius-pill; icon accent-text; label 600 primary. */
+.settings-nav-item--active {
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.settings-nav-item--active .settings-nav-item__icon {
+  color: var(--kimo-accent-text);
+}
+.settings-nav-item--active .settings-nav-item__label {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+/* Content (EHSmX): column, padding [0, 32, 24, 32], fill; scrolls when a pane is taller. */
+.settings-content {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  padding: 0 32px 24px 32px;
+  overflow-y: auto;
+}
+
+/* Title Bar (ahnDS): 56 tall, center; Title sans 16 / 600 text-primary. */
+.settings-title-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 100%;
+  height: 56px;
+  -webkit-app-region: drag;
+}
+.settings-title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-lg);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 19px; /* Pencil text box: round(16 × 1.21) */
+}
+
+.settings-content .kimo-setting-row {
+  flex: none;
+}
+
+/* Value (aRsQQ …): mono 11 text-secondary. */
+.settings-value {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box for JetBrains Mono 11 */
+  white-space: nowrap;
+}
+
+/* Button instances (s0cL7 …): h 28, padding [0, 12], label sans 12 (Secondary / Ghost). */
+.kimo-button.settings-button {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+}
+
+/* Select instances: fixed widths per row (120 / 148 / 104 / 96). */
+.kimo-select.settings-select {
+  flex: none;
+}
+
+/* Identity (dRIag): row, gap 12, padding [4, 0, 12, 0], center, bottom stroke 1 border. */
+.settings-identity {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 4px 0 12px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+/* Logo (kWmeh): 40 × 40, accent, radius-pill; Mark "k" sans 22 / 700, on-accent, -0.5. */
+.settings-identity__logo {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+}
+.settings-identity__mark {
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-sans);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 27px; /* Pencil text box: round(22 × 1.21) */
+}
+/* Text (h9UBFL): column, gap 2. */
+.settings-identity__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-identity__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 16px;
+}
+.settings-identity__license {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+
+/* Web dialog scrim. */
+.settings-scrim {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a4d;
+}

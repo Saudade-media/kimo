@@ -1,0 +1,127 @@
+/**
+ * Board 17 "Launch recovery · after a crash" (Fyy0m): the 02d Dialog at width 600, icon
+ * `life-buoy`, Body (CrBSg: column, stroke top 1 border) of RecoveryItems; footer "Kept for 30
+ * days" · Discard all · Decide later · Restore all. Esc / outside press = Decide later.
+ */
+
+import { Dialog, DialogScrim, RecoveryItem } from "@kimo/ui"
+import { LifeBuoy } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import type { RecoveryCandidate, RecoveryChoice } from "../platform/contract"
+import { displayPath } from "../platform/format"
+import type { FileDocumentSession, FileSessionManager } from "../platform/session"
+
+export interface RecoveryDialogViewProps {
+  candidates: RecoveryCandidate[]
+  /** The recovery directory, shortened ("~/.kimo/recovery"). */
+  dir: string
+  onChoose: (id: string, choice: RecoveryChoice) => void
+  onDiscardAll: () => void
+  onDecideLater: () => void
+  onRestoreAll: () => void
+  inline?: boolean
+}
+
+/** The dialog for a list of candidates (stateless). */
+export function RecoveryDialogView({
+  candidates,
+  dir,
+  onChoose,
+  onDiscardAll,
+  onDecideLater,
+  onRestoreAll,
+  inline = false,
+}: RecoveryDialogViewProps) {
+  const n = candidates.length
+  return (
+    <Dialog
+      width={600}
+      inline={inline}
+      data-pen="Fyy0m"
+      className="kimo-files-recovery"
+      icon={<LifeBuoy />}
+      title="Recover unsaved changes?"
+      description={`Kimo quit unexpectedly while ${n} file${n === 1 ? "" : "s"} had edits newer than their last save. The recovery files stay in ${dir} until you choose.`}
+      footnote="Kept for 30 days"
+      tertiary={{ label: "Discard all", onClick: onDiscardAll }}
+      cancelLabel="Decide later"
+      confirmLabel="Restore all"
+      onCancel={onDecideLater}
+      onConfirm={onRestoreAll}
+    >
+      <div className="kimo-files-recovery__body">
+        {candidates.map((c) => (
+          <RecoveryItem
+            key={c.entry.id}
+            data-recovery={c.entry.id}
+            name={c.entry.name}
+            badge={c.badge}
+            path={c.location}
+            meta={c.detail}
+            untitled={c.entry.sourceRef === null}
+            onSaveAs={() => onChoose(c.entry.id, "save-as")}
+            onDiscard={() => onChoose(c.entry.id, "discard")}
+            onRestore={() =>
+              onChoose(c.entry.id, c.entry.sourceRef === null ? "save-as" : "restore")
+            }
+          />
+        ))}
+      </div>
+    </Dialog>
+  )
+}
+
+export interface RecoveryDialogProps {
+  manager: FileSessionManager
+  /** A session was opened by Restore / Save as… (navigate to it). */
+  onOpened?: (session: FileDocumentSession) => void
+  /** The dialog closed (all resolved, or Decide later). */
+  onClose?: () => void
+}
+
+/**
+ * Launch recovery, modal. Mount once at app start (Home or the first editor window); renders
+ * nothing when there are no candidates.
+ */
+export function RecoveryDialog({ manager, onOpened, onClose }: RecoveryDialogProps) {
+  const [candidates, setCandidates] = useState<RecoveryCandidate[] | null>(null)
+  const refresh = useCallback(async () => {
+    const list = await manager.recoveryCandidates()
+    setCandidates(list)
+    if (list.length === 0) onClose?.()
+  }, [manager, onClose])
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+  if (!candidates || candidates.length === 0) return null
+  const dir = displayPath(manager.platform.recovery.dir ?? "~/.kimo/recovery")
+  const run = (p: Promise<unknown>) => void p.then(refresh, refresh)
+  return (
+    <DialogScrim>
+      <RecoveryDialogView
+        candidates={candidates}
+        dir={dir}
+        onChoose={(id, choice) =>
+          run(
+            manager.resolveRecovery(id, choice).then((s) => {
+              if (s) onOpened?.(s)
+            }),
+          )
+        }
+        onDiscardAll={() => run(manager.resolveRecoveryDialog("discard-all"))}
+        onDecideLater={() => {
+          setCandidates([])
+          onClose?.()
+        }}
+        onRestoreAll={() =>
+          run(
+            manager.resolveRecoveryDialog("restore-all").then(() => {
+              const first = manager.sessions()[0]
+              if (first) onOpened?.(first)
+            }),
+          )
+        }
+      />
+    </DialogScrim>
+  )
+}

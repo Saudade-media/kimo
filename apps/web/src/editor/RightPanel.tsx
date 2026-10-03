@@ -11,7 +11,8 @@ import type { NodeData } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
 import { Badge, EmptyState, Tabs } from "@kimo/ui"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ConflictsPanel, conflictsTabLabel, type EditorConflictSession } from "../conflicts"
 import type { AssetStore } from "../lib/assets"
 import { useDocHeader } from "../lib/header"
 import { type Bus, createBus, useNodes, useUi } from "../lib/hooks"
@@ -37,7 +38,7 @@ import { AutoLayoutSection, LayerSection, PositionSection } from "./sections/Lay
 import { FillSection, StrokeSection } from "./sections/PaintSections"
 import type { FileSession } from "./session"
 
-type RightTab = "design" | "code" | "agent"
+type RightTab = "design" | "code" | "agent" | "conflicts"
 const NO_REV = createBus(0)
 
 const TABS = [
@@ -56,17 +57,60 @@ export interface RightPanelProps {
   icons?: IconProvider | null
   /** M3 state (expanded view, commands). */
   m3: M3Controller
+  /** Board 18: the merge's conflict session; adds the "Conflicts N" tab while non-null. */
+  conflicts?: EditorConflictSession | null
+  /** Bumped by the external-conflicts toast's "Review": opens the Conflicts tab. */
+  review?: Bus<number>
 }
 
-export function RightPanel({ session, layout, assets = null, icons = null, m3 }: RightPanelProps) {
+export function RightPanel({
+  session,
+  layout,
+  assets = null,
+  icons = null,
+  m3,
+  conflicts = null,
+  review,
+}: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>("design")
+  const counts = useConflictCounts(conflicts)
+  // Open the tab when a document opens with (or a merge brings) open conflicts; drop it once
+  // "Mark resolved & save" finished the merge (the session becomes null).
+  const opened = useRef<EditorConflictSession | null>(null)
+  useEffect(() => {
+    if (conflicts && opened.current !== conflicts) {
+      opened.current = conflicts
+      if (conflicts.counts().open > 0) setTab("conflicts")
+    }
+    if (!conflicts) {
+      opened.current = null
+      setTab((t) => (t === "conflicts" ? "design" : t))
+    }
+  }, [conflicts])
+  const reviewRev = useBusValue(review ?? NO_REV)
+  const reviewed = useRef(reviewRev)
+  useEffect(() => {
+    if (reviewRev === reviewed.current) return
+    reviewed.current = reviewRev
+    if (conflicts) setTab("conflicts")
+  }, [reviewRev, conflicts])
+  const items = useMemo(
+    () =>
+      conflicts && counts
+        ? [...TABS, { value: "conflicts" as const, label: conflictsTabLabel(counts.open) }]
+        : TABS,
+    [conflicts, counts],
+  )
   return (
     // Board 05 (EHux2): the panel widens to 360 while the Agent tab is open.
     <aside
       className={tab === "agent" ? "right-panel right-panel--agent" : "right-panel"}
       aria-label="Properties panel"
     >
-      <Tabs label="Right panel" items={TABS} value={tab} onChange={setTab} />
+      <Tabs label="Right panel" items={items} value={tab} onChange={setTab} />
+      {tab === "conflicts" && conflicts && (
+        <ConflictsPanel session={conflicts} getNode={(id) => session.store.getNode(id)} />
+      )}
       {tab === "design" && (
         <DesignTab session={session} layout={layout} assets={assets} icons={icons} m3={m3} />
       )}
@@ -90,6 +134,27 @@ export function RightPanel({ session, layout, assets = null, icons = null, m3 }:
       )}
     </aside>
   )
+}
+
+/** Open / total conflicts of `session`, kept current (null without a session). */
+function useConflictCounts(
+  session: EditorConflictSession | null,
+): { open: number; total: number } | null {
+  const [counts, setCounts] = useState(() => (session ? session.counts() : null))
+  useEffect(() => {
+    if (!session) {
+      setCounts(null)
+      return
+    }
+    const read = () =>
+      setCounts((c) => {
+        const n = session.counts()
+        return c && c.open === n.open && c.total === n.total ? c : n
+      })
+    read()
+    return session.subscribe(read)
+  }, [session])
+  return counts
 }
 
 /** Node types with `fill` / `stroke` (graphics fields) and `radius`. */

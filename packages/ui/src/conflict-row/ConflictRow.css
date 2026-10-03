@@ -1,0 +1,82 @@
+/*
+ * ConflictRow: desing.pen 02d Components — Files (M4) > ConflictRow (uP9RN),
+ * ConflictRow/Resolved (d9zpM).
+ * frame: fill_container, stroke border bottom 1, layout vertical, gap 6, padding [10, 12]
+ *   ├ Head: fill_container, horizontal, gap 6, alignItems center
+ *   │   ├ Status   icon 14 lucide circle-alert, danger (resolved: circle-check, success)
+ *   │   ├ Property mono, text-xs (11), 500, text-primary
+ *   │   ├ Spacer   fill_container × 1
+ *   │   └ Hint     sans, text-xs (11), regular, text-tertiary
+ *   ├ Ours   ConflictChoice (resolved: ConflictChoice/Selected when applied)
+ *   └ Theirs ConflictChoice
+ * The two choices are direct children of the row in the design (gap 6 applies between all
+ * three); the radiogroup wrapper uses `display: contents` so it adds no box.
+ */
+.kimo-conflict-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  /* Inside stroke: the bottom border takes its 1px out of the bottom padding (10 − 1), so the
+     row is 109 high with one-line values, as uP9RN. */
+  padding: 10px 12px 9px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+.kimo-conflict-row__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kimo-conflict-row__choices {
+  display: contents;
+}
+
+.kimo-conflict-row__status {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-danger);
+}
+
+.kimo-conflict-row--resolved .kimo-conflict-row__status {
+  color: var(--kimo-success);
+}
+
+.kimo-conflict-row__status > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-conflict-row__property {
+  flex: none;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box for JetBrains Mono 11 */
+  white-space: nowrap;
+}
+
+.kimo-conflict-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-conflict-row__hint {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}

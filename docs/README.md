@@ -6,6 +6,7 @@
 | [spec/kimo-format-v0.1.md](spec/kimo-format-v0.1.md) | `.kimo` file format specification, v0.1 draft (normative types live in `@kimo/core-schema`) |
 | [adr/](adr/README.md) | Architecture decision records, with the ADR process and template |
 | [scope-checklist.md](scope-checklist.md) | Every feature from teardown section 3 as a checkbox, tagged with its milestone |
+| [kimo CLI](../packages/cli/README.md) | `kimo merge` (semantic git merge driver), `kimo gc`, `kimo validate`: usage and exit codes |
 
 Repository-level documents:
 

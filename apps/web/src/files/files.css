@@ -1,0 +1,526 @@
+/*
+ * M4 file hosts (boards 16, 17). Node values from desing.pen; text boxes measured in Pencil:
+ * Inter 11 → 13, 12 → 15, 13 → 16, 14 → 17, 16 → 19; JetBrains Mono 11 → 15.
+ */
+
+/* --- Toasts (board 15 placement: bottom-center of the canvas, 84 above its bottom) ------- */
+.kimo-files-toasts {
+  position: absolute;
+  z-index: 30;
+  bottom: 84px;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.kimo-files-toasts > * {
+  pointer-events: auto;
+}
+
+/* --- Launch recovery (Fyy0m > Body CrBSg: column, stroke top 1 border) ------------------- */
+.kimo-files-recovery__body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+/* --- Migration consent (UuonK > Body ciVuJ) ---------------------------------------------- */
+.kimo-files-migration__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Impact (EDDii): bg-subtle, radius-md, column, gap 8, padding [10, 12]. */
+.kimo-files-migration__impact {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+/* Item (jf9mp): row, gap 8 (alignItems start). */
+.kimo-files-migration__item {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-files-migration__icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-files-migration__icon--primary {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-files-migration__text {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Format Line (GTLQL): row, gap 8, padding [0, 4], center. */
+.kimo-files-migration__format {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0 4px;
+}
+
+.kimo-files-migration__format-label,
+.kimo-files-migration__format-from,
+.kimo-files-migration__format-to {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-files-migration__format-label {
+  color: var(--kimo-text-tertiary);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-files-migration__format-from {
+  color: var(--kimo-text-secondary);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-files-migration__arrow {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-files-migration__format-to {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+/* --- Failed load (TrOIn > Body z6LzR > Error Card HtVIp) --------------------------------- */
+.kimo-files-failed {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  background: var(--kimo-bg-canvas);
+}
+
+.kimo-files-failed__card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 520px;
+  max-width: calc(100% - 32px);
+  padding: 24px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+.kimo-files-failed__head {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+.kimo-files-failed__icon-wrap {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.kimo-files-failed__icon-wrap > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-files-failed__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kimo-files-failed__title,
+.kimo-files-failed__desc {
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+}
+
+.kimo-files-failed__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 17px;
+}
+
+.kimo-files-failed__desc {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Error Detail (iOG4v): bg-subtle, radius-md, column, gap 4, padding [10, 12]. */
+.kimo-files-failed__detail {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-files-failed__error,
+.kimo-files-failed__line,
+.kimo-files-failed__path {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: pre;
+}
+
+.kimo-files-failed__error {
+  color: var(--kimo-danger);
+}
+
+.kimo-files-failed__line {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-files-failed__line--error {
+  color: var(--kimo-text-primary);
+}
+
+/* Actions (XoYrM): row, gap 8, center. */
+.kimo-files-failed__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-files-failed__path {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  text-overflow: ellipsis;
+}
+
+.kimo-files-failed__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+.kimo-button.kimo-files-failed__reveal,
+.kimo-button.kimo-files-failed__open-text {
+  flex: none;
+  height: 30px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-button.kimo-files-failed__reveal {
+  padding: 0 12px;
+}
+
+.kimo-button.kimo-files-failed__open-text {
+  padding: 0 14px;
+}
+
+/* --- Lease details (ulWQH: Popover/Wide, Body PybNF column gap 8 padding 12) ------------- */
+.kimo-popover__body.kimo-files-lease__body {
+  gap: 8px;
+}
+
+.kimo-files-lease__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-files-lease__key {
+  flex: none;
+  width: 56px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+
+.kimo-files-lease__value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kimo-files-lease__note {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Actions (QLE8c): row, gap 6, padding [4, 0, 0, 0], justify end. */
+.kimo-files-lease__actions {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0 0;
+}
+
+.kimo-button.kimo-files-lease__reveal,
+.kimo-button.kimo-files-lease__retry {
+  height: 28px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-button.kimo-files-lease__reveal {
+  padding: 0 10px;
+}
+
+.kimo-button.kimo-files-lease__retry {
+  padding: 0 12px;
+}
+
+/* --- Home: LOCAL FOLDERS (fgqWk: padding [20, 4, 6, 10], space-between, center) ---------- */
+.kimo-files-folders-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 20px 4px 6px 10px;
+}
+
+.kimo-files-folders-header__label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  letter-spacing: 0.6px;
+  line-height: 13px;
+}
+
+/* Add Folder (vKzcY): IconButton 20 × 20, transparent, `plus` 14 text-tertiary. */
+.kimo-icon-button.kimo-files-folders-header__add {
+  width: 20px;
+  height: 20px;
+}
+
+.kimo-icon-button.kimo-files-folders-header__add .kimo-icon-button__icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Folder row (yjABh): fill × 32, radius-md, row, gap 10, padding [0, 10], center. */
+.kimo-files-folder {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-files-folder:hover,
+.kimo-files-folder--active {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-files-folder:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-files-folder__icon {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-files-folder__label {
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kimo-files-folder__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Changes (jnqXe): row, gap 4, center: Dot 6 warning · Count sans 11 text-tertiary. */
+.kimo-files-folder__changes {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.kimo-files-folder__dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-warning);
+}
+
+.kimo-files-folder__count {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+
+.kimo-files-folder__branch {
+  flex: none;
+  max-width: 120px;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Home: Files Header (Xp6lo: row, gap 8, center) -------------------------------------- */
+.kimo-files-recent-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-files-recent-header__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-lg);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 19px;
+  white-space: nowrap;
+}
+
+.kimo-files-recent-header__note {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-files-recent-header__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* File List (eso4o): column. Grid (QYBeG/a2kRP): rows gap 24, cards gap 20, fill. */
+.kimo-files-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.kimo-files-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.kimo-files-grid__row {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 100%;
+}
+
+.kimo-files-grid__card {
+  flex: 1 1 0;
+  min-width: 0;
+}

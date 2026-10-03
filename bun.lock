@@ -6,6 +6,7 @@
       "name": "kimo",
       "devDependencies": {
         "@biomejs/biome": "^2.5.15",
+        "@kimo/cli": "workspace:*",
         "bun-types": "^1.4.2",
         "typescript": "^7.0.2",
       },
@@ -14,6 +15,7 @@
       "name": "@kimo/desktop",
       "version": "0.0.0",
       "dependencies": {
+        "@kimo/platform": "workspace:*",
         "@tauri-apps/api": "^2.12.1",
       },
       "devDependencies": {
@@ -30,6 +32,7 @@
       "dependencies": {
         "@kimo/core-schema": "workspace:*",
         "@kimo/design-tokens": "workspace:*",
+        "@kimo/desktop": "workspace:*",
         "@kimo/editor-state": "workspace:*",
         "@kimo/layout": "workspace:*",
         "@kimo/platform": "workspace:*",
@@ -48,6 +51,16 @@
         "playwright": "^1.63.0",
         "tsx": "^4.23.15",
         "vite": "^8.3.2",
+      },
+    },
+    "packages/cli": {
+      "name": "@kimo/cli",
+      "version": "0.0.0",
+      "bin": {
+        "kimo": "./src/main.ts",
+      },
+      "dependencies": {
+        "@kimo/core-schema": "workspace:*",
       },
     },
     "packages/core-schema": {
@@ -207,6 +220,8 @@
     "@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.28.2", "", { "os": "win32", "cpu": "ia32" }, "sha512-YmJbfTlvU7Sdn9BB+4PRES4oB6pxgS37MAONj+hBr/cpXS1aBPKXxNnDbu+QCWPj0o9dgyxeq79g6c5P8KeuYA=="],
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.28.2", "", { "os": "win32", "cpu": "x64" }, "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g=="],
+
+    "@kimo/cli": ["@kimo/cli@workspace:packages/cli"],
 
     "@kimo/core-schema": ["@kimo/core-schema@workspace:packages/core-schema"],
 

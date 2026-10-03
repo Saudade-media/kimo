@@ -1,0 +1,83 @@
+/*
+ * SaveStatus: desing.pen 02d > SaveStatus (EdNXU) + /Saving (hbDxo) /Unsaved (O8d1r)
+ * /Paused (LvZiH) /ReadOnly (ChFsm) /Locked (Nn6l8) /Failed (qPGUY).
+ * frame: row, gap 6, padding [0, 10, 0, 8], height 24, alignItems center, radius-pill
+ *   ├ Icon  (Hkdir) 14 × 14 lucide
+ *   └ Label (nHNeX) sans, text-sm (12), weight 500
+ */
+.kimo-save-status {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  font: inherit;
+  white-space: nowrap;
+  cursor: default;
+  appearance: none;
+}
+
+.kimo-save-status:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-save-status__icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-save-status__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.kimo-save-status--saving .kimo-save-status__icon {
+  animation: kimo-save-status-spin 1s linear infinite;
+}
+
+@keyframes kimo-save-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-save-status--saving .kimo-save-status__icon {
+    animation: none;
+  }
+}
+
+.kimo-save-status--unsaved,
+.kimo-save-status--read-only {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-save-status--paused,
+.kimo-save-status--locked {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
+.kimo-save-status--failed {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+/* Locked opens the lease details (board 17 "Click Locked pill → lease details"). */
+.kimo-save-status--locked {
+  cursor: pointer;
+}

@@ -1,0 +1,108 @@
+/*
+ * Banner: desing.pen 02d > Banner (R6VHG), Banner/Warning (KPgcF), Banner/Danger (Gq3Fs).
+ * frame: fill_container, fill bg-subtle | warning-soft | danger-soft, stroke border bottom 1,
+ *        row, gap 10, padding [8, 8, 8, 16], alignItems center
+ *   ├ Icon (AClzz) 16 lucide: text-secondary | warning | danger
+ *   ├ Message (uBHpk) fill_container, row, gap 6, alignItems center
+ *   │   ├ Title (HRUqU) sans 12 / 600 text-primary
+ *   │   └ Body (x6Z0vQ) sans 12 / 400 text-secondary, fixed-width fill
+ *   ├ Actions (jU2dJ) row, gap 6, alignItems center
+ *   │   ├ Secondary Action (DW6X8) Button/Ghost h 28, padding [0, 12], label 12 text-primary
+ *   │   └ Primary Action (wGTB1) Button/Primary h 28, padding [0, 12], label 12
+ *   └ Dismiss (tXBEc) IconButton 24 × 24, fill #00000000, `x` 14 text-tertiary
+ */
+.kimo-banner {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px 8px 16px;
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-banner--warning {
+  background: var(--kimo-warning-soft);
+}
+
+.kimo-banner--danger {
+  background: var(--kimo-danger-soft);
+}
+
+.kimo-banner__icon {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-banner--warning .kimo-banner__icon {
+  color: var(--kimo-warning);
+}
+
+.kimo-banner--danger .kimo-banner__icon {
+  color: var(--kimo-danger);
+}
+
+.kimo-banner__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-banner__message {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kimo-banner__title,
+.kimo-banner__body {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.kimo-banner__title {
+  flex: none;
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.kimo-banner__body {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-secondary);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-banner__actions {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Button instances: h 28, padding [0, 12], label text-sm (12); the icon slot is disabled. */
+.kimo-button.kimo-banner__action {
+  height: 28px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+/* Button/Ghost instance with its label overridden to text-primary (R6VHG > DW6X8). */
+.kimo-button.kimo-banner__action--ghost {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-icon-button.kimo-banner__dismiss {
+  flex: none;
+}

@@ -1,0 +1,208 @@
+/*
+ * FileRow: desing.pen 02d > FileRow (K4gLI), /Modified (KuHqA), /Untracked (tOPzo),
+ * /Conflict (O3Tio3), /Selected (h6Wghb), FileRow/Header (ZyDkD).
+ * row: fill_container × 48, stroke border bottom 1, row, gap 12, padding [0, 12], center
+ *   ├ Icon Tile (NZI3R) 28 × 28, bg-muted, radius-sm, center; Icon (f0LOpi) 14 text-secondary
+ *   ├ Name Cell (AqWas) 200, center: Name (mau7W) sans 13 / 500 text-primary
+ *   ├ Path Cell (iCTgl) fill, clip, center: Path (wUUcz) mono 11 / 400 text-tertiary
+ *   ├ Modified Cell (y0yyn4) 112, center: Modified (k6Daof) sans 12 / 400 text-secondary
+ *   ├ Git Cell (SaDUv) 168, clip, gap 6, center: Dot (HOsXm) 6 × 6 · Git Label (qswUP) sans 11
+ *   │   text-secondary
+ *   └ Menu (Xm59h) IconButton 28 × 28, fill #00000000, `ellipsis` 16 text-tertiary
+ * header: fill_container × 32, same row metrics; Icon Cell 28 × 1, Menu Cell 28 × 1;
+ *   labels sans 11 / 600 text-tertiary, letterSpacing 0.6.
+ */
+.kimo-file-row,
+.kimo-file-row-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-file-row {
+  height: 48px;
+  cursor: default;
+  outline: none;
+}
+
+.kimo-file-row:hover,
+.kimo-file-row--selected {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-file-row:focus-visible {
+  box-shadow:
+    inset 0 -1px 0 0 var(--kimo-border),
+    inset 0 0 0 2px var(--kimo-accent);
+}
+
+.kimo-file-row__icon-tile {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-file-row__icon-tile > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-file-row__name-cell,
+.kimo-file-row__path-cell,
+.kimo-file-row__modified-cell,
+.kimo-file-row__git-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+
+.kimo-file-row__name-cell {
+  flex: none;
+  width: 200px;
+}
+
+.kimo-file-row__path-cell {
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.kimo-file-row__modified-cell {
+  flex: none;
+  width: 112px;
+}
+
+.kimo-file-row__git-cell {
+  flex: none;
+  gap: 6px;
+  width: 168px;
+  overflow: hidden;
+}
+
+.kimo-file-row__name {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kimo-file-row__path {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-file-row__modified {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-file-row__dot {
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-border-strong);
+}
+
+.kimo-file-row[data-git="modified"] .kimo-file-row__dot {
+  background: var(--kimo-warning);
+}
+
+.kimo-file-row[data-git="untracked"] .kimo-file-row__dot {
+  background: var(--kimo-success);
+}
+
+.kimo-file-row[data-git="conflict"] .kimo-file-row__dot {
+  background: var(--kimo-danger);
+}
+
+.kimo-file-row[data-git="none"] .kimo-file-row__dot {
+  background: var(--kimo-border);
+}
+
+.kimo-file-row__git {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* Menu: IconButton instance, fill #00000000, icon text-tertiary (the quiet tone), 28 × 28. */
+.kimo-icon-button.kimo-file-row__menu {
+  flex: none;
+}
+
+.kimo-file-row-header {
+  height: 32px;
+}
+
+.kimo-file-row-header__icon-cell,
+.kimo-file-row-header__menu-cell {
+  display: block;
+  flex: none;
+  width: 28px;
+  height: 1px;
+}
+
+.kimo-file-row-header__cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+
+.kimo-file-row-header__cell--name {
+  flex: none;
+  width: 200px;
+}
+
+.kimo-file-row-header__cell--path {
+  flex: 1 1 0;
+}
+
+.kimo-file-row-header__cell--modified {
+  flex: none;
+  width: 112px;
+}
+
+.kimo-file-row-header__cell--git {
+  flex: none;
+  width: 168px;
+}
+
+.kimo-file-row-header__label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  letter-spacing: 0.6px;
+  line-height: 13px;
+  white-space: nowrap;
+}

@@ -10,16 +10,7 @@
     "beforeBuildCommand": "bun run --filter @kimo/web build"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "Kimo",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 560
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
     }
@@ -44,7 +35,30 @@
         "description": "Kimo design document",
         "role": "Editor",
         "mimeType": "application/vnd.kimo+json"
+      },
+      {
+        "ext": ["kimoz"],
+        "name": "Kimo Package",
+        "description": "Kimo document package",
+        "role": "Editor",
+        "mimeType": "application/vnd.kimo+zip"
       }
     ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["kimo"]
+      }
+    },
+    "updater": {
+      "pubkey": "UPDATER_PUBKEY_PLACEHOLDER",
+      "endpoints": [
+        "https://github.com/kimo-design/kimo/releases/latest/download/latest-stable.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

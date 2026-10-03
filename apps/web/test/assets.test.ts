@@ -80,3 +80,22 @@ describe("zip", () => {
     expect(await contentHash(ascii("abc"))).toBe("ba7816bf8f01cfea")
   })
 })
+
+describe("folder asset store (a .kimo on disk)", () => {
+  test("stores and reads assets/<hash>.<ext> beside the file through platform.files", async () => {
+    const { createMemoryPlatform } = await import("@kimo/platform/memory")
+    const { createFolderAssetStore } = await import("../src/lib/assets")
+    const platform = createMemoryPlatform({ files: { "/p/doc.kimo": "{}" } })
+    const store = createFolderAssetStore(platform, "/p/doc.kimo")
+    expect(await store.keys()).toEqual([])
+    const data = ascii("<svg xmlns='http://www.w3.org/2000/svg'/>")
+    const key = `${await contentHash(data)}.svg`
+    expect(await store.putKey("0000000000000000.svg", data, { mime: "image/svg+xml" })).toBeNull()
+    const info = await store.putKey(key, data, { mime: "image/svg+xml", width: 1, height: 1 })
+    expect(info?.src).toBe(`./assets/${key}`)
+    expect(await store.keys()).toEqual([key])
+    expect(await platform.files.readBytes(`/p/assets/${key}`)).toEqual(data)
+    expect(await store.source.load(`./assets/${key}`)).toEqual(data)
+    store.dispose()
+  })
+})

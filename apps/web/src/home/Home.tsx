@@ -2,9 +2,28 @@
  * Home — board "06 Home" (J3yxNC): Sidebar (248, vertical, gap 4, padding [16, 12]) and Main
  * (fill, vertical, gap 28, padding [28, 40]): Header, "Start With AI" card, Files Header, Grid
  * (vertical gap 24 of rows of four FileCards, gap 20). Files come from the IndexedDB index.
+ *
+ * Desktop (board 16 hnvDX "Desktop Home · list view"): the Sidebar (LEwyc) starts with the
+ * traffic-light inset (G17HiQ, padding [0, 12, 16, 12]), LOCAL FOLDERS lists the watched
+ * folders (fgqWk + rows), and Main (Oedwu, gap 24) lists real files on disk from
+ * `platform.recents` (Files Header Xp6lo + File List eso4o, or the Annex grid a2kRP).
  */
+import { serialize } from "@kimo/core-schema"
+import { createEmptyDocument } from "@kimo/editor-state"
+import { basenameOf, KIMO_FILE_FILTER, type KimoPlatform } from "@kimo/platform"
 import { Button, Composer, FileCard, Input, Segmented, Tooltip } from "@kimo/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  addWatchedFolder,
+  LocalFolders,
+  RecentFilesGrid,
+  RecentFilesHeader,
+  RecentFilesList,
+  type RecentView,
+  TrafficLightInset,
+  useNow,
+  useRecents,
+} from "../files"
 import {
   createFile,
   editedLabel,
@@ -15,7 +34,8 @@ import {
   pickKimoFile,
 } from "../lib/files"
 import { Icon } from "../lib/icons"
-import { navigate } from "../router"
+import { useOpenSettings, useRuntime } from "../platform/runtime"
+import { diskPath, navigate } from "../router"
 
 const CHIPS = [
   { label: "Landing page", icon: "monitor" },
@@ -32,7 +52,28 @@ const VIEWS = [
 
 const AGENT_SOON = "Agent arrives in M6"
 
+/** Desktop "New file": a native Save dialog, then an empty document written to disk. */
+async function newDiskFile(platform: KimoPlatform): Promise<string | null> {
+  const ref = await platform.dialogs.saveFile({
+    title: "New file",
+    suggestedName: "Untitled.kimo",
+    filters: [KIMO_FILE_FILTER],
+  })
+  if (!ref) return null
+  const name = basenameOf(ref).replace(/\.kimo$/i, "") || "Untitled"
+  await platform.files.writeTextAtomic(ref, serialize(createEmptyDocument(name)), { mkdirs: true })
+  return ref
+}
+
 export function Home() {
+  const { platform } = useRuntime()
+  // Board 06 in the browser; board 16's desktop Home on the desktop host (and the memory host
+  // that stands in for it in tests).
+  return platform.kind === "browser" ? <WebHome /> : <DesktopHome platform={platform} />
+}
+
+function WebHome() {
+  const openSettings = useOpenSettings()
   const [files, setFiles] = useState<FileMeta[] | null>(null)
   const [query, setQuery] = useState("")
   const [view, setView] = useState<"grid" | "list">("grid")
@@ -141,12 +182,7 @@ export function Home() {
           </div>
           <p className="home-oss__desc">MIT licensed. Your files are plain JSON on your disk.</p>
         </div>
-        <span className="home-nav home-nav--static">
-          <span className="home-nav__icon">
-            <Icon name="settings" size={16} />
-          </span>
-          <span className="home-nav__label">Settings</span>
-        </span>
+        <SettingsRow onOpen={() => openSettings("general")} />
       </nav>
 
       <main className="home-main">
@@ -178,37 +214,7 @@ export function Home() {
           </Button>
         </header>
 
-        <section className="home-ai" aria-labelledby="home-ai-title">
-          <div className="home-ai__heading">
-            <h2 id="home-ai-title" className="home-ai__title">
-              What are we designing today?
-            </h2>
-            <p className="home-ai__desc">
-              Describe it and the agent drafts it on a new canvas — every change is a reviewable
-              diff.
-            </p>
-          </div>
-          <Tooltip label={AGENT_SOON} side="top" delay={150}>
-            <Composer
-              className="home-ai__composer"
-              placeholder="A pricing page for a calm budgeting app, three tiers, soft greens…"
-              model="Claude Sonnet 5.5"
-              context={null}
-              disabled
-              title={AGENT_SOON}
-            />
-          </Tooltip>
-          <div className="home-ai__chips">
-            {CHIPS.map((c) => (
-              <button key={c.label} type="button" className="home-chip" disabled title={AGENT_SOON}>
-                <span className="home-chip__icon">
-                  <Icon name={c.icon} size={14} />
-                </span>
-                <span className="home-chip__label">{c.label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <StartWithAi />
 
         <div className="home-files-header">
           <h2 className="home-files-header__title">Recent files</h2>
@@ -266,5 +272,199 @@ export function Home() {
         )}
       </main>
     </div>
+  )
+}
+
+/** Sidebar "Settings" row (uEJzA): opens the Settings window (desktop) or dialog (web). */
+function SettingsRow({ onOpen }: { onOpen(): void }) {
+  return (
+    <button type="button" className="home-nav home-nav--button" onClick={onOpen}>
+      <span className="home-nav__icon">
+        <Icon name="settings" size={16} />
+      </span>
+      <span className="home-nav__label">Settings</span>
+    </button>
+  )
+}
+
+/** Board 16 hnvDX: the desktop Home over `platform.recents` (real files on disk). */
+function DesktopHome({ platform }: { platform: KimoPlatform }) {
+  const openSettings = useOpenSettings()
+  const { files, folders, error: recentsError } = useRecents(platform)
+  const now = useNow()
+  const [query, setQuery] = useState("")
+  const [view, setView] = useState<RecentView>("list")
+  const [error, setError] = useState<string | null>(null)
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return (files ?? []).filter((f) => !q || f.name.toLowerCase().includes(q))
+  }, [files, query])
+
+  const openFile = useCallback(async () => {
+    try {
+      const [ref] = await platform.dialogs.openFile({ title: "Open", filters: [KIMO_FILE_FILTER] })
+      if (ref) navigate(diskPath(ref))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }, [platform])
+  const newFile = useCallback(async () => {
+    try {
+      const ref = await newDiskFile(platform)
+      if (ref) navigate(diskPath(ref))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }, [platform])
+  const message = error ?? recentsError
+
+  return (
+    <div className="home">
+      <nav className="home-sidebar home-sidebar--desktop" aria-label="Library">
+        <TrafficLightInset platform={platform} leading={4} />
+        <div className="home-sidebar__brand">
+          <span className="home-sidebar__logo">
+            <span className="home-sidebar__mark">k</span>
+          </span>
+          <span className="home-sidebar__wordmark">Kimo</span>
+        </div>
+        <a className="home-nav home-nav--active" href="#/" aria-current="page">
+          <span className="home-nav__icon">
+            <Icon name="history" size={16} />
+          </span>
+          <span className="home-nav__label">Recents</span>
+        </a>
+        <a className="home-nav" href="#/">
+          <span className="home-nav__icon">
+            <Icon name="folder" size={16} />
+          </span>
+          <span className="home-nav__label">All files</span>
+          <span className="home-nav__spacer" />
+          <span className="home-nav__count">{files?.length ?? ""}</span>
+        </a>
+        <span className="home-nav home-nav--static">
+          <span className="home-nav__icon">
+            <Icon name="layout-template" size={16} />
+          </span>
+          <span className="home-nav__label">Templates</span>
+        </span>
+        <a className="home-nav" href="#/gallery">
+          <span className="home-nav__icon">
+            <Icon name="swatch-book" size={16} />
+          </span>
+          <span className="home-nav__label">Design systems</span>
+          <span className="home-nav__spacer" />
+          <span className="home-nav__count">1</span>
+        </a>
+        <span className="home-nav home-nav--static">
+          <span className="home-nav__icon">
+            <Icon name="trash-2" size={16} />
+          </span>
+          <span className="home-nav__label">Trash</span>
+        </span>
+        <LocalFolders
+          folders={folders ?? []}
+          onAdd={() => void addWatchedFolder(platform).catch(() => null)}
+        />
+        <div className="home-sidebar__spacer" />
+        <div className="home-oss">
+          <div className="home-oss__row">
+            <span className="home-oss__icon">
+              <Icon name="github" size={14} />
+            </span>
+            <span className="home-oss__title">Kimo is open source</span>
+          </div>
+          <p className="home-oss__desc">MIT licensed. Your files are plain JSON on your disk.</p>
+        </div>
+        <SettingsRow onOpen={() => openSettings("general")} />
+      </nav>
+
+      <main className="home-main home-main--desktop">
+        <header className="home-header">
+          <h1 className="home-header__title">Recents</h1>
+          <span className="home-header__spacer" />
+          <Input
+            icon={<Icon name="search" size={16} />}
+            type="search"
+            placeholder="Search files"
+            aria-label="Search files"
+            value={query}
+            onChange={(e) => setQuery(e.currentTarget.value)}
+            frameProps={{ className: "home-header__search" }}
+          />
+          <Button
+            variant="secondary"
+            icon={<Icon name="folder-open" size={16} />}
+            onClick={() => void openFile()}
+          >
+            Open file
+          </Button>
+          <Button
+            variant="primary"
+            icon={<Icon name="plus" size={16} />}
+            onClick={() => void newFile()}
+          >
+            New file
+          </Button>
+        </header>
+
+        <StartWithAi />
+
+        <RecentFilesHeader folderCount={folders?.length ?? 0} view={view} onViewChange={setView} />
+
+        {message && (
+          <p className="home-error" role="alert">
+            {message}
+          </p>
+        )}
+
+        {view === "list" ? (
+          <RecentFilesList files={shown} now={now} onOpen={(f) => navigate(diskPath(f.ref))} />
+        ) : (
+          <RecentFilesGrid
+            files={shown}
+            folders={folders ?? []}
+            now={now}
+            onOpen={(f) => navigate(diskPath(f.ref))}
+          />
+        )}
+      </main>
+    </div>
+  )
+}
+
+/** "Start With AI" (fKvEZ): the agent composer, disabled until M6. */
+function StartWithAi() {
+  return (
+    <section className="home-ai" aria-labelledby="home-ai-title">
+      <div className="home-ai__heading">
+        <h2 id="home-ai-title" className="home-ai__title">
+          What are we designing today?
+        </h2>
+        <p className="home-ai__desc">
+          Describe it and the agent drafts it on a new canvas — every change is a reviewable diff.
+        </p>
+      </div>
+      <Tooltip label={AGENT_SOON} side="top" delay={150}>
+        <Composer
+          className="home-ai__composer"
+          placeholder="A pricing page for a calm budgeting app, three tiers, soft greens…"
+          model="Claude Sonnet 5.5"
+          context={null}
+          disabled
+          title={AGENT_SOON}
+        />
+      </Tooltip>
+      <div className="home-ai__chips">
+        {CHIPS.map((c) => (
+          <button key={c.label} type="button" className="home-chip" disabled title={AGENT_SOON}>
+            <span className="home-chip__icon">
+              <Icon name={c.icon} size={14} />
+            </span>
+            <span className="home-chip__label">{c.label}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }

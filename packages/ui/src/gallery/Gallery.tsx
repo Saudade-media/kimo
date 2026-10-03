@@ -45,6 +45,8 @@ import { ToolButton } from "../tool-button/ToolButton"
 import { Tooltip, TooltipContent } from "../tooltip/Tooltip"
 import { GalleryM2 } from "./GalleryM2"
 import { GalleryM3 } from "./GalleryM3"
+import { GalleryM4Files } from "./GalleryM4Files"
+import { GalleryM4Fonts } from "./GalleryM4Fonts"
 
 /** Props for {@link Gallery}. */
 export interface GalleryProps {
@@ -338,6 +340,8 @@ export function Gallery({ theme }: GalleryProps) {
       </div>
       <GalleryM2 theme={theme} />
       <GalleryM3 theme={theme} />
+      <GalleryM4Files theme={theme} />
+      <GalleryM4Fonts theme={theme} />
     </>
   )
 }

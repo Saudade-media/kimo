@@ -1,7 +1,9 @@
 /**
- * One open file: a DocStore (createDocStore), a UI store, and IndexedDB autosave through
- * `@kimo/sync`'s IndexedDbProvider. The file index entry (name, updatedAt, frame count) is
- * kept current from store changes.
+ * One open file: a DocStore, a UI store and its persistence.
+ * - Browser library (`#/file/:id`): IndexedDB autosave through `@kimo/sync`'s IndexedDbProvider;
+ *   the file index entry (name, updatedAt, frame count) is kept current from store changes.
+ * - A `.kimo` on disk (`#/disk/<ref>`): the window's session manager (ADR 0012 §4) owns the
+ *   store, lease, autosave, watching and merges; {@link FileSession.document} is that session.
  */
 import {
   bindUiToDocument,
@@ -19,12 +21,16 @@ import { manifestOps } from "../lib/asset-manifest"
 import type { ManifestEntry } from "../lib/assets"
 import { countFrames, docDbName, type FileMeta, getFile, patchFile } from "../lib/files"
 import { currentHeader } from "../lib/header"
+import type { FileDocumentSession, FileSessionManager } from "../platform/session"
 
 export interface FileSession {
   id: string
   store: DocStore
   ui: UiStore
-  provider: IndexedDbProvider
+  /** IndexedDB autosave (browser library); null for a file on disk. */
+  provider: IndexedDbProvider | null
+  /** The document session of a file on disk; null for the browser library. */
+  document: FileDocumentSession | null
   meta: FileMeta
   /** Applies `ops` as the user (one undo step) and reports a failure to the console. */
   apply(ops: Op | readonly Op[], label?: string): boolean
@@ -61,7 +67,13 @@ export interface Gesture {
   readonly done: boolean
 }
 
-function makeSession(id: string, store: DocStore, provider: IndexedDbProvider, meta: FileMeta) {
+function makeSession(
+  id: string,
+  store: DocStore,
+  provider: IndexedDbProvider | null,
+  meta: FileMeta,
+  document: FileDocumentSession | null = null,
+) {
   const reject = (message: string) => {
     console.warn("Kimo: edit rejected", message)
     for (const l of [...session.onReject]) l(message)
@@ -92,6 +104,7 @@ function makeSession(id: string, store: DocStore, provider: IndexedDbProvider, m
     store,
     ui: createUiStore(),
     provider,
+    document,
     meta,
     apply,
     assetEntry: () => null,
@@ -170,12 +183,73 @@ export function useFileSession(id: string): SessionState {
   return state
 }
 
-/** Provider status, kept current. */
-export function useSyncStatus(provider: IndexedDbProvider): SyncStatus {
-  const [status, setStatus] = useState<SyncStatus>(provider.status)
+/** Provider status, kept current ("synced" without an IndexedDB provider). */
+export function useSyncStatus(provider: IndexedDbProvider | null): SyncStatus {
+  const [status, setStatus] = useState<SyncStatus>(provider?.status ?? "synced")
   useEffect(() => {
+    if (!provider) return
     setStatus(provider.status)
     return provider.onStatus((e) => setStatus(e.status))
   }, [provider])
   return status
 }
+
+export type DiskSessionState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; session: FileSession }
+
+/**
+ * Opens the `.kimo` at `ref` through the window's session manager for the lifetime of the
+ * calling component. The document session's store is the editor's store; closing the editor
+ * flushes and closes the document session.
+ */
+export function useDiskSession(manager: FileSessionManager, ref: string): DiskSessionState {
+  const [state, setState] = useState<DiskSessionState>({ status: "loading" })
+  useEffect(() => {
+    retained.set(ref, (retained.get(ref) ?? 0) + 1)
+    let disposed = false
+    const cleanups: (() => void)[] = []
+    let doc: FileDocumentSession | null = null
+    setState({ status: "loading" })
+    void (async () => {
+      try {
+        doc = await manager.open(ref, { source: "open-dialog" })
+        if (disposed) return
+        const now = Date.now()
+        const meta: FileMeta = {
+          id: doc.ref,
+          name: doc.fileName,
+          createdAt: now,
+          updatedAt: now,
+          frames: 0,
+        }
+        const session = makeSession(doc.ref, doc.store, null, meta, doc)
+        cleanups.push(bindUiToDocument(session.ui, doc.store))
+        setState({ status: "ready", session })
+      } catch (e) {
+        if (!disposed)
+          setState({ status: "error", message: e instanceof Error ? e.message : String(e) })
+      }
+    })()
+    return () => {
+      disposed = true
+      for (const c of cleanups) c()
+      // Flush and release the lease (the store belongs to the document session). Deferred so a
+      // remount of the same file (StrictMode, route re-entry) keeps the session open.
+      const left = (retained.get(ref) ?? 1) - 1
+      if (left > 0) retained.set(ref, left)
+      else retained.delete(ref)
+      const closing = doc
+      setTimeout(() => {
+        if (retained.has(ref)) return
+        const s = closing ?? manager.get(ref)
+        if (s) void s.close().catch(() => undefined)
+      }, 0)
+    }
+  }, [manager, ref])
+  return state
+}
+
+/** Editors currently showing each file on disk (see {@link useDiskSession}). */
+const retained = new Map<string, number>()

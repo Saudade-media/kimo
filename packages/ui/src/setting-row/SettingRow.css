@@ -1,0 +1,61 @@
+/*
+ * SettingRow: desing.pen 02d > SettingRow (MuoTX).
+ * frame: row, gap 16, padding [12, 0], alignItems center, fill_container, stroke bottom 1 border
+ *   ├ Text (PRXt4) vertical, gap 2, fill_container
+ *   │   ├ Label (NcrOC) sans 12 / 500 text-primary
+ *   │   └ Desc  (LMxOY) sans 11 / 400 text-secondary, lineHeight 1.45, fixed-width
+ *   └ Control (J4s83) row, justifyContent end, alignItems center (instances: gap 8)
+ * Last row of a pane: stroke #00000000. Dimmed (lTh1f): opacity 0.45.
+ */
+.kimo-setting-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border); /* inside stroke: adds no height */
+}
+
+.kimo-setting-row--last {
+  box-shadow: none; /* stroke #00000000 */
+}
+
+.kimo-setting-row--dimmed {
+  opacity: 0.45;
+}
+
+.kimo-setting-row__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kimo-setting-row__label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) */
+}
+
+.kimo-setting-row__desc {
+  width: 100%;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+.kimo-setting-row__control {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}

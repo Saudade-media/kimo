@@ -150,8 +150,18 @@ export interface SetThemesOp {
  * (spec §12: a new asset reference and its entry are added in the same edit). M3 (ADR 0011):
  * `imports` (link / relink / unlink a library), `components` (the optional index, kept in
  * sync by Create component / Detach) and `meta` (root metadata, e.g. `kimo.themes.order`).
+ * M4 (ADR 0012, spec §21): `merge` and `conflicts`, so picking a side of a stored merge
+ * conflict (and "Mark resolved & save") is one undoable op group with the body edit.
  */
-export const HEADER_OP_KEYS = ["features", "assets", "imports", "components", "meta"] as const
+export const HEADER_OP_KEYS = [
+  "features",
+  "assets",
+  "imports",
+  "components",
+  "meta",
+  "merge",
+  "conflicts",
+] as const
 export type HeaderOpKey = (typeof HEADER_OP_KEYS)[number]
 
 /** Sets and/or removes header members ({@link HEADER_OP_KEYS}), as whole values. */

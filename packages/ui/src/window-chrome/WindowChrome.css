@@ -1,0 +1,176 @@
+/*
+ * Window chrome (macOS): desing.pen 02d > WindowChrome/TrafficLights (L2zCG), /Inactive
+ * (O8MOD), Topbar/Desktop (XDqrb).
+ * TrafficLights: 68 × 48, row, gap 8, padding [0, 0, 0, 16], center; Close / Minimize / Zoom
+ *   ellipses 12 × 12 (#FF5F57 / #FEBC2E / #28C840, inactive border-strong), stroke 0.5 #0000001F.
+ * Topbar/Desktop: fill × 48, bg-app, stroke bottom 1 border, row, gap 8, padding [0, 12, 0, 0].
+ *   Breadcrumb (RuRhK) gap 6: Folder (MPFjV) gap 6 padding [0, 4] · Sep · File (gRY55) gap 6
+ *   padding [0, 4] · Sep 2 · Page. Branch (Fyxb9) h 22 bg-muted pill gap 4 padding [0, 8, 0, 6].
+ *   Drag Region (hTlfG) fill × 48.
+ */
+.kimo-traffic-lights {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 68px;
+  height: 48px;
+  padding-left: 16px;
+}
+
+.kimo-traffic-lights__light {
+  box-sizing: border-box;
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px #0000001f; /* pen-literal: light stroke #0000001F */
+}
+
+.kimo-traffic-lights__light--close {
+  background: #ff5f57; /* pen-literal: Close (iZuYx) fill #FF5F57 */
+}
+
+.kimo-traffic-lights__light--minimize {
+  background: #febc2e; /* pen-literal: Minimize (R0xgK) fill #FEBC2E */
+}
+
+.kimo-traffic-lights__light--zoom {
+  background: #28c840; /* pen-literal: Zoom (TfB54) fill #28C840 */
+}
+
+.kimo-traffic-lights--inactive .kimo-traffic-lights__light {
+  background: var(--kimo-border-strong);
+}
+
+.kimo-desktop-breadcrumb {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kimo-desktop-breadcrumb__folder,
+.kimo-desktop-breadcrumb__file {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.kimo-desktop-breadcrumb__file {
+  margin: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-desktop-breadcrumb__file:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-desktop-breadcrumb__file:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-desktop-breadcrumb__folder-icon,
+.kimo-desktop-breadcrumb__chevron {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-desktop-breadcrumb__folder-name,
+.kimo-desktop-breadcrumb__sep,
+.kimo-desktop-breadcrumb__file-name,
+.kimo-desktop-breadcrumb__page {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-desktop-breadcrumb__folder-name,
+.kimo-desktop-breadcrumb__page {
+  color: var(--kimo-text-secondary);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-desktop-breadcrumb__sep {
+  color: var(--kimo-text-tertiary);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+.kimo-desktop-breadcrumb__file-name {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+/* Unfocused window: Kimo drops the File Name weight to 500 (02d, enkXj). */
+.kimo-desktop-breadcrumb--inactive .kimo-desktop-breadcrumb__file-name {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-branch-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-branch-chip__icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-branch-chip__name {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-desktop-topbar {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  padding: 0 12px 0 0;
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+  user-select: none;
+}
+
+.kimo-desktop-topbar__drag {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 48px;
+}

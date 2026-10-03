@@ -3,6 +3,16 @@
  * the generated JSON Schema, validation, normative defaults, canonical serialization,
  * versioning and migrations. Spec: docs/spec/kimo-format-v0.1.md.
  */
+
+export {
+  type AssetFile,
+  type AssetGcPlan,
+  isContentAddressed,
+  planAssetGc,
+  prunedManifest,
+  referencedAssets,
+  usedFontFamilies,
+} from "./assets/gc"
 export {
   argEffect,
   baseRoot,
@@ -94,6 +104,7 @@ export {
   type SideValue,
   sideValue,
 } from "./merge/conflicts"
+export { type MergeDocumentsOptions, mergeDocuments, threeWayMerge } from "./merge/three-way"
 export {
   type CycleRepair,
   MERGE_EXIT,

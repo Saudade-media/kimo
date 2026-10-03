@@ -1,0 +1,43 @@
+/*
+ * CanvasMarker/Conflict: desing.pen 02d Components — Files (M4) > CanvasMarker/Conflict (ar36v).
+ * frame: height 20, fill danger, radius-pill, horizontal, gap 4, padding [0, 8, 0, 6],
+ *        alignItems center (width hugs)
+ *   ├ Icon  12 × 12 lucide git-merge, text-inverse
+ *   └ Label sans, text-xs (11), 600, text-inverse
+ */
+.kimo-canvas-conflict-marker {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  margin: 0;
+  padding: 0 8px 0 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-danger);
+  color: var(--kimo-text-inverse);
+  cursor: pointer;
+  appearance: none;
+  white-space: nowrap;
+}
+
+.kimo-canvas-conflict-marker:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-canvas-conflict-marker__icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-canvas-conflict-marker__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px;
+}

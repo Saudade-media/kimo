@@ -1,0 +1,368 @@
+/*
+ * Board 18 "18 Merge Conflicts (M4)" (dTPQO): Conflicts Panel (cNrNM) and canvas overlay.
+ * Values are the node values; tokens are the editor's --kimo-* variables.
+ */
+
+/* Conflicts Panel cNrNM: fill × fill, vertical. Scrolls as a whole; the Footer stays pinned. */
+.conflicts-panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--kimo-bg-app);
+}
+
+/* Summary dsAsJ: fill width, stroke border bottom 1, vertical, gap 8, padding 12. */
+.conflicts-panel__summary {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  /* Inside stroke: the 1px bottom border comes out of the bottom padding (114 high, as dsAsJ). */
+  padding: 12px 12px 11px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+/* Title Row D4kpU: fill, horizontal, space_between, center. */
+.conflicts-panel__title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Title KRyTs: sans text-sm 600 text-primary. */
+.conflicts-panel__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* Count B09XG: sans text-xs regular text-secondary. */
+.conflicts-panel__count {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+/* Progress BxNy8: fill × 4, bg-muted, radius-pill, clip; Resolved QtFsi: success, radius-pill. */
+.conflicts-panel__progress {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.conflicts-panel__progress-fill {
+  height: 4px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-success);
+}
+
+/* Source XCDbb: mono text-xs regular text-tertiary, fixed-width fill. */
+.conflicts-panel__source {
+  width: 100%;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  overflow-wrap: anywhere;
+}
+
+/* Pick All Zzg9m: fill, horizontal, gap 6, padding [4, 0, 0, 0]. */
+.conflicts-panel__pick-all {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0 0;
+}
+
+/* Take all ours / theirs (Button/Secondary kv3Fk instances): width fill, height 28,
+   padding [0, 10], justifyContent center, icon disabled, label text-sm. `size="sm"` gives
+   height 28 and the text-sm label; padding, flex and centering are neutralized here. */
+.kimo-button.conflicts-panel__pick {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  justify-content: center;
+  font-size: var(--kimo-text-sm);
+}
+
+/* Group W03xYd: fill, vertical. */
+.conflicts-panel__group {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Group Header time9: fill, horizontal, gap 6, padding [12, 12, 2, 12], center. */
+.conflicts-panel__group-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 12px 2px;
+}
+
+/* Icon liWrH: 12 × 12, text-tertiary. */
+.conflicts-panel__group-icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.conflicts-panel__group-icon > svg,
+.conflicts-panel__group-icon > span {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+/* Node UCvpD: sans text-xs 600 text-primary. */
+.conflicts-panel__group-node {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Spacers (gIAOg, nplYX): fill × 1. */
+.conflicts-panel__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Count nlGW1: sans text-xs regular text-tertiary. */
+.conflicts-panel__group-count {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+.conflicts-panel [data-focused] .kimo-conflict-row__property {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Resolved KzQy6: fill, vertical, padding [12, 0, 0, 0]. */
+.conflicts-panel__resolved {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 100%;
+  padding: 12px 0 0;
+}
+
+/* Resolved Header e1NP6n: fill, horizontal, gap 6, padding [0, 12, 4, 12], center. */
+.conflicts-panel__resolved-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0 12px 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+/* Chevron fVnaV: 12 × 12 lucide chevron-down, text-tertiary. */
+.conflicts-panel__chevron {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.conflicts-panel__chevron > svg,
+.conflicts-panel__resolved-status > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Label hCsuv: sans text-xs 600 text-secondary. */
+.conflicts-panel__resolved-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px;
+}
+
+/* Resolved rows AnPLa: fill × 28, horizontal, gap 6, padding [0, 12], center. */
+.conflicts-panel__resolved-row {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.conflicts-panel__resolved-row:hover {
+  background: var(--kimo-bg-hover);
+}
+
+/* Status f4l9i: 14 × 14 lucide circle-check, success. */
+.conflicts-panel__resolved-status {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-success);
+}
+
+/* Node SDHW7: sans text-xs regular text-primary. */
+.conflicts-panel__resolved-node {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Property uDtHF: mono text-xs regular text-tertiary. */
+.conflicts-panel__resolved-property {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* Choice YWzv7: sans text-xs regular text-tertiary. */
+.conflicts-panel__resolved-choice {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+/* Spacer ZKdDB: fill × fill. */
+.conflicts-panel__fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Footer L9mpx: fill, stroke border top 1, vertical, gap 8, padding 12, alignItems center. */
+.conflicts-panel__footer {
+  position: sticky;
+  bottom: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  /* Inside stroke: the 1px top border comes out of the top padding (77 high, as L9mpx). */
+  padding: 11px 12px 12px;
+  border-top: 1px solid var(--kimo-border);
+  background: var(--kimo-bg-app);
+}
+
+/* Mark Resolved vQdpL (Button/Primary W2lra): width fill, justifyContent center, icon check;
+   opacity 0.4 while conflicts are open (the disabled state on the board). */
+.kimo-button.conflicts-panel__mark {
+  width: 100%;
+  justify-content: center;
+}
+
+.kimo-button.conflicts-panel__mark:disabled {
+  opacity: 0.4;
+}
+
+/* Hint A2bUn2: sans text-xs regular text-tertiary (hug); ready VvI5R: fixed-width fill,
+   textAlign center. */
+.conflicts-panel__hint {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+
+.conflicts-panel__hint--ready {
+  width: 100%;
+  text-align: center;
+}
+
+/* Canvas overlay (canvas S6HXd): markers ar36v and the 1.5px $danger outline (fawpR). */
+.conflict-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.conflict-overlay__outline {
+  position: absolute;
+  box-sizing: border-box;
+  /* 1.5px stroke as an inset shadow: Chromium rounds a 1.5px border down to 1px. */
+  box-shadow: inset 0 0 0 1.5px var(--kimo-danger);
+}
+
+.conflict-overlay__marker {
+  position: absolute;
+  pointer-events: auto;
+}

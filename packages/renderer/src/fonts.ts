@@ -79,8 +79,33 @@ export class CkFontProvider implements FontProvider {
   private readonly missing = new Set<string>()
   private readonly served = new Set<string>()
   private readonly listeners = new Set<(key: FontFaceKey) => void>()
-  sources: readonly NetworkFontSource[] = []
-  offline = false
+  private _sources: readonly NetworkFontSource[] = []
+  private _offline = false
+
+  /** Sources tried in order. Replacing them forgets families known missing (a new source,
+   * e.g. a document font asset or the platform cache, may have them). */
+  get sources(): readonly NetworkFontSource[] {
+    return this._sources
+  }
+  set sources(next: readonly NetworkFontSource[]) {
+    if (next !== this._sources) this.missing.clear()
+    this._sources = next
+  }
+
+  /** Skip network sources. Turning it off forgets known-missing families so they are retried. */
+  get offline(): boolean {
+    return this._offline
+  }
+  set offline(next: boolean) {
+    if (next !== this._offline) this.missing.clear()
+    this._offline = next
+  }
+
+  /** Forgets families known missing so the next `ensureFont` asks the sources again (settings
+   * changed, fonts installed, document fonts added). */
+  retryMissing(): void {
+    this.missing.clear()
+  }
 
   constructor(ck: CanvasKit) {
     this.provider = ck.TypefaceFontProvider.Make()

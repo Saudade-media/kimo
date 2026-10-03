@@ -1,0 +1,144 @@
+/*
+ * Dialog: desing.pen 02d > Dialog (bDVhS).
+ * frame: width 480, fill bg-overlay, radius-xl, stroke border 1, shadow 0 16 48 shadow-strong,
+ *        column, gap 14, padding 20
+ *   ├ Head (U83ete) row, gap 12
+ *   │   ├ Icon Wrap (nlNhT) 32 × 32, bg-muted, radius-pill, center; Icon (rhvD9) 16 text-primary
+ *   │   └ Text (g9Ml9) fill, column, gap 4
+ *   │       ├ Title (j7914) sans 14 / 600 text-primary
+ *   │       └ Desc  (QTzCg) sans 12 / 400 text-secondary, lineHeight 1.45, fixed-width fill
+ *   ├ Body (z3U95) slot (replaced per instance)
+ *   └ Footer (zI9zf) row, gap 8, alignItems center
+ *       ├ Footnote (POSht) sans 11 text-tertiary (hidden unless the instance enables it)
+ *       ├ Spacer (NLdhm) fill × 1
+ *       ├ Tertiary (gDY4y) Button/Ghost h 30, padding [0, 12], label 12 (hidden by default)
+ *       ├ Cancel (k0VaD)  Button/Ghost h 30, padding [0, 12], label 12
+ *       └ Confirm (qqpfr) Button/Primary h 30, padding [0, 14], label 12
+ */
+.kimo-dialog {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  outline: none;
+}
+
+.kimo-dialog__head {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+.kimo-dialog__icon-wrap {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-dialog__icon-wrap > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-dialog--danger .kimo-dialog__icon-wrap {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.kimo-dialog__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kimo-dialog__title,
+.kimo-dialog__desc {
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+}
+
+.kimo-dialog__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 17px; /* Pencil text box: round(14 × 1.21) for Inter */
+}
+
+.kimo-dialog__desc {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+.kimo-dialog__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-dialog__footnote {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-dialog__footnote--mono {
+  font-family: var(--kimo-font-mono);
+  line-height: 15px;
+}
+
+.kimo-dialog__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-dialog .kimo-button.kimo-dialog__button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-dialog .kimo-button.kimo-dialog__button--confirm {
+  padding: 0 14px;
+}
+
+/* Modal scrim (board 15 Scrim WWuf4), centering the dialog. */
+.kimo-dialog-scrim {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #0a0a0a4d; /* pen-literal: Scrim (WWuf4) fill #0A0A0A4D */
+}

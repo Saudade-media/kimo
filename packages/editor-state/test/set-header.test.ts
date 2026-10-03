@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+import { parse } from "@kimo/core-schema"
+import { HEADER_OP_KEYS } from "../src/ops"
 import { emptyStore, failed, frame, ok } from "./helpers"
+
+const BOARD_18 = join(
+  import.meta.dir,
+  "../../core-schema/fixtures/lint/CONFLICT_OPEN--board-18.kimo",
+)
 
 describe("setHeader op", () => {
   test("declares a feature in the same edit as the construct (one undo step)", () => {
@@ -72,5 +81,54 @@ describe("setHeader op", () => {
     const s = emptyStore()
     const r = failed(s.apply({ op: "setHeader", set: { name: "x" } as never }, { origin: "user" }))
     expect(r.errors[0]?.code).toBe("INVALID_OP")
+  })
+
+  test("merge and conflicts are header keys: a pick and finishing apply and undo as one step", () => {
+    expect(HEADER_OP_KEYS).toContain("merge")
+    expect(HEADER_OP_KEYS).toContain("conflicts")
+    const s = emptyStore()
+    s.loadDocument(parse(readFileSync(BOARD_18, "utf8")))
+    s.clearHistory()
+    const before = s.toDocument() as unknown as Record<
+      string,
+      Record<string, Record<string, unknown>>
+    >
+    const conflicts = before.conflicts as Record<string, Record<string, unknown>>
+    // A pick: one conflicts entry becomes resolved (ConflictSession.choose's header half).
+    ok(
+      s.apply(
+        {
+          op: "setHeader",
+          set: {
+            conflicts: { ...conflicts, CfHeadlin1: { ...conflicts.CfHeadlin1, resolved: true } },
+          },
+        },
+        { origin: "user" },
+      ),
+    )
+    const picked = s.toDocument() as unknown as typeof before
+    expect(picked.conflicts?.CfHeadlin1?.resolved).toBe(true)
+    s.undo("user")
+    expect(
+      (s.toDocument() as unknown as typeof before).conflicts?.CfHeadlin1?.resolved,
+    ).toBeUndefined()
+    s.redo("user")
+    expect((s.toDocument() as unknown as typeof before).conflicts?.CfHeadlin1?.resolved).toBe(true)
+    // finishMerge's header half: drop merge, conflicts and the feature in one op group.
+    ok(
+      s.apply(
+        { op: "setHeader", set: {}, unset: ["merge", "conflicts", "features"] },
+        { origin: "user" },
+      ),
+    )
+    const done = s.toDocument() as unknown as Record<string, unknown>
+    expect(done.merge).toBeUndefined()
+    expect(done.conflicts).toBeUndefined()
+    s.undo("user")
+    const restored = s.toDocument() as unknown as typeof before
+    expect(restored.merge).toEqual(before.merge)
+    expect(Object.keys(restored.conflicts ?? {})).toEqual(Object.keys(conflicts))
+    s.redo("user")
+    expect((s.toDocument() as unknown as Record<string, unknown>).conflicts).toBeUndefined()
   })
 })

@@ -54,8 +54,10 @@ export type ThreeWayMerge = (
 ) => ThreeWayMergeResult
 
 /**
- * Exit codes of `kimo merge <base> <ours> <theirs> [-o out] [--labels b,o,t]` when used as a
- * git merge driver (`merge=kimo` with `driver = kimo merge %O %A %B -L %S,%X,%Y`):
+ * Exit codes of `kimo merge <base> <ours> <theirs> [path] [-o out] [-L ours,base,theirs]` when
+ * used as a git merge driver (`*.kimo merge=kimo diff=kimo` with
+ * `driver = kimo merge %O %A %B %P`: base = %O, ours = %A, which receives the result,
+ * theirs = %B, path = %P for messages; the `-L` labels are optional):
  * - 0: clean merge, `%A` holds the canonical result;
  * - 1: merged with stored conflicts, `%A` holds a valid document with `conflicts` (git marks
  *   the path conflicted; the editor opens it on board 18);

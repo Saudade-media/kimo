@@ -7,6 +7,25 @@ import { CanvasKitRenderer } from "./renderer"
 import type { CreateRendererOptions, FontSource, Point, Rect, Renderer, Viewport } from "./types"
 
 export { parseColor, type RGBA, toHex } from "./color"
+export { type FontFileInfo, fontFormat, fsEmbeddable, readFontInfo } from "./font-info"
+export {
+  collectFontUsage,
+  createPlatformFontSources,
+  type DocumentFontFace,
+  detectMissingFonts,
+  type FontAvailability,
+  type FontHost,
+  type FontHostCacheEntry,
+  type FontHostLocalFamily,
+  type FontHostLocalStyle,
+  type FontPolicy,
+  type FontUsage,
+  googleCssUrl,
+  type MissingFont,
+  type PlatformFontSources,
+  type PlatformFontSourcesOptions,
+} from "./font-sources"
+export { BUNDLED_FAMILIES, FALLBACK_FAMILY, type NetworkFontSource } from "./fonts"
 export { DEFAULT_OVERLAY_THEME } from "./overlay"
 export { CanvasKitRenderer, RASTER_MAX_SCALE } from "./renderer"
 export * from "./types"

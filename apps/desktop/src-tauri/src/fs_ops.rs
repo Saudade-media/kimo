@@ -1,0 +1,288 @@
+//! File operations without Tauri types (unit-tested): the atomic write with read-back
+//! (ADR 0012 §3), reads, stat and list.
+
+use crate::error::{ctx, io_err, PlatformErrorPayload, R};
+use crate::util::{basename, path_str, sha256_hex, system_time_ms};
+use serde::Serialize;
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AtomicWriteResult {
+    pub bytes: u64,
+    pub hash: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadTextResult {
+    pub text: String,
+    pub hash: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FileStat {
+    #[serde(rename = "ref")]
+    pub file_ref: String,
+    pub name: String,
+    pub kind: &'static str,
+    pub size: u64,
+    pub mtime_ms: u64,
+    pub read_only: bool,
+}
+
+/// temp file in the same directory → fsync → rename → fsync dir → read back → SHA-256
+/// compare (`READ_BACK_MISMATCH`). The original is untouched when anything before the rename
+/// fails; the temp file is removed.
+pub fn write_atomic(path: &Path, bytes: &[u8], mkdirs: bool) -> R<AtomicWriteResult> {
+    write_atomic_with(path, bytes, mkdirs, |_| {})
+}
+
+/// [`write_atomic`] with a hook that runs between the rename and the read-back (tests use it
+/// to simulate a sync client or antivirus rewriting the file).
+pub fn write_atomic_with(
+    path: &Path,
+    bytes: &[u8],
+    mkdirs: bool,
+    after_rename: impl FnOnce(&Path),
+) -> R<AtomicWriteResult> {
+    let what = path_str(path);
+    let dir = path
+        .parent()
+        .ok_or_else(|| crate::error::invalid(format!("No parent directory: {what}")))?;
+    if mkdirs {
+        fs::create_dir_all(dir).map_err(ctx(&path_str(dir)))?;
+    } else if !dir.is_dir() {
+        return Err(io_err(
+            io::Error::from(io::ErrorKind::NotFound),
+            &format!("No directory for {what}"),
+        ));
+    }
+    let existing = fs::metadata(path).ok();
+    if let Some(m) = &existing {
+        if m.is_dir() {
+            return Err(PlatformErrorPayload::new(
+                "INVALID",
+                format!("{what} is a directory"),
+            ));
+        }
+        if !writable(path, m) {
+            return Err(
+                PlatformErrorPayload::new("PERMISSION", format!("{what} is read-only"))
+                    .with_errno(Some("EACCES".into())),
+            );
+        }
+    }
+    let hash = sha256_hex(bytes);
+    let tmp = temp_path(dir, path);
+    let staged = (|| -> io::Result<()> {
+        let mut f = OpenOptions::new().write(true).create_new(true).open(&tmp)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+        #[cfg(unix)]
+        if let Some(m) = &existing {
+            fs::set_permissions(&tmp, m.permissions())?;
+        }
+        drop(f);
+        fs::rename(&tmp, path)
+    })();
+    if let Err(e) = staged {
+        let _ = fs::remove_file(&tmp);
+        return Err(io_err(e, &what));
+    }
+    sync_dir(dir);
+    after_rename(path);
+    let back = fs::read(path).map_err(ctx(&what))?;
+    let back_hash = sha256_hex(&back);
+    if back_hash != hash {
+        return Err(PlatformErrorPayload::new(
+            "READ_BACK_MISMATCH",
+            format!("Read-back of {what} did not match what was written"),
+        ));
+    }
+    Ok(AtomicWriteResult {
+        bytes: bytes.len() as u64,
+        hash,
+    })
+}
+
+fn temp_path(dir: &Path, path: &Path) -> PathBuf {
+    let name = basename(path);
+    let rand = &uuid::Uuid::new_v4().simple().to_string()[..8];
+    dir.join(format!(".{name}.kimo-tmp-{}-{rand}", std::process::id()))
+}
+
+fn sync_dir(dir: &Path) {
+    #[cfg(unix)]
+    if let Ok(d) = File::open(dir) {
+        let _ = d.sync_all();
+    }
+    #[cfg(not(unix))]
+    let _ = dir;
+}
+
+fn writable(path: &Path, m: &fs::Metadata) -> bool {
+    if m.permissions().readonly() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let Ok(c) = std::ffi::CString::new(path.as_os_str().as_bytes()) else {
+            return false;
+        };
+        // SAFETY: access() reads a NUL-terminated path.
+        unsafe { libc::access(c.as_ptr(), libc::W_OK) == 0 }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        true
+    }
+}
+
+pub fn read_text(path: &Path) -> R<ReadTextResult> {
+    let what = path_str(path);
+    let bytes = fs::read(path).map_err(ctx(&what))?;
+    let hash = sha256_hex(&bytes);
+    let text = String::from_utf8(bytes)
+        .map_err(|_| PlatformErrorPayload::new("INVALID", format!("{what} is not UTF-8 text")))?;
+    Ok(ReadTextResult { text, hash })
+}
+
+pub fn read_bytes(path: &Path) -> R<Vec<u8>> {
+    fs::read(path).map_err(ctx(&path_str(path)))
+}
+
+pub fn remove(path: &Path) -> R<()> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(io_err(e, &path_str(path))),
+    }
+}
+
+pub fn stat(path: &Path) -> R<Option<FileStat>> {
+    match fs::metadata(path) {
+        Ok(m) => Ok(Some(stat_of(path, &m))),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(io_err(e, &path_str(path))),
+    }
+}
+
+pub fn stat_of(path: &Path, m: &fs::Metadata) -> FileStat {
+    let dir = m.is_dir();
+    FileStat {
+        file_ref: path_str(path),
+        name: basename(path),
+        kind: if dir { "directory" } else { "file" },
+        size: if dir { 0 } else { m.len() },
+        mtime_ms: m.modified().map(system_time_ms).unwrap_or(0),
+        read_only: !writable(path, m),
+    }
+}
+
+pub fn list(dir: &Path, extensions: Option<&[String]>) -> R<Vec<FileStat>> {
+    let what = path_str(dir);
+    let mut out = Vec::new();
+    for entry in fs::read_dir(dir).map_err(ctx(&what))? {
+        let Ok(entry) = entry else { continue };
+        let p = entry.path();
+        let Ok(m) = fs::metadata(&p) else { continue };
+        if m.is_file() {
+            if let Some(exts) = extensions {
+                let name = basename(&p);
+                if !exts.iter().any(|e| name.ends_with(&format!(".{e}"))) {
+                    continue;
+                }
+            }
+        }
+        out.push(stat_of(&p, &m));
+    }
+    out.sort_by(|a, b| a.file_ref.cmp(&b.file_ref));
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn atomic_write_and_read_back() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("doc.kimo");
+        let r = write_atomic(&p, b"{\"a\":1}", false).unwrap();
+        assert_eq!(r.bytes, 7);
+        assert_eq!(r.hash, sha256_hex(b"{\"a\":1}"));
+        let t = read_text(&p).unwrap();
+        assert_eq!(t.text, "{\"a\":1}");
+        assert_eq!(t.hash, r.hash);
+        // Overwrite; no temp files left behind.
+        write_atomic(&p, b"two", false).unwrap();
+        assert_eq!(fs::read(&p).unwrap(), b"two");
+        let names: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names.len(), 1);
+    }
+
+    #[test]
+    fn read_back_mismatch_is_reported() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("doc.kimo");
+        let e = write_atomic_with(&p, b"mine", false, |p| {
+            fs::write(p, b"someone else").unwrap()
+        })
+        .unwrap_err();
+        assert_eq!(e.code, "READ_BACK_MISMATCH");
+    }
+
+    #[test]
+    fn missing_dir_without_mkdirs() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("a/b/doc.kimo");
+        let e = write_atomic(&p, b"x", false).unwrap_err();
+        assert_eq!(e.code, "NOT_FOUND");
+        write_atomic(&p, b"x", true).unwrap();
+        assert_eq!(fs::read(&p).unwrap(), b"x");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn read_only_file_is_untouched() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("doc.kimo");
+        fs::write(&p, b"orig").unwrap();
+        fs::set_permissions(&p, fs::Permissions::from_mode(0o444)).unwrap();
+        let e = write_atomic(&p, b"new", false).unwrap_err();
+        assert_eq!(e.code, "PERMISSION");
+        assert_eq!(fs::read(&p).unwrap(), b"orig");
+        assert!(stat(&p).unwrap().unwrap().read_only);
+    }
+
+    #[test]
+    fn stat_list_remove() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("a.kimo"), b"1").unwrap();
+        fs::write(dir.path().join("b.txt"), b"22").unwrap();
+        fs::create_dir(dir.path().join("sub")).unwrap();
+        let all = list(dir.path(), None).unwrap();
+        assert_eq!(all.len(), 3);
+        let only = list(dir.path(), Some(&["kimo".to_string()])).unwrap();
+        assert_eq!(
+            only.iter().map(|s| s.name.as_str()).collect::<Vec<_>>(),
+            ["a.kimo", "sub"]
+        );
+        let s = stat(&dir.path().join("b.txt")).unwrap().unwrap();
+        assert_eq!((s.kind, s.size), ("file", 2));
+        assert!(stat(&dir.path().join("nope")).unwrap().is_none());
+        remove(&dir.path().join("b.txt")).unwrap();
+        remove(&dir.path().join("b.txt")).unwrap();
+        assert!(read_text(&dir.path().join("b.txt")).unwrap_err().code == "NOT_FOUND");
+    }
+}

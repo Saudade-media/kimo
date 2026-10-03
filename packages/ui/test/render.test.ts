@@ -119,6 +119,12 @@ describe("component CSS", () => {
       "image-fill-popover/ImageFillPopover.css: color: #ffffff",
       // M3 (board 15): danger Confirm label #FFFFFF; 02c AssetTile placeholder thumbnail.
       "confirm-dialog/ConfirmDialog.css: color: #ffffff",
+      // M4 files (02d / board 15): modal Scrim WWuf4; macOS traffic lights (the OS's colors).
+      "dialog/Dialog.css: background: #0a0a0a4d",
+      "window-chrome/WindowChrome.css: box-shadow: inset 0 0 0 0.5px #0000001f",
+      "window-chrome/WindowChrome.css: background: #ff5f57",
+      "window-chrome/WindowChrome.css: background: #febc2e",
+      "window-chrome/WindowChrome.css: background: #28c840",
       "gallery/Gallery.css: background: #0a0a0a",
       "gallery/Gallery.css: color: #ffffff",
     ])

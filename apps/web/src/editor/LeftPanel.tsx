@@ -5,9 +5,10 @@
  * (top border, gap 8, padding [10, 12]: files icon, "N pages", spacer, Kbd ⌘P).
  */
 import type { DocStore, NodeData, Op } from "@kimo/editor-state"
-import { EmptyState, Input, Kbd, LayerRow, LayerRowM3, Tabs } from "@kimo/ui"
+import { EmptyState, Input, Kbd, LayerRow, LayerRowConflict, LayerRowM3, Tabs } from "@kimo/ui"
 import { type KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { UiStore } from "../canvas/contract"
+import { type EditorConflictSession, useOpenConflictNodes } from "../conflicts"
 import { useNode, useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { AssetsTab } from "./m3/AssetsTab"
@@ -25,8 +26,18 @@ const TABS = [
   { value: "variables", label: "Variables" },
 ] as const
 
-export function LeftPanel({ session, m3 }: { session: FileSession; m3: M3Controller }) {
+export function LeftPanel({
+  session,
+  m3,
+  conflicts = null,
+}: {
+  session: FileSession
+  m3: M3Controller
+  /** Board 18: nodes owning an open conflict show LayerRow/Conflict (VpvIr). */
+  conflicts?: EditorConflictSession | null
+}) {
   const [tab, setTab] = useState<LeftTab>("layers")
+  const conflictNodes = useOpenConflictNodes(conflicts)
   const [query, setQuery] = useState("")
   return (
     <aside className="left-panel" aria-label="Layers panel">
@@ -50,6 +61,7 @@ export function LeftPanel({ session, m3 }: { session: FileSession; m3: M3Control
             apply={session.apply}
             query={query}
             m3={m3}
+            conflictNodes={conflictNodes}
           />
         </>
       )}
@@ -99,12 +111,14 @@ function LayerTree({
   apply,
   query,
   m3,
+  conflictNodes,
 }: {
   store: DocStore
   ui: UiStore
   apply: FileSession["apply"]
   query: string
   m3: M3Controller
+  conflictNodes: ReadonlyMap<string, unknown>
 }) {
   const shape = useTreeRevision(store)
   // M3: instances mirror their main's full child list through the expanded view (composite ids).
@@ -396,6 +410,7 @@ function LayerTree({
           open={r.hasChildren ? isOpen(r.id, r.depth) : undefined}
           selected={selected.has(r.id)}
           tabbable={r.id === tabbable}
+          conflict={conflictNodes.has(r.id)}
           actions={actions}
         />
       ))}
@@ -432,6 +447,7 @@ const LayerItem = memo(function LayerItem({
   open,
   selected,
   tabbable,
+  conflict,
   actions,
 }: {
   store: DocStore
@@ -442,6 +458,8 @@ const LayerItem = memo(function LayerItem({
   open: boolean | undefined
   selected: boolean
   tabbable: boolean
+  /** Owns an open merge conflict (board 18 "Layers" rule). */
+  conflict: boolean
   actions: RowActions
 }) {
   const real = useNode(store, row.id)
@@ -460,6 +478,22 @@ const LayerItem = memo(function LayerItem({
     actions.select(id, { shiftKey: false, metaKey: false, ctrlKey: false })
     actions.menu(id, e.clientX, e.clientY)
   }
+  if (conflict)
+    return (
+      <LayerRowConflict
+        data-node-id={id}
+        tabIndex={tabbable ? 0 : -1}
+        name={nodeName(n)}
+        icon={<Icon name={typeIcon(n)} size={14} />}
+        depth={depth}
+        expanded={open}
+        onToggleExpanded={() => actions.toggle(id, depth)}
+        selected={selected}
+        emphasized={depth === 0}
+        onClick={(e) => actions.select(id, e)}
+        onPointerEnter={() => actions.hover(id)}
+      />
+    )
   if (kind) {
     const derivedFrom =
       kind === "derived"

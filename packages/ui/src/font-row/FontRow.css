@@ -1,0 +1,90 @@
+/*
+ * FontRow: desing.pen 02d > FontRow (WVvHj), /Google (Lbs7z), /Offline (G92TP9), /Missing (mquPe).
+ * frame: row, gap 12, padding [10, 12], alignItems center, fill_container, stroke bottom 1 border
+ *   ├ Specimen (LvAkZ) 32 × 32, center, bg-muted, radius-md
+ *   │   └ "Aa" (MKjlE) 14 / 600 text-primary (Offline/Missing: Inter, text-tertiary)
+ *   ├ Info (R1Vot) vertical, gap 2, fill_container
+ *   │   ├ Family  (KcoKp) sans 13 / 500 text-primary
+ *   │   └ Weights (Uvvwl) mono 11 / 400 text-tertiary
+ *   ├ Source  Badge (jrIWa)
+ *   ├ Status  StatusPill (SVobH / n20iVc / jwQVJ) with the row's label
+ *   └ Action  IconButton (ZMxjt) 28 transparent / Select 148 / Button/Ghost 28
+ * Badge and StatusPill keep their own component CSS (Badge.css, StatusPill.css).
+ */
+.kimo-font-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border); /* inside stroke: adds no height */
+}
+
+.kimo-font-row__specimen {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-font-row__aa {
+  color: var(--kimo-text-primary);
+  font-size: 14px;
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 17px; /* Pencil text box: round(14 × 1.21) */
+  white-space: nowrap;
+}
+
+.kimo-font-row__aa--muted {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-font-row__info {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kimo-font-row__family {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kimo-font-row__meta {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box for JetBrains Mono 11 */
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+/* Action variants. FontRow/Missing (JoOkA): Select 148, value "Replace with…" text-secondary. */
+.kimo-font-row .kimo-select {
+  flex: none;
+}
+.kimo-font-row .kimo-select__value--placeholder {
+  color: var(--kimo-text-secondary);
+}
+/* FontRow/Offline in the Missing dialog (a4hbZC): Button/Ghost h 28, padding [0, 10]. */
+.kimo-font-row .kimo-button.kimo-button--sm {
+  flex: none;
+  padding: 0 10px;
+}

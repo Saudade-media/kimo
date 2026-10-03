@@ -3,13 +3,20 @@
  * vertical, bg-canvas; Topbar (48) over Body (Left Panel 256 · Canvas fill · Right Panel 280).
  * Owns the file session and the global shortcuts; the canvas is mounted through the
  * CanvasHost contract (CanvasKit renderer + Yoga layout, ADR 0009).
+ *
+ * M4 (ADR 0012): a `.kimo` on disk ({@link DiskEditor}) opens through the window's session
+ * manager and shows board 16's desktop topbar, board 17's banner / toasts / dialogs and board
+ * 18's conflicts (canvas markers, layer markers, Conflicts tab, ⌘'). Fonts resolve through the
+ * window's font system (Document → Local → Cache → Google, board 19).
  */
 
 import { createLayoutEngine, type LayoutResult } from "@kimo/layout"
-import { googleFontsSource, type OverlayTheme } from "@kimo/renderer"
+import { KIMO_FILE_FILTER } from "@kimo/platform"
+import type { DocumentFontFace, OverlayTheme } from "@kimo/renderer"
 import { browserIconProvider, createRenderer } from "@kimo/renderer/browser"
 import { EmptyState } from "@kimo/ui"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { CleanUpAssetsHost, indexedDbAssetFolder, platformAssetFolder } from "../assets-gc"
 import { CanvasHost } from "../canvas/CanvasHost"
 import {
   CANVAS_TOOLS,
@@ -17,16 +24,20 @@ import {
   type CanvasToolId,
   type IconPickerRequest,
 } from "../canvas/contract"
+import { CanvasConflictOverlay, useNextConflictShortcut } from "../conflicts"
+import { BannerHost, FailedLoadView, MigrationDialog, ToastHost } from "../files"
+import { createFontSystem, loadDocumentFontFaces, MissingFontsHost } from "../fonts"
 import * as assetsModule from "../lib/assets"
-import { createAssetStore, manifestEntry } from "../lib/assets"
+import { contentHash, createAssetStore, createFolderAssetStore, manifestEntry } from "../lib/assets"
 import * as filesModule from "../lib/files"
 import { exportFile, importFile, patchFile, pickKimoFile, saveFile } from "../lib/files"
 import { useDocHeader } from "../lib/header"
 import { createBus, isTyping } from "../lib/hooks"
 import { Icon } from "../lib/icons"
-import { useWebFonts } from "../lib/settings"
 import { cssToken, useTheme } from "../lib/theme"
-import { navigate } from "../router"
+import { useRuntime } from "../platform/runtime"
+import { diskPath, navigate } from "../router"
+import { DiskTopbar, useConflicts, useFocusNode } from "./disk"
 import { FloatingToolbar } from "./FloatingToolbar"
 import { useEditor } from "./fields"
 import { LeftPanel } from "./LeftPanel"
@@ -41,14 +52,9 @@ import { VariablesDialog } from "./m3/VariablesDialog"
 import { PanelContext } from "./panel-context"
 import { IconPickerPopover } from "./popovers/IconPicker"
 import { RightPanel } from "./RightPanel"
-import { type FileSession, useFileSession, useSyncStatus } from "./session"
+import { type FileSession, useDiskSession, useFileSession, useSyncStatus } from "./session"
+import { useSvgImport } from "./svg-drop"
 import { Topbar } from "./Topbar"
-
-/**
- * Google Fonts for families the document uses beyond the bundled Inter / JetBrains Mono. Off
- * when the user disables web fonts (File menu): the renderer then runs with `offlineFonts`.
- */
-const FONT_SOURCES = [googleFontsSource()]
 
 /** Overlay colors from the live `--kimo-*` tokens (board 03: handle fill is a #FFFFFF literal). */
 function useOverlayTheme(): OverlayTheme {
@@ -124,17 +130,83 @@ export function Editor({ fileId }: { fileId: string }) {
   )
 }
 
-function EditorShell({ session }: { session: FileSession }) {
+/** A `.kimo` on disk (`#/disk/<ref>`), opened through the window's session manager. */
+export function DiskEditor({ fileRef, node }: { fileRef: string; node?: string | null }) {
+  const { manager } = useRuntime()
+  const state = useDiskSession(manager, fileRef)
+  if (state.status === "ready")
+    return <EditorShell key={state.session.id} session={state.session} focusNode={node ?? null} />
+  return (
+    <div className="editor-status">
+      {state.status === "loading" ? (
+        <span className="editor-status__label">Opening file…</span>
+      ) : (
+        <EmptyState
+          icon={<Icon name="files" size={18} />}
+          title="Could not open file"
+          description={state.message}
+        />
+      )}
+      {state.status !== "loading" && (
+        <a className="editor-status__link" href="#/">
+          Back to files
+        </a>
+      )}
+    </div>
+  )
+}
+
+function EditorShell({
+  session,
+  focusNode = null,
+}: {
+  session: FileSession
+  focusNode?: string | null
+}) {
+  const { platform } = useRuntime()
+  /** The document session of a file on disk (null: browser library). */
+  const doc = session.document
   const [name, setName] = useState(session.meta.name)
   // Layout passes go to a bus, not React state: only panels that show a changed box re-render.
   const layout = useMemo(() => createBus<LayoutResult | null>(null), [])
   const canvas = useRef<CanvasHandle | null>(null)
   const syncStatus = useSyncStatus(session.provider)
   const overlayTheme = useOverlayTheme()
-  const webFonts = useWebFonts()
-  // Image fills and the Image tool store content-addressed assets per file (IndexedDB).
-  const assets = useMemo(() => createAssetStore(session.id), [session.id])
+  // Image fills and the Image tool store content-addressed assets per file: IndexedDB for the
+  // browser library, `assets/` beside the file on disk.
+  const assets = useMemo(
+    () => (doc ? createFolderAssetStore(platform, doc.ref) : createAssetStore(session.id)),
+    [doc, platform, session.id],
+  )
   useEffect(() => () => assets.dispose(), [assets])
+  // Fonts (board 19): one font system per editor window, Document → Local → Cache → Google.
+  const faces = useRef<readonly DocumentFontFace[]>([])
+  const fonts = useMemo(
+    () => createFontSystem({ platform, documentFaces: () => faces.current }),
+    [platform],
+  )
+  useEffect(() => () => fonts.dispose(), [fonts])
+  const offlineFonts = useSyncExternalStore(fonts.subscribe, fonts.offline)
+  useEffect(() => {
+    let live = true
+    const load = async () => {
+      const manifest = session.store.toHeader().assets as
+        | Readonly<Record<string, { mime?: string; name?: string }>>
+        | undefined
+      const keys = await assets.keys().catch(() => [] as string[])
+      const next = await loadDocumentFontFaces(manifest, keys, (k) => assets.bytes(k))
+      if (!live || (next.length === 0 && faces.current.length === 0)) return
+      faces.current = next
+      fonts.invalidate()
+    }
+    void load()
+    const off = assets.subscribe(() => void load())
+    return () => {
+      live = false
+      off()
+    }
+  }, [session.store, assets, fonts])
+  const conflicts = useConflicts(doc)
   const icons = useMemo(() => browserIconProvider(), [])
   const importImage = useCallback(
     async (file: File) => {
@@ -160,13 +232,41 @@ function EditorShell({ session }: { session: FileSession }) {
   useLibraries(m3)
   const panels = useBusValue(m3.panels)
   const drop = useCanvasDrop(m3)
+  const canvasEl = useRef<HTMLElement | null>(null)
+  const svg = useSvgImport({
+    session,
+    assets,
+    canvas,
+    container: canvasEl,
+    onError: (text) => m3.toast({ tone: "danger", text }),
+  })
+  // Clean up assets (board 19 Vqeu7): same rules as `kimo gc`.
+  const [gcOpen, setGcOpen] = useState(false)
+  const gcFolder = useMemo(
+    () => (doc ? platformAssetFolder(platform, doc.ref) : indexedDbAssetFolder(session.id)),
+    [doc, platform, session.id],
+  )
+  // Toast "Review" (external conflicts) opens the Conflicts tab.
+  const review = useMemo(() => createBus(0), [])
+
+  // Board 18: Next conflict selects + reveals the node; ⌘' / ⇧⌘'.
+  useEffect(() => {
+    if (!conflicts) return
+    conflicts.bindView({
+      select: (id) => session.ui.getState().select([id]),
+      reveal: (id) => canvas.current?.zoomToFit([id], 96),
+    })
+    return () => conflicts.bindView(null)
+  }, [conflicts, session])
+  useNextConflictShortcut(conflicts)
+  useFocusNode(focusNode, session.ui, canvas)
 
   // Test/debug hook: e2e and perf scripts read the store through it. On in dev; in a
   // production build only when opted in with `?kimo-debug` in the URL (or VITE_KIMO_DEBUG=1 at build time).
   useEffect(() => {
     if (!debugHookEnabled()) return
     const w = window as unknown as { __kimo?: unknown }
-    w.__kimo = { session, canvas: () => canvas.current, m3 }
+    w.__kimo = { session, canvas: () => canvas.current, m3, doc, platform, fonts }
     // Source-path keyed modules for e2e scripts, which import them directly on the dev server
     // and read them from here against a production bundle.
     ;(window as unknown as { __kimoModules?: unknown }).__kimoModules = {
@@ -176,7 +276,7 @@ function EditorShell({ session }: { session: FileSession }) {
     return () => {
       if ((w.__kimo as { session?: unknown } | undefined)?.session === session) w.__kimo = undefined
     }
-  }, [session, m3])
+  }, [session, m3, doc, platform, fonts])
 
   const rename = useCallback(
     (next: string) => {
@@ -194,7 +294,24 @@ function EditorShell({ session }: { session: FileSession }) {
       }),
     [session.store, name, assets],
   )
+  const save = useCallback(() => {
+    if (doc) void doc.save().catch((e: unknown) => console.warn("Kimo: save failed", e))
+    else download()
+  }, [doc, download])
+  const saveAs = useCallback(async () => {
+    if (!doc) return
+    const ref = await doc.saveAs().catch(() => null)
+    if (ref) navigate(diskPath(ref))
+  }, [doc])
   const openFile = useCallback(async () => {
+    // Desktop (and files on disk): a native open dialog through the session manager.
+    if (doc || platform.kind === "desktop") {
+      const [ref] = await platform.dialogs
+        .openFile({ title: "Open", filters: [KIMO_FILE_FILTER] })
+        .catch(() => [] as string[])
+      if (ref) navigate(diskPath(ref))
+      return
+    }
     const file = await pickKimoFile()
     if (!file) return
     try {
@@ -202,7 +319,7 @@ function EditorShell({ session }: { session: FileSession }) {
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e))
     }
-  }, [])
+  }, [doc, platform])
 
   const activate = useCallback(
     (id: CanvasToolId) => {
@@ -252,7 +369,8 @@ function EditorShell({ session }: { session: FileSession }) {
       }
       if (mod && key === "s") {
         e.preventDefault()
-        download()
+        if (e.shiftKey && doc) void saveAs()
+        else save()
         return
       }
       if (mod && key === "o") {
@@ -313,27 +431,59 @@ function EditorShell({ session }: { session: FileSession }) {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [session, activate, download, openFile, m3])
+  }, [session, activate, save, saveAs, doc, openFile, m3])
 
   return (
     <M3Context.Provider value={m3}>
       <div className="editor">
-        <Topbar
-          fileName={name}
-          pageName="Page 1"
-          syncStatus={syncStatus}
-          ui={session.ui}
-          canvas={() => canvas.current}
-          onRename={rename}
-          onDownload={download}
-          onOpenFile={() => void openFile()}
-          onHome={() => navigate("/")}
-          onExport={download}
-          onPreview={() => {}}
-        />
+        {doc ? (
+          <DiskTopbar
+            doc={doc}
+            pageName="Page 1"
+            ui={session.ui}
+            canvas={() => canvas.current}
+            onSave={save}
+            onSaveAs={() => void saveAs()}
+            onOpenFile={() => void openFile()}
+            onCleanUpAssets={() => setGcOpen(true)}
+            onHome={() => navigate("/")}
+            onExport={download}
+            onPreview={() => {}}
+          />
+        ) : (
+          <Topbar
+            fileName={name}
+            pageName="Page 1"
+            syncStatus={syncStatus}
+            ui={session.ui}
+            canvas={() => canvas.current}
+            onRename={rename}
+            onSave={save}
+            onOpenFile={() => void openFile()}
+            onCleanUpAssets={() => setGcOpen(true)}
+            onHome={() => navigate("/")}
+            onExport={download}
+            onPreview={() => {}}
+          />
+        )}
+        {doc && <BannerHost session={doc} />}
         <div className="editor__body">
-          <LeftPanel session={session} m3={m3} />
-          <main className="editor__canvas" aria-label="Canvas" {...drop.handlers}>
+          <LeftPanel session={session} m3={m3} conflicts={conflicts} />
+          <main
+            ref={canvasEl}
+            className="editor__canvas"
+            aria-label="Canvas"
+            onDragOver={(e) => {
+              drop.handlers.onDragOver(e)
+              if (!e.defaultPrevented) svg.handlers.onDragOver(e)
+            }}
+            onDragLeave={drop.handlers.onDragLeave}
+            onDrop={(e) => {
+              drop.handlers.onDrop(e)
+              if (!e.defaultPrevented) svg.handlers.onDrop(e)
+            }}
+          >
+            {doc && <FailedLoadView session={doc} />}
             <CanvasHost
               ref={canvas}
               store={session.store}
@@ -344,8 +494,8 @@ function EditorShell({ session }: { session: FileSession }) {
               icons={icons}
               onImportImage={importImage}
               onIconPicker={setIconRequest}
-              fontSources={FONT_SOURCES}
-              offlineFonts={!webFonts}
+              fontSources={fonts.sources}
+              offlineFonts={offlineFonts}
               overlayTheme={overlayTheme}
               onLayout={layout.set}
               libraries={m3.libraries()}
@@ -369,9 +519,14 @@ function EditorShell({ session }: { session: FileSession }) {
                 console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
               }}
             />
+            {conflicts && (
+              <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />
+            )}
             <FloatingToolbar ui={session.ui} onActivate={activate} />
             {drop.hint}
             <ToastStack m3={m3} />
+            {doc && <ToastHost session={doc} onReview={() => review.set(review.get() + 1)} />}
+            {svg.popover}
             {iconRequest && (
               <CanvasIconPicker
                 session={session}
@@ -385,7 +540,15 @@ function EditorShell({ session }: { session: FileSession }) {
               />
             )}
           </main>
-          <RightPanel session={session} layout={layout} assets={assets} icons={icons} m3={m3} />
+          <RightPanel
+            session={session}
+            layout={layout}
+            assets={assets}
+            icons={icons}
+            m3={m3}
+            conflicts={conflicts}
+            review={review}
+          />
         </div>
         {panels.variables && (
           <VariablesDialog
@@ -405,6 +568,43 @@ function EditorShell({ session }: { session: FileSession }) {
           />
         )}
         <ConfirmHost m3={m3} />
+        {doc && <MigrationDialog session={doc} />}
+        <MissingFontsHost
+          platform={platform}
+          system={fonts}
+          fileKey={session.id}
+          fileName={doc ? doc.fileName : name}
+          doc={() => session.store.toDocument()}
+          apply={(ops, label) => session.store.apply(ops, { origin: "user", label })}
+          addDocumentFont={async (f) => {
+            // "Choose font file…": a document asset (spec §12) + its manifest entry.
+            const key = `${await contentHash(f.bytes)}.${f.ext}`
+            await assets.putKey(key, f.bytes, { mime: f.mime, name: f.name })
+            const manifest = (session.store.toHeader().assets ?? {}) as Record<string, unknown>
+            if (!Object.hasOwn(manifest, key))
+              session.store.apply(
+                {
+                  op: "setHeader",
+                  set: {
+                    assets: {
+                      ...manifest,
+                      [key]: { mime: f.mime, bytes: f.bytes.byteLength, name: f.name },
+                    },
+                  },
+                },
+                { origin: "user", label: `Add font ${f.family}` },
+              )
+          }}
+        />
+        {gcOpen && (
+          <CleanUpAssetsHost
+            folder={gcFolder}
+            fileName={doc ? doc.fileName : name}
+            doc={() => session.store.toDocument() as unknown as Record<string, unknown>}
+            apply={(ops, label) => session.store.apply(ops, { origin: "user", label })}
+            onDone={() => setGcOpen(false)}
+          />
+        )}
       </div>
     </M3Context.Provider>
   )

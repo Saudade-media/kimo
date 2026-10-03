@@ -1,0 +1,100 @@
+/*
+ * ConflictChoice: desing.pen 02d Components — Files (M4) > ConflictChoice (o2cOff),
+ * ConflictChoice/Selected (nBjfh).
+ * frame: fill_container, fill bg-subtle, radius-sm, stroke border 1 (inside), layout horizontal,
+ *        gap 8, padding 8, alignItems center
+ *   ├ Radio  14 × 14, radius-pill, stroke border-strong 1.5 (inside), center/center
+ *   │   └ Radio Dot 6 × 6 ellipse on-accent (hidden; shown when selected)
+ *   ├ Swatch 12 × 12, radius-2xs, stroke chip-edge 1
+ *   ├ Value  mono, text-xs (11), regular, lineHeight 1.4, text-primary, fixed-width fill
+ *   └ Side   sans, text-xs (11), regular, text-tertiary
+ * Selected: fill bg-app, stroke text-primary; Radio fill accent, stroke accent; dot visible.
+ */
+.kimo-conflict-choice {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  /* Pencil strokes are inside the box: padding 8 is measured from the outer edge, so the 1px
+     border takes its width out of the padding (8 − 1). Height = 8 + 15.4 + 8 ≈ 31 (o2cOff). */
+  padding: 7px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  color: var(--kimo-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-conflict-choice:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-conflict-choice--selected {
+  border-color: var(--kimo-text-primary);
+  background: var(--kimo-bg-app);
+}
+
+.kimo-conflict-choice__radio {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--kimo-radius-pill);
+  /* 1.5px inside stroke: an inset shadow, because Chromium rounds a 1.5px border down to 1px. */
+  box-shadow: inset 0 0 0 1.5px var(--kimo-border-strong);
+}
+
+.kimo-conflict-choice--selected .kimo-conflict-choice__radio {
+  background: var(--kimo-accent);
+  box-shadow: inset 0 0 0 1.5px var(--kimo-accent);
+}
+
+.kimo-conflict-choice__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-on-accent);
+}
+
+.kimo-conflict-choice__swatch {
+  box-sizing: border-box;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--kimo-chip-edge);
+  border-radius: var(--kimo-radius-2xs);
+}
+
+.kimo-conflict-choice__value {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.kimo-conflict-choice__side {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}

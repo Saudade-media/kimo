@@ -5,14 +5,27 @@ import "./app.css"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./App"
-import { initTheme } from "./lib/theme"
+import { initTheme, setTheme } from "./lib/theme"
+import { createAppRuntime, RuntimeContext } from "./platform/runtime"
+import { diskPath, navigate } from "./router"
+import { bindAppearance } from "./settings"
 
 const container = document.getElementById("root")
 if (!container) throw new Error("Kimo: #root element missing from index.html")
 
 initTheme()
-createRoot(container).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+// One platform + session manager per window (ADR 0012); files the window was started with
+// (argv, file association, deep links) open in the editor route.
+void createAppRuntime((session, request) => navigate(diskPath(session.ref, request.node))).then(
+  (runtime) => {
+    // General › Appearance drives `[data-theme]` (system follows prefers-color-scheme live).
+    bindAppearance(runtime.platform.settings, setTheme)
+    createRoot(container).render(
+      <StrictMode>
+        <RuntimeContext.Provider value={runtime}>
+          <App />
+        </RuntimeContext.Provider>
+      </StrictMode>,
+    )
+  },
 )

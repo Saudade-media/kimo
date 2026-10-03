@@ -14,9 +14,11 @@
     "build": "tauri build",
     "icons": "tauri icon src-tauri/icons/source.png -o src-tauri/icons",
     "check:rust": "cargo check --manifest-path src-tauri/Cargo.toml",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
+    "@kimo/platform": "workspace:*",
     "@tauri-apps/api": "^2.12.1"
   },
   "devDependencies": {

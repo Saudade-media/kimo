@@ -4,6 +4,7 @@
  * Image fills and the canvas Image tool reference them as `./assets/<hash>.<ext>`; the
  * renderer reads them through {@link AssetStore.source}.
  */
+import { dirnameOf, type FileRef, type KimoPlatform } from "@kimo/platform"
 import type { AssetSource } from "@kimo/renderer"
 
 /** What a stored asset carries besides its bytes (the spec's manifest entry). */
@@ -153,8 +154,60 @@ async function imageSize(blob: Blob): Promise<{ width: number; height: number } 
   }
 }
 
-/** Opens (lazily) the asset store of file `fileId`. */
+/** Where an {@link AssetStore} keeps its rows. */
+interface RowBackend {
+  get(key: string): Promise<Row | undefined>
+  put(row: Row): Promise<void>
+  keys(): Promise<string[]>
+  close(): void
+}
+
+/** Opens (lazily) the asset store of file `fileId` (browser library, IndexedDB). */
 export function createAssetStore(fileId: string): AssetStore {
+  return assetStoreOver(indexedDbRows(fileId))
+}
+
+/**
+ * The asset store of a `.kimo` on disk: `assets/<hash>.<ext>` beside the file (spec §12),
+ * read and written through `platform.files` (atomic writes; the folder is created on demand).
+ */
+export function createFolderAssetStore(platform: KimoPlatform, kimoRef: FileRef): AssetStore {
+  const dir = `${dirnameOf(kimoRef).replace(/\/$/, "")}/assets`
+  const mimeOf = (key: string) => {
+    const ext = key.slice(key.lastIndexOf(".") + 1).toLowerCase()
+    return mimeForExtension(ext) ?? (ext === "svg" ? "image/svg+xml" : "application/octet-stream")
+  }
+  return assetStoreOver({
+    async get(key) {
+      if (!/^[0-9a-f]{16}\.[a-z0-9]{1,8}$/.test(key)) return undefined
+      try {
+        const bytes = await platform.files.readBytes(`${dir}/${key}`)
+        const mime = mimeOf(key)
+        return {
+          key,
+          src: `./assets/${key}`,
+          mime,
+          bytes: bytes.byteLength,
+          data: new Blob([bytes as Uint8Array<ArrayBuffer>], { type: mime }),
+        }
+      } catch {
+        return undefined
+      }
+    },
+    async put(row) {
+      const bytes = new Uint8Array(await row.data.arrayBuffer())
+      await platform.files.writeBytesAtomic(`${dir}/${row.key}`, bytes, { mkdirs: true })
+    },
+    async keys() {
+      const stat = await platform.files.stat(dir).catch(() => null)
+      if (stat?.kind !== "directory") return []
+      return (await platform.files.list(dir)).filter((e) => e.kind === "file").map((e) => e.name)
+    },
+    close() {},
+  })
+}
+
+function indexedDbRows(fileId: string): RowBackend {
   let dbp: Promise<IDBDatabase> | null = null
   const db = () =>
     (dbp ??= new Promise((resolve, reject) => {
@@ -177,7 +230,20 @@ export function createAssetStore(fileId: string): AssetStore {
           t.onabort = () => reject(t.error)
         }),
     )
-  const get = (key: string) => run<Row | undefined>("readonly", (s) => s.get(key))
+  return {
+    get: (key) => run<Row | undefined>("readonly", (s) => s.get(key)),
+    put: async (row) => {
+      await run("readwrite", (s) => s.put(row))
+    },
+    keys: async () => (await run<IDBValidKey[]>("readonly", (s) => s.getAllKeys())).map(String),
+    close() {
+      void dbp?.then((d) => d.close()).catch(() => undefined)
+    },
+  }
+}
+
+function assetStoreOver(rows: RowBackend): AssetStore {
+  const get = (key: string) => rows.get(key)
   const urls = new Map<string, string>()
   const listeners = new Set<() => void>()
   const emit = () => {
@@ -190,7 +256,7 @@ export function createAssetStore(fileId: string): AssetStore {
     return info
   }
   const store = async (row: Row) => {
-    await run("readwrite", (s) => s.put(row))
+    await rows.put(row)
     emit()
     return strip(row)
   }
@@ -261,9 +327,7 @@ export function createAssetStore(fileId: string): AssetStore {
         data,
       })
     },
-    async keys() {
-      return (await run<IDBValidKey[]>("readonly", (s) => s.getAllKeys())).map(String)
-    },
+    keys: () => rows.keys(),
     async bytes(key) {
       const row = await get(key).catch(() => undefined)
       return row ? new Uint8Array(await row.data.arrayBuffer()) : null
@@ -296,7 +360,7 @@ export function createAssetStore(fileId: string): AssetStore {
       for (const u of urls.values()) URL.revokeObjectURL(u)
       urls.clear()
       listeners.clear()
-      void dbp?.then((d) => d.close()).catch(() => undefined)
+      rows.close()
     },
   }
 }

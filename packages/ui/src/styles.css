@@ -64,4 +64,22 @@
 @import "./swap-popover/SwapPopover.css";
 @import "./library-manager/LibraryManager.css";
 @import "./variables-dialog/VariablesDialog.css";
+
+/* M4 fonts & settings (board 19, 02d). */
+@import "./font-row/FontRow.css";
+@import "./setting-row/SettingRow.css";
+
+/* M4 files (boards 02d, 16, 17). */
+@import "./save-status/SaveStatus.css";
+@import "./banner/Banner.css";
+@import "./dialog/Dialog.css";
+@import "./file-row/FileRow.css";
+@import "./recovery-item/RecoveryItem.css";
+@import "./window-chrome/WindowChrome.css";
+
+/* M4 merge (board 18, 02d). */
+@import "./conflict-choice/ConflictChoice.css";
+@import "./conflict-row/ConflictRow.css";
+@import "./conflict-marker/ConflictMarker.css";
+@import "./canvas-conflict-marker/CanvasConflictMarker.css";
 @import "./gallery/Gallery.css";

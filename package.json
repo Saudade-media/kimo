@@ -1,7 +1,7 @@
 {
   "name": "kimo",
   "private": true,
-  "description": "Kimo — an open-source, local-first, agent-native design canvas.",
+  "description": "Kimo \u2014 an open-source, local-first, agent-native design canvas.",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.3.5",
@@ -19,6 +19,7 @@
     "gen:scope-checklist": "bun scripts/gen-scope-checklist.ts"
   },
   "devDependencies": {
+    "@kimo/cli": "workspace:*",
     "@biomejs/biome": "^2.5.15",
     "bun-types": "^1.4.2",
     "typescript": "^7.0.2"

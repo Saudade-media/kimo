@@ -1,0 +1,18 @@
+/* Update toasts: bottom-center, above the canvas (board 15 toast placement, 16 px gutter). */
+.updater-toasts {
+  position: fixed;
+  z-index: 55;
+  bottom: 16px;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.updater-toasts > * {
+  pointer-events: auto;
+}

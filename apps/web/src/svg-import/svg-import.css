@@ -1,0 +1,109 @@
+/* SVG import popover (board 19 mevh8). Popover body keeps its gap 12 / padding 12 (Gk1mf). */
+
+/* Import As (E3zTd): row, fill, bg-muted, radius-pill, gap 2, padding 2. */
+.svg-import__as {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  width: 100%;
+  padding: 2px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+/* As Vector / As Image (rF2bf / gZFwz): fill, 26 tall, radius-pill, gap 6, centered. */
+.svg-import__as-option {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+.svg-import__as-option:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+.svg-import__as-option--active {
+  background: var(--kimo-bg-app);
+  box-shadow: 0 1px 2px 0 var(--kimo-shadow);
+}
+.svg-import__as-icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+.svg-import__as-option--active .svg-import__as-icon {
+  color: var(--kimo-text-primary);
+}
+.svg-import__as-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) */
+  white-space: nowrap;
+}
+.svg-import__as-option--active .svg-import__as-label {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+/* Desc (W0Dapp): sans 11 text-secondary, lineHeight 1.45, fixed-width fill. */
+.svg-import__desc {
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Option · … (HejPp): row, fill, space-between, center. */
+.svg-import__option {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.svg-import__option-label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+}
+
+/* Actions (VM4GH): row, fill, gap 6, padding [4, 0, 0, 0], justify end. */
+.svg-import__actions {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0 0 0;
+}
+.kimo-button.svg-import__cancel {
+  height: 28px;
+  padding: 0 10px;
+}
+.kimo-button.svg-import__import {
+  height: 28px;
+  padding: 0 12px;
+}

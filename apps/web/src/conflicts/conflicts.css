@@ -213,8 +213,7 @@
   color: var(--kimo-text-tertiary);
 }
 
-.conflicts-panel__chevron > svg,
-.conflicts-panel__resolved-status > svg {
+.conflicts-panel__chevron > svg {
   display: block;
   width: 100%;
   height: 100%;
@@ -227,75 +226,6 @@
   font-size: var(--kimo-text-xs);
   font-weight: var(--kimo-font-weight-semibold);
   line-height: 13px;
-}
-
-/* Resolved rows AnPLa: fill × 28, horizontal, gap 6, padding [0, 12], center. */
-.conflicts-panel__resolved-row {
-  box-sizing: border-box;
-  display: flex;
-  flex: none;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  height: 28px;
-  margin: 0;
-  padding: 0 12px;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  appearance: none;
-}
-
-.conflicts-panel__resolved-row:hover {
-  background: var(--kimo-bg-hover);
-}
-
-/* Status f4l9i: 14 × 14 lucide circle-check, success. */
-.conflicts-panel__resolved-status {
-  display: inline-flex;
-  flex: none;
-  width: 14px;
-  height: 14px;
-  color: var(--kimo-success);
-}
-
-/* Node SDHW7: sans text-xs regular text-primary. */
-.conflicts-panel__resolved-node {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--kimo-text-primary);
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-regular);
-  line-height: 13px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* Property uDtHF: mono text-xs regular text-tertiary. */
-.conflicts-panel__resolved-property {
-  flex: none;
-  color: var(--kimo-text-tertiary);
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-regular);
-  line-height: 15px;
-  white-space: nowrap;
-}
-
-/* Choice YWzv7: sans text-xs regular text-tertiary. */
-.conflicts-panel__resolved-choice {
-  flex: none;
-  color: var(--kimo-text-tertiary);
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-regular);
-  line-height: 13px;
-  white-space: nowrap;
 }
 
 /* Spacer ZKdDB: fill × fill. */
@@ -364,5 +294,10 @@
 
 .conflict-overlay__marker {
   position: absolute;
+  pointer-events: auto;
+}
+
+/* The "+N" pill's Menu/Dense (board 20 note BIO8v). Not drawn: width = the 02b instance width. */
+.conflict-overlay__menu {
   pointer-events: auto;
 }

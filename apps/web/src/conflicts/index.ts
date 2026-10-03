@@ -11,17 +11,25 @@ export {
 } from "./ConflictsPanel"
 export { hasOpenConflict, useOpenConflictNodes } from "./layers"
 export {
+  type CanvasConflictMarkerLayout,
   type CanvasConflictMarkerSpec,
+  type CanvasConflictMoreSpec,
   canvasConflictMarkers,
+  estimateMarkerWidth,
   MARKER_GAP,
   MARKER_HEIGHT,
   type MarkerLayout,
+  type MarkerMeasure,
   markerLabel,
+  moreLabel,
+  STACK_GAP,
+  stackMarkers,
 } from "./markers"
 export { diffOps } from "./ops"
 export {
   type ConflictSource,
   conflictRows,
+  DOCUMENT_GROUP,
   displayName,
   formatValue,
   groupRows,
@@ -30,6 +38,7 @@ export {
   shortLabel,
   sideView,
   sourceLine,
+  VARIABLES_GROUP,
 } from "./rows"
 export {
   type ConflictHost,
@@ -38,5 +47,6 @@ export {
   createConflictSession,
   type DocumentSessionLike,
   type EditorConflictSession,
+  reopenConflict,
 } from "./session"
 export { isNextConflictKey, stepConflict, useNextConflictShortcut } from "./shortcut"

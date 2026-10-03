@@ -18,7 +18,7 @@ const here = fileURLToPath(new URL(".", import.meta.url))
 const harnessDir = join(here, "m4-app-harness")
 let built: Promise<string> | null = null
 
-async function harnessUrl(ctx: E2EContext): Promise<string> {
+export async function harnessUrl(ctx: E2EContext): Promise<string> {
   if (process.env.KIMO_E2E_DEV === "1") return `${ctx.url}e2e/m4-app-harness/index.html`
   built ??= build({
     root: harnessDir,
@@ -31,17 +31,17 @@ async function harnessUrl(ctx: E2EContext): Promise<string> {
   return `${ctx.url}${await built}`
 }
 
-const SITE = "/Users/me/Work/kimo-site/design"
-const LOOM = "/Users/me/Projects/loom"
-const disk = (ref: string) => `#/disk/${encodeURIComponent(ref)}`
+export const SITE = "/Users/me/Work/kimo-site/design"
+export const LOOM = "/Users/me/Projects/loom"
+export const disk = (ref: string) => `#/disk/${encodeURIComponent(ref)}`
 
-async function open(ctx: E2EContext, hash: string): Promise<void> {
+export async function open(ctx: E2EContext, hash: string): Promise<void> {
   await ctx.page.setViewportSize({ width: 1440, height: 900 })
   await ctx.page.goto(`${await harnessUrl(ctx)}${hash}`)
   await ctx.page.waitForFunction(() => !!(window as unknown as { __kimoApp?: unknown }).__kimoApp)
 }
 
-const readFile = (page: Page, ref: string) =>
+export const readFile = (page: Page, ref: string) =>
   page.evaluate(
     (r) =>
       (

@@ -148,10 +148,13 @@ of `@kimo/platform` and `FileSessionProvider` (`@kimo/sync`, the M4 contract of
   after 400 ms: `displayedSaveStatus`), "Unsaved changes", "Autosave paused · rebase" / "2
   conflicts · autosave paused", "Read-only" / "Read-only · couldn't load", "Locked by another
   app", "Save failed", each mapped to its 02d component and node id.
-- **Banners**, one at a time, highest severity first (`BANNER_PRIORITY`): failed-load
-  (terminal) > save-failed (disk full / permission / read-back mismatch) > locked >
-  git-operation (Discard / Stash as recovery file / Keep my edits) > merge-conflicts >
-  newer-format > merge-ready ("Ready to commit"). `bannerCopy` returns the design's titles,
+- **Banners**, one at a time, highest first (`BANNER_PRIORITY`, amended by board 20 "Banner
+  priority" vgNUe): failed-load (terminal) > save-failed (disk full / permission / read-back
+  mismatch) > merge-conflicts (stored by `kimo merge`; they replace the generic git merge
+  banner, and the SaveStatus pill reads "N conflicts · autosave paused") > git-operation
+  (Discard / Stash as recovery file / Keep my edits) > locked > newer-format > merge-ready
+  ("Ready to commit"). With stored conflicts ⌘S saves them as-is even while git reports
+  MERGE_HEAD. `bannerCopy` returns the design's titles,
   bodies and actions.
 - **Toasts:** external reloaded / merged (Undo) / conflicts (Review), merge saved, update ready,
   restart after saving.
@@ -225,6 +228,31 @@ Suggested split:
 4. **Fonts, assets and settings:** font resolution (Document → Local → Google cache), the Missing
    fonts dialog, the font picker sources, asset import (SVG options) and clean-up, the Settings
    window and dialog, and the updater toasts (board 19).
+
+### 7. Board 20 "M4 Gaps" (amendment)
+
+Board 20 (`TsJoM`) closes the gaps the M4 build left; the contract changes are additive:
+
+- **Untitled documents** (V7ey1Q): desktop "New file" opens `untitled:<docId>` at once, with no
+  lease, file or watcher. Edits snapshot to the recovery entry `untitled-<docId>` (reason
+  `untitled`) after `files.autosaveIntervalMs`; the pill is SaveStatus/Unsaved "Not saved"
+  (`SaveStatus.unsaved.untitled`); the first ⌘S opens the native save panel pre-filled with
+  `Untitled.kimo` in the last-used folder, then the session moves to the file
+  (`SessionManager.newUntitled`, `FileDocumentSession.untitled`).
+- **Window title** (G1gEPp, `windowTitle`): `<file> — <folder>` (the repository's folder, else
+  the containing one), `Untitled • not saved`, ` (read-only)`, Home `Kimo`; macOS marks edits
+  with `setDocumentEdited`, Windows / Linux prefix `● ` and append ` - Kimo`.
+- **Windows / Linux chrome** (KcXQz): native decorations stay; the topbar drops the traffic-light
+  inset, takes padding [0, 12] and leads with the 28px k logo.
+- **Settings entries** (uXuLM): ⌘, / Ctrl+,, File menu Settings…, the macOS app menu (About
+  Kimo, Check for updates…, Settings… — `apps/desktop/src-tauri/src/menu.rs`) and the Home
+  sidebar; no topbar gear.
+- **Conflicts** (rTpad): `ConflictSession.reopen(id)`; groups ordered Document, Variables, then
+  nodes; `ConflictRow/Resolved` is node hZKbc (rebuilt; formerly d9zpM).
+- **Text case**: the Text section's Case control writes the existing `style.case`
+  (`upper` / `lower` / `title`, spec §8.2), which renderers already apply at draw time and the
+  layout measures; the board's "new `textCase` property" is the design tool's name for it, so
+  the format needs no new field.
 
 ## Consequences
 

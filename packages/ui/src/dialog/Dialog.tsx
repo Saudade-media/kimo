@@ -7,8 +7,11 @@ import { useDismiss, useFocusTrap } from "../popover/usePopover"
 export interface DialogProps extends Omit<ComponentPropsWithRef<"div">, "title" | "children"> {
   /** 16px lucide icon in the Icon Wrap (`file-clock`, `life-buoy`, `file-up`). */
   icon: ReactNode
-  /** Icon Wrap tone: `neutral` (bg-muted / text-primary, the component) or `danger`. */
-  tone?: "neutral" | "danger"
+  /**
+   * Icon Wrap tone: `neutral` (bg-muted / text-primary, the component), `danger`, or `success`
+   * (board 20 "Nothing to clean up" nsxuR: success-soft / success).
+   */
+  tone?: "neutral" | "danger" | "success"
   title: string
   description: ReactNode
   /**
@@ -22,8 +25,11 @@ export interface DialogProps extends Omit<ComponentPropsWithRef<"div">, "title" 
   footnoteMono?: boolean
   /** Footer > Tertiary (gDY4y, Button/Ghost): "Discard all". */
   tertiary?: { label: string; onClick: () => void }
-  /** Footer > Cancel (k0VaD, Button/Ghost). Default "Cancel". */
-  cancelLabel?: string
+  /**
+   * Footer > Cancel (k0VaD, Button/Ghost). Default "Cancel"; null hides it (board 20 nsxuR:
+   * a single "Done" button; Escape still cancels).
+   */
+  cancelLabel?: string | null
   /** Footer > Confirm (qqpfr, Button/Primary). */
   confirmLabel: string
   confirmDisabled?: boolean
@@ -75,7 +81,8 @@ export function Dialog({
   const descId = useId()
   const root = useRef<HTMLDivElement>(null)
   const cancel = useRef<HTMLButtonElement>(null)
-  const trap = useFocusTrap(root, inline ? "none" : cancel)
+  const confirm = useRef<HTMLButtonElement>(null)
+  const trap = useFocusTrap(root, inline ? "none" : cancelLabel === null ? confirm : cancel)
   useDismiss(root, onCancel, undefined, !inline)
   return (
     <div
@@ -85,7 +92,12 @@ export function Dialog({
       aria-describedby={descId}
       {...rest}
       ref={mergeRefs(root, ref)}
-      className={cx("kimo-dialog", tone === "danger" && "kimo-dialog--danger", className)}
+      className={cx(
+        "kimo-dialog",
+        tone === "danger" && "kimo-dialog--danger",
+        tone === "success" && "kimo-dialog--success",
+        className,
+      )}
       style={width !== undefined ? { width, ...style } : style}
       onKeyDown={(e) => {
         onKeyDown?.(e)
@@ -127,10 +139,13 @@ export function Dialog({
             {tertiary.label}
           </Button>
         )}
-        <Button ref={cancel} variant="ghost" className="kimo-dialog__button" onClick={onCancel}>
-          {cancelLabel}
-        </Button>
+        {cancelLabel !== null && (
+          <Button ref={cancel} variant="ghost" className="kimo-dialog__button" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+        )}
         <Button
+          ref={confirm}
           variant="primary"
           className="kimo-dialog__button kimo-dialog__button--confirm"
           disabled={confirmDisabled}

@@ -192,9 +192,18 @@ export const scenarios: Scenario[] = [
         (await page.locator('[data-tool="move"]').getAttribute("aria-pressed")) === "true",
         "V → move",
       )
-      // File menu → Rename; Zoom menu → Zoom in.
+      // Board 20 File menu (cPHVm): the web items in node order; rename is a double-click.
       await page.locator(".topbar__file").click()
-      await page.getByRole("menuitem", { name: "Rename" }).click()
+      const items = await page
+        .getByTestId("file-menu")
+        .locator(".kimo-menu-item-dense__label")
+        .allInnerTexts()
+      expect(
+        items.join("|") === "New file|Open…|Open recent|Save|Save as…|Clean up assets…|Settings…",
+        `web File menu: ${items.join("|")}`,
+      )
+      await page.keyboard.press("Escape")
+      await page.locator(".topbar__file").dblclick()
       const fileName = page.getByRole("textbox", { name: "File name" })
       await fileName.fill("Loom site")
       await fileName.press("Enter")

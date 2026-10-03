@@ -3,33 +3,29 @@
  * padding [0, 12], items centered. Children in node order: Logo, File, Sep, Page, Spacer,
  * Saved, Zoom, Theme (IconButton sun), Play (Button/Ghost "Preview"), Export (Button/Primary).
  *
+ * The file name opens board 20's File menu (`FileMenu`, web cPHVm): the trigger shows pressed
+ * (bg-muted, radius-sm) and its chevron flips up while the menu is open (s7QHW / rRmKs).
+ *
  * A `.kimo` on disk uses board 16's Topbar/Desktop (XDqrb) instead (`files/FileTopbar`): the
- * traffic-light inset, `folder / file.kimo / page` breadcrumb, branch chip and SaveStatus pill,
- * followed by the same trailing controls ({@link TopbarTrailing}). Its file name opens the same
- * File menu ({@link FileMenuItems}) anchored under the name.
+ * traffic-light inset (or, off macOS, the k logo), `folder / file.kimo / page` breadcrumb,
+ * branch chip and SaveStatus pill, followed by the same trailing controls
+ * ({@link TopbarTrailing}). Its file name opens the same File menu.
  */
+import type { RecentFile } from "@kimo/platform"
 import type { SyncStatus } from "@kimo/sync"
-import { Button, IconButton, Menu, MenuItem } from "@kimo/ui"
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react"
+import { Button, IconButton, MenuItem } from "@kimo/ui"
+import { useEffect, useState } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { MenuPopover } from "../lib/MenuPopover"
 import { getTheme } from "../lib/theme"
 import { useRuntime } from "../platform/runtime"
+import { FileMenu, type FileMenuActions, RECENT_LIMIT } from "./FileMenu"
 
-export interface FileMenuActions {
-  /** Browser library only (a file on disk is renamed in the file manager). */
-  onRename?(): void
-  onSave(): void
-  /** A file on disk: Save as… (⇧⌘S). */
-  onSaveAs?(): void
-  onOpenFile(): void
-  onCleanUpAssets(): void
-  onHome(): void
-}
+export type { FileMenuActions } from "./FileMenu"
 
-export interface TopbarProps extends Omit<FileMenuActions, "onRename"> {
+export interface TopbarProps extends FileMenuActions {
   fileName: string
   pageName: string
   syncStatus: SyncStatus
@@ -38,6 +34,7 @@ export interface TopbarProps extends Omit<FileMenuActions, "onRename"> {
   onRename(name: string): void
   onExport(): void
   onPreview(): void
+  onHome(): void
 }
 
 const SAVED_LABEL: Partial<Record<SyncStatus, [icon: string, label: string]>> = {
@@ -46,16 +43,6 @@ const SAVED_LABEL: Partial<Record<SyncStatus, [icon: string, label: string]>> = 
   dirty: ["cloud-upload", "Saving…"],
   error: ["cloud-alert", "Not saved"],
   "read-only": ["cloud-alert", "Read-only"],
-}
-
-/** Settings › Fonts & privacy "Google Fonts" (`fonts.google`), kept current. */
-function useGoogleFonts(): [boolean, (on: boolean) => void] {
-  const { platform } = useRuntime()
-  const on = useSyncExternalStore(
-    (cb) => platform.settings.onChange((key) => key === "fonts.google" && cb()),
-    () => platform.settings.get("fonts.google"),
-  )
-  return [on, (next) => void platform.settings.set("fonts.google", next).catch(() => undefined)]
 }
 
 /** Theme toggle → General › Appearance (`bindAppearance` applies it to `[data-theme]`). */
@@ -67,58 +54,55 @@ function useToggleAppearance(): () => void {
       .catch(() => undefined)
 }
 
-/** The File menu's items (board 03 file menu + M4 file actions). */
-export function FileMenuItems(props: FileMenuActions) {
-  const [webFonts, setWebFonts] = useGoogleFonts()
-  return (
-    <>
-      {props.onRename && (
-        <MenuItem icon={<Icon name="pencil-line" size={14} />} onSelect={props.onRename}>
-          Rename
-        </MenuItem>
-      )}
-      {props.onSaveAs ? (
-        <>
-          <MenuItem icon={<Icon name="save" size={14} />} shortcut="⌘S" onSelect={props.onSave}>
-            Save
-          </MenuItem>
-          <MenuItem
-            icon={<Icon name="download" size={14} />}
-            shortcut="⇧⌘S"
-            onSelect={props.onSaveAs}
-          >
-            Save as…
-          </MenuItem>
-        </>
-      ) : (
-        <MenuItem icon={<Icon name="download" size={14} />} shortcut="⌘S" onSelect={props.onSave}>
-          Save as .kimo
-        </MenuItem>
-      )}
-      <MenuItem
-        icon={<Icon name="folder-open" size={14} />}
-        shortcut="⌘O"
-        onSelect={props.onOpenFile}
-      >
-        Open file…
-      </MenuItem>
-      <MenuItem
-        icon={<Icon name="globe" size={14} />}
-        role="menuitemcheckbox"
-        aria-checked={webFonts}
-        shortcut={webFonts ? "On" : "Off"}
-        onSelect={() => setWebFonts(!webFonts)}
-      >
-        Web fonts
-      </MenuItem>
-      <MenuItem icon={<Icon name="trash-2" size={14} />} onSelect={props.onCleanUpAssets}>
-        Clean up assets…
-      </MenuItem>
-      <MenuItem icon={<Icon name="house" size={14} />} onSelect={props.onHome}>
-        Back to files
-      </MenuItem>
-    </>
-  )
+/** Recent files for the File menu's "Open recent", loaded while `active`. */
+export function useRecentFiles(active: boolean): readonly RecentFile[] | null {
+  const { platform } = useRuntime()
+  const [files, setFiles] = useState<readonly RecentFile[] | null>(null)
+  useEffect(() => {
+    if (!active) return
+    let live = true
+    const load = () =>
+      void platform.recents
+        .listFiles({ limit: RECENT_LIMIT })
+        .then((f) => live && setFiles(f))
+        .catch(() => live && setFiles([]))
+    load()
+    const off = platform.recents.onChange(load)
+    return () => {
+      live = false
+      off()
+    }
+  }, [active, platform])
+  return files
+}
+
+/**
+ * The File menu bound to a trigger element: open state, recents, "Clear recent". Render
+ * `menu` next to the trigger; `toggle(el)` opens or closes it.
+ */
+export function useFileMenu(actions: FileMenuActions) {
+  const { platform } = useRuntime()
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const recents = useRecentFiles(anchor !== null)
+  const close = () => setAnchor(null)
+  return {
+    open: anchor !== null,
+    toggle: (el: HTMLElement) => setAnchor((a) => (a ? null : el)),
+    close,
+    menu: anchor ? (
+      <FileMenu
+        {...actions}
+        anchor={anchor}
+        os={platform.os}
+        recents={recents}
+        onClearRecent={() => void platform.recents.clearFiles().catch(() => undefined)}
+        onClose={() => {
+          close()
+          anchor.focus({ preventScroll: true })
+        }}
+      />
+    ) : null,
+  }
 }
 
 /** Zoom, Theme, Preview, Export (board 03 / XDqrb trailing controls). */
@@ -197,53 +181,10 @@ export function TopbarTrailing({
   )
 }
 
-/**
- * A menu anchored under an element that is not a MenuPopover trigger (the desktop breadcrumb's
- * file name). Closes on outside pointerdown, Escape, or after an item is chosen.
- */
-export function AnchoredMenu({
-  anchor,
-  label,
-  onClose,
-  children,
-}: {
-  anchor: DOMRect
-  label: string
-  onClose(): void
-  children: ReactNode
-}) {
-  const root = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener("pointerdown", onDown)
-    return () => document.removeEventListener("pointerdown", onDown)
-  }, [onClose])
-  return (
-    <div
-      ref={root}
-      className="menu-popover menu-popover--anchored"
-      style={{ position: "fixed", left: anchor.left, top: anchor.bottom, zIndex: 50 }}
-    >
-      <Menu
-        label={label}
-        autoFocus
-        onClose={onClose}
-        className="menu-popover__menu menu-popover__menu--start"
-        onClick={(e) => {
-          if ((e.target as HTMLElement).closest('[role="menuitem"]')) onClose()
-        }}
-      >
-        {children}
-      </Menu>
-    </div>
-  )
-}
-
 export function Topbar(props: TopbarProps) {
   const [renaming, setRenaming] = useState(false)
   const [saved, savedLabel] = SAVED_LABEL[props.syncStatus] ?? ["cloud-check", "Saved locally"]
+  const fileMenu = useFileMenu(props)
 
   return (
     <header className="topbar">
@@ -272,33 +213,24 @@ export function Topbar(props: TopbarProps) {
           }}
         />
       ) : (
-        <MenuPopover
-          label="File"
-          trigger={(t) => (
-            <button
-              type="button"
-              className="topbar__file"
-              {...t}
-              onDoubleClick={() => setRenaming(true)}
-            >
-              <span className="topbar__file-name">{props.fileName}</span>
-              <span className="topbar__file-icon">
-                <Icon name="chevron-down" size={14} />
-              </span>
-            </button>
-          )}
+        <button
+          type="button"
+          className={fileMenu.open ? "topbar__file topbar__file--open" : "topbar__file"}
+          aria-haspopup="menu"
+          aria-expanded={fileMenu.open}
+          onClick={(e) => fileMenu.toggle(e.currentTarget)}
+          onDoubleClick={() => {
+            fileMenu.close()
+            setRenaming(true)
+          }}
         >
-          {() => (
-            <FileMenuItems
-              onRename={() => setRenaming(true)}
-              onSave={props.onSave}
-              onOpenFile={props.onOpenFile}
-              onCleanUpAssets={props.onCleanUpAssets}
-              onHome={props.onHome}
-            />
-          )}
-        </MenuPopover>
+          <span className="topbar__file-name">{props.fileName}</span>
+          <span className="topbar__file-icon">
+            <Icon name={fileMenu.open ? "chevron-up" : "chevron-down"} size={14} />
+          </span>
+        </button>
       )}
+      {fileMenu.menu}
       <span className="topbar__sep">/</span>
       <span className="topbar__page">{props.pageName}</span>
       <span className="topbar__spacer" />

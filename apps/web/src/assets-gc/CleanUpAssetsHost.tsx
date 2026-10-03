@@ -7,7 +7,7 @@ import type { Op } from "@kimo/editor-state"
 import { readFontInfo } from "@kimo/renderer"
 import { DialogScrim } from "@kimo/ui"
 import { useEffect, useState } from "react"
-import { CleanUpAssetsDialog } from "./CleanUpAssetsDialog"
+import { CleanUpAssetsDialog, CleanUpNothingDialog } from "./CleanUpAssetsDialog"
 import type { AssetFolder } from "./folders"
 import { type GcPlan, planAssetGc, prunedManifest } from "./logic"
 
@@ -47,7 +47,10 @@ export interface CleanUpAssetsHostProps {
   onDone: (removed: number) => void
 }
 
-/** Mount to run the flow; calls `onDone(0)` when there is nothing to remove. */
+/**
+ * Mount to run the flow. Nothing to remove shows board 20's "Nothing to clean up" dialog (Done
+ * calls `onDone(0)`); a folder that cannot be read closes silently with `onDone(0)`.
+ */
 export function CleanUpAssetsHost({
   folder,
   fileName,
@@ -56,15 +59,20 @@ export function CleanUpAssetsHost({
   onDone,
 }: CleanUpAssetsHostProps) {
   const [plan, setPlan] = useState<GcPlan | null>(null)
+  const [nothing, setNothing] = useState<{ count: number; bytes: number } | null>(null)
   const [busy, setBusy] = useState(false)
   // biome-ignore lint/correctness/useExhaustiveDependencies: plans once per mount
   useEffect(() => {
     let live = true
     void planFolderGc(folder, doc()).then(
-      (p) => {
+      async (p) => {
         if (!live) return
-        if (!p.unused.length) onDone(0)
-        else setPlan(p)
+        if (p.unused.length) {
+          setPlan(p)
+          return
+        }
+        const files = await folder.list().catch(() => [])
+        if (live) setNothing({ count: files.length, bytes: files.reduce((n, f) => n + f.bytes, 0) })
       },
       () => live && onDone(0),
     )
@@ -72,6 +80,17 @@ export function CleanUpAssetsHost({
       live = false
     }
   }, [folder])
+  if (nothing)
+    return (
+      <DialogScrim>
+        <CleanUpNothingDialog
+          fileName={fileName}
+          count={nothing.count}
+          bytes={nothing.bytes}
+          onDone={() => onDone(0)}
+        />
+      </DialogScrim>
+    )
   if (!plan) return null
   return (
     <DialogScrim>

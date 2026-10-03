@@ -30,14 +30,15 @@ import { createFontSystem, loadDocumentFontFaces, MissingFontsHost } from "../fo
 import * as assetsModule from "../lib/assets"
 import { contentHash, createAssetStore, createFolderAssetStore, manifestEntry } from "../lib/assets"
 import * as filesModule from "../lib/files"
-import { exportFile, importFile, patchFile, pickKimoFile, saveFile } from "../lib/files"
+import { createFile, exportFile, importFile, patchFile, pickKimoFile, saveFile } from "../lib/files"
 import { useDocHeader } from "../lib/header"
 import { createBus, isTyping } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { cssToken, useTheme } from "../lib/theme"
-import { useRuntime } from "../platform/runtime"
+import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { diskPath, navigate } from "../router"
-import { DiskTopbar, useConflicts, useFocusNode } from "./disk"
+import { DiskTopbar, useConflicts, useFocusNode, useWindowTitle } from "./disk"
+import type { FileMenuActions } from "./FileMenu"
 import { FloatingToolbar } from "./FloatingToolbar"
 import { useEditor } from "./fields"
 import { LeftPanel } from "./LeftPanel"
@@ -163,9 +164,11 @@ function EditorShell({
   session: FileSession
   focusNode?: string | null
 }) {
-  const { platform } = useRuntime()
+  const { platform, manager } = useRuntime()
+  const openSettings = useOpenSettings()
   /** The document session of a file on disk (null: browser library). */
   const doc = session.document
+  useWindowTitle(doc)
   const [name, setName] = useState(session.meta.name)
   // Layout passes go to a bus, not React state: only panels that show a changed box re-render.
   const layout = useMemo(() => createBus<LayoutResult | null>(null), [])
@@ -238,7 +241,22 @@ function EditorShell({
     assets,
     canvas,
     container: canvasEl,
-    onError: (text) => m3.toast({ tone: "danger", text }),
+    // Board 20 M4Pij9 / fW1JW: one Toast/Danger per rejected file (6 s), "Details" lists the
+    // offending elements and lines (the import log is not designed: a second toast shows them).
+    onError: (text, details) =>
+      m3.toast({
+        tone: "danger",
+        text,
+        ...(details?.length
+          ? {
+              action: {
+                label: "Details",
+                run: () =>
+                  m3.toast({ tone: "danger", text: details.join(" · "), duration: 10_000 }),
+              },
+            }
+          : {}),
+      }),
   })
   // Clean up assets (board 19 Vqeu7): same rules as `kimo gc`.
   const [gcOpen, setGcOpen] = useState(false)
@@ -294,15 +312,31 @@ function EditorShell({
       }),
     [session.store, name, assets],
   )
-  const save = useCallback(() => {
-    if (doc) void doc.save().catch((e: unknown) => console.warn("Kimo: save failed", e))
-    else download()
-  }, [doc, download])
   const saveAs = useCallback(async () => {
-    if (!doc) return
+    // Browser library: Save as… writes through the File System Access picker when granted,
+    // otherwise downloads the .kimo / .kimoz (board 20 note p0SuJa).
+    if (!doc) return download()
+    const wasUntitled = doc.untitled
     const ref = await doc.saveAs().catch(() => null)
     if (ref) navigate(diskPath(ref))
-  }, [doc])
+    else if (wasUntitled && !doc.untitled) navigate(diskPath(doc.ref))
+  }, [doc, download])
+  const save = useCallback(() => {
+    // An untitled document's first ⌘S is Save as… (board 20 V7ey1Q).
+    if (doc?.untitled) void saveAs()
+    else if (doc) void doc.save().catch((e: unknown) => console.warn("Kimo: save failed", e))
+    else download()
+  }, [doc, download, saveAs])
+  const newFile = useCallback(async () => {
+    // Desktop: an untitled document opens right away (board 20 V7ey1Q); the browser library
+    // creates a file in IndexedDB.
+    if (platform.kind === "desktop" || doc) {
+      const s = await manager.newUntitled()
+      navigate(diskPath(s.ref))
+      return
+    }
+    navigate(`/file/${await createFile("Untitled")}`)
+  }, [platform, manager, doc])
   const openFile = useCallback(async () => {
     // Desktop (and files on disk): a native open dialog through the session manager.
     if (doc || platform.kind === "desktop") {
@@ -369,13 +403,19 @@ function EditorShell({
       }
       if (mod && key === "s") {
         e.preventDefault()
-        if (e.shiftKey && doc) void saveAs()
+        if (e.shiftKey) void saveAs()
         else save()
         return
       }
       if (mod && key === "o") {
         e.preventDefault()
         void openFile()
+        return
+      }
+      if (mod && !e.shiftKey && key === "n") {
+        // The browser keeps ⌘N for a new window; it reaches the page when the canvas has focus.
+        e.preventDefault()
+        void newFile()
         return
       }
       if (mod && key === "0") {
@@ -431,7 +471,21 @@ function EditorShell({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [session, activate, save, saveAs, doc, openFile, m3])
+  }, [session, activate, save, saveAs, openFile, newFile, m3])
+
+  const fileMenu: FileMenuActions = {
+    onNewFile: () => void newFile(),
+    onOpenFile: () => void openFile(),
+    onOpenRecent: (ref) => navigate(diskPath(ref)),
+    onSave: save,
+    onSaveAs: () => void saveAs(),
+    // Desktop only (web cPHVm omits it); an untitled document has nothing on disk to reveal.
+    ...(doc && !doc.untitled && platform.capabilities.reveal
+      ? { onReveal: () => void platform.files.reveal(doc.ref).catch(() => {}) }
+      : {}),
+    onCleanUpAssets: () => setGcOpen(true),
+    onSettings: () => openSettings("general"),
+  }
 
   return (
     <M3Context.Provider value={m3}>
@@ -442,10 +496,7 @@ function EditorShell({
             pageName="Page 1"
             ui={session.ui}
             canvas={() => canvas.current}
-            onSave={save}
-            onSaveAs={() => void saveAs()}
-            onOpenFile={() => void openFile()}
-            onCleanUpAssets={() => setGcOpen(true)}
+            {...fileMenu}
             onHome={() => navigate("/")}
             onExport={download}
             onPreview={() => {}}
@@ -458,9 +509,7 @@ function EditorShell({
             ui={session.ui}
             canvas={() => canvas.current}
             onRename={rename}
-            onSave={save}
-            onOpenFile={() => void openFile()}
-            onCleanUpAssets={() => setGcOpen(true)}
+            {...fileMenu}
             onHome={() => navigate("/")}
             onExport={download}
             onPreview={() => {}}
@@ -548,6 +597,7 @@ function EditorShell({
             m3={m3}
             conflicts={conflicts}
             review={review}
+            fonts={fonts}
           />
         </div>
         {panels.variables && (

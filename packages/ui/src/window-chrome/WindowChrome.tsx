@@ -1,4 +1,4 @@
-import { ChevronDown, Folder, FolderGit2, GitBranch } from "lucide-react"
+import { ChevronDown, ChevronUp, Folder, FolderGit2, GitBranch } from "lucide-react"
 import type { ComponentPropsWithRef, MouseEvent, ReactNode } from "react"
 import { cx } from "../internal/util"
 
@@ -58,8 +58,11 @@ export function TrafficLights({
 
 /** Props for {@link DesktopBreadcrumb}. */
 export interface DesktopBreadcrumbProps extends Omit<ComponentPropsWithRef<"nav">, "children"> {
-  /** Containing folder ("loom"). */
-  folder: string
+  /**
+   * Containing folder ("loom"). null hides the Folder and its separator (board 20 untitled
+   * topbar Zvw7e: MPFjV and CkhLP disabled).
+   */
+  folder: string | null
   /** The folder is a git repository (`folder-git-2`) or not (`folder`). */
   folderIsRepo?: boolean
   file: string
@@ -69,6 +72,11 @@ export interface DesktopBreadcrumbProps extends Omit<ComponentPropsWithRef<"nav"
   focused?: boolean
   /** File name + chevron (the file menu). */
   onFileClick?: (e: MouseEvent<HTMLButtonElement>) => void
+  /**
+   * The File menu is open (board 20 Nl4Cz): File (gRY55) fill bg-muted, radius-sm, and the
+   * chevron flips to `chevron-up`.
+   */
+  fileOpen?: boolean
 }
 
 /**
@@ -85,10 +93,12 @@ export function DesktopBreadcrumb({
   page,
   focused = true,
   onFileClick,
+  fileOpen = false,
   className,
   ...rest
 }: DesktopBreadcrumbProps) {
   const FolderIcon = folderIsRepo ? FolderGit2 : Folder
+  const Chevron = fileOpen ? ChevronUp : ChevronDown
   return (
     <nav
       aria-label="File location"
@@ -99,16 +109,29 @@ export function DesktopBreadcrumb({
         className,
       )}
     >
-      <span className="kimo-desktop-breadcrumb__folder">
-        <FolderIcon className="kimo-desktop-breadcrumb__folder-icon" aria-hidden="true" />
-        <span className="kimo-desktop-breadcrumb__folder-name">{folder}</span>
-      </span>
-      <span className="kimo-desktop-breadcrumb__sep" aria-hidden="true">
-        /
-      </span>
-      <button type="button" className="kimo-desktop-breadcrumb__file" onClick={onFileClick}>
+      {folder !== null && (
+        <>
+          <span className="kimo-desktop-breadcrumb__folder">
+            <FolderIcon className="kimo-desktop-breadcrumb__folder-icon" aria-hidden="true" />
+            <span className="kimo-desktop-breadcrumb__folder-name">{folder}</span>
+          </span>
+          <span className="kimo-desktop-breadcrumb__sep" aria-hidden="true">
+            /
+          </span>
+        </>
+      )}
+      <button
+        type="button"
+        className={cx(
+          "kimo-desktop-breadcrumb__file",
+          fileOpen && "kimo-desktop-breadcrumb__file--open",
+        )}
+        aria-haspopup="menu"
+        aria-expanded={fileOpen}
+        onClick={onFileClick}
+      >
         <span className="kimo-desktop-breadcrumb__file-name">{file}</span>
-        <ChevronDown className="kimo-desktop-breadcrumb__chevron" aria-hidden="true" />
+        <Chevron className="kimo-desktop-breadcrumb__chevron" aria-hidden="true" />
       </button>
       {page != null && (
         <>
@@ -154,13 +177,20 @@ export interface DesktopTopbarProps extends Omit<ComponentPropsWithRef<"header">
   status?: ReactNode
   /** Zoom, Theme, Preview, Export (the editor's own controls). */
   trailing?: ReactNode
+  /**
+   * Windows / Linux (board 20 N1mtd, `decorations: true`): the OS draws the title bar, so the
+   * topbar drops the traffic-light inset, takes padding [0, 12] and leads with this logo (the
+   * web topbar's 28px "k", uE2vu).
+   */
+  logo?: ReactNode
 }
 
 /**
  * Desktop editor topbar. Mirrors `Topbar/Desktop` (XDqrb): fill_container × 48, bg-app, stroke
  * bottom 1 border, row, gap 8, padding [0, 12, 0, 0], center: Traffic Lights · Breadcrumb ·
  * Branch · Drag Region (fill × 48) · Save Status · trailing controls. The root and the Drag
- * Region carry `data-tauri-drag-region`; everything else opts out.
+ * Region carry `data-tauri-drag-region`; everything else opts out. Windows / Linux (board 20
+ * N1mtd): `logo` replaces the Traffic Lights and the padding becomes [0, 12].
  */
 export function DesktopTopbar({
   inset = 68,
@@ -170,12 +200,21 @@ export function DesktopTopbar({
   branch,
   status,
   trailing,
+  logo,
   className,
   ...rest
 }: DesktopTopbarProps) {
   return (
-    <header data-tauri-drag-region="" {...rest} className={cx("kimo-desktop-topbar", className)}>
-      <TrafficLights inset={inset} focused={focused} drawLights={drawLights} />
+    <header
+      data-tauri-drag-region=""
+      {...rest}
+      className={cx(
+        "kimo-desktop-topbar",
+        logo != null && "kimo-desktop-topbar--native",
+        className,
+      )}
+    >
+      {logo ?? <TrafficLights inset={inset} focused={focused} drawLights={drawLights} />}
       {breadcrumb}
       {branch}
       <span className="kimo-desktop-topbar__drag" data-tauri-drag-region="" />

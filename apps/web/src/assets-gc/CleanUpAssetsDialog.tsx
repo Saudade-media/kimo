@@ -9,15 +9,18 @@
  */
 
 import { Dialog } from "@kimo/ui"
-import { ImageIcon, PenTool, Trash2, Type } from "lucide-react"
+import { CircleCheck, ImageIcon, Images, PenTool, Trash2, Type } from "lucide-react"
 import {
   type AssetFile,
   formatBytes,
+  GC_NOTHING_TITLE,
   GC_VISIBLE_ROWS,
   gcCommand,
   gcConfirmLabel,
   gcDescription,
   gcMoreLabel,
+  gcNothingDescription,
+  gcSummary,
   gcTitle,
 } from "./logic"
 import "./assets-gc.css"
@@ -81,6 +84,54 @@ export function CleanUpAssetsDialog({
           </li>
         )}
       </ul>
+    </Dialog>
+  )
+}
+
+export interface CleanUpNothingDialogProps {
+  fileName: string
+  /** Files in `assets/` and their total size (Summary "12 assets · 31.4 MB"). */
+  count: number
+  bytes: number
+  onDone: () => void
+  inline?: boolean
+}
+
+/**
+ * Board 20 "Clean up assets · nothing to remove" (nsxuR): the same Dialog at width 520 with a
+ * success Icon Wrap (success-soft, `circle-check` success), "Nothing to clean up", Body (n3opt):
+ * row h 36, bg-subtle, radius-md, gap 10, padding [0, 12], center: `images` 14 text-tertiary ·
+ * Summary sans 11 text-secondary · Spacer · State "all referenced" sans 11 text-tertiary.
+ * Footer: Footnote `kimo gc ./marketing.kimo`, a single "Done" (Cancel hidden); Enter / Esc close.
+ */
+export function CleanUpNothingDialog({
+  fileName,
+  count,
+  bytes,
+  onDone,
+  inline = false,
+}: CleanUpNothingDialogProps) {
+  return (
+    <Dialog
+      width={520}
+      tone="success"
+      inline={inline}
+      icon={<CircleCheck />}
+      title={GC_NOTHING_TITLE}
+      description={gcNothingDescription(fileName)}
+      footnote={gcCommand(fileName)}
+      cancelLabel={null}
+      confirmLabel="Done"
+      onCancel={onDone}
+      onConfirm={onDone}
+      data-pen="nsxuR"
+    >
+      <div className="gc-nothing">
+        <Images className="gc-nothing__icon" aria-hidden="true" />
+        <span className="gc-nothing__summary">{gcSummary(count, bytes)}</span>
+        <span className="gc-row__spacer" aria-hidden="true" />
+        <span className="gc-nothing__state">all referenced</span>
+      </div>
     </Dialog>
   )
 }

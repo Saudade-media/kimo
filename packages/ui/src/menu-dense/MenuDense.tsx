@@ -1,4 +1,4 @@
-import { Check } from "lucide-react"
+import { Check, ChevronRight } from "lucide-react"
 import {
   type ComponentPropsWithRef,
   type KeyboardEvent,
@@ -70,7 +70,11 @@ export function MenuDense({
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(e)
     if (e.defaultPrevented) return
-    const items = [...(root.current?.querySelectorAll<HTMLElement>(ITEM_SELECTOR) ?? [])]
+    // Only this menu's own rows: a nested submenu (rendered inside the root so outside-press
+    // dismissal treats it as part of the menu) navigates its own items.
+    const items = [...(root.current?.querySelectorAll<HTMLElement>(ITEM_SELECTOR) ?? [])].filter(
+      (el) => el.closest('[role="menu"]') === root.current,
+    )
     const index = items.indexOf(document.activeElement as HTMLElement)
     const focus = (i: number) => items[(i + items.length) % items.length]?.focus()
     switch (e.key) {
@@ -147,6 +151,13 @@ export interface MenuItemDenseProps
   metaFont?: "mono" | "sans"
   /** Label in font-mono (the "With meta" variant dQw9B: format names). */
   mono?: boolean
+  /**
+   * A leading icon in the Check Slot (board 20 File menu: `file-plus`, `folder-open`, …, 14,
+   * text-secondary). Replaces the check mark.
+   */
+  icon?: ReactNode
+  /** Opens a submenu: the Meta slot shows `chevron-right` 12 text-tertiary (board 20 uNZcy). */
+  submenu?: boolean
   /** Click, Enter or Space. */
   onSelect?: () => void
   /** Pointer or keyboard highlight (the blend menu previews live). */
@@ -166,6 +177,8 @@ export function MenuItemDense({
   meta,
   metaFont = "mono",
   mono = false,
+  icon,
+  submenu = false,
   onSelect,
   onHighlight,
   disabled,
@@ -183,6 +196,7 @@ export function MenuItemDense({
       {...(checked === undefined
         ? { role: "menuitem" }
         : { role: "menuitemradio", "aria-checked": checked })}
+      aria-haspopup={submenu ? "menu" : undefined}
       tabIndex={-1}
       aria-disabled={disabled || undefined}
       data-highlighted={highlighted || undefined}
@@ -201,8 +215,14 @@ export function MenuItemDense({
         onSelect?.()
       }}
     >
-      <span className="kimo-menu-item-dense__check" aria-hidden="true">
-        {checked && <Check />}
+      <span
+        className={cx(
+          "kimo-menu-item-dense__check",
+          icon != null && "kimo-menu-item-dense__check--icon",
+        )}
+        aria-hidden="true"
+      >
+        {icon ?? (checked && <Check />)}
       </span>
       <span
         className={cx("kimo-menu-item-dense__label", mono && "kimo-menu-item-dense__label--mono")}
@@ -210,7 +230,8 @@ export function MenuItemDense({
         {label}
       </span>
       <span className="kimo-menu-item-dense__spacer" aria-hidden="true" />
-      {meta != null && (
+      {submenu && <ChevronRight className="kimo-menu-item-dense__submenu" aria-hidden="true" />}
+      {!submenu && meta != null && (
         <span
           className={cx(
             "kimo-menu-item-dense__meta",

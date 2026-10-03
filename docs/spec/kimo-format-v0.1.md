@@ -239,7 +239,7 @@ Effects apply in list order. An effect with `visible: false` is kept but not ren
 | `align` | `left` `center` `right` `justify` | |
 | `valign` | `top` `middle` `bottom` | |
 | `decoration` | (`"underline"` \| `"strike"`)[] (unique) | |
-| `case` | `upper` `lower` `title` | |
+| `case` | `upper` `lower` `title` | Render-time transform (also applied when measuring); `content` keeps what was typed. Absent = as typed. `title` capitalises the first letter of each word. |
 | `features` | record 4-char OpenType tag → boolean \| number | |
 | `href` | string | Link. |
 | `typography` | Ref | Binds a `typography` variable (feature **`tokens/composite`**): its fields apply first, inline fields override them. |

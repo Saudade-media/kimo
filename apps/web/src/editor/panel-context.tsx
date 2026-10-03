@@ -8,6 +8,7 @@ import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
 import type { PopoverProps } from "@kimo/ui"
 import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react"
+import type { FontSystem } from "../fonts/font-system"
 import type { AssetStore } from "../lib/assets"
 import { type DocHeader, resolveColor } from "../lib/header"
 import type { Bus } from "../lib/hooks"
@@ -26,6 +27,8 @@ export interface PanelContextValue {
   layout: Bus<LayoutResult | null>
   assets: AssetStore | null
   icons: IconProvider | null
+  /** The window's font system (Text section: font picker sources, shipped weights). */
+  fonts?: FontSystem | null
   /**
    * Effective theme of the single selected node (§10.4, its pins and its ancestors'); swatches
    * of bindings resolve in it. Absent: the document defaults.

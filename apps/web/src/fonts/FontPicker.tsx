@@ -12,7 +12,7 @@
  *   "No third-party fetch" variant (ljh5h): row gap 8 padding [8, 10] bg-app stroke 1 border
  *     radius-md: `shield` 14 + the same text style.
  */
-import { Input, MenuItemDense, Popover, Tab } from "@kimo/ui"
+import { Input, MenuItemDense, type PlacementOptions, Popover, Tab } from "@kimo/ui"
 import { Search, Shield, WifiOff } from "lucide-react"
 import { type CSSProperties, type KeyboardEvent, useMemo, useRef, useState } from "react"
 import "./fonts.css"
@@ -38,6 +38,8 @@ export interface FontPickerProps {
   onPick: (family: string) => void
   onClose?: () => void
   anchor?: HTMLElement | null
+  /** Overrides the popover placement (the Text section: left of the panel, `panelPlacement`). */
+  placement?: PlacementOptions
   /** Gallery specimen (rendered in flow, no initial focus). */
   inline?: boolean
 }
@@ -93,6 +95,7 @@ export function FontPicker({
   onPick,
   onClose,
   anchor,
+  placement,
   inline = false,
 }: FontPickerProps) {
   const [filter, setFilter] = useState<Filter>("all")
@@ -125,6 +128,7 @@ export function FontPicker({
       initialFocus={inline ? "none" : search}
       {...(onClose ? { onClose } : {})}
       {...(anchor ? { anchor } : {})}
+      {...(placement ? { placement } : {})}
       data-pen="azBUI"
     >
       <Input

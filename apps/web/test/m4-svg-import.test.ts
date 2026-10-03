@@ -14,10 +14,12 @@ import {
   SVG_LIMITS,
   SvgImportError,
   SvgImportPopover,
+  SvgRejectedError,
   sanitizeSvg,
   serializeSegments,
   serializeSvg,
   svgImportOps,
+  svgRejection,
 } from "../src/svg-import"
 
 const svg = (body: string, attrs = 'viewBox="0 0 100 100" width="100" height="100"') =>
@@ -254,7 +256,7 @@ describe("conversion", () => {
   })
 
   test("image option stores the sanitized SVG and places an image fill", async () => {
-    const p = await prepareSvg(svg(`<script>x</script><path d="M0 0L1 1"/>`), "logo.svg")
+    const p = await prepareSvg(svg(`<iframe/><path d="M0 0L1 1"/>`), "logo.svg")
     const put: { key: string; text: string }[] = []
     const r = await svgImportOps(
       p,
@@ -268,7 +270,7 @@ describe("conversion", () => {
       },
     )
     expect(put[0]?.key).toBe(p.imageKey)
-    expect(put[0]?.text).not.toContain("script")
+    expect(put[0]?.text).not.toContain("iframe")
     expect(r.ops[0]).toMatchObject({
       op: "insert",
       node: { type: "rect", fill: [{ kind: "image", src: `./assets/${p.imageKey}` }] },
@@ -299,5 +301,36 @@ describe("conversion", () => {
       "Import",
     ])
       expect(html).toContain(t)
+  })
+})
+
+describe("board 20: unsafe SVGs are rejected whole (M4Pij9 / fW1JW)", () => {
+  test("a script: Couldn't import logo.svg — it contains a script, with the line", async () => {
+    const text = `<svg xmlns="http://www.w3.org/2000/svg">\n<path d="M0 0L1 1"/>\n<script>alert(1)</script>\n</svg>`
+    const err = await prepareSvg(text, "logo.svg").catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(SvgRejectedError)
+    const r = err as SvgRejectedError
+    expect(r.message).toBe("Couldn't import logo.svg — it contains a script")
+    expect(r.details).toEqual(["<script> · line 3"])
+  })
+
+  test("event handlers and javascript: URLs count as scripts", () => {
+    expect(svgRejection(["onload"], `<svg onload="x()">`)?.reason).toBe("script")
+    expect(svgRejection(["href:javascript:alert(1)"], "")?.reason).toBe("script")
+  })
+
+  test("an external file: it loads an external file", async () => {
+    const text = svg(
+      `<image href="https://cdn.example/badge.png" width="1" height="1"/><use href="https://evil.example/x.svg#a"/>`,
+    )
+    const err = (await prepareSvg(text, "badge.svg").catch((e: unknown) => e)) as SvgRejectedError
+    expect(err.message).toBe("Couldn't import badge.svg — it loads an external file")
+    expect(svgRejection(["fill:url(https://x/y#a)"], "")?.reason).toBe("external")
+  })
+
+  test("foreignObject is rejected; unsupported elements are still dropped silently", async () => {
+    expect(svgRejection(["foreignObject"], "")?.reason).toBe("embedded-html")
+    expect(svgRejection(["iframe", "set", "style"], "")).toBeNull()
+    await expect(prepareSvg(svg(`<path d="M0 0L1 1"/>`), "ok.svg")).resolves.toBeTruthy()
   })
 })

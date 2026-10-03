@@ -36,11 +36,39 @@ function doc(name: string): string {
     h: 480,
     fill: "#FFFFFF",
   }
+  // Board 20 Text section specimen (t2DyQ): "Plan less. Ship more together."
+  d.nodes.Headline01 = {
+    type: "text",
+    parent: "Frame00001",
+    order: "a0",
+    name: "Headline",
+    x: 36,
+    y: 64,
+    w: 272,
+    grow: "fixed-width",
+    content: "Plan less. Ship more together.",
+    style: { font: "Inter", weight: 600, size: 28, lineHeight: 1.1, letterSpacing: -0.56 },
+  }
+  d.nodes.Caption001 = {
+    type: "text",
+    parent: "Frame00001",
+    order: "a1",
+    name: "Caption",
+    x: 36,
+    y: 200,
+    content: "Home — Desktop",
+    style: { size: 11 },
+  }
   return serialize(d)
 }
 
+// `?os=windows|linux` runs the same app as on Windows / Linux (board 20 KcXQz).
+const os = (new URLSearchParams(location.search).get("os") ?? "macos") as
+  | "macos"
+  | "windows"
+  | "linux"
 const platform = createMemoryPlatform({
-  os: "macos",
+  os,
   files: {
     [`${SITE}/home.kimo`]: doc("Home"),
     [`${LOOM}/marketing.kimo`]: board18,

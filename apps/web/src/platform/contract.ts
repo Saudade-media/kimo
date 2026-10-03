@@ -76,9 +76,16 @@ export type SaveStatus =
   | { kind: "saving"; since: number }
   /**
    * Edits newer than the last write. `autosaveAt` is when the idle timer fires (null when
-   * autosave is off). `target: "recovery"` while upgrade consent is pending (spec §16.2).
+   * autosave is off). `target: "recovery"` while upgrade consent is pending (spec §16.2), and
+   * for an untitled document (`untitled`, board 20 Zvw7e: the pill reads "Not saved").
    */
-  | { kind: "unsaved"; dirtySince: number; autosaveAt: number | null; target: "file" | "recovery" }
+  | {
+      kind: "unsaved"
+      dirtySince: number
+      autosaveAt: number | null
+      target: "file" | "recovery"
+      untitled?: boolean
+    }
   /** Autosave paused by a git operation (null = only `index.lock` seen) or by open conflicts. */
   | { kind: "paused"; reason: "git"; operation: GitOperation | null }
   | { kind: "paused"; reason: "conflicts"; open: number }
@@ -107,7 +114,7 @@ export function saveStatusLabel(s: SaveStatus): string {
     case "saving":
       return "Saving…"
     case "unsaved":
-      return "Unsaved changes"
+      return s.untitled ? "Not saved" : "Unsaved changes"
     case "paused":
       return s.reason === "git"
         ? `Autosave paused · ${s.operation ?? "git"}`
@@ -138,6 +145,56 @@ export function displayedSaveStatus(
 /** Tooltip of the saved pill (board 16 footer: "Saved 10:42:18 · ~/Projects/loom/marketing.kimo"). */
 export function savedTooltip(savedAtLabel: string, displayPath: string): string {
   return `Saved ${savedAtLabel} · ${displayPath}`
+}
+
+// ===============================================================================================
+// Untitled documents and the window title (board 20 "Feedback" V7ey1Q, "Desktop chrome" KcXQz)
+// ===============================================================================================
+
+/** The name of a never-saved document (breadcrumb ITncY "Untitled"). */
+export const UNTITLED_NAME = "Untitled"
+const UNTITLED_PREFIX = "untitled:"
+
+/** The session ref of an untitled document (`untitled:<docId>`; never a path). */
+export const untitledRef = (docId: string): FileRef => `${UNTITLED_PREFIX}${docId}`
+export const isUntitledRef = (ref: FileRef): boolean => ref.startsWith(UNTITLED_PREFIX)
+/** Its recovery entry id (`untitled-<docId>`, ADR 0012 §3 "Recovery store"). */
+export const untitledRecoveryId = (ref: FileRef): string =>
+  `untitled-${ref.slice(UNTITLED_PREFIX.length)}`
+
+export interface WindowTitleInput {
+  os: HostOS
+  /** null on Home: the title is "Kimo". */
+  fileName: string | null
+  /** The repository (or working) folder's name: "loom". */
+  folder: string | null
+  untitled?: boolean
+  /** The in-memory document is ahead of disk (SaveStatus Unsaved / Saving / Failed). */
+  edited?: boolean
+  readOnly?: boolean
+}
+
+/**
+ * Board 20 "Window title rule" (G1gEPp): `<file> — <folder>`; untitled "Untitled • not saved";
+ * read-only adds " (read-only)"; Home is "Kimo". macOS shows edits with the close-button dot
+ * (`setDocumentEdited`); Windows / Linux prefix "● " and add the suffix " - Kimo" (the title is
+ * the taskbar label there). The web tab follows macOS (not designed).
+ */
+export function windowTitle(t: WindowTitleInput): string {
+  if (t.fileName === null) return "Kimo"
+  let base = t.untitled
+    ? `${UNTITLED_NAME} • not saved`
+    : t.folder
+      ? `${t.fileName} — ${t.folder}`
+      : t.fileName
+  if (t.readOnly && !t.untitled) base += " (read-only)"
+  if (t.os === "windows" || t.os === "linux") return `${t.edited ? "● " : ""}${base} - Kimo`
+  return base
+}
+
+/** "Edited" for the window title / close-button dot: not yet on disk (G1gEPp row fPwI0). */
+export function isEdited(s: SaveStatus): boolean {
+  return s.kind === "unsaved" || s.kind === "saving" || s.kind === "failed"
 }
 
 // ===============================================================================================
@@ -213,13 +270,18 @@ export type Banner =
 
 export type BannerKind = Banner["kind"]
 
-/** Order when several apply: the first present wins (danger > warning > info). */
+/**
+ * Order when several apply: the first present wins. Board 20 "Banner priority" (vgNUe, list
+ * oV0OM): 1 save failed / disk errors · 2 stored merge conflicts (`kimo merge`; they replace the
+ * generic git merge banner) · 3 git operation in progress · 4 changed on disk / read-only /
+ * locked · 5 informational. A failed load is terminal for the window and stays first.
+ */
 export const BANNER_PRIORITY: readonly BannerKind[] = [
   "failed-load",
   "save-failed",
-  "locked",
-  "git-operation",
   "merge-conflicts",
+  "git-operation",
+  "locked",
   "newer-format",
   "merge-ready",
 ]
@@ -558,7 +620,7 @@ export interface ConflictRowView {
    * variable and header conflicts. */
   nodeId: string | null
   /** Group header: the node's layer name or path ("Hero", "Footer › Legal", "Button / Primary"),
-   * "$brand" for variables, "Document" for header conflicts. */
+   * "Variables" for variable conflicts, "Document" for header conflicts (board 20). */
   group: string
   /** Property label: "fill", "content", "gap", "label", "node", "parent", "$brand · light". */
   property: string
@@ -574,8 +636,8 @@ export interface ConflictRowView {
 }
 
 /**
- * The Conflicts tab ("Conflicts 2") and canvas markers. Rows are ordered by layer order
- * (variables, then header conflicts last). Every pick is an undoable edit applied live on
+ * The Conflicts tab ("Conflicts 2") and canvas markers. Rows are ordered Document (header
+ * conflicts), Variables, then nodes in layer order (board 20). Every pick is an undoable edit applied live on
  * canvas through `editor-state` ops with the same semantics as core-schema
  * `applyConflictSide`. Autosave stays paused while any conflict is open; ⌘S with open
  * conflicts saves them as-is (the file stays loadable) and keeps the banner.
@@ -588,6 +650,11 @@ export interface ConflictSession {
   choose(id: string, side: ConflictSide): void
   /** "Take all ours" / "Take all theirs": unresolved rows only. */
   chooseAll(side: "ours" | "theirs"): void
+  /**
+   * Board 20 ResolvedRow/Expanded "Reopen": marks a resolved conflict open again (the body keeps
+   * the applied side). One undoable edit.
+   */
+  reopen(id: string): void
   /** Id of the next / previous open conflict after `fromId` (wraps), or null when none. */
   next(fromId?: string): string | null
   previous(fromId?: string): string | null

@@ -1,0 +1,263 @@
+/**
+ * The File menu — board 20 "File menu" (AsXP1): `Menu/Dense` (G7A3Aj) at width 256 with
+ * `MenuItem/Dense` rows whose Check Slot holds the item icon (14, text-secondary) and whose Meta
+ * holds the shortcut (mono 11):
+ *
+ *   New file ⌘N (file-plus) · Open… ⌘O (folder-open) · Open recent ▸ (history) · Save ⌘S (save)
+ *   · Save as… ⇧⌘S (file-output) · ─ · Reveal in Finder (folder-search; desktop only) · Clean up
+ *   assets… (brush-cleaning) · ─ · Settings… ⌘, (settings)
+ *
+ * Desktop (A1jsC) opens from the breadcrumb's file name, web (cPHVm) from the topbar file name:
+ * the menu's top-left is the trigger's left edge, 12px below it. "Open recent" opens the
+ * submenu (Aw9t8, width 232) on hover after 120 ms, overlapping the menu by 4px: recent files
+ * (name · folder in mono meta), a divider, "Clear recent". Off macOS the shortcuts read
+ * Ctrl+… / Shift+Ctrl+…, and Reveal reads "Show in Explorer" / "Show in folder".
+ */
+import type { FileRef, HostOS, RecentFile } from "@kimo/platform"
+import { basenameOf } from "@kimo/platform"
+import { MenuDense, MenuDivider, MenuItemDense } from "@kimo/ui"
+import { type KeyboardEvent, useEffect, useRef, useState } from "react"
+import { Icon } from "../lib/icons"
+import { revealLabel } from "../platform/contract"
+
+/** What the File menu runs. Absent actions hide their item. */
+export interface FileMenuActions {
+  onNewFile(): void
+  onOpenFile(): void
+  onOpenRecent(ref: FileRef): void
+  onSave(): void
+  onSaveAs(): void
+  /** Desktop only: the web build has no filesystem path (board 20 V7Lu4m omits it). */
+  onReveal?: () => void
+  onCleanUpAssets(): void
+  onSettings(): void
+}
+
+/** Menu shortcut text per OS (board 20 note VJFSo: "Ctrl/Shift+Ctrl off macOS"). */
+export function menuShortcut(os: HostOS, key: string, shift = false): string {
+  if (os === "macos" || os === "web") return `${shift ? "⇧" : ""}⌘${key}`
+  return `${shift ? "Shift+" : ""}Ctrl+${key}`
+}
+
+/** Hover delay before "Open recent" opens its submenu (note VJFSo). */
+export const SUBMENU_DELAY_MS = 120
+/** Menu widths: A1jsC / cPHVm 256, Aw9t8 232. */
+export const FILE_MENU_WIDTH = 256
+export const RECENT_MENU_WIDTH = 232
+/** The menu's top sits 12px below the trigger (note VJFSo, y 44 under a file row at 16–32). */
+export const FILE_MENU_OFFSET = 12
+/** The submenu overlaps the menu by 4px (x 431 = 179 + 256 − 4). */
+export const SUBMENU_OVERLAP = 4
+/** Aw9t8 sits 10px above its item (y 96 vs Open recent at 106). */
+export const SUBMENU_RAISE = 10
+/** Recent files listed in the submenu (Aw9t8 shows three). Not designed beyond that. */
+export const RECENT_LIMIT = 8
+
+export interface FileMenuProps extends FileMenuActions {
+  /** The trigger (breadcrumb file name / topbar file name). */
+  anchor: HTMLElement
+  os: HostOS
+  /** Recent files (newest first); null while loading. */
+  recents: readonly RecentFile[] | null
+  onClearRecent(): void
+  onClose(): void
+}
+
+export function FileMenu(props: FileMenuProps) {
+  const { anchor, os, recents, onClose } = props
+  const [sub, setSub] = useState<HTMLElement | null>(null)
+  /** Opened from the keyboard (→ / Enter): the submenu takes focus. */
+  const [subFocus, setSubFocus] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const recentItem = useRef<HTMLButtonElement>(null)
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current)
+    },
+    [],
+  )
+  const clearTimer = () => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = null
+  }
+  const openSub = (now = false, focus = false) => {
+    clearTimer()
+    const el = recentItem.current
+    if (!el) return
+    setSubFocus(focus)
+    if (now) setSub(el)
+    else timer.current = setTimeout(() => setSub(el), SUBMENU_DELAY_MS)
+  }
+  const closeSub = () => {
+    clearTimer()
+    setSub(null)
+  }
+  const run = (f: () => void) => () => {
+    onClose()
+    f()
+  }
+  const hoverOther = () => {
+    // Moving to another row closes the submenu (after the same delay as opening).
+    clearTimer()
+    if (sub) timer.current = setTimeout(() => setSub(null), SUBMENU_DELAY_MS)
+  }
+  const r = sub?.getBoundingClientRect()
+  return (
+    <MenuDense
+      anchor={anchor}
+      placement={{ side: "bottom", align: "start", offset: FILE_MENU_OFFSET }}
+      width={FILE_MENU_WIDTH}
+      label="File"
+      autoFocus
+      onClose={onClose}
+      className="file-menu"
+      data-testid="file-menu"
+    >
+      <MenuItemDense
+        icon={<Icon name="file-plus" size={14} />}
+        label="New file"
+        meta={menuShortcut(os, "N")}
+        onPointerEnter={hoverOther}
+        onSelect={run(props.onNewFile)}
+      />
+      <MenuItemDense
+        icon={<Icon name="folder-open" size={14} />}
+        label="Open…"
+        meta={menuShortcut(os, "O")}
+        onPointerEnter={hoverOther}
+        onSelect={run(props.onOpenFile)}
+      />
+      <MenuItemDense
+        ref={recentItem}
+        icon={<Icon name="history" size={14} />}
+        label="Open recent"
+        submenu
+        aria-expanded={sub !== null}
+        highlighted={sub !== null}
+        onPointerEnter={() => openSub()}
+        onSelect={() => (sub ? closeSub() : openSub(true, true))}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight") {
+            e.preventDefault()
+            openSub(true, true)
+          }
+        }}
+      />
+      <MenuItemDense
+        icon={<Icon name="save" size={14} />}
+        label="Save"
+        meta={menuShortcut(os, "S")}
+        onPointerEnter={hoverOther}
+        onSelect={run(props.onSave)}
+      />
+      <MenuItemDense
+        icon={<Icon name="file-output" size={14} />}
+        label="Save as…"
+        meta={menuShortcut(os, "S", true)}
+        onPointerEnter={hoverOther}
+        onSelect={run(props.onSaveAs)}
+      />
+      <MenuDivider />
+      {props.onReveal && (
+        <MenuItemDense
+          icon={<Icon name="folder-search" size={14} />}
+          label={revealLabel(os)}
+          onPointerEnter={hoverOther}
+          onSelect={run(props.onReveal)}
+        />
+      )}
+      <MenuItemDense
+        icon={<Icon name="brush-cleaning" size={14} />}
+        label="Clean up assets…"
+        onPointerEnter={hoverOther}
+        onSelect={run(props.onCleanUpAssets)}
+      />
+      <MenuDivider />
+      <MenuItemDense
+        icon={<Icon name="settings" size={14} />}
+        label="Settings…"
+        meta={menuShortcut(os, ",")}
+        onPointerEnter={hoverOther}
+        onSelect={run(props.onSettings)}
+      />
+      {sub && r && (
+        <RecentSubmenu
+          anchor={{
+            x: r.x,
+            y: r.y - SUBMENU_RAISE,
+            width: r.width + 4 /* menu padding */,
+            height: r.height,
+          }}
+          recents={recents}
+          autoFocus={subFocus}
+          onPointerEnter={clearTimer}
+          onOpen={(ref) => {
+            onClose()
+            props.onOpenRecent(ref)
+          }}
+          onClear={() => {
+            onClose()
+            props.onClearRecent()
+          }}
+          onBack={() => {
+            closeSub()
+            recentItem.current?.focus()
+          }}
+        />
+      )}
+    </MenuDense>
+  )
+}
+
+/** Open recent (Aw9t8): recent files (name · folder) · divider · Clear recent. */
+function RecentSubmenu({
+  anchor,
+  recents,
+  autoFocus,
+  onPointerEnter,
+  onOpen,
+  onClear,
+  onBack,
+}: {
+  anchor: { x: number; y: number; width: number; height: number }
+  recents: readonly RecentFile[] | null
+  autoFocus: boolean
+  onPointerEnter(): void
+  onOpen(ref: FileRef): void
+  onClear(): void
+  onBack(): void
+}) {
+  const list = (recents ?? []).filter((f) => !f.missing).slice(0, RECENT_LIMIT)
+  return (
+    <MenuDense
+      anchor={anchor}
+      placement={{ side: "right", align: "start", offset: -SUBMENU_OVERLAP }}
+      width={RECENT_MENU_WIDTH}
+      label="Open recent"
+      autoFocus={autoFocus}
+      className="file-menu__recent"
+      data-testid="file-menu-recent"
+      onPointerEnter={onPointerEnter}
+      onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "ArrowLeft" || e.key === "Escape") {
+          e.preventDefault()
+          e.stopPropagation()
+          onBack()
+        }
+      }}
+    >
+      {list.map((f) => (
+        <MenuItemDense
+          key={f.ref}
+          label={f.name}
+          meta={basenameOf(f.folder)}
+          title={f.ref}
+          onSelect={() => onOpen(f.ref)}
+        />
+      ))}
+      {list.length === 0 && <MenuItemDense label="No recent files" disabled />}
+      <MenuDivider />
+      <MenuItemDense label="Clear recent" disabled={list.length === 0} onSelect={onClear} />
+    </MenuDense>
+  )
+}

@@ -15,6 +15,7 @@ import {
   rememberSvgChoice,
   type SvgImportChoice,
   SvgImportPopover,
+  SvgRejectedError,
   svgImportOps,
 } from "../svg-import"
 import type { FileSession } from "./session"
@@ -59,7 +60,11 @@ export function useSvgImport({
   canvas: { current: CanvasHandle | null }
   /** The canvas container (drop target; paste lands at its center). */
   container: { current: HTMLElement | null }
-  onError(message: string): void
+  /**
+   * A file that could not be imported. `details` (board 20 Toast/Danger "Details") lists the
+   * offending elements with their lines when the SVG was rejected as unsafe.
+   */
+  onError(message: string, details?: readonly string[]): void
 }): {
   handlers: {
     onDragOver(e: React.DragEvent<HTMLElement>): void
@@ -108,7 +113,8 @@ export function useSvgImport({
       try {
         prepared = await prepareSvg(bytes, name)
       } catch (e) {
-        errorRef.current(e instanceof Error ? e.message : String(e))
+        if (e instanceof SvgRejectedError) errorRef.current(e.message, e.details)
+        else errorRef.current(e instanceof Error ? e.message : String(e))
         return
       }
       const el = container.current

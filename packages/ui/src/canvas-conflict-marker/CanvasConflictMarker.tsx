@@ -5,8 +5,13 @@ import { cx } from "../internal/util"
 /** Props for {@link CanvasConflictMarker}. Native `<button>` props pass through. */
 export interface CanvasConflictMarkerProps
   extends Omit<ComponentPropsWithRef<"button">, "children"> {
-  /** "Hero · fill", "Headline · content", "2 conflicts". */
+  /** "Hero · fill", "Headline · content", "2 conflicts"; "+2" for `more`. */
   label: string
+  /**
+   * `CanvasMarker/Conflict/More` (board 20 mvPXI): the "+N" pill standing for hidden overlapping
+   * markers: padding [0, 8], fill bg-overlay, 1px danger stroke, no icon, label danger.
+   */
+  variant?: "default" | "more"
 }
 
 /**
@@ -17,13 +22,24 @@ export interface CanvasConflictMarkerProps
  */
 export function CanvasConflictMarker({
   label,
+  variant = "default",
   className,
   type = "button",
   ...rest
 }: CanvasConflictMarkerProps) {
   return (
-    <button type={type} {...rest} className={cx("kimo-canvas-conflict-marker", className)}>
-      <GitMerge className="kimo-canvas-conflict-marker__icon" aria-hidden="true" />
+    <button
+      type={type}
+      {...rest}
+      className={cx(
+        "kimo-canvas-conflict-marker",
+        variant === "more" && "kimo-canvas-conflict-marker--more",
+        className,
+      )}
+    >
+      {variant !== "more" && (
+        <GitMerge className="kimo-canvas-conflict-marker__icon" aria-hidden="true" />
+      )}
       <span className="kimo-canvas-conflict-marker__label">{label}</span>
     </button>
   )

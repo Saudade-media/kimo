@@ -244,7 +244,9 @@ export function useDiskSession(manager: FileSessionManager, ref: string): DiskSe
       setTimeout(() => {
         if (retained.has(ref)) return
         const s = closing ?? manager.get(ref)
-        if (s) void s.close().catch(() => undefined)
+        // Save as (and an untitled document's first save) moves the session to a new ref that
+        // the next editor already holds: keep it open.
+        if (s && !retained.has(s.ref)) void s.close().catch(() => undefined)
       }, 0)
     }
   }, [manager, ref])

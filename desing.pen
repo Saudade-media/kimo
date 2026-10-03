@@ -62725,74 +62725,6 @@
                               "fontFamily": "$font-sans",
                               "fontSize": "$text-xs",
                               "fontWeight": "normal"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "K29p0",
-                              "name": "Base Toggle",
-                              "width": 12,
-                              "height": 12,
-                              "icon": "chevron-right",
-                              "library": "lucide",
-                              "fill": "$text-tertiary"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "GCga3",
-                          "x": 0,
-                          "y": 0,
-                          "name": "Base",
-                          "enabled": false,
-                          "width": "fill_container(0)",
-                          "height": 20,
-                          "gap": 6,
-                          "padding": [
-                            0,
-                            0,
-                            0,
-                            20
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "P9SpY7",
-                              "name": "Base Label",
-                              "fill": "$text-tertiary",
-                              "content": "base",
-                              "fontFamily": "$font-mono",
-                              "fontSize": "$text-xs",
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "rectangle",
-                              "cornerRadius": "$radius-2xs",
-                              "id": "T4bAY",
-                              "name": "Base Swatch",
-                              "fill": "#F4A261",
-                              "width": 12,
-                              "height": 12,
-                              "stroke": "$chip-edge",
-                              "strokeWidth": 1
-                            },
-                            {
-                              "type": "text",
-                              "id": "Z52Yz",
-                              "name": "Base Value",
-                              "fill": "$text-secondary",
-                              "content": "#F4A261",
-                              "fontFamily": "$font-mono",
-                              "fontSize": "$text-xs",
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "UkQG0",
-                              "name": "Spacer",
-                              "width": "fill_container",
-                              "height": 1
                             }
                           ]
                         },
@@ -62820,6 +62752,28 @@
                           }
                         }
                       ]
+                    },
+                    {
+                      "id": "hZKbc",
+                      "type": "ref",
+                      "reusable": true,
+                      "ref": "uP9RN",
+                      "name": "ConflictRow/Resolved",
+                      "descendants": {
+                        "vwMkN": {
+                          "icon": "circle-check",
+                          "fill": "$success"
+                        },
+                        "x7VJ3": {
+                          "content": "kept ours"
+                        },
+                        "m3zB6": {
+                          "id": "E4jmci",
+                          "type": "ref",
+                          "ref": "nBjfh",
+                          "name": "Ours"
+                        }
+                      }
                     }
                   ]
                 },
@@ -71463,6 +71417,39 @@
                                   "fontWeight": "normal"
                                 }
                               ]
+                            },
+                            {
+                              "id": "HfWxA",
+                              "type": "ref",
+                              "ref": "uP9RN",
+                              "name": "ConflictRow · fill",
+                              "width": "fill_container",
+                              "descendants": {
+                                "GXuAU": {
+                                  "content": "fill"
+                                },
+                                "x7VJ3": {
+                                  "content": "both changed"
+                                },
+                                "m3zB6/W3tggP": {
+                                  "fill": "#FFF4E8"
+                                },
+                                "m3zB6/yGCTb": {
+                                  "content": "#FFF4E8"
+                                },
+                                "m3zB6/zeVrc": {
+                                  "content": "ours"
+                                },
+                                "t5eUZ/W3tggP": {
+                                  "fill": "#FFFFFF"
+                                },
+                                "t5eUZ/yGCTb": {
+                                  "content": "#FFFFFF"
+                                },
+                                "t5eUZ/zeVrc": {
+                                  "content": "theirs"
+                                }
+                              }
                             }
                           ]
                         },
@@ -71525,6 +71512,39 @@
                                   "fontWeight": "normal"
                                 }
                               ]
+                            },
+                            {
+                              "id": "f56LkN",
+                              "type": "ref",
+                              "ref": "uP9RN",
+                              "name": "ConflictRow · content",
+                              "width": "fill_container",
+                              "descendants": {
+                                "GXuAU": {
+                                  "content": "content"
+                                },
+                                "x7VJ3": {
+                                  "content": "both changed"
+                                },
+                                "m3zB6/W3tggP": {
+                                  "enabled": false
+                                },
+                                "m3zB6/yGCTb": {
+                                  "content": "Plan less. Ship more together."
+                                },
+                                "m3zB6/zeVrc": {
+                                  "content": "ours"
+                                },
+                                "t5eUZ/W3tggP": {
+                                  "enabled": false
+                                },
+                                "t5eUZ/yGCTb": {
+                                  "content": "Plan less, ship more."
+                                },
+                                "t5eUZ/zeVrc": {
+                                  "content": "theirs"
+                                }
+                              }
                             }
                           ]
                         },
@@ -71894,6 +71914,105 @@
                       "fontFamily": "$font-mono",
                       "fontSize": "$text-xs",
                       "fontWeight": "normal"
+                    },
+                    {
+                      "id": "v8Obpc",
+                      "type": "ref",
+                      "ref": "uP9RN",
+                      "name": "ConflictRow · Number · gap",
+                      "width": "fill_container",
+                      "descendants": {
+                        "GXuAU": {
+                          "content": "gap"
+                        },
+                        "x7VJ3": {
+                          "content": "both changed"
+                        },
+                        "m3zB6/W3tggP": {
+                          "enabled": false
+                        },
+                        "m3zB6/yGCTb": {
+                          "content": "12"
+                        },
+                        "m3zB6/zeVrc": {
+                          "content": "ours"
+                        },
+                        "t5eUZ/W3tggP": {
+                          "enabled": false
+                        },
+                        "t5eUZ/yGCTb": {
+                          "content": "16"
+                        },
+                        "t5eUZ/zeVrc": {
+                          "content": "theirs"
+                        }
+                      }
+                    },
+                    {
+                      "id": "xQJcO",
+                      "type": "ref",
+                      "ref": "uP9RN",
+                      "name": "ConflictRow · Delete vs edit",
+                      "width": "fill_container",
+                      "descendants": {
+                        "GXuAU": {
+                          "content": "node"
+                        },
+                        "x7VJ3": {
+                          "content": "deleted vs edited"
+                        },
+                        "m3zB6/W3tggP": {
+                          "enabled": false
+                        },
+                        "m3zB6/yGCTb": {
+                          "content": "Edited · 2 props"
+                        },
+                        "m3zB6/zeVrc": {
+                          "content": "ours"
+                        },
+                        "t5eUZ/W3tggP": {
+                          "enabled": false
+                        },
+                        "t5eUZ/yGCTb": {
+                          "content": "Deleted"
+                        },
+                        "t5eUZ/zeVrc": {
+                          "content": "theirs"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Yvbs3",
+                      "type": "ref",
+                      "ref": "uP9RN",
+                      "name": "ConflictRow · Move vs move",
+                      "width": "fill_container",
+                      "descendants": {
+                        "GXuAU": {
+                          "content": "parent"
+                        },
+                        "x7VJ3": {
+                          "content": "moved twice"
+                        },
+                        "m3zB6/W3tggP": {
+                          "enabled": false
+                        },
+                        "m3zB6/yGCTb": {
+                          "content": "Hero › CTA Row"
+                        },
+                        "m3zB6/zeVrc": {
+                          "content": "ours"
+                        },
+                        "t5eUZ/W3tggP": {
+                          "enabled": false
+                        },
+                        "t5eUZ/yGCTb": {
+                          "content": "Footer"
+                        },
+                        "t5eUZ/zeVrc": {
+                          "content": "theirs"
+                        }
+                      }
                     },
                     {
                       "id": "pr3mz",
@@ -75342,24 +75461,24 @@
                           }
                         },
                         {
-                          "id": "gI2LI",
+                          "id": "A1jsC",
                           "type": "ref",
                           "ref": "G7A3Aj",
                           "name": "File Menu",
                           "width": 256,
                           "x": 179,
                           "y": 44,
-                          "children": [
-                            {
+                          "descendants": {
+                            "ksc3x": {
                               "type": "frame",
-                              "id": "bCiHS",
+                              "id": "tn6QP",
                               "name": "Items",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 1,
                               "children": [
                                 {
-                                  "id": "gXlfi",
+                                  "id": "VEYrv",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · New file",
@@ -75379,7 +75498,7 @@
                                   }
                                 },
                                 {
-                                  "id": "xQCrT",
+                                  "id": "QVBIE",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Open…",
@@ -75399,7 +75518,7 @@
                                   }
                                 },
                                 {
-                                  "id": "AOaLA",
+                                  "id": "FvXLK",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Open recent",
@@ -75415,7 +75534,7 @@
                                     },
                                     "T4CD1": {
                                       "type": "icon",
-                                      "id": "USbvu",
+                                      "id": "uNZcy",
                                       "name": "Submenu",
                                       "width": 12,
                                       "height": 12,
@@ -75426,7 +75545,7 @@
                                   }
                                 },
                                 {
-                                  "id": "Pacos",
+                                  "id": "pCpTh",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Save",
@@ -75446,7 +75565,7 @@
                                   }
                                 },
                                 {
-                                  "id": "xkxvj",
+                                  "id": "d9yhb",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Save as…",
@@ -75466,13 +75585,13 @@
                                   }
                                 },
                                 {
-                                  "id": "Z1kKQH",
+                                  "id": "jhubu",
                                   "type": "ref",
                                   "ref": "fYNDQ",
                                   "name": "Divider"
                                 },
                                 {
-                                  "id": "bpBvi",
+                                  "id": "zMBXl",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Reveal in Finder",
@@ -75488,7 +75607,7 @@
                                   }
                                 },
                                 {
-                                  "id": "io84J",
+                                  "id": "nvEQj",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Clean up assets…",
@@ -75504,13 +75623,13 @@
                                   }
                                 },
                                 {
-                                  "id": "DUZsb",
+                                  "id": "RXpdF",
                                   "type": "ref",
                                   "ref": "fYNDQ",
                                   "name": "Divider 2"
                                 },
                                 {
-                                  "id": "LIp5i",
+                                  "id": "y1edl",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Settings…",
@@ -75531,27 +75650,27 @@
                                 }
                               ]
                             }
-                          ]
+                          }
                         },
                         {
-                          "id": "Xjpzs",
+                          "id": "Aw9t8",
                           "type": "ref",
                           "ref": "G7A3Aj",
                           "name": "Open Recent Submenu",
                           "width": 232,
                           "x": 431,
                           "y": 96,
-                          "children": [
-                            {
+                          "descendants": {
+                            "ksc3x": {
                               "type": "frame",
-                              "id": "w5NOt",
+                              "id": "hAceW",
                               "name": "Items",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 1,
                               "children": [
                                 {
-                                  "id": "sk0KB",
+                                  "id": "urQbS",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · home.kimo",
@@ -75566,7 +75685,7 @@
                                   }
                                 },
                                 {
-                                  "id": "I0gTzy",
+                                  "id": "JFa3t",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · pricing.kimo",
@@ -75581,7 +75700,7 @@
                                   }
                                 },
                                 {
-                                  "id": "w5WPtx",
+                                  "id": "JgoRX",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · q4-review.kimo",
@@ -75596,13 +75715,13 @@
                                   }
                                 },
                                 {
-                                  "id": "PRZV2",
+                                  "id": "pxqP0",
                                   "type": "ref",
                                   "ref": "fYNDQ",
                                   "name": "Divider"
                                 },
                                 {
-                                  "id": "Z8csn",
+                                  "id": "kwNC8",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Clear recent",
@@ -75614,7 +75733,7 @@
                                 }
                               ]
                             }
-                          ]
+                          }
                         }
                       ]
                     },
@@ -75842,6 +75961,7 @@
                               "type": "ref",
                               "ref": "ZMxjt",
                               "name": "Theme",
+                              "enabled": true,
                               "descendants": {
                                 "nd1MZ": {
                                   "icon": "sun"
@@ -75853,6 +75973,7 @@
                               "type": "ref",
                               "ref": "sqJv4",
                               "name": "Play",
+                              "enabled": false,
                               "descendants": {
                                 "zAVGx": {
                                   "icon": "play"
@@ -75879,24 +76000,24 @@
                           ]
                         },
                         {
-                          "id": "hYleo",
+                          "id": "cPHVm",
                           "type": "ref",
                           "ref": "G7A3Aj",
                           "name": "File Menu",
                           "width": 256,
                           "x": 48,
                           "y": 44,
-                          "children": [
-                            {
+                          "descendants": {
+                            "ksc3x": {
                               "type": "frame",
-                              "id": "ZQWvE",
+                              "id": "cS7Zj",
                               "name": "Items",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 1,
                               "children": [
                                 {
-                                  "id": "cTS9F",
+                                  "id": "wIWBx",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · New file",
@@ -75916,7 +76037,7 @@
                                   }
                                 },
                                 {
-                                  "id": "cBXqf",
+                                  "id": "z0fzKQ",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Open…",
@@ -75936,7 +76057,7 @@
                                   }
                                 },
                                 {
-                                  "id": "Mti1L",
+                                  "id": "V6jgC",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Open recent",
@@ -75951,7 +76072,7 @@
                                     },
                                     "T4CD1": {
                                       "type": "icon",
-                                      "id": "m8yM5",
+                                      "id": "Nk096",
                                       "name": "Submenu",
                                       "width": 12,
                                       "height": 12,
@@ -75962,7 +76083,7 @@
                                   }
                                 },
                                 {
-                                  "id": "usGbW",
+                                  "id": "Vwutp",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Save",
@@ -75982,7 +76103,7 @@
                                   }
                                 },
                                 {
-                                  "id": "t1YJtR",
+                                  "id": "f2G2ph",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Save as…",
@@ -76002,13 +76123,13 @@
                                   }
                                 },
                                 {
-                                  "id": "mb67j",
+                                  "id": "Bi1U3",
                                   "type": "ref",
                                   "ref": "fYNDQ",
                                   "name": "Divider"
                                 },
                                 {
-                                  "id": "GAB8n",
+                                  "id": "MmxCF",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Clean up assets…",
@@ -76024,13 +76145,13 @@
                                   }
                                 },
                                 {
-                                  "id": "K0SNtj",
+                                  "id": "DYhbU",
                                   "type": "ref",
                                   "ref": "fYNDQ",
                                   "name": "Divider 2"
                                 },
                                 {
-                                  "id": "Pt3Qi",
+                                  "id": "Ru7us",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Settings…",
@@ -76051,7 +76172,7 @@
                                 }
                               ]
                             }
-                          ]
+                          }
                         }
                       ]
                     },
@@ -78639,24 +78760,24 @@
                           ]
                         },
                         {
-                          "id": "l2iIcn",
+                          "id": "CRG2I",
                           "type": "ref",
                           "ref": "G7A3Aj",
                           "name": "App Menu",
                           "width": 232,
                           "x": 14,
                           "y": 30,
-                          "children": [
-                            {
+                          "descendants": {
+                            "ksc3x": {
                               "type": "frame",
-                              "id": "F6Hnbg",
+                              "id": "fSxbH",
                               "name": "Items",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 1,
                               "children": [
                                 {
-                                  "id": "H2sZi2",
+                                  "id": "M9Y7rn",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · About Kimo",
@@ -78672,7 +78793,7 @@
                                   }
                                 },
                                 {
-                                  "id": "dOeW5",
+                                  "id": "WZ0je",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Check for updates…",
@@ -78688,13 +78809,13 @@
                                   }
                                 },
                                 {
-                                  "id": "sBhyr",
+                                  "id": "w8usD",
                                   "type": "ref",
                                   "ref": "fYNDQ",
                                   "name": "Divider"
                                 },
                                 {
-                                  "id": "gFyzU",
+                                  "id": "J4feB",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Settings…",
@@ -78715,13 +78836,13 @@
                                   }
                                 },
                                 {
-                                  "id": "DCyTh",
+                                  "id": "X9YKDI",
                                   "type": "ref",
                                   "ref": "fYNDQ",
                                   "name": "Divider 2"
                                 },
                                 {
-                                  "id": "OhDNf",
+                                  "id": "QTSae",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Hide Kimo",
@@ -78736,7 +78857,7 @@
                                   }
                                 },
                                 {
-                                  "id": "n4GXkt",
+                                  "id": "UyNOY",
                                   "type": "ref",
                                   "ref": "EAGNC",
                                   "name": "Item · Quit Kimo",
@@ -78752,7 +78873,7 @@
                                 }
                               ]
                             }
-                          ]
+                          }
                         }
                       ]
                     },
@@ -80550,6 +80671,1633 @@
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
                       "content": "Rule: <file name> — <folder name>. The folder is the repo/working folder, not the full path. \"Edited\" = the in-memory document is ahead of disk (SaveStatus Unsaved / Saving / Failed); macOS uses setDocumentEdited, Windows/Linux prefix \"● \". Suffix \" - Kimo\" only off macOS, where the title is the taskbar label.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "rTpad",
+          "name": "Conflicts polish",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "RRfUW",
+              "name": "Section Header",
+              "width": "fill_container",
+              "stroke": "$border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 12,
+              "padding": [
+                0,
+                0,
+                12,
+                0
+              ],
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "e68Rn",
+                  "name": "Section Title",
+                  "fill": "$text-primary",
+                  "content": "Conflicts polish",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "o5yJxK",
+                  "name": "Section Note",
+                  "fill": "$text-tertiary",
+                  "content": "Base value, expanded resolved rows, group icons, overlapping canvas pills · extends board 18",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-sm",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "weJ7v",
+              "name": "Items",
+              "width": "fill_container",
+              "gap": 40,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "igiEE",
+                  "name": "Base Column",
+                  "width": 280,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "E7s1s",
+                      "name": "Caption",
+                      "fill": "$text-secondary",
+                      "content": "ConflictRow/Base · collapsed → open",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "id": "b3xOtr",
+                      "type": "ref",
+                      "reusable": true,
+                      "ref": "uP9RN",
+                      "name": "ConflictRow/Base",
+                      "width": "fill_container",
+                      "descendants": {
+                        "pApQH": {
+                          "type": "frame",
+                          "id": "P0vCd",
+                          "name": "Head",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "tXRNF",
+                              "name": "Status",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "circle-alert",
+                              "library": "lucide",
+                              "fill": "$danger"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ekd9d",
+                              "name": "Property",
+                              "fill": "$text-primary",
+                              "content": "fill",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bSyr0",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "Pnjgt",
+                              "name": "Hint",
+                              "fill": "$text-tertiary",
+                              "content": "both changed",
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "g8H4tU",
+                              "name": "Base Toggle",
+                              "height": 18,
+                              "fill": "#00000000",
+                              "cornerRadius": "$radius-pill",
+                              "gap": 2,
+                              "padding": [
+                                0,
+                                4,
+                                0,
+                                6
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "xlHFg",
+                                  "name": "Label",
+                                  "fill": "$text-tertiary",
+                                  "content": "base",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "pOxqE",
+                                  "name": "Chevron",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "chevron-right",
+                                  "library": "lucide",
+                                  "fill": "$text-tertiary"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "m3zB6/W3tggP": {
+                          "fill": "#FFF4E8"
+                        },
+                        "m3zB6/yGCTb": {
+                          "content": "#FFF4E8"
+                        },
+                        "m3zB6/zeVrc": {
+                          "content": "ours"
+                        },
+                        "t5eUZ/W3tggP": {
+                          "fill": "#FFFFFF"
+                        },
+                        "t5eUZ/yGCTb": {
+                          "content": "#FFFFFF"
+                        },
+                        "t5eUZ/zeVrc": {
+                          "content": "theirs"
+                        }
+                      }
+                    },
+                    {
+                      "id": "d4P5H",
+                      "type": "ref",
+                      "reusable": true,
+                      "ref": "uP9RN",
+                      "name": "ConflictRow/Base/Open",
+                      "width": "fill_container",
+                      "descendants": {
+                        "pApQH": {
+                          "type": "frame",
+                          "id": "KEKwy",
+                          "name": "Head",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "l3MFKZ",
+                              "name": "Head Row",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "rrfjg",
+                                  "name": "Status",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "circle-alert",
+                                  "library": "lucide",
+                                  "fill": "$danger"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "UT5TY",
+                                  "name": "Property",
+                                  "fill": "$text-primary",
+                                  "content": "fill",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "OaaFX",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ydOUx",
+                                  "name": "Hint",
+                                  "fill": "$text-tertiary",
+                                  "content": "both changed",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ZmwPH",
+                                  "name": "Base Toggle",
+                                  "height": 18,
+                                  "fill": "$bg-muted",
+                                  "cornerRadius": "$radius-pill",
+                                  "gap": 2,
+                                  "padding": [
+                                    0,
+                                    4,
+                                    0,
+                                    6
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "zJyDm",
+                                      "name": "Label",
+                                      "fill": "$text-secondary",
+                                      "content": "base",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": "$text-xs",
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "n3UqRO",
+                                      "name": "Chevron",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$text-tertiary"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HEuRD",
+                              "name": "Base",
+                              "width": "fill_container",
+                              "height": 20,
+                              "gap": 6,
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                20
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "C1DSO",
+                                  "name": "Base Label",
+                                  "fill": "$text-tertiary",
+                                  "content": "base",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$radius-2xs",
+                                  "id": "g1Lsf",
+                                  "name": "Base Swatch",
+                                  "fill": "#FFF7EE",
+                                  "width": 12,
+                                  "height": 12,
+                                  "stroke": "$chip-edge",
+                                  "strokeWidth": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "s3dO3a",
+                                  "name": "Base Value",
+                                  "fill": "$text-secondary",
+                                  "content": "#FFF7EE",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Q8VoxU",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "x65S6",
+                                  "name": "Base Commit",
+                                  "fill": "$text-tertiary",
+                                  "content": "4e1a9c2",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "m3zB6/W3tggP": {
+                          "fill": "#FFF4E8"
+                        },
+                        "m3zB6/yGCTb": {
+                          "content": "#FFF4E8"
+                        },
+                        "m3zB6/zeVrc": {
+                          "content": "ours"
+                        },
+                        "t5eUZ/W3tggP": {
+                          "fill": "#FFFFFF"
+                        },
+                        "t5eUZ/yGCTb": {
+                          "content": "#FFFFFF"
+                        },
+                        "t5eUZ/zeVrc": {
+                          "content": "theirs"
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "h0kgW",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"base ›\" pill in the head toggles a mono base line (value as stored at the merge base + short commit). Collapsed by default; state is per row and not persisted. Delete-vs-edit shows base \"Legal · 600×24\"; a side that adds a node shows base \"absent\".",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X2cb29",
+                  "name": "Resolved Column",
+                  "width": 280,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MTEaY",
+                      "name": "Caption",
+                      "fill": "$text-secondary",
+                      "content": "Resolved list · one row expanded",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mmn2O",
+                      "name": "Resolved Group",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        12,
+                        0,
+                        8,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wktbh",
+                          "name": "Resolved Header",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            12,
+                            4,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "b6MXd7",
+                              "name": "Chevron",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "chevron-down",
+                              "library": "lucide",
+                              "fill": "$text-tertiary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "xUWc3",
+                              "name": "Label",
+                              "fill": "$text-secondary",
+                              "content": "Resolved · 3",
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OPe5M",
+                          "name": "ResolvedRow/Expanded",
+                          "reusable": true,
+                          "width": "fill_container",
+                          "fill": "$bg-subtle",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            0,
+                            10,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "WHL5X",
+                              "name": "Row",
+                              "width": "fill_container",
+                              "height": 28,
+                              "gap": 6,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "qwHI6",
+                                  "name": "Status",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "circle-check",
+                                  "library": "lucide",
+                                  "fill": "$success"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "wPVHW",
+                                  "name": "Node",
+                                  "fill": "$text-primary",
+                                  "content": "CTA Row",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Zf9Pu",
+                                  "name": "Property",
+                                  "fill": "$text-tertiary",
+                                  "content": "gap",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ZSfic",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "vafG7",
+                                  "name": "Choice",
+                                  "fill": "$text-tertiary",
+                                  "content": "kept ours · 12",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "XNeYa",
+                                  "name": "Chevron",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "chevron-up",
+                                  "library": "lucide",
+                                  "fill": "$text-tertiary"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "kECtq",
+                              "name": "Detail",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "id": "T07ze",
+                                  "type": "ref",
+                                  "ref": "nBjfh",
+                                  "name": "Ours",
+                                  "descendants": {
+                                    "W3tggP": {
+                                      "enabled": false
+                                    },
+                                    "yGCTb": {
+                                      "content": "12"
+                                    },
+                                    "zeVrc": {
+                                      "content": "ours"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "iwbs5",
+                                  "type": "ref",
+                                  "ref": "o2cOff",
+                                  "name": "Theirs",
+                                  "descendants": {
+                                    "W3tggP": {
+                                      "enabled": false
+                                    },
+                                    "yGCTb": {
+                                      "content": "16"
+                                    },
+                                    "zeVrc": {
+                                      "content": "theirs"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "bdpQx",
+                                  "name": "Base",
+                                  "width": "fill_container",
+                                  "height": 20,
+                                  "gap": 6,
+                                  "padding": [
+                                    0,
+                                    0,
+                                    0,
+                                    4
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "TDZ3Y",
+                                      "name": "Base Label",
+                                      "fill": "$text-tertiary",
+                                      "content": "base",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": "$text-xs",
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "yl1Lj",
+                                      "name": "Base Value",
+                                      "fill": "$text-secondary",
+                                      "content": "8",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": "$text-xs",
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "iIGh3",
+                                      "name": "Spacer",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "e3iAmw",
+                                      "name": "Base Commit",
+                                      "fill": "$text-tertiary",
+                                      "content": "4e1a9c2",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": "$text-xs",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "jmxOT",
+                                  "name": "Actions",
+                                  "width": "fill_container",
+                                  "gap": 6,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "n8hRv",
+                                      "type": "ref",
+                                      "ref": "sqJv4",
+                                      "name": "Reopen",
+                                      "height": 26,
+                                      "padding": [
+                                        0,
+                                        10
+                                      ],
+                                      "descendants": {
+                                        "zAVGx": {
+                                          "icon": "rotate-ccw",
+                                          "width": 12,
+                                          "height": 12
+                                        },
+                                        "e5j2wK": {
+                                          "content": "Reopen",
+                                          "fontSize": "$text-xs"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Sx4Kl",
+                                      "name": "Hint",
+                                      "fill": "$text-tertiary",
+                                      "content": "or pick the other side",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": "$text-xs",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "GawEa",
+                          "name": "ResolvedRow",
+                          "reusable": true,
+                          "width": "fill_container",
+                          "height": 28,
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "qrekc",
+                              "name": "Status",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "circle-check",
+                              "library": "lucide",
+                              "fill": "$success"
+                            },
+                            {
+                              "type": "text",
+                              "id": "W1JWA9",
+                              "name": "Node",
+                              "fill": "$text-primary",
+                              "content": "Button / Primary",
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "uVQGZ",
+                              "name": "Property",
+                              "fill": "$text-tertiary",
+                              "content": "label",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "aC1zG",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "PzCxv",
+                              "name": "Choice",
+                              "fill": "$text-tertiary",
+                              "content": "took theirs",
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "D0iA0t",
+                          "type": "ref",
+                          "ref": "GawEa",
+                          "name": "Resolved · Footer › Legal",
+                          "descendants": {
+                            "W1JWA9": {
+                              "content": "Footer › Legal"
+                            },
+                            "uVQGZ": {
+                              "content": "node"
+                            },
+                            "PzCxv": {
+                              "content": "took theirs · deleted"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "ObigI",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Click a resolved row to expand it in place (one at a time, bg-subtle). It shows the applied side selected, the other side, the base line, and Reopen, which moves the row back to its group as open. Picking the other side directly re-resolves without reopening.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "cjhyh",
+                  "name": "Groups Column",
+                  "width": 280,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ff7M4",
+                      "name": "Caption",
+                      "fill": "$text-secondary",
+                      "content": "Group icons · variable & document header",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OQdSO",
+                      "name": "Groups Panel",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "zBg7u",
+                          "name": "Group · Variables",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "SXfbZ",
+                              "name": "Group Header",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "padding": [
+                                12,
+                                12,
+                                2,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "yaCuT",
+                                  "name": "Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "variable",
+                                  "library": "lucide",
+                                  "fill": "$text-tertiary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "rG9fj",
+                                  "name": "Node",
+                                  "fill": "$text-primary",
+                                  "content": "Variables",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "iHSVT",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "GDYjk",
+                                  "name": "Count",
+                                  "fill": "$text-tertiary",
+                                  "content": "1 open",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "bvYcX",
+                              "type": "ref",
+                              "ref": "uP9RN",
+                              "name": "ConflictRow · $brand · light",
+                              "width": "fill_container",
+                              "descendants": {
+                                "GXuAU": {
+                                  "content": "$brand · light"
+                                },
+                                "m3zB6/W3tggP": {
+                                  "fill": "#D9480F"
+                                },
+                                "m3zB6/yGCTb": {
+                                  "content": "#D9480F"
+                                },
+                                "m3zB6/zeVrc": {
+                                  "content": "ours"
+                                },
+                                "t5eUZ/W3tggP": {
+                                  "fill": "#E8590D"
+                                },
+                                "t5eUZ/yGCTb": {
+                                  "content": "#E8590D"
+                                },
+                                "t5eUZ/zeVrc": {
+                                  "content": "theirs"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Isy2f",
+                          "name": "Group · Document",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "FWcSd",
+                              "name": "Group Header",
+                              "width": "fill_container",
+                              "gap": 6,
+                              "padding": [
+                                12,
+                                12,
+                                2,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "GiLfV",
+                                  "name": "Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "file-cog",
+                                  "library": "lucide",
+                                  "fill": "$text-tertiary"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "jpokq",
+                                  "name": "Node",
+                                  "fill": "$text-primary",
+                                  "content": "Document",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "dwXjN",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "DqK2p",
+                                  "name": "Count",
+                                  "fill": "$text-tertiary",
+                                  "content": "1 open",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "RjD3S",
+                              "type": "ref",
+                              "ref": "uP9RN",
+                              "name": "ConflictRow · themes",
+                              "width": "fill_container",
+                              "descendants": {
+                                "GXuAU": {
+                                  "content": "themes · mode"
+                                },
+                                "m3zB6/W3tggP": {
+                                  "enabled": false
+                                },
+                                "m3zB6/yGCTb": {
+                                  "content": "light, dark"
+                                },
+                                "m3zB6/zeVrc": {
+                                  "content": "ours"
+                                },
+                                "t5eUZ/W3tggP": {
+                                  "enabled": false
+                                },
+                                "t5eUZ/yGCTb": {
+                                  "content": "light, dark, contrast"
+                                },
+                                "t5eUZ/zeVrc": {
+                                  "content": "theirs"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "AApU5",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Node groups keep the node's layer icon (frame, type, component…). Variable conflicts group under \"Variables\" with lucide variable; document-header conflicts (themes, imports, fonts, page order) group under \"Document\" with lucide file-cog. Order: Document, Variables, then nodes in layer order.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "cwwcM",
+                  "name": "Pills Column",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SMJMZ",
+                      "name": "Caption",
+                      "fill": "$text-secondary",
+                      "content": "Overlapping canvas pills",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "id": "mvPXI",
+                      "type": "ref",
+                      "reusable": true,
+                      "ref": "ar36v",
+                      "name": "CanvasMarker/Conflict/More",
+                      "fill": "$bg-overlay",
+                      "stroke": "$danger",
+                      "strokeWidth": 1,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "descendants": {
+                        "gTAr8": {
+                          "enabled": false
+                        },
+                        "Elf3t": {
+                          "content": "+2",
+                          "fill": "$danger"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "T7TxIQ",
+                      "name": "Vignette · Pill stacking",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "oBet2",
+                          "x": 16,
+                          "y": 12,
+                          "name": "Label · 2 overlap → stack, 4px gap",
+                          "fill": "$text-tertiary",
+                          "content": "2 overlap → stack",
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "s1naW0",
+                          "x": 16,
+                          "y": 100,
+                          "name": "Frame A",
+                          "fill": "$bg-app",
+                          "width": 140,
+                          "height": 80,
+                          "stroke": "$danger",
+                          "strokeWidth": 1
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "T6tVZ0",
+                          "x": 28,
+                          "y": 108,
+                          "name": "Frame B",
+                          "fill": "#00000000",
+                          "width": 120,
+                          "height": 60,
+                          "stroke": "$danger",
+                          "strokeWidth": 1
+                        },
+                        {
+                          "id": "z5007",
+                          "type": "ref",
+                          "ref": "ar36v",
+                          "name": "Pill A",
+                          "x": 16,
+                          "y": 76,
+                          "descendants": {
+                            "Elf3t": {
+                              "content": "Hero · 1"
+                            }
+                          }
+                        },
+                        {
+                          "id": "P5k9r",
+                          "type": "ref",
+                          "ref": "ar36v",
+                          "name": "Pill B (stacked)",
+                          "x": 28,
+                          "y": 52,
+                          "descendants": {
+                            "Elf3t": {
+                              "content": "Headline · 1"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "MX0dh",
+                          "x": 190,
+                          "y": 12,
+                          "name": "Label · 3+ overlap → first + \"+N\"",
+                          "fill": "$text-tertiary",
+                          "content": "3+ overlap → +N",
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "ww0mX",
+                          "x": 190,
+                          "y": 100,
+                          "name": "Frame C",
+                          "fill": "$bg-app",
+                          "width": 140,
+                          "height": 80,
+                          "stroke": "$danger",
+                          "strokeWidth": 1
+                        },
+                        {
+                          "id": "yBCpB",
+                          "type": "ref",
+                          "ref": "ar36v",
+                          "name": "Pill C",
+                          "x": 190,
+                          "y": 76,
+                          "descendants": {
+                            "Elf3t": {
+                              "content": "Hero · 1"
+                            }
+                          }
+                        },
+                        {
+                          "id": "nktwJ",
+                          "type": "ref",
+                          "ref": "mvPXI",
+                          "name": "Pill More",
+                          "x": 268,
+                          "y": 76
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "BIO8v",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Pills sit 4px above their node's top-left. When two pill boxes intersect, the later one (layer order) moves up by pill height + 4px. Three or more in the same cluster collapse to the first pill plus CanvasMarker/Conflict/More (\"+N\", outlined danger); clicking it opens a Menu/Dense listing the hidden conflicts. Pills are screen-space: recomputed on zoom, never scaled.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "vgNUe",
+          "name": "Banner priority",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "JZG4g",
+              "name": "Section Header",
+              "width": "fill_container",
+              "stroke": "$border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 12,
+              "padding": [
+                0,
+                0,
+                12,
+                0
+              ],
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "a9bTKe",
+                  "name": "Section Title",
+                  "fill": "$text-primary",
+                  "content": "Banner priority",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "jyJSU",
+                  "name": "Section Note",
+                  "fill": "$text-tertiary",
+                  "content": "One banner at a time under the topbar",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-sm",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ERQeR",
+              "name": "Items",
+              "width": "fill_container",
+              "gap": 40,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "oKwfp",
+                  "name": "Specimen Column",
+                  "width": 860,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WOiCb",
+                      "name": "Caption",
+                      "fill": "$text-secondary",
+                      "content": "Stored conflicts present (from kimo merge) → conflicts banner wins",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aJLh2",
+                      "name": "Suppressed",
+                      "opacity": 0.45,
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "grz2P",
+                          "name": "Tag",
+                          "fill": "$text-tertiary",
+                          "content": "SUPPRESSED",
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal",
+                          "letterSpacing": 0.5
+                        },
+                        {
+                          "id": "g43uW",
+                          "type": "ref",
+                          "ref": "KPgcF",
+                          "name": "Banner · Merge in progress (suppressed)",
+                          "descendants": {
+                            "AClzz": {
+                              "icon": "git-merge"
+                            },
+                            "HRUqU": {
+                              "content": "Merge in progress"
+                            },
+                            "x6Z0vQ": {
+                              "content": "Autosave is paused until git finishes the merge."
+                            },
+                            "DW6X8/e5j2wK": {
+                              "content": "Abort merge"
+                            },
+                            "wGTB1/bzZjb": {
+                              "content": "Keep my edits"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MKmPl",
+                      "name": "Shown",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Uu3Gz",
+                          "name": "Tag",
+                          "fill": "$text-secondary",
+                          "content": "SHOWN",
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal",
+                          "letterSpacing": 0.5
+                        },
+                        {
+                          "id": "cudnT",
+                          "type": "ref",
+                          "ref": "KPgcF",
+                          "name": "Banner · kimo merge conflicts",
+                          "descendants": {
+                            "AClzz": {
+                              "icon": "git-merge"
+                            },
+                            "HRUqU": {
+                              "content": "kimo merge left 2 conflicts"
+                            },
+                            "x6Z0vQ": {
+                              "content": "Merging feat/pricing-v2 into main: 14 changes applied, 3 of 5 conflicts resolved. Pick a side for the rest, then save."
+                            },
+                            "DW6X8/e5j2wK": {
+                              "content": "Previous"
+                            },
+                            "wGTB1/bzZjb": {
+                              "content": "Next conflict"
+                            },
+                            "tXBEc": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iWk95",
+                  "name": "Rule Column",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nxN9r",
+                      "name": "Caption",
+                      "fill": "$text-secondary",
+                      "content": "Priority (highest first)",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oV0OM",
+                      "name": "Priority List",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        4,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "f1jon",
+                          "name": "Priority 1",
+                          "width": "fill_container",
+                          "stroke": "$border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "gap": 10,
+                          "padding": [
+                            9,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "qaxtr",
+                              "name": "Rank",
+                              "fill": "$text-tertiary",
+                              "content": "1",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Ymemg",
+                              "name": "Label",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Save failed / disk errors (Banner/Danger)",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jfdDG",
+                          "name": "Priority 2",
+                          "width": "fill_container",
+                          "stroke": "$border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "gap": 10,
+                          "padding": [
+                            9,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Q1Oj9",
+                              "name": "Rank",
+                              "fill": "$text-tertiary",
+                              "content": "2",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "YWtik",
+                              "name": "Label",
+                              "fill": "$text-primary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Stored merge conflicts open — kimo merge (replaces git merge banner)",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "KXKWK",
+                          "name": "Priority 3",
+                          "width": "fill_container",
+                          "stroke": "$border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "gap": 10,
+                          "padding": [
+                            9,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "HadYh",
+                              "name": "Rank",
+                              "fill": "$text-tertiary",
+                              "content": "3",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "hiOed",
+                              "name": "Label",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Git operation in progress — merge / rebase without stored conflicts",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "HelEe",
+                          "name": "Priority 4",
+                          "width": "fill_container",
+                          "stroke": "$border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "gap": 10,
+                          "padding": [
+                            9,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "j0A5FM",
+                              "name": "Rank",
+                              "fill": "$text-tertiary",
+                              "content": "4",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TlYim",
+                              "name": "Label",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Changed on disk / read-only / locked",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "AvAc3",
+                          "name": "Priority 5",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            9,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "mhOT6",
+                              "name": "Rank",
+                              "fill": "$text-tertiary",
+                              "content": "5",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "yqGhG",
+                              "name": "Label",
+                              "fill": "$text-secondary",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Update available, informational",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$font-sans",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "U1kxE",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "When the header has stored conflicts (merge.conflicts present) while git still reports MERGE_HEAD, the conflicts banner replaces the generic one; autosave stays paused the same way. When the last conflict is resolved and saved, the generic git banner comes back until the user commits.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-sans",
                       "fontSize": "$text-xs",

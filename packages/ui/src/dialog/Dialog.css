@@ -63,6 +63,12 @@
   color: var(--kimo-danger);
 }
 
+/* Board 20 "Nothing to clean up" (nsxuR): Icon Wrap success-soft, icon circle-check success. */
+.kimo-dialog--success .kimo-dialog__icon-wrap {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
 .kimo-dialog__text {
   display: flex;
   flex: 1 1 0;

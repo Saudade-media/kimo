@@ -84,6 +84,21 @@
   height: 14px;
 }
 
+/* Board 20 File menu items: the Check Slot holds the item's icon (RmOTH enabled, 14,
+   fill text-secondary). */
+.kimo-menu-item-dense__check--icon {
+  color: var(--kimo-text-secondary);
+}
+
+/* Submenu (uNZcy): icon 12 × 12 chevron-right, text-tertiary, in the Meta slot. */
+.kimo-menu-item-dense__submenu {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
 .kimo-menu-item-dense__label {
   flex: 0 1 auto;
   min-width: 0;

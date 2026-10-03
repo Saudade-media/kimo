@@ -11,7 +11,7 @@
  * 3 locked by another process.
  */
 import { readFileSync, rmSync, statSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { basename, dirname, join } from "node:path"
 import {
   isObject,
   parse,
@@ -24,6 +24,11 @@ import { type CliIO, formatBytes, liveLease, plural, resolveIn, writeFileAtomic 
 import { assetListing } from "./validate"
 
 export const GC_EXIT = { ok: 0, unreadable: 2, locked: 3 } as const
+
+/** Board 20 "Nothing to clean up" (nsxuR) description, shared with the editor dialog. */
+export function gcNothingSentence(fileName: string): string {
+  return `Every asset is in use — each file in assets/ is referenced by a node, fill, component or variable in ${fileName}.`
+}
 
 export interface GcArgs {
   file: string
@@ -94,7 +99,8 @@ export function runGc(args: GcArgs, io: CliIO): number {
     return GC_EXIT.ok
   }
   if (nothing) {
-    io.stdout(`${args.file}: no unused assets\n`)
+    // Board 20 nsxuR: the CLI prints the dialog's sentence and exits 0.
+    io.stdout(`Nothing to clean up. ${gcNothingSentence(basename(args.file))}\n`)
     return GC_EXIT.ok
   }
   const verb = args.yes ? "Removed" : "Would remove"

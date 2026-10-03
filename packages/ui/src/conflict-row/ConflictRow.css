@@ -1,6 +1,7 @@
 /*
  * ConflictRow: desing.pen 02d Components — Files (M4) > ConflictRow (uP9RN),
- * ConflictRow/Resolved (d9zpM).
+ * ConflictRow/Resolved (hZKbc); board 20 ConflictRow/Base (b3xOtr) and /Base/Open (d4P5H),
+ * ResolvedRow (GawEa) and ResolvedRow/Expanded (OPe5M).
  * frame: fill_container, stroke border bottom 1, layout vertical, gap 6, padding [10, 12]
  *   ├ Head: fill_container, horizontal, gap 6, alignItems center
  *   │   ├ Status   icon 14 lucide circle-alert, danger (resolved: circle-check, success)
@@ -79,4 +80,266 @@
   font-weight: var(--kimo-font-weight-regular);
   line-height: 13px;
   white-space: nowrap;
+}
+
+/* Board 20 ConflictRow/Base/Open (d4P5H): Head becomes a column (gap 6) of Head Row + Base. */
+.kimo-conflict-row__head--open {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.kimo-conflict-row__head-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Base Toggle (g8H4tU): h 18, fill #00000000, radius-pill, gap 2, padding [0, 4, 0, 6], center;
+   Label mono 11 text-tertiary, Chevron 12 chevron-right text-tertiary. Open (ZmwPH): fill
+   bg-muted, label text-secondary, chevron-down. */
+.kimo-conflict-row__base-toggle {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+  margin: 0;
+  padding: 0 4px 0 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-conflict-row__base-toggle:hover,
+.kimo-conflict-row__base-toggle--open {
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-conflict-row__base-toggle:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-conflict-row__base-toggle-label {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box for JetBrains Mono 11 */
+  white-space: nowrap;
+}
+
+.kimo-conflict-row__base-toggle--open .kimo-conflict-row__base-toggle-label {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-conflict-row__base-toggle-chevron {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+/* Base (HEuRD): fill × 20, row, gap 6, padding [0, 0, 0, 20], center. In ResolvedRow/Expanded
+   (bdpQx): padding [0, 0, 0, 4]. */
+.kimo-conflict-base {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 20px;
+  padding: 0 0 0 20px;
+}
+
+.kimo-conflict-base--resolved {
+  padding-left: 4px;
+}
+
+.kimo-conflict-base__label,
+.kimo-conflict-base__commit {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-conflict-base__label,
+.kimo-conflict-base__value,
+.kimo-conflict-base__commit {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-conflict-base__value {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  text-overflow: ellipsis;
+}
+
+.kimo-conflict-base__swatch {
+  box-sizing: border-box;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--kimo-chip-edge);
+  border-radius: var(--kimo-radius-2xs);
+}
+
+.kimo-conflict-base__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* ResolvedRow (GawEa): fill × 28, row, gap 6, padding [0, 12], center. */
+.kimo-resolved-row {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.kimo-resolved-row__row {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-resolved-row:not(.kimo-resolved-row--expanded) .kimo-resolved-row__row:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-resolved-row__row:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-resolved-row__status {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-success);
+}
+
+.kimo-resolved-row__status > svg,
+.kimo-resolved-row__chevron {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-resolved-row__chevron {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-resolved-row__node,
+.kimo-resolved-row__choice,
+.kimo-resolved-row__hint {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+.kimo-resolved-row__node {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  text-overflow: ellipsis;
+}
+
+.kimo-resolved-row__property {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-resolved-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-resolved-row__choice,
+.kimo-resolved-row__hint {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+/* ResolvedRow/Expanded (OPe5M): column, gap 6, padding [0, 0, 10, 0], fill bg-subtle. */
+.kimo-resolved-row--expanded {
+  box-sizing: border-box;
+  gap: 6px;
+  padding: 0 0 10px;
+  background: var(--kimo-bg-subtle);
+}
+
+/* Detail (kECtq): column, gap 6, padding [0, 12]; the choices are direct children in the node
+   tree, so the radiogroup wrapper adds no box. */
+.kimo-resolved-row__detail {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 0 12px;
+}
+
+.kimo-resolved-row__choices {
+  display: contents;
+}
+
+/* Actions (jmxOT): row, gap 6, center. */
+.kimo-resolved-row__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Reopen (n8hRv): Button/Ghost, height 26, padding [0, 10], icon rotate-ccw 12, label 11. */
+.kimo-button.kimo-resolved-row__reopen {
+  height: 26px;
+  padding: 0 10px;
+  font-size: var(--kimo-text-xs);
+}
+
+.kimo-resolved-row__reopen .kimo-button__icon {
+  width: 12px;
+  height: 12px;
 }

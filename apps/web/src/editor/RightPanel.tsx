@@ -2,7 +2,8 @@
  * Right panel — board 08 "Editor — Styling (M2)" right panel (`hgQkJ`): 280 wide, bg-app, left
  * stroke 1 border, vertical. Children in node order: Tabs (Design / Code / Agent), Selection
  * (`eZbgB`), then the PropSections Layer (`cmbN4`), Position (`Z72l9N`), Auto layout
- * (`S3QTvG`), Fill (`LpXDi`), Stroke (`qQR6J`), Effects (`Vyrj5`). Icon nodes add the Icon
+ * (`S3QTvG`), Fill (`LpXDi`), Stroke (`qQR6J`), Effects (`Vyrj5`). Text nodes (board 20
+ * Gmaho): Layer, Position, Text (RuAZI), Fill, Stroke, Effects — no Auto layout. Icon nodes add the Icon
  * section (board 09 panel fragment `CVMdd`). The Design tab scrolls when taller than the
  * viewport.
  */
@@ -13,6 +14,7 @@ import type { IconProvider } from "@kimo/renderer"
 import { Badge, EmptyState, Tabs } from "@kimo/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ConflictsPanel, conflictsTabLabel, type EditorConflictSession } from "../conflicts"
+import type { FontSystem } from "../fonts/font-system"
 import type { AssetStore } from "../lib/assets"
 import { useDocHeader } from "../lib/header"
 import { type Bus, createBus, useNodes, useUi } from "../lib/hooks"
@@ -36,6 +38,7 @@ import { EffectsSection } from "./sections/EffectsSection"
 import { IconSection } from "./sections/IconSection"
 import { AutoLayoutSection, LayerSection, PositionSection } from "./sections/LayoutSections"
 import { FillSection, StrokeSection } from "./sections/PaintSections"
+import { TextSection } from "./sections/TextSection"
 import type { FileSession } from "./session"
 
 type RightTab = "design" | "code" | "agent" | "conflicts"
@@ -61,6 +64,8 @@ export interface RightPanelProps {
   conflicts?: EditorConflictSession | null
   /** Bumped by the external-conflicts toast's "Review": opens the Conflicts tab. */
   review?: Bus<number>
+  /** The window's font system (Text section). */
+  fonts?: FontSystem | null
 }
 
 export function RightPanel({
@@ -71,6 +76,7 @@ export function RightPanel({
   m3,
   conflicts = null,
   review,
+  fonts = null,
 }: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>("design")
   const counts = useConflictCounts(conflicts)
@@ -112,7 +118,14 @@ export function RightPanel({
         <ConflictsPanel session={conflicts} getNode={(id) => session.store.getNode(id)} />
       )}
       {tab === "design" && (
-        <DesignTab session={session} layout={layout} assets={assets} icons={icons} m3={m3} />
+        <DesignTab
+          session={session}
+          layout={layout}
+          assets={assets}
+          icons={icons}
+          m3={m3}
+          fonts={fonts}
+        />
       )}
       {tab === "code" && (
         <div className="right-panel__empty">
@@ -175,12 +188,14 @@ function DesignTab({
   assets,
   icons,
   m3,
+  fonts,
 }: {
   session: FileSession
   layout: Bus<LayoutResult | null>
   assets: AssetStore | null
   icons: IconProvider | null
   m3: M3Controller
+  fonts: FontSystem | null
 }) {
   // Re-renders when the selection or a selected node changes, not on every document edit.
   const selection = useUi(session.ui, (s) => s.selection)
@@ -218,6 +233,7 @@ function DesignTab({
   const first = sel[0] as Sel
   const types = new Set(nodes.map((n) => n.type))
   const all = (set: ReadonlySet<string>) => [...types].every((t) => set.has(t))
+  const allText = all(new Set(["text"]))
   const kind = shared(nodes, kindLabel)
   const instance = types.has("instance")
   const view = m3.view()
@@ -261,6 +277,7 @@ function DesignTab({
         layout,
         assets,
         icons,
+        fonts,
         theme: single ? view.theme(single) : undefined,
       }}
     >
@@ -300,7 +317,10 @@ function DesignTab({
           )}
           <LayerSection sel={sel} />
           <PositionSection sel={sel} />
-          <AutoLayoutSection sel={sel} />
+          {/* Board 20 (YjE2h): Text after Position (Resizing drives the W/H modes there); auto
+              layout is hidden for text nodes. */}
+          {allText && <TextSection sel={sel} fonts={fonts} />}
+          {!allText && <AutoLayoutSection sel={sel} />}
           {all(new Set(["icon"])) && <IconSection sel={sel} />}
           {(all(HAS_FILL) ||
             all(new Set(["icon"])) ||

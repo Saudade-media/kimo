@@ -11,6 +11,7 @@ pub mod fs_ops;
 pub mod git;
 pub mod leases;
 pub mod links;
+pub mod menu;
 pub mod recents;
 pub mod recovery;
 pub mod scope;
@@ -63,6 +64,11 @@ pub fn run() {
             st.open_request(app, r);
         }
     }));
+
+    // Board 20 Qj4uq: the macOS app menu holds About / Check for updates… / Settings… ⌘,.
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(menu::build);
+    let builder = builder.on_menu_event(|app, event| menu::on_menu_event(app, event.id().as_ref()));
 
     let app = builder
         .plugin(tauri_plugin_deep_link::init())

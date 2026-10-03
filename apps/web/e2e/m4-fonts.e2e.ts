@@ -358,17 +358,25 @@ export const scenarios: Scenario[] = [
         Object.values(k.doc().nodes).map((n) => (n as { name?: string }).name),
       )
       expect(names.includes("logo-mark"), "root frame inserted")
-      // Hostile SVG: no script runs, nothing reaches the DOM.
+      // Hostile SVG: rejected whole (board 20 M4Pij9: never silently stripped); no script runs,
+      // nothing reaches the DOM, no popover.
       const scriptsBefore = await page.evaluate(() => document.scripts.length)
       const evil = `<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script><foreignObject><iframe src="javascript:alert(3)"/></foreignObject><image href="https://evil.example/x.png"/><path d="M0 0L10 10" onclick="alert(4)"/></svg>`
       await page.evaluate((text) => {
         const k = (window as unknown as { __kimoM4: { show(v: unknown): Promise<void> } }).__kimoM4
         return k.show({ kind: "svg", text, name: "evil.svg" })
       }, evil)
-      await pop.waitFor()
-      await pop.getByRole("radio", { name: "Image" }).click()
-      await pop.getByRole("button", { name: "Import" }).click()
-      await pop.waitFor({ state: "detached" })
+      await page.waitForFunction(
+        () =>
+          !!(window as unknown as { __kimoM4: { svgState: { error?: string } } }).__kimoM4.svgState
+            .error,
+      )
+      const rejected = await hook(page, (k) => k.svgState.error)
+      expect(
+        rejected === "Couldn't import evil.svg — it contains a script",
+        `rejected: ${rejected}`,
+      )
+      expect((await pop.count()) === 0, "no import popover for a rejected SVG")
       await page.waitForTimeout(200)
       expect(dialogs.length === 0, `no script ran: ${dialogs.join(",")}`)
       expect(
@@ -378,7 +386,12 @@ export const scenarios: Scenario[] = [
       expect((await page.locator("iframe").count()) === 0, "no iframe")
       // DOCTYPE / entities are refused before any parsing.
       await page.evaluate(() => {
-        const k = (window as unknown as { __kimoM4: { show(v: unknown): Promise<void> } }).__kimoM4
+        const k = (
+          window as unknown as {
+            __kimoM4: { show(v: unknown): Promise<void>; svgState: { error?: string } }
+          }
+        ).__kimoM4
+        k.svgState.error = undefined
         return k.show({
           kind: "svg",
           name: "xxe.svg",

@@ -41,3 +41,12 @@
   font-weight: var(--kimo-font-weight-semibold);
   line-height: 13px;
 }
+
+/* CanvasMarker/Conflict/More (board 20 mvPXI): padding [0, 8], fill bg-overlay, stroke danger 1
+   (inside), Icon hidden, Label fill danger. */
+.kimo-canvas-conflict-marker--more {
+  padding: 0 8px;
+  background: var(--kimo-bg-overlay);
+  box-shadow: inset 0 0 0 1px var(--kimo-danger);
+  color: var(--kimo-danger);
+}

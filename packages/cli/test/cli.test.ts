@@ -233,7 +233,9 @@ describe("kimo gc", () => {
     expect(validate(d, { assetFiles: ["aaaaaaaaaaaaaaaa.png"] }).errors).toEqual([])
     const again = capture(undefined, p.env)
     expect(await run(["gc", p.file], again.io)).toBe(0)
-    expect(again.out()).toContain("no unused assets")
+    expect(again.out()).toContain(
+      "Nothing to clean up. Every asset is in use — each file in assets/",
+    )
   })
 
   test("a live lease blocks --yes (exit 3); a dead pid's lease does not", async () => {

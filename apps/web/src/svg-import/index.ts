@@ -19,7 +19,10 @@ export {
   prepareSvg,
   rememberSvgChoice,
   type SvgImportTarget,
+  SvgRejectedError,
+  type SvgRejectReason,
   svgImportOps,
+  svgRejection,
 } from "./flow"
 export { parsePath, parseTransform, serializeSegments } from "./geometry"
 export {

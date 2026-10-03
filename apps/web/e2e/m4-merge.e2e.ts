@@ -139,13 +139,13 @@ export const scenarios: Scenario[] = [
         (await texts(page, ".conflicts-panel__resolved-label"))[0] === "Resolved · 3",
         "Resolved · 3",
       )
-      const resolved = await texts(page, ".conflicts-panel__resolved-choice")
+      const resolved = await texts(page, ".kimo-resolved-row__choice")
       expect(
         resolved.join(",") === "kept ours · 12,took theirs,took theirs · deleted",
         `resolved ${resolved}`,
       )
       expect(
-        (await texts(page, ".conflicts-panel__resolved-node")).join(",") ===
+        (await texts(page, ".kimo-resolved-row__node")).join(",") ===
           "CTA Row,Button / Primary,Footer › Legal",
         "resolved nodes",
       )
@@ -191,7 +191,7 @@ export const scenarios: Scenario[] = [
         "Hero layer marker gone",
       )
       expect(
-        (await texts(page, ".conflicts-panel__resolved-choice")).includes("took theirs"),
+        (await texts(page, ".kimo-resolved-row__choice")).includes("took theirs"),
         "resolved list has the pick",
       )
       await page.keyboard.press("ControlOrMeta+z")
@@ -336,8 +336,8 @@ export const scenarios: Scenario[] = [
           side: box(heroRow?.querySelector(".kimo-conflict-choice__side") ?? null),
           resolved: box(q(".conflicts-panel__resolved")),
           resolvedHeader: box(q(".conflicts-panel__resolved-header")),
-          resolvedRow: box(q(".conflicts-panel__resolved-row")),
-          resolvedStatus: box(q(".conflicts-panel__resolved-status")),
+          resolvedRow: box(q(".kimo-resolved-row__row")),
+          resolvedStatus: box(q(".kimo-resolved-row__status")),
           footer: box(q(".conflicts-panel__footer")),
           mark: box(q(".conflicts-panel__mark")),
           hint: box(q(".conflicts-panel__hint")),
@@ -403,8 +403,10 @@ export const scenarios: Scenario[] = [
       check("Icon liWrH", "size", g(m.groupIcon, "w"), 12)
       check("Node UCvpD", "font-weight", g(m.groupNode, "fw"), "600")
       // ConflictRow uP9RN / ConflictChoice o2cOff.
-      check("ConflictRow · fill", "height", g(m.row, "h"), 109, 1.5)
-      check("ConflictRow · content", "height", g(m.rowContent, "h"), 124, 1.5)
+      // Board 20 ConflictRow/Base (b3xOtr): the Base Toggle (h 18) makes the head 18 tall, so
+      // the row is 112 (board 18's 109 + 3); the two-line content row grows the same.
+      check("ConflictRow/Base b3xOtr · fill", "height", g(m.row, "h"), 112, 1.5)
+      check("ConflictRow/Base · content", "height", g(m.rowContent, "h"), 127, 1.5)
       check(
         "ConflictRow uP9RN",
         "padding",
@@ -479,12 +481,10 @@ export const scenarios: Scenario[] = [
       check("Icon gTAr8", "size", g(m.canvasIcon, "w"), 12)
       check("Label Elf3t", "font-weight", g(m.canvasLabel, "fw"), "600")
       check("Conflict Outline fawpR", "stroke (inset)", g(m.outline, "shadow"), 1.5, 0.01)
-      check(
-        "Marker vs outline",
-        "gap above node (24)",
-        (g(m.outline, "y") as number) - (g(m.canvasMarker, "y") as number),
-        24,
-      )
+      // At the fitted zoom the Headline pill overlaps the Hero pill, so board 20's stacking rule
+      // moves it up by pill height + 4 (24 + 24); unstacked it sits 24 above its node.
+      const gap = (g(m.outline, "y") as number) - (g(m.canvasMarker, "y") as number)
+      check("Marker vs outline", "gap above node (24, or 48 stacked)", gap, gap > 36 ? 48 : 24)
       check(
         "Marker vs outline",
         "left aligned",
@@ -499,6 +499,166 @@ export const scenarios: Scenario[] = [
           `| ${el} | ${prop} | ${want} | ${typeof got === "number" ? Math.round(got * 100) / 100 : got} |`,
         )
       await shot(ctx, "measured")
+    },
+  },
+  {
+    name: "m4-merge: board 20 polish — base toggle, resolved expand + Reopen, pill stacking (measured)",
+    async run(ctx) {
+      const { page } = ctx
+      await load(page)
+      const rowSel = '.conflicts-panel__group [data-conflict-id="CfHeroFil1"]'
+      // Base toggle: collapsed by default, opens the mono base line.
+      const toggle = page.locator(`${rowSel} .kimo-conflict-row__base-toggle`)
+      expect((await toggle.getAttribute("aria-expanded")) === "false", "base collapsed")
+      await toggle.click()
+      await page.locator(`${rowSel} .kimo-conflict-base`).waitFor()
+      const baseText = (await page.locator(`${rowSel} .kimo-conflict-base`).innerText())
+        .replace(/\s+/g, " ")
+        .trim()
+      expect(baseText === "base #FFF7EE 4e1a9c2", `base line: ${baseText}`)
+      // Resolved row: expand in place, both sides + base + Reopen.
+      const cta = page.locator('.kimo-resolved-row[data-conflict-id="CfCtaGap01"]')
+      await cta.locator(".kimo-resolved-row__row").click()
+      await cta.locator(".kimo-resolved-row__reopen").waitFor()
+      const m = await page.evaluate((sel) => {
+        const box = (e: Element | null) => {
+          if (!e) return null
+          const r = e.getBoundingClientRect()
+          const cs = getComputedStyle(e)
+          return {
+            w: r.width,
+            h: r.height,
+            display: cs.display,
+            pad: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map(parseFloat),
+            gap: parseFloat(cs.columnGap) || parseFloat(cs.rowGap) || 0,
+            fs: parseFloat(cs.fontSize),
+            ff: cs.fontFamily.split(",")[0]?.replace(/"/g, ""),
+            bg: cs.backgroundColor,
+            radius: parseFloat(cs.borderTopLeftRadius),
+          }
+        }
+        const q = (s: string) => document.querySelector(s)
+        const row = q(sel)
+        const exp = q('.kimo-resolved-row[data-conflict-id="CfCtaGap01"]')
+        return {
+          row: box(row),
+          toggle: box(row?.querySelector(".kimo-conflict-row__base-toggle") ?? null),
+          toggleLabel: box(row?.querySelector(".kimo-conflict-row__base-toggle-label") ?? null),
+          chevron: box(row?.querySelector(".kimo-conflict-row__base-toggle-chevron") ?? null),
+          head: box(row?.querySelector(".kimo-conflict-row__head") ?? null),
+          base: box(row?.querySelector(".kimo-conflict-base") ?? null),
+          baseSwatch: box(row?.querySelector(".kimo-conflict-base__swatch") ?? null),
+          baseValue: box(row?.querySelector(".kimo-conflict-base__value") ?? null),
+          expanded: box(exp),
+          expRow: box(exp?.querySelector(".kimo-resolved-row__row") ?? null),
+          detail: box(exp?.querySelector(".kimo-resolved-row__detail") ?? null),
+          expBase: box(exp?.querySelector(".kimo-conflict-base") ?? null),
+          actions: box(exp?.querySelector(".kimo-resolved-row__actions") ?? null),
+          reopen: box(exp?.querySelector(".kimo-resolved-row__reopen") ?? null),
+          reopenIcon: box(
+            exp?.querySelector(".kimo-resolved-row__reopen .kimo-button__icon") ?? null,
+          ),
+          chevronUp: box(exp?.querySelector(".kimo-resolved-row__chevron") ?? null),
+        }
+      }, rowSel)
+      const log: string[] = []
+      const near = (a: number | undefined, b: number, tol = 0.75) =>
+        typeof a === "number" && Math.abs(a - b) <= tol
+      const check = (
+        el: string,
+        prop: string,
+        got: number | string | undefined,
+        want: number | string,
+        tol?: number,
+      ) => {
+        log.push(
+          `| ${el} | ${prop} | ${want} | ${typeof got === "number" ? Math.round(got * 100) / 100 : got} |`,
+        )
+        expect(
+          typeof want === "number" ? near(got as number, want, tol) : got === want,
+          `${el} ${prop}: want ${want}, got ${got}`,
+        )
+      }
+      check("ConflictRow/Base/Open d4P5H", "height", m.row?.h, 138, 1.5)
+      check("Head KEKwy", "height", m.head?.h, 44, 0.75)
+      check("Head KEKwy", "gap", m.head?.gap, 6)
+      check("Base Toggle ZmwPH", "height", m.toggle?.h, 18)
+      check("Base Toggle ZmwPH", "padding", m.toggle?.pad.join(" "), "0 4 0 6")
+      check("Base Toggle ZmwPH", "gap", m.toggle?.gap, 2)
+      check(
+        "Base Toggle ZmwPH",
+        "fill (bg-muted)",
+        m.toggle?.bg !== "rgba(0, 0, 0, 0)" ? "muted" : "none",
+        "muted",
+      )
+      check("Label zJyDm", "font", m.toggleLabel?.ff, "JetBrains Mono")
+      check("Chevron n3UqRO", "size", m.chevron?.w, 12)
+      check("Base HEuRD", "height", m.base?.h, 20)
+      check("Base HEuRD", "padding-left", m.base?.pad[3], 20)
+      check("Base HEuRD", "gap", m.base?.gap, 6)
+      check("Base Swatch g1Lsf", "size", m.baseSwatch?.w, 12)
+      check("Base Value s3dO3a", "font-size", m.baseValue?.fs, 11)
+      check("ResolvedRow/Expanded OPe5M", "height", m.expanded?.h, 170, 1.5)
+      check("ResolvedRow/Expanded OPe5M", "padding-bottom", m.expanded?.pad[2], 10)
+      check("ResolvedRow/Expanded OPe5M", "gap", m.expanded?.gap, 6)
+      check("Row WHL5X", "height", m.expRow?.h, 28)
+      check("Chevron XNeYa", "size", m.chevronUp?.w, 12)
+      check("Detail kECtq", "height", m.detail?.h, 126, 1.5)
+      check("Detail kECtq", "padding-x", m.detail?.pad[1], 12)
+      check("Base bdpQx", "padding-left", m.expBase?.pad[3], 4)
+      check("Actions jmxOT", "height", m.actions?.h, 26)
+      check("Reopen n8hRv", "height", m.reopen?.h, 26)
+      check("Reopen n8hRv", "padding-x", m.reopen?.pad[1], 10)
+      check("Reopen n8hRv", "font-size", m.reopen?.fs, 11)
+      check("Reopen icon zAVGx", "size", m.reopenIcon?.w, 12)
+      ctx.log(
+        `\n    | element | property | design | measured |\n    |---|---|---|---|\n${log.join("\n")}`,
+      )
+      await shot(ctx, "board20-polish")
+      // Reopen moves the row back to its group as open.
+      await cta.locator(".kimo-resolved-row__reopen").click()
+      await until(page, async () => (await counts(page))?.open === 3, "3 open after Reopen")
+      expect(
+        (await page.locator('.conflicts-panel__group [data-conflict-id="CfCtaGap01"]').count()) ===
+          1,
+        "reopened row is in its group",
+      )
+      // Pill stacking: zoomed far out the Hero and Headline pills overlap → the later one stacks.
+      await page.evaluate(() => {
+        const ui = window.__kimoConflicts.ui as unknown as {
+          getState(): { setViewport(v: { x: number; y: number; zoom: number }): void }
+        }
+        ui.getState().setViewport({ x: -100, y: -1200, zoom: 0.05 })
+      })
+      await until(
+        page,
+        async () => (await page.locator(".conflict-overlay__marker").count()) >= 2,
+        "markers at low zoom",
+      )
+      const pills = await page.locator(".conflict-overlay__marker").evaluateAll((els) =>
+        els.map((e) => {
+          const r = e.getBoundingClientRect()
+          return {
+            id: e.getAttribute("data-node-id"),
+            more: e.classList.contains("kimo-canvas-conflict-marker--more"),
+            y: r.y,
+            h: r.height,
+            text: (e as HTMLElement).innerText.trim(),
+          }
+        }),
+      )
+      const more = pills.find((p) => p.more)
+      if (more) {
+        expect(/^\+\d+$/.test(more.text), `+N pill ${more.text}`)
+        await page.locator(".kimo-canvas-conflict-marker--more").click()
+        await page.getByRole("menu", { name: "Hidden conflicts" }).waitFor()
+      } else {
+        const ys = pills.map((p) => p.y).sort((a, b) => a - b)
+        expect(
+          ys.length >= 2 && near((ys[1] as number) - (ys[0] as number), 24, 1),
+          `stacked pills ${JSON.stringify(pills)}`,
+        )
+      }
     },
   },
 ]

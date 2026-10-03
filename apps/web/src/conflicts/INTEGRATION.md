@@ -113,12 +113,24 @@ as a whole and its footer stays pinned).
 Autosave stays paused while `counts().open > 0`. ⌘S writes the conflicts as they are. The
 `merge-conflicts` banner reads `counts()` and `info`.
 
+## Board 20 "Conflicts polish" (rTpad)
+
+- Each ConflictRow head ends with a "base ›" toggle (`ConflictRow/Base` b3xOtr); open, the head
+  shows the mono base line with the merge base's short commit (`ConflictRow/Base/Open` d4P5H).
+  Per row, not persisted. A side that adds a node shows base "absent"; a deleted node shows
+  "Legal · 600×24".
+- Resolved rows are `ResolvedRow` (GawEa); clicking one expands it in place, one at a time, to
+  `ResolvedRow/Expanded` (OPe5M): both sides (the applied one selected), the base line and
+  Reopen (`ConflictSession.reopen`, one undo step; picking the other side re-resolves directly).
+  `ConflictRow/Resolved` is hZKbc (rebuilt; formerly d9zpM).
+- Groups: Document (`file-cog`), Variables (`variable`, every variable conflict), then nodes in
+  layer order with their layer icon.
+- Canvas pills: two overlapping pills stack (the later one moves up by pill height + 4); three or
+  more show the first pill plus `CanvasMarker/Conflict/More` "+N", which opens a Menu/Dense of
+  the hidden conflicts.
+
 ## Not designed (flagged)
 
-- Base values: `ConflictRowView.base` is computed, but board 18 shows no base, so the panel
-  doesn't render it.
-- Clicking a compact Resolved row expands it to `ConflictRow/Resolved` (d9zpM) so the choice
-  can change. The board only shows the compact rows.
-- Group icons for variable (`variable`) and header (`file-text`) conflicts. Board 18 only
-  shows node groups (`frame`, `type`).
+- The "+N" menu's width (208, the Menu/Dense instance width) and its item copy (the hidden
+  pills' labels).
 - "Take all ours / theirs" is disabled when nothing is open.

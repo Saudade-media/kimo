@@ -309,3 +309,41 @@
   .kimo-effect-row__remove:not(.kimo-effect-row__remove--hidden) {
   opacity: 1;
 }
+
+/* --- Text (board 20 YjE2h) ---------------------------------------------------------------- */
+
+/* Select open state (Font family nvXM0): fill bg-hover, stroke 1 border-strong, chevron-up. */
+.rp-select.rp-select--open {
+  background: var(--kimo-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+/* Align Row (Z6F9a9): fill, gap 8, space-between, center. */
+.rp-text__align-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.rp-text__more {
+  display: inline-flex;
+}
+
+/* Weight not shipped by the resolved font (rule L419s): italics + warning dot. */
+.rp-weight--missing .kimo-menu-item-dense__label {
+  font-style: italic;
+}
+
+.rp-weight--missing .kimo-menu-item-dense__meta::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--kimo-warning);
+  vertical-align: middle;
+}

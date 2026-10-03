@@ -60,6 +60,20 @@ export interface EditorConflictSession extends ConflictSession {
 
 type Obj = Record<string, unknown>
 
+/**
+ * `doc` with conflict `id` open again (`resolved` back to its default, false). The body keeps
+ * the applied side, so the row reopens on what the canvas shows.
+ */
+export function reopenConflict(doc: KimoDocument, id: string): KimoDocument {
+  const d = doc as unknown as Obj
+  const table = isObject(d.conflicts) ? (d.conflicts as Record<string, Conflict>) : undefined
+  const c = table?.[id]
+  if (!table || !c) throw new ConflictError("NOT_FOUND", `No conflict ${id}`, id)
+  if (c.resolved !== true) return doc
+  const { resolved: _resolved, ...open } = c as Conflict & { resolved?: boolean }
+  return { ...d, conflicts: { ...table, [id]: open as Conflict } } as unknown as KimoDocument
+}
+
 const LABELS: Record<ConflictSide, string> = { ours: "ours", theirs: "theirs", base: "base" }
 
 /** Creates the session for a store that holds stored conflicts (spec §21). */
@@ -160,6 +174,9 @@ export function createConflictSession(host: ConflictHost): EditorConflictSession
     },
     chooseAll(side) {
       commit((d) => applyAllConflicts(d, side), `Take all ${LABELS[side]}`)
+    },
+    reopen(id) {
+      commit((d) => reopenConflict(d, id), "Reopen conflict")
     },
     next: (fromId) => step(1, fromId),
     previous: (fromId) => step(-1, fromId),

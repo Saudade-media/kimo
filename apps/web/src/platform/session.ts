@@ -24,7 +24,14 @@ import {
   type OpenOptions as SchemaOpenOptions,
   type ThreeWayMerge,
 } from "@kimo/core-schema"
-import { createDocStore, type DocStore, openDocument, serialize } from "@kimo/editor-state"
+import {
+  createDocStore,
+  createEmptyDocument,
+  type DocStore,
+  isLocalOrigin,
+  openDocument,
+  serialize,
+} from "@kimo/editor-state"
 import {
   dirnameOf,
   type FileRef,
@@ -58,6 +65,7 @@ import {
   type FailedLoadDetail,
   GIT_MARKERS_EXPLANATION,
   type GitChoice,
+  isUntitledRef,
   type MigrationConsentChoice,
   type MigrationConsentRequest,
   type OpenOptions,
@@ -72,6 +80,9 @@ import {
   type SessionState,
   type Toast,
   toastForExternalChange,
+  UNTITLED_NAME,
+  untitledRecoveryId,
+  untitledRef,
 } from "./contract"
 import { displayPath, fileNameOf, formatTime, majorMinor } from "./format"
 
@@ -190,7 +201,10 @@ export class FileDocumentSession implements DocumentSession {
   private providerUnsubs: Unsubscribe[] = []
   private reconciling: Promise<void> | null = null
   private openedAt: number
-  private edited = false
+  /** Untitled (board 20 V7ey1Q): local edits since the document was created. */
+  private untitledEdits = 0
+  private untitledTimer: ReturnType<typeof setTimeout> | null = null
+  private untitledUnsubs: Unsubscribe[] = []
 
   constructor(
     ref: FileRef,
@@ -206,7 +220,14 @@ export class FileDocumentSession implements DocumentSession {
     return this._ref
   }
   get fileName(): string {
-    return fileNameOf(this._ref)
+    return this.untitled ? UNTITLED_NAME : fileNameOf(this._ref)
+  }
+  /**
+   * Never saved yet (board 20 "New file" V7ey1Q): no path, no lease, no provider; edits autosave
+   * to the recovery store only, and the first ⌘S opens the native save panel.
+   */
+  get untitled(): boolean {
+    return isUntitledRef(this._ref)
   }
   private get platform(): KimoPlatform {
     return this.manager.platform
@@ -218,7 +239,9 @@ export class FileDocumentSession implements DocumentSession {
   async init(options: OpenOptions = {}): Promise<void> {
     const { platform } = this
     try {
-      if (options.readOnly) {
+      if (this.untitled) {
+        await this.initUntitled()
+      } else if (options.readOnly) {
         this.readOnlyCause = "user-choice"
         await this.loadReadOnlyView()
       } else {
@@ -247,8 +270,78 @@ export class FileDocumentSession implements DocumentSession {
         if (!focused) void this.flushOnBlur()
       }),
     )
-    if (this.phase !== "failed-load") void platform.recents.noteOpened(this._ref).catch(() => {})
+    if (this.phase !== "failed-load" && !this.untitled)
+      void platform.recents.noteOpened(this._ref).catch(() => {})
     this.emit()
+  }
+
+  // --- Untitled ---------------------------------------------------------------------------------
+
+  /** The recovery entry of an untitled document (`untitled-<docId>`). */
+  get untitledRecoveryId(): string | null {
+    return this.untitled ? untitledRecoveryId(this._ref) : null
+  }
+
+  /**
+   * Starts an untitled document: an empty one, or what its recovery entry holds (a reload of
+   * the window, or "Restore"). Local edits snapshot to recovery after the autosave interval.
+   */
+  private async initUntitled(): Promise<void> {
+    const id = untitledRecoveryId(this._ref)
+    const saved = await this.platform.recovery.restore(id).catch(() => null)
+    let doc = createEmptyDocument(UNTITLED_NAME)
+    if (saved) {
+      try {
+        doc = openDocument(saved.text, this.manager.openOptions).doc
+        this.untitledEdits = saved.entry.edits
+        this.openedAt = saved.entry.createdAt
+      } catch {
+        // An unreadable snapshot starts over (the entry stays for the launch dialog).
+      }
+    }
+    this.store.loadDocument(doc, { origin: "file", validate: false })
+    this.store.clearHistory()
+    this.phase = "ready"
+    this.untitledUnsubs.push(
+      this.store.onChange((c) => {
+        if (!isLocalOrigin(c.origin)) return
+        this.untitledEdits++
+        this.scheduleUntitledSnapshot()
+        this.emit()
+      }),
+    )
+  }
+
+  private scheduleUntitledSnapshot(): void {
+    if (this.untitledTimer !== null) clearTimeout(this.untitledTimer)
+    this.untitledTimer = setTimeout(() => {
+      this.untitledTimer = null
+      void this.writeUntitledSnapshot()
+    }, this.platform.settings.get("files.autosaveIntervalMs"))
+  }
+
+  /** Writes the untitled document to its recovery entry (autosave target until saved). */
+  async writeUntitledSnapshot(): Promise<void> {
+    if (!this.untitled || this.untitledEdits === 0) return
+    const doc = this.store.toDocument()
+    await this.platform.recovery
+      .write({
+        id: untitledRecoveryId(this._ref),
+        sourceRef: null,
+        name: UNTITLED_NAME,
+        reason: "untitled",
+        text: serialize(doc),
+        edits: this.untitledEdits,
+        lastAutosaveAt: this.manager.now(),
+        layers: Object.keys(doc.nodes ?? {}).length,
+      })
+      .catch(() => {})
+  }
+
+  private stopUntitled(): void {
+    if (this.untitledTimer !== null) clearTimeout(this.untitledTimer)
+    this.untitledTimer = null
+    for (const u of this.untitledUnsubs.splice(0)) u()
   }
 
   /** Takes the per-file lease. False when another live process holds it. */
@@ -412,10 +505,6 @@ export class FileDocumentSession implements DocumentSession {
     if (!p) return
     if (p.dirty && this.dirtySince === null) this.dirtySince = this.manager.now()
     if (!p.dirty) this.dirtySince = null
-    if (p.dirty !== this.edited) {
-      this.edited = p.dirty
-      void this.platform.window.setDocumentEdited(p.dirty).catch(() => {})
-    }
     // Reload/merge toasts offer Undo only while the provider still holds the token.
     const live = p.lastUndoToken?.id ?? null
     this.toasts = this.toasts.filter((t) => !("undo" in t) || t.undo.id === live)
@@ -525,6 +614,15 @@ export class FileDocumentSession implements DocumentSession {
   /** The status before the 400 ms "Saving…" rule. */
   actualSaveStatus(): SaveStatus {
     const p = this.provider
+    if (this.untitled)
+      // Board 20 Zvw7e: SaveStatus/Unsaved reading "Not saved"; autosave goes to recovery.
+      return {
+        kind: "unsaved",
+        dirtySince: this.openedAt,
+        autosaveAt: null,
+        target: "recovery",
+        untitled: true,
+      }
     if (this.phase === "failed-load") return { kind: "read-only", cause: "failed-load" }
     if (this.holder && !this.lockedDismissed) return { kind: "locked", holder: this.holder }
     if (this.readOnlyCause === "newer-format") return { kind: "read-only", cause: "newer-format" }
@@ -533,9 +631,11 @@ export class FileDocumentSession implements DocumentSession {
     if (p.lastFailure) return { kind: "failed", failure: p.lastFailure }
     if (p.writingSince !== null && p.needsUpgradeConsent === false)
       return { kind: "saving", since: p.writingSince }
-    if (p.pauses.has("git")) return { kind: "paused", reason: "git", operation: this.gitOperation }
+    // Board 20 "Banner priority": stored conflicts from `kimo merge` replace the generic git
+    // merge state, in the pill as in the banner (autosave stays paused either way).
     if (p.pauses.has("conflicts") && this.conflictCounts)
       return { kind: "paused", reason: "conflicts", open: this.conflictCounts.open }
+    if (p.pauses.has("git")) return { kind: "paused", reason: "git", operation: this.gitOperation }
     if (p.needsUpgradeConsent && p.edits > 0)
       return {
         kind: "unsaved",
@@ -652,11 +752,18 @@ export class FileDocumentSession implements DocumentSession {
   // --- Commands ---------------------------------------------------------------------------------
 
   async save(): Promise<void> {
+    // The first ⌘S of an untitled document opens the native save panel (board 20 V7ey1Q).
+    if (this.untitled) {
+      await this.saveAs()
+      return
+    }
     const p = this.provider
     if (!p?.canSave || this.readOnlyCause) return
     if (this.phase === "needs-consent") return this.respondToConsent("upgrade")
-    if (p.pauses.has("git") && this.gitChoice !== "keep") {
-      // ⌘S during a git operation asks which of the three to do (board 17 "Do nothing").
+    if (p.pauses.has("git") && this.gitChoice !== "keep" && !this.conflictCounts) {
+      // ⌘S during a git operation asks which of the three to do (board 17 "Do nothing"). With
+      // stored conflicts the merge is Kimo's own (`kimo merge`): ⌘S saves them as-is, and
+      // "Mark resolved & save" writes the resolved file (board 20 "Banner priority").
       this.gitBannerHidden = false
       this.emit()
       return
@@ -669,12 +776,18 @@ export class FileDocumentSession implements DocumentSession {
     const { platform } = this
     const text = serialize(this.store.toDocument())
     let target: FileRef | null = null
+    const untitled = this.untitled
     try {
       target = await platform.dialogs.saveFile({
         title: "Save as",
-        suggestedName: this.fileName,
+        // Untitled: "Untitled.kimo" in the last-used folder (board 20 note h6JPi).
+        suggestedName: untitled ? `${UNTITLED_NAME}.kimo` : this.fileName,
         filters: [KIMO_FILE_FILTER],
-        defaultDir: dirnameOf(this._ref),
+        ...(untitled
+          ? this.manager.lastFolder
+            ? { defaultDir: this.manager.lastFolder }
+            : {}
+          : { defaultDir: dirnameOf(this._ref) }),
       })
     } catch (e) {
       if (!isPlatformError(e, "UNSUPPORTED") && !isPlatformError(e, "CANCELLED")) throw e
@@ -697,9 +810,15 @@ export class FileDocumentSession implements DocumentSession {
       }
     }
     await platform.files.writeTextAtomic(target, text, { mkdirs: true })
+    this.manager.lastFolder = dirnameOf(target)
     const old = this.provider
     const oldRef = this._ref
     if (old?.hasRecoveryCopy) await platform.recovery.discard(old.recoveryId).catch(() => {})
+    if (untitled) {
+      // From now on autosave writes the file; the recovery snapshot is no longer needed.
+      this.stopUntitled()
+      await platform.recovery.discard(untitledRecoveryId(oldRef)).catch(() => {})
+    }
     await this.teardownProvider()
     this._ref = target
     this.holder = null
@@ -718,6 +837,10 @@ export class FileDocumentSession implements DocumentSession {
   }
 
   async flush(): Promise<void> {
+    if (this.untitled) {
+      await this.writeUntitledSnapshot()
+      return
+    }
     const p = this.provider
     if (!p?.canSave || !p.dirty) return
     if (p.needsUpgradeConsent) await p.flush()
@@ -868,6 +991,7 @@ export class FileDocumentSession implements DocumentSession {
 
   /** Stops everything without flushing (window gone). */
   async dispose(): Promise<void> {
+    this.stopUntitled()
     for (const u of this.unsubs.splice(0)) u()
     if (this.savingTimer !== null) clearTimeout(this.savingTimer)
     await this.teardownProvider()
@@ -906,6 +1030,8 @@ export class FileSessionManager implements SessionManager {
   private readonly listeners = new Set<() => void>()
   private offClose: Unsubscribe | null = null
   private offOpen: Unsubscribe | null = null
+  /** The folder of the last Save as / open (the untitled save panel starts there). */
+  lastFolder: FileRef | null = null
 
   constructor(options: SessionManagerOptions) {
     this.platform = options.platform
@@ -938,6 +1064,7 @@ export class FileSessionManager implements SessionManager {
     if (existing) return existing
     const pending = this.opening.get(ref)
     if (pending) return pending
+    if (!isUntitledRef(ref)) this.lastFolder = dirnameOf(ref)
     const p = (async () => {
       const session = new FileDocumentSession(ref, this, this.createStore())
       this.byRef.set(ref, session)
@@ -951,6 +1078,14 @@ export class FileSessionManager implements SessionManager {
     } finally {
       this.opening.delete(ref)
     }
+  }
+
+  /**
+   * Board 20 "New file" (desktop): an untitled document that opens immediately, autosaves to
+   * recovery only, and asks where on its first ⌘S. Route to `diskPath(session.ref)`.
+   */
+  async newUntitled(): Promise<FileDocumentSession> {
+    return this.open(untitledRef(newUntitledId()))
   }
 
   get(ref: FileRef): FileDocumentSession | undefined {
@@ -988,7 +1123,9 @@ export class FileSessionManager implements SessionManager {
 
   async recoveryCandidates(): Promise<RecoveryCandidate[]> {
     const entries = await this.platform.recovery.list().catch(() => [] as RecoveryEntry[])
-    const open = new Set(this.sessions().map((s) => s.provider?.recoveryId))
+    const open = new Set(
+      this.sessions().map((s) => s.provider?.recoveryId ?? s.untitledRecoveryId ?? undefined),
+    )
     return entries
       .filter((e) => !(this.hideOwn && e.ownerAlive) && !open.has(e.id))
       .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -1079,6 +1216,16 @@ export function recoveryCandidate(entry: RecoveryEntry): RecoveryCandidate {
     detail,
     choices: untitled ? ["discard", "save-as"] : ["save-as", "discard", "restore"],
   }
+}
+
+/** A fresh untitled document id (10 base-36 chars, like node ids). */
+function newUntitledId(): string {
+  const bytes = new Uint8Array(8)
+  globalThis.crypto.getRandomValues(bytes)
+  return [...bytes]
+    .map((b) => b.toString(36).padStart(2, "0"))
+    .join("")
+    .slice(0, 10)
 }
 
 /** Creates the app's session manager. */

@@ -1,7 +1,7 @@
 /**
- * Board 18 rows: the stored conflicts of a document as {@link ConflictRowView}s, in layer order
- * (variables, then header conflicts last), with the labels the design shows. Pure: reads the
- * store through {@link ConflictSource} only.
+ * Board 18 rows: the stored conflicts of a document as {@link ConflictRowView}s, with the labels
+ * the design shows. Order (board 20 "Group icons", note AApU5): Document (header conflicts),
+ * Variables, then nodes in layer order. Pure: reads the store through {@link ConflictSource}.
  */
 import {
   type Conflict,
@@ -99,6 +99,16 @@ function nodeSummary(node: Obj, base: Obj | undefined): string {
   return n === 0 ? "Unchanged" : `Edited · ${n} prop${n === 1 ? "" : "s"}`
 }
 
+/** A node as stored at the merge base: "Legal · 600×24" (board 20 note h0kgW). */
+function nodeBaseLabel(node: Obj, src: ConflictSource): string {
+  const name = displayName(node, src)
+  const w = node.w
+  const h = node.h
+  return typeof w === "number" && typeof h === "number"
+    ? `${name} · ${formatValue(w)}×${formatValue(h)}`
+    : name
+}
+
 /** The ConflictChoice data of one side. */
 export function sideView(c: Conflict, side: ConflictSide, src: ConflictSource): ConflictSideView {
   const v = sideValue(c, side)
@@ -110,11 +120,21 @@ export function sideView(c: Conflict, side: ConflictSide, src: ConflictSource): 
     absent: !v.present,
   }
   if (!v.present) {
-    base.display = c.kind === "node" || (c.kind === "variable" && !c.when) ? "Deleted" : "Unset"
+    // Board 20 (ConflictRow/Base note h0kgW): "a side that adds a node shows base absent".
+    base.display =
+      side === "base"
+        ? "absent"
+        : c.kind === "node" || (c.kind === "variable" && !c.when)
+          ? "Deleted"
+          : "Unset"
     return base
   }
   switch (c.kind) {
     case "node": {
+      if (side === "base") {
+        base.display = nodeBaseLabel(v.value as Obj, src)
+        return base
+      }
       const b = sideValue(c, "base")
       base.display = nodeSummary(v.value as Obj, b.present ? (b.value as Obj) : undefined)
       return base
@@ -177,9 +197,13 @@ function nodeData(c: Conflict, src: ConflictSource): Obj | undefined {
   return undefined
 }
 
+/** Group header labels of variable and header conflicts (board 20 zBg7u / Isy2f). */
+export const VARIABLES_GROUP = "Variables"
+export const DOCUMENT_GROUP = "Document"
+
 function groupLabel(c: Conflict, src: ConflictSource): string {
-  if (c.kind === "variable") return `$${c.variable}`
-  if (c.kind === "header") return "Document"
+  if (c.kind === "variable") return VARIABLES_GROUP
+  if (c.kind === "header") return DOCUMENT_GROUP
   const n = nodeData(c, src)
   const name = displayName(n, src)
   if (c.kind === "node" && n && typeof n.parent === "string") {
@@ -236,7 +260,7 @@ function comparePaths(a: number[], b: number[]): number {
   return a.length - b.length
 }
 
-/** Rows for every stored conflict, in layer order, then variables, then header conflicts. */
+/** Rows for every stored conflict: header conflicts, variables, then nodes in layer order. */
 export function conflictRows(
   conflicts: Readonly<Record<string, Conflict>> | undefined,
   src: ConflictSource,
@@ -244,7 +268,7 @@ export function conflictRows(
   if (!conflicts) return []
   const entries = Object.entries(conflicts).map(([id, c]) => {
     const node = conflictNode(c)
-    const rank = node ? 0 : c.kind === "variable" ? 1 : 2
+    const rank = c.kind === "header" ? 0 : c.kind === "variable" ? 1 : 2
     const key = node ? layerPath(node, src, nodeData(c, src)) : []
     return { id, c, rank, key, node }
   })
@@ -280,13 +304,13 @@ export function conflictRows(
   })
 }
 
-/** Rows grouped by owner (node, variable or document), keeping row order. */
+/** Rows grouped by owner (a node, all variables, the document), keeping row order. */
 export function groupRows(
   rows: readonly ConflictRowView[],
 ): { key: string; rows: ConflictRowView[] }[] {
   const groups = new Map<string, ConflictRowView[]>()
   for (const r of rows) {
-    const key = r.nodeId ?? (r.kind === "variable" ? `var:${r.group}` : "header")
+    const key = r.nodeId ?? (r.kind === "variable" ? "variables" : "header")
     const list = groups.get(key)
     if (list) list.push(r)
     else groups.set(key, [r])

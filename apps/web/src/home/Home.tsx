@@ -1,16 +1,4 @@
-/**
- * Home — board "06 Home" (J3yxNC): Sidebar (248, vertical, gap 4, padding [16, 12]) and Main
- * (fill, vertical, gap 28, padding [28, 40]): Header, "Start With AI" card, Files Header, Grid
- * (vertical gap 24 of rows of four FileCards, gap 20). Files come from the IndexedDB index.
- *
- * Desktop (board 16 hnvDX "Desktop Home · list view"): the Sidebar (LEwyc) starts with the
- * traffic-light inset (G17HiQ, padding [0, 12, 16, 12]), LOCAL FOLDERS lists the watched
- * folders (fgqWk + rows), and Main (Oedwu, gap 24) lists real files on disk from
- * `platform.recents` (Files Header Xp6lo + File List eso4o, or the Annex grid a2kRP).
- */
-import { serialize } from "@kimo/core-schema"
-import { createEmptyDocument } from "@kimo/editor-state"
-import { basenameOf, KIMO_FILE_FILTER, type KimoPlatform } from "@kimo/platform"
+import { KIMO_FILE_FILTER, type KimoPlatform } from "@kimo/platform"
 import { Button, Composer, FileCard, Input, Segmented, Tooltip } from "@kimo/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -51,19 +39,6 @@ const VIEWS = [
 ] as const
 
 const AGENT_SOON = "Agent arrives in M6"
-
-/** Desktop "New file": a native Save dialog, then an empty document written to disk. */
-async function newDiskFile(platform: KimoPlatform): Promise<string | null> {
-  const ref = await platform.dialogs.saveFile({
-    title: "New file",
-    suggestedName: "Untitled.kimo",
-    filters: [KIMO_FILE_FILTER],
-  })
-  if (!ref) return null
-  const name = basenameOf(ref).replace(/\.kimo$/i, "") || "Untitled"
-  await platform.files.writeTextAtomic(ref, serialize(createEmptyDocument(name)), { mkdirs: true })
-  return ref
-}
 
 export function Home() {
   const { platform } = useRuntime()
@@ -308,14 +283,16 @@ function DesktopHome({ platform }: { platform: KimoPlatform }) {
       setError(e instanceof Error ? e.message : String(e))
     }
   }, [platform])
+  const { manager } = useRuntime()
   const newFile = useCallback(async () => {
+    // Board 20 V7ey1Q: no dialog up front — an untitled document opens right away and asks
+    // where on its first ⌘S.
     try {
-      const ref = await newDiskFile(platform)
-      if (ref) navigate(diskPath(ref))
+      navigate(diskPath((await manager.newUntitled()).ref))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
-  }, [platform])
+  }, [manager])
   const message = error ?? recentsError
 
   return (

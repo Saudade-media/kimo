@@ -228,6 +228,13 @@ button {
   border-radius: var(--kimo-radius-sm);
 }
 
+/* Board 20 File (s7QHW) while the File menu is open: fill bg-muted, radius-sm, chevron-up. */
+.topbar__file--open,
+.topbar__file--open:hover {
+  background: var(--kimo-bg-muted);
+  border-radius: var(--kimo-radius-sm);
+}
+
 .topbar__zoom-value {
   color: var(--kimo-text-secondary);
   font-size: var(--kimo-text-sm);

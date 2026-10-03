@@ -21,10 +21,14 @@ import {
   canvasConflictMarkers,
   createConflictSession,
   diffOps,
+  estimateMarkerWidth,
+  groupRows,
   isNextConflictKey,
   type MarkerLayout,
   markerLabel,
+  moreLabel,
   sourceLine,
+  stackMarkers,
 } from "../src/conflicts"
 import type { Toast } from "../src/platform/contract"
 
@@ -127,12 +131,13 @@ describe("board 18 rows", () => {
     const { session } = setup(doc)
     const rows = session.rows()
     expect(rows.map((r) => [r.group, r.property, r.kindLabel])).toEqual([
+      ["Variables", "$brand · light", "both changed"],
       ["Rectangle", "parent", "moved twice"],
-      ["$brand", "$brand · light", "both changed"],
     ])
-    expect(rows[0]?.ours.display).toBe("Hero › CTA Row")
-    expect(rows[0]?.theirs.display).toBe("Footer")
-    expect(rows[1]?.ours.swatch).toBe("#D9480F")
+    expect(rows[1]?.ours.display).toBe("Hero › CTA Row")
+    expect(rows[1]?.theirs.display).toBe("Footer")
+    expect(rows[0]?.ours.swatch).toBe("#D9480F")
+    expect(groupRows(rows).map((g) => g.key)).toEqual(["variables", "Button0001"])
   })
 })
 
@@ -228,9 +233,14 @@ describe("canvas markers", () => {
   }
   test("one pill per open node, 4px above its top-left; selected nodes get no outline", () => {
     const { session } = setup()
-    const m = canvasConflictMarkers(session.rows(), layout, { x: -56, y: -62, zoom: 1 }, [
-      "Hero000001",
-    ])
+    const { markers: m, more } = canvasConflictMarkers(
+      session.rows(),
+      layout,
+      { x: -56, y: -62, zoom: 1 },
+      ["Hero000001"],
+      () => 80,
+    )
+    expect(more).toEqual([])
     expect(m).toEqual([
       {
         nodeId: "Hero000001",
@@ -238,7 +248,9 @@ describe("canvas markers", () => {
         label: "Hero · fill",
         left: 56,
         top: 106,
+        width: 80,
         outline: null,
+        hidden: false,
       },
       {
         nodeId: "Headline01",
@@ -246,16 +258,95 @@ describe("canvas markers", () => {
         label: "Headline · content",
         left: 96,
         top: 195,
+        width: 80,
         outline: { left: 96, top: 219, width: 472, height: 106 },
+        hidden: false,
       },
     ])
   })
   test("zoom scales positions; several conflicts read 'N conflicts'", () => {
     const { session } = setup()
-    const m = canvasConflictMarkers(session.rows(), layout, { x: 0, y: 0, zoom: 2 })
+    const { markers: m } = canvasConflictMarkers(session.rows(), layout, { x: 0, y: 0, zoom: 2 })
     expect(m[1]?.outline).toEqual({ left: 80, top: 314, width: 944, height: 212 })
     const rows = session.rows()
     expect(markerLabel([rows[0], rows[1]] as never)).toBe("2 conflicts")
+  })
+})
+
+describe("canvas pill stacking (board 20 T7TxIQ)", () => {
+  const pill = (nodeId: string, left: number, top: number, width = 74) => ({
+    nodeId,
+    conflictId: `c-${nodeId}`,
+    label: nodeId,
+    left,
+    top,
+    width,
+    outline: null,
+    hidden: false,
+  })
+
+  test("two overlapping pills: the later one moves up by pill height + 4", () => {
+    // Vignette: Pill A at (16, 76), Pill B default (28, 84) → stacked at (28, 52).
+    const r = stackMarkers([pill("A", 16, 76), pill("B", 28, 84)])
+    expect(r.markers.map((m) => [m.nodeId, m.left, m.top, m.hidden])).toEqual([
+      ["A", 16, 76, false],
+      ["B", 28, 52, false],
+    ])
+    expect(r.more).toEqual([])
+  })
+
+  test("three or more: the first pill plus a +N pill 4px to its right", () => {
+    const r = stackMarkers([
+      pill("C", 190, 76),
+      pill("D", 200, 80),
+      pill("E", 210, 84),
+      pill("F", 600, 10),
+    ])
+    expect(r.markers.map((m) => [m.nodeId, m.hidden])).toEqual([
+      ["C", false],
+      ["D", true],
+      ["E", true],
+      ["F", false],
+    ])
+    expect(r.more).toHaveLength(1)
+    expect(r.more[0]).toMatchObject({ label: "+2", left: 190 + 74 + 4, top: 76 })
+    expect(r.more[0]?.hidden.map((m) => m.nodeId)).toEqual(["D", "E"])
+    expect(moreLabel(5)).toBe("+5")
+  })
+
+  test("pills that do not touch keep their places", () => {
+    const r = stackMarkers([pill("A", 0, 0), pill("B", 80, 0)])
+    expect(r.markers.map((m) => m.top)).toEqual([0, 0])
+  })
+
+  test("estimateMarkerWidth hugs the content (ar36v / mvPXI paddings)", () => {
+    expect(estimateMarkerWidth("", "default")).toBe(30)
+    expect(estimateMarkerWidth("", "more")).toBe(16)
+  })
+})
+
+describe("board 20 conflicts polish", () => {
+  test("base values: the stored base, a node as name · size", () => {
+    const { session } = setup()
+    const rows = session.rows()
+    expect(rows.find((r) => r.id === "CfHeroFil1")?.base).toMatchObject({
+      display: "#FFF7EE",
+      swatch: "#FFF7EE",
+    })
+    // Footer › Legal: the node exists at base (delete vs edit) → "Legal · 600×24"-style label.
+    expect(rows.find((r) => r.id === "CfLegal001")?.base.display).toMatch(/^Legal · \d+×\d+$/)
+  })
+
+  test("Reopen marks a resolved conflict open again (one undo step), body unchanged", () => {
+    const { store, session } = setup()
+    const before = serialize(store.toDocument())
+    const body = store.getNode("CtaRow0001")
+    session.reopen("CfCtaGap01")
+    expect(conflicts(store)?.CfCtaGap01?.resolved).toBeUndefined()
+    expect(store.getNode("CtaRow0001")).toEqual(body)
+    expect(session.counts()).toEqual({ total: 5, open: 3, resolved: 2 })
+    store.undo("user")
+    expect(serialize(store.toDocument())).toBe(before)
   })
 })
 

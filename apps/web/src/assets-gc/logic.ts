@@ -53,3 +53,18 @@ export const GC_VISIBLE_ROWS = 4
 export function gcMoreLabel(rest: readonly AssetFile[]): string {
   return `+ ${rest.length} more · ${formatBytes(rest.reduce((s, f) => s + f.bytes, 0))}`
 }
+
+// --- Nothing to clean up (board 20 nsxuR) --------------------------------------------------------
+
+export const GC_NOTHING_TITLE = "Nothing to clean up"
+
+/** "Every asset is in use — each file in assets/ is referenced by … in marketing.kimo." (same
+ * sentence as `kimo gc`). */
+export function gcNothingDescription(fileName: string): string {
+  return `Every asset is in use — each file in assets/ is referenced by a node, fill, component or variable in ${fileName}.`
+}
+
+/** Body Summary: "12 assets · 31.4 MB". */
+export function gcSummary(count: number, bytes: number): string {
+  return `${count} asset${count === 1 ? "" : "s"} · ${formatBytes(bytes)}`
+}

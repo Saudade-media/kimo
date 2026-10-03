@@ -79,6 +79,13 @@
   background: var(--kimo-bg-hover);
 }
 
+/* Board 20 Nl4Cz: File (gRY55) while the File menu is open: fill bg-muted, radius-sm. */
+.kimo-desktop-breadcrumb__file--open,
+.kimo-desktop-breadcrumb__file--open:hover {
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-muted);
+}
+
 .kimo-desktop-breadcrumb__file:focus-visible {
   outline: 2px solid var(--kimo-accent);
   outline-offset: 1px;
@@ -166,6 +173,11 @@
   background: var(--kimo-bg-app);
   box-shadow: inset 0 -1px 0 0 var(--kimo-border);
   user-select: none;
+}
+
+/* Board 20 Topbar · Windows/Linux (N1mtd): padding [0, 12], the k logo instead of the lights. */
+.kimo-desktop-topbar--native {
+  padding: 0 12px;
 }
 
 .kimo-desktop-topbar__drag {

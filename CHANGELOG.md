@@ -53,15 +53,48 @@ The first public release: release engineering, polish, the new mark and the form
   key or Entra ID through the Azure CLI. Missing credentials come back as a 401 that says what to
   do.
 
+- Board 27 completeness pass:
+  - Pages (strip in the Layers tab, ⌘P switcher; MCP `select.page` and a `page` op).
+  - System clipboard copy, cut, paste and paste in place, across files.
+  - Real groups, ungroup, wrap in frame, add/remove auto layout.
+  - Layer drag to reorder and reparent; drawing and dragging into auto layout.
+  - PNG/JPEG drop and paste.
+  - View menu and Settings › Canvas: snapping, pixel grid, rulers, nudge.
+  - Shape slot with Line, Arrow, Polygon and Star; path-edit toolbar.
+  - Clip content, flip, wrap row gap, per-paint blend, image crop, SVG outline strokes.
+  - Variable binding on every bindable field, including library variables.
+  - Components: enum targets, replace main with selection, fix broken overrides, ⌘D / ⌥-drag on
+    a main asks, relative library paths, a copied main pastes as an instance.
+  - Preview overlay (⇧Space).
+  - Agent: default provider and model, per-turn cost warning, the active page in context.
+  - Export: an Issues tab, a Tailwind theme option, File › Export… (⇧⌘E), Copy selection as PNG
+    (⇧⌘C).
+
+### Changed
+
+- ⇧⌘V is Paste in place; the Variables dialog moved to ⌥⇧⌘V.
+- The image size limit is 20 MB (was 50 MB).
+- Docs:
+  - Kimo collects no telemetry (SECURITY.md, teardown).
+  - Links use kimo.design.
+  - ADR 0014: agent sessions are stored in IndexedDB on every platform.
+
 ### Fixed
 
+- Per-corner radii render; bound per-side stroke widths and padding entries resolve in the
+  renderer, the exporters and the panel.
 - The agent's approval card names the layers it touches ("in Pricing") instead of their ids.
 - The web build reports its real version in Settings › About and the release-notes link.
 
 ### Format
 
-- **`.kimo` format 1.0.0 (stable).** Format 1.0 is format 0.1 declared stable: no field, default,
-  node type or feature changed, and it stays backward compatible within 1.x (spec §16.4).
+- **`.kimo` format 1.0.0 (stable).** Format 1.0 is format 0.1 declared stable plus five additive
+  fields; no existing field, default, node type or feature changed, every 0.1 document is a valid
+  1.0 document, and it stays backward compatible within 1.x (spec §16.4).
+- Additions in 1.0: root `pages` (page id → `{order, name}`) with a root-only `page` placement
+  (§5.6; lints `PAGE_UNKNOWN`, `PAGE_NOT_ROOT`); polygon `star: {ratio}` (§5.5); image paint
+  `fit: "crop"` using the existing `crop` transform (§7.1); enum component props with per-option
+  `targets` (§9.6, `PROP_TARGET_INVALID`).
   Documents are written with `"format": "1.0.0"` and
   `"$schema": "https://kimo.design/schema/kimo-1.0.json"`.
 - Spec: `docs/spec/kimo-format-1.0.md` (status *Stable*). The open draft items are decided: mesh

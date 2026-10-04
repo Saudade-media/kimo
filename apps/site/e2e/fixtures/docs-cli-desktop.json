@@ -1,0 +1,1126 @@
+{
+  "frame": "uvFUy",
+  "width": 1440,
+  "boxes": [
+    { "path": "Top bar", "x": 0, "y": 0, "w": 1440, "h": 64 },
+    { "path": "Top bar/Brand", "x": 24, "y": 18, "w": 256, "h": 28 },
+    { "path": "Top bar/Brand/KimoLogo", "x": 24, "y": 18, "w": 28, "h": 28 },
+    { "path": "Top bar/Brand/KimoLogo/Mark", "x": 24, "y": 18, "w": 28, "h": 28 },
+    {
+      "path": "Top bar/Brand/Wordmark",
+      "x": 62,
+      "y": 21.5,
+      "w": 41,
+      "h": 21,
+      "t": "17px 600 21px -0.3px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Top bar/Brand/Divider",
+      "x": 113,
+      "y": 24,
+      "w": 1,
+      "h": 16,
+      "f": "rgb(221, 219, 215) r0px"
+    },
+    {
+      "path": "Top bar/Brand/Section",
+      "x": 124,
+      "y": 23,
+      "w": 36.5,
+      "h": 18,
+      "t": "15px 500 18px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Top bar/Search",
+      "x": 296,
+      "y": 13,
+      "w": 420,
+      "h": 38,
+      "f": "rgb(242, 241, 239) r999px"
+    },
+    { "path": "Top bar/Search/Icon", "x": 310, "y": 24, "w": 16, "h": 16 },
+    {
+      "path": "Top bar/Search/Placeholder",
+      "x": 334,
+      "y": 23.5,
+      "w": 193.5,
+      "h": 17,
+      "t": "14px 400 17px 0px rgb(154, 157, 162)"
+    },
+    { "path": "Top bar/Search/Spacer", "x": 535.5, "y": 31.5, "w": 137.5, "h": 1 },
+    {
+      "path": "Top bar/Search/Kbd",
+      "x": 681,
+      "y": 21,
+      "w": 27,
+      "h": 22,
+      "f": "rgb(255, 255, 255) r6px"
+    },
+    {
+      "path": "Top bar/Search/Kbd/Label",
+      "x": 688,
+      "y": 24.5,
+      "w": 13,
+      "h": 15,
+      "t": "11px 400 15px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Top bar/Spacer", "x": 732, "y": 31.5, "w": 356.5, "h": 1 },
+    { "path": "Top bar/Version", "x": 1104.5, "y": 16, "w": 73, "h": 32 },
+    {
+      "path": "Top bar/Version/Label",
+      "x": 1116.5,
+      "y": 23.5,
+      "w": 31,
+      "h": 17,
+      "t": "13px 500 17px 0px rgb(10, 10, 10)"
+    },
+    { "path": "Top bar/Version/Chevron", "x": 1154, "y": 25, "w": 14, "h": 14 },
+    {
+      "path": "Top bar/Link · Changelog",
+      "x": 1194,
+      "y": 23.5,
+      "w": 72.5,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Top bar/Link · kimo.design",
+      "x": 1282.5,
+      "y": 23.5,
+      "w": 81.5,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Top bar/GitHub", "x": 1380, "y": 14, "w": 36, "h": 36 },
+    { "path": "Top bar/GitHub/Icon", "x": 1389, "y": 23, "w": 18, "h": 18 },
+    { "path": "Body", "x": 0, "y": 64, "w": 1440, "h": 1394 },
+    {
+      "path": "Body/Left nav",
+      "x": 0,
+      "y": 64,
+      "w": 280,
+      "h": 1394,
+      "f": "rgb(249, 248, 246) r0px"
+    },
+    { "path": "Body/Left nav/Group · Getting started", "x": 16, "y": 88, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · Getting started/Icon", "x": 26, "y": 98, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · Getting started/Label",
+      "x": 52,
+      "y": 97.5,
+      "w": 100,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Left nav/Group · Getting started/Spacer",
+      "x": 162,
+      "y": 105.5,
+      "w": 68,
+      "h": 1
+    },
+    {
+      "path": "Body/Left nav/Group · Getting started/Chevron",
+      "x": 240,
+      "y": 99,
+      "w": 14,
+      "h": 14
+    },
+    { "path": "Body/Left nav/Group · Editor", "x": 16, "y": 126, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · Editor/Icon", "x": 26, "y": 136, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · Editor/Label",
+      "x": 52,
+      "y": 135.5,
+      "w": 39,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Left nav/Group · Editor/Spacer", "x": 101, "y": 143.5, "w": 129, "h": 1 },
+    { "path": "Body/Left nav/Group · Editor/Chevron", "x": 240, "y": 137, "w": 14, "h": 14 },
+    {
+      "path": "Body/Left nav/Group · Components & variables",
+      "x": 16,
+      "y": 164,
+      "w": 248,
+      "h": 36
+    },
+    {
+      "path": "Body/Left nav/Group · Components & variables/Icon",
+      "x": 26,
+      "y": 174,
+      "w": 16,
+      "h": 16
+    },
+    {
+      "path": "Body/Left nav/Group · Components & variables/Label",
+      "x": 52,
+      "y": 173.5,
+      "w": 163,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Left nav/Group · Components & variables/Spacer",
+      "x": 225,
+      "y": 181.5,
+      "w": 5,
+      "h": 1
+    },
+    {
+      "path": "Body/Left nav/Group · Components & variables/Chevron",
+      "x": 240,
+      "y": 175,
+      "w": 14,
+      "h": 14
+    },
+    { "path": "Body/Left nav/Group · Agents & MCP", "x": 16, "y": 202, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · Agents & MCP/Icon", "x": 26, "y": 212, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · Agents & MCP/Label",
+      "x": 52,
+      "y": 211.5,
+      "w": 96,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Left nav/Group · Agents & MCP/Spacer", "x": 158, "y": 219.5, "w": 72, "h": 1 },
+    { "path": "Body/Left nav/Group · Agents & MCP/Chevron", "x": 240, "y": 213, "w": 14, "h": 14 },
+    { "path": "Body/Left nav/Group · Built-in agent", "x": 16, "y": 240, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · Built-in agent/Icon", "x": 26, "y": 250, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · Built-in agent/Label",
+      "x": 52,
+      "y": 249.5,
+      "w": 89.5,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Left nav/Group · Built-in agent/Spacer",
+      "x": 151.5,
+      "y": 257.5,
+      "w": 78.5,
+      "h": 1
+    },
+    {
+      "path": "Body/Left nav/Group · Built-in agent/Chevron",
+      "x": 240,
+      "y": 251,
+      "w": 14,
+      "h": 14
+    },
+    { "path": "Body/Left nav/Group · Export", "x": 16, "y": 278, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · Export/Icon", "x": 26, "y": 288, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · Export/Label",
+      "x": 52,
+      "y": 287.5,
+      "w": 44,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Left nav/Group · Export/Spacer", "x": 106, "y": 295.5, "w": 124, "h": 1 },
+    { "path": "Body/Left nav/Group · Export/Chevron", "x": 240, "y": 289, "w": 14, "h": 14 },
+    { "path": "Body/Left nav/Group · File format spec", "x": 16, "y": 316, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · File format spec/Icon", "x": 26, "y": 326, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · File format spec/Label",
+      "x": 52,
+      "y": 325.5,
+      "w": 107.5,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Left nav/Group · File format spec/Spacer",
+      "x": 169.5,
+      "y": 333.5,
+      "w": 60.5,
+      "h": 1
+    },
+    {
+      "path": "Body/Left nav/Group · File format spec/Chevron",
+      "x": 240,
+      "y": 327,
+      "w": 14,
+      "h": 14
+    },
+    { "path": "Body/Left nav/Group · CLI", "x": 16, "y": 354, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · CLI/Icon", "x": 26, "y": 364, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · CLI/Label",
+      "x": 52,
+      "y": 363.5,
+      "w": 22,
+      "h": 17,
+      "t": "14px 600 17px 0px rgb(10, 10, 10)"
+    },
+    { "path": "Body/Left nav/Group · CLI/Spacer", "x": 84, "y": 371.5, "w": 146, "h": 1 },
+    { "path": "Body/Left nav/Group · CLI/Chevron", "x": 240, "y": 365, "w": 14, "h": 14 },
+    { "path": "Body/Left nav/Items · CLI", "x": 16, "y": 392, "w": 248, "h": 232 },
+    { "path": "Body/Left nav/Items · CLI/Item · Overview", "x": 38, "y": 394, "w": 226, "h": 30 },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · Overview/Label",
+      "x": 50,
+      "y": 401,
+      "w": 60.5,
+      "h": 16,
+      "t": "13.5px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo merge",
+      "x": 38,
+      "y": 426,
+      "w": 226,
+      "h": 30,
+      "f": "rgb(255, 255, 255) r10px"
+    },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo merge/Label",
+      "x": 50,
+      "y": 432,
+      "w": 81,
+      "h": 18,
+      "t": "13.5px 500 18px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo validate",
+      "x": 38,
+      "y": 458,
+      "w": 226,
+      "h": 30
+    },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo validate/Label",
+      "x": 50,
+      "y": 464,
+      "w": 105.5,
+      "h": 18,
+      "t": "13.5px 400 18px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Left nav/Items · CLI/Item · kimo gc", "x": 38, "y": 490, "w": 226, "h": 30 },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo gc/Label",
+      "x": 50,
+      "y": 496,
+      "w": 56.5,
+      "h": 18,
+      "t": "13.5px 400 18px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Left nav/Items · CLI/Item · kimo mcp", "x": 38, "y": 522, "w": 226, "h": 30 },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo mcp/Label",
+      "x": 50,
+      "y": 528,
+      "w": 65,
+      "h": 18,
+      "t": "13.5px 400 18px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo mcp install",
+      "x": 38,
+      "y": 554,
+      "w": 226,
+      "h": 30
+    },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · kimo mcp install/Label",
+      "x": 50,
+      "y": 560,
+      "w": 129.5,
+      "h": 18,
+      "t": "13.5px 400 18px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Left nav/Items · CLI/Item · Exit codes", "x": 38, "y": 586, "w": 226, "h": 30 },
+    {
+      "path": "Body/Left nav/Items · CLI/Item · Exit codes/Label",
+      "x": 50,
+      "y": 593,
+      "w": 66,
+      "h": 16,
+      "t": "13.5px 400 16px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Left nav/Group · Contributing", "x": 16, "y": 626, "w": 248, "h": 36 },
+    { "path": "Body/Left nav/Group · Contributing/Icon", "x": 26, "y": 636, "w": 16, "h": 16 },
+    {
+      "path": "Body/Left nav/Group · Contributing/Label",
+      "x": 52,
+      "y": 635.5,
+      "w": 83.5,
+      "h": 17,
+      "t": "14px 500 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Left nav/Group · Contributing/Spacer",
+      "x": 145.5,
+      "y": 643.5,
+      "w": 84.5,
+      "h": 1
+    },
+    { "path": "Body/Left nav/Group · Contributing/Chevron", "x": 240, "y": 637, "w": 14, "h": 14 },
+    { "path": "Body/Content", "x": 280, "y": 64, "w": 912, "h": 1394 },
+    { "path": "Body/Content/Breadcrumb", "x": 344, "y": 104, "w": 126.5, "h": 17 },
+    {
+      "path": "Body/Content/Breadcrumb/Crumb",
+      "x": 344,
+      "y": 104.5,
+      "w": 20.5,
+      "h": 16,
+      "t": "13px 400 16px 0px rgb(154, 157, 162)"
+    },
+    { "path": "Body/Content/Breadcrumb/Sep", "x": 372.5, "y": 106.5, "w": 12, "h": 12 },
+    {
+      "path": "Body/Content/Breadcrumb/Crumb#1",
+      "x": 392.5,
+      "y": 104,
+      "w": 78,
+      "h": 17,
+      "t": "13px 400 17px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Title row", "x": 344, "y": 141, "w": 365, "h": 50 },
+    {
+      "path": "Body/Content/Title row/H1",
+      "x": 344,
+      "y": 141,
+      "w": 218,
+      "h": 50,
+      "t": "38px 600 50px -1px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Title row/Badge",
+      "x": 574,
+      "y": 154,
+      "w": 135,
+      "h": 24,
+      "f": "rgb(242, 241, 239) r999px"
+    },
+    {
+      "path": "Body/Content/Title row/Badge/Label",
+      "x": 584,
+      "y": 158,
+      "w": 115,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Lead",
+      "x": 344,
+      "y": 211,
+      "w": 784,
+      "h": 84,
+      "t": "18px 400 28px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/H2",
+      "x": 344,
+      "y": 315,
+      "w": 103.5,
+      "h": 29,
+      "t": "24px 600 29px -0.4px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Code · Synopsis",
+      "x": 344,
+      "y": 364,
+      "w": 784,
+      "h": 104,
+      "f": "rgb(249, 248, 246) r12px"
+    },
+    { "path": "Body/Content/Code · Synopsis/Header", "x": 344, "y": 364, "w": 784, "h": 38 },
+    { "path": "Body/Content/Code · Synopsis/Header/Icon", "x": 358, "y": 376, "w": 14, "h": 14 },
+    {
+      "path": "Body/Content/Code · Synopsis/Header/File name",
+      "x": 380,
+      "y": 375,
+      "w": 57.5,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Code · Synopsis/Header/Spacer",
+      "x": 445.5,
+      "y": 382.5,
+      "w": 647.5,
+      "h": 1
+    },
+    { "path": "Body/Content/Code · Synopsis/Header/Copy", "x": 1101, "y": 376.5, "w": 13, "h": 13 },
+    { "path": "Body/Content/Code · Synopsis/Lines", "x": 344, "y": 402, "w": 784, "h": 66 },
+    { "path": "Body/Content/Code · Synopsis/Lines/Line", "x": 360, "y": 414, "w": 296.5, "h": 21 },
+    {
+      "path": "Body/Content/Code · Synopsis/Lines/Line/Token",
+      "x": 360,
+      "y": 414,
+      "w": 78,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Code · Synopsis/Lines/Line/Token#1",
+      "x": 438,
+      "y": 414,
+      "w": 171.5,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Code · Synopsis/Lines/Line/Token#2",
+      "x": 609.5,
+      "y": 414,
+      "w": 47,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(154, 157, 162)"
+    },
+    { "path": "Body/Content/Code · Synopsis/Lines/Line#1", "x": 360, "y": 435, "w": 460, "h": 21 },
+    {
+      "path": "Body/Content/Code · Synopsis/Lines/Line#1/Token",
+      "x": 360,
+      "y": 435,
+      "w": 460,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(154, 157, 162)"
+    },
+    {
+      "path": "Body/Content/H2#1",
+      "x": 344,
+      "y": 488,
+      "w": 88,
+      "h": 29,
+      "t": "24px 600 29px -0.4px rgb(10, 10, 10)"
+    },
+    { "path": "Body/Content/Table · Options", "x": 344, "y": 537, "w": 784, "h": 162 },
+    {
+      "path": "Body/Content/Table · Options/Head",
+      "x": 344,
+      "y": 537,
+      "w": 784,
+      "h": 39,
+      "f": "rgb(249, 248, 246) r0px"
+    },
+    { "path": "Body/Content/Table · Options/Head/Cell", "x": 344, "y": 537, "w": 200, "h": 39 },
+    {
+      "path": "Body/Content/Table · Options/Head/Cell/Text",
+      "x": 360,
+      "y": 548,
+      "w": 39,
+      "h": 17,
+      "t": "12px 600 17px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Table · Options/Head/Cell#1", "x": 544, "y": 537, "w": 584, "h": 39 },
+    {
+      "path": "Body/Content/Table · Options/Head/Cell#1/Text",
+      "x": 560,
+      "y": 548,
+      "w": 552,
+      "h": 17,
+      "t": "12px 600 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -o <file>",
+      "x": 344,
+      "y": 576,
+      "w": 784,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -o <file>/Cell",
+      "x": 344,
+      "y": 576,
+      "w": 200,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -o <file>/Cell/Text",
+      "x": 360,
+      "y": 587,
+      "w": 70,
+      "h": 19,
+      "t": "13px 500 19px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -o <file>/Cell#1",
+      "x": 544,
+      "y": 576,
+      "w": 584,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -o <file>/Cell#1/Text",
+      "x": 560,
+      "y": 587,
+      "w": 552,
+      "h": 19,
+      "t": "13px 400 19px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -L <o>,<b>,<t>",
+      "x": 344,
+      "y": 617,
+      "w": 784,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -L <o>,<b>,<t>/Cell",
+      "x": 344,
+      "y": 617,
+      "w": 200,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -L <o>,<b>,<t>/Cell/Text",
+      "x": 360,
+      "y": 628,
+      "w": 109,
+      "h": 19,
+      "t": "13px 500 19px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -L <o>,<b>,<t>/Cell#1",
+      "x": 544,
+      "y": 617,
+      "w": 584,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · -L <o>,<b>,<t>/Cell#1/Text",
+      "x": 560,
+      "y": 628,
+      "w": 552,
+      "h": 19,
+      "t": "13px 400 19px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · --marker-size <n>",
+      "x": 344,
+      "y": 658,
+      "w": 784,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · --marker-size <n>/Cell",
+      "x": 344,
+      "y": 658,
+      "w": 200,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · --marker-size <n>/Cell/Text",
+      "x": 360,
+      "y": 669,
+      "w": 132.5,
+      "h": 19,
+      "t": "13px 500 19px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · --marker-size <n>/Cell#1",
+      "x": 544,
+      "y": 658,
+      "w": 584,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Options/Row · --marker-size <n>/Cell#1/Text",
+      "x": 560,
+      "y": 669,
+      "w": 552,
+      "h": 19,
+      "t": "13px 400 19px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/H2#2",
+      "x": 344,
+      "y": 719,
+      "w": 116,
+      "h": 29,
+      "t": "24px 600 29px -0.4px rgb(10, 10, 10)"
+    },
+    { "path": "Body/Content/Table · Exit codes", "x": 344, "y": 768, "w": 784, "h": 203 },
+    {
+      "path": "Body/Content/Table · Exit codes/Head",
+      "x": 344,
+      "y": 768,
+      "w": 784,
+      "h": 39,
+      "f": "rgb(249, 248, 246) r0px"
+    },
+    { "path": "Body/Content/Table · Exit codes/Head/Cell", "x": 344, "y": 768, "w": 120, "h": 39 },
+    {
+      "path": "Body/Content/Table · Exit codes/Head/Cell/Text",
+      "x": 360,
+      "y": 779,
+      "w": 30.5,
+      "h": 17,
+      "t": "12px 600 17px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Head/Cell#1",
+      "x": 464,
+      "y": 768,
+      "w": 664,
+      "h": 39
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Head/Cell#1/Text",
+      "x": 480,
+      "y": 779,
+      "w": 632,
+      "h": 17,
+      "t": "12px 600 17px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Table · Exit codes/Row · 0", "x": 344, "y": 807, "w": 784, "h": 41 },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 0/Cell",
+      "x": 344,
+      "y": 807,
+      "w": 120,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 0/Cell/Status",
+      "x": 360,
+      "y": 823.5,
+      "w": 8,
+      "h": 8,
+      "f": "rgb(30, 142, 62) r50%"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 0/Cell/Text",
+      "x": 376,
+      "y": 818,
+      "w": 8,
+      "h": 19,
+      "t": "13px 500 19px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 0/Cell#1",
+      "x": 464,
+      "y": 807,
+      "w": 664,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 0/Cell#1/Text",
+      "x": 480,
+      "y": 818,
+      "w": 632,
+      "h": 19,
+      "t": "13px 400 19px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Table · Exit codes/Row · 1", "x": 344, "y": 848, "w": 784, "h": 41 },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 1/Cell",
+      "x": 344,
+      "y": 848,
+      "w": 120,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 1/Cell/Status",
+      "x": 360,
+      "y": 864.5,
+      "w": 8,
+      "h": 8,
+      "f": "rgb(178, 106, 0) r50%"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 1/Cell/Text",
+      "x": 376,
+      "y": 859,
+      "w": 8,
+      "h": 19,
+      "t": "13px 500 19px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 1/Cell#1",
+      "x": 464,
+      "y": 848,
+      "w": 664,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 1/Cell#1/Text",
+      "x": 480,
+      "y": 859,
+      "w": 632,
+      "h": 19,
+      "t": "13px 400 19px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Table · Exit codes/Row · 2", "x": 344, "y": 889, "w": 784, "h": 41 },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 2/Cell",
+      "x": 344,
+      "y": 889,
+      "w": 120,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 2/Cell/Status",
+      "x": 360,
+      "y": 905.5,
+      "w": 8,
+      "h": 8,
+      "f": "rgb(221, 34, 41) r50%"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 2/Cell/Text",
+      "x": 376,
+      "y": 900,
+      "w": 8,
+      "h": 19,
+      "t": "13px 500 19px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 2/Cell#1",
+      "x": 464,
+      "y": 889,
+      "w": 664,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 2/Cell#1/Text",
+      "x": 480,
+      "y": 900,
+      "w": 632,
+      "h": 19,
+      "t": "13px 400 19px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Table · Exit codes/Row · 64", "x": 344, "y": 930, "w": 784, "h": 41 },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 64/Cell",
+      "x": 344,
+      "y": 930,
+      "w": 120,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 64/Cell/Status",
+      "x": 360,
+      "y": 946.5,
+      "w": 8,
+      "h": 8,
+      "f": "rgb(154, 157, 162) r50%"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 64/Cell/Text",
+      "x": 376,
+      "y": 941,
+      "w": 15.5,
+      "h": 19,
+      "t": "13px 500 19px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 64/Cell#1",
+      "x": 464,
+      "y": 930,
+      "w": 664,
+      "h": 41
+    },
+    {
+      "path": "Body/Content/Table · Exit codes/Row · 64/Cell#1/Text",
+      "x": 480,
+      "y": 941,
+      "w": 632,
+      "h": 19,
+      "t": "13px 400 19px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/H2#3",
+      "x": 344,
+      "y": 991,
+      "w": 257,
+      "h": 29,
+      "t": "24px 600 29px -0.4px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal",
+      "x": 344,
+      "y": 1040,
+      "w": 784,
+      "h": 125,
+      "f": "rgb(249, 248, 246) r12px"
+    },
+    { "path": "Body/Content/Code · Terminal/Header", "x": 344, "y": 1040, "w": 784, "h": 38 },
+    { "path": "Body/Content/Code · Terminal/Header/Icon", "x": 358, "y": 1052, "w": 14, "h": 14 },
+    {
+      "path": "Body/Content/Code · Terminal/Header/File name",
+      "x": 380,
+      "y": 1051,
+      "w": 57.5,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Header/Spacer",
+      "x": 445.5,
+      "y": 1058.5,
+      "w": 647.5,
+      "h": 1
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Header/Copy",
+      "x": 1101,
+      "y": 1052.5,
+      "w": 13,
+      "h": 13
+    },
+    { "path": "Body/Content/Code · Terminal/Lines", "x": 344, "y": 1078, "w": 784, "h": 87 },
+    { "path": "Body/Content/Code · Terminal/Lines/Line", "x": 360, "y": 1090, "w": 374.5, "h": 21 },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line/Token",
+      "x": 360,
+      "y": 1090,
+      "w": 8,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(154, 157, 162)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line/Token#1",
+      "x": 368,
+      "y": 1090,
+      "w": 203,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line/Token#2",
+      "x": 570.5,
+      "y": 1090,
+      "w": 164,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#1",
+      "x": 360,
+      "y": 1111,
+      "w": 413.5,
+      "h": 21
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#1/Token",
+      "x": 360,
+      "y": 1111,
+      "w": 8,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(154, 157, 162)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#1/Token#1",
+      "x": 368,
+      "y": 1111,
+      "w": 218.5,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#1/Token#2",
+      "x": 586,
+      "y": 1111,
+      "w": 187,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Code · Terminal/Lines/Line#2", "x": 360, "y": 1132, "w": 398, "h": 21 },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#2/Token",
+      "x": 360,
+      "y": 1132,
+      "w": 8,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(154, 157, 162)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#2/Token#1",
+      "x": 368,
+      "y": 1132,
+      "w": 31,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#2/Token#2",
+      "x": 399,
+      "y": 1132,
+      "w": 226,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Content/Code · Terminal/Lines/Line#2/Token#3",
+      "x": 625,
+      "y": 1132,
+      "w": 132.5,
+      "h": 21,
+      "t": "13px 400 21px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Callout · Note",
+      "x": 344,
+      "y": 1185,
+      "w": 784,
+      "h": 93,
+      "f": "rgb(249, 248, 246) r12px"
+    },
+    { "path": "Body/Content/Callout · Note/Icon", "x": 360, "y": 1199, "w": 18, "h": 18 },
+    { "path": "Body/Content/Callout · Note/Text", "x": 390, "y": 1199, "w": 722, "h": 65 },
+    {
+      "path": "Body/Content/Callout · Note/Text/Title",
+      "x": 390,
+      "y": 1199,
+      "w": 254.5,
+      "h": 17,
+      "t": "14px 600 17px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Content/Callout · Note/Text/Body",
+      "x": 390,
+      "y": 1220,
+      "w": 722,
+      "h": 44,
+      "t": "14px 400 22px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Content/Prev / next", "x": 344, "y": 1298, "w": 784, "h": 96 },
+    { "path": "Body/Content/Prev / next/Previous", "x": 344, "y": 1322, "w": 384, "h": 70 },
+    {
+      "path": "Body/Content/Prev / next/Previous/Dir",
+      "x": 364,
+      "y": 1338,
+      "w": 49,
+      "h": 15,
+      "t": "12px 400 15px 0px rgb(154, 157, 162)"
+    },
+    {
+      "path": "Body/Content/Prev / next/Previous/Title",
+      "x": 364,
+      "y": 1357,
+      "w": 73.5,
+      "h": 19,
+      "t": "16px 600 19px 0px rgb(10, 10, 10)"
+    },
+    { "path": "Body/Content/Prev / next/Next", "x": 744, "y": 1322, "w": 384, "h": 72 },
+    {
+      "path": "Body/Content/Prev / next/Next/Dir",
+      "x": 1081.5,
+      "y": 1338,
+      "w": 26.5,
+      "h": 15,
+      "t": "12px 400 15px 0px rgb(154, 157, 162)"
+    },
+    {
+      "path": "Body/Content/Prev / next/Next/Title",
+      "x": 983,
+      "y": 1357,
+      "w": 125,
+      "h": 21,
+      "t": "16px 600 21px 0px rgb(10, 10, 10)"
+    },
+    { "path": "Body/Right rail", "x": 1192, "y": 64, "w": 248, "h": 386 },
+    {
+      "path": "Body/Right rail/Title",
+      "x": 1192,
+      "y": 104,
+      "w": 79,
+      "h": 16,
+      "t": "13px 600 16px 0px rgb(10, 10, 10)"
+    },
+    { "path": "Body/Right rail/TOC", "x": 1192, "y": 132, "w": 224, "h": 112 },
+    { "path": "Body/Right rail/TOC/TOC · Synopsis", "x": 1192, "y": 132, "w": 224, "h": 28 },
+    {
+      "path": "Body/Right rail/TOC/TOC · Synopsis/Label",
+      "x": 1206,
+      "y": 138,
+      "w": 57,
+      "h": 16,
+      "t": "13px 500 16px 0px rgb(10, 10, 10)"
+    },
+    { "path": "Body/Right rail/TOC/TOC · Options", "x": 1192, "y": 160, "w": 224, "h": 28 },
+    {
+      "path": "Body/Right rail/TOC/TOC · Options/Label",
+      "x": 1206,
+      "y": 166,
+      "w": 47.5,
+      "h": 16,
+      "t": "13px 400 16px 0px rgb(107, 111, 117)"
+    },
+    { "path": "Body/Right rail/TOC/TOC · Exit codes", "x": 1192, "y": 188, "w": 224, "h": 28 },
+    {
+      "path": "Body/Right rail/TOC/TOC · Exit codes/Label",
+      "x": 1206,
+      "y": 194,
+      "w": 63.5,
+      "h": 16,
+      "t": "13px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Right rail/TOC/TOC · Set it up in a repository",
+      "x": 1192,
+      "y": 216,
+      "w": 224,
+      "h": 28
+    },
+    {
+      "path": "Body/Right rail/TOC/TOC · Set it up in a repository/Label",
+      "x": 1206,
+      "y": 222,
+      "w": 142,
+      "h": 16,
+      "t": "13px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Right rail/Commands",
+      "x": 1192,
+      "y": 256,
+      "w": 224,
+      "h": 154,
+      "f": "rgb(249, 248, 246) r12px"
+    },
+    {
+      "path": "Body/Right rail/Commands/Title",
+      "x": 1206,
+      "y": 270,
+      "w": 89,
+      "h": 16,
+      "t": "13px 600 16px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Right rail/Commands/Cmd",
+      "x": 1206,
+      "y": 292,
+      "w": 72,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(10, 10, 10)"
+    },
+    {
+      "path": "Body/Right rail/Commands/Cmd#1",
+      "x": 1206,
+      "y": 314,
+      "w": 93.5,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Right rail/Commands/Cmd#2",
+      "x": 1206,
+      "y": 336,
+      "w": 50.5,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Right rail/Commands/Cmd#3",
+      "x": 1206,
+      "y": 358,
+      "w": 57.5,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(107, 111, 117)"
+    },
+    {
+      "path": "Body/Right rail/Commands/Cmd#4",
+      "x": 1206,
+      "y": 380,
+      "w": 79,
+      "h": 16,
+      "t": "12px 400 16px 0px rgb(107, 111, 117)"
+    }
+  ]
+}

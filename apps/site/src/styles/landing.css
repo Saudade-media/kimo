@@ -1,0 +1,29 @@
+/* biome-ignore-all lint/complexity/noImportantStyles: design nodes carry their values inline; breakpoint and state rules must win over them */
+/*
+ * Landing: the desktop frame (yutK2, 1440) from 1024 px up, the mobile frame (t4GJ6Z, 390)
+ * below. Above 1440 the sections keep their full-bleed fills and the content keeps the design's
+ * 1312 px column (side padding grows past 64).
+ */
+.landing--mobile {
+  display: none !important;
+}
+@media (max-width: 1023.98px) {
+  .landing--desktop {
+    display: none !important;
+  }
+  .landing--mobile {
+    display: flex !important;
+  }
+}
+@media (min-width: 1441px) {
+  .landing--desktop .gutter {
+    padding-left: max(64px, calc((100% - 1312px) / 2)) !important;
+    padding-right: max(64px, calc((100% - 1312px) / 2)) !important;
+  }
+}
+.landing pre {
+  font: inherit;
+}
+.landing .code__line {
+  min-width: max-content;
+}

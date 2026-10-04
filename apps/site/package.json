@@ -1,0 +1,24 @@
+{
+  "name": "@kimo/site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "kimo.design: the landing page and the docs, built from the repository's markdown",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "bun scripts/dev.ts",
+    "build": "bun scripts/build.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test ./test",
+    "e2e": "tsx e2e/run.ts"
+  },
+  "dependencies": {
+    "@kimo/core-schema": "workspace:*",
+    "@kimo/design-tokens": "workspace:*",
+    "marked": "^18.0.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0",
+    "tsx": "^4.23.15"
+  }
+}

@@ -12,13 +12,18 @@
  */
 import type { Libraries } from "@kimo/core-schema"
 import {
+  addPageOps,
   createDocStore,
   type DocStore,
+  deletePageOps,
   generateId,
+  movePageOps,
   type NodeData,
   type NormalizedOp,
   type Op,
+  pagesOf,
   planCommand,
+  renamePageOps,
 } from "@kimo/editor-state"
 import type { ToolError } from "../envelope"
 import { toCommand, toStoreOp, type WireOp } from "../ops"
@@ -128,6 +133,12 @@ export function compileWireOps(
         case "replace":
           ops = replaceOps(scratch, resolve(op.id), op.node as Record<string, unknown>, path)
           break
+        case "page": {
+          const r = pageOps(scratch, op, newId, path)
+          ops = r.ops
+          if (op.action === "add" && r.pageId) remember(op.key, r.pageId, op.name)
+          break
+        }
         default: {
           const command = toCommand(op, resolve, newId)
           const plan = planCommand(scratch.toDocument(), command, {
@@ -176,6 +187,71 @@ export function wirePath(path: string, wireIndex: readonly number[]): string {
   if (!m) return path
   const i = wireIndex[Number(m[1])]
   return i === undefined ? path : `ops[${i}]`
+}
+
+// --- pages (spec §5.6) ------------------------------------------------------------------------
+
+function pageOps(
+  doc: DocStore,
+  op: Extract<WireOp, { op: "page" }>,
+  newId: () => string,
+  path: string,
+): { ops: Op[]; pageId?: string } {
+  const need = (v: unknown, field: string): string => {
+    if (typeof v === "string" && v) return v
+    throw new CompileError({
+      code: "INVALID_INPUT",
+      message: `page ${op.action} needs ${field}.`,
+      path: `${path}.${field}`,
+    })
+  }
+  const exists = (id: string) => {
+    if (!pagesOf(doc).some((p) => p.id === id))
+      throw new CompileError({
+        code: "INVALID_INPUT",
+        message: `Page ${id} does not exist.`,
+        path: `${path}.id`,
+        suggestion: "Read pages[].id with kimo_get_state.",
+      })
+    return id
+  }
+  switch (op.action) {
+    case "add": {
+      const r = addPageOps(doc, { name: need(op.name, "name"), id: newId() })
+      if (op.index === undefined) return { ops: r.ops, pageId: r.pageId }
+      // Appended, then moved to `index` (the move is computed on a throwaway replica).
+      return {
+        ops: [...r.ops, ...movePageAfterAdd(doc, r.ops, r.pageId, op.index)],
+        pageId: r.pageId,
+      }
+    }
+    case "rename":
+      return { ops: renamePageOps(doc, exists(need(op.id, "id")), need(op.name, "name")) }
+    case "move":
+      return { ops: movePageOps(doc, exists(need(op.id, "id")), op.index ?? 0) }
+    case "delete": {
+      const id = exists(need(op.id, "id"))
+      const ops = deletePageOps(doc, id)
+      if (!ops.length)
+        throw new CompileError({
+          code: "INVALID_INPUT",
+          message: "The last page of a document can't be deleted.",
+          path: `${path}.id`,
+        })
+      return { ops }
+    }
+  }
+}
+
+/** Ops moving a page just added by `added` to `index` (computed on a throwaway replica). */
+function movePageAfterAdd(doc: DocStore, added: Op[], pageId: string, index: number): Op[] {
+  const s = scratchOf(doc)
+  try {
+    s.apply(added, { origin: SCRATCH_ORIGIN })
+    return movePageOps(s, pageId, index)
+  } finally {
+    s.destroy()
+  }
 }
 
 // --- copy / replace ------------------------------------------------------------------------

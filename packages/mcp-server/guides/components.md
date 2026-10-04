@@ -50,7 +50,10 @@ pointing at a target path. Set them with `set_args`:
 ```
 
 Declared props survive component edits better and export as typed code props. Declare them with
-`declare_prop {component, name, def:{type:"text", target:"Label00001", field:"content"}}`.
+`declare_prop {component, name, def:{type:"text", target:"Label00001", field:"content"}}`. An
+`enum` option can set several layers: `def:{type:"enum", options:{sm:null,lg:null},
+targets:{sm:[{target:"Label00001", field:"style/size", value:12}], lg:[…]}}` (`field` is a
+property or `<property>/<key>`, e.g. `layout/pad`).
 
 ## Slots
 

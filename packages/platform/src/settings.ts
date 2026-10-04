@@ -7,6 +7,12 @@
 
 export type UpdateChannel = "stable" | "beta"
 export type Appearance = "system" | "light" | "dark"
+/**
+ * Settings › Canvas › Nudge (board 27 Lwg6P): arrow-key step / ⇧ step in px, as
+ * `"<step>/<big step>"`.
+ */
+export type NudgePreset = "1/10" | "0.5/5" | "8/16"
+
 export type ExternalChangePolicy =
   /** Merge with local edits and show a toast (board 19 "Merge & tell me"). */
   | "merge-and-tell"
@@ -41,6 +47,23 @@ export interface SettingsSchema {
   "general.onLaunch": "last-files" | "home"
   /** General › Canvas zoom. */
   "general.canvasZoom": "trackpad" | "mouse"
+  /**
+   * General › Duplicating a main component (board 27 §8 d: ⌘D / ⌥-drag / Edit › Duplicate on a
+   * main): ask, or the remembered choice (an instance, or a new component).
+   */
+  "general.duplicateMain": "ask" | "instance" | "component"
+  /** Canvas › Snap to objects (board 27 §4: edges, centres, equal gaps; ⌘ suspends). */
+  "canvas.snapToObjects": boolean
+  /** Canvas › Snap to pixel grid: x/y/w/h rounded to whole px on move/resize/draw/nudge. */
+  "canvas.snapToPixelGrid": boolean
+  /** Canvas › Pixel grid: drawn at ≥ 800 % zoom. */
+  "canvas.pixelGrid": boolean
+  /** Canvas › Rulers (⇧R): 20 px top/left strips. */
+  "canvas.rulers": boolean
+  /** Canvas › Nudge: arrow-key step and ⇧ big step. */
+  "canvas.nudge": NudgePreset
+  /** View › Show layer names on canvas (root frame labels). */
+  "canvas.layerNames": boolean
   /** Updates › Download updates. */
   "updates.download": boolean
   /** Updates › Channel. */
@@ -66,6 +89,13 @@ export const SETTINGS_DEFAULTS: Readonly<Settings> = Object.freeze({
   "general.appearance": "system",
   "general.onLaunch": "last-files",
   "general.canvasZoom": "trackpad",
+  "general.duplicateMain": "ask",
+  "canvas.snapToObjects": true,
+  "canvas.snapToPixelGrid": true,
+  "canvas.pixelGrid": true,
+  "canvas.rulers": false,
+  "canvas.nudge": "1/10",
+  "canvas.layerNames": true,
   "updates.download": true,
   "updates.channel": "stable",
 } satisfies Settings)
@@ -100,6 +130,13 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => v is SettingsSchema[K] } 
   "general.appearance": oneOf("system", "light", "dark"),
   "general.onLaunch": oneOf("last-files", "home"),
   "general.canvasZoom": oneOf("trackpad", "mouse"),
+  "general.duplicateMain": oneOf("ask", "instance", "component"),
+  "canvas.snapToObjects": (v): v is boolean => typeof v === "boolean",
+  "canvas.snapToPixelGrid": (v): v is boolean => typeof v === "boolean",
+  "canvas.pixelGrid": (v): v is boolean => typeof v === "boolean",
+  "canvas.rulers": (v): v is boolean => typeof v === "boolean",
+  "canvas.nudge": oneOf("1/10", "0.5/5", "8/16"),
+  "canvas.layerNames": (v): v is boolean => typeof v === "boolean",
   "updates.download": (v): v is boolean => typeof v === "boolean",
   "updates.channel": oneOf("stable", "beta"),
 }
@@ -137,4 +174,10 @@ export function googleFontsAllowed(
   s: Pick<Settings, "privacy.noThirdPartyFetch" | "fonts.google">,
 ) {
   return s["fonts.google"] && !s["privacy.noThirdPartyFetch"]
+}
+
+/** `"1/10"` → `{ step: 1, big: 10 }` (arrow / ⇧ arrow nudge in px). */
+export function nudgeSteps(preset: NudgePreset): { step: number; big: number } {
+  const [a, b] = preset.split("/").map(Number)
+  return { step: a ?? 1, big: b ?? 10 }
 }

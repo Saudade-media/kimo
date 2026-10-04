@@ -1,0 +1,38 @@
+/*
+ * Board 27 §6 (d) Section · Image (g9PSe) in crop mode. The frame is PropSection's (vertical,
+ * gap 8, padding [12, 12, 16, 12], bottom stroke 1 border); only its own deviations live here.
+ */
+
+/* Title (i3YVzd): sans text-sm, weight normal (PropSection's title is 600). */
+.image-crop .kimo-prop-section__title {
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+/* Hint (Q7Lkn): fixed-width fill, sans text-xs, line-height 1.45, text-tertiary. */
+.image-crop__hint {
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Actions (PO8y3): fill, gap 6, justify end. */
+.image-crop__actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Reset (sqJv4 instance): h 28, padding [0, 10], no icon; Apply (W2lra): h 28, padding [0, 12]. */
+.image-crop__reset.kimo-button {
+  padding: 0 10px;
+}
+
+.image-crop__apply.kimo-button {
+  padding: 0 12px;
+}

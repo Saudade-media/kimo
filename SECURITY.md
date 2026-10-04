@@ -38,5 +38,9 @@ already-compromised machine or user account, and social engineering.
 
 ## Design principles that matter for security
 
-Kimo has no backend and no account. Telemetry is off by default. Local endpoints bind to loopback
+Kimo has no backend and no account, and no telemetry: no analytics, crash reporting or usage
+tracking, on or off. The only network requests are Google Fonts (when a file uses a Google font
+you don't have; Settings › Fonts & privacy turns it off), remote image URLs a document references
+(blocked by "No third-party fetch"), the AI provider you configure (only when you use the built-in
+agent), and the desktop update check against GitHub releases. Local endpoints bind to loopback
 only and require tokens. These are commitments; a deviation from them is a security bug.

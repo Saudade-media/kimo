@@ -8,10 +8,19 @@ import { useRef } from "react"
 import { IMAGE_ACCEPT } from "../../lib/assets"
 import { panelPlacement, useAssetSize, useAssetUrls, usePanel } from "../panel-context"
 
-type Fit = "cover" | "contain" | "stretch" | "tile"
+type Fit = "cover" | "contain" | "stretch" | "tile" | "crop"
 
-/** Board 09 lists Cover · Contain · Stretch; Tile shows only when the paint already uses it. */
+/**
+ * Board 09 lists Cover · Contain · Stretch; board 27 §6 (d) adds Crop (a fill of one selected
+ * layer: choosing it enters crop mode). Tile shows only when the paint already uses it.
+ */
 const MODES: readonly Fit[] = ["cover", "contain", "stretch"]
+
+/** The mode a paint shows: fit "crop", or any `crop` affine (it wins over the fit when drawn). */
+export function imageFit(paint: Record<string, unknown>): Fit {
+  if (paint.fit === "crop" || Array.isArray(paint.crop)) return "crop"
+  return (typeof paint.fit === "string" ? paint.fit : "cover") as Fit
+}
 
 export { IMAGE_ACCEPT } from "../../lib/assets"
 
@@ -21,12 +30,15 @@ export function ImageFillPopover({
   onChange,
   onRemove,
   onClose,
+  onCrop,
 }: {
   anchor: HTMLElement
   paint: Record<string, unknown>
   onChange(next: unknown): void
   onRemove(): void
   onClose(): void
+  /** Board 27 §6 (d): Crop chosen — enter crop mode on the canvas (absent: no Crop mode). */
+  onCrop?(): void
 }) {
   const { assets } = usePanel()
   // Replace awaits hashing: apply to the paint and write path as they are when it finishes,
@@ -36,7 +48,10 @@ export function ImageFillPopover({
   const src = typeof paint.src === "string" ? paint.src : null
   const url = useAssetUrls(src ? [src] : [])
   const size = useAssetSize(src)
-  const fit = (typeof paint.fit === "string" ? paint.fit : "cover") as Fit
+  const fit = imageFit(paint)
+  const modes: Fit[] = [...MODES]
+  if (onCrop || fit === "crop") modes.push("crop")
+  if (fit === "tile") modes.push("tile")
   const opacity = typeof paint.opacity === "number" ? paint.opacity : 1
   const href = src ? url(src) : null
   return (
@@ -46,11 +61,16 @@ export function ImageFillPopover({
       src={href ?? undefined}
       naturalSize={size ?? undefined}
       mode={fit}
-      modes={fit === "tile" ? [...MODES, "tile"] : MODES}
+      modes={modes}
       opacity={opacity}
       accept={IMAGE_ACCEPT}
       onModeChange={(m) => {
-        const { fit: _, ...rest } = paint
+        if (m === "crop") {
+          onCrop?.()
+          return
+        }
+        // Another mode drops the crop rect (it would win over the fit when rendering).
+        const { fit: _, crop: __, ...rest } = paint
         onChange(m === "cover" ? rest : { ...rest, fit: m })
       }}
       onOpacityChange={(a) => {

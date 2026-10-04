@@ -24,7 +24,7 @@ export function SessionList({ controller, state, fileName, clis, now }: SessionL
       key={m.id}
       title={m.title}
       time={relativeTime(m.updatedAt, now)}
-      meta={sessionMetaLabel(m, { otherFile: other, clis })}
+      meta={sessionMetaLabel(m, { otherFile: other, clis, showCost: state.showCost })}
       current={state.session?.id === m.id}
       data-session={m.id}
       onClick={() => void controller.openSession(m.id)}

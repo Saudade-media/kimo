@@ -23,11 +23,14 @@ import {
   useRef,
   useState,
 } from "react"
+import { activeRoots } from "../editor/pages/model"
 import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
+import { useDocHeader } from "../lib/header"
 import { useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { matches } from "../shortcuts/shortcuts"
 import "./canvas-m2.css"
+import "./structure.css"
 import { AgentCanvasDom } from "./AgentCanvasDom"
 import { type AgentDomState, EMPTY_DOM } from "./agent-canvas"
 import {
@@ -41,9 +44,17 @@ import {
 } from "./contract"
 import { CanvasController, MEASURING_OFFSET, type TextEditState } from "./controller"
 import { HintPill, ZoomBadge } from "./hints"
+import type { StructureDom } from "./insertion"
+import { PathEditBar } from "./PathEditBar"
+import { StructureOverlay } from "./StructureOverlay"
 import { canvasToolStore } from "./tool-state"
 
+/** Board 27 §2 rules: the paste target flashes for 600 ms. */
+const FLASH_MS = 600
+
 /** Board 03: label baseline box sits 22 px above the frame (label y 40, frame y 62). */
+/** Board 27 rule bFozp: 1 px / ⇧ 10 px. */
+const DEFAULT_NUDGE = { step: 1, big: 10 } as const
 const LABEL_OFFSET = 22
 /** Roots narrower than this on screen get no label (board 11 annex note icB1k, as in Figma). */
 const MIN_LABEL_WIDTH = 40
@@ -56,6 +67,21 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
   const [ready, setReady] = useState(false)
   const [textEdit, setTextEdit] = useState<TextEditState | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
+  /** Board 27 §2: InsertionBar, vacated slots, drag ghosts, draw ghost and the layout hint. */
+  const [structure, setStructure] = useState<StructureDom | null>(null)
+  /** Board 27 §2 (R8OJ3 "Parent Outline"): the paste target's 600 ms flash, screen px. */
+  const [flash, setFlash] = useState<{
+    key: number
+    x: number
+    y: number
+    w: number
+    h: number
+  } | null>(null)
+  useEffect(() => {
+    if (!flash) return
+    const t = setTimeout(() => setFlash(null), FLASH_MS)
+    return () => clearTimeout(t)
+  }, [flash])
   const [hint, setHint] = useState<CanvasHint | null>(null)
   const [gridOn, setGridOn] = useState(false)
   const measuringRef = useRef<HTMLDivElement | null>(null)
@@ -66,9 +92,13 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
   // React renders the label set only when the tree's shape or names change; positions follow
   // pans, zooms and layout passes imperatively (no React work per frame).
   const shape = useTreeRevision(store)
+  // Board 27 §1: labels for the active page's roots only.
+  const page = useUi(uiStore, (s) => s.page)
+  const header = useDocHeader(store)
   const roots = useMemo(() => {
     void shape
-    return store.children(null).flatMap((id) => {
+    void header
+    return activeRoots(store, page).flatMap((id) => {
       const n = store.getNode(id)
       if (n?.type !== "frame" && n?.type !== "instance") return []
       // M3: root mains get CanvasLabel/Component (`tl5O8`), root instances
@@ -94,7 +124,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
           : ""
       return [{ id, name, kind, pins }]
     })
-  }, [store, shape])
+  }, [store, shape, page, header])
   const [compDom, setCompDom] = useState<ComponentDomOverlay | null>(null)
   // M6: agent DOM (placeholder tags, scope tags, cursors, prompt footers…), re-rendered only
   // when its projection changes (nothing at all while the document has no agent surfaces).
@@ -267,6 +297,22 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       zoomToFit(ids, padding) {
         ctl.current?.zoomToFit(ids, padding)
       },
+      pointer: () => ctl.current?.pointerPosition() ?? null,
+      size: () => ctl.current?.canvasSize ?? { w: 0, h: 0 },
+      flash(id) {
+        ctl.current?.flush()
+        const box = ctl.current?.layout?.nodes.get(id)?.world
+        const c = ctl.current
+        if (!box || !c) return
+        const v = uiStore.getState().viewport
+        setFlash({
+          key: Date.now(),
+          x: (box.x - v.x) * v.zoom,
+          y: (box.y - v.y) * v.zoom,
+          w: box.w * v.zoom,
+          h: box.h * v.zoom,
+        })
+      },
       zoomTo(zoom, anchor) {
         if (ctl.current) ctl.current.zoomTo(zoom, anchor)
         else uiStore.getState().setViewport({ zoom })
@@ -286,6 +332,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       stats: () => ctl.current?.renderer.stats() ?? null,
       focus: () => hostRef.current?.focus({ preventScroll: true }),
       previewComponentDrop: (target) => ctl.current?.previewComponentDrop(target),
+      previewFlowInsert: (screen) => ctl.current?.previewFlowInsert(screen) ?? null,
       insertAgentNode: (type, at) => ctl.current?.insertAgentNode(type, at) ?? null,
       setPromptTarget: (promptId, frameId) =>
         ctl.current?.setPromptTarget(promptId, frameId) ?? false,
@@ -359,6 +406,9 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         assets,
         snapping: () => cb.current.snapping ?? true,
         pixelGrid: () => cb.current.pixelGrid ?? true,
+        snapToPixelGrid: () => cb.current.snapToPixelGrid ?? true,
+        rulers: () => cb.current.rulers ?? false,
+        nudge: () => cb.current.nudge ?? DEFAULT_NUDGE,
         onHint: (h) => {
           if (cb.current.onHint) cb.current.onHint(h)
           else setHint(h)
@@ -366,6 +416,11 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         onPixelGrid: setGridOn,
         onPlacementChange: (pl) => cb.current.onPlacementChange?.(pl),
         onIconPicker: (r) => cb.current.onIconPicker?.(r),
+        confirmBoundText: (id, ref) =>
+          cb.current.confirmBoundText?.(id, ref) ?? Promise.resolve(true),
+        duplicateMainPref: () => cb.current.duplicateMainPref?.() ?? "instance",
+        askDuplicateMain: (main, ids) =>
+          cb.current.askDuplicateMain?.(main, ids) ?? Promise.resolve("instance"),
         toolStore,
         origin: p.origin ?? "user",
         onLayout: (l) => {
@@ -384,6 +439,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         },
         onContextMenu: (i) => cb.current.onContextMenu?.(i),
         onTextEdit: setTextEdit,
+        onStructure: setStructure,
         libraries: () => cb.current.libraries ?? {},
         author: () => cb.current.noteAuthor,
         route: (ops) => (cb.current.route ? cb.current.route(ops) : ops),
@@ -398,7 +454,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     })()
     return () => {
       cancelled = true
-      canvasToolStore(uiStore).set({ placement: null, penHint: false })
+      canvasToolStore(uiStore).set({ placement: null, penHint: false, pathEdit: null })
       ctl.current?.dispose()
       ctl.current = null
       if (hostRef.current) delete hostRef.current.dataset.ready
@@ -430,7 +486,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
   useEffect(() => {
     ctl.current?.updateGrid()
     ctl.current?.requestOverlay()
-  }, [props.pixelGrid, props.snapping])
+  }, [props.pixelGrid, props.snapping, props.snapToPixelGrid, props.rulers])
 
   // The web-fonts setting applies live (families already loaded stay).
   useEffect(() => {
@@ -459,7 +515,12 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       }}
     >
       <canvas ref={canvasRef} className="canvas-host__canvas" />
-      <div ref={labels} className="canvas-host__labels">
+      <div
+        ref={labels}
+        className="canvas-host__labels"
+        // View › Show layer names on canvas (board 27 rmQMe).
+        style={props.layerNames === false ? { display: "none" } : undefined}
+      >
         {ready &&
           roots.map((r) => (
             <div
@@ -494,6 +555,16 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
             </div>
           ))}
       </div>
+      {flash && (
+        <div
+          key={flash.key}
+          className="canvas-host__flash"
+          data-testid="paste-flash"
+          aria-hidden="true"
+          style={{ left: flash.x, top: flash.y, width: flash.w, height: flash.h }}
+        />
+      )}
+      {structure && <StructureOverlay dom={structure} />}
       {ready && agentDom !== EMPTY_DOM && (
         <AgentCanvasDom dom={agentDom} props={agentCanvas ?? null} hovered={hovered} />
       )}
@@ -509,12 +580,19 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
           onCommit={(v) => ctl.current?.commitText(v)}
         />
       )}
-      {ready && gridOn && <ZoomBadge ui={uiStore} />}
+      {ready && gridOn && <ZoomBadge ui={uiStore} rulers={props.rulers ?? false} />}
+      {hint?.kind === "crop" && (
+        // Board 27 §6 (d) ud74f: under the canvas content, above the floating toolbar.
+        <HintPill icon={hint.icon} className="canvas-hint--toolbar">
+          {hint.text}
+        </HintPill>
+      )}
       {hint?.kind === "path-edit" && (
         <HintPill icon={hint.icon} className="canvas-hint--top">
           {hint.text}
         </HintPill>
       )}
+      {ready && <PathEditBar ui={uiStore} run={(c) => ctl.current?.pathEditCommand(c)} />}
       {hint?.kind === "pen-close" && (
         <HintPill
           icon={hint.icon}

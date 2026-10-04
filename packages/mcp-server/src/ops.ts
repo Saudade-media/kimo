@@ -219,6 +219,32 @@ export const SetThemeAxesWire = Obj(
   { description: "Low-level theme axes write. Document-global." },
 )
 
+/** Board 27 / spec §5.6: pages (root `pages`; a top-level node's `page` names its page). */
+export const PageWire = Obj(
+  {
+    op: Tag("page", { description: "Add, rename, move or delete a page." }),
+    action: Enum(["add", "rename", "move", "delete"], {
+      description:
+        "add (name, index?) · rename (id, name) · move (id, index) · delete (id; deletes its top-level nodes; never the last page).",
+    }),
+    id: Opt(
+      Str({
+        description: "Page id (from kimo_get_state pages[].id).",
+        pattern: "^[A-Za-z0-9]{6,24}$",
+      }),
+    ),
+    name: Opt(Str({ description: "Page name (add / rename).", minLength: 1 })),
+    index: Opt(
+      Int({ description: "Position among the pages (add / move; 0 = first).", minimum: 0 }),
+    ),
+    key,
+  },
+  {
+    description:
+      "Pages are document-global. Put a top-level node on a page by setting its `page` field (insert node.page / update set.page); without `page` it is on the first page. The first add on a one-page document also gives that page an id (its nodes keep their page).",
+  },
+)
+
 // --- Component / instance commands (→ M3 ComponentCommand) --------------------------------------
 
 export const InstantiateWire = Obj(
@@ -478,6 +504,7 @@ export const WIRE_OP_SCHEMAS = [
   DeleteVariableWire,
   SetThemePinWire,
   ThemeAxisWire,
+  PageWire,
 ] as const
 
 export const WireOpSchema = AnyOf([...WIRE_OP_SCHEMAS], {
@@ -508,6 +535,7 @@ export type RenameVariableWire = Static<typeof RenameVariableWire>
 export type DeleteVariableWire = Static<typeof DeleteVariableWire>
 export type SetThemePinWire = Static<typeof SetThemePinWire>
 export type ThemeAxisWire = Static<typeof ThemeAxisWire>
+export type PageWire = Static<typeof PageWire>
 
 export type WireOp =
   | InsertWire
@@ -534,6 +562,7 @@ export type WireOp =
   | DeleteVariableWire
   | SetThemePinWire
   | ThemeAxisWire
+  | PageWire
 
 export type WireOpKind = WireOp["op"]
 
@@ -562,6 +591,7 @@ export const WIRE_OP_KINDS = [
   "delete_variable",
   "set_theme_pin",
   "theme_axis",
+  "page",
 ] as const satisfies readonly WireOpKind[]
 
 // --- Classification (scopes, approvals) ---------------------------------------------------------
@@ -598,6 +628,7 @@ export const WIRE_OP_COMPILE: Record<WireOpKind, "op" | "ops" | "command"> = {
   delete_variable: "command",
   set_theme_pin: "command",
   theme_axis: "command",
+  page: "ops",
 }
 
 /** Ops that write document-global state (scoped agents need the `globals` grant, 11.3). */
@@ -609,6 +640,7 @@ export const GLOBAL_OPS: ReadonlySet<WireOpKind> = new Set<WireOpKind>([
   "rename_variable",
   "delete_variable",
   "theme_axis",
+  "page",
 ])
 
 /** Ops that change components other areas instantiate (need the `components` grant, 11.3). */
@@ -636,6 +668,8 @@ export function isDestructive(op: WireOp): boolean {
       return (op.unset?.length ?? 0) > 0
     case "theme_axis":
       return op.action === "delete" || op.action === "remove_value"
+    case "page":
+      return op.action === "delete"
     case "set_slot":
       return op.remove === true && op.deleteContent === true
     default:
@@ -708,6 +742,7 @@ type CommandWire = Exclude<
   | SetThemeAxesWire
   | CopyWire
   | ReplaceWire
+  | PageWire
 >
 
 /** Command wire ops → M3 command(s). `theme_axis` and `reset_override` pick the command by action. */

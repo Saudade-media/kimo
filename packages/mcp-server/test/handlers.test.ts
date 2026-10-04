@@ -727,3 +727,59 @@ describe("kimo_export code and token targets (M7, ADR 0015)", () => {
     expectFail(await s.c.call("kimo_export", { docId, target: "png" }), "INVALID_INPUT")
   })
 })
+
+describe("pages (board 27 §1, spec §5.6)", () => {
+  type State = { documents: { pages: { id?: string; name: string; topLevelCount: number }[] }[] }
+  test("kimo_get_state lists pages; the page op edits them; kimo_query filters by select.page", async () => {
+    const s = setup()
+    const { docId } = await newDoc(s, "blank")
+    const one = expectOk(await s.c.call<State>("kimo_get_state", { docId }))
+    expect(one.data.documents[0]?.pages.map((p) => [p.id, p.name])).toEqual([[undefined, "Page 1"]])
+    const add = expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [{ op: "page", action: "add", name: "Docs", key: "docs" }],
+      }),
+    ) as unknown as { created: { key: string; id: string }[] }
+    const docs = add.created.find((c) => c.key === "docs")?.id as string
+    expect(docs).toMatch(/^[A-Za-z0-9]{6,24}$/)
+    expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [
+          {
+            op: "insert",
+            parent: "root",
+            key: "f",
+            node: { type: "frame", name: "Docs frame", w: 10, h: 10, page: docs },
+          },
+          { op: "page", action: "move", id: docs, index: 0 },
+        ],
+      }),
+    )
+    const st = expectOk(await s.c.call<State>("kimo_get_state", { docId }))
+    const pages = st.data.documents[0]?.pages ?? []
+    expect(pages.map((p) => p.name)).toEqual(["Docs", "Page 1"])
+    expect(pages[0]?.topLevelCount).toBe(1)
+    const q = expectOk(
+      await s.c.call<{ nodes: Record<string, unknown>[] }>("kimo_query", {
+        docId,
+        select: { topLevel: true, page: docs },
+        depth: 0,
+      }),
+    )
+    expect(q.data.nodes.map((n) => n.name)).toEqual(["Docs frame"])
+    // The last page can't be deleted.
+    const p1 = pages[1]?.id as string
+    expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [{ op: "page", action: "delete", id: docs }],
+      }),
+    )
+    expectFail(
+      await s.c.call("kimo_apply_ops", { docId, ops: [{ op: "page", action: "delete", id: p1 }] }),
+      "INVALID_INPUT",
+    )
+  })
+})

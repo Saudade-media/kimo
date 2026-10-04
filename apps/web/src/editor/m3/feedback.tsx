@@ -50,7 +50,7 @@ function TimedToast({ toast, old, onDone }: { toast: ToastItem; old: boolean; on
       tone={toast.tone === "component" ? "neutral" : toast.tone}
       className={`m3-toast${old ? " m3-toast--old" : ""}`}
       data-tone={toast.tone}
-      icon={<Icon name={TOAST_ICON[toast.tone]} size={16} />}
+      icon={<Icon name={toast.icon ?? TOAST_ICON[toast.tone]} size={16} />}
       actionLabel={toast.action?.label}
       onAction={() => {
         toast.action?.run()

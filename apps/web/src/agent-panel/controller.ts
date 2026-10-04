@@ -94,6 +94,7 @@ import {
   type ModeAgentRowView,
   type ModelPickerGroup,
 } from "../platform/contract"
+import { type CostWarningView, estimateTurn, shouldWarn } from "./cost-warning"
 import { modelLabel } from "./format"
 import { type AgentPanelRuntime, providerFor } from "./runtime"
 
@@ -199,6 +200,13 @@ export interface AgentPanelViewState extends AgentPanelState {
   onboarding: OnboardingView | null
   /** Board 25 rule "Composer": rendered but disabled (50 %) until a provider is connected. */
   composerDisabled: boolean
+  /** Settings › AI providers "Show cost" (board 27 r9hTk): off hides every $; tokens stay. */
+  showCost: boolean
+  /**
+   * Board 27 THx2k: a send estimated above "Warn per turn above" is held here (nothing is sent)
+   * until Send anyway / Edit message.
+   */
+  costWarning: CostWarningView | null
 }
 
 /** Agent tab first run (board 25 p55vU). */
@@ -249,6 +257,12 @@ export interface AgentPanelControllerExt extends AgentPanelController {
   connectKey(key: string): Promise<{ ok: boolean; detail: string }>
   /** Refusal "Edit request": the turn's prompt back in the composer. */
   editRequest(turnId: string): void
+  /** Cost warning "Send anyway": sends the held message without asking again. */
+  sendAnyway(): Promise<void>
+  /** Cost warning "Edit message": drops the hold; the text stays in the composer. */
+  editHeldMessage(): void
+  /** Cost warning "Settings" link (Settings › AI providers). */
+  openCostSettings(): void
   /** Copies a message's text (MessageMeta copy). */
   copyText(messageId: string): string
   /**
@@ -277,6 +291,8 @@ export interface AgentPanelOptions {
   /** Gap between side-by-side variants (board ZFOQf `agblr`: 40). Default 80 (`planSideBySide`). */
   sideBySideGap?: number
   nodeName?(id: string): string | undefined
+  /** Board 27 §1: the active page (null for a one-page document), for the system context. */
+  activePage?(): { id: string; name: string; count: number } | null
   /** Write mark text for a step ("Editing · Card"). */
   now?(): number
 }
@@ -512,10 +528,12 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let liveUsage: Usage = { ...ZERO_USAGE }
   let liveCost: number | null = 0
   let pendingFromHome = false
-  let promptRuns: Record<string, PromptRunState> = {}
+  // Finished prompt runs come back from app data (ADR 0014 §9); live ones stay in memory.
+  let promptRuns: Record<string, PromptRunState> = loadPromptRuns()
   /** The prompt node the running turn belongs to, with its lead origin. */
   let runningPrompt: { nodeId: string; origin: string } | null = null
   let lastRecord: TurnRecord | null = null
+  let costWarning: CostWarningView | null = null
 
   // --- State ------------------------------------------------------------------------------------
 
@@ -673,6 +691,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       })),
       onboarding,
       composerDisabled: onboarding !== null,
+      showCost: rt.usage?.().showCost ?? true,
+      costWarning,
       firstRun,
       menu,
       mark:
@@ -692,6 +712,22 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       undoneTurns,
       live: busy ? liveMeta() : null,
       promptRuns: livePromptRuns(),
+    }
+  }
+
+  function loadPromptRuns(): Record<string, PromptRunState> {
+    try {
+      return rt.promptRuns?.load(o.fileId) ?? {}
+    } catch {
+      return {}
+    }
+  }
+  function savePromptRun(nodeId: string) {
+    const st = promptRuns[nodeId]
+    try {
+      if (st) rt.promptRuns?.save(o.fileId, nodeId, st)
+    } catch {
+      // App data unavailable: the state lives until the window closes.
     }
   }
 
@@ -895,6 +931,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
 
   async function runAgent(i: AgentRunInput): Promise<TurnRecord> {
     const id = turnId()
+    const activePage = o.activePage?.() ?? null
     const system = buildSystemPrompt({
       mode: i.modeName,
       skills: i.skills,
@@ -902,6 +939,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       ...(i.selectionSummary ? { selection: i.selectionSummary } : {}),
       ...(i.brief ? { brief: i.brief } : {}),
       ...(i.fromHome ? { fromHome: true } : {}),
+      ...(activePage ? { page: activePage } : {}),
     })
     const failRecord = (err: ProviderError): TurnRecord => {
       const record: TurnRecord = {
@@ -1002,6 +1040,36 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           }
         : {}),
     })
+  }
+
+  /**
+   * Board 27 THx2k: the held warning for sending `t` now, or null (under the threshold, CLI /
+   * local / unpriced model, 0 = never warn).
+   */
+  function costWarningFor(t: string): CostWarningView | null {
+    const usage = rt.usage?.()
+    if (!usage || !model || isCliProvider(model.provider)) return null
+    const p = providers.find((x) => x.id === model?.provider)
+    if (!p) return null
+    const atts = attachments()
+    const estimate = estimateTurn({
+      kind: p.kind,
+      model: model.model,
+      ...(p.free ? { free: true } : {}),
+      text: t,
+      history: messages.map((m) => m.text),
+      frames: atts.filter((a) => a.kind === "selection").length,
+      images: atts.filter((a) => a.kind === "image").length,
+      multiplier:
+        mode.mode === "side-by-side" || mode.mode === "split"
+          ? mode.agents
+          : mode.mode === "iterate"
+            ? mode.passes
+            : 1,
+    })
+    return shouldWarn(estimate, usage.warnPerTurnUsd)
+      ? { text: t, estimate, thresholdUsd: usage.warnPerTurnUsd }
+      : null
   }
 
   // --- The thread's live agent message ----------------------------------------------------------
@@ -1654,6 +1722,12 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     )
     if (modeRun) modeRun = { ...modeRun, running: false }
     canvas = { ...canvas, scopes: [] }
+    const settled = await settleVariants(
+      lead,
+      specs.map((sp) => ({ origin: sp.origin, frame: sp.scopeRoots[0] ?? "" })),
+    )
+    // Undo of the turn also reverts the clean-up (it touches only the variant frames themselves).
+    if (settled) leadGroups.push(settled)
     const summary = `${modeRun?.done ?? 0} of ${n} variants done next to ${box.name}.`
     updateAgentMessage(aid, (m) => ({ ...m, text: summary }))
     await finishTurn(
@@ -1661,6 +1735,65 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       aid,
       { agents: n },
     )
+  }
+
+  /**
+   * ADR 0014 §6/§9: a turn ends by clearing the placeholders it set — done, stopped or failed.
+   * Side by side's variant frames are created by the lead's setup (owned by the children), so no
+   * child loop tracks them: a variant its child built into loses the flag, one left empty
+   * (stopped, failed, nothing built) is removed and its row reads discarded.
+   */
+  async function settleVariants(
+    lead: ToolHost,
+    variants: { origin: string; frame: string }[],
+  ): Promise<OpGroup | null> {
+    const signal = new AbortController().signal
+    const ops: Record<string, unknown>[] = []
+    const emptied: string[] = []
+    for (const v of variants) {
+      if (!v.frame) continue
+      const q = await lead.call(
+        {
+          id: `settle-query-${v.frame}`,
+          name: "kimo_query",
+          input: { docId: o.docId(), select: { ids: [v.frame] }, depth: 0 },
+        },
+        signal,
+      )
+      if (!q.result.ok) continue
+      const node = (
+        q.result.data as { nodes?: { id: string; children?: string[]; placeholder?: unknown }[] }
+      ).nodes?.find((x) => x.id === v.frame)
+      if (!node) continue
+      if (!node.children?.length) {
+        ops.push({ op: "delete", id: v.frame })
+        emptied.push(v.origin)
+      } else if (node.placeholder !== undefined && node.placeholder !== null)
+        ops.push({ op: "update", id: v.frame, unset: ["placeholder"] })
+    }
+    if (!ops.length) return null
+    const r = await lead.call(
+      {
+        id: `settle-${variants[0]?.frame ?? "variants"}`,
+        name: "kimo_apply_ops",
+        input: { docId: o.docId(), ops, label: "Clear variant placeholders" },
+      },
+      signal,
+    )
+    if (!r.result.ok) return null
+    for (const origin of emptied) {
+      patchRow(origin, { discarded: true })
+      personas.release(origin)
+    }
+    return r.result.undoToken
+      ? {
+          docId: o.docId(),
+          undoToken: r.result.undoToken,
+          summary: r.result.summary,
+          changed: r.result.changed ?? [],
+          tool: "kimo_apply_ops",
+        }
+      : null
   }
 
   async function runSplit(
@@ -2029,7 +2162,30 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         emit()
         return
       }
+      const held = costWarningFor(t)
+      costWarning = held
+      if (held) {
+        // Board 27 THx2k: hold the message (it stays in the composer) until the user chooses.
+        text = raw
+        emit()
+        return
+      }
       await sendNow(t)
+    },
+    async sendAnyway() {
+      const held = costWarning
+      if (!held || composerState !== "idle") return
+      costWarning = null
+      // The composer may have been edited while the card was up: send what is there now.
+      await sendNow(text.trim() || held.text)
+    },
+    editHeldMessage() {
+      if (!costWarning) return
+      costWarning = null
+      emit()
+    },
+    openCostSettings() {
+      rt.openSettings?.("ai-providers")
     },
     stop() {
       abort?.abort()
@@ -2087,6 +2243,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       session = null
       messages = []
       modeRun = null
+      costWarning = null
       personas = new PersonaAllocator(now)
       sessionsOpen = false
       undoneTurns = []
@@ -2195,10 +2352,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           void controller.continueTurn()
           break
         case "get_desktop":
-          rt.openLink?.("https://kimo.dev/download")
+          rt.openLink?.("https://kimo.design/docs/getting-started/")
           break
         case "provider_matrix":
-          rt.openLink?.("https://kimo.dev/docs/providers#browser-support")
+          rt.openLink?.("https://kimo.design/docs/built-in-agent/#api-providers")
           break
       }
     },
@@ -2401,6 +2558,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           ...promptRuns,
           [nodeId]: { ...promptRuns[nodeId], status: "failed", error: { kind, message } },
         }
+        savePromptRun(nodeId)
         emit()
       }
       if (abort || runningPrompt) return fail("busy", "the agent is busy with another turn")
@@ -2511,6 +2669,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           },
         },
       }
+      savePromptRun(nodeId)
       emit()
     },
     stopPrompt(nodeId) {

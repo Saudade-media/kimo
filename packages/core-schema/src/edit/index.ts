@@ -46,6 +46,22 @@ export {
   subtree,
 } from "./plan"
 export {
+  BROKEN_OVERRIDES_META_KEY,
+  type BrokenOverride,
+  brokenOverrides,
+  componentOfFamily,
+  type OverrideFix,
+  type OverrideFixRequest,
+  planFixOverrides,
+  planReplaceMain,
+  type RemapCandidate,
+  type ReplaceMainPreview,
+  remapCandidates,
+  replaceMainPreview,
+  replaceMainRefusal,
+  type StashedOverride,
+} from "./replace-main"
+export {
   axisDisplayOrder,
   planAddAxisValue,
   planCreateAxis,

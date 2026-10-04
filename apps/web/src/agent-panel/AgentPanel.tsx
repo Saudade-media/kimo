@@ -16,6 +16,7 @@ import {
   AttachmentChip,
   AttachmentThumb,
   ComposerAgent,
+  CostWarningCard,
   IconButton,
   IconErrorCard,
   Message,
@@ -56,6 +57,7 @@ import { inTauri } from "../platform/runtime"
 import { type ApprovalOpIcon, approvalOps } from "./approval"
 import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
 import { markOf } from "./controller"
+import { costWarningCopy } from "./cost-warning"
 import { FirstRun } from "./FirstRun"
 import { costLabel, durationLabel, headerCostLabel, tokensLabel } from "./format"
 import { useAgentPanelState } from "./hooks"
@@ -221,7 +223,9 @@ export function AgentPanel({
             </span>
             {!state.sessionsOpen && state.session && (
               <span className="agent-panel__cost" data-testid="agent-session-cost">
-                <span className="agent-panel__cost-label">{headerCostLabel(header)}</span>
+                <span className="agent-panel__cost-label">
+                  {headerCostLabel(header, state.showCost)}
+                </span>
               </span>
             )}
             {!state.sessionsOpen && state.approvals.length > 1 && (
@@ -324,6 +328,20 @@ export function AgentPanel({
                 controller.openMenu("model")
                 setAgentModelTarget(i)
               }}
+            />
+          )}
+          {state.costWarning && !state.busy && (
+            <CostWarningCard
+              data-testid="agent-cost-warning"
+              data-pen="qtTiZ"
+              className="agent-panel__cost-warning"
+              {...costWarningCopy(state.costWarning, state.showCost)}
+              onSendAnyway={() => void controller.sendAnyway()}
+              onEditMessage={() => {
+                controller.editHeldMessage()
+                textarea.current?.focus()
+              }}
+              onSettings={() => controller.openCostSettings()}
             />
           )}
           <ComposerAgent
@@ -520,7 +538,7 @@ function ThreadItem({
       {m.streaming && state.live && (
         <MessageMeta
           streaming
-          tokens={`${tokensLabel(state.live.tokensIn, state.live.tokensOut)}${state.live.costUsd !== null && state.composer.model && !state.composer.model.provider.startsWith("cli:") ? ` · ${costLabel({ costUsd: state.live.costUsd, billing: "api" })}` : ""}`}
+          tokens={`${tokensLabel(state.live.tokensIn, state.live.tokensOut)}${state.showCost && state.live.costUsd !== null && state.composer.model && !state.composer.model.provider.startsWith("cli:") ? ` · ${costLabel({ costUsd: state.live.costUsd, billing: "api" })}` : ""}`}
           data-testid="agent-streaming-meta"
         />
       )}
@@ -528,7 +546,9 @@ function ThreadItem({
         <MessageMeta
           data-testid="agent-message-meta"
           tokens={tokensLabel(m.meta.tokensIn, m.meta.tokensOut)}
-          cost={costLabel(m.meta)}
+          {...(state.showCost || m.meta.billing === "subscription"
+            ? { cost: costLabel(m.meta) }
+            : {})}
           duration={durationLabel(m.meta.wallMs)}
           onCopy={() => onCopy(m.text)}
           {...(m.meta.canRegenerate

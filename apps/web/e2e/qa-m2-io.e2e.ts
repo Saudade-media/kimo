@@ -275,7 +275,7 @@ export const scenarios: Scenario[] = [
         await page.evaluate(() =>
           (window as unknown as { __kimo: M2Hook }).__kimo.session.ui
             .getState()
-            .setViewport({ x: 0, y: 0, zoom: 6 }),
+            .setViewport({ x: 0, y: 0, zoom: 8 }),
         )
         await page.waitForTimeout(250)
       }

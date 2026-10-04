@@ -148,11 +148,11 @@ export const scenarios: Scenario[] = [
       await hook(page, (k) => k.show({ kind: "settings", pane: "files" }))
       await page.waitForSelector(".settings-window")
       expect(
-        (await page.locator(".settings-nav-item").count()) === 7,
-        "seven panes (M6 AI providers)",
+        (await page.locator(".settings-nav-item").count()) === 8,
+        "eight panes (M6 AI providers, board 27 Canvas)",
       )
       expect(
-        (await page.locator(".settings-nav-item").nth(3).getAttribute("data-pane")) ===
+        (await page.locator(".settings-nav-item").nth(4).getAttribute("data-pane")) ===
           "agents-mcp",
         "Agents & MCP sits between Fonts & privacy and Updates",
       )
@@ -360,7 +360,7 @@ export const scenarios: Scenario[] = [
       const desc = await pop.locator(".svg-import__desc").textContent()
       expect(
         desc ===
-          "Editable paths in a frame. 3 paths · 1 group · 1 gradient. Unsupported: 1 filter (dropped).",
+          "Editable paths in a frame. 3 paths · 1 group · 1 gradient · 1 stroked path. Unsupported: 1 filter (dropped).",
         `description: ${desc}`,
       )
       await shot(ctx, "svg-import")

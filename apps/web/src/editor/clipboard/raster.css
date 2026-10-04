@@ -1,0 +1,149 @@
+/* Board 27 §3 (a) vgvYj drop overlay + target (values from the nodes, see RasterDrop.tsx). */
+.raster-drop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* pQA7W "Drop Overlay": fill #2F6BFF0A ($selection at 4 %), 2 px $selection, radius 8, opacity 0.9. */
+.raster-drop__overlay {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--kimo-selection);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--kimo-selection) 4%, transparent);
+  opacity: 0.9;
+}
+
+/* RBQV2 "Target Outline": 2 px $selection. */
+.raster-drop__target {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--kimo-selection);
+}
+
+/* u6Bi1 "Target Tag": $selection pill, padding [3, 8], gap 4, right edge 4 px past the frame. */
+.raster-drop__tag {
+  position: absolute;
+  transform: translateX(-100%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-selection);
+  color: var(--kimo-on-accent);
+  white-space: nowrap;
+}
+
+.raster-drop__tag-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: var(--kimo-on-accent);
+}
+
+/* OGqUu / sKpaJ InsertionBar: 2 px bar, 2 × 6 end caps, $selection. */
+.raster-drop__bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+}
+
+.raster-drop__bar--h {
+  flex-direction: row;
+}
+
+.raster-drop__bar--v {
+  flex-direction: column;
+}
+
+.raster-drop__cap,
+.raster-drop__line {
+  flex: none;
+  background: var(--kimo-selection);
+}
+
+.raster-drop__bar--h .raster-drop__cap {
+  width: 2px;
+  height: 6px;
+}
+
+.raster-drop__bar--h .raster-drop__line {
+  flex: 1 1 0;
+  height: 2px;
+}
+
+.raster-drop__bar--v .raster-drop__cap {
+  width: 6px;
+  height: 2px;
+}
+
+.raster-drop__bar--v .raster-drop__line {
+  flex: 1 1 0;
+  width: 2px;
+}
+
+/* Z05qhP "File chips": 24 px below the pointer, gap 4. */
+.raster-drop__chips {
+  position: absolute;
+  display: flex;
+  gap: 4px;
+}
+
+/* S1Q0Y chip: padding [3, 8, 3, 6], gap 4, $bg-overlay, 1 px $border, pill, shadow 0 2 6 $shadow. */
+.raster-drop__chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-overlay);
+  box-shadow: 0 2px 6px var(--kimo-shadow);
+  color: var(--kimo-text-secondary);
+  white-space: nowrap;
+}
+
+.raster-drop__chip-name {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: var(--kimo-text-primary);
+}
+
+/* Ty50V "Drop Pill": bottom centre (13 px above the edge), $text-primary pill, padding [6, 12], gap 8. */
+.raster-drop__pill {
+  position: absolute;
+  left: 50%;
+  bottom: 13px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-text-primary);
+  color: var(--kimo-text-inverse);
+  white-space: nowrap;
+}
+
+.raster-drop__pill-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: normal;
+  color: var(--kimo-text-inverse);
+}
+
+.raster-drop__pill-meta {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: var(--kimo-text-tertiary);
+}

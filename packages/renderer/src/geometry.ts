@@ -98,12 +98,14 @@ export function resolveRadii(
     radii = [v, v, v, v]
   }
   // Scale all radii down uniformly when adjacent radii exceed a side (CSS backgrounds §5.5).
+  // A side whose two radii are both 0 never constrains the scale (it must not read as 0).
+  const fit = (side: number, sum: number) => (sum > 0 ? side / sum : 1)
   const f = Math.min(
     1,
-    w / (radii[0] + radii[1] || Number.POSITIVE_INFINITY),
-    w / (radii[3] + radii[2] || Number.POSITIVE_INFINITY),
-    h / (radii[0] + radii[3] || Number.POSITIVE_INFINITY),
-    h / (radii[1] + radii[2] || Number.POSITIVE_INFINITY),
+    fit(w, radii[0] + radii[1]),
+    fit(w, radii[3] + radii[2]),
+    fit(h, radii[0] + radii[3]),
+    fit(h, radii[1] + radii[2]),
   )
   return f < 1 ? (radii.map((x) => x * f) as [number, number, number, number]) : radii
 }

@@ -69,6 +69,7 @@ Numbers MUST be finite. Colors are specified in their own space; renderers and e
 | `variables` | no | record Name → Variable | §10. |
 | `assets` | no | record asset file name → AssetEntry | Optional asset manifest (§12). |
 | `components` | no | Id[] (unique) | Optional index of component node ids. Derived data; when present every entry MUST be a component. |
+| `pages` | no | record Id → Page | The document's pages (§5.6). Absent or empty = one implicit page. |
 | `merge` | no | struct MergeInfo | Labels of an in-progress semantic merge (§21). Only with `conflicts`. Feature `merge/conflicts`. |
 | `conflicts` | no | record Id → Conflict (non-empty) | Stored merge conflicts written by `kimo merge` (§21). Feature `merge/conflicts`. |
 | `nodes` | yes | record Id → Node | The flat node table (§5). |
@@ -103,6 +104,7 @@ The document is a forest stored as a flat table. Each node names its parent; rea
 | `theme` | record axis key → value | absent | Per-axis theme pins for this subtree (§10.3). |
 | `locked` | boolean | `false` | Editor state: not selectable on canvas. |
 | `meta` | record Meta key → any | absent | Namespaced extension data. Readers MUST preserve it and MUST NOT interpret keys of namespaces they do not own. Bindings inside `meta` are not bindings. |
+| `page` | Id | absent | Root nodes only: the page the node is on (§5.6). Absent = the first page. Not allowed in instance `props` or `set` overrides. |
 
 ### 5.3 Base fields (every node except instances)
 
@@ -134,7 +136,7 @@ Required fields are marked **req**. Every type also has the Placement fields; ev
 | `group` | `effects` | Container without size, paint or layout; its bounds are its children's. |
 | `rect` | Graphics; `w` **req**, `h` **req**: Size; `radius`: Radius, default 0 | Images are image paints on rects or frames; there is no image node. |
 | `ellipse` | Graphics; `w` **req**, `h` **req**; `innerRadius`: [0,1), default 0 (ring hole as a fraction); `startAngle`: degrees CCW from the positive x axis, default 0; `sweepAngle`: [-360,360], default 360 | Arcs and rings. |
-| `polygon` | Graphics; `w` **req**, `h` **req**; `sides` **req**: integer ≥ 3; `radius`: Num, default 0 | Regular polygon inscribed in the box. |
+| `polygon` | Graphics; `w` **req**, `h` **req**; `sides` **req**: integer ≥ 3; `radius`: Num, default 0; `star`: `{ ratio?: (0,1] }`, `ratio` default 0.38 | Regular polygon inscribed in the box. With `star` it is a star with `sides` points: the outer vertices are the polygon's, and an inner vertex sits between each pair, on the same ellipse scaled by `ratio` (inner / outer radius). `radius` rounds every vertex. |
 | `path` | Graphics; `w`, `h`: Size (absent = the `viewBox` size, else the geometry's bounds); `d` **req**: SVG path data; `fillRule`: `"nonzero"`\|`"evenodd"`, default `"nonzero"`; `viewBox`: `[x, y, w, h]` (absent = the geometry's bounding box) | The geometry is scaled from `viewBox` to `w`×`h`. Writers SHOULD set `viewBox`. |
 | `text` | Graphics; `w`, `h`: Size; `content` **req**: string \| Ref \| TextSpan[]; `grow`: `"auto"`\|`"fixed-width"`\|`"fixed"`, default `"auto"`; `style`: TextStyle | §8. |
 | `icon` | `w` **req**, `h` **req**; `set` **req**: string; `icon` **req**: string \| Ref (glyph name); `weight`: Num 100–700; `strokeWidth`: Num > 0; `color`: Color; `effects` | Known sets: `lucide`, `feather`, `phosphor`, `material-outlined`, `material-rounded`, `material-sharp`. Other values are allowed and render as a missing glyph. Icons are rendered as paths from the set, scaled from the set's grid to `w`×`h`. `weight` applies to Material sets (the `wght` axis; absent = 400) and to `phosphor` (nearest of thin 100, light 300, regular 400, bold 700; absent = regular); other sets ignore it. `strokeWidth` applies to stroke sets (`lucide`, `feather`) in the set's 24-unit grid units (absent = the set's own width, 2); other sets ignore it. |
@@ -145,6 +147,18 @@ Required fields are marked **req**. Every type also has the Placement fields; ev
 | `instance` | `of` **req**: QId; `props`: struct; `args`: record; `overrides`: record IdPath → Override; `component`: boolean \| ComponentDef, default `false` | §9. Has no Base fields at its top level. |
 
 Any other `type` is invalid in 1.0 (`UNKNOWN_NODE_TYPE`) and MUST be preserved by readers.
+
+### 5.6 Pages
+
+A document is split into **pages**: independent canvases that partition the root nodes. A page only groups roots; it is not a node and never appears in `parent`.
+
+1. The root member `pages` maps a page id (Id grammar) to `{ "order": Order key, "name": string }`. Pages list by (`order`, then id), code-unit order, like siblings (§5.1). Names need not be unique. Page ids are their own namespace, but writers SHOULD NOT reuse a node id.
+2. A root node (`parent: null`) is on the page its `page` names. A root without `page`, or whose `page` names no entry of `pages` (lint `PAGE_UNKNOWN`), is on the **first page**. So a document without `pages` (or with `pages: {}`) has exactly one implicit page holding every root; editors name it "Page 1".
+3. Every other node is on its root's page. `page` on a non-root node is ignored (lint `PAGE_NOT_ROOT`); writers moving a root into a container SHOULD remove it, and writers moving a node to the root SHOULD set it.
+4. Writers that add the first explicit page to a document SHOULD also give an explicit entry to the implicit page, so the existing roots stay on it whatever the new page's order. Deleting a page deletes its roots (or moves them first); readers never delete nodes because of `pages`.
+5. Viewport, selection and the active page are editor state, not document data.
+6. Exporters and tools that address "the canvas" address one page; whole-document operations (validation, variables, components, assets) span every page. A component on one page may be instantiated on any page.
+7. Live sync merges `pages` per page id (like `imports`); git three-way merges merge it as a record (§21: a `header` conflict may address `pages`).
 
 ## 6. Sizing and layout
 
@@ -191,9 +205,11 @@ A Paint is a **Color** (hex, OKLCH, P3 or Ref — a solid paint) or one of:
 |---|---|---|
 | `"solid"` | `color` **req**, `blend`, `visible` | `blend: "normal"`, `visible: true` |
 | `"linear"` \| `"radial"` \| `"angular"` | `stops` **req**: ≥ 2 × `{ color, at ∈ [0,1] }`; `center`: [x, y] normalized; `size`: [w, h] normalized (for linear, `h` is the length); `rotation`: degrees CCW, 0 = up; `interpolation`: `"srgb"` \| `"oklab"`; `opacity`: Num [0,1]; `blend`; `visible` | `center [0.5,0.5]`, `size [1,1]`, `rotation 0`, `interpolation "srgb"`, `opacity 1`, `blend "normal"`, `visible true` |
-| `"image"` | `src` **req**: asset reference; `fit`: `cover` `contain` `stretch` `tile`; `crop`: affine `[a, b, c, d, tx, ty]` in normalized image space; `opacity`; `blend`; `visible` | `fit "cover"`, `opacity 1`, `blend "normal"`, `visible true` |
+| `"image"` | `src` **req**: asset reference; `fit`: `cover` `contain` `stretch` `tile` `crop`; `crop`: affine `[a, b, c, d, tx, ty]` in normalized image space; `opacity`; `blend`; `visible` | `fit "cover"`, `opacity 1`, `blend "normal"`, `visible true` |
 | `"mesh"` | `cols` **req**, `rows` **req** (integers ≥ 1); `colors` **req**: Color[]; `points` **req**: array | **Feature `fill/mesh`.** `colors` and `points` are row-major with exactly `cols × rows` entries; each `points` entry is opaque in 1.0: readers store and round-trip it and are not required to render mesh paints (§20 row 29). |
 | `"shader"` | `src` **req**: relative path; `uniforms`: record name → any | **Feature `fill/shader`.** The shader protocol is not defined by 1.0: readers store and round-trip `src` and `uniforms` and are not required to render shader paints (§20 row 29). |
+
+**Image crop.** `crop` maps the node box, normalized to [0,1]², into normalized image space (`[a, b, c, d, tx, ty]` as in SVG/CSS `matrix()`): a box point (u, v) samples the image at (a·u + c·v + tx, b·u + d·v + ty). With `fit: "crop"` the image is drawn through that transform, so the crop region (the transform's image of the unit square) is stretched to the node box; an absent `crop` is the identity (same as `stretch`). An axis-aligned crop of the image rectangle (x, y, w, h), normalized, is `[w, 0, 0, h, x, y]`. Readers that do not support `crop` with another `fit` ignore it there.
 
 ### 7.2 Stroke
 
@@ -308,10 +324,12 @@ So `"ui:CardActns1/ui:BtnLabel01"` crosses from a library card into a library bu
 | `"text"` | `target`, `field: "content"`, `default?: string` | a `text` node | string or string binding; sets `content` |
 | `"boolean"` | `target`, `field: "visible"`, `default?: boolean` | any non-instance node | boolean or boolean binding; sets `visible` |
 | `"instance"` | `target`, `default?: QId` | an `instance` | a component QId; swaps the target's `of` |
-| `"enum"` | `target`, `field`, `options` (record option → value, ≥ 1) | a node that has `field` (not `type`/`parent`/`at`/`order`/`component`/`overrides`); every option value MUST be valid for `field` | an option name; sets `field` to that option's value |
+| `"enum"` | `options` (record option → value, ≥ 1); `target` + `field` (together, optional); `targets` (optional record option → EnumTarget[]) | `target`: a node that has `field` (not `type`/`parent`/`at`/`order`/`component`/`overrides`); every option value MUST be valid for `field`. Without `target`/`field`, `targets` is required and option values are informative (editors write `null`) | an option name; sets `field` to that option's value, then applies that option's `targets` in order |
 | `"slot"` | `target` | a frame with `slot` | not allowed: slot content is given by nodes with `at` (§9.4); exporters emit `children` or a named `ReactNode` prop |
 
 `target` is an IdPath resolved from the declaring component (§9.5). **A `target` equal to the declaring component's own id names the component root** (through derived components, the base root); its `args` apply at the root with the precedence of `args` (above `props`). Only declared prop targets may name the root: override keys and `at` MUST NOT (`OVERRIDE_PATH_UNRESOLVED`; the root is overridden through `props`). `default` is informative for exporters (the generated prop's default); an instance without the arg renders the component as authored; `enum` props have no `default`. `args` keys MUST be declared props (`ARG_UNKNOWN`).
+
+**Enum targets** (board 27 §8 a). `targets[option]` is a list of EnumTarget `{ target, field, value }`: `target` is an IdPath resolved like a prop target (the declaring component's own id names the root), `field` is a property name of the target node, or `<property>/<key>` for one key of a struct property (`layout/pad`, `layout/gap`, `style/size`, `style/weight`, an instance's `props/opacity`) — the property keeps its other keys (an absent property starts empty). `value` MUST be valid for the field (checked as the property with that key replaced) and MAY be a binding. Every `targets` key MUST be an option (`PROP_TARGET_INVALID`), as are a target that does not resolve, a field the node lacks, or a `target` without `field` (and vice versa). Choosing an option on an instance applies the legacy `target`/`field` value first, then the option's targets in list order, all with the precedence of `args`; args apply in key order. Properties an option does not target keep the main's values. A file whose enum props use only `target`/`field`/`options` is unchanged; editors MAY rewrite such a prop as `targets` (one target per option) when it is edited.
 
 Every PropDef MAY carry **`order`** (an Order key): `component.props` is a record, so canonical serialization sorts it by name; editors list declared props by (`order`, then name), an absent `order` counting as the empty string, and SHOULD write an `order` on every declaration they create. A derived component's redeclaration without `order` keeps the base declaration's position.
 
@@ -371,7 +389,7 @@ A binding MUST name an existing variable (`VARIABLE_MISSING`); `alias:name` name
 | `effects` | `shadow` |
 | `typography` | `typography` |
 | `args` of a text / boolean prop | `string` / `boolean` |
-| script `inputs`, shader `uniforms`, enum `options` | any |
+| script `inputs`, shader `uniforms`, enum `options`, enum target `value` | any |
 
 ### 10.3 Themes
 
@@ -427,6 +445,7 @@ A property equal to its default means exactly the same as the absent property. *
 | frame | `w` / `h` | `{ "mode": "fit" }` | `fit_content` |
 | frame | `clip`, `radius` | `false`, `0` | |
 | rect, polygon, browser | `radius` | `0` | |
+| polygon `star` | `ratio` | `0.38` | |
 | ellipse | `innerRadius`, `startAngle`, `sweepAngle` | `0`, `0`, `360` | |
 | path | `fillRule` | `"nonzero"` | |
 | text | `grow` | `"auto"` | |
@@ -569,9 +588,11 @@ A validator checks, in order: the format version; the structure (the JSON Schema
 | `TEXT_INVISIBLE` | warning | A text node's fill paints nothing. |
 | `FIT_ALL_FILL` | warning | A `fit` frame whose children all `fill` the same axis (circular sizing). |
 | `PROMPT_TARGET_MISSING` | warning | A prompt's `target` names no frame of this document. |
+| `PAGE_UNKNOWN` | warning | A root node's `page` names no page of `pages`; the node is shown on the first page. |
+| `PAGE_NOT_ROOT` | warning | A node that is not a root node has `page`; it is ignored. |
 | `VARIABLE_UNUSED` | warning | A variable is not referenced (not reported for library documents). |
 | `MERGE_WITHOUT_CONFLICTS` | error | `merge` labels are present but there is no `conflicts` table. |
-| `CONFLICT_PATH_INVALID` | error | A conflict `path` addresses what another kind owns (`type`/`parent`/`order`/`at`, or a root member other than meta/themes/imports/assets/components). |
+| `CONFLICT_PATH_INVALID` | error | A conflict `path` addresses what another kind owns (`type`/`parent`/`order`/`at`, or a root member other than meta/themes/imports/assets/components/pages). |
 | `CONFLICT_DUPLICATE` | error | Two conflicts address the same target, or one contains the other. |
 | `CONFLICT_OPEN` | warning | A merge conflict is not resolved yet. |
 | `CONFLICT_STALE` | warning | The document body no longer holds the conflict's `applied` side (edited by hand); editors mark it `edited`. |
@@ -681,6 +702,8 @@ Notes: `F6btn00001` is slot content (`parent` = the instance, `at` = the slot's 
 | 27 | M4 stored merge conflicts (ADR 0012) | Additive, still `0.1.0`, behind feature `merge/conflicts`: root members `merge` and `conflicts` (§21). They are root-only and **not** added to Appendix A (which stays frozen); the serializer ranks them after `components` and lays `conflicts` out as a table. A reader without the feature opens such a file read-only, so it never re-serializes it. The teardown (§10.2 rule 8) only says `kimo merge` is semantic; the board 18 design needs conflicts the editor can load, so they are stored in the file rather than as text markers. |
 | 28 | M6 note and prompt nodes (ADR 0014) | Additive, still `0.1.0`: `author` on `note`/`prompt`; prompt `model` also accepts the struct ModelRef `{provider, model}` (the bare string stays valid but is legacy); prompt `target` (Id); lint `PROMPT_TARGET_MISSING`; `placeholder.by` holds the owner's origin. Appendix A stays frozen, so `author` and `provider` are unranked keys: they serialize after the ranked keys in code-unit order (`…"model":{"model":…,"provider":…},"target":…,"author":…`). |
 | 29 | 1.0 freeze | Format `1.0.0` = format 0.1 as of rows 1–28, declared stable; no field, default, node type or feature changed. Open items decided: mesh `points` and the shader protocol stay opaque (stored and round-tripped, rendering optional; a later minor defines them only through new properties or kinds, §16.4); library-of-library references stay unresolved (row 17); planned lints are not format (row 22). Migration `0.1 → 1.0` rewrites only the header. `kimo://schema/1.0` is the MCP resource name of the schema. |
+| 30 | v1 completeness (board 27), before the 1.0 tag | Additive, no feature flag, no migration (no 1.0 file was published before them): root `pages` (record Id → `{order, name}`) and the root-only placement field `page` (§5.6), lints `PAGE_UNKNOWN` / `PAGE_NOT_ROOT` (warnings, so a concurrent page delete never makes a document invalid); polygon `star: {ratio}` (default 0.38); image `fit: "crop"` with the `crop` semantics of §7.1. Pages are a header record rather than `page` container nodes so that every reader, exporter and tool that walks `parent: null` roots keeps working unchanged, and a page edit merges per id. `pages`, `page`, `star` and `ratio` are unranked (Appendix A stays frozen): `pages` follows `components` at the root, `page` and `star` sort after the ranked node keys. A file without `pages` is exactly the one-page document it always was. |
+| 31 | Enum prop targets (board 27 §8) | Additive, no feature flag, no migration: EnumPropDef `targets` (record option → `{target, field, value}[]`, `field` may be `<property>/<key>`), and `target`/`field` become optional (both or neither; then `targets` is required). Lets one option set several properties on several layers (board 27 "Enum targets": "old opacity-only files migrate to one opacity target per option" is an editor rewrite on edit, not a file migration). `targets` is unranked (Appendix A stays frozen) and serializes after `options`. Fixtures: `valid/components-enum-targets.kimo`, `invalid/PROP_TARGET_INVALID--enum-target-field.kimo`. |
 
 ## 21. Stored merge conflicts (feature `merge/conflicts`)
 
@@ -702,7 +725,7 @@ Every entry has `kind`, `applied` and optional `resolved`, plus `base` / `ours` 
 | `node` | `node` (Id), `restored` (optional record Id → Node) | the whole node (Node schema) | "node · deleted vs edited" |
 | `move` | `node` (Id) | Placement `{ parent, order, at? }` — all three sides required | "parent · moved twice" |
 | `variable` | `variable` (local name), `when` (optional ThemeSelection) | without `when`: the whole Variable; with `when`: the `value` of the themed entry whose `when` equals it exactly | "$brand · light · both changed" |
-| `header` | `path` (JSON Pointer from the root into `meta`, `themes`, `imports`, `assets` or `components`) | the value at `path` | — |
+| `header` | `path` (JSON Pointer from the root into `meta`, `themes`, `imports`, `assets`, `components` or `pages`) | the value at `path` | — |
 
 - `applied` (required): which side the **document body currently holds** — `"ours"`, `"theirs"`, `"base"`, or `"edited"` when the user changed the target by hand after the merge.
 - `resolved` (boolean, default `false`): the user picked a side (or edited the target). Open conflicts are those not resolved.
@@ -742,12 +765,13 @@ Fixtures: `lint/CONFLICT_OPEN--board-18.kimo` (board 18: 5 conflicts, 3 resolved
 
 | Property | Values |
 |---|---|
-| root `themes`, `imports`, `variables`, `assets`, `conflicts`, `nodes` | struct (or string / string[]) |
+| root `themes`, `imports`, `variables`, `assets`, `pages`, `conflicts`, `nodes` | struct (or string / string[]) |
 | `theme`, `when` | strings |
 | `overrides` | struct (Override) |
 | `props` directly under `component` (declared props) | struct (PropDef) |
 | text style `features` | numbers / booleans |
 | node `meta`, `args`, script `inputs`, shader `uniforms`, enum `options` | **opaque** |
+| enum `targets` | **opaque** (unranked key: the subtree is ordered by code unit, so an EnumTarget serializes `field`, `target`, `value`) |
 
 An instance's `props` and a `set` override are structs (their keys are node property names).
 
@@ -763,6 +787,7 @@ An instance's `props` and a `set` override are structs (their keys are node prop
 | Versioning | `FORMAT_VERSION`, `SCHEMA_URL`, `formatStatus`, `MIGRATIONS` (`MIGRATE_0_1_TO_1_0`), `migrate`, `openDocument` |
 | Resolution (§10.4) | `effectiveTheme`, `defaultTheme`, `resolveVariable`, `selectThemedValue`, `defaultTextFill` |
 | Tree | `buildTree`, `compareSiblings` |
+| Pages (§5.6) | `listPages`, `pageOfRoot`, `isOnPage`, `rootsByPage`, `DEFAULT_PAGE_NAME` |
 | Components (§9) | `locate`, `derivedChain`, `baseRoot`, `resolveIdPath`, `declaredProps`, `argEffect`, `instancesOf`, `localComponents`, `COMPONENT_DESCRIPTION_META_KEY` |
 | Expansion (§9.8) | `createExpandedView`, `documentLookup`, `virtualId`, `parseVirtualId`, `qualifyNodeData` |
 | Merge conflicts (§21) | `Conflict`, `MergeInfo`, `listConflicts`, `conflictCounts`, `applyConflictSide`, `applyAllConflicts`, `markConflictEdited`, `finishMerge`, `attachConflicts`, `conflictMatchesBody`, `ThreeWayMerge` (contract), `MERGE_EXIT` |

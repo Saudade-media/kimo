@@ -54,11 +54,11 @@ describe("snap", () => {
     expect(r.snap.markers.length).toBe(12)
   })
 
-  test("threshold is in screen px: 5px at zoom 1, 2.5 world units at zoom 2", () => {
-    expect(snap(q({ x: 360, y: 133, w: 200, h: 160 }, [image])).dy).toBe(-5)
-    expect(snap(q({ x: 360, y: 134, w: 200, h: 160 }, [image])).dy).toBe(0)
-    expect(snap(q({ x: 360, y: 131, w: 200, h: 160 }, [image], { zoom: 2 })).dy).toBe(0)
-    expect(snap(q({ x: 360, y: 130, w: 200, h: 160 }, [image], { zoom: 2 })).dy).toBe(-2)
+  test("threshold is in screen px (board 27 i6rbIi): 6px at zoom 1, 3 world units at zoom 2", () => {
+    expect(snap(q({ x: 360, y: 134, w: 200, h: 160 }, [image])).dy).toBe(-6)
+    expect(snap(q({ x: 360, y: 135, w: 200, h: 160 }, [image])).dy).toBe(0)
+    expect(snap(q({ x: 360, y: 132, w: 200, h: 160 }, [image], { zoom: 2 })).dy).toBe(0)
+    expect(snap(q({ x: 360, y: 131, w: 200, h: 160 }, [image], { zoom: 2 })).dy).toBe(-3)
   })
 
   test("⌘ (disabled) returns a zero delta and nothing to draw", () => {

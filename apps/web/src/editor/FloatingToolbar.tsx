@@ -15,9 +15,10 @@ import { Kbd, ToolButton, Tooltip } from "@kimo/ui"
 import { type CSSProperties, useLayoutEffect, useRef, useState } from "react"
 import { activeToolId, CANVAS_TOOLS, type CanvasToolId, type UiStore } from "../canvas/contract"
 import { HintPill } from "../canvas/hints"
-import { useCanvasToolState } from "../canvas/tool-state"
+import { slotToolId, useCanvasToolState } from "../canvas/tool-state"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
+import { ShapeSlot } from "./ShapeSlot"
 
 /** desing.pen light values for the M6 tool tints until the tokens ship. */
 const TINT_FALLBACK: Record<string, string> = { "note-text": "#3D3205", agent: "#0093A3" }
@@ -36,8 +37,11 @@ export function FloatingToolbar({
   onAsk?: () => void
 }) {
   const tool = useUi(ui, (s) => s.tool)
-  const { placement, penHint } = useCanvasToolState(ui)
+  const { placement, penHint, shape, pathEdit } = useCanvasToolState(ui)
   const active = activeToolId(tool, placement)
+  // Board 27 §5: the slot shows the active slot tool, else the last-used shape.
+  const slotActive = !placement && slotToolId(tool) !== null
+  const slotShape = slotActive ? (slotToolId(tool) ?? shape) : shape
   const bar = useRef<HTMLDivElement | null>(null)
   const [barH, setBarH] = useState<number | null>(null)
   useLayoutEffect(() => {
@@ -62,8 +66,27 @@ export function FloatingToolbar({
           {PEN_HINT}
         </HintPill>
       )}
-      <div ref={bar} className="floating-toolbar" role="toolbar" aria-label="Tools">
+      {/* Board 27 §5 (c): the path-edit toolbar replaces this one while editing a path. */}
+      <div
+        ref={bar}
+        className="floating-toolbar"
+        role="toolbar"
+        aria-label="Tools"
+        hidden={pathEdit !== null}
+      >
         {CANVAS_TOOLS.map((t) => {
+          if (t.slot === "shape") {
+            // One slot for every shape tool, at the first shape tool's place (rkFut).
+            if (t.id !== CANVAS_TOOLS.find((x) => x.slot === "shape")?.id) return null
+            return (
+              <ShapeSlot
+                key="shape-slot"
+                shape={slotShape}
+                active={slotActive}
+                onActivate={onActivate}
+              />
+            )
+          }
           // M3: one-shot actions (Component, ⌥⌘K) are enabled even while the tool spec is not.
           const enabled = t.enabled || t.action !== undefined
           return (
@@ -71,7 +94,7 @@ export function FloatingToolbar({
               key={t.id}
               side="top"
               label={enabled ? t.label : `${t.label} · coming soon`}
-              shortcut={enabled ? t.shortcut : undefined}
+              shortcut={enabled && t.shortcut ? t.shortcut : undefined}
             >
               <ToolButton
                 label={t.label}

@@ -177,6 +177,31 @@ export function withPaintVisible(p: unknown, visible: boolean): unknown {
   return p
 }
 
+/** Board 27 §6 (c) rule K7NZ9: a paint's own blend mode (`fill[i].blend`); "normal" = absent. */
+export function paintBlend(p: unknown): string {
+  return isObj(p) && typeof p.blend === "string" ? p.blend : "normal"
+}
+
+/** Whether a paint can carry `blend` (solid, gradient, image; not mesh / shader). */
+export const paintBlendable = (p: unknown) => paintKind(p) !== "other"
+
+/**
+ * A paint with its blend mode changed. A bare color becomes `{kind:"solid"}` to carry the mode;
+ * "normal" removes the key, and a solid wrapper left with only its color collapses back.
+ */
+export function withPaintBlend(p: unknown, mode: string): unknown {
+  if (mode === "normal") {
+    if (!isObj(p) || p.blend === undefined) return p
+    const { blend: _, ...rest } = p
+    if (rest.kind === "solid" && Object.keys(rest).length === 2) return rest.color
+    return rest
+  }
+  if (typeof p === "string" || isRef(p) || (isObj(p) && typeof p.space === "string"))
+    return { kind: "solid", color: p, blend: mode }
+  if (isObj(p)) return { ...p, blend: mode }
+  return p
+}
+
 /** Fill rows in panel order: the top paint (last in the list) first. */
 export function rowsTopFirst<T>(list: readonly T[]): { item: T; index: number }[] {
   return list.map((item, index) => ({ item, index })).reverse()
@@ -200,6 +225,7 @@ const FIT_LABEL: Record<string, string> = {
   contain: "Contain",
   stretch: "Stretch",
   tile: "Tile",
+  crop: "Crop",
 }
 
 /**
@@ -215,7 +241,10 @@ export function paintRowLabel(p: unknown): { label: string; font: "mono" | "sans
     if (isObj(color) && color.space === "oklch") return { label: "OKLCH", font: "sans" }
     if (isObj(color) && color.space === "display-p3") return { label: "Display P3", font: "sans" }
     if (p.kind === "image")
-      return { label: `Image · ${FIT_LABEL[String(p.fit ?? "cover")] ?? "Cover"}`, font: "sans" }
+      return {
+        label: `Image · ${Array.isArray(p.crop) ? "Crop" : (FIT_LABEL[String(p.fit ?? "cover")] ?? "Cover")}`,
+        font: "sans",
+      }
     if (typeof p.kind === "string") return { label: titleCase(p.kind), font: "sans" }
   }
   return { label: "—", font: "sans" }
@@ -468,8 +497,13 @@ export function withSide(s: unknown, side: keyof Sides, value: number): Record<s
   // widths are literal numbers).
   const w = strokeWidthOf(s)
   const u = typeof w === "number" ? w : 1
-  const sides = strokeSides(s) ?? { t: u, r: u, b: u, l: u }
-  const next: Record<string, number> = { ...sides, [side]: Math.max(0, value) }
+  // Board 27 §7: a side bound to a variable keeps its binding when another side is edited.
+  const rw = strokeObj(s)?.width
+  const sides: Record<string, unknown> =
+    isObj(rw) && !isRef(rw)
+      ? { t: rw.t ?? 0, r: rw.r ?? 0, b: rw.b ?? 0, l: rw.l ?? 0 }
+      : { t: u, r: u, b: u, l: u }
+  const next: Record<string, unknown> = { ...sides, [side]: Math.max(0, value) }
   // An absent side is 0: store only non-zero sides; all sides 0 is a zero-width stroke (not an
   // empty `{}` sides object).
   for (const k of Object.keys(next)) if (next[k] === 0) delete next[k]

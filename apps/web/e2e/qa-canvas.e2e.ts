@@ -299,7 +299,11 @@ export const scenarios: Scenario[] = [
         ["frame", "frame"],
         ["text", "text"],
       ] as const) {
-        await page.locator(`[data-tool="${tool}"]`).click()
+        // Board 27 §5: Rectangle and Ellipse share the shape slot; the flyout lists both.
+        if (tool === "rectangle" || tool === "ellipse") {
+          await page.locator(".shape-slot__caret").click()
+          await page.locator(`.shape-flyout [data-tool="${tool}"]`).click()
+        } else await page.locator(`.floating-toolbar [data-tool="${tool}"]`).click()
         expect((await ui(page)).tool === want, `toolbar ${tool} → ${(await ui(page)).tool}`)
       }
     },
@@ -445,7 +449,7 @@ export const scenarios: Scenario[] = [
       expect(!sel.some((id) => dup.includes(id)), `selection pruned after undo (${sel})`)
       // Frame r1+r2, then duplicate a child inside the frame (+10/+10, same parent).
       await select(page, [r1, r2])
-      await page.keyboard.press("ControlOrMeta+g")
+      await page.keyboard.press("ControlOrMeta+Alt+g") // ⌥⌘G wrap in frame
       await settle(page)
       const frame = (await ui(page)).selection[0] as string
       expect((await node(page, r1))?.parent === frame, "framed")
@@ -457,8 +461,8 @@ export const scenarios: Scenario[] = [
       const r2n = await node(page, r2)
       expect(
         cn?.parent === frame &&
-          cn.x === (r2n?.x as number) + 10 &&
-          cn.y === (r2n?.y as number) + 10,
+          cn.x === (r2n?.x as number) + 16 &&
+          cn.y === (r2n?.y as number) + 16,
         `child dup ${JSON.stringify(cn)}`,
       )
       // Framing nodes with different parents does nothing.
@@ -658,7 +662,7 @@ export const scenarios: Scenario[] = [
       const hb = await world(page, hero)
       await select(page, [navbar, hero])
       await page.locator(".canvas-host").focus()
-      await page.keyboard.press("ControlOrMeta+g")
+      await page.keyboard.press("ControlOrMeta+Alt+g") // ⌥⌘G wrap in frame
       await settle(page)
       const f = (await ui(page)).selection[0] as string
       expect((await node(page, navbar))?.parent === f, "framed")

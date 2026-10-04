@@ -51,6 +51,27 @@
       "uniqueItems": true,
       "description": "Optional index of component node ids."
     },
+    "pages": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9]{6,24}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["order", "name"],
+        "properties": {
+          "order": {
+            "$ref": "#/$defs/OrderKey"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name (duplicates allowed)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Pages: page id → { order, name }. Absent or empty = one implicit page holding every root."
+    },
     "merge": {
       "$ref": "#/$defs/MergeInfo"
     },
@@ -273,6 +294,10 @@
         },
         "meta": {
           "$ref": "#/$defs/Meta"
+        },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
         },
         "rotation": {
           "type": "number",
@@ -632,6 +657,10 @@
         "meta": {
           "$ref": "#/$defs/Meta"
         },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
+        },
         "rotation": {
           "type": "number",
           "default": 0,
@@ -774,6 +803,10 @@
         },
         "meta": {
           "$ref": "#/$defs/Meta"
+        },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
         },
         "rotation": {
           "type": "number",
@@ -1005,6 +1038,10 @@
         "meta": {
           "$ref": "#/$defs/Meta"
         },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
+        },
         "rotation": {
           "type": "number",
           "default": 0,
@@ -1161,6 +1198,10 @@
         "meta": {
           "$ref": "#/$defs/Meta"
         },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
+        },
         "rotation": {
           "type": "number",
           "default": 0,
@@ -1294,8 +1335,9 @@
         },
         "fit": {
           "type": "string",
-          "enum": ["cover", "contain", "stretch", "tile"],
-          "default": "cover"
+          "enum": ["cover", "contain", "stretch", "tile", "crop"],
+          "default": "cover",
+          "description": "\"crop\": the `crop` region of the image, stretched to the node box."
         },
         "crop": {
           "type": "array",
@@ -1396,6 +1438,10 @@
         },
         "meta": {
           "$ref": "#/$defs/Meta"
+        },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
         },
         "component": {
           "anyOf": [
@@ -1737,6 +1783,10 @@
         },
         "meta": {
           "$ref": "#/$defs/Meta"
+        },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
         },
         "rotation": {
           "type": "number",
@@ -2246,6 +2296,10 @@
         "meta": {
           "$ref": "#/$defs/Meta"
         },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
+        },
         "rotation": {
           "type": "number",
           "default": 0,
@@ -2448,6 +2502,10 @@
         "meta": {
           "$ref": "#/$defs/Meta"
         },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
+        },
         "rotation": {
           "type": "number",
           "default": 0,
@@ -2530,6 +2588,19 @@
         "radius": {
           "$ref": "#/$defs/Radius",
           "default": 0
+        },
+        "star": {
+          "type": "object",
+          "properties": {
+            "ratio": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "default": 0.38
+            }
+          },
+          "additionalProperties": false,
+          "description": "Star: inner/outer radius ratio; points = sides"
         }
       },
       "additionalProperties": false
@@ -2582,6 +2653,10 @@
         },
         "meta": {
           "$ref": "#/$defs/Meta"
+        },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
         },
         "rotation": {
           "type": "number",
@@ -2789,7 +2864,7 @@
         },
         {
           "type": "object",
-          "required": ["type", "target", "field", "options"],
+          "required": ["type", "options"],
           "properties": {
             "type": {
               "type": "string",
@@ -2808,6 +2883,29 @@
                 "^.*$": {}
               },
               "minProperties": 1
+            },
+            "targets": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["target", "field", "value"],
+                    "properties": {
+                      "target": {
+                        "$ref": "#/$defs/IdPath"
+                      },
+                      "field": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9]*(/[A-Za-z][A-Za-z0-9]*)?$"
+                      },
+                      "value": {}
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
             },
             "order": {
               "$ref": "#/$defs/OrderKey"
@@ -2986,6 +3084,10 @@
         "meta": {
           "$ref": "#/$defs/Meta"
         },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
+        },
         "rotation": {
           "type": "number",
           "default": 0,
@@ -3128,6 +3230,10 @@
         },
         "meta": {
           "$ref": "#/$defs/Meta"
+        },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
         },
         "rotation": {
           "type": "number",
@@ -3632,6 +3738,10 @@
         },
         "meta": {
           "$ref": "#/$defs/Meta"
+        },
+        "page": {
+          "$ref": "#/$defs/Id",
+          "description": "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page."
         },
         "rotation": {
           "type": "number",

@@ -254,15 +254,18 @@ export function SkillsMenu({
       ))}
       <MenuDivider />
       <div className="agent-menu__footer">
-        <CompactButton
-          variant="ghost"
-          height={26}
-          padX={8}
-          icon={<FolderOpen />}
-          onClick={() => onOpenFolder?.()}
-        >
-          Open skills folder
-        </CompactButton>
+        {/* No user skills folder in the browser (platform.skills is desktop only). */}
+        {onOpenFolder && (
+          <CompactButton
+            variant="ghost"
+            height={26}
+            padX={8}
+            icon={<FolderOpen />}
+            onClick={() => onOpenFolder()}
+          >
+            Open skills folder
+          </CompactButton>
+        )}
         <span className="agent-menu__spacer" aria-hidden="true" />
         <span className="agent-menu__hint">↵ insert · ⌥↵ toggle</span>
       </div>

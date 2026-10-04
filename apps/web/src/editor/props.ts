@@ -55,6 +55,8 @@ const KIND: Record<string, string> = {
 /** Human kind for the selection badge (`Frame`, `Text`, `Component`, …). */
 export function kindLabel(node: NodeData): string {
   if (node.component === true || isObj(node.component)) return "Component"
+  // Board 27 §5: a star is a polygon with `star`.
+  if (node.type === "polygon" && isObj(node.star)) return "Star"
   return KIND[node.type] ?? node.type
 }
 
@@ -108,7 +110,7 @@ export function typeIcon(node: NodeData): string {
     case "path":
       return "spline"
     case "polygon":
-      return "hexagon"
+      return isObj(node.star) ? "star" : "hexagon"
     case "icon":
       return "smile"
     case "note":

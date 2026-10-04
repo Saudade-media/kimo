@@ -26,6 +26,7 @@
     "allow-kimo-skills-list",
     "allow-kimo-skills-read",
     "allow-kimo-skills-watch",
-    "allow-kimo-skills-unwatch"
+    "allow-kimo-skills-unwatch",
+    "allow-kimo-skills-reveal"
   ]
 }

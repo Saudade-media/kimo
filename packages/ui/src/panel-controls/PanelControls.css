@@ -1,0 +1,165 @@
+/*
+ * Board 27 §6 panel controls (desing.pen tnlUt).
+ * PanelIconToggle: IconButton (ZMxjt) instances IFtI5 / T4K2F / JIb4r (28) and F1NkuB / r7ZOxn
+ *   (24): radius-md, center, icon 14. On: fill bg-muted, icon text-primary. Off: bg-subtle +
+ *   text-secondary (subtle) or #00000000 + text-tertiary (clear).
+ * PanelCheckbox: atlT6 row gap 8 center; Box V3Zqy 14 × 14 radius 3 fill accent + check 10
+ *   on-accent; Label H3rh3 sans text-sm normal text-primary (text box 15 high).
+ * PaintBlendChip: FC2in padding [0, 0, 0, 24]; Chip I5CR0 bg-muted radius-xs padding [1, 6];
+ *   Label c8t5z sans text-xs normal text-secondary.
+ */
+.kimo-panel-icon-toggle {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-panel-icon-toggle--24 {
+  width: 24px;
+  height: 24px;
+}
+
+.kimo-panel-icon-toggle--clear {
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-panel-icon-toggle:hover:not(:disabled):not(.kimo-panel-icon-toggle--on) {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-panel-icon-toggle--on {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-panel-icon-toggle:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-panel-icon-toggle:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.kimo-panel-icon-toggle__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-panel-icon-toggle__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-panel-checkbox {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-panel-checkbox__box {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--kimo-border-strong);
+  color: var(--kimo-on-accent);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-panel-checkbox__box--on {
+  background: var(--kimo-accent);
+  box-shadow: none;
+}
+
+.kimo-panel-checkbox__box > svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+/* The native checkbox covers the Box, transparent (keyboard + a11y). */
+.kimo-panel-checkbox__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.kimo-panel-checkbox__box:has(.kimo-panel-checkbox__input:focus-visible) {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-panel-checkbox__box:has(.kimo-panel-checkbox__input:disabled) {
+  opacity: 0.5;
+}
+
+.kimo-panel-checkbox__label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.kimo-paint-blend-chip {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  padding: 0 0 0 24px;
+}
+
+.kimo-paint-blend-chip__chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}

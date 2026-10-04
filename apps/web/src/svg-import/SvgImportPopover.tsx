@@ -8,6 +8,10 @@
  *   Desc (W0Dapp): sans 11 text-secondary, lineHeight 1.45.
  *   Options (HejPp, ldWT8, z9D7g): row, space-between, center; Label sans 12 text-primary +
  *     Toggle (on / on / off).
+ *   Board 27 §6 (e) r6nLx "Outline strokes enabled" (lxXp0 > Option · Outline strokes vMlWH):
+ *     column, gap 2: Row (EiX2l, space-between, center: Label + Toggle) · Sub (G3tQz, sans 11
+ *     text-tertiary, lineHeight 1.45, fill). Enabled when the parse found ≥ 1 stroked path (the
+ *     count is in the sub line); otherwise disabled with "No strokes in this file".
  *   Actions (VM4GH): row, gap 6, padding [4, 0, 0, 0], justify end: Cancel (Button/Ghost h 28,
  *     [0, 10], 12) · Import (Button/Primary h 28, [0, 12], 12).
  */
@@ -33,6 +37,8 @@ export interface SvgImportPopoverProps {
   initial?: SvgImportChoice
   /** Outline strokes needs the canvas' outliner; false disables that toggle. */
   canOutline?: boolean
+  /** Stroked paths found by the parse (`SvgStats.stroked`): 0 disables Outline strokes. */
+  strokedPaths?: number
   onImport: (choice: SvgImportChoice) => void
   onCancel: () => void
   anchor?: HTMLElement | { x: number; y: number; width: number; height: number } | null
@@ -45,6 +51,7 @@ export function SvgImportPopover({
   imageDescription,
   initial,
   canOutline = true,
+  strokedPaths = 0,
   onImport,
   onCancel,
   anchor,
@@ -53,8 +60,8 @@ export function SvgImportPopover({
   const [mode, setMode] = useState<SvgImportMode>(initial?.mode ?? "vector")
   const [options, setOptions] = useState<SvgImportOptions>(initial?.options ?? DEFAULT_SVG_OPTIONS)
   const id = useId()
-  const toggle = (k: keyof SvgImportOptions, label: string, disabled = false) => (
-    <div className="svg-import__option" key={k}>
+  const row = (k: keyof SvgImportOptions, label: string, disabled: boolean, sub?: string) => (
+    <div className="svg-import__option" key={sub === undefined ? k : undefined}>
       <span id={`${id}-${k}`} className="svg-import__option-label">
         {label}
       </span>
@@ -62,10 +69,14 @@ export function SvgImportPopover({
         checked={options[k] && !disabled}
         disabled={disabled}
         aria-labelledby={`${id}-${k}`}
+        {...(sub !== undefined ? { "aria-describedby": `${id}-${k}-sub` } : {})}
         onChange={(v) => setOptions((o) => ({ ...o, [k]: v }))}
       />
     </div>
   )
+  const toggle = (k: keyof SvgImportOptions, label: string) => row(k, label, false)
+  const outlineOff = !canOutline || strokedPaths < 1
+  const outlineSub = outlineStrokesSub(strokedPaths)
   return (
     <Popover
       wide
@@ -101,7 +112,12 @@ export function SvgImportPopover({
       {mode === "vector" && [
         toggle("keepGroups", "Keep groups as frames"),
         toggle("matchVariables", "Match fills to variables"),
-        toggle("outlineStrokes", "Outline strokes", !canOutline),
+        <div className="svg-import__option-group" key="outlineStrokes">
+          {row("outlineStrokes", "Outline strokes", outlineOff, outlineSub)}
+          <p id={`${id}-outlineStrokes-sub`} className="svg-import__option-sub">
+            {outlineSub}
+          </p>
+        </div>,
       ]}
       <div className="svg-import__actions">
         <Button variant="ghost" size="sm" className="svg-import__cancel" onClick={onCancel}>
@@ -118,4 +134,15 @@ export function SvgImportPopover({
       </div>
     </Popover>
   )
+}
+
+/**
+ * Sub line of Outline strokes (G3tQz): "6 stroked paths become filled shapes — they scale
+ * without changing weight. Dashes are kept as segments.", or "No strokes in this file".
+ */
+export function outlineStrokesSub(stroked: number): string {
+  if (stroked < 1) return "No strokes in this file"
+  return stroked === 1
+    ? "1 stroked path becomes a filled shape — it scales without changing weight. Dashes are kept as segments."
+    : `${stroked} stroked paths become filled shapes — they scale without changing weight. Dashes are kept as segments.`
 }

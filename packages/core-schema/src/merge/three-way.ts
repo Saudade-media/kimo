@@ -744,7 +744,7 @@ function referencedVariables(doc: Obj): string[] {
 
 const BODY_KEYS = new Set(["nodes", "variables", "features", "conflicts", "merge", "components"])
 /** Header members whose conflicts can be stored (spec §21.2 `header`). */
-const RECORD_HEADER = new Set(["meta", "themes", "imports"])
+const RECORD_HEADER = new Set(["meta", "themes", "imports", "pages"])
 
 function mergeHeader(b: Obj, o: Obj, t: Obj, ctr: Counter, conflicts: Pending[]): Obj {
   const out: Obj = {}

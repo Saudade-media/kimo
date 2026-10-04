@@ -18,6 +18,7 @@ import {
   Id,
   META_KEY_PATTERN,
   Num,
+  OrderKey,
   RELATIVE_PATH_PATTERN,
   RecordOf,
   Ref,
@@ -138,6 +139,16 @@ export type AssetEntry = Static<typeof AssetEntry>
 /** Optional asset manifest: content-addressed file name (under `assets/`) → entry. */
 export const Assets = RecordOf(ASSET_FILE_PATTERN, AssetEntry)
 
+/**
+ * One page (root `pages`). Pages partition the root nodes: a root node's `page` names its page;
+ * a root without `page` (or naming no page) is on the first page. Pages list by (`order`, id).
+ */
+export const Page = Strict({
+  order: OrderKey,
+  name: Type.String({ description: "Display name (duplicates allowed)." }),
+})
+export type Page = Static<typeof Page>
+
 /** Pattern of `format` accepted by the 1.0 schema (any 1.0 patch). */
 export const FORMAT_1_0_PATTERN = "^1\\.0\\.(0|[1-9][0-9]*)$"
 
@@ -157,6 +168,12 @@ export const KimoDocument = Strict(
     assets: opt(Assets),
     components: opt(
       Type.Array(Id, { uniqueItems: true, description: "Optional index of component node ids." }),
+    ),
+    pages: opt(
+      RecordOf(ID_PATTERN, Page, {
+        description:
+          "Pages: page id → { order, name }. Absent or empty = one implicit page holding every root.",
+      }),
     ),
     merge: opt(MergeInfo),
     conflicts: opt(Conflicts),

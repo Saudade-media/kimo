@@ -9,7 +9,7 @@ Run a prompt with **Run** in its footer, the play button on its layer row, or **
 - With a **target** (right-click a frame › **Set as target**), the run is scoped to that frame.
 - Without one, Kimo creates a frame named `<prompt> · result` to the right of the prompt and the agent builds into it.
 
-A prompt can name its own model; otherwise the run uses the composer's model. Notes attached to the target are included, with their authors. A prompt can't run while another turn is running. Its run status (running, failed, last run with edits and cost) lasts until you reload.
+A prompt can name its own model; otherwise the run uses the composer's model. Notes attached to the target are included, with their authors. A prompt can't run while another turn is running. Its run status (running, failed, last run with edits and cost) is kept on this device, not in the file, so the last run and a failure are still shown after a reload.
 
 Prompts and notes are not design: the [Code tab](../export/code-tab.md) and exports skip them.
 
@@ -20,4 +20,4 @@ While an agent builds a frame, the frame carries a **placeholder** flag and the 
 An agent clears its placeholders when its turn ends, whether it finished, was stopped or failed. If a placeholder stays behind and its agent is no longer running, the tag reads **Interrupted**; right-click it for **Clear flag**, **Resume agent**, or **Ask Kimo to finish** when the session is gone.
 
 > [!NOTE]
-> The frames Kimo prepares for **Side by side** are cleared by each variant's agent when it finishes. If an agent stops early, its frame may be left **Interrupted**; clear the flag from the context menu.
+> When a **Side by side** turn ends (finished, stopped or failed), Kimo clears the flag on every variant frame an agent built into, and removes the frames that are still empty. Their rows read **Discarded**.

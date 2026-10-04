@@ -61,3 +61,9 @@
   left: 16px;
   z-index: 3;
 }
+
+/* Board 27 §4: rulers on → past the 20 px strips (RULER 20 + 16). */
+.canvas-zoom-badge--rulers {
+  top: 36px;
+  left: 36px;
+}

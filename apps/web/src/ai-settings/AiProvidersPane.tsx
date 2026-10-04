@@ -42,6 +42,8 @@ import {
   Sparkle,
   SquareChevronRight,
   SquareTerminal,
+  Star,
+  StarOff,
   Terminal,
   Trash2,
 } from "lucide-react"
@@ -63,17 +65,21 @@ import {
   cliPill,
   cliState,
   defaultBaseURL,
+  defaultProviderChoices,
   hostOf,
   isCloud,
+  isConnectedRow,
   keyPlaceholder,
   keyWithheld,
   maskKey,
+  modelChoices,
   money,
   OLLAMA_ID,
   originOf,
   parseAmount,
   providerMeta,
   providerPill,
+  selectionForProvider,
   storageLabel,
 } from "./model"
 import { useAiProviders, useAiSettingsState } from "./runtime"
@@ -152,6 +158,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
           label={s.agentStatus.label}
         />
       </div>
+      <DefaultRows s={s} ctl={ctl} />
       <p className="ai-intro" data-pen="L56aX">
         {introCopy(s)}
       </p>
@@ -300,6 +307,90 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
         )}
       />
     </div>
+  )
+}
+
+// --- Default provider / model (board 27 §10 (a) q2UAb) -------------------------------------------
+
+/**
+ * Setting · Default provider (AseJa) + Setting · Default model (WmFb2): SettingRow (MuoTX)
+ * instances whose Control holds a 180 × 28 Select (gP276 look). Only connected providers are
+ * listed; none → disabled "Connect a provider first". The model list is that provider's.
+ */
+function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController }) {
+  const choices = defaultProviderChoices({
+    platform: s.platform,
+    providers: s.providers,
+    clis: s.clis,
+    selection: s.defaultSelection,
+  })
+  const sel = s.defaultSelection
+  const current = choices.find((c) => c.provider === sel?.provider) ?? null
+  const none = choices.length === 0
+  return (
+    <>
+      <SettingRow
+        data-pen="AseJa"
+        className="ai-default-row"
+        label="Default provider"
+        description="New agent sessions start here. Only connected providers are listed."
+        control={
+          <Select
+            className="ai-default-select"
+            data-testid="ai-default-provider"
+            label="Default provider"
+            disabled={none}
+            placeholder={none ? "Connect a provider first" : "Choose…"}
+            options={choices.map((c) => ({ value: c.provider, label: c.label }))}
+            value={current?.provider ?? null}
+            onChange={(v) => void ctl.setDefault(selectionForProvider(choices, v))}
+          />
+        }
+      />
+      <SettingRow
+        data-pen="WmFb2"
+        className="ai-default-row"
+        label="Default model"
+        description="Fast model is used for titles and summaries."
+        control={
+          <Select
+            className="ai-default-select"
+            data-testid="ai-default-model"
+            label="Default model"
+            disabled={!current}
+            placeholder={none ? "Connect a provider first" : "Choose…"}
+            options={current?.models ?? []}
+            value={current ? (sel?.model ?? current.model) : null}
+            onChange={(v) => {
+              if (current) void ctl.setDefault({ provider: current.provider, model: v })
+            }}
+          />
+        }
+      />
+    </>
+  )
+}
+
+/**
+ * Provider row first action (LLVpP / DdxQS › Copy config lxvvC): h 28, padding [0, 12], gap 6,
+ * radius-pill, no fill. Default: star 14 + label text-primary; Make default: star-off 14
+ * text-tertiary + label text-secondary.
+ */
+function DefaultAction({ isDefault, onMake }: { isDefault: boolean; onMake: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={`ai-button ai-button--ghost ai-default-action${isDefault ? " is-default" : ""}`}
+      icon={isDefault ? <Star /> : <StarOff />}
+      aria-pressed={isDefault}
+      data-testid="ai-default-action"
+      onClick={() => {
+        if (!isDefault) onMake()
+      }}
+    >
+      {isDefault ? "Default" : "Make default"}
+    </Button>
   )
 }
 
@@ -532,6 +623,12 @@ function ProviderBlock({
   else
     actions = (
       <>
+        {isConnectedRow(row.status) && (
+          <DefaultAction
+            isDefault={row.isDefault}
+            onMake={() => void ctl.setDefault({ provider: row.id, model: row.models.agent })}
+          />
+        )}
         <GhostButton icon={<Activity />} busy={testing} onClick={() => void ctl.test(row.id)}>
           Test
         </GhostButton>
@@ -553,21 +650,6 @@ function ProviderBlock({
       {expanded && <ProviderDetail row={row} s={s} ctl={ctl} onRemoved={onToggle} />}
     </>
   )
-}
-
-function modelOptions(kind: ProviderKind, current: string[]) {
-  const catalog = MODEL_CATALOG[isCloud(kind) ? "anthropic" : kind]
-  const seen = new Set<string>()
-  const out: { value: string; label: string }[] = []
-  for (const m of catalog) {
-    // Dated snapshots and their aliases share a label: keep the first id per label.
-    if (seen.has(m.label)) continue
-    seen.add(m.label)
-    out.push({ value: m.id, label: m.label })
-  }
-  for (const c of current)
-    if (c && !out.some((o) => o.value === c)) out.push({ value: c, label: c })
-  return out
 }
 
 function ProviderDetail({
@@ -653,7 +735,7 @@ function ProviderDetail({
               <Select
                 className="ai-select"
                 label={`${role === "agent" ? "Agent" : "Fast"} model`}
-                options={modelOptions(row.kind, [row.models.agent, row.models.fast])}
+                options={modelChoices(row.kind, [row.models.agent, row.models.fast])}
                 value={row.models[role]}
                 onChange={(v) => void ctl.setModels(row.id, { ...row.models, [role]: v })}
               />

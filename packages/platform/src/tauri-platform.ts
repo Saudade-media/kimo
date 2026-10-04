@@ -26,6 +26,7 @@ import type {
   WindowState,
 } from "./tauri"
 import {
+  type EditorMenuAction,
   type FileRef,
   type GitChange,
   type GitState,
@@ -121,6 +122,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
   const settingsEvents = new Emitter<[string, unknown]>()
   const openEvents = new Emitter<[OpenRequest]>()
   const helpEvents = new Emitter<[HelpMenuAction]>()
+  const menuEvents = new Emitter<[EditorMenuAction]>()
   let closeHandler: (() => Promise<boolean> | boolean) | null = null
   let windowState: WindowState = { focused: true, fullscreen: false, trafficLightPosition: null }
   let updaterStatus: UpdaterStatus = { state: "idle" }
@@ -157,6 +159,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     "kimo://settings-changed": ({ key, value }) => settingsEvents.emit(key, value),
     "kimo://open-request": (r) => openEvents.emit(r),
     "kimo://help-menu": ({ action }) => helpEvents.emit(action),
+    "kimo://editor-menu": ({ action }) => menuEvents.emit(action),
   }
   const unlisteners = await Promise.all(
     (Object.keys(handlers) as TauriEvent[]).map((e) =>
@@ -277,6 +280,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
         await call("kimo_help_show_logs", none)
       },
     },
+    menu: { onAction: (l) => menuEvents.on(l) },
     capabilities,
     // M6 user skills (ADR 0014 §10): own command list (TAURI_SKILLS_COMMANDS), not TAURI_COMMANDS.
     skills: createTauriSkills({

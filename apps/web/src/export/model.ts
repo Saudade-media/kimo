@@ -60,6 +60,28 @@ export const DEFAULT_PDF_TOGGLES: PdfToggles = { embedFonts: true, bleed: false 
 /** "Include bleed": 3 mm on every side, in PDF points. */
 export const PDF_BLEED_PT = 8.5
 
+/**
+ * React + Tailwind "Tailwind theme" (board 27 §10 (c) f6LWt, rule jmMl8): where the theme goes
+ * — `@theme` in tokens.css (v4, default) · tailwind.config.ts (v3) · Don't emit — and "Map
+ * variables to theme tokens" (on by default).
+ */
+export type TailwindThemeOutput = "v4" | "v3" | "none"
+export interface TailwindChoices {
+  theme: TailwindThemeOutput
+  mapTokens: boolean
+}
+export const DEFAULT_TAILWIND: TailwindChoices = { theme: "v4", mapTokens: true }
+/**
+ * The Theme output Select's options. The board's v4 label reads "@theme in globals.css (v4)";
+ * the React exporter writes the `@theme` block into its `tokens.css` (next to the CSS variables),
+ * so the label names the file it really writes.
+ */
+export const TAILWIND_THEMES: readonly { value: TailwindThemeOutput; label: string }[] = [
+  { value: "v4", label: "@theme in tokens.css (v4)" },
+  { value: "v3", label: "tailwind.config.ts (v3)" },
+  { value: "none", label: "Don't emit" },
+]
+
 const STORE = "kimo.export"
 
 /** The dialog's remembered options (`kimo.export.toggles`); the Code tab reads the same. */

@@ -50,13 +50,35 @@ export function logsLabel(os: KimoPlatform["os"]): string {
       : "Show logs in Finder"
 }
 
-export const DOCS_URL = "https://kimo.dev/docs"
+export const DOCS_URL = "https://kimo.design/docs/"
 export const REPO_URL = REPO_URL_PLACEHOLDER
 
+/**
+ * Where provider keys live, for the About › Privacy meta: the OS store on desktop (the same names
+ * as AI providers' Storage line), the page's localStorage in the browser.
+ */
+export function keysLocation(host: Pick<KimoPlatform, "kind" | "os">): string {
+  if (host.kind !== "desktop") return "keys stay in this browser"
+  return host.os === "windows"
+    ? "keys stay in Credential Manager"
+    : host.os === "linux"
+      ? "keys stay in Secret Service"
+      : "keys stay in your Keychain"
+}
+
 /** The four About links (t4H8L): label · meta · icon · URL. */
-export function aboutLinks(version: string) {
+export function aboutLinks(
+  version: string,
+  host: Pick<KimoPlatform, "kind" | "os"> = { kind: "browser", os: "web" },
+) {
   return [
-    { id: "docs", label: "Documentation", meta: "kimo.dev/docs", icon: "book-open", url: DOCS_URL },
+    {
+      id: "docs",
+      label: "Documentation",
+      meta: "kimo.design/docs",
+      icon: "book-open",
+      url: DOCS_URL,
+    },
     {
       id: "source",
       label: "Source code",
@@ -74,7 +96,7 @@ export function aboutLinks(version: string) {
     {
       id: "privacy",
       label: "Privacy",
-      meta: "No telemetry · keys stay in your keychain",
+      meta: `No telemetry · ${keysLocation(host)}`,
       icon: "shield",
       url: `${REPO_URL}/blob/main/SECURITY.md`,
     },

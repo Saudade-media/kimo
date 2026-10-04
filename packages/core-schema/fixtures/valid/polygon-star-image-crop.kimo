@@ -1,0 +1,11 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"nodes": {
+"Photo00001": {"type":"rect","parent":null,"order":"a2","name":"Photo","x":240,"y":0,"w":200,"h":150,"fill":{"kind":"image","src":"./assets/0123456789abcdef.png","fit":"crop","crop":[0.5,0,0,0.5,0.25,0.25]}}
+
+, "Star000001": {"type":"polygon","parent":null,"order":"a0","name":"Star","x":0,"y":0,"w":100,"h":100,"sides":5,"fill":"#FFCC00","star":{"ratio":0.5}}
+
+, "Star000002": {"type":"polygon","parent":null,"order":"a1","name":"Star (default ratio)","x":120,"y":0,"w":100,"h":100,"sides":6,"star":{}}
+}
+}

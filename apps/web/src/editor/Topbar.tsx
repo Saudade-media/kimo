@@ -13,16 +13,18 @@
  */
 import type { RecentFile } from "@kimo/platform"
 import type { SyncStatus } from "@kimo/sync"
-import { Button, IconButton, KimoLogo, MenuItem } from "@kimo/ui"
+import { Button, IconButton, KimoLogo, Tooltip } from "@kimo/ui"
 import { useEffect, useState } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
+import { useCanvasViewPrefs } from "../canvas/view-prefs"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
-import { MenuPopover } from "../lib/MenuPopover"
 import { getTheme } from "../lib/theme"
 import { useRuntime } from "../platform/runtime"
 import { runHelpAction } from "../settings/help"
+import { shortcutLabel } from "../shortcuts/shortcuts"
 import { FileMenu, type FileMenuActions, RECENT_LIMIT } from "./FileMenu"
+import { ViewMenu } from "./ViewMenu"
 
 export type { FileMenuActions } from "./FileMenu"
 
@@ -35,6 +37,11 @@ export interface TopbarProps extends FileMenuActions {
   onRename(name: string): void
   onExport(): void
   onPreview(): void
+  /**
+   * Board 27 §9 (b) mtgng: the frame Preview will open (tooltip "Preview “<name>”"); null = the
+   * page has no top-level frame (button at 40 %, "Page has no frames"); undefined = unknown.
+   */
+  previewTarget?: string | null
   onHome(): void
 }
 
@@ -111,15 +118,23 @@ export function useFileMenu(actions: FileMenuActions) {
   }
 }
 
-/** Zoom, Theme, Preview, Export (board 03 / XDqrb trailing controls). */
+/**
+ * Zoom, Theme, Preview, Export (board 03 / XDqrb trailing controls). The zoom control opens the
+ * View menu (board 27 §4 rmQMe).
+ */
 export function TopbarTrailing({
   ui,
   canvas,
   onPreview,
   onExport,
-}: Pick<TopbarProps, "ui" | "canvas" | "onPreview" | "onExport">) {
+  previewTarget,
+}: Pick<TopbarProps, "ui" | "canvas" | "onPreview" | "onExport" | "previewTarget">) {
   const zoom = useUi(ui, (s) => s.viewport.zoom)
   const toggleAppearance = useToggleAppearance()
+  const { platform } = useRuntime()
+  const prefs = useCanvasViewPrefs(platform.settings)
+  /** Board 27 §4: the zoom control opens the View menu (F5DXf). */
+  const [viewAnchor, setViewAnchor] = useState<HTMLElement | null>(null)
   const zoomTo = (z: number) => {
     const c = canvas()
     if (c) c.zoomTo(z)
@@ -127,59 +142,68 @@ export function TopbarTrailing({
   }
   return (
     <>
-      <MenuPopover
-        label="Zoom"
-        align="end"
-        trigger={(t) => (
-          <button type="button" className="topbar__zoom" aria-label="Zoom" {...t}>
-            <span className="topbar__zoom-value">{Math.round(zoom * 100)}%</span>
-            <span className="topbar__zoom-icon">
-              <Icon name="chevron-down" size={12} />
-            </span>
-          </button>
-        )}
+      <button
+        type="button"
+        className="topbar__zoom"
+        aria-label="Zoom"
+        aria-haspopup="menu"
+        aria-expanded={viewAnchor !== null}
+        onClick={(e) => {
+          const el = e.currentTarget
+          setViewAnchor((a) => (a ? null : el))
+        }}
       >
-        {() => (
-          <>
-            <MenuItem
-              icon={<Icon name="zoom-in" size={14} />}
-              shortcut="⌘+"
-              onSelect={() => zoomTo(zoom * 2)}
-            >
-              Zoom in
-            </MenuItem>
-            <MenuItem
-              icon={<Icon name="zoom-out" size={14} />}
-              shortcut="⌘−"
-              onSelect={() => zoomTo(zoom / 2)}
-            >
-              Zoom out
-            </MenuItem>
-            <MenuItem
-              icon={<Icon name="search" size={14} />}
-              shortcut="⌘0"
-              onSelect={() => zoomTo(1)}
-            >
-              Zoom to 100%
-            </MenuItem>
-            <MenuItem
-              icon={<Icon name="maximize" size={14} />}
-              shortcut="⇧1"
-              onSelect={() => canvas()?.zoomToFit()}
-            >
-              Zoom to fit
-            </MenuItem>
-          </>
-        )}
-      </MenuPopover>
+        <span className="topbar__zoom-value">{Math.round(zoom * 100)}%</span>
+        <span className="topbar__zoom-icon">
+          <Icon name="chevron-down" size={12} />
+        </span>
+      </button>
+      {viewAnchor && (
+        <ViewMenu
+          anchor={viewAnchor}
+          os={platform.os}
+          prefs={prefs}
+          settings={platform.settings}
+          zoomIn={() => zoomTo(zoom * 2)}
+          zoomOut={() => zoomTo(zoom / 2)}
+          zoom100={() => zoomTo(1)}
+          zoomToFit={() => canvas()?.zoomToFit()}
+          zoomToSelection={() => canvas()?.zoomToFit(ui.getState().selection)}
+          onPreview={onPreview}
+          onClose={() => {
+            viewAnchor.focus({ preventScroll: true })
+            setViewAnchor(null)
+          }}
+        />
+      )}
       <IconButton
         label="Toggle theme"
         icon={<Icon name="sun" size={16} />}
         onClick={toggleAppearance}
       />
-      <Button variant="ghost" icon={<Icon name="play" size={16} />} onClick={onPreview}>
-        Preview
-      </Button>
+      {/* Board 27 §9 (b): ghost look kept; tooltip names the frame; disabled at 40 % (aria). */}
+      <Tooltip
+        label={
+          previewTarget === null
+            ? "Page has no frames"
+            : previewTarget
+              ? `Preview “${previewTarget}”`
+              : "Preview"
+        }
+        {...(previewTarget === null ? {} : { shortcut: shortcutLabel("preview") })}
+      >
+        <Button
+          variant="ghost"
+          className="topbar__preview"
+          icon={<Icon name="play" size={16} />}
+          aria-disabled={previewTarget === null || undefined}
+          onClick={() => {
+            if (previewTarget !== null) onPreview()
+          }}
+        >
+          Preview
+        </Button>
+      </Tooltip>
       <Button variant="primary" icon={<Icon name="code-xml" size={16} />} onClick={onExport}>
         Export
       </Button>
@@ -250,6 +274,7 @@ export function Topbar(props: TopbarProps) {
         ui={props.ui}
         canvas={props.canvas}
         onPreview={props.onPreview}
+        previewTarget={props.previewTarget}
         onExport={props.onExport}
       />
     </header>

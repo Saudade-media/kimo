@@ -1,0 +1,63 @@
+/*
+ * Board 27 §5 (a) rkFut. Shape Slot (jkzTd): row, alignItems center, gap 0 → ToolButton 36 × 36
+ * + Flyout Caret (XELvA) lucide chevron-down 10 × 10 text-tertiary (slot 46 × 36).
+ * Shape flyout (MBxVC): Menu/Dense width 200; rows' Check Slot icon text-secondary, the
+ * current tool's row (ApNUl) fill bg-hover with its icon text-primary.
+ */
+.shape-slot {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+}
+
+.shape-slot__caret {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 10px;
+  height: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+/* The 10 × 10 caret keeps the slot's full height as its hit area. */
+.shape-slot__caret::before {
+  content: "";
+  position: absolute;
+  inset: -13px 0;
+}
+
+.shape-slot__caret > svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.shape-slot__caret:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.shape-flyout__item--current .kimo-menu-item-dense__check--icon {
+  color: var(--kimo-text-primary);
+}
+
+/* ApNUl keeps the label's normal weight (MenuItemDense's checked state sets 500). */
+.shape-flyout__item--current .kimo-menu-item-dense__label {
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+/* Board 27 §5 (c): hidden while the path-edit toolbar replaces it. */
+.floating-toolbar[hidden] {
+  display: none;
+}

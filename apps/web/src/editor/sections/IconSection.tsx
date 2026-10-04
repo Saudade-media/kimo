@@ -5,6 +5,7 @@
  */
 import { IconGlyphSvg, PropRow, PropSection } from "@kimo/ui"
 import { useRef, useState } from "react"
+import { Bindable } from "../bind"
 import { NumberField } from "../fields"
 import { type Sel, useKeepPopoverFocus, usePanel } from "../panel-context"
 import { IconPickerPopover } from "../popovers/IconPicker"
@@ -87,27 +88,63 @@ export function IconSection({ sel }: { sel: readonly Sel[] }) {
               ...setOps(ids, "h", Math.max(1, n)),
             ]}
           />
+          {/* Board 27 §7: icon stroke width / weight bind number variables. */}
           {strokeLib ? (
-            <NumberField
-              prefix="Stroke"
-              label="Icon stroke"
-              value={stroke === MIXED ? MIXED : Number(stroke) || stroke}
-              editor={editor}
-              min={0.25}
-              step={0.25}
-              onNumber={(n) => setOps(ids, "strokeWidth", n === 2 ? undefined : Math.max(0.25, n))}
-            />
+            <Bindable
+              sel={sel}
+              spec={{
+                type: "number",
+                label: "Icon stroke",
+                prefix: "Stroke",
+                get: (n) => n.strokeWidth ?? 2,
+                put: (s, v) => setOps([s.id], "strokeWidth", v === 2 ? undefined : v),
+                current: () =>
+                  stroke === MIXED || Number.isNaN(Number(stroke)) ? null : Number(stroke),
+                varBase: "icon/stroke",
+              }}
+            >
+              {(bind) => (
+                <NumberField
+                  prefix="Stroke"
+                  label="Icon stroke"
+                  bind={bind}
+                  value={stroke === MIXED ? MIXED : Number(stroke) || stroke}
+                  editor={editor}
+                  min={0.25}
+                  step={0.25}
+                  onNumber={(n) =>
+                    setOps(ids, "strokeWidth", n === 2 ? undefined : Math.max(0.25, n))
+                  }
+                />
+              )}
+            </Bindable>
           ) : (
-            <NumberField
-              prefix="Weight"
-              label="Icon weight"
-              value={weight === MIXED ? MIXED : Number(weight) || weight}
-              editor={editor}
-              min={100}
-              max={700}
-              step={100}
-              onNumber={(n) => setOps(ids, "weight", weightValue(n))}
-            />
+            <Bindable
+              sel={sel}
+              spec={{
+                type: "number",
+                label: "Icon weight",
+                prefix: "Weight",
+                get: (n) => n.weight ?? 400,
+                put: (s, v) => setOps([s.id], "weight", v === 400 ? undefined : v),
+                current: () => (weightNumber === MIXED ? null : weightNumber),
+                varBase: "icon/weight",
+              }}
+            >
+              {(bind) => (
+                <NumberField
+                  prefix="Weight"
+                  label="Icon weight"
+                  bind={bind}
+                  value={weight === MIXED ? MIXED : Number(weight) || weight}
+                  editor={editor}
+                  min={100}
+                  max={700}
+                  step={100}
+                  onNumber={(n) => setOps(ids, "weight", weightValue(n))}
+                />
+              )}
+            </Bindable>
           )}
         </PropRow>
       </div>

@@ -39,14 +39,21 @@ export function durationLabel(ms: number): string {
   return `${m}m ${String(Math.round(s % 60)).padStart(2, "0")}s`
 }
 
-/** Thread header chip: "$0.38 · 41k tok" (API), "subscription · 41k tok" (CLI). */
-export function headerCostLabel(h: {
-  costUsd: number | null
-  tokens: number
-  billing: MessageMetaView["billing"]
-}): string {
+/**
+ * Thread header chip: "$0.38 · 41k tok" (API), "subscription · 41k tok" (CLI); Show cost off
+ * (board 27 r9hTk) hides the $: "41k tok".
+ */
+export function headerCostLabel(
+  h: {
+    costUsd: number | null
+    tokens: number
+    billing: MessageMetaView["billing"]
+  },
+  showCost = true,
+): string {
   const k = `${formatTokens(h.tokens)} tok`
   if (h.billing === "subscription") return `subscription · ${k}`
+  if (!showCost) return k
   return `${formatUsd(h.costUsd ?? null)} · ${k}`
 }
 
@@ -87,18 +94,21 @@ export function relativeTime(t: number, now: number): string {
  */
 export function sessionMetaLabel(
   m: SessionMeta,
-  opts: { otherFile: boolean; clis: readonly CliDetection[] },
+  opts: { otherFile: boolean; clis: readonly CliDetection[]; showCost?: boolean },
 ): string {
+  // Show cost off (board 27 r9hTk): no $ amount; "subscription" is not a dollar figure.
+  const hide = opts.showCost === false && m.billing !== "subscription"
   const cost =
     m.billing === "subscription"
       ? "subscription"
       : m.billing === "local"
         ? "$0.00"
         : formatUsd(m.costUsd)
-  if (opts.otherFile) return `${m.fileName.replace(/\.kimo$/, "")} · ${cost}`
+  const name = m.fileName.replace(/\.kimo$/, "")
+  if (opts.otherFile) return hide ? name : `${name} · ${cost}`
   const count =
     m.agents && m.agents > 1
       ? `${m.agents} agents`
       : `${m.messageCount} ${m.messageCount === 1 ? "message" : "messages"}`
-  return `${modelLabel(m.model, opts.clis)} · ${count} · ${cost}`
+  return `${modelLabel(m.model, opts.clis)} · ${count}${hide ? "" : ` · ${cost}`}`
 }

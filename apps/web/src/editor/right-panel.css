@@ -347,3 +347,133 @@
   background: var(--kimo-warning);
   vertical-align: middle;
 }
+
+/* Board 27 §6 (a) "Rotate · flip" (LN4Tc): fill, gap 6, alignItems center → Rotation (fill) ·
+   Flip horizontal / vertical (28 × 28, PanelIconToggle). */
+.rp-rotate-flip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Corner radius alone on its row keeps the half-width column of W / H. */
+.rp-row > .rp-row__empty {
+  height: 1px;
+}
+
+/* Board 27 §6 (b) Direction (nUHiL): DirectionControl · gap 6 · Wrap (JIb4r 28) · Spacer. */
+.rp-direction-row.rp-direction-row--wrap {
+  gap: 6px;
+}
+
+/* Gap fields wrapped for the canvas gap preview: the wrapper takes the field's place. */
+.rp-gap-hover {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Board 27 §7 bindable fields: the Bindable wrapper takes the field's place in its row. */
+.rp-bind {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.rp-bind > .rp-field,
+.rp-bind > .kimo-prop-field-bound {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.rp-bind.rp-bind--w96 {
+  flex: none;
+  width: 96px;
+}
+
+.rp-bind.rp-bind--w96 > .rp-field {
+  width: 100%;
+}
+
+/* Board 27 §7 (c) Visible (kRMBZ): fill, row, gap 8, center → Label (zZyoY) sans 11
+   text-tertiary · the bound field (fill). */
+.rp-bind-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.rp-bind-label {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  user-select: none;
+}
+
+.rp-static-value {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Clip content with the §7 Bind Button at the row's right edge (no field frame look). */
+.rp-clip-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.rp-clip-row > .rp-clip {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.rp-clip-row.kimo-prop-field--bindable,
+.rp-clip-row.kimo-prop-field--bindable:is(:hover, :focus-within),
+[data-bind-open] .rp-clip-row.kimo-prop-field--bindable {
+  padding-right: 0;
+  box-shadow: none;
+}
+
+/* Board 27 §7: a select (font family / weight) with the Bind Button at its right edge. The
+   wrapper carries the field look so the hover stroke wraps both. */
+.rp-select-bind {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.rp-select-bind > .rp-select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* While the select's own menu / picker is open, the bind affordance steps aside. */
+.rp-select-bind.kimo-prop-field--bindable:has(.rp-select--open) {
+  padding-right: 0;
+  box-shadow: none;
+}
+
+.rp-select-bind.kimo-prop-field--bindable:has(.rp-select--open) .kimo-bind-button {
+  display: none;
+}

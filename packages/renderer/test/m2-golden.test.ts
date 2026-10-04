@@ -300,13 +300,13 @@ describe("board 10 overlays (attachRaster, dpr 1)", () => {
     expect(edge[0]).toBeGreaterThan(200)
   })
 
-  test("#4 pixel grid above 400%: 1 device px lines every world unit; off at 400%", () => {
+  test("#4 pixel grid at ≥ 800%: 1 device px lines every world unit; off at 400%", () => {
     const on = pixels(shot("overlay-pixel-grid"))
     // Paper area (white) left of the shape: grid line at x = 8 (world 1), none at x = 12;
-    // #0A0A0A14 over white = #ECECEC, exactly one device pixel wide.
+    // board 27 rule zyQtF #0000000F over white = #F0F0F0, exactly one device pixel wide.
     const line = on.at(8, 44)
     const cell = on.at(12, 44)
-    expect(near(line, "#ECECEC", 2)).toBe(true)
+    expect(near(line, "#F0F0F0", 2)).toBe(true)
     expect(near(cell, "#FFFFFF", 0)).toBe(true)
     expect(on.at(9, 44)).toEqual(cell)
     expect(on.at(7, 44)).toEqual(cell)

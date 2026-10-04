@@ -394,6 +394,66 @@ export function GeneralPane(props: PaneProps) {
             />
           }
         />,
+        <SettingRow
+          key="duplicateMain"
+          label="Duplicating a main component"
+          description="⌘D, ⌥-drag and Edit › Duplicate on a main."
+          control={
+            <ChoiceSelect
+              k="general.duplicateMain"
+              props={props}
+              label={LABEL["general.duplicateMain"]}
+            />
+          }
+        />,
+      ])}
+    </>
+  )
+}
+
+// --- Canvas (board 27 §4 Lwg6P) -----------------------------------------------------------------
+
+/**
+ * Settings › Canvas (board 27 Lwg6P "Pane · Canvas" xg9X8): Title Bar "Canvas", then SettingRow
+ * MuoTX × 5 — Snap to objects, Snap to pixel grid, Pixel grid (toggles, on), Rulers (toggle,
+ * off) and Nudge (Select gP276 136). App preferences (not file data): the View menu writes the
+ * same keys.
+ */
+export function CanvasPane(props: PaneProps) {
+  return (
+    <>
+      <PaneTitle>Canvas</PaneTitle>
+      {markLast([
+        <SettingRow
+          key="snap-objects"
+          label="Snap to objects"
+          description="Edges, centres and equal gaps of nearby layers."
+          control={(ids) => <SettingToggle k="canvas.snapToObjects" props={props} {...ids} />}
+        />,
+        <SettingRow
+          key="snap-pixel"
+          label="Snap to pixel grid"
+          description="Round positions and sizes to whole pixels."
+          control={(ids) => <SettingToggle k="canvas.snapToPixelGrid" props={props} {...ids} />}
+        />,
+        <SettingRow
+          key="pixel-grid"
+          label="Pixel grid"
+          description="Shown at 800 % zoom and above."
+          control={(ids) => <SettingToggle k="canvas.pixelGrid" props={props} {...ids} />}
+        />,
+        <SettingRow
+          key="rulers"
+          label="Rulers"
+          description="Top and left rulers in canvas units."
+          control={(ids) => <SettingToggle k="canvas.rulers" props={props} {...ids} />}
+        />,
+        <SettingRow
+          key="nudge"
+          label="Nudge"
+          description="Arrow keys move by; ⇧ uses the big step."
+          control={<ChoiceSelect k="canvas.nudge" props={props} label={LABEL["canvas.nudge"]} />}
+        />,
       ])}
     </>
   )
@@ -467,5 +527,7 @@ const LABEL: Record<ChoiceKey, string> = {
   "general.appearance": "Appearance",
   "general.onLaunch": "On launch",
   "general.canvasZoom": "Canvas zoom",
+  "general.duplicateMain": "Duplicating a main component",
+  "canvas.nudge": "Nudge",
   "updates.channel": "Channel",
 }

@@ -6,6 +6,8 @@ import { createGoogleFontsSource } from "./fonts"
 import { CanvasKitRenderer } from "./renderer"
 import type { CreateRendererOptions, FontSource, Point, Rect, Renderer, Viewport } from "./types"
 
+/** CanvasKit types for app code that runs on the shared instance (SVG import outliner). */
+export type { CanvasKit, Path as CkPath } from "canvaskit-wasm"
 export {
   agentCanvasTheme,
   connectorPoints,
@@ -14,6 +16,8 @@ export {
   shimmerSpan,
   skeletonBars,
 } from "./agent-overlay"
+/** Shared CanvasKit loader (SVG import's stroke outliner reuses the renderer's instance). */
+export { loadCanvasKit } from "./ck"
 export { parseColor, type RGBA, toHex } from "./color"
 export { type FontFileInfo, fontFormat, fsEmbeddable, readFontInfo } from "./font-info"
 export {

@@ -14,7 +14,9 @@ export {
   usedFontFamilies,
 } from "./assets/gc"
 export {
+  applySetEntry,
   argEffect,
+  argEffects,
   baseRoot,
   COMPONENT_DESCRIPTION_META_KEY,
   type ComponentScope,
@@ -123,6 +125,14 @@ export {
   migrate,
 } from "./migrate"
 export { type OpenOptions, type OpenResult, openDocument, type ReadOnlyReason } from "./open"
+export {
+  DEFAULT_PAGE_NAME,
+  isOnPage,
+  listPages,
+  type PageInfo,
+  pageOfRoot,
+  rootsByPage,
+} from "./pages"
 export {
   defaultTextFill,
   defaultTheme,

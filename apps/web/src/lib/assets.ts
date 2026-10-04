@@ -45,8 +45,11 @@ export function mimeForExtension(ext: string): string | null {
 /** File picker `accept` for image intake (the formats {@link sniffImage} recognizes). */
 export const IMAGE_ACCEPT = Object.keys(EXT).join(",")
 
-/** Largest image file accepted (bytes); checked before reading or hashing. */
-export const MAX_ASSET_BYTES = 50 * 1024 * 1024
+/**
+ * Largest image file accepted (bytes); checked before reading or hashing. Board 27 §3 rules
+ * (N77cg "Storage"): 20 MB per image.
+ */
+export const MAX_ASSET_BYTES = 20 * 1024 * 1024
 /** Largest decoded image accepted (pixels): 16k × 16k worth of RGBA would exhaust memory. */
 export const MAX_ASSET_PIXELS = 100_000_000
 

@@ -80,6 +80,6 @@ Select an instance and press `⌥⌘K`, or choose **Create derived component** f
 | Create component | `⌥⌘K` | `Ctrl+Alt+K` |
 | Detach instance | `⌥⌘B` | `Ctrl+Alt+B` |
 | Go to main component | `⌥↵` | `Alt+↵` |
-| Variables | `⇧⌘V` | `Ctrl+Shift+V` |
+| Variables | `⌥⇧⌘V` | `Ctrl+Alt+Shift+V` |
 
 For the format behind all this, see the spec's [components, instances, overrides and slots](../../spec/kimo-format-1.0.md#9-components-instances-overrides-and-slots).

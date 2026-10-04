@@ -124,7 +124,7 @@ REF_TYPES.effects = ["shadow"]
 REF_TYPES.typography = ["typography"]
 
 /** Keys never set by a `set` override: identity and tree position, or nested override maps. */
-const SET_FORBIDDEN = new Set(["type", "parent", "at", "order", "component", "overrides"])
+const SET_FORBIDDEN = new Set(["type", "parent", "at", "order", "component", "overrides", "page"])
 /** Keys never set through an instance's `props`. */
 const PROPS_FORBIDDEN = new Set([...PLACEMENT_KEYS, "component"])
 
@@ -345,7 +345,7 @@ class Validation {
         // Opaque records (Appendix B) hold data, not paints or text styles.
         if (key === "inputs" || key === "uniforms" || key === "args") return false
         // Enum option values are values of the prop's `field`: gate them as that field.
-        if (key === "options") return false
+        if (key === "options" || key === "targets") return false
         if (
           isObject(v) &&
           v.type === "enum" &&
@@ -354,6 +354,17 @@ class Validation {
         ) {
           for (const [opt, value] of Object.entries(v.options))
             walk(value, `${path}/options/${escapePointer(opt)}`, v.field, gate)
+        }
+        // Board 27 §8 (a): each enum target value is a value of its field (last segment).
+        if (isObject(v) && v.type === "enum" && isObject(v.targets)) {
+          for (const [opt, list] of Object.entries(v.targets)) {
+            if (!Array.isArray(list)) continue
+            list.forEach((t, i) => {
+              if (!isObject(t) || typeof t.field !== "string") return
+              const leaf = t.field.split("/").pop() as string
+              walk(t.value, `${path}/targets/${escapePointer(opt)}/${i}/value`, leaf, gate)
+            })
+          }
         }
         if (key === "layout" && isObject(v)) {
           // A value equal to its default never needs a feature (applyDefaults must stay valid).
@@ -812,6 +823,7 @@ class Validation {
       if (!isObject(def) || !isObject(def.props)) continue
       const self: Located = { doc: this.doc, alias: null, id, node: n }
       for (const [name, prop] of Object.entries(def.props)) {
+        if (isObject(prop) && prop.type === "enum") this.enumTargets(self, id, name, prop)
         if (!isObject(prop) || typeof prop.target !== "string") continue
         const base = ptr("nodes", id, "component", "props", name)
         // M3 (ADR 0011, spec §9.6): a target equal to the declaring component's own id names
@@ -881,6 +893,67 @@ class Validation {
     }
     this.instanceCycles()
     this.slotSuggestions()
+  }
+
+  /**
+   * Board 27 §8 (a) enum targets: `target` and `field` come together (or neither, then
+   * `targets` is required); `targets` keys are options; each target resolves, its field exists
+   * on the target node and its value is valid for the field (a `<property>/<key>` field is
+   * checked as the property with that key replaced).
+   */
+  private enumTargets(self: Located, id: string, name: string, prop: Obj): void {
+    const base = ptr("nodes", id, "component", "props", name)
+    const hasTarget = typeof prop.target === "string"
+    const hasField = typeof prop.field === "string"
+    if (hasTarget !== hasField)
+      this.sink.add(
+        "PROP_TARGET_INVALID",
+        `${base}/${hasTarget ? "field" : "target"}`,
+        `An enum prop's "target" and "field" come together`,
+      )
+    if (!hasTarget && !hasField && !isObject(prop.targets))
+      this.sink.add(
+        "PROP_TARGET_INVALID",
+        base,
+        `An enum prop needs "target" + "field" or "targets"`,
+      )
+    if (!isObject(prop.targets)) return
+    const options = isObject(prop.options) ? prop.options : {}
+    for (const [opt, list] of Object.entries(prop.targets)) {
+      const at = `${base}/targets/${escapePointer(opt)}`
+      if (!Object.hasOwn(options, opt))
+        this.sink.add("PROP_TARGET_INVALID", at, `"${opt}" is not an option of this prop`)
+      if (!Array.isArray(list)) continue
+      list.forEach((t, i) => {
+        if (!isObject(t) || typeof t.target !== "string" || typeof t.field !== "string") return
+        const tat = `${at}/${i}`
+        const node =
+          t.target === id
+            ? this.baseRoot(self)
+            : this.resolveOrReport(self, t.target, `${tat}/target`)
+        if (!node) return
+        const tt = node.node.type
+        const [top, sub] = t.field.split("/") as [string, string | undefined]
+        if (!isNodeType(tt) || !nodeKeys(tt).has(top) || SET_FORBIDDEN.has(top)) {
+          this.sink.add(
+            "PROP_TARGET_INVALID",
+            `${tat}/field`,
+            `A "${tt}" node has no overridable property "${top}"`,
+          )
+          return
+        }
+        let value: unknown = t.value
+        if (sub !== undefined) {
+          const cur = node.node[top]
+          if (cur !== undefined && !isObject(cur)) {
+            this.sink.add("PROP_TARGET_INVALID", `${tat}/field`, `"${top}" is not a struct here`)
+            return
+          }
+          value = { ...(isObject(cur) ? cur : {}), [sub]: t.value }
+        }
+        this.checkPatch(node.node, { [top]: value }, `${tat}/value`, SET_FORBIDDEN)
+      })
+    }
   }
 
   /** Slot suggestions must name components (aliases declared, local ids existing). */
@@ -1134,7 +1207,13 @@ class Validation {
         this.pins(v, path)
         return false
       }
-      if (key === "args" || key === "options" || key === "inputs" || key === "uniforms") {
+      if (
+        key === "args" ||
+        key === "options" ||
+        key === "targets" ||
+        key === "inputs" ||
+        key === "uniforms"
+      ) {
         walk(v, path, null, (iv, ip) => {
           if (isRef(iv)) this.binding(iv.$ref, ip, null, owner)
           return true
@@ -1386,6 +1465,8 @@ class Validation {
       list.push(n)
       kids.set(n.parent, list)
     }
+    const rawPages = (this.doc as unknown as Obj).pages
+    const pages = isObject(rawPages) ? rawPages : null
     for (const [id, n] of this.scoped()) {
       if (n.type === "text" && "fill" in n) {
         const f = n.fill
@@ -1395,6 +1476,21 @@ class Validation {
             "TEXT_INVISIBLE",
             ptr("nodes", id, "fill"),
             "The text's fill paints nothing; the text is invisible",
+          )
+        }
+      }
+      if (typeof n.page === "string") {
+        if (n.parent !== null) {
+          this.sink.add(
+            "PAGE_NOT_ROOT",
+            ptr("nodes", id, "page"),
+            "Only root nodes are on a page; this node's page is its root's",
+          )
+        } else if (!pages || !Object.hasOwn(pages, n.page)) {
+          this.sink.add(
+            "PAGE_UNKNOWN",
+            ptr("nodes", id, "page"),
+            `Page "${n.page}" does not exist; the node is shown on the first page`,
           )
         }
       }

@@ -15,6 +15,9 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Frame | `F` | `F` |
 | Rectangle | `R` | `R` |
 | Ellipse | `O` | `O` |
+| Line | `L` | `L` |
+| Arrow | `⇧L` | `Shift+L` |
+| Star | `⇧S` | `Shift+S` |
 | Text | `T` | `T` |
 | Pen | `P` | `P` |
 | Note | `N` | `N` |
@@ -31,6 +34,8 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Open… | `⌘O` | `Ctrl+O` |
 | Save | `⌘S` | `Ctrl+S` |
 | Save as… | `⇧⌘S` | `Ctrl+Shift+S` |
+| Export… | `⇧⌘E` | `Ctrl+Shift+E` |
+| Copy selection as PNG | `⇧⌘C` | `Ctrl+Shift+C` |
 | Settings | `⌘,` | `Ctrl+,` |
 
 ## Edit
@@ -39,16 +44,33 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 |---|---|---|
 | Undo | `⌘Z` | `Ctrl+Z` |
 | Redo | `⇧⌘Z` or `⌘Y` | `Ctrl+Shift+Z` or `Ctrl+Y` |
+| Cut | `⌘X` | `Ctrl+X` |
+| Copy | `⌘C` | `Ctrl+C` |
+| Copy properties | `⌥⌘C` | `Ctrl+Alt+C` |
+| Paste | `⌘V` | `Ctrl+V` |
+| Paste in place | `⇧⌘V` | `Ctrl+Shift+V` |
+| Paste properties | `⌥⌘V` | `Ctrl+Alt+V` |
 | Duplicate | `⌘D` | `Ctrl+D` |
 | Group | `⌘G` | `Ctrl+G` |
+| Ungroup | `⇧⌘G` | `Ctrl+Shift+G` |
+| Wrap in frame | `⌥⌘G` | `Ctrl+Alt+G` |
+| Add auto layout | `⇧A` | `Shift+A` |
+| Remove auto layout | `⌥⇧A` | `Alt+Shift+A` |
+| Bring to front | `⌘]` | `Ctrl+]` |
+| Send to back | `⌘[` | `Ctrl+[` |
 | Delete | `⌫` | `⌫` |
 | Nudge 1 px · 10 px | `←↑→↓` or `⇧←` | `←↑→↓` or `Shift+←` |
+| Resize by nudge | `⌥←↑→↓` | `Alt+←↑→↓` |
+| Flip horizontal | `⇧H` | `Shift+H` |
+| Flip vertical | `⇧V` | `Shift+V` |
 | Rename layer | `F2` | `F2` |
 
 ## Selection & layers
 
 | Action | macOS | Windows · Linux |
 |---|---|---|
+| Select all | `⌘A` | `Ctrl+A` |
+| Select inverse | `⇧⌘A` | `Ctrl+Shift+A` |
 | Select children | `↵` | `↵` |
 | Select parent / deselect | `Esc` | `Esc` |
 | Add to selection | `⇧ click` | `Shift click` |
@@ -63,7 +85,7 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Create component | `⌥⌘K` | `Ctrl+Alt+K` |
 | Detach instance | `⌥⌘B` | `Ctrl+Alt+B` |
 | Go to main component | `⌥↵` | `Alt+↵` |
-| Variables | `⇧⌘V` | `Ctrl+Shift+V` |
+| Variables | `⌥⇧⌘V` | `Ctrl+Alt+Shift+V` |
 
 ## View
 
@@ -72,9 +94,13 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Zoom in | `⌘=` or `=` | `Ctrl+=` or `=` |
 | Zoom out | `⌘−` or `−` | `Ctrl+−` or `−` |
 | Zoom to 100 % | `⌘0` or `⇧0` | `Ctrl+0` or `Shift+0` |
+| Go to page… | `⌘P` | `Ctrl+P` |
 | Zoom to fit | `⇧1` | `Shift+1` |
 | Zoom to selection | `⇧2` | `Shift+2` |
+| Pixel grid | `⇧'` | `Shift+'` |
+| Rulers | `⇧R` | `Shift+R` |
 | Pan | `Space drag` | `Space drag` |
+| Preview | `⇧Space` | `Shift+Space` |
 
 ## Agent & text
 
@@ -121,6 +147,13 @@ These keys only apply while the mode is active, so the sheet doesn't list them.
 | Action | macOS | Windows · Linux |
 |---|---|---|
 | Cancel placement | `Esc` | `Esc` |
+
+### Image crop
+
+| Action | macOS | Windows · Linux |
+|---|---|---|
+| Apply crop | `↵` | `↵` |
+| Cancel crop | `Esc` | `Esc` |
 
 ### While dragging
 

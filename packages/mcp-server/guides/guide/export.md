@@ -1,13 +1,30 @@
 <!-- related: tokens, components, envelope -->
 # Export and design-to-code
 
-## PNG and .kimo exports
+## Exports
 
-`kimo_export {docId, target:"png", ids:[…], outDir, scale}` writes one PNG per node.
-`target:"kimo"` writes a standalone copy of the document. Existing files are never replaced
-unless you pass `overwrite:true` (otherwise `FILE_EXISTS`). Code and token targets
-(`react-tailwind`, `html-css`, `tokens-dtcg`, `tokens-css`, `tailwind-theme`, `svg`, `pdf`) are
-listed but return `UNSUPPORTED` in this version. Write the code yourself from the data, as below.
+`kimo_export {docId, target, ids:[…], outDir}` exports the given nodes (default: the page's
+top-level frames).
+
+- `png` writes one `<nodeId>.png` per node (`scale`, default 2). `kimo` writes the subtrees as a
+  standalone `.kimo` with the variables they use. Both need `outDir`.
+- Code and token targets: `react-tailwind` (`<Root>.tsx` pages, one `<Component>.tsx` per
+  component, `tokens.css`), `html-css` (`index.html`, `styles.css`, `tokens.css`), `tokens-dtcg`
+  (`tokens.json`), `tokens-css`, `tailwind-theme` (`@theme`). Variables stay CSS custom properties
+  unless `variables:false`.
+- `svg` (one file per root) and `pdf` (one page per root, fonts embedded) use the committed layout
+  and the canvas's text measurement, so line breaks match the canvas.
+
+With `outDir` the files are written there; without it, code/token/svg/pdf files come back inline
+in `files[].contents` (pdf as base64). Existing files with other contents are never replaced
+unless you pass `overwrite:true` (otherwise `FILE_EXISTS`, nothing written). The result lists
+`issues`: the places an exporter approximated (unsupported effect, blend mode, and so on). Read
+them before you ship the code.
+
+`kimo_render {format:"svg"}` returns SVG text instead of a PNG for a quick look.
+
+The exporter output is a faithful starting point. When you implement a design in an existing
+codebase, translate it with that codebase's components and conventions, as below.
 
 ## Implementing a design in code
 

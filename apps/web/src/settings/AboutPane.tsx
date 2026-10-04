@@ -137,7 +137,7 @@ export function AboutPane({
         </div>
       </div>
       <div className="about-links" data-pen="t4H8L">
-        {aboutLinks(info.version).map((l) => {
+        {aboutLinks(info.version, platform).map((l) => {
           const Icon = LINK_ICONS[l.icon]
           return (
             <button

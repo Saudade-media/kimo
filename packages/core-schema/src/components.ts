@@ -301,6 +301,11 @@ export interface DeclaredProp {
    * root (a target equal to the declaring component's id, ADR 0011), else `def.target`.
    */
   path: string
+  /**
+   * Enum props (board 27 §8 a): option → its targets, each with the IdPath to apply at (`""` =
+   * the root), relative to the queried component like {@link path}. Absent for other props.
+   */
+  targets?: Record<string, { path: string; field: string; value: unknown }[]>
 }
 
 /**
@@ -314,25 +319,90 @@ export function declaredProps(scope: ComponentScope, c: LocatedNode): DeclaredPr
     const def = link.node.component
     if (!isObject(def) || !isObject(def.props)) continue
     for (const [name, raw] of Object.entries(def.props)) {
-      if (!isObject(raw) || typeof raw.target !== "string") continue
+      if (!isObject(raw)) continue
+      const multi = raw.type === "enum" && isObject(raw.targets)
+      if (typeof raw.target !== "string" && !multi) continue
       const prev = out.get(name)
       const own = typeof raw.order === "string" ? raw.order : undefined
-      const isRoot = raw.target === link.id || raw.target === qualify(link.alias, link.id)
-      out.set(name, {
+      const pathOf = (t: string) =>
+        t === link.id || t === qualify(link.alias, link.id) ? "" : qualifyPath(t, link.alias)
+      const p: DeclaredProp = {
         name,
         def: raw as unknown as PropDef,
         declaredBy: link,
         inherited: false,
         redeclared: prev !== undefined,
         order: own ?? prev?.order ?? "",
-        path: isRoot ? "" : qualifyPath(raw.target, link.alias),
-      })
+        path: typeof raw.target === "string" ? pathOf(raw.target) : "",
+      }
+      if (multi) {
+        const targets: NonNullable<DeclaredProp["targets"]> = {}
+        for (const [opt, list] of Object.entries(raw.targets as Record<string, unknown>)) {
+          if (!Array.isArray(list)) continue
+          targets[opt] = list
+            .filter(
+              (t): t is { target: string; field: string; value: unknown } =>
+                isObject(t) && typeof t.target === "string" && typeof t.field === "string",
+            )
+            .map((t) => ({ path: pathOf(t.target), field: t.field, value: t.value }))
+        }
+        p.targets = targets
+      }
+      out.set(name, p)
     }
   }
   const self = qualify(c.alias, c.id)
   return [...out.values()]
     .map((p) => ({ ...p, inherited: qualify(p.declaredBy.alias, p.declaredBy.id) !== self }))
     .sort((a, b) => compareCodeUnits(a.order, b.order) || compareCodeUnits(a.name, b.name))
+}
+
+/**
+ * Every effect of an instance arg (§9.6; board 27 §8 a): the legacy single target first, then
+ * the option's `targets`, each as (path, set). A `set` key `<property>/<key>` sets one key of a
+ * struct property (see {@link applySetEntry}). Empty when the value does not fit.
+ */
+export function argEffects(
+  prop: DeclaredProp,
+  value: unknown,
+): { path: string; set: Record<string, unknown> }[] {
+  const def = prop.def as unknown as Record<string, unknown>
+  if (def.type !== "enum") {
+    const one = argEffect(prop, value)
+    return one ? [one] : []
+  }
+  const options = def.options
+  if (typeof value !== "string" || !isObject(options) || !Object.hasOwn(options, value)) return []
+  const out: { path: string; set: Record<string, unknown> }[] = []
+  if (typeof def.field === "string" && typeof def.target === "string")
+    out.push({ path: prop.path, set: { [def.field]: options[value] } })
+  for (const t of prop.targets?.[value] ?? [])
+    out.push({ path: t.path, set: { [t.field]: t.value } })
+  return out
+}
+
+/**
+ * Applies one `set` entry to node data in place: a plain key replaces the property; a
+ * `<property>/<key>` key (enum targets, board 27 §8 a) replaces one key of a struct property,
+ * keeping its other keys.
+ */
+export function applySetEntry(out: Record<string, unknown>, key: string, value: unknown): void {
+  const i = key.indexOf("/")
+  if (i < 0) {
+    Object.defineProperty(out, key, { value, enumerable: true, configurable: true, writable: true })
+    return
+  }
+  const top = key.slice(0, i)
+  const sub = key.slice(i + 1)
+  const cur = out[top]
+  const next: Record<string, unknown> = isObject(cur) && !("$ref" in cur) ? { ...cur } : {}
+  Object.defineProperty(next, sub, { value, enumerable: true, configurable: true, writable: true })
+  Object.defineProperty(out, top, {
+    value: next,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  })
 }
 
 /**
@@ -356,7 +426,8 @@ export function argEffect(
       const options = def.options
       if (typeof value !== "string" || !isObject(options) || !Object.hasOwn(options, value))
         return null
-      return { path: prop.path, set: { [String(def.field)]: options[value] } }
+      if (typeof def.field !== "string") return null
+      return { path: prop.path, set: { [def.field]: options[value] } }
     }
     default:
       return null

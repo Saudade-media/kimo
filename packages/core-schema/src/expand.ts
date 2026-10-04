@@ -27,6 +27,7 @@
  * {@link ExpandedView.invalidate}.
  */
 import {
+  applySetEntry,
   type ComponentScope,
   declaredProps,
   type LocatedNode,
@@ -423,7 +424,8 @@ function applySets(
   if (!sets || sets.length === 0) return n
   const out: Record<string, unknown> = { ...n }
   for (const { set } of sets)
-    for (const [k, v] of Object.entries(set)) if (!FORBIDDEN_SET.has(k)) setOwn(out, k, v)
+    for (const [k, v] of Object.entries(set))
+      if (!FORBIDDEN_SET.has(k.split("/")[0] as string)) applySetEntry(out, k, v)
   return out
 }
 
@@ -607,19 +609,30 @@ export function createExpandedView(
         const prop = props.find((p) => p.name === name)
         if (!prop) continue
         const effect = argEffectOf(prop.def as unknown as Record<string, unknown>, q(value))
-        if (!effect) continue
-        // Instance-prop values are QIds in the holder's namespace.
-        if (
-          effect.of !== undefined &&
-          alias !== null &&
-          !from.argsFromSet &&
-          !effect.of.includes(":")
-        )
-          effect.set.of = `${alias}:${effect.of}`
-        entryOf(layers, prop.path).sets.push({
-          set: effect.set,
-          src: mk("args", name, "set", Object.keys(effect.set)),
-        })
+        if (effect) {
+          // Instance-prop values are QIds in the holder's namespace.
+          if (
+            effect.of !== undefined &&
+            alias !== null &&
+            !from.argsFromSet &&
+            !effect.of.includes(":")
+          )
+            effect.set.of = `${alias}:${effect.of}`
+          entryOf(layers, prop.path).sets.push({
+            set: effect.set,
+            src: mk("args", name, "set", Object.keys(effect.set)),
+          })
+        }
+        // Board 27 §8 (a): the chosen enum option's targets, each at its own path (after the
+        // legacy target of the same arg).
+        if (!prop.targets || typeof value !== "string") continue
+        for (const t of prop.targets[value] ?? []) {
+          const set = { [t.field]: q(t.value) }
+          entryOf(layers, t.path).sets.push({
+            set,
+            src: mk("args", name, "set", [t.field.split("/")[0] as string]),
+          })
+        }
       }
     }
     if (isObject(inst.overrides))
@@ -1160,7 +1173,9 @@ function argEffectOf(
       const options = def.options
       if (typeof value !== "string" || !isObject(options) || !Object.hasOwn(options, value))
         return null
-      return { set: { [String(def.field)]: options[value] } }
+      // Targets-only enums (board 27 §8 a) have no legacy field: their effects are the targets.
+      if (typeof def.field !== "string" || typeof def.target !== "string") return null
+      return { set: { [def.field]: options[value] } }
     }
     default:
       return null

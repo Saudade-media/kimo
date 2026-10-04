@@ -231,6 +231,19 @@ pub async fn kimo_skills_root(app: AppHandle) -> R<String> {
     Ok(crate::util::path_str(s.skills.root()))
 }
 
+/// "Open skills folder" (agent panel Skills menu): creates `~/.kimo/skills` when missing and
+/// reveals it in Finder / Explorer / the file manager. A fixed path, so no fs scope is widened.
+#[tauri::command]
+pub async fn kimo_skills_reveal(app: AppHandle) -> R<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let s = svc(&app)?;
+    let root = s.skills.root().to_path_buf();
+    std::fs::create_dir_all(&root).map_err(|e| io_msg(format!("skills folder: {e}")))?;
+    app.opener()
+        .reveal_item_in_dir(&root)
+        .map_err(|e| io_msg(format!("Could not reveal the skills folder: {e}")))
+}
+
 #[tauri::command]
 pub async fn kimo_skills_list(app: AppHandle) -> R<Vec<crate::skills::SkillFile>> {
     let s = svc(&app)?;

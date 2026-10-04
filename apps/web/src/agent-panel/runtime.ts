@@ -31,6 +31,7 @@ import type { UsageEntry } from "../ai-settings/model"
 import { tauriBridge } from "../host/bridge"
 import type { AgentUsageSettings } from "../platform/contract"
 import { inTauri } from "../platform/runtime"
+import { createPromptRunStore, type PromptRunStore } from "./prompt-runs"
 import type { ToolHostFactory } from "./tools"
 
 /** A provider row that is not usable yet (picker "Add a key to use Gemini…"). */
@@ -64,6 +65,8 @@ export interface AgentPanelRuntime {
   /** The document side (in-window tools or the document host's). */
   tools: ToolHostFactory
   sessions: SessionStore
+  /** Prompt-node run state in app data (survives reload; never in the `.kimo`). */
+  promptRuns?: PromptRunStore
   skills?: SkillSource
   /** Settings › AI providers › Usage & limits, with this month's spend so far. */
   usage?(): AgentUsageSettings & { monthUsd: number }
@@ -105,6 +108,7 @@ export function createAppAgentRuntime(o: {
   ai: AiSettingsController
   tools: ToolHostFactory
   sessions?: SessionStore
+  promptRuns?: PromptRunStore
   fetchFor?: (config: ProviderConfig) => typeof fetch
   cliHost?: CliProcessHost | null
   mcpLaunch?: (cli: string) => KimoMcpLaunch
@@ -133,6 +137,7 @@ export function createAppAgentRuntime(o: {
     ...(o.mcpLaunch ? { mcpLaunch: o.mcpLaunch } : {}),
     tools: o.tools,
     sessions: o.sessions ?? createIndexedDbSessionStore(),
+    promptRuns: o.promptRuns ?? createPromptRunStore(),
     ...(o.skills ? { skills: o.skills } : {}),
     usage: () => ({ ...ai.state.settings, monthUsd: ai.state.usage.costUsd }),
     recordUsage: (e) => ai.recordUsage(e),

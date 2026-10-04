@@ -769,7 +769,7 @@ Dependency rule: `core-schema` ← `design-tokens` ← `layout` ← `renderer` �
 | Key storage and provider reach | OS keychain on desktop (Tauri keyring/stronghold, INFERRED); local-only storage on web, never synced. On web, model calls go straight from the browser: Anthropic allows this only with an explicit opt-in (`dangerouslyAllowBrowser` in `@anthropic-ai/sdk`), other providers' CORS support varies (INFERRED), and Bedrock/Vertex/Foundry need signed or OAuth credentials that are unsafe or unworkable in a browser. A published per-provider matrix states what works from a browser; Bedrock/Vertex/Foundry are routed only through desktop (Rust-side HTTP in Tauri) or a user-run local proxy | | |
 | Code export | IR + emitters; Tailwind v4 `@theme`; DTCG JSON | Deterministic, testable with golden files | Prompt-only (pen.dev) |
 | Script sandbox (later) | QuickJS-wasm or a worker with no network, a time limit and node caps | Matches pen.dev's sandbox properties `[docs/code-on-canvas]` (INFERRED choice) | |
-| Telemetry | None by default; opt-in Sentry for crashes | OSS norms | |
+| Telemetry | None, not even opt-in: no analytics, crash reporting or usage tracking. Network use is limited to Google Fonts, remote image URLs in the document, the configured AI provider and the desktop update check (see `SECURITY.md`) | OSS norms; local-first promise | |
 
 ### 9.3 Runtime data flow
 

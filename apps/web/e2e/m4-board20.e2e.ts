@@ -159,7 +159,7 @@ export const scenarios: Scenario[] = [
         .allInnerTexts()
       expect(
         labels.join("|") ===
-          "New file|Open…|Open recent|Save|Save as…|Reveal in Finder|Clean up assets…|Settings…",
+          "New file|Open…|Open recent|Save|Save as…|Export…|Copy selection as PNG|Reveal in Finder|Clean up assets…|Settings…",
         `desktop items: ${labels.join("|")}`,
       )
       const metas = await menu
@@ -167,7 +167,7 @@ export const scenarios: Scenario[] = [
           ":scope > .kimo-menu-dense__items > .kimo-menu-item-dense .kimo-menu-item-dense__meta",
         )
         .allInnerTexts()
-      expect(metas.join(" ") === "⌘N ⌘O ⌘S ⇧⌘S ⌘,", `shortcuts: ${metas.join(" ")}`)
+      expect(metas.join(" ") === "⌘N ⌘O ⌘S ⇧⌘S ⇧⌘E ⇧⌘C ⌘,", `shortcuts: ${metas.join(" ")}`)
       expect(
         (await trigger.getAttribute("aria-expanded")) === "true",
         "trigger is expanded while open",

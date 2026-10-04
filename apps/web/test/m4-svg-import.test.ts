@@ -158,7 +158,7 @@ describe("conversion", () => {
     const p = await prepareSvg(logo, "logo-mark.svg")
     expect(p.stats).toMatchObject({ paths: 4, groups: 2, gradients: 1, unsupported: { filter: 1 } })
     expect(p.vectorDescription).toBe(
-      "Editable paths in a frame. 4 paths · 2 groups · 1 gradient. Unsupported: 1 filter (dropped).",
+      "Editable paths in a frame. 4 paths · 2 groups · 1 gradient · 1 stroked path. Unsupported: 1 filter (dropped).",
     )
     expect(p.imageKey).toMatch(/^[0-9a-f]{16}\.svg$/)
     expect(

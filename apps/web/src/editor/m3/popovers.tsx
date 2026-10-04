@@ -4,6 +4,7 @@
  * Changes (board 13 `MuCtC`, 400).
  */
 import { splitQualified } from "@kimo/core-schema"
+import { relativeRefBetween } from "@kimo/platform"
 import {
   AssetRow,
   Input,
@@ -17,7 +18,13 @@ import { Fragment, useMemo, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { entriesOf, unlinkLibrary } from "./actions"
 import { type M3Controller, useLibraries } from "./controller"
-import { aliasFor, parseLibrary, pickLibraryFile, relativePath } from "./libraries"
+import {
+  aliasFor,
+  parseLibrary,
+  pickLibraryFile,
+  readLibraryBytes,
+  relativePath,
+} from "./libraries"
 import { type ComponentItem, listComponents, matches, nameOf } from "./model"
 import { M3Button, M3IconButton } from "./ui"
 
@@ -227,11 +234,29 @@ export function OverridesPopover({
   )
 }
 
+/** A library picked through the platform (a file on disk): its ref, name and text. */
+async function pickFromHost(m3: M3Controller) {
+  const p = await m3.fileHost?.pick()
+  if (!p) return null
+  return { name: p.name, ref: p.ref, text: await readLibraryBytes(p.bytes, p.name) }
+}
+
+/**
+ * Board 27 §8 rule gPEqc: the `imports` path relative to the open file (`../icons/icons.kimo`);
+ * `./<name>` only when the file's location is unknown (browser library).
+ */
+export function libraryPath(m3: M3Controller, name: string, ref: string | null): string {
+  const at = m3.fileHost?.docRef()
+  return (at && ref ? relativeRefBetween(at, ref) : null) ?? relativePath(name)
+}
+
 /** Links a picked library file under a fresh alias (one undo step: `imports` gains it). */
 export async function linkLibraryFlow(m3: M3Controller): Promise<string | null> {
   let picked: Awaited<ReturnType<typeof pickLibraryFile>>
+  let ref: string | null = null
   try {
-    picked = await pickLibraryFile()
+    picked = m3.fileHost?.docRef() ? await pickFromHost(m3) : await pickLibraryFile()
+    ref = picked && "ref" in picked ? (picked.ref as string) : null
   } catch (e) {
     m3.toast({
       tone: "danger",
@@ -253,7 +278,7 @@ export async function linkLibraryFlow(m3: M3Controller): Promise<string | null> 
   }
   const imports = (m3.doc().imports ?? {}) as Record<string, string>
   const alias = aliasFor(name, Object.keys(imports))
-  const path = relativePath(picked.name)
+  const path = libraryPath(m3, picked.name, ref)
   await m3.libs.put(alias, path, picked)
   const r = m3.run({ cmd: "linkLibrary", alias, path }, "Link library")
   if (!r.ok) {
@@ -265,9 +290,11 @@ export async function linkLibraryFlow(m3: M3Controller): Promise<string | null> 
 
 /** Locate… a missing library: re-pick the file, keep alias, update the path if it moved. */
 export async function locateLibrary(m3: M3Controller, alias: string): Promise<void> {
-  const picked = await pickLibraryFile().catch(() => null)
+  const picked = await (m3.fileHost?.docRef() ? pickFromHost(m3) : pickLibraryFile()).catch(
+    () => null,
+  )
   if (!picked) return
-  const path = relativePath(picked.name)
+  const path = libraryPath(m3, picked.name, "ref" in picked ? (picked.ref as string) : null)
   await m3.libs.put(alias, path, picked)
   const cur = ((m3.doc().imports ?? {}) as Record<string, string>)[alias]
   if (cur !== path) m3.run({ cmd: "relinkLibrary", alias, path }, "Relink library")

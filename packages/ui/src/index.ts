@@ -85,6 +85,7 @@ export {
   DirectionControl,
   type DirectionControlProps,
 } from "./direction-control/DirectionControl"
+export { DropIndicator, type DropIndicatorProps } from "./drop-indicator/DropIndicator"
 export {
   EFFECT_KINDS,
   type EffectKind,
@@ -100,6 +101,11 @@ export {
   type VariableEntriesProps,
   type VariableEntry,
 } from "./entry-row/EntryRow"
+export {
+  type EnumTargetRow,
+  EnumTargets,
+  type EnumTargetsProps,
+} from "./enum-targets/EnumTargets"
 export { FileCard, FileCardMiniFrame, type FileCardProps } from "./file-card/FileCard"
 export { FillRow, type FillRowProps } from "./fill-row/FillRow"
 export * from "./gaps"
@@ -166,6 +172,10 @@ export {
   LayerRow,
   type LayerRowProps,
 } from "./layer-row/LayerRow"
+export {
+  LayerRowDropTarget,
+  type LayerRowDropTargetProps,
+} from "./layer-row-drop-target/LayerRowDropTarget"
 export { type LayerKind, LayerRowM3, type LayerRowM3Props } from "./layer-row-m3/LayerRowM3"
 export { LibraryManager, type LibraryManagerProps } from "./library-manager/LibraryManager"
 export { LibraryRow, type LibraryRowProps } from "./library-row/LibraryRow"
@@ -184,6 +194,16 @@ export {
   type MenuItemDenseProps,
 } from "./menu-dense/MenuDense"
 export { OverrideDot, type OverrideDotProps } from "./override-dot/OverrideDot"
+export { PageRow, type PageRowProps } from "./page-row/PageRow"
+export { PaletteRow, type PaletteRowProps } from "./palette-row/PaletteRow"
+export {
+  PaintBlendChip,
+  type PaintBlendChipProps,
+  PanelCheckbox,
+  type PanelCheckboxProps,
+  PanelIconToggle,
+  type PanelIconToggleProps,
+} from "./panel-controls/PanelControls"
 export {
   PanelHeader,
   type PanelHeaderAction,
@@ -219,6 +239,13 @@ export {
 } from "./prop-def-row/PropDefRow"
 export { PropField, type PropFieldProps } from "./prop-field/PropField"
 export { PropTextField, type PropTextFieldProps } from "./prop-field/PropTextField"
+export {
+  type BindableType,
+  BindButton,
+  type BindButtonProps,
+  PropFieldBound,
+  type PropFieldBoundProps,
+} from "./prop-field-bound/PropFieldBound"
 export {
   PropRow,
   type PropRowProps,
@@ -289,6 +316,12 @@ export {
   VariableListRow,
   type VariableListRowProps,
 } from "./variable-list-row/VariableListRow"
+export {
+  VariablePicker,
+  type VariablePickerGroup,
+  type VariablePickerItem,
+  type VariablePickerProps,
+} from "./variable-picker/VariablePicker"
 export {
   AxisGroupHeader,
   type AxisGroupHeaderProps,

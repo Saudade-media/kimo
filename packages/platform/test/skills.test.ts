@@ -50,6 +50,7 @@ describe("platform.skills (ADR 0014 §10)", () => {
       "kimo_skills_read",
       "kimo_skills_watch",
       "kimo_skills_unwatch",
+      "kimo_skills_reveal",
     ])
     expect([...TAURI_SKILLS_EVENTS]).toEqual(["kimo://skills-changed"])
     for (const ok of ["brand", "brand-voice", "my_skill", "A1"])
@@ -76,6 +77,8 @@ describe("platform.skills (ADR 0014 §10)", () => {
       "kimo_skills_read",
       "kimo_skills_read",
     ])
+    await s.reveal?.()
+    expect(f.calls.at(-1)?.cmd).toBe("kimo_skills_reveal")
   })
 
   test("tauri: watch filters by watch id and unwatches", async () => {

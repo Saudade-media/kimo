@@ -25,7 +25,10 @@ export {
   isKimoPath,
   KIMO_EXTENSIONS,
   parseDeepLink,
+  rebaseRelativeRefs,
+  relativeRefBetween,
   resolveAgainstFile,
+  resolveRelativeRef,
 } from "./links"
 export * from "./mcp"
 export * from "./mcp-memory"
@@ -36,7 +39,9 @@ export {
   googleFontsAllowed,
   isSettingKey,
   isValidSetting,
+  type NudgePreset,
   normalizeSettings,
+  nudgeSteps,
   SETTING_CHOICES,
   SETTING_KEYS,
   SETTINGS_DEFAULTS,

@@ -16,6 +16,8 @@ use tauri::{
 pub const SETTINGS_LABEL: &str = "settings";
 pub const SETTINGS_PANES: &[&str] = &[
     "general",
+    // Board 27 §4 (Lwg6P): right after General.
+    "canvas",
     "files",
     "fonts",
     "agents-mcp",

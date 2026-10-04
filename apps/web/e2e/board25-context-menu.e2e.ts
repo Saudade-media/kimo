@@ -137,6 +137,27 @@ function check(diffs: Diff[], what: string, design: string | number, got: string
 }
 
 /** One measured pass of the open menu against j8U4z / EAGNC / fYNDQ. */
+/** Board 27 §2 (g1jiG "Context menu"): the standard rows after the agent group (note / prompt). */
+const BOARD27_STANDARD = [
+  "—",
+  "Copy ⌘C",
+  "Paste here ⌘V",
+  "Duplicate ⌘D",
+  "—",
+  "Group selection ⌘G",
+  "Ungroup ⇧⌘G",
+  "Wrap in frame ⌥⌘G",
+  "—",
+  "Add auto layout ⇧A",
+  "—",
+  "Create component ⌥⌘K",
+  "Bring to front ⌘]",
+  "Send to back ⌘[",
+  "Lock",
+  "—",
+  "Delete ⌫",
+]
+
 async function measureMenu(page: Page, ctx: E2EContext, label: string) {
   const m = await page.getByTestId("canvas-context-menu").evaluate((menu) => {
     const cs = (e: Element | null) => (e ? getComputedStyle(e) : null)
@@ -243,12 +264,8 @@ export const scenarios: Scenario[] = [
         JSON.stringify(await rows(page)) ===
           JSON.stringify([
             "Convert to prompt",
-            "—",
-            "Duplicate ⌘D",
-            "Bring to front",
-            "Lock",
-            "—",
-            "Delete ⌫",
+            // Board 27 §2 (g1jiG) replaced board 25's standard items.
+            ...BOARD27_STANDARD,
           ]),
         `note rows ${JSON.stringify(await rows(page))}`,
       )
@@ -276,12 +293,8 @@ export const scenarios: Scenario[] = [
           JSON.stringify([
             "Run prompt",
             "Set as target —",
-            "—",
-            "Duplicate ⌘D",
-            "Bring to front",
-            "Lock",
-            "—",
-            "Delete ⌫",
+            // Board 27 §2 (g1jiG) replaced board 25's standard items.
+            ...BOARD27_STANDARD,
           ]),
         `prompt rows ${JSON.stringify(await rows(page))}`,
       )
@@ -503,12 +516,8 @@ export const scenarios: Scenario[] = [
           JSON.stringify([
             "Resume agent session 1",
             "Clear flag",
-            "—",
-            "Duplicate ⌘D",
-            "Bring to front",
-            "Lock",
-            "—",
-            "Delete ⌫",
+            // Board 27 §2 (g1jiG) replaced board 25's standard items.
+            ...BOARD27_STANDARD,
           ]),
         `orphan rows ${JSON.stringify(await rows(page))}`,
       )
@@ -589,7 +598,8 @@ export const scenarios: Scenario[] = [
             (id) => window.__kimo?.session.store.getNode(id)?.name === "Front",
           ).length === 2,
       )
-      await rightClick(page, "Front25ddd")
+      // Board 27 §2: the copy lands +16/+16 on top; click Front's uncovered corner.
+      await rightClick(page, "Front25ddd", 0.04)
       await page.getByRole("menuitem", { name: /Delete/ }).click()
       await page.waitForFunction(() => !window.__kimo?.session.store.getNode("Front25ddd"))
     },

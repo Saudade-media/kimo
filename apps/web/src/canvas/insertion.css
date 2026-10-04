@@ -1,0 +1,101 @@
+/* Board 27 §2 structure feedback (StructureOverlay.tsx). Screen-space chrome over the canvas. */
+
+/* InsertionBar/Horizontal OGqUu: row, h 6, align center; caps 2×6, bar fill × 2, all $selection. */
+.canvas-insertion-bar {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.canvas-insertion-bar--horizontal {
+  flex-direction: row;
+  height: 6px;
+}
+
+/* InsertionBar/Vertical sKpaJ: column, w 6, align center; caps 6×2, bar 2 × fill. */
+.canvas-insertion-bar--vertical {
+  flex-direction: column;
+  width: 6px;
+}
+
+.canvas-insertion-bar__cap,
+.canvas-insertion-bar__bar {
+  display: block;
+  flex: none;
+  background: var(--kimo-selection);
+}
+
+.canvas-insertion-bar--horizontal .canvas-insertion-bar__cap {
+  width: 2px;
+  height: 6px;
+}
+
+.canvas-insertion-bar--horizontal .canvas-insertion-bar__bar {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 2px;
+}
+
+.canvas-insertion-bar--vertical .canvas-insertion-bar__cap {
+  width: 6px;
+  height: 2px;
+}
+
+.canvas-insertion-bar--vertical .canvas-insertion-bar__bar {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 2px;
+}
+
+/* Y4vVe Gap Placeholder m3Qwz: the vacated slot, stroke 1 $border-strong, no fill. */
+.canvas-gap {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  border: 1px solid var(--kimo-border-strong);
+  pointer-events: none;
+}
+
+/* Y4vVe EERUC "Card Two · dragged": opacity 0.85, stroke 1.5 $selection, shadow 0 8 20. */
+.canvas-drag-ghost {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  opacity: 0.85;
+  /* The 1.5 px stroke as an inset shadow: borders and outlines snap to whole device pixels. */
+  box-shadow:
+    inset 0 0 0 1.5px var(--kimo-selection),
+    0 8px 20px 0 var(--kimo-shadow-strong);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* c2o3u Draw Ghost N5i12: fill #2F6BFF14, stroke 1 $selection. */
+.canvas-draw-ghost {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  background: #2f6bff14;
+  border: 1px solid var(--kimo-selection);
+  pointer-events: none;
+}
+
+/* MeasurePill lSZXU (fill overridden to $selection): radius pill, padding [2, 8], mono xs 500. */
+.canvas-draw-pill {
+  position: absolute;
+  z-index: 3;
+  transform: translateY(-50%);
+  padding: 2px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-selection);
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}

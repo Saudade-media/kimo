@@ -394,7 +394,8 @@ export const scenarios: Scenario[] = [
       await undo(page)
       const u = await node(page, "pathNode0001")
       expect(u?.y === 100 && u?.d === "M0 100L50 0L100 100Z", "one undo restores the path")
-      // Click on the bottom segment adds an anchor.
+      // Board 27 §5: with "Add / pen" on in the path-edit toolbar, a segment click adds an anchor.
+      await page.locator('.path-edit-bar [data-mode="add"]').click()
       const mid = await toPage(page, { x: 150, y: 200 })
       await page.mouse.click(mid.x, mid.y)
       await settle(page)

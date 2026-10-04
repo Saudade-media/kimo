@@ -144,17 +144,17 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "qa-m2: snap threshold is 5 screen px at any zoom",
+    name: "qa-m2: snap threshold is 6 screen px at any zoom (board 27 rule i6rbIi)",
     async run({ page, url, log }) {
       await openEditor(page, url)
       await board(page, SNAP_KIDS)
-      // Zoom 2: 3 world px = 6 screen px → no snap.
+      // Zoom 2: 4 world px = 8 screen px → no snap.
       await vp(page, { x: 200, y: 50, zoom: 2 })
       let from = await toPage(page, { x: 460, y: 220 })
-      await dragSteps(page, from, { x: from.x, y: from.y - 18 })
+      await dragSteps(page, from, { x: from.x, y: from.y - 16 })
       const y2 = (await node(page, "cardRect0001"))?.y
       log("zoom 2 y", y2)
-      expect(y2 === 131, `zoom 2: 6 screen px is outside the threshold (y ${y2})`)
+      expect(y2 === 132, `zoom 2: 8 screen px is outside the threshold (y ${y2})`)
       await storeUndo(page)
       // Zoom 0.5: 4 world px = 2 screen px → snaps.
       await vp(page, { x: -200, y: -200, zoom: 0.5 })
@@ -289,7 +289,7 @@ export const scenarios: Scenario[] = [
   },
   // --- Pixel grid ---------------------------------------------------------------------------
   {
-    name: "qa-m2: pixel grid and zoom badge appear only above 400%",
+    name: "qa-m2: pixel grid and zoom badge appear only at ≥ 800% (board 27 rule zyQtF)",
     async run({ page, url, log }) {
       await openEditor(page, url)
       await board(page, [])
@@ -297,14 +297,14 @@ export const scenarios: Scenario[] = [
       const badge = page.locator(".canvas-zoom-badge")
       // setViewport decides grid visibility synchronously (controller onUi → updateGrid) and
       // vp() settles two frames, so React has committed the badge state by now.
-      await vp(page, { x: 0, y: 0, zoom: 4 })
+      await vp(page, { x: 0, y: 0, zoom: 7.99 })
       const at4 = await overlay(page)
-      expect(!at4?.pixelGrid && (await badge.count()) === 0, "no grid / badge at exactly 400%")
-      await vp(page, { x: 0, y: 0, zoom: 4.5 })
+      expect(!at4?.pixelGrid && (await badge.count()) === 0, "no grid / badge below 800%")
+      await vp(page, { x: 0, y: 0, zoom: 8 })
       await badge.waitFor({ timeout: 2000 })
       const text = await badge.textContent()
       log("badge", text)
-      expect(/450%/.test(text ?? ""), `badge reads 450% (${text})`)
+      expect(/800%/.test(text ?? ""), `badge reads 800% (${text})`)
       // The grid fades in over GRID_FADE_MS (150 ms) of rAF steps: wait for the last step.
       const faded = await page
         .waitForFunction(
@@ -337,7 +337,7 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "qa-m2: drawing and pen anchors at 800% land on whole pixels",
+    name: "qa-m2: drawing at 800% lands on whole pixels, pen anchors on half pixels",
     async run({ page, url, log }) {
       await openEditor(page, url)
       await board(page, [])
@@ -361,9 +361,10 @@ export const scenarios: Scenario[] = [
       await settle(page)
       const p = await node(page, (await added(page, before))[0] as string)
       log("pen", JSON.stringify(p))
+      // Board 27 rule iZUZg: path anchors are exempt from whole-px rounding (0.5 px).
       expect(
-        [p?.x, p?.y, p?.w, p?.h].every((v) => Number.isInteger(v)),
-        `pen path on whole pixels (${JSON.stringify(p)})`,
+        [p?.x, p?.y, p?.w, p?.h].every((v) => Number.isInteger((v as number) * 2)),
+        `pen path on half pixels (${JSON.stringify(p)})`,
       )
     },
   },

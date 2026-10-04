@@ -8,6 +8,7 @@ import {
   isObject,
   isRef,
   type KimoDocument,
+  pageOfRoot,
   resolveVariable,
 } from "@kimo/core-schema"
 import type { DocStore, NodeData } from "@kimo/editor-state"
@@ -23,6 +24,8 @@ export interface QueryInput {
     type?: string[]
     text?: string
     component?: string
+    /** Board 27 / spec §5.6: only nodes on this page (a page id from kimo_get_state). */
+    page?: string
   }
   depth?: number
   resolveVariables?: boolean
@@ -105,13 +108,15 @@ export function runQuery(
     sel.name !== undefined ||
     (sel.type && sel.type.length > 0) ||
     sel.text !== undefined ||
-    sel.component !== undefined
+    sel.component !== undefined ||
+    sel.page !== undefined
   if (!hasSelector)
     return {
       ok: false,
       error: {
         code: "INVALID_INPUT",
-        message: "Give at least one selector (ids, under, topLevel, name, type, text, component).",
+        message:
+          "Give at least one selector (ids, under, topLevel, name, type, text, component, page).",
         path: "select",
         suggestion: "Use select: {topLevel: true} for the canvas's top-level nodes.",
       },
@@ -182,9 +187,22 @@ export function runQuery(
   }
   const name = sel.name?.toLowerCase()
   const text = sel.text?.toLowerCase()
+  const pageDoc = { pages: store.toHeader().pages }
+  const onPage = (id: string): boolean => {
+    if (sel.page === undefined) return true
+    // The root of the (real part of the) id decides the page.
+    let cur = store.getNode(id.split("/")[0] as string)
+    const seen = new Set<string>()
+    while (cur && typeof cur.parent === "string" && !seen.has(cur.parent)) {
+      seen.add(cur.parent)
+      cur = store.getNode(cur.parent)
+    }
+    return !!cur && pageOfRoot(pageDoc, cur) === sel.page
+  }
   const matches = candidates.filter((id) => {
     const n = src.getNode(id)
     if (!n) return false
+    if (!onPage(id)) return false
     if (sel.topLevel && n.parent !== null) return false
     if (!inUnder(id)) return false
     if (

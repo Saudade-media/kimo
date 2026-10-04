@@ -47,6 +47,7 @@ import {
   type OpenRequest,
   REPO_URL_PLACEHOLDER,
   type RecoveryEntry,
+  rebaseRelativeRefs,
   type Unsubscribe,
   type WatchEvent,
 } from "@kimo/platform"
@@ -883,7 +884,23 @@ export class FileDocumentSession implements DocumentSession {
         this.lease = r.lease
       }
     }
-    await platform.files.writeTextAtomic(target, text, { mkdirs: true })
+    // Board 27 §8 rule gPEqc: library imports stay relative to the file's new location.
+    let out = text
+    if (!untitled) {
+      const imports = (this.store.toDocument().imports ?? {}) as Record<string, string>
+      const rebased = rebaseRelativeRefs(imports, this._ref, target)
+      if (rebased) {
+        this.store.apply(
+          { op: "setHeader", set: { imports: rebased } },
+          {
+            origin: "user",
+            label: "Update library paths",
+          },
+        )
+        out = serialize(this.store.toDocument())
+      }
+    }
+    await platform.files.writeTextAtomic(target, out, { mkdirs: true })
     this.manager.lastFolder = dirnameOf(target)
     const old = this.provider
     const oldRef = this._ref

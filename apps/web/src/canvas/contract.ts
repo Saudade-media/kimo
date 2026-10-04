@@ -45,6 +45,10 @@ export const CANVAS_TOOL_IDS = [
   "frame",
   "rectangle",
   "ellipse",
+  "line",
+  "arrow",
+  "polygon",
+  "star",
   "text",
   "pen",
   "image",
@@ -87,6 +91,11 @@ export interface CanvasToolSpec {
   iconColor?: string
   /** False = rendered disabled. */
   enabled: boolean
+  /**
+   * Board 27 §5 (rkFut): Rectangle, Ellipse, Line, Arrow, Polygon and Star share ONE toolbar
+   * slot that shows the last-used shape and a caret opening the Shape flyout (MBxVC).
+   */
+  slot?: "shape"
 }
 
 /** Board 03 floating toolbar: ToolButton refs `Wv5cB nnBhQ uhk56 SMjtG b2kOu h45yX7 H5COB9 vzjNQ`. */
@@ -100,6 +109,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
     enabled: true,
   },
   { id: "frame", label: "Frame", icon: "frame", shortcut: "F", tool: "frame", enabled: true },
+  // Board 27 §5 shape slot (flyout MBxVC, in item order): exact lucide names from the design.
   {
     id: "rectangle",
     label: "Rectangle",
@@ -107,6 +117,7 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
     shortcut: "R",
     tool: "rect",
     enabled: true,
+    slot: "shape",
   },
   {
     id: "ellipse",
@@ -115,6 +126,44 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
     shortcut: "O",
     tool: "ellipse",
     enabled: true,
+    slot: "shape",
+  },
+  {
+    id: "line",
+    label: "Line",
+    icon: "minus",
+    shortcut: "L",
+    tool: "line",
+    enabled: true,
+    slot: "shape",
+  },
+  {
+    id: "arrow",
+    label: "Arrow",
+    icon: "move-up-right",
+    shortcut: "⇧L",
+    tool: "arrow",
+    enabled: true,
+    slot: "shape",
+  },
+  {
+    id: "polygon",
+    label: "Polygon",
+    icon: "pentagon",
+    // The design's ⇧P stays Prompt's (board 22): Polygon is reached from the shape slot only.
+    shortcut: "",
+    tool: "polygon",
+    enabled: true,
+    slot: "shape",
+  },
+  {
+    id: "star",
+    label: "Star",
+    icon: "star",
+    shortcut: "⇧S",
+    tool: "star",
+    enabled: true,
+    slot: "shape",
   },
   { id: "text", label: "Text", icon: "type", shortcut: "T", tool: "text", enabled: true },
   // M2: Pen is a real mode (board 10 #7 "Pen tool active": ToolButton/Active I0D9n4).
@@ -161,6 +210,11 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
     enabled: true,
   },
 ]
+
+/** Board 27 §5: the tools sharing the shape slot, in flyout order. */
+export const SHAPE_SLOT_TOOLS: readonly CanvasToolSpec[] = CANVAS_TOOLS.filter(
+  (t) => t.slot === "shape",
+)
 
 /** Toolbar id for the current UI-store tool (`hand` and unmapped tools → null: none active). */
 export function toolIdFor(tool: Tool): CanvasToolId | null {
@@ -227,10 +281,10 @@ export interface PathGeometry {
 // --- Snapping and measurement (M2, pure) ------------------------------------------------------
 
 /**
- * Snap threshold in SCREEN px (house value; not in the design). World threshold =
+ * Snap threshold in SCREEN px (board 27 rule i6rbIi "threshold 6 screen px"). World threshold =
  * `SNAP_THRESHOLD_PX / zoom`.
  */
-export const SNAP_THRESHOLD_PX = 5
+export const SNAP_THRESHOLD_PX = 6
 
 /** A snap candidate: a sibling's or the parent's world AABB (`id` for debugging/tests). */
 export interface SnapBox {
@@ -493,8 +547,22 @@ export interface CanvasHostProps {
   // --- M2 -----------------------------------------------------------------------------------
   /** Snap while moving/resizing (View menu). Default true; ⌘ suspends it per gesture. */
   snapping?: boolean
-  /** Show the pixel grid above `OVERLAY_SPEC_M2.pixelGrid.minZoom` (View menu). Default true. */
+  /**
+   * Show the pixel grid at ≥ `OVERLAY_SPEC_M2.pixelGrid.minZoom` (800 %, board 27 rule zyQtF;
+   * View menu / Settings › Canvas). Default true.
+   */
   pixelGrid?: boolean
+  /**
+   * Board 27 rule iZUZg "Snap to pixel grid": x/y/w/h rounded to whole px on
+   * move/resize/draw/nudge at any zoom (rotation exempt; path anchors snap to 0.5 px). Default true.
+   */
+  snapToPixelGrid?: boolean
+  /** Board 27 rule YwZyP: 20 px top/left rulers (⇧R). Default false. */
+  rulers?: boolean
+  /** View › Show layer names on canvas (root frame labels). Default true. */
+  layerNames?: boolean
+  /** Board 27 rule bFozp: arrow-key nudge step / ⇧ big step in px. Default 1 / 10. */
+  nudge?: { step: number; big: number }
   /** Icon glyph source passed to the renderer (default: the renderer's lazy provider). */
   icons?: IconProvider
   /** An armed placement changed (toolbar shows Image active while armed). */
@@ -511,6 +579,22 @@ export interface CanvasHostProps {
    * the I key does nothing.
    */
   onIconPicker?: (request: IconPickerRequest) => void
+  /**
+   * Board 27 §7 (uu8Qa): starting to edit a text whose content is bound to a string variable
+   * asks first ("Detach copy/cta?"). Resolves true to detach (the content becomes the resolved
+   * string, one undo step) and edit; false cancels. Absent: the text edits directly.
+   */
+  confirmBoundText?: (id: string, ref: string) => Promise<boolean>
+  /**
+   * Board 27 §8 (d) rule WYOjQ: ⌥-drag of a main component follows ⌘D — Settings › General
+   * "Duplicating a main component" ("ask" | "instance" | "component"). Absent: "instance".
+   */
+  duplicateMainPref?: () => "ask" | "instance" | "component"
+  /** With "ask": the duplicate-main dialog on release (null = cancelled, nothing changes). */
+  askDuplicateMain?: (
+    main: string,
+    ids: readonly string[],
+  ) => Promise<"instance" | "component" | null>
 
   // --- M3 -----------------------------------------------------------------------------------
   /**
@@ -651,6 +735,8 @@ export type CanvasHint =
   | { kind: "pen-close"; icon: "circle-dot"; text: "Close path"; screen: Point }
   | { kind: "path-edit"; icon: "spline"; text: "Editing path · Esc or Enter to exit" }
   | { kind: "measuring"; text: "Measuring"; keys: "⌥" }
+  /** Board 27 §6 (d) ud74f: image crop mode (Hint u0dQ1, icon crop). */
+  | { kind: "crop"; icon: "crop"; text: "Drag edges to crop · drag inside to pan · Enter to apply" }
 
 /** Imperative handle exposed through `ref`. */
 export interface CanvasHandle {
@@ -716,6 +802,12 @@ export interface CanvasHandle {
    * (`GMebs`) or the replace target box (`d8kP2n`). Null hides it.
    */
   previewComponentDrop?(target: ComponentDropTarget | null): void
+  /**
+   * Board 27 §2 (c2o3u): a drop over an auto-layout frame at canvas point `screen` shows the
+   * InsertionBar; returns the frame and the sibling index the dropped node takes (null: not over
+   * a layout frame). Null clears the bar.
+   */
+  previewFlowInsert?(screen: Point | null): { parent: string; index: number } | null
 
   // --- M6 (board 22) -------------------------------------------------------------------------
   /**
@@ -734,4 +826,12 @@ export interface CanvasHandle {
    * null clears it (back to the prop).
    */
   setAgentCanvas?(props: AgentCanvasProps | null): void
+
+  // --- Board 27 §2 / §3 (clipboard, structure, raster import) -----------------------------------
+  /** Last pointer position over the canvas (canvas-local screen px), or null when outside. */
+  pointer?(): Point | null
+  /** The canvas size in CSS px. */
+  size?(): { w: number; h: number }
+  /** Paste feedback: a 1 px $selection outline on node `id` for 600 ms. */
+  flash?(id: string): void
 }

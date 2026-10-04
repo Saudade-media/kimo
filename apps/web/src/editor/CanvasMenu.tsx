@@ -6,6 +6,8 @@
  * items, Delete. Pick mode: crosshair cursor, the frame under the pointer outlined in `$agent`,
  * click sets the prompt's target, a click on empty canvas clears it, Esc cancels.
  */
+
+import { type KimoDocument, resolveVariable } from "@kimo/core-schema"
 import type { LayoutResult } from "@kimo/layout"
 import { AgentMark, CanvasContextMenu, type CanvasContextMenuItem } from "@kimo/ui"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -13,8 +15,14 @@ import type { AgentPanelControllerExt } from "../agent-panel"
 import { askKimoToFinish, placeholderSession, resumeAgentSession } from "../agent-panel/resume"
 import { type DocReader, deleteOps, duplicateOps, pathOf } from "../canvas/commands"
 import type { CanvasHandle, CanvasPointerInfo } from "../canvas/contract"
+import { currentHeader } from "../lib/header"
 import { Icon } from "../lib/icons"
 import { shortcutLabel } from "../shortcuts"
+import { requestBind } from "./bind"
+import { detachAllFields, nodeHasBinding, pickerGroups, sharedRef } from "./bindings"
+import { registerRowMenu } from "./clipboard/menu-bus"
+import { commandsFor } from "./clipboard/useEditorCommands"
+import type { StructureMenuState, VariableMenuState } from "./context-menu"
 import {
   type CanvasMenuAction,
   type CanvasMenuModel,
@@ -22,6 +30,8 @@ import {
   canvasMenuModel,
   menuNodeName,
 } from "./context-menu"
+import { createComponent } from "./m3/actions"
+import { openReplaceMain } from "./m3/ComponentDialogs"
 import type { M3Controller } from "./m3/controller"
 import type { FileSession } from "./session"
 import "./canvas-menu.css"
@@ -71,11 +81,36 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
       inInstance: (id) => view.isVirtual(id) || !!view.origin(id)?.top,
       ownerSession: (owner) => (controller ? placeholderSession(controller, owner) : null),
       kbd: (id) => shortcutLabel(id),
+      structure: structureState(session),
+      variables: variableState(session, m3),
     })
     const host = container.current?.getBoundingClientRect()
     if (model && host)
       setOpen({ at: { x: host.left + info.screen.x, y: host.top + info.screen.y }, model })
   }, [])
+
+  // Board 27 §2: layer rows open this menu too (same commands, same order).
+  useEffect(
+    () =>
+      registerRowMenu(d.session.store, (x, y) => {
+        const { session, m3, controller } = deps.current
+        setPick(null)
+        const view = m3.view()
+        const model = canvasMenuModel({
+          doc: session.store,
+          selection: session.ui.getState().selection,
+          live: new Set(controller?.state.canvas.live ?? []),
+          agent: controller !== null,
+          inInstance: (id) => view.isVirtual(id) || !!view.origin(id)?.top,
+          ownerSession: (owner) => (controller ? placeholderSession(controller, owner) : null),
+          kbd: (id) => shortcutLabel(id),
+          structure: structureState(session),
+          variables: variableState(session, m3),
+        })
+        if (model) setOpen({ at: { x, y }, model })
+      }),
+    [d.session.store],
+  )
 
   const run = useCallback((a: CanvasMenuAction) => {
     const { session, m3, canvas, controller, runPrompt, openAgentTab } = deps.current
@@ -108,7 +143,42 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
         openAgentTab()
         askKimoToFinish(controller, menuNodeName(session.store, a.frame) ?? "the frame")
         return
+      case "copy":
+        void commandsFor(session)?.copy()
+        return
+      case "pasteHere":
+        void commandsFor(session)?.pasteFromClipboard("smart")
+        return
+      case "group":
+        commandsFor(session)?.group()
+        return
+      case "ungroup":
+        commandsFor(session)?.ungroup()
+        return
+      case "wrap":
+        commandsFor(session)?.wrap()
+        return
+      case "addLayout":
+        commandsFor(session)?.addAutoLayout()
+        return
+      case "removeLayout":
+        commandsFor(session)?.removeAutoLayout()
+        return
+      case "createComponent":
+        createComponent(m3, ui.selection, c?.layout() ?? null)
+        return
+      case "replaceMain":
+        openReplaceMain(m3, a.main)
+        return
+      case "back":
+        commandsFor(session)?.arrange("back")
+        return
       case "duplicate": {
+        const cmds = commandsFor(session)
+        if (cmds) {
+          cmds.duplicate()
+          return
+        }
         const layout = c?.layout()
         if (!layout || !ui.selection.length) return
         const { ops, created } = duplicateOps(viewReader(session, m3), layout, ui.selection)
@@ -143,6 +213,27 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
             a.lock ? "Lock" : "Unlock",
           )
         return
+      case "bindVariable":
+        // Board 27 §7: the Design tab shows the field's row and opens its picker.
+        requestBind(a.field)
+        return
+      case "detachVariables": {
+        const header = currentHeader(session.store)
+        const libs = m3.libraries()
+        const view = m3.view()
+        const ops = a.ids.flatMap((id) => {
+          const n = session.store.getNode(id)
+          if (!n) return []
+          const theme = view.theme(id)
+          const set = detachAllFields(n as Record<string, unknown>, (ref) => {
+            const r = resolveVariable(header as unknown as KimoDocument, ref, theme, libs)
+            return r.ok ? r.value : undefined
+          })
+          return Object.keys(set).length ? [{ op: "update" as const, id, set }] : []
+        })
+        if (ops.length) session.apply(ops, "Detach all variables")
+        return
+      }
       case "delete": {
         const ops = deleteOps(viewReader(session, m3), ui.selection)
         if (ops.length && session.apply(ops, "Delete")) ui.select([])
@@ -154,8 +245,8 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
   const items = useMemo(
     () =>
       open
-        ? [open.model.agent, open.model.standard, open.model.danger].map((g) =>
-            g.map((r) => toItem(r, run)),
+        ? [open.model.agent, open.model.standard, ...open.model.structure, open.model.danger].map(
+            (g) => g.map((r) => toItem(r, run)),
           )
         : [],
     [open, run],
@@ -208,6 +299,7 @@ function toItem(r: CanvasMenuRow, run: (a: CanvasMenuAction) => void): CanvasCon
     ...(r.meta !== undefined ? { meta: r.meta } : {}),
     ...(r.metaFont ? { metaFont: r.metaFont } : {}),
     ...(r.tone ? { tone: r.tone } : {}),
+    ...(r.disabled ? { disabled: true } : {}),
     onSelect: () => run(r.action),
   }
 }
@@ -332,4 +424,53 @@ function TargetPick({
       style={{ left: hover.rect.x, top: hover.rect.y, width: hover.rect.w, height: hover.rect.h }}
     />
   ) : null
+}
+
+/** Board 27 §8 (b): the main of a "1 main + 1 other non-instance node" selection. */
+function replaceMainOf(session: FileSession, sel: readonly string[]): string | null {
+  if (sel.length !== 2) return null
+  const isMain = (id: string) => {
+    const n = session.store.getNode(id)
+    return !!n && n.type !== "instance" && n.component !== undefined && n.component !== false
+  }
+  const mains = sel.filter(isMain)
+  if (mains.length !== 1) return null
+  const other = session.store.getNode(sel.find((id) => id !== mains[0]) as string)
+  if (!other || other.type === "instance") return null
+  return mains[0] as string
+}
+
+/** Board 27 §2: what the structure items can do for the current selection. */
+function structureState(session: FileSession): StructureMenuState | undefined {
+  const cmds = commandsFor(session)
+  if (!cmds) return undefined
+  const sel = session.ui.getState().selection
+  return {
+    canPaste: true,
+    canGroup: cmds.canGroup(),
+    canUngroup: cmds.canUngroup(),
+    layout: cmds.layoutState(),
+    canCreateComponent:
+      sel.length > 0 && sel.every((id) => session.store.getNode(id)?.type !== "instance"),
+    replaceMain: replaceMainOf(session, sel),
+  }
+}
+
+/** Board 27 §7: which variable items the menu shows for the selection. */
+function variableState(session: FileSession, m3: M3Controller): VariableMenuState {
+  const ids = session.ui.getState().selection
+  const nodes = ids.map((id) => session.store.getNode(id)).filter((n) => !!n)
+  if (!nodes.length || nodes.length !== ids.length)
+    return { bound: false, bindVisible: false, bindText: false }
+  const header = currentHeader(session.store)
+  const libs = m3.libraries()
+  const any = (type: "boolean" | "string") => pickerGroups(header, libs, type, {}).length > 0
+  return {
+    bound: nodes.some((n) => nodeHasBinding(n as Record<string, unknown>)),
+    bindVisible: sharedRef(nodes.map((n) => n.visible)) === null && any("boolean"),
+    bindText:
+      nodes.every((n) => n.type === "text") &&
+      sharedRef(nodes.map((n) => n.content)) === null &&
+      any("string"),
+  }
 }

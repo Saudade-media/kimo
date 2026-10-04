@@ -107,3 +107,54 @@ export function resolveAgainstFile(fileRef: string, relative: string): string {
   }
   return [root, ...stack].join(sep)
 }
+
+/**
+ * The document-relative reference from the `.kimo` at `fileRef` to `targetRef` (board 27 §8
+ * rule gPEqc "Library paths": stored relative to the current file — `./icons.kimo`,
+ * `../icons/icons.kimo` — never always `./file`). Spaces are written `%20` (spec §3 relative
+ * paths have no whitespace). Null when the two refs share no root (another drive or scheme).
+ */
+export function relativeRefBetween(fileRef: string, targetRef: string): string | null {
+  const split = (p: string) => p.split(/[\\/]/)
+  const from = split(dirnameOf(fileRef))
+  const to = split(targetRef)
+  if ((from[0] ?? "") !== (to[0] ?? "")) return null
+  let i = 0
+  while (i < from.length && i < to.length - 1 && from[i] === to[i]) i++
+  const up = from.slice(i).filter((s) => s !== "")
+  const down = to.slice(i).filter((s) => s !== "")
+  if (down.length === 0) return null
+  const rel = [...(up.length ? up.map(() => "..") : ["."]), ...down].join("/")
+  return rel.replace(/\s/g, "%20")
+}
+
+/** Resolves a reference written by {@link relativeRefBetween} (`%20` → space). */
+export function resolveRelativeRef(fileRef: string, relative: string): string {
+  return resolveAgainstFile(fileRef, relative.replace(/%20/g, " "))
+}
+
+/**
+ * Rewrites document-relative references after the document moved from `oldRef` to `newRef`
+ * (Save as, a move): each still points at the same file. Unchanged or unresolvable entries keep
+ * their value. Returns null when nothing changes.
+ */
+export function rebaseRelativeRefs(
+  refs: Readonly<Record<string, string>>,
+  oldRef: string,
+  newRef: string,
+): Record<string, string> | null {
+  const out: Record<string, string> = {}
+  let changed = false
+  for (const [k, rel] of Object.entries(refs)) {
+    let next = rel
+    try {
+      const abs = resolveRelativeRef(oldRef, rel)
+      next = relativeRefBetween(newRef, abs) ?? rel
+    } catch {
+      next = rel
+    }
+    if (next !== rel) changed = true
+    out[k] = next
+  }
+  return changed ? out : null
+}

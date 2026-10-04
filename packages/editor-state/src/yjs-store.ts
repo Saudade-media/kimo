@@ -7,7 +7,8 @@
  *   fields (`overrides`, `args`, `props`) are nested Y.Maps keyed by IdPath / prop name, so
  *   concurrent overrides of different paths of one instance both survive;
  * - `header`: root members other than `nodes`, `variables` and `themes` (whole values, except
- *   `imports`: a nested Y.Map by alias, so two concurrent library links both survive);
+ *   `imports` and `pages`: nested Y.Maps by alias / page id, so two concurrent library links or
+ *   new pages both survive);
  * - `variables`: name → variable; `themes`: axis → values;
  * - `flags`: presence of empty `variables` / `themes` objects (exact round trips);
  * - `moves`: id → {@link MoveRecord} of the node's last reparenting, for cycle repair.
@@ -55,7 +56,7 @@ const SPLIT_KEYS = new Set(["nodes", "variables", "themes"])
 /** Record-valued node fields stored as nested Y.Maps (per-key last-writer-wins). */
 const MERGED_NODE_FIELDS = new Set(["overrides", "args", "props"])
 /** Record-valued header members stored as nested Y.Maps. */
-const MERGED_HEADER_KEYS = new Set(["imports"])
+const MERGED_HEADER_KEYS = new Set(["imports", "pages"])
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v)

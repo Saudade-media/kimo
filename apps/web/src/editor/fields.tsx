@@ -8,6 +8,7 @@ import type { Op } from "@kimo/editor-state"
 import { PropField, Toggle } from "@kimo/ui"
 import { useEffect, useId, useRef } from "react"
 import { Icon } from "../lib/icons"
+import type { BindSlot } from "./bind"
 import { MIXED, MIXED_LABEL, type Mixed } from "./props"
 import type { FileSession, Gesture } from "./session"
 
@@ -82,6 +83,8 @@ export interface NumberFieldProps {
   step?: number
   disabled?: boolean
   className?: string
+  /** Board 27 §7: the field is bindable (PropField/Bindable LFrgQ, see `Bindable`). */
+  bind?: BindSlot
 }
 
 /**
@@ -130,6 +133,8 @@ export function NumberField(p: NumberFieldProps) {
         min={p.min}
         max={p.max}
         disabled={p.disabled}
+        className={p.bind?.className}
+        trailing={p.bind?.trailing}
         onChange={(n) => p.editor.apply(p.onNumber(n), label)}
         onDelta={onDelta}
         onScrubStart={() => {

@@ -7,6 +7,8 @@
  * (a fake renderer: PNG preview / PNG + PDF export), `&preset=<format>` (Code tab "Open
  * export…"). Driven through `window.__export` (`memory` = failure injection, `nextFolder` = the
  * folder picker's answer, `toasts` = `exportToastOf` of each outcome).
+ * Board 27 §10 (c): `&fixture=issues` exports core-schema's `features-all` with one variable
+ * made missing (an error + paint warnings for the Issues tab); `selected` records node chips.
  */
 import "@kimo/design-tokens/editor.css"
 import "@kimo/ui/styles.css"
@@ -17,6 +19,7 @@ import type { TextMeasurer } from "@kimo/layout"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { StrictMode, useState } from "react"
 import { createRoot } from "react-dom/client"
+import featuresAll from "../../../../packages/core-schema/fixtures/valid/features-all.kimo?raw"
 import fixture from "../../../../packages/exporters/test/fixtures/layout-matrix.kimo?raw"
 import {
   ExportDialog,
@@ -31,7 +34,11 @@ const web = q.get("platform") === "web"
 const untitled = q.get("untitled") === "1"
 const withRenderer = q.get("renderer") === "1"
 const presetFormat = q.get("preset") as ExportFormat | null
-const doc = parse(fixture)
+const doc = parse(
+  q.get("fixture") === "issues"
+    ? featuresAll.replace('"gap":{"$ref":"space-s"}', '"gap":{"$ref":"space/legacy"}')
+    : fixture,
+)
 const memory = createMemoryPlatform({
   files: { "/Users/me/loom/site.kimo": "{}", "/Users/me/loom/tokens.css": "/* mine */\n" },
 })
@@ -109,6 +116,7 @@ declare global {
       nextFolder: string | null
       toasts: string[]
       delay: number
+      selected: string[]
     }
   }
 }
@@ -128,6 +136,7 @@ window.__export = {
   nextFolder: null,
   toasts: [],
   delay: 0,
+  selected: [],
 }
 
 function App() {
@@ -148,6 +157,7 @@ function App() {
         copied.push(t)
       }}
       download={(blob, name) => downloads.push({ name, size: blob.size })}
+      onSelectNode={(id) => window.__export.selected.push(id)}
     />
   ) : null
 }

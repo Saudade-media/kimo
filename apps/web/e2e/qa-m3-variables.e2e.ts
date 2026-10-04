@@ -149,7 +149,7 @@ async function variablesCrud({ page, url, log }: E2EContext) {
   // UI: Variables tab lists rows; the dialog shows aliases with an AliasChip.
   await page.locator(".left-panel .kimo-tab", { hasText: "Variables" }).click()
   await page.locator('[data-variable="surface"]').waitFor()
-  await page.keyboard.press("Meta+Shift+KeyV")
+  await page.keyboard.press("Meta+Alt+Shift+KeyV")
   const dialog = page.locator('[data-testid="variables-dialog"]')
   await dialog.waitFor()
   c.ok(
@@ -605,7 +605,7 @@ async function feedbackAndDark({ page, url, log }: E2EContext) {
     `canvas component overlay in dark: ${JSON.stringify(comp)}`,
   )
   // Variables dialog in dark: no hard-coded white surfaces.
-  await page.keyboard.press("Meta+Shift+KeyV")
+  await page.keyboard.press("Meta+Alt+Shift+KeyV")
   const dialog = page.locator('[data-testid="variables-dialog"]')
   await dialog.waitFor()
   const whites = await dialog.evaluate((root) =>

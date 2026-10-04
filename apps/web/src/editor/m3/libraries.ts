@@ -296,6 +296,12 @@ export class LibraryManager {
   private listeners = new Set<Listener>()
   /** Fresh reads waiting for "Got it" (the snapshot moves forward then). */
   private pending = new Map<string, { text: string; handle?: FileSystemFileHandleLike }>()
+  /**
+   * Board 27 §8 (gPEqc): reads a library by its `imports` path relative to the open file (a file
+   * on disk; set by the shell). Without a File System Access handle, the library is re-read
+   * through it, so a moved or deleted library shows as missing.
+   */
+  reader: ((path: string) => Promise<Uint8Array>) | null = null
   version = 0
 
   constructor(readonly fileId: string) {}
@@ -372,6 +378,31 @@ export class LibraryManager {
         if (perm === "granted") {
           const file = await rec.handle.getFile()
           fresh = await readLibraryBytes(new Uint8Array(await file.arrayBuffer()), file.name)
+        }
+      } catch {
+        gone = true
+      }
+    }
+    if (!rec?.handle && this.reader) {
+      try {
+        const bytes = await this.reader(path)
+        fresh = await readLibraryBytes(bytes, path)
+        if (!rec) {
+          // First open on this machine: the file itself is the snapshot.
+          const doc = parseLibrary(fresh)
+          await this.save(alias, path, fresh)
+          if (this.map.get(alias)?.path !== path) return
+          this.map.set(alias, {
+            alias,
+            path,
+            name: libraryName(doc, alias),
+            status: "linked",
+            doc,
+            changes: [],
+            hasHandle: false,
+          })
+          this.emit()
+          return
         }
       } catch {
         gone = true

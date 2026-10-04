@@ -354,7 +354,15 @@ export const scenarios: Scenario[] = [
       const { check, flush } = checker(ctx, "Keyboard shortcuts sheet (WcWPY)")
       const sh = g("sheet")
       check("Dialog", "width", sh.w, 1040)
-      check("Dialog", "height", sh.h, 762, 3)
+      // WcWPY is 762 high for board 25's rows; board 27 added rows (clipboard, structure, pages,
+      // tools), so the sheet grows up to the viewport cap (100vh − 32) and its body scrolls.
+      const cap = (await page.evaluate(() => window.innerHeight)) - 32
+      check(
+        "Dialog",
+        "height ≥ WcWPY, ≤ viewport cap",
+        sh.h >= 759 && sh.h <= cap + 1 ? `ok (${sh.h})` : `out of range (${sh.h})`,
+        `ok (${sh.h})`,
+      )
       check("Dialog", "fill", sh.bg, tok.bgApp)
       check("Dialog", "radius (radius-2xl)", sh.radius, 32)
       expect(sh.shadow.includes("0px 2px 6px") && sh.shadow.includes("0px 24px 64px"), "shadows")
@@ -393,7 +401,8 @@ export const scenarios: Scenario[] = [
         check(c, "gap", g(c).gap, 20)
       }
       check("Column 2", "x − Column 1 x", g("col2").x - g("col1").x, 306.67 + 32, 1)
-      check("Group · Tools", "height", g("tools").h, 351)
+      // Mto9I is 351 for its 11 rows (30 each); board 27 §5 adds Line, Arrow and Star.
+      check("Group · Tools", "height", g("tools").h, 351 + 3 * 30)
       check("Group Title", "font", g("groupTitle").ff, "JetBrains Mono")
       check("Group Title", "font-size", g("groupTitle").fs, 11)
       check("Group Title", "letter-spacing", g("groupTitle").ls, 0.4, 0.01)

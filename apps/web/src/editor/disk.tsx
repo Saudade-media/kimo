@@ -37,6 +37,8 @@ export interface DiskTopbarProps extends FileMenuActions {
   canvas: () => CanvasHandle | null
   onExport(): void
   onPreview(): void
+  /** Board 27 §9 (b): see `TopbarProps.previewTarget`. */
+  previewTarget?: string | null
   onHome(): void
   /** Board 21 Agent Presence (drag region, before Save Status). */
   presence?: ReactNode
@@ -53,6 +55,7 @@ export function DiskTopbar({
   canvas,
   onExport,
   onPreview,
+  previewTarget,
   onHome,
   presence,
   ...menu
@@ -68,7 +71,13 @@ export function DiskTopbar({
         onFileClick={(e) => fileMenu.toggle(e.currentTarget)}
         presence={presence}
         trailing={
-          <TopbarTrailing ui={ui} canvas={canvas} onPreview={onPreview} onExport={onExport} />
+          <TopbarTrailing
+            ui={ui}
+            canvas={canvas}
+            onPreview={onPreview}
+            onExport={onExport}
+            previewTarget={previewTarget}
+          />
         }
       />
       {fileMenu.menu}

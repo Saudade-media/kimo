@@ -52,6 +52,22 @@ const OpenDoc = Obj({
     description: "Top-level nodes (first 50; use kimo_query for more).",
   }),
   topLevelCount: Int({ description: "Total top-level nodes.", minimum: 0 }),
+  pages: Arr(
+    Obj({
+      id: Opt(
+        Str({
+          description:
+            "Page id (set it as `page` on a top-level node to put it on this page); absent for the single implicit page of a document without pages.",
+        }),
+      ),
+      name: Str({ description: "Page name." }),
+      topLevelCount: Int({ description: "Top-level nodes on the page.", minimum: 0 }),
+    }),
+    {
+      description:
+        "Pages in display order (spec §5.6). A top-level node without `page` is on the first page; filter kimo_query with select.page.",
+    },
+  ),
   components: Arr(
     Obj({
       id: Str({ description: "Component id." }),

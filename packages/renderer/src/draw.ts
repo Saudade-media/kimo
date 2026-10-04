@@ -418,7 +418,13 @@ export class Painter {
       case "polygon": {
         const sides = Math.max(3, Math.floor(resolveNum(r, id, node.sides, 3)))
         const radius = Math.max(0, resolveNum(r, id, node.radius, 0))
-        return { kind: "path", path: this.polygonPath(w, h, sides, radius) }
+        // Spec §5.5 / board 27 §5: `star` present = a star (ratio default 0.38).
+        const star = node.star as { ratio?: unknown } | undefined
+        const ratio =
+          star && typeof star === "object"
+            ? Math.max(0.01, Math.min(1, resolveNum(r, id, star.ratio, 0.38)))
+            : null
+        return { kind: "path", path: this.polygonPath(w, h, sides, radius, ratio) }
       }
       case "path": {
         const path = this.svgPath(node, w, h)
@@ -450,28 +456,31 @@ export class Painter {
     return pb.detachAndDelete()
   }
 
-  private polygonPath(w: number, h: number, sides: number, radius: number): Path {
+  private polygonPath(
+    w: number,
+    h: number,
+    sides: number,
+    radius: number,
+    ratio: number | null = null,
+  ): Path {
     const ck = this.ck
-    const pts: [number, number][] = []
-    for (let i = 0; i < sides; i++) {
-      const a = -Math.PI / 2 + (i * 2 * Math.PI) / sides
-      pts.push([w / 2 + (w / 2) * Math.cos(a), h / 2 + (h / 2) * Math.sin(a)])
-    }
+    const pts = polygonPoints(w, h, sides, ratio)
     const pb = new ck.PathBuilder()
     if (radius <= 0) {
       pb.addPolygon(pts.flat(), true)
       return pb.detachAndDelete()
     }
     // Rounded corners: start mid-edge, then arc tangentially through every vertex.
-    const at = (i: number) => pts[((i % sides) + sides) % sides] as [number, number]
+    const count = pts.length
+    const at = (i: number) => pts[((i % count) + count) % count] as [number, number]
     const mid = (i: number): [number, number] => {
       const p = at(i)
       const q = at(i + 1)
       return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
     }
-    const m0 = mid(sides - 1)
+    const m0 = mid(count - 1)
     pb.moveTo(m0[0], m0[1])
-    for (let i = 0; i < sides; i++) {
+    for (let i = 0; i < count; i++) {
       const v = at(i)
       const m = mid(i)
       pb.arcToTangent(v[0], v[1], m[0], m[1], radius)
@@ -1301,4 +1310,27 @@ export class Painter {
     for (const c of this.children(ctx, id)) this.imagesOf(ctx, c, out)
     return out
   }
+}
+
+/**
+ * Vertices of a regular polygon inscribed in the `w` × `h` box, first vertex up (spec §5.5).
+ * With a star `ratio`, an inner vertex sits midway (in angle) between each pair of outer
+ * vertices on the same ellipse scaled by `ratio` (board 27 §5: star = polygon + `star.ratio`).
+ */
+export function polygonPoints(
+  w: number,
+  h: number,
+  sides: number,
+  ratio: number | null = null,
+): [number, number][] {
+  const pts: [number, number][] = []
+  for (let i = 0; i < sides; i++) {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / sides
+    pts.push([w / 2 + (w / 2) * Math.cos(a), h / 2 + (h / 2) * Math.sin(a)])
+    if (ratio !== null) {
+      const b = a + Math.PI / sides
+      pts.push([w / 2 + (w / 2) * ratio * Math.cos(b), h / 2 + (h / 2) * ratio * Math.sin(b)])
+    }
+  }
+  return pts
 }

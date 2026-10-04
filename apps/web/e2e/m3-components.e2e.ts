@@ -421,7 +421,7 @@ async function variables({ page, url }: E2EContext) {
     ),
   )
   await page.locator('[data-variable="surface/page"]').waitFor()
-  await page.keyboard.press("Meta+Shift+KeyV")
+  await page.keyboard.press("Meta+Alt+Shift+KeyV")
   const dialog = page.locator('[data-testid="variables-dialog"]')
   await dialog.waitFor()
   expect(

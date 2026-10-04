@@ -11,7 +11,7 @@ import type { PlacementOptions } from "../popover/position"
 import { type PopoverAnchor, useAnchoredPosition, useDismiss } from "../popover/usePopover"
 
 const ITEM_SELECTOR =
-  '[role="menuitem"]:not([aria-disabled="true"]), [role="menuitemradio"]:not([aria-disabled="true"])'
+  '[role="menuitem"]:not([aria-disabled="true"]), [role="menuitemradio"]:not([aria-disabled="true"]), [role="menuitemcheckbox"]:not([aria-disabled="true"])'
 
 /** Props for {@link MenuDense}. Remaining `<div>` props go to the frame. */
 export interface MenuDenseProps extends ComponentPropsWithRef<"div"> {
@@ -61,7 +61,7 @@ export function MenuDense({
     if (!autoFocus || !visible || focused.current) return
     focused.current = true
     const el = root.current
-    const checked = el?.querySelector<HTMLElement>('[aria-checked="true"]')
+    const checked = el?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]')
     ;(checked ?? el?.querySelector<HTMLElement>(ITEM_SELECTOR) ?? el)?.focus({
       preventScroll: true,
     })
@@ -143,6 +143,12 @@ export interface MenuItemDenseProps
    * `menuitemradio` with `aria-checked`.
    */
   checked?: boolean
+  /**
+   * A checkable item (board 27 View menu rmQMe: "Checkable items use the Menu/Dense check
+   * slot"): a `menuitemcheckbox` whose Check (RmOTH) shows when on. Unlike `checked` the row
+   * keeps its regular weight and no fill. Ignored when `checked` is set.
+   */
+  toggled?: boolean
   /** Keyboard/hover highlight forced on: bg-hover. */
   highlighted?: boolean
   /** Right-hand text (Meta T4CD1), e.g. `244 162 97`. */
@@ -173,6 +179,7 @@ export interface MenuItemDenseProps
 export function MenuItemDense({
   label,
   checked,
+  toggled,
   highlighted = false,
   meta,
   metaFont = "mono",
@@ -193,9 +200,11 @@ export function MenuItemDense({
     <button
       {...rest}
       type={type}
-      {...(checked === undefined
-        ? { role: "menuitem" }
-        : { role: "menuitemradio", "aria-checked": checked })}
+      {...(checked !== undefined
+        ? { role: "menuitemradio", "aria-checked": checked }
+        : toggled !== undefined
+          ? { role: "menuitemcheckbox", "aria-checked": toggled }
+          : { role: "menuitem" })}
       aria-haspopup={submenu ? "menu" : undefined}
       tabIndex={-1}
       aria-disabled={disabled || undefined}
@@ -222,7 +231,7 @@ export function MenuItemDense({
         )}
         aria-hidden="true"
       >
-        {icon ?? (checked && <Check />)}
+        {icon ?? ((checked ?? toggled) && <Check />)}
       </span>
       <span
         className={cx("kimo-menu-item-dense__label", mono && "kimo-menu-item-dense__label--mono")}

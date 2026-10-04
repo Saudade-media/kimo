@@ -29,6 +29,8 @@ export interface SkillsApi {
   read(name: string): Promise<SkillFile | null>
   /** Fires (debounced) when anything under the root changes: the agent reloads its catalog. */
   watch(onChange: () => void): Unsubscribe
+  /** "Open skills folder": creates the root when missing and reveals it (desktop only). */
+  reveal?(): Promise<void>
 }
 
 /** Skill folder names the host accepts (no dots, separators or leading dash). */
@@ -46,6 +48,8 @@ export interface TauriSkillsCommandMap {
   kimo_skills_read: { args: { name: string }; result: SkillFile | null }
   kimo_skills_watch: { args: { watchId: string }; result: null }
   kimo_skills_unwatch: { args: { watchId: string }; result: null }
+  /** Creates the root when missing and reveals it in the file manager. */
+  kimo_skills_reveal: { args: Record<string, never>; result: null }
 }
 
 /** Kept out of the frozen `TAURI_COMMANDS`, like the other M6 commands. Keep the Rust order. */
@@ -55,6 +59,7 @@ export const TAURI_SKILLS_COMMANDS = [
   "kimo_skills_read",
   "kimo_skills_watch",
   "kimo_skills_unwatch",
+  "kimo_skills_reveal",
 ] as const satisfies readonly (keyof TauriSkillsCommandMap)[]
 
 export interface TauriSkillsEventMap {
@@ -75,6 +80,9 @@ export function createTauriSkills(bridge: { invoke: InvokeLike; listen: ListenLi
     root: async () => (await invoke("kimo_skills_root", {})) as string,
     list: async () => (await invoke("kimo_skills_list", {})) as SkillFile[],
     read: async (name) => (await invoke("kimo_skills_read", { name })) as SkillFile | null,
+    reveal: async () => {
+      await invoke("kimo_skills_reveal", {})
+    },
     watch(onChange) {
       const watchId = `skills-${Date.now().toString(36)}-${++watchSeq}`
       let stopped = false

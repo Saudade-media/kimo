@@ -32,3 +32,11 @@ describe("parseRoute", () => {
     expect(parseRoute("#/file/")).toEqual({ name: "not-found", path: "/file/" })
   })
 })
+
+test("board 27 §1: a page link keeps the file route", () => {
+  expect(parseRoute("#/file/abc?page=PageHome01")).toEqual({ name: "file", id: "abc" })
+  expect(parseRoute("#/disk/%2Fw%2Fa.kimo?page=PageHome01")).toMatchObject({
+    name: "disk",
+    node: null,
+  })
+})

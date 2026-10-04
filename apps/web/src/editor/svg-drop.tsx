@@ -10,6 +10,7 @@ import type { AssetStore } from "../lib/assets"
 import { isTyping } from "../lib/hooks"
 import {
   lastSvgChoice,
+  loadStrokeOutliner,
   type PreparedSvg,
   prepareSvg,
   rememberSvgChoice,
@@ -89,7 +90,16 @@ export function useSvgImport({
     async (p: Pending, choice: SvgImportChoice) => {
       const doc = session.store.toDocument() as unknown as Record<string, unknown>
       try {
+        // Board 27 r6nLx: Outline strokes runs CanvasKit's stroker (the canvas' shared
+        // instance). If it cannot load, the strokes stay editable strokes.
+        const outline =
+          choice.mode === "vector" &&
+          choice.options.outlineStrokes &&
+          (p.prepared.stats.stroked ?? 0) > 0
+            ? await loadStrokeOutliner().catch(() => undefined)
+            : undefined
         const { ops } = await svgImportOps(p.prepared, choice, {
+          ...(outline ? { outline } : {}),
           newId: generateId,
           at: p.at,
           parent: null,
@@ -199,7 +209,7 @@ export function useSvgImport({
       vectorDescription={pending.prepared.vectorDescription}
       imageDescription={pending.prepared.imageDescription}
       initial={lastSvgChoice()}
-      canOutline={false}
+      strokedPaths={pending.prepared.stats.stroked ?? 0}
       anchor={{ x: pending.client.x, y: pending.client.y, width: 0, height: 0 }}
       onCancel={() => setPending(null)}
       onImport={(choice) => {

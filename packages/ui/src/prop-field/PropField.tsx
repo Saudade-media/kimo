@@ -41,6 +41,11 @@ export interface PropFieldProps
   /** Accessible name of the input. Defaults to `prefix`. */
   inputLabel?: string
   disabled?: boolean
+  /**
+   * Rendered after the value, inside the frame: board 27 §7 `PropField/Bindable` (LFrgQ) puts
+   * its Bind Button here (with `kimo-prop-field--bindable` on the frame).
+   */
+  trailing?: ReactNode
 }
 
 const parse = (text: string): number | undefined => {
@@ -72,6 +77,7 @@ export function PropField({
   onDelta,
   inputLabel,
   disabled = false,
+  trailing,
   className,
   ...rest
 }: PropFieldProps) {
@@ -232,6 +238,7 @@ export function PropField({
         }}
         onKeyDown={onKeyDown}
       />
+      {trailing}
     </div>
   )
 }

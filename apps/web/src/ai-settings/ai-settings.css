@@ -747,3 +747,29 @@
 .kimo-button.ai-button--ghost.is-busy .kimo-button__icon > svg {
   animation: kimo-spin 1s linear infinite;
 }
+
+/*
+ * Board 27 §10 (a) q2UAb: Setting · Default provider (AseJa) / Default model (WmFb2) Controls
+ * hold a Select (A61KV / keHwF) 180 × 28 — the gP276 look (bg-subtle, value sans 12).
+ */
+.kimo-select.ai-default-select {
+  flex: none;
+  width: 180px;
+}
+
+/*
+ * Provider row first action (lxvvC): Default = star 14 text-primary + label text-primary;
+ * Make default = star-off 14 text-tertiary + label text-secondary.
+ */
+.kimo-button.ai-default-action.is-default .kimo-button__icon {
+  color: var(--kimo-text-primary);
+}
+.kimo-button.ai-default-action:not(.is-default) {
+  color: var(--kimo-text-secondary);
+}
+.kimo-button.ai-default-action:not(.is-default) .kimo-button__icon {
+  color: var(--kimo-text-tertiary);
+}
+.kimo-button.ai-default-action.is-default {
+  cursor: default;
+}

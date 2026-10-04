@@ -12,6 +12,7 @@ import { createSettingsStore } from "./settings-store"
 import { createMemorySkills, type MemorySkills } from "./skills"
 import {
   type AcquireResult,
+  type EditorMenuAction,
   type FileRef,
   type FileStat,
   type FontCacheEntry,
@@ -76,6 +77,8 @@ export interface MemoryControl {
   setLocalFonts(families: LocalFontFamily[], bytes?: Record<string, Uint8Array>): void
   /** Board 25 §7 (b): a native Help menu item picked (desktop `kimo://help-menu`). */
   helpMenu(action: HelpMenuAction): void
+  /** Board 27: a native File / View item picked (desktop `kimo://editor-menu`). */
+  editorMenu(action: EditorMenuAction): void
 }
 
 export type MemoryPlatform = KimoPlatform & {
@@ -270,6 +273,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
   const initial: OpenRequest[] = []
   const openEvents = new Emitter<[OpenRequest]>()
   const helpEvents = new Emitter<[HelpMenuAction]>()
+  const menuEvents = new Emitter<[EditorMenuAction]>()
 
   let persisted: Record<string, unknown> = { ...(options.settings ?? {}) }
   const settings = createSettingsStore({
@@ -308,6 +312,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
         calls.push("showLogs")
       },
     },
+    menu: { onAction: (l) => menuEvents.on(l) },
     capabilities,
     mcp: createMemoryMcpHost({ status: { version: appVersion } }),
     skills: createMemorySkills(options.skills),
@@ -639,6 +644,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
     control: {
       now,
       helpMenu: (a) => helpEvents.emit(a),
+      editorMenu: (a) => menuEvents.emit(a),
       tick(ms) {
         clock += ms
       },

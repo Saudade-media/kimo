@@ -10,4 +10,8 @@ export {
   type ApprovalCardOp,
   type ApprovalCardProps,
 } from "./approval-card/ApprovalCard"
+export {
+  CostWarningCard,
+  type CostWarningCardProps,
+} from "./cost-warning-card/CostWarningCard"
 export { RefusalCard, type RefusalCardProps } from "./refusal-card/RefusalCard"

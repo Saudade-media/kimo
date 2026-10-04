@@ -24,6 +24,13 @@ pub fn defaults() -> Map<String, Value> {
         "general.appearance": "system",
         "general.onLaunch": "last-files",
         "general.canvasZoom": "trackpad",
+        "general.duplicateMain": "ask",
+        "canvas.snapToObjects": true,
+        "canvas.snapToPixelGrid": true,
+        "canvas.pixelGrid": true,
+        "canvas.rulers": false,
+        "canvas.nudge": "1/10",
+        "canvas.layerNames": true,
         "updates.download": true,
         "updates.channel": "stable",
     });
@@ -52,6 +59,11 @@ pub fn validate(key: &str, v: &Value) -> Option<bool> {
         | "privacy.noThirdPartyFetch"
         | "fonts.google"
         | "fonts.embedInKimoz"
+        | "canvas.snapToObjects"
+        | "canvas.snapToPixelGrid"
+        | "canvas.pixelGrid"
+        | "canvas.rulers"
+        | "canvas.layerNames"
         | "updates.download" => v.is_boolean(),
         "files.autosaveIntervalMs" | "files.recoverySnapshotMs" => positive_ms(v),
         "files.onExternalChange" => one_of(v, &["merge-and-tell", "ask"]),
@@ -62,6 +74,8 @@ pub fn validate(key: &str, v: &Value) -> Option<bool> {
         "general.appearance" => one_of(v, &["system", "light", "dark"]),
         "general.onLaunch" => one_of(v, &["last-files", "home"]),
         "general.canvasZoom" => one_of(v, &["trackpad", "mouse"]),
+        "general.duplicateMain" => one_of(v, &["ask", "instance", "component"]),
+        "canvas.nudge" => one_of(v, &["1/10", "0.5/5", "8/16"]),
         "updates.channel" => one_of(v, &["stable", "beta"]),
         _ => return None,
     })
@@ -148,7 +162,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fifteen_keys_match_settings_ts() {
+    fn keys_match_settings_ts() {
         let ts = std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../../packages/platform/src/settings.ts"
@@ -166,8 +180,8 @@ mod tests {
             .filter_map(|l| l.trim().strip_prefix('"')?.split('"').next())
             .collect();
         let d = defaults();
-        assert_eq!(keys.len(), 15);
-        assert_eq!(d.len(), 15);
+        assert_eq!(keys.len(), 22);
+        assert_eq!(d.len(), 22);
         for k in keys {
             assert!(d.contains_key(k), "{k}");
             assert_eq!(validate(k, &d[k]), Some(true), "{k}");

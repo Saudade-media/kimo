@@ -19,6 +19,7 @@ import {
   Info,
   KeyRound,
   RefreshCw,
+  Ruler,
   Settings as SettingsIcon,
   Shield,
 } from "lucide-react"
@@ -28,11 +29,12 @@ import { AboutPane } from "./AboutPane"
 import { AgentsPane } from "./AgentsPane"
 import { useSetSetting, useSettings } from "./hooks"
 import { SETTINGS_PANES } from "./model"
-import { FilesPane, FontsPane, GeneralPane, type PaneProps, UpdatesPane } from "./panes"
+import { CanvasPane, FilesPane, FontsPane, GeneralPane, type PaneProps, UpdatesPane } from "./panes"
 import "./settings.css"
 
 const ICONS = {
   settings: SettingsIcon,
+  ruler: Ruler,
   "hard-drive": HardDrive,
   shield: Shield,
   "refresh-cw": RefreshCw,
@@ -141,6 +143,7 @@ export function SettingsView({
       </nav>
       <section id="settings-pane" role="tabpanel" className="settings-content" data-pane={pane}>
         {pane === "general" && <GeneralPane {...props} />}
+        {pane === "canvas" && <CanvasPane {...props} />}
         {pane === "files" && <FilesPane {...props} />}
         {pane === "fonts" && <FontsPane {...props} />}
         {pane === "agents-mcp" && <AgentsPane platform={platform} />}

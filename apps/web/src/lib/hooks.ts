@@ -141,7 +141,8 @@ function treeSig(store: DocStore, id: string): string {
   if (!n) return ""
   // M3: whether it is a main and what an instance points at (canvas labels, layer glyphs).
   const main = n.component !== undefined && n.component !== false ? "C" : ""
-  return `${String(n.parent)}\u0000${String(n.order)}\u0000${String(n.at)}\u0000${String(n.name)}\u0000${main}\u0000${typeof n.of === "string" ? n.of : ""}`
+  // Board 27 §1: a root's page (spec §5.6) decides which page tree it is listed in.
+  return `${String(n.parent)}\u0000${String(n.order)}\u0000${String(n.at)}\u0000${String(n.name)}\u0000${main}\u0000${typeof n.of === "string" ? n.of : ""}\u0000${typeof n.page === "string" ? n.page : ""}`
 }
 
 function treeHubFor(store: DocStore): TreeHub {
@@ -179,8 +180,8 @@ function treeHubFor(store: DocStore): TreeHub {
 
 /**
  * A token that changes when the layer tree's shape changes: a node is added or removed, or its
- * parent, order, slot (`at`) or name changes, or (M3) it becomes / stops being a main component
- * or an instance is swapped (`of`). Field edits (geometry, fills) keep it.
+ * parent, order, slot (`at`), name or page changes, or (M3) it becomes / stops being a main
+ * component or an instance is swapped (`of`). Field edits (geometry, fills) keep it.
  */
 export function useTreeRevision(store: DocStore): number {
   const hub = treeHubFor(store)

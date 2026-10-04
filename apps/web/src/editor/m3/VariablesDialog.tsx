@@ -1,5 +1,5 @@
 /**
- * Variables dialog (board 14 `EIkIk`, ⌘⇧V): 1040 × 780 over a scrim (#0A0A0A4D). Header
+ * Variables dialog (board 14 `EIkIk`, ⌥⇧⌘V): 1040 × 780 over a scrim (#0A0A0A4D). Header
  * (padding [20, 20, 16, 24]: title xl 500, desc base, Close 32) · Body: Sidebar 184 (Groups /
  * Theme axes / Libraries) + Main (Toolbar: Search 220 × 30, Type Filter, New variable · Table:
  * Axis Row 24, Column Row 32, VariableRows, open Entries · Footer: info note, Export DTCG, Done).

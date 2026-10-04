@@ -93,11 +93,16 @@ describe("Help menu (A0qRF, rule oKY0y)", () => {
   })
   test("About links (t4H8L)", () => {
     expect(aboutLinks("1.0.0").map((l) => [l.label, l.meta, l.icon])).toEqual([
-      ["Documentation", "kimo.dev/docs", "book-open"],
+      ["Documentation", "kimo.design/docs", "book-open"],
       ["Source code", "github.com/kimo-design/kimo", "git-branch"],
       ["Release notes", "1.0.0", "scroll-text"],
-      ["Privacy", "No telemetry · keys stay in your keychain", "shield"],
+      ["Privacy", "No telemetry · keys stay in this browser", "shield"],
     ])
+    const meta = (os: "macos" | "windows" | "linux") =>
+      aboutLinks("1.0.0", { kind: "desktop", os }).find((l) => l.id === "privacy")?.meta
+    expect(meta("macos")).toBe("No telemetry · keys stay in your Keychain")
+    expect(meta("windows")).toBe("No telemetry · keys stay in Credential Manager")
+    expect(meta("linux")).toBe("No telemetry · keys stay in Secret Service")
     expect(releaseNotesUrl("1.0.0")).toBe("https://github.com/kimo-design/kimo/releases/tag/v1.0.0")
   })
 })
@@ -147,7 +152,7 @@ describe("About pane render", () => {
       "Open-source, local-first, agent-native design canvas · MIT",
       "Copy version info",
       "Documentation",
-      "kimo.dev/docs",
+      "kimo.design/docs",
       "Release notes",
       `${NOTICES.length} packages`,
       "Filter packages",

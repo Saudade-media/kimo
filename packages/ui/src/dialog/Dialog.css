@@ -69,6 +69,12 @@
   color: var(--kimo-success);
 }
 
+/* Board 27 §8 (Replace main, Fix broken overrides, Duplicate main): component-soft / component. */
+.kimo-dialog--component .kimo-dialog__icon-wrap {
+  background: var(--kimo-component-soft);
+  color: var(--kimo-component);
+}
+
 .kimo-dialog__text {
   display: flex;
   flex: 1 1 0;
@@ -135,6 +141,17 @@
 
 .kimo-dialog .kimo-button.kimo-dialog__button--confirm {
   padding: 0 14px;
+}
+
+/* Board 27 Zq3KS (A7NLVt › qqpfr): a destructive confirm fills $danger. */
+.kimo-dialog .kimo-button.kimo-dialog__button--danger {
+  background: var(--kimo-danger);
+  color: var(--kimo-on-accent);
+}
+
+.kimo-dialog .kimo-button.kimo-dialog__button--danger:hover:not(:disabled) {
+  background: var(--kimo-danger);
+  filter: brightness(0.95);
 }
 
 /* Modal scrim (board 15 Scrim WWuf4), centering the dialog. */

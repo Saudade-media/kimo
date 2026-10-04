@@ -203,7 +203,7 @@ export const scenarios: Scenario[] = [
         .allInnerTexts()
       expect(
         items.join("|") ===
-          "New file|Open…|Open recent|Save|Save as…|Clean up assets…|Settings…|Help",
+          "New file|Open…|Open recent|Save|Save as…|Export…|Copy selection as PNG|Clean up assets…|Settings…|Help",
         `web File menu: ${items.join("|")}`,
       )
       await page.keyboard.press("Escape")

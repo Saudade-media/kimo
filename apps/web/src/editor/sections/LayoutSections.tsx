@@ -9,18 +9,29 @@ import {
   blendModeLabel,
   DirectionControl,
   type LayerBlendMode,
+  PanelCheckbox,
+  PanelIconToggle,
   PropRow,
   PropSection,
   Select,
   SizeField,
   type SizeMode,
-  Toggle,
 } from "@kimo/ui"
-import { type PointerEvent, useId, useRef, useState } from "react"
-import { groupOps, isFlowChild } from "../../canvas/commands"
+import { type PointerEvent, type ReactNode, useEffect, useRef, useState } from "react"
+import { flipOps, groupOps, isFlowChild } from "../../canvas/commands"
+import { gapPreviewStore } from "../../canvas/gap-preview"
 import { featureOps } from "../../lib/header"
 import { useBus } from "../../lib/hooks"
 import { Icon } from "../../lib/icons"
+import {
+  Bindable,
+  BindRow,
+  type BindSlot,
+  type BindSpec,
+  StaticField,
+  useBindRequest,
+} from "../bind"
+import { padSidesRaw, padValueRaw, sharedRef } from "../bindings"
 import { NumberField, ToggleRow } from "../fields"
 import { SectionTitle } from "../m3/overrides"
 import { type Sel, usePanel } from "../panel-context"
@@ -37,15 +48,7 @@ import {
   setOps,
   shared,
 } from "../props"
-import {
-  blendOf,
-  blendValue,
-  padSides,
-  padValue,
-  sizeModeFields,
-  sizeModeOf,
-  sizeModes,
-} from "../style"
+import { blendOf, blendValue, padSides, sizeModeFields, sizeModeOf, sizeModes } from "../style"
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v)
@@ -131,30 +134,88 @@ export function LayerSection({ sel }: { sel: readonly Sel[] }) {
               }}
             />
           )}
-          <NumberField
-            icon="blend"
-            label="Opacity"
-            className="rp-field--w96"
-            value={opacity === MIXED ? MIXED : `${Math.round(opacity * 100)}%`}
-            editor={editor}
-            min={0}
-            max={100}
-            onNumber={(n) => opacityOps(ids, n)}
-            onText={(t) => {
-              const n = parseNumber(t.replace(/%$/, ""))
-              return n === null ? null : opacityOps(ids, n)
+          {/* Board 27 §7: Opacity binds a number variable (0–1), chip prefix "Op" (d9NRu). */}
+          <Bindable
+            sel={sel}
+            className="rp-bind--w96"
+            spec={{
+              type: "number",
+              label: "Opacity",
+              prefix: "Op",
+              get: (n) => n.opacity ?? 1,
+              put: (s, v) => setOps([s.id], "opacity", v === 1 ? undefined : v),
+              format: (v) => `${Math.round(Number(v) * 100)} %`,
+              current: () => (opacity === MIXED ? null : opacity),
             }}
-            relative={() => {
-              const base = sel.map((s) => ({
-                id: s.id,
-                v: typeof s.node.opacity === "number" ? s.node.opacity * 100 : 100,
-              }))
-              return (d) => base.flatMap((b) => opacityOps([b.id], b.v + d))
-            }}
-          />
+          >
+            {(bind) => (
+              <NumberField
+                icon="blend"
+                label="Opacity"
+                bind={bind}
+                className="rp-field--w96"
+                value={opacity === MIXED ? MIXED : `${Math.round(opacity * 100)}%`}
+                editor={editor}
+                min={0}
+                max={100}
+                onNumber={(n) => opacityOps(ids, n)}
+                onText={(t) => {
+                  const n = parseNumber(t.replace(/%$/, ""))
+                  return n === null ? null : opacityOps(ids, n)
+                }}
+                relative={() => {
+                  const base = sel.map((s) => ({
+                    id: s.id,
+                    v: typeof s.node.opacity === "number" ? s.node.opacity * 100 : 100,
+                  }))
+                  return (d) => base.flatMap((b) => opacityOps([b.id], b.v + d))
+                }}
+              />
+            )}
+          </Bindable>
         </PropRow>
+        <VisibleRow sel={sel} />
       </div>
     </PropSection>
+  )
+}
+
+/**
+ * Board 27 §7 (c) Visible (kRMBZ): shown while visibility is bound to a boolean variable (or a
+ * "Bind visibility…" request from the layer menu is open); the eye in the layer row stays the
+ * everyday toggle.
+ */
+function VisibleRow({ sel }: { sel: readonly Sel[] }) {
+  const [requested, clear] = useBindRequest("visible")
+  const bound = sharedRef(sel.map((s) => s.node.visible)) !== null
+  if (!bound && !requested) return null
+  const visible = shared(
+    sel.map((s) => s.node),
+    (n) => n.visible !== false,
+  )
+  return (
+    <BindRow label="Visible">
+      <Bindable
+        sel={sel}
+        defaultOpen={requested && !bound}
+        onPickerClose={clear}
+        spec={{
+          type: "boolean",
+          label: "Visibility",
+          get: (n) => n.visible ?? true,
+          put: (s, v) => setOps([s.id], "visible", v === true ? undefined : v),
+          current: () => (visible === MIXED ? null : visible),
+          varBase: "show",
+        }}
+      >
+        {(bind) => (
+          <StaticField
+            value={visible === MIXED ? MIXED_LABEL : visible ? "Shown" : "Hidden"}
+            bind={bind}
+          />
+        )}
+      </Bindable>
+    </BindRow>
   )
 }
 
@@ -166,7 +227,8 @@ function opacityOps(ids: readonly string[], percent: number): Op[] {
 
 // --- Position -----------------------------------------------------------------------------
 
-const HAS_RADIUS = new Set(["frame", "rect", "polygon", "browser"])
+// Board 27 §5 (b): a polygon's / star's Radius lives in its Polygon section.
+const HAS_RADIUS = new Set(["frame", "rect", "browser"])
 const HAS_SIZE = (n: NodeData) => n.type !== "group" && n.type !== "instance"
 const HAS_ROTATION = (n: NodeData) => n.type !== "instance"
 
@@ -235,6 +297,13 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
     return setOps(ids, "rotation", r === 0 ? undefined : r)
   }
   const hasRadius = nodes.every((n) => HAS_RADIUS.has(n.type))
+  // Board 27 §6 rule K0t6s: flipX / flipY (not groups or instances).
+  const flippable = nodes.every((n) => n.type !== "group" && n.type !== "instance")
+  const flipX = shared(nodes, (n) => n.flipX === true)
+  const flipY = shared(nodes, (n) => n.flipY === true)
+  // Board 27 §6 rule lz2Ws: Clip content, frames only (components included).
+  const frames = nodes.every((n) => n.type === "frame")
+  const clip = shared(nodes, (n) => n.clip === true)
   const r = shared(nodes, (n) => n.radius)
   const rValue = r === MIXED ? MIXED : typeof r === "number" ? r : formatRadius(r)
   const absolute = shared(nodes, (n) => n.position === "absolute")
@@ -273,46 +342,83 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
           <SizeControl axis="w" sel={sel} laid={laid} modes={modes} disabled={!sized} />
           <SizeControl axis="h" sel={sel} laid={laid} modes={modes} disabled={!sized} />
         </PropRow>
-        {(rotatable || hasRadius) && (
+        {rotatable && (
+          /* Board 27 §6 (a) "Rotate · flip" (LN4Tc): row, gap 6, center → Rotation (fill) ·
+             Flip horizontal (IFtI5) · Flip vertical (T4K2F), 28 each, icons 14. */
+          <div className="rp-rotate-flip">
+            <NumberField
+              className="rp-rotate-flip__field"
+              icon="rotate-cw"
+              label="Rotation"
+              value={rotation === MIXED ? MIXED : `${formatNumber(rotation)}°`}
+              editor={editor}
+              onNumber={rotationOps}
+              onText={(t) => {
+                const n = parseNumber(t.replace(/°$/, ""))
+                return n === null ? null : rotationOps(n)
+              }}
+              relative={() => {
+                const base = sel.map((s) => ({
+                  id: s.id,
+                  v: typeof s.node.rotation === "number" ? s.node.rotation : 0,
+                }))
+                return (d) =>
+                  base.flatMap((b) => {
+                    const v = round(((((b.v + d + 180) % 360) + 360) % 360) - 180)
+                    return setOps([b.id], "rotation", v === 0 ? undefined : v)
+                  })
+              }}
+            />
+            {flippable && (
+              <>
+                <PanelIconToggle
+                  label="Flip horizontal"
+                  icon={<Icon name="flip-horizontal-2" size={14} />}
+                  pressed={flipX === true}
+                  onClick={() => editor.apply(flipOps(session.store, ids, "x"), "Flip horizontal")}
+                />
+                <PanelIconToggle
+                  label="Flip vertical"
+                  icon={<Icon name="flip-vertical-2" size={14} />}
+                  pressed={flipY === true}
+                  onClick={() => editor.apply(flipOps(session.store, ids, "y"), "Flip vertical")}
+                />
+              </>
+            )}
+          </div>
+        )}
+        {hasRadius && (
           <PropRow className="rp-row">
-            {rotatable && (
-              <NumberField
-                icon="rotate-cw"
-                label="Rotation"
-                value={rotation === MIXED ? MIXED : `${formatNumber(rotation)}°`}
-                editor={editor}
-                onNumber={rotationOps}
-                onText={(t) => {
-                  const n = parseNumber(t.replace(/°$/, ""))
-                  return n === null ? null : rotationOps(n)
-                }}
-                relative={() => {
-                  const base = sel.map((s) => ({
-                    id: s.id,
-                    v: typeof s.node.rotation === "number" ? s.node.rotation : 0,
-                  }))
-                  return (d) =>
-                    base.flatMap((b) => {
-                      const v = round(((((b.v + d + 180) % 360) + 360) % 360) - 180)
-                      return setOps([b.id], "rotation", v === 0 ? undefined : v)
-                    })
-                }}
-              />
-            )}
-            {hasRadius && (
-              <NumberField
-                icon="square-dashed"
-                label="Corner radius"
-                value={rValue}
-                editor={editor}
-                min={0}
-                onNumber={(n) => setOps(ids, "radius", n === 0 ? undefined : n)}
-                onText={(t) => {
-                  const v = parseRadius(t)
-                  return v === null ? null : setOps(ids, "radius", v)
-                }}
-              />
-            )}
+            {/* Board 27 §7: corner radius binds a number variable, chip prefix "R" (x090G). */}
+            <Bindable
+              sel={sel}
+              spec={{
+                type: "number",
+                label: "Corner radius",
+                prefix: "R",
+                get: (n) => n.radius ?? 0,
+                put: (s, v) => setOps([s.id], "radius", v === 0 ? undefined : v),
+                current: () => (typeof r === "number" ? r : r === undefined ? 0 : null),
+                varBase: "radius",
+              }}
+            >
+              {(bind) => (
+                <NumberField
+                  icon="square-dashed"
+                  label="Corner radius"
+                  bind={bind}
+                  value={rValue}
+                  editor={editor}
+                  min={0}
+                  onNumber={(n) => setOps(ids, "radius", n === 0 ? undefined : n)}
+                  onText={(t) => {
+                    const v = parseRadius(t)
+                    return v === null ? null : setOps(ids, "radius", v)
+                  }}
+                />
+              )}
+            </Bindable>
+            <span className="rp-row__empty" aria-hidden="true" />
           </PropRow>
         )}
         {inLayout && (
@@ -336,8 +442,51 @@ export function PositionSection({ sel }: { sel: readonly Sel[] }) {
             }
           />
         )}
+        {frames && <ClipRow sel={sel} clip={clip} />}
       </div>
     </PropSection>
+  )
+}
+
+/**
+ * Clip content (board 27 §6 rule lz2Ws) — bindable to a boolean variable (§7): unbound, the
+ * checkbox row gets the hover Bind Button; bound, a "Clip content" row with the chip (kRMBZ).
+ */
+function ClipRow({ sel, clip }: { sel: readonly Sel[]; clip: boolean | Mixed }) {
+  const { editor } = usePanel()
+  const ids = sel.map((s) => s.id)
+  const spec: BindSpec = {
+    type: "boolean",
+    label: "Clip content",
+    get: (n) => n.clip ?? false,
+    put: (s, v) => setOps([s.id], "clip", v === false ? undefined : v),
+    current: () => (clip === MIXED ? null : clip),
+    varBase: "clip",
+  }
+  if (sharedRef(sel.map((s) => s.node.clip)) !== null)
+    return (
+      <BindRow label="Clip content">
+        <Bindable sel={sel} spec={spec}>
+          {() => null}
+        </Bindable>
+      </BindRow>
+    )
+  return (
+    <Bindable sel={sel} spec={spec}>
+      {(bind) => (
+        <div className={`rp-clip-row ${bind.className}`}>
+          <PanelCheckbox
+            className="rp-clip"
+            label="Clip content"
+            checked={clip === MIXED ? "mixed" : clip}
+            onChange={(on) =>
+              editor.apply(setOps(ids, "clip", on ? true : undefined), "Set clip content")
+            }
+          />
+          {bind.trailing}
+        </div>
+      )}
+    </Bindable>
   )
 }
 
@@ -406,60 +555,86 @@ function SizeControl({
     scrub.current = null
     editor.end()
   }
+  // Board 27 §7: a fixed W / H binds a number variable (binding makes the axis fixed).
+  const other = axis === "w" ? "h" : "w"
+  const spec: BindSpec = {
+    type: "number",
+    label: axis === "w" ? "Width" : "Height",
+    prefix: axis === "w" ? "W" : "H",
+    get: (n) => n[axis],
+    put: (s, value) => {
+      const f = sizeModeFields(s.node, axis, "fixed", laid(s, axis), laid(s, other))
+      return [updateOp(s.id, { ...f.set, [axis]: value }, f.unset)]
+    },
+    current: () => (v === MIXED ? null : v),
+    varBase: axis === "w" ? "size/width" : "size/height",
+  }
+  if (disabled) return field(null)
   return (
-    <div
-      className="rp-field"
-      onPointerDownCapture={(e) => {
-        const t = e.target as HTMLElement
-        if (disabled || e.button !== 0 || !t.closest(".kimo-size-field__prefix")) return
-        e.preventDefault()
-        e.stopPropagation()
-        t.setPointerCapture(e.pointerId)
-        scrub.current = { x: e.clientX, pointer: e.pointerId, base: snapshot(), last: 0 }
-        editor.begin()
-      }}
-      onPointerMove={(e) => {
-        const sc = scrub.current
-        if (!sc || sc.pointer !== e.pointerId) return
-        const delta = Math.round(e.clientX - sc.x) * (e.shiftKey ? 10 : 1)
-        if (delta === sc.last) return
-        sc.last = delta
-        editor.apply(shift(sc.base, delta), `Set ${label}`)
-      }}
-      onPointerUp={endScrub}
-      onPointerCancel={endScrub}
-      onLostPointerCapture={endScrub}
-      onKeyDownCapture={(e) => {
-        if (v !== MIXED || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return
-        if (!(e.target instanceof HTMLInputElement)) return
-        // Mixed: step each node from its own size (the ui field only steps numbers).
-        e.preventDefault()
-        e.stopPropagation()
-        const d = (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : 1)
-        editor.apply(shift(snapshot(), d), `Set ${label}`)
-      }}
-    >
-      <SizeField
-        prefix={axis === "w" ? "W" : "H"}
-        inputLabel={axis === "w" ? "Width" : "Height"}
-        value={v === MIXED ? MIXED_LABEL : formatNumber(v)}
-        mode={mode === MIXED ? sizeModeOf(nodes[0] as NodeData, axis) : mode}
-        modes={modes}
-        disabled={disabled}
-        onModeChange={setMode}
-        onValueCommit={(text) => {
-          const p = parseSize(text)
-          if (p === null) return
-          if (typeof p === "number")
-            editor.apply(
-              fixedOps(sel, axis, () => p, laid),
-              `Set ${label}`,
-            )
-          else if (modes.includes(p.mode)) setMode(p.mode)
-        }}
-      />
-    </div>
+    <Bindable sel={sel} spec={spec}>
+      {(bind) => field(bind)}
+    </Bindable>
   )
+
+  function field(bind: BindSlot | null) {
+    return (
+      <div
+        className="rp-field"
+        onPointerDownCapture={(e) => {
+          const t = e.target as HTMLElement
+          if (e.altKey && bind) return // ⌥-click opens the variable picker (Bindable)
+          if (disabled || e.button !== 0 || !t.closest(".kimo-size-field__prefix")) return
+          e.preventDefault()
+          e.stopPropagation()
+          t.setPointerCapture(e.pointerId)
+          scrub.current = { x: e.clientX, pointer: e.pointerId, base: snapshot(), last: 0 }
+          editor.begin()
+        }}
+        onPointerMove={(e) => {
+          const sc = scrub.current
+          if (!sc || sc.pointer !== e.pointerId) return
+          const delta = Math.round(e.clientX - sc.x) * (e.shiftKey ? 10 : 1)
+          if (delta === sc.last) return
+          sc.last = delta
+          editor.apply(shift(sc.base, delta), `Set ${label}`)
+        }}
+        onPointerUp={endScrub}
+        onPointerCancel={endScrub}
+        onLostPointerCapture={endScrub}
+        onKeyDownCapture={(e) => {
+          if (v !== MIXED || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return
+          if (!(e.target instanceof HTMLInputElement)) return
+          // Mixed: step each node from its own size (the ui field only steps numbers).
+          e.preventDefault()
+          e.stopPropagation()
+          const d = (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : 1)
+          editor.apply(shift(snapshot(), d), `Set ${label}`)
+        }}
+      >
+        <SizeField
+          prefix={axis === "w" ? "W" : "H"}
+          inputLabel={axis === "w" ? "Width" : "Height"}
+          value={v === MIXED ? MIXED_LABEL : formatNumber(v)}
+          mode={mode === MIXED ? sizeModeOf(nodes[0] as NodeData, axis) : mode}
+          modes={modes}
+          disabled={disabled}
+          className={bind?.className}
+          trailing={bind?.trailing}
+          onModeChange={setMode}
+          onValueCommit={(text) => {
+            const p = parseSize(text)
+            if (p === null) return
+            if (typeof p === "number")
+              editor.apply(
+                fixedOps(sel, axis, () => p, laid),
+                `Set ${label}`,
+              )
+            else if (modes.includes(p.mode)) setMode(p.mode)
+          }}
+        />
+      </div>
+    )
+  }
 }
 
 // --- Auto layout --------------------------------------------------------------------------
@@ -496,7 +671,6 @@ function withLayout(n: NodeData, patch: Record<string, unknown>): Record<string,
 
 export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
   const { session, editor, layout } = usePanel()
-  const wrapLabel = useId()
   const nodes = sel.map((s) => s.node)
   const frames = nodes.every((n) => n.type === "frame")
   const withLayoutAll = frames && nodes.every((n) => layoutObj(n) !== null)
@@ -567,7 +741,13 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
     | Mixed
   const align = field((l) => (typeof l.align === "string" ? l.align : "start")) as string | Mixed
   const gap = field((l) => l.gap ?? 0)
-  const pads = shared(nodes, (n) => padSides(layoutObj(n)?.pad))
+  // Board 27 rule YRDTq: Row gap (crossGap) shows only while Wrap is on (horizontal); off keeps
+  // crossGap in the data, hidden. crossGap defaults to gap (spec §5.3).
+  const crossGap = field((l) => l.crossGap ?? l.gap ?? 0)
+  const wrapped = wrap === true && dir === "row"
+  const single = sel.length === 1 ? (sel[0] as Sel).id : null
+  // Raw sides: a bound side stays a `{ $ref }` (board 27 §7: each side binds on its own).
+  const pads = shared(nodes, (n) => padSidesRaw(layoutObj(n)?.pad))
   const individual = field((l) => Array.isArray(l.pad) && l.pad.length === 4)
   const distribution: Distribution | Mixed =
     justify === MIXED
@@ -578,15 +758,52 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
   const gridJustify = justify === MIXED ? "start" : justify
   const gridAlign: Align3 = align === "center" || align === "end" ? (align as Align3) : "start"
 
-  const padOps = (
-    next: (s: [number, number, number, number]) => [number, number, number, number],
-  ) =>
-    mapOps(sel, "layout", (n) => {
-      const sides = next(padSides(layoutObj(n)?.pad))
+  type Sides = [unknown, unknown, unknown, unknown]
+  const padOpsFor = (targets: readonly Sel[], next: (s: Sides) => Sides) =>
+    mapOps(targets, "layout", (n) => {
+      const sides = next(padSidesRaw(layoutObj(n)?.pad))
       const pad = layoutObj(n)?.pad
       const ind = Array.isArray(pad) && pad.length === 4
-      return withLayout(n, { pad: padValue(sides, ind) })
+      return withLayout(n, { pad: padValueRaw(sides, ind) })
     })
+  const padOps = (next: (s: Sides) => Sides) => padOpsFor(sel, next)
+  /** A raw pad pair as one field value (a token that is never a binding when they differ). */
+  const pair = (a: unknown, b: unknown) =>
+    JSON.stringify(a) === JSON.stringify(b) ? a : PAIR_MIXED
+  const sideValue = (v: unknown) => (typeof v === "number" ? v : MIXED)
+  const padSpec = (
+    label: string,
+    prefix: string,
+    get: (s: Sides) => unknown,
+    set: (s: Sides, v: unknown) => Sides,
+  ): BindSpec => ({
+    type: "number",
+    label,
+    prefix,
+    get: (n) => get(padSidesRaw(layoutObj(n)?.pad)),
+    put: (s, v) => padOpsFor([s], (sides) => set(sides, v)),
+    current: () => {
+      const vs = sel.map((s) => get(padSidesRaw(layoutObj(s.node)?.pad)))
+      const v0 = vs[0]
+      return typeof v0 === "number" && vs.every((v) => v === v0) ? v0 : null
+    },
+    varBase: "space",
+  })
+  const gapSpec = (key: "gap" | "crossGap", label: string, prefix: string): BindSpec => ({
+    type: "number",
+    label,
+    prefix,
+    get: (n) => {
+      const l = layoutObj(n) ?? {}
+      return key === "gap" ? (l.gap ?? 0) : (l.crossGap ?? l.gap ?? 0)
+    },
+    put: (s, v) => mapOps([s], "layout", (node) => withLayout(node, { [key]: v })),
+    current: () => {
+      const v = key === "gap" ? gap : crossGap
+      return typeof v === "number" ? v : null
+    },
+    varBase: "space",
+  })
   const num = (v: unknown) =>
     v === MIXED ? MIXED : typeof v === "number" ? v : isObj(v) ? `$${String(v.$ref)}` : 0
 
@@ -608,21 +825,22 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
       }}
     >
       <div className="rp-body">
-        {/* Direction Row (e3GOh): h 28, gap 8, center */}
-        <div className="rp-direction-row">
+        {/* Board 27 §6 (b) Direction (nUHiL): h 28, gap 6, center → DirectionControl · Wrap
+            (JIb4r, `text-wrap`, horizontal layouts only) · Spacer. */}
+        <div className="rp-direction-row rp-direction-row--wrap">
           <DirectionControl
             value={dir === MIXED ? "row" : dir}
             onChange={(d) => set({ dir: d }, "Set layout direction")}
           />
+          {dir === "row" && (
+            <PanelIconToggle
+              label="Wrap"
+              icon={<Icon name="text-wrap" size={14} />}
+              pressed={wrap === true}
+              onClick={() => set({ wrap: wrap === true ? undefined : true }, "Set wrap")}
+            />
+          )}
           <span className="rp-spacer" />
-          <span className="rp-label" id={wrapLabel}>
-            Wrap
-          </span>
-          <Toggle
-            aria-labelledby={wrapLabel}
-            checked={wrap === true}
-            onChange={(c) => set({ wrap: c ? true : undefined }, "Set wrap")}
-          />
         </div>
         {/* Align Row (XBXjF): gap 8 (top-aligned): AlignmentGrid · Spacing Column */}
         <div className="rp-align-row">
@@ -641,13 +859,60 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
             }
           />
           <div className="rp-align-row__spacing">
-            <NumberField
-              prefix="Gap"
-              label="Gap"
-              value={num(gap)}
-              editor={editor}
-              onNumber={(n) => mapOps(sel, "layout", (node) => withLayout(node, { gap: n }))}
-            />
+            {wrapped ? (
+              /* Board 27 §6 (b) Gaps (Zr6bS): row, gap 8 → Gap ↔ · Row gap ↕ (crossGap). */
+              <PropRow className="rp-row">
+                <GapHover id={single} kind="main">
+                  <Bindable sel={sel} spec={gapSpec("gap", "Gap", "↔")}>
+                    {(bind) => (
+                      <NumberField
+                        prefix="↔"
+                        label="Gap"
+                        bind={bind}
+                        value={num(gap)}
+                        editor={editor}
+                        onNumber={(n) =>
+                          mapOps(sel, "layout", (node) => withLayout(node, { gap: n }))
+                        }
+                      />
+                    )}
+                  </Bindable>
+                </GapHover>
+                <GapHover id={single} kind="cross">
+                  <Bindable sel={sel} spec={gapSpec("crossGap", "Row gap", "↕")}>
+                    {(bind) => (
+                      <NumberField
+                        prefix="↕"
+                        label="Row gap"
+                        bind={bind}
+                        value={num(crossGap)}
+                        editor={editor}
+                        onNumber={(n) =>
+                          mapOps(sel, "layout", (node) => withLayout(node, { crossGap: n }))
+                        }
+                      />
+                    )}
+                  </Bindable>
+                </GapHover>
+              </PropRow>
+            ) : (
+              <GapHover id={single} kind="main">
+                <Bindable sel={sel} spec={gapSpec("gap", "Gap", "Gap")}>
+                  {(bind) => (
+                    <NumberField
+                      prefix="Gap"
+                      label="Gap"
+                      bind={bind}
+                      value={num(gap)}
+                      editor={editor}
+                      onNumber={(n) =>
+                        mapOps(sel, "layout", (node) => withLayout(node, { gap: n }))
+                      }
+                    />
+                  )}
+                </Bindable>
+              </GapHover>
+            )}
             <Select<Distribution>
               dense
               label="Distribution"
@@ -674,34 +939,58 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
         {individual !== true && (
           /* Padding Row (VZ2dy): Pad H (arrow-left-right) · Pad V (arrow-up-down) */
           <PropRow className="rp-row">
-            <NumberField
-              icon="arrow-left-right"
-              label="Horizontal padding"
-              value={
-                pads === MIXED || individual === MIXED
-                  ? MIXED
-                  : pads[1] === pads[3]
-                    ? pads[1]
-                    : MIXED
-              }
-              editor={editor}
-              min={0}
-              onNumber={(n) => padOps(([t, , b]) => [t, n, b, n])}
-            />
-            <NumberField
-              icon="arrow-up-down"
-              label="Vertical padding"
-              value={
-                pads === MIXED || individual === MIXED
-                  ? MIXED
-                  : pads[0] === pads[2]
-                    ? pads[0]
-                    : MIXED
-              }
-              editor={editor}
-              min={0}
-              onNumber={(n) => padOps(([, r, , l]) => [n, r, n, l])}
-            />
+            {/* Board 27 §7: Padding H / V bind a number variable, chip prefixes Px / Py
+                (duVJV / tiX5K). */}
+            <Bindable
+              sel={sel}
+              spec={padSpec(
+                "Horizontal padding",
+                "Px",
+                ([, r, , l]) => pair(r, l),
+                ([t, , b], v) => [t, v, b, v],
+              )}
+            >
+              {(bind) => (
+                <NumberField
+                  icon="arrow-left-right"
+                  label="Horizontal padding"
+                  bind={bind}
+                  value={
+                    pads === MIXED || individual === MIXED
+                      ? MIXED
+                      : sideValue(pair(pads[1], pads[3]))
+                  }
+                  editor={editor}
+                  min={0}
+                  onNumber={(n) => padOps(([t, , b]) => [t, n, b, n])}
+                />
+              )}
+            </Bindable>
+            <Bindable
+              sel={sel}
+              spec={padSpec(
+                "Vertical padding",
+                "Py",
+                ([t, , b]) => pair(t, b),
+                ([, r, , l], v) => [v, r, v, l],
+              )}
+            >
+              {(bind) => (
+                <NumberField
+                  icon="arrow-up-down"
+                  label="Vertical padding"
+                  bind={bind}
+                  value={
+                    pads === MIXED || individual === MIXED
+                      ? MIXED
+                      : sideValue(pair(pads[0], pads[2]))
+                  }
+                  editor={editor}
+                  min={0}
+                  onNumber={(n) => padOps(([, r, , l]) => [n, r, n, l])}
+                />
+              )}
+            </Bindable>
           </PropRow>
         )}
         <ToggleRow
@@ -710,15 +999,13 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
           onChange={(on) =>
             editor.apply(
               mapOps(sel, "layout", (n) => {
+                const raw = padSidesRaw(layoutObj(n)?.pad)
+                if (on) return withLayout(n, { pad: [...raw] })
+                // Back to uniform: matching pairs (bound or not) are kept; else the larger.
                 const [t, r, b, l] = padSides(layoutObj(n)?.pad)
-                return withLayout(n, {
-                  pad: on
-                    ? [t, r, b, l]
-                    : padValue(
-                        [Math.max(t, b), Math.max(r, l), Math.max(t, b), Math.max(r, l)],
-                        false,
-                      ),
-                })
+                const v = pair(raw[0], raw[2]) === PAIR_MIXED ? Math.max(t, b) : raw[0]
+                const h = pair(raw[1], raw[3]) === PAIR_MIXED ? Math.max(r, l) : raw[1]
+                return withLayout(n, { pad: padValueRaw([v, h, v, h], false) })
               }),
               on ? "Individual padding" : "Uniform padding",
             )
@@ -726,22 +1013,40 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
         />
         {individual === true && (
           <div className="rp-sides">
+            {/* Board 27 §7 (QsU0r): with mixed bindings each side shows its own chip. */}
             {(["t", "r", "b", "l"] as const).map((side, i) => (
-              <NumberField
+              <Bindable
                 key={side}
-                prefix={side.toUpperCase()}
-                label={`Padding ${["top", "right", "bottom", "left"][i]}`}
-                value={pads === MIXED ? MIXED : (pads[i] as number)}
-                editor={editor}
-                min={0}
-                onNumber={(n) =>
-                  padOps((s) => {
-                    const next = [...s] as [number, number, number, number]
-                    next[i] = n
+                sel={sel}
+                spec={padSpec(
+                  `Padding ${["top", "right", "bottom", "left"][i]}`,
+                  side.toUpperCase(),
+                  (s) => s[i],
+                  (s, v) => {
+                    const next = [...s] as Sides
+                    next[i] = v
                     return next
-                  })
-                }
-              />
+                  },
+                )}
+              >
+                {(bind) => (
+                  <NumberField
+                    prefix={side.toUpperCase()}
+                    label={`Padding ${["top", "right", "bottom", "left"][i]}`}
+                    bind={bind}
+                    value={pads === MIXED ? MIXED : sideValue(pads[i])}
+                    editor={editor}
+                    min={0}
+                    onNumber={(n) =>
+                      padOps((s) => {
+                        const next = [...s] as Sides
+                        next[i] = n
+                        return next
+                      })
+                    }
+                  />
+                )}
+              </Bindable>
             ))}
           </div>
         )}
@@ -750,8 +1055,38 @@ export function AutoLayoutSection({ sel }: { sel: readonly Sel[] }) {
   )
 }
 
+/** Field value of a padding pair whose sides differ (never a binding). */
+const PAIR_MIXED = Symbol("pair-mixed")
+
 function omit(o: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> {
   const out = { ...o }
   for (const k of keys) delete out[k]
   return out
+}
+
+/**
+ * Board 27 §6 (b): while the pointer is over a gap field, the canvas labels that gap of the
+ * (single) selected layout frame in `measure` (gap-preview store → controller overlay).
+ */
+function GapHover({
+  id,
+  kind,
+  children,
+}: {
+  id: string | null
+  kind: "main" | "cross"
+  children: ReactNode
+}) {
+  const { session } = usePanel()
+  const store = gapPreviewStore(session.ui)
+  useEffect(() => () => store.set(null), [store])
+  return (
+    <div
+      className="rp-gap-hover"
+      onPointerEnter={() => id && store.set({ id, kind })}
+      onPointerLeave={() => store.set(null)}
+    >
+      {children}
+    </div>
+  )
 }

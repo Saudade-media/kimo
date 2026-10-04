@@ -13,6 +13,7 @@ import type { AssetStore } from "../lib/assets"
 import { type DocHeader, resolveColor } from "../lib/header"
 import type { Bus } from "../lib/hooks"
 import type { Editor } from "./fields"
+import type { M3Controller } from "./m3/controller"
 import type { FileSession } from "./session"
 
 export interface Sel {
@@ -34,6 +35,11 @@ export interface PanelContextValue {
    * of bindings resolve in it. Absent: the document defaults.
    */
   theme?: Theme
+  /**
+   * Board 27 §7: the file's M3 controller — libraries (imported variables for the binding
+   * picker) and per-node effective themes (bound values resolve per node).
+   */
+  m3?: M3Controller
 }
 
 export const PanelContext = createContext<PanelContextValue | null>(null)

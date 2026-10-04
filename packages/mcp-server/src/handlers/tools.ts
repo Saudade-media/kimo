@@ -12,8 +12,10 @@ import {
   isThemedValue,
   type KimoDocument,
   type Libraries,
+  listPages,
   localComponents,
   resolveVariable,
+  rootsByPage,
   serialize,
   usedFontFamilies,
   validate,
@@ -349,6 +351,14 @@ export function createToolHandlerMap(
             return s
           }),
           topLevelCount: top.length,
+          pages: (() => {
+            const byPage = rootsByPage({ pages: header.pages, nodes: doc.nodes })
+            return listPages({ pages: header.pages }).map((p) => ({
+              ...(p.id !== null ? { id: p.id } : {}),
+              name: p.name,
+              topLevelCount: byPage.get(p.id ?? "")?.length ?? 0,
+            }))
+          })(),
           components: localComponents(doc as never)
             .slice(0, 100)
             .map((id) => ({ id, name: String(d.store.getNode(id)?.name ?? id) })),

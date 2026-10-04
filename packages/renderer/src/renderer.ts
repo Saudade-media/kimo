@@ -1526,6 +1526,10 @@ export class CanvasKitRenderer implements Renderer {
         width: this.cssW,
         height: this.cssH,
         scene: this.scene,
+        image: (src) => {
+          const st = this.images?.get(src)
+          return st?.status === "ready" ? st.image : null
+        },
       })
       draws += oc.draws
       canvas.restore()
@@ -1659,6 +1663,15 @@ export class CanvasKitRenderer implements Renderer {
     }
     visit(nodeId)
     await Promise.all(jobs)
+  }
+
+  /** Board 27 crop mode: natural size of an image asset (loads it when needed). */
+  async imageSize(src: string): Promise<{ width: number; height: number } | null> {
+    const images = this.images
+    if (!images) return null
+    await images.load(src)
+    const st = images.get(src)
+    return st.status === "ready" ? { width: st.image.width(), height: st.image.height() } : null
   }
 
   samplePixel(world: Point): [number, number, number, number] | null {

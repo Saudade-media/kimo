@@ -27,7 +27,7 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | `RATE_LIMITED` | Too many calls too fast | Retryable after a short wait |
 | `APP_NOT_RUNNING` | The relay cannot reach the Kimo app | Retryable: ask the user to start Kimo, or use `kimo mcp` (headless) |
 | `PROTOCOL_MISMATCH` | Relay and app versions differ | Update Kimo or the CLI |
-| `UNSUPPORTED` | Not available here (e.g. svg render, code export before M7, focus headless) | Use the alternative named in `suggestion` |
+| `UNSUPPORTED` | Not available in this host (e.g. raster render without CanvasKit, SVG import headless, `kimo_script`, asset generation) | Use the alternative named in `suggestion` |
 | `INTERNAL` | Bug | Report it with the input. Re-read state before continuing |
 
 ## Common validator issues inside SCHEMA_VIOLATION

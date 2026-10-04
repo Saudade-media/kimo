@@ -1,0 +1,17 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"meta": {"name":"Pages"},
+"pages": {"PageArch01":{"order":"a2","name":"Archive"},"PageCheck1":{"order":"a1","name":"Checkout"},"PageHome01":{"order":"a0","name":"Home"}},
+"nodes": {
+"ArchNote01": {"type":"note","parent":null,"order":"a3","content":"Old explorations","page":"PageArch01"}
+
+, "CartFrame1": {"type":"frame","parent":null,"order":"a2","name":"Cart","x":0,"y":0,"w":390,"h":844,"page":"PageCheck1"}
+
+, "HomeFrame1": {"type":"frame","parent":null,"order":"a0","name":"Landing","x":0,"y":0,"w":1440,"h":900,"page":"PageHome01"}
+
+, "HomeTitle1": {"type":"text","parent":"HomeFrame1","order":"a0","content":"Welcome"}
+
+, "Unpaged001": {"type":"frame","parent":null,"order":"a1","name":"Legacy root (first page)","x":1600,"y":0,"w":400,"h":300}
+}
+}

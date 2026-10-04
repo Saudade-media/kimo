@@ -14,6 +14,11 @@ export interface OverrideDotProps extends Omit<ComponentPropsWithRef<"span">, "c
   onReset?: () => void
   /** Main value quoted in the hint: "Click to reset to main · “<resetValue>”". */
   resetValue?: string
+  /**
+   * Dot fill: `component` (an override, default) or `warning` (board 27 §8 Kpf1o: the layer row
+   * of an instance with broken overrides — same 12 × 12 slot, Dot fill `warning`).
+   */
+  tone?: "component" | "warning"
 }
 
 /**
@@ -24,6 +29,7 @@ export function OverrideDot({
   visible = true,
   onReset,
   resetValue,
+  tone = "component",
   className,
   onPointerEnter,
   onPointerLeave,
@@ -49,6 +55,7 @@ export function OverrideDot({
         "kimo-override-dot",
         !visible && "kimo-override-dot--off",
         interactive && "kimo-override-dot--interactive",
+        tone === "warning" && "kimo-override-dot--warning",
         className,
       )}
       onPointerEnter={(e) => {

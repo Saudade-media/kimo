@@ -20,9 +20,10 @@ export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, "") || "/"
   if (path === "/" || path === "") return { name: "home" }
   if (path === "/gallery") return { name: "gallery" }
-  const m = /^\/file\/([A-Za-z0-9_-]+)\/?$/.exec(path)
+  // Board 27 §1 "Copy link to page": `?page=<id>` (read by the pages strip).
+  const m = /^\/file\/([A-Za-z0-9_-]+)\/?(?:\?page=[A-Za-z0-9]+)?$/.exec(path)
   if (m?.[1]) return { name: "file", id: m[1] }
-  const d = /^\/disk\/([^?]+)(?:\?node=([A-Za-z0-9_-]+))?$/.exec(path)
+  const d = /^\/disk\/([^?]+)(?:\?node=([A-Za-z0-9_-]+))?(?:[?&]page=[A-Za-z0-9]+)?$/.exec(path)
   if (d?.[1]) {
     try {
       return { name: "disk", ref: decodeURIComponent(d[1]), node: d[2] ?? null }

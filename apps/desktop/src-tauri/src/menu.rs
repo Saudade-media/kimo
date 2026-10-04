@@ -11,6 +11,11 @@
 //! · ─ · Show logs in Finder. Logs are revealed here; every other item is sent to the focused
 //! editor window as `kimo://help-menu` (the web owns the URLs, the confirm and the clipboard).
 //! Windows / Linux have the same items as File › Help in the in-app menu.
+//!
+//! Board 27 §10 (d) W3CpXw / §9: File › Export… and Copy selection as PNG, View › Preview. They
+//! are sent to the focused editor window as `kimo://editor-menu` (`platform.menu.onAction`).
+//! No accelerators: a native accelerator would take ⇧⌘E / ⇧⌘C / ⇧Space before the webview (text
+//! fields included); the editor's own shortcut handler binds those keys.
 
 use tauri::{AppHandle, Runtime};
 
@@ -24,6 +29,19 @@ pub const HELP_WHATS_NEW: &str = "kimo-help-whats-new";
 pub const HELP_REPORT: &str = "kimo-help-report-issue";
 pub const HELP_DIAGNOSTICS: &str = "kimo-help-copy-diagnostics";
 pub const HELP_LOGS: &str = "kimo-help-show-logs";
+pub const FILE_EXPORT: &str = "kimo-file-export";
+pub const FILE_COPY_PNG: &str = "kimo-file-copy-png";
+pub const VIEW_PREVIEW: &str = "kimo-view-preview";
+
+/// The `kimo://editor-menu` event's `action` for each File / View item (`None` = not one).
+pub fn editor_action_for(id: &str) -> Option<&'static str> {
+    match id {
+        FILE_EXPORT => Some("export"),
+        FILE_COPY_PNG => Some("copy-png"),
+        VIEW_PREVIEW => Some("preview"),
+        _ => None,
+    }
+}
 
 /// The `kimo://help-menu` event's `action` for each Help item the web handles (`None` = not
 /// one; Show logs runs in Rust).
@@ -76,7 +94,18 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
         app,
         "File",
         true,
-        &[&PredefinedMenuItem::close_window(app, None)?],
+        &[
+            &MenuItem::with_id(app, FILE_EXPORT, "Export…", true, None::<&str>)?,
+            &MenuItem::with_id(
+                app,
+                FILE_COPY_PNG,
+                "Copy selection as PNG",
+                true,
+                None::<&str>,
+            )?,
+            &sep()?,
+            &PredefinedMenuItem::close_window(app, None)?,
+        ],
     )?;
     let edit = Submenu::with_items(
         app,
@@ -96,7 +125,11 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
         app,
         "View",
         true,
-        &[&PredefinedMenuItem::fullscreen(app, None)?],
+        &[
+            &MenuItem::with_id(app, VIEW_PREVIEW, "Preview", true, None::<&str>)?,
+            &sep()?,
+            &PredefinedMenuItem::fullscreen(app, None)?,
+        ],
     )?;
     let window = Submenu::with_items(
         app,
@@ -161,6 +194,10 @@ pub fn on_menu_event<Rt: Runtime>(app: &AppHandle<Rt>, id: &str) {
         emit_help(app, action);
         return;
     }
+    if let Some(action) = editor_action_for(id) {
+        emit_to_editor(app, "kimo://editor-menu", action);
+        return;
+    }
     let Some(pane) = settings_pane_for(id) else {
         return;
     };
@@ -183,6 +220,11 @@ pub fn on_menu_event<Rt: Runtime>(app: &AppHandle<Rt>, id: &str) {
 /// Sends a Help item to the focused editor window (else the primary one): the Settings window
 /// and the document host have no shortcuts sheet / issue confirm.
 fn emit_help<Rt: Runtime>(app: &AppHandle<Rt>, action: &str) {
+    emit_to_editor(app, "kimo://help-menu", action);
+}
+
+/// Sends `{ action }` as `event` to the focused editor window (else the primary one).
+fn emit_to_editor<Rt: Runtime>(app: &AppHandle<Rt>, event: &str, action: &str) {
     use tauri::{Emitter, Manager};
     let focused = app
         .webview_windows()
@@ -190,11 +232,7 @@ fn emit_help<Rt: Runtime>(app: &AppHandle<Rt>, action: &str) {
         .find(|w| crate::window::is_editor_label(w.label()) && w.is_focused().unwrap_or(false));
     if let Some(w) = focused.or_else(|| crate::window::primary_editor(app)) {
         let _ = w.set_focus();
-        let _ = app.emit_to(
-            w.label(),
-            "kimo://help-menu",
-            serde_json::json!({ "action": action }),
-        );
+        let _ = app.emit_to(w.label(), event, serde_json::json!({ "action": action }));
     }
 }
 
@@ -224,6 +262,16 @@ mod tests {
         assert_eq!(help_action_for(HELP_LOGS), None);
         assert_eq!(help_action_for(ABOUT), None);
         assert_eq!(settings_pane_for(HELP_DOCS), None);
+    }
+
+    #[test]
+    fn file_and_view_items_map_to_editor_actions() {
+        assert_eq!(editor_action_for(FILE_EXPORT), Some("export"));
+        assert_eq!(editor_action_for(FILE_COPY_PNG), Some("copy-png"));
+        assert_eq!(editor_action_for(VIEW_PREVIEW), Some("preview"));
+        assert_eq!(editor_action_for(HELP_DOCS), None);
+        assert_eq!(help_action_for(FILE_EXPORT), None);
+        assert_eq!(settings_pane_for(VIEW_PREVIEW), None);
     }
 
     #[test]

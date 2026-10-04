@@ -34,19 +34,19 @@ import { FILE, fixture, nodeMerge, ROOT, setup, sleep, waitFor } from "./m4-help
 
 describe("(a) Link… popover URL rule (NpwJS)", () => {
   test("http(s), mailto:, tel: and #frame only; empty removes", () => {
-    expect(parseLinkUrl("  https://kimo.dev/pricing ")).toEqual({
+    expect(parseLinkUrl("  https://kimo.design/pricing ")).toEqual({
       kind: "ok",
-      url: "https://kimo.dev/pricing",
+      url: "https://kimo.design/pricing",
       scheme: "http",
     })
     expect(parseLinkUrl("http://localhost:3000").kind).toBe("ok")
-    expect(parseLinkUrl("mailto:hi@kimo.dev")).toMatchObject({ kind: "ok", scheme: "mailto" })
+    expect(parseLinkUrl("mailto:hi@kimo.design")).toMatchObject({ kind: "ok", scheme: "mailto" })
     expect(parseLinkUrl("tel:+1 555 0100")).toMatchObject({ kind: "ok", scheme: "tel" })
     expect(parseLinkUrl("#Pricing")).toMatchObject({ kind: "ok", scheme: "frame" })
     expect(parseLinkUrl("")).toEqual({ kind: "empty" })
     expect(parseLinkUrl("   ")).toEqual({ kind: "empty" })
-    // Board 25 §6 (b) supersedes: no scheme ("kimo.dev") is auto-prefixed https://, not invalid.
-    expect(parseLinkUrl("kimo.dev")).toMatchObject({ kind: "ok", url: "https://kimo.dev" })
+    // Board 25 §6 (b) supersedes: no scheme ("kimo.design") is auto-prefixed https://, not invalid.
+    expect(parseLinkUrl("kimo.design")).toMatchObject({ kind: "ok", url: "https://kimo.design" })
     for (const bad of [
       "javascript:alert(1)",
       "ftp://x.y/z",

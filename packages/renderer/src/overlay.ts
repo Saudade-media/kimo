@@ -16,20 +16,23 @@
  * 13 drop feedback (slot insertion bar, replace target) on top of the selection.
  */
 import type { LayoutResult, Matrix } from "@kimo/layout"
-import type { Canvas, CanvasKit, Paint, Path } from "canvaskit-wasm"
+import type { Canvas, CanvasKit, Image, Paint, Path } from "canvaskit-wasm"
 import { AgentOverlayPainter, hasAgentOverlays } from "./agent-overlay"
 import { parseHex } from "./color"
 import { apply, multiply, resolveRadii, toCk, union } from "./geometry"
 import type { TextEngine } from "./text"
 import {
   type ComponentOutline,
+  type CropOverlay,
   type CursorBadge,
   type InstanceDropOverlay,
   type Measurement,
   type MeasureOutline,
   OVERLAY_SPEC,
+  OVERLAY_SPEC_CROP,
   OVERLAY_SPEC_M2,
   OVERLAY_SPEC_M3,
+  OVERLAY_SPEC_RULERS,
   type Overlay,
   type OverlayTheme,
   type PathContour,
@@ -39,6 +42,8 @@ import {
   type Rect,
   type RenderScene,
   type ResizeOverlay,
+  rulerStep,
+  type ShapeHandlesOverlay,
   type SnapLine,
   type SnapOverlay,
   type SpacingIndicator,
@@ -98,6 +103,8 @@ export interface OverlayEnv {
   width: number
   height: number
   scene?: RenderScene | null
+  /** Board 27 crop mode: a decoded image asset (null while loading / missing). */
+  image?: (src: string) => Image | null
 }
 
 /** Marquee fill alpha: `selection-soft` is `selection` at 0x1A (light) in desing.pen. */
@@ -351,7 +358,13 @@ export class OverlayPainter {
     return { x: bx, y: by, w: bw, h: bh }
   }
 
-  private pixelGrid(canvas: Canvas, v: Viewport, alpha: number, c: OverlayCounters): void {
+  private pixelGrid(
+    canvas: Canvas,
+    v: Viewport,
+    alpha: number,
+    theme: OverlayTheme,
+    c: OverlayCounters,
+  ): void {
     const ck = this.ck
     const spec = OVERLAY_SPEC_M2.pixelGrid
     const d = this.env.dpr
@@ -367,7 +380,7 @@ export class OverlayPainter {
       pb.addRect(ck.LTRBRect(0, y, width, y + lw))
     }
     const path = pb.detachAndDelete()
-    const p = this.paint(this.color(spec.color, alpha))
+    const p = this.paint(this.color(theme.pixelGrid ?? spec.color, alpha))
     p.setAntiAlias(false)
     canvas.drawPath(path, p)
     p.delete()
@@ -806,6 +819,7 @@ export class OverlayPainter {
     c: OverlayCounters,
   ): void {
     const spec = OVERLAY_SPEC_M2.path
+    const spec2 = OVERLAY_SPEC_M2
     const outline = this.contourPath(pe.contours, v)
     const op = this.paint(this.color(theme.selection), spec.outlineWidth)
     canvas.drawPath(outline, op)
@@ -837,6 +851,22 @@ export class OverlayPainter {
         }
       }
     }
+    // Board 27 §5 (J5Vng): the clicked segment, 3 px selection.
+    const ss = pe.selectedSegment
+    const sk = ss ? pe.contours[ss.contour] : undefined
+    if (ss && sk && sk.anchors.length > 1) {
+      const j = (ss.index + 1) % sk.anchors.length
+      const a = sk.anchors[ss.index]
+      const b = sk.anchors[j]
+      if (a && b && (j !== 0 || sk.closed)) {
+        const seg = this.contourPath([{ anchors: [a, b], closed: false }], v)
+        const p = this.paint(this.color(theme.selection), spec2.pathEdit.selectedSegmentWidth)
+        canvas.drawPath(seg, p)
+        p.delete()
+        seg.delete()
+        c.draws++
+      }
+    }
     const selected = new Set(pe.selected.map((r) => `${r.contour}:${r.index}`))
     pe.contours.forEach((k, ci) => {
       const idx: number[] = []
@@ -863,6 +893,48 @@ export class OverlayPainter {
         "top-left",
         theme.selection,
         theme.onSelection,
+        theme,
+        c,
+      )
+    }
+  }
+
+  /** Board 27 §5 (ICb89): star ratio (hollow) / radius (filled) handles + MeasurePill. */
+  private shapeHandles(
+    canvas: Canvas,
+    sh: ShapeHandlesOverlay,
+    v: Viewport,
+    theme: OverlayTheme,
+    c: OverlayCounters,
+  ): void {
+    const ck = this.ck
+    const spec = OVERLAY_SPEC_M2.shapeHandle
+    const r = spec.size / 2
+    const i = spec.strokeWidth / 2
+    const white = theme.handleFill
+    for (const h of sh.handles) {
+      const s = this.ws(v, h.at)
+      const fill = this.paint(this.color(h.kind === "filled" ? theme.selection : white))
+      canvas.drawOval(ck.LTRBRect(s.x - r, s.y - r, s.x + r, s.y + r), fill)
+      fill.delete()
+      const st = this.paint(
+        this.color(h.kind === "filled" ? white : theme.selection),
+        spec.strokeWidth,
+      )
+      canvas.drawOval(ck.LTRBRect(s.x - r + i, s.y - r + i, s.x + r - i, s.y + r - i), st)
+      st.delete()
+      c.draws += 2
+    }
+    if (sh.pill) {
+      const s = this.ws(v, sh.pill.at)
+      this.pill(
+        canvas,
+        sh.pill.text,
+        s.x + r + spec.pillGap,
+        s.y - OVERLAY_SPEC_M2.pill.height / 2,
+        "top-left",
+        theme.selection,
+        themeColor(theme, "on-accent"),
         theme,
         c,
       )
@@ -1029,6 +1101,126 @@ export class OverlayPainter {
     return box ? this.rectQuad(box, v) : null
   }
 
+  /**
+   * Board 27 §6 (d) VCSml: the whole source through `imageToScreen`, Dim (#14141499) outside the
+   * box, Crop Box (white 1, inside), thirds (#FFFFFF59), 16 × 3 brackets / edge bars from 3 px
+   * outside the box, and the MeasurePill 10 under it. The box chrome draws in the box's own
+   * frame (screen px), so a rotated layer keeps square brackets.
+   */
+  private crop(canvas: Canvas, crop: CropOverlay, theme: OverlayTheme, c: OverlayCounters): void {
+    const ck = this.ck
+    const spec = OVERLAY_SPEC_CROP
+    const m = crop.imageToScreen
+    const iw = crop.imageWidth
+    const ih = crop.imageHeight
+    const corners = [
+      apply(m, { x: 0, y: 0 }),
+      apply(m, { x: iw, y: 0 }),
+      apply(m, { x: iw, y: ih }),
+      apply(m, { x: 0, y: ih }),
+    ]
+    const img = this.env.image?.(crop.src) ?? null
+    if (img) {
+      canvas.save()
+      canvas.concat(toCk(m))
+      const p = this.paint(this.color("#FFFFFF", crop.opacity ?? 1))
+      canvas.drawImageRectOptions(
+        img,
+        ck.XYWHRect(0, 0, img.width(), img.height()),
+        ck.XYWHRect(0, 0, iw, ih),
+        ck.FilterMode.Linear,
+        ck.MipmapMode.Linear,
+        p,
+      )
+      p.delete()
+      canvas.restore()
+      c.draws++
+    }
+    const [tl, tr, , bl] = crop.box as [Point, Point, Point, Point]
+    // Dim: the image area minus the box (even-odd).
+    const pb = new ck.PathBuilder()
+    pb.addPolygon(
+      corners.flatMap((p) => [p.x, p.y]),
+      true,
+    )
+    pb.addPolygon(
+      crop.box.flatMap((p) => [p.x, p.y]),
+      true,
+    )
+    pb.setFillType(ck.FillType.EvenOdd)
+    const dimPath = pb.detachAndDelete()
+    const dim = this.paint(this.color(spec.dim))
+    canvas.drawPath(dimPath, dim)
+    dim.delete()
+    dimPath.delete()
+    c.draws++
+
+    // Box frame: origin tl, unit axes along the box edges, screen px units.
+    const w = Math.hypot(tr.x - tl.x, tr.y - tl.y)
+    const h = Math.hypot(bl.x - tl.x, bl.y - tl.y)
+    if (w <= 0 || h <= 0) return
+    const ux = { x: (tr.x - tl.x) / w, y: (tr.y - tl.y) / w }
+    const uy = { x: (bl.x - tl.x) / h, y: (bl.y - tl.y) / h }
+    const axisAligned = Math.abs(ux.y) < 1e-6 && Math.abs(uy.x) < 1e-6
+    canvas.save()
+    canvas.concat(toCk([ux.x, ux.y, uy.x, uy.y, tl.x, tl.y]))
+    // Crisp 1 px lines when axis-aligned: snap the box to device pixels.
+    const d = this.env.dpr
+    const ox = axisAligned ? Math.round(tl.x * d) / d - tl.x : 0
+    const oy = axisAligned ? Math.round(tl.y * d) / d - tl.y : 0
+    const thirds = this.paint(this.color(spec.thirds.color))
+    const tw = spec.thirds.width
+    for (const f of [1 / 3, 2 / 3]) {
+      canvas.drawRect(ck.XYWHRect(ox + w * f, oy, tw, h), thirds)
+      canvas.drawRect(ck.XYWHRect(ox, oy + h * f, w, tw), thirds)
+    }
+    thirds.delete()
+    const bw = spec.box.width
+    const box = this.paint(this.color(spec.box.color), bw)
+    canvas.drawRect(ck.XYWHRect(ox + bw / 2, oy + bw / 2, w - bw, h - bw), box)
+    box.delete()
+    const L = spec.bracket.length
+    const T = spec.bracket.thickness
+    const bars: [number, number, number, number][] = [
+      // Brackets TL / TR / BL / BR (h, v).
+      [-T, -T, L, T],
+      [-T, -T, T, L],
+      [w + T - L, -T, L, T],
+      [w, -T, T, L],
+      [-T, h, L, T],
+      [-T, h + T - L, T, L],
+      [w + T - L, h, L, T],
+      [w, h + T - L, T, L],
+      // Edge bars T / B / L / R.
+      [w / 2 - L / 2, -T, L, T],
+      [w / 2 - L / 2, h, L, T],
+      [-T, h / 2 - L / 2, T, L],
+      [w, h / 2 - L / 2, T, L],
+    ]
+    const white = this.paint(this.color(spec.bracket.color))
+    for (const [x, y, bw2, bh2] of bars)
+      canvas.drawRect(ck.XYWHRect(ox + x, oy + y, bw2, bh2), white)
+    white.delete()
+    canvas.restore()
+    c.draws += 7 + bars.length
+
+    // MeasurePill (lSZXU, fill selection): centered under the box's lowest point.
+    const ys = crop.box.map((p) => p.y)
+    const xs = crop.box.map((p) => p.x)
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2
+    this.pill(
+      canvas,
+      crop.label,
+      cx,
+      Math.max(...ys) + spec.pill.offset + OVERLAY_SPEC_M2.pill.height / 2,
+      "center",
+      themeColor(theme, spec.pill.fill),
+      themeColor(theme, spec.pill.text),
+      theme,
+      c,
+    )
+  }
+
   draw(
     canvas: Canvas,
     overlay: Overlay,
@@ -1053,8 +1245,8 @@ export class OverlayPainter {
     // M2 marks under the selection (board 10 layer order).
     const grid = overlay.pixelGrid
     const gridAlpha = typeof grid === "number" ? Math.max(0, Math.min(1, grid)) : grid ? 1 : 0
-    if (gridAlpha > 0 && v.zoom > OVERLAY_SPEC_M2.pixelGrid.minZoom && env.width > 0)
-      this.pixelGrid(canvas, v, gridAlpha, c)
+    if (gridAlpha > 0 && v.zoom >= OVERLAY_SPEC_M2.pixelGrid.minZoom && env.width > 0)
+      this.pixelGrid(canvas, v, gridAlpha, theme, c)
     if (layout && overlay.measureOutlines?.length)
       this.measureOutlines(canvas, overlay.measureOutlines, layout, v, theme, c)
     if (overlay.spacing?.length) this.spacing(canvas, overlay.spacing, v, theme, c)
@@ -1094,6 +1286,7 @@ export class OverlayPainter {
     }
 
     if (overlay.instanceDrop) this.instanceDrop(canvas, overlay.instanceDrop, layout, v, theme, c)
+    if (overlay.shapeHandles) this.shapeHandles(canvas, overlay.shapeHandles, v, theme, c)
 
     if (overlay.pen) this.pen(canvas, overlay.pen, v, theme, c)
     if (overlay.pathEdit) this.pathEdit(canvas, overlay.pathEdit, v, theme, c)
@@ -1119,6 +1312,9 @@ export class OverlayPainter {
       c.draws += 2
     }
 
+    // Board 27 §6 (d): crop mode draws over everything else.
+    if (overlay.crop) this.crop(canvas, overlay.crop, theme, c)
+
     if (overlay.guides?.length) {
       const p = this.paint(hoverColor, 1)
       for (const g of overlay.guides) {
@@ -1135,5 +1331,103 @@ export class OverlayPainter {
       }
       p.delete()
     }
+
+    // Board 27 §4: rulers on top of everything (screen chrome over the canvas edges).
+    if (overlay.rulers && env.width > 0) this.rulers(canvas, overlay.rulers.selection, v, theme, c)
   }
+
+  /** Board 27 §4 (b) rulers (Ko6aO): see {@link OVERLAY_SPEC_RULERS}. */
+  private rulers(
+    canvas: Canvas,
+    sel: Rect | null,
+    v: Viewport,
+    theme: OverlayTheme,
+    c: OverlayCounters,
+  ): void {
+    const ck = this.ck
+    const spec = OVERLAY_SPEC_RULERS
+    const S = spec.size
+    const { width, height } = this.env
+    const bg = this.paint(this.color(theme.rulerBg ?? spec.defaults.bg))
+    const border = this.paint(this.color(theme.rulerBorder ?? spec.defaults.border))
+    const tick = this.paint(this.color(theme.rulerTick ?? spec.defaults.tick))
+    const soft = this.paint(this.color(themeColor(theme, "selection-soft")))
+    tick.setAntiAlias(false)
+    border.setAntiAlias(false)
+    // Strips (top FPOwB, left euDLd) and the corner (O90uvJ).
+    canvas.drawRect(ck.LTRBRect(0, 0, width, S), bg)
+    canvas.drawRect(ck.LTRBRect(0, S, S, height), bg)
+    // Selection ranges (zxrLO / TaeVj) under the ticks.
+    const range = sel
+      ? {
+          x0: (sel.x - v.x) * v.zoom,
+          x1: (sel.x + sel.w - v.x) * v.zoom,
+          y0: (sel.y - v.y) * v.zoom,
+          y1: (sel.y + sel.h - v.y) * v.zoom,
+        }
+      : null
+    if (range) {
+      canvas.drawRect(ck.LTRBRect(Math.max(S, range.x0), 0, Math.min(width, range.x1), S), soft)
+      canvas.drawRect(ck.LTRBRect(0, Math.max(S, range.y0), S, Math.min(height, range.y1)), soft)
+    }
+    const step = rulerStep(v.zoom)
+    const t = spec.tick
+    const style = { ...this.monoStyle(theme), fontSize: spec.label.fontSize, fontWeight: 400 }
+    const label = (text: string, color: string) => {
+      const para = this.text.paragraph(
+        { nodeId: `\u0000overlay-ruler-${this.slot++}`, runs: [{ text, style }], style },
+        { color: this.color(color) },
+        undefined,
+      )
+      const w = para.getMaxIntrinsicWidth()
+      para.layout(w + 0.01)
+      return { para, w }
+    }
+    const textColor = theme.rulerText ?? spec.defaults.text
+    // Top ruler: ticks (1 × 8 at y 12) and numbers (tick + 3, y 3) outside the range.
+    for (let k = Math.ceil(v.x / step) * step; (k - v.x) * v.zoom <= width; k += step) {
+      const x = Math.round((k - v.x) * v.zoom)
+      if (x < S) continue
+      canvas.drawRect(ck.XYWHRect(x, S - t.length, t.width, t.length), tick)
+      c.draws++
+      const n = label(fmtRuler(k), textColor)
+      const lx = x + spec.label.dx
+      const hidden = range && lx < range.x1 && lx + n.w > range.x0
+      if (!hidden && lx + n.w <= width) {
+        canvas.drawParagraph(n.para, lx, spec.label.dy)
+        c.draws++
+      }
+    }
+    // Left ruler: ticks only (8 × 1 at x 12), as designed.
+    for (let k = Math.ceil(v.y / step) * step; (k - v.y) * v.zoom <= height; k += step) {
+      const y = Math.round((k - v.y) * v.zoom)
+      if (y < S) continue
+      canvas.drawRect(ck.XYWHRect(S - t.length, y, t.length, t.width), tick)
+      c.draws++
+    }
+    // Sel Start / Sel End (wCB0f / G4heDr) in `selection`.
+    if (sel && range) {
+      const a = label(fmtRuler(sel.x), theme.selection)
+      const ax = range.x0 + spec.label.dx
+      if (ax >= S) canvas.drawParagraph(a.para, ax, spec.label.dy)
+      const b = label(fmtRuler(sel.x + sel.w), theme.selection)
+      const bx = range.x1 - spec.label.endGap - b.w
+      if (bx > ax + a.w && bx + b.w <= width) canvas.drawParagraph(b.para, bx, spec.label.dy)
+      c.draws += 2
+    }
+    // Inner edge strokes: top ruler bottom 1, left ruler right 1, corner right + bottom.
+    const bw = spec.borderWidth
+    canvas.drawRect(ck.LTRBRect(0, S - bw, width, S), border)
+    canvas.drawRect(ck.LTRBRect(S - bw, 0, S, height), border)
+    canvas.drawRect(ck.LTRBRect(0, 0, S, S), bg)
+    canvas.drawRect(ck.LTRBRect(S - bw, 0, S, S), border)
+    canvas.drawRect(ck.LTRBRect(0, S - bw, S, S), border)
+    c.draws += 8
+    for (const p of [bg, border, tick, soft]) p.delete()
+  }
+}
+
+/** Ruler numbers: canvas units, up to 2 decimals, no trailing zeros. */
+function fmtRuler(v: number): string {
+  return String(Math.round(v * 100) / 100)
 }

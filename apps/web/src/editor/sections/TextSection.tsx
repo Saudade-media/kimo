@@ -55,6 +55,8 @@ import type { FontSystem } from "../../fonts/font-system"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { matches } from "../../shortcuts/shortcuts"
+import { Bindable, StaticField, useBindRequest } from "../bind"
+import { sharedRef } from "../bindings"
 import { NumberField } from "../fields"
 import { SectionTitle } from "../m3/overrides"
 import { panelPlacement, type Sel, useKeepPopoverFocus, usePanel } from "../panel-context"
@@ -78,6 +80,7 @@ import {
   sizeOf,
   styleOf,
   styleOps,
+  TEXT_DEFAULTS,
   type TextAlign,
   type TextCase,
   type TextDecoration,
@@ -228,145 +231,247 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
       data-testid="text-section"
     >
       <div className="rp-body">
+        <ContentRow sel={sel} />
         {/* Family Row (RWKxU) */}
         <PropRow className="rp-row">
-          <button
-            ref={fontTrigger}
-            type="button"
-            className={fontOpen ? "rp-select rp-select--open" : "rp-select"}
-            aria-label="Font family"
-            aria-haspopup="dialog"
-            aria-expanded={fontOpen}
-            onClick={() => setFontOpen((o) => !o)}
+          {/* Board 27 §7: font family binds a string variable. */}
+          <Bindable
+            sel={sel}
+            spec={{
+              type: "string",
+              label: "Font family",
+              get: (n) => styleOf(n).font ?? TEXT_DEFAULTS.font,
+              put: (s, v) => styleOps([s], "font", () => v),
+              current: () => (font === MIXED || font.startsWith("$") ? null : font),
+              varBase: "font",
+            }}
           >
-            <span className="rp-select__value">{font === MIXED ? MIXED_LABEL : font}</span>
-            <span className="rp-select__chevron" aria-hidden="true">
-              <Icon name={fontOpen ? "chevron-up" : "chevron-down"} size={14} />
-            </span>
-          </button>
+            {(bind) => (
+              <div className={`rp-select-bind ${bind.className}`}>
+                <button
+                  ref={fontTrigger}
+                  type="button"
+                  className={fontOpen ? "rp-select rp-select--open" : "rp-select"}
+                  aria-label="Font family"
+                  aria-haspopup="dialog"
+                  aria-expanded={fontOpen}
+                  onClick={() => setFontOpen((o) => !o)}
+                >
+                  <span className="rp-select__value">{font === MIXED ? MIXED_LABEL : font}</span>
+                  <span className="rp-select__chevron" aria-hidden="true">
+                    <Icon name={fontOpen ? "chevron-up" : "chevron-down"} size={14} />
+                  </span>
+                </button>
+                {bind.trailing}
+              </div>
+            )}
+          </Bindable>
         </PropRow>
         {/* Weight Size Row (nk7RJ) */}
         <PropRow className="rp-row">
-          <button
-            ref={weightTrigger}
-            type="button"
-            className={[
-              "rp-select",
-              weightOpen && "rp-select--open",
-              weightWarning && "rp-select--warning",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            aria-label="Font weight"
-            aria-haspopup="menu"
-            aria-expanded={weightOpen}
-            aria-description={weightWarning ? weightWarning.title : undefined}
-            onClick={() => setWeightOpen((o) => !o)}
-            onPointerEnter={() => setWeightTip((t) => ({ ...t, hover: true }))}
-            onPointerLeave={() => setWeightTip((t) => ({ ...t, hover: false }))}
-            onFocus={() => setWeightTip((t) => ({ ...t, focus: true }))}
-            onBlur={() => setWeightTip((t) => ({ ...t, focus: false }))}
-            onKeyDown={(e) => {
-              if (!weightOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-                e.preventDefault()
-                setWeightOpen(true)
-              }
+          {/* Board 27 §7: font weight binds a number variable. */}
+          <Bindable
+            sel={sel}
+            spec={{
+              type: "number",
+              label: "Font weight",
+              prefix: "Wt",
+              get: (n) => styleOf(n).weight ?? TEXT_DEFAULTS.weight,
+              put: (s, v) => styleOps([s], "weight", () => v),
+              current: () => (typeof weight === "number" ? weight : null),
+              varBase: "font/weight",
             }}
           >
-            <span className="rp-select__value">
-              {weight === MIXED
-                ? MIXED_LABEL
-                : typeof weight === "number"
-                  ? weightName(weight)
-                  : weight}
-            </span>
-            {weightWarning && (
-              <>
-                <span className="rp-select__spacer" aria-hidden="true" />
-                <WarningDot className="rp-select__warning" data-testid="weight-warning-dot" />
-              </>
+            {(bind) => (
+              <div className={`rp-select-bind ${bind.className}`}>
+                <button
+                  ref={weightTrigger}
+                  type="button"
+                  className={[
+                    "rp-select",
+                    weightOpen && "rp-select--open",
+                    weightWarning && "rp-select--warning",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-label="Font weight"
+                  aria-haspopup="menu"
+                  aria-expanded={weightOpen}
+                  aria-description={weightWarning ? weightWarning.title : undefined}
+                  onClick={() => setWeightOpen((o) => !o)}
+                  onPointerEnter={() => setWeightTip((t) => ({ ...t, hover: true }))}
+                  onPointerLeave={() => setWeightTip((t) => ({ ...t, hover: false }))}
+                  onFocus={() => setWeightTip((t) => ({ ...t, focus: true }))}
+                  onBlur={() => setWeightTip((t) => ({ ...t, focus: false }))}
+                  onKeyDown={(e) => {
+                    if (!weightOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+                      e.preventDefault()
+                      setWeightOpen(true)
+                    }
+                  }}
+                >
+                  <span className="rp-select__value">
+                    {weight === MIXED
+                      ? MIXED_LABEL
+                      : typeof weight === "number"
+                        ? weightName(weight)
+                        : weight}
+                  </span>
+                  {weightWarning && (
+                    <>
+                      <span className="rp-select__spacer" aria-hidden="true" />
+                      <WarningDot className="rp-select__warning" data-testid="weight-warning-dot" />
+                    </>
+                  )}
+                  <span className="rp-select__chevron" aria-hidden="true">
+                    <Icon name={weightOpen ? "chevron-up" : "chevron-down"} size={14} />
+                  </span>
+                </button>
+                {bind.trailing}
+              </div>
             )}
-            <span className="rp-select__chevron" aria-hidden="true">
-              <Icon name={weightOpen ? "chevron-up" : "chevron-down"} size={14} />
-            </span>
-          </button>
-          <NumberField
-            icon="a-large-small"
-            label="Font size"
-            className="rp-field--w96"
-            value={size}
-            editor={editor}
-            min={1}
-            onNumber={(n) => styleOps(sel, "size", () => Math.max(1, round(n)))}
-            relative={() => {
-              const base = sel.map((s) => ({ s, v: sizeNumber(s.node) }))
-              return (d) =>
-                base.flatMap(({ s, v }) => styleOps([s], "size", () => Math.max(1, round(v + d))))
+          </Bindable>
+          {/* Board 27 §7: font size binds a number variable, chip prefix "Sz" (cNy0g). */}
+          <Bindable
+            sel={sel}
+            className="rp-bind--w96"
+            spec={{
+              type: "number",
+              label: "Font size",
+              prefix: "Sz",
+              get: (n) => styleOf(n).size ?? TEXT_DEFAULTS.size,
+              put: (s, v) => styleOps([s], "size", () => v),
+              current: () => (typeof size === "number" ? size : null),
+              varBase: "font/size",
             }}
-          />
+          >
+            {(bind) => (
+              <NumberField
+                icon="a-large-small"
+                label="Font size"
+                bind={bind}
+                className="rp-field--w96"
+                value={size}
+                editor={editor}
+                min={1}
+                onNumber={(n) => styleOps(sel, "size", () => Math.max(1, round(n)))}
+                relative={() => {
+                  const base = sel.map((s) => ({ s, v: sizeNumber(s.node) }))
+                  return (d) =>
+                    base.flatMap(({ s, v }) =>
+                      styleOps([s], "size", () => Math.max(1, round(v + d))),
+                    )
+                }}
+              />
+            )}
+          </Bindable>
         </PropRow>
         {/* Spacing Row (NEORl) */}
         <PropRow className="rp-row">
-          <NumberField
-            icon="unfold-vertical"
-            label="Line height"
-            value={lineHeight}
-            editor={editor}
-            min={0}
-            onNumber={(n) => styleOps(sel, "lineHeight", () => Math.max(0, round(n) / 100))}
-            onText={(t) => {
-              const v = parseLineHeight(t)
-              return v === null ? null : styleOps(sel, "lineHeight", () => v)
+          {/* Board 27 §7: line height binds a number variable (a multiplier), prefix "LH". */}
+          <Bindable
+            sel={sel}
+            spec={{
+              type: "number",
+              label: "Line height",
+              prefix: "LH",
+              get: (n) => styleOf(n).lineHeight ?? null,
+              put: (s, v) => styleOps([s], "lineHeight", () => v),
+              format: (v) => `${formatNumber(Number(v) * 100)}%`,
+              current: () => {
+                const lhs = sel.map((s) => styleOf(s.node).lineHeight)
+                const v0 = lhs[0]
+                return typeof v0 === "number" && lhs.every((v) => v === v0) ? v0 : null
+              },
+              varBase: "font/line-height",
             }}
-            relative={() => {
-              const base = sel.map((s) => {
-                const lh = styleOf(s.node).lineHeight
-                return { s, v: typeof lh === "number" ? lh * 100 : 120 }
-              })
-              return (d) =>
-                base.flatMap(({ s, v }) =>
-                  styleOps([s], "lineHeight", () => Math.max(0, round(v + d)) / 100),
-                )
+          >
+            {(bind) => (
+              <NumberField
+                bind={bind}
+                icon="unfold-vertical"
+                label="Line height"
+                value={lineHeight}
+                editor={editor}
+                min={0}
+                onNumber={(n) => styleOps(sel, "lineHeight", () => Math.max(0, round(n) / 100))}
+                onText={(t) => {
+                  const v = parseLineHeight(t)
+                  return v === null ? null : styleOps(sel, "lineHeight", () => v)
+                }}
+                relative={() => {
+                  const base = sel.map((s) => {
+                    const lh = styleOf(s.node).lineHeight
+                    return { s, v: typeof lh === "number" ? lh * 100 : 120 }
+                  })
+                  return (d) =>
+                    base.flatMap(({ s, v }) =>
+                      styleOps([s], "lineHeight", () => Math.max(0, round(v + d)) / 100),
+                    )
+                }}
+              />
+            )}
+          </Bindable>
+          {/* Board 27 §7: letter spacing binds a number variable (px), prefix "LS". */}
+          <Bindable
+            sel={sel}
+            spec={{
+              type: "number",
+              label: "Letter spacing",
+              prefix: "LS",
+              get: (n) => styleOf(n).letterSpacing ?? 0,
+              put: (s, v) => styleOps([s], "letterSpacing", () => (v === 0 ? undefined : v)),
+              format: (v) => `${formatNumber(Number(v))}px`,
+              current: () => {
+                const ls = sel.map((s) => styleOf(s.node).letterSpacing ?? 0)
+                const v0 = ls[0]
+                return typeof v0 === "number" && ls.every((v) => v === v0) ? v0 : null
+              },
+              varBase: "font/tracking",
             }}
-          />
-          <NumberField
-            icon="unfold-horizontal"
-            label="Letter spacing"
-            value={letterSpacing}
-            editor={editor}
-            step={0.1}
-            onNumber={(n) =>
-              styleOps(sel, "letterSpacing", (node) => {
-                const px = round((n * sizeNumber(node)) / 100)
-                return px === 0 ? undefined : px
-              })
-            }
-            onText={(t) => {
-              const ops = sel.map((s) => {
-                const px = parseLetterSpacing(t, sizeNumber(s.node))
-                return px === null
-                  ? null
-                  : styleOps([s], "letterSpacing", () => (px === 0 ? undefined : px))
-              })
-              return ops.some((o) => o === null)
-                ? null
-                : (ops.flat() as ReturnType<typeof styleOps>)
-            }}
-            relative={() => {
-              const base = sel.map((s) => {
-                const ls = styleOf(s.node).letterSpacing
-                const px = typeof ls === "number" ? ls : 0
-                return { s, pct: (px / sizeNumber(s.node)) * 100 }
-              })
-              return (d) =>
-                base.flatMap(({ s, pct }) =>
-                  styleOps([s], "letterSpacing", (node) => {
-                    const px = round(((pct + d) * sizeNumber(node)) / 100)
+          >
+            {(bind) => (
+              <NumberField
+                bind={bind}
+                icon="unfold-horizontal"
+                label="Letter spacing"
+                value={letterSpacing}
+                editor={editor}
+                step={0.1}
+                onNumber={(n) =>
+                  styleOps(sel, "letterSpacing", (node) => {
+                    const px = round((n * sizeNumber(node)) / 100)
                     return px === 0 ? undefined : px
-                  }),
-                )
-            }}
-          />
+                  })
+                }
+                onText={(t) => {
+                  const ops = sel.map((s) => {
+                    const px = parseLetterSpacing(t, sizeNumber(s.node))
+                    return px === null
+                      ? null
+                      : styleOps([s], "letterSpacing", () => (px === 0 ? undefined : px))
+                  })
+                  return ops.some((o) => o === null)
+                    ? null
+                    : (ops.flat() as ReturnType<typeof styleOps>)
+                }}
+                relative={() => {
+                  const base = sel.map((s) => {
+                    const ls = styleOf(s.node).letterSpacing
+                    const px = typeof ls === "number" ? ls : 0
+                    return { s, pct: (px / sizeNumber(s.node)) * 100 }
+                  })
+                  return (d) =>
+                    base.flatMap(({ s, pct }) =>
+                      styleOps([s], "letterSpacing", (node) => {
+                        const px = round(((pct + d) * sizeNumber(node)) / 100)
+                        return px === 0 ? undefined : px
+                      }),
+                    )
+                }}
+              />
+            )}
+          </Bindable>
         </PropRow>
         {/* Align Row (Z6F9a9): space-between */}
         <div className="rp-text__align-row">
@@ -563,6 +668,43 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
 }
 
 /** Resizing / Decoration / Case rows (l7RLS1, OhisU, a5p1T9): h 28, gap 8. */
+/**
+ * Board 27 §7 (c) Content (EYpeL): text content bound to a string variable shows its chip at the
+ * top of the Text section (full width, no prefix); also shown for a "Bind text…" request.
+ */
+function ContentRow({ sel }: { sel: readonly Sel[] }) {
+  const [requested, clear] = useBindRequest("content")
+  const bound = sharedRef(sel.map((s) => s.node.content)) !== null
+  if (!bound && !requested) return null
+  const text = sharedText(
+    sel.map((s) => s.node),
+    (n) => (typeof n.content === "string" ? n.content : null),
+  )
+  return (
+    <Bindable
+      sel={sel}
+      defaultOpen={requested && !bound}
+      onPickerClose={clear}
+      spec={{
+        type: "string",
+        label: "Text",
+        get: (n) => n.content,
+        put: (s, v) => [{ op: "update", id: s.id, set: { content: v } }],
+        format: (v) => `\u201c${String(v)}\u201d`,
+        current: () => (typeof text === "string" ? text : null),
+        varBase: "copy",
+      }}
+    >
+      {(bind) => (
+        <StaticField
+          value={text === MIXED ? MIXED_LABEL : text === null ? "Rich text" : text}
+          bind={bind}
+        />
+      )}
+    </Bindable>
+  )
+}
+
 function SegmentedRow<V extends string>({
   label,
   options: opts,

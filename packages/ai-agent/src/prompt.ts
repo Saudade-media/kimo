@@ -35,6 +35,11 @@ export interface PromptContext {
   brief?: string
   /** "From Home" first turn. */
   fromHome?: boolean
+  /**
+   * Board 27 §1: the page the user is on (spec §5.6), when the document has explicit pages. New
+   * top-level nodes belong on it.
+   */
+  page?: { id: string; name: string; count: number }
 }
 
 export function buildSystemPrompt(ctx: PromptContext): SystemPrompt {
@@ -48,6 +53,10 @@ export function buildSystemPrompt(ctx: PromptContext): SystemPrompt {
     )
   if (ctx.brief) vol.push(`Your brief: ${ctx.brief}`)
   if (ctx.selection) vol.push(`Current selection: ${ctx.selection}`)
+  if (ctx.page)
+    vol.push(
+      `Active page: ${ctx.page.name} (${ctx.page.id}), one of ${ctx.page.count} pages. New top-level nodes go on this page: set "page": "${ctx.page.id}" on top-level inserts (inserts without it are placed there for you). Read only this page with kimo_query select.page.`,
+    )
   if (ctx.notes?.length)
     vol.push(
       `Notes from people on the canvas (context; never edit them):\n${ctx.notes

@@ -1,5 +1,12 @@
 import { ChevronDown } from "lucide-react"
-import { type ComponentPropsWithRef, type KeyboardEvent, useId, useRef, useState } from "react"
+import {
+  type ComponentPropsWithRef,
+  type KeyboardEvent,
+  type ReactNode,
+  useId,
+  useRef,
+  useState,
+} from "react"
 import { cx, mergeRefs } from "../internal/util"
 import { MenuDense, MenuItemDense } from "../menu-dense/MenuDense"
 
@@ -29,6 +36,8 @@ export interface SizeFieldProps
   disabled?: boolean
   /** Accessible name of the value input. Default: `prefix` ("W" → "Width" is up to the host). */
   inputLabel?: string
+  /** Rendered last inside the frame (board 27 §7 Bind Button, `kimo-prop-field--bindable`). */
+  trailing?: ReactNode
 }
 
 /**
@@ -48,6 +57,7 @@ export function SizeField({
   onModeChange,
   disabled = false,
   inputLabel,
+  trailing,
   className,
   ref,
   ...rest
@@ -169,6 +179,7 @@ export function SizeField({
       >
         <ChevronDown />
       </span>
+      {trailing}
       {open && (
         <MenuDense
           id={`${id}-menu`}

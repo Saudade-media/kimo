@@ -91,6 +91,7 @@ describe("route and copy", () => {
     expect(settingsHash("about")).toBe("#/settings/about")
     expect(SETTINGS_PANES.map((p) => p.label)).toEqual([
       "General",
+      "Canvas",
       "Files & autosave",
       "Fonts & privacy",
       "Agents & MCP",

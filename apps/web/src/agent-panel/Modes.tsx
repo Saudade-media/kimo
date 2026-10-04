@@ -102,7 +102,8 @@ export function PlanCard({
         <span className="agent-plan__title">{title}</span>
         <span className="agent-plan__spacer" aria-hidden="true" />
         <span className="agent-plan__cost">
-          {usd(run.costUsd)} · {tok(run.tokens)}
+          {controller.state.showCost ? `${usd(run.costUsd)} · ` : ""}
+          {tok(run.tokens)}
         </span>
         {run.running && (
           <button type="button" className="agent-plan__stop" onClick={() => controller.stopAll()}>
@@ -135,7 +136,7 @@ export function PlanCard({
                   a.modelLabel,
                   `${a.ops} ops`,
                   ...(a.rejected ? [`${a.rejected} rejected`] : []),
-                  usd(a.costUsd),
+                  ...(controller.state.showCost ? [usd(a.costUsd)] : []),
                 ].join(" · ")}
               </span>
             </div>
@@ -172,15 +173,18 @@ export function VariantActions({
   onKeep,
   onDiscard,
   compact = false,
+  showCost = true,
 }: {
   cost: number | null
   onKeep(): void
   onDiscard(): void
   compact?: boolean
+  /** Settings "Show cost" (board 27 r9hTk); default on. */
+  showCost?: boolean
 }) {
   return (
     <div className={`agent-variant-actions${compact ? " agent-variant-actions--compact" : ""}`}>
-      {!compact && <StatusDot label={`Done · ${usd(cost)}`} tone="done" />}
+      {!compact && <StatusDot label={showCost ? `Done · ${usd(cost)}` : "Done"} tone="done" />}
       {!compact && <span className="agent-plan__spacer" aria-hidden="true" />}
       <CompactButton variant="ghost" height={26} padX={10} onClick={onDiscard}>
         Discard
@@ -213,7 +217,8 @@ export function ReviewCard({
             {it.reviewing ? `Pass ${it.pass} ready for review` : `Pass ${it.pass} running…`}
           </span>
           <span className="agent-review__sub">
-            “{it.goal}” · {it.changes} changes · {usd(it.costUsd)}
+            “{it.goal}” · {it.changes} changes
+            {controller.state.showCost ? ` · ${usd(it.costUsd)}` : ""}
           </span>
         </div>
         <SegmentedText
@@ -307,7 +312,16 @@ export function ReviewCard({
 }
 
 /** Mode Summary (jDKaM): h 28, gap 8, padding [0, 10, 0, 6], bg-app, 1 px border, pill. */
-export function ModeSummaryPill({ run, onStopAll }: { run: ModeRunView; onStopAll?: () => void }) {
+export function ModeSummaryPill({
+  run,
+  onStopAll,
+  showCost = true,
+}: {
+  run: ModeRunView
+  onStopAll?: () => void
+  /** Settings "Show cost" (board 27 r9hTk); default on. */
+  showCost?: boolean
+}) {
   const name =
     run.mode === "split" ? "Split" : run.mode === "side-by-side" ? "Side by side" : "Iterate"
   return (
@@ -326,7 +340,7 @@ export function ModeSummaryPill({ run, onStopAll }: { run: ModeRunView; onStopAl
       <span className="agent-mode-summary__label">
         {name} · {run.agents.length} agents · {run.done} done
       </span>
-      <span className="agent-mode-summary__cost">{usd(run.costUsd)}</span>
+      {showCost && <span className="agent-mode-summary__cost">{usd(run.costUsd)}</span>}
       {run.running && onStopAll && (
         <button type="button" className="agent-mode-summary__stop" onClick={onStopAll}>
           Stop all

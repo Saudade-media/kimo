@@ -13,6 +13,7 @@ import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
 import { Badge, EmptyState, Tabs } from "@kimo/ui"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { useCropSession } from "../canvas/crop"
 import { type CodeExportPreset, CodeTab } from "../code-tab"
 import { ConflictsPanel, conflictsTabLabel, type EditorConflictSession } from "../conflicts"
 import type { FontSystem } from "../fonts/font-system"
@@ -37,8 +38,10 @@ import { kindLabel, MIXED, nodeName, shared, typeIcon } from "./props"
 import "./right-panel.css"
 import { EffectsSection } from "./sections/EffectsSection"
 import { IconSection } from "./sections/IconSection"
+import { ImageCropSection } from "./sections/ImageCropSection"
 import { AutoLayoutSection, LayerSection, PositionSection } from "./sections/LayoutSections"
 import { FillSection, StrokeSection } from "./sections/PaintSections"
+import { PolygonSection } from "./sections/PolygonSection"
 import { TextSection } from "./sections/TextSection"
 import type { FileSession } from "./session"
 
@@ -268,6 +271,8 @@ function DesignTab({
   const key = selection.join("\u0000")
   const editor = useEditor(session, key)
   const header = useDocHeader(session.store)
+  // Board 27 §6 (d): the Image section while the selected layer is in crop mode.
+  const crop = useCropSession(session.ui)
 
   if (sel.length === 0)
     return (
@@ -330,6 +335,7 @@ function DesignTab({
         icons,
         fonts,
         theme: single ? view.theme(single) : undefined,
+        m3,
       }}
     >
       {/* Keyed by the selection: popovers, open effect rows and drafts reset with it. */}
@@ -354,6 +360,7 @@ function DesignTab({
           )}
         </div>
         <OverrideFieldsContext.Provider value={overrides}>
+          {crop && single === crop.nodeId && <ImageCropSection crop={crop} />}
           {/* Board 14 (PEcqt): a node with theme pins shows Theme first, under the header. */}
           {themeFirst && <ThemeSection m3={m3} id={themeFirst} />}
           {single && m3kind === "instance" && <InstanceSection m3={m3} id={single} />}
@@ -373,6 +380,8 @@ function DesignTab({
           {allText && <TextSection sel={sel} fonts={fonts} />}
           {!allText && <AutoLayoutSection sel={sel} />}
           {all(new Set(["icon"])) && <IconSection sel={sel} />}
+          {/* Board 27 §5 (b): Polygon & Star share one section. */}
+          {all(new Set(["polygon"])) && <PolygonSection sel={sel} />}
           {(all(HAS_FILL) ||
             all(new Set(["icon"])) ||
             (instance && all(new Set(["instance"])))) && <FillSection sel={sel} />}

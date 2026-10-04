@@ -15,9 +15,10 @@ export interface DialogProps extends Omit<ComponentPropsWithRef<"div">, "title" 
   icon: ReactNode
   /**
    * Icon Wrap tone: `neutral` (bg-muted / text-primary, the component), `danger`, or `success`
-   * (board 20 "Nothing to clean up" nsxuR: success-soft / success).
+   * (board 20 "Nothing to clean up" nsxuR: success-soft / success), or `component` (board 27
+   * §8: component-soft / component).
    */
-  tone?: "neutral" | "danger" | "success"
+  tone?: "neutral" | "danger" | "success" | "component"
   title: string
   description: ReactNode
   /**
@@ -38,6 +39,9 @@ export interface DialogProps extends Omit<ComponentPropsWithRef<"div">, "title" 
   cancelLabel?: string | null
   /** Footer > Confirm (qqpfr, Button/Primary). */
   confirmLabel: string
+  /** Confirm fill override: `danger` = $danger (board 27 Zq3KS "Delete page" qqpfr). */
+  confirmTone?: "primary" | "danger"
+
   confirmDisabled?: boolean
   /** Escape, outside press and Cancel. */
   onCancel: () => void
@@ -77,6 +81,7 @@ export function Dialog({
   tertiary,
   cancelLabel = "Cancel",
   confirmLabel,
+  confirmTone = "primary",
   confirmDisabled = false,
   onCancel,
   onConfirm,
@@ -108,6 +113,7 @@ export function Dialog({
         "kimo-dialog",
         tone === "danger" && "kimo-dialog--danger",
         tone === "success" && "kimo-dialog--success",
+        tone === "component" && "kimo-dialog--component",
         className,
       )}
       style={
@@ -165,7 +171,10 @@ export function Dialog({
         <Button
           ref={confirm}
           variant="primary"
-          className="kimo-dialog__button kimo-dialog__button--confirm"
+          className={cx(
+            "kimo-dialog__button kimo-dialog__button--confirm",
+            confirmTone === "danger" && "kimo-dialog__button--danger",
+          )}
           disabled={confirmDisabled}
           onClick={onConfirm}
         >

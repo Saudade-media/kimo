@@ -22,6 +22,7 @@ import type { ManifestEntry } from "../lib/assets"
 import { countFrames, docDbName, type FileMeta, getFile, patchFile } from "../lib/files"
 import { currentHeader } from "../lib/header"
 import type { FileDocumentSession, FileSessionManager } from "../platform/session"
+import { withActivePage } from "./pages/model"
 
 export interface FileSession {
   id: string
@@ -83,10 +84,12 @@ function makeSession(
     const extra = manifestOps(currentHeader(store).assets, ops, (src) => session.assetEntry(src))
     return extra.length ? [...extra, ...(Array.isArray(ops) ? ops : [ops as Op])] : ops
   }
-  /** `ops` through the M3 router (instances); null = refused. */
+  /** `ops` through the M3 router (instances), kept on the active page; null = refused. */
   const routed = (ops: Op | readonly Op[]): readonly Op[] | null => {
     const list: readonly Op[] = Array.isArray(ops) ? ops : [ops as Op]
-    return session.route ? session.route(list) : list
+    const r = session.route ? session.route(list) : list
+    // Board 27 §1: new roots land on the active page (spec §5.6).
+    return r && withActivePage(store, session.ui, r)
   }
   const apply = (ops: Op | readonly Op[], label?: string) => {
     const list = routed(ops)

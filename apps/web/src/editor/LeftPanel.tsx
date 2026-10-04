@@ -7,13 +7,15 @@
 import type { DocStore, NodeData, Op } from "@kimo/editor-state"
 import {
   AGENT_LAYER_ROW_CLASS,
+  DropIndicator,
   EmptyState,
   Input,
-  Kbd,
   LayerRow,
   LayerRowConflict,
+  LayerRowDropTarget,
   LayerRowM3,
   Tabs,
+  TooltipContent,
 } from "@kimo/ui"
 import { type KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { UiStore } from "../canvas/contract"
@@ -26,7 +28,13 @@ import { ChildMenu } from "./m3/menus"
 import { isOverridden, layerKind, replacedName } from "./m3/model"
 import { VariablesTab } from "./m3/VariablesTab"
 import "../canvas/agent-canvas.css"
+import { useDocHeader } from "../lib/header"
 import { matches } from "../shortcuts/shortcuts"
+import { openRowMenu } from "./clipboard/menu-bus"
+import { computeTreeDrop, refuseParent, type TreeDrop, treeDropOps } from "./clipboard/tree-drop"
+import { activeRoots, pageLayerCount } from "./pages/model"
+import { pageSwitcherBus } from "./pages/PageSwitcher"
+import { PagesFooter, PagesStrip, usePageList } from "./pages/PagesStrip"
 import { kindLabel, nodeName, typeIcon } from "./props"
 import type { FileSession } from "./session"
 
@@ -64,6 +72,8 @@ export function LeftPanel({
       <Tabs label="Left panel" items={TABS} value={tab} onChange={setTab} />
       {tab === "layers" && (
         <>
+          {/* Board 27 §1 (a) lid8E: the pages strip at the top of the Layers tab. */}
+          <PagesStrip session={session} m3={m3} />
           <div className="left-panel__search">
             <Input
               icon={<Icon name="search" size={16} />}
@@ -75,6 +85,7 @@ export function LeftPanel({
               frameProps={{ className: "left-panel__search-input" }}
             />
           </div>
+          <LayerTreeHeader session={session} />
           <LayerTree
             store={session.store}
             ui={session.ui}
@@ -90,15 +101,32 @@ export function LeftPanel({
       {tab === "assets" && <AssetsTab session={session} m3={m3} />}
       {tab === "variables" && <VariablesTab session={session} m3={m3} />}
       <div className="left-panel__spacer" />
-      <div className="left-panel__footer">
-        <span className="left-panel__footer-icon">
-          <Icon name="files" size={14} />
-        </span>
-        <span className="left-panel__footer-label">1 page</span>
-        <span className="left-panel__footer-spacer" />
-        <Kbd>⌘P</Kbd>
-      </div>
+      {/* Board 27 §1 (d) wsA6U: live page count; click (or ⌘P) opens the switcher. */}
+      <PagesFooter session={session} onOpenSwitcher={() => pageSwitcherBus(session).set(true)} />
     </aside>
+  )
+}
+
+/**
+ * Board 27 §1 (a) "Tree Header" (hvwbw): the active page's name (sans text-xs 600 text-tertiary)
+ * and its layer count (mono text-xs text-tertiary), above the tree.
+ */
+function LayerTreeHeader({ session }: { session: FileSession }) {
+  const { pages, active } = usePageList(session)
+  const shape = useTreeRevision(session.store)
+  const count = useMemo(() => {
+    void shape
+    return pageLayerCount(session.store, activeRoots(session.store, active))
+  }, [session.store, active, shape])
+  const name = pages.find((p) => p.id === active)?.name ?? pages[0]?.name ?? ""
+  return (
+    <div className="layer-tree-header" data-testid="layer-tree-header">
+      <span className="layer-tree-header__page">{name}</span>
+      <span className="layer-tree-header__spacer" />
+      <span className="layer-tree-header__count">
+        {count} {count === 1 ? "layer" : "layers"}
+      </span>
+    </div>
   )
 }
 
@@ -110,6 +138,9 @@ interface Row {
 }
 
 const NO_AGENT_NODES: ReadonlySet<string> = new Set()
+
+/** Board 27 rules F1FPb: a hovered collapsed container opens after 600 ms of "into". */
+const AUTO_EXPAND_MS = 600
 
 /** LayerRow height (28) + Layer Tree gap (1): the virtualized row pitch. */
 const ROW_PITCH = 29
@@ -153,8 +184,19 @@ function LayerTree({
   const compRev = useComponentRev(m3)
   // Row lists change only with structure (not with fills / geometry inside a main).
   const treeRev = useLayerTreeRev(m3)
+  // Board 27 §8 Kpf1o: instances with broken overrides (memoized per tree rev + variables).
+  const broken = m3.brokenInstances()
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  /** Board 27 §2 (c): a row drag in progress. */
+  const [drag, setDrag] = useState<{
+    ids: readonly string[]
+    drop: TreeDrop | null
+    x: number
+    y: number
+  } | null>(null)
   const selection = useUi(ui, (s) => s.selection)
+  const page = useUi(ui, (s) => s.page)
+  const pagesHeader = useDocHeader(store).pages
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
   const [focusId, setFocusId] = useState<string | null>(null)
@@ -192,8 +234,12 @@ function LayerTree({
       memo.set(id, ok)
       return ok
     }
+    // Board 27 §1 rule "Layers tree": only the active page's roots (pages are never rows).
+    void pagesHeader
+    const onPage = new Set(activeRoots(store, page))
     const walk = (parent: string | null, depth: number) => {
       for (const id of view.children(parent)) {
+        if (parent === null && !onPage.has(id)) continue
         if (q && !matches(id)) continue
         const kids = view.children(id).length > 0
         out.push({ id, depth, hasChildren: kids, parent })
@@ -202,7 +248,7 @@ function LayerTree({
     }
     walk(null, 0)
     return out
-  }, [m3, shape, treeRev, query, isOpen])
+  }, [m3, shape, treeRev, query, isOpen, store, page, pagesHeader])
 
   const index = useMemo(() => new Map(rows.map((r, i) => [r.id, i])), [rows])
   const selected = useMemo(() => new Set(selection), [selection])
@@ -320,6 +366,11 @@ function LayerTree({
       apply: (op, label) => latest.current.apply(op, label),
       hover: (id) => latest.current.ui.getState().setHovered(id),
       menu: (id, x, y) => setMenu({ id, x, y }),
+      contextSelect: (id) => {
+        const u = latest.current.ui.getState()
+        if (!u.selection.includes(id))
+          select(id, { shiftKey: false, metaKey: false, ctrlKey: false })
+      },
     }),
     [toggle, select],
   )
@@ -383,6 +434,113 @@ function LayerTree({
     }
   }
 
+  // --- Board 27 §2 (c) h0cqV3: drag rows to reorder / reparent ------------------------------------
+  const startRowDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || e.shiftKey || e.metaKey || e.ctrlKey) return
+    const t = e.target as HTMLElement
+    if (t.closest("button, input")) return
+    const rowEl = t.closest<HTMLElement>("[data-node-id]")
+    const rowId = rowEl?.dataset.nodeId
+    const el = tree.current
+    if (!rowId || !el) return
+    const view = m3.view()
+    const sel = latest.current.ui.getState().selection
+    const order = latest.current.index
+    const picked = sel.includes(rowId) ? sel.filter((id) => order.has(id)) : [rowId]
+    // Top-level of the picked rows, in tree order; nothing inside an instance moves.
+    const set = new Set(picked)
+    const ids = picked
+      .filter((id) => {
+        let p = store.getNode(id)?.parent ?? null
+        while (typeof p === "string") {
+          if (set.has(p)) return false
+          p = store.getNode(p)?.parent ?? null
+        }
+        return true
+      })
+      .sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
+    if (!ids.length || ids.some((id) => view.isVirtual(id) || !store.hasNode(id))) return
+    if (
+      ids.some((id) => refuseParent(dropReader(), store.getNode(id)?.parent ?? null, []) !== null)
+    )
+      return
+    const sx = e.clientX
+    const sy = e.clientY
+    let started = false
+    let expandTimer: ReturnType<typeof setTimeout> | null = null
+    let expandFor: string | null = null
+    let last: TreeDrop | null = null
+    const compute = (cx: number, cy: number): TreeDrop | null => {
+      const r = el.getBoundingClientRect()
+      const y = cy - r.top + el.scrollTop
+      const list = latest.current.rows
+      const i = Math.max(0, Math.min(list.length - 1, Math.floor(y / ROW_PITCH)))
+      const fy = Math.max(0, Math.min(1, (y - i * ROW_PITCH) / (ROW_PITCH - ROW_GAP)))
+      const px = (cx - r.left - 6 - 8) / 14
+      return computeTreeDrop(list, i, fy, px, ids, dropReader(), (row) =>
+        latest.current.isOpen(row.id, row.depth),
+      )
+    }
+    const move = (ev: PointerEvent) => {
+      if (!started && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return
+      started = true
+      last = compute(ev.clientX, ev.clientY)
+      setDrag({ ids, drop: last, x: ev.clientX, y: ev.clientY })
+      // Into a collapsed container: auto-expand after 600 ms (rules F1FPb).
+      const into = last?.kind === "into" ? last.target : null
+      if (into !== expandFor) {
+        if (expandTimer) clearTimeout(expandTimer)
+        expandTimer = null
+        expandFor = into
+        if (into) {
+          const row = latest.current.rows.find((x) => x.id === into)
+          if (row && !latest.current.isOpen(row.id, row.depth))
+            expandTimer = setTimeout(() => toggle(row.id, row.depth), AUTO_EXPAND_MS)
+        }
+      }
+    }
+    const end = (commit: boolean) => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+      window.removeEventListener("keydown", key, true)
+      if (expandTimer) clearTimeout(expandTimer)
+      if (!started) return
+      // Swallow the click that follows a drag.
+      window.addEventListener("click", (c) => c.stopPropagation(), { capture: true, once: true })
+      setDrag(null)
+      if (!commit || !last?.valid) return
+      const layout = m3.canvas()?.layout() ?? null
+      const ops = treeDropOps(dropReader(), ids, last, {
+        worldOf: (id) => layout?.nodes.get(id)?.world ?? null,
+        originOf: (p) => {
+          if (p === null) return { x: 0, y: 0 }
+          const w = layout?.nodes.get(p)?.world
+          return w ? { x: w.x, y: w.y } : null
+        },
+      })
+      if (ops.length && latest.current.apply(ops, ids.length > 1 ? "Move layers" : "Move layer"))
+        latest.current.ui.getState().select(ids)
+    }
+    const up = () => end(true)
+    const key = (ev: globalThis.KeyboardEvent) => {
+      if (ev.key !== "Escape" || !started) return
+      ev.preventDefault()
+      ev.stopPropagation()
+      end(false)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+    window.addEventListener("keydown", key, true)
+  }
+  const dropReader = () => {
+    const view = m3.view()
+    return {
+      getNode: (id: string) => store.getNode(id),
+      children: (p: string | null, at?: string | null) => store.children(p, at),
+      isVirtual: (id: string) => view.isVirtual(id),
+    }
+  }
+
   const scrollToIndex = (i: number) => {
     const el = tree.current
     if (!el) return
@@ -392,7 +550,7 @@ function LayerTree({
       el.scrollTop = top + ROW_PITCH - el.clientHeight
   }
 
-  if (rows.length === 0)
+  if (rows.length === 0 && !drag)
     return (
       <div className="left-panel__empty">
         <EmptyState
@@ -424,6 +582,8 @@ function LayerTree({
       aria-multiselectable="true"
       onKeyDown={onKeyDown}
       onPointerLeave={() => ui.getState().setHovered(null)}
+      onPointerDown={startRowDrag}
+      data-dragging={drag ? (drag.drop?.valid === false ? "invalid" : "valid") : undefined}
     >
       {start > 0 && (
         <div className="layer-tree__spacer" style={{ height: start * ROW_PITCH - ROW_GAP }} />
@@ -439,7 +599,9 @@ function LayerTree({
           selected={selected.has(r.id)}
           tabbable={r.id === tabbable}
           conflict={conflictNodes.has(r.id)}
+          dropInto={drag?.drop?.kind === "into" && drag.drop.target === r.id}
           agent={agentNodes.has(r.id)}
+          broken={broken.has(r.id)}
           actions={actions}
           agentRows={agentRows}
         />
@@ -451,6 +613,26 @@ function LayerTree({
         />
       )}
       {menu && <ChildMenu m3={m3} id={menu.id} at={menu} onClose={() => setMenu(null)} />}
+      {drag?.drop && drag.drop.kind !== "into" && (
+        <DropIndicator
+          className="layer-tree__drop"
+          invalid={!drag.drop.valid}
+          data-testid="layer-drop-indicator"
+          style={{
+            top: drag.drop.slot * ROW_PITCH - ROW_GAP / 2 - 4,
+            left: 6 + 8 + 14 * drag.drop.depth - 4,
+          }}
+        />
+      )}
+      {drag?.drop && !drag.drop.valid && (
+        <TooltipContent
+          className="layer-tree__drop-tip"
+          data-testid="layer-drop-tooltip"
+          style={{ left: drag.x + 12, top: drag.y + 16 }}
+        >
+          {drag.drop.reason}
+        </TooltipContent>
+      )}
     </div>
   )
 }
@@ -461,6 +643,8 @@ interface RowActions {
   apply: FileSession["apply"]
   hover(id: string | null): void
   menu(id: string, x: number, y: number): void
+  /** Right-click: selects the row unless it is already part of the selection. */
+  contextSelect(id: string): void
 }
 
 const visibilityOp = (id: string, hidden: boolean): Op =>
@@ -478,7 +662,9 @@ const LayerItem = memo(function LayerItem({
   selected,
   tabbable,
   conflict,
+  dropInto = false,
   agent,
+  broken = false,
   actions,
   agentRows,
 }: {
@@ -492,8 +678,12 @@ const LayerItem = memo(function LayerItem({
   tabbable: boolean
   /** Owns an open merge conflict (board 18 "Layers" rule). */
   conflict: boolean
+  /** Board 27 §2 (c): the drag's "into" target (LayerRow/DropTarget). */
+  dropInto?: boolean
   /** Touched by an uncommitted agent group (board 21 LayerRow/Agent). */
   agent: boolean
+  /** Board 27 §8 Kpf1o: an instance holding broken overrides (warning dot). */
+  broken?: boolean
   actions: RowActions
   agentRows: AgentRowHooks
 }) {
@@ -509,11 +699,27 @@ const LayerItem = memo(function LayerItem({
   const kind = layerKind(view, id)
   const inInstance = view.isVirtual(id) || !!view.origin(id)?.owned
   const onContextMenu = (e: React.MouseEvent) => {
-    if (!inInstance && n.type !== "instance") return
+    if (!inInstance && n.type !== "instance") {
+      // Board 27 §2 (g1jiG): layer rows open the canvas context menu (same commands, order).
+      e.preventDefault()
+      actions.contextSelect(id)
+      openRowMenu(store, e.clientX, e.clientY)
+      return
+    }
     e.preventDefault()
     actions.select(id, { shiftKey: false, metaKey: false, ctrlKey: false })
     actions.menu(id, e.clientX, e.clientY)
   }
+  if (dropInto)
+    return (
+      <LayerRowDropTarget
+        data-node-id={id}
+        name={nodeName(n)}
+        icon={<Icon name={typeIcon(n)} size={14} />}
+        depth={depth}
+        expanded={open ?? false}
+      />
+    )
   if (conflict)
     return (
       <LayerRowConflict
@@ -560,6 +766,7 @@ const LayerItem = memo(function LayerItem({
           kind !== "derived" &&
           isOverridden(view, id)
         }
+        broken={kind === "instance" && broken}
         visible={!hidden}
         onToggle={() => actions.toggle(id, depth)}
         onSelect={(e) => actions.select(id, { shiftKey: e.shift, metaKey: e.meta, ctrlKey: false })}

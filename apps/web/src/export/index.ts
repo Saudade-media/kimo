@@ -2,6 +2,13 @@
  * M7 export UI (board 07 "Export Dialog" `AsO2h`, ADR 0015) with board 25 § 2 additions
  * (`O3Abm`). See INTEGRATION.md.
  */
+
+export {
+  COPY_PNG_SCALE,
+  type CopyPngResult,
+  copySelectionAsPng,
+  writePngToClipboard,
+} from "./copy-png"
 export {
   ExportDialog,
   type ExportDialogProps,
@@ -18,6 +25,14 @@ export {
   previewRaster,
 } from "./generate"
 export {
+  groupIssues,
+  type IssueGroup,
+  type IssueLevel,
+  type IssueRow,
+  issuesReport,
+} from "./issues"
+export {
+  DEFAULT_TAILWIND,
   DEFAULT_TOGGLES,
   EXPORT_FORMATS,
   type ExportFormat,
@@ -26,6 +41,8 @@ export {
   exportToastOf,
   planWrite,
   readExportToggles,
+  TAILWIND_THEMES,
+  type TailwindChoices,
   type WriteResult,
   writePlan,
   zipFiles,

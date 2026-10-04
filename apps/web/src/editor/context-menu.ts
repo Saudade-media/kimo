@@ -13,8 +13,10 @@
  *   "Clear flag"; when the owning session is gone, "Ask Kimo to finish" replaces Resume.
  * - Multi-select (Pzcdu): agent items show only when every selected node supports them
  *   ("Convert 3 to prompts").
- * - Standard items: only commands the editor has — Duplicate ⌘D, Bring to front, Lock / Unlock,
- *   Delete ⌫. The design's "Copy ⌘C" row is left out: Kimo has no node clipboard yet.
+ * - Standard items (board 25): Duplicate ⌘D, Bring to front, Lock / Unlock, Delete ⌫.
+ * - Board 27 §2 (g1jiG, with `structure`): Copy · Paste here · Duplicate ─ Group selection ·
+ *   Ungroup · Wrap in frame ─ Add / Remove auto layout ─ Create component · Bring to front ·
+ *   Send to back · Lock ─ Delete; the same list as the layer-row menu (identical order).
  */
 import { isOrphanPlaceholder, placeholderOwner } from "@kimo/ai-agent"
 
@@ -42,7 +44,46 @@ export interface CanvasMenuInput {
   /** The Kimo session behind a placeholder owner origin. */
   ownerSession?(owner: string | undefined): MenuOwnerSession | null
   /** Shortcut label of a binding in the SHORTCUTS table (default: the macOS glyphs). */
-  kbd?(id: "duplicate" | "delete"): string
+  kbd?(id: string): string
+  /**
+   * Board 27 §2 (g1jiG "Context menu"): the clipboard and structure commands' availability.
+   * When given, the standard items follow board 27: Copy · Paste here · Duplicate ─ Group
+   * selection · Ungroup · Wrap in frame ─ Add / Remove auto layout ─ Create component · Bring to
+   * front · Send to back · Lock ─ Delete. Items that don't apply are disabled, not hidden (the
+   * auto layout pair swaps).
+   */
+  structure?: StructureMenuState
+  /**
+   * Board 27 §7 (rule RAez2, H7PYY): variable items, as a group before Delete — "Bind
+   * visibility to variable…" / "Bind text to variable…" (boolean / string variables exist) and
+   * "Detach all variables" (the selection has bindings). Hidden when nothing applies.
+   */
+  variables?: VariableMenuState
+}
+
+/** What the board 27 §7 variable items can do for the current selection. */
+export interface VariableMenuState {
+  /** Some selected node holds a variable binding (any field). */
+  bound: boolean
+  /** Visibility can be bound (boolean variables exist and it is not bound already). */
+  bindVisible: boolean
+  /** Text content can be bound (text selection, string variables exist, not bound already). */
+  bindText: boolean
+}
+
+/** What the board 27 structure items can do for the current selection. */
+export interface StructureMenuState {
+  canPaste: boolean
+  canGroup: boolean
+  canUngroup: boolean
+  /** "add" / "remove" auto layout, or null (disabled "Add auto layout"). */
+  layout: "add" | "remove" | null
+  canCreateComponent: boolean
+  /**
+   * Board 27 §8 (b) rule Y4XQq6: the main to replace when the selection is exactly one main +
+   * one other non-instance node ("Replace main with selection…"); absent otherwise.
+   */
+  replaceMain?: string | null
 }
 
 export type CanvasMenuAction =
@@ -53,9 +94,21 @@ export type CanvasMenuAction =
   | { kind: "ask"; frame: string }
   | { kind: "clear"; ids: string[] }
   | { kind: "duplicate" }
+  | { kind: "copy" }
+  | { kind: "pasteHere" }
+  | { kind: "group" }
+  | { kind: "ungroup" }
+  | { kind: "wrap" }
+  | { kind: "addLayout" }
+  | { kind: "removeLayout" }
+  | { kind: "createComponent" }
+  | { kind: "replaceMain"; main: string }
+  | { kind: "back"; ids: string[] }
   | { kind: "front"; ids: string[] }
   | { kind: "lock"; ids: string[]; lock: boolean }
   | { kind: "delete" }
+  | { kind: "bindVariable"; field: "visible" | "content" }
+  | { kind: "detachVariables"; ids: string[] }
 
 export interface CanvasMenuRow {
   id: string
@@ -65,12 +118,15 @@ export interface CanvasMenuRow {
   meta?: string
   metaFont?: "mono" | "sans"
   tone?: "agent" | "danger"
+  disabled?: boolean
   action: CanvasMenuAction
 }
 
 export interface CanvasMenuModel {
   agent: CanvasMenuRow[]
   standard: CanvasMenuRow[]
+  /** Board 27 groups between the standard items and Delete (empty without `structure`). */
+  structure: CanvasMenuRow[][]
   danger: CanvasMenuRow[]
 }
 
@@ -186,29 +242,152 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
 export function canvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
   const sel = i.selection.filter((id) => i.doc.getNode(id) || i.inInstance?.(id))
   if (sel.length === 0) return null
-  const kbd = i.kbd ?? ((id: "duplicate" | "delete") => (id === "duplicate" ? "⌘D" : "⌫"))
+  const kbd = i.kbd ?? ((id: string) => DEFAULT_KBD[id] ?? "")
   const real = sel.filter((id) => i.doc.getNode(id))
   const allLocked = real.length > 0 && real.every((id) => i.doc.getNode(id)?.locked === true)
+  const lock: CanvasMenuRow = {
+    id: "lock",
+    label: allLocked ? "Unlock" : "Lock",
+    action: { kind: "lock", ids: real, lock: !allLocked },
+  }
+  const danger: CanvasMenuRow[] = [
+    {
+      id: "delete",
+      label: "Delete",
+      meta: kbd("delete"),
+      tone: "danger",
+      action: { kind: "delete" },
+    },
+  ]
+  const vars = variableRows(i.variables, real)
+  const st = i.structure
+  if (st) {
+    const row = (
+      id: string,
+      label: string,
+      action: CanvasMenuAction,
+      enabled: boolean,
+      key?: string,
+    ): CanvasMenuRow => ({
+      id,
+      label,
+      ...(key ? { meta: kbd(key) } : {}),
+      ...(enabled ? {} : { disabled: true }),
+      action,
+    })
+    return {
+      agent: agentRows({ ...i, selection: sel }),
+      standard: [
+        row("copy", "Copy", { kind: "copy" }, real.length > 0, "copy"),
+        row("pasteHere", "Paste here", { kind: "pasteHere" }, st.canPaste, "paste"),
+        row("duplicate", "Duplicate", { kind: "duplicate" }, real.length > 0, "duplicate"),
+      ],
+      structure: [
+        [
+          row("group", "Group selection", { kind: "group" }, st.canGroup, "group"),
+          row("ungroup", "Ungroup", { kind: "ungroup" }, st.canUngroup, "ungroup"),
+          row("wrap", "Wrap in frame", { kind: "wrap" }, st.canGroup, "wrapInFrame"),
+        ],
+        [
+          st.layout === "remove"
+            ? row(
+                "removeLayout",
+                "Remove auto layout",
+                { kind: "removeLayout" },
+                true,
+                "removeAutoLayout",
+              )
+            : row(
+                "addLayout",
+                "Add auto layout",
+                { kind: "addLayout" },
+                st.layout === "add",
+                "addAutoLayout",
+              ),
+        ],
+        [
+          row(
+            "createComponent",
+            "Create component",
+            { kind: "createComponent" },
+            st.canCreateComponent,
+            "createComponent",
+          ),
+          ...(st.replaceMain
+            ? [
+                row(
+                  "replaceMain",
+                  "Replace main with selection…",
+                  { kind: "replaceMain", main: st.replaceMain },
+                  true,
+                ),
+              ]
+            : []),
+          row(
+            "front",
+            "Bring to front",
+            { kind: "front", ids: real },
+            real.length > 0,
+            "bringToFront",
+          ),
+          row("back", "Send to back", { kind: "back", ids: real }, real.length > 0, "sendToBack"),
+          lock,
+        ],
+        ...(vars.length ? [vars] : []),
+      ],
+      danger,
+    }
+  }
   const standard: CanvasMenuRow[] = [
     { id: "duplicate", label: "Duplicate", meta: kbd("duplicate"), action: { kind: "duplicate" } },
     { id: "front", label: "Bring to front", action: { kind: "front", ids: real } },
-    {
-      id: "lock",
-      label: allLocked ? "Unlock" : "Lock",
-      action: { kind: "lock", ids: real, lock: !allLocked },
-    },
+    lock,
   ]
   return {
     agent: agentRows({ ...i, selection: sel }),
     standard,
-    danger: [
-      {
-        id: "delete",
-        label: "Delete",
-        meta: kbd("delete"),
-        tone: "danger",
-        action: { kind: "delete" },
-      },
-    ],
+    structure: vars.length ? [vars] : [],
+    danger,
   }
+}
+
+/** Board 27 §7 variable rows (empty when none applies). */
+function variableRows(v: VariableMenuState | undefined, real: string[]): CanvasMenuRow[] {
+  if (!v || real.length === 0) return []
+  const out: CanvasMenuRow[] = []
+  if (v.bindVisible)
+    out.push({
+      id: "bindVisible",
+      label: "Bind visibility to variable…",
+      action: { kind: "bindVariable", field: "visible" },
+    })
+  if (v.bindText)
+    out.push({
+      id: "bindText",
+      label: "Bind text to variable…",
+      action: { kind: "bindVariable", field: "content" },
+    })
+  if (v.bound)
+    out.push({
+      id: "detachVariables",
+      label: "Detach all variables",
+      action: { kind: "detachVariables", ids: real },
+    })
+  return out
+}
+
+/** macOS glyphs of the bindings the menu shows (when the shell passes no `kbd`). */
+const DEFAULT_KBD: Record<string, string> = {
+  duplicate: "⌘D",
+  delete: "⌫",
+  copy: "⌘C",
+  paste: "⌘V",
+  group: "⌘G",
+  ungroup: "⇧⌘G",
+  wrapInFrame: "⌥⌘G",
+  addAutoLayout: "⇧A",
+  removeAutoLayout: "⌥⇧A",
+  createComponent: "⌥⌘K",
+  bringToFront: "⌘]",
+  sendToBack: "⌘[",
 }

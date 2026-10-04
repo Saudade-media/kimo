@@ -1,0 +1,44 @@
+/*
+ * Board 27 §5 (b) ICb89: Section · Polygon (MTQK3) / Section · Star (wVNjO) inside the right
+ * panel's PropSection frame (vertical, gap 8, padding [12, 12, 16, 12], bottom stroke).
+ * Header (uQ7EH): fill width, space-between, alignItems center (28 tall: the SegmentedText).
+ * Title (MFaaW): sans 12 (text-sm), weight normal, text-primary.
+ * Row 2 (OciK3) in polygon mode: opacity 0.4. Spacer (kvHMK): fill × 1.
+ * Hint (ABpsC): sans 11 (text-xs), line-height 1.45, text-tertiary, fixed width = fill.
+ */
+.rp-polygon__header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.rp-polygon__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.rp-polygon__row--off {
+  opacity: 0.4;
+}
+
+.rp-polygon__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.rp-polygon__hint {
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}

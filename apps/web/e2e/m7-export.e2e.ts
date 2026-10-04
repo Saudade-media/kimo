@@ -217,8 +217,10 @@ export const scenarios: Scenario[] = [
       })
       const c = checker(ctx, "Export dialog (AsO2h, light, 1440 × 900)")
       c.box("Scrim WWuf4", m.scrim, { w: 1440, h: 900, bg: "rgba(10, 10, 10, 0.3)" })
-      // Board 25 (O3Abm) adds the PDF row D7dje (52 + gap 6) to board 07's 597.
-      c.box("Dialog m2Oi5", m.dialog, { w: 880, h: 655, radius: 32, bg: t["--kimo-bg-app"] })
+      // Board 25 (O3Abm) adds the PDF row D7dje (52 + gap 6) to board 07's 597; board 27 §10 (c)
+      // f6LWt adds the Tailwind theme group under React + Tailwind (label 15 · Select 28 · Map
+      // row 16 · hint 64 at 1.45 + 3 × gap 10 = 153, + the column gap 20 → 173): 655 + 173.
+      c.box("Dialog m2Oi5", m.dialog, { w: 880, h: 828, radius: 32, bg: t["--kimo-bg-app"] })
       c.box("Header r6NKt7", m.header, { w: 880, h: 84, gap: 12, pad: "24 24 16 28" })
       c.box("Titles uVedp", m.titles, { w: 784, h: 44, gap: 4, dir: "column" })
       c.box("Title TTr17", m.title, {
@@ -230,8 +232,8 @@ export const scenarios: Scenario[] = [
       })
       c.box("Desc OBcKu", m.desc, { fs: 13, color: t["--kimo-text-secondary"] })
       c.box("Close Ax7lX", m.close, { w: 32, h: 32, radius: 999, bg: t["--kimo-bg-muted"] })
-      c.box("Body xu5Kq", m.body, { w: 880, h: 495, gap: 20, pad: "0 24 0 24" })
-      c.box("Options P50z4", m.options, { w: 264, h: 495, gap: 20, pad: "4 0 0 4" })
+      c.box("Body xu5Kq", m.body, { w: 880, h: 668, gap: 20, pad: "0 24 0 24" })
+      c.box("Options P50z4", m.options, { w: 264, h: 668, gap: 20, pad: "4 0 0 4" })
       c.box("Format sKgSl", m.format, { w: 260, h: 305, gap: 6 })
       c.box("Format Label T4qdI", m.formatLabel, {
         fs: 12,

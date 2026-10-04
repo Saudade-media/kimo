@@ -14,6 +14,7 @@ import {
   type Libraries,
   type Node,
   type OverrideChange,
+  type OverrideFixRequest,
   type Plan,
   type PlanError,
   type PlanNote,
@@ -30,6 +31,7 @@ import {
   planDetachInstance,
   planDuplicateAxisValue,
   planDuplicateVariable,
+  planFixOverrides,
   planHideInInstance,
   planLinkLibrary,
   planMoveAxisValue,
@@ -40,6 +42,7 @@ import {
   planRenameAxisValue,
   planRenameVariable,
   planReorderProp,
+  planReplaceMain,
   planResetAll,
   planResetOverride,
   planSetArgs,
@@ -158,6 +161,7 @@ export const HEADER_OP_KEYS = [
   "assets",
   "imports",
   "components",
+  "pages",
   "meta",
   "merge",
   "conflicts",
@@ -301,6 +305,10 @@ export type ComponentCommand =
       deleteContent?: boolean
     }
   | { cmd: "setComponentDescription"; component: string; text: string | null }
+  /** Board 27 §8 (b): the selection's layers become the main's (overrides re-matched). */
+  | { cmd: "replaceMain"; main: string; source: string }
+  /** Board 27 §8 (c): Fix broken overrides › Apply (Remap · Reset per row). */
+  | { cmd: "fixOverrides"; fixes: readonly OverrideFixRequest[] }
 
 /** Variable, theme-axis and theme-pin commands (board 14). */
 export type VariableCommand =
@@ -379,6 +387,10 @@ export function planCommand(
       return planSetSlot(ctx, c.frame, c.slot, { deleteContent: c.deleteContent })
     case "setComponentDescription":
       return planSetComponentDescription(ctx, c.component, c.text)
+    case "replaceMain":
+      return planReplaceMain(ctx, c.main, c.source)
+    case "fixOverrides":
+      return planFixOverrides(ctx, c.fixes)
     case "createVariable":
       return planCreateVariable(ctx, c.name, c.variable)
     case "updateVariable":

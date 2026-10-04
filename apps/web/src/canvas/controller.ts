@@ -10,6 +10,7 @@
 import {
   declaredProps,
   isLocated,
+  isRef,
   jsonEqual,
   type Libraries,
   locate,
@@ -42,6 +43,7 @@ import {
   type ComponentOutline,
   type CursorBadge,
   type InstanceDropOverlay,
+  type Measurement,
   OVERLAY_SPEC_M2,
   OVERLAY_SPEC_M3,
   type Overlay,
@@ -54,11 +56,14 @@ import {
   type SnapOverlay,
   type SpacingIndicator,
 } from "@kimo/renderer"
+import { altDragCloneOps, type DuplicateMainPref } from "../editor/m3/component-actions"
+import { pageScopedSource, withActivePage } from "../editor/pages/model"
 import { manifestOps } from "../lib/asset-manifest"
 import { type Combo, matchCombo, matches, pointerHeld, shortcut } from "../shortcuts/shortcuts"
 import { AgentCanvasModel, type AgentDomState, SHIMMER_FRAME_MS } from "./agent-canvas"
 import {
   canMove,
+  cloneOps,
   createIconOp,
   createImageFrameOp,
   createPathOp,
@@ -68,8 +73,10 @@ import {
   deleteOps,
   dropParent,
   duplicateOps,
+  flipOps,
   groupOps,
   isFlowChild,
+  lineContours,
   type MoveStart,
   moveOps,
   moveStart,
@@ -81,7 +88,9 @@ import {
   resizeOps,
   resizeStart,
   type ShapeKind,
+  STAR_RATIO,
   toLocal,
+  toParentDelta,
   topLevel,
 } from "./commands"
 import type {
@@ -98,7 +107,23 @@ import type {
   SnapResult,
   UiStore,
 } from "./contract"
+import { CROP_CURSOR, cropStore } from "./crop"
+import { CropMode, topImagePaint } from "./crop-mode"
+import { gapPreviewMeasurements, gapPreviewStore } from "./gap-preview"
 import { type Gesture, startGesture } from "./gesture"
+import {
+  contentBox,
+  type FlowFrame,
+  flowSiblingIndex,
+  insideRect,
+  padOf,
+  type SlotBar,
+  type StructureDom,
+  sequentialIndices,
+  slotAnchor,
+  slotBar,
+  slotIndex,
+} from "./insertion"
 import {
   clampZoom,
   containsRect,
@@ -108,8 +133,10 @@ import {
   handleAt,
   handleDir,
   IDENTITY,
+  invert,
   rectFromPoints,
   resizeBox,
+  round2,
   sizeLabel,
   sizeMode,
   unionRects,
@@ -118,6 +145,7 @@ import {
 import { measure } from "./measure"
 import {
   constrain45,
+  contoursBounds,
   mirror,
   moveAnchors,
   nearestOnCubic,
@@ -128,6 +156,17 @@ import {
   setHandle,
   splitSegment,
 } from "./path-geometry"
+import {
+  bendSegment,
+  cutAtAnchors,
+  deleteSegment,
+  radiusFromLocal,
+  ratioFromLocal,
+  selectedAnchorKind,
+  setAnchorKind,
+  starHandles,
+  toggleAnchorKind,
+} from "./path-tools"
 import { enterTarget, pickTarget } from "./selection"
 import { candidatesIn, fmtUnits, snap, snapPoint } from "./snapping"
 import type { CanvasToolStore } from "./tool-state"
@@ -159,7 +198,20 @@ const CLOSE_HINT_OFFSET = { x: 38, y: 28 }
 /** ⌥ "Measuring" tooltip offset from the pointer (house value). */
 export const MEASURING_OFFSET = { x: 16, y: 16 }
 
+/** A finite number, else undefined. */
+const num = (v: unknown): number | undefined =>
+  typeof v === "number" && Number.isFinite(v) ? v : undefined
+/** No exclusions (container / flow lookups). */
+const NO_TARGETS: ReadonlySet<string> = new Set()
 const NO_SNAP: { snap: SnapOverlay; spacing: readonly SpacingIndicator[] } | null = null
+
+/** ⌥ arrow resize directions (Δw, Δh). */
+const NUDGE_RESIZE: Record<string, [number, number]> = {
+  arrowright: [1, 0],
+  arrowleft: [-1, 0],
+  arrowdown: [0, 1],
+  arrowup: [0, -1],
+}
 
 /** Pen tool state while a contour is being drawn (board 10 #5). */
 interface PenState {
@@ -176,6 +228,10 @@ interface PathEditState {
   contours: PathContour[]
   selected: AnchorRef[]
   hoveredSegment: AnchorRef | null
+  /** Board 27 §5 (J5Vng): the clicked segment (3 px `selection`; ⌫ deletes it). */
+  selectedSegment: AnchorRef | null
+  /** Toolbar mode: Select anchors · Add / pen · Bend. */
+  mode: "select" | "add" | "bend"
 }
 
 /** Cands for snapping during a gesture. */
@@ -221,11 +277,23 @@ export interface ControllerOptions {
   snapping?: () => boolean
   /** Live "pixel grid" setting (default on). */
   pixelGrid?: () => boolean
+  /** Board 27: live "snap to pixel grid" setting (default on): whole-px edits at any zoom. */
+  snapToPixelGrid?: () => boolean
+  /** Board 27: live "rulers" setting (default off). */
+  rulers?: () => boolean
+  /** Board 27: arrow-key nudge step / ⇧ big step (default 1 / 10). */
+  nudge?: () => { step: number; big: number }
   onHint?: (hint: CanvasHint | null) => void
   /** Pixel grid visibility/zoom changed (host shows the zoom badge). */
   onPixelGrid?: (visible: boolean) => void
   onPlacementChange?: (placement: ImagePlacement | null) => void
   onIconPicker?: (request: IconPickerRequest) => void
+  /**
+   * Board 27 §7 (uu8Qa): starting to edit a text whose content is bound to a string variable
+   * asks first ("Detach copy/cta?"). Resolves true to detach (the content becomes the resolved
+   * string, one undo step) and edit; false cancels. Absent: the text edits directly.
+   */
+  confirmBoundText?: (id: string, ref: string) => Promise<boolean>
   /** Image tool without a placement yet: the host opens the file picker. */
   onPickImage?: () => void
   toolStore?: CanvasToolStore
@@ -241,6 +309,70 @@ export interface ControllerOptions {
   route?: (ops: readonly Op[]) => readonly Op[] | null
   /** The overlay (selection, hover, layout) was recomputed: the host re-reads its DOM overlays. */
   onOverlayChange?: () => void
+  /** Board 27 §2: InsertionBar, vacated slots, drag ghosts and the layout hint (screen px). */
+  onStructure?: (dom: StructureDom | null) => void
+  /**
+   * Board 27 §8 (d) rule WYOjQ: Settings › General "Duplicating a main component" (⌥-drag of a
+   * main follows ⌘D). Absent: "instance" (no dialog to ask with).
+   */
+  duplicateMainPref?: () => DuplicateMainPref
+  /** The ⌘D duplicate-main dialog for an ⌥-drag on release (null = cancelled). */
+  askDuplicateMain?: (
+    main: string,
+    ids: readonly string[],
+  ) => Promise<"instance" | "component" | null>
+}
+
+/** Board 27 §2 (c2o3u): a draw / line / place gesture over an auto-layout frame. */
+interface FlowInsert {
+  parent: string
+  flow: FlowFrame
+  /** Slot the pointer picks (0…n). */
+  slot: number
+  /** ⌘ held: an absolute child drawn live instead of a flow child inserted on release. */
+  absolute: boolean
+  /** The gesture's latest ops while the insertion waits for the release. */
+  pending: readonly Op[] | null
+}
+
+/** Board 27 §2 (Y4vVe) and ⌥-drag: a move that may reorder, reparent or duplicate. */
+interface Reloc {
+  parent: string | null
+  /** World box of the original parent (null = the page root). */
+  parentBox: Rect | null
+  /** Every moved node started as a flow child of an auto-layout parent. */
+  flowStart: boolean
+  /** ⌥-drag: the ops move copies of the originals. */
+  alt: boolean
+  originals: string[]
+  ids: string[]
+  clone: Op[]
+  /** ⌥-drag of a main with "ask": the dialog decides on release (§8 d). */
+  ask: { main: string; component: Op[] } | null
+  /** The latest ops handed to the gesture (an "ask" release re-applies them after the dialog). */
+  lastOps: Op[]
+  starts: {
+    world: Rect
+    local: Rect
+    x: number
+    y: number
+    w: unknown
+    h: unknown
+    position: unknown
+  }[]
+  /** Not drop targets: the dragged subtrees (and, with ⌥, the originals'). */
+  noTarget: Set<string>
+  /** Left out of slot math (the nodes being moved). */
+  moving: Set<string>
+  /** The original parent's children in the order the ops apply to (copies after originals). */
+  base: string[]
+  last: {
+    mode: "free" | "absolute" | "reparent" | "flow"
+    target: string | null
+    slot: number
+    flow: FlowFrame | null
+    delta: Point
+  } | null
 }
 
 type Drag =
@@ -272,6 +404,8 @@ type Drag =
       /** World union box of the moved nodes at start (snapping), or null. */
       box: Rect | null
       cands: Cands
+      /** Board 27 §2: reorder / reparent / ⌥-duplicate state (null = a plain move). */
+      reloc?: Reloc | null
     }
   | {
       kind: "resize"
@@ -301,6 +435,34 @@ type Drag =
       gesture: Gesture
       dragged: boolean
       cands: Cands
+    }
+  | {
+      /** Board 27 §5: Line / Arrow tools (a `path` node from start to end). */
+      kind: "line"
+      shape: "line" | "arrow"
+      start: Point
+      startWorld: Point
+      parent: string | null
+      id: string
+      name: string
+      gesture: Gesture
+      dragged: boolean
+      cands: Cands
+    }
+  | {
+      /** Board 27 §5 (ICb89): dragging a star's ratio or radius handle. */
+      kind: "shape-handle"
+      id: string
+      handle: "ratio" | "radius"
+      gesture: Gesture
+    }
+  | {
+      /** Board 27 §5 (J5Vng): Bend — dragging a segment through the pointer. */
+      kind: "path-bend"
+      ref: AnchorRef
+      t: number
+      base: PathContour[]
+      gesture: Gesture
     }
   | {
       kind: "pen"
@@ -341,8 +503,11 @@ type Drag =
       cands: Cands
     }
 
-const isShapeTool = (t: Tool): t is "frame" | "rect" | "ellipse" =>
-  t === "frame" || t === "rect" || t === "ellipse"
+const isShapeTool = (t: Tool): t is "frame" | "rect" | "ellipse" | "polygon" | "star" =>
+  t === "frame" || t === "rect" || t === "ellipse" || t === "polygon" || t === "star"
+
+/** Board 27 §5: tools that draw a one-segment path. */
+const isLineTool = (t: Tool): t is "line" | "arrow" => t === "line" || t === "arrow"
 
 export class CanvasController {
   readonly store: DocStore
@@ -371,6 +536,10 @@ export class CanvasController {
   private spaceHeld = false
   private editing: TextEditState | null = null
   private editingNode: { id: string; data: LayoutNodeData } | null = null
+  /** Board 27 §6 (d): the node being cropped draws without its image paint (the overlay shows it). */
+  private cropNode: { id: string; data: LayoutNodeData } | null = null
+  /** Board 27 §6 (d) image crop mode. */
+  readonly cropMode: CropMode
   private marquee: Rect | null = null
   private cleanups: (() => void)[] = []
   private disposed = false
@@ -398,6 +567,7 @@ export class CanvasController {
     this.renderer = opts.renderer
     this.engine = opts.engine
     this.header = this.readHeader()
+    this.paged = pageScopedSource(this.store, this.ui)
     this.src = this.makeView()
     this.resolver = this.makeResolver()
     this.vdoc = {
@@ -409,13 +579,63 @@ export class CanvasController {
     // The renderer reads through this view so the node being text-edited draws empty (the
     // overlay textarea shows its text) while layout keeps measuring the real content.
     this.viewSrc = {
-      getNode: (id) => (this.editingNode?.id === id ? this.editingNode.data : this.src.getNode(id)),
+      getNode: (id) =>
+        this.editingNode?.id === id
+          ? this.editingNode.data
+          : this.cropNode?.id === id
+            ? this.cropNode.data
+            : this.ghosted.has(id)
+              ? this.ghostNode(id)
+              : this.src.getNode(id),
       children: (parent, at) => this.src.children(parent, at),
     }
+    this.cropMode = new CropMode({
+      getNode: (id) => this.src.getNode(id) as NodeData | undefined,
+      isReal: (id) => !this.src.isVirtual(id) && this.store.getNode(id) !== undefined,
+      layout: () => this.layoutResult,
+      viewport: () => this.ui.getState().viewport,
+      imageSize: (src) => this.renderer.imageSize?.(src) ?? Promise.resolve(null),
+      apply: (ops, label) => this.apply(ops, label),
+      override: (id, data) => {
+        const prev = this.cropNode?.id
+        this.cropNode = data ? { id, data: data as LayoutNodeData } : null
+        this.renderer.invalidate([id, ...(prev && prev !== id ? [prev] : [])])
+        this.renderer.requestFrame()
+      },
+      changed: () => {
+        this.updateOverlay()
+        this.updateCursor()
+        this.renderer.requestFrame()
+      },
+      store: cropStore(this.ui),
+    })
+  }
+
+  /** Board 27 §1: roots of the active page only (other pages are not laid out or drawn). */
+  private readonly paged: ReturnType<typeof pageScopedSource>
+  /** Roots laid out by the last full pass (a root leaving the page needs a full pass). */
+  private shownRoots: ReadonlySet<string> = new Set()
+  /** The `pages` header the last full pass was laid out under. */
+  private pagesKey = ""
+
+  private pagesKeyNow(): string {
+    return JSON.stringify(this.store.toHeader().pages ?? null)
+  }
+
+  /** True when a change to `id` cannot touch the active page (its root is on another page). */
+  private offPage(id: string): boolean {
+    let n = this.store.getNode(id)
+    let root = id
+    for (let guard = 0; n && typeof n.parent === "string" && guard < 4096; guard++) {
+      root = n.parent
+      n = this.store.getNode(root)
+    }
+    if (!n) return false
+    return !this.shownRoots.has(root) && !this.paged.children(null).includes(root)
   }
 
   private makeView(): InstanceView {
-    return createInstanceView(this.store, {
+    return createInstanceView(this.paged, {
       libraries: this.opts.libraries?.() ?? {},
       header: () => this.header as never,
     })
@@ -502,7 +722,14 @@ export class CanvasController {
 
     this.cleanups.push(
       this.store.onChange((c) => {
-        for (const id of c.nodes) this.dirty.add(id)
+        // Board 27 §1: edits on other pages don't reach the canvas; a root that leaves the
+        // active page (moved to another page) or a `pages` change needs a full pass.
+        const shown = c.nodes.size > 0 ? this.paged.children(null) : null
+        for (const id of c.nodes) {
+          if (this.shownRoots.has(id) && shown && !shown.includes(id)) this.fullPending = true
+          else if (!this.offPage(id)) this.dirty.add(id)
+        }
+        if (c.header && this.pagesKeyNow() !== this.pagesKey) this.fullPending = true
         // M6: placeholder frames and prompt nodes are tracked incrementally.
         if (c.cause === "load") this.agent.scanAll()
         else this.agent.scan(c.nodes)
@@ -518,6 +745,26 @@ export class CanvasController {
       }),
     )
     this.bindDom(el)
+    // Board 27 §6 (b): the Auto layout Gap / Row gap field hovered in the panel.
+    this.cleanups.push(gapPreviewStore(this.ui).subscribe(() => this.updateOverlay()))
+    // Board 27 §6 (d): the properties panel drives crop mode through the shared crop store.
+    const crops = cropStore(this.ui)
+    const crop = this.cropMode
+    const actions: NonNullable<typeof crops.actions> = {
+      start: (id, paint) => {
+        this.ui.getState().select([id])
+        void crop.start(id, paint)
+      },
+      setRect: (r) => crop.setRect(r),
+      apply: () => crop.apply(),
+      cancel: () => crop.cancel(),
+      reset: () => crop.reset(),
+    }
+    crops.actions = actions
+    this.cleanups.push(() => {
+      crop.cancel()
+      if (crops.actions === actions) crops.actions = null
+    })
     if (this.opts.onStats) {
       const t = setInterval(() => this.opts.onStats?.(r.stats()), 250)
       this.cleanups.push(() => clearInterval(t))
@@ -536,6 +783,11 @@ export class CanvasController {
 
   get layout(): LayoutResult | null {
     return this.layoutResult
+  }
+
+  /** Board 27 §2: the last pointer position over the canvas (screen px), or null. */
+  pointerPosition(): Point | null {
+    return this.pointer
   }
 
   get canvasSize(): { w: number; h: number } {
@@ -565,6 +817,8 @@ export class CanvasController {
   }
 
   private computeFull(): void {
+    this.shownRoots = new Set(this.paged.children(null))
+    this.pagesKey = this.pagesKeyNow()
     this.src.invalidate()
     this.resolver.invalidate()
     try {
@@ -642,13 +896,26 @@ export class CanvasController {
   }
 
   private onUi(s: UiState, prev: UiState): void {
+    if (s.page !== prev.page) {
+      // Board 27 §1: another page — lay out and draw its roots only.
+      if (this.editing) this.commitText(null)
+      this.exitPathEdit()
+      this.fullPending = true
+      this.schedule()
+    }
     if (s.viewport !== prev.viewport) {
       this.renderer.setViewport(s.viewport)
       this.updateGrid()
       // Screen-anchored hints (close path) follow pans and zooms.
-      if (this.pen?.closeHint) this.updateOverlay()
+      if (this.pen?.closeHint || this.cropMode.active) this.updateOverlay()
+      // Board 27 §5: the path-edit toolbar and the star handles' inset follow pans and zooms.
+      else if (this.pathEdit) this.publishPathEdit()
+      else if (this.drag === null && this.starHandleWorld()) this.updateOverlay()
     }
     if (s.selection !== prev.selection) {
+      // Board 27: selecting something else commits the crop.
+      const cid = this.cropMode.nodeId
+      if (cid && (s.selection.length !== 1 || s.selection[0] !== cid)) this.cropMode.apply()
       const pe = this.pathEdit
       if (pe && (s.selection.length !== 1 || s.selection[0] !== pe.id)) this.exitPathEdit()
     }
@@ -658,6 +925,7 @@ export class CanvasController {
       if (prev.tool === "path" && this.pen) this.finishPen()
       if (s.tool !== "select") {
         this.exitPathEdit()
+        this.cropMode.apply()
         if (this.armed) this.armPlacement(null)
       }
       this.updateOverlay()
@@ -668,7 +936,8 @@ export class CanvasController {
   private updateOverlay(): void {
     const { selection, hovered } = this.ui.getState()
     const layout = this.layoutResult
-    const sel = selection.filter((id) => layout?.nodes.has(id))
+    // Board 27 §2: a node whose ghost follows the pointer has no selection chrome at its slot.
+    const sel = selection.filter((id) => layout?.nodes.has(id) && !this.ghosted.has(id))
     const d = this.drag
     const busy =
       d?.kind === "move" ||
@@ -677,7 +946,10 @@ export class CanvasController {
       d?.kind === "pan" ||
       d?.kind === "place" ||
       d?.kind === "path-anchor" ||
-      d?.kind === "path-handle"
+      d?.kind === "path-handle" ||
+      d?.kind === "line" ||
+      d?.kind === "shape-handle" ||
+      d?.kind === "path-bend"
     let label: string | null = null
     const moving = d?.kind === "move"
     if (layout && sel.length && !this.editing && !this.pathEdit && moving) {
@@ -700,10 +972,17 @@ export class CanvasController {
       }
     }
     const m = this.measuring()
+    const cropping = this.cropMode.active
     const overlay: Overlay = {
-      selection: this.editing || this.pen ? [] : sel,
+      selection: this.editing || this.pen || cropping ? [] : sel,
       hovered:
-        hovered && !selection.includes(hovered) && !busy && !this.editing && !m && !this.pathEdit
+        hovered &&
+        !selection.includes(hovered) &&
+        !busy &&
+        !this.editing &&
+        !m &&
+        !this.pathEdit &&
+        !cropping
           ? hovered
           : null,
       marquee: this.marquee,
@@ -712,11 +991,21 @@ export class CanvasController {
       handles: !busy || moving,
       snap: this.snapView?.snap ?? null,
       spacing: this.snapView?.spacing ?? [],
-      measurements: m?.measurements ?? [],
+      measurements: m?.measurements ?? (busy ? [] : this.gapPreviewMeasurements()),
       measureOutlines: m?.outline ? [m.outline] : [],
       pixelGrid: this.pixelGridEnabled() ? this.grid.alpha : false,
+      // Board 27 §4 rulers (⇧R): the selection's world extent is highlighted.
+      rulers: this.opts.rulers?.()
+        ? {
+            selection:
+              layout && sel.length
+                ? unionRects(sel.map((id) => layout.nodes.get(id)?.world as Rect))
+                : null,
+          }
+        : null,
       pen: this.penOverlay(),
       pathEdit: this.pathEditOverlay(),
+      shapeHandles: this.shapeHandlesOverlay(),
       resize: this.resizeView,
       cursorBadge: this.cursorBadge ?? (!busy && this.gridVisible() ? this.pixelBadge : null),
     }
@@ -727,9 +1016,13 @@ export class CanvasController {
     overlay.instanceDrop = this.dropPreview
     // M6 (board 22 / 24): placeholders, flashes, scopes, persona selections, connectors.
     if (layout) Object.assign(overlay, this.agent.overlay(layout))
+    // Board 27 §6 (d): crop chrome over everything.
+    if (cropping) overlay.crop = this.cropMode.overlay()
     this.renderer.setOverlay(overlay)
+    this.publishPathEdit()
     this.scheduleAgentFrame()
     this.updateHint(m !== null)
+    this.syncStructure()
     this.opts.onOverlayChange?.()
   }
 
@@ -888,7 +1181,11 @@ export class CanvasController {
           pad?: unknown
           gap?: unknown
         }
-        const pad = this.resolver.value(slotId, lay.pad)
+        const padRaw = this.resolver.value(slotId, lay.pad)
+        // Each pad array entry may itself be a binding.
+        const pad = Array.isArray(padRaw)
+          ? padRaw.map((v) => this.resolver.value(slotId, v))
+          : padRaw
         const [pt, pr, , pl] = Array.isArray(pad)
           ? pad.length === 2
             ? [pad[0], pad[1], pad[0], pad[1]]
@@ -977,7 +1274,14 @@ export class CanvasController {
   private updateHint(measuring: boolean): void {
     let hint: CanvasHint | null = null
     const pen = this.pen
-    if (pen?.closeHint && pen.anchors[0]) {
+    if (this.cropMode.active) {
+      // Board 27 §6 (d) ud74f "Hint" (u0dQ1, icon crop).
+      hint = {
+        kind: "crop",
+        icon: "crop",
+        text: "Drag edges to crop · drag inside to pan · Enter to apply",
+      }
+    } else if (pen?.closeHint && pen.anchors[0]) {
       const a = this.toScreen(pen.anchors[0])
       hint = {
         kind: "pen-close",
@@ -1032,12 +1336,17 @@ export class CanvasController {
     return this.opts.pixelGrid?.() ?? true
   }
 
-  /** Pixel grid visible (board 10 #4: above 400%) → edits snap to whole pixels. */
+  /** Pixel grid visible (board 27 rule zyQtF: at ≥ 800 % zoom while the setting is on). */
   gridVisible(): boolean {
     return (
       this.pixelGridEnabled() &&
-      this.ui.getState().viewport.zoom > OVERLAY_SPEC_M2.pixelGrid.minZoom
+      this.ui.getState().viewport.zoom >= OVERLAY_SPEC_M2.pixelGrid.minZoom
     )
+  }
+
+  /** Board 27 rule iZUZg: edits round to whole px (independent of the grid's visibility). */
+  private pixelSnap(): boolean {
+    return this.opts.snapToPixelGrid?.() ?? true
   }
 
   /**
@@ -1072,13 +1381,19 @@ export class CanvasController {
     )
   }
 
-  /** Rounds a world coordinate to the pixel grid while it is visible. */
+  /** Rounds a world coordinate to whole px while Snap to pixel grid is on. */
   private px(v: number): number {
-    return this.gridVisible() ? Math.round(v) : v
+    return this.pixelSnap() ? Math.round(v) : v
   }
 
   private pxPoint(p: Point): Point {
     return { x: this.px(p.x), y: this.px(p.y) }
+  }
+
+  /** Path anchors are exempt from whole-px rounding: they snap to 0.5 px (rule iZUZg). */
+  private pxAnchor(p: Point): Point {
+    if (!this.pixelSnap()) return p
+    return { x: Math.round(p.x * 2) / 2, y: Math.round(p.y * 2) / 2 }
   }
 
   /** Fades the pixel grid in/out when its visibility changes (also on setting changes). */
@@ -1165,10 +1480,12 @@ export class CanvasController {
     c: Cands,
     e: { metaKey: boolean; ctrlKey: boolean },
     extra: SnapBox[] = [],
+    /** Pixel rounding: whole px (default) or {@link pxAnchor} for path anchors. */
+    round: (q: Point) => Point = (q) => this.pxPoint(q),
   ): Point {
     if (!this.snapEnabled(e)) {
       this.setSnapView(null)
-      return this.pxPoint(p)
+      return round(p)
     }
     const r = snapPoint(
       p,
@@ -1177,7 +1494,7 @@ export class CanvasController {
       this.ui.getState().viewport.zoom,
     )
     this.setSnapView(r)
-    return this.pxPoint({ x: p.x + r.dx, y: p.y + r.dy })
+    return round({ x: p.x + r.dx, y: p.y + r.dy })
   }
 
   private report(error: CanvasError): void {
@@ -1188,9 +1505,11 @@ export class CanvasController {
   /** Applies one op group as one undo step. */
   apply(ops: readonly Op[], label: string): boolean {
     if (!ops.length) return false
-    const routed = this.opts.route ? this.opts.route(ops) : ops
-    if (!routed) return false
-    if (!routed.length) return true
+    const r0 = this.opts.route ? this.opts.route(ops) : ops
+    if (!r0) return false
+    if (!r0.length) return true
+    // Board 27 §1: new roots (and moves to the root) land on the active page.
+    const routed = withActivePage(this.store, this.ui, r0)
     const r = this.store.apply(routed, { origin: this.opts.origin, label })
     if (!r.ok) {
       this.report({ kind: "op", message: r.errors.map((e) => e.message).join("; ") })
@@ -1203,9 +1522,9 @@ export class CanvasController {
     const g = startGesture(this.store, this.opts.origin, label, (message) =>
       this.report({ kind: "op", message }),
     )
-    const route = this.opts.route
-    if (!route) return g
-    // Gesture steps on instance content go through the M3 router too (overrides, not ops).
+    const route = this.opts.route ?? ((ops: readonly Op[]) => ops)
+    // Gesture steps on instance content go through the M3 router too (overrides, not ops), and
+    // new roots land on the active page (board 27 §1).
     return {
       get applied() {
         return g.applied
@@ -1215,7 +1534,7 @@ export class CanvasController {
       },
       set: (ops, stepLabel) => {
         const routed = route(ops)
-        return routed ? g.set(routed, stepLabel) : false
+        return routed ? g.set(withActivePage(this.store, this.ui, routed), stepLabel) : false
       },
       cancel: () => g.cancel(),
       end: () => g.end(),
@@ -1357,10 +1676,14 @@ export class CanvasController {
     const d = this.drag
     if (d?.kind === "pan") return "grabbing"
     if (d?.kind === "resize") return HANDLE_CURSOR[d.handle]
-    if (d?.kind === "move") return d.allowed ? "default" : "not-allowed"
+    if (d?.kind === "move") return d.allowed ? (d.reloc?.alt ? "copy" : "default") : "not-allowed"
+    if (this.cropMode.active) {
+      const h = this.cropMode.dragging ?? (p ? this.cropMode.handleAt(p) : null)
+      return h ? CROP_CURSOR[h] : "default"
+    }
     const tool = this.ui.getState().tool
     if (this.spaceHeld || tool === "hand") return "grab"
-    if (isShapeTool(tool) || this.armed) return "crosshair"
+    if (isShapeTool(tool) || isLineTool(tool) || this.armed) return "crosshair"
     if (tool === "text") return "text"
     if (tool === "path") return this.penCursor(!!this.pen?.closeHint)
     if (this.pathEdit) return "default"
@@ -1499,7 +1822,8 @@ export class CanvasController {
 
   /** Events from the text editor / DOM labels that the canvas must not treat as canvas input. */
   private isOverlayTarget(t: EventTarget | null): boolean {
-    return t instanceof HTMLElement && !!t.closest("[data-canvas-overlay]")
+    // Element, not HTMLElement: a press on a button's SVG icon is inside the overlay too.
+    return t instanceof Element && !!t.closest("[data-canvas-overlay]")
   }
 
   private artboardOf(t: EventTarget | null): string | null {
@@ -1526,6 +1850,12 @@ export class CanvasController {
     if (e.button !== 0) return
     this.flush()
     el.setPointerCapture(e.pointerId)
+    // Board 27 §6 (d): crop mode owns every press.
+    if (this.cropMode.active) {
+      this.cropMode.down(p)
+      this.updateCursor(p)
+      return
+    }
 
     if (this.armed) {
       const parent = dropParent(this.store, this.hits(p))
@@ -1562,6 +1892,24 @@ export class CanvasController {
       }
       return
     }
+    if (isLineTool(ui.tool)) {
+      const shape = ui.tool
+      const parent = dropParent(this.store, this.hits(p))
+      const cands = this.cands(parent, [])
+      this.drag = {
+        kind: "line",
+        shape,
+        start: p,
+        startWorld: this.snapPt(this.toWorld(p), cands, e, [], (q) => this.pxAnchor(q)),
+        parent,
+        id: generateId(),
+        name: nextName(this.store, shape),
+        gesture: this.gesture(`Create ${shape}`),
+        dragged: false,
+        cands,
+      }
+      return
+    }
     if (ui.tool === "path") {
       e.preventDefault()
       this.penDown(p, e)
@@ -1573,11 +1921,30 @@ export class CanvasController {
       const hit = this.hits(p)
       const target = hit[0] ? this.store.getNode(hit[0]) : undefined
       if (hit[0] && target?.type === "text") this.beginTextEdit(hit[0])
-      else this.beginTextEdit(null, this.toWorld(p), dropParent(this.store, hit))
+      else {
+        // Board 27 §2 (c2o3u): a text clicked into an auto-layout frame takes the clicked slot.
+        const w = this.toWorld(p)
+        const into = this.containerAt(w, NO_TARGETS)
+        const flow = into ? this.flowFrame(into, NO_TARGETS) : null
+        this.textFlow = into && flow ? { parent: into, flow, slot: slotIndex(flow, w) } : null
+        this.beginTextEdit(null, w, this.textFlow?.parent ?? dropParent(this.store, hit))
+      }
       return
     }
     if (ui.tool !== "select") return
 
+    // Board 27 §5 (ICb89): a selected star's ratio / radius handles win over the resize handles.
+    const starHandle = this.starHandleAt(p)
+    if (starHandle) {
+      this.drag = {
+        kind: "shape-handle",
+        id: starHandle.id,
+        handle: starHandle.handle,
+        gesture: this.gesture(starHandle.handle === "ratio" ? "Star ratio" : "Corner radius"),
+      }
+      this.updateOverlay()
+      return
+    }
     const handle = this.handleAt(p)
     if (handle && this.layoutResult) {
       const snap = resizeStart(this.store, this.layoutResult, ui.selection)
@@ -1654,6 +2021,10 @@ export class CanvasController {
     const p = this.local(e)
     this.pointer = p
     if (e.altKey !== this.altHeld && !this.drag) this.setAlt(e.altKey)
+    if (this.cropMode.active && this.drag?.kind !== "pan") {
+      if (!this.cropMode.move(p, e.shiftKey)) this.updateCursor(p)
+      return
+    }
     const d = this.drag
     if (!d) {
       if (this.isOverlayTarget(e.target) || e.buttons) return
@@ -1700,6 +2071,8 @@ export class CanvasController {
     if (!d || !layout) return
     const ui = this.ui.getState()
     const v = ui.viewport
+    // Board 27 §2 (c2o3u): drawing over an auto-layout frame picks a slot.
+    if (d.kind === "draw" || d.kind === "line" || d.kind === "place") this.trackFlowInsert(p, e)
     switch (d.kind) {
       case "press": {
         if (Math.hypot(p.x - d.start.x, p.y - d.start.y) < DRAG_THRESHOLD) return
@@ -1732,6 +2105,7 @@ export class CanvasController {
           box,
           cands: this.cands(typeof pp === "string" ? pp : null, ui.selection),
         }
+        this.beginReloc(this.drag, e.altKey)
         if (ui.hovered) ui.setHovered(null)
         this.updateOverlay()
         this.updateCursor()
@@ -1774,7 +2148,8 @@ export class CanvasController {
           if (!lockX) dx = this.px(d.box.x + dx) - d.box.x
           if (!lockY) dy = this.px(d.box.y + dy) - d.box.y
         }
-        d.gesture.set(moveOps(this.store, layout, d.items, { x: dx, y: dy }))
+        if (d.reloc) this.relocStep(d, d.reloc, { x: dx, y: dy }, p, e)
+        else d.gesture.set(moveOps(this.store, layout, d.items, { x: dx, y: dy }))
         this.updateOverlay()
         return
       }
@@ -1806,7 +2181,7 @@ export class CanvasController {
         let scope = d.scope
         if (scope === null) {
           // A marquee fully inside one root frame selects that frame's children.
-          for (const root of this.store.children(null)) {
+          for (const root of this.paged.children(null)) {
             const b = layout.nodes.get(root)?.world
             if (b && containsRect(b, rect) && this.store.children(root).length) scope = root
           }
@@ -1853,6 +2228,28 @@ export class CanvasController {
       case "path-handle":
         this.pathEditDrag(p, e, d)
         return
+      case "line": {
+        if (!d.dragged && Math.hypot(p.x - d.start.x, p.y - d.start.y) < DRAG_THRESHOLD) return
+        d.dragged = true
+        // ⇧ constrains to 45° (rule g7wdz); else the end snaps like a pen anchor.
+        const end = e.shiftKey
+          ? this.pxAnchor(constrain45(d.startWorld, this.toWorld(p)))
+          : this.snapPt(this.toWorld(p), d.cands, e, [], (q) => this.pxAnchor(q))
+        const op = this.lineOp(d, end)
+        const ok = op ? d.gesture.set([op]) : false
+        if (ok && ui.selection[0] !== d.id) ui.select([d.id])
+        this.updateOverlay()
+        return
+      }
+      case "shape-handle":
+        this.starHandleDrag(d, p)
+        return
+      case "path-bend": {
+        const contours = bendSegment(d.base, d.ref, d.t, this.pxAnchor(this.toWorld(p)))
+        if (this.pathEdit && this.writePath(contours, d.gesture)) this.pathEdit.contours = contours
+        this.updateOverlay()
+        return
+      }
       case "draw": {
         if (!d.dragged && Math.hypot(p.x - d.start.x, p.y - d.start.y) < DRAG_THRESHOLD) return
         d.dragged = true
@@ -1866,7 +2263,16 @@ export class CanvasController {
         }
         const r = rectFromPoints(d.startWorld, end)
         const ok = d.gesture.set([
-          createShapeOp(this.store, layout, d.shape, d.parent, r, d.id, d.name),
+          createShapeOp(
+            this.store,
+            layout,
+            d.shape,
+            d.parent,
+            r,
+            d.id,
+            d.name,
+            this.toolSides(d.shape),
+          ),
         ])
         if (ok && ui.selection[0] !== d.id) ui.select([d.id])
         this.updateOverlay()
@@ -1878,6 +2284,7 @@ export class CanvasController {
   private onUp(e: PointerEvent): void {
     const el = this.el as HTMLElement
     if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId)
+    if (this.cropMode.up()) return
     this.onUpAt(this.local(e))
   }
 
@@ -1890,6 +2297,9 @@ export class CanvasController {
     if (pending) this.dragMove(pending.e, pending.p)
     const ui = this.ui.getState()
     const final = this.drag ?? d
+    // Board 27 §2: a click (no drag) over an auto-layout frame inserts at the clicked slot.
+    if (p && (final.kind === "draw" || final.kind === "line" || final.kind === "place"))
+      this.trackFlowInsert(p)
     this.drag = null
     this.clearGestureFeedback()
     switch (final.kind) {
@@ -1898,6 +2308,13 @@ export class CanvasController {
         else if (final.target && final.collapse) ui.select([final.target])
         break
       case "move":
+        if (final.reloc) this.finishReloc(final.reloc, final.gesture)
+        if (final.reloc?.ask && final.gesture.applied) {
+          this.askAltDuplicate(final.reloc, final.gesture)
+          break
+        }
+        final.gesture.end()
+        break
       case "resize":
         final.gesture.end()
         break
@@ -1916,6 +2333,7 @@ export class CanvasController {
               { x: c.x, y: c.y, w: CLICK_SIZE, h: CLICK_SIZE },
               final.id,
               final.name,
+              this.toolSides(final.shape),
             ),
           ])
         }
@@ -1924,6 +2342,22 @@ export class CanvasController {
         ui.setTool("select")
         break
       }
+      case "line": {
+        if (!final.dragged && this.layoutResult) {
+          // Click: a 100 px horizontal line / arrow from the click (CLICK_SIZE, like shapes).
+          const c = final.startWorld
+          const op = this.lineOp(final, { x: c.x + CLICK_SIZE, y: c.y })
+          if (op) final.gesture.set([op])
+        }
+        final.gesture.end()
+        if (final.gesture.applied) ui.select([final.id])
+        ui.setTool("select")
+        break
+      }
+      case "shape-handle":
+      case "path-bend":
+        final.gesture.end()
+        break
       case "place": {
         const pl = final.placement
         if (!final.dragged && this.layoutResult) {
@@ -1975,12 +2409,16 @@ export class CanvasController {
       k === "draw" ||
       k === "place" ||
       k === "path-anchor" ||
-      k === "path-handle"
+      k === "path-handle" ||
+      k === "line" ||
+      k === "shape-handle" ||
+      k === "path-bend"
     )
   }
 
   /** Snap guides, resize badges and the delta badge end with the gesture. */
   private clearGestureFeedback(): void {
+    this.endStructure()
     this.snapView = NO_SNAP
     this.resizeView = null
     this.cursorBadge = null
@@ -1999,10 +2437,14 @@ export class CanvasController {
       d.kind === "draw" ||
       d.kind === "place" ||
       d.kind === "path-anchor" ||
-      d.kind === "path-handle"
+      d.kind === "path-handle" ||
+      d.kind === "line" ||
+      d.kind === "shape-handle" ||
+      d.kind === "path-bend"
     )
       d.gesture.cancel()
-    if (d.kind === "path-anchor" || d.kind === "path-handle") this.syncPathEdit(true)
+    if (d.kind === "path-anchor" || d.kind === "path-handle" || d.kind === "path-bend")
+      this.syncPathEdit(true)
     if (d.kind === "marquee") {
       this.marquee = null
       this.ui.getState().select(d.before)
@@ -2014,7 +2456,19 @@ export class CanvasController {
 
   private onDoubleClick(e: MouseEvent): void {
     if (this.isOverlayTarget(e.target) || this.ui.getState().tool !== "select") return
-    if (this.pathEdit || this.armed) return
+    if (this.pathEdit) {
+      // Board 27 §5 (J5Vng): double-click an anchor toggles Sharp ⇄ Smooth.
+      const pe = this.pathEdit
+      const a = this.anchorAt(this.local(e))
+      if (a) {
+        const contours = toggleAnchorKind(pe.contours, a)
+        if (this.writePath(contours)) pe.contours = contours
+        pe.selected = [a]
+        this.updateOverlay()
+      }
+      return
+    }
+    if (this.armed) return
     const p = this.local(e)
     const hits = this.viewHits(p)
     const hit = hits[0]
@@ -2027,6 +2481,11 @@ export class CanvasController {
       else if (!this.src.isVirtual(sel)) this.editPath(sel)
       return
     }
+    // Board 27 §6 (d): double-click an image fill (a leaf: frames with children are entered).
+    if (sel && hits.includes(sel) && this.croppable(sel)) {
+      void this.cropMode.start(sel)
+      return
+    }
     // Board 11: double-click enters an instance one level at a time (composite ids), like groups.
     const next = enterTarget(this.vdoc, hit, sel)
     ui.select([next])
@@ -2034,6 +2493,14 @@ export class CanvasController {
     if (isTextual(t)) this.beginTextEdit(hit)
     // Board 10 #6: double-click a vector to edit it (not inside an instance: detach first).
     else if (t === "path" && !this.src.isVirtual(hit)) this.editPath(hit)
+  }
+
+  /** A real node with a visible image fill whose double-click enters crop mode. */
+  private croppable(id: string): boolean {
+    const n = this.src.getNode(id) as NodeData | undefined
+    if (!n || this.src.isVirtual(id) || isTextual(n.type) || n.type === "path") return false
+    if (n.type === "frame" && this.src.children(id).length > 0) return false
+    return topImagePaint(n) !== null
   }
 
   private onWheel(e: WheelEvent): void {
@@ -2091,6 +2558,23 @@ export class CanvasController {
       e.preventDefault()
       return true
     }
+    // Board 27 §6 (d): Enter applies, Esc reverts; arrows don't nudge the layer meanwhile.
+    if (this.cropMode.active) {
+      if (matches("crop.apply", e)) {
+        e.preventDefault()
+        this.cropMode.apply()
+        return true
+      }
+      if (matches("crop.cancel", e)) {
+        e.preventDefault()
+        this.cropMode.cancel()
+        return true
+      }
+      if (/^Arrow/.test(e.key) || e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault()
+        return true
+      }
+    }
     const run = (fn: () => unknown): true => {
       e.preventDefault()
       this.flush()
@@ -2113,6 +2597,8 @@ export class CanvasController {
     if (this.armed && matches("placement.cancel", e)) return run(() => this.armPlacement(null))
     if (this.pathEdit) {
       if (matches("pathEdit.exit", e)) return run(() => this.exitPathEdit())
+      if (matches("pathEdit.deletePoints", e) && this.pathEdit.selectedSegment)
+        return run(() => this.deleteSelectedSegment())
       if (matches("pathEdit.deletePoints", e) && this.pathEdit.selected.length)
         return run(() => this.deleteSelectedAnchors())
     }
@@ -2123,7 +2609,16 @@ export class CanvasController {
     if (matches("group", e)) return run(() => this.group())
     if (matches("zoomIn", e)) return run(() => this.zoomTo(ui.viewport.zoom * 2))
     if (matches("zoomOut", e)) return run(() => this.zoomTo(ui.viewport.zoom / 2))
+    // Board 27 rule bFozp: ⌥ arrows resize by the nudge step (⇧ = big step).
+    if (matches("nudgeResize", e) && ui.selection.length && this.layoutResult) {
+      const d = NUDGE_RESIZE[e.key.toLowerCase()]
+      if (d) return run(() => this.nudgeResize(d[0], d[1], e.shiftKey))
+    }
     if (mod || e.altKey) return false
+    if (matches("flipHorizontal", e) && ui.selection.length)
+      return run(() => this.apply(flipOps(this.vdoc, ui.selection, "x"), "Flip horizontal"))
+    if (matches("flipVertical", e) && ui.selection.length)
+      return run(() => this.apply(flipOps(this.vdoc, ui.selection, "y"), "Flip vertical"))
     if (matches("zoomToFit", e)) return run(() => this.zoomToFit())
     if (matches("zoomToSelection", e))
       return run(() => this.zoomToFit(this.ui.getState().selection))
@@ -2159,7 +2654,8 @@ export class CanvasController {
     }
     const a = arrows[key]
     if (a && matches("nudge", e) && ui.selection.length && this.layoutResult) {
-      const k = e.shiftKey ? 10 : 1
+      const n = this.nudgeStep()
+      const k = e.shiftKey ? n.big : n.step
       return run(() => {
         if (this.layoutResult)
           this.apply(
@@ -2169,6 +2665,606 @@ export class CanvasController {
       })
     }
     return false
+  }
+
+  /** Board 27 §6 (b): the hovered gap field's marks on the selected auto-layout frame. */
+  private gapPreviewMeasurements(): Measurement[] {
+    const g = gapPreviewStore(this.ui).get()
+    const layout = this.layoutResult
+    if (!g || !layout) return []
+    const lay = this.src.getNode(g.id)?.layout as { dir?: unknown } | undefined
+    if (!lay || typeof lay !== "object") return []
+    const kids = (this.src.children(g.id) as string[]).filter((c) => isFlowChild(this.vdoc, c))
+    return gapPreviewMeasurements(layout, g, lay.dir === "column" ? "column" : "row", kids)
+  }
+
+  /** Board 27 Settings › Canvas › Nudge (default 1 / ⇧ 10 px). */
+  private nudgeStep(): { step: number; big: number } {
+    return this.opts.nudge?.() ?? { step: 1, big: 10 }
+  }
+
+  /** ⌥ arrow: grows (→ ↓) or shrinks (← ↑) the selection's right / bottom edge by the step. */
+  private nudgeResize(dw: number, dh: number, big: boolean): void {
+    const layout = this.layoutResult
+    if (!layout) return
+    const start = resizeStart(this.store, layout, this.ui.getState().selection)
+    if (!start) return
+    const n = this.nudgeStep()
+    const k = big ? n.big : n.step
+    const b = start.box
+    const to = { ...b, w: Math.max(1, b.w + dw * k), h: Math.max(1, b.h + dh * k) }
+    this.apply(resizeOps(this.store, layout, start, to), "Resize")
+  }
+
+  // --- Board 27 §2 (c2o3u, Y4vVe): insert into / drag in and out of auto layout -------------------
+
+  /** The running draw / line / place gesture's layout insertion (undefined = not resolved yet). */
+  private flowInsert: FlowInsert | null | undefined = undefined
+  /** A component dragged from Assets over an auto-layout frame (`previewFlowInsert`). */
+  private dropFlow: { parent: string; flow: FlowFrame; slot: number } | null = null
+  /** A text clicked into an auto-layout frame: the slot it takes when committed. */
+  private textFlow: { parent: string; flow: FlowFrame; slot: number } | null = null
+  /** Nodes drawn invisible while their ghost follows the pointer (their slot stays laid out). */
+  private ghosted: ReadonlySet<string> = new Set()
+  private ghostNodes = new Map<string, { base: unknown; data: LayoutNodeData }>()
+  /** Ghost rasters by original id (object URLs, revoked when the drag ends). */
+  private ghostSrc = new Map<string, string>()
+  private ghostRequested = new Set<string>()
+  private structureKey = ""
+
+  /** The view node of a ghosted node with opacity 0 (identity-stable per source object). */
+  private ghostNode(id: string): LayoutNodeData | undefined {
+    const n = this.src.getNode(id)
+    if (!n) return n
+    const hit = this.ghostNodes.get(id)
+    if (hit && hit.base === n) return hit.data
+    const data = { ...n, opacity: 0 } as LayoutNodeData
+    this.ghostNodes.set(id, { base: n, data })
+    return data
+  }
+
+  private setGhosted(ids: readonly string[]): void {
+    const next = new Set(ids)
+    const prev = this.ghosted
+    if (next.size === prev.size && [...next].every((id) => prev.has(id))) return
+    this.ghosted = next
+    this.ghostNodes.clear()
+    this.renderer.invalidate([...new Set([...prev, ...next])])
+    this.renderer.requestFrame()
+  }
+
+  /**
+   * The deepest frame under world point `w` that may take children: visible, unlocked, not
+   * excluded, never entering an instance. Null = the active page's root.
+   */
+  private containerAt(w: Point, exclude: ReadonlySet<string>): string | null {
+    const layout = this.layoutResult
+    if (!layout) return null
+    let found: string | null = null
+    let ids: readonly string[] = this.paged.children(null)
+    for (let depth = 0; depth < 256; depth++) {
+      let next: string | null = null
+      for (let i = ids.length - 1; i >= 0; i--) {
+        const id = ids[i] as string
+        if (exclude.has(id)) continue
+        const n = this.store.getNode(id)
+        const l = layout.nodes.get(id)
+        if (!n || !l?.visible || n.type !== "frame" || n.locked === true) continue
+        if (!insideRect(l.world, w)) continue
+        next = id
+        break
+      }
+      if (next === null) break
+      found = next
+      ids = this.store.children(next)
+    }
+    return found
+  }
+
+  /** True when `id` is a strict descendant of `ancestor` (null = the root: always). */
+  private isWithin(id: string, ancestor: string | null): boolean {
+    if (ancestor === null) return true
+    let cur = this.store.getNode(id)?.parent
+    for (let guard = 0; typeof cur === "string" && guard < 4096; guard++) {
+      if (cur === ancestor) return true
+      cur = this.store.getNode(cur)?.parent
+    }
+    return false
+  }
+
+  /** Flow geometry of auto-layout frame `id` (children in `exclude` left out), else null. */
+  private flowFrame(id: string, exclude: ReadonlySet<string>): FlowFrame | null {
+    const n = this.store.getNode(id)
+    const layout = this.layoutResult
+    const box = layout?.nodes.get(id)?.world
+    const lay = n?.layout
+    if (!n || !layout || !box || typeof lay !== "object" || lay === null) return null
+    if (this.src.isVirtual(id)) return null
+    const L = lay as { dir?: unknown; gap?: unknown; pad?: unknown; wrap?: unknown }
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0)
+    const pad = this.resolver.value(id, L.pad)
+    const children = this.store
+      .children(id)
+      .filter((c) => !exclude.has(c) && layout.nodes.get(c)?.inFlow === true)
+      .map((c) => ({ id: c, box: (layout.nodes.get(c) as { world: Rect }).world }))
+    return {
+      dir: L.dir === "column" ? "column" : "row",
+      content: contentBox(
+        box,
+        padOf(Array.isArray(pad) ? pad.map((v) => this.resolver.value(id, v)) : pad),
+      ),
+      gap: num(this.resolver.value(id, L.gap)),
+      wrap: L.wrap === true,
+      children,
+    }
+  }
+
+  /** A parent-local point → world (null parent = world). */
+  private localToWorld(parent: string | null, x: number, y: number): Point {
+    const t = parent ? this.layoutResult?.nodes.get(parent)?.transform : undefined
+    if (!t) return { x, y }
+    return { x: t[0] * x + t[2] * y + t[4], y: t[1] * x + t[3] * y + t[5] }
+  }
+
+  /** Resolves (on the first call) and updates the layout insertion of a draw / line / place. */
+  private trackFlowInsert(p: Point, e?: { metaKey: boolean; ctrlKey: boolean }): void {
+    const d = this.drag
+    if (!d || (d.kind !== "draw" && d.kind !== "line" && d.kind !== "place")) return
+    if (this.flowInsert === undefined) {
+      this.flowInsert = null
+      const start = this.toWorld(d.start)
+      const parent = this.containerAt(start, NO_TARGETS)
+      const flow = parent ? this.flowFrame(parent, NO_TARGETS) : null
+      if (!parent || !flow) return
+      const f: FlowInsert = { parent, flow, slot: 0, absolute: false, pending: null }
+      this.flowInsert = f
+      d.gesture = this.flowGesture(d.gesture, f)
+    }
+    const f = this.flowInsert
+    if (!f) return
+    if (e) f.absolute = e.metaKey || e.ctrlKey
+    f.slot = slotIndex(f.flow, this.toWorld(p))
+  }
+
+  /**
+   * Wraps a draw gesture over an auto-layout frame: nothing is written while dragging (the bar
+   * and the draw ghost show the result); the release inserts the node at the slot with its
+   * drawn size. With ⌘ the node is drawn live as an absolute child of the frame.
+   */
+  private flowGesture(inner: Gesture, f: FlowInsert): Gesture {
+    return {
+      get applied() {
+        return inner.applied
+      },
+      get done() {
+        return inner.done
+      },
+      set: (ops, label) => {
+        if (f.absolute) {
+          f.pending = null
+          return inner.set(this.flowOps(ops, f, true), label)
+        }
+        f.pending = ops
+        inner.set([], label)
+        return true
+      },
+      cancel: () => {
+        f.pending = null
+        inner.cancel()
+      },
+      end: () => {
+        if (f.pending && !f.absolute) inner.set(this.flowOps(f.pending, f, false))
+        f.pending = null
+        inner.end()
+      },
+    }
+  }
+
+  /** Retargets insert ops into a layout frame: flow child at the slot, or absolute (⌘). */
+  private flowOps(
+    ops: readonly Op[],
+    f: { parent: string; flow: FlowFrame; slot: number },
+    absolute: boolean,
+  ): Op[] {
+    const layout = this.layoutResult
+    return ops.map((op) => {
+      if (op.op !== "insert" || !layout) return op
+      const node = { ...(op.node as Record<string, unknown>) }
+      const from = op.parent ?? null
+      if (absolute) {
+        const world = this.localToWorld(from, num(node.x) ?? 0, num(node.y) ?? 0)
+        const tl = toLocal(layout, f.parent, world)
+        node.x = round2(tl.x)
+        node.y = round2(tl.y)
+        node.position = "absolute"
+        const { index: _index, ...rest } = op
+        return { ...rest, parent: f.parent, node }
+      }
+      delete node.x
+      delete node.y
+      const siblings = this.store.children(f.parent)
+      const flowIds = f.flow.children.map((c) => c.id)
+      return {
+        ...op,
+        parent: f.parent,
+        index: flowSiblingIndex(siblings, flowIds, f.slot),
+        node,
+      }
+    })
+  }
+
+  /** World box of the first insert op (the draw ghost). */
+  private opWorldRect(ops: readonly Op[]): Rect | null {
+    const op = ops.find((o) => o.op === "insert")
+    if (op?.op !== "insert") return null
+    const n = op.node as Record<string, unknown>
+    const tl = this.localToWorld(op.parent ?? null, num(n.x) ?? 0, num(n.y) ?? 0)
+    return { x: tl.x, y: tl.y, w: num(n.w) ?? 0, h: num(n.h) ?? 0 }
+  }
+
+  /**
+   * Board 13 / 27: a component dragged from Assets over an auto-layout frame shows the bar;
+   * returns the frame and the sibling index the instance takes (null: not over a layout frame,
+   * or `screen` null to clear).
+   */
+  previewFlowInsert(screen: Point | null): { parent: string; index: number } | null {
+    let next: typeof this.dropFlow = null
+    if (screen) {
+      this.flush()
+      const w = this.toWorld(screen)
+      const parent = this.containerAt(w, NO_TARGETS)
+      const flow = parent ? this.flowFrame(parent, NO_TARGETS) : null
+      if (parent && flow) next = { parent, flow, slot: slotIndex(flow, w) }
+    }
+    this.dropFlow = next
+    this.syncStructure()
+    if (!next) return null
+    const flowIds = next.flow.children.map((c) => c.id)
+    return {
+      parent: next.parent,
+      index: flowSiblingIndex(this.store.children(next.parent), flowIds, next.slot),
+    }
+  }
+
+  /**
+   * Starts the reorder / reparent / ⌥-duplicate state of a move (non-root selections, or any
+   * selection with ⌥). Roots without ⌥ keep the plain move (they stay on the page root).
+   */
+  private beginReloc(d: Drag, alt: boolean): void {
+    if (d.kind !== "move") return
+    const layout = this.layoutResult
+    if (!layout) return
+    const ui = this.ui.getState()
+    const sel = topLevel(this.store, ui.selection)
+    const first = sel[0] ? this.store.getNode(sel[0]) : undefined
+    if (!first) return
+    const parent = typeof first.parent === "string" ? first.parent : null
+    const ok = sel.every((id) => {
+      const n = this.store.getNode(id)
+      return (
+        !!n &&
+        n.locked !== true &&
+        !this.src.isVirtual(id) &&
+        typeof n.at !== "string" &&
+        (n.parent ?? null) === parent &&
+        !!layout.nodes.get(id)
+      )
+    })
+    if (!ok || (parent !== null && this.store.getNode(parent)?.type === "instance")) return
+    if (parent === null && !alt) return
+    const originals = this.store.children(parent).filter((id) => sel.includes(id))
+    const flowStart =
+      parent !== null && originals.every((id) => layout.nodes.get(id)?.inFlow === true)
+    let ids = originals
+    let clone: Op[] = []
+    let ask: Reloc["ask"] = null
+    let base = this.store.children(parent)
+    if (alt) {
+      // Board 27 §8 (d): a main follows the ⌘D rule (instance · new component · ask).
+      const ask0 = this.opts.askDuplicateMain
+      const pref = this.opts.duplicateMainPref?.() ?? "instance"
+      const store = this.store
+      const m = altDragCloneOps(
+        store,
+        originals,
+        pref === "ask" && !ask0 ? "instance" : pref,
+        () => new Set(store.nodeIds().map((id) => String(store.getNode(id)?.name ?? ""))),
+        () => generateId(),
+      )
+      if (m?.component) ask = { main: m.main, component: m.component }
+      const c = m ?? cloneOps(this.store, originals)
+      clone = c.ops
+      ids = originals.map((id) => c.pairs.get(id) as string)
+      base = base.flatMap((id) => (c.pairs.has(id) ? [id, c.pairs.get(id) as string] : [id]))
+    }
+    const noTarget = new Set<string>()
+    const walk = (id: string) => {
+      noTarget.add(id)
+      for (const k of this.store.children(id)) walk(k)
+    }
+    for (const id of originals) walk(id)
+    const starts = originals.map((id) => {
+      const n = this.store.getNode(id) as NodeData
+      const l = layout.nodes.get(id) as { world: Rect; local: Rect }
+      return {
+        world: l.world,
+        local: l.local,
+        x: num(n.x) ?? 0,
+        y: num(n.y) ?? 0,
+        w: n.w,
+        h: n.h,
+        position: n.position,
+      }
+    })
+    d.reloc = {
+      parent,
+      parentBox: parent ? (layout.nodes.get(parent)?.world ?? null) : null,
+      flowStart,
+      alt,
+      originals,
+      ids,
+      clone,
+      ask,
+      lastOps: [],
+      starts,
+      noTarget,
+      moving: new Set(ids),
+      base,
+      last: null,
+    }
+    d.allowed = true
+    d.box = unionRects(starts.map((s) => s.world))
+  }
+
+  /** Sizes an auto-layout parent gave (`fill`) frozen to px when a node leaves the flow. */
+  private frozenSize(s: Reloc["starts"][number]): Record<string, unknown> {
+    const out: Record<string, unknown> = {}
+    const fill = (v: unknown) =>
+      typeof v === "object" && v !== null && (v as { mode?: unknown }).mode === "fill"
+    if (fill(s.w)) out.w = round2(s.local.w)
+    if (fill(s.h)) out.h = round2(s.local.h)
+    return out
+  }
+
+  /** One pointer step of a reloc move (world delta already snapped). */
+  private relocStep(
+    d: Extract<Drag, { kind: "move" }>,
+    r: Reloc,
+    delta: Point,
+    p: Point,
+    e: { metaKey: boolean; ctrlKey: boolean },
+  ): void {
+    const layout = this.layoutResult
+    if (!layout) return
+    const w = this.toWorld(p)
+    const meta = e.metaKey || e.ctrlKey
+    let mode: NonNullable<Reloc["last"]>["mode"] = "free"
+    let target: string | null = r.parent
+    if (r.parent !== null && meta) mode = r.flowStart ? "absolute" : "free"
+    else if (r.parent !== null) {
+      const t = this.containerAt(w, r.noTarget)
+      const inside = !r.parentBox || insideRect(r.parentBox, w)
+      const deeper = t !== null && t !== r.parent && this.isWithin(t, r.parent)
+      if (!inside || deeper) {
+        mode = "reparent"
+        target = t
+      }
+    }
+    let flow: FlowFrame | null = null
+    let slot = 0
+    if (mode === "reparent" && target !== null) flow = this.flowFrame(target, r.moving)
+    else if (mode === "free" && r.flowStart && r.parent !== null)
+      flow = this.flowFrame(r.parent, r.moving)
+    if (flow) {
+      mode = "flow"
+      slot = slotIndex(flow, w)
+    }
+    r.last = { mode, target, slot, flow, delta }
+    const ops: Op[] = mode !== "flow" && r.alt ? [...r.clone] : []
+    const l = toParentDelta(layout, r.parent, delta)
+    r.starts.forEach((s, i) => {
+      const id = r.ids[i] as string
+      if (mode === "free") {
+        ops.push({ op: "update", id, set: { x: round2(s.x + l.x), y: round2(s.y + l.y) } })
+      } else if (mode === "absolute") {
+        ops.push({
+          op: "update",
+          id,
+          set: {
+            position: "absolute",
+            x: round2(s.local.x + l.x),
+            y: round2(s.local.y + l.y),
+            ...this.frozenSize(s),
+          },
+        })
+      } else if (mode === "reparent") {
+        const tl = toLocal(layout, target, { x: s.world.x + delta.x, y: s.world.y + delta.y })
+        ops.push({ op: "move", id, parent: target })
+        ops.push({
+          op: "update",
+          id,
+          set: { x: round2(tl.x), y: round2(tl.y), ...this.frozenSize(s) },
+          unset: s.position !== undefined ? ["position"] : [],
+        })
+      }
+    })
+    d.gesture.set(ops)
+    r.lastOps = ops
+    const ui = this.ui.getState()
+    if (r.alt && mode !== "flow" && d.gesture.applied) {
+      if (ui.selection.join() !== r.ids.join()) ui.select(r.ids)
+    } else if (r.alt && ui.selection.join() !== r.originals.join()) ui.select(r.originals)
+    if (mode === "flow") {
+      // The slot, not the pointer position, decides a flow drop: no snap guides.
+      this.setSnapView(null)
+      this.requestGhosts(r)
+    }
+    this.applyGhosting(r)
+  }
+
+  /** The release of a reloc move: a flow preview becomes the reorder / insertion. */
+  private finishReloc(r: Reloc, gesture: Gesture): void {
+    const last = r.last
+    if (last?.mode !== "flow" || !last.flow || last.target === null) return
+    const target = last.target
+    const base =
+      target === r.parent ? r.base : this.store.children(target).filter((id) => !r.moving.has(id))
+    const flowIds = last.flow.children.map((c) => c.id)
+    const anchor = slotAnchor(base, flowIds, last.slot, r.moving)
+    const idx = sequentialIndices(base, r.ids, anchor)
+    const ops: Op[] = r.alt ? [...r.clone] : []
+    r.ids.forEach((id, i) => {
+      ops.push({ op: "move", id, parent: target, index: idx[i] as number })
+      if ((r.starts[i] as { position: unknown }).position !== undefined)
+        ops.push({ op: "update", id, unset: ["position"] })
+    })
+    gesture.set(ops)
+    r.lastOps = ops
+    if (r.alt && gesture.applied) this.ui.getState().select(r.ids)
+  }
+
+  /**
+   * Board 27 §8 (d): the release of an ⌥-drag of a main with "ask". The previewed copy is
+   * reverted, the duplicate-main dialog asks, and the answer applies the same drop as one undo
+   * step (instances as previewed, or new components at the same place).
+   */
+  private askAltDuplicate(r: Reloc, gesture: Gesture): void {
+    const ask = r.ask
+    const prompt = this.opts.askDuplicateMain
+    const ops = r.lastOps
+    gesture.cancel()
+    this.ui.getState().select(r.originals)
+    if (!ask || !prompt || !ops.length) return
+    void prompt(ask.main, r.originals).then((mode) => {
+      if (!mode) return
+      const final = mode === "instance" ? ops : [...ask.component, ...ops.slice(r.clone.length)]
+      if (this.apply(final, "Duplicate")) this.ui.getState().select(r.ids)
+    })
+  }
+
+  /** Renders the originals' ghost rasters (once per drag). */
+  private requestGhosts(r: Reloc): void {
+    const v = this.ui.getState().viewport
+    const scale = Math.min(4, Math.max(0.25, v.zoom * this.size.dpr))
+    for (const id of r.originals) {
+      if (this.ghostRequested.has(id)) continue
+      this.ghostRequested.add(id)
+      void this.renderer
+        .exportRaster(id, { scale })
+        .then((bytes) => {
+          if (!this.ghostRequested.has(id)) return
+          const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "image/png" }))
+          this.ghostSrc.set(id, url)
+          const d = this.drag
+          if (d?.kind === "move" && d.reloc) this.applyGhosting(d.reloc)
+          this.updateOverlay()
+        })
+        .catch(() => undefined)
+    }
+  }
+
+  /** In a flow preview the originals hide once their ghost is ready (not with ⌥: they stay). */
+  private applyGhosting(r: Reloc): void {
+    this.setGhosted(
+      r.last?.mode === "flow" && !r.alt ? r.originals.filter((id) => this.ghostSrc.has(id)) : [],
+    )
+  }
+
+  /** Ends every structure feedback (gesture end / cancel). */
+  private endStructure(): void {
+    this.flowInsert = undefined
+    this.setGhosted([])
+    for (const url of this.ghostSrc.values()) URL.revokeObjectURL(url)
+    this.ghostSrc.clear()
+    this.ghostRequested.clear()
+    this.syncStructure()
+  }
+
+  /** Publishes the screen-space structure feedback when it changed. */
+  private syncStructure(): void {
+    const v = this.ui.getState().viewport
+    const layout = this.layoutResult
+    const sx = (x: number) => (x - v.x) * v.zoom
+    const sy = (y: number) => (y - v.y) * v.zoom
+    let bar: SlotBar | null = null
+    const gaps: StructureDom["gaps"] = []
+    const ghosts: StructureDom["ghosts"] = []
+    let draw: StructureDom["draw"] = null
+    let hint: StructureDom["hint"] = null
+    const d = this.drag
+    const f = this.flowInsert
+    if (f && d && (d.kind === "draw" || d.kind === "line" || d.kind === "place")) {
+      hint = { icon: "square", text: `Release → inserts at ${f.slot + 1} · ⌘ draws on top` }
+      if (!f.absolute) {
+        bar = slotBar(f.flow, f.slot)
+        const r = f.pending ? this.opWorldRect(f.pending) : null
+        if (r)
+          draw = {
+            x: sx(r.x),
+            y: sy(r.y),
+            w: r.w * v.zoom,
+            h: r.h * v.zoom,
+            label: `${fmtUnits(r.w)} × ${fmtUnits(r.h)}`,
+          }
+      }
+    } else if (d?.kind === "move" && d.reloc) {
+      const r = d.reloc
+      if (r.flowStart) hint = { icon: "move", text: "Outside → to Canvas · ⌘ keeps it absolute" }
+      const last = r.last
+      if (last?.mode === "flow" && last.flow) {
+        bar = slotBar(last.flow, last.slot)
+        r.originals.forEach((id, i) => {
+          const s = r.starts[i] as { world: Rect }
+          const radius = this.radiusOf(id) * v.zoom
+          ghosts.push({
+            key: id,
+            x: sx(s.world.x + last.delta.x),
+            y: sy(s.world.y + last.delta.y),
+            w: s.world.w * v.zoom,
+            h: s.world.h * v.zoom,
+            radius,
+            src: this.ghostSrc.get(id) ?? null,
+          })
+          const box = layout?.nodes.get(id)?.world
+          if (!r.alt && box && this.ghosted.has(id))
+            gaps.push({
+              x: sx(box.x),
+              y: sy(box.y),
+              w: box.w * v.zoom,
+              h: box.h * v.zoom,
+              radius,
+            })
+        })
+      }
+    } else if (this.dropFlow) {
+      bar = slotBar(this.dropFlow.flow, this.dropFlow.slot)
+    }
+    const dom: StructureDom | null =
+      bar || gaps.length || ghosts.length || draw || hint
+        ? {
+            bar: bar
+              ? bar.axis === "v"
+                ? { x: sx(bar.x), y: sy(bar.y), length: bar.length * v.zoom, axis: "v" }
+                : { x: sx(bar.x), y: sy(bar.y), length: bar.length * v.zoom, axis: "h" }
+              : null,
+            gaps,
+            ghosts,
+            draw,
+            hint,
+          }
+        : null
+    const key = dom ? JSON.stringify(dom) : ""
+    if (key === this.structureKey) return
+    this.structureKey = key
+    this.opts.onStructure?.(dom)
+  }
+
+  /** The first corner radius of a node (resolved; 0 when none). */
+  private radiusOf(id: string): number {
+    const n = this.src.getNode(id)
+    const raw = n ? this.resolver.value(id, (n as { radius?: unknown }).radius) : 0
+    const v = Array.isArray(raw) ? this.resolver.value(id, raw[0]) : raw
+    return typeof v === "number" && Number.isFinite(v) ? v : 0
   }
 
   // --- M2: resize feedback (board 10 #8) ------------------------------------------------------
@@ -2224,7 +3320,7 @@ export class CanvasController {
         r.h -= s.dy
       } else if (moveB) r.h += s.dy
     } else this.setSnapView(null)
-    if (this.gridVisible()) {
+    if (this.pixelSnap()) {
       if (moveL) {
         const nx = Math.round(r.x)
         r.w += r.x - nx
@@ -2367,8 +3463,8 @@ export class CanvasController {
   private penPoint(p: Point, e: PointerEvent, cands: Cands): Point {
     let w = this.toWorld(p)
     const last = this.pen?.anchors.at(-1)
-    if (e.shiftKey && last) return this.pxPoint(constrain45(last, w))
-    w = this.snapPt(w, cands, e, this.penAnchorBoxes())
+    if (e.shiftKey && last) return this.pxAnchor(constrain45(last, w))
+    w = this.snapPt(w, cands, e, this.penAnchorBoxes(), (q) => this.pxAnchor(q))
     return w
   }
 
@@ -2439,7 +3535,7 @@ export class CanvasController {
     if (!a) return
     let h = this.toWorld(p)
     if (e.shiftKey) h = constrain45(a, h)
-    h = this.pxPoint(h)
+    h = this.pxAnchor(h)
     const degenerate = Math.hypot(h.x - a.x, h.y - a.y) < 1e-9
     if (degenerate) {
       delete a.out
@@ -2525,7 +3621,14 @@ export class CanvasController {
     const ui = this.ui.getState()
     if (ui.tool !== "select") ui.setTool("select")
     if (ui.selection.length !== 1 || ui.selection[0] !== id) ui.select([id])
-    this.pathEdit = { id, contours, selected: [], hoveredSegment: null }
+    this.pathEdit = {
+      id,
+      contours,
+      selected: [],
+      hoveredSegment: null,
+      selectedSegment: null,
+      mode: "select",
+    }
     this.updateOverlay()
     this.updateCursor()
   }
@@ -2537,7 +3640,7 @@ export class CanvasController {
   exitPathEdit(): void {
     if (!this.pathEdit) return
     const d = this.drag
-    if (d?.kind === "path-anchor" || d?.kind === "path-handle") {
+    if (d?.kind === "path-anchor" || d?.kind === "path-handle" || d?.kind === "path-bend") {
       d.gesture.end()
       this.drag = null
     }
@@ -2564,7 +3667,11 @@ export class CanvasController {
     const pe = this.pathEdit
     if (!pe) return
     const d = this.drag
-    if (!force && (d?.kind === "path-anchor" || d?.kind === "path-handle")) return
+    if (
+      !force &&
+      (d?.kind === "path-anchor" || d?.kind === "path-handle" || d?.kind === "path-bend")
+    )
+      return
     const contours = this.store.getNode(pe.id)?.type === "path" ? this.readContours(pe.id) : null
     if (!contours?.length) {
       this.exitPathEdit()
@@ -2572,6 +3679,12 @@ export class CanvasController {
     }
     pe.contours = contours
     pe.selected = pe.selected.filter((r) => r.index < (contours[r.contour]?.anchors.length ?? 0))
+    const seg = pe.selectedSegment
+    if (
+      seg &&
+      !(contours[seg.contour] && seg.index < segmentCount(contours[seg.contour] as PathContour))
+    )
+      pe.selectedSegment = null
   }
 
   private pathEditOverlay(): Overlay["pathEdit"] {
@@ -2590,6 +3703,7 @@ export class CanvasController {
       contours: pe.contours,
       selected: pe.selected,
       hoveredSegment: pe.hoveredSegment,
+      selectedSegment: pe.selectedSegment,
       badge,
     }
   }
@@ -2680,6 +3794,7 @@ export class CanvasController {
     const has = (r: AnchorRef) =>
       pe.selected.some((s) => s.contour === r.contour && s.index === r.index)
     if (a) {
+      pe.selectedSegment = null
       let collapse: AnchorRef | null = null
       if (e.shiftKey) {
         pe.selected = has(a)
@@ -2701,8 +3816,28 @@ export class CanvasController {
       return true
     }
     const seg = this.segmentAt(p)
+    if (seg && pe.mode === "select") {
+      // Board 27 §5 (J5Vng): a clicked segment highlights (3 px selection); ⌫ deletes it.
+      pe.selected = []
+      pe.selectedSegment = seg.ref
+      this.updateOverlay()
+      return true
+    }
+    if (seg && pe.mode === "bend") {
+      pe.selected = []
+      pe.selectedSegment = null
+      this.drag = {
+        kind: "path-bend",
+        ref: seg.ref,
+        t: seg.t,
+        base: pe.contours,
+        gesture: this.gesture("Bend path"),
+      }
+      this.updateOverlay()
+      return true
+    }
     if (seg) {
-      // Click on a segment adds an anchor there (one undo step with the drag that may follow).
+      // Add / pen: a click on a segment adds an anchor there (one undo step with the drag).
       const { contours, anchor } = splitSegment(pe.contours, seg.ref.contour, seg.ref.index, seg.t)
       const gesture = this.gesture("Add anchor")
       if (!this.writePath(contours, gesture)) return true
@@ -2762,12 +3897,14 @@ export class CanvasController {
           this.cands(typeof parent === "string" ? parent : null, [pe.id]),
           e,
           others,
+          (q) => this.pxAnchor(q),
         )
         dx = to.x - a.x
         dy = to.y - a.y
       } else if (a) {
-        dx = this.px(a.x + dx) - a.x
-        dy = this.px(a.y + dy) - a.y
+        const to = this.pxAnchor({ x: a.x + dx, y: a.y + dy })
+        dx = to.x - a.x
+        dy = to.y - a.y
       }
       contours = moveAnchors(d.base, d.refs, { x: dx, y: dy })
     } else {
@@ -2775,7 +3912,7 @@ export class CanvasController {
       if (!a) return
       let h = this.toWorld(p)
       if (e.shiftKey) h = constrain45(a, h)
-      h = this.pxPoint(h)
+      h = this.pxAnchor(h)
       // ⌥ breaks the handles' symmetry.
       contours = setHandle(d.base, d.ref, d.side, h, e.altKey)
     }
@@ -2823,6 +3960,270 @@ export class CanvasController {
       pe.selected = []
       this.updateOverlay()
     }
+  }
+
+  // --- Board 27 §5: shape slot tools, star handles, path-edit toolbar ---------------------------
+
+  /** Sides for a new polygon / star: the session's remembered counts (rule g7wdz). */
+  private toolSides(shape: ShapeKind): number | undefined {
+    const t = this.opts.toolStore?.get()
+    if (shape === "polygon") return t?.polygonSides
+    if (shape === "star") return t?.starPoints
+    return undefined
+  }
+
+  /** Insert op for a Line / Arrow drag ending at world `end` (null: zero length). */
+  private lineOp(d: Extract<Drag, { kind: "line" }>, end: Point): Op | null {
+    const layout = this.layoutResult
+    if (!layout) return null
+    if (Math.hypot(end.x - d.startWorld.x, end.y - d.startWorld.y) < 1e-9) return null
+    const parent = d.parent && this.store.hasNode(d.parent) ? d.parent : null
+    const t = parent ? layout.nodes.get(parent)?.transform : undefined
+    const fields = pathGeometry.toNode(lineContours(d.shape, d.startWorld, end), t ?? IDENTITY)
+    const hasTextDefault = this.header.variables?.["text/default"] !== undefined
+    return createPathOp(this.store, parent, fields, false, hasTextDefault, d.id, d.name)
+  }
+
+  /** The single selected star (a polygon with `star`), with its layout, or null. */
+  private selectedStar(): {
+    id: string
+    w: number
+    h: number
+    ratio: number
+    radius: number
+    transform: readonly number[]
+  } | null {
+    const sel = this.ui.getState().selection
+    if (sel.length !== 1 || this.pathEdit || this.editing) return null
+    const id = sel[0] as string
+    const n = this.src.getNode(id)
+    const l = this.layoutResult?.nodes.get(id)
+    if (!n || !l || n.type !== "polygon" || this.src.isVirtual(id)) return null
+    const star = n.star as { ratio?: unknown } | undefined
+    if (!star || typeof star !== "object") return null
+    const ratio = typeof star.ratio === "number" ? star.ratio : STAR_RATIO.default
+    const rv = this.resolver.value(id, n.radius)
+    const radius = typeof rv === "number" && Number.isFinite(rv) ? rv : 0
+    return { id, w: l.local.w, h: l.local.h, ratio, radius, transform: l.transform }
+  }
+
+  /** World points of the selected star's handles. */
+  private starHandleWorld(): { id: string; ratio: Point; radius: Point } | null {
+    const s = this.selectedStar()
+    if (!s) return null
+    const zoom = this.ui.getState().viewport.zoom
+    const h = starHandles(s.w, s.h, s.ratio, s.radius, zoom)
+    const m = s.transform
+    const map = (q: Point): Point => ({
+      x: (m[0] as number) * q.x + (m[2] as number) * q.y + (m[4] as number),
+      y: (m[1] as number) * q.x + (m[3] as number) * q.y + (m[5] as number),
+    })
+    return { id: s.id, ratio: map(h.ratio), radius: map(h.radius) }
+  }
+
+  /** A star handle under screen point `p` (8 px handles, picked within ANCHOR_PICK). */
+  private starHandleAt(p: Point): { id: string; handle: "ratio" | "radius" } | null {
+    const w = this.starHandleWorld()
+    if (!w) return null
+    for (const handle of ["ratio", "radius"] as const) {
+      const s = this.toScreen(w[handle])
+      if (Math.hypot(s.x - p.x, s.y - p.y) <= ANCHOR_PICK) return { id: w.id, handle }
+    }
+    return null
+  }
+
+  private starHandleDrag(d: Extract<Drag, { kind: "shape-handle" }>, p: Point): void {
+    const s = this.selectedStar()
+    if (!s || s.id !== d.id) return
+    const m = s.transform
+    const inv = invert(m as never) as readonly number[]
+    const w = this.toWorld(p)
+    const local = {
+      x: (inv[0] as number) * w.x + (inv[2] as number) * w.y + (inv[4] as number),
+      y: (inv[1] as number) * w.x + (inv[3] as number) * w.y + (inv[5] as number),
+    }
+    const zoom = this.ui.getState().viewport.zoom
+    if (d.handle === "ratio") {
+      const ratio = ratioFromLocal(s.h, local)
+      d.gesture.set([
+        {
+          op: "update",
+          id: d.id,
+          set: { star: ratio === STAR_RATIO.default ? {} : { ratio } },
+        },
+      ])
+      this.starPill = `${Math.round(ratio * 100)} %`
+    } else {
+      const radius = radiusFromLocal(s.h, local, zoom)
+      d.gesture.set([
+        { op: "update", id: d.id, set: { radius: radius === 0 ? undefined : radius } },
+      ])
+      this.starPill = String(radius)
+    }
+    this.updateOverlay()
+  }
+
+  /** MeasurePill text while a star handle is dragged. */
+  private starPill: string | null = null
+
+  private shapeHandlesOverlay(): Overlay["shapeHandles"] {
+    const w = this.starHandleWorld()
+    if (!w) return null
+    const d = this.drag
+    const dragging = d?.kind === "shape-handle" ? d.handle : null
+    if (!dragging) this.starPill = null
+    return {
+      handles: [
+        { at: w.ratio, kind: "hollow" },
+        { at: w.radius, kind: "filled" },
+      ],
+      pill: dragging && this.starPill ? { text: this.starPill, at: w[dragging] } : null,
+    }
+  }
+
+  /** Publishes the path-edit toolbar state (board 27 §5 J5Vng) to the tool store. */
+  private publishPathEdit(): void {
+    const store = this.opts.toolStore
+    if (!store) return
+    const pe = this.pathEdit
+    const layout = this.layoutResult
+    if (!pe || !layout) {
+      if (store.get().pathEdit) store.set({ pathEdit: null })
+      return
+    }
+    const b = contoursBounds(pe.contours) ?? layout.nodes.get(pe.id)?.world
+    if (!b) return
+    const tl = this.toScreen({ x: b.x, y: b.y })
+    const z = this.ui.getState().viewport.zoom
+    let cue: Point | null = null
+    const seg = pe.selectedSegment
+    const a = seg ? pe.contours[seg.contour]?.anchors[seg.index] : undefined
+    if (a) {
+      // NsORT: top-left = the segment's start anchor + (−12, +6) (anchor 380, 90 → cue 368, 96).
+      const s = this.toScreen(a)
+      cue = { x: s.x - 12, y: s.y + 6 }
+    }
+    store.set({
+      pathEdit: {
+        id: pe.id,
+        mode: pe.mode,
+        anchorKind: selectedAnchorKind(pe.contours, pe.selected),
+        canCut: pe.selected.length > 0,
+        segmentSelected: pe.selectedSegment !== null,
+        box: { x: tl.x, y: tl.y, w: b.w * z, h: b.h * z },
+        cue,
+      },
+    })
+  }
+
+  /** Board 27 §5 (J5Vng): a path-edit toolbar button. */
+  pathEditCommand(
+    c: "select" | "add" | "bend" | "sharp" | "smooth" | "cut" | "deleteSegment" | "done",
+  ): void {
+    if (!this.pathEdit) return
+    this.flush()
+    if (c === "select" || c === "add" || c === "bend") this.setPathEditMode(c)
+    else if (c === "sharp" || c === "smooth") this.setAnchorKind(c)
+    else if (c === "cut") this.cutAtAnchors()
+    else if (c === "deleteSegment") this.deleteSelectedSegment()
+    else this.exitPathEdit()
+    this.el?.focus({ preventScroll: true })
+  }
+
+  /** Toolbar: Select anchors · Add / pen · Bend. */
+  setPathEditMode(mode: "select" | "add" | "bend"): void {
+    const pe = this.pathEdit
+    if (!pe || pe.mode === mode) return
+    pe.mode = mode
+    pe.hoveredSegment = null
+    this.updateOverlay()
+    this.updateCursor()
+  }
+
+  /** Toolbar Sharp / Smooth for the selected anchors (one undo step). */
+  setAnchorKind(kind: "sharp" | "smooth"): void {
+    const pe = this.pathEdit
+    if (!pe?.selected.length) return
+    const contours = setAnchorKind(pe.contours, pe.selected, kind)
+    if (this.writePath(contours)) pe.contours = contours
+    this.updateOverlay()
+  }
+
+  /**
+   * Scissors (rule g7wdz "Cut"): splits at the selected anchor(s) in ONE undo step; an open
+   * path becomes two paths (the new one named "<name> 2"), a closed one opens.
+   */
+  cutAtAnchors(): void {
+    const pe = this.pathEdit
+    const layout = this.layoutResult
+    if (!pe?.selected.length || !layout) return
+    const r = cutAtAnchors(pe.contours, pe.selected)
+    if (!r) return
+    const n = this.store.getNode(pe.id)
+    if (!n) return
+    const parent = typeof n.parent === "string" ? n.parent : null
+    const t = parent ? layout.nodes.get(parent)?.transform : undefined
+    const f = pathGeometry.toNode(r.keep, t ?? IDENTITY)
+    const set: Record<string, unknown> = {
+      x: f.x,
+      y: f.y,
+      w: f.w,
+      h: f.h,
+      d: f.d,
+      viewBox: f.viewBox,
+    }
+    if (typeof n.rotation === "number" && n.rotation !== 0) set.rotation = 0
+    if (n.flipX === true) set.flipX = false
+    if (n.flipY === true) set.flipY = false
+    const ops: Op[] = [{ op: "update", id: pe.id, set }]
+    const base = typeof n.name === "string" && n.name ? n.name : "Path"
+    const siblings = this.store.children(parent)
+    const index = siblings.indexOf(pe.id)
+    r.extra.forEach((c, i) => {
+      const g = pathGeometry.toNode([c], t ?? IDENTITY)
+      const node: Record<string, unknown> = {
+        ...n,
+        ...g,
+        viewBox: g.viewBox,
+        name: `${base} ${i + 2}`,
+      }
+      for (const k of ["id", "parent", "order", "at", "rotation", "flipX", "flipY"]) delete node[k]
+      delete node.fill
+      if (n.fill !== undefined && c.closed) node.fill = n.fill
+      ops.push({
+        op: "insert",
+        id: generateId(),
+        parent,
+        ...(index >= 0 ? { index: index + 1 + i } : {}),
+        node,
+      } as Op)
+    })
+    if (this.apply(ops, "Cut path")) {
+      pe.contours = r.keep
+      pe.selected = []
+      pe.selectedSegment = null
+    }
+    this.updateOverlay()
+  }
+
+  /** Eraser / ⌫ on a selected segment: removes just that segment (rule g7wdz). */
+  deleteSelectedSegment(): void {
+    const pe = this.pathEdit
+    const seg = pe?.selectedSegment
+    if (!pe || !seg) return
+    const contours = deleteSegment(pe.contours, seg)
+    if (!contours.length) {
+      const id = pe.id
+      this.exitPathEdit()
+      if (this.apply([{ op: "delete", id }], "Delete path")) this.ui.getState().clearSelection()
+      return
+    }
+    if (this.writePath(contours)) {
+      pe.contours = contours
+      pe.selected = []
+      pe.selectedSegment = null
+    }
+    this.updateOverlay()
   }
 
   // --- M2: image placement and icons ------------------------------------------------------------
@@ -3030,6 +4431,19 @@ export class CanvasController {
       const n = this.src.getNode(id) as LayoutNodeData | undefined
       const l = this.layoutResult?.nodes.get(id)
       if (!n || !l || !isTextual(n.type) || n.locked === true) return
+      // Board 27 §7 (uu8Qa): bound content asks "Detach <variable>?" before editing.
+      if (n.type === "text" && isRef(n.content) && this.opts.confirmBoundText) {
+        const ref = n.content.$ref
+        const value = this.resolver.value(id, n.content)
+        void this.opts.confirmBoundText(id, ref).then((ok) => {
+          if (!ok || typeof value !== "string") return
+          const cur = this.store.getNode(id)
+          if (!cur || !isRef(cur.content) || cur.content.$ref !== ref) return
+          if (this.apply([{ op: "update", id, set: { content: value } }], "Detach text"))
+            this.beginTextEdit(id)
+        })
+        return
+      }
       const input = resolveText(id, n, this.resolver)
       const fill = this.resolver.value(id, n.fill)
       // M6: a note / prompt edits its body box (board 22 afq5v `utO8L`, poE5B `ITEfa`).
@@ -3097,8 +4511,11 @@ export class CanvasController {
     } else {
       if (text.trim() && layout) {
         const id = generateId()
-        if (this.apply([createTextOp(this.store, layout, s.parent, s.at, text, id)], "Add text"))
-          this.ui.getState().select([id])
+        const op = createTextOp(this.store, layout, s.parent, s.at, text, id)
+        const tf = this.textFlow
+        this.textFlow = null
+        const ops = tf && tf.parent === s.parent ? this.flowOps([op], tf, false) : [op]
+        if (this.apply(ops, "Add text")) this.ui.getState().select([id])
       }
       // A new text (typed or abandoned) ends the text tool, unless another tool was picked.
       if (this.ui.getState().tool === "text") this.ui.getState().setTool("select")

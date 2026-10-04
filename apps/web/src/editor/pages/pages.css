@@ -1,0 +1,297 @@
+/*
+ * Board 27 §1 Pages (v1Sju). Node values:
+ * - Pages (k801nc): column, gap 1, padding [4, 6, 8, 6], stroke bottom 1 border.
+ * - Pages Header (vs31B): 28 high, gap 4, padding [0, 2, 0, 8], alignItems center: Collapse
+ *   chevron 12 text-tertiary · Title sans text-sm 500 text-primary · Spacer · Add page
+ *   (IconButton 24, fill #00000000, plus 14).
+ * - Tree Header (hvwbw): gap 6, padding [8, 14, 4, 14], alignItems center: Page Name sans text-xs
+ *   600 text-tertiary · Spacer · Count mono text-xs text-tertiary.
+ * - Footer (wsA6U): a button; hover bg-hover, icon text-secondary, label text-primary.
+ * - Quick Switcher (C1rd4 JFfml): 400 wide, column, bg-overlay, stroke 1 border, radius-xl,
+ *   shadow 0 16 48 shadow-strong; Search 44 high gap 8 padding [0, 14] bottom border; Results
+ *   column gap 1 padding 6; Hints gap 14 padding [8, 14] top border.
+ * - Reorder ghost (Zq3KS Z45Jb): PageRow, fill bg-app, opacity 0.9, shadow 0 4 12 shadow-strong.
+ */
+.pages-strip {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 1px;
+  width: 100%;
+  padding: 4px 6px 8px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.pages-strip__header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 28px;
+  padding: 0 2px 0 8px;
+}
+
+.pages-strip__collapse {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.pages-strip__collapse svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.pages-strip__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+.pages-strip__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-icon-button.pages-strip__add {
+  background: transparent;
+}
+
+.pages-strip__list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pages-strip__row--dragging {
+  opacity: 0.4;
+}
+
+.pages-strip__drop {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.kimo-page-row.pages-strip__ghost {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background: var(--kimo-bg-app);
+  box-shadow: 0 4px 12px var(--kimo-shadow-strong);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.kimo-menu-item-dense.pages-strip__menu-delete .kimo-menu-item-dense__label {
+  color: var(--kimo-danger);
+}
+
+/* Tree Header (hvwbw). */
+.layer-tree-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px 4px;
+}
+
+.layer-tree-header__page {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.layer-tree-header__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.layer-tree-header__count {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: normal;
+}
+
+/* Footer (wsA6U): the whole row is a button. */
+button.left-panel__footer.pages-footer {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+button.left-panel__footer.pages-footer:hover {
+  background: var(--kimo-bg-hover);
+}
+
+button.left-panel__footer.pages-footer:hover .left-panel__footer-icon {
+  color: var(--kimo-text-secondary);
+}
+
+button.left-panel__footer.pages-footer:hover .left-panel__footer-label {
+  color: var(--kimo-text-primary);
+}
+
+/* ⌘P quick switcher (C1rd4). */
+.page-switcher__scrim {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+}
+
+.page-switcher {
+  position: fixed;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow: 0 16px 48px var(--kimo-shadow-strong);
+}
+
+.page-switcher__search {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.page-switcher__search-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.page-switcher__search-icon svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.page-switcher__query {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.page-switcher__spacer {
+  display: none;
+}
+
+.page-switcher__scope {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: normal;
+}
+
+.page-switcher__results {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 360px;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.page-switcher__hints {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.page-switcher__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-switcher__hint-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: normal;
+}
+
+/* Board 27 §2 (c) h0cqV3: layer drag. The indicator sits on the row gap at the target indent
+   (Drop slot padding-left 8 + 14 × depth inside the tree's 6 px padding, ring centred there). */
+.layer-tree {
+  position: relative;
+}
+
+.kimo-drop-indicator.layer-tree__drop {
+  position: absolute;
+  z-index: 2;
+  right: 6px;
+  width: auto;
+}
+
+.layer-tree[data-dragging="invalid"],
+.layer-tree[data-dragging="invalid"] * {
+  cursor: not-allowed;
+}
+
+.kimo-tooltip.layer-tree__drop-tip {
+  position: fixed;
+  z-index: 70;
+  pointer-events: none;
+}

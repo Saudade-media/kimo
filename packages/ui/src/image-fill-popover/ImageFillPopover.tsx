@@ -9,18 +9,22 @@ import type { PopoverAnchor } from "../popover/usePopover"
 import { PropTextField } from "../prop-field/PropTextField"
 import { Select } from "../select/Select"
 
-/** `.kimo` image fill modes (`ImageFill.mode`). */
-export type ImageFillMode = "cover" | "contain" | "stretch" | "tile"
+/** `.kimo` image fill modes (`ImagePaint.fit`). */
+export type ImageFillMode = "cover" | "contain" | "stretch" | "tile" | "crop"
 
 const MODE_LABELS: Record<ImageFillMode, string> = {
   cover: "Cover",
   contain: "Contain",
   stretch: "Stretch",
   tile: "Tile",
+  crop: "Crop",
 }
 
-/** Modes offered by default: the board 09 caption lists cover · contain · stretch. */
-export const IMAGE_FILL_MODES: readonly ImageFillMode[] = ["cover", "contain", "stretch"]
+/**
+ * Modes offered by default: board 09 lists cover · contain · stretch; board 27 §6 (d) adds Crop
+ * as the fourth (choosing it enters crop mode on the canvas).
+ */
+export const IMAGE_FILL_MODES: readonly ImageFillMode[] = ["cover", "contain", "stretch", "crop"]
 
 /** Display label of a mode (`cover` → "Cover"), also used by FillRow ("Image · Cover"). */
 export const imageFillModeLabel = (mode: ImageFillMode): string => MODE_LABELS[mode]
@@ -36,7 +40,7 @@ export function imageFillBackground(src: string, mode: ImageFillMode): CSSProper
         ? "cover"
         : mode === "contain"
           ? "contain"
-          : mode === "stretch"
+          : mode === "stretch" || mode === "crop"
             ? "100% 100%"
             : "auto",
   }

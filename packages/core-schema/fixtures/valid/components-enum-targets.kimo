@@ -1,0 +1,14 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"meta": {"name":"Enum targets"},
+"nodes": {
+"BtnIcon001": {"type":"icon","parent":"Button0001","order":"a0","name":"Icon","w":16,"h":16,"set":"lucide","icon":"plus","color":"#FFFFFF"}
+
+, "BtnLabel01": {"type":"text","parent":"Button0001","order":"a1","name":"Label","content":"Button","style":{"size":14,"weight":500},"fill":"#FFFFFF"}
+
+, "BtnLarge01": {"type":"instance","parent":null,"order":"a1","name":"Button large","of":"Button0001","x":200,"y":0,"args":{"size":"lg","tone":"half"}}
+
+, "Button0001": {"type":"frame","parent":null,"order":"a0","name":"Button","component":{"props":{"size":{"type":"enum","order":"a0","options":{"lg":null,"md":null,"sm":null},"targets":{"lg":[{"field":"layout/pad","target":"Button0001","value":[12,20]},{"field":"style/size","target":"BtnLabel01","value":16},{"field":"w","target":"BtnIcon001","value":20},{"field":"h","target":"BtnIcon001","value":20},{"field":"opacity","target":"Button0001","value":0.9}],"md":[{"field":"layout/pad","target":"Button0001","value":[8,14]},{"field":"style/size","target":"BtnLabel01","value":14},{"field":"w","target":"BtnIcon001","value":16},{"field":"h","target":"BtnIcon001","value":16}],"sm":[{"field":"layout/pad","target":"Button0001","value":[6,10]},{"field":"style/size","target":"BtnLabel01","value":12},{"field":"w","target":"BtnIcon001","value":12},{"field":"h","target":"BtnIcon001","value":12}]}},"tone":{"type":"enum","order":"a1","target":"Button0001","field":"opacity","options":{"full":1,"half":0.5},"targets":{"half":[{"field":"fill","target":"BtnLabel01","value":"#888888"}]}}}},"x":0,"y":0,"radius":8,"fill":"#111111","layout":{"dir":"row","gap":6,"pad":[8,14]}}
+}
+}

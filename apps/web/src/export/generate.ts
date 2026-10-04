@@ -4,18 +4,28 @@
  */
 
 import type { KimoDocument, Libraries } from "@kimo/core-schema"
-import type { ExportFile, IconLoader, IRDocument, IRNode, RasterSource } from "@kimo/exporters"
+import type {
+  ExportFile,
+  ExportIssue,
+  IconLoader,
+  IRDocument,
+  IRNode,
+  RasterSource,
+} from "@kimo/exporters"
 import type { LayoutResult, TextMeasurer } from "@kimo/layout"
 import { fontFormat } from "@kimo/renderer"
+import { groupIssues, type IssueGroup } from "./issues"
 import {
   DEFAULT_PDF_TOGGLES,
   DEFAULT_PNG_SCALE,
+  DEFAULT_TAILWIND,
   type ExportFormat,
   type ExportToggles,
   type ImageKind,
   PDF_BLEED_PT,
   type PdfToggles,
   type PngScale,
+  type TailwindChoices,
   targetsOf,
 } from "./model"
 
@@ -65,6 +75,8 @@ export interface ExportChoices {
   scale?: PngScale
   /** PDF options. */
   pdf?: PdfToggles
+  /** React + Tailwind: theme output and token mapping (board 27 §10 rule jmMl8). */
+  tailwind?: TailwindChoices
 }
 
 export interface ExportSummary {
@@ -87,6 +99,8 @@ export interface GeneratedExport {
   errors: string[]
   /** The exported roots (PNG / PDF preview renders the first). */
   roots: { id: string; name: string }[]
+  /** Exporter issues grouped per output file (board 27 §10 Issues tab), `errors` included. */
+  issues: IssueGroup[]
 }
 
 const loadExporters = () => import("@kimo/exporters")
@@ -95,6 +109,20 @@ function countNodes(nodes: readonly IRNode[]): number {
   let n = 0
   for (const node of nodes) n += 1 + countNodes(node.children)
   return n
+}
+
+/** Layer-name chain (export root → node) per IR node id, roots and components. */
+function namesOf(ir: IRDocument): Map<string, string[]> {
+  const out = new Map<string, string[]>()
+  const walk = (n: IRNode, chain: string[]) => {
+    // Unnamed layers read as their type ("Frame"), as the Layers panel shows them.
+    const names = [...chain, n.name ?? `${n.type.charAt(0).toUpperCase()}${n.type.slice(1)}`]
+    if (!out.has(n.id)) out.set(n.id, names)
+    for (const c of n.children) walk(c, names)
+  }
+  for (const r of ir.roots) walk(r, [])
+  for (const c of ir.components) if (c) walk(c.root, [c.name])
+  return out
 }
 
 function summaryOf(ir: IRDocument, fileName: string): ExportSummary {
@@ -133,6 +161,9 @@ export async function generateExport(
   const pdf = options.pdf ?? DEFAULT_PDF_TOGGLES
   const files: ExportFile[] = []
   const errors: string[] = []
+  const issues: ExportIssue[] = []
+  const names = new Map<string, string[]>()
+  const tailwind = options.tailwind ?? DEFAULT_TAILWIND
   let ir: IRDocument | null = null
   const engine = {
     ...(layout ? { layout } : {}),
@@ -143,17 +174,30 @@ export async function generateExport(
       const result = await ex.exportDocument(doc, target, {
         ...base,
         ...(target === "svg" ? engine : {}),
+        ...(target === "react-tailwind"
+          ? { tailwindTheme: tailwind.theme, themeTokens: tailwind.mapTokens }
+          : {}),
       })
       ir ??= result.ir
       files.push(...result.files)
+      issues.push(...result.issues)
+      for (const [id, n] of namesOf(result.ir)) if (!names.has(id)) names.set(id, n)
     } catch (e) {
       errors.push(e instanceof Error ? e.message : String(e))
     }
   }
-  ir ??= ex.buildIR(doc, {
-    ...(libraries ? { libraries } : {}),
-    ...(selection.length ? { ids: selection } : {}),
-  })
+  if (!ir) {
+    // PNG / PDF: no text target ran — the IR's own issues (unresolved variables, instances…).
+    ir = ex.buildIR(doc, {
+      ...(libraries ? { libraries } : {}),
+      ...(selection.length ? { ids: selection } : {}),
+    })
+    const planned = targets.pdf
+      ? [{ path: "export.pdf" }]
+      : ir.roots.map(() => ({ path: `x@${scale}x.png` }))
+    issues.push(...ex.attributeIssues(ir, targets.pdf ? "pdf" : "png", planned))
+    for (const [id, n] of namesOf(ir)) names.set(id, n)
+  }
   const binary: ExportFile[] = []
   if (targets.png && options.binary) {
     if (!renderer) errors.push("png export needs a renderer (raster)")
@@ -180,6 +224,11 @@ export async function generateExport(
     summary: summaryOf(ir, source.fileName),
     errors,
     roots: ir.roots.map((r) => ({ id: r.id, name: r.name ?? r.key })),
+    issues: groupIssues(issues, {
+      files: files.map((f) => f.path),
+      names: (id) => names.get(id) ?? null,
+      failures: errors,
+    }),
   }
 }
 

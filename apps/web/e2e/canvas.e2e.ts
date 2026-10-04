@@ -287,8 +287,10 @@ export const scenarios: Scenario[] = [
       for (let i = 0; i < 3; i++) await page.keyboard.press("ControlOrMeta+z")
       n = (await node(page, mobile)) as unknown as Box
       expect(n.w === 280 && n.h === 560, `undo resizes → ${n.w}×${n.h}`)
-      // A flow child can't be dragged: Navbar stays put, cursor not-allowed.
+      // Board 27 §2 (Y4vVe): a flow child drags (reorder preview); dropped near its own slot it
+      // stays first in its auto-layout parent, without x/y.
       const navbar = (await idOf(page, "Navbar")) as string
+      const navParent = (await node(page, navbar))?.parent
       await row(page, "Navbar").click()
       const nc = await centerOf(page, navbar)
       await page.mouse.move(nc.x, nc.y)
@@ -297,8 +299,9 @@ export const scenarios: Scenario[] = [
       await settle(page)
       const cursor = await page.locator(".canvas-host").evaluate((el) => el.style.cursor)
       await page.mouse.up()
-      expect(cursor === "not-allowed", `flow child cursor (${cursor})`)
-      expect((await node(page, navbar))?.x === undefined, "flow child not moved")
+      expect(cursor === "default", `flow child cursor (${cursor})`)
+      const nav = await node(page, navbar)
+      expect(nav?.x === undefined && nav?.parent === navParent, "flow child stays in its flow")
     },
   },
   {
@@ -308,21 +311,29 @@ export const scenarios: Scenario[] = [
       await openEditor(page, url)
       const canvas = page.locator(".canvas-host")
       await canvas.focus()
+      // Empty canvas right of the sample (board 27 §2: drawing over an auto-layout artboard
+      // inserts into it, so these shapes are drawn clear of both artboards).
+      await page.evaluate(() =>
+        (window as unknown as { __kimo: KimoHook }).__kimo.session.ui
+          .getState()
+          .setViewport({ x: 1950, y: 600, zoom: 1 }),
+      )
+      await settle(page)
       // Rectangle tool (R), drag on empty canvas → root rect 120×80.
       await page.keyboard.press("r")
-      const a = await toPage(page, { x: 100, y: 700 })
+      const a = await toPage(page, { x: 2100, y: 700 })
       await drag(page, a, { x: a.x + 120, y: a.y + 80 })
       let s = await ui(page)
       const rect = s.selection[0] as string
       let n = (await node(page, rect)) as Record<string, unknown>
       expect(
-        n.type === "rect" && n.w === 120 && n.h === 80 && n.x === 100 && n.y === 700,
+        n.type === "rect" && n.w === 120 && n.h === 80 && n.x === 2100 && n.y === 700,
         `rect ${JSON.stringify(n)}`,
       )
       expect(s.tool === "select", "tool returns to select")
       // Ellipse tool with shift → circle.
       await page.keyboard.press("o")
-      const b = await toPage(page, { x: 300, y: 700 })
+      const b = await toPage(page, { x: 2300, y: 700 })
       await page.keyboard.down("Shift")
       await drag(page, b, { x: b.x + 90, y: b.y + 40 })
       await page.keyboard.up("Shift")
@@ -331,7 +342,7 @@ export const scenarios: Scenario[] = [
       expect(n.type === "ellipse" && n.w === 90 && n.h === 90, `circle ${n.w}×${n.h}`)
       // Frame tool click (no drag) → 100×100 frame.
       await page.keyboard.press("f")
-      const f = await toPage(page, { x: 450, y: 700 })
+      const f = await toPage(page, { x: 2450, y: 700 })
       await page.mouse.click(f.x, f.y)
       await settle(page)
       s = await ui(page)
@@ -340,7 +351,7 @@ export const scenarios: Scenario[] = [
       // Rectangle drawn inside the mobile artboard (no auto layout? it has layout → root).
       // Text tool: click, type, commit with Escape.
       await page.keyboard.press("t")
-      const t = await toPage(page, { x: 600, y: 700 })
+      const t = await toPage(page, { x: 2600, y: 700 })
       await page.mouse.click(t.x, t.y)
       const editor = page.getByRole("textbox", { name: "Edit text" })
       await editor.waitFor()
@@ -421,9 +432,9 @@ export const scenarios: Scenario[] = [
       expect(v.zoom > 0.5 && v.zoom <= 1, `fit zoom ${v.zoom}`)
       for (let i = 0; i < 12; i++) await page.keyboard.press("=")
       expect((await ui(page)).viewport.zoom === 256, "clamped to MAX_ZOOM")
-      // Zoom menu "Zoom to 100%".
+      // View menu (board 27 rmQMe) "Zoom to 100 %".
       await page.getByRole("button", { name: "Zoom" }).click()
-      await page.getByRole("menuitem", { name: /100%/ }).click()
+      await page.getByRole("menuitem", { name: /100 %/ }).click()
       expect((await ui(page)).viewport.zoom === 1, "menu → 100%")
     },
   },
@@ -434,13 +445,13 @@ export const scenarios: Scenario[] = [
       await openEditor(page, url)
       const mobile = (await idOf(page, "Home — Mobile")) as string
       await page.locator(`.canvas-host__label[data-artboard="${mobile}"]`).click()
-      // ⌘D duplicates the artboard to the right (x + w + 32).
+      // ⌘D duplicates +16/+16 (board 27 §2 rules F1FPb).
       await page.keyboard.press("ControlOrMeta+d")
       await settle(page)
       let s = await ui(page)
       const copy = s.selection[0] as string
       const cn = (await node(page, copy)) as Record<string, unknown>
-      expect(copy !== mobile && cn.name === "Home — Mobile" && cn.x === 808 + 280 + 32, "dup x")
+      expect(copy !== mobile && cn.name === "Home — Mobile" && cn.x === 808 + 16, "dup x")
       const kids = await page.evaluate(
         (i) => (window as unknown as { __kimo: KimoHook }).__kimo.session.store.children(i).length,
         copy,
@@ -450,20 +461,27 @@ export const scenarios: Scenario[] = [
       await page.keyboard.press("ArrowRight")
       await page.keyboard.press("Shift+ArrowDown")
       const nn = (await node(page, copy)) as unknown as Box
-      expect(nn.x === 1121 && nn.y === 72, `nudged ${nn.x},${nn.y}`)
+      expect(nn.x === 825 && nn.y === 88, `nudged ${nn.x},${nn.y}`)
       // Delete.
       await page.keyboard.press("Backspace")
       expect((await node(page, copy)) === null, "deleted")
       await page.keyboard.press("ControlOrMeta+z")
       expect((await node(page, copy)) !== null, "undo delete")
-      // ⌘G frames two rects.
+      // ⌥⌘G frames two rects, drawn on empty canvas (board 27 §2: drawing over an auto-layout
+      // artboard inserts into it).
+      await page.evaluate(() =>
+        (window as unknown as { __kimo: KimoHook }).__kimo.session.ui
+          .getState()
+          .setViewport({ x: 1950, y: 600, zoom: 1 }),
+      )
+      await settle(page)
       await page.locator(".canvas-host").focus()
       await page.keyboard.press("r")
-      const a = await toPage(page, { x: 100, y: 700 })
+      const a = await toPage(page, { x: 2100, y: 700 })
       await drag(page, a, { x: a.x + 50, y: a.y + 50 })
       const r1 = (await ui(page)).selection[0] as string
       await page.keyboard.press("r")
-      const b = await toPage(page, { x: 200, y: 720 })
+      const b = await toPage(page, { x: 2200, y: 720 })
       await drag(page, b, { x: b.x + 50, y: b.y + 50 })
       const r2 = (await ui(page)).selection[0] as string
       await page.evaluate(
@@ -471,19 +489,20 @@ export const scenarios: Scenario[] = [
           (window as unknown as { __kimo: KimoHook }).__kimo.session.ui.getState().select(ids),
         [r1, r2],
       )
-      await page.keyboard.press("ControlOrMeta+g")
+      // ⌥⌘G wraps in a frame (⌘G makes a group since board 27 §2).
+      await page.keyboard.press("ControlOrMeta+Alt+g")
       await settle(page)
       s = await ui(page)
       const frame = s.selection[0] as string
       const fn = (await node(page, frame)) as Record<string, unknown>
       const r1n = (await node(page, r1)) as Record<string, unknown>
       expect(
-        fn.type === "frame" && fn.x === 100 && fn.y === 700 && fn.w === 150 && fn.h === 70,
+        fn.type === "frame" && fn.x === 2100 && fn.y === 700 && fn.w === 150 && fn.h === 70,
         `frame ${JSON.stringify(fn)}`,
       )
       expect(r1n.parent === frame && r1n.x === 0 && r1n.y === 0, `child ${JSON.stringify(r1n)}`)
       const w1 = await world(page, r1)
-      expect(w1?.x === 100 && w1?.y === 700, "child keeps its world position")
+      expect(w1?.x === 2100 && w1?.y === 700, "child keeps its world position")
       // Escape selects the parent, then clears.
       await page.evaluate(
         (id) =>

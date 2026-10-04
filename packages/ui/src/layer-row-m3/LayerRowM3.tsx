@@ -37,6 +37,11 @@ export interface LayerRowM3Props
   selected?: boolean
   /** Shows the OverrideDot (`Override` slot, hidden by default; on for `replaced`). */
   overridden?: boolean
+  /**
+   * Board 27 §8 Kpf1o: the instance holds broken overrides — the Override slot shows the
+   * warning dot (OverrideDot, Dot fill `warning`) instead of the override dot.
+   */
+  broken?: boolean
   /** Click on the dot (reset that entry). Without it the dot is decorative. */
   onResetOverride?: () => void
   /** Layer visibility; hidden rows keep the eye-off affordance. Default true. */
@@ -76,6 +81,7 @@ export function LayerRowM3({
   onToggle,
   selected = false,
   overridden = kind === "replaced",
+  broken = false,
   onResetOverride,
   visible = true,
   onToggleVisible,
@@ -121,6 +127,7 @@ export function LayerRowM3({
       aria-expanded={leaf ? undefined : expanded}
       data-kind={kind}
       data-hidden={!visible || undefined}
+      data-broken={broken || undefined}
       className={cx(
         "kimo-layer-row-m3",
         selected && "kimo-layer-row-m3--selected",
@@ -203,12 +210,20 @@ export function LayerRowM3({
       ) : (
         <span className="kimo-layer-row-m3__spacer" aria-hidden="true" />
       )}
-      {overridden && (
+      {broken ? (
         <OverrideDot
-          className="kimo-layer-row-m3__override"
-          onReset={onResetOverride}
-          title={onResetOverride ? undefined : "Overridden"}
+          tone="warning"
+          className="kimo-layer-row-m3__broken"
+          title="Broken overrides — review in the instance panel"
         />
+      ) : (
+        overridden && (
+          <OverrideDot
+            className="kimo-layer-row-m3__override"
+            onReset={onResetOverride}
+            title={onResetOverride ? undefined : "Overridden"}
+          />
+        )
       )}
       {onToggleVisible && (
         <button

@@ -6,12 +6,12 @@
   "ops": [ … up to 500 … ] }
 ```
 
-The whole list is applied as one transaction. If any op fails, nothing changes
-(`rolledBack: true`). One call = one undo step, attributed to you.
+The list is one transaction: if any op fails, nothing changes (`rolledBack: true`).
+One call = one undo step, attributed to you.
 
 **References.** Any `id`, `parent`, `instance`, `component`, `frame` or `node` field takes a node id
-or `@key` of a node created earlier in the same call. `parent: "root"` places a node at the top
-level. `index` is the position among siblings (0 = first). Leave it out to append.
+or `@key` of a node created earlier in the call. `parent: "root"` = top level. `index` is the
+position among siblings (0 = first); omit it to append.
 
 ## Build a subtree
 
@@ -25,7 +25,7 @@ level. `index` is the position among siblings (0 = first). Leave it out to appen
 ]
 ```
 
-Children are separate `insert` ops. A node body never contains its children.
+Children are separate `insert` ops; a node body never contains them.
 
 ## Edit
 
@@ -72,13 +72,24 @@ remove?}`.
 Also: `update_variable`, `rename_variable` (rebinds every use), `delete_variable {detach?}`,
 low-level `set_variables` / `set_theme_axes`.
 
+## Pages
+
+```json
+{"op":"page","action":"add","name":"Checkout","key":"checkout"}
+{"op":"insert","parent":"root","node":{"type":"frame","name":"Cart","w":390,"h":844,"page":"<page id>"}}
+{"op":"page","action":"rename","id":"<page id>","name":"Cart flow"}
+{"op":"page","action":"move","id":"<page id>","index":0}
+```
+
+`created[]` maps the add's `key` to the new page id (use it as `page` later). A top-level
+insert without `page` lands on the first page. `delete` removes the page and its
+top-level nodes (destructive); the last page can't be deleted.
+
 ## Habits that work
 
-- Pass `baseRevision` from your previous result. You will get `REVISION_CONFLICT` instead of
+- Pass `baseRevision` from your previous result: you get `REVISION_CONFLICT` instead of
   silently overwriting the user's edits.
-- Use `dryRun: true` to check a large batch. It returns the would-be ops and warnings and
-  commits nothing.
-- Build one section per call (20–150 ops), then `kimo_render` it. Don't send one giant call.
-- To place a new top-level frame, call `kimo_find_space {docId, w, h}` first and use its x/y.
-- Mark work in progress with `placeholder: true` on the frame and remove it with `unset` at the
-  end.
+- `dryRun: true` checks a large batch: returns the would-be ops and warnings, commits nothing.
+- Build one section per call (20–150 ops), then `kimo_render` it. No giant calls.
+- To place a new top-level frame, use the x/y from `kimo_find_space {docId, w, h}`.
+- Mark work in progress with `placeholder: true` on the frame; `unset` it at the end.

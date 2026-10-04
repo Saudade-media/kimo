@@ -81,6 +81,23 @@
   align-items: center;
   width: 100%;
 }
+/* Option · Outline strokes (vMlWH, board 27 r6nLx): column, fill, gap 2 → Row (EiX2l) + Sub. */
+.svg-import__option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+/* Sub (G3tQz): sans 11 (text-xs) normal, text-tertiary, lineHeight 1.45, fixed-width fill. */
+.svg-import__option-sub {
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
 .svg-import__option-label {
   color: var(--kimo-text-primary);
   font-family: var(--kimo-font-sans);

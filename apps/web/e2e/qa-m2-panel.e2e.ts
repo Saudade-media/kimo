@@ -559,7 +559,8 @@ export const scenarios: Scenario[] = [
         },
       ])
       await sel(page, ["alFrame00001"])
-      await section(page, "Auto layout").getByRole("switch", { name: "Wrap" }).click()
+      // Board 27 §6 (b): Wrap is an icon toggle (text-wrap) beside the DirectionControl.
+      await section(page, "Auto layout").getByRole("button", { name: "Wrap" }).click()
       await settle(page)
       const l = (await one(page, "alFrame00001"))?.layout as Record<string, unknown>
       const features = await page.evaluate(
@@ -848,7 +849,10 @@ export const scenarios: Scenario[] = [
         await page.keyboard.press("Escape")
         await settle(page)
         const s = await selection()
-        const open2 = await page.locator("[role=menu],[role=listbox]").count()
+        // The Pages strip (board 27 §1) is a permanent listbox, not a popup.
+        const open2 = await page
+          .locator("[role=menu],[role=listbox]:not(.pages-strip__list)")
+          .count()
         log(what, JSON.stringify({ focusIn, selection: s, stillOpen: open2 }))
         if (s !== '["escRect00001"]' || open2 > 0)
           bad.push(`${what} (selection ${s}, focus in menu ${focusIn})`)

@@ -298,6 +298,7 @@
                     "selection",
                     "topLevel",
                     "topLevelCount",
+                    "pages",
                     "components",
                     "variables",
                     "agents"
@@ -453,6 +454,33 @@
                       "type": "integer",
                       "description": "Total top-level nodes.",
                       "minimum": 0
+                    },
+                    "pages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "name",
+                          "topLevelCount"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Page id (set it as `page` on a top-level node to put it on this page); absent for the single implicit page of a document without pages."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Page name."
+                          },
+                          "topLevelCount": {
+                            "type": "integer",
+                            "description": "Top-level nodes on the page.",
+                            "minimum": 0
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "description": "Pages in display order (spec §5.6). A top-level node without `page` is on the first page; filter kimo_query with select.page."
                     },
                     "components": {
                       "type": "array",
@@ -1331,10 +1359,14 @@
               "component": {
                 "type": "string",
                 "description": "Instances of this component id (alias:id for libraries)."
+              },
+              "page": {
+                "type": "string",
+                "description": "Only nodes on this page (a page id from kimo_get_state; with topLevel: the page's top-level nodes)."
               }
             },
             "additionalProperties": false,
-            "description": "At least one of ids, under, topLevel, name, type, text, component."
+            "description": "At least one of ids, under, topLevel, name, type, text, component, page."
           },
           "depth": {
             "type": "integer",
@@ -3004,6 +3036,54 @@
                   },
                   "additionalProperties": false,
                   "description": "createAxis/renameAxis/deleteAxis/addAxisValue/moveAxisValue/renameAxisValue/removeAxisValue. delete and remove_value are destructive."
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "op",
+                    "action"
+                  ],
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "enum": [
+                        "page"
+                      ],
+                      "description": "Add, rename, move or delete a page."
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "add",
+                        "rename",
+                        "move",
+                        "delete"
+                      ],
+                      "description": "add (name, index?) · rename (id, name) · move (id, index) · delete (id; deletes its top-level nodes; never the last page)."
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "Page id (from kimo_get_state pages[].id).",
+                      "pattern": "^[A-Za-z0-9]{6,24}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Page name (add / rename).",
+                      "minLength": 1
+                    },
+                    "index": {
+                      "type": "integer",
+                      "description": "Position among the pages (add / move; 0 = first).",
+                      "minimum": 0
+                    },
+                    "key": {
+                      "type": "string",
+                      "description": "Your name for the created node; later ops in this call may reference it as @key.",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Pages are document-global. Put a top-level node on a page by setting its `page` field (insert node.page / update set.page); without `page` it is on the first page. The first add on a one-page document also gives that page an id (its nodes keep their page)."
                 }
               ],
               "description": "One typed edit. See kimo_read_docs path=ops for examples."

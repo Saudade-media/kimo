@@ -84,8 +84,8 @@ describe("createTauriPlatform", () => {
       trafficLights: true,
       settingsWindow: true,
     })
-    // All ten events have a listener.
-    expect(t.listeners.size).toBe(10)
+    // All eleven events have a listener.
+    expect(t.listeners.size).toBe(11)
     expect(p.arch).toBe("aarch64")
     p.dispose()
     expect([...t.listeners.values()].every((s) => s.size === 0)).toBe(true)
@@ -248,6 +248,13 @@ describe("createTauriPlatform", () => {
     t.emit("kimo://help-menu", { action: "shortcuts" })
     t.emit("kimo://help-menu", { action: "report-issue" })
     expect(help).toEqual(["shortcuts", "report-issue"])
+    // Board 27: native File / View items for the focused editor.
+    const menu: unknown[] = []
+    p.menu?.onAction((a) => menu.push(a))
+    t.emit("kimo://editor-menu", { action: "export" })
+    t.emit("kimo://editor-menu", { action: "copy-png" })
+    t.emit("kimo://editor-menu", { action: "preview" })
+    expect(menu).toEqual(["export", "copy-png", "preview"])
     await p.help?.showLogs()
     expect(t.last("kimo_help_show_logs")).toEqual({})
     p.dispose()

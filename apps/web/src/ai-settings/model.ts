@@ -18,7 +18,11 @@ import {
   type ProviderKind,
   pickDefaultSelection,
 } from "@kimo/ai-agent"
-import { AGENT_USAGE_DEFAULTS, type AgentUsageSettings } from "../platform/contract"
+import {
+  AGENT_USAGE_DEFAULTS,
+  type AgentUsageSettings,
+  type ProviderRowView,
+} from "../platform/contract"
 
 // --- Persisted config ---------------------------------------------------------------------------
 
@@ -721,4 +725,84 @@ export function sanitizeTitle(raw: string): string | null {
     .slice(0, 60)
     .trim()
   return t ? t : null
+}
+
+// --- Default provider / model (board 27 §10 (a) q2UAb, rule q07tZ) -----------------------------
+
+/** Model choices of a provider row: the catalog (one id per label) plus its configured ids. */
+export function modelChoices(
+  kind: ProviderKind,
+  current: readonly string[],
+): { value: string; label: string }[] {
+  const catalog = MODEL_CATALOG[isCloud(kind) ? "anthropic" : kind]
+  const seen = new Set<string>()
+  const out: { value: string; label: string }[] = []
+  for (const m of catalog) {
+    // Dated snapshots and their aliases share a label: keep the first id per label.
+    if (seen.has(m.label)) continue
+    seen.add(m.label)
+    out.push({ value: m.id, label: m.label })
+  }
+  for (const c of current)
+    if (c && !out.some((o) => o.value === c)) out.push({ value: c, label: c })
+  return out
+}
+
+/** One option of the "Default provider" Select, with its "Default model" options. */
+export interface DefaultProviderChoice {
+  /** Provider id (`anthropic`, `custom:ollama`, `cli:claude-code`). */
+  provider: string
+  label: string
+  /** The model a new default gets when only the provider is picked. */
+  model: string
+  models: { value: string; label: string }[]
+}
+
+/** A provider row is "connected" (Settings pill) — the only ones the Default Select lists. */
+export const isConnectedRow = (status: ProviderRowView["status"]): boolean =>
+  status === "connected" || status === "local"
+
+/**
+ * "Default provider" options (q2UAb): connected API providers, then signed-in local CLIs
+ * (desktop). The effective default is always listed so the Select shows it. Empty → the Select
+ * is disabled with "Connect a provider first".
+ */
+export function defaultProviderChoices(input: {
+  platform: "desktop" | "web"
+  providers: readonly Pick<ProviderRowView, "id" | "kind" | "label" | "status" | "models">[]
+  clis: readonly { detection: CliDetection }[]
+  selection: ModelSelection | null
+}): DefaultProviderChoice[] {
+  const out: DefaultProviderChoice[] = []
+  for (const p of input.providers) {
+    if (!isConnectedRow(p.status) && p.id !== input.selection?.provider) continue
+    const current = [p.models.agent, p.models.fast]
+    if (input.selection?.provider === p.id) current.push(input.selection.model)
+    out.push({
+      provider: p.id,
+      label: p.label,
+      model: p.models.agent,
+      models: modelChoices(p.kind, current),
+    })
+  }
+  if (input.platform === "desktop")
+    for (const c of input.clis) {
+      const id = cliProviderId(c.detection.id)
+      if (!cliUsable(c.detection) && id !== input.selection?.provider) continue
+      const models = [{ value: "default", label: `${c.detection.label} default` }]
+      const sel = input.selection
+      if (sel?.provider === id && sel.model !== "default")
+        models.push({ value: sel.model, label: sel.model })
+      out.push({ provider: id, label: c.detection.label, model: "default", models })
+    }
+  return out
+}
+
+/** The selection after picking a provider in the Default Select (its agent model). */
+export function selectionForProvider(
+  choices: readonly DefaultProviderChoice[],
+  provider: string,
+): ModelSelection | null {
+  const c = choices.find((x) => x.provider === provider)
+  return c ? { provider: c.provider, model: c.model } : null
 }

@@ -40,11 +40,14 @@ export function useCanvasDrop(m3: M3Controller) {
       const { p, target: t } = target(e.currentTarget, e.clientX, e.clientY, e.altKey)
       setHover({ x: p.x, y: p.y, target: t })
       m3.canvas()?.previewComponentDrop?.(t)
+      // Board 27 §2 (c2o3u): over an auto-layout frame the InsertionBar marks the slot.
+      m3.canvas()?.previewFlowInsert?.(t?.kind === "frame" ? p : null)
     },
     onDragLeave(e: React.DragEvent<HTMLElement>) {
       if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
         setHover(null)
         m3.canvas()?.previewComponentDrop?.(null)
+        m3.canvas()?.previewFlowInsert?.(null)
       }
     },
     onDrop(e: React.DragEvent<HTMLElement>) {
@@ -89,6 +92,18 @@ export function dropComponent(
   if (t.kind === "slot") return insertIntoSlot(m3, `${t.instance}/${t.path}`, drag.of)
   if (t.kind === "replace") return replaceWithComponent(m3, `${t.instance}/${t.path}`, drag.of)
   const canvas = m3.canvas()
+  // Board 27 §2 (c2o3u): dropped over an auto-layout frame → the slot under the pointer.
+  const flow = canvas?.previewFlowInsert?.(screen) ?? null
+  canvas?.previewFlowInsert?.(null)
+  if (flow)
+    return m3.run(
+      {
+        cmd: "createInstance",
+        of: drag.of,
+        placement: { parent: flow.parent, index: flow.index, name: drag.name },
+      },
+      "Insert instance",
+    ).ok
   const world = canvas ? canvas.screenToWorld(screen) : screen
   let x = world.x
   let y = world.y

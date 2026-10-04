@@ -27,7 +27,10 @@ export {
   svgRejection,
 } from "./flow"
 export { parsePath, parseTransform, serializeSegments } from "./geometry"
+export { createStrokeOutliner, dashIntervals } from "./outline"
+export { loadStrokeOutliner } from "./outline-loader"
 export {
+  outlineStrokesSub,
   type SvgImportChoice,
   type SvgImportMode,
   SvgImportPopover,

@@ -109,7 +109,12 @@ export const GradientPaint = Strict({
 export const ImagePaint = Strict({
   kind: Type.Literal("image"),
   src: Type.String({ pattern: ASSET_REF_PATTERN, description: "Content-addressed asset." }),
-  fit: opt(StringEnum(["cover", "contain", "stretch", "tile"] as const, { default: D.image.fit })),
+  fit: opt(
+    StringEnum(["cover", "contain", "stretch", "tile", "crop"] as const, {
+      default: D.image.fit,
+      description: '"crop": the `crop` region of the image, stretched to the node box.',
+    }),
+  ),
   crop: opt(
     Type.Tuple(
       [Type.Number(), Type.Number(), Type.Number(), Type.Number(), Type.Number(), Type.Number()],

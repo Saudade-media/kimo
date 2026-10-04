@@ -54,7 +54,7 @@ export function topLevel(doc: DocReader, ids: readonly string[]): string[] {
 }
 
 /** World → parent-local delta for a node (parent rotation/flip undone). */
-function toParentDelta(layout: LayoutResult, parent: unknown, d: Point): Point {
+export function toParentDelta(layout: LayoutResult, parent: unknown, d: Point): Point {
   const t = typeof parent === "string" ? layout.nodes.get(parent)?.transform : undefined
   return applyLinear(invert(t ?? IDENTITY), d)
 }
@@ -182,18 +182,22 @@ export function resizeOps(
 
 // --- Create -------------------------------------------------------------------------------
 
-export type ShapeKind = "frame" | "rect" | "ellipse"
+export type ShapeKind = "frame" | "rect" | "ellipse" | "polygon" | "star"
 
 /** Kinds that get "Name N" names. */
-export type NameKind = ShapeKind | "text" | "path" | "image"
+export type NameKind = ShapeKind | "text" | "path" | "image" | "line" | "arrow"
 
 const SHAPE_NAME: Record<NameKind, string> = {
   frame: "Frame",
   rect: "Rectangle",
   ellipse: "Ellipse",
+  polygon: "Polygon",
+  star: "Star",
   text: "Text",
   path: "Path",
   image: "Image",
+  line: "Line",
+  arrow: "Arrow",
 }
 
 /**
@@ -204,7 +208,21 @@ export const SHAPE_FILL: Record<ShapeKind, string> = {
   frame: "#FFFFFF",
   rect: "#D9D9D9",
   ellipse: "#D9D9D9",
+  polygon: "#D9D9D9",
+  star: "#D9D9D9",
 }
+
+/** Board 27 §5 rules g7wdz: Sides/Points 3–60; star ratio 1–99 % (default 38 %). */
+export const POLYGON_SIDES = { min: 3, max: 60, polygon: 3, star: 5 } as const
+export const STAR_RATIO = { min: 0.01, max: 0.99, default: 0.38 } as const
+
+/** Clamped integer sides / points. */
+export const clampSides = (n: number) =>
+  Math.min(POLYGON_SIDES.max, Math.max(POLYGON_SIDES.min, Math.round(n)))
+
+/** Clamped ratio rounded to whole percents. */
+export const clampRatio = (r: number) =>
+  Math.min(STAR_RATIO.max, Math.max(STAR_RATIO.min, Math.round(r * 100) / 100))
 
 /** Next free "Rectangle 3"-style name. */
 export function nextName(doc: DocReader, kind: NameKind): string {
@@ -252,19 +270,58 @@ export function createShapeOp(
   r: Rect,
   id: string,
   name = nextName(doc, kind),
+  /** Polygon sides / star points (default {@link POLYGON_SIDES}). */
+  sides?: number,
 ): Op {
   const tl = toLocal(layout, parent, r)
   const node: Record<string, unknown> = {
-    type: kind,
+    type: kind === "star" ? "polygon" : kind,
     name,
     x: round2(tl.x),
     y: round2(tl.y),
     w: round2(Math.max(1, r.w)),
     h: round2(Math.max(1, r.h)),
-    fill: SHAPE_FILL[kind],
   }
+  // Board 27 §5: a native polygon node; a star is `{ type: "polygon", star: {} }` (ratio 38 %
+  // is the format default, so the canonical form omits it).
+  if (kind === "polygon" || kind === "star") node.sides = clampSides(sides ?? POLYGON_SIDES[kind])
+  if (kind === "star") node.star = {}
+  node.fill = SHAPE_FILL[kind]
+  // Board 27 §6 rule lz2Ws: clip content on for new top-level frames, off when nested.
+  if (kind === "frame" && parent === null) node.clip = true
   return { op: "insert", id, parent, node }
 }
+
+/**
+ * Board 27 §5: the contours a Line / Arrow tool draws from `a` to `b` (world space). Arrow =
+ * the segment plus an open two-segment head at `b` (stroked like the line).
+ */
+export function lineContours(
+  kind: "line" | "arrow",
+  a: Point,
+  b: Point,
+): { anchors: { x: number; y: number }[]; closed: boolean }[] {
+  const out = [{ anchors: [{ ...a }, { ...b }], closed: false }]
+  if (kind === "arrow") {
+    const len = Math.hypot(b.x - a.x, b.y - a.y)
+    if (len > 0) {
+      const ux = (b.x - a.x) / len
+      const uy = (b.y - a.y) / len
+      const s = Math.min(ARROW_HEAD.length, len / 2)
+      const c = Math.cos(ARROW_HEAD.angle)
+      const n = Math.sin(ARROW_HEAD.angle)
+      const wing = (sign: number) => ({
+        x: b.x - s * (ux * c - sign * uy * n),
+        y: b.y - s * (uy * c + sign * ux * n),
+      })
+      out.push({ anchors: [wing(1), { ...b }, wing(-1)], closed: false })
+    }
+  }
+  return out
+}
+
+/** Arrowhead wings: 10 world px at ±30° (house values: the design draws only the icon). */
+export const ARROW_HEAD = { length: 10, angle: Math.PI / 6 } as const
 
 // --- M2: pen paths, images, icons ---------------------------------------------------------
 
@@ -283,10 +340,11 @@ export function createPathOp(
   closed: boolean,
   hasTextDefault: boolean,
   id: string = generateId(),
+  name: string = nextName(doc, "path"),
 ): Op {
   const node: Record<string, unknown> = {
     type: "path",
-    name: nextName(doc, "path"),
+    name,
     x: fields.x,
     y: fields.y,
     w: fields.w,
@@ -392,6 +450,49 @@ export function deleteOps(doc: DocReader, ids: readonly string[]): Op[] {
 const TREE_KEYS = new Set(["parent", "order", "at"])
 const bodyOf = (n: NodeData): Record<string, unknown> =>
   Object.fromEntries(Object.entries(n).filter(([k]) => !TREE_KEYS.has(k)))
+
+/**
+ * Board 27 §2 (⌥-drag): copies of each top-level subtree at the same place, each inserted right
+ * after its original (same parent, `at` and fields). `pairs` maps original → copy.
+ */
+export function cloneOps(
+  doc: DocReader,
+  ids: readonly string[],
+  newId: () => string = () => generateId(),
+): { ops: Op[]; created: string[]; pairs: Map<string, string> } {
+  const ops: Op[] = []
+  const created: string[] = []
+  const pairs = new Map<string, string>()
+  for (const id of topLevel(doc, ids)) {
+    const n = doc.getNode(id)
+    if (!n) continue
+    const parent = typeof n.parent === "string" ? n.parent : null
+    const siblings = doc.children(parent, typeof n.at === "string" ? n.at : null)
+    const copy = newId()
+    const insert: Op = {
+      op: "insert",
+      id: copy,
+      parent,
+      index: siblings.indexOf(id) + 1,
+      node: bodyOf(n),
+    }
+    if (typeof n.at === "string") (insert as { at?: string }).at = n.at
+    ops.push(insert)
+    created.push(copy)
+    pairs.set(id, copy)
+    const walk = (src: string, dst: string) => {
+      for (const c of doc.children(src)) {
+        const cn = doc.getNode(c)
+        if (!cn) continue
+        const cid = newId()
+        ops.push({ op: "insert", id: cid, parent: dst, node: bodyOf(cn) })
+        walk(c, cid)
+      }
+    }
+    walk(id, copy)
+  }
+  return { ops, created, pairs }
+}
 
 /**
  * Duplicates each top-level selected subtree: root nodes land to the right (32 = the gap
@@ -538,4 +639,23 @@ export function nudgeOps(
   dy: number,
 ): Op[] {
   return moveOps(doc, layout, moveStart(doc, ids), { x: dx, y: dy })
+}
+
+/**
+ * Board 27 §6 rule K0t6s "Flip H / V" (⇧H / ⇧V, panel toggles beside Rotation): stored as
+ * `flipX` / `flipY` (mirrors around the node centre, W/H stay positive). Flips every selected
+ * top-level node on when any is unflipped, else turns them all off (unset). Groups, instances
+ * and locked nodes are skipped.
+ */
+export function flipOps(doc: DocReader, ids: readonly string[], axis: "x" | "y"): Op[] {
+  const key = axis === "x" ? "flipX" : "flipY"
+  const nodes = topLevel(doc, ids).filter((id) => {
+    const n = doc.getNode(id)
+    return !!n && n.locked !== true && n.type !== "group" && n.type !== "instance"
+  })
+  if (!nodes.length) return []
+  const on = nodes.some((id) => doc.getNode(id)?.[key] !== true)
+  return nodes.map((id) =>
+    on ? { op: "update", id, set: { [key]: true } } : { op: "update", id, unset: [key] },
+  )
 }

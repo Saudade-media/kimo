@@ -80,6 +80,8 @@ export interface BlendModeMenuProps {
   placement?: PlacementOptions
   /** Focus the checked item on open. Default true. */
   autoFocus?: boolean
+  /** Menu width (board 09 layer menu 208; board 27 paint row menu kNrNc 128). Default 208. */
+  width?: number
 }
 
 /**
@@ -96,6 +98,7 @@ export function BlendModeMenu({
   anchor,
   placement,
   autoFocus = true,
+  width = 208,
 }: BlendModeMenuProps) {
   const committed = useRef(false)
   const groups = BLEND_MODE_GROUPS.map((g) =>
@@ -108,7 +111,7 @@ export function BlendModeMenu({
   return (
     <MenuDense
       label="Blend mode"
-      width={208}
+      width={width}
       anchor={anchor}
       placement={placement}
       autoFocus={autoFocus}

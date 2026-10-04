@@ -22,6 +22,7 @@ export type ShortcutScope =
   | "pen" // the Pen mode
   | "placement" // an armed image placement
   | "path-edit" // editing a path's anchors
+  | "crop" // board 27 image crop mode
   | "gesture" // mid-drag
 
 export type ShortcutGroup =
@@ -73,6 +74,15 @@ const tool = (id: string, label: string, key: string): Shortcut => ({
   combos: [{ keys: [key], mod: false, alt: false, shift: false, label: key.toUpperCase() }],
 })
 
+// ⇧ + single key tools (board 27 shape slot).
+const shiftTool = (id: string, label: string, key: string): Shortcut => ({
+  id,
+  label,
+  scope: "global",
+  group: "tools",
+  combos: [{ keys: [key], mod: false, alt: false, shift: true, label: key.toUpperCase() }],
+})
+
 /** The table, in sheet order within each group. */
 export const SHORTCUT_LIST: readonly Shortcut[] = [
   // --- Tools (CANVAS_TOOLS + Editor.tsx / controller.ts) -----------------------------------
@@ -80,16 +90,16 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   tool("tool.frame", "Frame", "f"),
   tool("tool.rectangle", "Rectangle", "r"),
   tool("tool.ellipse", "Ellipse", "o"),
+  // Board 27 §5 shape slot (rule ZsJgx): Line L · Arrow ⇧L · Star ⇧S. The design's Polygon ⇧P
+  // stays the Prompt tool's (board 22, lead decision): Polygon has no key, it is reached from
+  // the shape slot flyout.
+  tool("tool.line", "Line", "l"),
+  shiftTool("tool.arrow", "Arrow", "l"),
+  shiftTool("tool.star", "Star", "s"),
   tool("tool.text", "Text", "t"),
   tool("tool.pen", "Pen", "p"),
   tool("tool.note", "Note", "n"),
-  {
-    id: "tool.prompt",
-    label: "Prompt",
-    scope: "global",
-    group: "tools",
-    combos: [{ keys: ["p"], mod: false, alt: false, shift: true, label: "P" }],
-  },
+  shiftTool("tool.prompt", "Prompt", "p"),
   {
     id: "tool.image",
     label: "Image",
@@ -142,6 +152,20 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     combos: [{ keys: ["s"], mod: true, shift: true, label: "S" }],
   },
   {
+    id: "exportDialog",
+    label: "Export…",
+    scope: "global",
+    group: "file",
+    combos: [{ keys: ["e"], codes: ["KeyE"], mod: true, shift: true, alt: false, label: "E" }],
+  },
+  {
+    id: "copyAsPng",
+    label: "Copy selection as PNG",
+    scope: "global",
+    group: "file",
+    combos: [{ keys: ["c"], codes: ["KeyC"], mod: true, shift: true, alt: false, label: "C" }],
+  },
+  {
     id: "settings",
     label: "Settings",
     scope: "global",
@@ -167,6 +191,50 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
       { keys: ["y"], mod: true, label: "Y" },
     ],
   },
+  // Board 27 §2 (g1jiG Edit menu, rules F1FPb): clipboard and structure commands
+  // (editor/clipboard/useEditorCommands.ts).
+  {
+    id: "cut",
+    label: "Cut",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ keys: ["x"], mod: true, shift: false, alt: false, label: "X" }],
+  },
+  {
+    id: "copy",
+    label: "Copy",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ keys: ["c"], mod: true, shift: false, alt: false, label: "C" }],
+  },
+  {
+    id: "copyProperties",
+    label: "Copy properties",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["KeyC"], mod: true, shift: false, alt: true, label: "C" }],
+  },
+  {
+    id: "paste",
+    label: "Paste",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ keys: ["v"], mod: true, shift: false, alt: false, label: "V" }],
+  },
+  {
+    id: "pasteInPlace",
+    label: "Paste in place",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["KeyV"], mod: true, shift: true, alt: false, label: "V" }],
+  },
+  {
+    id: "pasteProperties",
+    label: "Paste properties",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["KeyV"], mod: true, shift: false, alt: true, label: "V" }],
+  },
   {
     id: "duplicate",
     label: "Duplicate",
@@ -180,6 +248,48 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     scope: "canvas",
     group: "edit",
     combos: [{ keys: ["g"], mod: true, shift: false, alt: false, label: "G" }],
+  },
+  {
+    id: "ungroup",
+    label: "Ungroup",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["KeyG"], mod: true, shift: true, alt: false, label: "G" }],
+  },
+  {
+    id: "wrapInFrame",
+    label: "Wrap in frame",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["KeyG"], mod: true, shift: false, alt: true, label: "G" }],
+  },
+  {
+    id: "addAutoLayout",
+    label: "Add auto layout",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["KeyA"], mod: false, shift: true, alt: false, label: "A" }],
+  },
+  {
+    id: "removeAutoLayout",
+    label: "Remove auto layout",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["KeyA"], mod: false, shift: true, alt: true, label: "A" }],
+  },
+  {
+    id: "bringToFront",
+    label: "Bring to front",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["BracketRight"], mod: true, shift: false, alt: false, label: "]" }],
+  },
+  {
+    id: "sendToBack",
+    label: "Send to back",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ codes: ["BracketLeft"], mod: true, shift: false, alt: false, label: "[" }],
   },
   {
     id: "delete",
@@ -199,6 +309,29 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     ],
   },
   {
+    // Board 27 §4 rule bFozp "Nudge … Applies to arrow-key moves and Alt-arrow resize".
+    id: "nudgeResize",
+    label: "Resize by nudge",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ keys: ARROWS, mod: false, alt: true, label: "←↑→↓" }],
+  },
+  {
+    // Board 27 §6 rule K0t6s: ⇧H / ⇧V.
+    id: "flipHorizontal",
+    label: "Flip horizontal",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ keys: ["h"], mod: false, alt: false, shift: true, label: "H" }],
+  },
+  {
+    id: "flipVertical",
+    label: "Flip vertical",
+    scope: "canvas",
+    group: "edit",
+    combos: [{ keys: ["v"], mod: false, alt: false, shift: true, label: "V" }],
+  },
+  {
     id: "renameLayer",
     label: "Rename layer",
     scope: "layers",
@@ -207,6 +340,20 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
   },
 
   // --- Selection & layers ------------------------------------------------------------------------
+  {
+    id: "selectAll",
+    label: "Select all",
+    scope: "canvas",
+    group: "selection",
+    combos: [{ keys: ["a"], mod: true, shift: false, alt: false, label: "A" }],
+  },
+  {
+    id: "selectInverse",
+    label: "Select inverse",
+    scope: "canvas",
+    group: "selection",
+    combos: [{ codes: ["KeyA"], mod: true, shift: true, alt: false, label: "A" }],
+  },
   {
     id: "selectChildren",
     label: "Select children",
@@ -278,7 +425,8 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     label: "Variables",
     scope: "global",
     group: "components",
-    combos: [{ codes: ["KeyV"], mod: true, shift: true, label: "V" }],
+    // Board 27 §2 gives ⇧⌘V to Paste in place; the Variables dialog moves to ⌥⇧⌘V.
+    combos: [{ codes: ["KeyV"], mod: true, shift: true, alt: true, label: "V" }],
   },
 
   // --- View ------------------------------------------------------------------------------------
@@ -314,6 +462,14 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     ],
   },
   {
+    // Board 27 §1 (c) C1rd4: the ⌘P page switcher.
+    id: "pageSwitcher",
+    label: "Go to page…",
+    scope: "global",
+    group: "view",
+    combos: [{ keys: ["p"], mod: true, shift: false, alt: false, label: "P" }],
+  },
+  {
     id: "zoomToFit",
     label: "Zoom to fit",
     scope: "canvas",
@@ -328,11 +484,36 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     combos: [{ codes: ["Digit2"], mod: false, alt: false, shift: true, label: "2" }],
   },
   {
+    // Board 27 §4 View menu (rmQMe): Pixel grid ⇧'.
+    id: "view.pixelGrid",
+    label: "Pixel grid",
+    scope: "global",
+    group: "view",
+    combos: [{ codes: ["Quote"], mod: false, alt: false, shift: true, label: "'" }],
+  },
+  {
+    // Board 27 §4 rule YwZyP "Rulers ⇧R".
+    id: "view.rulers",
+    label: "Rulers",
+    scope: "global",
+    group: "view",
+    combos: [{ keys: ["r"], mod: false, alt: false, shift: true, label: "R" }],
+  },
+  {
     id: "pan",
     label: "Pan",
     scope: "canvas",
     group: "view",
-    combos: [{ codes: ["Space"], mod: false, label: "Space drag" }],
+    // shift: false — ⇧Space is Preview (board 27 §9).
+    combos: [{ codes: ["Space"], mod: false, shift: false, label: "Space drag" }],
+  },
+  {
+    // Board 27 §9 (j52y5f): Preview — topbar Play button, View › Preview, ⇧Space (Editor.tsx).
+    id: "preview",
+    label: "Preview",
+    scope: "global",
+    group: "view",
+    combos: [{ codes: ["Space"], mod: false, alt: false, shift: true, label: "Space" }],
   },
 
   // --- Agent & text ------------------------------------------------------------------------------
@@ -432,6 +613,19 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     label: "Delete points",
     scope: "path-edit",
     combos: [{ keys: ["backspace", "delete"], mod: false, label: "⌫" }],
+  },
+  // Board 27 §6 (d) rules R6uRRw: Enter / Apply commits, Esc reverts.
+  {
+    id: "crop.apply",
+    label: "Apply crop",
+    scope: "crop",
+    combos: [{ keys: ["enter"], mod: false, label: "↵" }],
+  },
+  {
+    id: "crop.cancel",
+    label: "Cancel crop",
+    scope: "crop",
+    combos: [{ keys: ["escape"], label: "Esc" }],
   },
 ]
 

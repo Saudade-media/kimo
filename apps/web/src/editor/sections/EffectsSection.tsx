@@ -6,6 +6,7 @@
 import { ColorField, type EffectKind, EffectRow, PropRow, PropSection } from "@kimo/ui"
 import { Fragment, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
+import { Bindable } from "../bind"
 import { NumberField } from "../fields"
 import { SectionTitle } from "../m3/overrides"
 import { type Sel, useKeepPopoverFocus, usePanel, useResolver } from "../panel-context"
@@ -58,20 +59,50 @@ export function EffectsSection({ sel }: { sel: readonly Sel[] }) {
     label: string,
     min?: number,
   ) => (
-    <NumberField
-      prefix={prefix}
-      label={label}
-      value={num(e, key)}
-      editor={editor}
-      min={min}
-      onNumber={(n) =>
-        setOps(
-          ids,
-          "effects",
-          replace(i, withEffectField(e, key, min !== undefined ? Math.max(min, n) : n)),
-        )
-      }
-    />
+    // Board 27 §7: shadow x / y / blur / spread and blur radius bind number variables.
+    <Bindable
+      sel={sel}
+      spec={{
+        type: "number",
+        label,
+        prefix,
+        get: (n) => {
+          const x = effectList(n.effects)[i]
+          return isObj(x) ? (x[key] ?? 0) : 0
+        },
+        put: (s, v) => {
+          const own = effectList(s.node.effects)
+          return setOps(
+            [s.id],
+            "effects",
+            own.map((x, j) => (j === i ? withEffectField(x, key, v) : x)),
+          )
+        },
+        current: () => {
+          const v = num(e, key)
+          return typeof v === "number" ? v : null
+        },
+        varBase: key === "radius" ? "blur" : `shadow/${key}`,
+      }}
+    >
+      {(bind) => (
+        <NumberField
+          prefix={prefix}
+          label={label}
+          bind={bind}
+          value={num(e, key)}
+          editor={editor}
+          min={min}
+          onNumber={(n) =>
+            setOps(
+              ids,
+              "effects",
+              replace(i, withEffectField(e, key, min !== undefined ? Math.max(min, n) : n)),
+            )
+          }
+        />
+      )}
+    </Bindable>
   )
 
   return (

@@ -198,8 +198,8 @@ export function structOrder(keys: string[]): string[] {
 
 /**
  * Root members defined by format 1.0 (§4), in canonical order (`nodes` is always last). Any
- * other root member is unknown and opaque. `merge` and `conflicts` (feature "merge/conflicts",
- * §21) are root-only: their names are not in {@link KEY_ORDER} (Appendix A stays frozen), so
+ * other root member is unknown and opaque. `pages`, `merge` and `conflicts` (feature
+ * "merge/conflicts", §21) are root-only: their names are not in {@link KEY_ORDER} (Appendix A stays frozen), so
  * they never rank keys below the root.
  */
 const ROOT_ORDER: readonly string[] = [
@@ -212,6 +212,7 @@ const ROOT_ORDER: readonly string[] = [
   "variables",
   "assets",
   "components",
+  "pages",
   "merge",
   "conflicts",
   "nodes",
@@ -221,6 +222,7 @@ const ROOT_RANK = new Map(ROOT_ORDER.map((k, i) => [k, i]))
 
 /** Child modes of root members that Appendix A does not rank (§21). */
 const ROOT_ONLY_MODES: ReadonlyMap<string, Mode> = new Map<string, Mode>([
+  ["pages", "record"],
   ["merge", "struct"],
   ["conflicts", "record"],
 ])

@@ -4,6 +4,7 @@
  * `store.apply` (one undo step) plus notes for the UI.
  */
 import {
+  applySetEntry,
   COMPONENT_DESCRIPTION_META_KEY,
   type ComponentScope,
   componentOfInstance,
@@ -705,6 +706,10 @@ export function planDetachInstance(ctx: PlanContext, instanceId: string): Plan {
         const p = props.find((x) => x.name === name)
         const eff = p ? argSet(p, importValue(scope, a, value), a) : null
         if (eff) entry(p?.path ?? "").sets.push(eff)
+        // Board 27 §8 (a): the chosen enum option's targets.
+        if (p?.targets && typeof value === "string")
+          for (const t of p.targets[value] ?? [])
+            entry(t.path).sets.push({ [t.field]: importValue(scope, a, t.value) })
       }
     }
     if (isObject(n.overrides))
@@ -780,7 +785,8 @@ export function planDetachInstance(ctx: PlanContext, instanceId: string): Plan {
         continue
       }
       const data = importNodeData(scope, alias, src)
-      for (const s of e?.sets ?? []) Object.assign(data, s)
+      for (const s of e?.sets ?? [])
+        for (const [k, v] of Object.entries(s)) applySetEntry(data, k, v)
       delete data.component
       const id = newId()
       data.order = src.order
@@ -806,7 +812,24 @@ export function planDetachInstance(ctx: PlanContext, instanceId: string): Plan {
               continue
             }
             const prevSet = isObject(prev) && isObject(prev.set) ? prev.set : {}
-            ov[sub] = { set: Object.assign({}, prevSet, ...de.sets) }
+            const merged: Rec = { ...prevSet }
+            // Enum-target keys `<property>/<key>` (board 27 §8 a) are baked into the property
+            // read from the nested component's node at that path.
+            const nestedLoc = typeof data.of === "string" ? locate(scope, data.of) : null
+            const at =
+              isLocated(nestedLoc) &&
+              de.sets.some((x) => Object.keys(x).some((k) => k.includes("/")))
+                ? resolveIdPath(scope, nestedLoc, sub)
+                : null
+            const baseNode = at?.ok ? at.target.node : {}
+            for (const x of de.sets)
+              for (const [k, v] of Object.entries(x)) {
+                const top = k.split("/")[0] as string
+                if (k.includes("/") && !Object.hasOwn(merged, top) && isObject(baseNode[top]))
+                  merged[top] = structuredClone(baseNode[top])
+                applySetEntry(merged, k, v)
+              }
+            ov[sub] = { set: merged }
           }
         }
         // Outer keys that no longer resolve in the nested instance (e.g. deep overrides left
@@ -851,7 +874,8 @@ export function planDetachInstance(ctx: PlanContext, instanceId: string): Plan {
   // Root.
   const rootId = newId()
   const rootData = importNodeData(scope, root.alias, root.node)
-  for (const s of layers.get("")?.sets ?? []) Object.assign(rootData, s)
+  for (const s of layers.get("")?.sets ?? [])
+    for (const [k, v] of Object.entries(s)) applySetEntry(rootData, k, v)
   for (const k of PLACEMENT) delete rootData[k]
   delete rootData.component
   const pins: Rec = {}
@@ -916,8 +940,12 @@ function argSet(p: DeclaredProp, value: unknown, alias: string | null): Rec | nu
         ? { of: alias !== null && !value.includes(":") ? `${alias}:${value}` : value }
         : null
     case "enum":
-      return typeof value === "string" && isObject(def.options) && Object.hasOwn(def.options, value)
-        ? { [String(def.field)]: def.options[value] }
+      return typeof value === "string" &&
+        typeof def.field === "string" &&
+        typeof def.target === "string" &&
+        isObject(def.options) &&
+        Object.hasOwn(def.options, value)
+        ? { [def.field]: def.options[value] }
         : null
     default:
       return null

@@ -24,8 +24,10 @@ import {
   type CanvasToolId,
   type IconPickerRequest,
 } from "../canvas/contract"
+import { toggleViewPref, useCanvasViewPrefs } from "../canvas/view-prefs"
 import { CanvasConflictOverlay, useNextConflictShortcut } from "../conflicts"
 import {
+  copySelectionAsPng,
   ExportDialog,
   type ExportPreset,
   type ExportSource,
@@ -43,10 +45,14 @@ import { createBus, isTyping } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { cssToken, useTheme } from "../lib/theme"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
+import { exitSelection, PreviewOverlay, pickPreviewFrame, usePreviewTarget } from "../preview"
 import { diskPath, navigate } from "../router"
 import { useEditorAgentPanel } from "./agent-panel"
 import { useAgentTouched, useEditorAgents } from "./agents"
+import { refName } from "./bindings"
 import { useCanvasMenu } from "./CanvasMenu"
+import { useRasterDrop } from "./clipboard/RasterDrop"
+import { useEditorCommands } from "./clipboard/useEditorCommands"
 import { DiskTopbar, useConflicts, useFocusNode, useWindowTitle } from "./disk"
 import type { FileMenuActions } from "./FileMenu"
 import { FloatingToolbar } from "./FloatingToolbar"
@@ -58,7 +64,9 @@ import { M3Context, M3Controller, useBusValue, useLibraries } from "./m3/control
 import { ConfirmHost, ToastStack } from "./m3/feedback"
 import "./m3/m3.css"
 import "./m3/m3-panels.css"
+import "./m3/component-dialogs.css"
 import { type Combo, matchCombo, matches, SHORTCUTS, shortcut } from "../shortcuts/shortcuts"
+import { ComponentDialogs } from "./m3/ComponentDialogs"
 import { LibraryChanges, LibraryManager } from "./m3/popovers"
 import { VariablesDialog } from "./m3/VariablesDialog"
 import { PanelContext } from "./panel-context"
@@ -71,7 +79,6 @@ import { Topbar } from "./Topbar"
 /** Overlay colors from the live `--kimo-*` tokens (board 03: handle fill is a #FFFFFF literal). */
 function useOverlayTheme(): OverlayTheme {
   const mode = useTheme()
-  // biome-ignore lint/correctness/useExhaustiveDependencies: tokens change with the theme mode
   return useMemo(() => {
     const mono = cssToken("--kimo-font-mono")
       .split(",")[0]
@@ -93,7 +100,14 @@ function useOverlayTheme(): OverlayTheme {
         // M3: component / instance identity (violet; 02c "Canvas outlines").
         component: "--kimo-component",
         componentSoft: "--kimo-component-soft",
+        // Board 27 §4 rulers (Ko6aO): bg-app strips, border edges, border-strong ticks.
+        rulerBg: "--kimo-bg-app",
+        rulerBorder: "--kimo-border",
+        rulerTick: "--kimo-border-strong",
+        rulerText: "--kimo-text-tertiary",
       }),
+      // Board 27 rule zyQtF: pixel grid lines #0000000F light / #FFFFFF1F dark (literals).
+      pixelGrid: mode === "dark" ? "#FFFFFF1F" : "#0000000F",
     }
   }, [mode])
 }
@@ -187,6 +201,8 @@ function EditorShell({
   const askRef = useRef<(() => void) | null>(null)
   const syncStatus = useSyncStatus(session.provider)
   const overlayTheme = useOverlayTheme()
+  // Board 27 §4: snapping, pixel grid, rulers, nudge, layer names (app preferences).
+  const viewPrefs = useCanvasViewPrefs(platform.settings)
   // Image fills and the Image tool store content-addressed assets per file: IndexedDB for the
   // browser library, `assets/` beside the file on disk.
   const assets = useMemo(
@@ -255,6 +271,10 @@ function EditorShell({
   const panels = useBusValue(m3.panels)
   const drop = useCanvasDrop(m3)
   const canvasEl = useRef<HTMLElement | null>(null)
+  // Board 27 §3: raster drop / paste (image rectangles, drop overlay).
+  const raster = useRasterDrop({ session, m3, canvas, assets, container: canvasEl })
+  // Board 27 §1–§2: clipboard, structure commands, ⌘P page switcher.
+  const editorCommands = useEditorCommands({ session, m3, canvas, assets })
   const svg = useSvgImport({
     session,
     assets,
@@ -277,6 +297,22 @@ function EditorShell({
           : {}),
       }),
   })
+  // Board 27 §9 (j52y5f): Preview — an in-place overlay over the whole window (ui mode
+  // "preview"); the editor stays mounted underneath, so its viewport is untouched on exit.
+  const [preview, setPreview] = useState<{ frame: string; selection: readonly string[] } | null>(
+    null,
+  )
+  const openPreview = useCallback(() => {
+    const ui = session.ui.getState()
+    const frame = pickPreviewFrame(session.store, ui.selection)
+    if (frame) setPreview({ frame, selection: ui.selection })
+  }, [session])
+  const previewTarget = usePreviewTarget(session.store, session.ui)
+  // Desktop menu bar View › Preview (`kimo://editor-menu` {action: "preview"}).
+  useEffect(
+    () => platform.menu?.onAction((a) => (a === "preview" ? openPreview() : undefined)),
+    [platform, openPreview],
+  )
   // Board 07 Export dialog (M7): code / tokens / SVG·PNG from the selection or every root frame.
   const [exportOpen, setExportOpen] = useState(false)
   const [exportPreset, setExportPreset] = useState<ExportPreset | null>(null)
@@ -296,6 +332,31 @@ function EditorShell({
       }),
     }),
     [doc, name, session, m3, icons],
+  )
+  // Board 27 §10 (d): File › Export… ⇧⌘E (selection, else the page) and Copy selection as PNG ⇧⌘C.
+  const openExport = useCallback(() => {
+    setExportPreset(null)
+    setExportOpen(true)
+  }, [])
+  const copyPng = useCallback(() => {
+    void copySelectionAsPng({
+      selection: session.ui.getState().selection,
+      renderer: canvas.current?.renderer ?? null,
+    }).then((r) =>
+      m3.toast(
+        r.ok
+          ? { tone: "success", text: "Copied as PNG (2×)" }
+          : { tone: r.reason === "failed" ? "danger" : "warning", text: r.message },
+      ),
+    )
+  }, [session, m3])
+  useEffect(
+    () =>
+      platform.menu?.onAction((a) => {
+        if (a === "export") openExport()
+        else if (a === "copy-png") copyPng()
+      }),
+    [platform, openExport, copyPng],
   )
   // Clean up assets (board 19 Vqeu7): same rules as `kimo gc`.
   const [gcOpen, setGcOpen] = useState(false)
@@ -443,6 +504,16 @@ function EditorShell({
         void openFile()
         return
       }
+      if (matches("exportDialog", e)) {
+        e.preventDefault()
+        openExport()
+        return
+      }
+      if (matches("copyAsPng", e)) {
+        e.preventDefault()
+        copyPng()
+        return
+      }
       if (matches("newFile", e)) {
         // The browser keeps ⌘N for a new window; it reaches the page when the canvas has focus.
         e.preventDefault()
@@ -472,7 +543,7 @@ function EditorShell({
         return
       }
       // M3 shortcuts (boards 11/12/14): ⌥⌘K create component, ⌥⌘B detach, ⌥⏎ go to main,
-      // ⌘⇧V variables (matched by `e.code`: ⌥ changes `e.key` on macOS).
+      // ⌥⇧⌘V variables (matched by `e.code`: ⌥ changes `e.key` on macOS).
       if (matches("createComponent", e)) {
         e.preventDefault()
         createComponent(m3, ui.selection, canvas.current?.layout() ?? null)
@@ -497,6 +568,23 @@ function EditorShell({
         m3.openPanel({ variables: !m3.panels.get().variables })
         return
       }
+      // Board 27 §9: ⇧Space opens Preview (the overlay owns every key while open).
+      if (matches("preview", e)) {
+        e.preventDefault()
+        openPreview()
+        return
+      }
+      // Board 27 §4 View menu: ⇧' pixel grid, ⇧R rulers (the same keys as Settings › Canvas).
+      if (matches("view.pixelGrid", e)) {
+        e.preventDefault()
+        toggleViewPref(platform.settings, "canvas.pixelGrid")
+        return
+      }
+      if (matches("view.rulers", e)) {
+        e.preventDefault()
+        toggleViewPref(platform.settings, "canvas.rulers")
+        return
+      }
       // Escape, Delete, arrows, ⌘D/⌘G and zoom keys are canvas commands (CanvasController).
       if (matches("tool.hand", e)) {
         // Hand tool (no toolbar entry in board 03; Space-drag pans temporarily).
@@ -504,7 +592,7 @@ function EditorShell({
         ui.setTool("hand")
         return
       }
-      // Single-key tools (V F R O T P N, ⇧P Prompt).
+      // Single-key tools (V F R O L T P N), ⇧P Prompt and the board 27 shape slot's ⇧L ⇧S.
       const tool = TOOL_SHORTCUTS.find((t) => matches(t.shortcut, e))
       if (tool) {
         e.preventDefault()
@@ -513,7 +601,19 @@ function EditorShell({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [session, activate, save, saveAs, openFile, newFile, m3])
+  }, [
+    session,
+    activate,
+    save,
+    saveAs,
+    openFile,
+    newFile,
+    m3,
+    platform,
+    openPreview,
+    openExport,
+    copyPng,
+  ])
 
   // Board 21: agents (presence chip, approvals, canvas attribution, layer dots, Activity tab).
   const agents = useEditorAgents({
@@ -585,6 +685,8 @@ function EditorShell({
     ...(doc && !doc.untitled && platform.capabilities.reveal
       ? { onReveal: () => void platform.files.reveal(doc.ref).catch(() => {}) }
       : {}),
+    onExportDialog: openExport,
+    onCopyPng: copyPng,
     onCleanUpAssets: () => setGcOpen(true),
     onSettings: () => openSettings("general"),
   }
@@ -604,7 +706,8 @@ function EditorShell({
               setExportPreset(null)
               setExportOpen(true)
             }}
-            onPreview={() => {}}
+            onPreview={openPreview}
+            previewTarget={previewTarget}
             presence={agents.presence}
           />
         ) : (
@@ -621,7 +724,8 @@ function EditorShell({
               setExportPreset(null)
               setExportOpen(true)
             }}
-            onPreview={() => {}}
+            onPreview={openPreview}
+            previewTarget={previewTarget}
           />
         )}
         {doc && (
@@ -652,11 +756,17 @@ function EditorShell({
             aria-label="Canvas"
             onDragOver={(e) => {
               drop.handlers.onDragOver(e)
+              // Board 27 §3: raster files (overlay + target), then SVG files.
+              if (!e.defaultPrevented) raster.handlers.onDragOver(e)
               if (!e.defaultPrevented) svg.handlers.onDragOver(e)
             }}
-            onDragLeave={drop.handlers.onDragLeave}
+            onDragLeave={(e) => {
+              drop.handlers.onDragLeave(e)
+              raster.handlers.onDragLeave(e)
+            }}
             onDrop={(e) => {
               drop.handlers.onDrop(e)
+              if (!e.defaultPrevented) raster.handlers.onDrop(e)
               if (!e.defaultPrevented) svg.handlers.onDrop(e)
             }}
           >
@@ -671,9 +781,36 @@ function EditorShell({
               icons={icons}
               onImportImage={importImage}
               onIconPicker={setIconRequest}
+              confirmBoundText={(_id, ref) =>
+                // Board 27 §7 (uu8Qa): editing bound text asks "Detach copy/cta?" first.
+                m3.confirm({
+                  title: `Detach ${refName(ref)}?`,
+                  desc: "This text is bound to a string variable. Editing it here replaces the binding with the current text.",
+                  icon: "unlink",
+                  tone: "component",
+                  items: [
+                    { icon: "type", accent: true, text: "The text keeps its current value" },
+                    { icon: "variable", text: `${refName(ref)} stays in the file, unchanged` },
+                  ],
+                  confirm: "Detach & edit",
+                })
+              }
+              duplicateMainPref={() => m3.prefs?.duplicateMain() ?? "ask"}
+              askDuplicateMain={(main, ids) =>
+                // Board 27 §8 (d): ⌥-drag of a main asks like ⌘D.
+                new Promise((resolve) =>
+                  m3.componentDialog.set({ kind: "duplicateMain", ids, main, resolve }),
+                )
+              }
               fontSources={fonts.sources}
               offlineFonts={offlineFonts}
               overlayTheme={overlayTheme}
+              snapping={viewPrefs.snapToObjects}
+              snapToPixelGrid={viewPrefs.snapToPixelGrid}
+              pixelGrid={viewPrefs.pixelGrid}
+              rulers={viewPrefs.rulers}
+              layerNames={viewPrefs.layerNames}
+              nudge={viewPrefs.nudge}
               onLayout={layout.set}
               agentCanvas={agentPanel.canvas}
               noteAuthor={agentPanel.noteAuthor}
@@ -709,10 +846,12 @@ function EditorShell({
               {...(agentPanel.controller ? { onAsk: openAgentTab } : {})}
             />
             {drop.hint}
+            {raster.overlay}
             <ToastStack m3={m3} />
             {doc && <ToastHost session={doc} onReview={() => review.set(review.get() + 1)} />}
             {svg.popover}
             {canvasMenu.element}
+            {editorCommands.element}
             {iconRequest && (
               <CanvasIconPicker
                 session={session}
@@ -753,6 +892,7 @@ function EditorShell({
             onClose={() => m3.openPanel({ variables: false })}
           />
         )}
+        <ComponentDialogs m3={m3} />
         {panels.libraryManager && (
           <LibraryManager m3={m3} onClose={() => m3.openPanel({ libraryManager: false })} />
         )}
@@ -772,6 +912,10 @@ function EditorShell({
             fileRef={doc && !doc.untitled ? doc.ref : null}
             preset={exportPreset}
             onClose={() => setExportOpen(false)}
+            onSelectNode={(id) => {
+              session.ui.getState().select([id])
+              canvas.current?.zoomToFit([id], 96)
+            }}
             onExported={(o) => {
               const t = exportToastOf(o)
               const reveal = t.reveal
@@ -783,6 +927,26 @@ function EditorShell({
                   ? { action: { label: "Reveal", run: () => void platform.files.reveal(reveal) } }
                   : {}),
               })
+            }}
+          />
+        )}
+        {preview && (
+          <PreviewOverlay
+            store={session.store}
+            libraries={() => m3.libraries()}
+            frameId={preview.frame}
+            createRenderer={createRenderer}
+            createLayoutEngine={createLayoutEngine}
+            assets={assets.source}
+            icons={icons}
+            fontSources={fonts.sources}
+            offlineFonts={offlineFonts}
+            onExit={(last, navigated) => {
+              // Rule "Exit": viewport untouched; the last frame becomes selected after ‹ ›.
+              if (navigated)
+                session.ui.getState().select(exitSelection(preview.selection, last, true))
+              setPreview(null)
+              requestAnimationFrame(() => canvas.current?.focus())
             }}
           />
         )}

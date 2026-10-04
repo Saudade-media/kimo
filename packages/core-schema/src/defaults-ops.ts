@@ -121,6 +121,13 @@ function size(v: unknown, op: Op): unknown {
   return o
 }
 
+function star(v: unknown, op: Op): unknown {
+  if (!isObject(v)) return v
+  const o: Obj = { ...v }
+  withDefaults(o, DEFAULTS.star, op)
+  return o
+}
+
 /** Value-level normalizers, keyed by the property that holds the value. */
 const FIELD: Record<string, (v: unknown, op: Op) => unknown> = {
   fill: paints,
@@ -130,6 +137,7 @@ const FIELD: Record<string, (v: unknown, op: Op) => unknown> = {
   w: size,
   h: size,
   color,
+  star,
 }
 
 function fields(obj: Obj, op: Op): void {

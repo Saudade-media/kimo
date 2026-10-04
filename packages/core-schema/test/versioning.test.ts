@@ -235,6 +235,6 @@ describe("forward compatibility conformance (10.2 rule 7)", () => {
     ])
     expect(out).toContain(`"cornerSmoothing":0.6`)
     expect(out).toContain(`"type":"sticker"`)
-    expect(out).toContain(`"pages": {"Page000001":{"name":"Home","order":"a0"}}`)
+    expect(out).toContain(`"sections": {"Sect000001":{"name":"Home","order":"a0"}}`)
   })
 })

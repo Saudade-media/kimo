@@ -427,6 +427,8 @@ export class PaintFactory {
       )
     }
     switch (v.fit) {
+      // Board 27 §6 (d): fit "crop" without a `crop` affine = the identity (the whole image).
+      case "crop":
       case "stretch":
         m = SCALE(w / iw, h / ih)
         break

@@ -22,6 +22,8 @@ export const DEFAULTS = {
   frame: { w: { mode: "fit" }, h: { mode: "fit" }, clip: false, radius: 0 },
   rect: { radius: 0 },
   polygon: { radius: 0 },
+  /** Polygon `star` struct. */
+  star: { ratio: 0.38 },
   ellipse: { innerRadius: 0, startAngle: 0, sweepAngle: 360 },
   path: { fillRule: "nonzero" },
   text: { grow: "auto" },
@@ -94,4 +96,6 @@ export const DEFAULTS_ADDED_IN_SPEC: readonly string[] = [
   "stroke.miterLimit",
   "shadow.visible",
   "blur.visible",
+  // Added for v1 completeness (board 27): stars.
+  "star.ratio",
 ]

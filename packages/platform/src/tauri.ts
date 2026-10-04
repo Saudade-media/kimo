@@ -20,6 +20,7 @@ import type { SettingKey, Settings, UpdateChannel } from "./settings"
 import type {
   AcquireResult,
   AtomicWriteResult,
+  EditorMenuAction,
   FileFilter,
   FileStat,
   FontCacheEntry,
@@ -227,6 +228,8 @@ export interface TauriEventMap {
   "kimo://open-request": OpenRequest
   /** Board 25 §7 (b): a native Help menu item, sent to the focused editor window. */
   "kimo://help-menu": { action: HelpMenuAction }
+  /** Board 27: a native File / View item for the focused editor window. */
+  "kimo://editor-menu": { action: EditorMenuAction }
 }
 
 export type TauriEvent = keyof TauriEventMap
@@ -322,4 +325,5 @@ export const TAURI_EVENTS = [
   "kimo://settings-changed",
   "kimo://open-request",
   "kimo://help-menu",
+  "kimo://editor-menu",
 ] as const satisfies readonly TauriEvent[]

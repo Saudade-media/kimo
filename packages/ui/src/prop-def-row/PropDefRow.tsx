@@ -1,5 +1,5 @@
 import { ArrowRight, Crosshair, Lock, Minus, Plus, RotateCcw } from "lucide-react"
-import type { ComponentPropsWithRef, HTMLAttributes } from "react"
+import type { ComponentPropsWithRef, HTMLAttributes, ReactNode } from "react"
 import { IconButton } from "../icon-button/IconButton"
 import { DraftInput } from "../internal/DraftInput"
 import { cx } from "../internal/util"
@@ -39,6 +39,13 @@ export interface PropDefRowProps extends Omit<ComponentPropsWithRef<"div">, "chi
   onRemove?: () => void
   /** Spread on the Type Glyph, the row's drag handle (reorder → reorderProp). */
   dragHandleProps?: HTMLAttributes<HTMLSpanElement>
+  /**
+   * Board 27 §8 (a): an enum prop with per-option targets has no Binding row; its Options and
+   * Targets blocks ({@link EnumTargets}) render after the Head instead.
+   */
+  hideBinding?: boolean
+  /** Rendered after the Head (and the Binding row, when shown). */
+  children?: ReactNode
 }
 
 /**
@@ -62,6 +69,8 @@ export function PropDefRow({
   onDefaultCommit,
   onRemove,
   dragHandleProps,
+  hideBinding = false,
+  children,
   className,
   ...rest
 }: PropDefRowProps) {
@@ -114,36 +123,39 @@ export function PropDefRow({
           onClick={onRemove}
         />
       </div>
-      <div className="kimo-prop-def-row__binding">
-        <button
-          type="button"
-          className="kimo-prop-field kimo-prop-def-row__target"
-          aria-label={`Target: ${target}`}
-          disabled={locked}
-          onClick={onPickTarget}
-        >
-          <span
-            className="kimo-prop-field__prefix kimo-prop-field__prefix--static kimo-prop-field__prefix--icon"
-            aria-hidden="true"
-          >
-            <Crosshair />
-          </span>
-          <span className="kimo-prop-field__value kimo-prop-def-row__target-value">{target}</span>
-        </button>
-        {defaultValue !== undefined && (
-          <PropTextField
-            className="kimo-prop-def-row__default"
-            prefix="="
-            inputLabel="Default value"
-            value={defaultValue}
+      {!hideBinding && (
+        <div className="kimo-prop-def-row__binding">
+          <button
+            type="button"
+            className="kimo-prop-field kimo-prop-def-row__target"
+            aria-label={`Target: ${target}`}
             disabled={locked}
-            onCommit={(v) => {
-              onDefaultCommit?.(v)
-              return undefined
-            }}
-          />
-        )}
-      </div>
+            onClick={onPickTarget}
+          >
+            <span
+              className="kimo-prop-field__prefix kimo-prop-field__prefix--static kimo-prop-field__prefix--icon"
+              aria-hidden="true"
+            >
+              <Crosshair />
+            </span>
+            <span className="kimo-prop-field__value kimo-prop-def-row__target-value">{target}</span>
+          </button>
+          {defaultValue !== undefined && (
+            <PropTextField
+              className="kimo-prop-def-row__default"
+              prefix="="
+              inputLabel="Default value"
+              value={defaultValue}
+              disabled={locked}
+              onCommit={(v) => {
+                onDefaultCommit?.(v)
+                return undefined
+              }}
+            />
+          )}
+        </div>
+      )}
+      {children}
     </div>
   )
 }

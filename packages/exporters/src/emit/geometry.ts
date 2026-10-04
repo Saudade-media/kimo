@@ -83,23 +83,38 @@ export function ellipsePath(
   return { d: `${d}Z`, fillRule: "nonzero" }
 }
 
-/** Regular polygon inscribed in the box, first vertex up; `radius` rounds every corner. */
-export function polygonPath(w: number, h: number, sides: number, radius: number): string {
+/**
+ * Regular polygon inscribed in the box, first vertex up; `radius` rounds every corner. A star
+ * `ratio` adds an inner vertex midway between each pair of outer ones, on the ellipse scaled by
+ * `ratio` (renderer `polygonPoints`).
+ */
+export function polygonPath(
+  w: number,
+  h: number,
+  sides: number,
+  radius: number,
+  ratio: number | null = null,
+): string {
   const pts: [number, number][] = []
   for (let i = 0; i < sides; i++) {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / sides
     pts.push([w / 2 + (w / 2) * Math.cos(a), h / 2 + (h / 2) * Math.sin(a)])
+    if (ratio !== null) {
+      const b = a + Math.PI / sides
+      pts.push([w / 2 + (w / 2) * ratio * Math.cos(b), h / 2 + (h / 2) * ratio * Math.sin(b)])
+    }
   }
+  const count = pts.length
   if (radius <= 0) return `M${pts.map((p) => `${n(p[0])} ${n(p[1])}`).join("L")}Z`
-  const at = (i: number) => pts[((i % sides) + sides) % sides] as [number, number]
+  const at = (i: number) => pts[((i % count) + count) % count] as [number, number]
   const mid = (i: number): [number, number] => {
     const p = at(i)
     const q = at(i + 1)
     return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
   }
-  let cur = mid(sides - 1)
+  let cur = mid(count - 1)
   let d = `M${n(cur[0])} ${n(cur[1])}`
-  for (let i = 0; i < sides; i++) {
+  for (let i = 0; i < count; i++) {
     const v = at(i)
     const m = mid(i)
     // arcToTangent(v, m, r): an arc tangent to cur→v and v→m.
@@ -153,7 +168,7 @@ export function shapePath(
     }
     case "polygon":
       return {
-        d: polygonPath(w, h, shape.sides, shape.cornerRadius),
+        d: polygonPath(w, h, shape.sides, shape.cornerRadius, shape.starRatio ?? null),
         fillRule: "nonzero",
         transform: null,
       }

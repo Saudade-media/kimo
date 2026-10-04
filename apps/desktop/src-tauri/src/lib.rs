@@ -257,6 +257,7 @@ pub fn run() {
             ai_commands::kimo_skills_read,
             ai_commands::kimo_skills_watch,
             ai_commands::kimo_skills_unwatch,
+            ai_commands::kimo_skills_reveal,
         ])
         .build(tauri::generate_context!())
         .expect("error while building the Kimo desktop app");
@@ -570,7 +571,7 @@ mod tests {
         let secrets = ts_list("secrets.ts", "TAURI_SECRETS_COMMANDS");
         let cli = ts_list("cli-agents.ts", "TAURI_CLI_COMMANDS");
         let skills = ts_list("skills.ts", "TAURI_SKILLS_COMMANDS");
-        assert_eq!((secrets.len(), cli.len(), skills.len()), (7, 9, 5));
+        assert_eq!((secrets.len(), cli.len(), skills.len()), (7, 9, 6));
         let own = |l: &[&str]| l.iter().map(|s| s.to_string()).collect::<Vec<_>>();
         assert_eq!(own(super::command_list_ai::SECRETS_COMMANDS), secrets);
         assert_eq!(own(super::command_list_ai::CLI_COMMANDS), cli);

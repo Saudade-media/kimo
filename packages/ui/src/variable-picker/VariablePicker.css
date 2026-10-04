@@ -1,0 +1,170 @@
+/*
+ * VariablePicker: board 27 §7 (b) "Picker · local + libraries" > Variable Picker (xec6v), a
+ * Popover (xvOvm) instance at width 320, Title (cNBKW) "Bind Gap".
+ *   Body (oDd1B) fill, column, gap 2, padding [8, 6, 6, 6]
+ *   ├ Search (VyoHA) Input (Zs05d) h 28 → icon search 16 · placeholder sans 12 (text-sm)
+ *   ├ Group · This file (rPIXV) fill, row, gap 6, padding [8, 8, 4, 8], center
+ *   │   Title (t96Qm) sans 11 / 600 text-tertiary · Spacer · Meta (DVd0x) mono 11 text-tertiary
+ *   ├ VariableListRow (yB4CN) × n — current binding fill bg-hover (Y1tn4)
+ *   ├ Group · <alias> (uUIBy) as above with Lib (YnXcX) `library` 12 text-tertiary first
+ *   └ Footer (phtV6) fill, stroke top 1 border, row, gap 8, padding [8, 8, 2, 8], center
+ *       Plus (u0flD) 14 text-secondary · Create (Mx6PN) sans 12 text-secondary · Spacer ·
+ *       Detach (Q3ang) `unlink` 14 text-tertiary
+ * The rows sit in a scroll list (same column gap) so long variable sets stay inside the viewport.
+ */
+.kimo-popover.kimo-variable-picker {
+  width: 320px;
+}
+
+.kimo-popover__body.kimo-variable-picker__body {
+  gap: 2px;
+  padding: 8px 6px 6px 6px;
+}
+
+.kimo-input.kimo-input--dense.kimo-variable-picker__search {
+  flex: none;
+  height: 28px;
+  border-radius: var(--kimo-radius-md);
+}
+
+.kimo-variable-picker__search .kimo-input__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-variable-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  max-height: 336px;
+  overflow-y: auto;
+}
+
+.kimo-variable-picker__list .kimo-variable-list-row {
+  flex: none;
+}
+
+.kimo-variable-picker__group {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 8px 4px 8px;
+}
+
+.kimo-variable-picker__lib {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-variable-picker__group-title,
+.kimo-variable-picker__empty {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-variable-picker__group-title {
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-variable-picker__group-meta {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kimo-variable-picker__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-variable-picker__empty {
+  margin: 0;
+  padding: 8px;
+}
+
+.kimo-variable-picker__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 8px 2px 8px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.kimo-variable-picker__plus {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-variable-picker__create {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+  cursor: default;
+}
+
+.kimo-variable-picker__create:hover {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-variable-picker__create:focus-visible,
+.kimo-variable-picker__detach:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-variable-picker__detach {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: default;
+}
+
+.kimo-variable-picker__detach > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-variable-picker__detach:hover {
+  color: var(--kimo-text-primary);
+}

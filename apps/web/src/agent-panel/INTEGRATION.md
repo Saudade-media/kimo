@@ -52,8 +52,8 @@ useEffect(() => session.ui.subscribe((s) => agentPanel?.setSelection(
   answered). A desktop window whose document is hosted by the document host uses
   `createHostTools({client, ref})` instead (host RPC `agentCall`, same `ToolHostSpec`); see
   "Tools on desktop" below.
-- **Sessions**: IndexedDB `kimo-sessions` by default (web and desktop webview); pass `sessions`
-  to use the desktop `~/.kimo/sessions/<fileId>/<id>.json` store when the platform has one.
+- **Sessions**: IndexedDB `kimo-sessions` on web and desktop (the webview's IndexedDB; ADR 0014
+  §7 as amended). `sessions` stays injectable (tests pass a memory store).
 
 ## 2. RightPanel.tsx: the Agent tab
 
@@ -68,7 +68,7 @@ import { AgentPanel, hasHomeHandoff, useHomeHandoff } from "../agent-panel"
     fileName={session.ref.name}
     clis={ai.clis()}
     onOpenSettings={() => openSettings(platform, "ai-providers")}
-    onOpenSkillsFolder={() => platform.shell.reveal("~/.kimo/skills")}
+    onOpenSkillsFolder={skillsFolderAction(platform)} // desktop: reveals ~/.kimo/skills; web: undefined, button hidden
   />
 )}
 ```

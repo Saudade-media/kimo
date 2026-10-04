@@ -74,6 +74,21 @@ export {
   type Origin,
   type RemoteOrigin,
 } from "./origin"
+export {
+  addPageOps,
+  deletePageOps,
+  duplicatePageOps,
+  materializePageOps,
+  movePageOps,
+  moveToPageOps,
+  nextPageName,
+  type PageEdit,
+  type PageReader,
+  pageOfNode,
+  pageRoots,
+  pagesOf,
+  renamePageOps,
+} from "./pages"
 export { type MoveRecord, planTreeRepairs, type TreeFields, type TreeRepair } from "./repair"
 export * from "./types"
 export {

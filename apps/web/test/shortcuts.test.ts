@@ -79,6 +79,7 @@ describe("SHORTCUTS table", () => {
       "src/conflicts/shortcut.ts",
       "src/settings/SettingsDialog.tsx",
       "src/shortcuts/ShortcutsSheetHost.tsx",
+      "src/editor/clipboard/useEditorCommands.ts",
     ]
       .map((f) => readFileSync(join(import.meta.dir, "..", f), "utf8"))
       .join("\n")
@@ -93,6 +94,8 @@ describe("SHORTCUTS table", () => {
 
   test("toolbar tooltips (CANVAS_TOOLS.shortcut) agree with the table", () => {
     for (const t of CANVAS_TOOLS) {
+      // Polygon has no key (the design's ⇧P stays Prompt's).
+      if (!t.shortcut) continue
       const id = t.id === "component" ? "createComponent" : `tool.${t.id}`
       const c = shortcut(id).combos[0] as Combo
       expect(`${t.id} ${formatCombo(c, "mac")}`).toBe(`${t.id} ${t.shortcut}`)
@@ -116,6 +119,10 @@ describe("SHORTCUTS table", () => {
     expect(matches("tool.pen", ev({ key: "p" }))).toBe(true)
     expect(matches("tool.pen", ev({ key: "P", shiftKey: true }))).toBe(false)
     expect(matches("tool.prompt", ev({ key: "P", shiftKey: true }))).toBe(true)
+    expect(matches("tool.arrow", ev({ key: "L", shiftKey: true }))).toBe(true)
+    expect(matches("tool.line", ev({ key: "l" }))).toBe(true)
+    expect(matches("tool.star", ev({ key: "S", shiftKey: true }))).toBe(true)
+    expect(matches("tool.star", ev({ key: "S", shiftKey: true, metaKey: true }))).toBe(false)
     expect(matches("zoomIn", ev({ key: "+", shiftKey: true }))).toBe(true)
     expect(matches("zoomIn", ev({ key: "=", altKey: true }))).toBe(false)
     expect(matches("zoomOut", ev({ metaKey: true, key: "-" }))).toBe(true)
@@ -202,6 +209,9 @@ describe("sheet", () => {
       "Frame",
       "Rectangle",
       "Ellipse",
+      "Line",
+      "Arrow",
+      "Star",
       "Text",
       "Pen",
       "Note",
@@ -215,6 +225,9 @@ describe("sheet", () => {
   test("filter matches action names and formatted keys; empty groups drop", () => {
     expect(sheetGroups("mac", "zoom").map((g) => g.id)).toEqual(["view"])
     expect(sheetGroups("mac", "⌥⌘").flatMap((g) => g.rows.map((r) => r.id))).toEqual([
+      "copyProperties",
+      "pasteProperties",
+      "wrapInFrame",
       "createComponent",
       "detachInstance",
     ])

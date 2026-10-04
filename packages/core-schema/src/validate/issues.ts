@@ -54,7 +54,7 @@ export const ISSUE_CODES = {
   // Merge conflicts (feature "merge/conflicts", spec §21)
   MERGE_WITHOUT_CONFLICTS: "`merge` labels are present but there is no `conflicts` table.",
   CONFLICT_PATH_INVALID:
-    "A conflict `path` addresses what another kind owns (`type`/`parent`/`order`/`at`, or a root member other than meta/themes/imports/assets/components).",
+    "A conflict `path` addresses what another kind owns (`type`/`parent`/`order`/`at`, or a root member other than meta/themes/imports/assets/components/pages).",
   CONFLICT_DUPLICATE: "Two conflicts address the same target, or one contains the other.",
   CONFLICT_OPEN: "A merge conflict is not resolved yet.",
   CONFLICT_STALE:
@@ -63,6 +63,9 @@ export const ISSUE_CODES = {
   TEXT_INVISIBLE: "A text node's fill paints nothing.",
   FIT_ALL_FILL: "A `fit` frame whose children all `fill` the same axis (circular sizing).",
   PROMPT_TARGET_MISSING: "A prompt's `target` names no frame of this document.",
+  PAGE_UNKNOWN:
+    "A root node's `page` names no page of `pages`; the node is shown on the first page.",
+  PAGE_NOT_ROOT: "A node that is not a root node has `page`; it is ignored.",
   VARIABLE_UNUSED: "A variable is not referenced (not reported for library documents).",
 } as const
 
@@ -96,6 +99,8 @@ export const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "TEXT_INVISIBLE",
   "FIT_ALL_FILL",
   "PROMPT_TARGET_MISSING",
+  "PAGE_UNKNOWN",
+  "PAGE_NOT_ROOT",
   "VARIABLE_UNUSED",
   "CONFLICT_OPEN",
   "CONFLICT_STALE",

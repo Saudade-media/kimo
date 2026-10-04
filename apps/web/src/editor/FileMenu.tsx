@@ -4,7 +4,8 @@
  * holds the shortcut (mono 11):
  *
  *   New file ⌘N (file-plus) · Open… ⌘O (folder-open) · Open recent ▸ (history) · Save ⌘S (save)
- *   · Save as… ⇧⌘S (file-output) · ─ · Reveal in Finder (folder-search; desktop only) · Clean up
+ *   · Save as… ⇧⌘S (file-output) · ─ · Export… ⇧⌘E (download) · Copy selection as PNG ⇧⌘C
+ *   (image) (board 27 §10 (d) W3CpXw) · ─ · Reveal in Finder (folder-search; desktop only) · Clean up
  *   assets… (brush-cleaning) · ─ · Settings… ⌘, (settings)
  *   · ─ · Help ▸ (Windows / Linux / web; board 25 §7 (b) A0qRF: macOS has the native Help menu)
  *
@@ -33,6 +34,10 @@ export interface FileMenuActions {
   onOpenRecent(ref: FileRef): void
   onSave(): void
   onSaveAs(): void
+  /** Board 27 §10 (d): Export… ⇧⌘E — the Export dialog (selection, else the current page). */
+  onExportDialog?: () => void
+  /** Board 27 §10 (d): Copy selection as PNG ⇧⌘C — a 2× PNG on the clipboard. */
+  onCopyPng?: () => void
   /** Desktop only: the web build has no filesystem path (board 20 V7Lu4m omits it). */
   onReveal?: () => void
   onCleanUpAssets(): void
@@ -184,6 +189,25 @@ export function FileMenu(props: FileMenuProps) {
         onPointerEnter={hoverOther}
         onSelect={run(props.onSaveAs)}
       />
+      {(props.onExportDialog || props.onCopyPng) && <MenuDivider />}
+      {props.onExportDialog && (
+        <MenuItemDense
+          icon={<Icon name="download" size={14} />}
+          label="Export…"
+          meta={menuShortcut(os, "E", true)}
+          onPointerEnter={hoverOther}
+          onSelect={run(props.onExportDialog)}
+        />
+      )}
+      {props.onCopyPng && (
+        <MenuItemDense
+          icon={<Icon name="image" size={14} />}
+          label="Copy selection as PNG"
+          meta={menuShortcut(os, "C", true)}
+          onPointerEnter={hoverOther}
+          onSelect={run(props.onCopyPng)}
+        />
+      )}
       <MenuDivider />
       {props.onReveal && (
         <MenuItemDense

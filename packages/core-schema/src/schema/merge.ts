@@ -207,4 +207,5 @@ export const HEADER_CONFLICT_MEMBERS = new Set([
   "imports",
   "assets",
   "components",
+  "pages",
 ])

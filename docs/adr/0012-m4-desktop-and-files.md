@@ -148,14 +148,16 @@ of `@kimo/platform` and `FileSessionProvider` (`@kimo/sync`, the M4 contract of
   after 400 ms: `displayedSaveStatus`), "Unsaved changes", "Autosave paused · rebase" / "2
   conflicts · autosave paused", "Read-only" / "Read-only · couldn't load", "Locked by another
   app", "Save failed", each mapped to its 02d component and node id.
-- **Banners**, one at a time, highest first (`BANNER_PRIORITY`, amended by board 20 "Banner
-  priority" vgNUe): failed-load (terminal) > save-failed (disk full / permission / read-back
-  mismatch) > merge-conflicts (stored by `kimo merge`; they replace the generic git merge
-  banner, and the SaveStatus pill reads "N conflicts · autosave paused") > git-operation
-  (Discard / Stash as recovery file / Keep my edits) > locked > newer-format > merge-ready
-  ("Ready to commit"). With stored conflicts ⌘S saves them as-is even while git reports
-  MERGE_HEAD. `bannerCopy` returns the design's titles,
-  bodies and actions.
+- **Banners**, one at a time, highest first (`BANNER_PRIORITY` in `apps/web/src/platform/contract.ts`,
+  amended by board 20 "Banner priority" vgNUe and board 24 "Banner priority vs 'Ready to commit'"
+  a9ykr0): failed-load (terminal for the window) > locked (read-only: another app holds the file)
+  > newer-format (read-only: written by a newer Kimo) > save-failed (disk full / permission /
+  read-back mismatch) > merge-conflicts (stored by `kimo merge`; they replace the generic git
+  merge banner, and the SaveStatus pill reads "N conflicts · autosave paused") > git-operation
+  (Discard / Stash as recovery file / Keep my edits) > merge-ready ("Ready to commit"; it replaces
+  the git banner in the same slot, never stacks under it). With stored conflicts ⌘S saves them
+  as-is even while git reports MERGE_HEAD. `bannerCopy` returns the design's titles, bodies and
+  actions.
 - **Toasts:** external reloaded / merged (Undo) / conflicts (Review), merge saved, update ready,
   restart after saving.
 - **Dialogs:** launch recovery (Restore / Save as… / Discard per entry; Discard all / Decide

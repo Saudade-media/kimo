@@ -229,10 +229,20 @@ const script: Script = (req) => {
 const firstRun = new URLSearchParams(location.search).get("runtime")
 let cliChosen = false
 let keyOk = false
+// `?warn=0.05` (board 27 §10 b EP0Ir): Usage & limits with that per-turn warning; Show cost is
+// flipped through `window.__m6.usage` + `controller.refresh()`.
+const warnQ = new URLSearchParams(location.search).get("warn")
+const harnessUsage = {
+  monthlyLimitUsd: 0,
+  warnPerTurnUsd: Number(warnQ ?? 1),
+  showCost: true,
+  defaultModel: null,
+}
 const base = createTestRuntime({
   tools: tools.factory,
   script,
   platform: "web",
+  ...(warnQ ? { usage: () => ({ ...harnessUsage, monthUsd: 0 }) } : {}),
   ...(firstRun
     ? {
         providers: [],
@@ -290,10 +300,18 @@ declare global {
       rateLimited: number
       stats: typeof agentMarkRendererStats
       copied: string[]
+      usage: typeof harnessUsage
     }
   }
 }
-window.__m6 = { controller, store, rateLimited: 0, stats: agentMarkRendererStats, copied: [] }
+window.__m6 = {
+  controller,
+  store,
+  rateLimited: 0,
+  stats: agentMarkRendererStats,
+  copied: [],
+  usage: harnessUsage,
+}
 
 function PanelScene() {
   const state = useAgentPanelState(controller)

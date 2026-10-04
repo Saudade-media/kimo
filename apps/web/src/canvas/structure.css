@@ -1,0 +1,21 @@
+/* Board 27 §2 (R8OJ3 "Parent Outline" n8mU3e): the paste target flashes a 1 px $selection outline
+   (opacity 0.5) for 600 ms. */
+.canvas-host__flash {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--kimo-selection);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 3;
+  animation: canvas-host-flash 600ms ease-out forwards;
+}
+
+@keyframes canvas-host-flash {
+  0%,
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
+}

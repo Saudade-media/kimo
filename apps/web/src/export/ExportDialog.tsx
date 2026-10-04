@@ -28,6 +28,7 @@ import {
   ProgressTrack,
   ReviewFileRow,
   SegmentedText,
+  Select,
   Tab,
   Toggle,
   useFocusTrap,
@@ -37,11 +38,13 @@ import { downloadBlob } from "../lib/files"
 import { Icon } from "../lib/icons"
 import "./export.css"
 import { type ExportSource, type GeneratedExport, generateExport, previewRaster } from "./generate"
+import { hasIssueError, issuesLabel, issuesReport, issueTotal } from "./issues"
 import {
   bytesOf,
   codeLines,
   DEFAULT_PDF_TOGGLES,
   DEFAULT_PNG_SCALE,
+  DEFAULT_TAILWIND,
   DEFAULT_TOGGLES,
   defaultChoice,
   defaultZipName,
@@ -74,6 +77,8 @@ import {
   reviewSummary,
   safeFileName,
   shortFolder,
+  TAILWIND_THEMES,
+  type TailwindChoices,
   tokenizeLine,
   unifiedDiff,
   type WriteResult,
@@ -108,6 +113,8 @@ export interface ExportDialogProps {
   copyText?(text: string): Promise<void> | void
   /** Browser download (default `downloadBlob`). */
   download?(blob: Blob, name: string): void
+  /** Issues tab node chip (board 27 §10 rule AiMJh): the dialog closes, then this selects it. */
+  onSelectNode?(id: string): void
 }
 
 const STORE = "kimo.export"
@@ -183,6 +190,7 @@ export function ExportDialog({
   onExported,
   copyText = (t) => navigator.clipboard?.writeText(t),
   download = downloadBlob,
+  onSelectNode,
 }: ExportDialogProps) {
   const desktop = platform.kind === "desktop"
   const untitled = desktop && !fileRef
@@ -204,6 +212,11 @@ export function ExportDialog({
   const [pdf, setPdf] = useState<PdfToggles>(() =>
     readStore<PdfToggles>("pdf", DEFAULT_PDF_TOGGLES),
   )
+  const [tailwind, setTailwind] = useState<TailwindChoices>(() =>
+    readStore<TailwindChoices>("tailwind", DEFAULT_TAILWIND),
+  )
+  /** Board 27 §10 (c): the preview pane's Preview | Issues tabs. */
+  const [pane, setPane] = useState<"preview" | "issues">("preview")
   const [folder, setFolder] = useState<FileRef | null>(() => {
     if (!fileRef) return null
     return readStore<{ folder: FileRef | null }>(`folder.${fileRef}`, {
@@ -222,17 +235,33 @@ export function ExportDialog({
   useEffect(() => writeStore("prefs", prefs), [prefs])
   useEffect(() => writeStore("toggles", toggles), [toggles])
   useEffect(() => writeStore("pdf", pdf), [pdf])
+  useEffect(() => writeStore("tailwind", tailwind), [tailwind])
 
   // Regenerate the preview when the format or an option changes (the latest run wins).
   useEffect(() => {
     let live = true
-    void generateExport(source, format, toggles, { image, scale, pdf }).then((g) => {
+    void generateExport(source, format, toggles, { image, scale, pdf, tailwind }).then((g) => {
       if (live) setGenerated(g)
     })
     return () => {
       live = false
     }
-  }, [source, format, toggles, image, scale, pdf])
+  }, [source, format, toggles, image, scale, pdf, tailwind])
+
+  // Rule AiMJh: the Issues tab opens by itself when a dry run finds an error (once per new set).
+  const issueGroups = generated?.issues ?? []
+  const issueCount = issueTotal(issueGroups)
+  const issueError = hasIssueError(issueGroups)
+  const errorKey = issueError
+    ? issueGroups
+        .flatMap((g) => g.issues.filter((i) => i.level === "error").map((i) => g.file + i.message))
+        .join("\n")
+    : ""
+  const lastErrorKey = useRef("")
+  useEffect(() => {
+    if (errorKey && errorKey !== lastErrorKey.current) setPane("issues")
+    lastErrorKey.current = errorKey
+  }, [errorKey])
 
   // PNG preview (rule "PNG preview") and the PDF page-1 thumbnail.
   const raster = format === "pdf" || (format === "assets" && image === "png")
@@ -400,6 +429,7 @@ export function ExportDialog({
         image,
         scale,
         pdf,
+        tailwind,
       })
       const all = [...full.files, ...full.binary]
       if (all.length < full.count && full.errors.length > 0) {
@@ -565,6 +595,37 @@ export function ExportDialog({
                     )
                   })}
                 </div>
+                {format === "react" && (
+                  <div className="export-group export-group--tailwind" data-option="tailwind">
+                    <span className="export-label" id="export-tailwind-label">
+                      Tailwind theme
+                    </span>
+                    <Select
+                      className="export-tailwind-select"
+                      label="Tailwind theme"
+                      options={TAILWIND_THEMES}
+                      value={tailwind.theme}
+                      disabled={!toggles.variables}
+                      onChange={(v) => setTailwind((t) => ({ ...t, theme: v }))}
+                    />
+                    <div className="export-tailwind-map" data-option="mapTokens">
+                      <span className="export-tailwind-map__label" id="export-opt-mapTokens">
+                        Map variables to theme tokens
+                      </span>
+                      <Toggle
+                        checked={tailwind.mapTokens && tailwind.theme !== "none"}
+                        disabled={!toggles.variables || tailwind.theme === "none"}
+                        aria-labelledby="export-opt-mapTokens"
+                        onChange={(v) => setTailwind((t) => ({ ...t, mapTokens: v }))}
+                      />
+                    </div>
+                    <span className="export-tailwind-hint">
+                      Colour, spacing, radius and font variables become --color-*, --spacing-*,
+                      --radius-*, --font-* tokens; classes use them (bg-surface-base) instead of
+                      arbitrary values.
+                    </span>
+                  </div>
+                )}
                 <div className="export-group export-group--settings">
                   <span className="export-label">Options</span>
                   {format === "pdf"
@@ -681,8 +742,103 @@ export function ExportDialog({
               <div
                 className={`export-preview${raster ? " export-preview--raster" : ""}`}
                 data-preview={format === "pdf" ? "pdf" : raster ? "png" : "code"}
+                data-pane={pane}
               >
-                {format === "assets" && (
+                <div className="export-pane-tabs" role="tablist" aria-label="Preview or issues">
+                  <Tab
+                    className="export-pane-tab"
+                    active={pane === "preview"}
+                    data-pane-tab="preview"
+                    onClick={() => setPane("preview")}
+                  >
+                    Preview
+                  </Tab>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={pane === "issues"}
+                    tabIndex={pane === "issues" ? 0 : -1}
+                    data-pane-tab="issues"
+                    className={`export-issues-tab${pane === "issues" ? " export-issues-tab--active" : ""}`}
+                    onClick={() => setPane("issues")}
+                  >
+                    <span className="export-issues-tab__label">Issues</span>
+                    {issueCount > 0 && (
+                      <span
+                        className={`export-issues-count${issueError ? " export-issues-count--error" : ""}`}
+                      >
+                        {issueCount}
+                      </span>
+                    )}
+                  </button>
+                  <span className="export-tabs__spacer" />
+                  {pane === "issues" && issueCount > 0 && (
+                    <button
+                      type="button"
+                      className="export-copy-report"
+                      onClick={() => void copyText(issuesReport(issueGroups))}
+                    >
+                      Copy report
+                    </button>
+                  )}
+                </div>
+                {pane === "issues" && (
+                  <div className="export-issues" role="tabpanel" aria-label="Issues">
+                    {issueGroups.map((g) => (
+                      <div key={g.file} className="export-issue-file" data-file={g.file}>
+                        <div className="export-issue-file__head">
+                          <span className="export-issue-file__icon">
+                            <Icon name="file-code" size={14} />
+                          </span>
+                          <span className="export-issue-file__name">{g.file}</span>
+                          <span className="export-tabs__spacer" />
+                          <span className="export-issue-file__count">
+                            {issuesLabel(g.issues.length)}
+                          </span>
+                        </div>
+                        {g.issues.map((i, k) => (
+                          <div
+                            // biome-ignore lint/suspicious/noArrayIndexKey: issues are positional
+                            key={k}
+                            className="export-issue"
+                            data-level={i.level}
+                          >
+                            <span className={`export-issue__icon export-issue__icon--${i.level}`}>
+                              <Icon
+                                name={i.level === "error" ? "circle-x" : "triangle-alert"}
+                                size={14}
+                              />
+                            </span>
+                            <span className="export-issue__message">{i.message}</span>
+                            <button
+                              type="button"
+                              className="export-issue__node"
+                              disabled={!i.nodeId || !onSelectNode}
+                              title={i.nodeId ? "Select this layer" : undefined}
+                              onClick={() => {
+                                if (!i.nodeId || !onSelectNode) return
+                                onClose()
+                                onSelectNode(i.nodeId)
+                              }}
+                            >
+                              <span className="export-issue__node-icon">
+                                <Icon name="crosshair" size={10} />
+                              </span>
+                              <span className="export-issue__node-path">{i.path}</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    {issueCount === 0 && (
+                      <div className="export-issues-empty">
+                        No issues — nothing was approximated.
+                      </div>
+                    )}
+                    <div className="export-issues-note">Warnings never block export.</div>
+                  </div>
+                )}
+                {pane === "preview" && format === "assets" && (
                   <div className="export-preview-bar">
                     <SegmentedText
                       className="export-seg"
@@ -712,7 +868,7 @@ export function ExportDialog({
                     )}
                   </div>
                 )}
-                {raster ? (
+                {pane === "issues" ? null : raster ? (
                   <>
                     <div className={`export-image-area${fit ? "" : " export-image-area--actual"}`}>
                       {preview && "url" in preview ? (

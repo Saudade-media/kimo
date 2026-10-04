@@ -17,6 +17,19 @@ Top-level frames on the canvas act as your screens or artboards; there is one ca
 
 The zoom percentage in the top bar opens the same commands. Zoom goes from 2 % to 25 600 %.
 
+## Preview
+
+**Preview** in the top bar (or `⇧Space`, or **View › Preview**) shows one frame on its own, in the same window: panels, toolbar, agent panel, selection and other canvas overlays are hidden, and the frame sits fitted on a dark stage. It opens the selected top-level frame, or the frame that contains the selection, or the first frame. The button is disabled when there is no top-level frame.
+
+| To | Do |
+|---|---|
+| Previous / next frame | `←` `→`, or `‹` `›` in the bar (top-level frames in layer order) |
+| Fit / 100 % | `0` / `1`, or the zoom menu (Fit · 50 · 100 · 200 %). `⌘`+scroll or pinch zooms, `Space`+drag pans |
+| Light / dark | `T` or the sun/moon toggle; one menu per other theme axis |
+| Exit | `Esc`, **Exit**, or `⇧Space` again |
+
+Theme choices made in Preview only change the preview, never the file. Each frame starts with its own pinned themes. On exit the canvas is where you left it; if you stepped to other frames, the last one you saw becomes the selection. An agent run keeps going in the background and its edits show up live.
+
 ## Tools
 
 | Tool | Key | Creates |

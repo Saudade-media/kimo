@@ -3,7 +3,7 @@
  * (padding [4, 8, 8, 8]) · body (column, gap 1, padding [0, 8]): Preview Theme (`zGMmt`: `eye`
  * 12 + pill "preview" + value + `chevron-down`; editor state, not in the file) · groups by the
  * `group` field's first segment (`pA5k7`) · VariableListRows (padding-left 22) · Open variables
- * (`table-2`, opens the dialog, ⌘⇧V). Empty state: board 15 `L1LDv6`.
+ * (`table-2`, opens the dialog, ⌥⇧⌘V). Empty state: board 15 `L1LDv6`.
  */
 import { axisDisplayOrder, isRef, type KimoDocument } from "@kimo/core-schema"
 import { EmptyState, Input, MenuDense, MenuDivider, VariableListRow } from "@kimo/ui"

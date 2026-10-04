@@ -212,7 +212,13 @@ export interface IRText {
 export type IRShape =
   | { kind: "rect" }
   | { kind: "ellipse"; innerRadius: number; startAngle: number; sweepAngle: number }
-  | { kind: "polygon"; sides: number; cornerRadius: number }
+  | {
+      kind: "polygon"
+      sides: number
+      cornerRadius: number
+      /** Board 27 §5: a star's inner/outer radius ratio (absent = a regular polygon). */
+      starRatio?: number
+    }
   | {
       kind: "path"
       d: string
@@ -390,6 +396,8 @@ export interface ExportIssue {
   code: ExportIssueCode
   nodeId?: string
   message: string
+  /** Output file the issue belongs to (set by `exportDocument`; the Export dialog's Issues tab). */
+  file?: string
 }
 
 export interface IRDocument {

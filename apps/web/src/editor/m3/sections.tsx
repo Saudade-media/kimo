@@ -19,10 +19,10 @@ import {
   type Variable,
 } from "@kimo/core-schema"
 import {
+  EnumTargets,
   InstancePropRow,
   OverrideDot,
   PropDefRow,
-  PropOptions,
   PropSection,
   PropTextField,
   type PropType,
@@ -32,7 +32,24 @@ import {
 import { Fragment, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { detachInstance, goToMain, entriesOf as overrideList, setSlotOff } from "./actions"
+import { BrokenStrip, ComponentMenu } from "./ComponentDialogs"
 import { type M3Controller, useBusValue } from "./controller"
+import {
+  defaultOptionLabel,
+  kindOf,
+  optionNames,
+  parseValue,
+  propertiesFor,
+  rowsOf,
+  storedOf,
+  TARGET_PROPERTIES,
+  type TargetRow,
+  targetsByOption,
+  valueText,
+  withOption,
+  withOptionRenamed,
+  withOptionTargets,
+} from "./enum-targets"
 import { AddPropMenu, InstanceMenu, TargetMenu } from "./menus"
 import { componentName, listComponents, nameOf, propsOfInstance, summaryText } from "./model"
 import { OverridesPopover, SwapPopover } from "./popovers"
@@ -75,6 +92,7 @@ export function InstanceSection({ m3, id }: { m3: M3Controller; id: string }) {
         onClick: (e) => setMenu(menu ? null : e.currentTarget),
       }}
     >
+      {real && <BrokenStrip m3={m3} instance={id} />}
       <div className="rp-body">
         <div className="m3-component-row">
           <span className="m3-component-chip">
@@ -432,6 +450,10 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
   const n = store.getNode(id)
   const [menu, setMenu] = useState<HTMLElement | null>(null)
   const [targetFor, setTargetFor] = useState<{ prop: string; anchor: HTMLElement } | null>(null)
+  /** Board 27 §8: the Component menu (dgOzz) anchor. */
+  const [compMenu, setCompMenu] = useState<HTMLElement | null>(null)
+  /** Board 27 §8 (a): the Option tab shown per enum prop. */
+  const [enumTab, setEnumTab] = useState<Record<string, string>>({})
   const drag = useRef<string | null>(null)
   if (!n?.component) return null
   const doc = m3.doc()
@@ -495,7 +517,8 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
       if (!target) return m3.toast({ tone: "warning", text: "Add a layer to the component first" })
       def = { type, target, field: "visible", default: true }
     } else if (type === "enum") {
-      def = { type, target: id, field: "opacity", options: { full: 1, half: 0.5 } }
+      // Board 27 §8 (a): options own their targets (Add target per option); none yet.
+      def = { type, options: { sm: null, md: null, lg: null }, targets: {} }
     } else {
       target = pick((x) => x.type === "instance")
       if (!target)
@@ -513,7 +536,7 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
       action={{
         label: "Component menu",
         icon: <Icon name="ellipsis" size={14} />,
-        onClick: () => undefined,
+        onClick: (e) => setCompMenu(compMenu ? null : e.currentTarget),
       }}
     >
       <div className="rp-body">
@@ -596,15 +619,14 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
           {props.map((p) => {
             const def = p.def as unknown as Rec
             const type = def.type as PropType
-            const options = isObj(def.options)
-              ? Object.entries(def.options).map(([k, v]) => ({ name: k, value: optionText(v) }))
-              : undefined
             const state = p.inherited ? "inherited" : p.redeclared ? "redeclared" : "own"
             return (
               <Fragment key={p.name}>
                 <PropDefRow
                   name={p.name}
                   type={type}
+                  hideBinding={type === "enum"}
+                  className={type === "enum" ? "kimo-prop-def-row--enum" : undefined}
                   target={targetLabel(p)}
                   defaultValue={propDefault(type, def.default, (q) =>
                     componentName(doc, m3.libraries(), q),
@@ -679,50 +701,28 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
                         "Reorder props",
                       )
                   }}
-                />
-                {type === "enum" && (
-                  <PropOptions
-                    field={String(def.field)}
-                    options={options ?? []}
-                    readOnly={p.inherited}
-                    data-options={p.name}
-                    onAddOption={() => {
-                      const opts = isObj(def.options) ? def.options : {}
-                      const k = freePropName("option", Object.keys(opts))
-                      m3.run(
-                        {
-                          cmd: "updateProp",
-                          component: id,
-                          name: p.name,
-                          patch: { options: { ...opts, [k]: Object.values(opts)[0] ?? 0 } },
-                        },
-                        "Add option",
-                      )
-                    }}
-                    onOptionChange={(i, o) => {
-                      const entries = Object.entries(isObj(def.options) ? def.options : {})
-                      if (o === null) {
-                        if (entries.length <= 1) return
-                        entries.splice(i, 1)
-                      } else entries[i] = [o.name, parseOption(o.value)]
-                      m3.run(
-                        {
-                          cmd: "updateProp",
-                          component: id,
-                          name: p.name,
-                          patch: { options: Object.fromEntries(entries) },
-                        },
-                        "Edit option",
-                      )
-                    }}
-                  />
-                )}
+                >
+                  {type === "enum" && (
+                    <EnumPropTargets
+                      m3={m3}
+                      component={id}
+                      name={p.name}
+                      def={def}
+                      readOnly={p.inherited}
+                      tab={enumTab[p.name] ?? null}
+                      onTab={(o) => setEnumTab((t) => ({ ...t, [p.name]: o }))}
+                    />
+                  )}
+                </PropDefRow>
               </Fragment>
             )
           })}
         </div>
       </div>
       {menu && <AddPropMenu anchor={menu} onPick={addProp} onClose={() => setMenu(null)} />}
+      {compMenu && (
+        <ComponentMenu m3={m3} id={id} anchor={compMenu} onClose={() => setCompMenu(null)} />
+      )}
       {targetFor && (
         <TargetMenu
           m3={m3}
@@ -739,6 +739,152 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
       )}
     </PropSection>
   )
+}
+
+/**
+ * Board 27 §8 (a): Option tabs + the selected option's targets (Layer × Property × Value) of an
+ * enum prop. Every edit writes the prop in targets form (a legacy single target migrates).
+ */
+function EnumPropTargets({
+  m3,
+  component,
+  name,
+  def,
+  readOnly,
+  tab,
+  onTab,
+}: {
+  m3: M3Controller
+  component: string
+  name: string
+  def: Rec
+  readOnly: boolean
+  tab: string | null
+  onTab: (option: string) => void
+}) {
+  const store = m3.session.store
+  const view = m3.view()
+  const options = optionNames(def)
+  const option = tab && options.includes(tab) ? tab : (options[0] ?? null)
+  // Layers: the main's root and its descendants (instances are layers; their content is not).
+  const layers: { value: string; label: string }[] = []
+  const walk = (pid: string, depth: number) => {
+    for (const c of store.children(pid)) {
+      const n = store.getNode(c)
+      layers.push({ value: c, label: nameOf(n, String(n?.type ?? c)) })
+      if (n?.type !== "instance") walk(c, depth + 1)
+    }
+  }
+  layers.push({ value: component, label: nameOf(store.getNode(component), "Root") })
+  walk(component, 1)
+  const nodeOf = (lid: string) =>
+    (store.getNode(lid) ?? view.getNode(`${component}/${lid}`)) as Rec | undefined
+  const typeOf = (lid: string) => String(nodeOf(lid)?.type ?? "")
+  const all = targetsByOption(def)
+  const rows = option ? rowsOf(all[option] ?? [], typeOf) : []
+  const labelOf = (property: string) =>
+    TARGET_PROPERTIES.find((x) => x.key === property)?.label ?? property.replace(/^field:/, "")
+  const write = (next: Rec | null, label: string) => {
+    if (!next) return
+    m3.run({ cmd: "updateProp", component, name, patch: next }, label)
+  }
+  const writeRows = (next: TargetRow[], label: string) => {
+    if (option === null) return
+    write(withOptionTargets(def, option, storedOf(next, typeOf)), label)
+  }
+  return (
+    <EnumTargets
+      data-options={name}
+      options={options}
+      option={option}
+      onOptionChange={onTab}
+      defaultLabel={defaultOptionLabel(def, nodeOf)}
+      layers={layers}
+      properties={(lid) => {
+        const list = propertiesFor(typeOf(lid)).map((x) => ({ value: x.key, label: x.label }))
+        // A stored field outside the catalog stays selectable on its row.
+        for (const r of rows)
+          if (r.layer === lid && r.property.startsWith("field:"))
+            list.push({ value: r.property, label: labelOf(r.property) })
+        return list
+      }}
+      rows={rows.map((r) => ({ layer: r.layer, property: r.property, value: valueText(r.value) }))}
+      readOnly={readOnly}
+      onRowChange={(i, r) => {
+        const next = rows.slice()
+        if (r === null) next.splice(i, 1)
+        else {
+          const cur = next[i] as TargetRow
+          let property = r.property
+          let value: unknown = cur.value
+          if (r.layer !== cur.layer) {
+            // Keep the property when the new layer supports it, else its first one.
+            const props = propertiesFor(typeOf(r.layer))
+            if (!props.some((x) => x.key === property)) property = props[0]?.key ?? property
+            value = readCurrent(nodeOf(r.layer), property, typeOf(r.layer)) ?? cur.value
+          } else if (r.property !== cur.property)
+            value = readCurrent(nodeOf(r.layer), property, typeOf(r.layer)) ?? cur.value
+          else {
+            const parsed = parseValue(r.value, kindOf(r.property))
+            if (parsed === null) {
+              m3.toast({ tone: "warning", text: `"${r.value}" isn't a ${labelOf(r.property)}` })
+              return
+            }
+            value = parsed
+          }
+          next[i] = { layer: r.layer, property, value }
+        }
+        writeRows(next, r === null ? "Remove target" : "Edit target")
+      }}
+      onAddTarget={() => {
+        // A new target: the root's first supported property not targeted yet, at its value.
+        const lid = component
+        const used = new Set(rows.filter((r) => r.layer === lid).map((r) => r.property))
+        const p = propertiesFor(typeOf(lid)).find((x) => !used.has(x.key))
+        if (!p) return
+        writeRows(
+          [
+            ...rows,
+            {
+              layer: lid,
+              property: p.key,
+              value: readCurrent(nodeOf(lid), p.key, typeOf(lid)) ?? 1,
+            },
+          ],
+          "Add target",
+        )
+      }}
+      onAddOption={() => {
+        const k = freePropName("option", options)
+        write(withOption(def, k), "Add option")
+        onTab(k)
+      }}
+      onRenameOption={(from, to) => {
+        const next = withOptionRenamed(def, from, to)
+        if (!next) {
+          if (to === null) m3.toast({ tone: "warning", text: "An enum needs at least one option" })
+          return
+        }
+        write(next, to === null ? "Remove option" : "Rename option")
+        if (to !== null) onTab(to)
+      }}
+    />
+  )
+}
+
+/** The main's own value of a catalog property on a layer (the first field of the property). */
+function readCurrent(n: Rec | undefined, property: string, type: string): unknown {
+  const p = TARGET_PROPERTIES.find((x) => x.key === property)
+  const f = p?.fields[0]
+  if (!n || !f) return undefined
+  const [top, sub] = f.split("/") as [string, string | undefined]
+  if (type === "instance") {
+    const props = isObj(n.props) ? n.props : {}
+    return structuredClone(props[top])
+  }
+  const v = n[top]
+  if (sub === undefined) return structuredClone(v)
+  return isObj(v) ? structuredClone(v[sub]) : undefined
 }
 
 function freePropName(base: string, taken: readonly string[]): string {

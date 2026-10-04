@@ -311,6 +311,7 @@ export const LAYOUT_KEYS: ReadonlySet<string> = new Set([
   "stroke",
   "theme",
   "sides",
+  "star",
   "viewBox",
   "d",
 ])

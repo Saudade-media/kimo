@@ -173,6 +173,12 @@
   padding: 0 12px 12px;
 }
 
+/* Board 27 §10 (b) EP0Ir: the held-turn card sits above the composer (column gap 10). */
+.agent-panel__cost-warning {
+  flex: none;
+  margin-bottom: 10px;
+}
+
 .agent-panel__queued {
   margin: 6px 4px 0;
   color: var(--kimo-text-tertiary);

@@ -11,6 +11,7 @@ import {
   type Matrix,
   matrixScale,
   multiply,
+  parsePath,
   parseTransform,
   type Seg,
   segmentBounds,
@@ -46,12 +47,26 @@ export interface SvgStats {
   blocked: string[]
   /** Strokes that stayed strokes because no outliner was available. */
   strokesKept: number
+  /**
+   * Paths with a visible stroke (board 27 r6nLx: enables "Outline strokes" and is the count in
+   * its sub line). Absent = 0.
+   */
+  stroked?: number
 }
 
 /** Outlines a stroke into fill geometry (CanvasKit `Path.stroke` in the app). */
 export type StrokeOutliner = (
   d: string,
-  stroke: { width: number; cap: string; join: string; miterLimit: number },
+  stroke: {
+    width: number
+    cap: string
+    join: string
+    miterLimit: number
+    /** SVG `stroke-dasharray` (absent / empty = solid). */
+    dash?: readonly number[]
+    /** SVG `stroke-dashoffset`. */
+    dashOffset?: number
+  },
 ) => string | null
 
 export interface ConvertContext {
@@ -251,6 +266,7 @@ export function describeStats(s: SvgStats): string {
   const parts = [p(s.paths, "path")]
   if (s.groups) parts.push(p(s.groups, "group"))
   if (s.gradients) parts.push(p(s.gradients, "gradient"))
+  if (s.stroked) parts.push(p(s.stroked, "stroked path"))
   let out = `Editable paths in a frame. ${parts.join(" · ")}.`
   const un = Object.entries(s.unsupported)
   if (un.length)
@@ -294,6 +310,7 @@ function walk(svg: SanitizedSvg, report: SanitizeReport) {
     unsupported: { ...report.unsupported },
     blocked: [...report.blocked],
     strokesKept: 0,
+    stroked: 0,
   }
 
   const ownStyle = (el: SvgElement): Style => {
@@ -393,6 +410,7 @@ function walk(svg: SanitizedSvg, report: SanitizeReport) {
     if (!segs?.length) return []
     const world = transformSegments(segs, mm)
     stats.paths++
+    if (hasStroke(style)) stats.stroked = (stats.stroked ?? 0) + 1
     for (const v of [style.fill, style.stroke]) {
       const ref = v ? /^url\(\s*['"]?#([\w.:-]+)/.exec(v) : null
       if (ref) gradient(ref[1] as string)
@@ -545,24 +563,49 @@ export function convertSvg(
         join: st["stroke-linejoin"] ?? "miter",
         miterLimit: len(st["stroke-miterlimit"], 4),
       }
-      const outlined = options.outlineStrokes && ctx.outline ? ctx.outline(dataStr, stroke) : null
-      if (outlined) {
-        // The outline is a separate filled path above the fill.
-        if (fill) ops.push({ op: "insert", id: ctx.newId(), parent, node } as InsertOp)
-        ops.push({
-          op: "insert",
-          id: ctx.newId(),
-          parent,
-          node: { ...node, name: `${d.name} stroke`, d: outlined, fill: [strokePaint] },
-        } as InsertOp)
-        return
-      }
-      if (options.outlineStrokes) stats.strokesKept++
       const dash = (st["stroke-dasharray"] ?? "")
         .split(/[\s,]+/)
         .filter(Boolean)
         .map(Number)
         .filter((v) => Number.isFinite(v) && v >= 0)
+      const scale = d.scale ?? 1
+      const outlined =
+        options.outlineStrokes && ctx.outline
+          ? outlineNode(
+              ctx.outline(dataStr, {
+                ...stroke,
+                width,
+                ...(dash.length && st["stroke-dasharray"] !== "none"
+                  ? { dash: dash.map((v) => v * scale) }
+                  : {}),
+                dashOffset: len(st["stroke-dashoffset"], 0) * scale,
+              }),
+            )
+          : null
+      if (outlined) {
+        // The outline is a separate filled path above the fill, sized to its own bounds (the
+        // stroke reaches past the geometry by half its width, more at miters and caps).
+        if (fill) ops.push({ op: "insert", id: ctx.newId(), parent, node } as InsertOp)
+        const { fillRule: _evenodd, ...base } = node
+        ops.push({
+          op: "insert",
+          id: ctx.newId(),
+          parent,
+          node: {
+            ...base,
+            name: `${d.name} stroke`,
+            x: round(b.x + outlined.box.x - origin.x),
+            y: round(b.y + outlined.box.y - origin.y),
+            w: outlined.box.w,
+            h: outlined.box.h,
+            viewBox: [0, 0, outlined.box.w, outlined.box.h],
+            d: outlined.d,
+            fill: [strokePaint],
+          },
+        } as InsertOp)
+        return
+      }
+      if (options.outlineStrokes) stats.strokesKept++
       node.stroke = {
         paint: strokePaint,
         width: stroke.width,
@@ -580,6 +623,28 @@ export function convertSvg(
 }
 
 const round = (v: number) => Math.round(v * 1000) / 1000
+
+/** A path with a visible stroke: a paint other than none and a positive width. */
+function hasStroke(st: Style): boolean {
+  const s = st.stroke?.trim()
+  if (!s || s === "none" || s === "transparent") return false
+  if (!/^url\(/i.test(s) && parseSvgColor(s) === null) return false
+  return len(st["stroke-width"], 1) > 0 && len(st["stroke-opacity"], 1) > 0
+}
+
+/** Outline path data (node-local space) → its bounds and data re-based to them. */
+function outlineNode(d: string | null): { d: string; box: Bounds } | null {
+  if (!d) return null
+  const segs = parsePath(d)
+  const box = segmentBounds(segs)
+  if (!box) return null
+  const w = round(Math.max(box.w, 0.01))
+  const h = round(Math.max(box.h, 0.01))
+  return {
+    d: serializeSegments(transformSegments(segs, [1, 0, 0, 1, -box.x, -box.y])),
+    box: { x: box.x, y: box.y, w, h },
+  }
+}
 
 /** Parses, sanitizes and converts in one call (throws `SvgImportError` for unusable input). */
 export function importSvgAsVectors(

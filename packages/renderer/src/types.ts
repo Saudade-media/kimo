@@ -9,6 +9,7 @@
  */
 import type {
   LayoutResult,
+  Matrix,
   NodeSource,
   Rect,
   ResolveHeader,
@@ -217,6 +218,11 @@ export interface PathEditOverlay {
   selected: readonly AnchorRef[]
   /** Hovered segment for insertion feedback (drawn 1.5px), or null. */
   hoveredSegment?: AnchorRef | null
+  /**
+   * Board 27 §5 (J5Vng "Selected Segment" yeYJK): the clicked segment, drawn 3 px `selection`
+   * (⌫ deletes it), or null.
+   */
+  selectedSegment?: AnchorRef | null
   badge?: string | null
 }
 
@@ -230,6 +236,17 @@ export interface ResizeOverlay {
   children: readonly { id: string; label: string }[]
   /** Pre-drag position of the dragged edge (world), drawn 4/4 dashed 1px `selection`. */
   ghostEdge?: SnapLine | null
+}
+
+/**
+ * Board 27 §5 (ICb89 "Polygon & Star"): handles on a selected star (world points). `hollow` =
+ * Ratio Handle M2IQJ (8 × 8 ellipse, fill #FFFFFF, stroke 1.5 selection); `filled` = Radius
+ * Handle gAuNj (fill selection, stroke 1.5 #FFFFFF). `pill` = MeasurePill (xP9Lo, fill
+ * `selection`, on-accent) beside the dragged handle: left = handle right + 6, centred on it.
+ */
+export interface ShapeHandlesOverlay {
+  handles: readonly { at: Point; kind: "hollow" | "filled" }[]
+  pill?: { text: string; at: Point } | null
 }
 
 /**
@@ -272,12 +289,20 @@ export interface Overlay {
    * false/0. A number is the grid's opacity multiplier (0–1) so the host can fade it in.
    */
   pixelGrid?: boolean | number
+  /**
+   * Board 27 §4 rulers (rule YwZyP, ⇧R): 20 px top/left strips in canvas units, drawn on top of
+   * everything. `selection` (world AABB) is highlighted in `selection-soft` with its start/end
+   * values; null / absent hides the rulers.
+   */
+  rulers?: { selection: Rect | null } | null
   /** Pen tool state (#5). */
   pen?: PenOverlay | null
   /** Path edit mode (#6). Selection handles are hidden while set. */
   pathEdit?: PathEditOverlay | null
   /** Resize with layout children (#8). */
   resize?: ResizeOverlay | null
+  /** Board 27 §5 (ICb89): a selected star's ratio / radius handles (+ MeasurePill while dragged). */
+  shapeHandles?: ShapeHandlesOverlay | null
   /** Pointer-following delta badge (#8 "Delta", #4 "Pixel readout"). */
   cursorBadge?: CursorBadge | null
 
@@ -321,7 +346,47 @@ export interface Overlay {
   rejected?: readonly string[]
   /** Prompt → target connectors (cf2sC `C9IXO8` / `bPSY1`). */
   promptConnectors?: readonly PromptConnector[]
+
+  // Board 27 §6 (d) VCSml: image crop mode. Absent = not drawn.
+  /** Image crop mode: the whole source, dim outside the crop box, box + thirds + brackets. */
+  crop?: CropOverlay | null
 }
+
+/**
+ * Board 27 §6 (d) "Image crop mode" (VCSml, stage ud74f): drawn over everything else. The whole
+ * image source draws through `imageToScreen`; outside `box` it is dimmed
+ * ({@link OVERLAY_SPEC_CROP}.dim); the box gets a white 1 px outline, thirds, 3 px corner
+ * brackets and edge bars, and a MeasurePill with `label` under it.
+ */
+export interface CropOverlay {
+  /** `./assets/<hash>.<ext>` of the image paint. */
+  src: string
+  /** Natural size of the source in px. */
+  imageWidth: number
+  imageHeight: number
+  /** Image px → screen CSS px (node transform · crop mapping · viewport). */
+  imageToScreen: Matrix
+  /** Crop box corners on screen (tl, tr, br, bl). */
+  box: readonly Point[]
+  /** MeasurePill text under the box: the crop size in source px ("1440 × 960"). */
+  label: string
+  /** Paint opacity (0–1) of the image. Default 1. */
+  opacity?: number
+}
+
+/**
+ * Board 27 §6 (d) crop chrome (VCSml, stage ud74f), screen CSS px. Dim T/B/L/R `#14141499`;
+ * Crop Box stroke 1 `#FFFFFF`; Third V1/V2/H1/H2 1 px `#FFFFFF59`; brackets (TL/TR/BL/BR h+v)
+ * and edge bars (T/B/L/R) 16 × 3 `#FFFFFF` starting 3 px outside the box; MeasurePill (lSZXU)
+ * `selection` fill / `on-accent` label, 10 below the box, centered.
+ */
+export const OVERLAY_SPEC_CROP = {
+  dim: "#14141499",
+  box: { color: "#FFFFFF", width: 1 },
+  thirds: { color: "#FFFFFF59", width: 1 },
+  bracket: { color: "#FFFFFF", length: 16, thickness: 3 },
+  pill: { fill: "selection", text: "on-accent", offset: 10 },
+} as const
 
 // --- M6 overlays (desing.pen board 22 "Built-in Agent (M6)", board 24 "Agent Mark & Gaps") ---
 
@@ -575,6 +640,17 @@ export interface OverlayTheme {
   component?: string
   /** `component-soft` (#7C3AED14 / #A78BFA24): empty-slot fill, replace target fill. */
   componentSoft?: string
+  // Board 27 §4 (optional; light values are the fallback).
+  /** Pixel grid lines: #0000000F light / #FFFFFF1F dark (rule zyQtF). */
+  pixelGrid?: string
+  /** Ruler strip fill (`bg-app`). */
+  rulerBg?: string
+  /** Ruler edge stroke (`border`). */
+  rulerBorder?: string
+  /** Ruler ticks (`border-strong`). */
+  rulerTick?: string
+  /** Ruler numbers (`text-tertiary`). */
+  rulerText?: string
   // M6 (optional; DEFAULT_AGENT_CANVAS_THEME light values are the fallback).
   /** Note / prompt chrome and agent overlay colors ({@link AgentCanvasTheme}). */
   agentCanvas?: Partial<AgentCanvasTheme>
@@ -629,8 +705,12 @@ export const OVERLAY_SPEC_M2 = {
   },
   /** #3a/#3b: lines 1px measure; "Hover outline" rmL0x 1px; "Parent outline" DglSx 1px @ 0.5. */
   measure: { lineWidth: 1, outlineWidth: 1, parentOutlineOpacity: 0.5 },
-  /** #4 hD0aS: "Pixel grid" j2MBuX, 1px #0A0A0A14, one cell per world unit, "Above 400%". */
-  pixelGrid: { minZoom: 4, lineWidth: 1, color: "#0A0A0A14" },
+  /**
+   * #4 hD0aS "Pixel grid" j2MBuX, revised by board 27 rule zyQtF: 1 px lines, one cell per
+   * world unit, drawn at ≥ 800 % zoom; #0000000F light (dark: `OverlayTheme.pixelGrid`
+   * #FFFFFF1F); never exported.
+   */
+  pixelGrid: { minZoom: 8, lineWidth: 1, color: "#0000000F" },
   /** #5 cXWyk / #6 B9dJsH. */
   path: {
     /** PathAnchor iqdgN: 7×7 rect, fill #FFFFFF (handleFill), stroke 1.5 selection. Active V9wRl: fill selection. */
@@ -647,7 +727,17 @@ export const OVERLAY_SPEC_M2 = {
     closeRing: { size: 14, strokeWidth: 1.5 },
   },
   /** #6: "Vertex badge" PzxaD (SizeBadge) top-left = selected anchor center + (16, −14). */
-  pathEdit: { vertexBadgeOffset: { x: 16, y: -14 } },
+  pathEdit: {
+    vertexBadgeOffset: { x: 16, y: -14 },
+    /** Board 27 §5 J5Vng "Selected Segment" yeYJK: 3 px selection. */
+    selectedSegmentWidth: 3,
+  },
+  /**
+   * Board 27 §5 ICb89: star handles 8 × 8 ellipses, stroke 1.5 (ratio M2IQJ hollow: fill
+   * #FFFFFF / stroke selection; radius gAuNj filled: fill selection / stroke #FFFFFF);
+   * MeasurePill xP9Lo at (handle right + 6, handle centre).
+   */
+  shapeHandle: { size: 8, strokeWidth: 1.5, pillGap: 6 },
   /** #8 ect1B. */
   resize: {
     /** "Child outline" c4Meq: 1px selection at opacity 0.35. */
@@ -1003,6 +1093,11 @@ export interface Renderer {
    * null when nothing is laid out. Optional so M1 fakes keep compiling.
    */
   samplePixel?(world: Point): [number, number, number, number] | null
+  /**
+   * Board 27 crop mode: natural size of an image asset (loads it when needed); null when it is
+   * missing or not an image. Optional for fakes.
+   */
+  imageSize?(src: string): Promise<{ width: number; height: number } | null>
 
   stats(): RenderStats
   /** Frees every CanvasKit object and the surface. */
@@ -1017,3 +1112,39 @@ export interface CreateRendererOptions {
 
 /** Factory signature the web app's CanvasHost receives (so tests can inject a fake). */
 export type RendererFactory = (options?: CreateRendererOptions) => Renderer
+
+/**
+ * Board 27 §4 (b) rulers (Iaqcg › Ko6aO): "Ruler · top" FPOwB 20 tall / "Ruler · left" euDLd
+ * 20 wide, fill `bg-app`, inner edge stroke 1 `border`; "Corner" O90uvJ 20 × 20 with right and
+ * bottom strokes. Ticks 1 × 8 `border-strong` on the inner edge (y 12 / x 12); numbers mono 9
+ * normal `text-tertiary` at tick + 3, y 3 (top ruler only, as designed). "Selection Range"
+ * full-strip `selection-soft`; "Sel Start" at range + 3 and "Sel End" ending 5 before the range
+ * end, in `selection`; tick numbers under the range are hidden. Ticks every "nice" step: the
+ * smallest of 1 · 2 · 4 · 5 × 10ⁿ whose spacing is ≥ `minSpacing` px (1600 % → 4, 64 px).
+ */
+export const OVERLAY_SPEC_RULERS = {
+  size: 20,
+  borderWidth: 1,
+  tick: { length: 8, width: 1 },
+  label: { fontSize: 9, dx: 3, dy: 3, endGap: 5 },
+  minSpacing: 50,
+  defaults: {
+    bg: "#FFFFFF",
+    border: "#ECEBE8",
+    tick: "#DDDBD7",
+    text: "#9A9DA2",
+  },
+} as const
+
+/** Ruler tick step in world units for `zoom` (see {@link OVERLAY_SPEC_RULERS}). */
+export function rulerStep(
+  zoom: number,
+  minSpacing: number = OVERLAY_SPEC_RULERS.minSpacing,
+): number {
+  for (let k = 0; k < 12; k++)
+    for (const m of [1, 2, 4, 5]) {
+      const step = m * 10 ** k
+      if (step * zoom >= minSpacing) return step
+    }
+  return 10 ** 12
+}

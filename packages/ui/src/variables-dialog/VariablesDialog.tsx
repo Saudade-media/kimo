@@ -64,7 +64,7 @@ export interface VariablesDialogProps
 }
 
 /**
- * Variables dialog (board 14 `EIkIk`, ⌘⇧V): 1040 × 780, clip, fill bg-app, radius-2xl, shadows
+ * Variables dialog (board 14 `EIkIk`, ⌥⇧⌘V): 1040 × 780, clip, fill bg-app, radius-2xl, shadows
  * 0 2 6 shadow + 0 24 64 shadow-strong, column.
  * Header (DaqRQ: stroke bottom 1 border, row, gap 12, padding [20, 20, 16, 24], center): Titles
  * (column, gap 4, fill: Title sans 20 / 500 letterSpacing -0.3; Desc sans 13 text-secondary) ·

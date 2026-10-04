@@ -17,7 +17,13 @@ import type { IRComponent, IRComponentProp, IRDocument, IRNode } from "../ir/typ
 import { type AttrValue, type Child, el, isEl, toJsx } from "./el"
 import { Markup } from "./markup"
 import type { IconLookup } from "./svgpaint"
-import { emitTailwindTheme, emitTokensCss, tailwindNamespaces, tailwindSuffix } from "./tokens"
+import {
+  emitTailwindConfig,
+  emitTailwindTheme,
+  emitTokensCss,
+  tailwindNamespaces,
+  tailwindSuffix,
+} from "./tokens"
 import type { ExportFile } from "./types"
 
 export interface ReactOptions {
@@ -30,7 +36,18 @@ export interface ReactOptions {
   /** `data-kimo-id` attributes (verification). */
   ids?: boolean
   icons?: IconLookup
+  /**
+   * Tailwind theme output (Export dialog "Tailwind theme", board 27 §10 jmMl8): `v4` (default) —
+   * the `@theme inline` block in `tokens.css`; `v3` — `tailwind.config.ts` (`theme.extend`) and
+   * plain variables in `tokens.css`; `none` — variables only, no theme (utilities then use
+   * arbitrary values).
+   */
+  theme?: TailwindThemeOutput
+  /** "Map variables to theme tokens" (default true): utilities use theme tokens where bound. */
+  themeTokens?: boolean
 }
+
+export type TailwindThemeOutput = "v4" | "v3" | "none"
 
 /** `[attribute: \`data-${string}\`]` (theme attributes pass through to the root). */
 const DATA_ATTRIBUTES = ["  [attribute: `data-$", "{string}`]: string | undefined"].join("")
@@ -81,22 +98,31 @@ class ReactEmitter {
     })
     const exposed = new Map<string, Set<string>>()
     for (const v of ir.variables) exposed.set(v.name, new Set(tailwindNamespaces(v)))
-    this.tokens = (ns, ref) => (exposed.get(ref)?.has(ns) ? tailwindSuffix(ref) : null)
+    const mapped = o.themeTokens !== false && o.theme !== "none"
+    this.tokens = (ns, ref) => (mapped && exposed.get(ref)?.has(ns) ? tailwindSuffix(ref) : null)
     this.attrOf = new Map(ir.axes.map((a) => [a.key, a.attr]))
   }
 
   emit(): ExportFile[] {
     const files: ExportFile[] = []
-    const used = new NameSet()
+    const names = reactPageNames(this.ir)
     for (const root of this.ir.roots) {
-      const name = used.take(pascal(root.name ?? root.key))
+      const name = names.get(root.id) as string
       files.push({ path: `${name}.tsx`, contents: this.page(name, root) })
     }
     if (this.split)
       for (const c of this.ir.components)
         if (c) files.push({ path: `${c.ident}.tsx`, contents: this.component(c) })
-    const tokens = this.vars ? `${emitTokensCss(this.ir)}\n${emitTailwindTheme(this.ir)}` : null
-    if (tokens) files.push({ path: "tokens.css", contents: tokens })
+    const theme = this.o.theme ?? "v4"
+    if (this.vars) {
+      const css = emitTokensCss(this.ir)
+      files.push({
+        path: "tokens.css",
+        contents: theme === "v4" ? `${css}\n${emitTailwindTheme(this.ir)}` : css,
+      })
+      if (theme === "v3")
+        files.push({ path: "tailwind.config.ts", contents: emitTailwindConfig(this.ir) })
+    }
     return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
   }
 
@@ -422,6 +448,14 @@ class ReactEmitter {
 }
 
 // --- Helpers ----------------------------------------------------------------------------------
+
+/** Page component name per exported root id (`<name>.tsx`), as {@link emitReact} names them. */
+export function reactPageNames(ir: IRDocument): Map<string, string> {
+  const used = new NameSet()
+  const out = new Map<string, string>()
+  for (const root of ir.roots) out.set(root.id, used.take(pascal(root.name ?? root.key)))
+  return out
+}
 
 class NameSet {
   private used = new Set<string>()

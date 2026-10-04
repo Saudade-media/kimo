@@ -1,0 +1,37 @@
+/*
+ * DropIndicator: desing.pen 27 §0 DropIndicator/Between (miJd9), DropIndicator/Invalid (nN73G).
+ * frame: fill_container × 8, alignItems center (no gap)
+ *   ├ Ring 8 × 8 ellipse, fill bg-app, stroke 2 selection (invalid: danger)
+ *   └ Line fill_container × 2, fill selection (invalid: danger)
+ */
+.kimo-drop-indicator {
+  --kimo-drop-indicator-color: var(--kimo-selection);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 8px;
+  pointer-events: none;
+}
+
+.kimo-drop-indicator--invalid {
+  --kimo-drop-indicator-color: var(--kimo-danger);
+}
+
+.kimo-drop-indicator__ring {
+  box-sizing: border-box;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--kimo-drop-indicator-color);
+  border-radius: 50%;
+  background: var(--kimo-bg-app);
+}
+
+.kimo-drop-indicator__line {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 2px;
+  background: var(--kimo-drop-indicator-color);
+}

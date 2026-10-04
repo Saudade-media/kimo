@@ -8,12 +8,13 @@
 export { type CssOptions, CssWriter, type Decl, type NodeCss } from "./css/style"
 export { BASE_CSS, emitHtml, type HtmlOptions } from "./emit/html"
 export { emitPdf, type PdfOptions } from "./emit/pdf"
-export { emitReact, type ReactOptions } from "./emit/react"
+export { emitReact, type ReactOptions, type TailwindThemeOutput } from "./emit/react"
 export { buildScene, type SceneNode, type SceneOptions, textLines } from "./emit/scene"
 export { emitSvg, type SvgOptions, svgOf } from "./emit/svg"
 export type { IconGlyphLike, IconLookup } from "./emit/svgpaint"
 export {
   emitDtcg,
+  emitTailwindConfig,
   emitTailwindTheme,
   emitTokensCss,
   THEME_MARKER,
@@ -21,6 +22,7 @@ export {
 } from "./emit/tokens"
 export type { ExportFile } from "./emit/types"
 export {
+  attributeIssues,
   EXPORT_TARGETS,
   type ExportOptions,
   type ExportResult,

@@ -32,6 +32,7 @@ pub const SKILLS_COMMANDS: &[&str] = &[
     "kimo_skills_read",
     "kimo_skills_watch",
     "kimo_skills_unwatch",
+    "kimo_skills_reveal",
 ];
 
 /// The Settings window detects CLIs and manages keys, but never spawns or drives processes
@@ -47,4 +48,5 @@ pub const AI_SETTINGS_EXCLUDED: &[&str] = &[
     "kimo_skills_read",
     "kimo_skills_watch",
     "kimo_skills_unwatch",
+    "kimo_skills_reveal",
 ];

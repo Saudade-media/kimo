@@ -20,6 +20,7 @@ const MODE_TITLES: Record<string, string> = {
   pen: "Pen",
   "path-edit": "Path editing",
   placement: "Image placement",
+  crop: "Image crop",
   gesture: "While dragging",
 }
 

@@ -15,14 +15,14 @@ import {
 } from "@kimo/layout"
 import { emitHtml } from "./emit/html"
 import { emitPdf } from "./emit/pdf"
-import { emitReact } from "./emit/react"
+import { emitReact, reactPageNames, type TailwindThemeOutput } from "./emit/react"
 import { emitSvg } from "./emit/svg"
 import type { IconGlyphLike, IconLookup } from "./emit/svgpaint"
 import { emitDtcg, emitTailwindTheme, emitTokensCss } from "./emit/tokens"
 import type { ExportFile } from "./emit/types"
 import { buildIR } from "./ir/build"
 import { kebab } from "./ir/names"
-import type { ExportIssue, IRDocument } from "./ir/types"
+import type { ExportIssue, IRDocument, IRNode } from "./ir/types"
 
 export const EXPORT_TARGETS = [
   "react-tailwind",
@@ -76,6 +76,10 @@ export interface ExportOptions {
   assets?: (src: string) => Uint8Array | null
   /** PDF bleed in points on every side (default 0). */
   bleed?: number
+  /** React + Tailwind: theme output (default `v4`, the `@theme` block in `tokens.css`). */
+  tailwindTheme?: TailwindThemeOutput
+  /** React + Tailwind: "Map variables to theme tokens" (default true). */
+  themeTokens?: boolean
 }
 
 export interface ExportResult {
@@ -161,6 +165,8 @@ export async function exportDocument(
         components: options.components !== false,
         layerNames: options.layerNames === true,
         ...(icons ? { icons } : {}),
+        ...(options.tailwindTheme ? { theme: options.tailwindTheme } : {}),
+        ...(options.themeTokens === false ? { themeTokens: false } : {}),
       })
       break
     case "tokens-dtcg":
@@ -195,7 +201,78 @@ export async function exportDocument(
       files = await emitPng(ir, options)
       break
   }
-  return { files, issues: ir.issues, ir }
+  return { files, issues: attributeIssues(ir, target, files), ir }
+}
+
+/**
+ * The issues of an export, each with the output `file` it belongs to: the file emitted for the
+ * root (or component) whose tree holds the node; node-less issues go to the tokens file when
+ * there is one, else the first file.
+ */
+export function attributeIssues(
+  ir: IRDocument,
+  target: ExportTarget,
+  files: readonly { path: string }[],
+): ExportIssue[] {
+  const owner = new Map<string, string>()
+  const walk = (n: IRNode, path: string) => {
+    if (!owner.has(n.id)) owner.set(n.id, path)
+    for (const c of n.children) walk(c, path)
+    for (const list of Object.values(n.instance?.slots ?? {})) for (const c of list) walk(c, path)
+  }
+  const single = (path: string) => {
+    for (const r of ir.roots) walk(r, path)
+  }
+  const perRoot = (name: (r: IRNode) => string | undefined) => {
+    for (const r of ir.roots) {
+      const path = name(r)
+      if (path) walk(r, path)
+    }
+  }
+  const kebabPaths = (ext: string) => {
+    const used = new Set<string>()
+    const out = new Map<string, string>()
+    for (const r of ir.roots) {
+      let name = kebab(r.name ?? r.key, "root")
+      for (let i = 2; used.has(name); i++) name = `${kebab(r.name ?? r.key, "root")}-${i}`
+      used.add(name)
+      out.set(r.id, `${name}${ext}`)
+    }
+    return out
+  }
+  const paths = new Set(files.map((f) => f.path))
+  switch (target) {
+    case "react-tailwind": {
+      for (const c of ir.components) if (c) walk(c.root, `${c.ident}.tsx`)
+      const names = reactPageNames(ir)
+      perRoot((r) => `${names.get(r.id)}.tsx`)
+      break
+    }
+    case "html-css":
+      single("index.html")
+      break
+    case "svg": {
+      const names = kebabPaths(".svg")
+      perRoot((r) => names.get(r.id))
+      break
+    }
+    case "pdf":
+      single(files[0]?.path ?? "export.pdf")
+      break
+    case "png": {
+      const names = kebabPaths(`@${files[0]?.path.match(/@(\d+)x\.png$/)?.[1] ?? 2}x.png`)
+      perRoot((r) => names.get(r.id))
+      break
+    }
+    default:
+      if (files[0]) single(files[0].path)
+  }
+  const fallback =
+    ["tokens.css", "theme.css", "tokens.json"].find((p) => paths.has(p)) ?? files[0]?.path
+  return ir.issues.map((i) => {
+    const file = (i.nodeId !== undefined ? owner.get(i.nodeId) : undefined) ?? fallback
+    return file ? { ...i, file } : { ...i }
+  })
 }
 
 /** PNG per exported root through the renderer (`<name>@<scale>x.png`). */

@@ -876,3 +876,289 @@
 .export-footer.export-footer--review {
   padding: 16px 20px 20px 24px;
 }
+
+/* --- Board 27 §10 (c) f6LWt: Tailwind theme (qSQC1) ------------------------------------------ */
+
+/* Options column group: label · Theme output (Select gP276) · Map variables · Hint, gap 10. */
+.export-group--tailwind {
+  gap: 10px;
+}
+
+/* X8IWvq: space-between, center; Label sans 12 / 400 text-primary; Toggle y893S. */
+.export-tailwind-map {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.export-tailwind-map__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  color: var(--kimo-text-primary);
+}
+
+/* F5cw4: sans 11 / 400 text-tertiary, line-height 1.45, fixed width. */
+.export-tailwind-hint {
+  width: 100%;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  color: var(--kimo-text-tertiary);
+}
+
+/* --- Board 27 §10 (c) f6LWt: Preview | Issues (U771XL) ----------------------------------------- */
+
+/* Tabs hCpxA: gap 2, padding 6, center; bottom stroke 1 border. */
+.export-pane-tabs {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 6px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+/* Tab · Issues TY8MD: gap 6, padding [5, 10, 5, 12], center, radius-pill; active fill bg-muted. */
+.export-issues-tab {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px 10px 5px 12px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.export-issues-tab:hover:not(.export-issues-tab--active) {
+  color: var(--kimo-text-primary);
+}
+
+.export-issues-tab:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.export-issues-tab--active {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+/* L0Dhnv: sans 12 / 400. */
+.export-issues-tab__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Count Bys6o: padding [0, 6], radius-pill, warning-soft (danger-soft with an error); N mono 11. */
+.export-issues-count {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-warning-soft);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  color: var(--kimo-text-primary);
+}
+
+.export-issues-count--error {
+  background: var(--kimo-danger-soft);
+}
+
+/* Copy SPvBm: sans 11 / 400 text-secondary. */
+.export-copy-report {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.export-copy-report:hover {
+  color: var(--kimo-text-primary);
+}
+
+.export-issues {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  max-height: 386px; /* the code preview's height (file tabs + .export-code max 352) */
+  overflow-y: auto;
+}
+
+/* File JrTXc: vertical, gap 2, padding [8, 12, 6, 12], bottom stroke 1 border. */
+.export-issue-file {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px 6px 12px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+/* Head t7ekg: gap 6, center. */
+.export-issue-file__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.export-issue-file__icon,
+.export-issue__icon,
+.export-issue__node-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+/* zvlqv: file-code 14 text-tertiary. */
+.export-issue-file__icon {
+  color: var(--kimo-text-tertiary);
+}
+
+/* Name Hn8ak: mono 11 / 400 text-primary. */
+.export-issue-file__name {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  color: var(--kimo-text-primary);
+  white-space: nowrap;
+}
+
+/* Count vp4JX: sans 11 / 400 text-tertiary. */
+.export-issue-file__count {
+  flex: none;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  color: var(--kimo-text-tertiary);
+  white-space: nowrap;
+}
+
+/* Issue rsdxP: gap 8, padding [5, 0, 5, 20]. */
+.export-issue {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 0 5px 20px;
+}
+
+/* NUJTW triangle-alert 14 warning · f5A9qV circle-x 14 danger. */
+.export-issue__icon--warning {
+  color: var(--kimo-warning);
+}
+
+.export-issue__icon--error {
+  color: var(--kimo-danger);
+}
+
+/* Message YDFaT: fill, sans 11 / 400 text-secondary, line-height 1.45. */
+.export-issue__message {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  color: var(--kimo-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Node X9cmva: gap 4, padding [1, 6], center, bg-muted, radius-xs. */
+.export-issue__node {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
+  margin: 0;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-muted);
+  cursor: pointer;
+  appearance: none;
+}
+
+.export-issue__node:disabled {
+  cursor: default;
+}
+
+.export-issue__node:not(:disabled):hover {
+  background: var(--kimo-bg-hover);
+}
+
+.export-issue__node:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+/* JAITN: crosshair 10 text-tertiary. */
+.export-issue__node-icon {
+  color: var(--kimo-text-tertiary);
+}
+
+/* Path X9AuK: mono 11 / 400 text-secondary. */
+.export-issue__node-path {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  color: var(--kimo-text-secondary);
+  white-space: nowrap;
+}
+
+/* Footer note TGW5f: padding [8, 12]; Note sans 11 / 400 text-tertiary, line-height 1.45. */
+.export-issues-note,
+.export-issues-empty {
+  box-sizing: border-box;
+  flex: none;
+  width: 100%;
+  padding: 8px 12px;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  color: var(--kimo-text-tertiary);
+}

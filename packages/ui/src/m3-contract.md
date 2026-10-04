@@ -414,7 +414,7 @@ missing: icon `danger`, name `text-tertiary`); AssetRows indented; **Link librar
 + "light · comfortable" xs 500 + `chevron-down` 10 — editor state, not in the file) · groups by
 `group` first segment (`pA5k7`) · VariableListRows · **Open variables** (pill `table-2`).
 
-**Variables dialog** (board 14 `EIkIk`, ⌘⇧V): 1040 × 780, `bg-app`, `r-2xl`. Header (padding
+**Variables dialog** (board 14 `EIkIk`, ⌥⇧⌘V): 1040 × 780, `bg-app`, `r-2xl`. Header (padding
 [20, 20, 16, 24]: title xl 500 "Variables", desc base `text-secondary`, Close 32 pill
 `bg-muted`). Body row: **Sidebar** (184, column, gap 1, padding [4, 8, 12, 8], `bg-subtle`,
 stroke `border`): sections Groups (All + one per group, `folder` 14) / Theme axes (`sun-moon`,

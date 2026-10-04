@@ -18,12 +18,15 @@ export interface PaneInfo {
   id: SettingsPane
   label: string
   /** Lucide icon name (Nav · … Icon). */
-  icon: "settings" | "hard-drive" | "shield" | "bot" | "key-round" | "refresh-cw" | "info"
+  icon: "settings" | "ruler" | "hard-drive" | "shield" | "bot" | "key-round" | "refresh-cw" | "info"
 }
 
 /** Sidebar order (XmeDB > Sidebar h7qQD). */
 export const SETTINGS_PANES: readonly PaneInfo[] = [
   { id: "general", label: "General", icon: "settings" },
+  // Board 27 §4 n9EfHf: "New 'Canvas' sidebar item … after General". The nav icon is not in the
+  // design (house choice: lucide `ruler`).
+  { id: "canvas", label: "Canvas", icon: "ruler" },
   { id: "files", label: "Files & autosave", icon: "hard-drive" },
   { id: "fonts", label: "Fonts & privacy", icon: "shield" },
   { id: "agents-mcp", label: "Agents & MCP", icon: "bot" },
@@ -94,6 +97,18 @@ export const CHOICES = {
     { value: "trackpad", label: "Trackpad" },
     { value: "mouse", label: "Mouse" },
   ],
+  // Board 27 §8 (d) WYOjQ "Duplicate a main": ask, or the remembered choice.
+  "general.duplicateMain": [
+    { value: "ask", label: "Ask" },
+    { value: "instance", label: "Instance" },
+    { value: "component", label: "New component" },
+  ],
+  // Board 27 Lwg6P › Setting · Nudge (uFQFU) Select iv6cR "1 px · ⇧ 10 px".
+  "canvas.nudge": [
+    { value: "0.5/5", label: "0.5 px · ⇧ 5 px" },
+    { value: "1/10", label: "1 px · ⇧ 10 px" },
+    { value: "8/16", label: "8 px · ⇧ 16 px" },
+  ],
   "updates.channel": [
     { value: "stable", label: "Stable" },
     { value: "beta", label: "Beta" },
@@ -110,6 +125,8 @@ export const SELECT_WIDTH: Record<ChoiceKey, number> = {
   "general.appearance": 104,
   "general.onLaunch": 104,
   "general.canvasZoom": 104,
+  "general.duplicateMain": 136,
+  "canvas.nudge": 136,
   "updates.channel": 96,
 }
 

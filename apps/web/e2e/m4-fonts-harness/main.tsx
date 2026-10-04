@@ -161,7 +161,7 @@ function SvgView({ text, name }: { text: string; name: string }) {
         fileName={name}
         vectorDescription={prepared.vectorDescription}
         imageDescription={prepared.imageDescription}
-        canOutline={false}
+        strokedPaths={prepared.stats.stroked ?? 0}
         onCancel={() => setView({ kind: "none" })}
         onImport={async (choice) => {
           rememberSvgChoice(choice)

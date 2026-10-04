@@ -76,6 +76,11 @@ export interface KimoPlatform {
    * browser and memory hosts have no native menu (their Help lives in File › Help).
    */
   readonly help?: HelpHostApi
+  /**
+   * Board 27 §9/§10: native menu-bar items that act on the focused editor (File › Export…,
+   * Copy selection as PNG, View › Preview); desktop only.
+   */
+  readonly menu?: EditorMenuApi
   /** Stops watchers and listeners (window teardown). */
   dispose(): void
 }
@@ -87,6 +92,14 @@ export type HelpMenuAction =
   | "whats-new"
   | "report-issue"
   | "copy-diagnostics"
+
+/** A native menu-bar item the focused editor window runs (`kimo://editor-menu`). */
+export type EditorMenuAction = "export" | "copy-png" | "preview"
+
+export interface EditorMenuApi {
+  /** Native File / View menu items picked while this window is the focused editor. */
+  onAction(listener: (action: EditorMenuAction) => void): () => void
+}
 
 export interface HelpHostApi {
   /** Native Help menu items picked while this window is the focused editor. */
@@ -542,6 +555,8 @@ export const REPO_URL_PLACEHOLDER = "https://github.com/kimo-design/kimo"
 /** Settings panes (board 19). */
 export type SettingsPane =
   | "general"
+  /** Board 27 §4 (Lwg6P): snapping, pixel grid, rulers, nudge. */
+  | "canvas"
   | "files"
   | "fonts"
   | "agents-mcp"

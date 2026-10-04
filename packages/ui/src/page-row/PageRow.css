@@ -1,0 +1,135 @@
+/*
+ * PageRow: desing.pen 27 §0 PageRow (w38uQ), PageRow/Current (JMKMB), §1 "PageRow · Renaming" (LmnKt).
+ * frame: fill_container × 28, radius-sm, gap 6, padding [0, 8], alignItems center
+ *   ├ Check Slot 14 × 14, centered — lucide check 14 text-primary (current only)
+ *   ├ Name       font-sans text-sm text-primary, normal (current 500)
+ *   ├ Spacer     fill_container × 1
+ *   └ Count      font-mono text-xs text-tertiary (optional)
+ * Current: fill bg-hover. Renaming: padding [0, 4, 0, 8]; Rename Input fill_container × 24,
+ * gap 1, padding [0, 6], bg-app, stroke 1.5 selection, radius-xs, value sans text-sm text-primary.
+ */
+.kimo-page-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  flex: none;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  cursor: default;
+  user-select: none;
+}
+
+.kimo-page-row:hover:not(.kimo-page-row--renaming),
+.kimo-page-row--current {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-page-row:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-page-row--renaming {
+  padding: 0 4px 0 8px;
+}
+
+.kimo-page-row__check {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-primary);
+}
+
+.kimo-page-row__check > svg,
+.kimo-page-row__menu > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-page-row__name {
+  overflow: hidden;
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-page-row--current .kimo-page-row__name {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-page-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-page-row__count {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}
+
+.kimo-page-row__menu {
+  display: none;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-page-row:hover .kimo-page-row__menu {
+  display: inline-flex;
+}
+
+.kimo-page-row:hover .kimo-page-row__count {
+  display: none;
+}
+
+.kimo-page-row__rename {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-app);
+  /* 1.5 px inside stroke: an inset shadow (Chrome snaps 1.5 px borders to whole pixels). */
+  box-shadow: inset 0 0 0 1.5px var(--kimo-selection);
+}
+
+.kimo-page-row__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font: inherit;
+  font-weight: var(--kimo-font-weight-regular);
+}

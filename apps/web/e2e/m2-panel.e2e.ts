@@ -203,8 +203,9 @@ export const scenarios: Scenario[] = [
       // Row gap 8, X field fill (half of 256 − 8).
       expect(m.row?.cgap === 8 && m.x?.w === 124 && m.x.h === 28, `row ${JSON.stringify(m.x)}`)
       expect(m.sizeField?.w === 124 && m.sizeField.h === 28, "size field 124 × 28")
-      // Direction Row h 28; Align Row gap 8, grid fill × 64, spacing column fill.
-      expect(m.directionRow?.h === 28 && m.directionRow.cgap === 8, "direction row")
+      // Direction Row h 28 (gap 6 since board 27 lQ9JF added the Wrap toggle); Align Row gap 8,
+      // grid fill × 64, spacing column fill.
+      expect(m.directionRow?.h === 28 && m.directionRow.cgap === 6, "direction row")
       expect(
         m.alignRow?.cgap === 8 && m.grid?.h === 64 && m.grid.w === 124,
         `align ${JSON.stringify(m.grid)}`,

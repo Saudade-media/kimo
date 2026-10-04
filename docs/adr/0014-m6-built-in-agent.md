@@ -153,9 +153,16 @@ with auto-resume, CORS web-only, budget warning, stopped by you, refusal) — ne
 
 ### 7. Sessions and costs (`src/session.ts`, `src/pricing.ts`)
 
-- Sessions live in app data — desktop `~/.kimo/sessions/<fileId>/<sessionId>.json`, web IndexedDB
-  `kimo-sessions` — **never in the `.kimo`**. Per file, newest first, then other files; search
-  over title and message text. `fileId` is the M4/M5 id (`sha256(path)[:16]`).
+- Sessions live in app data — IndexedDB `kimo-sessions` (store `sessions`, key `id`, index
+  `fileId`) on **both** web and desktop (the desktop webview has its own IndexedDB inside the
+  app's data directory) — **never in the `.kimo`**. Per file, newest first, then other files;
+  search over title and message text. `fileId` is the M4/M5 id (`sha256(path)[:16]`).
+  *Amended at v1:* the first draft put desktop sessions in `~/.kimo/sessions/<fileId>/<sessionId>.json`.
+  That was never built; one store keeps both hosts on the same code path and needs no new
+  platform API or file watcher. The trade-off: desktop sessions are not plain files a user can
+  grep or back up separately, and clearing the webview's data clears them. The `SessionStore`
+  interface (`agent-panel/runtime.ts`) stays injectable, so a file-backed store can replace it
+  later without touching the controller.
 - Costs are **estimated**: usage × a **versioned price table shipped with each adapter family**
   (`PRICE_TABLES`, `priceVersion` on every estimate). Unknown models estimate to `null` (shown
   "—"), never a guess. The monthly limit pauses after the current batch; "warn per turn" asks

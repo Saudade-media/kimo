@@ -10,6 +10,7 @@ import {
   BoolOrRef,
   Color,
   ID_PATH_PATTERN,
+  ID_PATTERN,
   Id,
   IdPath,
   LAYER_BLEND_MODES,
@@ -47,6 +48,13 @@ export const placementProps = {
   theme: opt(ThemeSelection),
   locked: opt(Type.Boolean({ default: D.node.locked })),
   meta: opt(Meta),
+  page: opt(
+    Type.String({
+      pattern: ID_PATTERN,
+      description:
+        "Root nodes only: the id of the page (root `pages`) the node is on. Absent, or naming no page, = the first page.",
+    }),
+  ),
 }
 
 /**
@@ -76,11 +84,27 @@ export const InstancePropDef = Strict({
   default: opt(QId),
   order: propOrder,
 })
+/**
+ * Board 27 §8 (a): one target of an enum option — `field` of the node at `target` takes `value`.
+ * `field` is a node property name, or `<property>/<key>` for one key of a struct property
+ * (`layout/pad`, `style/size`, an instance's `props/opacity`).
+ */
+export const ENUM_TARGET_FIELD_PATTERN = "^[A-Za-z][A-Za-z0-9]*(/[A-Za-z][A-Za-z0-9]*)?$"
+export const EnumTarget = Strict({
+  target: IdPath,
+  field: Type.String({ pattern: ENUM_TARGET_FIELD_PATTERN }),
+  value: Type.Unknown(),
+})
+export type EnumTarget = Static<typeof EnumTarget>
+
 export const EnumPropDef = Strict({
   type: Type.Literal("enum"),
-  target: IdPath,
-  field: Type.String({ minLength: 1 }),
+  /** The single legacy target (with `field`); optional when `targets` carries the effects. */
+  target: opt(IdPath),
+  field: opt(Type.String({ minLength: 1 })),
   options: Type.Record(Type.String({ minLength: 1 }), Type.Unknown(), { minProperties: 1 }),
+  /** Board 27 §8 (a): option → its targets, applied after the legacy `target`/`field`. */
+  targets: opt(Type.Record(Type.String({ minLength: 1 }), Type.Array(EnumTarget))),
   order: propOrder,
 })
 export const SlotPropDef = Strict({ type: Type.Literal("slot"), target: IdPath, order: propOrder })
@@ -175,6 +199,14 @@ export const EllipseNode = Strict({
   sweepAngle: opt(Type.Number({ minimum: -360, maximum: 360, default: D.ellipse.sweepAngle })),
 })
 
+/** A star: a polygon with `sides` points whose inner vertices sit at `ratio` × the outer radius. */
+export const StarDef = Strict(
+  {
+    ratio: opt(Type.Number({ exclusiveMinimum: 0, maximum: 1, default: D.star.ratio })),
+  },
+  { description: "Star: inner/outer radius ratio; points = sides" },
+)
+
 export const PolygonNode = Strict({
   type: Type.Literal("polygon"),
   ...baseProps,
@@ -183,6 +215,7 @@ export const PolygonNode = Strict({
   h: Size,
   sides: Type.Integer({ minimum: 3 }),
   radius: radiusOpt(D.polygon.radius),
+  star: opt(StarDef),
 })
 
 export const PathNode = Strict({

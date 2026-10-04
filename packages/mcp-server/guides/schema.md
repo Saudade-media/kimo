@@ -48,6 +48,15 @@ rect or frame, imported with `kimo_import` / `kimo_assets`. There is no image no
 - Effects: `[{kind:"shadow", x, y, blur, color, spread?, inner?}, {kind:"blur", radius},
   {kind:"backdrop-blur", radius}]`.
 
+## Pages
+
+A document can have several pages (`kimo_get_state` → `pages[]`). A page is not a node: a
+top-level node's `page` field names its page, and a top-level node without `page` is on the first
+page. Children are on their top-level ancestor's page; never set `page` below the top level.
+Read one page with `kimo_query {select: {topLevel: true, page: "<id>"}}`; create, rename, move
+and delete pages with the `page` op (see `ops`). Polygons take `star: {ratio}` (inner / outer
+radius, default 0.38) to draw stars; an image fill with `fit: "crop"` shows its `crop` region.
+
 ## Defaults and nulls
 
 A field equal to its default is the same as the field being absent, and Kimo omits it when it

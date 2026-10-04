@@ -1,0 +1,232 @@
+/*
+ * Board 27 §0 / §7 variable binding: desing.pen PropField/Bindable (LFrgQ), PropField/Bound (egdNP).
+ *
+ * PropField/Bindable (LFrgQ) = PropField (A9DDs) while hovered / focused:
+ *   frame stroke 1 border-strong, padding [0, 4, 0, 8]; trailing Bind Button (fBIJF) 20 × 20,
+ *   fill bg-hover, radius-xs, center → Icon (x2Sf8m) `variable` 12 text-primary.
+ *   Hosts add `kimo-prop-field--bindable` to the field frame and put a BindButton last.
+ *
+ * PropField/Bound (egdNP): fill_container × 28, fill bg-subtle, radius-sm, row, gap 6,
+ *   padding [0, 4, 0, 8], alignItems center
+ *   ├ Prefix (m2mZXW) font-sans, text-xs (11), normal, text-tertiary
+ *   ├ Variable Chip (ZtFyB) fill bg-app, radius-xs, stroke 1 border-strong, row, gap 4,
+ *   │   padding [2, 6, 2, 5], center → Glyph (r6ZAyc) 10 × 10 text-tertiary ·
+ *   │   Name (D4Hy8R) font-mono, text-xs, normal, text-primary
+ *   ├ Spacer (DC0rl) fill × 1
+ *   ├ Resolved (r1TUXL) font-mono, text-xs, normal, text-tertiary (hidden < 140 px, uu8Qa)
+ *   └ Detach Button (c21X7y) 20 × 20, radius-xs, center → `unlink` 12 text-secondary
+ * Hover → detach (TwQNv): frame stroke 1 border-strong + Detach Button shown.
+ * Missing (gD832): chip stroke danger, name fill danger. Picker open (XSUF5): chip stroke selection.
+ */
+
+/* --- Bindable (LFrgQ) ------------------------------------------------------------------- */
+
+.kimo-bind-button {
+  box-sizing: border-box;
+  display: none;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-hover);
+  color: var(--kimo-text-primary);
+  cursor: default;
+}
+
+.kimo-bind-button > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-bind-button:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+/* `[data-bind-open]` on an ancestor: the picker is open for this field. */
+.kimo-prop-field--bindable:is(:hover, :focus-within),
+[data-bind-open] .kimo-prop-field--bindable {
+  padding-right: 4px;
+}
+
+.kimo-prop-field--bindable:hover:not(:focus-within),
+[data-bind-open] .kimo-prop-field--bindable:not(:focus-within) {
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-prop-field--bindable:is(:hover, :focus-within) .kimo-bind-button,
+[data-bind-open] .kimo-prop-field--bindable .kimo-bind-button {
+  display: inline-flex;
+}
+
+.kimo-prop-field--bindable.kimo-prop-field--disabled .kimo-bind-button,
+.kimo-prop-field--bindable.kimo-size-field--disabled .kimo-bind-button {
+  display: none;
+}
+
+/* --- Bound (egdNP) ---------------------------------------------------------------------- */
+
+.kimo-prop-field-bound {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  /* The resolved value hides in half-width fields (< 140 px). */
+  container-type: inline-size;
+}
+
+.kimo-prop-field-bound:is(:hover, :focus-within) {
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-prop-field-bound__prefix {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  user-select: none;
+}
+
+.kimo-prop-field-bound__prefix--icon {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  line-height: 0;
+}
+
+.kimo-prop-field-bound__prefix--icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-prop-field-bound__chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 2px 6px 2px 5px;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+  color: var(--kimo-text-primary);
+  cursor: default;
+}
+
+.kimo-prop-field-bound__chip:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-prop-field-bound--active .kimo-prop-field-bound__chip {
+  box-shadow: inset 0 0 0 1px var(--kimo-selection);
+}
+
+.kimo-prop-field-bound--missing .kimo-prop-field-bound__chip {
+  box-shadow: inset 0 0 0 1px var(--kimo-danger);
+}
+
+.kimo-prop-field-bound__glyph {
+  display: block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-prop-field-bound__name,
+.kimo-prop-field-bound__resolved {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-prop-field-bound__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  text-overflow: ellipsis;
+}
+
+.kimo-prop-field-bound--missing .kimo-prop-field-bound__name {
+  color: var(--kimo-danger);
+}
+
+.kimo-prop-field-bound__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-prop-field-bound__resolved {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  text-overflow: ellipsis;
+}
+
+@container (max-width: 139.98px) {
+  .kimo-prop-field-bound__resolved {
+    display: none;
+  }
+}
+
+.kimo-prop-field-bound__detach {
+  box-sizing: border-box;
+  display: none;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-xs);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: default;
+}
+
+.kimo-prop-field-bound__detach > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-prop-field-bound:is(:hover, :focus-within) .kimo-prop-field-bound__detach {
+  display: inline-flex;
+}
+
+.kimo-prop-field-bound__detach:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-prop-field-bound__detach:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}

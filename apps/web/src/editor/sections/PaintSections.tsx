@@ -5,9 +5,14 @@
  */
 import type { NodeData, Op } from "@kimo/editor-state"
 import {
+  BlendModeMenu,
+  blendModeLabel,
   FillRow,
+  type LayerBlendMode,
   MenuDense,
   MenuItemDense,
+  PaintBlendChip,
+  PanelIconToggle,
   PropRow,
   PropSection,
   percent,
@@ -15,8 +20,10 @@ import {
   Select,
   StrokeSideFields,
 } from "@kimo/ui"
-import { type MouseEvent, useRef, useState } from "react"
+import { Fragment, type MouseEvent, useRef, useState } from "react"
+import { cropStore } from "../../canvas/crop"
 import { Icon } from "../../lib/icons"
+import { Bindable } from "../bind"
 import { NumberField, ToggleRow } from "../fields"
 import { SectionTitle } from "../m3/overrides"
 import {
@@ -39,6 +46,8 @@ import {
   moveItem,
   NEW_SOLID,
   paintAlpha,
+  paintBlend,
+  paintBlendable,
   paintCss,
   paintKind,
   paintRowLabel,
@@ -49,6 +58,7 @@ import {
   strokeSides,
   strokeWidthOf,
   withDash,
+  withPaintBlend,
   withPaintVisible,
   withSide,
   withSidesMode,
@@ -61,6 +71,9 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
 
 // --- Paint rows ---------------------------------------------------------------------------
 
+/** Board 27 §6 (c) "Blend menu" kNrNc: Menu/Dense width 128 (the layer menu's list). */
+const PAINT_BLEND_MENU_WIDTH = 128
+
 interface PaintRowsProps {
   /** Paints in stored order (last = top). */
   paints: readonly unknown[]
@@ -70,9 +83,11 @@ interface PaintRowsProps {
   write(list: unknown[], label: string): void
   /** Icon `color`: one solid row, no visibility or reorder. */
   colorOnly?: boolean
+  /** Board 27 §6 (d): an image row's Crop mode enters crop mode on the canvas (Fill, 1 layer). */
+  onCrop?(index: number): void
 }
 
-function PaintRows({ paints, name, write, colorOnly = false }: PaintRowsProps) {
+function PaintRows({ paints, name, write, colorOnly = false, onCrop }: PaintRowsProps) {
   const { editor } = usePanel()
   const resolve = useResolver()
   const assetUrl = useAssetUrls(
@@ -81,6 +96,8 @@ function PaintRows({ paints, name, write, colorOnly = false }: PaintRowsProps) {
     ),
   )
   const [open, setOpen] = useState<number | null>(null)
+  /** Board 27 §6 (c): the paint whose Blend menu (kNrNc) is open. */
+  const [blendMenu, setBlendMenu] = useState<{ index: number; el: HTMLElement } | null>(null)
   useKeepPopoverFocus(open)
   const rows = useRef(new Map<number, HTMLDivElement>())
   const drag = useRef<number | null>(null)
@@ -96,72 +113,115 @@ function PaintRows({ paints, name, write, colorOnly = false }: PaintRowsProps) {
         const kind = paintKind(p)
         const visible = paintVisible(p)
         const who = paints.length > 1 ? `${name} ${paints.length - i}` : name
+        const mode = paintBlend(p)
         return (
-          <FillRow
-            key={i}
-            ref={(el: HTMLDivElement | null) => {
-              if (el) rows.current.set(i, el)
-              else rows.current.delete(i)
-            }}
-            name={who.toLowerCase()}
-            swatch={paintCss(p, resolve, assetUrl)}
-            label={label}
-            labelFont={font}
-            opacity={percent(paintAlpha(p))}
-            visible={visible}
-            active={open === i}
-            removable
-            draggable={!colorOnly && paints.length > 1}
-            onDragStart={(e) => {
-              drag.current = i
-              e.dataTransfer.effectAllowed = "move"
-            }}
-            onDragOver={(e) => {
-              if (drag.current !== null) e.preventDefault()
-            }}
-            onDrop={(e) => {
-              e.preventDefault()
-              const from = drag.current
-              drag.current = null
-              if (from === null || from === i) return
-              setOpen(null)
-              write(moveItem(paints, from, i), `Reorder ${name.toLowerCase()}`)
-            }}
-            onDragEnd={() => {
-              drag.current = null
-            }}
-            onKeyDown={(e) => {
-              if (colorOnly || !e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return
-              e.preventDefault()
-              // Up = toward the top paint = a higher stored index.
-              const to = e.key === "ArrowUp" ? i + 1 : i - 1
-              if (to < 0 || to >= paints.length) return
-              setOpen(null)
-              write(moveItem(paints, i, to), `Reorder ${name.toLowerCase()}`)
-            }}
-            onOpen={() => {
-              if (kind === "other") return
-              setOpen((o) => (o === i ? null : i))
-            }}
-            onToggleVisible={
-              colorOnly
-                ? undefined
-                : () =>
-                    write(
-                      replace(i, withPaintVisible(p, !visible)),
-                      `${visible ? "Hide" : "Show"} ${name.toLowerCase()}`,
-                    )
-            }
-            onRemove={() => {
-              setOpen(null)
-              write(
-                paints.filter((_, j) => j !== i),
-                `Remove ${name.toLowerCase()}`,
-              )
-            }}
-          />
+          <Fragment key={i}>
+            <FillRow
+              ref={(el: HTMLDivElement | null) => {
+                if (el) rows.current.set(i, el)
+                else rows.current.delete(i)
+              }}
+              name={who.toLowerCase()}
+              swatch={paintCss(p, resolve, assetUrl)}
+              label={label}
+              labelFont={font}
+              opacity={percent(paintAlpha(p))}
+              visible={visible}
+              active={open === i}
+              removable
+              draggable={!colorOnly && paints.length > 1}
+              onDragStart={(e) => {
+                drag.current = i
+                e.dataTransfer.effectAllowed = "move"
+              }}
+              onDragOver={(e) => {
+                if (drag.current !== null) e.preventDefault()
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                const from = drag.current
+                drag.current = null
+                if (from === null || from === i) return
+                setOpen(null)
+                write(moveItem(paints, from, i), `Reorder ${name.toLowerCase()}`)
+              }}
+              onDragEnd={() => {
+                drag.current = null
+              }}
+              onKeyDown={(e) => {
+                if (colorOnly || !e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return
+                e.preventDefault()
+                // Up = toward the top paint = a higher stored index.
+                const to = e.key === "ArrowUp" ? i + 1 : i - 1
+                if (to < 0 || to >= paints.length) return
+                setOpen(null)
+                write(moveItem(paints, i, to), `Reorder ${name.toLowerCase()}`)
+              }}
+              onOpen={() => {
+                if (kind === "other") return
+                setOpen((o) => (o === i ? null : i))
+              }}
+              onToggleVisible={
+                colorOnly
+                  ? undefined
+                  : () =>
+                      write(
+                        replace(i, withPaintVisible(p, !visible)),
+                        `${visible ? "Hide" : "Show"} ${name.toLowerCase()}`,
+                      )
+              }
+              onRemove={() => {
+                setOpen(null)
+                write(
+                  paints.filter((_, j) => j !== i),
+                  `Remove ${name.toLowerCase()}`,
+                )
+              }}
+              blend={
+                // Board 27 §6 (c) rule K7NZ9: 24 px Blend button between the field and the eye.
+                !colorOnly && paintBlendable(p) ? (
+                  <PanelIconToggle
+                    className="kimo-fill-row__blend"
+                    size={24}
+                    rest="clear"
+                    label={`Blend mode of ${who.toLowerCase()}`}
+                    icon={<Icon name="blend" size={14} />}
+                    pressed={mode !== "normal"}
+                    aria-haspopup="menu"
+                    aria-expanded={blendMenu?.index === i}
+                    onClick={(e) => {
+                      const el = e.currentTarget
+                      setOpen(null)
+                      setBlendMenu((b) => (b?.index === i ? null : { index: i, el }))
+                    }}
+                  />
+                ) : undefined
+              }
+            />
+            {mode !== "normal" && (
+              // Non-normal: a small mode chip under the row (FC2in).
+              <PaintBlendChip label={blendModeLabel(mode as LayerBlendMode)} />
+            )}
+          </Fragment>
         )
       })}
+      {blendMenu && paints[blendMenu.index] !== undefined && (
+        <BlendModeMenu
+          width={PAINT_BLEND_MENU_WIDTH}
+          anchor={blendMenu.el}
+          // kNrNc sits beside the panel (left of the right panel), top-aligned with the button.
+          placement={{ side: "left", align: "start", offset: 8 }}
+          value={paintBlend(paints[blendMenu.index]) as LayerBlendMode}
+          onSelect={(m) => {
+            const i = blendMenu.index
+            write(replace(i, withPaintBlend(paints[i], m)), `Set ${name.toLowerCase()} blend mode`)
+          }}
+          onClose={() => {
+            blendMenu.el.focus({ preventScroll: true })
+            setBlendMenu(null)
+          }}
+        />
+      )}
       {open !== null && anchor && openPaint !== undefined && (
         <PaintPopover
           anchor={anchor}
@@ -180,6 +240,16 @@ function PaintRows({ paints, name, write, colorOnly = false }: PaintRowsProps) {
             editor.end()
             setOpen(null)
           }}
+          onCrop={
+            onCrop
+              ? () => {
+                  const i = open
+                  editor.end()
+                  setOpen(null)
+                  onCrop(i)
+                }
+              : undefined
+          }
         />
       )}
     </>
@@ -192,12 +262,14 @@ function PaintPopover({
   onChange,
   onRemove,
   onClose,
+  onCrop,
 }: {
   anchor: HTMLElement
   paint: unknown
   onChange(next: unknown): void
   onRemove(): void
   onClose(): void
+  onCrop?: (() => void) | undefined
 }) {
   const kind = paintKind(paint)
   if (kind === "image" && isObj(paint))
@@ -208,6 +280,7 @@ function PaintPopover({
         onChange={onChange}
         onRemove={onRemove}
         onClose={onClose}
+        {...(onCrop ? { onCrop } : {})}
       />
     )
   if ((kind === "linear" || kind === "radial" || kind === "angular") && isObj(paint))
@@ -383,7 +456,17 @@ export function FillSection({ sel }: { sel: readonly Sel[] }) {
           {fill === MIXED ? (
             <MixedRow name="Fill" />
           ) : (
-            <PaintRows paints={list} name="Fill" write={write} />
+            <PaintRows
+              paints={list}
+              name="Fill"
+              write={write}
+              {...(ids.length === 1 && session.store.getNode(ids[0] as string)
+                ? {
+                    onCrop: (i: number) =>
+                      cropStore(session.ui).actions?.start(ids[0] as string, i),
+                  }
+                : {})}
+            />
           )}
         </div>
       )}
@@ -521,21 +604,39 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
         )}
         {/* Row (s0FLr): Weight 96 (icon `menu`) · Align Select fill */}
         <PropRow className="rp-row">
-          <NumberField
-            icon="menu"
-            label="Stroke weight"
-            className="rp-field--w96"
-            value={weightValue}
-            editor={editor}
-            min={0}
-            onNumber={(n) =>
-              strokeOps((node) => {
-                const s = strokeSides(node.stroke)
-                if (s) return withStrokeField(node.stroke, "width", { t: n, r: n, b: n, l: n })
-                return withStrokeField(node.stroke, "width", Math.max(0, n))
-              })
-            }
-          />
+          {/* Board 27 §7: stroke width binds a number variable (all sides). */}
+          <Bindable
+            sel={sel}
+            className="rp-bind--w96"
+            spec={{
+              type: "number",
+              label: "Stroke weight",
+              prefix: <Icon name="menu" size={12} />,
+              get: (n) => strokeObj(n.stroke)?.width ?? 1,
+              put: (s, v) => mapOps([s], "stroke", (n) => withStrokeField(n.stroke, "width", v)),
+              current: () => (typeof weightValue === "number" ? weightValue : null),
+              varBase: "stroke",
+            }}
+          >
+            {(bind) => (
+              <NumberField
+                icon="menu"
+                label="Stroke weight"
+                bind={bind}
+                className="rp-field--w96"
+                value={weightValue}
+                editor={editor}
+                min={0}
+                onNumber={(n) =>
+                  strokeOps((node) => {
+                    const s = strokeSides(node.stroke)
+                    if (s) return withStrokeField(node.stroke, "width", { t: n, r: n, b: n, l: n })
+                    return withStrokeField(node.stroke, "width", Math.max(0, n))
+                  })
+                }
+              />
+            )}
+          </Bindable>
           <Select<Align>
             dense
             label="Stroke align"

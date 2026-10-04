@@ -76,8 +76,14 @@ export const kimoQuery = defineTool({
         component: Opt(
           Str({ description: "Instances of this component id (alias:id for libraries)." }),
         ),
+        page: Opt(
+          Str({
+            description:
+              "Only nodes on this page (a page id from kimo_get_state; with topLevel: the page's top-level nodes).",
+          }),
+        ),
       },
-      { description: "At least one of ids, under, topLevel, name, type, text, component." },
+      { description: "At least one of ids, under, topLevel, name, type, text, component, page." },
     ),
     depth: Opt(
       Int({

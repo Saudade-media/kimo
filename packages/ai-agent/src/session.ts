@@ -1,7 +1,6 @@
 /**
- * Agent sessions (board 22 "Sessions", ADR 0014 §7). Sessions live in app data — desktop
- * `~/.kimo/sessions/<fileId>/<sessionId>.json`, web IndexedDB `kimo-sessions` — and never in
- * the `.kimo` file. Per file, newest first, then other files; searchable by title and content.
+ * Agent sessions (board 22 "Sessions", ADR 0014 §7). Sessions live in app data — IndexedDB
+ * `kimo-sessions` on web and in the desktop webview alike — and never in the `.kimo` file. Per file, newest first, then other files; searchable by title and content.
  */
 import type { CliBilling } from "./cli/types"
 import type { TurnRecord } from "./loop"
@@ -10,7 +9,7 @@ import type { ChatMessage, ModelSelection, ThinkingMode, Usage, UserMessage } fr
 import { ZERO_USAGE } from "./types"
 
 export const SESSION_LOCATIONS = {
-  desktop: "~/.kimo/sessions/<fileId>/<sessionId>.json",
+  desktop: "IndexedDB database kimo-sessions in the app webview (same store as web)",
   web: "IndexedDB database kimo-sessions, store sessions (key: id, index: fileId)",
 } as const
 

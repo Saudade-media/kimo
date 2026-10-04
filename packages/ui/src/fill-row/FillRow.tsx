@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Minus } from "lucide-react"
-import type { ComponentPropsWithRef } from "react"
+import type { ComponentPropsWithRef, ReactNode } from "react"
 import { ColorField } from "../color-field/ColorField"
 import { IconButton } from "../icon-button/IconButton"
 import { cx } from "../internal/util"
@@ -24,6 +24,11 @@ export interface FillRowProps extends Omit<ComponentPropsWithRef<"div">, "childr
   onRemove?: () => void
   /** Accessible name prefix, e.g. `"Fill 1"`. Default `label`. */
   name?: string
+  /**
+   * Board 27 §6 (c): the 24 px per-paint Blend button (F1NkuB / r7ZOxn) between the field and
+   * the eye. Absent = no slot.
+   */
+  blend?: ReactNode
 }
 
 /**
@@ -44,6 +49,7 @@ export function FillRow({
   onToggleVisible,
   onRemove,
   name,
+  blend,
   className,
   ...rest
 }: FillRowProps) {
@@ -66,6 +72,7 @@ export function FillRow({
         }}
         onClick={() => onOpen?.()}
       />
+      {blend}
       <IconButton
         className="kimo-fill-row__eye"
         label={visible ? `Hide ${who}` : `Show ${who}`}

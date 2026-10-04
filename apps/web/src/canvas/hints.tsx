@@ -14,7 +14,7 @@
  * the canvas host does not re-render on every zoom frame.
  */
 import { TooltipHint, ZoomBadge as UiZoomBadge } from "@kimo/ui"
-import { CircleDot, PenTool, Spline } from "lucide-react"
+import { CircleDot, Crop, PenTool, Spline } from "lucide-react"
 import type { ComponentPropsWithRef, ReactNode } from "react"
 import { useUi } from "../lib/hooks"
 import type { UiStore } from "./contract"
@@ -23,6 +23,7 @@ const HINT_ICONS = {
   "pen-tool": PenTool,
   "circle-dot": CircleDot,
   spline: Spline,
+  crop: Crop,
 } as const
 
 export type HintIcon = keyof typeof HINT_ICONS
@@ -46,10 +47,18 @@ export function HintPill({
   )
 }
 
-/** SizeBadge/Zoom (L5GCtM) at (16, 16) while the pixel grid shows; follows the live zoom. */
-export function ZoomBadge({ ui }: { ui: UiStore }) {
+/**
+ * SizeBadge/Zoom (L5GCtM) at (16, 16) while the pixel grid shows; follows the live zoom. With
+ * rulers on it moves past the 20 px strips (36, 36) so it never covers the numbers.
+ */
+export function ZoomBadge({ ui, rulers = false }: { ui: UiStore; rulers?: boolean }) {
   const zoom = useUi(ui, (s) => s.viewport.zoom)
   return (
-    <UiZoomBadge zoom={zoom} className="canvas-zoom-badge" data-canvas-overlay="" role="status" />
+    <UiZoomBadge
+      zoom={zoom}
+      className={rulers ? "canvas-zoom-badge canvas-zoom-badge--rulers" : "canvas-zoom-badge"}
+      data-canvas-overlay=""
+      role="status"
+    />
   )
 }

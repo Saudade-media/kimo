@@ -31,4 +31,4 @@ Use the `type/display` variables for headlines and never hard-code font sizes.
 - `description` is required; the menu shows it.
 - The file must be a regular UTF-8 file of at most 256 KiB inside that folder.
 
-Kimo watches the folder, so a new or edited skill shows up in the menu (under **Yours · ~/.kimo/skills**) without a restart. A skill with a problem is listed with its error. User skills aren't available in the browser.
+Kimo watches the folder, so a new or edited skill shows up in the menu (under **Yours · ~/.kimo/skills**) without a restart. A skill with a problem is listed with its error. In the desktop app, **Open skills folder** at the bottom of the menu shows `~/.kimo/skills` in Finder, Explorer or your file manager, creating it first if needed. User skills aren't available in the browser, so the button isn't shown there.

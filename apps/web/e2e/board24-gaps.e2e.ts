@@ -174,7 +174,7 @@ export const scenarios: Scenario[] = [
       const apply = pop.getByRole("button", { name: "Apply" })
       await pop.locator(".kimo-link-popover__hint--error").waitFor()
       expect(await apply.isDisabled(), "Apply disabled for a URL without an allowed scheme")
-      await field.fill("https://kimo.dev/pricing")
+      await field.fill("https://kimo.design/pricing")
       await pop.locator(".kimo-link-popover__hint--error").waitFor({ state: "detached" })
       expect(!(await apply.isDisabled()), "Apply enabled for https")
       const m = await measure(page, {
@@ -243,7 +243,7 @@ export const scenarios: Scenario[] = [
       await shot(ctx, "link-popover")
       await page.keyboard.press("Enter")
       await pop.waitFor({ state: "detached" })
-      expect((await style(page)).href === "https://kimo.dev/pricing", "Enter applies")
+      expect((await style(page)).href === "https://kimo.design/pricing", "Enter applies")
       // Reopen: the current link offers Remove link; an empty field + Enter removes it.
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
       await page.keyboard.press("Meta+k")

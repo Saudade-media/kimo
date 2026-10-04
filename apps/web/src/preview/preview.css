@@ -1,0 +1,325 @@
+/*
+ * Preview overlay — board 27 §9 (a) PMt3U. Literal colors: the stage is fixed dark in both app
+ * themes (decision Co3jD), so these are the node's own hex values, not theme tokens.
+ */
+
+/* Editor Window · Preview (PMt3U): vertical, fill #0E0E10, clip; covers the whole window. */
+.preview {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  background: #0e0e10;
+  overflow: hidden;
+  color-scheme: dark;
+}
+
+/* Preview Bar (dMexB): 44, fill #161618, bottom stroke 1 #FFFFFF14, gap 10, padding [0, 12]. */
+.preview__bar {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  background: #161618;
+  border-bottom: 1px solid #ffffff14;
+}
+
+/* KimoLogo/Small (guszg) 16 × 16, Mark fill #F2F2F3. */
+.preview__logo {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: #f2f2f3;
+}
+.preview__logo svg {
+  display: block;
+}
+
+/* Frame Name (NJYXt): sans 12 normal #F2F2F3. */
+.preview__name {
+  flex: none;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: normal;
+  color: #f2f2f3;
+  white-space: nowrap;
+}
+
+/* Frame Nav (Y6AA1): pill #FFFFFF0F, padding [0, 4], gap 2, alignItems center. */
+.preview__nav {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  padding: 0 4px;
+  background: #ffffff0f;
+  border-radius: var(--kimo-radius-pill);
+}
+
+/* Nav chevron-left / -right (bC0WI / F37gJ5): 24 × 24, centred 14 icon #C9C9CE. */
+.preview__nav-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #c9c9ce;
+  cursor: pointer;
+}
+.preview__nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.preview__nav-btn svg,
+.preview__seg svg,
+.preview__pill-icon svg {
+  display: block;
+}
+
+/* Count (X99Rmz): mono 11 #C9C9CE. */
+.preview__count {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: #c9c9ce;
+  white-space: nowrap;
+}
+
+/* Spacer (JX6Bb): fill × 1. */
+.preview__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Theme Toggle (lAQUQ): pill #FFFFFF0F, padding 2, gap 2. */
+.preview__theme {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  flex: none;
+  padding: 2px;
+  background: #ffffff0f;
+  border-radius: var(--kimo-radius-pill);
+}
+
+/* Seg · sun / moon (u5miT0 / eQxjm): 28 × 24 pill; on: fill #FFFFFF1F icon #FFFFFF; off: icon #8E8E95. */
+.preview__seg {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  color: #8e8e95;
+  cursor: pointer;
+}
+.preview__seg--on {
+  background: #ffffff1f;
+  color: #ffffff;
+}
+.preview__seg:disabled {
+  cursor: default;
+}
+
+.preview__menu {
+  position: relative;
+  flex: none;
+}
+
+/* Theme Select / Zoom (JXfhp / xTvfV): 28 high, pill #FFFFFF0F, padding [0, 10], gap 6. */
+.preview__pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: #ffffff0f;
+  cursor: pointer;
+}
+
+/* Value (H8bOV sans / C3ZAQ mono): 11 normal #E4E4E7. */
+.preview__pill-value {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: #e4e4e7;
+  white-space: nowrap;
+}
+.preview__pill-value--mono {
+  font-family: var(--kimo-font-mono);
+}
+
+/* chevron-down 12 #8E8E95. */
+.preview__pill-icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: #8e8e95;
+}
+
+/* Exit (CT7WC): 28 high, stroke 1 #FFFFFF24, pill, padding [0, 6, 0, 10], gap 6. */
+.preview__exit {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 28px;
+  margin: 0;
+  padding: 0 6px 0 10px;
+  border: 1px solid #ffffff24;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Label (j4LKq3): sans 11 #F2F2F3. */
+.preview__exit-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: #f2f2f3;
+}
+
+/* Key (kDwh3 …): padding [0, 4], fill #FFFFFF14, radius 3; Keys mono 11 #C9C9CE. */
+.preview__key {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #ffffff14;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: #c9c9ce;
+  white-space: nowrap;
+}
+
+/* Exit Key (AypvU): fill #FFFFFF1F; Keys #E4E4E7. */
+.preview__key--bar {
+  background: #ffffff1f;
+  color: #e4e4e7;
+}
+
+.preview__nav-btn:focus-visible,
+.preview__seg:focus-visible,
+.preview__pill:focus-visible,
+.preview__exit:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+/* Stage (I6kjY): fill × fill; the 24 px padding is the fit margin (model FIT_MARGIN). */
+.preview__stage {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+.preview__stage--grab {
+  cursor: grab;
+}
+
+.preview__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Frame shadow (udQKA effect): outer 0 12 40 #00000080, radius 4 — drawn under the canvas. */
+.preview__frame-shadow {
+  position: absolute;
+  border-radius: 4px;
+  box-shadow: 0 12px 40px #00000080;
+  pointer-events: none;
+}
+
+.preview__failed {
+  position: absolute;
+  inset: auto 0 24px;
+  text-align: center;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  color: #8e8e95;
+}
+
+/* Hint Row (szqdl): 28 high, justify/align center, gap 16. */
+.preview__hints {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex: none;
+  width: 100%;
+  height: 28px;
+}
+
+/* Hint (W2E27 …): alignItems center, gap 6. */
+.preview__hint {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Label (a5oPZ …): sans 11 #8E8E95. */
+.preview__hint-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: normal;
+  color: #8e8e95;
+  white-space: nowrap;
+}
+
+/* Board 27 §9 (b) "Disabled state" (RnXZG): the topbar Preview button at opacity 0.4 when the
+   page has no top-level frame (aria-disabled keeps the tooltip reachable). */
+.topbar__preview[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+.topbar__preview[aria-disabled="true"]:hover {
+  background: transparent;
+}

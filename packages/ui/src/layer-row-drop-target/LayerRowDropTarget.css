@@ -1,0 +1,73 @@
+/*
+ * LayerRow/DropTarget: desing.pen 27 §0 (tvN2q).
+ * frame: fill_container × 28, fill selection-soft, radius-sm, stroke 1.5 selection, gap 6,
+ * padding [0, 8], alignItems center
+ *   ├ Disclosure 12 × 12 chevron-right, text-tertiary
+ *   ├ Type Icon  14 × 14, selection
+ *   ├ Name       font-sans text-sm text-primary, normal
+ *   ├ Spacer     fill_container × 1
+ *   └ Into Icon  14 × 14 corner-down-right, selection
+ */
+.kimo-layer-row-drop-target {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-selection-soft);
+  /* 1.5 px inside stroke: an inset shadow (Chrome snaps 1.5 px borders to whole pixels). */
+  box-shadow: inset 0 0 0 1.5px var(--kimo-selection);
+  color: var(--kimo-text-primary);
+  cursor: default;
+  user-select: none;
+}
+
+.kimo-layer-row-drop-target__disclosure,
+.kimo-layer-row-drop-target__icon,
+.kimo-layer-row-drop-target__into {
+  display: inline-flex;
+  flex: none;
+}
+
+.kimo-layer-row-drop-target__disclosure {
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-layer-row-drop-target__icon,
+.kimo-layer-row-drop-target__into {
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-selection);
+}
+
+.kimo-layer-row-drop-target__disclosure > svg,
+.kimo-layer-row-drop-target__icon > svg,
+.kimo-layer-row-drop-target__into > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-layer-row-drop-target__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-layer-row-drop-target__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}

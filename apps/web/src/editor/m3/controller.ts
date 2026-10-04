@@ -5,6 +5,7 @@
  * switches of boards 11–15. Panels read it through {@link useM3}.
  */
 import {
+  brokenOverrides,
   createExpandedView,
   type ExpandedView,
   jsonEqual,
@@ -31,6 +32,8 @@ export interface ToastItem {
   tone: "danger" | "warning" | "component" | "success"
   text: string
   action?: { label: string; run: () => void }
+  /** Lucide icon overriding the tone's (board 27: `clipboard-check` for a paste). */
+  icon?: string
   /** ms before it fades (danger 6 s, warning 4 s, created-component 4 s). */
   duration: number
 }
@@ -51,6 +54,18 @@ interface ConfirmState {
   spec: ConfirmSpec
   resolve(ok: boolean): void
 }
+
+/** Board 27 §8: the component dialog that is open (Replace main · Fix broken overrides · ⌘D). */
+export type ComponentDialogState =
+  | { kind: "replaceMain"; main: string; source: string }
+  | { kind: "fixOverrides"; component: string }
+  | {
+      kind: "duplicateMain"
+      ids: readonly string[]
+      main: string
+      /** ⌥-drag (§8 d): the canvas applies the answer itself (null = cancelled). */
+      resolve?: (mode: "instance" | "component" | null) => void
+    }
 
 /** Open dialogs / popovers of the shell (not document state). */
 export interface M3Panels {
@@ -83,6 +98,9 @@ const ROW_FIELDS = [
   "args",
   "props",
   "slot",
+  // Board 27 §8 Kpf1o: Replace with selection stashes unmatched overrides in `meta` (the
+  // row's broken-override warning dot).
+  "meta",
 ] as const
 
 type RowNode = Readonly<Record<string, unknown>>
@@ -116,6 +134,25 @@ export class M3Controller {
   readonly toasts: Bus<readonly ToastItem[]>
   readonly confirmState: Bus<ConfirmState | null>
   readonly panels: Bus<M3Panels>
+  /** Board 27 §8: the open component dialog (see `ComponentDialogs.tsx`). */
+  readonly componentDialog: Bus<ComponentDialogState | null>
+  /**
+   * App preferences the component actions read (Settings › General "Duplicating a main
+   * component"); attached by `ComponentDialogs` from the runtime's settings. Null: always ask.
+   */
+  /**
+   * Board 27 §8 rule gPEqc: file access for library links of a file on disk (attached by
+   * `ComponentDialogs` from the runtime). `docRef` is the open file's ref (null: not on disk).
+   */
+  fileHost: {
+    docRef(): string | null
+    pick(): Promise<{ ref: string; name: string; bytes: Uint8Array } | null>
+    read(ref: string): Promise<Uint8Array>
+  } | null = null
+  prefs: {
+    duplicateMain(): "ask" | "instance" | "component"
+    setDuplicateMain(v: "ask" | "instance" | "component"): void
+  } | null = null
   /** Preview theme of the Variables tab/dialog (editor state, not in the file). */
   readonly previewTheme: Bus<Theme | null>
   /** Bumps when the expanded view may have changed (any document change, libraries). */
@@ -141,6 +178,7 @@ export class M3Controller {
   private view_: ExpandedView
   private libVersion = -1
   private doc_: { rev: string; doc: KimoDocument } | null = null
+  private broken_: { key: string; ids: ReadonlySet<string> } | null = null
   private dontAsk = new Set<string>()
   private announced = new Set<string>()
   private nextToast = 1
@@ -158,6 +196,7 @@ export class M3Controller {
       libraryManager: false,
       libraryChanges: null,
     })
+    this.componentDialog = createBus<ComponentDialogState | null>(null)
     this.previewTheme = createBus<Theme | null>(null)
     this.rev = createBus(0)
     this.compRev = createBus(0)
@@ -300,6 +339,23 @@ export class M3Controller {
 
   libraries(): Libraries {
     return this.libs.libraries()
+  }
+
+  /**
+   * Board 27 §8 rule Kpf1o: local instances holding broken overrides (the layer rows' warning
+   * dot). Memoized on what detection reads — {@link treeRev} (structure, overrides, libraries)
+   * and the variable names — so geometry / fill edits and row renders never rescan.
+   */
+  brokenInstances(): ReadonlySet<string> {
+    const vars = Object.keys((currentHeader(this.session.store).variables ?? {}) as object)
+    const key = `${this.treeRev.get()}|${this.libs.version}|${vars.join("\u0000")}`
+    if (this.broken_?.key !== key) {
+      const ids = new Set<string>()
+      for (const b of brokenOverrides({ doc: this.doc(), libraries: this.libraries() }))
+        ids.add(b.instance)
+      this.broken_ = { key, ids }
+    }
+    return this.broken_.ids
   }
 
   /** The current document (copied once per revision). */

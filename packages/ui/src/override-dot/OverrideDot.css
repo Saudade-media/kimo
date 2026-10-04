@@ -38,6 +38,11 @@
   background: var(--kimo-component);
 }
 
+/* Board 27 §8 Kpf1o: broken overrides (layer rows) — the Broken strip's `warning` (c16xy icon). */
+.kimo-override-dot--warning .kimo-override-dot__dot {
+  background: var(--kimo-warning);
+}
+
 /* Board 11 Dot hover (Dtgm2): the hint sits below the row. */
 .kimo-override-dot__hint {
   position: absolute;

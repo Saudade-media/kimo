@@ -14,9 +14,10 @@
  * window's own store (`createInWindowTools`). See agent-panel/INTEGRATION.md.
  */
 import { type NoteView, type PromptNodeView, shimLaunch } from "@kimo/ai-agent"
+import { pagesOf } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { KimoPlatform } from "@kimo/platform"
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import {
   AgentPanel,
   type AgentPanelControllerExt,
@@ -28,6 +29,7 @@ import {
   createPlatformAgentRuntime,
   hasHomeHandoff,
   modelLabel,
+  skillsFolderAction,
   useHomeHandoff,
 } from "../agent-panel"
 import { useAiProviders } from "../ai-settings"
@@ -38,6 +40,8 @@ import type { Bus } from "../lib/hooks"
 import type { FileDocumentSession } from "../platform/session"
 import { useFileId } from "./agents"
 import type { PromptRowStatus } from "./LeftPanel"
+import { pageAwareToolHost } from "./pages/agent"
+import { activePageId, hasPages } from "./pages/model"
 import type { FileSession } from "./session"
 
 type Box = { x: number; y: number; w: number; h: number }
@@ -154,19 +158,37 @@ export function useEditorAgentPanel({
     fileName: doc ? doc.fileName : session.meta.name,
   }
   const store = session.store
+  /** The active page id, or null for a one-page document (no `page` fields needed). */
+  const ui = session.ui
+  const pageForAgent = useCallback(
+    () => (hasPages(store) ? activePageId(store, ui.getState().page) : null),
+    [store, ui],
+  )
   const controller = useMemo(() => {
     if (!ai || !fileId) return null
     return createAgentPanelController({
-      runtime: createPlatformAgentRuntime(platform, ai, tools.factory, {
-        mcpLaunch: (cli) => shimLaunch(latest.current.shim ?? "kimo-mcp", cli),
-        openSettings: () => latest.current.openSettings("ai-providers"),
-        openLink: (url) => void platform.files.openExternalUrl(url).catch(() => {}),
-        // Desktop: ~/.kimo/skills (listed, read and watched by Rust); absent on the web.
-        ...(platform.skills ? { skills: platform.skills } : {}),
-      }),
+      // Board 27 §1: the agent's top-level inserts land on the active page.
+      runtime: createPlatformAgentRuntime(
+        platform,
+        ai,
+        (spec) => pageAwareToolHost(tools.factory(spec), pageForAgent),
+        {
+          mcpLaunch: (cli) => shimLaunch(latest.current.shim ?? "kimo-mcp", cli),
+          openSettings: () => latest.current.openSettings("ai-providers"),
+          openLink: (url) => void platform.files.openExternalUrl(url).catch(() => {}),
+          // Desktop: ~/.kimo/skills (listed, read and watched by Rust); absent on the web.
+          ...(platform.skills ? { skills: platform.skills } : {}),
+        },
+      ),
       fileId,
       fileName: latest.current.fileName,
       docId: () => tools.docId(),
+      activePage: () => {
+        const id = pageForAgent()
+        if (!id) return null
+        const pages = pagesOf(store)
+        return { id, name: pages.find((p) => p.id === id)?.name ?? id, count: pages.length }
+      },
       nodeName: (id) => {
         const n = store.getNode(id) as { name?: unknown } | undefined
         return n ? (str(n.name) ?? id) : undefined
@@ -186,7 +208,7 @@ export function useEditorAgentPanel({
       },
       sideBySideGap: SIDE_BY_SIDE_GAP,
     })
-  }, [ai, fileId, tools, platform, store])
+  }, [ai, fileId, tools, platform, store, pageForAgent])
   useEffect(() => () => controller?.dispose(), [controller])
 
   // Canvas selection → removable attachment chips (the scope of Single mode).
@@ -241,6 +263,7 @@ export function useEditorAgentPanel({
         fileName={doc ? doc.fileName : session.meta.name}
         clis={ai.clis()}
         onOpenSettings={() => openSettings("ai-providers")}
+        onOpenSkillsFolder={skillsFolderAction(platform)}
         nodeNameOf={(id) => nodeNameIn(session, id)}
         parentNameOf={(id) => {
           const n = session.store.getNode(id) as { parent?: unknown } | undefined

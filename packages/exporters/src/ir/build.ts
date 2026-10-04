@@ -614,7 +614,7 @@ class Builder {
         extra.fill(s)
       } else if (isObject(w))
         (["t", "r", "b", "l"] as const).forEach((k, i) => {
-          extra[i] = Math.max(0, num(w[k]) ?? 0)
+          extra[i] = Math.max(0, num(this.value(id, w[k], "spacing").v) ?? 0)
         })
     }
     const justify = ["start", "center", "end", "between", "around", "evenly"].includes(
@@ -721,9 +721,12 @@ class Builder {
         return {
           kind: "image",
           src: p.src,
+          // Fit "crop" (board 27): the `crop` region stretched to the box.
           fit: ["cover", "contain", "stretch", "tile"].includes(p.fit as string)
             ? (p.fit as "cover")
-            : "cover",
+            : p.fit === "crop"
+              ? "stretch"
+              : "cover",
           crop,
           opacity: clamp01(this.num(id, p.opacity, "opacity", 1).v),
           blend,
@@ -857,6 +860,9 @@ class Builder {
           kind: "polygon",
           sides: Math.max(3, Math.floor(num(n.sides) ?? 3)),
           cornerRadius: this.num(id, n.radius, "radius", 0).v,
+          ...(isObject(n.star)
+            ? { starRatio: Math.max(0.01, Math.min(1, num(n.star.ratio) ?? 0.38)) }
+            : {}),
         }
       case "path": {
         const vb = n.viewBox

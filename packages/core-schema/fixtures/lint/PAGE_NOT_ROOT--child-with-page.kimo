@@ -1,0 +1,10 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"pages": {"PageHome01":{"order":"a0","name":"Home"}},
+"nodes": {
+"Child00001": {"type":"rect","parent":"Root000001","order":"a0","w":10,"h":10,"page":"PageHome01"}
+
+, "Root000001": {"type":"frame","parent":null,"order":"a0","name":"Root","w":100,"h":100,"page":"PageHome01"}
+}
+}

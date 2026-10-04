@@ -4,6 +4,7 @@
 @import "./tool-button/ToolButton.css";
 @import "./input/Input.css";
 @import "./prop-field/PropField.css";
+@import "./prop-field-bound/PropFieldBound.css";
 @import "./color-field/ColorField.css";
 @import "./menu/Menu.css";
 @import "./select/Select.css";
@@ -51,6 +52,7 @@
 @import "./asset-row/AssetRow.css";
 @import "./type-glyph/TypeGlyph.css";
 @import "./prop-def-row/PropDefRow.css";
+@import "./enum-targets/EnumTargets.css";
 @import "./instance-swap-field/InstanceSwapField.css";
 @import "./instance-prop-row/InstancePropRow.css";
 @import "./alias-chip/AliasChip.css";
@@ -63,6 +65,7 @@
 @import "./library-row/LibraryRow.css";
 @import "./confirm-dialog/ConfirmDialog.css";
 @import "./swap-popover/SwapPopover.css";
+@import "./variable-picker/VariablePicker.css";
 @import "./library-manager/LibraryManager.css";
 @import "./variables-dialog/VariablesDialog.css";
 
@@ -131,3 +134,15 @@
 @import "./notice-card/NoticeCard.css";
 @import "./icon-error-card/IconErrorCard.css";
 @import "./approval-card/ApprovalCard.css";
+
+/* Board 27 §10 (b): per-turn cost warning above the agent composer. */
+@import "./cost-warning-card/CostWarningCard.css";
+
+/* Board 27 §0: pages strip, ⌘P switcher, layer drag. */
+@import "./page-row/PageRow.css";
+@import "./palette-row/PaletteRow.css";
+@import "./drop-indicator/DropIndicator.css";
+@import "./layer-row-drop-target/LayerRowDropTarget.css";
+
+/* Board 27 §6: panel icon toggles (flip, wrap, paint blend), checkbox, paint blend chip. */
+@import "./panel-controls/PanelControls.css";

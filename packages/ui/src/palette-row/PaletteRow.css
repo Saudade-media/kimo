@@ -1,0 +1,97 @@
+/*
+ * PaletteRow: desing.pen 27 §0 PaletteRow (PiM7v), PaletteRow/Active (Emzr7).
+ * frame: fill_container × 32, radius-md, gap 8, padding [0, 10], alignItems center
+ *   ├ Icon      14 × 14 lucide, text-tertiary (active text-primary)
+ *   ├ Name      font-sans text-sm text-primary, normal
+ *   ├ Meta      font-sans text-xs text-tertiary
+ *   ├ Spacer    fill_container × 1
+ *   └ Enter Key (active only) bg-subtle, radius 4, stroke 1 border, padding [1, 5];
+ *               Keys "↵" font-sans text-xs text-secondary
+ * Active: fill bg-hover.
+ */
+.kimo-palette-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  flex: none;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  font-family: var(--kimo-font-sans);
+  cursor: default;
+  user-select: none;
+}
+
+.kimo-palette-row--active {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-palette-row__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-palette-row--active .kimo-palette-row__icon {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-palette-row__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-palette-row__name {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-palette-row__meta {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.kimo-palette-row__meta--mono {
+  font-family: var(--kimo-font-mono);
+}
+
+.kimo-palette-row__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-palette-row__key {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid var(--kimo-border);
+  border-radius: 4px;
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-palette-row__keys {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}

@@ -44,13 +44,20 @@ describe("AgentPresenceChip (I3Q0Q, /Paused fFrQA, /Waiting MFqUw)", () => {
         `kimo-agent-chip--${state}`,
       )
   })
-  test("no meta → no separator; waiting orb ring 1.5; 2+ clients stack (≤ 3 orbs)", () => {
+  test("no meta → no separator; mark follows presence (board 24 BXTD5); queue badge (I7jut)", () => {
     expect(renderToString(h(AgentPresenceChip, { label: "x" }))).not.toContain("__sep")
+    expect(renderToString(h(AgentPresenceChip, { label: "x" }))).toContain('data-state="working"')
     expect(renderToString(h(AgentPresenceChip, { label: "x", state: "waiting" }))).toContain(
-      'data-ring="1.5"',
+      'data-state="listening"',
     )
-    const many = renderToString(h(AgentPresenceChip, { label: "5 agents editing", orbs: 5 }))
-    expect(many.match(/kimo-agent-orb/g)?.length).toBe(3)
+    expect(renderToString(h(AgentPresenceChip, { label: "x", state: "paused" }))).toContain(
+      'data-state="paused"',
+    )
+    const q = renderToString(h(AgentPresenceChip, { label: "Codex is waiting", queue: 12 }))
+    expect(q).toContain("kimo-agent-chip__queue")
+    expect(q).toContain(">9+<")
+    expect(q).not.toContain("__sep")
+    expect(renderToString(h(AgentPresenceChip, { label: "x", meta: "+2" }))).toContain(">+2<")
   })
 })
 

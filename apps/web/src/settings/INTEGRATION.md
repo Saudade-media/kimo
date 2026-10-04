@@ -60,3 +60,9 @@ follows `prefers-color-scheme` live. The Topbar theme toggle should then write
 resolves is overwritten when the initial load applies the persisted values (the load re-applies
 every key that differs). Writes before `ready` are lost. Suggest: track keys written before load
 and skip them when applying loaded values.
+
+## M6: AI providers pane
+
+`"ai-providers"` (board 23 g6AqH) sits right after Agents & MCP; `SettingsView` renders
+`AiProvidersPane` from `../ai-settings` (see `apps/web/src/ai-settings/INTEGRATION.md`). The
+active nav icon is `$agent` for this pane. Desktop Rust `SETTINGS_PANES` must include it.

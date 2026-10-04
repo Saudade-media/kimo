@@ -4,8 +4,8 @@
  * run"). A DOM layer stacked over the canvas (pointer-events: none except the bar); the caller
  * projects node ids to layer coordinates.
  */
-import { AgentOrb, Button } from "@kimo/ui"
-import { useEffect, useState } from "react"
+import { AgentMark, CompactButton } from "@kimo/ui"
+import { useEffect, useRef, useState } from "react"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
 import { AgentIcon } from "./icons"
@@ -28,6 +28,72 @@ export interface AgentCanvasLayerProps {
   viewportKey?: unknown
   /** Outline fades this long after the op group commits (rule: 2 s). */
   fadeMs?: number
+  /** Off-screen cursor pill click: pan to the node (board 24 g rule 3). */
+  onPanTo?: (nodeId: string) => void
+}
+
+/** Cursor hides after this much idle time (board 24 g rule 5). */
+export const CURSOR_IDLE_MS = 3000
+
+export interface CursorPlacement {
+  kind: "on-canvas" | "docked"
+  /** Pointer position (on canvas) or the docked pill's position. */
+  x: number
+  y: number
+  /** Label pill flipped left / up near a viewport edge (rule 2). */
+  flipX: boolean
+  flipY: boolean
+  /** Docked: arrow toward the target. */
+  arrow?:
+    | "arrow-up-left"
+    | "arrow-up"
+    | "arrow-up-right"
+    | "arrow-left"
+    | "arrow-right"
+    | "arrow-down-left"
+    | "arrow-down"
+    | "arrow-down-right"
+}
+
+/**
+ * Board 24 › 5 · (g) cursor placement rules: anchor = top-left of the target node (+4, +4); the
+ * label pill sits below-right of the pointer and flips left/up within 8 px of a viewport edge; an
+ * off-screen target docks the pill to the nearest edge with an arrow; several agents on one node
+ * stack 4 px apart (lead on top) and never overlap the dry-run bar.
+ */
+export function placeCursor(
+  box: ProjectedBox,
+  view: { w: number; h: number },
+  opts: { stack?: number; pill?: { w: number; h: number }; reservedTop?: number } = {},
+): CursorPlacement {
+  const pill = opts.pill ?? { w: 180, h: 26 }
+  const stack = (opts.stack ?? 0) * (pill.h + 4)
+  const top = opts.reservedTop ?? 0
+  const ax = box.x + 4
+  const ay = box.y + 4 + stack
+  const off = ax < 0 || ay < top || ax > view.w || ay > view.h
+  if (!off) {
+    return {
+      kind: "on-canvas",
+      x: ax,
+      y: ay,
+      flipX: ax + 18 + pill.w > view.w - 8,
+      flipY: ay + 20 + pill.h > view.h - 8,
+    }
+  }
+  const h = ax < 0 ? "left" : ax > view.w ? "right" : ""
+  const v = ay < top ? "up" : ay > view.h ? "down" : ""
+  const arrow = (
+    v && h ? `arrow-${v}-${h}` : v ? `arrow-${v}` : `arrow-${h || "right"}`
+  ) as CursorPlacement["arrow"]
+  return {
+    kind: "docked",
+    x: Math.max(8, Math.min(view.w - 8 - pill.w, ax)),
+    y: Math.max(top + 8, Math.min(view.h - 8 - pill.h, ay)),
+    flipX: false,
+    flipY: false,
+    ...(arrow ? { arrow } : {}),
+  }
 }
 
 export function AgentCanvasLayer({
@@ -35,8 +101,19 @@ export function AgentCanvasLayer({
   project,
   viewportKey,
   fadeMs = 2000,
+  onPanTo,
 }: AgentCanvasLayerProps) {
   const state = useAgentsState(controller)
+  const layer = useRef<HTMLDivElement>(null)
+  const [view, setView] = useState({ w: 0, h: 0 })
+  useEffect(() => {
+    const el = layer.current
+    if (!el || typeof ResizeObserver === "undefined") return
+    const ro = new ResizeObserver(() => setView({ w: el.clientWidth, h: el.clientHeight }))
+    ro.observe(el)
+    setView({ w: el.clientWidth, h: el.clientHeight })
+    return () => ro.disconnect()
+  }, [])
   const [tick, setTick] = useState(0)
   // Re-render once the fade window of the most recent edit passes.
   const latest = Math.max(0, ...state.chips.map((c) => c.lastActivityAt))
@@ -50,14 +127,22 @@ export function AgentCanvasLayer({
   void viewportKey
   const dry = state.dryRun && !state.dryRunHidden ? state.dryRun : null
   return (
-    <div className="agents-canvas-layer" data-testid="agent-canvas-layer">
-      {state.chips.map((chip) => (
+    <div ref={layer} className="agents-canvas-layer" data-testid="agent-canvas-layer">
+      {state.chips.map((chip, i) => (
         <Attribution
           key={chip.connectionId}
           chip={chip}
           project={project}
           fadeMs={fadeMs}
           store={controller.store}
+          view={view}
+          stack={
+            state.chips
+              .slice(0, i)
+              .filter((c) => c.focus[0] !== undefined && c.focus[0] === chip.focus[0]).length
+          }
+          reservedTop={dry || state.dryRun ? 52 : 0}
+          {...(onPanTo ? { onPanTo } : {})}
         />
       ))}
       {dry?.ghosts.map((g) => {
@@ -76,11 +161,19 @@ function Attribution({
   project,
   fadeMs,
   store,
+  view,
+  stack,
+  reservedTop,
+  onPanTo,
 }: {
   chip: AgentChipView
   project: AgentCanvasLayerProps["project"]
   fadeMs: number
   store: AgentsControllerExt["store"]
+  view: { w: number; h: number }
+  stack: number
+  reservedTop: number
+  onPanTo?: (id: string) => void
 }) {
   const writing = chip.state === "editing" || Date.now() - chip.lastActivityAt < fadeMs
   if (chip.presence === "paused") return null
@@ -89,6 +182,9 @@ function Attribution({
   const box = project(id)
   if (!box) return null
   const name = (store?.getNode(id) as { name?: string } | undefined)?.name ?? id
+  const idle = Date.now() - chip.lastActivityAt > CURSOR_IDLE_MS && chip.state !== "editing"
+  const place = view.w > 0 ? placeCursor(box, view, { stack, reservedTop }) : null
+  const markState = chip.state === "editing" ? "working" : "idle"
   return (
     <div
       className={`agents-attribution${writing ? "" : " agents-attribution--faded"}`}
@@ -106,27 +202,44 @@ function Attribution({
           borderRadius: box.radius ?? 0,
         }}
       />
-      {/* Agent Attribution tag (GSUtG): 18 tall, 3 px above the outline */}
+      {/* Agent Attribution tag (GSUtG): 18 tall, 3 px above the outline; mark → AgentMark 12 */}
       <div
         className="agents-attribution__tag"
         data-testid="agent-tag"
         style={{ left: box.x, top: box.y - 21 }}
       >
-        <AgentOrb size={12} ring={1} />
+        <AgentMark size={12} state={markState} />
         <span className="agents-attribution__tag-label">
           {chip.label} · {name}
         </span>
       </div>
-      {/* Agent Cursor (IJH2i): board 04 cursor with the client orb */}
-      {chip.state === "editing" && (
+      {/* Agent Cursor (IJH2i; board 24 g placement): anchor = node top-left + (4, 4) */}
+      {!idle && place?.kind === "docked" && (
+        <button
+          type="button"
+          className="agents-cursor-docked"
+          data-testid="agent-cursor-docked"
+          style={{ left: place.x, top: place.y }}
+          onClick={() => onPanTo?.(id)}
+        >
+          <AgentMark size={12} state={markState} />
+          <span className="agents-cursor-docked__label">
+            {chip.label} · {name}
+          </span>
+          <AgentIcon name={place.arrow ?? "arrow-right"} size={12} />
+        </button>
+      )}
+      {!idle && chip.state === "editing" && place?.kind !== "docked" && (
         <div
           className="agents-cursor"
           data-testid="agent-cursor"
-          style={{ left: box.x + Math.round(box.w * 0.62), top: box.y + Math.round(box.h * 0.85) }}
+          data-flip-x={place?.flipX || undefined}
+          data-flip-y={place?.flipY || undefined}
+          style={{ left: place?.x ?? box.x + 4, top: place?.y ?? box.y + 4 }}
         >
           <AgentIcon name="mouse-pointer-2" size={18} className="agents-cursor__pointer" />
           <div className="agents-cursor__pill">
-            <AgentOrb size={14} ring={1} />
+            <AgentMark size={12} state="working" />
             <span className="agents-cursor__label">
               {chip.label} · editing {name}…
             </span>
@@ -162,39 +275,64 @@ function Ghost({ kind, name, box }: { kind: GhostKind; name: string; box: Projec
   )
 }
 
-/** Dry Run Bar (P1Ulp): "Dry run · nothing applied", counts, Hide / Show preview. */
+/**
+ * Dry-run bar (board 24 › 5 · (g) joR0E › jMSYI): pinned top-centre of the canvas; row, h 32, gap
+ * 8, padding [0, 4], center, bg-overlay, 1 px border, pill, shadow 0 4 12 › AgentMark 12 ·
+ * Label "Dry run · 7 ops" sans 12 / 500 · Meta "nothing applied" sans 11 text-tertiary · Discard
+ * (Button/Ghost h 24, padding [0, 8], 11) · Apply (Button/Primary h 24, padding [0, 10], 11).
+ * Apply = ⌘↩, Discard = Esc. It replaces the presence chip while active.
+ */
 export function DryRunBar({ controller }: { controller: AgentsControllerExt }) {
   const state = useAgentsState(controller)
   const dry = state.dryRun
-  if (!dry) return null
+  const approval = dry?.source === "approval" ? state.queue[0] : undefined
+  // Discard = Esc. With an approval behind the dry run, the approval prompt already answers Esc
+  // (Deny) and the presence layer ⌘↩ (Apply); a dry-run call only needs Esc to dismiss.
+  useEffect(() => {
+    if (!dry || approval) return
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t?.closest("input, textarea, [contenteditable=true], [role=dialog]")) return
+      if (e.key === "Escape") {
+        e.preventDefault()
+        controller.setDryRunHidden(true)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [dry, approval, controller])
+  if (!dry || state.dryRunHidden) return null
   const { delete: del, insert, update } = dry.counts
+  const ops = del + insert + update
   return (
     <div className="agents-dry-bar" role="status" data-testid="agent-dry-run-bar">
-      <AgentIcon name="eye" size={16} className="agents-dry-bar__icon" />
-      <span className="agents-dry-bar__title">Dry run · nothing applied</span>
-      {del > 0 && (
-        <span className="agents-count agents-count--delete">
-          <span className="agents-count__label">−{del} delete</span>
-        </span>
-      )}
-      {insert > 0 && (
-        <span className="agents-count agents-count--insert">
-          <span className="agents-count__label">+{insert} insert</span>
-        </span>
-      )}
-      {update > 0 && (
-        <span className="agents-count agents-count--update">
-          <span className="agents-count__label">~{update} update</span>
-        </span>
-      )}
-      <Button
+      <AgentMark size={12} state="working" />
+      <span className="agents-dry-bar__title">
+        Dry run · {ops} {ops === 1 ? "op" : "ops"}
+      </span>
+      <span className="agents-dry-bar__meta">nothing applied</span>
+      <CompactButton
         variant="ghost"
-        className="agents-button agents-button--ghost-primary agents-dry-bar__toggle"
-        icon={<AgentIcon name={state.dryRunHidden ? "eye" : "eye-off"} size={14} />}
-        onClick={() => controller.setDryRunHidden(!state.dryRunHidden)}
+        height={24}
+        padX={8}
+        text="xs"
+        onClick={() =>
+          approval ? void controller.answer(approval.id, "deny") : controller.setDryRunHidden(true)
+        }
       >
-        {state.dryRunHidden ? "Show preview" : "Hide preview"}
-      </Button>
+        Discard
+      </CompactButton>
+      {approval && (
+        <CompactButton
+          variant="primary"
+          height={24}
+          padX={10}
+          text="xs"
+          onClick={() => void controller.answer(approval.id, "once")}
+        >
+          Apply
+        </CompactButton>
+      )}
     </div>
   )
 }

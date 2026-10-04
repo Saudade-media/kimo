@@ -13,8 +13,17 @@
  * frame draws them, and the red one closes the dialog.
  */
 import type { KimoPlatform, SettingsPane } from "@kimo/platform"
-import { Bot, HardDrive, Info, RefreshCw, Settings as SettingsIcon, Shield } from "lucide-react"
+import {
+  Bot,
+  HardDrive,
+  Info,
+  KeyRound,
+  RefreshCw,
+  Settings as SettingsIcon,
+  Shield,
+} from "lucide-react"
 import { type KeyboardEvent, useCallback, useRef } from "react"
+import { AiProvidersPane } from "../ai-settings/AiProvidersPane"
 import { AgentsPane } from "./AgentsPane"
 import { useSetSetting, useSettings } from "./hooks"
 import { SETTINGS_PANES } from "./model"
@@ -28,6 +37,7 @@ const ICONS = {
   "refresh-cw": RefreshCw,
   info: Info,
   bot: Bot,
+  "key-round": KeyRound,
 } as const
 
 export interface SettingsViewProps {
@@ -136,6 +146,7 @@ export function SettingsView({
         {pane === "files" && <FilesPane {...props} />}
         {pane === "fonts" && <FontsPane {...props} />}
         {pane === "agents-mcp" && <AgentsPane platform={platform} />}
+        {pane === "ai-providers" && <AiProvidersPane platform={platform} />}
         {pane === "updates" && <UpdatesPane {...props} />}
         {pane === "about" && <AboutPane {...props} />}
       </section>

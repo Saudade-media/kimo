@@ -1,0 +1,221 @@
+/*
+ * Composer/Agent: desing.pen 22 > Components (M6) > Composer/Agent (Bry8p); model chip with
+ * AgentMark/12 per board 24 P9Dzzb (qgvQ7), split persona variant (VVIpR).
+ * column fill_container, gap 10, padding [12, 12, 10, 16], fill bg-app, stroke 1 border-strong,
+ * radius-xl
+ *   ├ Attachments (FLTbw) row fill, gap 6, center
+ *   ├ Input       (Jfb3E) fill, sans 13 text-primary (placeholder text-tertiary)
+ *   └ Bar         (IYc3u) row fill, gap 4, center
+ *        Attach (x4agy) 24 × 24 radius-sm › paperclip 14 text-secondary
+ *        Skills (X2Uuj) h 24, gap 4, padding [0, 6], radius-sm › book-open 14 + Count mono 11
+ *        Mode   (SzC72) ModeChip
+ *        Spacer
+ *        Model  (KnAC9) gap 4, padding [2, 6] › AgentMark 12 · Label sans 11 text-tertiary ·
+ *               chevron-down 12 text-tertiary; open (U4mrI): fill bg-muted, radius-pill, label
+ *               text-primary; split (VVIpR): fill agent-<p>-soft, radius-sm, label + chevron
+ *               agent-<p>
+ *        Send   (fh2Ry) 28 × 28 pill accent › arrow-up 16 on-accent (square 12 while streaming)
+ */
+.kimo-composer-agent {
+  /* Split: the persona tint of the agent being configured (set inline on the Model chip). */
+  --kimo-model-tint: var(--kimo-agent);
+  --kimo-model-soft: var(--kimo-agent-soft);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 12px 10px 16px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+
+.kimo-composer-agent--disabled {
+  opacity: 0.6;
+}
+
+.kimo-composer-agent__attachments {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kimo-composer-agent__input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
+}
+
+.kimo-composer-agent__input::placeholder {
+  color: var(--kimo-text-tertiary);
+  opacity: 1;
+}
+
+.kimo-composer-agent__bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.kimo-composer-agent__attach,
+.kimo-composer-agent__skills,
+.kimo-composer-agent__model,
+.kimo-composer-agent__send {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-composer-agent__attach {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--kimo-radius-sm);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-composer-agent__attach:hover,
+.kimo-composer-agent__skills:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-composer-agent__attach svg,
+.kimo-composer-agent__skills svg {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-composer-agent__skills {
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--kimo-radius-sm);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-composer-agent__skills--open,
+.kimo-composer-agent__skills--open:hover {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-composer-agent__skills-count {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.kimo-composer-agent__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+.kimo-composer-agent__model {
+  /* Shrinks (label ellipsis) before the bar overflows the 336 composer. */
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--kimo-radius-pill);
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-composer-agent__model:hover,
+.kimo-composer-agent__model--open {
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-composer-agent__model--persona,
+.kimo-composer-agent__model--persona:hover {
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-model-soft);
+  color: var(--kimo-model-tint);
+}
+
+.kimo-composer-agent__model-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-composer-agent__model--open .kimo-composer-agent__model-label {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-composer-agent__model-chevron {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-composer-agent__send {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+}
+
+.kimo-composer-agent__send:hover:not(:disabled) {
+  background: var(--kimo-accent-hover);
+}
+
+/* The design draws Send solid even when there is nothing to send (Bry8p fh2Ry). */
+.kimo-composer-agent__send:disabled {
+  cursor: default;
+}
+
+.kimo-composer-agent__send svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-composer-agent__send--stop svg {
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-composer-agent button:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}

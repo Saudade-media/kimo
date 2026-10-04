@@ -235,9 +235,10 @@ export const scenarios: Scenario[] = [
           )?.features?.ss01 === true,
       )
       await page.keyboard.press("Escape")
-      // Custom tag… → salt = 2.
+      // Custom tag… (board 24 b Ehror: expands inline) → salt = 2.
       await menu.getByRole("menuitemradio", { name: /Custom tag/ }).click()
-      await page.getByRole("textbox", { name: "Custom OpenType tag" }).fill("salt = 2")
+      await page.getByRole("textbox", { name: "OpenType tag" }).fill("salt")
+      await page.getByRole("textbox", { name: "Feature value" }).fill("2")
       await page.keyboard.press("Enter")
       await page.waitForFunction(
         () =>
@@ -349,14 +350,14 @@ export const scenarios: Scenario[] = [
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
       await page.keyboard.press("Meta+i")
       await italicRow.waitFor()
-      // ⌘K opens the inline link field; Enter sets href.
+      // ⌘K opens the Link… popover (board 24 a NpwJS); Enter sets href.
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
       await page.keyboard.press("Meta+k")
       const link = page.getByRole("textbox", { name: "Link URL" })
       await link.waitFor()
       await link.fill("https://kimo.dev/pricing")
       await page.keyboard.press("Enter")
-      await page.waitForFunction(() => !document.querySelector('[data-testid="text-link-field"]'))
+      await page.waitForFunction(() => !document.querySelector('[data-testid="text-link-popover"]'))
       expect((await style(page)).href === "https://kimo.dev/pricing", "href set")
       await openMenu(page)
       const linkItem = page

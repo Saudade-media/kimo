@@ -143,7 +143,10 @@ export const scenarios: Scenario[] = [
       await open(ctx)
       await hook(page, (k) => k.show({ kind: "settings", pane: "files" }))
       await page.waitForSelector(".settings-window")
-      expect((await page.locator(".settings-nav-item").count()) === 6, "six panes")
+      expect(
+        (await page.locator(".settings-nav-item").count()) === 7,
+        "seven panes (M6 AI providers)",
+      )
       expect(
         (await page.locator(".settings-nav-item").nth(3).getAttribute("data-pane")) ===
           "agents-mcp",

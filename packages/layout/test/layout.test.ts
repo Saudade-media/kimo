@@ -367,13 +367,30 @@ describe("text", () => {
     )
     expect(l.box("t")).toEqual([0, 0, 40, 25])
   })
-  test("notes size to their content unless w/h are set", async () => {
+  test("notes and prompts: design width, chrome + wrapped body height (board 22)", async () => {
     const l = await lay({
       n: { type: "note", ...root, content: "abcd" },
       m: { type: "note", ...root, content: "aa bb", w: 20 },
+      f: { type: "note", ...root, content: "abcd", w: { mode: "fit" } },
+      p: { type: "prompt", ...root, content: "abcd" },
+      h: { type: "prompt", ...root, content: "abcd", w: 200, h: 90 },
     })
-    expect(l.box("n")).toEqual([0, 0, 32, 20])
-    expect(l.box("m")).toEqual([0, 0, 20, 40])
+    // Note: 220 wide (afq5v); body at y 33 = 12 + 13 + 8, 14 below; 12 px × 1.45 lines.
+    expect(l.box("n")[2]).toBe(220)
+    expect(l.box("n")[3]).toBeCloseTo(33 + 17.4 + 14, 5)
+    expect(l.get("n").text?.w).toBe(24)
+    // Body width = w - 28 → the words wrap one per line.
+    expect(l.box("m")[3]).toBeCloseTo(33 + 2 * 17.4 + 14, 5)
+    // fit: unwrapped body + 14 + 14.
+    expect(l.box("f")[2]).toBe(52)
+    // Prompt: 300 wide (poE5B); head 38 + body padding 10 + 12 × 1.5 + 10 + footer 42.
+    expect(l.box("p")).toEqual([0, 0, 300, 38 + 10 + 18 + 10 + 42])
+    expect(l.box("h")).toEqual([0, 0, 200, 90])
+  })
+  test("a note's style applies on top of the card's body style", async () => {
+    const l = await lay({ n: { type: "note", ...root, content: "ab", style: { size: 20 } } })
+    expect(l.get("n").text?.w).toBe(20)
+    expect(l.box("n")[3]).toBeCloseTo(33 + 20 * 1.45 + 14, 5)
   })
   test("a measurer that throws is reported, the box falls back to 0", async () => {
     const { engine, inputFor, nodes } = await import("./helpers")

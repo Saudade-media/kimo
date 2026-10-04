@@ -59,6 +59,8 @@ import {
 import {
   type Banner,
   type BannerActionId,
+  type ClosePromptChoice,
+  type ClosePromptRequest,
   type ConflictSession,
   type DocumentSession,
   displayedSaveStatus,
@@ -202,6 +204,14 @@ export class FileDocumentSession implements DocumentSession {
   private pendingReconcile = false
   private conflictCounts: { open: number; total: number; resolved: number } | null = null
   private mergeReady = false
+  /**
+   * Board 24 (n): the stored merge was just finished (Mark resolved & save) and not written yet:
+   * that save goes through even while git still merges ("resolved AND saved").
+   */
+  private resolutionUnsaved = false
+  /** Board 24 (i): the pending close prompt of a never-saved document. */
+  private closeAsk: { request: ClosePromptRequest; resolve(c: ClosePromptChoice): void } | null =
+    null
   private toasts: Toast[] = []
   private lastShown: SaveStatus | null = null
   private dirtySince: number | null = null
@@ -594,6 +604,7 @@ export class FileDocumentSession implements DocumentSession {
     const c = conflictCounts(header)
     const p = this.provider
     if (c.total === 0) {
+      if (this.conflictCounts) this.resolutionUnsaved = true
       this.conflictCounts = null
       // The editor's conflict session (board 18) holds store listeners: release them.
       ;(this.conflicts as { destroy?: () => void } | null)?.destroy?.()
@@ -601,6 +612,10 @@ export class FileDocumentSession implements DocumentSession {
       p?.resumeAutosave("conflicts")
     } else {
       this.conflictCounts = c
+      this.resolutionUnsaved = false
+      // Board 24 (n): a resolution undone (conflicts back in the file) → the git banner returns;
+      // "Ready to commit" shows again after the next Mark resolved & save.
+      this.mergeReady = false
       if (!this.conflicts && this.manager.createConflictSession)
         this.conflicts = this.manager.createConflictSession(this)
       if (c.open > 0) p?.pauseAutosave("conflicts")
@@ -690,14 +705,18 @@ export class FileDocumentSession implements DocumentSession {
         fileName: this.fileName,
         holder: this.holder,
       })
-    if (p?.pauses.has("git") && !this.gitBannerHidden)
+    // Board 24 (n): "Ready to commit" replaces the git banner in the same slot once every
+    // conflict is resolved and saved (no stored conflicts left).
+    const ready = this.mergeReady && !this.conflictCounts
+    if (p?.pauses.has("git") && !this.gitBannerHidden && !ready)
       out.push({
         kind: "git-operation",
         severity: "warning",
         operation: this.gitOperation,
         unsavedEdits: p.edits,
       })
-    if (this.conflictCounts && this.conflictCounts.open > 0)
+    // Board 24 (n) step 2: all resolved but not saved yet keeps the banner (CTA "Save").
+    if (this.conflictCounts && this.conflictCounts.total > 0)
       out.push({
         kind: "merge-conflicts",
         severity: "warning",
@@ -705,8 +724,7 @@ export class FileDocumentSession implements DocumentSession {
         ...this.conflictCounts,
       })
     if (this.newer) out.push(this.newer)
-    if (this.mergeReady)
-      out.push({ kind: "merge-ready", severity: "info", fileName: this.fileName })
+    if (ready) out.push({ kind: "merge-ready", severity: "info", fileName: this.fileName })
     return out
   }
 
@@ -734,6 +752,7 @@ export class FileDocumentSession implements DocumentSession {
         ? { open: this.conflictCounts.open, total: this.conflictCounts.total }
         : null,
       unsavedEdits: this.provider?.edits ?? 0,
+      closePrompt: this.closeAsk?.request ?? null,
     }
   }
 
@@ -770,7 +789,12 @@ export class FileDocumentSession implements DocumentSession {
     const p = this.provider
     if (!p?.canSave || this.readOnlyCause) return
     if (this.phase === "needs-consent") return this.respondToConsent("upgrade")
-    if (p.pauses.has("git") && this.gitChoice !== "keep" && !this.conflictCounts) {
+    if (
+      p.pauses.has("git") &&
+      this.gitChoice !== "keep" &&
+      !this.conflictCounts &&
+      !this.resolutionUnsaved
+    ) {
       // ⌘S during a git operation asks which of the three to do (board 17 "Do nothing"). With
       // stored conflicts the merge is Kimo's own (`kimo merge`): ⌘S saves them as-is, and
       // "Mark resolved & save" writes the resolved file (board 20 "Banner priority").
@@ -779,6 +803,7 @@ export class FileDocumentSession implements DocumentSession {
       return
     }
     await p.save().catch(() => {})
+    if (!p.dirty) this.resolutionUnsaved = false
     this.emit()
   }
 
@@ -947,6 +972,9 @@ export class FileDocumentSession implements DocumentSession {
         if (c && next) c.focus(next)
         break
       }
+      case "mark-resolved-save":
+        await this.conflicts?.markResolvedAndSave().catch(() => {})
+        break
       case "copy-commit-command": {
         const cmd = `git add ${this.fileName} && git commit --no-edit`
         await globalThis.navigator?.clipboard?.writeText(cmd).catch(() => {})
@@ -986,6 +1014,79 @@ export class FileDocumentSession implements DocumentSession {
   /** True when the last save failed and edits are not on disk. */
   get saveFailed(): boolean {
     return !!this.provider?.lastFailure && !!this.provider.dirty
+  }
+
+  // --- Board 24 (i): closing a never-saved document -------------------------------------------
+
+  /** A never-saved document with edits: closing it would lose them. */
+  get needsClosePrompt(): boolean {
+    return this.untitled && this.untitledEdits > 0 && this.phase !== "closed"
+  }
+
+  /** Top-level frames of the document (the close prompt's "its 12 frames"). */
+  topLevelFrames(): number {
+    const doc = this.store.toDocument() as unknown as {
+      nodes?: Record<string, { type?: string; parent?: string | null }>
+    }
+    let n = 0
+    for (const node of Object.values(doc.nodes ?? {}))
+      if (node && node.type === "frame" && (node.parent ?? null) === null) n++
+    return n
+  }
+
+  /**
+   * Asks before a never-saved document goes away (tab ×, ⌘W, window close). Resolves true when
+   * it may close: saved through Save…, or Don't save (its recovery entry is discarded). Cancel /
+   * Escape, or a cancelled save panel, resolve false. Saved-before files never ask (autosave
+   * already wrote them).
+   */
+  async confirmClose(): Promise<boolean> {
+    if (!this.needsClosePrompt) return true
+    const choice = await this.askClose()
+    if (choice === "cancel") return false
+    if (choice === "discard") {
+      this.stopUntitled()
+      this.untitledEdits = 0
+      await this.platform.recovery.discard(untitledRecoveryId(this._ref)).catch(() => {})
+      return true
+    }
+    const ref = await this.saveAs().catch(() => null)
+    return ref !== null && !this.untitled
+  }
+
+  private askClose(): Promise<ClosePromptChoice> {
+    // A second request (window close while the tab prompt shows) joins the pending one.
+    const pending = this.closeAsk
+    if (pending)
+      return new Promise((resolve) => {
+        const prev = pending.resolve
+        pending.resolve = (c) => {
+          prev(c)
+          resolve(c)
+        }
+      })
+    return new Promise((resolve) => {
+      this.closeAsk = {
+        request: { fileName: this.fileName, frames: this.topLevelFrames() },
+        resolve,
+      }
+      this.emit()
+    })
+  }
+
+  /** The prompt's answer (Save… / Don't save / Cancel). */
+  respondToClose(choice: ClosePromptChoice): void {
+    const ask = this.closeAsk
+    if (!ask) return
+    this.closeAsk = null
+    this.emit()
+    ask.resolve(choice)
+  }
+
+  /** Board 24 (i) close: asks first for a never-saved document, then {@link close}. */
+  async requestClose(): Promise<boolean> {
+    if (!(await this.confirmClose())) return false
+    return this.close()
   }
 
   async close(): Promise<boolean> {
@@ -1058,7 +1159,11 @@ export class FileSessionManager implements SessionManager {
 
   /** Flush-before-close and launch requests (call once per window). */
   install(onOpened?: (session: FileDocumentSession, request: OpenRequest) => void): Unsubscribe {
-    this.offClose = this.platform.window.onCloseRequested(async () => (await this.flushAll()).ok)
+    this.offClose = this.platform.window.onCloseRequested(async () => {
+      // Board 24 (i): never-saved documents ask first; Cancel keeps the window open.
+      if (!(await this.confirmCloseAll())) return false
+      return (await this.flushAll()).ok
+    })
     this.offOpen = this.platform.launch.onOpenRequest((req) => {
       void this.handleOpenRequest(req).then(() => {
         const s = req.refs[0] ? this.byRef.get(req.refs[0]) : undefined
@@ -1177,6 +1282,12 @@ export class FileSessionManager implements SessionManager {
       if (choice === "discard-all") await this.platform.recovery.discard(c.entry.id)
       else if (c.entry.sourceRef) await this.resolveRecovery(c.entry.id, "restore")
     }
+  }
+
+  /** Board 24 (i): asks for every never-saved document with edits, in order; false on Cancel. */
+  async confirmCloseAll(): Promise<boolean> {
+    for (const s of this.sessions()) if (!(await s.confirmClose())) return false
+    return true
   }
 
   async flushAll(): Promise<{ ok: boolean; failed: FileRef[] }> {

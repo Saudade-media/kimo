@@ -3,7 +3,7 @@
  * blocks until Deny / Always for this session / Allow once, or the 2-minute timeout denies it.
  * Prompts queue oldest first (rule "Approval"); Esc = Deny.
  */
-import { AgentOpRow, AgentOrb, Button, useAnchoredPosition } from "@kimo/ui"
+import { AgentMark, AgentOpRow, Button, useAnchoredPosition } from "@kimo/ui"
 import { useEffect, useRef } from "react"
 import type { AgentsControllerExt } from "./controller"
 import { useAgentsState, useNow } from "./hooks"
@@ -101,7 +101,7 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
     >
       {/* Head (CDPPh) */}
       <div className="agents-approval__head">
-        <AgentOrb size={32} />
+        <AgentMark size={32} state="listening" />
         <div className="agents-approval__text">
           <span id="agents-approval-title" className="agents-approval__title">
             {approvalTitle(r, store)}

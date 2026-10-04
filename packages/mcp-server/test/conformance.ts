@@ -341,10 +341,26 @@ const CASES: Record<ConformanceCase, Impl> = {
     )
     expect(r.data.files[0]?.path).toBe(target)
     expect(await h.readFile(target)).toContain('"Board00001"')
-    expectFail(
-      await c.call("kimo_export", { docId, target: "react-tailwind", outDir }),
-      "UNSUPPORTED",
-    )
+    // Code targets (M7): an identical file is unchanged, a different one blocks the batch.
+    const call = () =>
+      c.call<{ files: { path: string; unchanged?: boolean }[] }>("kimo_export", {
+        docId,
+        target: "html-css",
+        ids: ["Board00001"],
+        outDir: `${outDir}/web`,
+      })
+    const first = expectOk(await call())
+    expect(first.data.files.map((f) => f.path.slice(outDir.length + 1)).sort()).toEqual([
+      "web/index.html",
+      "web/styles.css",
+      "web/tokens.css",
+    ])
+    expect(first.data.files.every((f) => !f.unchanged)).toBe(true)
+    const again = expectOk(await call())
+    expect(again.data.files.every((f) => f.unchanged === true)).toBe(true)
+    await h.writeFile(`${outDir}/web/styles.css`, "/* mine */")
+    expectFail(await call(), "FILE_EXISTS")
+    expect(await h.readFile(`${outDir}/web/styles.css`)).toBe("/* mine */")
   },
 
   "kimo_save reports bytes/sha256 only after read-back matched": async (h) => {

@@ -106,14 +106,23 @@
   height: 12px;
 }
 
-/* Not designed: Link… URL field (under the header) and the Custom tag field (in the menu). */
-.rp-text-link {
-  display: flex;
-  width: 100%;
-}
+/* Board 24 (b) Ehror › Custom tag (jtxHo) inside Menu/Dense ndO4D: the block keeps its own
+   node values; the 8px sides line it up with the menu rows' padding [0, 8] (the vignette draws it
+   in a popover body with padding 12). */
 .rp-text-menu__custom {
   box-sizing: border-box;
   display: flex;
   width: 100%;
-  padding: 2px 4px;
+  padding: 0 8px 6px;
+}
+
+/* Board 24 (k) QfSAK Weight field with a missing weight: value · Spacer · Warning dot (6 × 6
+   warning) · chevron, gap 6 (nTJ7I/FsOdH). */
+.rp-select.rp-select--warning {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.rp-select__spacer {
+  flex: 1 1 0;
+  height: 1px;
 }

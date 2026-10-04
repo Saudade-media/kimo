@@ -17,6 +17,7 @@
  */
 import type { LayoutResult, Matrix } from "@kimo/layout"
 import type { Canvas, CanvasKit, Paint, Path } from "canvaskit-wasm"
+import { AgentOverlayPainter, hasAgentOverlays } from "./agent-overlay"
 import { parseHex } from "./color"
 import { apply, multiply, resolveRadii, toCk, union } from "./geometry"
 import type { TextEngine } from "./text"
@@ -110,7 +111,12 @@ export class OverlayPainter {
   constructor(
     private readonly ck: CanvasKit,
     private readonly text: TextEngine,
-  ) {}
+  ) {
+    this.agents = new AgentOverlayPainter(ck)
+  }
+
+  /** M6 surfaces (placeholders, scopes, agent selections, connectors). */
+  private readonly agents: AgentOverlayPainter
 
   private color(hex: string, alpha = 1): Float32Array {
     const c = parseHex(hex) ?? [0.184, 0.42, 1, 1]
@@ -1056,6 +1062,10 @@ export class OverlayPainter {
     if (overlay.measurements?.length) this.measurements(canvas, overlay.measurements, v, theme, c)
     const selQuad = this.selectionQuad(overlay, layout, v)
     if (overlay.resize) this.resize(canvas, overlay.resize, layout, selQuad, v, theme, c)
+
+    // M6 (board 22/24): agent surfaces under the identity outlines, hover and selection.
+    if (layout && hasAgentOverlays(overlay))
+      this.agents.draw(canvas, overlay, layout, v, theme, c, env.scene)
 
     if (layout && overlay.componentOutlines?.length)
       this.componentOutlines(canvas, overlay.componentOutlines, layout, v, theme, c)

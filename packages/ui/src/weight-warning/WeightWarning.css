@@ -1,0 +1,47 @@
+/*
+ * Font missing-weight warning: desing.pen board 24 (k) QfSAK.
+ *   Warning dot (HWYvD) ellipse 6 × 6, fill warning.
+ *   Tooltip · missing weight (Esdjk): column, gap 2, padding [6, 8], width 260, fill
+ *   text-primary, radius-sm, shadow outer 0 4 blur 12 shadow
+ *     ├ Title (rQ5cV) sans 12 / 500 text-inverse
+ *     └ Body (tPank) sans 11 / 400 text-inverse, opacity 0.8, lineHeight 1.45, fill width
+ */
+.kimo-warning-dot {
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kimo-warning);
+}
+
+.kimo-weight-tooltip {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 260px;
+  padding: 6px 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-text-primary);
+  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
+  pointer-events: none;
+  z-index: 40;
+}
+.kimo-weight-tooltip__title,
+.kimo-weight-tooltip__body {
+  color: var(--kimo-text-inverse);
+  font-family: var(--kimo-font-sans);
+}
+.kimo-weight-tooltip__title {
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+.kimo-weight-tooltip__body {
+  width: 100%;
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  opacity: 0.8;
+}

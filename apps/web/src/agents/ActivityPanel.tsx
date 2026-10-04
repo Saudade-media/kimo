@@ -4,7 +4,7 @@
  * Rules: newest first, grouped by session; hover highlights targets in $agent, click selects and
  * scrolls; per-entry and per-session undo only for that origin (guarded replay → "stale").
  */
-import { ActivityRow, AgentOrb, Button, Select } from "@kimo/ui"
+import { ActivityRow, AgentMark, Button, CompactButton, EmptyState, Select } from "@kimo/ui"
 import { useMemo, useState } from "react"
 import type { AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
@@ -26,6 +26,8 @@ export interface AgentActivityPanelProps {
   onHighlight?: (nodeIds: string[] | null) => void
   /** Export JSON: receives the file text (default: a download). */
   onExport?: (json: string, filename: string) => void
+  /** Empty log, no agent connected: "Connect an agent…" opens Settings › Agents & MCP. */
+  onConnectAgent?: () => void
 }
 
 export function AgentActivityPanel({
@@ -33,6 +35,7 @@ export function AgentActivityPanel({
   fileId,
   onHighlight,
   onExport,
+  onConnectAgent,
 }: AgentActivityPanelProps) {
   const state = useAgentsState(controller)
   const [client, setClient] = useState<string>("all")
@@ -53,6 +56,7 @@ export function AgentActivityPanel({
     kind,
     stale: state.stale,
     undone: state.undone,
+    undoneAt: state.undoneAt,
     transport: (o) => {
       const c = byOrigin.get(o)
       return c ? transportLabel(c, state.server) : null
@@ -83,13 +87,32 @@ export function AgentActivityPanel({
       </div>
       <div className="agents-activity__list">
         {groups.length === 0 && (
-          // Not designed: an empty log.
-          <p className="agents-activity__empty">No agent activity in this file yet.</p>
+          // Board 24 › 5 · (f) KzugB: Body column gap 12, padding 16, center › EmptyState
+          // (history) · "Connect an agent…" only while no agent is connected.
+          <div className="agents-activity__empty" data-testid="agent-activity-empty">
+            <EmptyState
+              className="agents-activity__empty-state"
+              icon={<AgentIcon name="history" size={18} />}
+              title="No agent activity yet"
+              description="Every change an agent makes to this file shows up here, with undo per entry."
+            />
+            {state.connections.length === 0 && onConnectAgent && (
+              <CompactButton
+                variant="secondary"
+                height={28}
+                padX={10}
+                icon={<AgentIcon name="plug" size={14} />}
+                onClick={onConnectAgent}
+              >
+                Connect an agent…
+              </CompactButton>
+            )}
+          </div>
         )}
         {groups.map((g) => (
           <section key={g.origin} className="agents-activity__group" data-origin={g.origin}>
             <div className="agents-activity__group-header">
-              <AgentOrb size={16} />
+              <AgentMark size={16} />
               <span className="agents-activity__group-name">{g.name}</span>
               <span className="agents-activity__group-meta">{g.meta}</span>
               <span className="agents-spacer" />
@@ -113,6 +136,10 @@ export function AgentActivityPanel({
                 tone={r.tone}
                 pending={r.pending}
                 stale={r.stale}
+                undone={r.undone}
+                {...(r.undone && r.entry && controller.redoEntry
+                  ? { onRedo: () => void controller.redoEntry?.(r.entry as never) }
+                  : {})}
                 data-key={r.key}
                 onUndo={
                   r.entry && r.undoable

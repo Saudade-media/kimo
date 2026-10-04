@@ -41,7 +41,7 @@ import { FillSection, StrokeSection } from "./sections/PaintSections"
 import { TextSection } from "./sections/TextSection"
 import type { FileSession } from "./session"
 
-type RightTab = "design" | "code" | "agent" | "activity" | "conflicts"
+export type RightTab = "design" | "code" | "agent" | "activity" | "conflicts"
 const NO_REV = createBus(0)
 
 const TABS = [
@@ -73,6 +73,12 @@ export interface RightPanelProps {
   activity?: ReactNode
   /** Bumped to open the Activity tab (Paused banner "Show ops", Settings "Open activity"). */
   openActivity?: Bus<number>
+  /** M6: the Agent tab body (board 22 D0zDSY); null keeps the empty state. */
+  agent?: ReactNode
+  /** Bumped to open the Agent tab (Home hand-off, placeholder "Review", prompt runs). */
+  openAgent?: Bus<number>
+  /** The tab shown first (Home hand-off: "agent"). */
+  initialTab?: RightTab
 }
 
 export function RightPanel({
@@ -86,8 +92,18 @@ export function RightPanel({
   fonts = null,
   activity = null,
   openActivity,
+  agent = null,
+  openAgent,
+  initialTab = "design",
 }: RightPanelProps) {
-  const [tab, setTab] = useState<RightTab>("design")
+  const [tab, setTab] = useState<RightTab>(initialTab)
+  const agentRev = useBusValue(openAgent ?? NO_REV)
+  const agentSeen = useRef(agentRev)
+  useEffect(() => {
+    if (agentRev === agentSeen.current) return
+    agentSeen.current = agentRev
+    setTab("agent")
+  }, [agentRev])
   const activityRev = useBusValue(openActivity ?? NO_REV)
   const activitySeen = useRef(activityRev)
   useEffect(() => {
@@ -157,7 +173,8 @@ export function RightPanel({
           />
         </div>
       )}
-      {tab === "agent" && (
+      {tab === "agent" && agent}
+      {tab === "agent" && !agent && (
         <div className="right-panel__empty">
           <EmptyState
             icon={<Icon name="sparkles" size={18} />}

@@ -1,0 +1,425 @@
+/*
+ * M6 canvas DOM (desing.pen board 22 D0zDSY, board 24 iLW1l). Values are the design nodes';
+ * tokens fall back to the .pen light values until @kimo/design-tokens carries them.
+ */
+
+.agent-canvas {
+  position: absolute;
+  inset: 0;
+  /* clip, not hidden: focusing a tooltip button must never scroll the layer. */
+  overflow: clip;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Persona hue (board 24 "Persona hue tokens"): lead = agent (teal), then Iris → Moss. */
+.agent-canvas [class*="--agent"] {
+  --agent-canvas-hue: var(--kimo-agent, #0093a3);
+}
+.agent-canvas [class*="--iris"] {
+  --agent-canvas-hue: var(--kimo-agent-iris, #4f5fe8);
+}
+.agent-canvas [class*="--violet"] {
+  --agent-canvas-hue: var(--kimo-agent-violet, #8b47de);
+}
+.agent-canvas [class*="--rose"] {
+  --agent-canvas-hue: var(--kimo-agent-rose, #d6457f);
+}
+.agent-canvas [class*="--ember"] {
+  --agent-canvas-hue: var(--kimo-agent-ember, #e8652a);
+}
+.agent-canvas [class*="--moss"] {
+  --agent-canvas-hue: var(--kimo-agent-moss, #5e8a2e);
+}
+
+/*
+ * PlaceholderFrame Tag (EKCy7 iyhUZ): height 20, fill agent (persona hue in split), radius-xs,
+ * gap 4, padding [0, 7, 0, 5], align center; AgentMark 12; Label 11/500 on-accent.
+ * Orphan (DwvTl): "Interrupted" in warning.
+ */
+.agent-canvas__tag {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px 0 5px;
+  border-radius: var(--kimo-radius-xs, 4px);
+  background: var(--agent-canvas-hue);
+  color: var(--kimo-on-accent, #ffffff);
+  white-space: nowrap;
+  pointer-events: auto;
+}
+.agent-canvas__tag--interrupted {
+  background: var(--kimo-warning, #b26a00);
+}
+.agent-canvas__tag-label,
+.agent-canvas__scope-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 500;
+  line-height: 13px;
+}
+
+/*
+ * Human Edit Tooltip (MVnAW vqqTf): width 280, bg-overlay, radius-md, 1 border, shadow
+ * 0 8 24 shadow-strong, vertical gap 8, padding 12. Head gap 6 (AgentMark 16 + Title 12/600);
+ * Desc 11, line height 1.45, text-secondary; Actions gap 6 (Secondary / Ghost, 26 high,
+ * padding [0, 10], icon 14, label text-sm).
+ */
+.agent-canvas__tip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 280px;
+  padding: 12px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-md, 10px);
+  background: var(--kimo-bg-overlay);
+  box-shadow: 0 8px 24px var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  white-space: normal;
+  cursor: default;
+}
+.agent-canvas__tip-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.agent-canvas__tip-title {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm, 12px);
+  font-weight: 600;
+  color: var(--kimo-text-primary);
+}
+.agent-canvas__tip-desc {
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--kimo-text-secondary);
+}
+.agent-canvas__tip-actions {
+  display: flex;
+  gap: 6px;
+}
+.agent-canvas__tip-actions .kimo-button {
+  --kimo-button-height: 26px;
+  --kimo-button-padding-x: 10px;
+  --kimo-button-icon-size: 14px;
+  --kimo-button-font-size: var(--kimo-text-sm, 12px);
+}
+
+/* Done Chip (MVnAW i6wxFe): 22 high, agent-soft, pill, gap 5, padding [0, 8, 0, 6]; check 12 + 11/500 agent. */
+.agent-canvas__ready {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--kimo-radius-pill, 999px);
+  background: var(--kimo-agent-soft, #e3f5f7);
+  color: var(--kimo-agent, #0093a3);
+  white-space: nowrap;
+  pointer-events: auto;
+  animation: agent-canvas-fade 4s linear forwards;
+}
+.agent-canvas__ready-label,
+.agent-canvas__ready-review {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 500;
+  line-height: 13px;
+  color: inherit;
+}
+.agent-canvas__ready-review {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.agent-canvas__ready-review:hover {
+  text-decoration: underline;
+}
+@keyframes agent-canvas-fade {
+  0%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ScopeTag (NKE7Z): 20 high, fill agent / persona hue, radius-xs, gap 4, padding [0, 7, 0, 5]; lock 11 + 11/500 on-accent. */
+.agent-canvas__scope {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px 0 5px;
+  border-radius: var(--kimo-radius-xs, 4px);
+  background: var(--agent-canvas-hue);
+  color: var(--kimo-on-accent, #ffffff);
+  white-space: nowrap;
+}
+
+/* Pass Chip (h6oHb NCElh): 22 high, bg-app, pill, 1 agent stroke, gap 5, padding [0, 8, 0, 6]; repeat 12 + 11/500 agent. */
+.agent-canvas__pass {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--kimo-agent, #0093a3);
+  border-radius: var(--kimo-radius-pill, 999px);
+  background: var(--kimo-bg-app);
+  color: var(--kimo-agent, #0093a3);
+  white-space: nowrap;
+}
+.agent-canvas__pass-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 500;
+  line-height: 13px;
+}
+
+/* Rejected Op (z6D2MM O2Whh): 24 high, danger, pill, shadow 0 4 12, gap 6, padding [0, 10, 0, 8]; ban 12 + mono 11/500 #FFFFFF. */
+.agent-canvas__rejected {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border-radius: var(--kimo-radius-pill, 999px);
+  background: var(--kimo-danger, #dd2229);
+  box-shadow: 0 4px 12px var(--kimo-shadow);
+  color: #ffffff;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.agent-canvas__rejected-label {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 500;
+  line-height: 13px;
+}
+
+/*
+ * Agent Cursor (board 24 GmEAl H6ncRy): vertical gap 2; Pointer mouse-pointer-2 18 in the
+ * persona hue; Pill: persona fill, radius 999, shadow 0 4 12 shadow, gap 6, padding [4, 10, 4, 4],
+ * AgentMark 12 + Label 12/500 on-accent. Eases 120 ms between anchors (decision G5).
+ */
+.agent-canvas__cursor {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  transition:
+    left 120ms ease,
+    top 120ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-canvas__cursor {
+    transition: none;
+  }
+}
+.agent-canvas__cursor-pointer {
+  display: inline-flex;
+  color: var(--agent-canvas-hue);
+}
+.agent-canvas__cursor-pill {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--agent-canvas-hue);
+  box-shadow: 0 4px 12px var(--kimo-shadow);
+  white-space: nowrap;
+}
+.agent-canvas__cursor-label {
+  font-family: var(--kimo-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 15px;
+  color: var(--kimo-on-accent, #ffffff);
+}
+.agent-canvas__cursor--flip-x {
+  align-items: flex-end;
+  transform: translateX(-100%);
+}
+.agent-canvas__cursor--flip-y {
+  flex-direction: column-reverse;
+  transform: translateY(-100%);
+}
+.agent-canvas__cursor--flip-x.agent-canvas__cursor--flip-y {
+  transform: translate(-100%, -100%);
+}
+
+/*
+ * Prompt Footer (poE5B pFCri) contents, world-scaled (transform: scale(zoom)): 42 high,
+ * gap 8, padding [8, 8, 8, 12]; Status Icon 12 (circle-check success · loader-circle agent ·
+ * circle-alert danger); Status mono 11 (text-tertiary · agent · danger); Run pill 26 high,
+ * gap 4, padding [0, 10, 0, 8], icon 12 + label 11/600 (Run / Retry: accent, on-accent;
+ * Stop: bg-muted, text-primary — n22Gv VFi4q).
+ */
+.agent-canvas__prompt-footer {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 8px 8px 8px 12px;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.agent-canvas__prompt-status-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-success, #1e8e3e);
+}
+.agent-canvas__prompt-footer--running .agent-canvas__prompt-status-icon {
+  color: var(--kimo-agent, #0093a3);
+}
+.agent-canvas__prompt-footer--failed .agent-canvas__prompt-status-icon {
+  color: var(--kimo-danger, #dd2229);
+}
+.agent-canvas__prompt-status {
+  overflow: hidden;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 400;
+  line-height: 15px;
+  color: var(--kimo-text-tertiary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agent-canvas__prompt-footer--running .agent-canvas__prompt-status {
+  color: var(--kimo-agent, #0093a3);
+}
+.agent-canvas__prompt-footer--failed .agent-canvas__prompt-status {
+  color: var(--kimo-danger, #dd2229);
+}
+.agent-canvas__prompt-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+.agent-canvas__prompt-run {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  margin: 0;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill, 999px);
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent, #ffffff);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.agent-canvas__prompt-run--stop {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+.agent-canvas__prompt-run:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.agent-canvas__prompt-run-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 600;
+  line-height: 13px;
+}
+
+/* Prompt · running (n22Gv VFi4q): stroke 1.5 agent (inside). */
+.agent-canvas__prompt-running {
+  position: absolute;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1.5px var(--kimo-agent, #0093a3);
+}
+
+/* Target Chip (n22Gv sWQ2b): 18 high, agent-soft, radius-xs, gap 3, padding [0, 6, 0, 4]; crosshair 10 + mono 11 agent. */
+.agent-canvas__target {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 6px 0 4px;
+  border-radius: var(--kimo-radius-xs, 4px);
+  background: var(--kimo-agent-soft, #e3f5f7);
+  color: var(--kimo-agent, #0093a3);
+  white-space: nowrap;
+}
+.agent-canvas__target-label {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs, 11px);
+  font-weight: 400;
+  line-height: 13px;
+}
+
+/*
+ * Layer rows (board 22 n22Gv / MVnAW): LayerRow/Note (Td29N) and LayerRow/Prompt (zKI13) have
+ * no disclosure (`ujm25` disabled); LayerRow/Placeholder (lZZ9q) keeps it. Base LayerRow
+ * (GXnBT) styles come from @kimo/ui `.kimo-layer-row`.
+ */
+.agent-layer-row:not(.kimo-layer-row--selected) .kimo-layer-row__icon--note {
+  color: var(--kimo-note-text, #3d3205);
+}
+.agent-layer-row:not(.kimo-layer-row--selected) .kimo-layer-row__icon--agent,
+.agent-layer-row--placeholder:not(.kimo-layer-row--selected) .kimo-layer-row__name {
+  color: var(--kimo-agent, #0093a3);
+}
+.agent-layer-row__trail {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kimo-text-tertiary);
+}
+.agent-layer-row__trail > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+button.agent-layer-row__trail {
+  cursor: pointer;
+}
+.agent-layer-row__trail--running,
+.agent-layer-row__trail--lock {
+  color: var(--kimo-agent, #0093a3);
+}
+.agent-layer-row__trail--failed {
+  color: var(--kimo-danger, #dd2229);
+}

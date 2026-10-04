@@ -1,14 +1,16 @@
 /*
- * AgentPresenceChip: desing.pen 21 > Components (M5) > AgentPresenceChip (I3Q0Q),
- * /Paused (fFrQA), /Waiting (MFqUw).
+ * AgentPresenceChip: desing.pen 21 > Components (M5) > AgentPresenceChip (I3Q0Q) / Paused
+ * (fFrQA), with the board 24 replacement (BXTD5): Orb 20 → AgentMark 24, waiting keeps the
+ * agent-soft fill with a Listening mark (W42AfV), approval queue badge (I7jut kMZD0).
  * frame: row, gap 6, padding [0, 10, 0, 4], alignItems center, h 28, radius-pill, agent-soft
- *   ├ Orb     (sZqHj) AgentOrb 20
- *   ├ Label   (u7zeoB) sans 12 / 500 agent
- *   ├ Sep     (S02ieE) ellipse 3 × 3 agent
- *   ├ Meta    (sCc98) mono 11 / 400 agent
- *   └ Chevron (OSvd0) lucide chevron-down 12 agent
- * Paused: fill warning-soft, content warning. Waiting: fill agent, content on-accent, orb stroke
- * on-accent 1.5.
+ *   ├ AgentMark 24 (whSu1 / i6eT4U)
+ *   ├ Label   sans 12 / 500 agent
+ *   ├ Sep     ellipse 3 × 3 agent
+ *   ├ Meta    mono 11 / 400 agent
+ *   │  or Queue badge (kMZD0) h 18, gap 4, padding [0, 7], text-primary, radius-pill ›
+ *   │     hand 11 text-inverse · Count sans 11 / 600 text-inverse
+ *   └ Chevron lucide chevron-down 12 agent
+ * Paused: fill warning-soft, content warning.
  */
 .kimo-agent-chip {
   box-sizing: border-box;
@@ -40,38 +42,6 @@
   color: var(--kimo-warning);
 }
 
-.kimo-agent-chip--waiting {
-  background: var(--kimo-agent);
-  color: var(--kimo-on-accent);
-  animation: kimo-agent-chip-pulse 900ms ease-out 1;
-}
-
-@keyframes kimo-agent-chip-pulse {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--kimo-agent) 45%, transparent);
-  }
-  100% {
-    box-shadow: 0 0 0 8px color-mix(in srgb, var(--kimo-agent) 0%, transparent);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .kimo-agent-chip--waiting {
-    animation: none;
-  }
-}
-
-/* One orb: the Orb node. 2+ clients: stacked orbs (not drawn on the board; 6px overlap). */
-.kimo-agent-chip__orbs {
-  display: inline-flex;
-  flex: none;
-  flex-direction: row;
-}
-
-.kimo-agent-chip__orb + .kimo-agent-chip__orb {
-  margin-left: -6px;
-}
-
 .kimo-agent-chip__label {
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-sm);
@@ -93,6 +63,34 @@
   font-size: var(--kimo-text-xs);
   font-weight: var(--kimo-font-weight-regular);
   line-height: 15px; /* Pencil text box for JetBrains Mono 11 */
+}
+
+.kimo-agent-chip__queue {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-text-primary);
+  color: var(--kimo-text-inverse);
+}
+
+.kimo-agent-chip__queue-icon {
+  display: block;
+  flex: none;
+  width: 11px;
+  height: 11px;
+}
+
+.kimo-agent-chip__queue-count {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
 }
 
 .kimo-agent-chip__chevron {

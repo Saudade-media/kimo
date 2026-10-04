@@ -66,6 +66,8 @@ export interface AgentsViewState extends AgentsState {
   /** Activity entries whose undo replay was stale / that were undone here. */
   stale: ReadonlySet<number>
   undone: ReadonlySet<number>
+  /** seq → time it was undone here (board 24 h). */
+  undoneAt: ReadonlyMap<number, number>
   /** Dry-run ghosts: the oldest pending approval of this file, or the last dryRun call. */
   dryRun: (DryRunView & { source: "approval" | "call"; origin: string }) | null
   dryRunHidden: boolean
@@ -75,6 +77,8 @@ export interface AgentsViewState extends AgentsState {
 /** Per-origin undo for agent groups (the document host's `kimo_history`; default: the store). */
 export interface AgentHistory {
   undo(origin: string, undoToken?: string): Promise<{ ok: boolean; stale: boolean }>
+  /** Redo the origin's last undone group (board 24 h "Redo"); absent: no Redo action. */
+  redo?(origin: string): Promise<{ ok: boolean; stale: boolean }>
 }
 
 export interface AgentsOptions {
@@ -114,6 +118,8 @@ export interface AgentsControllerExt extends AgentsController {
   undoTop(origin: string): Promise<{ ok: boolean; stale: boolean }>
   /** Undo session: every undoable entry of a session in the activity log. */
   undoSession(origin: string): Promise<{ undone: number; stale: number }>
+  /** Redo an undone entry (board 24 h); null when the history cannot redo. */
+  redoEntry: ((entry: McpActivityEntry) => Promise<{ ok: boolean; stale: boolean }>) | null
   /** Pause: the client becomes read-only until Resume (policy level `read`). */
   pause(client: string): Promise<void>
   resume(client: string): Promise<void>
@@ -142,6 +148,11 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
             const r = store.undo(origin as LocalOrigin)
             return { ok: r.ok, stale: r.stale }
           },
+          async redo(origin) {
+            if (!store) return { ok: false, stale: false }
+            const r = store.redo(origin as LocalOrigin)
+            return { ok: r.ok, stale: r.stale }
+          },
         })
 
   let server: McpServerStatus | null = null
@@ -155,6 +166,7 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
   const userPaused = new Set<string>()
   const stale = new Set<number>()
   const undone = new Set<number>()
+  const undoneAt = new Map<number, number>()
   let dryRunCall: { origin: string; view: DryRunView; seq: number } | null = null
   let dryRunHidden = false
   let disposed = false
@@ -298,6 +310,7 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       paused: { ...paused },
       stale: new Set(stale),
       undone: new Set(undone),
+      undoneAt: new Map(undoneAt),
       dryRun,
       dryRunHidden,
       now: t,
@@ -419,7 +432,10 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
     if (!entry.undoToken) return { ok: false, stale: false }
     const r = await history.undo(entry.origin, entry.undoToken)
     if (r.stale || !r.ok) stale.add(entry.seq)
-    else undone.add(entry.seq)
+    else {
+      undone.add(entry.seq)
+      undoneAt.set(entry.seq, now())
+    }
     emit()
     return r
   }
@@ -444,6 +460,17 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       await opts.host.disconnect(connectionId)
     },
     undoEntry: undoEntryImpl,
+    redoEntry: history.redo
+      ? async (entry) => {
+          const r = await (history.redo as NonNullable<AgentHistory["redo"]>)(entry.origin)
+          if (r.ok) {
+            undone.delete(entry.seq)
+            undoneAt.delete(entry.seq)
+          }
+          emit()
+          return r
+        }
+      : null,
     focusEntry(entry) {
       if (entry.nodeIds && entry.nodeIds.length > 0) opts.onFocus?.([...entry.nodeIds])
     },

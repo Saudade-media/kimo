@@ -156,3 +156,27 @@ Not done: the session popover's "client settings" deep link opens the pane but d
 the client (the Settings window route carries the pane only); "Ask before destructive" has no
 global setting behind it (per-client `confirmDestructive` lives in each policy); the Settings
 window's "Open activity" has no cross-window channel to the editor's Activity tab.
+
+## Board 24 (M6) additions
+
+- **AgentMark** replaces AgentOrb on every surface (chip 24, session popover 28, approval prompt
+  32, canvas tag 12, cursor pill 12, Activity group 16, client row 28). Marks follow presence
+  (editing → Working, reading → Thinking, waiting → Listening, paused → Idle frozen).
+- **Presence chip** (BXTD5 / yeF1Z / I7jut): 2+ agents show the lead (waiting → working → idle)
+  with meta "+N"; while approvals wait, a neutral queue badge (hand + N, "9+") replaces the meta
+  and the chip opens the queue popover (XCENV; oldest first, ⌘↩ approves the top). With 2+
+  agents the chip opens the agents popover (N4cx0). New optional props:
+  `onOpenAgentsSettings` ("Agents & MCP…") and `fileName` ("Session · <file>").
+- **Dry-run bar** (joR0E jMSYI): top-centre of the canvas, AgentMark 12, "Dry run · N ops ·
+  nothing applied", Discard (Esc) / Apply (⌘↩, approval-backed dry runs). For an agent's
+  dry-run *call* it replaces the presence chip; an approval's dry run keeps the chip (the prompt
+  hangs from it).
+- **Agent cursor placement** (joR0E rules): anchor = target top-left + (4, 4), pill flips near
+  edges, off-screen targets dock to the nearest edge with an arrow (`onPanTo` on
+  `AgentCanvasLayer`), stacked 4 px apart, eases 120 ms, hides after 3 s idle.
+- **Activity**: empty log = EmptyState (history) + "Connect an agent…" when no agent is connected
+  (`onConnectAgent` on `AgentActivityPanel`); undone entries stay (struck label, "Undone by you ·
+  10:52", Redo when the history can redo: `AgentHistory.redo`, the store-based default can).
+- **Config diff preview** (KdEak K5Dnf) is built into `AgentsMcpPane` (Install / Update /
+  Remove): unified diff scrolled to the change, Copy diff, backup footnote, nothing written on
+  Cancel.

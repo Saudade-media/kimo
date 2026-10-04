@@ -107,3 +107,18 @@
   height: 28px;
   padding: 0 12px;
 }
+
+/* Board 24 (j): the rejection toast sits where the editor's toasts do (board 15 placement,
+   `.m3-toasts`: centered, above the floating toolbar) and grows in place. */
+.svg-rejection-toast {
+  position: absolute;
+  z-index: 41;
+  left: 50%;
+  bottom: calc(24px + var(--floating-toolbar-h, 48px) + 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  transform: translateX(-50%);
+}

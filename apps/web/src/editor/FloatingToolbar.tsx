@@ -7,6 +7,9 @@
  * M2 (board 10 #7 "Pen tool active", BacCm): Pen takes the active slot while the pen tool is
  * armed and the Tooltip/Hint pill (EW0tj → u0dQ1) floats 12px above the toolbar, centered,
  * fading out after the first anchor. Image shows active while an image placement is armed.
+ *
+ * M6 (board 22 cf2sC `FTOjQ`): Note (N) and Prompt (⇧P) after Component, their icons tinted
+ * `note-text` / `agent` as in the design's Tool · Note / Tool · Prompt.
  */
 import { Kbd, ToolButton, Tooltip } from "@kimo/ui"
 import { type CSSProperties, useLayoutEffect, useRef, useState } from "react"
@@ -16,15 +19,21 @@ import { useCanvasToolState } from "../canvas/tool-state"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 
+/** desing.pen light values for the M6 tool tints until the tokens ship. */
+const TINT_FALLBACK: Record<string, string> = { "note-text": "#3D3205", agent: "#0093A3" }
+
 /** Board 10 #7 hint copy (Zlv3i). */
 const PEN_HINT = "Click to add points · Drag to curve · Enter to finish"
 
 export function FloatingToolbar({
   ui,
   onActivate,
+  onAsk,
 }: {
   ui: UiStore
   onActivate(id: CanvasToolId): void
+  /** "Ask Kimo" (⌘K): opens the Agent tab (M6). Absent: the M5 disabled state. */
+  onAsk?: () => void
 }) {
   const tool = useUi(ui, (s) => s.tool)
   const { placement, penHint } = useCanvasToolState(ui)
@@ -66,7 +75,23 @@ export function FloatingToolbar({
             >
               <ToolButton
                 label={t.label}
-                icon={<Icon name={t.icon} size={18} />}
+                icon={
+                  t.iconColor ? (
+                    // M6 (board 22 cf2sC "Insert hint"): Note sticky-note `note-text`,
+                    // Prompt sparkles `agent`.
+                    <span
+                      className="floating-toolbar__tinted"
+                      style={{
+                        display: "inline-flex",
+                        color: `var(--kimo-${t.iconColor}, ${TINT_FALLBACK[t.iconColor] ?? "currentColor"})`,
+                      }}
+                    >
+                      <Icon name={t.icon} size={18} />
+                    </span>
+                  ) : (
+                    <Icon name={t.icon} size={18} />
+                  )
+                }
                 active={active === t.id}
                 disabled={!enabled}
                 data-tool={t.id}
@@ -76,15 +101,25 @@ export function FloatingToolbar({
           )
         })}
         <span className="floating-toolbar__divider" aria-hidden="true" />
-        <Tooltip side="top" label="Agent arrives in M6">
-          <button type="button" className="floating-toolbar__ask" aria-disabled="true">
+        {onAsk ? (
+          <button type="button" className="floating-toolbar__ask" onClick={onAsk}>
             <span className="floating-toolbar__ask-icon">
               <Icon name="sparkles" size={16} />
             </span>
             <span className="floating-toolbar__ask-label">Ask Kimo</span>
             <Kbd>⌘K</Kbd>
           </button>
-        </Tooltip>
+        ) : (
+          <Tooltip side="top" label="Agent arrives in M6">
+            <button type="button" className="floating-toolbar__ask" aria-disabled="true">
+              <span className="floating-toolbar__ask-icon">
+                <Icon name="sparkles" size={16} />
+              </span>
+              <span className="floating-toolbar__ask-label">Ask Kimo</span>
+              <Kbd>⌘K</Kbd>
+            </button>
+          </Tooltip>
+        )}
       </div>
     </>
   )

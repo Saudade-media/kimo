@@ -16,9 +16,17 @@ import {
   type SvgImportChoice,
   SvgImportPopover,
   SvgRejectedError,
+  SvgRejectionToast,
   svgImportOps,
 } from "../svg-import"
 import type { FileSession } from "./session"
+
+/** A rejected file (board 24 j): kept so "Import without these" can import it sanitized. */
+interface Rejected {
+  error: SvgRejectedError
+  bytes: Uint8Array | string
+  client: { x: number; y: number }
+}
 
 interface Pending {
   prepared: PreparedSvg
@@ -61,8 +69,8 @@ export function useSvgImport({
   /** The canvas container (drop target; paste lands at its center). */
   container: { current: HTMLElement | null }
   /**
-   * A file that could not be imported. `details` (board 20 Toast/Danger "Details") lists the
-   * offending elements with their lines when the SVG was rejected as unsafe.
+   * A file that could not be imported (not SVG, DOCTYPE, too large…). Unsafe SVGs no longer go
+   * here: board 24 (j) shows them in {@link SvgRejectionToast} (part of the returned `popover`).
    */
   onError(message: string, details?: readonly string[]): void
 }): {
@@ -73,6 +81,7 @@ export function useSvgImport({
   popover: ReactNode
 } {
   const [pending, setPending] = useState<Pending | null>(null)
+  const [rejected, setRejected] = useState<Rejected | null>(null)
   const errorRef = useRef(onError)
   errorRef.current = onError
 
@@ -108,12 +117,13 @@ export function useSvgImport({
       name: string,
       client: { x: number; y: number },
       shift: boolean,
+      allowRemoved = false,
     ) => {
       let prepared: PreparedSvg
       try {
-        prepared = await prepareSvg(bytes, name)
+        prepared = await prepareSvg(bytes, name, { allowRemoved })
       } catch (e) {
-        if (e instanceof SvgRejectedError) errorRef.current(e.message, e.details)
+        if (e instanceof SvgRejectedError) setRejected({ error: e, bytes, client })
         else errorRef.current(e instanceof Error ? e.message : String(e))
         return
       }
@@ -122,7 +132,8 @@ export function useSvgImport({
       const local = r ? { x: client.x - r.left, y: client.y - r.top } : client
       const at = canvas.current?.screenToWorld(local) ?? { x: 0, y: 0 }
       const p: Pending = { prepared, client, at: { x: Math.round(at.x), y: Math.round(at.y) } }
-      if (shift) void run(p, lastSvgChoice())
+      // Consent to the sanitized SVG imports right away with the last choice (as ⇧-drop does).
+      if (shift || allowRemoved) void run(p, lastSvgChoice())
       else setPending(p)
     },
     [canvas, container, run],
@@ -168,6 +179,20 @@ export function useSvgImport({
     },
   }
 
+  const dismissRejected = useCallback(() => setRejected(null), [])
+  const rejection = rejected ? (
+    <SvgRejectionToast
+      key={`${rejected.error.fileName}-${rejected.client.x}-${rejected.client.y}`}
+      error={rejected.error}
+      onDismiss={dismissRejected}
+      onImport={() => {
+        const r = rejected
+        setRejected(null)
+        void start(r.bytes, r.error.fileName, r.client, false, true)
+      }}
+    />
+  ) : null
+
   const popover = pending ? (
     <SvgImportPopover
       fileName={pending.prepared.fileName}
@@ -186,5 +211,13 @@ export function useSvgImport({
     />
   ) : null
 
-  return { handlers, popover }
+  return {
+    handlers,
+    popover: (
+      <>
+        {popover}
+        {rejection}
+      </>
+    ),
+  }
 }

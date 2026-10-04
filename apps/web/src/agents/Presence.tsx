@@ -4,15 +4,19 @@
  * Mount `<AgentPresence>` in the topbar's drag region, right-aligned before Save status.
  */
 import {
+  AgentMark,
+  type AgentMarkState,
   AgentOpRow,
-  AgentOrb,
   AgentPresenceChip,
+  assignPersonas,
   Button,
+  CompactButton,
   IconButton,
+  type Persona,
   useAnchoredPosition,
   useDismiss,
 } from "@kimo/ui"
-import { useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { ApprovalPrompt } from "./ApprovalPrompt"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
@@ -25,16 +29,64 @@ export interface AgentPresenceProps {
   onShowOnCanvas?: (nodeIds: string[]) => void
   /** Client settings (Settings › Agents & MCP, that client expanded). */
   onOpenClientSettings?: (client: string) => void
+  /** "Agents & MCP…" in the 2+ agents popover. */
+  onOpenAgentsSettings?: () => void
+  /** "Pricing page.kimo" for the 2+ agents popover title ("Session · <file>"). */
+  fileName?: string
+}
+
+/** AgentMark state of a chip (board 24 mapping eqlcN; presence chip rule BXTD5). */
+export function chipMarkState(c: AgentChipView): AgentMarkState {
+  if (c.presence === "waiting") return "listening"
+  if (c.presence === "paused") return "paused"
+  switch (c.state) {
+    case "editing":
+      return "working"
+    case "reading":
+    case "rendering":
+      return "thinking"
+    default:
+      return "idle"
+  }
+}
+
+const PRESENCE_ORDER = { waiting: 0, editing: 1, paused: 2 } as const
+
+/** Sorted waiting → working → idle (board 24 yeF1Z rule), lead first among equals. */
+export function sortChips(chips: readonly AgentChipView[]): AgentChipView[] {
+  const rank = (c: AgentChipView) =>
+    PRESENCE_ORDER[c.presence] * 2 + (chipMarkState(c) === "working" ? 0 : 1)
+  return [...chips].sort((a, b) => rank(a) - rank(b))
 }
 
 /**
- * One chip per active client; 2+ clients collapse to stacked orbs + "N agents editing" (rule
- * "Presence chip"). Click → session popover. The approval prompt opens under the chip by itself.
+ * Persona per chip (board 24 PqjaS): the first agent attached is the lead (Teal); external CLIs
+ * stay Teal outside Split mode; agents spawned inside a session (`agent:` origins) take the next
+ * hue in order Iris → Moss.
+ */
+export function chipPersonas(chips: readonly AgentChipView[]): Map<string, Persona> {
+  const slots = assignPersonas(
+    chips.map((c, i) => ({
+      id: c.origin,
+      lead: i === 0,
+      external: c.origin.startsWith("mcp:"),
+    })),
+  )
+  return new Map(chips.map((c, i) => [c.origin, slots[i]?.persona ?? "teal"]))
+}
+
+/**
+ * The presence chip: the lead agent's mark + label, "+N" when 2+ agents are active (board 24
+ * yeF1Z), a neutral approval-queue badge while approvals wait (I7jut). Click → the session
+ * popover (one agent: hIfmx; 2+: the agents list N4cx0) or, with a queue, the queue popover
+ * (XCENV). The approval prompt still opens under the chip by itself.
  */
 export function AgentPresence({
   controller,
   onShowOnCanvas,
   onOpenClientSettings,
+  onOpenAgentsSettings,
+  fileName,
 }: AgentPresenceProps) {
   const state = useAgentsState(controller)
   const [open, setOpen] = useState(false)
@@ -43,40 +95,61 @@ export function AgentPresence({
   useEffect(() => {
     if (chips.length === 0) setOpen(false)
   }, [chips.length])
+  // ⌘↩ approves the oldest queued request (rule e).
+  useEffect(() => {
+    const first = state.queue[0]
+    if (!first) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        void controller.answer(first.id, "once")
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [state.queue, controller])
 
   if (chips.length === 0)
     return state.prompt ? <ApprovalPrompt controller={controller} anchor={null} /> : null
-  const waiting = chips.filter((c) => c.presence === "waiting")
-  const paused = chips.filter((c) => c.presence === "paused")
+  const sorted = sortChips(chips)
+  const personas = chipPersonas(chips)
+  const lead = sorted[0] as AgentChipView
+  const queue = state.queue.length
   const many = chips.length > 1
-  const ops = chips.reduce((n, c) => n + c.session.rows.length, 0)
-  const lead = waiting[0] ?? paused[0] ?? (chips[0] as AgentChipView)
-  const chipState =
-    waiting.length > 0 ? "waiting" : !many && paused.length > 0 ? "paused" : "editing"
-  const label = many
-    ? waiting.length > 0
-      ? `${waiting.length === 1 ? (waiting[0] as AgentChipView).label : `${waiting.length} agents`} need${waiting.length === 1 ? "s" : ""} approval`
-      : `${chips.length} agents editing`
-    : lead.text
-  const meta = many
-    ? waiting.length > 0
-      ? String(waiting.reduce((n, c) => n + c.pending, 0))
-      : ops > 0
-        ? `${ops} ${ops === 1 ? "op" : "ops"}`
-        : undefined
-    : lead.meta
+  const chipState = queue > 0 ? "waiting" : lead.presence
+  const label = queue > 0 && !many ? `${lead.label} is waiting` : lead.text
+  const meta = many ? `+${chips.length - 1}` : lead.meta
+  // The dry-run bar replaces the presence chip while active (board 24 g) — for an agent's dry-run
+  // call. A dry run that previews an approval keeps the chip: the approval prompt hangs from it
+  // (board 21 weJXw) and the bar's Apply / Discard answer the same request.
+  if (state.dryRun && state.dryRun.source === "call" && !state.dryRunHidden && !open) return null
   return (
     <span className="agents-presence" data-testid="agent-presence">
       <AgentPresenceChip
         ref={setAnchorEl}
         state={chipState}
         label={label}
-        meta={meta}
-        orbs={chips.length}
+        {...(queue > 0 ? { queue } : meta !== undefined ? { meta } : {})}
+        markState={queue > 0 ? "listening" : chipMarkState(lead)}
+        persona={personas.get(lead.origin) ?? "teal"}
         open={open}
         onClick={() => setOpen((o) => !o)}
       />
-      {open && anchorEl && !state.prompt && (
+      {open && anchorEl && queue > 0 && (
+        <QueuePopover controller={controller} anchor={anchorEl} onClose={() => setOpen(false)} />
+      )}
+      {open && anchorEl && queue === 0 && many && (
+        <AgentsPopover
+          controller={controller}
+          chips={sorted}
+          personas={personas}
+          {...(fileName ? { fileName } : {})}
+          anchor={anchorEl}
+          onClose={() => setOpen(false)}
+          onOpenAgentsSettings={onOpenAgentsSettings}
+        />
+      )}
+      {open && anchorEl && queue === 0 && !many && !state.prompt && (
         <SessionPopover
           controller={controller}
           chips={chips}
@@ -86,8 +159,277 @@ export function AgentPresence({
           onOpenClientSettings={onOpenClientSettings}
         />
       )}
-      {state.prompt && <ApprovalPrompt controller={controller} anchor={anchorEl} />}
+      {state.prompt && !open && <ApprovalPrompt controller={controller} anchor={anchorEl} />}
     </span>
+  )
+}
+
+/** Popover frame shared by (d) and (e): 340 / 320 wide, Header h 40 + Close. */
+function AgentsPopoverFrame({
+  title,
+  icon,
+  width,
+  anchor,
+  onClose,
+  testId,
+  children,
+}: {
+  title: string
+  icon: string
+  width: number
+  anchor: HTMLElement
+  onClose(): void
+  testId: string
+  children: ReactNode
+}) {
+  const root = useRef<HTMLDivElement>(null)
+  const pos = useAnchoredPosition(root, anchor, { side: "bottom", align: "end", offset: 8 })
+  useDismiss(root, onClose, anchor, true)
+  return (
+    <div
+      ref={root}
+      role="dialog"
+      aria-label={title}
+      className="agents-pop"
+      data-testid={testId}
+      style={{
+        width,
+        ...(pos
+          ? {
+              position: "fixed",
+              left: pos.x,
+              top: pos.y,
+              visibility: pos.ready ? "visible" : "hidden",
+            }
+          : {}),
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation()
+          onClose()
+        }
+      }}
+    >
+      <div className="agents-pop__header">
+        <span className="agents-pop__leading">
+          <AgentIcon name={icon} size={14} className="agents-pop__icon" />
+          <span className="agents-pop__title">{title}</span>
+        </span>
+        <IconButton
+          size="sm"
+          tone="quiet"
+          className="agents-icon-button agents-pop__close"
+          label="Close"
+          icon={<AgentIcon name="x" size={14} />}
+          onClick={onClose}
+        />
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Board 24 (d) yeF1Z › Popover · Session N4cx0 (340): Header "Session · <file>" (users icon) ›
+ * Body rows (OGJkT): row gap 10, padding [8, 12], center › AgentMark 24 (live state + persona) ·
+ * Text column gap 2 (Name sans 12 / 500 · Meta sans 11 text-tertiary) · Review (Button/Secondary
+ * h 24) when waiting / Pause (Button/Ghost h 24) when working › Footer (PwFn6) gap 6, padding
+ * [8, 12, 4, 12], top stroke: Agents & MCP… · Spacer · Stop all (≥ 2 active, danger label).
+ */
+export function AgentsPopover({
+  controller,
+  chips,
+  personas,
+  anchor,
+  onClose,
+  onOpenAgentsSettings,
+  fileName,
+}: {
+  controller: AgentsControllerExt
+  chips: AgentChipView[]
+  personas: Map<string, Persona>
+  fileName?: string
+  anchor: HTMLElement
+  onClose(): void
+  onOpenAgentsSettings?: () => void
+}) {
+  const file = fileName ?? ""
+  const active = chips.filter((c) => chipMarkState(c) !== "idle" || c.presence === "waiting")
+  return (
+    <AgentsPopoverFrame
+      title={file ? `Session · ${file}` : "Session"}
+      icon="users"
+      width={340}
+      anchor={anchor}
+      onClose={onClose}
+      testId="agents-session-list"
+    >
+      <div className="agents-pop__body">
+        {chips.map((c) => {
+          const mark = chipMarkState(c)
+          const ops = c.session.rows.length
+          const opsLabel = `${ops} ${ops === 1 ? "op" : "ops"}`
+          const focus = c.focus[0]
+          const focusName = focus
+            ? ((controller.store?.getNode(focus) as { name?: string } | undefined)?.name ?? "")
+            : ""
+          const meta =
+            c.presence === "waiting"
+              ? `waiting for approval · ${opsLabel}`
+              : c.presence === "paused"
+                ? "paused"
+                : mark === "working"
+                  ? `editing${focusName ? ` ${focusName}` : ""} · ${opsLabel}`
+                  : mark === "thinking"
+                    ? `reading · ${opsLabel}`
+                    : "idle"
+          return (
+            <div key={c.connectionId} className="agents-pop__agent" data-origin={c.origin}>
+              <AgentMark size={24} state={mark} persona={personas.get(c.origin) ?? "teal"} />
+              <span className="agents-pop__text">
+                <span className="agents-pop__name">{c.label}</span>
+                <span className="agents-pop__meta">{meta}</span>
+              </span>
+              {c.presence === "waiting" ? (
+                <CompactButton
+                  variant="secondary"
+                  height={24}
+                  padX={8}
+                  text="xs"
+                  onClick={() => {
+                    onClose()
+                    controller.refresh()
+                  }}
+                >
+                  Review
+                </CompactButton>
+              ) : mark === "working" ? (
+                <CompactButton
+                  variant="ghost"
+                  height={24}
+                  padX={8}
+                  text="xs"
+                  onClick={() => void controller.pause(c.client)}
+                >
+                  Pause
+                </CompactButton>
+              ) : c.presence === "paused" ? (
+                <CompactButton
+                  variant="ghost"
+                  height={24}
+                  padX={8}
+                  text="xs"
+                  onClick={() => void controller.resume(c.client)}
+                >
+                  Resume
+                </CompactButton>
+              ) : null}
+            </div>
+          )
+        })}
+        <div className="agents-pop__footer">
+          <CompactButton
+            variant="ghost"
+            height={24}
+            padX={6}
+            text="xs"
+            icon={<AgentIcon name="settings" size={14} />}
+            onClick={() => {
+              onClose()
+              onOpenAgentsSettings?.()
+            }}
+          >
+            Agents &amp; MCP…
+          </CompactButton>
+          <span className="agents-spacer" />
+          {active.length >= 2 && (
+            <CompactButton
+              variant="ghost"
+              height={24}
+              padX={6}
+              text="xs"
+              danger
+              icon={<AgentIcon name="square" size={14} />}
+              onClick={() => {
+                for (const c of active) void controller.disconnect(c.connectionId)
+                onClose()
+              }}
+            >
+              Stop all
+            </CompactButton>
+          )}
+        </div>
+      </div>
+    </AgentsPopoverFrame>
+  )
+}
+
+/**
+ * Board 24 (e) I7jut › Popover · Waiting for approval (XCENV, 320): Header (hand) › one request
+ * per row (mywhw): row gap 8, padding [8, 12], center, bottom stroke › Text column gap 2 (Title
+ * sans 12 / 500 · Detail sans 11 text-tertiary) · Deny (ghost h 24) · Approve (primary h 24).
+ * Oldest first; ⌘↩ approves the top item.
+ */
+export function QueuePopover({
+  controller,
+  anchor,
+  onClose,
+}: {
+  controller: AgentsControllerExt
+  anchor: HTMLElement
+  onClose(): void
+}) {
+  const state = useAgentsState(controller)
+  const names = (ids: readonly string[]) =>
+    ids
+      .slice(0, 3)
+      .map((id) => (controller.store?.getNode(id) as { name?: string } | undefined)?.name ?? id)
+      .join(", ")
+  useEffect(() => {
+    if (state.queue.length === 0) onClose()
+  }, [state.queue.length, onClose])
+  return (
+    <AgentsPopoverFrame
+      title={`Waiting for approval · ${state.queue.length}`}
+      icon="hand"
+      width={320}
+      anchor={anchor}
+      onClose={onClose}
+      testId="agents-queue-popover"
+    >
+      <div className="agents-pop__body">
+        {state.queue.map((r) => (
+          <div key={r.id} className="agents-pop__request" data-request={r.id}>
+            <span className="agents-pop__text">
+              <span className="agents-pop__name">{r.summary}</span>
+              <span className="agents-pop__meta">
+                {r.preview?.nodeIds?.length
+                  ? names(r.preview.nodeIds)
+                  : `${r.client.label} · ${r.tool}`}
+              </span>
+            </span>
+            <CompactButton
+              variant="ghost"
+              height={24}
+              padX={8}
+              text="xs"
+              onClick={() => void controller.answer(r.id, "deny")}
+            >
+              Deny
+            </CompactButton>
+            <CompactButton
+              variant="primary"
+              height={24}
+              padX={8}
+              text="xs"
+              onClick={() => void controller.answer(r.id, "once")}
+            >
+              Approve
+            </CompactButton>
+          </div>
+        ))}
+      </div>
+    </AgentsPopoverFrame>
   )
 }
 
@@ -178,7 +520,7 @@ function SessionSection({
     <section className="agents-session__section" data-origin={chip.origin}>
       {/* Header (eLfuF) */}
       <div className="agents-session__header">
-        <AgentOrb size={28} />
+        <AgentMark size={28} state={chipMarkState(chip)} />
         <div className="agents-session__text">
           <div className="agents-session__name-row">
             <span className="agents-session__name">{chip.label}</span>

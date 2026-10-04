@@ -5,7 +5,13 @@
  * "Artboard Label": 12/500 text-tertiary, 22 px above each root frame, constant screen size)
  * and the inline text editor.
  */
-import { type AssetSource, RendererError } from "@kimo/renderer"
+import {
+  AGENT_CANVAS_TOKENS,
+  type AgentCanvasTheme,
+  type AssetSource,
+  type OverlayTheme,
+  RendererError,
+} from "@kimo/renderer"
 import { SlotBadge, SlotQuickInsert, TooltipContent } from "@kimo/ui"
 import {
   type Ref,
@@ -21,7 +27,10 @@ import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } 
 import { useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import "./canvas-m2.css"
+import { AgentCanvasDom } from "./AgentCanvasDom"
+import { type AgentDomState, EMPTY_DOM } from "./agent-canvas"
 import {
+  type AgentCanvasProps,
   CANVAS_TOOLS,
   type CanvasHandle,
   type CanvasHint,
@@ -86,6 +95,23 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     })
   }, [store, shape])
   const [compDom, setCompDom] = useState<ComponentDomOverlay | null>(null)
+  // M6: agent DOM (placeholder tags, scope tags, cursors, prompt footers…), re-rendered only
+  // when its projection changes (nothing at all while the document has no agent surfaces).
+  const [agentDom, setAgentDom] = useState<AgentDomState>(EMPTY_DOM)
+  const agentKey = useRef("")
+  const refreshAgentDom = useCallback(() => {
+    const d = ctl.current?.agentDom() ?? EMPTY_DOM
+    const key = d === EMPTY_DOM ? "" : JSON.stringify(d)
+    if (key === agentKey.current) return
+    agentKey.current = key
+    setAgentDom(d)
+  }, [])
+  const hovered = useUi(uiStore, (s) => s.hovered)
+  // Harness / imperative override of the agent state (`CanvasHandle.setAgentCanvas`).
+  const [agentOverride, setAgentOverride] = useState<AgentCanvasProps | null>(null)
+  // The imperative override wins while set (harnesses drive a mounted editor); null returns
+  // to the shell's `agentCanvas` prop.
+  const agentCanvas = agentOverride ?? props.agentCanvas
   /** Root labels hidden because a nested component/instance label sits on them (note icB1k). */
   const covered = useMemo(
     () => new Set((compDom?.labels ?? []).flatMap((l) => (l.covers ? [l.covers] : []))),
@@ -162,9 +188,10 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         if (s.viewport !== prev.viewport) {
           placeLabels(false)
           refreshComponentDom()
+          refreshAgentDom()
         }
       }),
-    [uiStore, placeLabels, refreshComponentDom],
+    [uiStore, placeLabels, refreshComponentDom, refreshAgentDom],
   )
 
   // Latest callbacks without re-creating the pipeline.
@@ -219,6 +246,11 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
           pickImage()
           return
         }
+        // M6: Note (N) / Prompt (⇧P) insert at the viewport center and open the body.
+        if (spec.action === "insertNote" || spec.action === "insertPrompt") {
+          ctl.current?.insertAgentNode(spec.action === "insertNote" ? "note" : "prompt")
+          return
+        }
         ctl.current?.armPlacement(null)
         if (spec.tool) uiStore.getState().setTool(spec.tool)
       },
@@ -253,6 +285,12 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       stats: () => ctl.current?.renderer.stats() ?? null,
       focus: () => hostRef.current?.focus({ preventScroll: true }),
       previewComponentDrop: (target) => ctl.current?.previewComponentDrop(target),
+      insertAgentNode: (type, at) => ctl.current?.insertAgentNode(type, at) ?? null,
+      setPromptTarget: (promptId, frameId) =>
+        ctl.current?.setPromptTarget(promptId, frameId) ?? false,
+      convertNoteToPrompt: (id) => ctl.current?.convertNoteToPrompt(id) ?? false,
+      clearPlaceholder: (id) => ctl.current?.clearPlaceholder(id) ?? false,
+      setAgentCanvas: (p) => setAgentOverride(p),
     }),
     [uiStore, pickImage],
   )
@@ -269,7 +307,9 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     void (async () => {
       let engineFailed = false
       try {
-        const init: Parameters<typeof renderer.init>[0] = { overlayTheme: p.overlayTheme }
+        const init: Parameters<typeof renderer.init>[0] = {
+          overlayTheme: withAgentCanvasTheme(p.overlayTheme, hostRef.current),
+        }
         if (p.icons) init.icons = p.icons
         if (p.canvaskitWasmUrl) init.canvaskitWasmUrl = p.canvaskitWasmUrl
         if (p.fontSources) init.fontSources = p.fontSources
@@ -332,7 +372,10 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
           refreshComponentDom()
           cb.current.onLayout?.(l)
         },
-        onOverlayChange: refreshComponentDom,
+        onOverlayChange: () => {
+          refreshComponentDom()
+          refreshAgentDom()
+        },
         onStats: (s) => cb.current.onStats?.(s),
         onError: (e) => {
           if (cb.current.onError) cb.current.onError(e)
@@ -341,9 +384,11 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         onContextMenu: (i) => cb.current.onContextMenu?.(i),
         onTextEdit: setTextEdit,
         libraries: () => cb.current.libraries ?? {},
+        author: () => cb.current.noteAuthor,
         route: (ops) => (cb.current.route ? cb.current.route(ops) : ops),
       })
       ctl.current = c
+      c.setAgentCanvas(cb.current.agentCanvas ?? null)
       c.start(el, canvas)
       el.dataset.ready = "true"
       setReady(true)
@@ -359,6 +404,11 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     }
   }, [store, uiStore])
 
+  // M6: the host's agent state (scopes, cursors, rejections, prompt runs, live origins).
+  useEffect(() => {
+    ctl.current?.setAgentCanvas(agentCanvas ?? null)
+  }, [agentCanvas])
+
   // M3: linked libraries load / re-read / unlink → rebuild the expanded view.
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-expand when the libraries change
   useEffect(() => {
@@ -369,7 +419,9 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
   useEffect(() => {
     const r = ctl.current?.renderer
     if (!r) return
-    void r.init({ overlayTheme: props.overlayTheme }).then(() => r.requestFrame())
+    void r
+      .init({ overlayTheme: withAgentCanvasTheme(props.overlayTheme, hostRef.current) })
+      .then(() => r.requestFrame())
   }, [props.overlayTheme])
 
   // View settings apply live.
@@ -441,6 +493,9 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
             </div>
           ))}
       </div>
+      {ready && agentDom !== EMPTY_DOM && (
+        <AgentCanvasDom dom={agentDom} props={agentCanvas ?? null} hovered={hovered} />
+      )}
       {ready && compDom && (
         <ComponentDom overlay={compDom} onQuickInsert={(q) => cb.current.onQuickInsert?.(q)} />
       )}
@@ -538,6 +593,22 @@ async function naturalSize(file: Blob): Promise<{ width: number; height: number 
   }
 }
 
+/**
+ * M6: note / prompt chrome and agent overlay colors follow the live design tokens
+ * (`--kimo-note`, `--kimo-agent-iris`, …) read from the canvas host, unless the shell already
+ * passes `overlayTheme.agentCanvas`. Missing tokens keep the renderer's .pen light defaults.
+ */
+function withAgentCanvasTheme(theme: OverlayTheme, el: HTMLElement | null): OverlayTheme {
+  if (theme.agentCanvas || !el || typeof getComputedStyle !== "function") return theme
+  const cs = getComputedStyle(el)
+  const agentCanvas: Partial<AgentCanvasTheme> = {}
+  for (const [key, token] of Object.entries(AGENT_CANVAS_TOKENS)) {
+    const v = cs.getPropertyValue(`--kimo-${token}`).trim()
+    if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v)) agentCanvas[key as keyof AgentCanvasTheme] = v
+  }
+  return { ...theme, agentCanvas }
+}
+
 /** The renderer's own error, or a WASM_LOAD_FAILED wrapper for anything else it threw. */
 function rendererError(e: Error): RendererError {
   return e instanceof RendererError ? e : new RendererError("WASM_LOAD_FAILED", e.message)
@@ -595,6 +666,10 @@ function TextEditor({
         left: (state.at.x - viewport.x) * z,
         top: (state.at.y - viewport.y) * z,
         minWidth: state.box ? state.box.w * z : 4,
+        // M6: note / prompt bodies wrap inside the card's body box.
+        ...(state.kind && state.box
+          ? { width: state.box.w * z, maxWidth: state.box.w * z, whiteSpace: "pre-wrap" as const }
+          : {}),
         minHeight: state.box ? state.box.h * z : undefined,
         fontFamily: `"${s.fontFamily}", var(--kimo-font-sans)`,
         fontSize: s.fontSize * z,

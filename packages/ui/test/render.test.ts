@@ -98,7 +98,6 @@ describe("component CSS", () => {
       "toggle/Toggle.css: background: #ffffff",
       "avatar/Avatar.css: color: #ffffff",
       "tooltip/Tooltip.css: background: #ffffff26",
-      "agent/Agent.css: color: #ffffff",
       // M2 (02b / 09): Slider thumb #FFFFFF, hue track stops, alpha/stop-bar checker #E4E2DE,
       // ring/thumb stroke #FFFFFF + shadow, color area overlays, variable mode-chip edge,
       // image preview placeholder fill and dimension badge.
@@ -125,6 +124,8 @@ describe("component CSS", () => {
       "window-chrome/WindowChrome.css: background: #ff5f57",
       "window-chrome/WindowChrome.css: background: #febc2e",
       "window-chrome/WindowChrome.css: background: #28c840",
+      // M6 (board 22): AttachmentThumb placeholder image fill.
+      "attachment-thumb/AttachmentThumb.css: background: linear-gradient(160deg, #e9b48a 0%, #c9653f 100%)",
       "gallery/Gallery.css: background: #0a0a0a",
       "gallery/Gallery.css: color: #ffffff",
     ])

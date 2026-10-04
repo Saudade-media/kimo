@@ -1,0 +1,36 @@
+/*
+ * CompactButton: Button/Primary (W2lra) · Secondary (kv3Fk) · Ghost (sqJv4) instances with the
+ * board 22 / 24 overrides: height 24–30, padding [0, 6–14], icon 14 × 14, label text-xs or
+ * text-sm. Gap 6, radius-pill and weight 500 stay the component's.
+ */
+.kimo-button.kimo-compact-button {
+  --kimo-compact-h: 26px;
+  --kimo-compact-px: 10px;
+  height: var(--kimo-compact-h);
+  padding: 0 var(--kimo-compact-px);
+}
+
+.kimo-button.kimo-compact-button .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-button.kimo-compact-button--sm {
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-button.kimo-compact-button--xs {
+  font-size: var(--kimo-text-xs);
+}
+
+.kimo-button.kimo-compact-button .kimo-button__label {
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.kimo-button.kimo-compact-button--xs .kimo-button__label {
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-button.kimo-compact-button[data-danger] {
+  color: var(--kimo-danger);
+}

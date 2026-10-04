@@ -104,9 +104,13 @@ async function persistNew(store: DocStore, name: string): Promise<string> {
 }
 
 /** Creates a file (with the sample design unless `empty`) and returns its id. */
-export async function createFile(name = "Untitled", options: { empty?: boolean } = {}) {
-  const store = createDocStore(newDocument(name))
-  if (!options.empty) buildSampleDocument(store)
+export async function createFile(
+  name = "Untitled",
+  options: { empty?: boolean; document?: KimoDocument } = {},
+) {
+  // M6 Home composer: a prebuilt document (the placeholder first frame) instead of the sample.
+  const store = createDocStore(options.document ?? newDocument(name))
+  if (!options.empty && !options.document) buildSampleDocument(store)
   try {
     return await persistNew(store, name)
   } finally {

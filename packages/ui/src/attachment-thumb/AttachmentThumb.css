@@ -1,0 +1,78 @@
+/*
+ * AttachmentThumb: desing.pen 22 > Components (M6) > AttachmentThumb (PeXjy).
+ * frame 40 × 40, layout none
+ *   ├ Image  (BnTL3) 36 × 36 at (0, 4), stroke 1 border (inside), radius-sm,
+ *   │        placeholder fill linear 200° #E9B48A → #C9653F
+ *   └ Remove (NNiWS) 16 × 16 at (24, 0), text-primary, stroke 1.5 bg-app, radius-pill, x 10
+ *            text-inverse
+ * 24 instances: frame 24 × 24, Image 24 × 24 at (0, 0), no Remove.
+ */
+.kimo-attach-thumb {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-block;
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+
+.kimo-attach-thumb--24 {
+  width: 24px;
+  height: 24px;
+}
+
+.kimo-attach-thumb__image {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  box-sizing: border-box;
+  display: block;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-sm);
+  background: linear-gradient(
+    160deg,
+    #e9b48a 0%,
+    #c9653f 100%
+  ); /* pen-literal: AttachmentThumb BnTL3 placeholder fill, rotation 200 */
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+.kimo-attach-thumb--24 .kimo-attach-thumb__image {
+  top: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.kimo-attach-thumb__image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kimo-attach-thumb__remove {
+  position: absolute;
+  left: 24px;
+  top: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--kimo-bg-app);
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-text-primary);
+  color: var(--kimo-text-inverse);
+  cursor: pointer;
+}
+
+.kimo-attach-thumb__remove svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+}

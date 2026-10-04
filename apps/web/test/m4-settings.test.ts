@@ -94,6 +94,7 @@ describe("route and copy", () => {
       "Files & autosave",
       "Fonts & privacy",
       "Agents & MCP",
+      "AI providers",
       "Updates",
       "About & licenses",
     ])

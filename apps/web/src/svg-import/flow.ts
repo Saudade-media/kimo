@@ -45,61 +45,163 @@ const REASON_TEXT: Record<SvgRejectReason, string> = {
 }
 
 /**
- * Board 20 rule (note o9snO): an SVG is rejected whole — never silently stripped — when it has
- * `<script>`, `on*` handlers, `javascript:` URLs, `<foreignObject>`, or `href` / `xlink:href`
- * (or `url()`) outside the file. Nothing is copied to `assets/`.
+ * One construct the sanitizer removed, as board 24 (j) "SVG rejection · details" (nx2kl) lists
+ * it: `L4 <script> scripts are never imported`.
+ */
+export interface SvgRemovedItem {
+  /** 1-based source line, or null when it could not be located. */
+  line: number | null
+  /** `<script>`, `href="https://cdn…/x.svg"`, `<foreignObject>`, `onload="…"`. */
+  code: string
+  /** "scripts are never imported" / "external refs blocked" / … */
+  why: string
+  reason: SvgRejectReason
+}
+
+/**
+ * Board 20 rule (note o9snO): an SVG with `<script>`, `on*` handlers, `javascript:` URLs,
+ * `<foreignObject>`, or `href` / `xlink:href` (or `url()`) outside the file is never silently
+ * stripped. Board 24 (j) changes the outcome from reject-whole to optional sanitized import on
+ * explicit consent: the toast's "Details" lists {@link items}, and "Import without these" calls
+ * {@link prepareSvg} again with `allowRemoved`. Nothing is copied to `assets/` before that.
  */
 export class SvgRejectedError extends SvgImportError {
   readonly fileName: string
   readonly reason: SvgRejectReason
   /** The offending constructs with their source lines: `<script> · line 4`. */
   readonly details: string[]
-  constructor(fileName: string, reason: SvgRejectReason, details: string[]) {
+  /** Board 24 (j) rows, same order as {@link details}. */
+  readonly items: SvgRemovedItem[]
+  constructor(
+    fileName: string,
+    reason: SvgRejectReason,
+    details: string[],
+    items: SvgRemovedItem[] = [],
+  ) {
     super(`Couldn't import ${fileName} — it ${REASON_TEXT[reason]}`)
     this.fileName = fileName
     this.reason = reason
     this.details = details
+    this.items = items
   }
 }
 
-/** 1-based line of the first `needle` in `text` (case-insensitive), or null. */
-function lineOf(text: string, needle: string): number | null {
-  const i = text.toLowerCase().indexOf(needle.toLowerCase())
-  return i < 0 ? null : text.slice(0, i).split("\n").length
+/** 1-based line of the `nth` (0-based) `needle` in `text` (case-insensitive), or null. */
+function lineOf(text: string, needle: string, nth = 0): number | null {
+  const hay = text.toLowerCase()
+  const n = needle.toLowerCase()
+  let i = -1
+  for (let k = 0; k <= nth; k++) {
+    i = hay.indexOf(n, i + 1)
+    if (i < 0) return k === 0 ? null : lineOf(text, needle, k - 1)
+  }
+  return text.slice(0, i).split("\n").length
+}
+
+/** "https://cdn.example/assets/x.svg" → "https://cdn…/x.svg" (board 24 j). */
+export function shortRef(value: string): string {
+  if (value.length <= 24) return value
+  const slash = value.lastIndexOf("/")
+  const tail = slash > 11 ? value.slice(slash) : value.slice(-8)
+  return `${value.slice(0, 11)}…${tail.length > 12 ? `${tail.slice(0, 11)}…` : tail}`
+}
+
+const WHY: Record<"script" | "handler" | "javascript" | "external" | "embedded-html", string> = {
+  script: "scripts are never imported",
+  handler: "event handlers stripped",
+  javascript: "script URLs blocked",
+  external: "external refs blocked",
+  "embedded-html": "HTML inside SVG unsupported",
 }
 
 /** Classifies the sanitizer's removals; null when nothing requires a rejection. */
 export function svgRejection(
   blocked: readonly string[],
   source: string,
-): { reason: SvgRejectReason; details: string[] } | null {
-  const hits: { reason: SvgRejectReason; label: string; needle: string }[] = []
+): { reason: SvgRejectReason; details: string[]; items: SvgRemovedItem[] } | null {
+  const hits: {
+    reason: SvgRejectReason
+    label: string
+    needle: string
+    code: string
+    why: keyof typeof WHY
+  }[] = []
   for (const b of blocked) {
     const sep = b.indexOf(":")
     const key = sep < 0 ? b : b.slice(0, sep)
     const value = sep < 0 ? "" : b.slice(sep + 1)
-    if (b === "script") hits.push({ reason: "script", label: "<script>", needle: "<script" })
+    if (b === "script")
+      hits.push({
+        reason: "script",
+        label: "<script>",
+        needle: "<script",
+        code: "<script>",
+        why: "script",
+      })
     else if (b === "foreignObject")
-      hits.push({ reason: "embedded-html", label: "<foreignObject>", needle: "<foreignObject" })
+      hits.push({
+        reason: "embedded-html",
+        label: "<foreignObject>",
+        needle: "<foreignObject",
+        code: "<foreignObject>",
+        why: "embedded-html",
+      })
     else if (/^on/i.test(b) && sep < 0)
-      hits.push({ reason: "script", label: `${b} handler`, needle: `${b}=` })
+      hits.push({
+        reason: "script",
+        label: `${b} handler`,
+        needle: `${b}=`,
+        code: `${b}="…"`,
+        why: "handler",
+      })
     else if (/javascript:/i.test(value))
-      hits.push({ reason: "script", label: `${key}="${value}"`, needle: value })
+      hits.push({
+        reason: "script",
+        label: `${key}="${value}"`,
+        needle: value,
+        code: `${key}="${shortRef(value)}"`,
+        why: "javascript",
+      })
     else if (key === "href")
-      hits.push({ reason: "external", label: `href="${value}"`, needle: value })
+      hits.push({
+        reason: "external",
+        label: `href="${value}"`,
+        needle: value,
+        code: `href="${shortRef(value)}"`,
+        why: "external",
+      })
     else if (sep >= 0 && /url\(/i.test(value))
-      hits.push({ reason: "external", label: `${key}="${value}"`, needle: value })
+      hits.push({
+        reason: "external",
+        label: `${key}="${value}"`,
+        needle: value,
+        code: `${key}="${shortRef(value)}"`,
+        why: "external",
+      })
   }
   if (hits.length === 0) return null
   // Scripts first (they are the more serious finding), then embedded HTML, then external files.
   const rank: Record<SvgRejectReason, number> = { script: 0, "embedded-html": 1, external: 2 }
-  hits.sort((a, b) => rank[a.reason] - rank[b.reason])
+  // The reason (toast copy) is the most serious finding; the details list keeps source order.
+  const reason = [...hits].sort(
+    (a, b) => rank[a.reason] - rank[b.reason],
+  )[0] as (typeof hits)[number]
+  const seen = new Map<string, number>()
+  const located = hits.map((h) => {
+    const k = h.needle.toLowerCase()
+    const nth = seen.get(k) ?? 0
+    seen.set(k, nth + 1)
+    return { ...h, line: lineOf(source, h.needle, nth) }
+  })
+  located.sort(
+    (a, b) =>
+      (a.line ?? Number.POSITIVE_INFINITY) - (b.line ?? Number.POSITIVE_INFINITY) ||
+      rank[a.reason] - rank[b.reason],
+  )
   return {
-    reason: (hits[0] as (typeof hits)[number]).reason,
-    details: hits.map((h) => {
-      const line = lineOf(source, h.needle)
-      return line === null ? h.label : `${h.label} · line ${line}`
-    }),
+    reason: reason.reason,
+    details: located.map((h) => (h.line === null ? h.label : `${h.label} · line ${h.line}`)),
+    items: located.map((h) => ({ line: h.line, code: h.code, why: WHY[h.why], reason: h.reason })),
   }
 }
 
@@ -108,11 +210,19 @@ export function svgRejection(
 export async function prepareSvg(
   bytes: Uint8Array | string,
   fileName: string,
+  options: {
+    /**
+     * Board 24 (j) "Import without these": the user saw the removed items and consented to the
+     * sanitized SVG (never set without that explicit choice).
+     */
+    allowRemoved?: boolean
+  } = {},
 ): Promise<PreparedSvg> {
   const svg = sanitizeSvg(bytes)
   const source = typeof bytes === "string" ? bytes : new TextDecoder().decode(bytes)
-  const rejected = svgRejection(svg.report.blocked, source)
-  if (rejected) throw new SvgRejectedError(fileName, rejected.reason, rejected.details)
+  const rejected = options.allowRemoved ? null : svgRejection(svg.report.blocked, source)
+  if (rejected)
+    throw new SvgRejectedError(fileName, rejected.reason, rejected.details, rejected.items)
   const stats = analyzeSvg(svg)
   const imageBytes = new TextEncoder().encode(serializeSvg(svg.root))
   const imageKey = `${await contentHash(imageBytes)}.svg`

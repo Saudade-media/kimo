@@ -1,0 +1,81 @@
+/*
+ * AgentErrorCard: desing.pen 22 > Components (M6) > AgentErrorCard (Ny3kQ) and the board 22 E
+ * instances (wxgY1).
+ * column fill_container, gap 8, padding [10, 12], fill danger-soft, radius-lg
+ *   ├ Head    (mRIVx) row fill, gap 8, center › Icon (Q3ljkL) 14 danger · Title (d8jH5P) sans
+ *   │         12 / 600 text-primary
+ *   ├ Desc    (k92b6e) fill, sans 11 text-secondary, line height 1.45
+ *   └ Actions (NJWqF) row gap 6, center › Button/Secondary + Button/Ghost h 26, padding [0, 10]
+ * Rate limited / Spending limit: warning-soft + icon warning. Offline: bg-muted + icon
+ * text-secondary. Stopped by you: bg-subtle, stroke 1 border, icon text-secondary.
+ */
+.kimo-error-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-danger-soft);
+  --kimo-error-icon: var(--kimo-danger);
+}
+
+.kimo-error-card--warning {
+  background: var(--kimo-warning-soft);
+  --kimo-error-icon: var(--kimo-warning);
+}
+
+.kimo-error-card--neutral {
+  background: var(--kimo-bg-muted);
+  --kimo-error-icon: var(--kimo-text-secondary);
+}
+
+.kimo-error-card--stopped {
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  --kimo-error-icon: var(--kimo-text-secondary);
+}
+
+.kimo-error-card__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-error-card__icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-error-icon);
+}
+
+.kimo-error-card__title {
+  min-width: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.kimo-error-card__desc {
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px; /* lineHeight 1.45 × 11 = 15.95, rendered as whole-px lines (16) */
+}
+
+.kimo-error-card__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}

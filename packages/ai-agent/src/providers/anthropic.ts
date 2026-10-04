@@ -78,7 +78,11 @@ export class AnthropicProvider implements Provider {
       baseURL: this.config.baseURL ?? ANTHROPIC_BASE_URL,
       fetch: this.runtime.fetch,
       maxRetries: 0,
-      dangerouslyAllowBrowser: this.runtime.platform === "web" && this.config.allowBrowser === true,
+      // Desktop runs the SDK inside the Tauri webview (browser-like), but its key is the relay
+      // placeholder and Rust injects the real one, so the browser guard does not apply there.
+      dangerouslyAllowBrowser:
+        this.runtime.platform === "desktop" ||
+        (this.runtime.platform === "web" && this.config.allowBrowser === true),
       ...(this.config.headers ? { defaultHeaders: this.config.headers } : {}),
     })
     return this.client

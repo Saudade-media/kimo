@@ -26,6 +26,8 @@ export interface CanvasConflictMarkerSpec {
   conflictId: string
   /** "Hero · fill" for one open conflict, "2 conflicts" for several. */
   label: string
+  /** Board 24 (l) "+N" menu meta: the property ("fill") or "2 conflicts". */
+  meta: string
   /** Top-left of the pill. */
   left: number
   top: number
@@ -196,6 +198,7 @@ export function canvasConflictMarkers(
       nodeId,
       conflictId: (list[0] as ConflictRowView).id,
       label,
+      meta: list.length === 1 ? (list[0] as ConflictRowView).property : `${list.length} conflicts`,
       left,
       top: top - MARKER_HEIGHT - MARKER_GAP,
       width: measure(label, "default"),

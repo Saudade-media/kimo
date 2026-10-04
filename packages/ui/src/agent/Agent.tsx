@@ -1,4 +1,4 @@
-import { ArrowUp, ChevronDown, CircleCheck, LoaderCircle, Sparkles } from "lucide-react"
+import { ArrowUp, ChevronDown, CircleCheck, CircleX, LoaderCircle } from "lucide-react"
 import {
   type ComponentPropsWithRef,
   type FormEvent,
@@ -7,6 +7,9 @@ import {
   type ReactNode,
   useState,
 } from "react"
+import { AgentMark } from "../agent-mark/AgentMark"
+import type { AgentMarkState } from "../agent-mark/faces"
+import type { Persona } from "../agent-mark/persona"
 import { cx } from "../internal/util"
 
 // --- Message ------------------------------------------------------------------------------
@@ -14,28 +17,45 @@ import { cx } from "../internal/util"
 /** Props for {@link Message}. Remaining `<div>` props go to the row frame. */
 export interface MessageProps extends ComponentPropsWithRef<"div"> {
   from: "user" | "agent"
+  /** Agent mark state: Working while streaming, Done once the turn completes (board 24 I3H68). */
+  markState?: AgentMarkState
+  /** Agent persona hue (split mode children). */
+  persona?: Persona
+  /** Streaming: a caret after the text (board 22 A "then I'll▍"). */
+  streaming?: boolean
 }
 
 /**
  * Chat message (presentational).
  * `Message/User` (ROG0x): row justifyContent end; Bubble width 260, fill accent, radius-lg,
  * padding [10, 14]; text sans 13 on-accent, line height 1.45.
- * `Message/Agent` (QqwyN): row gap 10; Mark 24 × 24 pill gradient agent → agent-2 with a
- * 13px #FFFFFF sparkles icon; Bubble fill_container, bg-muted, radius-lg, padding [10, 14];
- * text sans 13 text-primary, line height 1.5.
+ * `Message/Agent` (QqwyN): row gap 10; Mark → AgentMark/24 (board 24 I3H68: LAyD7 Done /
+ * whSu1 Working, replacing the gradient + sparkles mark); Bubble fill_container, bg-muted,
+ * radius-lg, padding [10, 14]; text sans 13 text-primary, line height 1.5.
  */
-export function Message({ from, className, children, ...rest }: MessageProps) {
+export function Message({
+  from,
+  markState = "done",
+  persona = "teal",
+  streaming = false,
+  className,
+  children,
+  ...rest
+}: MessageProps) {
   return (
-    <div {...rest} className={cx("kimo-message", `kimo-message--${from}`, className)}>
+    <div
+      {...rest}
+      data-streaming={streaming || undefined}
+      className={cx("kimo-message", `kimo-message--${from}`, className)}
+    >
       {from === "agent" && (
-        <span className="kimo-message__mark" aria-hidden="true">
-          <span className="kimo-message__mark-icon">
-            <Sparkles />
-          </span>
-        </span>
+        <AgentMark size={24} state={markState} persona={persona} className="kimo-message__mark" />
       )}
       <div className="kimo-message__bubble">
-        <div className="kimo-message__text">{children}</div>
+        <div className="kimo-message__text">
+          {children}
+          {streaming && <span className="kimo-message__caret" aria-hidden="true" />}
+        </div>
       </div>
     </div>
   )
@@ -45,8 +65,11 @@ export function Message({ from, className, children, ...rest }: MessageProps) {
 
 /** Props for {@link AgentStep}. Remaining `<div>` props go to the frame. */
 export interface AgentStepProps extends ComponentPropsWithRef<"div"> {
-  /** `done`: circle-check in success; `running`: spinning loader-circle in agent. */
-  status: "done" | "running"
+  /**
+   * `done`: circle-check in success; `running`: spinning loader-circle in agent; `failed` (not
+   * drawn on the board): circle-x in danger.
+   */
+  status: "done" | "running" | "failed"
 }
 
 /**
@@ -62,7 +85,13 @@ export function AgentStep({ status, className, children, ...rest }: AgentStepPro
       className={cx("kimo-agent-step", `kimo-agent-step--${status}`, className)}
     >
       <span className="kimo-agent-step__status" aria-hidden="true">
-        {status === "running" ? <LoaderCircle /> : <CircleCheck />}
+        {status === "running" ? (
+          <LoaderCircle />
+        ) : status === "failed" ? (
+          <CircleX />
+        ) : (
+          <CircleCheck />
+        )}
       </span>
       <span className="kimo-agent-step__label">{children}</span>
     </div>

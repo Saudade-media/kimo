@@ -1,0 +1,34 @@
+/*
+ * ScopeTag: desing.pen 22 > Components (M6) > ScopeTag (NKE7Z).
+ * row, h 20, gap 4, padding [0, 7, 0, 5], alignItems center, fill agent (persona hue in split),
+ * radius-xs › Icon (l7j6Z) lock 11 on-accent › Label (IAq4s) sans 11 / 500 on-accent
+ */
+.kimo-scope-tag {
+  --kimo-scope-fill: var(--kimo-agent);
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px 0 5px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-scope-fill);
+  color: var(--kimo-on-accent);
+  white-space: nowrap;
+}
+
+.kimo-scope-tag__icon {
+  display: block;
+  flex: none;
+  width: 11px;
+  height: 11px;
+}
+
+.kimo-scope-tag__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}

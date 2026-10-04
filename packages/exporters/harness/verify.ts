@@ -9,6 +9,7 @@ import { type KimoDocument, parse } from "@kimo/core-schema"
 import { createRenderer } from "@kimo/renderer"
 import { chromium } from "playwright"
 import { bundledFontFaces, type FixtureReport, verifyFixture } from "./boxdiff"
+import { isKnownDiff } from "./known-diffs"
 
 const HERE = import.meta.dir
 const CORE = join(HERE, "../../core-schema/fixtures/valid")
@@ -81,14 +82,21 @@ if (import.meta.main) {
   const reports = await runHarness(join(HERE, "out"))
   let failed = false
   for (const r of reports) {
+    // Listed differences (known-diffs.ts, each with its reason) are reported, not failed.
+    const known = (kind: string) => (d: { id: string }) => isKnownDiff(r.fixture, kind, d.id)
+    const listed =
+      r.exactFailures.filter(known("exact")).length +
+      r.geometryFailures.filter(known("geometry")).length +
+      r.textFailures.filter(known("text")).length
     const bad =
       r.exactFailures.length +
       r.geometryFailures.length +
       r.textFailures.length +
-      r.colorFailures.length
+      r.colorFailures.length -
+      listed
     if (bad) failed = true
     console.log(
-      `${bad ? "FAIL" : "ok  "} ${r.fixture.padEnd(26)} nodes ${String(r.nodes).padStart(3)}  A exact ✗${r.exactFailures.length}  B geometry ${r.geometryChecked}/✗${r.geometryFailures.length}  B text ${r.textChecked}/✗${r.textFailures.length} (max Δ ${r.textMaxDelta}px)  lines≠ ${r.lineMismatches.length}  colors ${r.colorsChecked}/✗${r.colorFailures.length}`,
+      `${bad ? "FAIL" : listed ? "known" : "ok  "} ${r.fixture.padEnd(26)} nodes ${String(r.nodes).padStart(3)}  A exact ✗${r.exactFailures.length}  B geometry ${r.geometryChecked}/✗${r.geometryFailures.length}  B text ${r.textChecked}/✗${r.textFailures.length} (max Δ ${r.textMaxDelta}px)  lines≠ ${r.lineMismatches.length}  colors ${r.colorsChecked}/✗${r.colorFailures.length}`,
     )
     for (const d of [...r.exactFailures, ...r.geometryFailures, ...r.textFailures].slice(0, 8))
       console.log(

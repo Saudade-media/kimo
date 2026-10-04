@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "ai-agent",
+  "description": "M6 built-in agent (ADR 0014 §4, §11): editor windows and the document host manage provider keys in the OS keychain (values never returned), relay AI requests through Rust (kimo_ai_request / kimo_ai_abort, streamed on kimo://ai-response) and detect, spawn and drive the user's agent CLIs (kimo://cli-output, kimo://cli-exit).",
+  "windows": ["main", "editor-*", "document-host"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-kimo-secret-has",
+    "allow-kimo-secret-set",
+    "allow-kimo-secret-delete",
+    "allow-kimo-secret-list",
+    "allow-kimo-secret-hint",
+    "allow-kimo-ai-request",
+    "allow-kimo-ai-abort",
+    "allow-kimo-cli-which",
+    "allow-kimo-cli-exec",
+    "allow-kimo-cli-home-file-exists",
+    "allow-kimo-cli-has-env",
+    "allow-kimo-cli-prepare-workspace",
+    "allow-kimo-cli-spawn",
+    "allow-kimo-cli-write",
+    "allow-kimo-cli-close-stdin",
+    "allow-kimo-cli-kill"
+  ]
+}

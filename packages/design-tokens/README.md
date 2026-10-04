@@ -90,7 +90,9 @@ floating surfaces (popover, dialog, menu, tooltip). **Color carries meaning, nev
 | Hue | Tokens | Reserved for |
 |---|---|---|
 | Blue | `selection`, `selection-soft` | Canvas selection: bounds, handles, hover outlines |
-| Teal → indigo | `agent`, `agent-soft`, `agent-2` | Anything the AI agent is doing (cursors, activity, the agent orb gradient) |
+| Teal → indigo | `agent`, `agent-soft`, `agent-2` | Anything the AI agent is doing (cursors, activity, the AgentMark body) |
+| Persona hues | `agent-<p>`, `agent-<p>-2`, `agent-<p>-soft` for p = iris, violet, rose, ember, moss | Identity of the 2nd–6th parallel agent only (board 24 PqjaS): AgentMark body, split-mode cursor + label, session dot. Never status, diffs or selection |
+| Note yellow | `note`, `note-edge`, `note-text` | Note nodes on the canvas (board 22) |
 | Green / amber / red | `success*`, `warning*`, `danger*` | Status: results, warnings, errors, destructive actions |
 
 Everything else, including primary actions, uses the neutral `accent` ink and the `bg-*`, `border*`

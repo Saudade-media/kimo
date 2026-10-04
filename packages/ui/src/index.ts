@@ -102,6 +102,7 @@ export {
 } from "./entry-row/EntryRow"
 export { FileCard, FileCardMiniFrame, type FileCardProps } from "./file-card/FileCard"
 export { FillRow, type FillRowProps } from "./fill-row/FillRow"
+export * from "./gaps"
 export {
   colorAt,
   GradientEditor,
@@ -162,6 +163,7 @@ export * from "./m4-files"
 export * from "./m4-fonts"
 export * from "./m4-merge"
 export * from "./m5-agents"
+export * from "./m6-agent"
 export { Menu, MenuItem, type MenuItemProps, type MenuProps } from "./menu/Menu"
 export {
   MenuDense,

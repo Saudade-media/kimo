@@ -13,6 +13,7 @@ export {
   AgentPresenceChip,
   type AgentPresenceChipProps,
   type AgentPresenceState,
+  presenceMarkState,
 } from "./agent-presence-chip/AgentPresenceChip"
 export {
   type AgentPillTone,

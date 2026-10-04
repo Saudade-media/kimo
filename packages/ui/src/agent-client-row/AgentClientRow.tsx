@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronRight } from "lucide-react"
 import type { ComponentPropsWithRef } from "react"
-import { AgentOrb } from "../agent-orb/AgentOrb"
+import { AgentMark } from "../agent-mark/AgentMark"
+import type { AgentMarkState } from "../agent-mark/faces"
+import type { Persona } from "../agent-mark/persona"
 import { cx } from "../internal/util"
 
 /** Props for {@link AgentClientRow}. Remaining `<button>` props go to the row. */
@@ -15,11 +17,14 @@ export interface AgentClientRowProps extends Omit<ComponentPropsWithRef<"button"
   writable: boolean
   /** Expanded to the permissions panel: chevron-down and no bottom stroke (EbQQD). */
   expanded?: boolean
+  /** Mark state (board 24: AgentOrb → AgentMark; idle when connected and quiet). */
+  markState?: AgentMarkState
+  persona?: Persona
 }
 
 /**
  * One connected client. Mirrors `AgentClientRow` (hp5kw): row, gap 12, padding [12, 0], center,
- * fill_container, bottom stroke 1 border. Orb (s6KNcG) 28 · Text (g1h7Xi) column gap 2 fill:
+ * fill_container, bottom stroke 1 border. Orb (s6KNcG) → AgentMark 28 (board 24) · Text (g1h7Xi) column gap 2 fill:
  * Name Row (p0JJGd) gap 6: Name sans 12 / 500 · Version mono 11 text-tertiary; Meta (ZSMNf)
  * sans 11 text-secondary · Scope (H8RP2y) Badge (agent-soft / agent when writable) · Chevron
  * (QknTo) chevron-right 14 text-tertiary.
@@ -31,6 +36,8 @@ export function AgentClientRow({
   scope,
   writable,
   expanded = false,
+  markState = "idle",
+  persona = "teal",
   className,
   type = "button",
   ...rest
@@ -47,7 +54,7 @@ export function AgentClientRow({
         className,
       )}
     >
-      <AgentOrb size={28} />
+      <AgentMark size={28} state={markState} persona={persona} />
       <span className="kimo-agent-client-row__text">
         <span className="kimo-agent-client-row__name-row">
           <span className="kimo-agent-client-row__name">{name}</span>

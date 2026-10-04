@@ -230,7 +230,7 @@ export const scenarios: Scenario[] = [
       const c = checker(ctx, "AgentPresenceChip (I3Q0Q) in Drag Region (G1mul)")
       const m = await measure(page, {
         chip: ".kimo-agent-chip",
-        orb: ".kimo-agent-chip .kimo-agent-orb",
+        orb: ".kimo-agent-chip .kimo-agent-mark",
         label: ".kimo-agent-chip__label",
         sep: ".kimo-agent-chip__sep",
         meta: ".kimo-agent-chip__meta",
@@ -246,7 +246,14 @@ export const scenarios: Scenario[] = [
         (m.drag?.x ?? 0) + (m.drag?.w ?? 0),
       )
       c.check("chip", "center y", (m.chip?.y ?? 0) + 14, 24)
-      c.box("Orb (sZqHj)", m.orb, { w: 20, h: 20 })
+      // Board 24 BXTD5: Orb 20 → AgentMark/24/Working.
+      c.box("AgentMark/24 (ff0un, was Orb sZqHj)", m.orb, { w: 24, h: 24 })
+      c.check(
+        "AgentMark",
+        "state",
+        await page.locator(".kimo-agent-chip .kimo-agent-mark").getAttribute("data-state"),
+        "working",
+      )
       c.box("Label (u7zeoB)", m.label, { fs: 12, fw: "500", lh: 15, color: agent, ff: "Inter" })
       c.box("Sep (S02ieE)", m.sep, { w: 3, h: 3, bg: agent })
       c.box("Meta (sCc98)", m.meta, { fs: 11, ff: "JetBrains Mono", lh: 15 })
@@ -276,7 +283,7 @@ export const scenarios: Scenario[] = [
       const pm = await measure(page, {
         pop: "[data-testid=agent-session-popover]",
         header: ".agents-session__header",
-        orb: ".agents-session__header > .kimo-agent-orb",
+        orb: ".agents-session__header > .kimo-agent-mark",
         name: ".agents-session__name",
         version: ".agents-session__version",
         scope: ".agents-session__scope",
@@ -300,7 +307,7 @@ export const scenarios: Scenario[] = [
         (m.chip?.y ?? 0) + 28 + 16,
       )
       p.box("Header (eLfuF)", pm.header, { h: 53, gap: 10, pad: [12, 12, 10, 12] })
-      p.box("Orb (aNZFr)", pm.orb, { w: 28, h: 28 })
+      p.box("AgentMark 28 (was Orb aNZFr)", pm.orb, { w: 28, h: 28 })
       p.box("Name (NCPvU)", pm.name, { fs: 13, fw: "600", lh: 16 })
       p.box("Version (MUzJe)", pm.version, { fs: 11, ff: "JetBrains Mono" })
       p.box("Scope (J7TFb)", pm.scope, { fs: 11, lh: 13 })
@@ -397,9 +404,11 @@ export const scenarios: Scenario[] = [
       await page.evaluate(() => (window as unknown as Agents).__agents.request())
       const prompt = page.locator("[data-testid=agent-approval]")
       await prompt.waitFor()
+      // Board 24 (e): waiting keeps the agent-soft chip with a Listening mark and a neutral queue
+      // badge (hand + N); the approval prompt still hangs from the chip.
       const chip = page.locator(".kimo-agent-chip")
-      expect((await chip.getAttribute("data-state")) === "waiting", "chip /Waiting")
-      expect((await chip.innerText()).includes("Claude Code needs approval"), "waiting label")
+      expect((await chip.getAttribute("data-state")) === "waiting", "chip waiting")
+      expect((await chip.innerText()).includes("Claude Code is waiting"), "waiting label")
       expect(
         (await prompt.locator(".agents-approval__title").innerText()) ===
           "Claude Code wants to delete 2 frames",
@@ -427,16 +436,18 @@ export const scenarios: Scenario[] = [
       )
 
       const agent = await token(page, "--kimo-agent")
-      const onAccent = await token(page, "--kimo-on-accent")
       const danger = await token(page, "--kimo-danger")
       const dangerSoft = await token(page, "--kimo-danger-soft")
-      const c = checker(ctx, "Approval Prompt (weJXw) + chip /Waiting (MFqUw)")
+      const c = checker(ctx, "Approval Prompt (weJXw) + chip waiting (board 24 I7jut)")
       const m = await measure(page, {
         chip: ".kimo-agent-chip",
-        chipLabel: ".kimo-agent-chip__label",
+        chipMark: ".kimo-agent-chip .kimo-agent-mark",
+        badge: ".kimo-agent-chip__queue",
+        badgeIcon: ".kimo-agent-chip__queue-icon",
+        badgeCount: ".kimo-agent-chip__queue-count",
         prompt: "[data-testid=agent-approval]",
         head: ".agents-approval__head",
-        orb: ".agents-approval__head > .kimo-agent-orb",
+        orb: ".agents-approval__head > .kimo-agent-mark",
         text: ".agents-approval__text",
         title: ".agents-approval__title",
         desc: ".agents-approval__desc",
@@ -450,9 +461,21 @@ export const scenarios: Scenario[] = [
         once: "[data-choice=once]",
         footnote: ".agents-approval__footnote",
       })
-      c.box("chip /Waiting", m.chip, { h: 28, bg: agent })
-      c.box("chip label", m.chipLabel, { color: onAccent })
       c.box("Approval Prompt", m.prompt, { w: 400, gap: 14, pad: [20, 20, 20, 20], radius: 24 })
+      c.box("chip waiting (W42AfV)", m.chip, { h: 28, bg: await token(page, "--kimo-agent-soft") })
+      c.box("AgentMark/24/Listening (lwHOe)", m.chipMark, { w: 24, h: 24 })
+      c.box("Queue badge (kMZD0)", m.badge, {
+        h: 18,
+        gap: 4,
+        pad: [0, 7, 0, 7],
+        bg: await token(page, "--kimo-text-primary"),
+      })
+      c.box("Badge icon (IDSo6) hand", m.badgeIcon, { w: 11, h: 11 })
+      c.box("Badge count (W4U4tm)", m.badgeCount, {
+        fs: 11,
+        fw: "600",
+        color: await token(page, "--kimo-text-inverse"),
+      })
       c.check(
         "Approval Prompt",
         "top = chip bottom + 18",
@@ -460,7 +483,7 @@ export const scenarios: Scenario[] = [
         (m.chip?.y ?? 0) + 28 + 18,
       )
       c.box("Head (CDPPh)", m.head, { gap: 12 })
-      c.box("Orb (TehF3)", m.orb, { w: 32, h: 32 })
+      c.box("AgentMark/32/Listening (was Orb TehF3)", m.orb, { w: 32, h: 32 })
       c.box("Text (XMYt8)", m.text, { gap: 4 })
       c.box("Title (K8XYWw)", m.title, { fs: 14, fw: "600", lh: 17 })
       c.box("Desc (Ckwa6)", m.desc, { fs: 12, lh: 17 })
@@ -484,7 +507,7 @@ export const scenarios: Scenario[] = [
       // Dry run: ghosts + bar.
       const ghosts = page.locator("[data-testid=agent-ghost]")
       expect((await ghosts.count()) === 3, "3 ghosts (2 delete, 1 update)")
-      const d = checker(ctx, "Dry run ghosts (Atu30 / IgiLq) + Dry Run Bar (P1Ulp)")
+      const d = checker(ctx, "Dry run ghosts (Atu30 / IgiLq) + Dry-run bar (board 24 g jMSYI)")
       const dm = await measure(page, {
         canvas: "[data-testid=canvas]",
         ghost: "[data-kind=delete]",
@@ -493,10 +516,11 @@ export const scenarios: Scenario[] = [
         box: "[data-kind=delete] .agents-ghost__box",
         upd: "[data-kind=update] .agents-ghost__box",
         bar: "[data-testid=agent-dry-run-bar]",
+        mark: "[data-testid=agent-dry-run-bar] .kimo-agent-mark",
         title: ".agents-dry-bar__title",
-        count: ".agents-count--delete",
-        countLabel: ".agents-count--delete .agents-count__label",
-        hide: ".agents-dry-bar__toggle",
+        meta: ".agents-dry-bar__meta",
+        discard: "[data-testid=agent-dry-run-bar] .kimo-button--ghost",
+        apply: "[data-testid=agent-dry-run-bar] .kimo-button--primary",
       })
       d.box("Ghost (Atu30)", dm.ghost, { gap: 6 })
       d.box("Label Row (JnRy2)", dm.label, { h: 16, gap: 6 })
@@ -506,27 +530,24 @@ export const scenarios: Scenario[] = [
       d.check("Box (hz52k)", "opacity", dm.box?.opacity, "0.4")
       d.check("Box (hz52k)", "x = Card 1 x", (dm.box?.x ?? 0) - (dm.canvas?.x ?? 0), 64)
       d.check("update box", "stroke", dm.upd?.shadow, `${agent} 0px 0px 0px 1.5px inset`)
-      d.box("Dry Run Bar", dm.bar, { h: 44, gap: 10, pad: [0, 6, 0, 16] })
-      d.box("Title (ranUS)", dm.title, { fs: 12, fw: "600" })
-      d.box("Count (wuupD)", dm.count, { h: 20, pad: [0, 8, 0, 8], bg: dangerSoft })
-      d.box("Count label", dm.countLabel, {
-        fs: 11,
-        fw: "500",
-        ff: "JetBrains Mono",
-        color: danger,
-      })
-      d.box("Hide preview (C2JNGh)", dm.hide, { h: 32, pad: [0, 12, 0, 12], fs: 12 })
+      d.box("Dry-run bar (jMSYI)", dm.bar, { h: 32, gap: 8, pad: [0, 4, 0, 4], radius: 999 })
+      d.check("Dry-run bar", "top-centre: y", (dm.bar?.y ?? 0) - (dm.canvas?.y ?? 0), 10)
+      d.check(
+        "Dry-run bar",
+        "top-centre: centre x",
+        (dm.bar?.x ?? 0) + (dm.bar?.w ?? 0) / 2,
+        (dm.canvas?.x ?? 0) + (dm.canvas?.w ?? 0) / 2,
+      )
+      d.box("AgentMark/12 (sNM5a)", dm.mark, { w: 12, h: 12 })
+      d.box("Label (BKX87)", dm.title, { fs: 12, fw: "500" })
+      d.box("Meta (veup0)", dm.meta, { fs: 11 })
+      d.box("Discard (l5WPN)", dm.discard, { h: 24, pad: [0, 8, 0, 8], fs: 11 })
+      d.box("Apply (njpQz)", dm.apply, { h: 24, pad: [0, 10, 0, 10], fs: 11 })
       d.flush()
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "m5-approval-dry-run.png") })
       expect(
-        (await page.locator(".agents-dry-bar").innerText()).includes("−2 delete"),
-        "delete count",
-      )
-      await page.locator(".agents-dry-bar__toggle").click()
-      expect((await ghosts.count()) === 0, "Hide preview hides the ghosts")
-      expect(
-        (await page.locator(".agents-dry-bar__toggle").innerText()) === "Show preview",
-        "toggle copy",
+        (await page.locator(".agents-dry-bar__title").innerText()) === "Dry run · 3 ops",
+        "op count",
       )
 
       // Queue: a file request arrives; Esc denies the first, the file prompt follows without session.
@@ -565,6 +586,7 @@ export const scenarios: Scenario[] = [
         (await calls(page)).some((x) => /^respond ap\d+ once$/.test(x)),
         "Allow once",
       )
+      await chip.waitFor()
       expect((await chip.getAttribute("data-state")) === "editing", "back to editing")
     },
   },
@@ -608,12 +630,12 @@ export const scenarios: Scenario[] = [
         canvas: "[data-testid=canvas]",
         outline: "[data-testid=agent-outline]",
         tag: "[data-testid=agent-tag]",
-        tagOrb: "[data-testid=agent-tag] .kimo-agent-orb",
+        tagOrb: "[data-testid=agent-tag] .kimo-agent-mark",
         tagLabel: ".agents-attribution__tag-label",
         cursor: "[data-testid=agent-cursor]",
         pointer: ".agents-cursor__pointer",
         pill: ".agents-cursor__pill",
-        pillOrb: ".agents-cursor__pill .kimo-agent-orb",
+        pillOrb: ".agents-cursor__pill .kimo-agent-mark",
         pillLabel: ".agents-cursor__label",
       })
       const cx = m.canvas?.x ?? 0
@@ -634,12 +656,19 @@ export const scenarios: Scenario[] = [
         bg: agent,
       })
       c.check("Agent Attribution", "y", (m.tag?.y ?? 0) - cy, 131)
-      c.box("Orb (TVSAy)", m.tagOrb, { w: 12, h: 12 })
+      c.box("AgentMark/12 (was Orb TVSAy)", m.tagOrb, { w: 12, h: 12 })
       c.box("Label (pF4zL)", m.tagLabel, { fs: 11, fw: "500", lh: 13, color: onAccent })
       c.box("Agent Cursor (IJH2i)", m.cursor, { gap: 2 })
       c.box("Pointer (ehJ5c)", m.pointer, { w: 18, h: 18, color: agent })
       c.box("Pill (pIYVd)", m.pill, { gap: 6, pad: [4, 10, 4, 4], bg: agent, h: 23 })
-      c.box("Orb (vocxw)", m.pillOrb, { w: 14, h: 14 })
+      // Board 24 GmEAl: the cursor pill mark is AgentMark/12 (was Orb 14).
+      c.box("AgentMark/12 (c0aVjQ, was Orb vocxw)", m.pillOrb, { w: 12, h: 12 })
+      c.check(
+        "Agent Cursor",
+        "anchor = target top-left + (4, 4) (board 24 g)",
+        `${(m.cursor?.x ?? 0) - cx},${(m.cursor?.y ?? 0) - cy}`,
+        "220,156",
+      )
       c.box("Label (FnfGU)", m.pillLabel, { fs: 12, fw: "500", color: onAccent })
       c.flush()
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "m5-attribution.png") })
@@ -805,7 +834,7 @@ export const scenarios: Scenario[] = [
         filters: ".agents-activity__filters",
         select: ".agents-activity__select",
         group: ".agents-activity__group-header",
-        orb: ".agents-activity__group-header .kimo-agent-orb",
+        orb: ".agents-activity__group-header .kimo-agent-mark",
         gname: ".agents-activity__group-name",
         gmeta: ".agents-activity__group-meta",
         link: ".agents-activity__group-header .agents-link",
@@ -827,7 +856,7 @@ export const scenarios: Scenario[] = [
       c.box("Filters (nDEoh)", m.filters, { h: 44, gap: 8, pad: [8, 12, 8, 12] })
       c.box("Client filter (c76Fq)", m.select, { w: 154, h: 28 })
       c.box("Group (RnyZP)", m.group, { h: 32, gap: 8, pad: [8, 12, 8, 12], bg: subtle })
-      c.box("Orb (DlFYh)", m.orb, { w: 16, h: 16 })
+      c.box("AgentMark 16 (was Orb DlFYh)", m.orb, { w: 16, h: 16 })
       c.box("Name (LSle2)", m.gname, { fs: 12, fw: "600" })
       c.box("Meta (IMIPp)", m.gmeta, { fs: 11, ff: "JetBrains Mono" })
       c.box("Undo session (a7Z2n)", m.link, { fs: 11, fw: "500" })
@@ -885,11 +914,13 @@ export const scenarios: Scenario[] = [
       await page.waitForFunction(
         () => document.querySelectorAll(".kimo-activity-row[data-stale]").length > 0 || true,
       )
-      const targets = await panel.locator(".kimo-activity-row__target").allInnerTexts()
+      // Board 24 (h) uKH9b: undone entries stay, tool line "Undone by you · time", struck label.
+      const toolLines = await panel.locator(".kimo-activity-row__tool").allInnerTexts()
       expect(
-        targets.some((t) => t.includes("undone")),
-        `undone marks: ${targets.join(" / ")}`,
+        toolLines.some((t) => t.startsWith("Undone by you · ")),
+        `undone marks: ${toolLines.join(" / ")}`,
       )
+      expect((await panel.locator(".kimo-activity-row--undone").count()) > 0, "undone rows marked")
 
       // Export JSON.
       await panel.getByRole("button", { name: "Export JSON" }).click()
@@ -996,7 +1027,7 @@ export const scenarios: Scenario[] = [
         actions: ".kimo-agent-host-row__actions",
         actionBtn: ".kimo-agent-host-row__actions .kimo-button",
         client: ".kimo-agent-client-row",
-        clientOrb: ".kimo-agent-client-row .kimo-agent-orb",
+        clientOrb: ".kimo-agent-client-row .kimo-agent-mark",
         clientMeta: ".kimo-agent-client-row__meta",
         scope: ".kimo-agent-client-row__scope",
         scopeLabel: ".kimo-agent-client-row__scope-label",
@@ -1050,7 +1081,7 @@ export const scenarios: Scenario[] = [
       c.box("Copy config (qqtPY)", m.actionBtn, { h: 28, pad: [0, 12, 0, 12] })
       c.box("AgentClientRow (EbQQD expanded)", m.client, { h: 54, gap: 12, pad: [12, 0, 12, 0] })
       c.check("EbQQD", "stroke removed", m.client?.shadow, "none")
-      c.box("Orb (s6KNcG)", m.clientOrb, { w: 28, h: 28 })
+      c.box("AgentMark 28 (was Orb s6KNcG)", m.clientOrb, { w: 28, h: 28 })
       c.box("Meta (ZSMNf)", m.clientMeta, { fs: 11, lh: 13 })
       c.box("Scope (H8RP2y)", m.scope, { pad: [2, 8, 2, 8], h: 17 })
       c.box("Scope label (teal)", m.scopeLabel, { color: agent, fs: 11, fw: "500" })
@@ -1108,7 +1139,13 @@ export const scenarios: Scenario[] = [
       await page.locator("[data-host=gemini-cli]").getByRole("button", { name: "Install" }).click()
       const diff = page.locator("[data-testid=agents-diff]")
       await diff.waitFor()
-      expect((await diff.innerText()).includes('+   "kimo"'), "diff preview shows the added entry")
+      // Board 24 (c) K5Dnf: the unified diff, scrolled to the change.
+      expect(
+        (await page.locator(".agents-config-diff__line--add").allInnerTexts()).some((t) =>
+          t.includes('"kimo"'),
+        ),
+        "diff preview shows the added entry",
+      )
       await page.getByRole("button", { name: "Write config" }).click()
       await page.waitForFunction(
         () =>

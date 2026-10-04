@@ -1,0 +1,21 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "ai-settings",
+  "description": "Settings › AI providers (ADR 0014 §4, §11): save, delete, list and hint provider keys, test them through the relay, and detect agent CLIs (which, version/auth probes, auth-file and env presence). It cannot prepare workspaces or spawn and drive CLI processes.",
+  "windows": ["settings"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-kimo-secret-has",
+    "allow-kimo-secret-set",
+    "allow-kimo-secret-delete",
+    "allow-kimo-secret-list",
+    "allow-kimo-secret-hint",
+    "allow-kimo-ai-request",
+    "allow-kimo-ai-abort",
+    "allow-kimo-cli-which",
+    "allow-kimo-cli-exec",
+    "allow-kimo-cli-home-file-exists",
+    "allow-kimo-cli-has-env"
+  ]
+}

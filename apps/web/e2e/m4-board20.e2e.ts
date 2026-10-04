@@ -606,7 +606,7 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "board20: an SVG with a script is rejected whole — Toast/Danger with Details",
+    name: "board20: an SVG with a script is not imported silently — Toast/Danger with Details",
     async run(ctx) {
       const { page } = ctx
       await editor(ctx)
@@ -619,13 +619,22 @@ export const scenarios: Scenario[] = [
         )
         window.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true }))
       })
-      const toast = page.locator(".m3-toast", { hasText: "Couldn't import" })
+      const toast = page.locator('[data-testid="svg-rejection-toast"] .kimo-toast', {
+        hasText: "Couldn't import",
+      })
       await toast.waitFor({ timeout: 5000 })
       const text = (await toast.innerText()).replace(/\s+/g, " ")
       expect(text.includes("— it contains a script"), `toast: ${text}`)
       expect((await toast.getAttribute("data-tone")) === "danger", "Toast/Danger")
+      // Board 24 (j): Details grows the toast in place into the removed-items list.
       await toast.getByRole("button", { name: "Details" }).click()
-      await page.locator(".m3-toast", { hasText: "<script> · line 3" }).waitFor({ timeout: 5000 })
+      const row = page.locator(".kimo-svg-rejection__reason").first()
+      await row.waitFor({ timeout: 5000 })
+      expect(
+        (await row.innerText()).replace(/\s+/g, " ").trim() ===
+          "L3 <script> scripts are never imported",
+        `row: ${await row.innerText()}`,
+      )
     },
   },
 ]

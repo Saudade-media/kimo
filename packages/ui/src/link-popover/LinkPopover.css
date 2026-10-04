@@ -1,0 +1,100 @@
+/*
+ * Link… popover: desing.pen board 24 (a) NpwJS › Popover · Link (L3eKN).
+ * frame: Popover instance, width 300 (bg-overlay, stroke border 1, radius-lg, shadow 0 8 24)
+ *   ├ Header (oqDII) 40, padding [0, 6, 0, 12], space-between, bottom stroke 1 border
+ *   │   ├ Leading (JTVM6) gap 6 › Icon (KqORT) link 14 text-secondary · Title (rG26Y) sans 12 / 500
+ *   │   └ Close (A7UGEI) IconButton 24, x 14 text-tertiary
+ *   └ Body (mzMkc) column, gap 10, padding 12
+ *       ├ Field (Oe8Zg) Input h 30 (padding [0, 10], gap 8, radius-md, bg-muted), icon link 14,
+ *       │   text sans 12 text-primary
+ *       ├ Hint (t7NY3J) row, gap 6, center › info 12 text-tertiary · sans 11 text-tertiary
+ *       └ Actions (H1Sutf) row, gap 6, center › Open · Remove link · Spacer · Apply
+ *           Button/Ghost|Primary h 28, padding [0, 10], gap 6, icon 14, label sans 12 / 500
+ */
+.kimo-popover.kimo-link-popover {
+  width: 300px;
+}
+
+.kimo-link-popover__title-icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-link-popover__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-popover .kimo-link-popover__body {
+  gap: 10px;
+}
+
+/* Field (Oe8Zg): Input with height 30, icon 14, text 12 / text-primary. */
+.kimo-input.kimo-link-popover__field {
+  height: 30px;
+}
+.kimo-link-popover__field .kimo-input__icon {
+  width: 14px;
+  height: 14px;
+}
+.kimo-link-popover__field .kimo-input__field {
+  font-size: var(--kimo-text-sm);
+}
+.kimo-link-popover__field:has(.kimo-input__field[aria-invalid="true"]) {
+  box-shadow: inset 0 0 0 1px var(--kimo-danger);
+}
+
+.kimo-link-popover__hint {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--kimo-text-tertiary);
+}
+/* Not designed: an invalid URL turns the hint danger (rule "shows the inline error"). */
+.kimo-link-popover__hint--error {
+  color: var(--kimo-danger);
+}
+.kimo-link-popover__hint-icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.kimo-link-popover__hint-text {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-link-popover__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.kimo-link-popover__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* Button instances h 28, padding [0, 10] (Button sm keeps the component's [0, 14]). */
+.kimo-button.kimo-link-popover__action {
+  --kimo-button-padding-x: 10px;
+  padding: 0 10px;
+}
+.kimo-button.kimo-link-popover__action:disabled {
+  opacity: 0.5;
+}
+.kimo-link-popover__remove .kimo-button__label {
+  color: var(--kimo-danger);
+}

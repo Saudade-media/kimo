@@ -58,6 +58,12 @@ export interface RenderScene {
   assets: AssetSource
   /** Canvas background (world space, behind every root). Default: transparent. */
   background?: string
+  /**
+   * M6: display labels for note / prompt chrome. `promptModel` turns a prompt's `model`
+   * (`{provider, model}` or the legacy string) into the pill text ("Opus 5.5"); absent = the
+   * model id. Pictures of prompts are re-recorded on `invalidate()`.
+   */
+  labels?: { promptModel?: (model: unknown) => string }
 }
 
 // --- Overlays ------------------------------------------------------------------------------
@@ -294,7 +300,229 @@ export interface Overlay {
    * target box around an instance descendant. Null hides.
    */
   instanceDrop?: InstanceDropOverlay | null
+
+  // M6 (board 22 D0zDSY, board 24 iLW1l, ADR 0014). All optional: absent = not drawn. Drawn
+  // under the hover and selection chrome; tags, chips, cursors and buttons are DOM (host).
+  /** Frames carrying the `placeholder` flag (DzQcZ): outline, shimmer, skeleton when empty. */
+  placeholders?: readonly PlaceholderOverlay[]
+  /** Frames whose placeholder just cleared: the 1.2 s fade (`progress` 0 → 1). */
+  placeholderFlashes?: readonly PlaceholderFlash[]
+  /**
+   * Shimmer phase 0–1 (one sweep = {@link OVERLAY_SPEC_M6}.placeholder.shimmerPeriodMs). The
+   * host advances it per frame only while a building placeholder is on screen; null/absent
+   * draws the band centered and still (reduced motion, goldens).
+   */
+  shimmerPhase?: number | null
+  /** Agent scope outlines (modes ZFOQf: side by side, split, iterate). */
+  scopes?: readonly ScopeOutline[]
+  /** Nodes each agent is working on, outlined in its persona hue (board 24 GmEAl). */
+  agentSelections?: readonly AgentSelectionOutline[]
+  /** Targets of rejected (OUT_OF_SCOPE) ops: 1.5 `danger` flash (z6D2MM `O9CyHA`). */
+  rejected?: readonly string[]
+  /** Prompt → target connectors (cf2sC `C9IXO8` / `bPSY1`). */
+  promptConnectors?: readonly PromptConnector[]
 }
+
+// --- M6 overlays (desing.pen board 22 "Built-in Agent (M6)", board 24 "Agent Mark & Gaps") ---
+
+/** Agent persona hue: the lead is `agent` (teal); spawned agents take Iris → Violet → Rose → Ember → Moss. */
+export type AgentPersona = "agent" | "iris" | "violet" | "rose" | "ember" | "moss"
+
+/** One placeholder frame (PlaceholderFrame `EKCy7`). */
+export interface PlaceholderOverlay {
+  id: string
+  /** Tint: `agent` (lead) or the persona hue in split mode (board 24 nVrLq). Default `agent`. */
+  persona?: AgentPersona
+  /** `interrupted`: the owner is gone (orphan): no shimmer. */
+  state: "building" | "interrupted"
+  /** Skeleton bars (`Wun0d`): only while the frame has no children. */
+  skeleton: boolean
+}
+
+export interface PlaceholderFlash {
+  id: string
+  /** 0 at clear, 1 when the 1.2 s fade ends. */
+  progress: number
+  persona?: AgentPersona
+}
+
+/** A scope outline (`Scope Outline · …`). */
+export interface ScopeOutline {
+  id: string
+  persona?: AgentPersona
+  /**
+   * `outset`: 3 px outside the node, radius + 3 (side by side `TvhRj`, iterate `cCMHZ`);
+   * `flush`: on the node's box (split sections `REU1L`, flush with their parent).
+   */
+  fit: "outset" | "flush"
+}
+
+/** Board 24 GmEAl "Sel · Agent n": 1.5 persona-hue rect, 2 px outside the node. */
+export interface AgentSelectionOutline {
+  id: string
+  persona: AgentPersona
+}
+
+export interface PromptConnector {
+  /** The prompt node. */
+  prompt: string
+  /** Its `target` frame. */
+  target: string
+  persona?: AgentPersona
+}
+
+/**
+ * Colors of the M6 canvas surfaces. Every value is a token of `@kimo/design-tokens` (the name
+ * in the comment); the defaults ({@link DEFAULT_AGENT_CANVAS_THEME}) are the light values
+ * from desing.pen. Hosts pass the live values through {@link OverlayTheme.agentCanvas}.
+ */
+export interface AgentCanvasTheme {
+  /** `note` */
+  note: string
+  /** `note-edge` */
+  noteEdge: string
+  /** `note-text` */
+  noteText: string
+  /** `shadow` */
+  shadow: string
+  /** `bg-app` */
+  bgApp: string
+  /** `bg-subtle` */
+  bgSubtle: string
+  /** `bg-muted` */
+  bgMuted: string
+  /** `border` */
+  border: string
+  /** `border-strong` */
+  borderStrong: string
+  /** `text-primary` */
+  textPrimary: string
+  /** `text-secondary` */
+  textSecondary: string
+  /** `text-tertiary` */
+  textTertiary: string
+  /** `agent` */
+  agent: string
+  /** `agent-soft` */
+  agentSoft: string
+  /** `danger` */
+  danger: string
+  /** `agent-iris`, `agent-violet`, `agent-rose`, `agent-ember`, `agent-moss` */
+  iris: string
+  violet: string
+  rose: string
+  ember: string
+  moss: string
+  /** `agent-<persona>-soft` (skeleton bars and flash ring of persona-tinted placeholders). */
+  irisSoft: string
+  violetSoft: string
+  roseSoft: string
+  emberSoft: string
+  mossSoft: string
+}
+
+/** Light values from desing.pen variables (token name → value). */
+export const DEFAULT_AGENT_CANVAS_THEME: AgentCanvasTheme = {
+  note: "#FFF1B8",
+  noteEdge: "#EBD686",
+  noteText: "#3D3205",
+  shadow: "#0A0A0A0F",
+  bgApp: "#FFFFFF",
+  bgSubtle: "#F9F8F6",
+  bgMuted: "#F2F1EF",
+  border: "#ECEBE8",
+  borderStrong: "#DDDBD7",
+  textPrimary: "#0A0A0A",
+  textSecondary: "#6B6F75",
+  textTertiary: "#9A9DA2",
+  agent: "#0093A3",
+  agentSoft: "#E3F5F7",
+  danger: "#DD2229",
+  iris: "#4F5FE8",
+  violet: "#8B47DE",
+  rose: "#D6457F",
+  ember: "#E8652A",
+  moss: "#5E8A2E",
+  irisSoft: "#ECEEFF",
+  violetSoft: "#F3EBFD",
+  roseSoft: "#FDEBF2",
+  emberSoft: "#FDEEE6",
+  mossSoft: "#EEF4E4",
+}
+
+/** Token names of {@link AgentCanvasTheme} keys (hosts read `--kimo-<token>`). */
+export const AGENT_CANVAS_TOKENS: Record<keyof AgentCanvasTheme, string> = {
+  note: "note",
+  noteEdge: "note-edge",
+  noteText: "note-text",
+  shadow: "shadow",
+  bgApp: "bg-app",
+  bgSubtle: "bg-subtle",
+  bgMuted: "bg-muted",
+  border: "border",
+  borderStrong: "border-strong",
+  textPrimary: "text-primary",
+  textSecondary: "text-secondary",
+  textTertiary: "text-tertiary",
+  agent: "agent",
+  agentSoft: "agent-soft",
+  danger: "danger",
+  iris: "agent-iris",
+  violet: "agent-violet",
+  rose: "agent-rose",
+  ember: "agent-ember",
+  moss: "agent-moss",
+  irisSoft: "agent-iris-soft",
+  violetSoft: "agent-violet-soft",
+  roseSoft: "agent-rose-soft",
+  emberSoft: "agent-ember-soft",
+  mossSoft: "agent-moss-soft",
+}
+
+/** Persona hue and its soft tint. */
+export function personaColors(
+  theme: AgentCanvasTheme,
+  persona: AgentPersona = "agent",
+): { hue: string; soft: string } {
+  if (persona === "agent") return { hue: theme.agent, soft: theme.agentSoft }
+  return { hue: theme[persona], soft: theme[`${persona}Soft`] }
+}
+
+/**
+ * M6 overlay geometry (screen px unless noted "world"). Values from board 22 (`DzQcZ`,
+ * `cf2sC`, `ZFOQf`) and board 24 (`GmEAl`).
+ */
+export const OVERLAY_SPEC_M6 = {
+  placeholder: {
+    /** EKCy7 stroke 1.5 `agent` (inside). */
+    outlineWidth: 1.5,
+    /** Fill gradient: linear, rotation −60°, agent @ 0 → agent 0x1F @ 0.5 → agent 0 @ 1. */
+    shimmerRotation: -60,
+    shimmerAlpha: 0x1f / 255,
+    /** f7c6p1: "a diagonal $agent shimmer sweeping every 1.6 s". */
+    shimmerPeriodMs: 1600,
+    /** Skeleton `Wun0d` (world units, frame-local): padding 16, tag 20 + gap 10, padding-top 6, gap 8. */
+    skeleton: {
+      padding: 16,
+      top: 16 + 20 + 10 + 6,
+      gap: 8,
+      title: { w: 140, h: 14, r: 4 },
+      line1: { h: 8, r: 4 },
+      line2: { w: 180, h: 8, r: 4 },
+      blocks: { paddingTop: 6, gap: 8, r: 6, count: 3 },
+    },
+  },
+  /** F1viK5: "Outline fades over 1.2 s through a 3 px $agent-soft ring". */
+  flash: { durationMs: 1200, ringWidth: 3 },
+  /** Scope Outline: stroke 1.5, outset 3 (radius + 3) or flush. */
+  scope: { width: 1.5, outset: 3 },
+  /** GmEAl "Sel · Agent n": 1.5, 2 px outside the node. */
+  agentSelection: { width: 1.5, outset: 2 },
+  /** z6D2MM "Rejected Target Flash": 1.5 `danger` on the node box. */
+  rejected: { width: 1.5 },
+  /** cf2sC Connector: 1.5 line + 7 px end dot centered on the target edge. */
+  connector: { width: 1.5, dot: 7 },
+} as const
 
 /**
  * One component identity outline. Colors are `component` / `component-soft`
@@ -347,6 +575,9 @@ export interface OverlayTheme {
   component?: string
   /** `component-soft` (#7C3AED14 / #A78BFA24): empty-slot fill, replace target fill. */
   componentSoft?: string
+  // M6 (optional; DEFAULT_AGENT_CANVAS_THEME light values are the fallback).
+  /** Note / prompt chrome and agent overlay colors ({@link AgentCanvasTheme}). */
+  agentCanvas?: Partial<AgentCanvasTheme>
 }
 
 /**

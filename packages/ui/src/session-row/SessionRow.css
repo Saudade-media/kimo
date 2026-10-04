@@ -1,0 +1,85 @@
+/*
+ * SessionRow: desing.pen 22 > Components (M6) > SessionRow (cV3ln).
+ * column fill_container, gap 2, padding [8, 10], radius-md
+ *   ├ Top  (txgCM) row fill, gap 8, center › Title (T8AH3h) sans 12 / 500 text-primary ·
+ *   │      Spacer · Time (oBUYd) sans 11 text-tertiary
+ *   └ Meta (D6w4a) mono 11 text-tertiary
+ * Current (uCPJ5): fill bg-muted. Hover: bg-hover.
+ */
+.kimo-session-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-session-row:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-session-row--current,
+.kimo-session-row--current:hover {
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-session-row:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-session-row__top {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kimo-session-row__title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kimo-session-row__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+.kimo-session-row__time {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-session-row__meta {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

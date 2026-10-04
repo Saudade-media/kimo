@@ -1,0 +1,749 @@
+/*
+ * Settings › AI providers — desing.pen board 23 g6AqH (Content EGVxF), web variant board 22
+ * BWkRR. Node values; see AiProvidersPane.tsx. Pencil text boxes: sans 11 → 13, 12 → 15,
+ * 13 → 16, 14 → 17; mono 11 → 15. Strokes are inside strokes (inset box-shadows).
+ */
+
+/* The pane's children are Content (EGVxF) children: no wrapper box. */
+.ai-pane {
+  display: contents;
+}
+
+.ai-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Title Bar (oXKjz): 56, center; Title (p6nHC) sans 14 / 600 text-primary. */
+.ai-title-bar {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 56px;
+  -webkit-app-region: drag;
+}
+.ai-title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 17px;
+  white-space: nowrap;
+}
+.ai-agent-status {
+  flex: none;
+  -webkit-app-region: no-drag;
+}
+
+/* Intro (L56aX), Desc (MZM7I, HDutC, E8Erp5): sans 11 text-secondary lh 1.45, fill. */
+.ai-intro,
+.ai-group__desc {
+  flex: none;
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Group · … (j5dTH, rXLN6, tAaTK): column, gap 2, fill. */
+.ai-group {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+.ai-group--local {
+  padding: 24px 0 8px 0;
+}
+.ai-group--providers,
+.ai-group--usage {
+  padding: 24px 0 4px 0;
+}
+/* Title Row (qLbia, rKyoU): 28, gap 8, center. Usage (T7x0M) hugs its 16 px text. */
+.ai-group__title-row {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+}
+.ai-group__title-row--usage {
+  height: auto;
+}
+.ai-group__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 16px;
+  white-space: nowrap;
+}
+.ai-group__subtitle {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.ai-checking {
+  padding: 12px 0;
+}
+/* Spacer 8 (ypvLL). */
+.ai-spacer-8 {
+  display: block;
+  flex: none;
+  width: 100%;
+  height: 8px;
+}
+
+/* Precedence (Y84n9): gap 8, padding [8, 12], center, bg-subtle, stroke 1 border, radius-md. */
+.ai-precedence {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.ai-precedence__icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+.ai-precedence__key {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  white-space: nowrap;
+}
+/* Step 1 (aBeiC) text-primary = the step in effect; others (D1xhC, vkYAQ) text-secondary. */
+.ai-precedence__step {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.ai-precedence__step.is-active {
+  color: var(--kimo-text-primary);
+}
+.ai-precedence__arrow {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+/* Button instances: h 28, padding [0, 12], icon 14, label sans 12 (Button sm). */
+.kimo-button.ai-button {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+}
+/* Button/Ghost instances: label overridden text-primary; the icon keeps text-secondary. */
+.kimo-button.ai-button--ghost {
+  color: var(--kimo-text-primary);
+}
+.kimo-button.ai-button--ghost .kimo-button__icon {
+  color: var(--kimo-text-secondary);
+}
+
+/* Local · <CLI> (eJZeF): row, gap 12, padding [12, 0], center, fill, bottom stroke 1 border. */
+.ai-cli-row {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+/* Host Tile (z1Uqv3): 32 × 32, center, bg-muted, radius-md; Host Icon 16 text-primary. */
+.ai-cli-row__tile {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+.ai-cli-row__icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+.ai-cli-row__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Text (ay0Q8): column, gap 2, fill. */
+.ai-cli-row__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* Name Row (WngZ6): gap 8, center. */
+.ai-cli-row__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.ai-cli-row__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.ai-cli-row__meta {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Hint (kERUT): gap 5, padding [2, 0, 0, 0], center; info 12 + text sans 11, both warning. */
+.ai-cli-row__hint {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0 0 0;
+}
+.ai-cli-row__hint-icon {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-warning);
+}
+.ai-cli-row__hint-text {
+  flex: 1 1 0;
+  color: var(--kimo-warning);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+/* Actions (GKFVM): gap 6, justify end, center. */
+.ai-cli-row__actions {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+/* Default Badge (dPHWu): padding [1, 7], center, stroke 1 border-strong, radius-pill. */
+.ai-default-badge {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: var(--kimo-radius-pill);
+  box-shadow: inset 0 0 0 1px var(--kimo-border-strong);
+}
+.ai-default-badge__label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+}
+
+/* Provider rows: AgentHostRow (fRQJO). Anthropic: Host Tile agent-soft, icon agent. */
+.kimo-agent-host-row.ai-provider-row {
+  flex: none;
+}
+.ai-provider-row--anthropic .kimo-agent-host-row__tile {
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+
+/* Detail (cDi2t): column, gap 10, padding 16, bg-subtle, stroke 1 border, radius-lg. */
+.ai-detail {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Web Variant (BWkRR): column, bg-app, stroke 1 border, radius-lg; Banner + Body (Fkjob). */
+.ai-detail--web {
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  background: var(--kimo-bg-app);
+}
+.ai-detail__banner.kimo-banner {
+  border-radius: var(--kimo-radius-lg) var(--kimo-radius-lg) 0 0;
+}
+.ai-detail__body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+}
+.ai-detail__footer {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Field · … (vfqoC, sogTB, GESY1): gap 8, center, fill, h 28. */
+.ai-field {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+}
+.ai-field__label {
+  flex: none;
+  width: 88px;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+}
+.ai-field__note {
+  margin: 0;
+  padding-left: 96px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 1.45;
+}
+.ai-field__error {
+  width: 100%;
+  padding-left: 96px;
+  color: var(--kimo-danger);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+/* Value Field (purB3): fill × 28, gap 6, padding [0, 4, 0, 8], center, bg-app, stroke 1
+   border, radius-sm. Web (cPPeT) and Base URL (RrLvC) have no icons: padding [0, 8] there. */
+.ai-value-field {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.ai-value-field.is-editing,
+.ai-value-field--url {
+  padding: 0 8px;
+}
+.ai-value-field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+.ai-value,
+.ai-value-input {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ai-value-input {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+}
+.ai-value-input::placeholder {
+  color: var(--kimo-text-tertiary);
+}
+/* Base URL Value (tAma7) shows the default in text-primary. */
+.ai-value-input--url::placeholder {
+  color: var(--kimo-text-primary);
+}
+/* Reveal / Replace / Remove key (u7omGi …): IconButton 22 × 22, transparent, radius-md;
+   icon 13 text-tertiary. */
+.ai-field-icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+.ai-field-icon > svg {
+  display: block;
+  width: 13px;
+  height: 13px;
+}
+.ai-field-icon:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+.ai-field-icon:disabled {
+  cursor: default;
+}
+.ai-field-icon:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+/* Model · Agent / Fast (ICJ6r, zBKMG): gap 6, center, fill; Role sans 11 tertiary. */
+.ai-model {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ai-model__role {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+.ai-model__input {
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Select instances (mnEYU, GQ3w3): fill bg-app, stroke 1 border; value text-xs. */
+.kimo-select.ai-select {
+  flex: 1 1 0;
+}
+.kimo-select.ai-select .kimo-select__trigger {
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.kimo-select.ai-select .kimo-select__trigger:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+.kimo-select.ai-select .kimo-select__value {
+  font-size: var(--kimo-text-xs);
+}
+
+/* Storage (z9hHLf / eXP8m): gap 6, center; icon 12 + label mono 11, text-tertiary. */
+.ai-storage {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.ai-storage__icon {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+.ai-storage__label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+}
+
+/* Test Result (TUwHz): gap 8, padding [6, 10], center, success-soft, radius-sm; icon 14 +
+   label sans 11 / 600 success; Detail mono 11 text-secondary. Failure: danger. */
+.ai-test {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-success-soft);
+}
+.ai-test--fail {
+  background: var(--kimo-danger-soft);
+}
+.ai-test__icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-success);
+}
+.ai-test__label {
+  flex: none;
+  color: var(--kimo-success);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px;
+  white-space: nowrap;
+}
+.ai-test--fail .ai-test__icon,
+.ai-test--fail .ai-test__label {
+  color: var(--kimo-danger);
+}
+.ai-test__detail {
+  min-width: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+}
+
+/* Opt-in (N0dsja): row, gap 10 (top-aligned); Text (yXjc1) column, gap 2. */
+.ai-optin {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+.ai-optin .kimo-toggle {
+  flex: none;
+}
+.ai-optin__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ai-optin__label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+}
+.ai-optin__desc {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Period (ItEWL): sans 11 tertiary. */
+.ai-usage__period {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}
+/* Usage Card (DCGkU): column, gap 12, padding 16, bg-subtle, stroke 1 border, radius-lg. */
+.ai-usage {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Top (nvLT2): gap 8, alignItems end. */
+.ai-usage__top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+.ai-usage__spent {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: 28px;
+  font-weight: var(--kimo-font-weight-semibold);
+  letter-spacing: -0.6px;
+  line-height: 34px;
+  white-space: nowrap;
+}
+.ai-usage__of {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.ai-usage__tokens {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+/* Meter (GIpCW): fill × 6, bg-muted, radius-pill, clip; segments are 6 tall rectangles. */
+.ai-usage__meter {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+.ai-usage__segment {
+  display: block;
+  flex: none;
+  height: 6px;
+}
+/* Breakdown (b8OQv): gap 16, center; Item gap 6, center; Dot 6; Name sans 11 secondary;
+   Value mono 11 primary. */
+.ai-usage__breakdown {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+.ai-usage__item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.ai-usage__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.ai-usage__name {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}
+.ai-usage__value {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* Amount Field (pdL0w): 96 × 28, gap 4, padding [0, 8], center, bg-app, stroke 1 border,
+   radius-sm; Prefix "$" mono 11 tertiary; Value mono 11 primary. */
+.ai-amount {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 96px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.ai-amount:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+.ai-amount__prefix {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+.ai-amount__value {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+}
+
+/* Busy ghost buttons (Re-check while detecting, Test while testing): the icon spins. Last:
+   highest specificity. */
+.kimo-button.ai-button--ghost.is-busy .kimo-button__icon > svg {
+  animation: kimo-spin 1s linear infinite;
+}

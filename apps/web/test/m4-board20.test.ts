@@ -169,14 +169,15 @@ describe("Banner priority (vgNUe)", () => {
     operation: "merge",
     unsavedEdits: 0,
   }
-  test("order: save failure > stored conflicts > git operation > lock / read-only > info", () => {
+  // Board 24 (n) a9ykr0 (decided) supersedes board 20's order: locked / read-only first.
+  test("order: lock / read-only > disk > stored conflicts > git operation > ready to commit", () => {
     expect(BANNER_PRIORITY).toEqual([
       "failed-load",
+      "locked",
+      "newer-format",
       "save-failed",
       "merge-conflicts",
       "git-operation",
-      "locked",
-      "newer-format",
       "merge-ready",
     ])
   })
@@ -195,7 +196,7 @@ describe("Banner priority (vgNUe)", () => {
         lockPath: "",
       } as never,
     }
-    expect(pickBanner([locked, gitMerge])?.kind).toBe("git-operation")
+    expect(pickBanner([locked, gitMerge])?.kind).toBe("locked")
   })
 })
 

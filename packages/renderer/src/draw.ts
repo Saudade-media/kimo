@@ -6,16 +6,20 @@
  */
 import { defaultTextFill, isObject, isRef, type KimoDocument } from "@kimo/core-schema"
 import {
+  agentNodeBodyBox,
   type LayoutNodeData,
   type LayoutResult,
+  NOTE_CHROME,
   type NodeLayout,
   type NodeSource,
+  PROMPT_CHROME,
   type ResolveHeader,
   type Resolver,
   resolveText,
+  TEXT_STYLE_DEFAULTS,
 } from "@kimo/layout"
 import type { Canvas, CanvasKit, ImageFilter, Paint, Path } from "canvaskit-wasm"
-import type { RGBA } from "./color"
+import { parseHex, type RGBA } from "./color"
 import { invert, resolveNum, resolveRadii, toCk, union } from "./geometry"
 import type { IconRegistry } from "./icons/registry"
 import { applyBlend, imageSources, isNonNormalBlend, type PaintFactory, paintList } from "./paint"
@@ -28,7 +32,12 @@ import {
   type StrokeStyle,
 } from "./stroke"
 import type { TextEngine, TextFill } from "./text"
-import type { Rect } from "./types"
+import {
+  type AgentCanvasTheme,
+  DEFAULT_AGENT_CANVAS_THEME,
+  type Rect,
+  type RenderScene,
+} from "./types"
 
 type Radii = [number, number, number, number]
 
@@ -59,6 +68,8 @@ export interface PaintContext {
   header: () => ResolveHeader
   resolve: Resolver
   layout: LayoutResult
+  /** M6: display labels for chrome (prompt model pill). */
+  labels?: RenderScene["labels"]
 }
 
 export interface DrawCounters {
@@ -76,9 +87,6 @@ export interface DrawCounters {
 
 const PLACEHOLDER_FILL: RGBA = [0, 0, 0, 0.04]
 const PLACEHOLDER_STROKE: RGBA = [0, 0, 0, 0.3]
-/** Sticky note / prompt card colors (M1 placeholders; not in desing.pen). */
-const NOTE_FILL: RGBA = [1, 0.953, 0.722, 1]
-const PROMPT_FILL: RGBA = [0.918, 0.965, 0.957, 1]
 
 export class Painter {
   constructor(
@@ -125,6 +133,9 @@ export class Painter {
     const l = ctx.layout.nodes.get(id)
     const node = ctx.nodes.getNode(id)
     if (!l || !node || !l.visible) return
+    // Spec §5.5: a PNG/PDF of a parent skips notes and prompts (they are not the design).
+    if (this.skipAgentNodes && this.depth > 1 && (node.type === "note" || node.type === "prompt"))
+      return
     counters.nodes++
     const ck = this.ck
     const { resolve } = ctx
@@ -202,9 +213,11 @@ export class Painter {
 
     switch (node.type) {
       case "text":
+        this.drawText(canvas, ctx, id, node, l, counters)
+        break
       case "note":
       case "prompt":
-        this.drawText(canvas, ctx, id, node, l, counters)
+        this.drawAgentCard(canvas, ctx, id, node, l, counters)
         break
       case "icon":
         this.drawIcon(canvas, ctx, id, node, w, h, counters)
@@ -884,14 +897,6 @@ export class Painter {
     counters: DrawCounters,
   ): void {
     const { w, h } = l.local
-    if (node.type !== "text") {
-      const p = new this.ck.Paint()
-      p.setAntiAlias(true)
-      p.setColor(this.paints.color(node.type === "note" ? NOTE_FILL : PROMPT_FILL))
-      canvas.drawRRect(this.rrect(0, 0, w, h, [4, 4, 4, 4]), p)
-      p.delete()
-      counters.draws++
-    }
     const fill = this.textFill(ctx, id, node, w, h)
     if (!fill) return
     const input = resolveText(id, node, ctx.resolve)
@@ -903,6 +908,277 @@ export class Painter {
     const valign = input.style.valign
     const dy = h > ph ? (valign === "middle" ? (h - ph) / 2 : valign === "bottom" ? h - ph : 0) : 0
     canvas.drawParagraph(para, 0, dy)
+    counters.draws++
+  }
+
+  // --- M6: note and prompt cards (board 22 cf2sC: NoteNode afq5v, PromptNode poE5B) --------
+
+  /**
+   * Colors of the note / prompt chrome (editor tokens, not document paint). The renderer sets
+   * it from `OverlayTheme.agentCanvas` and drops recorded pictures when it changes.
+   */
+  agentTheme: AgentCanvasTheme = DEFAULT_AGENT_CANVAS_THEME
+
+  /** Set while exporting: notes / prompts below the exported root are not drawn. */
+  skipAgentNodes = false
+
+  private hexColor(hex: string, alpha = 1): Float32Array {
+    const c = parseHex(hex) ?? [0, 0, 0, 1]
+    return this.paints.color([c[0], c[1], c[2], c[3] * alpha])
+  }
+
+  /** One line of chrome text (Inter) at `x`, vertically centered on `cy`; returns its width. */
+  private chromeLabel(
+    canvas: Canvas,
+    key: string,
+    text: string,
+    size: number,
+    weight: number,
+    color: string,
+    x: number,
+    cy: number | null,
+    counters: DrawCounters,
+    draw = true,
+  ): { w: number; h: number } {
+    const style = { ...TEXT_STYLE_DEFAULTS, fontSize: size, fontWeight: weight }
+    const para = this.text.paragraph(
+      { nodeId: key, runs: [{ text, style }], style },
+      { color: this.hexColor(color) },
+      undefined,
+    )
+    const pw = para.getMaxIntrinsicWidth()
+    const ph = para.getHeight()
+    if (draw && cy !== null) {
+      canvas.drawParagraph(para, x, cy - ph / 2)
+      counters.draws++
+    }
+    return { w: pw, h: ph }
+  }
+
+  /** A lucide chrome glyph at (`x`, `y`), `size` square. */
+  private chromeIcon(
+    canvas: Canvas,
+    name: string,
+    color: string,
+    x: number,
+    y: number,
+    size: number,
+    counters: DrawCounters,
+  ): void {
+    const found = this.icons ? this.icons.lookup("lucide", name, undefined) : null
+    if (found?.status === "loading") {
+      counters.pendingIcons = (counters.pendingIcons ?? 0) + 1
+      return
+    }
+    if (!found || found.status === "missing") return
+    const { glyph, paths } = found
+    const [vx, vy, vw, vh] = glyph.viewBox
+    if (!(vw > 0 && vh > 0)) return
+    const ck = this.ck
+    canvas.save()
+    canvas.translate(x, y)
+    canvas.scale(size / vw, size / vh)
+    canvas.translate(-vx, -vy)
+    const p = new ck.Paint()
+    p.setAntiAlias(true)
+    p.setColor(this.hexColor(color))
+    glyph.paths.forEach((gp, i) => {
+      const path = paths[i]
+      if (!path) return
+      if (gp.paint === "stroke") {
+        p.setStyle(ck.PaintStyle.Stroke)
+        p.setStrokeWidth(glyph.strokeWidth ?? 2)
+        p.setStrokeCap(ck.StrokeCap.Round)
+        p.setStrokeJoin(ck.StrokeJoin.Round)
+      } else p.setStyle(ck.PaintStyle.Fill)
+      canvas.drawPath(path, p)
+      counters.draws++
+    })
+    p.delete()
+    canvas.restore()
+  }
+
+  /** Display label of a prompt's `model` (host hook, else the model id). */
+  private modelLabel(ctx: PaintContext, model: unknown): string | null {
+    if (model === undefined || model === null) return null
+    const hook = ctx.labels?.promptModel
+    if (hook) return hook(model)
+    if (typeof model === "string") return model
+    if (isObject(model) && typeof model.model === "string") return model.model
+    return null
+  }
+
+  /**
+   * Note: `note` fill, 1 px `note-edge` (inside), radius 4, shadow 0/2/6 `shadow`; Head
+   * (sticky-note 12 + "<author> · note" 11/500 `note-text`); Body 12/1.45 `note-text`.
+   * Prompt: `bg-app`, 1 px `border-strong`, radius 16, shadow 0/2/8, clip; Head 38 (sparkles
+   * 12 + "Prompt" 11/600 `agent`, Model pill), 1 px `border` divider; Body 12/1.5
+   * `text-primary`; Footer 42 `bg-subtle` with a 1 px `border` top (its status and Run button
+   * are the host's DOM overlay: run state is app data).
+   */
+  private drawAgentCard(
+    canvas: Canvas,
+    ctx: PaintContext,
+    id: string,
+    node: LayoutNodeData,
+    l: NodeLayout,
+    counters: DrawCounters,
+  ): void {
+    const ck = this.ck
+    const t = this.agentTheme
+    const { w, h } = l.local
+    const note = node.type === "note"
+    const spec = note ? NOTE_CHROME : PROMPT_CHROME
+    const r = spec.radius
+    const card = this.rrect(0, 0, w, h, [r, r, r, r])
+    // Shadow (blur radius → sigma = blur / 2, like the format's shadows).
+    const sh = new ck.Paint()
+    sh.setAntiAlias(true)
+    sh.setColor(this.hexColor(t.shadow))
+    const mf = ck.MaskFilter.MakeBlur(ck.BlurStyle.Normal, spec.shadow.blur / 2, false)
+    sh.setMaskFilter(mf)
+    canvas.drawRRect(this.rrect(spec.shadow.x, spec.shadow.y, w, h, [r, r, r, r]), sh)
+    sh.delete()
+    mf.delete()
+    const p = new ck.Paint()
+    p.setAntiAlias(true)
+    p.setColor(this.hexColor(note ? t.note : t.bgApp))
+    canvas.drawRRect(card, p)
+    counters.draws += 2
+    canvas.save()
+    canvas.clipRRect(card, ck.ClipOp.Intersect, true)
+    if (note) {
+      const [pt, , , pl] = NOTE_CHROME.padding
+      const cy = pt + NOTE_CHROME.headHeight / 2
+      this.chromeIcon(
+        canvas,
+        "sticky-note",
+        t.noteText,
+        pl,
+        cy - NOTE_CHROME.iconSize / 2,
+        NOTE_CHROME.iconSize,
+        counters,
+      )
+      const author =
+        typeof node.author === "string" && node.author ? `${node.author} · note` : "Note"
+      this.chromeLabel(
+        canvas,
+        `${id}\u0000author`,
+        author,
+        NOTE_CHROME.labelSize,
+        NOTE_CHROME.labelWeight,
+        t.noteText,
+        pl + NOTE_CHROME.iconSize + NOTE_CHROME.headGap,
+        cy,
+        counters,
+      )
+    } else {
+      const P = PROMPT_CHROME
+      const [pt, pr, , pl] = P.headPadding
+      p.setColor(this.hexColor(t.bgSubtle))
+      canvas.drawRect(ck.XYWHRect(0, h - P.footerHeight, w, P.footerHeight), p)
+      p.setColor(this.hexColor(t.border))
+      canvas.drawRect(ck.XYWHRect(0, P.headHeight - 1, w, 1), p)
+      canvas.drawRect(ck.XYWHRect(0, h - P.footerHeight, w, 1), p)
+      counters.draws += 3
+      const cy = P.headHeight / 2
+      this.chromeIcon(canvas, "sparkles", t.agent, pl, cy - P.iconSize / 2, P.iconSize, counters)
+      this.chromeLabel(
+        canvas,
+        `${id}\u0000kind`,
+        "Prompt",
+        P.labelSize,
+        P.kindWeight,
+        t.agent,
+        pl + P.iconSize + P.headGap,
+        cy,
+        counters,
+      )
+      const label = this.modelLabel(ctx, node.model)
+      if (label) {
+        const M = P.model
+        const size = this.chromeLabel(
+          canvas,
+          `${id}\u0000model`,
+          label,
+          P.labelSize,
+          M.weight,
+          t.textSecondary,
+          0,
+          null,
+          counters,
+          false,
+        )
+        const pw = M.padding[3] + size.w + M.gap + M.chevron + M.padding[1]
+        const px = w - pr - pw
+        p.setColor(this.hexColor(t.bgMuted))
+        canvas.drawRRect(
+          this.rrect(px, pt, pw, M.height, [
+            M.height / 2,
+            M.height / 2,
+            M.height / 2,
+            M.height / 2,
+          ]),
+          p,
+        )
+        counters.draws++
+        this.chromeLabel(
+          canvas,
+          `${id}\u0000model`,
+          label,
+          P.labelSize,
+          M.weight,
+          t.textSecondary,
+          px + M.padding[3],
+          cy,
+          counters,
+        )
+        this.chromeIcon(
+          canvas,
+          "chevron-down",
+          t.textTertiary,
+          px + M.padding[3] + size.w + M.gap,
+          cy - M.chevron / 2,
+          M.chevron,
+          counters,
+        )
+      }
+    }
+    p.delete()
+    // Body: the node's content in the body box (measured by layout with the same insets).
+    const type = note ? "note" : "prompt"
+    const body = agentNodeBodyBox(type, w, h)
+    const input = resolveText(id, node, ctx.resolve)
+    if (body.w > 0 && input.runs.some((run) => run.text)) {
+      const para = this.text.paragraph(
+        input,
+        { color: this.hexColor(note ? t.noteText : t.textPrimary) },
+        body.w,
+      )
+      canvas.save()
+      canvas.clipRect(
+        ck.XYWHRect(body.x, body.y, body.w, Math.max(0, body.h)),
+        ck.ClipOp.Intersect,
+        true,
+      )
+      canvas.drawParagraph(para, body.x, body.y)
+      canvas.restore()
+      counters.draws++
+    }
+    canvas.restore()
+    // Stroke inside the card edge.
+    const s = new ck.Paint()
+    s.setAntiAlias(true)
+    s.setStyle(ck.PaintStyle.Stroke)
+    s.setStrokeWidth(spec.strokeWidth)
+    s.setColor(this.hexColor(note ? t.noteEdge : t.borderStrong))
+    const half = spec.strokeWidth / 2
+    const ri = Math.max(0, r - half)
+    canvas.drawRRect(
+      this.rrect(half, half, w - spec.strokeWidth, h - spec.strokeWidth, [ri, ri, ri, ri]),
+      s,
+    )
+    s.delete()
     counters.draws++
   }
 
@@ -992,6 +1268,9 @@ export class Painter {
       const r = this.iconRef(ctx, id, n)
       if (r) out.push(r)
     }
+    if (n.type === "note") out.push(["lucide", "sticky-note", undefined])
+    if (n.type === "prompt")
+      out.push(["lucide", "sparkles", undefined], ["lucide", "chevron-down", undefined])
     for (const c of this.children(ctx, id)) this.iconsOf(ctx, c, out)
     return out
   }

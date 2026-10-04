@@ -93,4 +93,26 @@
 @import "./agent-op-row/AgentOpRow.css";
 @import "./activity-row/ActivityRow.css";
 @import "./agent-layer-mark/AgentLayerMark.css";
+
+/* M6 built-in agent (boards 22, 24). */
+@import "./agent-mark/AgentMark.css";
+@import "./message-meta/MessageMeta.css";
+@import "./attachment-chip/AttachmentChip.css";
+@import "./attachment-thumb/AttachmentThumb.css";
+@import "./compact-button/CompactButton.css";
+@import "./mode-chip/ModeChip.css";
+@import "./mode-option/ModeOption.css";
+@import "./scope-tag/ScopeTag.css";
+@import "./skill-row/SkillRow.css";
+@import "./session-row/SessionRow.css";
+@import "./agent-error-card/AgentErrorCard.css";
+@import "./composer-agent/ComposerAgent.css";
 @import "./gallery/Gallery.css";
+
+/* Board 24 gaps (link popover, custom tag, close prompt, SVG rejection, weight warning, +N menu). */
+@import "./link-popover/LinkPopover.css";
+@import "./custom-tag-field/CustomTagField.css";
+@import "./close-prompt/ClosePrompt.css";
+@import "./svg-rejection/SvgRejectionDetails.css";
+@import "./weight-warning/WeightWarning.css";
+@import "./conflict-more-menu/ConflictMoreMenu.css";

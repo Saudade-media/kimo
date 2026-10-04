@@ -49,6 +49,8 @@ export const CANVAS_TOOL_IDS = [
   "pen",
   "image",
   "component",
+  "note",
+  "prompt",
 ] as const
 export type CanvasToolId = (typeof CANVAS_TOOL_IDS)[number]
 
@@ -77,7 +79,12 @@ export interface CanvasToolSpec {
    * M3: a one-shot action instead of a mode. `createComponent` runs Create component on the
    * selection (⌥⌘K; board 12 note "Create component (⌥⌘K or toolbar ◇)").
    */
-  action?: "createComponent"
+  action?: "createComponent" | "insertNote" | "insertPrompt"
+  /**
+   * M6: icon color token (board 22 cf2sC "Insert hint": sticky-note `note-text`, sparkles
+   * `agent`). Absent = the ToolButton's own color.
+   */
+  iconColor?: string
   /** False = rendered disabled. */
   enabled: boolean
 }
@@ -129,6 +136,28 @@ export const CANVAS_TOOLS: readonly CanvasToolSpec[] = [
     tool: null,
     // M3: a one-shot action (the shell runs Create component on the selection).
     action: "createComponent",
+    enabled: true,
+  },
+  // M6 (board 22 cf2sC `FTOjQ` "Insert hint": Tool · Note `AJpaL`, Tool · Prompt `eSlHx`):
+  // one-shot inserts at the viewport center, then the body opens for typing.
+  {
+    id: "note",
+    label: "Note",
+    icon: "sticky-note",
+    iconColor: "note-text",
+    shortcut: "N",
+    tool: null,
+    action: "insertNote",
+    enabled: true,
+  },
+  {
+    id: "prompt",
+    label: "Prompt",
+    icon: "sparkles",
+    iconColor: "agent",
+    shortcut: "⇧P",
+    tool: null,
+    action: "insertPrompt",
     enabled: true,
   },
 ]
@@ -502,6 +531,97 @@ export interface CanvasHostProps {
    * (a main's slot frame: default children; `<instance>/<path>`: `at` content).
    */
   onQuickInsert?: (insert: { slot: string; of: string; name: string }) => void
+
+  // --- M6 -----------------------------------------------------------------------------------
+  /**
+   * Built-in agent surfaces on the canvas (board 22 D0zDSY, board 24 iLW1l): placeholder
+   * frames, scope outlines + ScopeTag, persona cursors and selections, rejected-op pills,
+   * prompt connectors, prompt footers with Run. Absent = no agent: notes and prompts still
+   * draw, placeholders show as Interrupted (no live owner).
+   */
+  agentCanvas?: AgentCanvasProps
+  /** Author display name written on new notes / prompts (`note.author`, the OS user name). */
+  noteAuthor?: string
+}
+
+// --- M6: built-in agent on the canvas (ADR 0014; board 22 D0zDSY, board 24 iLW1l) -------------
+
+/** Persona hue (board 24 "Persona hue tokens"): lead `agent` (teal), then Iris → Moss. */
+export type CanvasAgentPersona = "agent" | "iris" | "violet" | "rose" | "ember" | "moss"
+
+/** AgentMark face state (board 24 component sheet). */
+export type CanvasAgentMarkState = "idle" | "listening" | "thinking" | "working" | "done" | "error"
+
+/** What the canvas knows about a running agent origin (`agent:kimo.<session>.<n>`). */
+export interface CanvasAgentInfo {
+  /** "Kimo", "Agent 2". */
+  label: string
+  persona: CanvasAgentPersona
+  /** Ops applied so far this turn ("Kimo · building Features · 14 ops"). */
+  ops?: number
+  paused?: boolean
+}
+
+/** One enforced scope (modes ZFOQf). */
+export interface CanvasAgentScope {
+  origin: string
+  /** Scope root node ids. */
+  roots: readonly string[]
+  /**
+   * `side-by-side`: outset outline + ScopeTag above ("Agent 1 · only inside Pricing · v1");
+   * `split`: outline flush on the section + ScopeTag inside its top-right;
+   * `single` / `iterate`: outset outline + "Agent can only edit inside <name>".
+   */
+  mode: "single" | "side-by-side" | "split" | "iterate"
+  /** Iterate: the Pass Chip under the outline (h6oHb `NCElh` "Iterate · pass 2 of 3 · review"). */
+  iterate?: { pass: number; of: number; reviewing: boolean }
+}
+
+/** Where an agent is working (persona cursor + selection outline, board 24 GmEAl). */
+export interface CanvasAgentCursor {
+  origin: string
+  /** Node the current op targets. */
+  nodeId: string
+  /** "setting Headline font…" (the pill reads "<label> · <text>"). */
+  text: string
+  state: CanvasAgentMarkState
+}
+
+/** A rejected op (OUT_OF_SCOPE / PERMISSION_DENIED): danger pill + target flash. */
+export interface CanvasAgentRejection {
+  /** Unique per rejection (re-flashes when a new key arrives). */
+  key: string
+  origin: string
+  nodeId: string
+  /** "update Navbar → OUT_OF_SCOPE" (the pill reads "<label> · <text>"). */
+  text: string
+}
+
+/** Prompt-node run state as the footer shows it (ADR 0014 §9, `@kimo/ai-agent` PromptRunState). */
+export type CanvasPromptRun = import("@kimo/ai-agent").PromptRunState
+
+export interface AgentCanvasProps {
+  /** Origins that are running; a placeholder whose `by` is not live shows "Interrupted". */
+  liveOrigins: ReadonlySet<string>
+  agent(origin: string): CanvasAgentInfo | null
+  scopes?: readonly CanvasAgentScope[]
+  cursors?: readonly CanvasAgentCursor[]
+  rejections?: readonly CanvasAgentRejection[]
+  /** Run state of a prompt node (app data keyed by `<fileId>/<nodeId>`); absent = never run. */
+  promptRun?(nodeId: string): CanvasPromptRun | undefined
+  /** Model pill text for a prompt's `model` ("Opus 5.5"); absent = the model id. */
+  modelLabel?(model: unknown): string
+  /** Footer formatters (defaults: "4m ago", "$0.06"). */
+  ago?(t: number): string
+  usd?(v: number | null): string
+  onRunPrompt?(nodeId: string): void
+  onStopPrompt?(nodeId: string): void
+  /** Placeholder tooltip "Pause agent": pause the owning session. */
+  onPauseAgent?(origin: string): void
+  /** "<name> ready · N ops · Review" chip: open the change card in the Agent tab. */
+  onReviewPlaceholder?(nodeId: string, origin: string): void
+  /** Reduced motion: no shimmer sweep, no cursor easing. Default: the media query. */
+  reducedMotion?: boolean
 }
 
 /** M2: where the I key asked for an icon. */
@@ -594,4 +714,22 @@ export interface CanvasHandle {
    * (`GMebs`) or the replace target box (`d8kP2n`). Null hides it.
    */
   previewComponentDrop?(target: ComponentDropTarget | null): void
+
+  // --- M6 (board 22) -------------------------------------------------------------------------
+  /**
+   * Inserts a note / prompt (one undo step) with its top-left at world `at` (default: centered
+   * in the viewport), selects it and opens its body for typing. Returns the new id.
+   */
+  insertAgentNode?(type: "note" | "prompt", at?: Point): string | null
+  /** Sets (or with null clears) a prompt's `target` frame ("Set as target"). */
+  setPromptTarget?(promptId: string, frameId: string | null): boolean
+  /** Note context menu "Convert to prompt": `replace` keeping id, position and body. */
+  convertNoteToPrompt?(noteId: string): boolean
+  /** Orphan context menu "Clear flag": unsets `placeholder` (one undo step). */
+  clearPlaceholder?(frameId: string): boolean
+  /**
+   * Imperative agent state for harnesses / shells: wins over the `agentCanvas` prop while set;
+   * null clears it (back to the prop).
+   */
+  setAgentCanvas?(props: AgentCanvasProps | null): void
 }

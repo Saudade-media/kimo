@@ -6,6 +6,14 @@ import { createGoogleFontsSource } from "./fonts"
 import { CanvasKitRenderer } from "./renderer"
 import type { CreateRendererOptions, FontSource, Point, Rect, Renderer, Viewport } from "./types"
 
+export {
+  agentCanvasTheme,
+  connectorPoints,
+  hasAgentOverlays,
+  shimmerDirection,
+  shimmerSpan,
+  skeletonBars,
+} from "./agent-overlay"
 export { parseColor, type RGBA, toHex } from "./color"
 export { type FontFileInfo, fontFormat, fsEmbeddable, readFontInfo } from "./font-info"
 export {

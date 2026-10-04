@@ -62,11 +62,14 @@ function doc(name: string): string {
   return serialize(d)
 }
 
-// `?os=windows|linux` runs the same app as on Windows / Linux (board 20 KcXQz).
-const os = (new URLSearchParams(location.search).get("os") ?? "macos") as
+// `?os=windows|linux` runs the same app as on Windows / Linux (board 20 KcXQz); `?os=web` reports
+// a browser host (board 24 m: the web tab title format).
+const requestedOs = (new URLSearchParams(location.search).get("os") ?? "macos") as
   | "macos"
   | "windows"
   | "linux"
+  | "web"
+const os = requestedOs === "web" ? "macos" : requestedOs
 const platform = createMemoryPlatform({
   os,
   files: {
@@ -89,6 +92,7 @@ platform.control.setGit(LOOM, repo("main", null), { kind: "status-changed" })
 void platform.recents.addFolder("/Users/me/Work/kimo-site")
 void platform.recents.addFolder(LOOM)
 
+if (requestedOs === "web") Object.defineProperty(platform, "os", { value: "web" })
 const manager = createAppSessionManager(platform)
 manager.install()
 Object.assign(window, { __kimoApp: { platform, control: platform.control, manager, SITE, LOOM } })

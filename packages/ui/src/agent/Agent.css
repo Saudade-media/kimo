@@ -5,8 +5,7 @@
  *   └ Bubble width 260, fill accent, radius-lg, padding [10, 14]
  *       └ Text fill_container, font-sans, text-base (13), on-accent, lineHeight 1.45
  * Message/Agent (QqwyN): fill_container, gap 10
- *   ├ Mark 24 × 24, radius-pill, gradient 225 agent → agent-2, center
- *   │   └ Icon 13 × 13 (lucide sparkles), #FFFFFF (literal)
+ *   ├ Mark AgentMark/24 (board 24 I3H68, replaces the gradient + sparkles mark)
  *   └ Bubble fill_container, fill bg-muted, radius-lg, padding [10, 14]
  *       └ Text fill_container, font-sans, text-base (13), text-primary, lineHeight 1.5
  */
@@ -26,28 +25,32 @@
   gap: 10px;
 }
 
+/* Mark: AgentMark/24 (board 24 I3H68) replaces the gradient + sparkles mark. */
 .kimo-message__mark {
-  display: inline-flex;
   flex: none;
-  justify-content: center;
-  align-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--kimo-radius-pill);
-  background: linear-gradient(135deg, var(--kimo-agent) 0%, var(--kimo-agent-2) 100%);
 }
 
-.kimo-message__mark-icon {
-  display: inline-flex;
-  width: 13px;
-  height: 13px;
-  color: #ffffff; /* pen-literal: Mark > Icon fill #FFFFFF */
+/* Streaming caret ("then I'll▍" on board 22 A). */
+.kimo-message__caret {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  margin-left: 1px;
+  vertical-align: -2px;
+  background: currentColor;
+  animation: kimo-message-caret 1s steps(1) infinite;
 }
 
-.kimo-message__mark-icon > svg {
-  display: block;
-  width: 100%;
-  height: 100%;
+@keyframes kimo-message-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-message__caret {
+    animation: none;
+  }
 }
 
 .kimo-message__bubble {
@@ -140,6 +143,14 @@
 .kimo-agent-step--running .kimo-agent-step__label {
   color: var(--kimo-text-primary);
   font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-agent-step--failed .kimo-agent-step__status {
+  color: var(--kimo-danger);
+}
+
+.kimo-agent-step--failed .kimo-agent-step__label {
+  color: var(--kimo-text-secondary);
 }
 
 /*

@@ -1,0 +1,73 @@
+/*
+ * SkillRow: desing.pen 22 > Components (M6) > SkillRow (TEEsL).
+ * row fill_container, gap 10, padding [6, 8], alignItems center, radius-sm
+ *   ├ Tile   (EAVaJ) 28 × 28 center, bg-muted, radius-sm › Icon (QUAte) 14 text-primary
+ *   ├ Text   (ZEkrD) column fill, gap 1 › Name (z3KtI1) sans 12 / 500 text-primary ·
+ *   │        Source (sOw2b) mono 11 text-tertiary
+ *   └ Toggle (E7PJk) Toggle/On 28 × 16
+ * Highlighted (rhXhZ instance): fill bg-hover.
+ */
+.kimo-skill-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--kimo-radius-sm);
+  cursor: pointer;
+  outline: none;
+}
+
+.kimo-skill-row:hover,
+.kimo-skill-row:focus-visible,
+.kimo-skill-row[data-highlighted] {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-skill-row__tile {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-skill-row__icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-skill-row__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.kimo-skill-row__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.kimo-skill-row__source {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,77 @@
+/*
+ * AgentMark: desing.pen 24 > 3 · AgentMark component (ZkIvw) — AgentMark QofdJ and the
+ * /<size>/<state> and /<Hue> variants.
+ * frame S × S, layout none
+ *   ├ Body  ellipse S × S: shader fill agent-liquid.glsl (u_c1 ink · u_c2 $agent[-p]-2 ·
+ *   │       u_c3 $agent[-p] · u_c4 highlight · u_soft 0.6); ≤ 12 px / Static: flat 3 × 3 mesh
+ *   └ Eye L, Eye R  flat #FFFFFF (rect / arc / stroked path by state)
+ * The body canvas is painted by the shared renderer; until then (SSR, first paint) it shows the
+ * the mesh's $agent → $agent-2 read as a CSS gradient (u_c1 / u_c4 are canvas-only).
+ */
+.kimo-agent-mark {
+  /* Persona colors (teal defaults; AgentMark sets the persona's inline). */
+  --kimo-mark-base: var(--kimo-agent);
+  --kimo-mark-second: var(--kimo-agent-2);
+  --kimo-mark-ring: 1px;
+  --kimo-mark-ring-color: transparent;
+  position: relative;
+  box-sizing: border-box;
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.kimo-agent-mark__body {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--kimo-mark-base) 35%, var(--kimo-mark-second) 75%);
+}
+
+/* Painted: the canvas carries the body (keep the CSS read from bleeding at the AA edge). */
+.kimo-agent-mark__body[width] {
+  background: none;
+}
+
+.kimo-agent-mark__eyes {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: visible;
+  transform-origin: 50% 50%;
+}
+
+.kimo-agent-mark__eye {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transition: transform 60ms linear;
+}
+
+/* Blink: eye scaleY 1 → 0.1 → 1 over 120 ms. */
+.kimo-agent-mark__eyes[data-blink] .kimo-agent-mark__eye {
+  transform: scaleY(0.1);
+}
+
+/* Disconnected = Error at 50 % opacity. */
+.kimo-agent-mark[data-state="disconnected"] {
+  opacity: 0.5;
+}
+
+.kimo-agent-mark[data-ring]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 var(--kimo-mark-ring) var(--kimo-mark-ring-color);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-agent-mark__eye {
+    transition: none;
+  }
+}

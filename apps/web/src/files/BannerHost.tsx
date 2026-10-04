@@ -19,6 +19,7 @@ import {
 import { bannerCopy, type Banner as SessionBanner } from "../platform/contract"
 import { bannerFormatters } from "../platform/format"
 import type { FileDocumentSession } from "../platform/session"
+import { ClosePromptHost } from "./ClosePromptHost"
 import { useSessionState } from "./hooks"
 
 const ICON: Record<SessionBanner["kind"], LucideIcon> = {
@@ -58,16 +59,23 @@ export function SessionBannerView({ banner, os, onAction, onDismiss }: SessionBa
   )
 }
 
-/** Mount directly under the topbar, full width. */
+/**
+ * Mount directly under the topbar, full width. Also hosts the board 24 (i) close prompt of a
+ * never-saved document (a modal, so its place in the tree does not matter).
+ */
 export function BannerHost({ session }: { session: FileDocumentSession }) {
   const state = useSessionState(session)
-  if (!state.banner) return null
   return (
-    <SessionBannerView
-      banner={state.banner}
-      os={session.manager.platform.os}
-      onAction={(id) => void session.runAction(id as never)}
-      onDismiss={() => session.showMergeReady(false)}
-    />
+    <>
+      {state.banner && (
+        <SessionBannerView
+          banner={state.banner}
+          os={session.manager.platform.os}
+          onAction={(id) => void session.runAction(id as never)}
+          onDismiss={() => session.showMergeReady(false)}
+        />
+      )}
+      <ClosePromptHost session={session} />
+    </>
   )
 }

@@ -25,6 +25,7 @@ import { type M3Controller, useComponentRev, useLayerTreeRev } from "./m3/contro
 import { ChildMenu } from "./m3/menus"
 import { isOverridden, layerKind, replacedName } from "./m3/model"
 import { VariablesTab } from "./m3/VariablesTab"
+import "../canvas/agent-canvas.css"
 import { kindLabel, nodeName, typeIcon } from "./props"
 import type { FileSession } from "./session"
 
@@ -40,6 +41,8 @@ export function LeftPanel({
   m3,
   conflicts = null,
   agentNodes = NO_AGENT_NODES,
+  promptRun,
+  onRunPrompt,
 }: {
   session: FileSession
   m3: M3Controller
@@ -47,6 +50,10 @@ export function LeftPanel({
   conflicts?: EditorConflictSession | null
   /** Board 21: rows an uncommitted agent group touched get `LayerRow/Agent` (PwDCI). */
   agentNodes?: ReadonlySet<string>
+  /** M6 (board 22): prompt run status for LayerRow/Prompt's trailing icon (app data). */
+  promptRun?: (id: string) => PromptRowStatus | undefined
+  /** M6: the play button of a LayerRow/Prompt. */
+  onRunPrompt?: (id: string) => void
 }) {
   const [tab, setTab] = useState<LeftTab>("layers")
   const conflictNodes = useOpenConflictNodes(conflicts)
@@ -75,6 +82,7 @@ export function LeftPanel({
             m3={m3}
             conflictNodes={conflictNodes}
             agentNodes={agentNodes}
+            agentRows={{ promptRun, onRunPrompt }}
           />
         </>
       )}
@@ -128,6 +136,7 @@ function LayerTree({
   m3,
   conflictNodes,
   agentNodes,
+  agentRows,
 }: {
   store: DocStore
   ui: UiStore
@@ -136,6 +145,7 @@ function LayerTree({
   m3: M3Controller
   conflictNodes: ReadonlyMap<string, unknown>
   agentNodes: ReadonlySet<string>
+  agentRows: AgentRowHooks
 }) {
   const shape = useTreeRevision(store)
   // M3: instances mirror their main's full child list through the expanded view (composite ids).
@@ -430,6 +440,7 @@ function LayerTree({
           conflict={conflictNodes.has(r.id)}
           agent={agentNodes.has(r.id)}
           actions={actions}
+          agentRows={agentRows}
         />
       ))}
       {end < rows.length && (
@@ -468,6 +479,7 @@ const LayerItem = memo(function LayerItem({
   conflict,
   agent,
   actions,
+  agentRows,
 }: {
   store: DocStore
   m3: M3Controller
@@ -482,6 +494,7 @@ const LayerItem = memo(function LayerItem({
   /** Touched by an uncommitted agent group (board 21 LayerRow/Agent). */
   agent: boolean
   actions: RowActions
+  agentRows: AgentRowHooks
 }) {
   const real = useNode(store, row.id)
   void rev
@@ -560,6 +573,34 @@ const LayerItem = memo(function LayerItem({
       />
     )
   }
+  // M6 (board 22): LayerRow/Note (Td29N), LayerRow/Prompt (zKI13), LayerRow/Placeholder (lZZ9q).
+  const placeholder =
+    n.type === "frame" && n.placeholder !== undefined && n.placeholder !== false && !inInstance
+  if (!inInstance && (n.type === "note" || n.type === "prompt" || placeholder)) {
+    const kind = n.type === "note" ? "note" : n.type === "prompt" ? "prompt" : "placeholder"
+    return (
+      <AgentLayerRow
+        kind={kind}
+        className={agentClass}
+        id={id}
+        name={nodeName(n)}
+        depth={depth}
+        expanded={kind === "placeholder" ? open : undefined}
+        onToggle={() => actions.toggle(id, depth)}
+        selected={selected}
+        tabbable={tabbable}
+        hidden={hidden}
+        run={kind === "prompt" ? (agentRows.promptRun?.(id) ?? "idle") : undefined}
+        onRun={kind === "prompt" ? agentRows.onRunPrompt : undefined}
+        onToggleVisible={() =>
+          actions.apply(visibilityOp(id, hidden), hidden ? "Show layer" : "Hide layer")
+        }
+        onSelect={(e) => actions.select(id, e)}
+        onHover={() => actions.hover(id)}
+        onRename={(name) => actions.apply({ op: "update", id, set: { name } }, "Rename layer")}
+      />
+    )
+  }
   const dot = inInstance && isOverridden(view, id)
   return (
     <LayerRow
@@ -591,3 +632,202 @@ const LayerItem = memo(function LayerItem({
     />
   )
 })
+
+// --- M6: agent node rows (board 22 cf2sC n22Gv, DzQcZ MVnAW) -----------------------------------
+
+/** Run status shown by LayerRow/Prompt's trailing slot. */
+export type PromptRowStatus = "idle" | "running" | "failed"
+
+interface AgentRowHooks {
+  promptRun?: (id: string) => PromptRowStatus | undefined
+  onRunPrompt?: (id: string) => void
+}
+
+/**
+ * LayerRow variants built on the LayerRow base (GXnBT: 28 high, gap 6, padding [0, 8]):
+ * - Note (Td29N): no disclosure, sticky-note `note-text`, eye (hover) as usual;
+ * - Prompt (zKI13): no disclosure, sparkles `agent`; trailing play `text-tertiary` (idle, runs
+ *   the prompt) · loader-circle `agent` (running) · circle-alert `danger` (failed);
+ * - Placeholder (lZZ9q): disclosure kept, loader-circle `agent`, name `agent`, lock `agent`
+ *   instead of the eye (never locked for people: rows stay selectable).
+ */
+function AgentLayerRow({
+  kind,
+  className,
+  id,
+  name,
+  depth,
+  expanded,
+  onToggle,
+  selected,
+  tabbable,
+  hidden,
+  run,
+  onRun,
+  onToggleVisible,
+  onSelect,
+  onHover,
+  onRename,
+}: {
+  kind: "note" | "prompt" | "placeholder"
+  className?: string
+  id: string
+  name: string
+  depth: number
+  expanded: boolean | undefined
+  onToggle(): void
+  selected: boolean
+  tabbable: boolean
+  hidden: boolean
+  run?: PromptRowStatus
+  onRun?: (id: string) => void
+  onToggleVisible(): void
+  onSelect(e: Mods): void
+  onHover(): void
+  onRename(name: string): void
+}) {
+  const [renaming, setRenaming] = useState(false)
+  const [draft, setDraft] = useState(name)
+  const icon = kind === "note" ? "sticky-note" : kind === "prompt" ? "sparkles" : "loader-circle"
+  const leaf = expanded === undefined
+  const finish = (commit: boolean) => {
+    setRenaming(false)
+    const next = draft.trim()
+    if (commit && next && next !== name) onRename(next)
+  }
+  return (
+    <div
+      role="treeitem"
+      aria-level={depth + 1}
+      aria-selected={selected}
+      aria-expanded={leaf ? undefined : expanded}
+      tabIndex={tabbable ? 0 : -1}
+      data-node-id={id}
+      data-agent-row={kind}
+      data-hidden={hidden || undefined}
+      className={[
+        "kimo-layer-row",
+        "agent-layer-row",
+        `agent-layer-row--${kind}`,
+        selected && "kimo-layer-row--selected",
+        hidden && "kimo-layer-row--hidden",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{ paddingLeft: 8 + 14 * depth }}
+      onClick={(e) => onSelect(e)}
+      onPointerEnter={onHover}
+      onDoubleClick={(e) => {
+        if ((e.target as HTMLElement).closest("button")) return
+        setDraft(name)
+        setRenaming(true)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "F2" && !renaming) {
+          e.preventDefault()
+          setDraft(name)
+          setRenaming(true)
+        }
+      }}
+    >
+      {kind === "placeholder" && (
+        <button
+          type="button"
+          tabIndex={-1}
+          className={`kimo-layer-row__disclosure${leaf ? " kimo-layer-row__disclosure--leaf" : ""}`}
+          aria-label={leaf ? undefined : expanded ? "Collapse" : "Expand"}
+          aria-hidden={leaf || undefined}
+          disabled={leaf}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle()
+          }}
+        >
+          <Icon name={expanded === false ? "chevron-right" : "chevron-down"} size={12} />
+        </button>
+      )}
+      <span
+        className={`kimo-layer-row__icon kimo-layer-row__icon--${kind === "note" ? "note" : "agent"}`}
+        aria-hidden="true"
+      >
+        <Icon name={icon} size={14} />
+      </span>
+      {renaming ? (
+        <input
+          // biome-ignore lint/a11y/noAutofocus: rename starts on an explicit double-click / F2
+          autoFocus
+          className="kimo-layer-row__input"
+          aria-label="Layer name"
+          value={draft}
+          onChange={(e) => setDraft(e.currentTarget.value)}
+          onBlur={() => finish(true)}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === "Enter") finish(true)
+            else if (e.key === "Escape") finish(false)
+          }}
+        />
+      ) : (
+        <span className="kimo-layer-row__name">{name}</span>
+      )}
+      <span className="kimo-layer-row__spacer" aria-hidden="true" />
+      {kind === "placeholder" ? (
+        <span
+          className="agent-layer-row__trail agent-layer-row__trail--lock"
+          title="An agent is building this frame (you can still edit it)"
+        >
+          <Icon name="lock" size={14} />
+        </span>
+      ) : kind === "prompt" ? (
+        run === "running" ? (
+          <span className="agent-layer-row__trail agent-layer-row__trail--running" title="Running">
+            <Icon name="loader-circle" size={14} />
+          </span>
+        ) : run === "failed" ? (
+          <button
+            type="button"
+            tabIndex={-1}
+            className="agent-layer-row__trail agent-layer-row__trail--failed"
+            aria-label="Run failed · retry"
+            disabled={!onRun}
+            onClick={(e) => {
+              e.stopPropagation()
+              onRun?.(id)
+            }}
+          >
+            <Icon name="circle-alert" size={14} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            tabIndex={-1}
+            className="agent-layer-row__trail agent-layer-row__trail--play"
+            aria-label="Run prompt"
+            disabled={!onRun}
+            onClick={(e) => {
+              e.stopPropagation()
+              onRun?.(id)
+            }}
+          >
+            <Icon name="play" size={14} />
+          </button>
+        )
+      ) : (
+        <button
+          type="button"
+          tabIndex={-1}
+          className={`kimo-layer-row__affordance kimo-layer-row__visibility${hidden ? " kimo-layer-row__affordance--on" : ""}`}
+          aria-label={hidden ? "Show layer" : "Hide layer"}
+          aria-pressed={hidden}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleVisible()
+          }}
+        >
+          <Icon name={hidden ? "eye-off" : "eye"} size={14} />
+        </button>
+      )}
+    </div>
+  )
+}

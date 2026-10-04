@@ -130,3 +130,19 @@
 .kimo-activity-row[data-stale] .kimo-activity-row__undo {
   opacity: 0.4;
 }
+
+/* Undone (board 24 › 5 · (h) uKH9b d8Vjj1): fill bg-subtle; Label (lQxhQ) and Target (aegZN)
+   text-tertiary, the label struck through (decision QrUGA); the action icon is redo-2. */
+.kimo-activity-row--undone,
+.kimo-activity-row--undone:hover {
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-activity-row--undone .kimo-activity-row__label {
+  color: var(--kimo-text-tertiary);
+  text-decoration: line-through;
+}
+
+.kimo-activity-row--undone .kimo-activity-row__target {
+  color: var(--kimo-text-tertiary);
+}

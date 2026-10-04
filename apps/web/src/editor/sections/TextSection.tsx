@@ -19,22 +19,31 @@
  * frac, Stylistic sets ss01–20 submenu, Custom tag…), Reset text style. Italic on → an "Italic"
  * row with Toggle/On (G0AWh7); active non-default tags → a "Features" row of removable chips
  * (SE1Ap). Only §8.2 TextStyle fields without a row: italic, href, features.
+ *
+ * Board 24 gaps: (a) "Link… popover" (NpwJS) opens from ⌘K / "Link…" left of the panel (Enter
+ * applies, an empty field + Enter removes; http(s), mailto:, tel: and #frame only); (b) "Custom
+ * tag…" (Ehror) expands inline in the menu (tag exactly 4 chars a–z 0–9, value 0–99, default 1;
+ * duplicates replace); (k) a 6px $warning dot on the Weight field when the family lacks the
+ * weight, with a tooltip naming the weight actually rendered (QfSAK).
  */
 import type { LayoutResult } from "@kimo/layout"
 import {
+  CustomTagField,
   IconButton,
-  Input,
+  LinkPopover,
   MenuDense,
   MenuDivider,
   MenuItemDense,
+  MissingWeightTooltip,
   PropRow,
   PropSection,
   Segmented,
   Toggle,
+  WarningDot,
 } from "@kimo/ui"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import "./text-more.css"
-import { FontPicker, useFontPickerEntries } from "../../fonts"
+import { FontPicker, missingWeight, useFontPickerEntries } from "../../fonts"
 import type { FontSystem } from "../../fonts/font-system"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
@@ -138,6 +147,17 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
   const [weightOpen, setWeightOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
+  const [weightTip, setWeightTip] = useState({ hover: false, focus: false })
+  const runtime = useOptionalRuntime()
+  // Link "Open": a new tab on the web, the default browser on desktop.
+  const openExternal = async (url: string) => {
+    if (runtime) await runtime.platform.files.openExternalUrl(url).catch(() => {})
+    else window.open(url, "_blank", "noopener,noreferrer")
+  }
+  const family = font === MIXED ? null : font
+  const shippedWeights = useShippedWeights(fonts, family)
+  const weightWarning =
+    family && typeof weight === "number" ? missingWeight(family, weight, shippedWeights) : null
   const italicMissing = useItalicMissing(
     fonts,
     font === MIXED ? null : font,
@@ -193,21 +213,6 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
       data-testid="text-section"
     >
       <div className="rp-body">
-        {linkOpen && (
-          // Not designed: rule "Link…" — an inline URL field under the header.
-          <LinkField
-            value={href === MIXED ? "" : href}
-            onCommit={(url) => {
-              setLinkOpen(false)
-              const v = url.trim()
-              editor.apply(
-                styleOps(sel, "href", () => (v === "" ? undefined : v)),
-                v === "" ? "Remove link" : "Set link",
-              )
-            }}
-            onCancel={() => setLinkOpen(false)}
-          />
-        )}
         {/* Family Row (RWKxU) */}
         <PropRow className="rp-row">
           <button
@@ -230,11 +235,22 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
           <button
             ref={weightTrigger}
             type="button"
-            className={weightOpen ? "rp-select rp-select--open" : "rp-select"}
+            className={[
+              "rp-select",
+              weightOpen && "rp-select--open",
+              weightWarning && "rp-select--warning",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             aria-label="Font weight"
             aria-haspopup="menu"
             aria-expanded={weightOpen}
+            aria-description={weightWarning ? weightWarning.title : undefined}
             onClick={() => setWeightOpen((o) => !o)}
+            onPointerEnter={() => setWeightTip((t) => ({ ...t, hover: true }))}
+            onPointerLeave={() => setWeightTip((t) => ({ ...t, hover: false }))}
+            onFocus={() => setWeightTip((t) => ({ ...t, focus: true }))}
+            onBlur={() => setWeightTip((t) => ({ ...t, focus: false }))}
             onKeyDown={(e) => {
               if (!weightOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
                 e.preventDefault()
@@ -249,6 +265,12 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
                   ? weightName(weight)
                   : weight}
             </span>
+            {weightWarning && (
+              <>
+                <span className="rp-select__spacer" aria-hidden="true" />
+                <WarningDot className="rp-select__warning" data-testid="weight-warning-dot" />
+              </>
+            )}
             <span className="rp-select__chevron" aria-hidden="true">
               <Icon name={weightOpen ? "chevron-up" : "chevron-down"} size={14} />
             </span>
@@ -446,6 +468,38 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
           }}
         />
       )}
+      {weightWarning && !weightOpen && (weightTip.hover || weightTip.focus) && (
+        <MissingWeightTooltip
+          anchor={weightTrigger.current}
+          title={weightWarning.title}
+          body={weightWarning.body}
+          data-testid="weight-warning-tooltip"
+        />
+      )}
+      {linkOpen && moreAnchor.current && (
+        <LinkPopover
+          anchor={moreAnchor.current.closest("button") ?? moreAnchor.current}
+          placement={panelPlacement(moreAnchor.current)}
+          value={href === MIXED ? "" : href}
+          data-testid="text-link-popover"
+          onOpen={(url) => void openExternal(url)}
+          onApply={(url) => {
+            setLinkOpen(false)
+            editor.apply(
+              styleOps(sel, "href", () => url),
+              "Set link",
+            )
+          }}
+          onRemove={() => {
+            setLinkOpen(false)
+            editor.apply(
+              styleOps(sel, "href", () => undefined),
+              "Remove link",
+            )
+          }}
+          onClose={() => setLinkOpen(false)}
+        />
+      )}
       {weightOpen && weightTrigger.current && (
         <WeightMenu
           anchor={weightTrigger.current}
@@ -471,6 +525,7 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
           italicMissing={italicMissing}
           linked={href !== "" && href !== MIXED}
           features={features}
+          family={family}
           onClose={() => setMoreOpen(false)}
           onItalic={() => {
             setMoreOpen(false)
@@ -631,29 +686,29 @@ function WeightMenu({
   )
 }
 
-/** Weights the family ships (null while unknown: every weight is offered). */
+/**
+ * Weights the family ships (null while unknown: every weight is offered). Board 24 (k): exact
+ * upright weights from the font system (`availability` matches the nearest face, so it cannot
+ * tell a missing weight apart); re-read when fonts change (install, fetch, settings).
+ */
 function useShippedWeights(fonts: FontSystem | null, family: string | null): Set<number> | null {
   const [state, setState] = useState<{ family: string; weights: Set<number> | null } | null>(null)
+  const [version, setVersion] = useState(0)
+  useEffect(() => fonts?.subscribe(() => setVersion((v) => v + 1)), [fonts])
   useEffect(() => {
     if (!fonts || !family || family.startsWith("$")) return
     let live = true
-    void Promise.all(
-      WEIGHT_NAMES.map(async ([w]) => {
-        const a = await fonts
-          .availability({ family, weight: w, style: "normal" })
-          .catch(() => "missing" as const)
-        return [w, a !== "missing"] as const
-      }),
-    ).then((res) => {
-      if (!live) return
-      const ok = new Set(res.filter(([, has]) => has).map(([w]) => w))
-      // A family nothing provides keeps every weight (the Missing fonts dialog handles it).
-      setState({ family, weights: ok.size > 0 ? ok : null })
-    })
+    void version
+    void fonts
+      .shippedWeights(family)
+      .catch(() => null)
+      .then((weights) => {
+        if (live) setState({ family, weights })
+      })
     return () => {
       live = false
     }
-  }, [fonts, family])
+  }, [fonts, family, version])
   return state?.family === family ? state.weights : null
 }
 
@@ -715,6 +770,11 @@ export function toggledFeature(features: Features, tag: string): FeatureValue | 
   return on ? undefined : true
 }
 
+/** Board 24 (b): a custom tag's value; 1 (the default) is stored as plain "on". */
+export function customFeatureValue(value: number): FeatureValue {
+  return value === 1 ? true : value
+}
+
 /** "salt = 2" / "salt" → [tag, value]; null when invalid (4-char OpenType tag). */
 export function parseCustomTag(input: string): [string, FeatureValue] | null {
   const m = /^\s*([A-Za-z0-9]{4})\s*(?:=\s*(\d{1,5}))?\s*$/.exec(input)
@@ -750,6 +810,7 @@ function TextMoreMenu({
   italicMissing,
   linked,
   features,
+  family,
   onClose,
   onItalic,
   onLink,
@@ -761,6 +822,7 @@ function TextMoreMenu({
   italicMissing: boolean
   linked: boolean
   features: Features
+  family: string | null
   onClose(): void
   onItalic(): void
   onLink(): void
@@ -843,14 +905,19 @@ function TextMoreMenu({
           onSelect={() => setSets((cur) => (cur ? null : (document.activeElement as HTMLElement)))}
         />
         {custom ? (
-          // Not designed: rule "Custom tag… takes a 4-char tag and an optional number".
-          <CustomTagField
-            onCommit={(tag, value) => {
-              setCustom(false)
-              onFeature(tag, value)
-            }}
-            onCancel={() => setCustom(false)}
-          />
+          // Board 24 (b) Ehror: the last OpenType row expands inline (no dialog).
+          <div className="rp-text-menu__custom" role="presentation">
+            <CustomTagField
+              autoFocus
+              family={family}
+              data-testid="text-custom-tag"
+              onAdd={(tag, value) => {
+                setCustom(false)
+                onFeature(tag, customFeatureValue(value))
+              }}
+              onCancel={() => setCustom(false)}
+            />
+          </div>
         ) : (
           <MenuItemDense
             label="Custom tag…"
@@ -892,70 +959,6 @@ function TextMoreMenu({
         </MenuDense>
       )}
     </>
-  )
-}
-
-function CustomTagField({
-  onCommit,
-  onCancel,
-}: {
-  onCommit(tag: string, value: FeatureValue): void
-  onCancel(): void
-}) {
-  const [text, setText] = useState("")
-  const parsed = parseCustomTag(text)
-  return (
-    <div className="rp-text-menu__custom">
-      <Input
-        dense
-        autoFocus
-        aria-label="Custom OpenType tag"
-        placeholder="salt = 2"
-        value={text}
-        aria-invalid={text !== "" && !parsed}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          e.stopPropagation()
-          if (e.key === "Enter" && parsed) onCommit(parsed[0], parsed[1])
-          else if (e.key === "Escape") onCancel()
-        }}
-      />
-    </div>
-  )
-}
-
-function LinkField({
-  value,
-  onCommit,
-  onCancel,
-}: {
-  value: string
-  onCommit(url: string): void
-  onCancel(): void
-}) {
-  const [text, setText] = useState(value)
-  return (
-    <div className="rp-text-link" data-testid="text-link-field">
-      <Input
-        dense
-        autoFocus
-        aria-label="Link URL"
-        placeholder="https://"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => onCommit(text)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault()
-            onCommit(text)
-          } else if (e.key === "Escape") {
-            e.preventDefault()
-            e.stopPropagation()
-            onCancel()
-          }
-        }}
-      />
-    </div>
   )
 }
 

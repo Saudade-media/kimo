@@ -19,6 +19,7 @@ import {
   validate,
 } from "@kimo/core-schema"
 import type { DocStore, LocalOrigin, NodeData, Op } from "@kimo/editor-state"
+import type { ExportResult, ExportTarget } from "@kimo/exporters"
 import {
   type DocRef,
   failure,
@@ -32,7 +33,7 @@ import {
 import { readGuide as builtinGuide } from "../guides"
 import type { WireOp } from "../ops"
 import type { HandlerOutput, HostDocument, ToolContext, ToolHandler } from "../runtime"
-import { M5_EXPORT_TARGETS } from "../tools/output"
+import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
 import { compileWireOps, touchedIds, wirePath } from "./compile"
 import type { CoreDocumentHost } from "./core-host"
 import { EXTENSION, imageSize, parseCssTokens, parseDtcg, sniffFont, sniffImage } from "./importers"
@@ -50,6 +51,7 @@ import {
   sameRev,
   sha256Hex,
   themeOf,
+  toBase64,
   toToken,
   toWarnings,
 } from "./util"
@@ -1247,13 +1249,16 @@ export function createToolHandlerMap(
     const d = docOrFail(ctx, input)
     if (isOutput(d)) return d
     const target = String(input.target)
-    if (!(M5_EXPORT_TARGETS as readonly string[]).includes(target))
+    const code = (CODE_EXPORT_TARGETS as readonly string[]).includes(target)
+    if (!code && !(M5_EXPORT_TARGETS as readonly string[]).includes(target))
+      return fail({ code: "UNSUPPORTED", message: `Unknown export target ${target}.` })
+    const outDir = typeof input.outDir === "string" ? normalizePath(input.outDir) : null
+    if (!outDir && !code)
       return fail({
-        code: "UNSUPPORTED",
-        message: `Export target ${target} arrives in a later version (M7).`,
-        suggestion: "Use png or kimo.",
+        code: "INVALID_INPUT",
+        message: `${target} export writes files: give outDir.`,
+        path: "outDir",
       })
-    const outDir = normalizePath(String(input.outDir))
     const ids =
       (input.ids as string[] | undefined) ??
       d.store.children(null).filter((id) => d.store.getNode(id)?.type === "frame")
@@ -1267,15 +1272,76 @@ export function createToolHandlerMap(
         return fail({ code: "NODE_NOT_FOUND", message: `Node ${id} does not exist.`, nodeId: id })
     const overwrite = input.overwrite === true
     const planned: {
-      path: string
+      /** Relative to outDir. */
+      name: string
       nodeId?: string
       bytes: () => Promise<Uint8Array | ToolError>
     }[] = []
-    if (target === "png") {
+    let issues: { code: string; message: string; nodeId?: string }[] | undefined
+    if (code) {
+      // ADR 0015: one IR for every target; SVG/PDF read the committed layout.
+      const layout = target === "svg" || target === "pdf" ? await scene.layout(d.store) : undefined
+      if (layout === null)
+        return fail({
+          code: "INTERNAL",
+          message: `The layout engine is unavailable; ${target} export needs it.`,
+          retryable: true,
+        })
+      let result: ExportResult
+      try {
+        // Lazy: the exporters (and pdf-lib) load on the first code export only.
+        const { exportDocument } = await import("@kimo/exporters")
+        result = await exportDocument(
+          d.store.toDocument() as KimoDocument,
+          target as ExportTarget,
+          {
+            libraries: libs(d.ref.id),
+            ids,
+            ...(typeof input.variables === "boolean" ? { variables: input.variables } : {}),
+            ...(typeof input.components === "boolean" ? { components: input.components } : {}),
+            ...(typeof input.layerNames === "boolean" ? { layerNames: input.layerNames } : {}),
+            ...(layout ? { layout } : {}),
+          },
+        )
+      } catch (e) {
+        return fail({ code: "INTERNAL", message: `Export failed: ${errorMessage(e)}` })
+      }
+      issues = result.issues.map((i) => ({
+        code: i.code,
+        message: i.message,
+        ...(i.nodeId ? { nodeId: i.nodeId } : {}),
+      }))
+      for (const f of result.files) {
+        const bytes =
+          typeof f.contents === "string" ? new TextEncoder().encode(f.contents) : f.contents
+        planned.push({ name: f.path, bytes: async () => bytes })
+      }
+      if (!outDir) {
+        // Inline: nothing touches the disk.
+        const files = await Promise.all(
+          result.files.map(async (f) => {
+            const text = typeof f.contents === "string"
+            const bytes = text ? new TextEncoder().encode(f.contents as string) : f.contents
+            return {
+              path: f.path,
+              bytes: (bytes as Uint8Array).byteLength,
+              sha256: sha256Hex(bytes as Uint8Array),
+              contents: text ? (f.contents as string) : toBase64(f.contents as Uint8Array),
+              encoding: text ? ("utf8" as const) : ("base64" as const),
+            }
+          }),
+        )
+        return done(
+          success({ files, issues }, `Exported ${files.length} ${target} file(s) inline.`, {
+            doc: d.ref,
+          }),
+        )
+      }
+    } else if (target === "png") {
       const scale = numberOr(input.scale, 2)
       for (const id of ids)
         planned.push({
-          path: joinPath(outDir, `${id}.png`),
+          name: `${id}.png`,
           nodeId: id,
           bytes: async () => {
             const r = await ctx.host.render(d.ref.id, [id], { scale, maxSize: 4096 * 4 })
@@ -1287,36 +1353,58 @@ export function createToolHandlerMap(
       const name =
         ids.length === 1 ? ids[0] : `${basename(d.ref.path).replace(/\.kimo$/i, "")}-export`
       planned.push({
-        path: joinPath(outDir, `${name}.kimo`),
+        name: `${name}.kimo`,
         bytes: async () => new TextEncoder().encode(serialize(subtreeDocument(d.store, ids))),
       })
     }
-    // No-overwrite guard for the whole batch before writing anything.
-    if (!overwrite)
-      for (const p of planned) {
-        const exists = await ctx.host.readFile(p.path)
-        if (exists.ok)
-          return fail({
-            code: "FILE_EXISTS",
-            message: `${p.path} exists; nothing was written. Pass overwrite=true to replace it.`,
-            path: "outDir",
-          })
-      }
-    const files: { path: string; bytes: number; sha256: string; nodeId?: string }[] = []
+    const dir = outDir as string
+    // Produce every file first, then the no-overwrite check for the whole batch: a file that
+    // already holds the same bytes is unchanged (skipped), a different one is a conflict and
+    // nothing is written unless overwrite=true.
+    const made: { path: string; nodeId?: string; bytes: Uint8Array; same: boolean }[] = []
     for (const p of planned) {
       const b = await p.bytes()
       if (!(b instanceof Uint8Array)) return fail(b)
-      const w = await ctx.host.writeFile(p.path, b, overwrite)
+      const path = joinPath(dir, p.name)
+      const existing = await ctx.host.readFile(path)
+      const same = existing.ok && sha256Hex(existing.value) === sha256Hex(b)
+      if (existing.ok && !same && !overwrite)
+        return fail({
+          code: "FILE_EXISTS",
+          message: `${path} exists with other contents; nothing was written. Pass overwrite=true to replace it.`,
+          path: "outDir",
+        })
+      made.push({ path, bytes: b, same, ...(p.nodeId ? { nodeId: p.nodeId } : {}) })
+    }
+    const files: {
+      path: string
+      bytes: number
+      sha256: string
+      nodeId?: string
+      unchanged?: boolean
+    }[] = []
+    for (const m of made) {
+      const node = m.nodeId ? { nodeId: m.nodeId } : {}
+      if (m.same) {
+        files.push({
+          path: m.path,
+          bytes: m.bytes.byteLength,
+          sha256: sha256Hex(m.bytes),
+          ...node,
+          unchanged: true,
+        })
+        continue
+      }
+      const w = await ctx.host.writeFile(m.path, m.bytes, overwrite)
       if (!w.ok) return fail(w.error)
-      files.push({
-        path: p.path,
-        bytes: w.value.bytes,
-        sha256: w.value.sha256,
-        ...(p.nodeId ? { nodeId: p.nodeId } : {}),
-      })
+      files.push({ path: m.path, bytes: w.value.bytes, sha256: w.value.sha256, ...node })
     }
     return done(
-      success({ files }, `Exported ${files.length} file(s) to ${outDir}.`, { doc: d.ref }),
+      success(
+        { files, ...(issues ? { issues } : {}) },
+        `Exported ${files.length} file(s) to ${dir}.`,
+        { doc: d.ref },
+      ),
     )
   }
 

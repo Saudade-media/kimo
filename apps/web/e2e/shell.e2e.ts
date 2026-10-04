@@ -58,7 +58,9 @@ export const scenarios: Scenario[] = [
       await page.getByRole("heading", { name: "What are we designing today?" }).waitFor()
       expect(await page.getByRole("button", { name: "New file" }).isVisible(), "New file button")
       expect(await page.getByRole("button", { name: "Open file" }).isVisible(), "Open file button")
-      expect(await page.getByLabel("Message the agent").isDisabled(), "composer is disabled in M1")
+      // M6 Home composer (board 22 w9bz9): no provider yet → the first-run card, Send disabled.
+      await page.getByLabel("Describe what to design").waitFor()
+      expect(await page.getByRole("button", { name: "Send" }).isDisabled(), "send needs a provider")
       await shot(ctx, "home-empty")
     },
   },

@@ -16,9 +16,20 @@ export { ApprovalPrompt, type ApprovalPromptProps } from "./ApprovalPrompt"
 export {
   AgentCanvasLayer,
   type AgentCanvasLayerProps,
+  CURSOR_IDLE_MS,
+  type CursorPlacement,
   DryRunBar,
   type ProjectedBox,
+  placeCursor,
 } from "./CanvasLayer"
+export {
+  backupPath,
+  ConfigDiffDialog,
+  type ConfigDiffDialogProps,
+  type DiffRow,
+  diffRows,
+  unifiedDiffText,
+} from "./ConfigDiffDialog"
 export {
   type AgentChipView,
   type AgentHistory,
@@ -34,6 +45,11 @@ export { AgentPausedBanner, type AgentPausedBannerProps } from "./PausedBanner"
 export {
   AgentPresence,
   type AgentPresenceProps,
+  AgentsPopover,
+  chipMarkState,
+  chipPersonas,
+  QueuePopover,
   SessionPopover,
   type SessionPopoverProps,
+  sortChips,
 } from "./Presence"

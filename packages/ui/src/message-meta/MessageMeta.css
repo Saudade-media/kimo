@@ -1,0 +1,95 @@
+/*
+ * MessageMeta: desing.pen 22 > Components (M6) > MessageMeta (S0S1S); streaming meta from the
+ * agent panel A (uZbJj).
+ * row fill_container, gap 8, padding [0, 0, 0, 34], alignItems center
+ *   ├ Tokens / Cost / Duration  mono 11 text-tertiary
+ *   ├ Spacer fill
+ *   └ Copy, Regenerate  14 text-tertiary (hover)
+ */
+.kimo-msg-meta {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 15px;
+  padding: 0 0 0 34px;
+}
+
+.kimo-msg-meta__text {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.kimo-msg-meta__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+.kimo-msg-meta__action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.kimo-msg-meta__action svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-msg-meta__action:hover {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-msg-meta:hover .kimo-msg-meta__action,
+[data-meta-hover]:hover .kimo-msg-meta__action {
+  opacity: 1;
+}
+
+.kimo-msg-meta__action:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+.kimo-msg-meta__spinner {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-agent);
+  animation: kimo-spin 1s linear infinite;
+}
+
+.kimo-msg-meta__streaming {
+  flex: none;
+  color: var(--kimo-agent);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-msg-meta__spinner {
+    animation: none;
+  }
+}

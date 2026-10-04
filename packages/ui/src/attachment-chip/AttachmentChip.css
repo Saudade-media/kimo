@@ -1,0 +1,60 @@
+/*
+ * AttachmentChip: desing.pen 22 > Components (M6) > AttachmentChip (DwwpT).
+ * row, gap 4, padding [2, 6, 2, 8], alignItems center, fill bg-muted, radius-pill
+ *   ├ Icon   (Fg9Kl) lucide frame 12 text-secondary
+ *   ├ Label  (UfluG) sans 11 / 500 text-secondary
+ *   └ Remove (JKnL3) lucide x 12 text-tertiary
+ * Without Remove (sent message, gVw5S DJXCI: JKnL3 disabled) the right padding stays 6.
+ */
+.kimo-attach-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  white-space: nowrap;
+}
+
+.kimo-attach-chip__icon,
+.kimo-attach-chip__icon svg {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-attach-chip__label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-attach-chip__remove {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+
+.kimo-attach-chip__remove svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-attach-chip__remove:hover {
+  color: var(--kimo-text-primary);
+}

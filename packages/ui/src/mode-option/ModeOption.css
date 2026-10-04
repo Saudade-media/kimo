@@ -1,0 +1,88 @@
+/*
+ * ModeOption: desing.pen 22 > Components (M6) > ModeOption (leX10).
+ * row fill_container, gap 10, padding 8, radius-sm (alignItems start: the node sets none)
+ *   ├ Tile  (xhNUb) 28 × 28 center, agent-soft, radius-sm › Icon (m2RV7) 14 agent
+ *   ├ Text  (i3APr) column fill, gap 2 › Name (MTHEE) sans 12 / 500 text-primary ·
+ *   │       Desc (qyR7W) sans 11 text-secondary, line height 1.4
+ *   └ Check (F9baR) check 14 text-primary
+ * Highlighted (NIIY8 instance): fill bg-hover.
+ */
+.kimo-mode-option {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-mode-option:hover,
+.kimo-mode-option:focus-visible,
+.kimo-mode-option[data-highlighted] {
+  background: var(--kimo-bg-hover);
+  outline: none;
+}
+
+.kimo-mode-option__tile {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+
+.kimo-mode-option--single .kimo-mode-option__tile {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-mode-option__icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-mode-option__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kimo-mode-option__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.kimo-mode-option__desc {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* lineHeight 1.4 × 11 = 15.4, rendered as whole-px lines (15) */
+}
+
+.kimo-mode-option__check {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-primary);
+}

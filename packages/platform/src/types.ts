@@ -509,7 +509,15 @@ export const REPO_URL_PLACEHOLDER = "https://github.com/kimo-design/kimo"
 // ===============================================================================================
 
 /** Settings panes (board 19). */
-export type SettingsPane = "general" | "files" | "fonts" | "agents-mcp" | "updates" | "about"
+export type SettingsPane =
+  | "general"
+  | "files"
+  | "fonts"
+  | "agents-mcp"
+  /** M6 (board 23 g6AqH): API keys, local agent CLIs, usage & limits. */
+  | "ai-providers"
+  | "updates"
+  | "about"
 
 export interface WindowApi {
   /** Window label: `main`, `settings`, `editor-<n>`; `web` in the browser. */

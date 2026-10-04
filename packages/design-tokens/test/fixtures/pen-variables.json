@@ -271,6 +271,132 @@
         { "value": "#7C3AED14", "theme": { "mode": "light" } },
         { "value": "#A78BFA24", "theme": { "mode": "dark" } }
       ]
+    },
+    "note": {
+      "type": "color",
+      "value": [
+        { "value": "#FFF1B8", "theme": { "mode": "light" } },
+        { "value": "#3A3318", "theme": { "mode": "dark" } }
+      ]
+    },
+    "note-edge": {
+      "type": "color",
+      "value": [
+        { "value": "#EBD686", "theme": { "mode": "light" } },
+        { "value": "#574C22", "theme": { "mode": "dark" } }
+      ]
+    },
+    "note-text": {
+      "type": "color",
+      "value": [
+        { "value": "#3D3205", "theme": { "mode": "light" } },
+        { "value": "#F3E7B4", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-iris": {
+      "type": "color",
+      "value": [
+        { "value": "#4F5FE8", "theme": { "mode": "light" } },
+        { "value": "#8592FF", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-iris-2": {
+      "type": "color",
+      "value": [
+        { "value": "#3236B8", "theme": { "mode": "light" } },
+        { "value": "#5B6CFF", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-iris-soft": {
+      "type": "color",
+      "value": [
+        { "value": "#ECEEFF", "theme": { "mode": "light" } },
+        { "value": "#171A3D", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-violet": {
+      "type": "color",
+      "value": [
+        { "value": "#8B47DE", "theme": { "mode": "light" } },
+        { "value": "#B580F5", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-violet-2": {
+      "type": "color",
+      "value": [
+        { "value": "#5A2BAE", "theme": { "mode": "light" } },
+        { "value": "#8E5AE0", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-violet-soft": {
+      "type": "color",
+      "value": [
+        { "value": "#F3EBFD", "theme": { "mode": "light" } },
+        { "value": "#22143A", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-rose": {
+      "type": "color",
+      "value": [
+        { "value": "#D6457F", "theme": { "mode": "light" } },
+        { "value": "#F27BAA", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-rose-2": {
+      "type": "color",
+      "value": [
+        { "value": "#A12C68", "theme": { "mode": "light" } },
+        { "value": "#D0558F", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-rose-soft": {
+      "type": "color",
+      "value": [
+        { "value": "#FDEBF2", "theme": { "mode": "light" } },
+        { "value": "#34121F", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-ember": {
+      "type": "color",
+      "value": [
+        { "value": "#E8652A", "theme": { "mode": "light" } },
+        { "value": "#FF9257", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-ember-2": {
+      "type": "color",
+      "value": [
+        { "value": "#A8331E", "theme": { "mode": "light" } },
+        { "value": "#D9573A", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-ember-soft": {
+      "type": "color",
+      "value": [
+        { "value": "#FDEEE6", "theme": { "mode": "light" } },
+        { "value": "#36170E", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-moss": {
+      "type": "color",
+      "value": [
+        { "value": "#5E8A2E", "theme": { "mode": "light" } },
+        { "value": "#9CCB5E", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-moss-2": {
+      "type": "color",
+      "value": [
+        { "value": "#3B5E1C", "theme": { "mode": "light" } },
+        { "value": "#6F9A3A", "theme": { "mode": "dark" } }
+      ]
+    },
+    "agent-moss-soft": {
+      "type": "color",
+      "value": [
+        { "value": "#EEF4E4", "theme": { "mode": "light" } },
+        { "value": "#1A2610", "theme": { "mode": "dark" } }
+      ]
     }
   },
   "themes": { "mode": ["light", "dark"] }

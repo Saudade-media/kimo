@@ -3,7 +3,21 @@
  * surface of `@kimo/platform/tauri` (ADR 0012 §5); this entry wires `@tauri-apps/api` into
  * `createTauriPlatform()` so the web app gets a `KimoPlatform` without importing Tauri itself.
  */
-import { createTauriPlatform, type KimoPlatform, type TauriBridge } from "@kimo/platform"
+import {
+  type CliProcessHostLike,
+  createRelayFetch,
+  createTauriCliHost,
+  createTauriPlatform,
+  createTauriSecrets,
+  type InvokeLike,
+  type KimoPlatform,
+  type ListenLike,
+  PlatformError,
+  type PlatformErrorCode,
+  type RelayRoute,
+  type SecretsApi,
+  type TauriBridge,
+} from "@kimo/platform"
 import type { TypedInvoke, TypedListen } from "@kimo/platform/tauri"
 
 /** Bundle identifier, mirrored from `src-tauri/tauri.conf.json`. */
@@ -38,4 +52,45 @@ export async function createDesktopPlatform(): Promise<KimoPlatform> {
       win.listen(event, (e) => handler(e.payload))) as unknown as TypedListen,
   }
   return createTauriPlatform(bridge)
+}
+
+/** M6 desktop services (ADR 0014 §4, §11) over the `kimo_secret_*`, `kimo_ai_*` and
+ * `kimo_cli_*` commands. Keys stay in the OS keychain: `relayFetch` is the adapters' `fetch`,
+ * and Rust injects the key. Events are listened to on the current window (Rust emits the
+ * relay and CLI streams to the window that started them). */
+export interface DesktopAgentServices {
+  secrets: SecretsApi
+  relayFetch(route: RelayRoute): typeof fetch
+  cliHost: CliProcessHostLike
+}
+
+/** Rethrows a command rejection (`PlatformErrorPayload`) as a {@link PlatformError}. */
+function rethrow(e: unknown): never {
+  if (e instanceof PlatformError) throw e
+  if (e && typeof e === "object" && "code" in e) {
+    const p = e as { code: unknown; message?: unknown; errno?: unknown }
+    throw new PlatformError(
+      String(p.code) as PlatformErrorCode,
+      typeof p.message === "string" ? p.message : String(p.code),
+      { ...(typeof p.errno === "string" ? { errno: p.errno } : {}), cause: e },
+    )
+  }
+  throw new PlatformError("IO", typeof e === "string" ? e : String(e), { cause: e })
+}
+
+export async function createDesktopAgentServices(): Promise<DesktopAgentServices> {
+  const [{ invoke }, { getCurrentWebviewWindow }] = await Promise.all([
+    import("@tauri-apps/api/core"),
+    import("@tauri-apps/api/webviewWindow"),
+  ])
+  const win = getCurrentWebviewWindow()
+  const bridge: { invoke: InvokeLike; listen: ListenLike } = {
+    invoke: (cmd, args) => invoke(cmd, args).catch(rethrow),
+    listen: (event, handler) => win.listen(event, (e) => handler(e.payload)),
+  }
+  return {
+    secrets: createTauriSecrets(bridge.invoke),
+    relayFetch: (route) => createRelayFetch(bridge, route),
+    cliHost: createTauriCliHost(bridge),
+  }
 }

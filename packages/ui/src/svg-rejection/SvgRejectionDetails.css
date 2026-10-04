@@ -1,0 +1,169 @@
+/*
+ * SVG rejection details: desing.pen board 24 (j) nx2kl › Toast · expanded (wcrmf).
+ * frame: column, fill bg-overlay, stroke border 1, radius-lg, shadow 0 8 24 shadow-strong, clip
+ *   ├ Head (imrWl) row, gap 8, padding [10, 12], center, fill danger-soft
+ *   │   circle-x 14 danger · Title sans 12 / 500 text-primary · Spacer · Action sans 11 / 500
+ *   │   text-secondary
+ *   ├ Reasons (eLrfb) column, padding [6, 0]
+ *   │   └ Reason row, gap 8, padding [4, 12], center: Line mono 11 text-tertiary w 24 ·
+ *   │     Code mono 11 danger · Why sans 11 text-secondary
+ *   └ Footer (aO5B5) row, gap 6, padding [8, 12], center, stroke top 1 border
+ *       Copy report Button/Ghost h 24 [0, 6] copy 14 · Spacer · Cancel Button/Ghost h 24 [0, 8] ·
+ *       Import without these Button/Secondary h 24 [0, 8]; labels sans 11 / 500
+ * The vignette's toast is fill_container in its 381 stage (349 wide); the toast keeps that width.
+ */
+.kimo-svg-rejection {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 349px;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow: 0 8px 24px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  pointer-events: auto;
+}
+/* Inside stroke above the clipped head fill (as Pencil draws it). */
+.kimo-svg-rejection::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  pointer-events: none;
+}
+
+.kimo-svg-rejection__head {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--kimo-danger-soft);
+}
+.kimo-svg-rejection__icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-danger);
+}
+.kimo-svg-rejection__title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kimo-svg-rejection__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+.kimo-svg-rejection__action {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+}
+.kimo-svg-rejection__action:hover {
+  color: var(--kimo-text-primary);
+}
+
+.kimo-svg-rejection__reasons {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+}
+.kimo-svg-rejection__reason {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 12px;
+}
+.kimo-svg-rejection__line,
+.kimo-svg-rejection__code {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+.kimo-svg-rejection__line {
+  flex: none;
+  width: 24px;
+  min-height: 15px;
+  color: var(--kimo-text-tertiary);
+}
+.kimo-svg-rejection__code {
+  flex: none;
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--kimo-danger);
+  text-overflow: ellipsis;
+}
+.kimo-svg-rejection__why {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Not designed: the "+N more" row past 5 reasons keeps the row metrics, text tertiary. */
+.kimo-svg-rejection__reason--more .kimo-svg-rejection__why {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-svg-rejection__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+.kimo-button.kimo-svg-rejection__button {
+  --kimo-button-padding-x: 8px;
+  flex: none;
+  height: 24px;
+  padding: 0 8px;
+  font-size: var(--kimo-text-xs);
+}
+.kimo-button.kimo-svg-rejection__copy {
+  --kimo-button-padding-x: 6px;
+  padding: 0 6px;
+}
+.kimo-svg-rejection__copy .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}

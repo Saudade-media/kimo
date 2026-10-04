@@ -25,7 +25,8 @@ import {
   type IconPickerRequest,
 } from "../canvas/contract"
 import { CanvasConflictOverlay, useNextConflictShortcut } from "../conflicts"
-import { BannerHost, FailedLoadView, MigrationDialog, ToastHost } from "../files"
+import { ExportDialog, type ExportSource } from "../export"
+import { BannerHost, FailedLoadView, MigrationDialog, ToastHost, useWebTabTitle } from "../files"
 import { createFontSystem, loadDocumentFontFaces, MissingFontsHost } from "../fonts"
 import * as assetsModule from "../lib/assets"
 import { contentHash, createAssetStore, createFolderAssetStore, manifestEntry } from "../lib/assets"
@@ -37,6 +38,7 @@ import { Icon } from "../lib/icons"
 import { cssToken, useTheme } from "../lib/theme"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { diskPath, navigate } from "../router"
+import { AgentContextMenu, agentMenuItems, useEditorAgentPanel } from "./agent-panel"
 import { useAgentTouched, useEditorAgents } from "./agents"
 import { DiskTopbar, useConflicts, useFocusNode, useWindowTitle } from "./disk"
 import type { FileMenuActions } from "./FileMenu"
@@ -169,11 +171,12 @@ function EditorShell({
   const openSettings = useOpenSettings()
   /** The document session of a file on disk (null: browser library). */
   const doc = session.document
-  useWindowTitle(doc)
   const [name, setName] = useState(session.meta.name)
   // Layout passes go to a bus, not React state: only panels that show a changed box re-render.
   const layout = useMemo(() => createBus<LayoutResult | null>(null), [])
   const canvas = useRef<CanvasHandle | null>(null)
+  /** ⌘K "Ask Kimo" (set once the agent panel exists). */
+  const askRef = useRef<(() => void) | null>(null)
   const syncStatus = useSyncStatus(session.provider)
   const overlayTheme = useOverlayTheme()
   // Image fills and the Image tool store content-addressed assets per file: IndexedDB for the
@@ -259,6 +262,20 @@ function EditorShell({
           : {}),
       }),
   })
+  // Board 07 Export dialog (M7): code / tokens / SVG·PNG from the selection or every root frame.
+  const [exportOpen, setExportOpen] = useState(false)
+  const exportSource = useMemo<ExportSource>(
+    () => ({
+      fileName: doc ? doc.fileName.replace(/\.kimoz?$/, "") : name,
+      document: () => session.store.toDocument(),
+      libraries: () => m3.libraries(),
+      selection: () => session.ui.getState().selection,
+      renderer: () => canvas.current?.renderer ?? null,
+      layout: () => canvas.current?.layout() ?? null,
+      icons,
+    }),
+    [doc, name, session, m3, icons],
+  )
   // Clean up assets (board 19 Vqeu7): same rules as `kimo gc`.
   const [gcOpen, setGcOpen] = useState(false)
   const gcFolder = useMemo(
@@ -425,6 +442,16 @@ function EditorShell({
         else ui.setViewport({ zoom: 1 })
         return
       }
+      // "Ask Kimo" (board 03 floating toolbar Kbd ⌘K): the Agent tab — except with text selected,
+      // where ⌘K is the Text section's Link… (board 24 (a)).
+      const textSelected =
+        ui.selection.length > 0 &&
+        ui.selection.every((id) => session.store.getNode(id)?.type === "text")
+      if (mod && !e.shiftKey && !e.altKey && key === "k" && askRef.current && !textSelected) {
+        e.preventDefault()
+        askRef.current()
+        return
+      }
       if (mod && e.shiftKey && key === "k") {
         e.preventDefault()
         activate("image")
@@ -464,7 +491,10 @@ function EditorShell({
         ui.setTool("hand")
         return
       }
-      const tool = CANVAS_TOOLS.find((t) => t.shortcut.toLowerCase() === key)
+      // Single-key tools match without Shift; "⇧P" (Prompt) only with it (P alone is the Pen).
+      const tool = CANVAS_TOOLS.find(
+        (t) => t.shortcut.toLowerCase() === (e.shiftKey ? `⇧${key}` : key),
+      )
       if (tool) {
         e.preventDefault()
         activate(tool.id)
@@ -486,6 +516,41 @@ function EditorShell({
     onSaveCopy: () => void saveAs(),
   })
   const agentNodes = useAgentTouched(agents.controller)
+
+  // M6: the built-in agent (Agent tab, canvas surfaces, prompt runs, Home hand-off).
+  const openAgent = useMemo(() => createBus(0), [])
+  const openAgentTab = useCallback(() => openAgent.set(openAgent.get() + 1), [openAgent])
+  askRef.current = openAgentTab
+  const agentPanel = useEditorAgentPanel({
+    platform,
+    hostClient,
+    session,
+    doc,
+    canvas,
+    layout,
+    openSettings: (pane) => openSettings(pane),
+    openAgentTab,
+  })
+  const [agentMenu, setAgentMenu] = useState<{
+    at: { x: number; y: number }
+    items: ReturnType<typeof agentMenuItems>
+  } | null>(null)
+  // Board 20 / 24 (m): window title ("<Agent> editing" while the built-in agent works); the
+  // browser library's tab title.
+  useWindowTitle(doc, agentPanel.editingAgent)
+  useWebTabTitle(
+    platform,
+    doc
+      ? null
+      : { fileName: name, unsaved: syncStatus === "error", agent: agentPanel.editingAgent },
+  )
+  // Home: a never-saved document asks first (board 24 (i) close prompt).
+  const goHome = useCallback(() => {
+    if (!doc?.untitled) return navigate("/")
+    void doc.requestClose().then((ok) => {
+      if (ok) navigate("/")
+    })
+  }, [doc])
 
   const fileMenu: FileMenuActions = {
     onNewFile: () => void newFile(),
@@ -511,8 +576,8 @@ function EditorShell({
             ui={session.ui}
             canvas={() => canvas.current}
             {...fileMenu}
-            onHome={() => navigate("/")}
-            onExport={download}
+            onHome={goHome}
+            onExport={() => setExportOpen(true)}
             onPreview={() => {}}
             presence={agents.presence}
           />
@@ -525,15 +590,22 @@ function EditorShell({
             canvas={() => canvas.current}
             onRename={rename}
             {...fileMenu}
-            onHome={() => navigate("/")}
-            onExport={download}
+            onHome={goHome}
+            onExport={() => setExportOpen(true)}
             onPreview={() => {}}
           />
         )}
         {doc && <BannerHost session={doc} />}
         {agents.banner}
         <div className="editor__body">
-          <LeftPanel session={session} m3={m3} conflicts={conflicts} agentNodes={agentNodes} />
+          <LeftPanel
+            session={session}
+            m3={m3}
+            conflicts={conflicts}
+            agentNodes={agentNodes}
+            promptRun={agentPanel.promptRun}
+            onRunPrompt={agentPanel.runPrompt}
+          />
           <main
             ref={canvasEl}
             className="editor__canvas"
@@ -563,6 +635,18 @@ function EditorShell({
               offlineFonts={offlineFonts}
               overlayTheme={overlayTheme}
               onLayout={layout.set}
+              agentCanvas={agentPanel.canvas}
+              noteAuthor={agentPanel.noteAuthor}
+              onContextMenu={(info) => {
+                const live = new Set(agentPanel.controller?.state.canvas.live ?? [])
+                const items = agentMenuItems(session, info, live)
+                const host = canvasEl.current?.getBoundingClientRect()
+                if (items.length && host)
+                  setAgentMenu({
+                    at: { x: host.left + info.screen.x, y: host.top + info.screen.y },
+                    items,
+                  })
+              }}
               libraries={m3.libraries()}
               route={(ops) => (session.route ? session.route(ops) : ops)}
               onNotice={(n) => m3.toast({ tone: n.tone, text: n.text, action: n.action })}
@@ -588,11 +672,23 @@ function EditorShell({
             {conflicts && (
               <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />
             )}
-            <FloatingToolbar ui={session.ui} onActivate={activate} />
+            <FloatingToolbar
+              ui={session.ui}
+              onActivate={activate}
+              {...(agentPanel.controller ? { onAsk: openAgentTab } : {})}
+            />
             {drop.hint}
             <ToastStack m3={m3} />
             {doc && <ToastHost session={doc} onReview={() => review.set(review.get() + 1)} />}
             {svg.popover}
+            {agentMenu && (
+              <AgentContextMenu
+                at={agentMenu.at}
+                items={agentMenu.items}
+                canvas={canvas}
+                onClose={() => setAgentMenu(null)}
+              />
+            )}
             {iconRequest && (
               <CanvasIconPicker
                 session={session}
@@ -617,6 +713,9 @@ function EditorShell({
             fonts={fonts}
             activity={agents.activity}
             openActivity={agents.openActivity}
+            agent={agentPanel.panel}
+            openAgent={openAgent}
+            initialTab={agentPanel.initialAgentTab ? "agent" : "design"}
           />
         </div>
         {panels.variables && (
@@ -638,6 +737,14 @@ function EditorShell({
         )}
         <ConfirmHost m3={m3} />
         {doc && <MigrationDialog session={doc} />}
+        {exportOpen && (
+          <ExportDialog
+            platform={platform}
+            source={exportSource}
+            fileRef={doc && !doc.untitled ? doc.ref : null}
+            onClose={() => setExportOpen(false)}
+          />
+        )}
         <MissingFontsHost
           platform={platform}
           system={fonts}

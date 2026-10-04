@@ -316,6 +316,11 @@ impl Hub {
                 hello["cwd"] = json!(cwd);
             }
             ev["hello"] = hello;
+            // M6 (ADR 0014 §11): a CLI the app spawned → its agent session (policy, presence).
+            if let Some(s) = crate::ai::cli::agent_session_for(c.hello.cwd.as_deref(), c.hello.ppid)
+            {
+                ev["agentSession"] = json!(s);
+            }
         }
         ev
     }
@@ -900,6 +905,9 @@ fn connection_info(id: &str, c: &Conn) -> Value {
     });
     if let Some(cwd) = &c.hello.cwd {
         info["cwd"] = json!(cwd);
+    }
+    if let Some(s) = crate::ai::cli::agent_session_for(c.hello.cwd.as_deref(), c.hello.ppid) {
+        info["agentSession"] = json!(s);
     }
     info
 }

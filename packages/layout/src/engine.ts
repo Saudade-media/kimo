@@ -35,6 +35,7 @@ import {
   type Node as YNode,
   type Yoga,
 } from "yoga-layout/load"
+import { agentNodeChrome } from "./agent-nodes"
 import { createInstanceView, type InstanceView, isExpandedView, isInstanceView } from "./expand"
 import {
   fromF32,
@@ -130,6 +131,24 @@ interface Entry {
   /** Set by emit(): applied sizing, and the FIT_ALL_FILL flags its children were emitted with. */
   applied: Sizing | null
   kidsAllFill: string
+  /**
+   * A flowing `fill` item with `min`/`max` on its parent's main axis (set by applyStyle()).
+   * Yoga clamps the flex base size by min/max before distributing free space; CSS (§9.7
+   * "Resolving Flexible Lengths") distributes from the unclamped base and freezes violators.
+   * The engine leaves these bounds out of Yoga and applies them with {@link resolveFlexClamps}.
+   */
+  flexClamp: FlexClamp | null
+  /** True while resolveFlexClamps() holds this item at its clamped size. */
+  frozen: boolean
+  /** `yoga`: the bounds are Yoga's (fallback); `css`: resolveFlexClamps() applies them. */
+  clampMode: "yoga" | "css"
+}
+
+interface FlexClamp {
+  axis: Axis
+  min: number | undefined
+  max: number | undefined
+  weight: number
 }
 
 type Sizing = { readonly w: AppliedSizing; readonly h: AppliedSizing }
@@ -320,6 +339,9 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       pad: [0, 0, 0, 0],
       applied: null,
       kidsAllFill: "",
+      flexClamp: null,
+      frozen: false,
+      clampMode: "css",
     }
     readFlags(e)
     return e
@@ -413,6 +435,9 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     }
     if (raw === undefined) {
       if (n.type === "path") return { mode: "fixed", v: pathSize(e, axis) }
+      // Notes / prompts: the card's design width; the height fits (board 22).
+      const chrome = axis === "w" ? agentNodeChrome(n.type) : null
+      if (chrome) return { mode: "fixed", v: chrome.defaultWidth }
       if (FIT_BY_DEFAULT.has(n.type)) return { mode: "fit" }
       if (LEAF_TYPES.has(n.type)) issue(e, "INVALID_SIZE", `${n.type} requires ${axis}`, `/${axis}`)
       return { mode: "fixed", v: 0 }
@@ -510,6 +535,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     e.emptyW = undefined
     e.emptyH = undefined
 
+    let clamp: FlexClamp | null = null
     const axis = (a: Axis) => {
       const isMain = flow && (pdir === "row") === (a === "w")
       let size: number | "auto" = "auto"
@@ -539,6 +565,12 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
           if (isMain) {
             grow = spec.weight
             shrink = 1
+            if (min !== undefined || max !== undefined) {
+              // CSS freezes min/max violators after distributing (resolveFlexClamps).
+              clamp = { axis: a, min, max, weight: spec.weight }
+              min = undefined
+              max = undefined
+            }
           } else alignSelf = Align.Stretch
         } else if (spec.mode === "fill" && spec.fallback !== undefined) {
           size = spec.fallback // no layout parent, or absolute (§6.1)
@@ -568,6 +600,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     }
     axis("w")
     axis("h")
+    setFlexClamp(e, clamp)
     put(e, "grow", grow, (v) => y.setFlexGrow(v))
     put(e, "shrink", shrink, (v) => y.setFlexShrink(v))
     put(e, "alignSelf", alignSelf, (v) => y.setAlignSelf(v))
@@ -635,6 +668,16 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
   const measureTextFn = (e: Entry, w: number, wm: MeasureMode, h: number, hm: MeasureMode) => {
     const maxW = wm === MeasureMode.Undefined || Number.isNaN(w) ? undefined : w
+    const chrome = agentNodeChrome(e.data.type)
+    if (chrome) {
+      // Note / prompt card: the body wraps inside the chrome insets.
+      const [t, r, b, l] = chrome.body
+      const m = measure(e, maxW === undefined ? undefined : Math.max(0, maxW - l - r))
+      return {
+        width: wm === MeasureMode.Exactly ? w : m.w + l + r,
+        height: hm === MeasureMode.Exactly ? h : m.h + t + b,
+      }
+    }
     const m = measure(e, maxW)
     return {
       width: wm === MeasureMode.Exactly ? w : m.w,
@@ -711,7 +754,182 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     if (only && !only.has(e)) return
     for (const c of e.children) calc(c, only)
     if (e.kind === "box" || e.kind === "group") updateContent(e)
-    if (!e.flow) e.y.calculateLayout(undefined, undefined, Direction.LTR)
+    if (!e.flow) {
+      const items = clampItemsOf(e)
+      // Wrapping lines: Yoga breaks them on the clamped sizes, as CSS does (see below).
+      for (const c of items) setClampMode(c, c.parent?.style.wrap === Wrap.Wrap ? "yoga" : "css")
+      e.y.calculateLayout(undefined, undefined, Direction.LTR)
+      if (items.length > 0) resolveFlexClamps(e, items)
+    }
+  }
+
+  // --- min/max of flexible items (CSS §9.7) ---------------------------------------------------
+
+  /** Every flowing fill item with a main-axis min/max (see Entry.flexClamp). */
+  const clampItems = new Set<Entry>()
+
+  const setFlexClamp = (e: Entry, clamp: FlexClamp | null) => {
+    // applyStyle() just wrote the unfrozen size / grow / shrink through put().
+    e.frozen = false
+    e.clampMode = "css"
+    e.flexClamp = clamp
+    if (clamp) clampItems.add(e)
+    else clampItems.delete(e)
+  }
+
+  /** The clamp items laid out by the Yoga tree rooted at `root` (a non-flow entry). */
+  const clampItemsOf = (root: Entry): Entry[] => {
+    if (clampItems.size === 0) return []
+    const out: Entry[] = []
+    for (const c of clampItems) {
+      if (!c.alive || !c.flexClamp) continue
+      let r: Entry | null = c
+      while (r?.flow) r = r.parent
+      if (r === root) out.push(c)
+    }
+    return out
+  }
+
+  const freeze = (e: Entry, size: number) => {
+    const key = (e.flexClamp as FlexClamp).axis
+    e.frozen = true
+    put(e, key, size, (v) => (key === "w" ? e.y.setWidth(v) : e.y.setHeight(v)))
+    put(e, "grow", 0, (v) => e.y.setFlexGrow(v))
+    put(e, "shrink", 0, (v) => e.y.setFlexShrink(v))
+  }
+
+  const unfreeze = (e: Entry) => {
+    const c = e.flexClamp as FlexClamp
+    e.frozen = false
+    put(e, c.axis, "auto" as const, (v) => (c.axis === "w" ? e.y.setWidth(v) : e.y.setHeight(v)))
+    put(e, "grow", c.weight, (v) => e.y.setFlexGrow(v))
+    put(e, "shrink", 1, (v) => e.y.setFlexShrink(v))
+  }
+
+  /** Gives the item's main-axis bounds to Yoga (`yoga`) or takes them out (`css`); thaws it. */
+  const setClampMode = (e: Entry, mode: "yoga" | "css") => {
+    const c = e.flexClamp as FlexClamp
+    if (e.frozen) unfreeze(e)
+    e.clampMode = mode
+    const w = c.axis === "w"
+    const min = mode === "yoga" ? c.min : undefined
+    const max = mode === "yoga" ? c.max : undefined
+    put(e, w ? "minW" : "minH", min, (v) => (w ? e.y.setMinWidth(v) : e.y.setMinHeight(v)))
+    put(e, w ? "maxW" : "maxH", max, (v) => (w ? e.y.setMaxWidth(v) : e.y.setMaxHeight(v)))
+  }
+
+  /**
+   * CSS "Resolving Flexible Lengths" for fill items with min/max: Yoga laid them out without
+   * their main-axis bounds (free space shared from the unclamped bases); per flex line, while
+   * the clamped sizes differ, freeze the min violators (total violation > 0), the max violators
+   * (< 0) or all violators (= 0) at their clamped size and lay out again — the others share the
+   * space that is left. Outer lines first: a frozen item resizes the containers inside it.
+   *
+   * Wrapping containers break lines on the clamped (hypothetical) sizes, which Yoga does when it
+   * has the bounds: the first pass keeps them to record the lines; when a later pass breaks the
+   * lines differently, that container keeps Yoga's own result (bounds back in Yoga).
+   */
+  const resolveFlexClamps = (root: Entry, items: Entry[]) => {
+    const EPS = 1e-3
+    const signature = (p: Entry) =>
+      flexLines(p)
+        .map((l) => l.length)
+        .join(",")
+    const wrapped = new Map<Entry, string>()
+    for (const c of items)
+      if (c.clampMode === "yoga" && c.parent && !wrapped.has(c.parent))
+        wrapped.set(c.parent, signature(c.parent))
+    if (wrapped.size > 0) {
+      for (const c of items) setClampMode(c, "css")
+      root.y.calculateLayout(undefined, undefined, Direction.LTR)
+    }
+    for (let round = 0; round <= 2 * items.length + 1; round++) {
+      // A container whose lines moved keeps Yoga's result.
+      let reverted = false
+      for (const [p, sig] of wrapped) {
+        if (signature(p) === sig) continue
+        for (const c of items) if (c.parent === p) setClampMode(c, "yoga")
+        wrapped.delete(p)
+        reverted = true
+      }
+      if (reverted) {
+        root.y.calculateLayout(undefined, undefined, Direction.LTR)
+        continue
+      }
+      const containers = new Map<Entry, number>()
+      for (const c of items) {
+        const p = c.parent
+        if (c.frozen || c.clampMode !== "css" || !p || containers.has(p)) continue
+        let d = 0
+        for (let q: Entry | null = p; q && q !== root; q = q.parent) d++
+        containers.set(p, d)
+      }
+      let top = Number.POSITIVE_INFINITY
+      const pending: { pick: { item: Entry; size: number }[]; depth: number }[] = []
+      for (const [p, depth] of containers) {
+        for (const line of flexLines(p)) {
+          const v: { item: Entry; size: number; diff: number }[] = []
+          let total = 0
+          for (const c of line) {
+            const clamp = c.flexClamp
+            if (c.frozen || c.clampMode !== "css" || !clamp) continue
+            const L = c.y.getComputedLayout()
+            const size = fromF32(clamp.axis === "w" ? L.width : L.height)
+            let clamped = size
+            if (clamp.max !== undefined) clamped = Math.min(clamped, clamp.max)
+            if (clamp.min !== undefined) clamped = Math.max(clamped, clamp.min)
+            const diff = clamped - size
+            if (Math.abs(diff) > EPS) {
+              v.push({ item: c, size: clamped, diff })
+              total += diff
+            }
+          }
+          if (v.length === 0) continue
+          const pick =
+            total > EPS
+              ? v.filter((x) => x.diff > 0)
+              : total < -EPS
+                ? v.filter((x) => x.diff < 0)
+                : v
+          pending.push({ pick, depth })
+          if (depth < top) top = depth
+        }
+      }
+      if (pending.length === 0) return
+      for (const { pick, depth } of pending)
+        if (depth === top) for (const x of pick) freeze(x.item, x.size)
+      root.y.calculateLayout(undefined, undefined, Direction.LTR)
+    }
+  }
+
+  /** The flowing children of container `p` grouped into flex lines (wrap starts a new one). */
+  const flexLines = (p: Entry): Entry[][] => {
+    const kids = p.attached
+    if (kids.length === 0) return []
+    if (p.style.wrap !== Wrap.Wrap) return [kids]
+    const EPS = 1e-3
+    const row = p.dir === "row"
+    const lines: Entry[][] = []
+    let line: Entry[] = []
+    let prevMain = Number.NEGATIVE_INFINITY
+    let crossEnd = Number.NEGATIVE_INFINITY
+    for (const c of kids) {
+      const L = c.y.getComputedLayout()
+      const main = fromF32(row ? L.left : L.top)
+      const cross = fromF32(row ? L.top : L.left)
+      const crossSize = fromF32(row ? L.height : L.width)
+      // A new line goes back along the main axis, or starts below the current line's extent.
+      if (line.length > 0 && (main < prevMain - EPS || cross > crossEnd - EPS)) {
+        lines.push(line)
+        line = []
+        crossEnd = Number.NEGATIVE_INFINITY
+      }
+      line.push(c)
+      prevMain = main
+      crossEnd = Math.max(crossEnd, cross + Math.max(crossSize, EPS * 2))
+    }
+    lines.push(line)
+    return lines
   }
 
   interface Emit {
@@ -779,7 +997,12 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     const world = transformedBounds(T, w, h)
     const visible = parentVisible && e.visibleSelf
     let text: TextMetrics | undefined
-    if (e.kind === "text") text = measure(e, e.autoText ? undefined : w)
+    if (e.kind === "text") {
+      const chrome = agentNodeChrome(e.data.type)
+      text = chrome
+        ? measure(e, Math.max(0, w - chrome.body[1] - chrome.body[3]))
+        : measure(e, e.autoText ? undefined : w)
+    }
     const sizing = appliedSizing(e)
     e.applied = sizing
     const inFlow = e.flow
@@ -868,6 +1091,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
   const freeEntry = (e: Entry) => {
     e.alive = false
+    clampItems.delete(e)
     if (e.measured) e.y.unsetMeasureFunc()
     e.y.free()
   }

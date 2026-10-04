@@ -35,6 +35,7 @@
         "@kimo/design-tokens": "workspace:*",
         "@kimo/desktop": "workspace:*",
         "@kimo/editor-state": "workspace:*",
+        "@kimo/exporters": "workspace:*",
         "@kimo/layout": "workspace:*",
         "@kimo/mcp-server": "workspace:*",
         "@kimo/platform": "workspace:*",
@@ -139,6 +140,7 @@
       "dependencies": {
         "@kimo/core-schema": "workspace:*",
         "@kimo/editor-state": "workspace:*",
+        "@kimo/exporters": "workspace:*",
         "@kimo/layout": "workspace:*",
         "@kimo/platform": "workspace:*",
         "@kimo/renderer": "workspace:*",

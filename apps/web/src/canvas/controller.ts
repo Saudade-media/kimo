@@ -18,6 +18,8 @@ import {
 import type { DocStore, LocalOrigin, NodeData, Op, Tool, UiState } from "@kimo/editor-state"
 import { generateId } from "@kimo/editor-state"
 import {
+  agentNodeBodyBox,
+  agentNodeChrome,
   createInstanceView,
   createResolver,
   type InstanceView,
@@ -53,6 +55,7 @@ import {
   type SpacingIndicator,
 } from "@kimo/renderer"
 import { manifestOps } from "../lib/asset-manifest"
+import { AgentCanvasModel, type AgentDomState, SHIMMER_FRAME_MS } from "./agent-canvas"
 import {
   canMove,
   createIconOp,
@@ -81,6 +84,7 @@ import {
   topLevel,
 } from "./commands"
 import type {
+  AgentCanvasProps,
   CanvasError,
   CanvasHint,
   CanvasPointerInfo,
@@ -189,7 +193,12 @@ export interface TextEditState {
   color: string
   /** Parent of a new text node. */
   parent: string | null
+  /** M6: editing a note / prompt body (wraps at `box.w`; absent = a text node). */
+  kind?: "note" | "prompt"
 }
+
+/** Text-editable node types: text, and the bodies of notes and prompts (M6). */
+const isTextual = (t: unknown): boolean => t === "text" || t === "note" || t === "prompt"
 
 export interface ControllerOptions {
   store: DocStore
@@ -219,6 +228,8 @@ export interface ControllerOptions {
   // --- M3 ---
   /** Loaded libraries by alias (read on every view rebuild; see {@link CanvasController.setLibraries}). */
   libraries?: () => Libraries
+  /** M6: author display name written on new notes / prompts (`note.author`). */
+  author?: () => string | undefined
   /**
    * Rewrites an op group before it is applied (edits on composite instance ids become
    * overrides; the shell's `session.route`). Null refuses the edit (the router reports why).
@@ -427,6 +438,7 @@ export class CanvasController {
         header: () => this.header,
         resolve: this.resolver,
         assets: this.opts.assets,
+        labels: this.sceneLabels,
       })
       this.fullPending = true
       this.schedule()
@@ -473,7 +485,9 @@ export class CanvasController {
       header: () => this.header,
       resolve: this.resolver,
       assets: this.opts.assets,
+      labels: this.sceneLabels,
     })
+    this.agent.scanAll()
     this.computeFull()
     r.setViewport(this.ui.getState().viewport)
     this.measure()
@@ -485,6 +499,9 @@ export class CanvasController {
     this.cleanups.push(
       this.store.onChange((c) => {
         for (const id of c.nodes) this.dirty.add(id)
+        // M6: placeholder frames and prompt nodes are tracked incrementally.
+        if (c.cause === "load") this.agent.scanAll()
+        else this.agent.scan(c.nodes)
         if (c.header || c.cause === "load") this.dirtyHeader = true
         // A load replaces everything: re-read it all (expansions included).
         if (c.cause === "load") this.fullPending = true
@@ -507,6 +524,7 @@ export class CanvasController {
     if (this.disposed) return
     this.disposed = true
     if (this.raf) cancelAnimationFrame(this.raf)
+    if (this.agentRaf) cancelAnimationFrame(this.agentRaf)
     for (const c of this.cleanups.splice(0)) c()
     this.renderer.dispose()
     this.engine.dispose()
@@ -703,7 +721,10 @@ export class CanvasController {
     overlay.selectionTone = comp.tone
     overlay.componentOutlines = comp.outlines
     overlay.instanceDrop = this.dropPreview
+    // M6 (board 22 / 24): placeholders, flashes, scopes, persona selections, connectors.
+    if (layout) Object.assign(overlay, this.agent.overlay(layout))
     this.renderer.setOverlay(overlay)
+    this.scheduleAgentFrame()
     this.updateHint(m !== null)
     this.opts.onOverlayChange?.()
   }
@@ -1988,8 +2009,8 @@ export class CanvasController {
     const ui = this.ui.getState()
     const sel = ui.selection.length === 1 ? ui.selection[0] : undefined
     const selType = sel ? this.src.getNode(sel)?.type : undefined
-    if (sel && (selType === "text" || selType === "path") && hits.includes(sel)) {
-      if (selType === "text") this.beginTextEdit(sel)
+    if (sel && (isTextual(selType) || selType === "path") && hits.includes(sel)) {
+      if (isTextual(selType)) this.beginTextEdit(sel)
       else if (!this.src.isVirtual(sel)) this.editPath(sel)
       return
     }
@@ -1997,7 +2018,7 @@ export class CanvasController {
     const next = enterTarget(this.vdoc, hit, sel)
     ui.select([next])
     const t = next === hit ? this.src.getNode(hit)?.type : undefined
-    if (t === "text") this.beginTextEdit(hit)
+    if (isTextual(t)) this.beginTextEdit(hit)
     // Board 10 #6: double-click a vector to edit it (not inside an instance: detach first).
     else if (t === "path" && !this.src.isVirtual(hit)) this.editPath(hit)
   }
@@ -2104,7 +2125,7 @@ export class CanvasController {
     if (key === "enter" && ui.selection.length === 1) {
       const id = ui.selection[0] as string
       const t = this.src.getNode(id)?.type
-      if (t === "text") return run(() => this.beginTextEdit(id))
+      if (isTextual(t)) return run(() => this.beginTextEdit(id))
       if (t === "path" && !this.src.isVirtual(id)) return run(() => this.editPath(id))
       const first = this.src.children(id)[0]
       if (first) return run(() => ui.select([first]))
@@ -2873,6 +2894,119 @@ export class CanvasController {
     if (this.apply(ops, "Frame selection")) this.ui.getState().select([id])
   }
 
+  // --- M6: built-in agent on the canvas (board 22 / 24) ---------------------------------------
+
+  /** Placeholder frames, prompt nodes and the host's agent state (scopes, cursors, runs). */
+  readonly agent = new AgentCanvasModel({
+    getNode: (id) => this.store.getNode(id) as Record<string, unknown> | undefined,
+    children: (p) => this.store.children(p),
+    nodeIds: () => this.store.nodeIds(),
+  })
+  private agentRaf = 0
+  private agentLast = 0
+  /** Scene labels read the live props (no setDocument per prop change). */
+  private readonly sceneLabels = {
+    promptModel: (m: unknown): string => {
+      const f = this.agent.props?.modelLabel
+      if (f) return f(m)
+      if (typeof m === "string") return m
+      return m && typeof m === "object" && typeof (m as { model?: unknown }).model === "string"
+        ? ((m as { model: string }).model as string)
+        : ""
+    },
+  }
+
+  /** The host's agent state changed (CanvasHost prop). */
+  setAgentCanvas(props: AgentCanvasProps | null): void {
+    const prev = this.agent.props
+    this.agent.setProps(props)
+    // A new model formatter re-labels prompt pills.
+    if (prev?.modelLabel !== props?.modelLabel && this.agent.prompts.size)
+      this.renderer.invalidate([...this.agent.prompts.keys()])
+    this.updateOverlay()
+  }
+
+  /**
+   * Shimmer / flash / rejected-pill animation: one overlay pass per tick (≤ 30 fps), only
+   * while something animates — nothing runs (and no picture is re-recorded) otherwise.
+   */
+  private scheduleAgentFrame(): void {
+    if (this.agentRaf || this.disposed || !this.agent.animating()) return
+    this.agentRaf = requestAnimationFrame((t) => {
+      this.agentRaf = 0
+      if (this.disposed) return
+      if (t - this.agentLast < SHIMMER_FRAME_MS - 1) {
+        this.scheduleAgentFrame()
+        return
+      }
+      this.agentLast = t
+      this.agent.prune()
+      this.updateOverlay()
+    })
+  }
+
+  /** DOM pieces of the agent surfaces (CanvasHost renders them). */
+  agentDom(): AgentDomState {
+    const v = this.ui.getState().viewport
+    return this.agent.dom(this.layoutResult, v, { w: this.size.w, h: this.size.h })
+  }
+
+  /** Inserts a note / prompt and opens its body for typing (one undo step for the insert). */
+  insertAgentNode(type: "note" | "prompt", at?: Point): string | null {
+    this.flush()
+    const chrome = agentNodeChrome(type)
+    if (!chrome) return null
+    const w = chrome.defaultWidth
+    const c = at ?? this.toWorld({ x: this.size.w / 2, y: this.size.h / 2 })
+    const x = Math.round(at ? c.x : c.x - w / 2)
+    const y = Math.round(at ? c.y : c.y - 40)
+    const id = generateId()
+    const author = this.opts.author?.()
+    const node: Record<string, unknown> = { type, x, y, content: "" }
+    if (author) node.author = author
+    const ops: Op[] = [{ op: "insert", id, parent: null, node } as unknown as Op]
+    if (!this.apply(ops, type === "note" ? "Add note" : "Add prompt")) return null
+    this.flush()
+    this.ui.getState().select([id])
+    this.beginTextEdit(id)
+    return id
+  }
+
+  setPromptTarget(promptId: string, frameId: string | null): boolean {
+    const p = this.store.getNode(promptId)
+    if (p?.type !== "prompt") return false
+    if (frameId === null)
+      return this.apply([{ op: "update", id: promptId, unset: ["target"] }], "Clear prompt target")
+    if (this.store.getNode(frameId)?.type !== "frame") return false
+    return this.apply(
+      [{ op: "update", id: promptId, set: { target: frameId } }],
+      "Set prompt target",
+    )
+  }
+
+  /** "Convert to prompt" (ADR 0014 §9): a replace keeping id, parent, order, position and body. */
+  convertNoteToPrompt(noteId: string): boolean {
+    const n = this.store.getNode(noteId)
+    if (n?.type !== "note") return false
+    const { type: _type, parent, order, at, ...body } = n as Record<string, unknown>
+    void _type
+    const place: Record<string, unknown> = { parent: parent ?? null, order }
+    if (typeof at === "string") place.at = at
+    return this.apply(
+      [
+        { op: "delete", id: noteId },
+        { op: "insert", id: noteId, ...place, node: { ...body, type: "prompt" } } as unknown as Op,
+      ],
+      "Convert to prompt",
+    )
+  }
+
+  clearPlaceholder(frameId: string): boolean {
+    const n = this.store.getNode(frameId)
+    if (!n || n.placeholder === undefined) return false
+    return this.apply([{ op: "update", id: frameId, unset: ["placeholder"] }], "Clear flag")
+  }
+
   // --- text editing -------------------------------------------------------------------------
 
   /** Opens the text overlay for node `id`, or for a new text node at world point `at`. */
@@ -2883,18 +3017,33 @@ export class CanvasController {
     if (id) {
       const n = this.src.getNode(id) as LayoutNodeData | undefined
       const l = this.layoutResult?.nodes.get(id)
-      if (!n || !l || n.type !== "text" || n.locked === true) return
+      if (!n || !l || !isTextual(n.type) || n.locked === true) return
       const input = resolveText(id, n, this.resolver)
       const fill = this.resolver.value(id, n.fill)
+      // M6: a note / prompt edits its body box (board 22 afq5v `utO8L`, poE5B `ITEfa`).
+      const card = n.type === "note" || n.type === "prompt" ? n.type : null
+      const body = card ? agentNodeBodyBox(card, l.local.w, l.local.h) : null
       state = {
         id,
-        at: { x: l.world.x, y: l.world.y },
-        box: l.world,
+        at: body
+          ? { x: l.world.x + body.x, y: l.world.y + body.y }
+          : { x: l.world.x, y: l.world.y },
+        box: body
+          ? { x: l.world.x + body.x, y: l.world.y + body.y, w: body.w, h: body.h }
+          : l.world,
         value: input.runs.map((r) => r.text).join(""),
         style: input.style,
-        color: typeof fill === "string" ? fill : "#000000",
+        color:
+          card === "note"
+            ? "var(--kimo-note-text, #3D3205)"
+            : card === "prompt"
+              ? "var(--kimo-text-primary, #0A0A0A)"
+              : typeof fill === "string"
+                ? fill
+                : "#000000",
         parent: typeof n.parent === "string" ? n.parent : null,
       }
+      if (card) state.kind = card
       this.editingNode = { id, data: { ...n, content: "" } }
       this.renderer.invalidate([id])
       this.ui.getState().select([id])
@@ -2929,9 +3078,10 @@ export class CanvasController {
     const layout = this.layoutResult
     if (s.id) {
       if (!this.src.getNode(s.id)) return
-      if (!text.trim()) this.apply([{ op: "delete", id: s.id }], "Delete text")
+      const what = s.kind ?? "text"
+      if (!text.trim()) this.apply([{ op: "delete", id: s.id }], `Delete ${what}`)
       else if (text !== s.value)
-        this.apply([{ op: "update", id: s.id, set: { content: text } }], "Edit text")
+        this.apply([{ op: "update", id: s.id, set: { content: text } }], `Edit ${what}`)
     } else {
       if (text.trim() && layout) {
         const id = generateId()

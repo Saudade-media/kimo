@@ -10,29 +10,10 @@ import { join } from "node:path"
 import { createRenderer, type Renderer } from "@kimo/renderer"
 import { type Browser, chromium } from "playwright"
 import { bundledFontFaces, type FixtureReport, verifyFixture } from "../harness/boxdiff"
+import { KNOWN_DIFFS } from "../harness/known-diffs"
 import { FONT_DIR, HARNESS_FIXTURES, loadFixture } from "../harness/verify"
 
-/**
- * Differences that are not exporter bugs, each with its reason. Anything else fails.
- * `id` + `kind` (`exact`: pass A, `geometry`/`text`: pass B).
- */
-export const KNOWN_DIFFS: { fixture: string; id: string; kind: string; reason: string }[] = [
-  {
-    fixture: "unicode-and-escapes",
-    id: "Txt0000001",
-    kind: "text",
-    reason: "emoji and tab come from different fallback fonts in CanvasKit Paragraph and Chromium",
-  },
-  ...["exact", "geometry"].flatMap((kind) =>
-    ["Cell000001", "Cell000002"].map((id) => ({
-      fixture: "features-all",
-      id,
-      kind,
-      reason:
-        "@kimo/layout reads a `dimension`-bound gap as 0 and Yoga does not redistribute free space after a `min` clamp; the CSS follows the spec (gap 8px)",
-    })),
-  ),
-]
+export { KNOWN_DIFFS } from "../harness/known-diffs"
 
 const chromiumReady = (() => {
   try {

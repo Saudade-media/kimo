@@ -69,15 +69,6 @@
 .kimo-button.agents-button--danger {
   color: var(--kimo-danger);
 }
-.agents-dry-bar .kimo-button.agents-dry-bar__toggle {
-  height: 32px;
-  font-size: var(--kimo-text-sm);
-}
-.agents-dry-bar .kimo-button.agents-dry-bar__toggle .kimo-button__icon {
-  width: 14px;
-  height: 14px;
-}
-
 /* IconButton instances: fill #00000000, 24 (icon 14) / 22 (icon 13). */
 .kimo-icon-button.agents-icon-button {
   background: transparent;
@@ -501,67 +492,42 @@
   background: color-mix(in srgb, var(--kimo-agent-soft) 70%, transparent);
 }
 
-/* Dry Run Bar (P1Ulp): row, gap 10, padding [0, 6, 0, 16], center, h 44, bg-overlay, stroke 1
-   border, radius-pill, shadow 0 8 24 shadow-strong. Bottom-centre of the canvas. */
+/* Dry-run bar (board 24 › 5 · (g) jMSYI): row, h 32, gap 8, padding [0, 4], center, bg-overlay,
+   stroke 1 border, pill, shadow 0 4 12 shadow. Pinned top-centre of the canvas. */
 .agents-dry-bar {
   box-sizing: border-box;
   position: absolute;
-  bottom: 28px;
+  top: 10px;
   left: 50%;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 6px 0 16px;
+  gap: 8px;
+  height: 32px;
+  padding: 0 4px;
   border-radius: var(--kimo-radius-pill);
   background: var(--kimo-bg-overlay);
   box-shadow:
     inset 0 0 0 1px var(--kimo-border),
-    0 8px 24px 0 var(--kimo-shadow-strong);
+    0 4px 12px 0 var(--kimo-shadow);
   white-space: nowrap;
   transform: translateX(-50%);
   pointer-events: auto;
 }
-.agents-dry-bar__icon {
-  display: block;
-  flex: none;
-  color: var(--kimo-agent);
-}
+/* Label (BKX87): sans 12 / 500 text-primary. */
 .agents-dry-bar__title {
   color: var(--kimo-text-primary);
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-sm);
-  font-weight: var(--kimo-font-weight-semibold);
-  line-height: 15px;
-}
-/* Count (wuupD …): padding [0, 8], center, h 20, radius-pill; Label mono 11 / 500. */
-.agents-count {
-  box-sizing: border-box;
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: var(--kimo-radius-pill);
-}
-.agents-count__label {
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
   font-weight: var(--kimo-font-weight-medium);
   line-height: 15px;
 }
-.agents-count--delete {
-  background: var(--kimo-danger-soft);
-  color: var(--kimo-danger);
-}
-.agents-count--insert {
-  background: var(--kimo-agent-soft);
-  color: var(--kimo-agent);
-}
-.agents-count--update {
-  background: var(--kimo-bg-muted);
-  color: var(--kimo-text-secondary);
+/* Meta (veup0): sans 11 text-tertiary. */
+.agents-dry-bar__meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -631,14 +597,19 @@
   line-height: 15px;
   white-space: nowrap;
 }
+/* Empty log (board 24 › 5 · (f) KzugB › Body utuM4): column, gap 12, padding 16, center. */
 .agents-activity__empty {
-  margin: 0;
-  padding: 24px 12px;
-  color: var(--kimo-text-tertiary);
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-sm);
-  line-height: 15px;
-  text-align: center;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+/* EmptyState instance (CCGxw): width fill_container. */
+.kimo-empty-state.agents-activity__empty-state {
+  box-sizing: border-box;
+  width: 100%;
 }
 /* Footer (ng9cE): row, gap 8, padding [10, 12], center, top stroke 1 border. */
 .agents-activity__footer {
@@ -1090,4 +1061,300 @@
 /* Settings nav item for this pane (J9yS0): the only coloured nav icon (bot in agent). */
 .settings-nav-item[data-pane="agents-mcp"] .settings-nav-item__icon {
   color: var(--kimo-agent);
+}
+
+/* Cursor label pill flips left / up within 8 px of a viewport edge (board 24 g rule 2). */
+.agents-cursor[data-flip-x] {
+  align-items: flex-end;
+  transform: translateX(-100%);
+}
+.agents-cursor[data-flip-y] {
+  flex-direction: column-reverse;
+  transform: translateY(-100%);
+}
+.agents-cursor[data-flip-x][data-flip-y] {
+  transform: translate(-100%, -100%);
+}
+.agents-cursor {
+  transition:
+    left 120ms ease,
+    top 120ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agents-cursor {
+    transition: none;
+  }
+}
+/* Off-screen pointer (joR0E nLvHN): row, gap 4, padding [2, 8, 2, 3], center, agent, pill ›
+   AgentMark 12 · Label sans 11 / 500 on-accent · Arrow 12 on-accent. Click pans to the node. */
+.agents-cursor-docked {
+  box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 8px 2px 3px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-agent);
+  color: var(--kimo-on-accent);
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.agents-cursor-docked__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+}
+
+/* Config diff preview (board 24 › 5 · (c) K5Dnf): column, gap 14, padding 20, bg-overlay,
+   stroke 1 border, radius-xl, shadow 0 16 48 shadow-strong. */
+.agents-config-diff {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px 0 var(--kimo-shadow-strong);
+}
+.agents-config-diff > * {
+  width: 100%;
+}
+/* Head (EVccw): row, gap 12. */
+.agents-config-diff__head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+/* Icon Wrap (BPzO7): 32 × 32, center, bg-muted, pill › file-diff 16 text-secondary. */
+.agents-config-diff__icon-wrap {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+.agents-config-diff__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+/* Title (TVhJO): sans 13 / 600 text-primary. */
+.agents-config-diff__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 16px;
+}
+/* Desc (Ik7Ti): mono 11 text-secondary. */
+.agents-config-diff__desc {
+  margin: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Diff (MFEi0): column, padding [8, 0], bg-subtle, stroke 1 border, radius-md. */
+.agents-config-diff__diff {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  padding: 8px 0;
+  overflow: auto;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Line (xcMvc): row, gap 8, padding [1, 12]; − danger-soft, + success-soft. */
+.agents-config-diff__line {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 1px 12px;
+  white-space: pre;
+}
+.agents-config-diff__line--del {
+  background: var(--kimo-danger-soft);
+}
+.agents-config-diff__line--add {
+  background: var(--kimo-success-soft);
+}
+.agents-config-diff__sign,
+.agents-config-diff__code {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+.agents-config-diff__sign {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+.agents-config-diff__line--del .agents-config-diff__sign {
+  color: var(--kimo-danger);
+}
+.agents-config-diff__line--add .agents-config-diff__sign {
+  color: var(--kimo-success);
+}
+.agents-config-diff__code {
+  color: var(--kimo-text-primary);
+}
+.agents-config-diff__error {
+  margin: 0;
+  color: var(--kimo-danger);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+/* Footer (hdWkt): row, gap 8, center. */
+.agents-config-diff__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+/* Footnote (v3QurW): sans 11 text-tertiary. */
+.agents-config-diff__footnote {
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+
+/* Popovers (board 24 › 5 · (d) N4cx0, (e) XCENV): column, bg-overlay, stroke 1 border,
+   radius-lg, shadow 0 8 24 shadow-strong. */
+.agents-pop {
+  box-sizing: border-box;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 80px);
+  overflow: hidden auto;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+}
+/* Header (he0SM): h 40, padding [0, 6, 0, 12], center, space-between, bottom stroke. */
+.agents-pop__header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+.agents-pop__leading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.agents-pop__icon {
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+.agents-pop__title {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kimo-icon-button.agents-pop__close {
+  color: var(--kimo-text-tertiary);
+}
+/* Body (KkQIy): column, padding [4, 0]. */
+.agents-pop__body {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+/* Agent row (OGJkT): row, gap 10, padding [8, 12], center. */
+.agents-pop__agent {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+/* Request row (mywhw): row, gap 8, padding [8, 12], center, bottom stroke. */
+.agents-pop__request {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+.agents-pop__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agents-pop__name {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agents-pop__meta {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Footer (PwFn6): row, gap 6, padding [8, 12, 4, 12], center, top stroke. */
+.agents-pop__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--kimo-border);
 }

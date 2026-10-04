@@ -1,5 +1,5 @@
 import { KIMO_FILE_FILTER, type KimoPlatform } from "@kimo/platform"
-import { Button, Composer, FileCard, Input, Segmented, Tooltip } from "@kimo/ui"
+import { Button, FileCard, Input, Segmented } from "@kimo/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   addWatchedFolder,
@@ -24,21 +24,12 @@ import {
 import { Icon } from "../lib/icons"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { diskPath, navigate } from "../router"
-
-const CHIPS = [
-  { label: "Landing page", icon: "monitor" },
-  { label: "Mobile app", icon: "smartphone" },
-  { label: "Dashboard", icon: "layout-dashboard" },
-  { label: "Design system", icon: "swatch-book" },
-  { label: "Slides", icon: "presentation" },
-] as const
+import { HomeComposer } from "./HomeComposer"
 
 const VIEWS = [
   { value: "grid", label: "Grid view", icon: <Icon name="layout-grid" size={14} /> },
   { value: "list", label: "List view", icon: <Icon name="list" size={14} /> },
 ] as const
-
-const AGENT_SOON = "Agent arrives in M6"
 
 export function Home() {
   const { platform } = useRuntime()
@@ -48,6 +39,7 @@ export function Home() {
 }
 
 function WebHome() {
+  const { platform } = useRuntime()
   const openSettings = useOpenSettings()
   const [files, setFiles] = useState<FileMeta[] | null>(null)
   const [query, setQuery] = useState("")
@@ -189,7 +181,7 @@ function WebHome() {
           </Button>
         </header>
 
-        <StartWithAi />
+        <HomeComposer platform={platform} />
 
         <div className="home-files-header">
           <h2 className="home-files-header__title">Recent files</h2>
@@ -385,7 +377,7 @@ function DesktopHome({ platform }: { platform: KimoPlatform }) {
           </Button>
         </header>
 
-        <StartWithAi />
+        <HomeComposer platform={platform} />
 
         <RecentFilesHeader folderCount={folders?.length ?? 0} view={view} onViewChange={setView} />
 
@@ -407,41 +399,5 @@ function DesktopHome({ platform }: { platform: KimoPlatform }) {
         )}
       </main>
     </div>
-  )
-}
-
-/** "Start With AI" (fKvEZ): the agent composer, disabled until M6. */
-function StartWithAi() {
-  return (
-    <section className="home-ai" aria-labelledby="home-ai-title">
-      <div className="home-ai__heading">
-        <h2 id="home-ai-title" className="home-ai__title">
-          What are we designing today?
-        </h2>
-        <p className="home-ai__desc">
-          Describe it and the agent drafts it on a new canvas — every change is a reviewable diff.
-        </p>
-      </div>
-      <Tooltip label={AGENT_SOON} side="top" delay={150}>
-        <Composer
-          className="home-ai__composer"
-          placeholder="A pricing page for a calm budgeting app, three tiers, soft greens…"
-          model="Claude Sonnet 5.5"
-          context={null}
-          disabled
-          title={AGENT_SOON}
-        />
-      </Tooltip>
-      <div className="home-ai__chips">
-        {CHIPS.map((c) => (
-          <button key={c.label} type="button" className="home-chip" disabled title={AGENT_SOON}>
-            <span className="home-chip__icon">
-              <Icon name={c.icon} size={14} />
-            </span>
-            <span className="home-chip__label">{c.label}</span>
-          </button>
-        ))}
-      </div>
-    </section>
   )
 }

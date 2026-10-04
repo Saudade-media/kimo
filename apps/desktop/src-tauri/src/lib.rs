@@ -3,7 +3,10 @@
 //! links, single instance and the updater. Rust routes and persists host state; it never owns
 //! document content (ADR 0002): documents are only touched by the atomic write + read-back.
 
+pub mod ai;
+mod ai_commands;
 pub mod command_list;
+pub mod command_list_ai;
 pub mod command_list_mcp;
 mod commands;
 pub mod error;
@@ -93,6 +96,13 @@ pub fn run() {
             ));
             app.manage(st.clone());
             let handle = app.handle().clone();
+
+            // M6 (ADR 0014 §4, §11): keychain, AI relay, local agent CLI host.
+            app.manage(Arc::new(ai::AiServices::new(
+                app.path().home_dir().unwrap_or_else(|_| home.clone()),
+                home.clone(),
+                mcp::shim_path(),
+            )));
 
             // M5 (ADR 0013 §7): socket/pipe + optional HTTP listeners, then the hidden
             // document host they relay to. `--background` (kimo-mcp --launch) skips the editor.
@@ -224,6 +234,22 @@ pub fn run() {
             mcp_commands::kimo_mcp_log_info,
             mcp_commands::kimo_mcp_log_reveal,
             mcp_commands::kimo_mcp_scope_allow,
+            ai_commands::kimo_secret_has,
+            ai_commands::kimo_secret_set,
+            ai_commands::kimo_secret_delete,
+            ai_commands::kimo_secret_list,
+            ai_commands::kimo_secret_hint,
+            ai_commands::kimo_ai_request,
+            ai_commands::kimo_ai_abort,
+            ai_commands::kimo_cli_which,
+            ai_commands::kimo_cli_exec,
+            ai_commands::kimo_cli_home_file_exists,
+            ai_commands::kimo_cli_has_env,
+            ai_commands::kimo_cli_prepare_workspace,
+            ai_commands::kimo_cli_spawn,
+            ai_commands::kimo_cli_write,
+            ai_commands::kimo_cli_close_stdin,
+            ai_commands::kimo_cli_kill,
         ])
         .build(tauri::generate_context!())
         .expect("error while building the Kimo desktop app");
@@ -273,6 +299,9 @@ pub fn run() {
             }
         }
         RunEvent::Exit => {
+            if let Some(a) = ai::services(app) {
+                a.shutdown();
+            }
             if let Some(m) = mcp::service(app) {
                 m.shutdown_blocking();
             }
@@ -503,5 +532,187 @@ mod tests {
                 "{ev} not in TauriMcpEventMap"
             );
         }
+    }
+
+    fn ts_list(file: &str, marker: &str) -> Vec<String> {
+        let ts = std::fs::read_to_string(format!(
+            "{}/../../../packages/platform/src/{file}",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        let block = ts
+            .split(&format!("export const {marker} = ["))
+            .nth(1)
+            .unwrap()
+            .split(']')
+            .next()
+            .unwrap();
+        // Every quoted string in the array literal (one per line or all on one line).
+        block
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .map(String::from)
+            .collect()
+    }
+
+    /// ADR 0014 §4/§11: the M6 commands mirror `TAURI_SECRETS_COMMANDS` / `TAURI_CLI_COMMANDS`,
+    /// are all registered, and are granted by the ai-agent / ai-settings capabilities only.
+    #[test]
+    fn ai_command_surface_matches_platform_ts() {
+        let secrets = ts_list("secrets.ts", "TAURI_SECRETS_COMMANDS");
+        let cli = ts_list("cli-agents.ts", "TAURI_CLI_COMMANDS");
+        assert_eq!((secrets.len(), cli.len()), (7, 9));
+        let own = |l: &[&str]| l.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(own(super::command_list_ai::SECRETS_COMMANDS), secrets);
+        assert_eq!(own(super::command_list_ai::CLI_COMMANDS), cli);
+        let all: BTreeSet<String> = secrets.iter().chain(&cli).cloned().collect();
+
+        let lib =
+            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib.rs")).unwrap();
+        let handler = lib
+            .split("generate_handler![")
+            .nth(1)
+            .unwrap()
+            .split("])")
+            .next()
+            .unwrap();
+        let registered: BTreeSet<String> = handler
+            .lines()
+            .filter_map(|l| {
+                l.trim()
+                    .strip_prefix("ai_commands::")?
+                    .strip_suffix(',')
+                    .map(String::from)
+            })
+            .collect();
+        assert_eq!(registered, all);
+
+        let perm = |c: &str| format!("allow-{}", c.replace('_', "-"));
+        let (agent_windows, agent_perms) = capability("ai-agent");
+        assert!(agent_windows.contains("main") && agent_windows.contains("document-host"));
+        assert!(!agent_windows.contains("settings"));
+        let (settings_windows, settings_perms) = capability("ai-settings");
+        assert_eq!(settings_windows, BTreeSet::from(["settings".to_string()]));
+        let excluded: BTreeSet<String> = super::command_list_ai::AI_SETTINGS_EXCLUDED
+            .iter()
+            .map(|c| c.to_string())
+            .collect();
+        for c in &all {
+            assert!(agent_perms.contains(&perm(c)), "ai-agent misses {c}");
+            assert_eq!(
+                settings_perms.contains(&perm(c)),
+                !excluded.contains(c),
+                "ai-settings grant for {c}"
+            );
+        }
+        let expected: BTreeSet<String> = all.iter().map(|c| perm(c)).collect();
+        for p in agent_perms.iter().chain(&settings_perms) {
+            assert!(
+                expected.contains(p)
+                    || ["core:event:allow-listen", "core:event:allow-unlisten"]
+                        .contains(&p.as_str()),
+                "unexpected permission {p}"
+            );
+        }
+        // No other capability grants an M6 command.
+        for other in ["default", "mcp-host", "mcp-ui"] {
+            let (_, perms) = capability(other);
+            assert!(perms.is_disjoint(&expected), "{other} grants M6 commands");
+        }
+    }
+
+    /// Event names and the shared constants match secrets.ts / cli-agents.ts.
+    #[test]
+    fn ai_events_and_constants_match_platform_ts() {
+        let read = |f: &str| {
+            std::fs::read_to_string(format!(
+                "{}/../../../packages/platform/src/{f}",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap()
+        };
+        let secrets = read("secrets.ts");
+        let cli = read("cli-agents.ts");
+        assert_eq!(
+            ts_list("secrets.ts", "TAURI_SECRETS_EVENTS"),
+            vec![super::ai::relay::EV_AI_RESPONSE.to_string()]
+        );
+        assert_eq!(
+            ts_list("cli-agents.ts", "TAURI_CLI_EVENTS"),
+            vec![
+                super::ai::cli::EV_CLI_OUTPUT.to_string(),
+                super::ai::cli::EV_CLI_EXIT.to_string()
+            ]
+        );
+        assert!(secrets.contains(&format!(
+            "SECRET_SERVICE = \"{}\"",
+            super::ai::secrets::SERVICE
+        )));
+        let allowed = ts_list("cli-agents.ts", "ALLOWED_CLI_COMMANDS");
+        assert_eq!(
+            allowed,
+            super::ai::cli::BUILTIN_COMMANDS
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+        );
+        for f in ts_list("cli-agents.ts", "CLI_AUTH_FILES") {
+            assert!(super::ai::cli::AUTH_FILES.contains(&f.as_str()), "{f}");
+        }
+        assert!(cli.contains(&format!(
+            "CLI_WORKSPACES_DIR = \".kimo/{}\"",
+            super::ai::cli::WORKSPACES_DIR
+        )));
+    }
+
+    /// `SETTINGS_PANES` (window.rs) mirrors the `SettingsPane` union in platform types.ts, in
+    /// the web sidebar order (apps/web/src/settings/model.ts).
+    #[test]
+    fn settings_panes_match_platform_ts() {
+        let ts = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../packages/platform/src/types.ts"
+        ))
+        .unwrap();
+        let union = ts
+            .split("export type SettingsPane =")
+            .nth(1)
+            .unwrap()
+            .split("\n\n")
+            .next()
+            .unwrap();
+        let panes: Vec<String> = union
+            .lines()
+            .filter_map(|l| {
+                l.trim()
+                    .strip_prefix("| \"")?
+                    .split('"')
+                    .next()
+                    .map(String::from)
+            })
+            .collect();
+        let rust: Vec<String> = super::window::SETTINGS_PANES
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(rust, panes);
+        let web = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../web/src/settings/model.ts"
+        ))
+        .unwrap();
+        let web_ids: Vec<String> = web
+            .split("export const SETTINGS_PANES")
+            .nth(1)
+            .unwrap()
+            .split("\n]")
+            .next()
+            .unwrap()
+            .split("{ id: \"")
+            .skip(1)
+            .filter_map(|c| c.split('"').next().map(String::from))
+            .collect();
+        assert_eq!(rust, web_ids);
     }
 }

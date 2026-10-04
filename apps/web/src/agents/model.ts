@@ -774,6 +774,8 @@ export interface ActivityRowView {
   pending: boolean
   undoable: boolean
   stale: boolean
+  /** Undone by you (board 24 h): struck-through label, "Undone by you · 10:52", Redo. */
+  undone: boolean
   nodeIds: string[]
 }
 
@@ -815,7 +817,7 @@ function outcomeText(e: McpActivityEntry): string {
 export function activityRowView(
   e: McpActivityEntry,
   nameOf: NameOf,
-  flags: { stale?: boolean; undone?: boolean } = {},
+  flags: { stale?: boolean; undone?: boolean; undoneAt?: number } = {},
 ): ActivityRowView {
   const names = (e.nodeIds ?? []).map(nameOf)
   const nodes = namesSummary(names)
@@ -843,7 +845,10 @@ export function activityRowView(
   else if (failed) target = `${nodes || "document"} · no change`
   else if (!nodes && !rev) target = "no doc change"
   else target = [nodes, rev].filter(Boolean).join(" · ")
-  if (flags.undone && !flags.stale) target = `${target} · undone`
+  // Board 24 (h) uKH9b: an undone entry stays in the log; the tool line says who and when.
+  if (flags.undone && !flags.stale)
+    tool =
+      flags.undoneAt !== undefined ? `Undone by you · ${clock(flags.undoneAt)}` : "Undone by you"
   return {
     key: `e${e.seq}`,
     entry: e,
@@ -856,6 +861,7 @@ export function activityRowView(
     pending: false,
     undoable: !!e.undoToken && UNDOABLE.has(e.kind) && !flags.undone,
     stale: !!flags.stale,
+    undone: !!flags.undone && !flags.stale,
     nodeIds: [...(e.nodeIds ?? [])],
   }
 }
@@ -876,6 +882,7 @@ export function pendingRowView(r: McpApprovalRequest): ActivityRowView {
     pending: true,
     undoable: false,
     stale: false,
+    undone: false,
     nodeIds: [...(p?.nodeIds ?? [])],
   }
 }
@@ -892,6 +899,8 @@ export function activityGroups(input: {
   kind: KindFilter
   stale: ReadonlySet<number>
   undone: ReadonlySet<number>
+  /** When each undone entry was undone (tool line "Undone by you · 10:52"). */
+  undoneAt?: ReadonlyMap<number, number>
   transport?: (origin: string) => string | null
   label?: (origin: string, actor: string) => string
 }): ActivityGroupView[] {
@@ -960,6 +969,7 @@ export function activityGroups(input: {
         activityRowView(e, input.nameOf, {
           stale: input.stale.has(e.seq),
           undone: input.undone.has(e.seq),
+          ...(input.undoneAt?.has(e.seq) ? { undoneAt: input.undoneAt.get(e.seq) as number } : {}),
         }),
       )
     }

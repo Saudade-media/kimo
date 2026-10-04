@@ -1,0 +1,56 @@
+/*
+ * ModeChip: desing.pen 22 > Components (M6) > ModeChip (qBbwC); Single = the Composer/Agent
+ * instance override (SzC72: fill bg-muted, icon message-square text-secondary, label
+ * text-secondary, chevron text-tertiary).
+ * row, h 24, gap 4, padding [0, 8, 0, 6], alignItems center, fill agent-soft, radius-pill
+ *   ├ Icon    (lfq38) 12 agent
+ *   ├ Label   (XQtSh) sans 11 / 500 agent
+ *   └ Chevron (Xvj19) chevron-down 12 agent
+ */
+.kimo-mode-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  margin: 0;
+  padding: 0 8px 0 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-mode-chip:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-mode-chip__icon,
+.kimo-mode-chip__chevron {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-mode-chip__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-mode-chip--single {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-mode-chip--single .kimo-mode-chip__chevron {
+  color: var(--kimo-text-tertiary);
+}

@@ -4,11 +4,11 @@
  * (selected nodes keep the selection outline). Positions come from {@link canvasConflictMarkers}
  * (layout + viewport). Board 20 stacking: two overlapping pills stack (the later one moves up by
  * pill height + 4); three or more show the first pill plus a "+N" `CanvasMarker/Conflict/More`
- * that opens a Menu/Dense of the hidden ones. Mount it inside the canvas container
+ * that opens the board 24 (l) conflicts menu of the hidden ones. Mount it inside the canvas container
  * (`position: relative`).
  */
 import type { LayoutResult } from "@kimo/layout"
-import { CanvasConflictMarker, MenuDense, MenuItemDense } from "@kimo/ui"
+import { CanvasConflictMarker, ConflictMoreMenu } from "@kimo/ui"
 import { useMemo, useState, useSyncExternalStore } from "react"
 import type { UiStore } from "../canvas/contract"
 import type { Bus } from "../lib/hooks"
@@ -111,25 +111,22 @@ export function CanvasConflictOverlay({ session, ui, layout }: CanvasConflictOve
         />
       ))}
       {menu && (
-        <MenuDense
+        // Board 24 (l) c2CNAR: 240 wide (min 200, max 320 for long names), middle-truncated
+        // layer paths, 8 rows then scroll; a row selects + zooms to the conflicted node.
+        <ConflictMoreMenu
           anchor={menu.el}
-          label="Hidden conflicts"
-          width={208}
-          autoFocus
-          onClose={() => setMenu(null)}
           className="conflict-overlay__menu"
-        >
-          {menu.spec.hidden.map((m) => (
-            <MenuItemDense
-              key={m.nodeId}
-              label={m.label}
-              onSelect={() => {
-                setMenu(null)
-                session.focus(m.conflictId)
-              }}
-            />
-          ))}
-        </MenuDense>
+          items={menu.spec.hidden.map((m) => ({
+            id: m.conflictId,
+            path: session.layerPath(m.nodeId),
+            meta: m.meta,
+          }))}
+          onClose={() => setMenu(null)}
+          onSelect={(id) => {
+            setMenu(null)
+            session.focus(id)
+          }}
+        />
       )}
     </div>
   )

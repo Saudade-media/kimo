@@ -1,0 +1,105 @@
+/*
+ * Untitled close prompt: desing.pen board 24 (i) a3Y0Fb › Dialog · Close untitled (n7Xrg).
+ * frame: column, gap 14, padding 20, fill bg-overlay, stroke border 1, radius-xl,
+ *        shadow outer 0 16 blur 48 shadow-strong
+ *   ├ Head (cjNpC) row, gap 12
+ *   │   ├ Icon Wrap (J3qcm) 32 × 32, bg-muted, radius-pill, center › file-question-mark 16
+ *   │   │   text-secondary
+ *   │   └ Text (wllgi) fill, column, gap 4
+ *   │       ├ Title (K3Szup) sans 13 / 600 text-primary
+ *   │       └ Desc (J0qBj) sans 12 text-secondary, lineHeight 1.45
+ *   └ Footer (Pr0X1) row, gap 8, alignItems center
+ *       ├ Don't save (VYQpB) Button/Ghost h 28, padding [0, 10], label 12 / 500 danger
+ *       ├ Spacer (pibrT) fill × 1
+ *       ├ Cancel (JCqPk) Button/Ghost h 28, padding [0, 10], label 12 / 500
+ *       └ Save… (nUfbg) Button/Primary h 28, padding [0, 10], label 12 / 500
+ * The vignette draws it fill_container in a 381 stage (349); the modal width is not specified,
+ * 400 here (flagged).
+ */
+.kimo-close-prompt {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  outline: none;
+}
+
+.kimo-close-prompt__head {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+.kimo-close-prompt__icon-wrap {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+.kimo-close-prompt__icon-wrap > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-close-prompt__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kimo-close-prompt__title,
+.kimo-close-prompt__desc {
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+}
+.kimo-close-prompt__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
+}
+.kimo-close-prompt__desc {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+.kimo-close-prompt__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.kimo-close-prompt__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+.kimo-button.kimo-close-prompt__button {
+  --kimo-button-padding-x: 10px;
+  flex: none;
+  padding: 0 10px;
+}
+.kimo-close-prompt__discard .kimo-button__label {
+  color: var(--kimo-danger);
+}

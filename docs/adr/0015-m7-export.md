@@ -152,8 +152,11 @@ out in document order (`NameRegistry`), fixed formatting without a formatter.
   type check, not rendered (no Tailwind compiler in the repo).
 - Findings outside this package: `@kimo/layout` reads a `dimension`-bound `gap` (and other
   dimension-bound lengths) as 0, and Yoga does not redistribute free space after a `min` clamp —
-  both differ from the spec/CSS (`features-all` known diff). `kimo_export` can now implement its
-  code/token targets with `exportDocument`.
+  both differ from the spec/CSS (`features-all` known diff). Fixed in the M7 integration: the
+  layout resolver reads `dimension` values as px, and fill items with main-axis min/max are
+  resolved as CSS §9.7 does (bounds out of Yoga, violators frozen per line, Yoga's own result
+  kept for a wrapping container whose lines would move); the known diff is gone. `kimo_export`
+  implements its code/token targets with `exportDocument`.
 
 ## Alternatives considered
 
@@ -171,5 +174,4 @@ out in document order (`NameRegistry`), fixed formatting without a formatter.
 ## Revisit when
 
 - Tailwind (or another CSS compiler) is in the repo: render the React output in the harness too.
-- `@kimo/layout` fixes dimension-bound lengths / min redistribution: drop the known diff.
 - Variant sets (v1.x) land: map variant axes onto enum props.

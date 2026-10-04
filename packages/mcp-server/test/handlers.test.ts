@@ -636,3 +636,94 @@ describe("host runtime", () => {
 function templateDocumentText(): string {
   return `${JSON.stringify(templateDocument("web"), null, 2)}\n`
 }
+
+describe("kimo_export code and token targets (M7, ADR 0015)", () => {
+  async function designSystemDoc() {
+    const s = setup()
+    const { docId } = await newDoc(s, "web")
+    expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [
+          {
+            op: "set_variables",
+            set: [{ name: "gap", variable: { type: "number", value: 8 } }],
+          },
+        ],
+      }),
+    )
+    return { s, docId }
+  }
+  type Files = {
+    files: { path: string; contents?: string; encoding?: string; unchanged?: boolean }[]
+    issues?: { code: string }[]
+  }
+
+  test("without outDir the files come back inline (tokens, html, react)", async () => {
+    const { s, docId } = await designSystemDoc()
+    const dtcg = expectOk(
+      await s.c.call<Files>("kimo_export", { docId, target: "tokens-dtcg" }),
+    ).data
+    expect(dtcg.files.map((f) => f.path)).toEqual(["tokens.json"])
+    expect(dtcg.files[0]?.encoding).toBe("utf8")
+    expect(JSON.parse(dtcg.files[0]?.contents ?? "{}").gap.$value).toBeDefined()
+    const css = expectOk(await s.c.call<Files>("kimo_export", { docId, target: "tokens-css" }))
+    expect(css.data.files[0]?.contents).toContain("--gap: 8;")
+    const html = expectOk(
+      await s.c.call<Files>("kimo_export", { docId, target: "html-css", ids: ["DesktopFrm1"] }),
+    )
+    expect(html.data.files.map((f) => f.path).sort()).toEqual([
+      "index.html",
+      "styles.css",
+      "tokens.css",
+    ])
+    expect(Array.isArray(html.data.issues)).toBe(true)
+    const react = expectOk(
+      await s.c.call<Files>("kimo_export", {
+        docId,
+        target: "react-tailwind",
+        ids: ["DesktopFrm1"],
+      }),
+    )
+    expect(react.data.files.some((f) => f.path.endsWith(".tsx"))).toBe(true)
+    // Nothing written.
+    expect(await s.platform.files.stat("/w/index.html").catch(() => null)).toBeNull()
+  })
+
+  test("svg reads the committed layout; pdf comes back as base64", async () => {
+    const { s, docId } = await designSystemDoc()
+    const svg = expectOk(
+      await s.c.call<Files>("kimo_export", { docId, target: "svg", ids: ["DesktopFrm1"] }),
+    )
+    expect(svg.data.files[0]?.contents).toStartWith("<svg")
+    const pdf = expectOk(
+      await s.c.call<Files>("kimo_export", { docId, target: "pdf", ids: ["DesktopFrm1"] }),
+    )
+    expect(pdf.data.files[0]?.encoding).toBe("base64")
+    expect(atob(pdf.data.files[0]?.contents ?? "").slice(0, 5)).toBe("%PDF-")
+  })
+
+  test("outDir: written through the host, identical files unchanged, conflicts block", async () => {
+    const { s, docId } = await designSystemDoc()
+    const call = (overwrite = false) =>
+      s.c.call<Files>("kimo_export", {
+        docId,
+        target: "tokens-css",
+        outDir: "/w/tokens",
+        ...(overwrite ? { overwrite } : {}),
+      })
+    const a = expectOk(await call()).data
+    expect(a.files).toMatchObject([{ path: "/w/tokens/tokens.css" }])
+    expect(a.files[0]?.contents).toBeUndefined()
+    const written = new TextDecoder().decode(
+      await s.platform.files.readBytes("/w/tokens/tokens.css"),
+    )
+    expect(written).toContain("--gap: 8;")
+    expect(expectOk(await call()).data.files[0]?.unchanged).toBe(true)
+    await s.platform.control.writeExternal("/w/tokens/tokens.css", "/* edited */")
+    expectFail(await call(), "FILE_EXISTS")
+    expect(expectOk(await call(true)).data.files[0]?.unchanged).toBeUndefined()
+    // png and kimo still need a folder.
+    expectFail(await s.c.call("kimo_export", { docId, target: "png" }), "INVALID_INPUT")
+  })
+})

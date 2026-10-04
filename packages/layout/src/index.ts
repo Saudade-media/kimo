@@ -6,6 +6,14 @@
 import { isObject, type KimoDocument } from "@kimo/core-schema"
 import type { LayoutNodeData, NodeSource } from "./types"
 
+export {
+  type AgentNodeChrome,
+  type AgentNodeType,
+  agentNodeBodyBox,
+  agentNodeChrome,
+  NOTE_CHROME,
+  PROMPT_CHROME,
+} from "./agent-nodes"
 export { createLayoutEngine } from "./engine"
 
 export {

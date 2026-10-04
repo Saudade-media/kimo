@@ -22,6 +22,7 @@ import type {
 } from "@kimo/layout"
 import { resolveText } from "@kimo/layout"
 import type { Canvas, CanvasKit, Image, SkPicture, Surface } from "canvaskit-wasm"
+import { agentCanvasTheme } from "./agent-overlay"
 import { isBrowser, loadCanvasKit } from "./ck"
 import { parseColor } from "./color"
 import { type DrawCounters, type PaintContext, Painter } from "./draw"
@@ -335,7 +336,10 @@ export class CanvasKitRenderer implements Renderer {
   // --- lifecycle ----------------------------------------------------------------------------
 
   init(options: RendererInitOptions = {}): Promise<void> {
-    if (options.overlayTheme) this.theme = options.overlayTheme
+    if (options.overlayTheme) {
+      this.theme = options.overlayTheme
+      this.applyAgentTheme()
+    }
     if (this.fontProvider) {
       if (options.fontSources) this.fontProvider.sources = options.fontSources
       if (options.offlineFonts !== undefined) this.fontProvider.offline = options.offlineFonts
@@ -382,6 +386,7 @@ export class CanvasKitRenderer implements Renderer {
       this.painter = new Painter(ck, new PaintFactory(ck, images), text, registry)
       this.painter.subtree = (c, ctx, id, counters) => this.drawShared(c, ctx, id, counters)
       this.painter.knownBlends = (ctx, id) => this.sharedFor(ctx, id)?.sp.blends
+      this.applyAgentTheme()
       this.overlayPainter = new OverlayPainter(ck, text)
       fonts.onFontLoaded(() => {
         text.invalidate()
@@ -394,6 +399,27 @@ export class CanvasKitRenderer implements Renderer {
     })
     this.initPromise = p
     return p
+  }
+
+  /**
+   * M6: note / prompt chrome colors follow `OverlayTheme.agentCanvas`; recorded pictures are
+   * dropped only when a value actually changed (hosts re-pass equal themes freely).
+   */
+  private applyAgentTheme(): void {
+    const painter = this.painter
+    if (!painter) return
+    const next = agentCanvasTheme(this.theme)
+    const prev = painter.agentTheme
+    if (prev === next) return
+    let same = true
+    for (const k of Object.keys(next) as (keyof typeof next)[])
+      if (prev[k] !== next[k]) {
+        same = false
+        break
+      }
+    if (same) return
+    painter.agentTheme = next
+    this.dropAll(false)
   }
 
   private need(): {
@@ -855,7 +881,9 @@ export class CanvasKitRenderer implements Renderer {
     const layout = this.layout
     if (!s || !layout) return null
     const header = typeof s.header === "function" ? s.header : () => s.header as ResolveHeader
-    return { nodes: s.nodes, header, resolve: s.resolve, layout }
+    return s.labels
+      ? { nodes: s.nodes, header, resolve: s.resolve, layout, labels: s.labels }
+      : { nodes: s.nodes, header, resolve: s.resolve, layout }
   }
 
   private picture(ctx: PaintContext, root: string, e: RootEntry): SkPicture | null {
@@ -1693,7 +1721,12 @@ export class CanvasKitRenderer implements Renderer {
       c.clear(bg ? ck.Color4f(bg[0], bg[1], bg[2], bg[3]) : ck.TRANSPARENT)
       c.scale(scale, scale)
       c.translate(-box.x, -box.y)
-      painter.drawNode(c, ctx, nodeId, { nodes: 0, draws: 0 })
+      painter.skipAgentNodes = true
+      try {
+        painter.drawNode(c, ctx, nodeId, { nodes: 0, draws: 0 })
+      } finally {
+        painter.skipAgentNodes = false
+      }
       surface.flush()
       const img = surface.makeImageSnapshot()
       const bytes = img.encodeToBytes(ck.ImageFormat.PNG, 100)

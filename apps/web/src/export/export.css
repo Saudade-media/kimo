@@ -1,0 +1,440 @@
+/*
+ * Export dialog — desing.pen board 07 "Export Dialog" (AsO2h). Values per node:
+ *
+ * Scrim WWuf4: fill #0A0A0A4D, column, justify center, align center
+ * └ Dialog m2Oi5: 880, fill bg-app, radius-2xl, clip, column,
+ *   shadows 0 2 6 $shadow, 0 24 64 $shadow-strong
+ *   ├ Header r6NKt7: fill width, row, gap 12, padding [24, 24, 16, 28]
+ *   │   ├ Titles uVedp: fill, column, gap 4
+ *   │   │   ├ Title TTr17 sans xl (20) / 500, letterSpacing −0.3, text-primary
+ *   │   │   └ Desc OBcKu sans base (13), text-secondary
+ *   │   └ Close Ax7lX: IconButton 32 × 32, radius-pill, fill bg-muted, icon x
+ *   ├ Body xu5Kq: fill width, row, gap 20, padding [0, 24]
+ *   │   ├ Options P50z4: 264, column, gap 20, padding [4, 0, 0, 4]
+ *   │   │   ├ Format sKgSl: fill, column, gap 6 — Label (sm / 500 tertiary) + 4 rows
+ *   │   │   │   └ row v0S2cL: fill, row, gap 10, padding [10, 12], align center, radius-lg,
+ *   │   │   │       selected fill bg-muted
+ *   │   │   │     ├ Icon Wrap 32 × 32 radius-pill center: selected accent / on-accent,
+ *   │   │   │     │   else bg-muted / text-secondary; icon 16
+ *   │   │   │     ├ Text: fill, column, gap 1 — Title base / 500 primary, Sub sm tertiary
+ *   │   │   │     └ Check (selected only) 16 text-primary
+ *   │   │   ├ Settings Q6kGEo: fill, column, gap 10 — Label + rows (row, gap 10, align center:
+ *   │   │   │   label sm primary fill, Toggle)
+ *   │   │   └ Path JcyHA: fill, column, gap 6 — Label + Folder (PropField A9DDs, height 32:
+ *   │   │       bg-subtle, radius-sm, gap 8, padding [0, 8], align center; Prefix mono xs
+ *   │   │       tertiary, Value mono sm primary)
+ *   │   └ Preview g1SaG: fill, column, clip, fill bg-subtle, radius-lg
+ *   │       ├ File Tabs GU9Jd: fill, row, gap 2, padding [8, 8, 0, 8], align center —
+ *   │       │   Tab / Tab/Active (label font-mono), Spacer fill, Copy IconButton fill bg-subtle
+ *   │       └ Code t1smNB: fill, column, gap 3, padding [14, 16, 18, 16]; Line = row of
+ *   │           mono sm tokens (number text-tertiary, keyword agent-2, attribute warning,
+ *   │           string success, rest text-primary)
+ *   └ Footer zeI7q: fill width, row, gap 8, padding [20, 24, 24, 28], align center —
+ *       info 14 tertiary, Note sm tertiary, Spacer fill, Button/Secondary (clipboard,
+ *       "Copy code"), Button/Primary (download, "Export N files")
+ */
+
+.export-scrim {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #0a0a0a4d; /* pen-literal: Scrim fill #0A0A0A4D */
+}
+
+.export-dialog {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 880px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  border-radius: var(--kimo-radius-2xl);
+  background: var(--kimo-bg-app);
+  box-shadow:
+    0 2px 6px 0 var(--kimo-shadow),
+    0 24px 64px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  outline: none;
+}
+
+/* --- Header ---------------------------------------------------------------------------------- */
+
+.export-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  gap: 12px;
+  width: 100%;
+  padding: 24px 24px 16px 28px;
+}
+
+.export-titles {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.export-title,
+.export-desc {
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+  line-height: normal;
+}
+
+.export-title {
+  font-size: var(--kimo-text-xl);
+  font-weight: var(--kimo-font-weight-medium);
+  letter-spacing: -0.3px;
+  color: var(--kimo-text-primary);
+}
+
+.export-desc {
+  font-size: var(--kimo-text-base);
+  font-weight: 400;
+  color: var(--kimo-text-secondary);
+}
+
+/* Close (Ax7lX): IconButton resized to 32 × 32, radius-pill, fill bg-muted. */
+.kimo-icon-button.export-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+/* --- Body ------------------------------------------------------------------------------------ */
+
+.export-body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: 0 1 auto;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+  min-height: 0;
+  padding: 0 24px;
+}
+
+.export-options {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 20px;
+  width: 264px;
+  padding: 4px 0 0 4px;
+}
+
+.export-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.export-group--format,
+.export-group--path {
+  gap: 6px;
+}
+
+.export-group--settings {
+  gap: 10px;
+}
+
+.export-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-format {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--kimo-radius-lg);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.export-format:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.export-format--on {
+  background: var(--kimo-bg-muted);
+}
+
+.export-format__icon-wrap {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.export-format--on .export-format__icon-wrap {
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+}
+
+.export-format__icon-wrap > svg,
+.export-format__check > svg {
+  display: block;
+}
+
+.export-format__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.export-format__title,
+.export-format__sub {
+  font-family: var(--kimo-font-sans);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.export-format__title {
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-medium);
+  color: var(--kimo-text-primary);
+}
+
+.export-format__sub {
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-format__check {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--kimo-text-primary);
+}
+
+.export-toggle-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.export-toggle-row__label {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: normal;
+  color: var(--kimo-text-primary);
+}
+
+/* Folder (d0Qg5Y): PropField A9DDs with height 32; Value overridden to font-mono. */
+.export-folder {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.export-folder:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.export-folder__prefix,
+.export-folder__value {
+  font-family: var(--kimo-font-mono);
+  font-weight: 400;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.export-folder__prefix {
+  flex: none;
+  font-size: var(--kimo-text-xs);
+  color: var(--kimo-text-tertiary);
+}
+
+.export-folder__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--kimo-text-sm);
+  color: var(--kimo-text-primary);
+}
+
+/* --- Preview --------------------------------------------------------------------------------- */
+
+.export-preview {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-subtle);
+}
+
+.export-tabs {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 8px 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.export-tab .kimo-tab__label {
+  font-family: var(--kimo-font-mono);
+}
+
+.export-tabs__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Copy (a2Pcn): IconButton with fill bg-subtle; stays reachable while the tabs scroll. */
+.kimo-icon-button.export-copy {
+  position: sticky;
+  right: 0;
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-icon-button.export-copy:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+
+/* Code (t1smNB): the board's 17 lines are 352 tall; longer files scroll inside it. */
+.export-code {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  max-height: 352px;
+  padding: 14px 16px 18px 16px;
+  overflow: auto;
+}
+
+.export-line {
+  display: flex;
+  flex-direction: row;
+  flex: none;
+}
+
+.export-token {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: normal;
+  white-space: pre;
+  color: var(--kimo-text-primary);
+}
+
+.export-token--line {
+  color: var(--kimo-text-tertiary);
+  user-select: none;
+}
+
+.export-token--keyword {
+  color: var(--kimo-agent-2);
+}
+
+.export-token--attr {
+  color: var(--kimo-warning);
+}
+
+.export-token--string {
+  color: var(--kimo-success);
+}
+
+/* --- Footer ---------------------------------------------------------------------------------- */
+
+.export-footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 20px 24px 24px 28px;
+}
+
+.export-footer__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-footer__icon > svg {
+  display: block;
+}
+
+.export-footer__note {
+  flex: none;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: normal;
+  white-space: nowrap;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-footer__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}

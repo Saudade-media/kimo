@@ -19,7 +19,7 @@ import {
 import type { DocStore, LocalOrigin } from "@kimo/editor-state"
 import type { ConflictRowView, ConflictSession, Toast } from "../platform/contract"
 import { diffOps } from "./ops"
-import { conflictNode, conflictRows } from "./rows"
+import { conflictNode, conflictRows, displayName } from "./rows"
 
 /** What a conflict session needs from its document session and the editor. */
 export interface ConflictHost {
@@ -54,6 +54,11 @@ export interface EditorConflictSession extends ConflictSession {
   /** Open rows per node id (layer markers, canvas markers). */
   openByNode(): ReadonlyMap<string, readonly ConflictRowView[]>
   fileName(): string
+  /**
+   * Layer path of a node, outermost first (["Pricing", "Cards", "Item 3"]): board 24 (l) "+N"
+   * menu rows (middle-truncated "Pricing / … / Item 3").
+   */
+  layerPath(nodeId: string): string[]
   bindView(view: ConflictView | null): void
   destroy(): void
 }
@@ -219,6 +224,18 @@ export function createConflictSession(host: ConflictHost): EditorConflictSession
       return m
     },
     fileName: () => host.fileName ?? "this file",
+    layerPath(nodeId) {
+      const out: string[] = []
+      const seen = new Set<string>()
+      for (let id: string | null = nodeId; id !== null && !seen.has(id); ) {
+        seen.add(id)
+        const n = store.getNode(id) as Obj | undefined
+        if (!n) break
+        out.unshift(displayName(n, store))
+        id = typeof n.parent === "string" ? n.parent : null
+      }
+      return out
+    },
     bindView(v) {
       view = v
     },

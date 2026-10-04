@@ -178,7 +178,12 @@ function EditorScene() {
       <header className="h-topbar">
         <span className="h-crumb">home.kimo</span>
         <div className="h-drag" data-testid="drag-region">
-          <AgentPresence controller={controller} onShowOnCanvas={(ids) => focused.push(ids)} />
+          <AgentPresence
+            controller={controller}
+            onShowOnCanvas={(ids) => focused.push(ids)}
+            onOpenAgentsSettings={() => void host.calls.push("open-agents-settings")}
+            fileName="home.kimo"
+          />
         </div>
         <SaveStatus kind={store.readOnly ? "read-only" : "saved"} />
         <span className="h-tail" />
@@ -236,6 +241,7 @@ function EditorScene() {
               setHl(ids)
             }}
             onExport={(json) => exported.push(json)}
+            onConnectAgent={() => void host.calls.push("connect-agent")}
           />
         </aside>
       </div>

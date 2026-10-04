@@ -143,6 +143,10 @@
 .settings-nav-item--active .settings-nav-item__icon {
   color: var(--kimo-accent-text);
 }
+/* Nav · AI providers (b13pOm): the active icon is $agent (board 22 "Placement"). */
+.settings-nav-item--active[data-pane="ai-providers"] .settings-nav-item__icon {
+  color: var(--kimo-agent);
+}
 .settings-nav-item--active .settings-nav-item__label {
   color: var(--kimo-text-primary);
   font-weight: var(--kimo-font-weight-semibold);

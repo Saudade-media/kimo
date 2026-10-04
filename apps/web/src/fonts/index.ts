@@ -41,6 +41,7 @@ export {
   missingFontsTitle,
   replaceLabel,
 } from "./MissingFontsDialog"
+export { type MissingWeight, missingWeight, renderedWeight } from "./missing-weight"
 export {
   FontReplaceSelect,
   type ReplaceChoice,

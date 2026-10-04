@@ -49,12 +49,25 @@ hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
 bytes = "1"
 getrandom = "0.3"
+# M6 (ADR 0014 §4): HMAC (Bedrock SigV4) and RS256 (Vertex service-account ADC).
+ring = "0.17"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
+# M6 provider keys in the OS keychain (service "kimo", account "provider.<id>").
+keyring = { version = "3.6", features = ["apple-native"] }
+
+[target.'cfg(windows)'.dependencies.keyring]
+version = "3.6"
+features = ["windows-native"]
+
+[target.'cfg(target_os = "linux")'.dependencies.keyring]
+version = "3.6"
+# Secret Service over zbus (pure Rust: no libdbus at build time).
+features = ["async-secret-service", "tokio", "crypto-rust"]
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

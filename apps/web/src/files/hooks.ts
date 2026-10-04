@@ -4,7 +4,7 @@
  */
 import type { KimoPlatform, RecentFile, WatchedFolder } from "@kimo/platform"
 import { useEffect, useState, useSyncExternalStore } from "react"
-import type { SessionState } from "../platform/contract"
+import { type SessionState, type TabTitleInput, tabTitle } from "../platform/contract"
 import type { FileDocumentSession, FileSessionManager } from "../platform/session"
 
 /** The session's state, re-rendered on every change. */
@@ -90,4 +90,23 @@ export function useNow(ms = 30_000): number {
     return () => clearInterval(t)
   }, [ms])
   return now
+}
+
+/**
+ * Board 24 (m) web tab title for an editor that has no document session (the browser library,
+ * IndexedDB): `[●] {file} [· state] — Kimo`; back to "Kimo" on unmount. Desktop windows keep the
+ * board 20 window title (`editor/disk.tsx` `useWindowTitle`).
+ */
+export function useWebTabTitle(platform: KimoPlatform, input: TabTitleInput | null): void {
+  const title = input ? tabTitle(input) : null
+  useEffect(() => {
+    if (platform.kind === "desktop" || title === null) return
+    void platform.window.setTitle(title).catch(() => {})
+  }, [platform, title])
+  useEffect(() => {
+    if (platform.kind === "desktop") return
+    return () => {
+      void platform.window.setTitle("Kimo").catch(() => {})
+    }
+  }, [platform])
 }

@@ -217,6 +217,10 @@ export interface WindowTitleInput {
   /** The in-memory document is ahead of disk (SaveStatus Unsaved / Saving / Failed). */
   edited?: boolean
   readOnly?: boolean
+  /** Web tab (board 24 m): open merge conflicts ("· 2 conflicts"). */
+  conflicts?: number
+  /** Web tab (board 24 m): the agent editing the file ("· Claude Code editing"). */
+  agent?: string | null
 }
 
 /**
@@ -226,6 +230,14 @@ export interface WindowTitleInput {
  * the taskbar label there). The web tab follows macOS (not designed).
  */
 export function windowTitle(t: WindowTitleInput): string {
+  if (t.os === "web")
+    return tabTitle({
+      fileName: t.fileName,
+      unsaved: t.edited === true,
+      readOnly: t.readOnly === true,
+      conflicts: t.conflicts ?? 0,
+      agent: t.agent ?? null,
+    })
   if (t.fileName === null) return "Kimo"
   let base = t.untitled
     ? `${UNTITLED_NAME} • not saved`
@@ -235,6 +247,58 @@ export function windowTitle(t: WindowTitleInput): string {
   if (t.readOnly && !t.untitled) base += " (read-only)"
   if (t.os === "windows" || t.os === "linux") return `${t.edited ? "● " : ""}${base} - Kimo`
   return base
+}
+
+/** Board 24 (m): a web tab title is at most this long; the file name truncates, never the suffix. */
+export const TAB_TITLE_MAX = 60
+
+export interface TabTitleInput {
+  /** null on Home: "Kimo". A trailing ".kimo" is dropped. */
+  fileName: string | null
+  /** "●" prefix: unsaved changes exist (web autosave failing / never saved). */
+  unsaved?: boolean
+  /** Open merge conflicts (state priority 1). */
+  conflicts?: number
+  /** Read-only (state priority 2). */
+  readOnly?: boolean
+  /** Agent editing the file (state priority 3), e.g. "Claude Code". */
+  agent?: string | null
+}
+
+/**
+ * Board 24 (m) "Web tab title format" (i3wgk): `[●] {file} [· state] — Kimo`. Only the
+ * highest-priority state shows: "2 conflicts" › "read-only" › "{Agent} editing". Home is
+ * "Kimo". Max {@link TAB_TITLE_MAX} characters: the file name is cut with "…", never the suffix.
+ */
+export function tabTitle(t: TabTitleInput): string {
+  if (t.fileName === null) return "Kimo"
+  const name = t.fileName.replace(/\.kimo$/i, "")
+  const n = t.conflicts ?? 0
+  const state =
+    n > 0
+      ? `${n} conflict${n === 1 ? "" : "s"}`
+      : t.readOnly
+        ? "read-only"
+        : t.agent
+          ? `${t.agent} editing`
+          : null
+  const head = t.unsaved ? "● " : ""
+  const tail = `${state ? ` · ${state}` : ""} — Kimo`
+  const room = TAB_TITLE_MAX - head.length - tail.length
+  const file =
+    [...name].length <= room ? name : `${[...name].slice(0, Math.max(1, room - 1)).join("")}…`
+  return `${head}${file}${tail}`
+}
+
+/**
+ * The web tab's "●" (board 24 m): only when edits are not safe anywhere the user expects —
+ * a never-saved document, a failed save, or autosave off / paused. Plain autosave debounce does
+ * not count (it is about to be written).
+ */
+export function hasUnsavedChanges(s: SaveStatus): boolean {
+  if (s.kind === "failed") return true
+  if (s.kind !== "unsaved") return false
+  return s.untitled === true || s.autosaveAt === null
 }
 
 /** "Edited" for the window title / close-button dot: not yet on disk (G1gEPp row fPwI0). */
@@ -316,18 +380,20 @@ export type Banner =
 export type BannerKind = Banner["kind"]
 
 /**
- * Order when several apply: the first present wins. Board 20 "Banner priority" (vgNUe, list
- * oV0OM): 1 save failed / disk errors · 2 stored merge conflicts (`kimo merge`; they replace the
- * generic git merge banner) · 3 git operation in progress · 4 changed on disk / read-only /
- * locked · 5 informational. A failed load is terminal for the window and stays first.
+ * Order when several apply: the first present wins. Board 24 "Banner priority vs 'Ready to
+ * commit'" (a9ykr0, decided): 1 locked / read-only › 2 changed on disk (save failures: the disk
+ * refused the write) › 3 git operation (stored `kimo merge` conflicts first: they replace the
+ * generic git merge banner) › 4 Ready to commit › 5 recovery › 6 informational. A failed load is
+ * terminal for the window and stays first. "Ready to commit" also REPLACES the git banner in the
+ * same slot (see `FileDocumentSession.banners`), never stacks under it.
  */
 export const BANNER_PRIORITY: readonly BannerKind[] = [
   "failed-load",
+  "locked",
+  "newer-format",
   "save-failed",
   "merge-conflicts",
   "git-operation",
-  "locked",
-  "newer-format",
   "merge-ready",
 ]
 
@@ -356,6 +422,8 @@ export type BannerActionId =
   | "previous-conflict"
   | "next-conflict"
   | "copy-commit-command"
+  /** Board 24 (n) step 2: every conflict resolved, not saved yet → "Save" (Mark resolved & save). */
+  | "mark-resolved-save"
 
 export interface BannerAction {
   id: BannerActionId
@@ -480,6 +548,18 @@ export function bannerCopy(
         ],
       }
     case "merge-conflicts": {
+      // Board 24 (n) step 2: all resolved but not saved yet → the git banner stays, its CTA
+      // becomes Save (Mark resolved & save).
+      if (b.open === 0 && b.total > 0)
+        return {
+          title:
+            b.info?.theirs && b.info.ours
+              ? `Merging ${b.info.theirs} → ${b.info.ours}`
+              : "Merge in progress",
+          body: "All conflicts resolved. Save to mark them resolved for git.",
+          // The vignette's ghost "Abort merge" has no git abort behind it yet (flagged).
+          actions: [{ id: "mark-resolved-save", label: "Save", variant: "primary" }],
+        }
       const into =
         b.info?.theirs && b.info.ours ? `Merging ${b.info.theirs} into ${b.info.ours}: ` : ""
       const applied =
@@ -748,7 +828,21 @@ export interface SessionState {
   conflicts: { open: number; total: number } | null
   /** Edits newer than the last write (git banner "Your 6 unsaved edits"). */
   unsavedEdits: number
+  /**
+   * Board 24 (i): closing a never-saved document asks first (Save… / Don't save / Cancel).
+   * Absent or null while no close is pending.
+   */
+  closePrompt?: ClosePromptRequest | null
 }
+
+/** A pending board 24 (i) close prompt (see `FileDocumentSession.requestClose`). */
+export interface ClosePromptRequest {
+  fileName: string
+  /** Top-level frames ("its 12 frames are gone for good"). */
+  frames: number
+}
+
+export type ClosePromptChoice = "save" | "discard" | "cancel"
 
 /**
  * One open `.kimo` file in one window. Lifecycle (ADR 0012 §4):

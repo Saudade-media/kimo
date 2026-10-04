@@ -1,4 +1,4 @@
-import { Undo2 } from "lucide-react"
+import { Redo2, Undo2 } from "lucide-react"
 import type { ComponentPropsWithRef, KeyboardEvent } from "react"
 import { cx } from "../internal/util"
 
@@ -24,6 +24,13 @@ export interface ActivityRowProps extends Omit<ComponentPropsWithRef<"div">, "ch
   stale?: boolean
   /** Click / Enter: select and scroll to the targets. */
   onActivate?: () => void
+  /**
+   * Undone (board 24 vignette h, d8Vjj1): fill bg-subtle, label struck through in tertiary,
+   * target tertiary; pass `tool` as "Undone by you · 10:52". The action becomes Redo.
+   */
+  undone?: boolean
+  /** Redo an undone entry (redo-2). */
+  onRedo?: () => void
 }
 
 /**
@@ -31,7 +38,8 @@ export interface ActivityRowProps extends Omit<ComponentPropsWithRef<"div">, "ch
  * fill_container, bottom stroke 1 border. Time (d7qv9g) 36 mono 11 text-tertiary · Text (pnhEg)
  * column gap 3 fill: Label (lQxhQ) sans 12 / 500 · Tool (PPms1) mono 11 text-secondary · Target
  * (aegZN) mono 11 text-tertiary · Undo (ECru2) IconButton 24, fill #00000000, undo-2 14
- * text-secondary. Hover: bg-hover (s8L4Rd). Pending: agent-soft (hIHR9).
+ * text-secondary. Hover: bg-hover (s8L4Rd). Pending: agent-soft (hIHR9). Undone (board 24
+ * d8Vjj1): bg-subtle, label + target text-tertiary (label struck through), Redo (redo-2).
  */
 export function ActivityRow({
   time,
@@ -43,6 +51,8 @@ export function ActivityRow({
   onUndo,
   stale = false,
   onActivate,
+  undone = false,
+  onRedo,
   className,
   onKeyDown,
   ...rest
@@ -55,9 +65,11 @@ export function ActivityRow({
       {...rest}
       data-tone={tone}
       data-stale={stale || undefined}
+      data-undone={undone || undefined}
       className={cx(
         "kimo-activity-row",
         pending && "kimo-activity-row--pending",
+        undone && "kimo-activity-row--undone",
         tone !== "default" && `kimo-activity-row--${tone}`,
         className,
       )}
@@ -79,7 +91,17 @@ export function ActivityRow({
         <span className="kimo-activity-row__tool">{tool}</span>
         <span className="kimo-activity-row__target">{target}</span>
       </span>
-      {onUndo && (
+      {undone && onRedo && (
+        <button
+          type="button"
+          className="kimo-activity-row__undo"
+          aria-label="Redo"
+          onClick={onRedo}
+        >
+          <Redo2 aria-hidden="true" />
+        </button>
+      )}
+      {!undone && onUndo && (
         <button
           type="button"
           className="kimo-activity-row__undo"

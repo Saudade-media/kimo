@@ -5,6 +5,7 @@
 import "./files.css"
 
 export { BannerHost, SessionBannerView } from "./BannerHost"
+export { ClosePromptHost } from "./ClosePromptHost"
 export {
   addWatchedFolder,
   folderLabel,
@@ -28,6 +29,7 @@ export {
   useRecents,
   useSessionState,
   useSessions,
+  useWebTabTitle,
   useWindowChrome,
   type WindowChromeState,
 } from "./hooks"

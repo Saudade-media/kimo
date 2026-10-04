@@ -20,6 +20,7 @@
   "dependencies": {
     "@kimo/core-schema": "workspace:*",
     "@kimo/editor-state": "workspace:*",
+    "@kimo/exporters": "workspace:*",
     "@kimo/layout": "workspace:*",
     "@kimo/platform": "workspace:*",
     "@kimo/renderer": "workspace:*",

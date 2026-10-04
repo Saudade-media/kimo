@@ -19,7 +19,6 @@ import {
   AgentTonePill,
   Banner,
   Button,
-  ConfirmDialog,
   EmptyState,
   IconButton,
   PropField,
@@ -28,6 +27,7 @@ import {
   Toggle,
 } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useState } from "react"
+import { ConfigDiffDialog } from "./ConfigDiffDialog"
 import { AgentIcon } from "./icons"
 import {
   clientMeta,
@@ -246,25 +246,22 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
       <AgentTonePill tone={pill.tone} label={pill.label} data-testid="agents-server-status" />
     </div>
   )
+  // Board 24 (c) KdEak: the config diff preview before any host config write.
   const dialog = preview && (
-    <ConfirmDialog
-      tone={preview.action === "remove" ? "danger" : "component"}
-      icon={<AgentIcon name={preview.action === "remove" ? "x" : "plus"} />}
-      title={`${preview.action === "remove" ? "Remove Kimo from" : "Add Kimo to"} ${preview.label}?`}
-      description={
-        // Not designed: the diff preview (rule "Host rows": Install/Update open a diff preview).
-        <span className="agents-diff">
-          <span className="agents-diff__path">{tildePath(preview.path, home)}</span>
-          {preview.error ? (
-            <span className="agents-diff__error">{preview.error}</span>
-          ) : (
-            <pre className="agents-diff__text" data-testid="agents-diff">
-              {diffLines(preview.before, preview.after)}
-            </pre>
-          )}
-        </span>
+    <ConfigDiffDialog
+      label={preview.label}
+      action={
+        preview.action === "remove"
+          ? "remove"
+          : views.find((x) => x.host === preview.host)?.state === "outdated"
+            ? "update"
+            : "install"
       }
-      confirmLabel={preview.action === "remove" ? "Remove" : "Write config"}
+      path={tildePath(preview.path, home)}
+      before={preview.before}
+      after={preview.after}
+      {...(preview.error ? { error: preview.error } : {})}
+      onCopy={copy}
       onCancel={() => setPreview(null)}
       onConfirm={() => {
         const p = preview

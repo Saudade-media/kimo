@@ -19,6 +19,8 @@ pub const SETTINGS_PANES: &[&str] = &[
     "files",
     "fonts",
     "agents-mcp",
+    // M6 (board 22/23): right after Agents & MCP.
+    "ai-providers",
     "updates",
     "about",
 ];

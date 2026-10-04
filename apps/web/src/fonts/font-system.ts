@@ -11,6 +11,7 @@
  */
 import { googleFontsAllowed, type KimoPlatform, type SettingKey } from "@kimo/platform"
 import {
+  BUNDLED_FAMILIES,
   collectFontUsage,
   createPlatformFontSources,
   type DocumentFontFace,
@@ -48,6 +49,12 @@ export interface FontSystem {
   googleAllowed(): boolean
   online(): boolean
   availability(key: FontFaceKey): Promise<FontAvailability>
+  /**
+   * Board 24 (k): the upright weights a family really ships (document → local → cache), or null
+   * when every weight is available (bundled families, or Google reachable for a Google family).
+   * `availability` matches the nearest face, so it cannot tell a missing weight apart.
+   */
+  shippedWeights(family: string): Promise<Set<number> | null>
   /** Families a document uses that no source provides (`collectFontUsage` + availability). */
   missingFonts(doc: Parameters<typeof collectFontUsage>[0]): Promise<MissingFont[]>
   usage(doc: Parameters<typeof collectFontUsage>[0]): FontUsage[]
@@ -98,6 +105,26 @@ export function createFontSystem(options: FontSystemOptions): FontSystem {
     googleAllowed,
     online,
     availability: (key) => inner.availability(key),
+    async shippedWeights(family) {
+      const f = family.toLowerCase()
+      if (BUNDLED_FAMILIES.has(f)) return null
+      const out = new Set<number>()
+      for (const d of options.documentFaces?.() ?? [])
+        if (d.family.toLowerCase() === f && d.style !== "italic") out.add(d.weight)
+      const local = await platform.fonts.listLocal().catch(() => [])
+      for (const fam of local)
+        if (fam.family.toLowerCase() === f)
+          for (const st of fam.styles) if (!st.italic) out.add(st.weight)
+      const cached = await platform.fonts.cache.list().catch(() => [])
+      for (const e of cached) if (e.family.toLowerCase() === f && !e.italic) out.add(e.weight)
+      if (
+        googleAllowed() &&
+        online() &&
+        (await inner.availability({ family, weight: 400, style: "normal" })) === "google"
+      )
+        return null
+      return out.size > 0 ? out : null
+    },
     usage: (doc) => collectFontUsage(doc),
     missingFonts: (doc) => detectMissingFonts(collectFontUsage(doc), (k) => inner.availability(k)),
     async fetchFamily(family, weights) {

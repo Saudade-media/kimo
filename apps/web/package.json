@@ -23,6 +23,7 @@
     "@kimo/design-tokens": "workspace:*",
     "@kimo/desktop": "workspace:*",
     "@kimo/editor-state": "workspace:*",
+    "@kimo/exporters": "workspace:*",
     "@kimo/layout": "workspace:*",
     "@kimo/mcp-server": "workspace:*",
     "@kimo/platform": "workspace:*",

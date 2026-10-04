@@ -1,0 +1,1164 @@
+/*
+ * Agent tab: desing.pen 22 "Built-in Agent (M6)" › Agent panel (s4pGz0): A RH3G0, B J7bfOc,
+ * C r6eAFo, D gVw5S; modes ZFOQf (d5X1eG, Vacqa) and board 24 GmEAl (split plan, cursors).
+ * The panel body sits below RightPanel's Tabs frame (RsgtZ) and fills the rest of the 360 panel.
+ */
+.agent-panel {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Thread Header (w1BjvW): h 44, gap 8, padding [0, 8, 0, 12], center. */
+.agent-panel__header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 8px 0 12px;
+}
+
+/* Thread Title (fZQQo): sans 12 / 600 text-primary. */
+.agent-panel__title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Session Cost (gPIkj): h 20, padding [0, 7], center, bg-muted, pill › mono 11 text-secondary. */
+.agent-panel__cost {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.agent-panel__cost-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+.agent-panel__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* Thread (aCRfC): fill, column, gap 12, padding 16, clip. */
+.agent-panel__thread {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.agent-panel__thread > * {
+  flex: none;
+  width: 100%;
+}
+
+.agent-panel__first-run {
+  width: 100%;
+  margin: auto 0;
+}
+
+/* User block (board 22 D w9jPO8 gap 6): User Attachments · Message/User · Skill Used. */
+.agent-panel__user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.agent-panel__user > :not(.agent-panel__from-home) {
+  width: 100%;
+}
+
+/* User Attachments (Y3Px0): row, gap 6, center, justify end. */
+.agent-panel__user-attachments {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.agent-panel__from-home {
+  align-self: flex-end;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* Skill Used (f7ZEFP): row, gap 6, padding [6, 0, 0, 34], center › book-open 12 · sans 11 / 500 agent. */
+.agent-panel__skill-used {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 0 34px;
+  color: var(--kimo-agent);
+}
+
+.agent-panel__skill-used-icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.agent-panel__skill-used-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* Agent block: Steps (fpDaW gap 8) · Message/Agent · meta / card, thread gap 12 between. */
+.agent-panel__agent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.agent-panel__agent > * {
+  width: 100%;
+}
+
+.agent-panel__steps {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* Indent (M9tWS): padding [0, 0, 0, 34]. */
+.agent-panel__indent {
+  box-sizing: border-box;
+  padding: 0 0 0 34px;
+}
+
+/* Composer Wrap (mt5k9): padding [0, 12, 12, 12]. */
+.agent-panel__composer-wrap {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  padding: 0 12px 12px;
+}
+
+.agent-panel__queued {
+  margin: 6px 4px 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.agent-panel__thumb-button {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* --- Menus (Menu/Dense geometry) ------------------------------------------------------------- */
+
+.agent-menu {
+  position: absolute;
+  z-index: 20;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: min(560px, 70vh);
+  padding: 4px;
+  overflow-y: auto;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+  outline: none;
+}
+
+/* Model Menu (XxdJv): 280 wide, right edge on the composer's, 4 above the Composer Wrap. */
+.agent-menu--model {
+  right: 12px;
+  bottom: calc(100% + 4px);
+  width: 280px;
+}
+
+/* Skills Menu (e2cwq): as wide as the composer (x 12, 336), 4 above. */
+.agent-menu--skills {
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% + 4px);
+}
+
+/* Mode Menu (d5X1eG): the Stack (gap 6) above the composer. */
+.agent-menu--mode {
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% + 6px);
+}
+
+.agent-menu__section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Group header (zMLnz): row, gap 6, padding [6, 8, 2, 8], center. */
+.agent-menu__group {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px 2px;
+}
+
+.agent-menu__group-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.agent-menu__group-status {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.agent-menu__group-status--mono {
+  font-family: var(--kimo-font-mono);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.agent-menu__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* "Add a key to use Gemini…" (Bu5Vq): label text-tertiary. */
+.agent-menu__add .kimo-menu-item-dense__label {
+  color: var(--kimo-text-tertiary);
+}
+
+/* Manage providers (xTwOu): settings-2 in the check slot, text-secondary. */
+.agent-menu__manage .kimo-menu-item-dense__check {
+  color: var(--kimo-text-secondary);
+}
+
+/* Effort (e9Njhu): row, gap 8, padding [4, 8], center › "Thinking" sans 12 text-primary. */
+.agent-menu__effort {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.agent-menu__effort-label,
+.agent-menu__config-label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* SegmentedText instances: segments h 20, padding [0, 8], label 11. */
+.agent-seg-sm .kimo-seg-text__segment {
+  height: 20px;
+  padding: 0 8px;
+}
+
+.agent-seg-sm .kimo-seg-text__label {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.agent-menu__error {
+  margin: 0;
+  padding: 2px 8px;
+  color: var(--kimo-danger);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+/* Skills Footer (OIg0k): row, gap 4, padding [2, 4], center › Open folder · Spacer · Hint. */
+.agent-menu__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+}
+
+.agent-menu__hint {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+/* Config rows (sefVX): h 32, gap 8, padding [0, 8], center. */
+.agent-menu__config {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+}
+
+/* Stepper (jDnWz): h 24, gap 2, padding [0, 4], center, bg-muted, pill. */
+.agent-stepper {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  padding: 0 4px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.agent-stepper__btn {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+}
+
+.agent-stepper__btn:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.agent-stepper__btn svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.agent-stepper__value {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+/* Cap (wYdvG): sans 11 text-tertiary. */
+.agent-menu__cap {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* Select (pBhFA): width 140, value 11. */
+.agent-menu__select {
+  flex: none;
+  width: 140px;
+}
+
+.agent-menu__select .kimo-select__value {
+  font-size: var(--kimo-text-xs);
+}
+
+/* Per-agent model (board 24 P9Dzzb qlZOe): row, gap 8, center › Lbl mono 11 tertiary · Model. */
+.agent-menu__agent-model {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 8px;
+}
+
+.agent-menu__agent-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+/* Model (VVIpR): gap 4, padding [2, 6], center, fill agent-<p>-soft, radius-sm. */
+.agent-persona-chip {
+  --agent-persona: var(--kimo-agent);
+  --agent-persona-soft: var(--kimo-agent-soft);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--agent-persona-soft);
+  color: var(--agent-persona);
+  cursor: pointer;
+}
+
+.agent-persona-chip__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.agent-persona-chip__chevron {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+/* --- Session list (zJTW2) ------------------------------------------------------------------- */
+
+.agent-sessions {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 0;
+  padding: 4px 8px 8px;
+  overflow-y: auto;
+}
+
+.agent-sessions > * {
+  width: 100%;
+}
+
+/* Search Wrap (yO7ir): padding [0, 4, 8, 4]. */
+.agent-sessions__search {
+  box-sizing: border-box;
+  padding: 0 4px 8px;
+}
+
+.agent-sessions__group {
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.agent-sessions__empty {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* Gap (K6oHT): 8 tall. */
+.agent-sessions__gap {
+  display: block;
+  flex: none;
+  height: 8px;
+}
+
+.agent-sessions__spacer {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Footer (LMBEG): row, gap 6, padding [8, 4, 0, 4], center, top stroke 1 border. */
+.agent-sessions__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px 0;
+  border-top: 1px solid var(--kimo-border);
+}
+
+.agent-sessions__footer-icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.agent-sessions__footer-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* --- Split Plan (board 24 tiORC) / side by side plan --------------------------------------- */
+
+.agent-plan {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+.agent-plan > * {
+  width: 100%;
+}
+
+/* Head (N1Shb): row, gap 8, padding [12, 14], center, bottom stroke. */
+.agent-plan__head {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+.agent-plan__icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-agent);
+}
+
+.agent-plan__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.agent-plan__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+.agent-plan__cost {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+
+/* Stop all (e7SfKX): h 26, gap 6, padding [0, 10], pill › square 12 danger · sans 12 / 500 danger. */
+.agent-plan__stop {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: none;
+  color: var(--kimo-danger);
+  cursor: pointer;
+}
+
+.agent-plan__stop:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.agent-plan__stop-icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.agent-plan__stop-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+/* Agent row (U9vMZ): row, gap 10, padding [10, 14], center, bottom stroke. */
+.agent-plan__agent {
+  --agent-persona: var(--kimo-agent);
+  --agent-persona-soft: var(--kimo-agent-soft);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+.agent-plan__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-plan__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.agent-plan__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* Scope Badge (h8ARJS): h 18, gap 3, padding [0, 6, 0, 4], center, persona soft, radius-xs. */
+.agent-plan__scope {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  min-width: 0;
+  padding: 0 6px 0 4px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--agent-persona-soft);
+  color: var(--agent-persona);
+}
+
+.agent-plan__scope-icon {
+  display: block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+
+.agent-plan__scope-label {
+  overflow: hidden;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-plan__meta {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status (IGSLX): gap 5, padding [2, 8, 2, 6], pill; Dot 6; Label sans 11 / 500. */
+.agent-status {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.agent-status__dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-text-tertiary);
+}
+
+.agent-status__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.agent-status--done {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
+.agent-status--done .agent-status__dot {
+  background: var(--kimo-success);
+}
+
+.agent-status--danger {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.agent-status--danger .agent-status__dot {
+  background: var(--kimo-danger);
+}
+
+/* Log (bZSsS): column, padding [6, 0]. */
+.agent-plan__log,
+.agent-review__changes {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+}
+
+/* Op row (B6L1P): row, gap 8, padding [5, 12], center. */
+.agent-op-log {
+  --agent-persona: var(--kimo-agent);
+  --agent-persona-soft: var(--kimo-agent-soft);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+}
+
+/* Op (NopAC): 52 × 18, center, persona soft, radius-xs › mono 11 / 500 persona. */
+.agent-op-log__chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 18px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--agent-persona-soft);
+  color: var(--agent-persona);
+}
+
+.agent-op-log--reject .agent-op-log__chip {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.agent-op-log__op {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.agent-op-log__target {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-op-log__detail {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-op-log__revert {
+  display: inline-flex;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+
+.agent-op-log__revert svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+/* Variant Actions (avr2x): row, gap 6, center. */
+.agent-variant-actions {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 280px;
+}
+
+.agent-variant-actions--compact {
+  width: auto;
+}
+
+/* --- Review Card (Vacqa) -------------------------------------------------------------------- */
+
+.agent-review {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-app);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 4px 16px 0 var(--kimo-shadow);
+}
+
+.agent-review > * {
+  width: 100%;
+}
+
+/* Head (xKhWe): row, gap 10, padding [12, 14], center, bottom stroke. */
+.agent-review__head {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+.agent-review__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.agent-review__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.agent-review__sub {
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Passes (bB4Vd): row, gap 8, padding [10, 14], center, bottom stroke. */
+.agent-review__passes {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+/* Pass (i5lo64): h 24, gap 5, padding [0, 9], center, bg-muted, pill › sans 11 / 500. */
+.agent-pass {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  margin: 0;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+}
+
+.agent-pass:disabled {
+  cursor: default;
+}
+
+.agent-pass--current {
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+
+.agent-pass--future {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-tertiary);
+}
+
+.agent-pass__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* Next Pass (sQqnY): column, gap 8, padding [10, 14, 14, 14], top stroke. */
+.agent-review__next {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--kimo-border);
+}
+
+/* Steer Field (dE1td): h 32, padding [0, 10], bg-subtle, 1 px border, radius-md › sans 11. */
+.agent-review__steer {
+  box-sizing: border-box;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  outline: none;
+}
+
+.agent-review__steer::placeholder {
+  color: var(--kimo-text-tertiary);
+}
+
+.agent-review__steer:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+/* Actions (aTicX): row, gap 8, center. The card is 560 on the board; in the 328 thread the
+   buttons wrap instead of overflowing. */
+.agent-review__actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- Canvas pieces ------------------------------------------------------------------------ */
+
+/* Mode Summary (jDKaM): h 28, gap 8, padding [0, 10, 0, 6], center, bg-app, border, pill. */
+.agent-mode-summary {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px 0 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+/* Orbs (oqNK1): gap −6. */
+.agent-mode-summary__marks {
+  display: inline-flex;
+  align-items: center;
+}
+
+.agent-mode-summary__marks > * + * {
+  margin-left: -6px;
+}
+
+.agent-mode-summary__label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.agent-mode-summary__cost {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+}
+
+.agent-mode-summary__stop {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kimo-danger);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  cursor: pointer;
+}
+
+/* Pass Chip (NCElh): h 22, gap 5, padding [0, 8, 0, 6], bg-app, 1 px agent, pill. */
+.agent-pass-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-agent);
+  color: var(--kimo-agent);
+}
+
+.agent-pass-chip__icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.agent-pass-chip__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* Agent cursor (GmEAl H6ncRy): column, gap 2 › Pointer 18 · Pill gap 6, padding [4, 10, 4, 4]. */
+.agent-cursor {
+  --agent-persona: var(--kimo-agent);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.agent-cursor__pointer {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: var(--agent-persona);
+}
+
+.agent-cursor__pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--agent-persona);
+  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
+}
+
+.agent-cursor__label {
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* Rejected Op (O2Whh): h 24, gap 6, padding [0, 10, 0, 8], danger, pill, shadow 0 4 12. */
+.agent-rejected {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-danger);
+  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
+  color: #ffffff; /* pen-literal: O2Whh icon + label #FFFFFF */
+}
+
+.agent-rejected__icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.agent-rejected__label {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}

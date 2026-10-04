@@ -21,6 +21,8 @@ export {
   type SvgImportTarget,
   SvgRejectedError,
   type SvgRejectReason,
+  type SvgRemovedItem,
+  shortRef,
   svgImportOps,
   svgRejection,
 } from "./flow"
@@ -31,6 +33,7 @@ export {
   SvgImportPopover,
   type SvgImportPopoverProps,
 } from "./SvgImportPopover"
+export { SvgRejectionToast, type SvgRejectionToastProps } from "./SvgRejectionToast"
 export {
   type SanitizedSvg,
   type SanitizeReport,

@@ -2,6 +2,7 @@
  * Shared document readers for layout and renderer: the variable/theme resolver and text
  * resolution (ADR 0009: measure and draw read the same runs).
  */
+
 import {
   defaultTheme,
   isObject,
@@ -13,6 +14,7 @@ import {
   resolveVariable,
   type Theme,
 } from "@kimo/core-schema"
+import { agentNodeChrome } from "./agent-nodes"
 import {
   type LayoutIssue,
   type LayoutNodeData,
@@ -172,7 +174,7 @@ export function createResolver(
         r = resolveVariable(doc, value.$ref, t, libs)
         m.set(value.$ref, r)
       }
-      if (r.ok) return r.value
+      if (r.ok) return dimensionPx(r)
       options.onIssue?.({
         code: "VARIABLE_UNRESOLVED",
         severity: "warning",
@@ -189,6 +191,17 @@ export function createResolver(
       memo = new WeakMap()
     },
   }
+}
+
+/**
+ * A `dimension` variable's value (`{ value, unit: "px" }`, px-only in format 0.x/1.x) as the px
+ * number every length reader expects (gap, padding, sizes, radius, stroke width…); any other
+ * resolution is returned as is.
+ */
+function dimensionPx(r: { value: unknown; type?: string | undefined }): unknown {
+  const v = r.value
+  if (r.type === "dimension" && isObject(v) && typeof v.value === "number") return v.value
+  return v
 }
 
 // --- Text ---------------------------------------------------------------------------------
@@ -247,7 +260,9 @@ export function resolveText(
   node: LayoutNodeData,
   resolve: Resolver,
 ): TextMeasureInput {
-  const style = resolveTextStyle(nodeId, node.style, resolve)
+  // Notes and prompts: the card's body style (board 22) is the base under `style`.
+  const base = agentNodeChrome(node.type)?.text ?? TEXT_STYLE_DEFAULTS
+  const style = resolveTextStyle(nodeId, node.style, resolve, base)
   const content = node.content
   let runs: ResolvedTextRun[]
   if (Array.isArray(content)) {

@@ -651,7 +651,8 @@ export const scenarios: Scenario[] = [
       if (more) {
         expect(/^\+\d+$/.test(more.text), `+N pill ${more.text}`)
         await page.locator(".kimo-canvas-conflict-marker--more").click()
-        await page.getByRole("menu", { name: "Hidden conflicts" }).waitFor()
+        // Board 24 (l): the conflicts menu (c2CNAR) replaced the Menu/Dense "Hidden conflicts".
+        await page.getByRole("menu", { name: /more conflicts$/ }).waitFor()
       } else {
         const ys = pills.map((p) => p.y).sort((a, b) => a - b)
         expect(
@@ -659,6 +660,145 @@ export const scenarios: Scenario[] = [
           `stacked pills ${JSON.stringify(pills)}`,
         )
       }
+    },
+  },
+  {
+    name: "board24 (l): conflict '+N' menu — 240 wide, middle-truncated paths, row selects (measured)",
+    async run(ctx) {
+      const { page } = ctx
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await load(page)
+      // Far out every pill overlaps: the first pill + "+N".
+      await page.evaluate(() => {
+        const ui = window.__kimoConflicts.ui as unknown as {
+          getState(): { setViewport(v: { x: number; y: number; zoom: number }): void }
+        }
+        ui.getState().setViewport({ x: -100, y: -1200, zoom: 0.02 })
+      })
+      // Reopen every resolved node conflict: 3+ overlapping pills collapse into "+N".
+      await page.evaluate(() => {
+        const s = window.__kimoConflicts.session() as unknown as {
+          rows(): { id: string; nodeId: string | null; resolved: boolean }[]
+          reopen(id: string): void
+        }
+        for (const r of s.rows()) if (r.resolved && r.nodeId) s.reopen(r.id)
+      })
+      const more = page.locator(".kimo-canvas-conflict-marker--more")
+      await more.waitFor({ timeout: 10_000 })
+      await more.click()
+      const menu = page.locator(".kimo-conflict-more-menu")
+      await menu.waitFor()
+      const m = await page.evaluate(() => {
+        const q = (sel: string) => {
+          const e = document.querySelector(sel)
+          if (!e) return null
+          const r = e.getBoundingClientRect()
+          const cs = getComputedStyle(e)
+          return {
+            x: r.x,
+            y: r.y,
+            w: r.width,
+            h: r.height,
+            pad: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map(parseFloat),
+            gap: parseFloat(cs.columnGap) || 0,
+            fs: parseFloat(cs.fontSize),
+            ff: cs.fontFamily.split(",")[0]?.replace(/"/g, "").trim(),
+            radius: parseFloat(cs.borderTopLeftRadius),
+            color: cs.color,
+            shadow: cs.boxShadow,
+            display: cs.display,
+          }
+        }
+        return {
+          menu: q(".kimo-conflict-more-menu"),
+          group: q(".kimo-conflict-more-menu__group"),
+          groupLabel: q(".kimo-conflict-more-menu__group-label"),
+          item: q(".kimo-conflict-more-menu__item"),
+          icon: q(".kimo-conflict-more-menu__icon"),
+          label: q(".kimo-conflict-more-menu__label"),
+          meta: q(".kimo-conflict-more-menu__meta"),
+          danger: (() => {
+            const el = document.createElement("div")
+            el.style.color = "var(--kimo-danger)"
+            document.body.append(el)
+            const c = getComputedStyle(el).color
+            el.remove()
+            return c
+          })(),
+        }
+      })
+      const log: string[] = []
+      const check = (el: string, prop: string, got: unknown, want: number | string, tol = 0.75) => {
+        const ok =
+          typeof want === "number"
+            ? typeof got === "number" && Math.abs(got - want) <= tol
+            : got === want
+        log.push(
+          `| ${el} | ${prop} | ${want} | ${typeof got === "number" ? Math.round(got * 100) / 100 : got} |`,
+        )
+        expect(ok, `${el} ${prop}: want ${want}, got ${got}`)
+      }
+      const labels = await texts(page, ".kimo-conflict-more-menu__label")
+      const full = await page
+        .locator(".kimo-conflict-more-menu__item")
+        .evaluateAll((els) => els.map((e) => e.getAttribute("title")))
+      ctx.log(`    rows: ${JSON.stringify(labels)} full: ${JSON.stringify(full)}`)
+      // 240 unless a name is long: then it grows, up to 320 (and the name middle-truncates).
+      const long = full.some((t) => t !== null)
+      check("Menu OJl8h", "width (240, max 320)", m.menu?.w, long ? 320 : 240)
+      check("Menu OJl8h", "padding", m.menu?.pad[0], 4)
+      check("Menu OJl8h", "radius (radius-md)", m.menu?.radius, 10)
+      check("Menu OJl8h", "shadow 0 8 24", /0px 8px 24px/.test(m.menu?.shadow ?? "") ? 1 : 0, 1)
+      check("Group aKs8f", "padding-top", m.group?.pad[0], 6)
+      check("Group aKs8f", "padding-bottom", m.group?.pad[2], 4)
+      check("Group aKs8f", "padding-x", m.group?.pad[1], 8)
+      check(
+        "Group label dnp0l",
+        "font",
+        `${m.groupLabel?.ff} ${m.groupLabel?.fs}`,
+        "JetBrains Mono 11",
+      )
+      check("Group aKs8f", "height", m.group?.h, 25)
+      check("Item XJjNE", "height", m.item?.h, 28)
+      check("Item XJjNE", "width (menu − 2 × 4)", m.item?.w, (m.menu?.w ?? 0) - 8)
+      check("Item XJjNE", "padding-x", m.item?.pad[1], 8)
+      check("Item XJjNE", "gap", m.item?.gap, 8)
+      check("Item XJjNE", "radius-sm", m.item?.radius, 6)
+      check("Icon JZM0n", "size", m.icon?.w, 14)
+      check("Icon JZM0n", "color danger", m.icon?.color, m.danger)
+      check("Icon JZM0n", "x (item + 8)", (m.icon?.x ?? 0) - (m.item?.x ?? 0), 8)
+      check("Label yP8x0", "font", `${m.label?.ff} ${m.label?.fs}`, "Inter 12")
+      check("Label yP8x0", "x (icon + 14 + 8)", (m.label?.x ?? 0) - (m.icon?.x ?? 0), 22)
+      check("Meta hMjfC", "font", `${m.meta?.ff} ${m.meta?.fs}`, "JetBrains Mono 11")
+      check(
+        "Meta hMjfC",
+        "right inset 8",
+        (m.item?.x ?? 0) + (m.item?.w ?? 0) - ((m.meta?.x ?? 0) + (m.meta?.w ?? 0)),
+        8,
+      )
+      check(
+        "Menu",
+        "top = +N bottom + 4",
+        (m.menu?.y ?? 0) - ((await more.boundingBox())?.y ?? 0) - 20,
+        4,
+      )
+      ctx.log(
+        `\n    | element | property | design | measured |\n    |---|---|---|---|\n${log.join("\n")}`,
+      )
+      expect(
+        labels.every((l) => !l.includes(" › ")),
+        `paths use " / ": ${labels.join(" | ")}`,
+      )
+      // Row click: select + zoom to the conflicted node.
+      await page.locator(".kimo-conflict-more-menu__item").first().click()
+      await menu.waitFor({ state: "detached" })
+      await until(
+        page,
+        async () =>
+          (await page.evaluate(() => window.__kimoConflicts.ui.getState().selection.length)) === 1,
+        "selection after row click",
+      )
+      await shot(ctx, "board24-plus-n-menu")
     },
   },
 ]

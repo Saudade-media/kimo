@@ -8,7 +8,7 @@ import { type ReactNode, useCallback, useEffect, useSyncExternalStore } from "re
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import type { EditorConflictSession } from "../conflicts"
 import { FileTopbar } from "../files"
-import { isEdited, type SessionState, windowTitle } from "../platform/contract"
+import { hasUnsavedChanges, isEdited, type SessionState, windowTitle } from "../platform/contract"
 import type { FileDocumentSession } from "../platform/session"
 import type { FileMenuActions } from "./FileMenu"
 import { TopbarTrailing, useFileMenu } from "./Topbar"
@@ -108,9 +108,10 @@ export function titleFolder(state: SessionState): string {
 /**
  * Board 20 window title rule (G1gEPp) for the window showing `doc`: `<file> — <folder>`, the
  * macOS close-button dot through `setDocumentEdited`, "● … - Kimo" on Windows / Linux. Back to
- * "Kimo" when the editor closes (Home).
+ * "Kimo" when the editor closes (Home). In a browser tab (`os: "web"`) the board 24 (m) format
+ * applies: `[●] {file} [· 2 conflicts | read-only | {agent} editing] — Kimo`.
  */
-export function useWindowTitle(doc: FileDocumentSession | null): void {
+export function useWindowTitle(doc: FileDocumentSession | null, agent: string | null = null): void {
   useEffect(() => {
     if (!doc) return
     const win = doc.manager.platform.window
@@ -124,8 +125,11 @@ export function useWindowTitle(doc: FileDocumentSession | null): void {
         fileName: state.fileName,
         folder: titleFolder(state),
         untitled: doc.untitled,
-        edited: e,
+        // The web tab's ● means "not safe anywhere" (board 24 m), not "autosave pending".
+        edited: os === "web" ? hasUnsavedChanges(state.saveStatus) : e,
         readOnly: state.phase === "read-only" || state.phase === "failed-load",
+        conflicts: state.conflicts?.open ?? 0,
+        agent,
       })
       if (t !== title) {
         title = t
@@ -143,5 +147,5 @@ export function useWindowTitle(doc: FileDocumentSession | null): void {
       void win.setTitle(windowTitle({ os, fileName: null, folder: null })).catch(() => {})
       void win.setDocumentEdited(false).catch(() => {})
     }
-  }, [doc])
+  }, [doc, agent])
 }

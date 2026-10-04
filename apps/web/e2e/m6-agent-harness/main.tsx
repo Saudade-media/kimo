@@ -149,6 +149,28 @@ const script: Script = (req) => {
       }),
     }
   if (text.includes("auth")) return { error: "auth", status: 401, message: "invalid x-api-key" }
+  // Board 25 §5: refusal (dIkT6), generic error (u8mh7l), approval outside the scope (OlhpU).
+  if (text.includes("Stripe"))
+    return {
+      text: "Recreating the Stripe logo pixel-for-pixel isn't something I'll draw. I can make an original mark in a similar spirit — geometric, two-tone, rounded.",
+      stop: "refusal",
+    }
+  if (text.includes("broken"))
+    return {
+      error: "invalid_request",
+      status: 400,
+      message: "Anthropic returned 400 · invalid_request_error",
+    }
+  if (text.includes("legacy") && !afterTool(req))
+    return {
+      text: "Found 3 legacy cards. Removing them needs your OK.",
+      tools: [
+        {
+          name: "kimo_apply_ops",
+          input: { docId: docId(), ops: [{ op: "delete", id: "Navbar0001" }] },
+        },
+      ],
+    }
   if (text.includes("rate") && window.__m6.rateLimited++ === 0)
     return { error: "rate_limit", status: 429, retryAfterMs: 1500 }
   if (text.includes("slow"))
@@ -203,7 +225,49 @@ const script: Script = (req) => {
   }
 }
 
-const runtime = createTestRuntime({ tools: tools.factory, script, platform: "web" })
+// `?runtime=first-cli` (board 25 FrS9y) | `first-key` (D8covN): no API provider yet.
+const firstRun = new URLSearchParams(location.search).get("runtime")
+let cliChosen = false
+let keyOk = false
+const base = createTestRuntime({
+  tools: tools.factory,
+  script,
+  platform: "web",
+  ...(firstRun
+    ? {
+        providers: [],
+        defaultSelection:
+          firstRun === "first-cli" ? { provider: "cli:claude-code", model: "default" } : null,
+        clis:
+          firstRun === "first-cli"
+            ? [
+                {
+                  id: "claude-code",
+                  label: "Claude Code",
+                  installed: true,
+                  path: "/Users/me/.local/bin/claude",
+                  signedIn: true,
+                  billing: "subscription" as const,
+                },
+              ]
+            : [],
+      }
+    : {}),
+})
+const runtime = firstRun
+  ? {
+      ...base,
+      apiReady: () => keyOk,
+      cliConfirmed: () => cliChosen,
+      chooseCli: async () => {
+        cliChosen = true
+      },
+      connectKey: async (_p: string, key: string) => {
+        keyOk = key === "sk-ant-api03-test-3f9a"
+        return keyOk ? { ok: true, detail: "ok" } : { ok: false, detail: "401 · invalid x-api-key" }
+      },
+    }
+  : base
 const controller = createAgentPanelController({
   runtime,
   fileId: "f-marketing",
@@ -250,6 +314,14 @@ function PanelScene() {
       <AgentPanel
         controller={controller}
         fileName="Marketing site.kimo"
+        platform={firstRun ? "desktop" : "web"}
+        parentNameOf={(id) => {
+          const n = store.getNode(id) as { parent?: string | null } | undefined
+          const p = n?.parent
+            ? (store.getNode(n.parent) as { name?: string } | undefined)
+            : undefined
+          return p?.name ?? "Page 1"
+        }}
         onCopy={(t) => window.__m6.copied.push(t)}
       />
       <span hidden data-testid="busy">

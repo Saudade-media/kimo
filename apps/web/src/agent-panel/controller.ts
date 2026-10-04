@@ -190,7 +190,24 @@ export interface AgentPanelViewState extends AgentPanelState {
   live: LiveMeta | null
   /** Prompt-node run state by node id (app data, ADR 0014 §9; footer + layer row). */
   promptRuns: Readonly<Record<string, PromptRunState>>
+  /** Every pending in-app approval, oldest first (board 25 rule "Approval queue"). */
+  approvals: ApprovalPromptView[]
+  /**
+   * Agent tab first run (board 25 §5): a detected, signed-in CLI to confirm (FrS9y), or the
+   * inline Anthropic key card (D8covN). Null once a provider passed its Test / a CLI is chosen.
+   */
+  onboarding: OnboardingView | null
+  /** Board 25 rule "Composer": rendered but disabled (50 %) until a provider is connected. */
+  composerDisabled: boolean
 }
+
+/** Agent tab first run (board 25 p55vU). */
+export type OnboardingView =
+  | { kind: "cli"; cli: CliDetection }
+  | { kind: "key"; provider: "anthropic"; connecting: boolean; error: string | null }
+
+/** Board 23 detection order: Claude Code, then Codex / Gemini CLI. */
+const CLI_ORDER = ["claude-code", "codex", "gemini-cli"]
 
 /** What a prompt-node run needs from the document (board 22 cf2sC, ADR 0014 §9). */
 export interface PromptRunInput {
@@ -223,6 +240,15 @@ export interface AgentPanelControllerExt extends AgentPanelController {
   setIterateView(view: "before" | "after"): void
   /** Re-reads providers, CLIs and skills. */
   refresh(): Promise<void>
+  /** First run (board 25 FrS9y): "Use Claude Code" — makes the detected CLI the default. */
+  chooseCli(id: string): Promise<void>
+  /**
+   * First run (board 25 D8covN): saves the key, runs its Test; on a pass the panel switches to
+   * an empty thread. Resolves with the Test outcome.
+   */
+  connectKey(key: string): Promise<{ ok: boolean; detail: string }>
+  /** Refusal "Edit request": the turn's prompt back in the composer. */
+  editRequest(turnId: string): void
   /** Copies a message's text (MessageMeta copy). */
   copyText(messageId: string): string
   /**
@@ -476,7 +502,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let sessionsOpen = false
   let sessionQuery = ""
   let sessionList: SessionMeta[] = []
-  let approval: (ApprovalPromptView & { resolve(o: ApprovalOutcome): void }) | null = null
+  let approvalQueue: (ApprovalPromptView & { resolve(o: ApprovalOutcome): void })[] = []
+  let connect: { connecting: boolean; error: string | null } = { connecting: false, error: null }
   let abort: AbortController | null = null
   let composerState: AgentComposerView["state"] = "idle"
   let modeRun: ModeRunView | null = null
@@ -533,6 +560,28 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     return null
   }
 
+  /**
+   * Board 25 §5 rules GXL4Z: no API provider + a signed-in local CLI (detection order) → confirm
+   * it ("Use Claude Code"); no provider and no CLI → the inline key card. A thread with messages
+   * never shows it.
+   */
+  function onboardingOf(clis: readonly CliDetection[]): OnboardingView | null {
+    const ready = rt.apiReady ? rt.apiReady() : providers.length > 0
+    if (ready || messages.length > 0) return null
+    const usable = clis.filter((c) => c.signedIn === true).sort((a, b) => rank(a.id) - rank(b.id))
+    const cli = usable[0]
+    if (cli) {
+      if (rt.cliConfirmed?.() ?? true) return null
+      return { kind: "cli", cli }
+    }
+    if (model) return null
+    return { kind: "key", provider: "anthropic", ...connect }
+  }
+  const rank = (id: string) => {
+    const i = CLI_ORDER.indexOf(id)
+    return i < 0 ? CLI_ORDER.length : i
+  }
+
   function compute(): AgentPanelViewState {
     const clis = rt.clis()
     const groups = pickerGroups({
@@ -556,6 +605,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       : 0
     const firstRun = !model && providers.length === 0 && !clis.some((c) => c.signedIn === true)
     const busy = composerState !== "idle"
+    const approval = approvalQueue[0] ?? null
+    const onboarding = onboardingOf(clis)
     return {
       session: session ? metaOf(session) : null,
       messages,
@@ -609,15 +660,23 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       approval: approval
         ? {
             request: approval.request,
-            queued: approval.queued,
+            queued: approvalQueue.length,
             choices: approval.choices,
             remainingMs: approval.remainingMs,
           }
         : null,
+      approvals: approvalQueue.map((a, i) => ({
+        request: a.request,
+        queued: approvalQueue.length - i,
+        choices: a.choices,
+        remainingMs: a.remainingMs,
+      })),
+      onboarding,
+      composerDisabled: onboarding !== null,
       firstRun,
       menu,
       mark:
-        approval !== null
+        approvalQueue.length > 0
           ? "waiting"
           : busy
             ? "working"
@@ -703,25 +762,36 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
 
   function requestApproval(req: ApprovalRequest): Promise<ApprovalOutcome> {
     return new Promise((resolve) => {
-      approval = {
-        request: req as never,
-        queued: 1,
-        choices: approvalChoices(req as never),
-        remainingMs: Number.POSITIVE_INFINITY,
-        resolve,
-      }
+      // More than one pending: cards stack in order (board 25 rule "Approval queue").
+      approvalQueue = [
+        ...approvalQueue,
+        {
+          request: req as never,
+          queued: 1,
+          choices: approvalChoices(req as never),
+          remainingMs: Number.POSITIVE_INFINITY,
+          resolve,
+        },
+      ]
       composerState = "waiting-approval"
       emit()
     })
   }
 
-  function settleApproval(outcome: ApprovalOutcome) {
-    const a = approval
+  /** Answers one pending approval (the oldest when `id` is omitted). */
+  function settleApproval(outcome: ApprovalOutcome, id?: string) {
+    const a = id ? approvalQueue.find((x) => x.request.id === id) : approvalQueue[0]
     if (!a) return
-    approval = null
-    if (composerState === "waiting-approval") composerState = "streaming"
+    approvalQueue = approvalQueue.filter((x) => x !== a)
+    if (approvalQueue.length === 0 && composerState === "waiting-approval")
+      composerState = "streaming"
     a.resolve(outcome)
     emit()
+  }
+
+  /** Stop answers every pending approval Deny. */
+  function denyAll() {
+    while (approvalQueue.length) settleApproval("deny")
   }
 
   // --- Canvas bookkeeping -----------------------------------------------------------------------
@@ -1252,7 +1322,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       }
     } finally {
       abort = null
-      if (approval) settleApproval("deny")
+      if (approvalQueue.length) denyAll()
       composerState = "idle"
       emit()
       const next = queued.shift()
@@ -1963,7 +2033,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     },
     stop() {
       abort?.abort()
-      if (approval) settleApproval("deny")
+      if (approvalQueue.length) denyAll()
       queued = []
       emit()
     },
@@ -2089,8 +2159,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       else images = images.filter((i) => i.id !== id)
       emit()
     },
-    async answerApproval(_id, choice: McpApprovalChoice) {
-      settleApproval(choice)
+    async answerApproval(id, choice: McpApprovalChoice) {
+      settleApproval(choice, id || undefined)
     },
     cardAction(id, action: ErrorCardAction) {
       switch (action) {
@@ -2286,6 +2356,39 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       } catch {}
       if (!model) model = rt.defaultSelection()
       emit()
+    },
+    async chooseCli(id) {
+      const sel = { provider: `cli:${id}`, model: "default" }
+      await rt.chooseCli?.(id)
+      model = sel
+      emit()
+    },
+    async connectKey(key) {
+      if (!rt.connectKey) return { ok: false, detail: "Open Settings › AI providers." }
+      connect = { connecting: true, error: null }
+      emit()
+      try {
+        const r = await rt.connectKey("anthropic", key)
+        connect = { connecting: false, error: r.ok ? null : r.detail }
+        if (r.ok) {
+          await controller.refresh()
+          if (!model || !providers.some((p) => p.id === model?.provider))
+            model = rt.defaultSelection()
+        }
+        emit()
+        return r
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e)
+        connect = { connecting: false, error: detail }
+        emit()
+        return { ok: false, detail }
+      }
+    },
+    editRequest(turnId) {
+      const i = messages.findIndex((m) => m.kind === "agent" && m.turnId === turnId)
+      const before = (i < 0 ? messages : messages.slice(0, i)).filter((m) => m.kind === "user")
+      const last = before[before.length - 1]
+      if (last) controller.setText(last.text)
     },
     copyText(id) {
       const m = messages.find((x) => x.id === id)

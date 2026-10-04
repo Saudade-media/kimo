@@ -67,6 +67,7 @@
     "allow-kimo-window-close",
     "allow-kimo-settings-get-all",
     "allow-kimo-settings-set",
-    "allow-kimo-launch-take-initial"
+    "allow-kimo-launch-take-initial",
+    "allow-kimo-help-show-logs"
   ]
 }

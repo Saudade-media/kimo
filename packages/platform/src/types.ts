@@ -66,8 +66,33 @@ export interface KimoPlatform {
    * memory scripted; absent in the browser. Structurally a `@kimo/ai-agent` `SkillSource`.
    */
   readonly skills?: SkillsApi
+  /**
+   * CPU architecture of the running app (`aarch64`, `x86_64`; Rust `std::env::consts::ARCH`) for
+   * the version string (board 25 §7 "Version string"); absent when the host can't tell (web).
+   */
+  readonly arch?: string
+  /**
+   * Board 25 §7 (b): the native Help menu (macOS) and "Show logs in Finder"; desktop only. The
+   * browser and memory hosts have no native menu (their Help lives in File › Help).
+   */
+  readonly help?: HelpHostApi
   /** Stops watchers and listeners (window teardown). */
   dispose(): void
+}
+
+/** A Help menu item the window runs (board 25 §7 (b) A0qRF). Show logs is `HelpHostApi.showLogs`. */
+export type HelpMenuAction =
+  | "docs"
+  | "shortcuts"
+  | "whats-new"
+  | "report-issue"
+  | "copy-diagnostics"
+
+export interface HelpHostApi {
+  /** Native Help menu items picked while this window is the focused editor. */
+  onMenu(listener: (action: HelpMenuAction) => void): () => void
+  /** Reveals Kimo's log file (`~/.kimo/mcp/server.log`) in Finder / Explorer / the file manager. */
+  showLogs(): Promise<void>
 }
 
 // ===============================================================================================

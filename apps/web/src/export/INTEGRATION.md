@@ -52,15 +52,17 @@ const exportSource = useMemo<ExportSource>(() => ({
 `ExportOutcome` = `{ kind: "folder", folder, written, unchanged, kept }` |
 `{ kind: "zip", name, files }`.
 
-## Needs design (not built)
+## Board 25 additions (O3Abm, built)
 
-- RightPanel **Code tab** (live code for the selection): no board draws it (no `Tab/Active`
-  "Code" anywhere, no Code panel frame) — keep the current placeholder.
-- Review of **changed files** before overwriting ("existing files are diffed"): no diff/confirm
-  frame; changed files are kept and reported through `onExported` (host toast copy is the
-  host's).
-- **PDF** export: board 07 lists only SVG / PNG ("Assets at 1×, 2×, 3×"); `exportDocument(…,
-  "pdf")` exists but has no row.
-- Web variant: no output folder; the footer note reads "N files · downloaded as <name>.zip".
-- Preview of binary files (PNG) and an export error state: errors are shown as plain lines in
-  the code area; generation progress has no state.
+- Editor passes `preset` (Code tab "Open export…": format + node ids) and maps `onExported`
+  through `exportToastOf(outcome)` to `m3.toast` (+ "Reveal" → `platform.files.reveal` on
+  desktop). The Code tab (`../code-tab`, mounted by `RightPanel`) calls `onOpenExport`.
+- PDF row (Embed fonts / Include bleed → `exportDocument(…, "pdf", { fonts, bleed })`; pass
+  `ExportSource.fonts` to embed real faces). SVG / PNG: the preview bar's SVG | PNG toggle picks
+  the output, PNG at the chosen scale (1× 2× 3×, default 2×) with a raster preview.
+- Desktop: export → review (only when a target exists and differs; hand-edited files — disk no
+  longer hashes to what Kimo wrote last time, `kimo.export.written.<folder>` — default Keep) →
+  per-file progress (Cancel stops after the current file) → error card + Retry (failed +
+  skipped). Untitled desktop files start without a folder (Export disabled until Choose…).
+- Web: "Download as" (editable zip name, default `kimo-export-<frame>.zip`); a single-file
+  export downloads the file itself.

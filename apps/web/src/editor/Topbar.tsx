@@ -21,6 +21,7 @@ import { Icon } from "../lib/icons"
 import { MenuPopover } from "../lib/MenuPopover"
 import { getTheme } from "../lib/theme"
 import { useRuntime } from "../platform/runtime"
+import { runHelpAction } from "../settings/help"
 import { FileMenu, type FileMenuActions, RECENT_LIMIT } from "./FileMenu"
 
 export type { FileMenuActions } from "./FileMenu"
@@ -95,6 +96,11 @@ export function useFileMenu(actions: FileMenuActions) {
         anchor={anchor}
         os={platform.os}
         recents={recents}
+        help={{
+          version: platform.appVersion,
+          logs: platform.help !== undefined,
+          run: runHelpAction,
+        }}
         onClearRecent={() => void platform.recents.clearFiles().catch(() => undefined)}
         onClose={() => {
           close()

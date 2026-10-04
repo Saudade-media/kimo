@@ -9,6 +9,7 @@
  * `BLOCKED` otherwise. Fetched faces go to the content-addressed cache, so later opens render
  * offline with no request.
  */
+
 import { googleFontsAllowed, type KimoPlatform, type SettingKey } from "@kimo/platform"
 import {
   BUNDLED_FAMILIES,
@@ -23,6 +24,7 @@ import {
   type NetworkFontSource,
   type PlatformFontSources,
 } from "@kimo/renderer"
+import { fontFeatureTags } from "./font-features"
 
 /** Settings that change what fonts resolve to. */
 export const FONT_SETTING_KEYS: readonly SettingKey[] = [
@@ -39,6 +41,11 @@ export interface FontSystemOptions {
   onRemoteFetched?: (face: FontFaceKey, bytes: Uint8Array) => void
   /** `navigator.onLine` by default. */
   online?: () => boolean
+  /**
+   * Board 25 §6 (d): the font file the canvas renders (family, weight, style) with — the
+   * renderer's `FontProvider.faceBytes` — or null when it is not registered (fallback used).
+   */
+  faceBytes?: (key: FontFaceKey) => Uint8Array | null
 }
 
 export interface FontSystem {
@@ -62,6 +69,12 @@ export interface FontSystem {
    * false when fetching is not allowed or Google has no such family. */
   fetchFamily(family: string, weights: readonly number[]): Promise<boolean>
   knownGoogleFamilies(): Promise<Set<string>>
+  /**
+   * Board 25 §6 (d) rule v0gB4 `font.features.has(tag)`: the OpenType feature tags (GSUB ∪
+   * GPOS) of the resolved face, or null when it can't be inspected (not loaded yet, fallback
+   * font, WOFF 2) — the UI then shows no font-support hint.
+   */
+  features(key: FontFaceKey): Promise<ReadonlySet<string> | null>
   /** Forget memoized lists (after Clear cache, Add folder…, a new document font). */
   invalidate(): void
   /** Fires when fonts may resolve differently (font settings, a fetch, invalidate). Not on
@@ -144,6 +157,10 @@ export function createFontSystem(options: FontSystemOptions): FontSystem {
       return any
     },
     knownGoogleFamilies: () => inner.knownGoogleFamilies(),
+    async features(key) {
+      const bytes = options.faceBytes?.(key) ?? null
+      return bytes ? fontFeatureTags(bytes) : null
+    },
     invalidate() {
       inner.invalidate()
       emit()

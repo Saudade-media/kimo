@@ -83,11 +83,6 @@
   width: 100%;
 }
 
-.agent-panel__first-run {
-  width: 100%;
-  margin: auto 0;
-}
-
 /* User block (board 22 D w9jPO8 gap 6): User Attachments · Message/User · Skill Used. */
 .agent-panel__user {
   display: flex;
@@ -1161,4 +1156,226 @@
   font-weight: var(--kimo-font-weight-medium);
   line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
   white-space: nowrap;
+}
+
+/*
+ * Agent tab first run (board 25 "v1 Polish" §5 p55vU): Body (E3icY / WJCW5) column, gap 12,
+ * padding [16, 24], justify center, align center, fill — in place of Thread Header + Thread.
+ */
+.agent-first-run {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 0;
+  padding: 16px 24px;
+  overflow-y: auto;
+  font-family: var(--kimo-font-sans);
+}
+.agent-first-run__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-lg);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 19px; /* Pencil text box: round(16 × 1.21) for Inter */
+}
+.agent-first-run__desc {
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  text-align: center;
+}
+/* Detected (fFG6G): column gap 10, padding 12, bg-subtle, stroke border, radius-lg. */
+.agent-first-run__card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Key Card (rPDtX): gap 8. */
+.agent-first-run__card--key {
+  gap: 8px;
+}
+.agent-first-run__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+/* Host Tile (vUU6S): 32, bg-muted, radius-md; icon 16 text-primary. */
+.agent-first-run__tile {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+.agent-first-run__tile > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.agent-first-run__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agent-first-run__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.agent-first-run__name {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.agent-first-run__path {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Use Claude Code (jfK4g) / Connect (kBBgE): Button/Primary h 32, padding [0, 12], fill. */
+.kimo-button.kimo-compact-button.agent-first-run__primary {
+  justify-content: center;
+  width: 100%;
+}
+.agent-first-run__note {
+  width: 100%;
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  text-align: center;
+}
+/* Alt (mPBZ5) / Other providers (z1GSX): row gap 4, center; sans 11 / 500 + arrow-right 12. */
+.agent-first-run__link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  cursor: pointer;
+}
+.agent-first-run__link > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+.agent-first-run__link:hover {
+  color: var(--kimo-text-primary);
+}
+/* Label Row (xNc8d): row gap 6, center; key-round 14 $agent + sans 12 / 500. */
+.agent-first-run__label-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.agent-first-run__key-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-agent);
+}
+.agent-first-run__label {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+}
+/* Key Field (WxxLI): h 32, padding [0, 10], center, bg-app, stroke border, radius-sm. */
+.agent-first-run__field {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.agent-first-run__field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+.agent-first-run__field.is-danger {
+  box-shadow: inset 0 0 0 1px var(--kimo-danger);
+}
+.agent-first-run__input {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+.agent-first-run__input::placeholder {
+  color: var(--kimo-text-tertiary);
+}
+.agent-first-run__error {
+  color: var(--kimo-danger);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+/* Other (tp7XM): column gap 6, center. */
+.agent-first-run__other {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.agent-first-run__hint {
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+/* Board 25 rule "Composer": disabled at 50 % until a provider passes its Test. */
+.kimo-composer-agent.kimo-composer-agent--disabled.agent-panel__composer--off {
+  opacity: 0.5;
 }

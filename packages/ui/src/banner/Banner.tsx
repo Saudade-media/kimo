@@ -1,10 +1,14 @@
-import { CircleX, Info, TriangleAlert, X } from "lucide-react"
+import { CircleCheck, CircleX, Info, TriangleAlert, X } from "lucide-react"
 import type { ComponentPropsWithRef, ReactNode } from "react"
 import { Button } from "../button/Button"
 import { IconButton } from "../icon-button/IconButton"
 import { cx } from "../internal/util"
 
-export type BannerTone = "info" | "warning" | "danger"
+/**
+ * `success` (board 25 §6 (e) tzFIU): success-soft fill + success icon — only "Ready to commit",
+ * the one banner that reports a finished state.
+ */
+export type BannerTone = "info" | "warning" | "danger" | "success"
 
 /** One banner action. `ghost` and `secondary` both render the board's Button/Ghost instance
  * (label text-primary); `primary` is Button/Primary. Order = left to right. */
@@ -12,6 +16,8 @@ export interface BannerActionItem {
   id: string
   label: string
   variant: "ghost" | "secondary" | "primary"
+  /** Leading 14px icon (board 25 §6 (e) LsjRG "Copied": `check` on-accent). */
+  icon?: ReactNode
 }
 
 /** Props for {@link Banner}. Remaining `<div>` props go to the frame. */
@@ -31,6 +37,7 @@ const FALLBACK: Record<BannerTone, ReactNode> = {
   info: <Info />,
   warning: <TriangleAlert />,
   danger: <CircleX />,
+  success: <CircleCheck />,
 }
 
 /**
@@ -78,6 +85,7 @@ export function Banner({
                 a.variant !== "primary" && "kimo-banner__action--ghost",
               )}
               data-action={a.id}
+              {...(a.icon ? { icon: a.icon } : {})}
               onClick={() => onAction?.(a.id)}
             >
               {a.label}

@@ -41,8 +41,17 @@ follows `prefers-color-scheme` live. The Topbar theme toggle should then write
 
 ## Optional props
 
-- `licenses={{ count, url }}`: "Kimo and the 214 packages it ships with." (count from the SBOM /
-  NOTICE generation); without it the copy omits the number.
+- None. About & licenses (board 25 §7 (a)) reads the generated licence list
+  (`src/settings/generated/notices.json`, `bun run gen:notices` in apps/web; `check:generated`
+  fails when bun.lock / Cargo.lock / the fonts changed without a regenerate) and the version
+  string from `versionInfo(platform)`.
+
+## Help (board 25 §7 (b))
+
+- Mount `<HelpHost platform>` once per window (App). Every entry point calls
+  `runHelpAction(action)`: File › Help (Windows / Linux / web), ⌘/ (shortcuts table); the macOS
+  native Help menu arrives through `platform.help.onMenu` (menu.rs `kimo://help-menu`; "Show logs
+  in Finder" is revealed in Rust).
 
 ## Not designed (marked in code)
 

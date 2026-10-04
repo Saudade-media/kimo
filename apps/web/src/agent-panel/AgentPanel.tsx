@@ -12,17 +12,36 @@ import {
   AgentErrorCard,
   type AgentErrorCardAction,
   AgentStep,
+  ApprovalCard,
   AttachmentChip,
   AttachmentThumb,
-  CompactButton,
   ComposerAgent,
-  EmptyState,
   IconButton,
+  IconErrorCard,
   Message,
   MessageMeta,
   ModeChip,
+  RefusalCard,
 } from "@kimo/ui"
-import { BookOpen, Hand, History, Plug, SquarePen } from "lucide-react"
+import {
+  BookOpen,
+  CircleX,
+  Component,
+  Copy,
+  Download,
+  FilePlus,
+  FolderOpen,
+  History,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Save,
+  Settings2,
+  SquareDashed,
+  SquarePen,
+  Trash2,
+  Variable,
+} from "lucide-react"
 import {
   type ClipboardEvent,
   type DragEvent,
@@ -33,8 +52,11 @@ import {
   useState,
 } from "react"
 import type { AgentMessageView, AttachmentChipView } from "../platform/contract"
+import { inTauri } from "../platform/runtime"
+import { type ApprovalOpIcon, approvalOps } from "./approval"
 import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
 import { markOf } from "./controller"
+import { FirstRun } from "./FirstRun"
 import { costLabel, durationLabel, headerCostLabel, tokensLabel } from "./format"
 import { useAgentPanelState } from "./hooks"
 import { ModelMenu, ModeMenu, SkillsMenu } from "./Menus"
@@ -54,6 +76,24 @@ export interface AgentPanelProps {
   /** Copy (MessageMeta). Default: navigator.clipboard. */
   onCopy?: (text: string) => void
   now?: () => number
+  /** Approval op rows: a node's name / its parent's name ("Delete 3 layers · in Pricing"). */
+  nodeNameOf?: (id: string) => string | undefined
+  parentNameOf?: (id: string) => string | undefined
+  /** First run "Have Claude Code?…" hint (desktop only). Default: the host (Tauri → desktop). */
+  platform?: "desktop" | "web"
+}
+
+const OP_ICONS: Record<ApprovalOpIcon, typeof Trash2> = {
+  "trash-2": Trash2,
+  pencil: Pencil,
+  plus: Plus,
+  variable: Variable,
+  component: Component,
+  save: Save,
+  download: Download,
+  "file-plus": FilePlus,
+  "folder-open": FolderOpen,
+  "square-dashed": SquareDashed,
 }
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -94,6 +134,9 @@ export function AgentPanel({
   onOpenSkillsFolder,
   onCopy,
   now = Date.now,
+  nodeNameOf,
+  parentNameOf,
+  platform = inTauri() ? "desktop" : "web",
 }: AgentPanelProps) {
   const state = useAgentPanelState(controller)
   const thread = useRef<HTMLDivElement>(null)
@@ -163,53 +206,56 @@ export function AgentPanel({
         }
       }}
     >
-      <div className="agent-panel__header">
-        <span className="agent-panel__title" data-testid="agent-thread-title">
-          {state.sessionsOpen ? "Sessions" : header.title}
-        </span>
-        {!state.sessionsOpen && state.session && (
-          <span className="agent-panel__cost" data-testid="agent-session-cost">
-            <span className="agent-panel__cost-label">{headerCostLabel(header)}</span>
-          </span>
-        )}
-        <span className="agent-panel__spacer" aria-hidden="true" />
-        <IconButton
-          label="History"
-          icon={<History />}
-          active={state.sessionsOpen}
-          onClick={() => controller.toggleHistory()}
-        />
-        <IconButton
-          label="New session"
-          icon={<SquarePen />}
-          onClick={() => controller.newSession()}
-        />
-      </div>
-
-      {state.sessionsOpen ? (
-        <SessionList
+      {state.onboarding ? (
+        <FirstRun
+          view={state.onboarding}
           controller={controller}
-          state={state}
-          fileName={fileName}
-          clis={clis}
-          now={now()}
+          platform={platform}
+          {...(onOpenSettings ? { onOpenSettings } : {})}
         />
       ) : (
         <>
-          <div className="agent-panel__thread" ref={thread} data-testid="agent-thread">
-            {state.firstRun && state.messages.length === 0 ? (
-              <EmptyState
-                className="agent-panel__first-run"
-                icon={<Plug />}
-                title="Connect a model to start"
-                description="Add an API key, or sign in to Claude Code, Codex or Gemini CLI on this computer."
-              >
-                <CompactButton variant="secondary" height={28} padX={10} onClick={onOpenSettings}>
-                  Open AI providers
-                </CompactButton>
-              </EmptyState>
-            ) : (
-              state.messages.map((m, i) => (
+          <div className="agent-panel__header">
+            <span className="agent-panel__title" data-testid="agent-thread-title">
+              {state.sessionsOpen ? "Sessions" : header.title}
+            </span>
+            {!state.sessionsOpen && state.session && (
+              <span className="agent-panel__cost" data-testid="agent-session-cost">
+                <span className="agent-panel__cost-label">{headerCostLabel(header)}</span>
+              </span>
+            )}
+            {!state.sessionsOpen && state.approvals.length > 1 && (
+              // Board 25 rule "Approval queue": the header shows "N waiting" (not drawn: the
+              // Session Cost pill look).
+              <span className="agent-panel__cost" data-testid="agent-approvals-waiting">
+                <span className="agent-panel__cost-label">{state.approvals.length} waiting</span>
+              </span>
+            )}
+            <span className="agent-panel__spacer" aria-hidden="true" />
+            <IconButton
+              label="History"
+              icon={<History />}
+              active={state.sessionsOpen}
+              onClick={() => controller.toggleHistory()}
+            />
+            <IconButton
+              label="New session"
+              icon={<SquarePen />}
+              onClick={() => controller.newSession()}
+            />
+          </div>
+
+          {state.sessionsOpen ? (
+            <SessionList
+              controller={controller}
+              state={state}
+              fileName={fileName}
+              clis={clis}
+              now={now()}
+            />
+          ) : (
+            <div className="agent-panel__thread" ref={thread} data-testid="agent-thread">
+              {state.messages.map((m, i) => (
                 <ThreadItem
                   key={m.id}
                   m={m}
@@ -217,137 +263,171 @@ export function AgentPanel({
                   state={state}
                   controller={controller}
                   onCopy={copy}
+                  onEditRequest={(turnId) => {
+                    controller.editRequest(turnId)
+                    setTimeout(() => textarea.current?.focus(), 0)
+                  }}
                 />
-              ))
-            )}
-            {state.modeRun && state.modeRun.mode !== "iterate" && (
-              <PlanCard controller={controller} run={state.modeRun} />
-            )}
-            {state.modeRun?.mode === "iterate" && state.modeRun.iterate && (
-              <ReviewCard controller={controller} run={state.modeRun} />
-            )}
-          </div>
-
-          <div className="agent-panel__composer-wrap">
-            {state.menu === "model" && (
-              <ModelMenu
-                controller={controller}
-                state={state}
-                target={agentModelTarget}
-                onManage={onOpenSettings}
-              />
-            )}
-            {state.menu === "skills" && (
-              <SkillsMenu controller={controller} state={state} onOpenFolder={onOpenSkillsFolder} />
-            )}
-            {state.menu === "mode" && (
-              <ModeMenu
-                controller={controller}
-                state={state}
-                personaOf={(i) =>
-                  (["iris", "violet", "rose", "ember", "moss"] as const)[i % 5] ?? "iris"
-                }
-                onPickAgentModel={(i) => {
-                  controller.openMenu("model")
-                  setAgentModelTarget(i)
-                }}
-              />
-            )}
-            <ComposerAgent
-              data-testid="agent-composer"
-              value={state.composer.text}
-              onChange={(t) => controller.setText(t)}
-              placeholder={
-                state.busy
-                  ? "Queue a follow-up — sent when this turn ends"
-                  : "Ask Kimo to design or edit…"
-              }
-              textareaRef={textarea}
-              onTextareaKeyDown={onKeyDown}
-              onTextareaPaste={(e: ClipboardEvent<HTMLTextAreaElement>) => {
-                const files = [...e.clipboardData.files]
-                if (files.length) {
-                  e.preventDefault()
-                  void addFiles(files)
-                }
-              }}
-              onFocusChange={(f) => controller.setFocused(f)}
-              attachments={state.composer.attachments.map((a) =>
-                a.kind === "image" ? (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className="agent-panel__thumb-button"
-                    aria-label="Remove image"
-                    onClick={() => controller.removeAttachment(a.id)}
-                  >
-                    <AttachmentThumb
-                      name="image"
-                      size={24}
-                      {...(a.image
-                        ? { src: `data:${a.image.mimeType};base64,${a.image.data}` }
-                        : {})}
-                    />
-                  </button>
-                ) : (
-                  <AttachmentChip
-                    key={a.id}
-                    label={a.label}
-                    onRemove={() => controller.removeAttachment(a.id)}
-                  />
-                ),
+              ))}
+              {state.approvals.map((a) => (
+                // Board 25 OlhpU: a thread-level card per pending approval, oldest first.
+                <ApprovalCard
+                  key={a.request.id}
+                  data-testid="agent-approval"
+                  data-pen="OlhpU"
+                  title="Kimo wants to"
+                  ops={approvalOps(a.request, {
+                    ...(nodeNameOf ? { nodeName: nodeNameOf } : {}),
+                    ...(parentNameOf ? { parentName: parentNameOf } : {}),
+                  }).map((o) => {
+                    const Icon = OP_ICONS[o.icon]
+                    return { icon: <Icon />, label: o.label, ...(o.meta ? { meta: o.meta } : {}) }
+                  })}
+                  choices={(["once", "session", "deny"] as const).filter((c) =>
+                    a.choices.includes(c),
+                  )}
+                  onChoose={(c) => void controller.answerApproval(a.request.id, c)}
+                />
+              ))}
+              {state.modeRun && state.modeRun.mode !== "iterate" && (
+                <PlanCard controller={controller} run={state.modeRun} />
               )}
-              onAttach={() => fileInput.current?.click()}
-              skillsCount={state.skills.enabled.length}
-              skillsOpen={state.menu === "skills"}
-              onSkills={() => controller.openMenu("skills")}
-              skillsRef={(el) => el?.setAttribute("data-agent-menu-anchor", "")}
-              modeChip={
-                <ModeChip
-                  mode={state.composer.mode.mode}
-                  label={state.modeLabel}
-                  open={state.menu === "mode"}
-                  data-agent-menu-anchor=""
-                  onClick={() => controller.openMenu("mode")}
-                />
-              }
-              model={{
-                label: state.modelLabel,
-                open: state.menu === "model",
-                markState: state.busy ? "working" : "idle",
-                onClick: () => {
-                  setAgentModelTarget(null)
-                  controller.openMenu("model")
-                },
-              }}
-              modelRef={(el) => el?.setAttribute("data-agent-menu-anchor", "")}
-              action={state.busy ? "stop" : "send"}
-              sendDisabled={
-                !state.composer.text.trim() &&
-                !state.composer.attachments.some((a) => a.kind === "image")
-              }
-              onSend={() => void controller.send(state.composer.text)}
-              onStop={() => controller.stop()}
-            />
-            {state.composer.queued.length > 0 && (
-              <p className="agent-panel__queued" data-testid="agent-queued">
-                {state.composer.queued.length} queued · sent when this turn ends
-              </p>
-            )}
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              multiple
-              hidden
-              onChange={(e) => {
-                const files = [...(e.currentTarget.files ?? [])]
-                e.currentTarget.value = ""
-                void addFiles(files)
-              }}
-            />
-          </div>
+              {state.modeRun?.mode === "iterate" && state.modeRun.iterate && (
+                <ReviewCard controller={controller} run={state.modeRun} />
+              )}
+            </div>
+          )}
         </>
+      )}
+
+      {(!state.sessionsOpen || state.onboarding) && (
+        <div className="agent-panel__composer-wrap">
+          {state.menu === "model" && (
+            <ModelMenu
+              controller={controller}
+              state={state}
+              target={agentModelTarget}
+              onManage={onOpenSettings}
+            />
+          )}
+          {state.menu === "skills" && (
+            <SkillsMenu controller={controller} state={state} onOpenFolder={onOpenSkillsFolder} />
+          )}
+          {state.menu === "mode" && (
+            <ModeMenu
+              controller={controller}
+              state={state}
+              personaOf={(i) =>
+                (["iris", "violet", "rose", "ember", "moss"] as const)[i % 5] ?? "iris"
+              }
+              onPickAgentModel={(i) => {
+                controller.openMenu("model")
+                setAgentModelTarget(i)
+              }}
+            />
+          )}
+          <ComposerAgent
+            data-testid="agent-composer"
+            className={state.composerDisabled ? "agent-panel__composer--off" : undefined}
+            disabled={state.composerDisabled}
+            value={state.composer.text}
+            onChange={(t) => controller.setText(t)}
+            placeholder={
+              state.composerDisabled
+                ? "Connect a model to start"
+                : state.approvals.length > 0
+                  ? "Kimo is waiting for your approval…"
+                  : state.busy
+                    ? "Queue a follow-up — sent when this turn ends"
+                    : "Ask Kimo to design or edit…"
+            }
+            textareaRef={textarea}
+            onTextareaKeyDown={onKeyDown}
+            onTextareaPaste={(e: ClipboardEvent<HTMLTextAreaElement>) => {
+              const files = [...e.clipboardData.files]
+              if (files.length) {
+                e.preventDefault()
+                void addFiles(files)
+              }
+            }}
+            onFocusChange={(f) => controller.setFocused(f)}
+            attachments={(state.composerDisabled || state.approvals.length > 0
+              ? []
+              : state.composer.attachments
+            ).map((a) =>
+              a.kind === "image" ? (
+                <button
+                  key={a.id}
+                  type="button"
+                  className="agent-panel__thumb-button"
+                  aria-label="Remove image"
+                  onClick={() => controller.removeAttachment(a.id)}
+                >
+                  <AttachmentThumb
+                    name="image"
+                    size={24}
+                    {...(a.image ? { src: `data:${a.image.mimeType};base64,${a.image.data}` } : {})}
+                  />
+                </button>
+              ) : (
+                <AttachmentChip
+                  key={a.id}
+                  label={a.label}
+                  onRemove={() => controller.removeAttachment(a.id)}
+                />
+              ),
+            )}
+            onAttach={() => fileInput.current?.click()}
+            skillsCount={state.skills.enabled.length}
+            skillsOpen={state.menu === "skills"}
+            onSkills={() => controller.openMenu("skills")}
+            skillsRef={(el) => el?.setAttribute("data-agent-menu-anchor", "")}
+            modeChip={
+              <ModeChip
+                mode={state.composer.mode.mode}
+                label={state.modeLabel}
+                open={state.menu === "mode"}
+                data-agent-menu-anchor=""
+                onClick={() => controller.openMenu("mode")}
+              />
+            }
+            model={{
+              label: state.modelLabel,
+              open: state.menu === "model",
+              disabled: state.composerDisabled,
+              markState: state.busy ? "working" : "idle",
+              onClick: () => {
+                setAgentModelTarget(null)
+                controller.openMenu("model")
+              },
+            }}
+            modelRef={(el) => el?.setAttribute("data-agent-menu-anchor", "")}
+            action={state.busy ? "stop" : "send"}
+            sendDisabled={
+              !state.composer.text.trim() &&
+              !state.composer.attachments.some((a) => a.kind === "image")
+            }
+            onSend={() => void controller.send(state.composer.text)}
+            onStop={() => controller.stop()}
+          />
+          {state.composer.queued.length > 0 && (
+            <p className="agent-panel__queued" data-testid="agent-queued">
+              {state.composer.queued.length} queued · sent when this turn ends
+            </p>
+          )}
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            hidden
+            onChange={(e) => {
+              const files = [...(e.currentTarget.files ?? [])]
+              e.currentTarget.value = ""
+              void addFiles(files)
+            }}
+          />
+        </div>
       )}
     </div>
   )
@@ -359,12 +439,14 @@ function ThreadItem({
   state,
   controller,
   onCopy,
+  onEditRequest,
 }: {
   m: AgentMessageView
   latest: boolean
   state: AgentPanelViewState
   controller: AgentPanelControllerExt
   onCopy(text: string): void
+  onEditRequest(turnId: string): void
 }) {
   if (m.kind === "user")
     return (
@@ -424,16 +506,17 @@ function ThreadItem({
           ))}
         </div>
       )}
-      {(m.text || (m.streaming && m.steps.length === 0) || (!card && !m.streaming)) && (
-        <Message
-          from="agent"
-          streaming={m.streaming}
-          markState={markOf(m.streaming, m.steps, card)}
-          data-meta-hover=""
-        >
-          {m.text}
-        </Message>
-      )}
+      {card?.kind !== "refusal" &&
+        (m.text || (m.streaming && m.steps.length === 0) || (!card && !m.streaming)) && (
+          <Message
+            from="agent"
+            streaming={m.streaming}
+            markState={markOf(m.streaming, m.steps, card)}
+            data-meta-hover=""
+          >
+            {m.text}
+          </Message>
+        )}
       {m.streaming && state.live && (
         <MessageMeta
           streaming
@@ -455,52 +538,57 @@ function ThreadItem({
       )}
       {card && (
         <div className="agent-panel__indent">
-          <AgentErrorCard
-            kind={card.kind}
-            title={card.title}
-            description={card.body}
-            actions={actions}
-            data-testid="agent-error-card"
-          />
-        </div>
-      )}
-      {m.streaming && state.approval && (
-        <div className="agent-panel__indent">
-          <div
-            className="kimo-error-card kimo-error-card--neutral agent-panel__approval"
-            role="alertdialog"
-            aria-label="Approval needed"
-            data-testid="agent-approval"
-          >
-            <div className="kimo-error-card__head">
-              <Hand className="kimo-error-card__icon" aria-hidden="true" />
-              <span className="kimo-error-card__title">
-                Approve: {state.approval.request.summary}
-              </span>
-            </div>
-            <p className="kimo-error-card__desc">
-              Waiting for you — the agent is paused until you answer (Stop denies).
-            </p>
-            <div className="kimo-error-card__actions">
-              {state.approval.choices.map((c) => (
-                <CompactButton
-                  key={c}
-                  variant={c === "once" ? "primary" : c === "session" ? "secondary" : "ghost"}
-                  height={26}
-                  padX={10}
-                  onClick={() =>
-                    void controller.answerApproval(state.approval?.request.id ?? "", c)
-                  }
-                >
-                  {c === "deny" ? "Deny" : c === "once" ? "Allow once" : "Allow for this session"}
-                </CompactButton>
-              ))}
-            </div>
-          </div>
+          {card.kind === "refusal" ? (
+            // Board 25 dIkT6: neutral, hand, the model's own reason, "Edit request".
+            <RefusalCard
+              data-testid="agent-error-card"
+              data-pen="dIkT6"
+              title="Kimo won't do this one"
+              reason={m.text.trim() || card.body}
+              onEditRequest={() => onEditRequest(m.turnId)}
+            />
+          ) : card.kind === "error" ? (
+            // Board 25 u8mh7l: AgentErrorCard + circle-x, Retry + Copy error.
+            <IconErrorCard
+              data-testid="agent-error-card"
+              data-kind="error"
+              data-pen="u8mh7l"
+              icon={<CircleX />}
+              title="Something went wrong"
+              description={genericBody(card)}
+              actions={[
+                ...actions.slice(0, 1).map((a) => ({
+                  ...a,
+                  icon: a.id === "open_settings" ? <Settings2 /> : <RotateCcw />,
+                })),
+                {
+                  id: "copy_error",
+                  label: "Copy error",
+                  icon: <Copy />,
+                  onClick: () => onCopy(`${card.title}\n${card.body}`),
+                },
+              ]}
+            />
+          ) : (
+            <AgentErrorCard
+              kind={card.kind}
+              title={card.title}
+              description={card.body}
+              actions={actions}
+              data-testid="agent-error-card"
+            />
+          )}
         </div>
       )}
     </div>
   )
+}
+
+/** "Anthropic returned 500 · overloaded_error. Nothing was changed on the canvas." */
+function genericBody(card: { body: string; opsApplied: number }): string {
+  const body = card.body.trim()
+  if (card.opsApplied > 0 || /canvas|kept/i.test(body)) return body
+  return `${body}${/[.!?]$/.test(body) ? "" : "."} Nothing was changed on the canvas.`
 }
 
 function switchLabel(state: AgentPanelViewState): string {

@@ -29,17 +29,22 @@ import {
   type AiSettingsState,
   createAiSettingsController,
 } from "./controller"
-import { AI_CONFIG_KEY, isCloud, type StoredProvider } from "./model"
+import { AI_CONFIG_KEY, authOf, isCloud, keyWithheld, type StoredProvider } from "./model"
 
 /** How the relay injects one provider's credentials (desktop). */
 export function relayAuthFor(p: StoredProvider): AiRelayRequest["auth"] {
-  if (isCloud(p.kind))
+  if (isCloud(p.kind)) {
+    // Foundry: the relay's `project` slot carries the resource (`<resource>.services.ai.azure.com`).
+    const project = p.kind === "foundry" ? (p.resource ?? p.project) : p.project
     return {
       kind: "cloud",
       platform: p.kind,
       ...(p.region ? { region: p.region } : {}),
-      ...(p.project ? { project: p.project } : {}),
+      ...(project ? { project } : {}),
     }
+  }
+  // Board 25 "Origin pin": the base URL's host left the pinned origin → the key is withheld.
+  if (keyWithheld(p)) return { kind: "none" }
   switch (p.kind) {
     case "anthropic":
       return { kind: "header", header: "x-api-key" }
@@ -48,11 +53,14 @@ export function relayAuthFor(p: StoredProvider): AiRelayRequest["auth"] {
     case "openai":
     case "openrouter":
       return { kind: "header", header: "authorization", scheme: "Bearer" }
-    default:
+    default: {
       if (p.free) return { kind: "none" }
-      return p.wire === "anthropic"
-        ? { kind: "header", header: "x-api-key" }
-        : { kind: "header", header: "authorization", scheme: "Bearer" }
+      const a = authOf(p)
+      if (a.scheme === "bearer")
+        return { kind: "header", header: "authorization", scheme: "Bearer" }
+      if (a.scheme === "x-api-key") return { kind: "header", header: "x-api-key" }
+      return { kind: "header", header: (a.header?.trim() || "x-api-key").toLowerCase() }
+    }
   }
 }
 

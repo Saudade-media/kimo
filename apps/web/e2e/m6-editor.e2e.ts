@@ -6,6 +6,7 @@
  * untitled document asks first (board 24 (i)).
  */
 import { disk, harnessUrl, SITE } from "./m4-app.e2e"
+import { checker, measure, token } from "./m6-helpers"
 import { type E2EContext, expect, type Scenario } from "./run"
 
 type Kimo = {
@@ -58,14 +59,49 @@ export const scenarios: Scenario[] = [
       await editor(ctx)
       await page.locator(".editor__canvas").click({ position: { x: 900, y: 600 } })
       await page.keyboard.press("Meta+k")
-      await page.getByText("Connect a model to start").waitFor({ timeout: 10_000 })
+      await page.locator("[data-testid=agent-first-run-key]").waitFor({ timeout: 10_000 })
       const w = await page.locator(".right-panel").evaluate((e) => e.getBoundingClientRect().width)
       expect(Math.abs(w - 360) < 0.75, `right panel width ${w}`)
+      // Board 25 D8covN (nothing found): Body WJCW5, Key Card rPDtX, Key Field WxxLI, the
+      // composer kept at 50 % with "Connect a model to start".
+      const m = await measure(page, {
+        body: '[data-pen="WJCW5"]',
+        title: ".agent-first-run__title",
+        card: '[data-pen="rPDtX"]',
+        field: '[data-pen="WxxLI"]',
+        connect: '[data-pen="kBBgE"]',
+      })
+      const c = checker(ctx, "Editor Agent tab · first run (D8covN)")
+      c.box("Body WJCW5", m.body, { pad: [16, 24, 16, 24], gap: 12 })
+      c.box("Title", m.title, { fs: 16, fw: "600", h: 19 })
+      c.box("Key Card rPDtX", m.card, {
+        pad: [12, 12, 12, 12],
+        gap: 8,
+        radius: 16,
+        bg: await token(page, "--kimo-bg-subtle"),
+      })
+      c.box("Key Field WxxLI", m.field, { h: 32, pad: [0, 10, 0, 10], radius: 6 })
+      c.box("Connect", m.connect, { h: 32 })
+      c.check(
+        "Composer",
+        "placeholder",
+        await page.locator("[data-testid=agent-composer] textarea").getAttribute("placeholder"),
+        "Connect a model to start",
+      )
+      c.check(
+        "Composer",
+        "opacity",
+        await page
+          .locator("[data-testid=agent-composer]")
+          .evaluate((e) => getComputedStyle(e).opacity),
+        "0.5",
+      )
+      c.flush()
       // Back to Design, then the floating toolbar's Ask Kimo.
       await page.getByRole("tab", { name: "Design" }).click()
-      expect((await page.getByText("Connect a model to start").count()) === 0, "design tab")
+      expect((await page.locator("[data-testid=agent-first-run-key]").count()) === 0, "design tab")
       await page.getByRole("button", { name: /Ask Kimo/ }).click()
-      await page.getByText("Connect a model to start").waitFor()
+      await page.locator("[data-testid=agent-first-run-key]").waitFor()
     },
   },
   {
@@ -119,7 +155,7 @@ export const scenarios: Scenario[] = [
       expect(!!at, "note on screen")
       if (!at) return
       await canvas.click({ button: "right", position: { x: at.x, y: at.y } })
-      const menu = page.getByTestId("agent-context-menu")
+      const menu = page.getByTestId("canvas-context-menu")
       await menu.waitFor({ timeout: 5_000 })
       await menu.getByRole("menuitem", { name: "Convert to prompt" }).click()
       await page.waitForFunction(

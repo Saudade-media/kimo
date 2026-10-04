@@ -14,13 +14,29 @@ export function parseFeatureValue(text: string): number | null {
   return Number(t)
 }
 
+/** The format hint shown until the font's support of the typed tag is known. */
+export const CUSTOM_TAG_FORMAT_HINT = "4 characters, a–z 0–9"
+
+/**
+ * Board 25 §6 (d) rule kkH4N: "<tag> is in <font>" / "<tag> isn't in <font> — it will be saved
+ * but has no effect"; the format hint when the tag is incomplete or support is unknown.
+ */
+export function customTagHint(tag: string, family: string | null, inFont: boolean | null): string {
+  if (!isOpenTypeTag(tag) || !family || inFont === null) return CUSTOM_TAG_FORMAT_HINT
+  return inFont
+    ? `${tag} is in ${family}`
+    : `${tag} isn't in ${family} — it will be saved but has no effect`
+}
+
 /** Props for {@link CustomTagField}. Remaining `<div>` props go to the frame. */
 export interface CustomTagFieldProps extends Omit<ComponentPropsWithRef<"div">, "onSubmit"> {
   /** Family named in the hint ("cv11 is in Inter"). */
   family?: string | null
   /**
-   * Whether the font has the typed tag: true → "· cv11 is in Inter", false → "· not in font",
-   * null/undefined (unknown) → no suffix. Unknown tags are still allowed.
+   * Board 25 §6 (d) rule v0gB4 `font.features.has(tag)`: true → "cv11 is in Inter", false →
+   * "zero isn't in Inter — it will be saved but has no effect" (tertiary, never a warning),
+   * null/undefined (unknown: the font can't be inspected) → the plain format hint. Unknown and
+   * missing tags are still allowed.
    */
   inFont?: (tag: string) => boolean | null
   /** Add / Enter with a valid tag and value. */
@@ -38,7 +54,9 @@ export interface CustomTagFieldProps extends Omit<ComponentPropsWithRef<"div">, 
  *   Inputs (oZgHz) row, gap 6, center: Field (Qcbn1) Input 84 × 30 no icon, mono 12 ·
  *     Eq (l6vuGd) "=" mono 11 text-tertiary · Field (pPUw9) Input 48 × 30, mono 12 · Spacer ·
  *     Add (IIbvY) Button/Secondary h 28, padding [0, 10], label 12.
- *   Hint (pqGfb) sans 11 text-tertiary: "4 characters, a–z 0–9 · cv11 is in Inter".
+ *   Hint (pqGfb) sans 11 text-tertiary: "4 characters, a–z 0–9".
+ * Board 25 §6 (d) (g95jKz › Hint x9tphT): once the tag is complete and the font inspected, the
+ * hint states support — fill width, sans 11 text-tertiary, line-height 1.4, wrapping.
  */
 export function CustomTagField({
   family,
@@ -55,9 +73,8 @@ export function CustomTagField({
   const tagOk = isOpenTypeTag(tag)
   const n = parseFeatureValue(value)
   const ok = tagOk && n !== null
-  const known = tagOk ? (inFont?.(tag) ?? null) : null
-  const suffix =
-    known === true && family ? ` · ${tag} is in ${family}` : known === false ? " · not in font" : ""
+  const known = tagOk && family ? (inFont?.(tag) ?? null) : null
+  const hint = customTagHint(tag, family ?? null, known)
   const add = () => {
     if (ok) onAdd(tag, n as number)
   }
@@ -116,8 +133,14 @@ export function CustomTagField({
           Add
         </Button>
       </div>
-      <span id={`${id}-hint`} className="kimo-custom-tag__hint">
-        4 characters, a–z 0–9{suffix}
+      <span
+        id={`${id}-hint`}
+        className={cx(
+          "kimo-custom-tag__hint",
+          hint !== CUSTOM_TAG_FORMAT_HINT && "kimo-custom-tag__hint--support",
+        )}
+      >
+        {hint}
       </span>
     </div>
   )

@@ -16,12 +16,7 @@
  * Web: no Local agents group (CLIs run only on desktop — not designed for web, hidden), the
  * detail is the BWkRR variant (Banner/Warning + Body with the Anthropic browser opt-in).
  */
-import {
-  BROWSER_SUPPORT,
-  type CliDetection,
-  MODEL_CATALOG,
-  type ProviderKind,
-} from "@kimo/ai-agent"
+import { type CliDetection, MODEL_CATALOG, type ProviderKind } from "@kimo/ai-agent"
 import type { KimoPlatform } from "@kimo/platform"
 import { AgentHostRow, AgentTonePill, Banner, Button, Select, SettingRow, Toggle } from "@kimo/ui"
 import {
@@ -29,8 +24,6 @@ import {
   ArrowRight,
   Braces,
   ChevronUp,
-  CircleCheck,
-  CircleX,
   Cloud,
   Copy,
   ExternalLink,
@@ -41,6 +34,7 @@ import {
   ListOrdered,
   Lock,
   Pencil,
+  Pin,
   Plus,
   RefreshCw,
   Route,
@@ -53,6 +47,8 @@ import {
 } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import type { ProviderRowView } from "../platform/contract"
+import { AddProviderDialog } from "./AddProviderDialog"
+import { CloudCards } from "./CloudCards"
 import {
   type AiSettingsController,
   type AiSettingsState,
@@ -67,24 +63,22 @@ import {
   cliPill,
   cliState,
   defaultBaseURL,
+  hostOf,
   isCloud,
   keyPlaceholder,
+  keyWithheld,
   maskKey,
   money,
   OLLAMA_ID,
+  originOf,
   parseAmount,
   providerMeta,
   providerPill,
   storageLabel,
-  testDetail,
-  testLabel,
 } from "./model"
 import { useAiProviders, useAiSettingsState } from "./runtime"
+import { TestResult } from "./TestResult"
 import "./ai-settings.css"
-
-/** Not designed (relay rule): a custom endpoint's key is pinned to the first origin it reaches. */
-const CUSTOM_KEY_PIN_NOTE =
-  "Its key is pinned to the first origin it is sent to; saving or deleting the key clears the pin."
 
 const PROVIDER_ICONS: Record<ProviderKind, ReactNode> = {
   anthropic: <Sparkle />,
@@ -130,6 +124,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
   const ctl = controller ?? fromWindow
   const s = useAiSettingsState(ctl)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
   useEffect(() => {
     void ctl?.refresh()
   }, [ctl])
@@ -222,11 +217,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
         <div className="ai-group__title-row" data-pen="rKyoU">
           <h3 className="ai-group__title">API providers</h3>
           <span className="ai-spacer" />
-          <GhostButton
-            icon={<Plus />}
-            onClick={() => setExpanded(expanded === "+custom" ? null : "+custom")}
-            data-pen="A1ueIJ"
-          >
+          <GhostButton icon={<Plus />} onClick={() => setAdding(true)} data-pen="A1ueIJ">
             Add provider
           </GhostButton>
         </div>
@@ -236,11 +227,16 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
             : "Used by the agent in this browser, or when a session or prompt node picks one explicitly. A model is always {provider, model} — an unknown one fails loudly, never falls back."}
         </p>
       </div>
-      {expanded === "+custom" && (
-        <AddCustomCard
+      {adding && (
+        <AddProviderDialog
           ctl={ctl}
-          onDone={(id) => setExpanded(id)}
-          onCancel={() => setExpanded(null)}
+          backend={s.secretsBackend}
+          os={s.os}
+          onAdded={(id) => {
+            setAdding(false)
+            setExpanded(id)
+          }}
+          onCancel={() => setAdding(false)}
         />
       )}
       {s.providers.map((p) => (
@@ -494,7 +490,9 @@ function ProviderBlock({
   const cloud = isCloud(row.kind)
   const webCloud = cloud && s.platform === "web"
   const failed = row.lastTest && !row.lastTest.ok && row.status === "key-saved"
-  const pill = providerPill(failed ? "failed" : row.status)
+  // Board 25 rule "Add provider": a failing first Test leaves it "Not verified".
+  const unverified = ctl.storedOf(row.id)?.unverified === true && row.status !== "connected"
+  const pill = providerPill(unverified ? "unverified" : failed ? "failed" : row.status)
   const isApiDefault =
     row.isDefault || (row.id === "anthropic" && !s.providers.some((p) => p.isDefault))
   const meta = providerMeta(
@@ -588,13 +586,32 @@ function ProviderDetail({
   const keyless =
     row.kind === "custom" ? row.status === "local" || row.id === "custom:ollama" : cloud
   const [bannerHidden, setBannerHidden] = useState(false)
-  const t = row.lastTest
-  const cors = t && !t.ok && t.error?.kind === "cors"
-  const how = BROWSER_SUPPORT.find((r) => r.kind === row.kind)?.how
+  const stored = ctl.storedOf(row.id)
+  const t = row.lastTest ? ctl.testOf(row.id) : undefined
+  // Board 25: the offending field gets a danger stroke; a withheld key asks to be re-entered.
+  const withheld = stored ? keyWithheld(stored) : false
+  const keyDanger = withheld || (t !== undefined && !t.ok && t.errorKind === "auth")
+  const urlDanger =
+    t !== undefined && !t.ok && (t.errorKind === "network" || t.errorKind === "timeout")
   const open = MODEL_CATALOG[isCloud(row.kind) ? "anthropic" : row.kind].length === 0
+  const result = t && (
+    <TestResult
+      test={t}
+      retrying={s.testing[row.id] === true}
+      onRetry={() => void ctl.test(row.id)}
+    />
+  )
+  // Board 25 gpmey: the cloud row expands one detail card per cloud (no key field).
+  if (cloud)
+    return (
+      <div className="ai-clouds" data-pen="HPWcv" data-provider={row.id}>
+        <CloudCards ctl={ctl} readOnly={web} />
+        {result}
+      </div>
+    )
   const fields = (
     <>
-      {!keyless && <KeyField row={row} s={s} ctl={ctl} />}
+      {!keyless && <KeyField row={row} s={s} ctl={ctl} danger={keyDanger} withheld={withheld} />}
       {web && row.kind === "anthropic" && (
         <div className="ai-optin" data-pen="N0dsja">
           <Toggle
@@ -613,7 +630,7 @@ function ProviderDetail({
           </span>
         </div>
       )}
-      {cloud ? <CloudFields row={row} ctl={ctl} /> : <BaseUrlField row={row} ctl={ctl} />}
+      <BaseUrlField row={row} ctl={ctl} danger={urlDanger} />
       <div className="ai-field ai-field--models" data-pen="GESY1">
         <span className="ai-field__label">Models</span>
         {(["agent", "fast"] as const).map((role) => (
@@ -651,33 +668,12 @@ function ProviderDetail({
           <Lock className="ai-storage__icon" aria-hidden="true" />
         )}
         <span className="ai-storage__label">
-          {cloud
-            ? "Credentials from your cloud login · signed in Rust, never in JS"
-            : keyless
-              ? "No key · requests go straight to this endpoint"
-              : storageLabel(row.id, s.secretsBackend, s.os)}
+          {keyless
+            ? "No key · requests go straight to this endpoint"
+            : storageLabel(row.id, s.secretsBackend, s.os)}
         </span>
       </div>
-      {t && (
-        <div
-          className={`ai-test ai-test--${t.ok ? "ok" : "fail"}`}
-          data-pen="TUwHz"
-          role={t.ok ? "status" : "alert"}
-        >
-          {t.ok ? (
-            <CircleCheck className="ai-test__icon" aria-hidden="true" />
-          ) : (
-            <CircleX className="ai-test__icon" aria-hidden="true" />
-          )}
-          <span className="ai-test__label">
-            {testLabel({ ok: t.ok, ...(t.error ? { errorKind: t.error.kind } : {}) })}
-          </span>
-          <span className="ai-test__detail">
-            {testDetail(t)}
-            {cors && how ? ` · ${how}` : ""}
-          </span>
-        </div>
-      )}
+      {result}
       {row.id.startsWith("custom:") && row.id !== "custom:ollama" && (
         <div className="ai-detail__footer">
           <GhostButton
@@ -721,10 +717,14 @@ function KeyField({
   row,
   s,
   ctl,
+  danger = false,
+  withheld = false,
 }: {
   row: ProviderRowView
   s: AiSettingsState
   ctl: AiSettingsController
+  danger?: boolean
+  withheld?: boolean
 }) {
   const [editing, setEditing] = useState(row.keyHint === null)
   const [draft, setDraft] = useState("")
@@ -761,7 +761,10 @@ function KeyField({
       <label className="ai-field__label" htmlFor={`key-${row.id}`}>
         API key
       </label>
-      <span className={`ai-value-field${editing ? " is-editing" : ""}`} data-pen="purB3">
+      <span
+        className={`ai-value-field${editing ? " is-editing" : ""}${danger && !editing ? " is-danger" : ""}`}
+        data-pen="purB3"
+      >
         {editing ? (
           <input
             ref={input}
@@ -798,6 +801,18 @@ function KeyField({
           </span>
         )}
         {!editing && <span className="ai-spacer" />}
+        {!editing && withheld && (
+          <button
+            type="button"
+            className="ai-test__action ai-reenter"
+            onClick={() => {
+              setEditing(true)
+              setTimeout(() => input.current?.focus(), 0)
+            }}
+          >
+            Re-enter key
+          </button>
+        )}
         {!editing && (
           <>
             <FieldIcon
@@ -828,7 +843,15 @@ function KeyField({
   )
 }
 
-function BaseUrlField({ row, ctl }: { row: ProviderRowView; ctl: AiSettingsController }) {
+function BaseUrlField({
+  row,
+  ctl,
+  danger = false,
+}: {
+  row: ProviderRowView
+  ctl: AiSettingsController
+  danger?: boolean
+}) {
   const def = defaultBaseURL(row)
   // Built-in providers only call their own API (the relay never sends their key elsewhere):
   // the field shows the default, read-only (board 23 tAma7 "https://api.anthropic.com (default)").
@@ -852,7 +875,10 @@ function BaseUrlField({ row, ctl }: { row: ProviderRowView; ctl: AiSettingsContr
         <label className="ai-field__label" htmlFor={`url-${row.id}`}>
           Base URL
         </label>
-        <span className="ai-value-field ai-value-field--url" data-pen="RrLvC">
+        <span
+          className={`ai-value-field ai-value-field--url${danger ? " is-danger" : ""}`}
+          data-pen="RrLvC"
+        >
           <input
             id={`url-${row.id}`}
             key={row.baseURL}
@@ -872,163 +898,18 @@ function BaseUrlField({ row, ctl }: { row: ProviderRowView; ctl: AiSettingsContr
         </span>
       </div>
       {row.status !== "local" && row.id !== OLLAMA_ID && (
-        <p className="ai-field__note">{CUSTOM_KEY_PIN_NOTE}</p>
-      )}
-    </>
-  )
-}
-
-/** Not designed: the cloud row's Set up fields (platform, region, project). */
-function CloudFields({ row, ctl }: { row: ProviderRowView; ctl: AiSettingsController }) {
-  const kind = row.kind as "bedrock" | "vertex" | "foundry"
-  const [region, setRegion] = useState("")
-  const [project, setProject] = useState("")
-  return (
-    <>
-      <div className="ai-field">
-        <span className="ai-field__label">Platform</span>
-        <span className="ai-model ai-model--wide">
-          <Select
-            className="ai-select"
-            label="Cloud platform"
-            options={[
-              { value: "bedrock", label: "Amazon Bedrock" },
-              { value: "vertex", label: "Google Vertex AI" },
-              { value: "foundry", label: "Microsoft Foundry" },
-            ]}
-            value={kind}
-            onChange={(v) => void ctl.setCloud(v as typeof kind, { region, project })}
-          />
-        </span>
-      </div>
-      {kind !== "foundry" && (
-        <div className="ai-field">
-          <label className="ai-field__label" htmlFor="cloud-region">
-            Region
-          </label>
-          <span className="ai-value-field">
-            <input
-              id="cloud-region"
-              className="ai-value-input"
-              placeholder={kind === "vertex" ? "us-east5" : "us-east-1"}
-              value={region}
-              onChange={(e) => setRegion(e.currentTarget.value)}
-              onBlur={() => void ctl.setCloud(kind, { region, project })}
-            />
-          </span>
-        </div>
-      )}
-      {kind === "vertex" && (
-        <div className="ai-field">
-          <label className="ai-field__label" htmlFor="cloud-project">
-            Project
-          </label>
-          <span className="ai-value-field">
-            <input
-              id="cloud-project"
-              className="ai-value-input"
-              placeholder="my-gcp-project"
-              value={project}
-              onChange={(e) => setProject(e.currentTarget.value)}
-              onBlur={() => void ctl.setCloud(kind, { region, project })}
-            />
-          </span>
+        // Board 25 Origin Pin Note (W2ERTF), with the row's pinned (or current) host.
+        <div className="ai-add__pin" data-pen="W2ERTF">
+          <Pin className="ai-add__pin-icon" aria-hidden="true" />
+          <p className="ai-add__pin-text">
+            This key is pinned to the first origin it's sent to —{" "}
+            {hostOf(ctl.storedOf(row.id)?.pinnedOrigin ?? originOf(row.baseURL) ?? "this endpoint")}
+            . If the base URL later points at another host, Kimo withholds the key until you
+            re-enter it.
+          </p>
         </div>
       )}
     </>
-  )
-}
-
-/** Not designed: "Add provider" → a custom OpenAI- / Anthropic-compatible endpoint. */
-function AddCustomCard({
-  ctl,
-  onDone,
-  onCancel,
-}: {
-  ctl: AiSettingsController
-  onDone: (id: string) => void
-  onCancel: () => void
-}) {
-  const [label, setLabel] = useState("")
-  const [baseURL, setBaseURL] = useState("")
-  const [wire, setWire] = useState<"openai-chat" | "openai-responses" | "anthropic">("openai-chat")
-  const [agent, setAgent] = useState("")
-  const [fast, setFast] = useState("")
-  const [free, setFree] = useState(false)
-  const ok = label.trim() && /^https?:\/\//.test(baseURL.trim()) && agent.trim()
-  const text = (id: string, name: string, v: string, set: (v: string) => void, ph: string) => (
-    <div className="ai-field">
-      <label className="ai-field__label" htmlFor={id}>
-        {name}
-      </label>
-      <span className="ai-value-field">
-        <input
-          id={id}
-          className="ai-value-input"
-          placeholder={ph}
-          value={v}
-          spellCheck={false}
-          onChange={(e) => set(e.currentTarget.value)}
-        />
-      </span>
-    </div>
-  )
-  return (
-    <div className="ai-detail ai-detail--add" data-provider="+custom">
-      {text("custom-label", "Name", label, setLabel, "LM Studio")}
-      {text("custom-url", "Base URL", baseURL, setBaseURL, "http://localhost:1234/v1")}
-      <div className="ai-field">
-        <span className="ai-field__label">Format</span>
-        <span className="ai-model ai-model--wide">
-          <Select
-            className="ai-select"
-            label="Wire format"
-            options={[
-              { value: "openai-chat", label: "OpenAI Chat Completions" },
-              { value: "openai-responses", label: "OpenAI Responses" },
-              { value: "anthropic", label: "Anthropic Messages" },
-            ]}
-            value={wire}
-            onChange={(v) => setWire(v as typeof wire)}
-          />
-        </span>
-      </div>
-      <p className="ai-field__note">
-        For proxies and self-hosted endpoints. Built-in providers only call their own API. After
-        adding, paste a key if it needs one. {CUSTOM_KEY_PIN_NOTE}
-      </p>
-      {text("custom-agent", "Agent model", agent, setAgent, "model id")}
-      {text("custom-fast", "Fast model", fast, setFast, "model id (optional)")}
-      <div className="ai-optin">
-        <Toggle checked={free} label="Local, no key" onChange={setFree} />
-        <span className="ai-optin__text">
-          <span className="ai-optin__label">Local runtime, no key</span>
-          <span className="ai-optin__desc">Costs estimate to $0.00.</span>
-        </span>
-      </div>
-      <div className="ai-detail__footer">
-        <GhostButton onClick={onCancel}>Cancel</GhostButton>
-        <Button
-          variant="primary"
-          size="sm"
-          className="ai-button"
-          disabled={!ok}
-          onClick={() =>
-            void ctl
-              .addCustom({
-                label: label.trim(),
-                baseURL: baseURL.trim(),
-                wire,
-                models: { agent: agent.trim(), fast: fast.trim() || agent.trim() },
-                free,
-              })
-              .then(onDone)
-          }
-        >
-          Add endpoint
-        </Button>
-      </div>
-    </div>
   )
 }
 

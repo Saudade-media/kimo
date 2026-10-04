@@ -213,7 +213,8 @@ async function main() {
     await dev.listen()
     server = dev
   } else {
-    const outDir = join(here, ".dist")
+    // KIMO_E2E_OUTDIR: a separate bundle dir so parallel runs don't clobber each other.
+    const outDir = process.env.KIMO_E2E_OUTDIR ?? join(here, ".dist")
     process.env.VITE_KIMO_DEBUG = "1"
     await build({ root, configFile, logLevel: "error", build: { outDir, emptyOutDir: true } })
     server = await preview({
@@ -232,7 +233,11 @@ async function main() {
   const flaky: string[] = []
   const infra: string[] = []
   try {
-    const files = readdirSync(here).filter((f) => f.endsWith(".e2e.ts"))
+    // KIMO_E2E_FILES="canvas,m4-merge": only these *.e2e.ts files (by basename prefix).
+    const only_files = process.env.KIMO_E2E_FILES?.split(",").filter(Boolean)
+    const files = readdirSync(here).filter(
+      (f) => f.endsWith(".e2e.ts") && (!only_files || only_files.some((p) => f.startsWith(p))),
+    )
     const only = process.argv[2]
     for (const file of files) {
       const mod = (await import(join(here, file))) as { scenarios: Scenario[] }

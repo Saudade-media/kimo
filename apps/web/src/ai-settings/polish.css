@@ -1,0 +1,498 @@
+/*
+ * Settings › AI providers, board 25 "v1 Polish" §4 (bM295): Add provider dialog (uOwr0), cloud
+ * set-up cards (YewZG / bSx6y / g7Uzta) and the failed-test strip (c7lVl). Values are the node
+ * values; text boxes use Pencil's line heights (sans 11 → 13, sans 12 → 15, mono 11 → 15).
+ */
+
+/* --- Dialog (uOwr0) ------------------------------------------------------------------------- */
+
+.ai-add-scrim {
+  z-index: 80;
+}
+
+.ai-add {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 520px;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px var(--kimo-shadow-strong);
+  font-family: var(--kimo-font-sans);
+}
+
+/* Head (x8Lc26): row, gap 12. */
+.ai-add__head {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+.ai-add__icon-wrap {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+.ai-add__icon-wrap > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.ai-add__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ai-add__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 17px;
+}
+.ai-add__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Body (kumFs): column, gap 10. */
+.ai-add__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Field · <Name> (cmSwF …): row, gap 8, center; Label 96 sans 12 text-secondary lh 1.45. */
+.ai-add__field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+/* Field · Auth header (UqJ1i): row, gap 8, no alignment (top). */
+.ai-add__field--auth {
+  align-items: flex-start;
+}
+.ai-add__label {
+  flex: none;
+  width: 96px;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Value Field (p8jZmn …): row, gap 6, padding [0, 4, 0, 8], h 28, bg-app, stroke border. */
+.ai-value-field.ai-add__value {
+  flex: 1 1 0;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px 0 8px;
+}
+.ai-value-field.is-danger,
+.ai-value-field.is-danger:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-danger);
+}
+.ai-add__input {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+.ai-add__input--mono {
+  font-family: var(--kimo-font-mono);
+  line-height: 15px;
+}
+.ai-add__input::placeholder {
+  color: var(--kimo-text-tertiary);
+}
+.ai-add__input:disabled {
+  cursor: default;
+}
+
+/* Select instances: fill bg-app, stroke border, value 11 (ai-select); mono values (SIolh). */
+.kimo-select.ai-select--mono .kimo-select__value {
+  font-family: var(--kimo-font-mono);
+}
+
+/* Auth Scheme (q7PGg): column, gap 6 › SegmentedText (labels 11) · Preview mono 11 tertiary. */
+.ai-add__auth {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ai-add__scheme.kimo-seg-text {
+  align-self: flex-start;
+}
+.ai-add__scheme .kimo-seg-text__label {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+.ai-add__header-name.ai-value-field {
+  flex: none;
+  width: 100%;
+}
+.ai-add__preview {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* Model Chips (MMIyj): row, gap 6, center. */
+.ai-add__chips {
+  display: flex;
+  flex: 1 1 0;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+/* Chip (nFXEe): h 24, gap 4, padding [0, 6, 0, 10], bg-muted, pill; mono 11 + x 12 tertiary. */
+.ai-add__chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px 0 10px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+.ai-add__chip-label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.ai-add__chip-x {
+  display: inline-flex;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+.ai-add__chip-x > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+.ai-add__chip-input {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}
+.ai-add__chip-input::placeholder {
+  color: var(--kimo-text-tertiary);
+}
+/* Fetch (avnRN): h 24, gap 4, padding [0, 10, 0, 8], stroke border, pill; icon 12 + sans 11. */
+.ai-add__fetch {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  margin: 0;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ai-add__fetch > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+.ai-add__fetch:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+.ai-add__fetch:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.ai-spin {
+  animation: ai-spin 0.9s linear infinite;
+}
+@keyframes ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Origin Pin Note (W2ERTF): row gap 8, padding [8, 10], bg-subtle, stroke border, radius-md. */
+.ai-add__pin {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.ai-add__pin-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-secondary);
+}
+.ai-add__pin-text {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Storage (F1hbeP): row gap 6, center; icon 12 + mono 11, text-tertiary. */
+.ai-add__storage {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.ai-add__storage-icon {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+.ai-add__storage-label {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ai-add__error {
+  margin: 0;
+  color: var(--kimo-danger);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+
+/* Footer (ThgQE): row, gap 8, center. */
+.ai-add__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* --- Test result strip (c7lVl) -------------------------------------------------------------- */
+
+.ai-test--warn {
+  background: var(--kimo-warning-soft);
+}
+.ai-test--warn .ai-test__icon,
+.ai-test--warn .ai-test__label {
+  color: var(--kimo-warning);
+}
+.ai-test__detail {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Action (h3sxwS): sans 11 / 500 text-primary. */
+.ai-test__action {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  cursor: pointer;
+}
+.ai-test__action:hover {
+  text-decoration: underline;
+}
+/* Expanded (FhxWF): column, gap 8, padding [8, 10]. */
+.ai-test.ai-test--expanded {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 10px;
+}
+.ai-test__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+/* Details (bWSl9): column, gap 2, padding [6, 8], bg-app, radius-xs; lines mono 11 secondary. */
+.ai-test__details {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-app);
+}
+.ai-test__line {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  overflow-wrap: anywhere;
+}
+/* Actions (KTl6a): row gap 6, center; buttons h 24, padding [0, 10], icon 12, label 11. */
+.ai-test__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.kimo-button.kimo-compact-button.ai-test__button .kimo-button__icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* --- Cloud cards (gpmey) -------------------------------------------------------------------- */
+
+/* Detail · <Cloud> (YewZG): column gap 10, padding 16, bg-app, stroke border, radius-lg. */
+.ai-cloud {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Head (da1Bb): row gap 8, center. */
+.ai-cloud__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+/* Tile (QN8Vc): 24 × 24, bg-muted, radius-sm; cloud 14 text-primary. */
+.ai-cloud__tile {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+.ai-cloud__tile > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+.ai-cloud__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.ai-cloud__pill {
+  flex: none;
+}
+/* Hint (Y0owv): row gap 6 (top); info 12 + sans 11 text-tertiary lh 1.45. */
+.ai-cloud__hint {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  width: 100%;
+}
+.ai-cloud__hint-icon {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+.ai-cloud__hint-text {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+/* Stage (HPWcv) gap 12 between the cards. */
+.ai-clouds {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}

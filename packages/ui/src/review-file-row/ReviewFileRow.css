@@ -1,0 +1,118 @@
+/*
+ * ReviewFileRow: desing.pen 25 › 2 Export dialog › Review (P8d2o) › Files (mex2e) rows
+ * L888zt (selected) / PC6fC / wReGw (new).
+ * row fill, gap 8, padding [8, 8, 8, 10], alignItems center, radius-md; selected fill bg-muted
+ *   ├ Text (g6aOn) column fill, gap 2
+ *   │   ├ Name mono xs (11) 500 text-primary
+ *   │   └ Meta (OJyCO) row gap 6 center: Added mono xs success · Removed mono xs danger · Kind
+ *   │       sans xs text-tertiary
+ *   └ Keep / Overwrite: SegmentedText (FC6O7) with segments h 22, labels xs (11); or
+ *     New Badge (Y3Ase) padding [2, 8], fill success-soft, radius-pill › Label sans xs 500 success
+ */
+.kimo-review-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 8px 8px 10px;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+}
+
+.kimo-review-row--selected {
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-review-row__text {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-review-row__text:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-review-row__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  white-space: nowrap;
+  color: var(--kimo-text-primary);
+}
+
+.kimo-review-row__meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.kimo-review-row__added,
+.kimo-review-row__removed {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  white-space: nowrap;
+}
+
+.kimo-review-row__added {
+  color: var(--kimo-success);
+}
+
+.kimo-review-row__removed {
+  color: var(--kimo-danger);
+}
+
+.kimo-review-row__kind {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  color: var(--kimo-text-tertiary);
+}
+
+/* GLSBk: SegmentedText with Segment height 22 and labels text-xs. */
+.kimo-review-row__choice .kimo-seg-text__segment {
+  height: 22px;
+}
+
+.kimo-review-row__choice .kimo-seg-text__label {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-review-row__new {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-success-soft);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  color: var(--kimo-success);
+}

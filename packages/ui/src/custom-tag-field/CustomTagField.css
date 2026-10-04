@@ -83,3 +83,9 @@
   font-weight: var(--kimo-font-weight-regular);
   line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
 }
+/* Board 25 §6 (d) Hint x9tphT: the font-support sentence wraps in the full width, line-height
+   1.4 (still sans 11 text-tertiary — never a warning colour). */
+.kimo-custom-tag__hint--support {
+  width: 100%;
+  line-height: 1.4;
+}

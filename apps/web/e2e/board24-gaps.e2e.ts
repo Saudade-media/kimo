@@ -19,7 +19,7 @@ type Session = {
   }
   ui: { getState(): { select(ids: string[]): void } }
 }
-type App = {
+export type App = {
   __kimoApp: {
     control: {
       calls: string[]
@@ -43,27 +43,27 @@ type App = {
 }
 declare const window: App & Window
 
-async function openApp(ctx: E2EContext, hash: string, query = ""): Promise<void> {
+export async function openApp(ctx: E2EContext, hash: string, query = ""): Promise<void> {
   await ctx.page.setViewportSize({ width: 1440, height: 900 })
   await ctx.page.goto(`${await harnessUrl(ctx)}${query}${hash}`)
   await ctx.page.waitForFunction(() => !!(window as unknown as App).__kimoApp)
 }
 
-async function editor(ctx: E2EContext, ref = `${SITE}/home.kimo`, query = "") {
+export async function editor(ctx: E2EContext, ref = `${SITE}/home.kimo`, query = "") {
   await openApp(ctx, disk(ref), query)
   await ctx.page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
   await ctx.page.waitForFunction(() => !!(window as unknown as App).__kimo?.session)
   await ctx.page.evaluate(() => document.fonts.ready)
 }
 
-async function selectHeadline(page: Page) {
+export async function selectHeadline(page: Page) {
   await page.evaluate(() =>
     (window as unknown as App).__kimo?.session.ui.getState().select(["Headline01"]),
   )
   await page.getByTestId("text-section").waitFor()
 }
 
-const style = (page: Page) =>
+export const style = (page: Page) =>
   page.evaluate(
     () =>
       ((window as unknown as App).__kimo?.session.store.getNode("Headline01")?.style ??
@@ -89,7 +89,7 @@ type Box = {
   justify: string
 }
 
-function measure(page: Page, sels: Record<string, string>) {
+export function measure(page: Page, sels: Record<string, string>) {
   return page.evaluate((s) => {
     const out: Record<string, unknown> = {}
     for (const [k, sel] of Object.entries(s)) {
@@ -123,7 +123,7 @@ function measure(page: Page, sels: Record<string, string>) {
   }, sels) as Promise<Record<string, Box | null>>
 }
 
-const token = (page: Page, name: string) =>
+export const token = (page: Page, name: string) =>
   page.evaluate((n) => {
     const el = document.createElement("div")
     el.style.color = `var(${n})`
@@ -133,7 +133,7 @@ const token = (page: Page, name: string) =>
     return c
   }, name)
 
-function checker(ctx: E2EContext, surface: string) {
+export function checker(ctx: E2EContext, surface: string) {
   const rows: string[] = []
   const check = (el: string, prop: string, got: unknown, want: number | string, tol = 0.75) => {
     const ok =
@@ -168,14 +168,14 @@ export const scenarios: Scenario[] = [
       const pop = page.getByTestId("text-link-popover")
       await pop.waitFor()
       const field = page.getByRole("textbox", { name: "Link URL" })
-      await field.fill("kimo.dev")
+      // Board 25 §6 (b): an unsupported scheme (a bare host is now auto-prefixed https://);
+      // the error shows 250 ms after input.
+      await field.fill("javascript:alert(1)")
       const apply = pop.getByRole("button", { name: "Apply" })
+      await pop.locator(".kimo-link-popover__hint--error").waitFor()
       expect(await apply.isDisabled(), "Apply disabled for a URL without an allowed scheme")
-      expect(
-        (await pop.locator(".kimo-link-popover__hint--error").count()) === 1,
-        "inline error on the hint",
-      )
       await field.fill("https://kimo.dev/pricing")
+      await pop.locator(".kimo-link-popover__hint--error").waitFor({ state: "detached" })
       expect(!(await apply.isDisabled()), "Apply enabled for https")
       const m = await measure(page, {
         pop: ".kimo-link-popover",
@@ -516,7 +516,8 @@ export const scenarios: Scenario[] = [
         import: ".kimo-svg-rejection__footer .kimo-button--secondary",
       })
       const { check, flush } = checker(ctx, "Toast · expanded (wcrmf)")
-      check("Toast wcrmf", "width", m.panel?.w, 349)
+      // Board 25 §6 (c) J30Nk decides 360 (was the 349 stage width).
+      check("Toast wcrmf", "width", m.panel?.w, 360)
       check("Toast wcrmf", "radius-lg", m.panel?.radius, 16)
       check("Toast wcrmf", "bg-overlay", m.panel?.bg, await token(page, "--kimo-bg-overlay"))
       check("Head imrWl", "height", m.head?.h, 35)

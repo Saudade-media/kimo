@@ -126,3 +126,11 @@
   flex: 1 1 0;
   height: 1px;
 }
+
+/* Board 25 §6 (d) LFdEa inside Menu/Dense: the row keeps MenuItem/Dense's box (h 28, padding
+   [0, 8]) so its Check sits in the items' check column; the row itself is the node's own
+   row / gap 8 / center (OpenTypeFeatureRow). */
+.kimo-ot-feature-row.rp-text-menu__feature-row {
+  height: 28px;
+  padding: 0 8px;
+}

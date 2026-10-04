@@ -179,6 +179,9 @@ export {
   type PanelHeaderAction,
   type PanelHeaderProps,
 } from "./panel-header/PanelHeader"
+export * from "./polish-agent"
+export * from "./polish-export"
+export * from "./polish-shell"
 export { Popover, type PopoverProps } from "./popover/Popover"
 export {
   type Align,

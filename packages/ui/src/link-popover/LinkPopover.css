@@ -47,8 +47,13 @@
 .kimo-link-popover__field .kimo-input__field {
   font-size: var(--kimo-text-sm);
 }
-.kimo-link-popover__field:has(.kimo-input__field[aria-invalid="true"]) {
+/* Board 25 §6 (b) Field rWPuM: invalid → fill bg-app, stroke danger, icon link danger. */
+.kimo-input.kimo-link-popover__field:has(.kimo-input__field[aria-invalid="true"]) {
+  background: var(--kimo-bg-app);
   box-shadow: inset 0 0 0 1px var(--kimo-danger);
+}
+.kimo-link-popover__field:has(.kimo-input__field[aria-invalid="true"]) .kimo-input__icon {
+  color: var(--kimo-danger);
 }
 
 .kimo-link-popover__hint {
@@ -58,8 +63,10 @@
   gap: 6px;
   color: var(--kimo-text-tertiary);
 }
-/* Not designed: an invalid URL turns the hint danger (rule "shows the inline error"). */
+/* Board 25 §6 (b) Hint UuqA2: the error in place — row gap 6, top-aligned (no center),
+   circle-alert 12 danger · Text gSRzU fill width, sans 11 / 400 danger, line-height 1.4. */
 .kimo-link-popover__hint--error {
+  align-items: flex-start;
   color: var(--kimo-danger);
 }
 .kimo-link-popover__hint-icon {
@@ -73,6 +80,11 @@
   font-size: var(--kimo-text-xs);
   font-weight: var(--kimo-font-weight-regular);
   line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+.kimo-link-popover__hint--error .kimo-link-popover__hint-text {
+  flex: 1 1 0;
+  min-width: 0;
+  line-height: 1.4;
 }
 
 .kimo-link-popover__actions {
@@ -92,8 +104,9 @@
   --kimo-button-padding-x: 10px;
   padding: 0 10px;
 }
+/* Board 25 §6 (b): Open (qY3dm) and Apply (GlEuf) at opacity 0.4 while disabled. */
 .kimo-button.kimo-link-popover__action:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 .kimo-link-popover__remove .kimo-button__label {
   color: var(--kimo-danger);

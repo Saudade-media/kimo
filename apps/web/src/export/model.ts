@@ -9,9 +9,12 @@ import type { FileRef, KimoPlatform } from "@kimo/platform"
 
 // --- Formats ---------------------------------------------------------------------------------
 
-export type ExportFormat = "react" | "html" | "tokens" | "assets"
+export type ExportFormat = "react" | "html" | "tokens" | "assets" | "pdf"
 
-/** Board 07 Format rows (`v0S2cL`, `qsAIn`, `OOS97`, `wPYOJ`): icon, title, sub — in node order. */
+/**
+ * Format rows: board 07 (`v0S2cL`, `qsAIn`, `OOS97`, `wPYOJ`) with board 25 § 2 (a) (`NAYlQ`):
+ * the tokens / SVG·PNG subs as redrawn there and the 5th row PDF (`D7dje`, icon file-text).
+ */
 export const EXPORT_FORMATS: readonly {
   id: ExportFormat
   icon: string
@@ -20,12 +23,18 @@ export const EXPORT_FORMATS: readonly {
 }[] = [
   { id: "react", icon: "atom", title: "React + Tailwind", sub: "TSX · Tailwind v4" },
   { id: "html", icon: "code-xml", title: "HTML + CSS", sub: "Static markup, CSS variables" },
-  { id: "tokens", icon: "braces", title: "Design tokens", sub: "CSS vars · W3C JSON" },
-  { id: "assets", icon: "image", title: "SVG / PNG", sub: "Assets at 1×, 2×, 3×" },
+  { id: "tokens", icon: "braces", title: "Design tokens", sub: "W3C DTCG JSON + CSS" },
+  { id: "assets", icon: "image", title: "SVG / PNG", sub: "Vector or raster per frame" },
+  { id: "pdf", icon: "file-text", title: "PDF", sub: "Vector · one page per frame" },
 ]
 
-/** "Assets at 1×, 2×, 3×" (`O9inf1`): one PNG per root and scale. */
+/** Preview bar Scale switch (`k7fVi5`): 1×, 2×, 3× (rule: default 2×). */
 export const PNG_SCALES = [1, 2, 3] as const
+export type PngScale = (typeof PNG_SCALES)[number]
+export const DEFAULT_PNG_SCALE: PngScale = 2
+
+/** SVG / PNG row: the preview bar's SVG | PNG toggle (`plpsW`) picks what is exported. */
+export type ImageKind = "svg" | "png"
 
 /** Board 07 Settings (`Q6kGEo`): toggle values as drawn (on, on, off). */
 export interface ExportToggles {
@@ -42,20 +51,49 @@ export const DEFAULT_TOGGLES: ExportToggles = {
   layerNames: false,
 }
 
-/** `@kimo/exporters` targets per format (text targets first; PNG is generated on export). */
-export function targetsOf(format: ExportFormat): {
+/** Board 25 rule "PDF row": Embed fonts (on), Include bleed (off). */
+export interface PdfToggles {
+  embedFonts: boolean
+  bleed: boolean
+}
+export const DEFAULT_PDF_TOGGLES: PdfToggles = { embedFonts: true, bleed: false }
+/** "Include bleed": 3 mm on every side, in PDF points. */
+export const PDF_BLEED_PT = 8.5
+
+const STORE = "kimo.export"
+
+/** The dialog's remembered options (`kimo.export.toggles`); the Code tab reads the same. */
+export function readExportToggles(storage: Pick<Storage, "getItem"> | null): ExportToggles {
+  try {
+    const raw = storage?.getItem(`${STORE}.toggles`)
+    return raw ? { ...DEFAULT_TOGGLES, ...(JSON.parse(raw) as object) } : DEFAULT_TOGGLES
+  } catch {
+    return DEFAULT_TOGGLES
+  }
+}
+
+/** `@kimo/exporters` targets per format (text targets first; PNG / PDF are binary). */
+export function targetsOf(
+  format: ExportFormat,
+  image: ImageKind = "svg",
+): {
   text: ("react-tailwind" | "html-css" | "tokens-css" | "tokens-dtcg" | "svg")[]
   png: boolean
+  pdf: boolean
 } {
   switch (format) {
     case "react":
-      return { text: ["react-tailwind"], png: false }
+      return { text: ["react-tailwind"], png: false, pdf: false }
     case "html":
-      return { text: ["html-css"], png: false }
+      return { text: ["html-css"], png: false, pdf: false }
     case "tokens":
-      return { text: ["tokens-css", "tokens-dtcg"], png: false }
+      return { text: ["tokens-css", "tokens-dtcg"], png: false, pdf: false }
     case "assets":
-      return { text: ["svg"], png: true }
+      return image === "png"
+        ? { text: [], png: true, pdf: false }
+        : { text: ["svg"], png: false, pdf: false }
+    case "pdf":
+      return { text: [], png: false, pdf: true }
   }
 }
 
@@ -75,13 +113,19 @@ export function describeExport(
   ].join(" · ")
 }
 
-/** Footer note (`Vg83B`): "3 files · existing files are diffed, never overwritten silently". */
-export function footerNote(count: number, desktop: boolean, zipName: string): string {
+/**
+ * Footer note: desktop (`Vg83B`) "3 files · existing files are diffed, never overwritten
+ * silently"; web (board 25 `jufHA`) "3 files".
+ */
+export function footerNote(count: number, desktop: boolean): string {
   return desktop
     ? `${plural(count, "file")} · existing files are diffed, never overwritten silently`
-    : // Not designed (web): the board's note is about writing into a folder.
-      `${plural(count, "file")} · downloaded as ${zipName}`
+    : plural(count, "file")
 }
+
+/** Board 25 (e) header (`cwq8A`): "Untitled 3 · not saved yet · 1 frame". */
+export const describeUntitled = (name: string, frames: number) =>
+  [name, "not saved yet", plural(frames, "frame")].join(" · ")
 
 /** Primary button label (`ZjvC1` "Export 3 files"). */
 export const exportLabel = (count: number) => `Export ${plural(count, "file")}`
@@ -213,10 +257,12 @@ export type PlanStatus = "new" | "same" | "changed"
 export interface PlanEntry extends PlannedFile {
   ref: FileRef
   status: PlanStatus
+  /** What is on disk now (changed files: the review step diffs it). */
+  existing?: Uint8Array
 }
 
 const encoder = new TextEncoder()
-const bytesOf = (c: string | Uint8Array) => (typeof c === "string" ? encoder.encode(c) : c)
+export const bytesOf = (c: string | Uint8Array) => (typeof c === "string" ? encoder.encode(c) : c)
 function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
   if (a.byteLength !== b.byteLength) return false
   for (let i = 0; i < a.byteLength; i++) if (a[i] !== b[i]) return false
@@ -238,10 +284,12 @@ export async function planWrite(
       continue
     }
     const existing = await platform.files.readBytes(ref).catch(() => null)
+    const same = existing !== null && equalBytes(existing, bytesOf(f.contents))
     out.push({
       ...f,
       ref,
-      status: existing && equalBytes(existing, bytesOf(f.contents)) ? "same" : "changed",
+      status: same ? "same" : "changed",
+      ...(!same && existing ? { existing } : {}),
     })
   }
   return out
@@ -365,8 +413,317 @@ export function zipFiles(files: readonly PlannedFile[]): Uint8Array {
   return out
 }
 
-/** A file-system-safe base name for the zip ("Marketing site" → "Marketing site.zip"). */
-export function zipNameOf(name: string): string {
+/** A file-system-safe file name ("Marketing site.zip"). */
+export function safeFileName(name: string, ext: string): string {
   const base = name.replace(/[\\/:*?"<>|]+/g, "-").trim() || "export"
-  return `${base}.zip`
+  return base.toLowerCase().endsWith(`.${ext}`) ? base : `${base}.${ext}`
 }
+
+/** Board 25 (d) rule: the zip name defaults to `kimo-export-<frame>.zip` ("Hero" → hero). */
+export function defaultZipName(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return `kimo-export-${slug || "export"}.zip`
+}
+
+// --- Review step (board 25 § 2 (g) P8d2o, rule "Review") -----------------------------------
+
+export type DiffKind = "context" | "add" | "remove"
+export interface DiffRow {
+  kind: DiffKind
+  /** New-side number for context / added rows, old-side number for removed rows. */
+  number: number
+  text: string
+}
+export interface DiffHunk {
+  rows: DiffRow[]
+}
+export interface FileDiff {
+  hunks: DiffHunk[]
+  added: number
+  removed: number
+}
+
+/** Line edit script (Myers O(ND)): rows in order, before context trimming. */
+function editScript(a: readonly string[], b: readonly string[]): DiffRow[] {
+  const n = a.length
+  const m = b.length
+  const max = n + m
+  const off = max + 1
+  const v = new Int32Array(2 * max + 3)
+  const trace: Int32Array[] = []
+  let done = false
+  for (let d = 0; d <= max && !done; d++) {
+    trace.push(v.slice())
+    for (let k = -d; k <= d; k += 2) {
+      let x =
+        k === -d || (k !== d && (v[off + k - 1] as number) < (v[off + k + 1] as number))
+          ? (v[off + k + 1] as number)
+          : (v[off + k - 1] as number) + 1
+      let y = x - k
+      while (x < n && y < m && a[x] === b[y]) {
+        x++
+        y++
+      }
+      v[off + k] = x
+      if (x >= n && y >= m) {
+        done = true
+        break
+      }
+    }
+  }
+  // Backtrack.
+  const rows: DiffRow[] = []
+  let x = n
+  let y = m
+  for (let d = trace.length - 1; d >= 0; d--) {
+    const vd = trace[d] as Int32Array
+    const k = x - y
+    const prevK =
+      k === -d || (k !== d && (vd[off + k - 1] as number) < (vd[off + k + 1] as number))
+        ? k + 1
+        : k - 1
+    const prevX = d === 0 ? 0 : (vd[off + prevK] as number)
+    const prevY = prevX - prevK
+    while (x > prevX && y > prevY) {
+      rows.push({ kind: "context", number: y, text: b[y - 1] as string })
+      x--
+      y--
+    }
+    if (d === 0) break
+    if (x === prevX) rows.push({ kind: "add", number: y, text: b[y - 1] as string })
+    else rows.push({ kind: "remove", number: x, text: a[x - 1] as string })
+    x = prevX
+    y = prevY
+  }
+  return rows.reverse()
+}
+
+/** Unified diff of `before` (on disk) → `after` (export), `context` lines around changes. */
+export function unifiedDiff(before: string, after: string, context = 3): FileDiff {
+  const rows = editScript(codeLines(before), codeLines(after))
+  const changed = rows.map((r) => r.kind !== "context")
+  const keep = rows.map((_, i) => {
+    for (let j = Math.max(0, i - context); j <= Math.min(rows.length - 1, i + context); j++)
+      if (changed[j]) return true
+    return false
+  })
+  const hunks: DiffHunk[] = []
+  let cur: DiffHunk | null = null
+  rows.forEach((r, i) => {
+    if (!keep[i]) {
+      cur = null
+      return
+    }
+    if (!cur) {
+      cur = { rows: [] }
+      hunks.push(cur)
+    }
+    cur.rows.push(r)
+  })
+  return {
+    hunks,
+    added: rows.filter((r) => r.kind === "add").length,
+    removed: rows.filter((r) => r.kind === "remove").length,
+  }
+}
+
+/** Diff header Meta (`L4oMS`): "3 hunks". */
+export const hunksLabel = (n: number) => plural(n, "hunk")
+
+export type ReviewChoice = "keep" | "overwrite"
+
+/** A hash of a file's bytes as Kimo wrote it (crc32 + length). */
+export const contentHash = (c: string | Uint8Array) => {
+  const b = bytesOf(c)
+  return `${crc32(b).toString(16).padStart(8, "0")}:${b.byteLength}`
+}
+
+/** Hashes of the files Kimo wrote last time into a folder (`kimo.export.written.<folder>`). */
+export type WrittenRecord = Record<string, string>
+
+export function readWritten(
+  folder: string,
+  storage: Pick<Storage, "getItem"> | null,
+): WrittenRecord {
+  try {
+    const raw = storage?.getItem(`${STORE}.written.${folder}`)
+    return raw ? (JSON.parse(raw) as WrittenRecord) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function recordWritten(
+  folder: string,
+  files: readonly PlannedFile[],
+  storage: Pick<Storage, "getItem" | "setItem"> | null,
+) {
+  if (files.length === 0) return
+  const rec = readWritten(folder, storage)
+  for (const f of files) rec[f.path] = contentHash(f.contents)
+  try {
+    storage?.setItem(`${STORE}.written.${folder}`, JSON.stringify(rec))
+  } catch {}
+}
+
+/**
+ * Rule "Review": Overwrite for files Kimo wrote last time (the disk still hashes to what it
+ * wrote), Keep for files edited by hand since — or never written by Kimo.
+ */
+export function defaultChoice(
+  existing: Uint8Array | undefined,
+  last: string | undefined,
+): ReviewChoice {
+  return existing && last !== undefined && contentHash(existing) === last ? "overwrite" : "keep"
+}
+
+/** Review header Desc (`x250y`): "2 of 3 files already exist in ~/loom/src/components". */
+export const reviewDesc = (changed: number, total: number, folder: string) =>
+  `${changed} of ${plural(total, "file")} already exist${changed === 1 ? "s" : ""} in ${folder}`
+
+/** Review footer Summary (`qQXam`): "1 overwrite · 1 kept · 1 new". */
+export function reviewSummary(overwrite: number, kept: number, fresh: number): string {
+  return [
+    `${overwrite} overwrite${overwrite === 1 ? "" : "s"}`,
+    `${kept} kept`,
+    `${fresh} new`,
+  ].join(" · ")
+}
+
+/** Primary (`dUJUL`): "Write 2 files". */
+export const writeLabel = (n: number) => `Write ${plural(n, "file")}`
+
+/** Folder for display ("~/loom/src/components"). */
+export function shortFolder(folder: string): string {
+  const d = folderDisplay(folder)
+  return d.prefix === "~/" ? `~/${d.value}`.replace(/\/$/, "") || "~" : folder
+}
+
+// --- Progress / error (board 25 § 2 (b) WnLfR, (c) ixYdn) -----------------------------------
+
+/** Progress Label (`h5COWe`): "Writing 2 of 3 · ~/loom/src/components". */
+export const progressLabel = (k: number, n: number, folder: string) =>
+  `Writing ${k} of ${n} · ${shortFolder(folder)}`
+
+/** Retry (`Wqwu8`): "Retry 2 files". */
+export const retryLabel = (n: number) => `Retry ${plural(n, "file")}`
+
+/** The error card's title / description for a failed write (rule "Error"). */
+export function describeWriteError(
+  error: unknown,
+  file: string,
+  folder: string,
+  written: readonly string[],
+  notStarted: readonly string[],
+): { title: string; description: string } {
+  const e = error as { errno?: string; code?: string; message?: string }
+  const errno = e?.errno ?? (e?.code && /^E[A-Z]+$/.test(e.code) ? e.code : undefined)
+  const where = shortFolder(folder)
+  let reason: string
+  switch (errno ?? e?.code) {
+    case "EACCES":
+    case "EPERM":
+    case "EROFS":
+    case "PERMISSION":
+      reason = `Permission denied (${errno ?? "EACCES"}) — ${where} is read-only.`
+      break
+    case "ENOSPC":
+    case "EDQUOT":
+    case "DISK_FULL":
+      reason = `Disk full (${errno ?? "ENOSPC"}) — not enough space in ${where}.`
+      break
+    case "EEXIST":
+    case "CHANGED":
+      reason = `${file} changed while exporting, review again.`
+      break
+    default:
+      reason = e?.message ? `${e.message}.` : "The file could not be written."
+  }
+  const tail = [
+    written.length ? `${list(written)} ${written.length === 1 ? "was" : "were"} written` : "",
+    notStarted.length
+      ? `${list(notStarted)} ${notStarted.length === 1 ? "was" : "were"} not started`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("; ")
+  return {
+    title: `Couldn't write ${file}`,
+    description: tail ? `${reason} ${tail}.` : reason,
+  }
+}
+
+const list = (xs: readonly string[]) =>
+  xs.length <= 2 ? xs.join(" and ") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`
+
+// --- Toasts (board 25 § 2 (f) pQlt5, rule "Toast") -----------------------------------------
+
+export interface ExportToastSpec {
+  tone: "success" | "warning"
+  /** Lucide icon (`d82EN`): circle-check success · circle-alert warning. */
+  icon: "circle-check" | "circle-alert"
+  text: string
+  /** Desktop only: "Reveal" opens the folder in Finder / Explorer. */
+  reveal: string | null
+  /** 4 s; cancelled 6 s. */
+  duration: number
+}
+
+/** The toast after an export ("Exported 3 files to ~/loom/src/components", …). */
+export function exportToastOf(
+  o:
+    | {
+        kind: "folder"
+        folder: string
+        written: readonly string[]
+        kept: readonly string[]
+        cancelled?: { total: number }
+      }
+    | { kind: "zip" | "file"; name: string },
+): ExportToastSpec {
+  if (o.kind !== "folder")
+    return {
+      tone: "success",
+      icon: "circle-check",
+      text: `Downloaded ${o.name}`,
+      reveal: null,
+      duration: 4000,
+    }
+  if (o.cancelled)
+    return {
+      tone: "warning",
+      icon: "circle-alert",
+      text: `Export cancelled · ${o.written.length} of ${o.cancelled.total} written`,
+      reveal: o.folder,
+      duration: 6000,
+    }
+  if (o.kept.length > 0)
+    return {
+      tone: "success",
+      icon: "circle-check",
+      text: `${o.written.length} written · ${o.kept.length} kept as-is`,
+      reveal: o.folder,
+      duration: 4000,
+    }
+  return {
+    tone: "success",
+    icon: "circle-check",
+    text: `Exported ${plural(o.written.length, "file")} to ${shortFolder(o.folder)}`,
+    reveal: o.folder,
+    duration: 4000,
+  }
+}
+
+// --- PNG preview (rule "PNG preview": size line) --------------------------------------------
+
+/** "720 × 366 → 1440 × 732 · ≈ 212 KB". */
+export function pngSizeLine(w: number, h: number, scale: number, bytes: number): string {
+  const kb = Math.max(1, Math.round(bytes / 1024))
+  return `${Math.round(w)} × ${Math.round(h)} → ${Math.round(w * scale)} × ${Math.round(h * scale)} · ≈ ${kb} KB`
+}
+
+/** PDF preview meta: "3 pages". */
+export const pagesLabel = (n: number) => plural(n, "page")

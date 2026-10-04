@@ -55,6 +55,7 @@ import {
   type SpacingIndicator,
 } from "@kimo/renderer"
 import { manifestOps } from "../lib/asset-manifest"
+import { type Combo, matchCombo, matches, pointerHeld, shortcut } from "../shortcuts/shortcuts"
 import { AgentCanvasModel, type AgentDomState, SHIMMER_FRAME_MS } from "./agent-canvas"
 import {
   canMove,
@@ -130,6 +131,9 @@ import {
 import { enterTarget, pickTarget } from "./selection"
 import { candidatesIn, fmtUnits, snap, snapPoint } from "./snapping"
 import type { CanvasToolStore } from "./tool-state"
+
+/** ⇧0 — the canvas's combo of "Zoom to 100 %" (⌘0 is Editor.tsx's). */
+const ZOOM_100_SHIFT = shortcut("zoom100").combos[1] as Combo
 
 /** Pointer travel (screen px) before a press becomes a drag. */
 const DRAG_THRESHOLD = 3
@@ -1438,7 +1442,14 @@ export class CanvasController {
       if (this.isOverlayTarget(e.target)) return
       e.preventDefault()
       const p = this.local(e)
-      this.opts.onContextMenu?.({ screen: p, world: this.toWorld(p), hit: this.hits(p)[0] ?? null })
+      const hit = this.hits(p)[0] ?? null
+      this.opts.onContextMenu?.({
+        screen: p,
+        world: this.toWorld(p),
+        hit,
+        // What a click here selects (board 25 §3: the menu acts on the selection).
+        target: hit ? this.pick(hit, this.ui.getState().selection, e.metaKey || e.ctrlKey) : null,
+      })
     })
     on(window, "keydown", (e) => this.onKey(e))
     on(window, "keyup", (e) => {
@@ -1592,21 +1603,23 @@ export class CanvasController {
     const hit = artboard ? [artboard] : this.viewHits(p)
     const deepest = hit[0]
     const before = ui.selection
+    // SHORTCUTS "Add to selection" (⇧ click) / "Select inside group" (⌘ click).
+    const add = pointerHeld("addToSelection", e)
     if (!deepest) {
-      if (!e.shiftKey) ui.clearSelection()
+      if (!add) ui.clearSelection()
       this.drag = {
         kind: "press",
         start: p,
         startWorld: this.toWorld(p),
         target: null,
-        before: e.shiftKey ? before : [],
+        before: add ? before : [],
         scope: null,
         collapse: false,
         toggle: false,
       }
       return
     }
-    const target = artboard ?? this.pick(deepest, before, e.metaKey || e.ctrlKey)
+    const target = artboard ?? this.pick(deepest, before, pointerHeld("selectInside", e))
     const isRoot = this.store.getNode(target)?.parent === null
     // Dragging on an unselected root frame's background draws a marquee over its children.
     const scope =
@@ -1620,7 +1633,7 @@ export class CanvasController {
         : undefined
     let collapse = false
     let toggle = false
-    if (e.shiftKey) {
+    if (add) {
       if (before.includes(target)) toggle = true
       else ui.toggleSelection(target)
     } else if (!before.includes(target)) ui.select([target])
@@ -1630,7 +1643,7 @@ export class CanvasController {
       start: p,
       startWorld: this.toWorld(p),
       target,
-      before: e.shiftKey ? before : [],
+      before: add ? before : [],
       scope,
       collapse,
       toggle,
@@ -2060,7 +2073,7 @@ export class CanvasController {
       if (ui.selection.length) e.preventDefault()
       return false
     }
-    if (e.code === "Space" && !mod) {
+    if (matches("pan", e)) {
       if (!this.spaceHeld) {
         this.spaceHeld = true
         this.updateCursor()
@@ -2068,7 +2081,7 @@ export class CanvasController {
       e.preventDefault()
       return true
     }
-    if (e.key === "Escape" && this.cancelDrag()) {
+    if (matches("gesture.cancel", e) && this.cancelDrag()) {
       e.preventDefault()
       return true
     }
@@ -2086,43 +2099,42 @@ export class CanvasController {
     }
     const key = e.key.toLowerCase()
     // --- M2 modes: pen, image placement, path edit, icon insertion.
-    if (ui.tool === "path" && !mod) {
-      if (key === "enter" || key === "escape") {
+    if (ui.tool === "path") {
+      if (matches("pen.finish", e)) {
         return run(() => {
           if (this.pen?.anchors.length) this.finishPen()
           else ui.setTool("select")
         })
       }
-      if ((key === "backspace" || key === "delete") && this.pen?.anchors.length) {
+      if (matches("pen.removePoint", e) && this.pen?.anchors.length) {
         return run(() => this.penUndo(false))
       }
     }
-    if (this.armed && key === "escape") return run(() => this.armPlacement(null))
-    if (this.pathEdit && !mod) {
-      if (key === "enter" || key === "escape") return run(() => this.exitPathEdit())
-      if ((key === "backspace" || key === "delete") && this.pathEdit.selected.length)
+    if (this.armed && matches("placement.cancel", e)) return run(() => this.armPlacement(null))
+    if (this.pathEdit) {
+      if (matches("pathEdit.exit", e)) return run(() => this.exitPathEdit())
+      if (matches("pathEdit.deletePoints", e) && this.pathEdit.selected.length)
         return run(() => this.deleteSelectedAnchors())
     }
-    if (key === "i" && !mod && !e.altKey && !e.shiftKey && this.opts.onIconPicker) {
+    if (matches("iconPicker", e) && this.opts.onIconPicker) {
       return run(() => this.requestIcon())
     }
-    if (mod && !e.shiftKey && !e.altKey && key === "d") return run(() => this.duplicate())
-    if (mod && !e.shiftKey && !e.altKey && key === "g") return run(() => this.group())
-    if (mod && (key === "=" || key === "+")) return run(() => this.zoomTo(ui.viewport.zoom * 2))
-    if (mod && key === "-") return run(() => this.zoomTo(ui.viewport.zoom / 2))
+    if (matches("duplicate", e)) return run(() => this.duplicate())
+    if (matches("group", e)) return run(() => this.group())
+    if (matches("zoomIn", e)) return run(() => this.zoomTo(ui.viewport.zoom * 2))
+    if (matches("zoomOut", e)) return run(() => this.zoomTo(ui.viewport.zoom / 2))
     if (mod || e.altKey) return false
-    if (e.shiftKey && e.code === "Digit1") return run(() => this.zoomToFit())
-    if (e.shiftKey && e.code === "Digit2")
+    if (matches("zoomToFit", e)) return run(() => this.zoomToFit())
+    if (matches("zoomToSelection", e))
       return run(() => this.zoomToFit(this.ui.getState().selection))
-    if (e.shiftKey && e.code === "Digit0") return run(() => this.zoomTo(1))
-    if (key === "=" || key === "+") return run(() => this.zoomTo(ui.viewport.zoom * 2))
-    if (key === "-" || key === "_") return run(() => this.zoomTo(ui.viewport.zoom / 2))
-    if (key === "delete" || key === "backspace") {
+    // ⇧0 (⌘0 is Editor.tsx's).
+    if (matchCombo(ZOOM_100_SHIFT, e)) return run(() => this.zoomTo(1))
+    if (matches("delete", e)) {
       if (!ui.selection.length) return false
       // Composite ids delete through the router (hidden instead, board 15).
       return run(() => this.apply(deleteOps(this.vdoc, ui.selection), "Delete"))
     }
-    if (key === "enter" && ui.selection.length === 1) {
+    if (matches("selectChildren", e) && ui.selection.length === 1) {
       const id = ui.selection[0] as string
       const t = this.src.getNode(id)?.type
       if (isTextual(t)) return run(() => this.beginTextEdit(id))
@@ -2131,7 +2143,7 @@ export class CanvasController {
       if (first) return run(() => ui.select([first]))
       return false
     }
-    if (key === "escape" && ui.selection.length) {
+    if (matches("selectParent", e) && ui.selection.length) {
       // Escape selects the parent (Figma); at the top level it clears the selection.
       const parents = [...new Set(ui.selection.map((id) => this.src.getNode(id)?.parent ?? null))]
       e.preventDefault()
@@ -2146,7 +2158,7 @@ export class CanvasController {
       arrowdown: [0, 1],
     }
     const a = arrows[key]
-    if (a && ui.selection.length && this.layoutResult) {
+    if (a && matches("nudge", e) && ui.selection.length && this.layoutResult) {
       const k = e.shiftKey ? 10 : 1
       return run(() => {
         if (this.layoutResult)

@@ -1,0 +1,345 @@
+/*
+ * Right panel › Code tab — desing.pen 25 "v1 Polish" (OqLSw) › 1 Code tab (nkVxr). Values per
+ * node (Right Panel · Code hc6wk: column, fill bg-app):
+ *
+ * Selection CChLA: shared `.selection-header` (gap 8, padding [8, 12, 12, 12], bottom 1 border)
+ * Framework Bar WLqjf: row fill, gap 8, padding [10, 12, 8, 12], center
+ *   ├ Framework Switch ebO2s: SegmentedText FC6O7, labels text-xs (11)
+ *   ├ Spacer fill
+ *   └ Copy file AM6ea: IconButton 28 × 28, fill transparent, icon copy 14 text-secondary
+ * File Tabs vQgF3: row fill, gap 2, padding [0, 12, 8, 12], center — FileChip…, Spacer, Meta
+ *   mono xs text-tertiary
+ * Code View deO9F: column fill × fill, gap 2, padding [10, 0], fill bg-subtle, stroke border
+ *   top 1 + bottom 1, clip — CodeLine…
+ * Truncation Bar PhPBM: column fill, gap 8, padding [10, 12], fill bg-muted, stroke bottom 1
+ *   ├ Row MAkcp: gap 8 center — scissors 14 text-secondary, Title sans xs 600 text-primary
+ *   ├ Desc FPix2: sans xs text-secondary, line height 1.45
+ *   └ Actions c2iBn4: gap 6 center — Copy all (Button/Secondary h 24, padding [0, 10], icon
+ *       copy 12, label xs), Open export (Button/Ghost h 24, padding [0, 10], label xs primary)
+ * Footer uyAuG: row fill, gap 6, padding [10, 12], center
+ *   ├ Live Dot 6 × 6 ellipse success (paused: text-tertiary)
+ *   ├ Status sans xs text-tertiary
+ *   ├ Spacer fill
+ *   └ Open export link M3CVSl: row gap 4 center — Label sans xs 500 text-primary,
+ *       arrow-up-right 12 text-primary
+ * (d) Empty: Divider LTeqc fill × 1 border; Empty Body kNMph: column fill × fill, gap 10,
+ *   padding [0, 32], justify center, align center — Icon Wrap 40 bg-muted pill (code-xml 18
+ *   text-secondary), Title sans base 600 primary, Desc sans sm secondary 1.45 center, Button/
+ *   Secondary h 28 padding [0, 12] (download 14, "Export page…" sm)
+ * (e) Unsupported Body SQJFF: column fill, gap 12, padding 12 — Notice xHvmD (NoticeCard)
+ */
+
+/* Board 25: the panel widens with the Code tab like with the Agent tab (code needs width). */
+.right-panel.right-panel--code {
+  width: 360px;
+}
+
+.right-panel:has(> .code-tab) {
+  overflow: hidden;
+}
+
+.code-tab {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  background: var(--kimo-bg-app);
+}
+
+.code-tab__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.code-tab__selection-icon--agent {
+  color: var(--kimo-agent);
+}
+
+/* --- Framework Bar --------------------------------------------------------------------------- */
+
+.code-tab__bar {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px 8px 12px;
+}
+
+.code-tab__switch .kimo-seg-text__label {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-icon-button.code-tab__copy {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-icon-button.code-tab__copy:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+
+/* --- File Tabs ------------------------------------------------------------------------------- */
+
+.code-tab__files {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 0 12px 8px 12px;
+}
+
+.code-tab__chips {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.code-tab__meta {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  white-space: nowrap;
+  color: var(--kimo-text-tertiary);
+}
+
+/* --- Code View ------------------------------------------------------------------------------- */
+
+.code-tab__view {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 0;
+  overflow: auto;
+  background: var(--kimo-bg-subtle);
+  box-shadow:
+    inset 0 1px 0 0 var(--kimo-border),
+    inset 0 -1px 0 0 var(--kimo-border);
+  overscroll-behavior: contain;
+}
+
+.code-tab__view > .kimo-code-line {
+  cursor: default;
+}
+
+/* --- Truncation Bar -------------------------------------------------------------------------- */
+
+.code-tab__truncation {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.code-tab__truncation-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.code-tab__truncation-icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-secondary);
+}
+
+.code-tab__truncation-icon > svg,
+.code-tab__open-export > svg,
+.code-tab__empty-icon > svg {
+  display: block;
+}
+
+.code-tab__truncation-title {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  color: var(--kimo-text-primary);
+}
+
+.code-tab__truncation-desc {
+  width: 100%;
+  margin: 0;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  color: var(--kimo-text-secondary);
+}
+
+.code-tab__truncation-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* SunOY: icon copy 12 × 12 (CompactButton draws 14). */
+.kimo-button.kimo-compact-button.code-tab__copy-all .kimo-button__icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* OczoZ: Button/Ghost with label fill text-primary. */
+.kimo-button.kimo-compact-button.code-tab__open-export-button {
+  color: var(--kimo-text-primary);
+}
+
+/* --- Footer ---------------------------------------------------------------------------------- */
+
+.code-tab__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.code-tab__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-success);
+}
+
+.code-tab__dot--paused {
+  background: var(--kimo-text-tertiary);
+}
+
+.code-tab__status {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  color: var(--kimo-text-tertiary);
+}
+
+.code-tab__open-export {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.code-tab__open-export:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.code-tab__open-export-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* --- (d) Nothing selected -------------------------------------------------------------------- */
+
+.code-tab__divider {
+  flex: none;
+  width: 100%;
+  height: 1px;
+  background: var(--kimo-border);
+}
+
+.code-tab__empty {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 0 32px;
+}
+
+.code-tab__empty-icon {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.code-tab__empty-title {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+  color: var(--kimo-text-primary);
+}
+
+.code-tab__empty-desc {
+  align-self: stretch;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  text-align: center;
+  color: var(--kimo-text-secondary);
+}
+
+/* --- (e) Unsupported ------------------------------------------------------------------------- */
+
+.code-tab__unsupported {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+}

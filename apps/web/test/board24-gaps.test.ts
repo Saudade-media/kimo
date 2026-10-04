@@ -45,8 +45,9 @@ describe("(a) Link… popover URL rule (NpwJS)", () => {
     expect(parseLinkUrl("#Pricing")).toMatchObject({ kind: "ok", scheme: "frame" })
     expect(parseLinkUrl("")).toEqual({ kind: "empty" })
     expect(parseLinkUrl("   ")).toEqual({ kind: "empty" })
+    // Board 25 §6 (b) supersedes: no scheme ("kimo.dev") is auto-prefixed https://, not invalid.
+    expect(parseLinkUrl("kimo.dev")).toMatchObject({ kind: "ok", url: "https://kimo.dev" })
     for (const bad of [
-      "kimo.dev",
       "javascript:alert(1)",
       "ftp://x.y/z",
       "data:text/html,x",

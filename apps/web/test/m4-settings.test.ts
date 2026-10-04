@@ -184,7 +184,8 @@ describe("SettingsView renders every pane bound to platform.settings", () => {
     expect(await render("updates")).toContain("Kimo 0.4.2")
     expect(await render("updates")).toContain("Check now")
     const about = await render("about")
-    expect(about).toContain("MIT License · local-first, no account")
-    expect(about).toContain("Open repo")
+    // Board 25 §7 (a) replaced the board 19 About pane (see board25-about-help.test.ts).
+    expect(about).toContain("Version 0.4.2 (")
+    expect(about).toContain("Open-source licenses")
   })
 })

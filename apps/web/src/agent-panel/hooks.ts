@@ -6,5 +6,7 @@ export function useAgentPanelState(c: AgentPanelControllerExt): AgentPanelViewSt
   return useSyncExternalStore(
     (l) => c.subscribe(l),
     () => c.state,
+    // Server rendering (unit tests' renderToString): the same snapshot.
+    () => c.state,
   )
 }

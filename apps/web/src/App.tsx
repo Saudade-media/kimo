@@ -16,7 +16,14 @@ import { useHash } from "./lib/hooks"
 import { type ThemeMode, useTheme } from "./lib/theme"
 import { SettingsOpenerContext, useRuntime } from "./platform/runtime"
 import { diskPath, navigate, parseRoute } from "./router"
-import { openSettings, SettingsDialog, SettingsRoute, useSettingsShortcut } from "./settings"
+import {
+  HelpHost,
+  openSettings,
+  SettingsDialog,
+  SettingsRoute,
+  useSettingsShortcut,
+} from "./settings"
+import { ShortcutsSheetHost } from "./shortcuts"
 import { createUpdaterController, UpdateToastHost } from "./updater"
 
 const Gallery = lazy(() => import("@kimo/ui/gallery").then((m) => ({ default: m.Gallery })))
@@ -73,6 +80,8 @@ export function App() {
         />
       )}
       {updater && <UpdateToastHost controller={updater} />}
+      <ShortcutsSheetHost />
+      <HelpHost platform={platform} />
     </SettingsOpenerContext.Provider>
   )
 }

@@ -354,7 +354,11 @@ export class AgentOverlayPainter {
     if (!l?.visible) return
     const ck = this.ck
     const spec = OVERLAY_SPEC_M6.placeholder
-    const { hue, soft } = personaColors(t, ph.persona)
+    // Orphans (board 25 §3 UMRAO): outline border-strong, skeleton bg-muted, no shimmer.
+    const orphan = ph.state === "interrupted"
+    const persona = personaColors(t, ph.persona)
+    const hue = orphan ? t.borderStrong : persona.hue
+    const soft = orphan ? t.bgMuted : persona.soft
     const shape = this.box(layout, scene, ph.id, v, 0, "node")
     if (!shape) return
     canvas.save()

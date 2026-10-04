@@ -1,12 +1,27 @@
 /** ⌘' / Ctrl+' "Next conflict" (board 18; contract NEXT_CONFLICT_SHORTCUT = "Mod+'"). */
 import { useEffect } from "react"
+import { matches } from "../shortcuts/shortcuts"
 import type { EditorConflictSession } from "./session"
 
-/** True for Mod+' (⇧ goes to the previous conflict). Uses `code` so keyboard layouts agree. */
+/**
+ * True for Mod+' or ⇧Mod+' (SHORTCUTS "nextConflict" / "previousConflict"; ⇧ goes to the
+ * previous conflict). Matches `code` too, so keyboard layouts agree.
+ */
 export function isNextConflictKey(
-  e: Pick<KeyboardEvent, "metaKey" | "ctrlKey" | "altKey" | "key" | "code">,
+  e: Pick<KeyboardEvent, "metaKey" | "ctrlKey" | "altKey" | "key" | "code"> & {
+    shiftKey?: boolean
+  },
 ): boolean {
-  return (e.metaKey || e.ctrlKey) && !e.altKey && (e.code === "Quote" || e.key === "'")
+  // Explicit fields: a DOM KeyboardEvent's props are prototype getters, which a spread drops.
+  const k = {
+    key: e.key,
+    code: e.code,
+    metaKey: e.metaKey,
+    ctrlKey: e.ctrlKey,
+    altKey: e.altKey,
+    shiftKey: e.shiftKey ?? false,
+  }
+  return matches("nextConflict", k) || matches("previousConflict", k)
 }
 
 /** Runs one Next / Previous conflict step: selects the node, reveals it, focuses its row. */
@@ -23,7 +38,7 @@ export function useNextConflictShortcut(session: EditorConflictSession | null): 
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || !isNextConflictKey(e)) return
       e.preventDefault()
-      stepConflict(session, e.shiftKey)
+      stepConflict(session, matches("previousConflict", e))
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)

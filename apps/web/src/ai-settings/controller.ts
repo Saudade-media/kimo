@@ -39,20 +39,30 @@ import type {
 import {
   AI_CONFIG_KEY,
   type AiConfig,
+  type AuthScheme,
   agentStatus,
+  authOf,
+  authPreview,
+  BUILTIN_PROVIDERS,
   cliStatusText,
   defaultSelection,
   isCloud,
   keyless,
+  keyWithheld,
+  maskForTrace,
   monthUsage,
   OLLAMA_ID,
   OLLAMA_URL,
+  originOf,
   type PillTone,
   parseConfig,
   providerRows,
   pruneLedger,
   type StoredProvider,
+  type StoredTest,
   sanitizeTitle,
+  TEST_TIMEOUT_MS,
+  type TestTrace,
   type UsableApi,
   type UsageEntry,
 } from "./model"
@@ -63,6 +73,28 @@ const CLOUD_IDS = ["bedrock", "vertex", "foundry"]
 
 /** Minimal CLI host (`@kimo/platform` `CliProcessHostLike` / `@kimo/ai-agent` `CliProcessHost`). */
 export type CliHost = Parameters<typeof detectClis>[0]
+
+/** Board 25 cloud cards' fields (rules Oo1ZC / wqHjl / zYzwc). */
+export interface CloudFields {
+  region?: string
+  project?: string
+  credentials?: string
+  profile?: string
+  resource?: string
+  /** Bedrock Models / Foundry Deployment: the agent model id. */
+  model?: string
+}
+
+/** Board 25 Add provider (uOwr0): Type, Name, Base URL, Auth header, API key, Models. */
+export interface AddProviderInput {
+  type: "custom" | "openai" | "gemini" | "openrouter"
+  label: string
+  baseURL?: string
+  auth?: AuthScheme
+  key?: string
+  /** First = agent model, second = fast model (rule BdODa). */
+  models: string[]
+}
 
 export interface AiSettingsDeps {
   platform: "desktop" | "web"
@@ -78,6 +110,8 @@ export interface AiSettingsDeps {
   /** fetch for one provider: global fetch on web; the relay on desktop. */
   fetchFor(provider: StoredProvider): typeof fetch
   online?: () => boolean
+  /** Test timeout (board 25 AbbSR, default 15 s). */
+  testTimeoutMs?: number
   now?: () => number
   /** Home directory for `~` paths in CLI rows. */
   home?: string | null
@@ -113,11 +147,23 @@ export interface AiSettingsController extends AiProvidersController {
   refresh(): Promise<void>
   /** Web only: the stored key for "Reveal" (desktop keys never leave the keychain). */
   revealKey(providerId: string): Promise<string | null>
-  /** Cloud row "Set up": which platform and its routing fields. */
-  setCloud(
-    kind: "bedrock" | "vertex" | "foundry",
-    fields: { region?: string; project?: string },
-  ): Promise<void>
+  /**
+   * Cloud row "Set up" (board 25 YewZG / bSx6y / g7Uzta): one platform's routing fields. The
+   * platform last set up is the one the row uses; the others keep their fields.
+   */
+  setCloud(kind: "bedrock" | "vertex" | "foundry", fields: CloudFields): Promise<void>
+  /** Board 25 "Add provider" dialog: adds (or keys a built-in row), then runs the Test. */
+  addProvider(input: AddProviderInput): Promise<{ id: string; test: ConnectionTest }>
+  /** Board 25 footer "Test connection": tests the form's draft without adding it. */
+  testDraft(input: AddProviderInput): Promise<StoredTest>
+  /** Board 25 Models "Fetch /models": the endpoint's model ids for a draft. */
+  fetchModels(input: AddProviderInput): Promise<string[]>
+  /** Custom endpoints: the auth header scheme. */
+  setAuth(providerId: string, auth: AuthScheme): Promise<void>
+  /** The stored row (auth, pin, cloud fields), or undefined. */
+  storedOf(providerId: string): StoredProvider | undefined
+  /** The last Test (with its Details trace), or undefined. */
+  testOf(providerId: string): StoredTest | undefined
   /** Ollama / custom keyless endpoints: mark configured (after a passing Test). */
   setConfigured(providerId: string, configured: boolean): Promise<void>
   dismissHomeCard(dismissed?: boolean): void
@@ -173,6 +219,85 @@ async function cloudTest(
           })
     return { ok: false, latencyMs: now() - t0, detail: error.message, error }
   }
+}
+
+const STATUS_TEXT: Record<number, string> = {
+  400: "Bad Request",
+  401: "Unauthorized",
+  403: "Forbidden",
+  404: "Not Found",
+  408: "Request Timeout",
+  422: "Unprocessable Entity",
+  429: "Too Many Requests",
+  500: "Internal Server Error",
+  502: "Bad Gateway",
+  503: "Service Unavailable",
+  504: "Gateway Timeout",
+}
+
+class TestTimeout extends Error {}
+
+/**
+ * Wraps a provider fetch for one Test: records the last request for the Details expander
+ * (request line, status + latency, the first 400 chars of a failed response), collects the ids
+ * a `/models` response lists (model-missing warning) and enforces the Test timeout.
+ */
+function recordingFetch(inner: typeof fetch, timeoutMs: number, now: () => number) {
+  const rec: {
+    request: string
+    response: string
+    body: string
+    status?: number
+    listed: string[] | null
+    timedOut: boolean
+  } = { request: "", response: "", body: "", listed: null, timedOut: false }
+  const started = now()
+  const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req = new Request(input, init)
+    rec.request = `${req.method} ${req.url.replace(/^kimo-relay:\/\//, "")}`
+    const t0 = now()
+    const left = Math.max(0, timeoutMs - (t0 - started))
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      const res = await Promise.race([
+        inner(input, init),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            rec.timedOut = true
+            reject(new TestTimeout(`no response in ${Math.round(timeoutMs / 1000)} s`))
+          }, left)
+        }),
+      ])
+      clearTimeout(timer)
+      rec.status = res.status
+      rec.response = `← ${res.status} ${res.statusText || STATUS_TEXT[res.status] || ""}`.trimEnd()
+      rec.response += ` · ${now() - t0} ms`
+      if (!res.ok) {
+        rec.body = (
+          await res
+            .clone()
+            .text()
+            .catch(() => "")
+        ).slice(0, 400)
+      } else if (/\/models\/?(\?|$)/.test(new URL(req.url).pathname + new URL(req.url).search)) {
+        const j = (await res
+          .clone()
+          .json()
+          .catch(() => null)) as { data?: { id?: string }[]; models?: { name?: string }[] } | null
+        const ids = [
+          ...(j?.data ?? []).map((m) => m.id ?? ""),
+          ...(j?.models ?? []).map((m) => (m.name ?? "").replace(/^models\//, "")),
+        ].filter(Boolean)
+        rec.listed = ids
+      }
+      return res
+    } catch (e) {
+      clearTimeout(timer)
+      rec.response = `← ${e instanceof Error ? e.message : String(e)} · ${now() - t0} ms`
+      throw e
+    }
+  }) as typeof fetch
+  return { fetch: f, rec }
 }
 
 export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsController {
@@ -324,11 +449,28 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
     hints = next
   }
 
-  async function providerConfig(p: StoredProvider): Promise<ProviderConfig> {
-    const apiKey =
-      deps.platform === "web" && !keyless(p)
+  async function providerConfig(p: StoredProvider, draftKey?: string): Promise<ProviderConfig> {
+    // Board 25 "Origin pin": a key pinned to another origin is withheld (re-enter it).
+    const withheld = keyWithheld(p)
+    const key =
+      draftKey ??
+      (deps.platform === "web" && !keyless(p) && !withheld
         ? ((await deps.secrets.get(providerAccount(p.id)).catch(() => null)) ?? undefined)
-        : undefined
+        : undefined)
+    // Custom endpoints on web: a scheme the adapter doesn't send by itself goes as a header.
+    let apiKey = key
+    let headers: Record<string, string> | undefined
+    if (key && p.kind === "custom") {
+      const a = authOf(p)
+      const native = p.wire === "anthropic" ? a.scheme === "x-api-key" : a.scheme === "bearer"
+      if (!native) {
+        apiKey = undefined
+        headers =
+          a.scheme === "bearer"
+            ? { authorization: `Bearer ${key}` }
+            : { [a.scheme === "x-api-key" ? "x-api-key" : a.header?.trim() || "x-api-key"]: key }
+      }
+    }
     return {
       id: p.id,
       kind: p.kind,
@@ -337,10 +479,145 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
       ...(p.extraModels ? { extraModels: p.extraModels } : {}),
       ...(p.baseURL ? { baseURL: p.baseURL } : {}),
       ...(apiKey ? { apiKey } : {}),
+      ...(headers ? { headers } : {}),
       ...(p.allowBrowser !== undefined ? { allowBrowser: p.allowBrowser } : {}),
       ...(p.wire ? { wire: p.wire } : {}),
       ...(p.api ? { api: p.api } : {}),
       ...(p.free ? { free: true } : {}),
+    }
+  }
+
+  /** "auth: Authorization: Bearer acme_live_…7c21" (the key masked; desktop: its last 4). */
+  async function authLine(p: StoredProvider, draftKey?: string): Promise<string> {
+    if (isCloud(p.kind)) return "auth: signed credentials (Rust side)"
+    if (!draftKey && keyless(p) && !hints[p.id]) return "auth: none"
+    const key =
+      draftKey ??
+      (deps.platform === "web"
+        ? await deps.secrets.get(providerAccount(p.id)).catch(() => null)
+        : null)
+    const masked = key ? maskForTrace(key) : hints[p.id] ? `…${hints[p.id]}` : "<none>"
+    const scheme: AuthScheme =
+      p.kind === "custom"
+        ? authOf(p)
+        : p.kind === "anthropic"
+          ? { scheme: "x-api-key" }
+          : p.kind === "gemini"
+            ? { scheme: "custom", header: "x-goog-api-key" }
+            : { scheme: "bearer" }
+    return `auth: ${authPreview(scheme, masked)}`
+  }
+
+  /** One Test of a row or a draft: the result plus what the pane stores (with Details). */
+  async function runTest(
+    p: StoredProvider,
+    draftKey?: string,
+  ): Promise<{ result: ConnectionTest; stored: StoredTest }> {
+    let result: ConnectionTest
+    const t0 = now()
+    const timeoutMs = deps.testTimeoutMs ?? TEST_TIMEOUT_MS
+    const { fetch: recorded, rec } = recordingFetch(deps.fetchFor(p), timeoutMs, now)
+    const reach = availableOn(
+      { kind: p.kind, allowBrowser: p.allowBrowser === true },
+      deps.platform,
+    )
+    try {
+      if (!reach.ok)
+        throw new ProviderError("unsupported_platform", reach.reason, { provider: p.id })
+      const provider = createProvider(
+        await providerConfig(p, deps.platform === "web" ? draftKey : undefined),
+        { platform: deps.platform, fetch: recorded, online },
+      )
+      // Bedrock / Vertex only serve POST /v1/messages (listModels → 404): one tiny message
+      // instead of the adapter's models-list + tool probe.
+      result = isCloud(p.kind)
+        ? await cloudTest(provider, p.models.agent, now)
+        : await provider.test()
+    } catch (e) {
+      const error =
+        e instanceof ProviderError
+          ? e
+          : new ProviderError("unknown", e instanceof Error ? e.message : String(e), {
+              provider: p.id,
+            })
+      result = { ok: false, latencyMs: now() - t0, detail: error.message, error }
+    }
+    // Board 25 variants: timed out, reachable but the model isn't listed (warning).
+    let errorKind: string | undefined = result.error?.kind
+    let detail = result.detail
+    if (!result.ok && rec.timedOut) {
+      errorKind = "timeout"
+      detail = `no response in ${Math.round(timeoutMs / 1000)} s`
+    } else if (
+      !result.ok &&
+      errorKind !== "auth" &&
+      rec.listed &&
+      p.models.agent &&
+      !rec.listed.includes(p.models.agent)
+    ) {
+      errorKind = "model_missing"
+      detail = `${p.models.agent} not in /models`
+    }
+    if (errorKind !== result.error?.kind || detail !== result.detail)
+      result = {
+        ...result,
+        detail,
+        error: new ProviderError((errorKind ?? "unknown") as never, detail, { provider: p.id }),
+      }
+    const trace: TestTrace | undefined = result.ok
+      ? undefined
+      : {
+          request: rec.request || `${isCloud(p.kind) ? "POST" : "GET"} ${p.baseURL ?? ""}`,
+          response: rec.response || `← ${detail}`,
+          body: rec.body,
+          auth: await authLine(p, draftKey),
+        }
+    const stored: StoredTest = {
+      ok: result.ok,
+      latencyMs: result.latencyMs,
+      detail,
+      ...(errorKind ? { errorKind } : {}),
+      ...(rec.status !== undefined && !result.ok ? { status: rec.status } : {}),
+      at: now(),
+      ...(trace ? { trace } : {}),
+    }
+    return { result, stored }
+  }
+
+  /** A provider row for the Add provider form (not stored). */
+  function draftOf(input: AddProviderInput): StoredProvider {
+    const base = BUILTIN_PROVIDERS.find((b) => b.id === input.type)
+    const models = input.models.map((m) => m.trim()).filter(Boolean)
+    const fallback = base?.models ?? { agent: "", fast: "" }
+    return {
+      id: input.type === "custom" ? "custom:draft" : input.type,
+      kind: input.type,
+      label: input.label.trim() || (base?.label ?? "Custom endpoint"),
+      models: models[0] ? { agent: models[0], fast: models[1] ?? models[0] } : fallback,
+      ...(input.type === "custom"
+        ? { baseURL: (input.baseURL ?? "").trim(), wire: "openai-chat" as const }
+        : {}),
+      ...(input.auth ? { auth: input.auth } : {}),
+      ...(input.key?.trim() ? {} : { free: true }),
+    }
+  }
+
+  /**
+   * Desktop: the relay injects the key from the keychain by provider id, so a draft's key is
+   * stored under a throwaway account (`provider.custom:draft`) for the call and removed after
+   * (its origin pin with it). Built-in drafts on desktop need their key saved first.
+   */
+  async function withDraftKey<T>(
+    draft: StoredProvider,
+    key: string | undefined,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    const stash = deps.platform === "desktop" && !!key && draft.id === "custom:draft"
+    if (stash && key) await deps.secrets.set(providerAccount(draft.id), key)
+    try {
+      return await run()
+    } finally {
+      if (stash) await deps.secrets.delete(providerAccount(draft.id)).catch(() => {})
     }
   }
 
@@ -382,6 +659,12 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
       const tests = { ...config.tests }
       delete tests[p.id]
       config = { ...config, tests }
+      // Saving the key clears its origin pin (board 25 rule "Origin pin": re-enter the key).
+      const stored = config.providers[p.id]
+      if (stored?.pinnedOrigin) {
+        const { pinnedOrigin: _o, ...rest } = stored
+        config = { ...config, providers: { ...config.providers, [p.id]: rest } }
+      }
       testing[p.id] = true
       hints = { ...hints, [p.id]: k.slice(-4) }
       markConfigured(p.id, true)
@@ -404,52 +687,32 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
       if (!p) throw new Error(`Unknown provider ${providerId}`)
       testing[p.id] = true
       emit()
-      let result: ConnectionTest
-      const t0 = now()
-      const reach = availableOn(
-        { kind: p.kind, allowBrowser: p.allowBrowser === true },
-        deps.platform,
-      )
-      try {
-        if (!reach.ok)
-          throw new ProviderError("unsupported_platform", reach.reason, { provider: p.id })
-        const provider = createProvider(await providerConfig(p), {
-          platform: deps.platform,
-          fetch: deps.fetchFor(p),
-          online,
-        })
-        // Bedrock / Vertex only serve POST /v1/messages (listModels → 404): one tiny message
-        // instead of the adapter's models-list + tool probe.
-        result = isCloud(p.kind)
-          ? await cloudTest(provider, p.models.agent, now)
-          : await provider.test()
-      } catch (e) {
-        const error =
-          e instanceof ProviderError
-            ? e
-            : new ProviderError("unknown", e instanceof Error ? e.message : String(e), {
-                provider: p.id,
-              })
-        result = { ok: false, latencyMs: now() - t0, detail: error.message, error }
-      }
+      const { result, stored } = await runTest(p)
       testing[p.id] = false
-      config = {
-        ...config,
-        tests: {
-          ...config.tests,
-          [p.id]: {
-            ok: result.ok,
-            latencyMs: result.latencyMs,
-            detail: result.detail,
-            ...(result.error ? { errorKind: result.error.kind } : {}),
-            at: now(),
+      config = { ...config, tests: { ...config.tests, [p.id]: stored } }
+      const cur = config.providers[p.id]
+      if (result.ok && cur) {
+        // First successful request pins a custom endpoint's key to its origin (board 25).
+        const pin =
+          p.kind === "custom" && !keyless(p) && !cur.pinnedOrigin ? originOf(p.baseURL) : null
+        const { unverified: _u, ...rest } = cur
+        config = {
+          ...config,
+          providers: {
+            ...config.providers,
+            [p.id]: { ...rest, ...(pin ? { pinnedOrigin: pin } : {}) },
           },
-        },
+        }
       }
       if (keyless(p) && result.ok) markConfigured(p.id, true)
       save()
       emit()
       return result
+    },
+    async testDraft(input) {
+      const draft = draftOf(input)
+      const key = input.key?.trim()
+      return withDraftKey(draft, key, async () => (await runTest(draft, key)).stored)
     },
     async setModels(providerId, models) {
       putProvider(providerId, { models })
@@ -561,15 +824,21 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
     },
     async setCloud(kind, fields) {
       const providers = { ...config.providers }
-      for (const k of CLOUD_IDS) delete providers[k]
-      providers[kind] = {
+      const prev: StoredProvider = providers[kind] ?? {
         id: kind,
         kind,
         label: "Bedrock · Vertex · Foundry",
-        models: (rowOf("bedrock") as StoredProvider).models,
-        ...(fields.region ? { region: fields.region } : {}),
-        ...(fields.project ? { project: fields.project } : {}),
+        models: (BUILTIN_PROVIDERS.find((b) => b.id === "bedrock") as StoredProvider).models,
       }
+      const next: StoredProvider = { ...prev, id: kind, kind }
+      for (const k of ["region", "project", "credentials", "profile", "resource"] as const) {
+        if (!(k in fields)) continue
+        const v = fields[k]?.trim()
+        if (v) next[k] = v
+        else delete next[k]
+      }
+      if (fields.model?.trim()) next.models = { ...next.models, agent: fields.model.trim() }
+      providers[kind] = next
       config = {
         ...config,
         providers,
@@ -578,6 +847,55 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
       save()
       emit()
     },
+    async addProvider(input) {
+      const models = input.models.map((m) => m.trim()).filter(Boolean)
+      const key = input.key?.trim() ?? ""
+      let id: string
+      if (input.type === "custom") {
+        const agent = models[0] ?? ""
+        id = await ctl.addCustom({
+          label: input.label.trim(),
+          baseURL: (input.baseURL ?? "").trim(),
+          wire: "openai-chat",
+          models: { agent, fast: models[1] ?? agent },
+          ...(key ? {} : { free: true }),
+        })
+        putProvider(id, {
+          ...(input.auth ? { auth: input.auth } : {}),
+          ...(models.length > 2 ? { extraModels: models.slice(2) } : {}),
+          unverified: true,
+        })
+      } else {
+        id = input.type
+        putProvider(id, {
+          ...(models[0] ? { models: { agent: models[0], fast: models[1] ?? models[0] } } : {}),
+          ...(models.length > 2 ? { extraModels: models.slice(2) } : {}),
+          unverified: true,
+        })
+      }
+      emit()
+      const test = key ? await ctl.setKey(id, key) : await ctl.test(id)
+      return { id, test }
+    },
+    async fetchModels(input) {
+      const draft = draftOf(input)
+      const key = input.key?.trim()
+      return withDraftKey(draft, key, async () => {
+        const cfg = await providerConfig(draft, deps.platform === "web" ? key : undefined)
+        const provider = createProvider(cfg, {
+          platform: deps.platform,
+          fetch: deps.fetchFor(draft),
+          online,
+        })
+        return provider.listModels()
+      })
+    },
+    async setAuth(providerId, auth) {
+      putProvider(providerId, { auth })
+      emit()
+    },
+    storedOf: (providerId) => config.providers[providerId] ?? rowOf(providerId),
+    testOf: (providerId) => config.tests[providerId],
     async setConfigured(providerId, on) {
       markConfigured(providerId, on)
       save()
@@ -595,7 +913,7 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
     },
     async providerConfigs() {
       const rows = providerRows(config).filter(isConfigured)
-      return Promise.all(rows.map(providerConfig))
+      return Promise.all(rows.map((r) => providerConfig(r)))
     },
     fetchFor(providerId) {
       const row = rowOf(providerId)

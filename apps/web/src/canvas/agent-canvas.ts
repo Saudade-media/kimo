@@ -381,8 +381,9 @@ export class AgentCanvasModel {
         left: r.x + inset,
         top: r.y + inset,
         state: orphan ? "interrupted" : "building",
+        // Board 25 §3 kTwwU / rule jMJaL: an orphan reads "Agent stopped · <name>".
         text: orphan
-          ? "Interrupted"
+          ? `Agent stopped · ${name}`
           : `${label} · building ${name}${info?.ops ? ` · ${info.ops} ops` : ""}`,
         persona: info?.persona ?? "agent",
         label,

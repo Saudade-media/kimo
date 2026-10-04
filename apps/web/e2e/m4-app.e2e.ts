@@ -26,7 +26,11 @@ export async function harnessUrl(ctx: E2EContext): Promise<string> {
     base: "./",
     logLevel: "error",
     plugins: [react()],
-    build: { outDir: join(here, ".dist", "m4-app"), emptyOutDir: true, target: "es2022" },
+    build: {
+      outDir: join(process.env.KIMO_E2E_OUTDIR ?? join(here, ".dist"), "m4-app"),
+      emptyOutDir: true,
+      target: "es2022",
+    },
   }).then(() => "m4-app/index.html")
   return `${ctx.url}${await built}`
 }

@@ -194,14 +194,16 @@ export const scenarios: Scenario[] = [
         (await page.locator('[data-tool="move"]').getAttribute("aria-pressed")) === "true",
         "V → move",
       )
-      // Board 20 File menu (cPHVm): the web items in node order; rename is a double-click.
+      // Board 20 File menu (cPHVm): the web items in node order (+ board 25 §7 (b) File › Help);
+      // rename is a double-click.
       await page.locator(".topbar__file").click()
       const items = await page
         .getByTestId("file-menu")
         .locator(".kimo-menu-item-dense__label")
         .allInnerTexts()
       expect(
-        items.join("|") === "New file|Open…|Open recent|Save|Save as…|Clean up assets…|Settings…",
+        items.join("|") ===
+          "New file|Open…|Open recent|Save|Save as…|Clean up assets…|Settings…|Help",
         `web File menu: ${items.join("|")}`,
       )
       await page.keyboard.press("Escape")

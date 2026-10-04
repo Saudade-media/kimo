@@ -24,10 +24,11 @@ import {
 } from "lucide-react"
 import { type KeyboardEvent, useCallback, useRef } from "react"
 import { AiProvidersPane } from "../ai-settings/AiProvidersPane"
+import { AboutPane } from "./AboutPane"
 import { AgentsPane } from "./AgentsPane"
 import { useSetSetting, useSettings } from "./hooks"
 import { SETTINGS_PANES } from "./model"
-import { AboutPane, FilesPane, FontsPane, GeneralPane, type PaneProps, UpdatesPane } from "./panes"
+import { FilesPane, FontsPane, GeneralPane, type PaneProps, UpdatesPane } from "./panes"
 import "./settings.css"
 
 const ICONS = {
@@ -49,7 +50,6 @@ export interface SettingsViewProps {
   /** Dialog only: the red light / Escape. */
   onClose?: () => void
   onFontCacheCleared?: PaneProps["onFontCacheCleared"]
-  licenses?: PaneProps["licenses"]
   /** A write was refused (INVALID / IO). */
   onError?: (e: unknown) => void
 }
@@ -61,7 +61,6 @@ export function SettingsView({
   variant,
   onClose,
   onFontCacheCleared,
-  licenses,
   onError,
 }: SettingsViewProps) {
   const settings = useSettings(platform.settings)
@@ -72,7 +71,6 @@ export function SettingsView({
     settings,
     set,
     ...(onFontCacheCleared ? { onFontCacheCleared } : {}),
-    ...(licenses ? { licenses } : {}),
   }
   const nativeLights = platform.window.trafficLightPosition() !== null
   const drawLights = variant === "dialog" || !nativeLights
@@ -148,7 +146,7 @@ export function SettingsView({
         {pane === "agents-mcp" && <AgentsPane platform={platform} />}
         {pane === "ai-providers" && <AiProvidersPane platform={platform} />}
         {pane === "updates" && <UpdatesPane {...props} />}
-        {pane === "about" && <AboutPane {...props} />}
+        {pane === "about" && <AboutPane platform={platform} />}
       </section>
     </div>
   )

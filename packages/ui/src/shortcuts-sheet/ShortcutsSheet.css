@@ -1,0 +1,241 @@
+/*
+ * ShortcutsSheet: desing.pen 25 v1 Polish › §7 (c) › Dialog · Keyboard shortcuts (WcWPY).
+ * frame: column, 1040, fill bg-app, radius-2xl, clip,
+ *        shadows outer 0 2 blur 6 shadow + outer 0 24 blur 64 shadow-strong (no stroke)
+ *   ├ Header (gVWmk) row, gap 12, padding [22, 24, 16, 28], alignItems center
+ *   │   ├ Titles (ngix3) column, gap 4, fill
+ *   │   │   ├ Title (s9PBY) sans text-xl (20) / 500, letterSpacing −0.3, text-primary
+ *   │   │   └ Desc (dJElp) sans text-base (13) / 400, text-secondary
+ *   │   ├ Filter (R5dm5) Input (Zs05d) 220 × 32; Placeholder (BwYzP) text-sm (12)
+ *   │   ├ Platform (AnOZ9) SegmentedText (FC6O7); labels text-xs (11); Segment 3 disabled
+ *   │   └ Close (vh19d) IconButton (ZMxjt) 32 × 32, fill bg-muted, radius-pill; icon x 16
+ *   ├ Body (R0ug05) row, gap 32, padding [4, 28, 24, 28]
+ *   │   └ Column 1–3 (qvtPA / u0lSDC / luOGF) column, gap 20, fill
+ *   │       └ Group · <title> column, fill
+ *   │           ├ Group Title mono text-xs (11) / 400, letterSpacing 0.4, text-tertiary
+ *   │           ├ Gap 1 × 6
+ *   │           └ Row · <action> row, gap 8, alignItems center, fill × 30, stroke bottom 1 border
+ *   │               ├ Action sans text-sm (12) / 400 text-primary
+ *   │               ├ New (CMCaf) padding [1, 6], fill bg-muted, radius-pill;
+ *   │               │   Label sans 10 / 500 text-secondary
+ *   │               ├ Spacer fill × 1
+ *   │               ├ Kbd (Eo5JW)
+ *   │               ├ Or sans text-xs (11) / 400 text-tertiary
+ *   │               └ Kbd (Eo5JW)
+ *   └ Footer (vALG2) row, gap 8, padding [12, 28], alignItems center, fill bg-subtle,
+ *       stroke top 1 border
+ *       ├ Icon (DUIm8) lucide info 14 × 14, text-tertiary
+ *       └ Note (QTqnj) sans text-sm (12) / 400 text-tertiary
+ */
+.kimo-shortcuts-sheet {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 1040px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  border-radius: var(--kimo-radius-2xl);
+  background: var(--kimo-bg-app);
+  box-shadow:
+    0 2px 6px 0 var(--kimo-shadow),
+    0 24px 64px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  outline: none;
+}
+
+.kimo-shortcuts-sheet__header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 22px 24px 16px 28px;
+}
+
+.kimo-shortcuts-sheet__titles {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kimo-shortcuts-sheet__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xl);
+  font-weight: var(--kimo-font-weight-medium);
+  letter-spacing: -0.3px;
+  line-height: 24px; /* Pencil text box: round(20 × 1.21) for Inter */
+}
+
+.kimo-shortcuts-sheet__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px; /* round(13 × 1.21) */
+}
+
+/* Filter: Input (Zs05d) instance, width 220 (component fill_container), text-sm placeholder. */
+.kimo-input.kimo-shortcuts-sheet__filter {
+  flex: none;
+  width: 220px;
+  height: 32px;
+}
+
+.kimo-shortcuts-sheet__filter .kimo-input__field {
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-shortcuts-sheet__filter .kimo-input__field::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* Platform: SegmentedText (FC6O7) instance with labels at text-xs. */
+.kimo-shortcuts-sheet__platform .kimo-seg-text__label {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* round(11 × 1.21) */
+}
+
+/* Close: IconButton (ZMxjt) instance resized to 32, pill, bg-muted. */
+.kimo-icon-button.kimo-shortcuts-sheet__close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-shortcuts-sheet__body {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  min-height: 0;
+  padding: 4px 28px 24px;
+  overflow-y: auto;
+}
+
+.kimo-shortcuts-sheet__column {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.kimo-shortcuts-sheet__group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.kimo-shortcuts-sheet__group-title {
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  letter-spacing: 0.4px;
+  line-height: 15px; /* round(11 × 1.32) for JetBrains Mono */
+  text-transform: uppercase;
+}
+
+.kimo-shortcuts-sheet__gap {
+  flex: none;
+  width: 1px;
+  height: 6px;
+}
+
+.kimo-shortcuts-sheet__row {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-shortcuts-sheet__action {
+  flex: none;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* round(12 × 1.21) */
+  white-space: nowrap;
+}
+
+.kimo-shortcuts-sheet__new {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.kimo-shortcuts-sheet__new-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: 10px;
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 12px; /* round(10 × 1.21) */
+}
+
+.kimo-shortcuts-sheet__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-shortcuts-sheet__or {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* round(11 × 1.21) */
+}
+
+.kimo-shortcuts-sheet__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 28px;
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.kimo-shortcuts-sheet__footer-icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-shortcuts-sheet__note {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* round(12 × 1.21) */
+}

@@ -1,0 +1,24 @@
+/*
+ * Canvas context menu (desing.pen board 25 §3 jWmmU; menus j8U4z / AYe2e / cXA2Y):
+ * Menu/Dense frame 236 × hug, vertical, gap 1, padding 4 (see MenuDense.css); rows MenuItem/Dense
+ * (EAGNC). Agent rows (rule H8cZk6): Check Slot icon RmOTH 14 fill $agent, Label 500
+ * text-primary. Delete (A7BF6s): Label fill $danger. Meta T4CD1 mono 11 text-tertiary; the
+ * Resume row's meta qScPD is sans 11 (MenuItemDense metaFont "sans").
+ */
+.kimo-canvas-menu__item--agent .kimo-menu-item-dense__check,
+.kimo-canvas-menu__item--agent .kimo-menu-item-dense__check--icon {
+  color: var(--kimo-agent);
+}
+
+.kimo-canvas-menu__item--agent .kimo-menu-item-dense__label {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-canvas-menu__item--danger .kimo-menu-item-dense__label {
+  color: var(--kimo-danger);
+}
+
+/* AgentMark/12 (nN0TD) inside the 14 × 14 Check Slot: centered, not scaled to the slot. */
+.kimo-canvas-menu .kimo-menu-item-dense__check > .kimo-agent-mark {
+  flex: none;
+}

@@ -1,0 +1,120 @@
+/*
+ * ApprovalCard: desing.pen board 25 "v1 Polish" › §5 Agent tab › Approval Card (OlhpU).
+ * column fill_container, gap 10, padding 12, fill bg-app, stroke 1 $agent, radius-lg,
+ * shadow 0 2 8 $shadow.
+ */
+.kimo-approval-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-app);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-agent),
+    0 2px 8px var(--kimo-shadow);
+  font-family: var(--kimo-font-sans);
+}
+
+.kimo-approval-card__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-approval-card__title {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-approval-card__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Waiting (u25Yn): row gap 4, center; pause 12 + "paused" sans 11, text-tertiary. */
+.kimo-approval-card__waiting {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+}
+
+.kimo-approval-card__waiting > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+/* Ops (G9V6Kf): column gap 6, padding [8, 10], bg-subtle, radius-md. */
+.kimo-approval-card__ops {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.kimo-approval-card__op {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kimo-approval-card__op-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-primary);
+}
+
+.kimo-approval-card__op-icon > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-approval-card__op-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-approval-card__op-meta {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+/* Actions (v26S3I): row gap 4, center. */
+.kimo-approval-card__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}

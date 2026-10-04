@@ -1,0 +1,71 @@
+/*
+ * CodeLine: desing.pen 25 v1 Polish › 1 Code tab › Code View (deO9F) › Line N (zwdHw).
+ * row fill, padding [1, 12, 1, 10], fill transparent
+ *   ├ No     (dILXj) width 22, right, font-mono text-xs (11) 400 text-tertiary
+ *   ├ Gutter (q55No) 10 × 1
+ *   └ Token… font-mono text-xs: strong 600 text-primary · attr text-secondary · punct
+ *            text-tertiary · comment text-tertiary italic · plain text-primary
+ * Highlighted (Fd5Zh): fill selection-soft, stroke selection left 2 (inside: no layout shift),
+ * No fill selection.
+ */
+.kimo-code-line {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  width: 100%;
+  min-width: max-content;
+  padding: 1px 12px 1px 10px;
+  background: transparent;
+}
+
+.kimo-code-line--highlighted {
+  background: var(--kimo-selection-soft);
+  box-shadow: inset 2px 0 0 0 var(--kimo-selection);
+}
+
+.kimo-code-line__no,
+.kimo-code-line__token {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  font-style: normal;
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  white-space: pre;
+  color: var(--kimo-text-primary);
+}
+
+.kimo-code-line__no {
+  width: 22px;
+  text-align: right;
+  color: var(--kimo-text-tertiary);
+  user-select: none;
+}
+
+.kimo-code-line--highlighted .kimo-code-line__no {
+  color: var(--kimo-selection);
+}
+
+.kimo-code-line__gutter {
+  flex: none;
+  width: 10px;
+  height: 1px;
+}
+
+.kimo-code-line__token--strong {
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-code-line__token--attr {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-code-line__token--punct {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-code-line__token--comment {
+  color: var(--kimo-text-tertiary);
+  font-style: italic;
+}

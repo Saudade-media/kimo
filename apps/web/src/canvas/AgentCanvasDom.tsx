@@ -4,7 +4,8 @@
  * and controls, positioned by {@link AgentCanvasModel.dom}:
  *
  * - placeholder Tag (EKCy7 `iyhUZ`; AgentMark/12/Working per board 24 nVrLq) and its hover
- *   tooltip (MVnAW `vqqTf`: "Pause agent" / "Edit anyway"); orphans read "Interrupted";
+ *   tooltip (MVnAW `vqqTf`: "Pause agent" / "Edit anyway"); orphans (board 25 UMRAO) read
+ *   "Agent stopped · <name>" with `unplug` on bg-muted;
  * - "<name> ready · N ops · Review" chip (MVnAW `i6wxFe`) after a placeholder clears;
  * - ScopeTag (NKE7Z) per scope root, the rejected-op pill (z6D2MM `O2Whh`);
  * - persona cursors (board 24 GmEAl `H6ncRy`: pointer + pill with AgentMark + label);
@@ -49,8 +50,10 @@ export function AgentCanvasDom({
           onPointerEnter={() => setTagHover(t.id)}
           onPointerLeave={() => setTagHover((h) => (h === t.id ? null : h))}
         >
-          {t.state === "building" && (
+          {t.state === "building" ? (
             <CanvasAgentMark state="working" persona={t.persona} size={12} />
+          ) : (
+            <Icon name="unplug" size={11} className="agent-canvas__tag-icon" />
           )}
           <span className="agent-canvas__tag-label">{t.text}</span>
           {t.state === "building" && tipFor === t.id && !dismissed.has(t.id) && (

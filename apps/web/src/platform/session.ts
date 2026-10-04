@@ -20,6 +20,7 @@ import {
   FORMAT_VERSION,
   type KimoDocument,
   KimoParseError,
+  listConflicts,
   mergeInfo,
   type OpenOptions as SchemaOpenOptions,
   type ThreeWayMerge,
@@ -62,6 +63,7 @@ import {
   type ClosePromptChoice,
   type ClosePromptRequest,
   type ConflictSession,
+  commitCommand,
   type DocumentSession,
   displayedSaveStatus,
   type FailedLoadDetail,
@@ -87,6 +89,16 @@ import {
   untitledRef,
 } from "./contract"
 import { displayPath, fileNameOf, formatTime, majorMinor } from "./format"
+
+/** The nodes stored conflicts are about (prop / node / move conflicts), deduplicated. */
+function conflictNodeIds(doc: KimoDocument): string[] {
+  const out = new Set<string>()
+  for (const { conflict } of listConflicts(doc)) {
+    const node = (conflict as { node?: unknown }).node
+    if (typeof node === "string") out.add(node)
+  }
+  return [...out]
+}
 
 /** The merge `kimo merge` uses, once `@kimo/core-schema` exports it (M4 merge builder). */
 export function defaultMerge(): ThreeWayMerge | null {
@@ -204,6 +216,14 @@ export class FileDocumentSession implements DocumentSession {
   private pendingReconcile = false
   private conflictCounts: { open: number; total: number; resolved: number } | null = null
   private mergeReady = false
+  /** Board 25 §6 (e): "Commit in terminal…" copied the command (banner says "Copied"). */
+  private mergeReadyCopied = false
+  /** Board 25 §6 (e): × hides "Ready to commit" until the next git change. */
+  private mergeReadyDismissed = false
+  /** Conflicts the finished merge resolved (count + their nodes, for "Review changes"). */
+  private mergeResolved: { count: number; nodes: string[] } | null = null
+  /** Nodes the stored conflicts are about (kept to hand to "Review changes"). */
+  private conflictNodes: string[] = []
   /**
    * Board 24 (n): the stored merge was just finished (Mark resolved & save) and not written yet:
    * that save goes through even while git still merges ("resolved AND saved").
@@ -570,6 +590,10 @@ export class FileDocumentSession implements DocumentSession {
   }
 
   private onGitChange(state: GitState | null, _change: GitChange): void {
+    // Board 25 §6 (e): any git change brings a dismissed "Ready to commit" back; it leaves for
+    // good once git no longer merges (the commit was made, or the merge aborted outside Kimo).
+    this.mergeReadyDismissed = false
+    if (this.mergeReady && !state?.operation) this.clearMergeReady()
     this.applyGit(state)
     this.emit()
   }
@@ -604,7 +628,10 @@ export class FileDocumentSession implements DocumentSession {
     const c = conflictCounts(header)
     const p = this.provider
     if (c.total === 0) {
-      if (this.conflictCounts) this.resolutionUnsaved = true
+      if (this.conflictCounts) {
+        this.resolutionUnsaved = true
+        this.mergeResolved = { count: this.conflictCounts.total, nodes: this.conflictNodes }
+      }
       this.conflictCounts = null
       // The editor's conflict session (board 18) holds store listeners: release them.
       ;(this.conflicts as { destroy?: () => void } | null)?.destroy?.()
@@ -612,10 +639,11 @@ export class FileDocumentSession implements DocumentSession {
       p?.resumeAutosave("conflicts")
     } else {
       this.conflictCounts = c
+      this.conflictNodes = conflictNodeIds(header)
       this.resolutionUnsaved = false
       // Board 24 (n): a resolution undone (conflicts back in the file) → the git banner returns;
       // "Ready to commit" shows again after the next Mark resolved & save.
-      this.mergeReady = false
+      this.clearMergeReady()
       if (!this.conflicts && this.manager.createConflictSession)
         this.conflicts = this.manager.createConflictSession(this)
       if (c.open > 0) p?.pauseAutosave("conflicts")
@@ -708,6 +736,7 @@ export class FileDocumentSession implements DocumentSession {
     // Board 24 (n): "Ready to commit" replaces the git banner in the same slot once every
     // conflict is resolved and saved (no stored conflicts left).
     const ready = this.mergeReady && !this.conflictCounts
+    const showReady = ready && !this.mergeReadyDismissed
     if (p?.pauses.has("git") && !this.gitBannerHidden && !ready)
       out.push({
         kind: "git-operation",
@@ -724,7 +753,17 @@ export class FileDocumentSession implements DocumentSession {
         ...this.conflictCounts,
       })
     if (this.newer) out.push(this.newer)
-    if (ready) out.push({ kind: "merge-ready", severity: "info", fileName: this.fileName })
+    if (showReady)
+      out.push({
+        kind: "merge-ready",
+        severity: "info",
+        fileName: this.fileName,
+        command: commitCommand(this.fileName),
+        copied: this.mergeReadyCopied,
+        ...(this.mergeResolved
+          ? { resolved: this.mergeResolved.count, nodes: this.mergeResolved.nodes }
+          : {}),
+      })
     return out
   }
 
@@ -976,19 +1015,40 @@ export class FileDocumentSession implements DocumentSession {
         await this.conflicts?.markResolvedAndSave().catch(() => {})
         break
       case "copy-commit-command": {
-        const cmd = `git add ${this.fileName} && git commit --no-edit`
-        await globalThis.navigator?.clipboard?.writeText(cmd).catch(() => {})
-        this.mergeReady = false
+        // Board 25 §6 (e): copy, confirm "Copied"; the banner stays until git is clean.
+        await globalThis.navigator?.clipboard
+          ?.writeText(commitCommand(this.fileName))
+          .catch(() => {})
+        this.mergeReadyCopied = true
         break
       }
+      case "review-changes":
+        // Handled by the editor (BannerHost `onReview`: select + reveal `nodes`).
+        break
     }
     this.emit()
   }
 
   /** Board 18 "Ready to commit" (after Mark resolved & save while MERGE_HEAD exists). */
   showMergeReady(show = true): void {
-    this.mergeReady = show
+    if (show) {
+      this.mergeReady = true
+      this.mergeReadyCopied = false
+      this.mergeReadyDismissed = false
+    } else this.clearMergeReady()
     this.emit()
+  }
+
+  /** Board 25 §6 (e) Dismiss (×): hides "Ready to commit" until the next git change. */
+  dismissMergeReady(): void {
+    this.mergeReadyDismissed = true
+    this.emit()
+  }
+
+  private clearMergeReady(): void {
+    this.mergeReady = false
+    this.mergeReadyCopied = false
+    this.mergeReadyDismissed = false
   }
 
   /** Adds a toast (merge-saved, update toasts) from outside the session. */

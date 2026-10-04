@@ -26,6 +26,7 @@ import { ChildMenu } from "./m3/menus"
 import { isOverridden, layerKind, replacedName } from "./m3/model"
 import { VariablesTab } from "./m3/VariablesTab"
 import "../canvas/agent-canvas.css"
+import { matches } from "../shortcuts/shortcuts"
 import { kindLabel, nodeName, typeIcon } from "./props"
 import type { FileSession } from "./session"
 
@@ -338,13 +339,13 @@ function LayerTree({
     }
     const mod = e.metaKey || e.ctrlKey
     const key = e.key
-    if (mod && e.shiftKey && (key === "h" || key === "H")) {
+    if (matches("toggleHidden", e)) {
       e.preventDefault()
       const n = m3.view().getNode(row.id)
       if (n) apply(visibilityOp(row.id, n.visible === false), "Toggle visibility")
       return
     }
-    if (mod && e.shiftKey && (key === "l" || key === "L")) {
+    if (matches("toggleLocked", e)) {
       e.preventDefault()
       const n = store.getNode(row.id)
       if (n) apply(lockOp(row.id, n.locked === true), "Toggle lock")
@@ -724,7 +725,7 @@ function AgentLayerRow({
         setRenaming(true)
       }}
       onKeyDown={(e) => {
-        if (e.key === "F2" && !renaming) {
+        if (matches("renameLayer", e) && !renaming) {
           e.preventDefault()
           setDraft(name)
           setRenaming(true)

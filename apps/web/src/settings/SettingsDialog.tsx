@@ -9,6 +9,7 @@
 import type { KimoPlatform, SettingsPane } from "@kimo/platform"
 import { useFocusTrap } from "@kimo/ui"
 import { useEffect, useRef, useState } from "react"
+import { matches } from "../shortcuts/shortcuts"
 import { DEFAULT_PANE, parseSettingsHash, settingsHash } from "./model"
 import { SettingsView, type SettingsViewProps } from "./SettingsView"
 
@@ -94,7 +95,7 @@ export function useSettingsShortcut(
 ): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "," || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
+      if (!matches("settings", e)) return
       e.preventDefault()
       void openSettings(platform, pane).then((how) => {
         if (how === "dialog") showDialog(pane)

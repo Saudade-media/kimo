@@ -596,6 +596,33 @@ pub async fn kimo_fonts_open_cache_folder(app: AppHandle, st: St<'_>) -> R<()> {
         .map_err(|e| io_msg(format!("Could not open the font cache: {e}")))
 }
 
+/// Board 25 §7 (b) "Show logs in Finder": reveals `~/.kimo/mcp/server.log` (Kimo's only log
+/// file), or opens its folder when nothing has been logged yet.
+#[tauri::command]
+pub async fn kimo_help_show_logs(app: AppHandle, st: St<'_>) -> R<()> {
+    show_logs(&app, &st.kimo_home)
+}
+
+pub fn show_logs<Rt: tauri::Runtime>(
+    app: &tauri::AppHandle<Rt>,
+    kimo_home: &std::path::Path,
+) -> R<()> {
+    let paths = kimo_mcp::paths::KimoPaths::new(kimo_home);
+    let log = crate::mcp::files::server_log_path(&paths);
+    if log.is_file() {
+        return app
+            .opener()
+            .reveal_item_in_dir(&log)
+            .map_err(|e| io_msg(format!("Could not reveal the logs: {e}")));
+    }
+    let dir = paths.mcp_dir();
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| io_msg(format!("Could not create {}: {e}", path_str(&dir))))?;
+    app.opener()
+        .open_path(path_str(&dir), None::<&str>)
+        .map_err(|e| io_msg(format!("Could not open the logs folder: {e}")))
+}
+
 // --- updater ------------------------------------------------------------------------------------
 
 #[tauri::command]

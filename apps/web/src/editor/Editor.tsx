@@ -25,7 +25,7 @@ import {
   type IconPickerRequest,
 } from "../canvas/contract"
 import { CanvasConflictOverlay, useNextConflictShortcut } from "../conflicts"
-import { ExportDialog, type ExportSource } from "../export"
+import { ExportDialog, type ExportPreset, type ExportSource, exportToastOf } from "../export"
 import { BannerHost, FailedLoadView, MigrationDialog, ToastHost, useWebTabTitle } from "../files"
 import { createFontSystem, loadDocumentFontFaces, MissingFontsHost } from "../fonts"
 import * as assetsModule from "../lib/assets"
@@ -38,8 +38,9 @@ import { Icon } from "../lib/icons"
 import { cssToken, useTheme } from "../lib/theme"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { diskPath, navigate } from "../router"
-import { AgentContextMenu, agentMenuItems, useEditorAgentPanel } from "./agent-panel"
+import { useEditorAgentPanel } from "./agent-panel"
 import { useAgentTouched, useEditorAgents } from "./agents"
+import { useCanvasMenu } from "./CanvasMenu"
 import { DiskTopbar, useConflicts, useFocusNode, useWindowTitle } from "./disk"
 import type { FileMenuActions } from "./FileMenu"
 import { FloatingToolbar } from "./FloatingToolbar"
@@ -51,6 +52,7 @@ import { M3Context, M3Controller, useBusValue, useLibraries } from "./m3/control
 import { ConfirmHost, ToastStack } from "./m3/feedback"
 import "./m3/m3.css"
 import "./m3/m3-panels.css"
+import { type Combo, matchCombo, matches, SHORTCUTS, shortcut } from "../shortcuts/shortcuts"
 import { LibraryChanges, LibraryManager } from "./m3/popovers"
 import { VariablesDialog } from "./m3/VariablesDialog"
 import { PanelContext } from "./panel-context"
@@ -189,7 +191,14 @@ function EditorShell({
   // Fonts (board 19): one font system per editor window, Document → Local → Cache → Google.
   const faces = useRef<readonly DocumentFontFace[]>([])
   const fonts = useMemo(
-    () => createFontSystem({ platform, documentFaces: () => faces.current }),
+    () =>
+      createFontSystem({
+        platform,
+        documentFaces: () => faces.current,
+        // Board 25 §6 (d): OpenType font support reads the face the canvas renders with.
+        faceBytes: (k) =>
+          canvas.current?.renderer?.fonts.faceBytes?.(k.family, k.weight, k.style) ?? null,
+      }),
     [platform],
   )
   useEffect(() => () => fonts.dispose(), [fonts])
@@ -264,6 +273,7 @@ function EditorShell({
   })
   // Board 07 Export dialog (M7): code / tokens / SVG·PNG from the selection or every root frame.
   const [exportOpen, setExportOpen] = useState(false)
+  const [exportPreset, setExportPreset] = useState<ExportPreset | null>(null)
   const exportSource = useMemo<ExportSource>(
     () => ({
       fileName: doc ? doc.fileName.replace(/\.kimoz?$/, "") : name,
@@ -389,54 +399,47 @@ function EditorShell({
   )
 
   useEffect(() => {
+    // Every binding below is a row of the SHORTCUTS table (board 25 §7 GJYcL), matched in order.
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || isTyping(e.target)) return
-      const mod = e.metaKey || e.ctrlKey
-      const key = e.key.toLowerCase()
       const ui = session.ui.getState()
+      const undo = matches("undo", e)
+      const redo = matches("redo", e)
       // A canvas gesture owns the undo stack until it ends (its steps collapse into one entry).
-      if (mod && (key === "z" || key === "y") && canvas.current?.isGesturing()) {
+      if ((undo || redo) && canvas.current?.isGesturing()) {
         e.preventDefault()
         return
       }
       // The pen's points are not in the document yet: ⌘Z removes the last one (Figma).
-      if (
-        mod &&
-        (key === "z" || key === "y") &&
-        canvas.current?.penUndo(key === "y" || e.shiftKey)
-      ) {
+      if ((undo || redo) && canvas.current?.penUndo(redo)) {
         e.preventDefault()
         return
       }
-      if (mod && key === "z") {
+      if (undo || redo) {
         e.preventDefault()
-        if (e.shiftKey) session.store.redo("user")
+        if (redo) session.store.redo("user")
         else session.store.undo("user")
         return
       }
-      if (mod && key === "y") {
-        e.preventDefault()
-        session.store.redo("user")
-        return
-      }
-      if (mod && key === "s") {
+      if (matches("save", e) || matches("saveAs", e)) {
         e.preventDefault()
         if (e.shiftKey) void saveAs()
         else save()
         return
       }
-      if (mod && key === "o") {
+      if (matches("openFile", e)) {
         e.preventDefault()
         void openFile()
         return
       }
-      if (mod && !e.shiftKey && key === "n") {
+      if (matches("newFile", e)) {
         // The browser keeps ⌘N for a new window; it reaches the page when the canvas has focus.
         e.preventDefault()
         void newFile()
         return
       }
-      if (mod && key === "0") {
+      // ⌘0 (the canvas owns ⇧0): works before the canvas has mounted too.
+      if (matchCombo(ZOOM_100_MOD, e)) {
         e.preventDefault()
         if (canvas.current) canvas.current.zoomTo(1)
         else ui.setViewport({ zoom: 1 })
@@ -447,30 +450,30 @@ function EditorShell({
       const textSelected =
         ui.selection.length > 0 &&
         ui.selection.every((id) => session.store.getNode(id)?.type === "text")
-      if (mod && !e.shiftKey && !e.altKey && key === "k" && askRef.current && !textSelected) {
+      if (matches("askKimo", e) && askRef.current && !textSelected) {
         e.preventDefault()
         askRef.current()
         return
       }
-      if (mod && e.shiftKey && key === "k") {
+      if (matches("tool.image", e)) {
         e.preventDefault()
         activate("image")
         return
       }
       // M3 shortcuts (boards 11/12/14): ⌥⌘K create component, ⌥⌘B detach, ⌥⏎ go to main,
-      // ⌘⇧V variables. `e.code` because ⌥ changes `e.key` on macOS.
-      if (mod && e.altKey && e.code === "KeyK") {
+      // ⌘⇧V variables (matched by `e.code`: ⌥ changes `e.key` on macOS).
+      if (matches("createComponent", e)) {
         e.preventDefault()
         createComponent(m3, ui.selection, canvas.current?.layout() ?? null)
         return
       }
-      if (mod && e.altKey && e.code === "KeyB") {
+      if (matches("detachInstance", e)) {
         e.preventDefault()
         const id = ui.selection[0]
         if (id && session.store.getNode(id)?.type === "instance") void detachInstance(m3, id)
         return
       }
-      if (!mod && e.altKey && e.key === "Enter") {
+      if (matches("goToMain", e)) {
         const id = ui.selection[0]
         if (id && m3.view().origin(id)?.instance) {
           e.preventDefault()
@@ -478,23 +481,20 @@ function EditorShell({
         }
         return
       }
-      if (mod && e.shiftKey && e.code === "KeyV") {
+      if (matches("variables", e)) {
         e.preventDefault()
         m3.openPanel({ variables: !m3.panels.get().variables })
         return
       }
-      if (mod || e.altKey) return
       // Escape, Delete, arrows, ⌘D/⌘G and zoom keys are canvas commands (CanvasController).
-      if (key === "h" && !e.shiftKey) {
+      if (matches("tool.hand", e)) {
         // Hand tool (no toolbar entry in board 03; Space-drag pans temporarily).
         e.preventDefault()
         ui.setTool("hand")
         return
       }
-      // Single-key tools match without Shift; "⇧P" (Prompt) only with it (P alone is the Pen).
-      const tool = CANVAS_TOOLS.find(
-        (t) => t.shortcut.toLowerCase() === (e.shiftKey ? `⇧${key}` : key),
-      )
+      // Single-key tools (V F R O T P N, ⇧P Prompt).
+      const tool = TOOL_SHORTCUTS.find((t) => matches(t.shortcut, e))
       if (tool) {
         e.preventDefault()
         activate(tool.id)
@@ -531,10 +531,22 @@ function EditorShell({
     openSettings: (pane) => openSettings(pane),
     openAgentTab,
   })
-  const [agentMenu, setAgentMenu] = useState<{
-    at: { x: number; y: number }
-    items: ReturnType<typeof agentMenuItems>
-  } | null>(null)
+  // Debug hook (see above): the Agent tab controller, for e2e scripts (board 25 §3 Resume agent).
+  useEffect(() => {
+    if (!debugHookEnabled()) return
+    const w = window as unknown as { __kimo?: { session?: unknown; agent?: unknown } }
+    if (w.__kimo?.session === session) w.__kimo.agent = agentPanel.controller
+  }, [session, agentPanel.controller])
+  // Board 25 §3: the canvas context menu (agent group first) and "Set as target" pick mode.
+  const canvasMenu = useCanvasMenu({
+    session,
+    m3,
+    canvas,
+    container: canvasEl,
+    controller: agentPanel.controller,
+    runPrompt: agentPanel.runPrompt,
+    openAgentTab,
+  })
   // Board 20 / 24 (m): window title ("<Agent> editing" while the built-in agent works); the
   // browser library's tab title.
   useWindowTitle(doc, agentPanel.editingAgent)
@@ -577,7 +589,10 @@ function EditorShell({
             canvas={() => canvas.current}
             {...fileMenu}
             onHome={goHome}
-            onExport={() => setExportOpen(true)}
+            onExport={() => {
+              setExportPreset(null)
+              setExportOpen(true)
+            }}
             onPreview={() => {}}
             presence={agents.presence}
           />
@@ -591,11 +606,25 @@ function EditorShell({
             onRename={rename}
             {...fileMenu}
             onHome={goHome}
-            onExport={() => setExportOpen(true)}
+            onExport={() => {
+              setExportPreset(null)
+              setExportOpen(true)
+            }}
             onPreview={() => {}}
           />
         )}
-        {doc && <BannerHost session={doc} />}
+        {doc && (
+          <BannerHost
+            session={doc}
+            // Board 25 §6 (e) "Review changes": the merge's resolved nodes.
+            onReview={(ids) => {
+              const live = ids.filter((id) => session.store.getNode(id))
+              if (!live.length) return
+              session.ui.getState().select(live)
+              canvas.current?.zoomToFit(live, 96)
+            }}
+          />
+        )}
         {agents.banner}
         <div className="editor__body">
           <LeftPanel
@@ -637,16 +666,7 @@ function EditorShell({
               onLayout={layout.set}
               agentCanvas={agentPanel.canvas}
               noteAuthor={agentPanel.noteAuthor}
-              onContextMenu={(info) => {
-                const live = new Set(agentPanel.controller?.state.canvas.live ?? [])
-                const items = agentMenuItems(session, info, live)
-                const host = canvasEl.current?.getBoundingClientRect()
-                if (items.length && host)
-                  setAgentMenu({
-                    at: { x: host.left + info.screen.x, y: host.top + info.screen.y },
-                    items,
-                  })
-              }}
+              onContextMenu={canvasMenu.onContextMenu}
               libraries={m3.libraries()}
               route={(ops) => (session.route ? session.route(ops) : ops)}
               onNotice={(n) => m3.toast({ tone: n.tone, text: n.text, action: n.action })}
@@ -681,14 +701,7 @@ function EditorShell({
             <ToastStack m3={m3} />
             {doc && <ToastHost session={doc} onReview={() => review.set(review.get() + 1)} />}
             {svg.popover}
-            {agentMenu && (
-              <AgentContextMenu
-                at={agentMenu.at}
-                items={agentMenu.items}
-                canvas={canvas}
-                onClose={() => setAgentMenu(null)}
-              />
-            )}
+            {canvasMenu.element}
             {iconRequest && (
               <CanvasIconPicker
                 session={session}
@@ -716,6 +729,10 @@ function EditorShell({
             agent={agentPanel.panel}
             openAgent={openAgent}
             initialTab={agentPanel.initialAgentTab ? "agent" : "design"}
+            onOpenExport={(p) => {
+              setExportPreset(p)
+              setExportOpen(true)
+            }}
           />
         </div>
         {panels.variables && (
@@ -742,7 +759,20 @@ function EditorShell({
             platform={platform}
             source={exportSource}
             fileRef={doc && !doc.untitled ? doc.ref : null}
+            preset={exportPreset}
             onClose={() => setExportOpen(false)}
+            onExported={(o) => {
+              const t = exportToastOf(o)
+              const reveal = t.reveal
+              m3.toast({
+                tone: t.tone,
+                text: t.text,
+                duration: t.duration,
+                ...(reveal && platform.kind === "desktop"
+                  ? { action: { label: "Reveal", run: () => void platform.files.reveal(reveal) } }
+                  : {}),
+              })
+            }}
           />
         )}
         <MissingFontsHost
@@ -844,3 +874,11 @@ function CanvasIconPicker({
 }
 
 const NULL_LAYOUT = createBus<LayoutResult | null>(null)
+
+/** ⌘0 / Ctrl+0 (the first combo of "Zoom to 100 %"; ⇧0 is the canvas's). */
+const ZOOM_100_MOD = shortcut("zoom100").combos[0] as Combo
+
+/** Toolbar tools with a single-key row in SHORTCUTS (`tool.<id>`). */
+const TOOL_SHORTCUTS = CANVAS_TOOLS.flatMap((t) =>
+  SHORTCUTS[`tool.${t.id}`] && t.id !== "image" ? [{ id: t.id, shortcut: `tool.${t.id}` }] : [],
+)

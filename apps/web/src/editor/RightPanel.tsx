@@ -13,6 +13,7 @@ import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
 import { Badge, EmptyState, Tabs } from "@kimo/ui"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type CodeExportPreset, CodeTab } from "../code-tab"
 import { ConflictsPanel, conflictsTabLabel, type EditorConflictSession } from "../conflicts"
 import type { FontSystem } from "../fonts/font-system"
 import type { AssetStore } from "../lib/assets"
@@ -79,6 +80,11 @@ export interface RightPanelProps {
   openAgent?: Bus<number>
   /** The tab shown first (Home hand-off: "agent"). */
   initialTab?: RightTab
+  /**
+   * Board 25 Code tab: "Open export…" / "Export page…" open the Export dialog with the same
+   * selection and framework preselected.
+   */
+  onOpenExport?: (preset: CodeExportPreset) => void
 }
 
 export function RightPanel({
@@ -95,6 +101,7 @@ export function RightPanel({
   agent = null,
   openAgent,
   initialTab = "design",
+  onOpenExport,
 }: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>(initialTab)
   const agentRev = useBusValue(openAgent ?? NO_REV)
@@ -144,9 +151,16 @@ export function RightPanel({
     return base
   }, [conflicts, counts, hasActivity])
   return (
-    // Board 05 (EHux2): the panel widens to 360 while the Agent tab is open.
+    // Board 05 (EHux2): the panel widens to 360 while the Agent tab is open; board 25: and
+    // while the Code tab is open.
     <aside
-      className={tab === "agent" ? "right-panel right-panel--agent" : "right-panel"}
+      className={
+        tab === "agent"
+          ? "right-panel right-panel--agent"
+          : tab === "code"
+            ? "right-panel right-panel--code"
+            : "right-panel"
+      }
       aria-label="Properties panel"
     >
       <Tabs label="Right panel" items={items} value={tab} onChange={setTab} />
@@ -165,13 +179,12 @@ export function RightPanel({
         />
       )}
       {tab === "code" && (
-        <div className="right-panel__empty">
-          <EmptyState
-            icon={<Icon name="code-xml" size={18} />}
-            title="Code export is coming"
-            description="React, HTML and token export arrive in M7."
-          />
-        </div>
+        <CodeTab
+          session={session}
+          m3={m3}
+          icons={icons}
+          {...(onOpenExport ? { onOpenExport } : {})}
+        />
       )}
       {tab === "agent" && agent}
       {tab === "agent" && !agent && (

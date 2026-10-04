@@ -78,6 +78,17 @@ export interface AgentPanelRuntime {
   openSettings?(pane?: "ai-providers" | "usage"): void
   /** Opens the download page (CORS card "Get desktop") / provider matrix. */
   openLink?(url: string): void
+  /**
+   * First run (board 25 rule "First run · CLI"): the user already chose a CLI (Settings default
+   * or "Use Claude Code"). Omitted: confirmed (tests, harnesses with CLIs).
+   */
+  cliConfirmed?(): boolean
+  /** An API provider passed its Test (or is local). Omitted: any configured provider. */
+  apiReady?(): boolean
+  /** "Use Claude Code": makes the CLI the Settings default. */
+  chooseCli?(id: string): Promise<void>
+  /** Inline key card "Connect": saves the key and runs its Test. */
+  connectKey?(provider: string, key: string): Promise<{ ok: boolean; detail: string }>
 }
 
 export function providerFor(rt: AgentPanelRuntime, config: ProviderConfig): Provider {
@@ -129,6 +140,25 @@ export function createAppAgentRuntime(o: {
     online,
     ...(o.openSettings ? { openSettings: o.openSettings } : {}),
     ...(o.openLink ? { openLink: o.openLink } : {}),
+    cliConfirmed: () => {
+      const d = ai.state.settings.defaultModel
+      return d?.provider.startsWith("cli:") === true
+    },
+    apiReady: () =>
+      ai.state.providers.some(
+        (p) =>
+          p.status === "connected" ||
+          p.status === "local" ||
+          (p.status === "key-saved" && p.lastTest?.ok !== false && ai.state.testing[p.id] !== true),
+      ),
+    chooseCli: (id) => ai.setDefault({ provider: `cli:${id}`, model: "default" }),
+    connectKey: async (provider, key) => {
+      // Web: Anthropic needs the browser opt-in; pressing Connect on this card is that opt-in.
+      if (ai.state.platform === "web" && provider === "anthropic")
+        await ai.setAllowBrowser(provider, true)
+      const t = await ai.setKey(provider, key)
+      return { ok: t.ok, detail: t.detail }
+    },
   }
 }
 

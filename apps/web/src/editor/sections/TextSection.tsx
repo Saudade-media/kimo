@@ -25,6 +25,12 @@
  * tag…" (Ehror) expands inline in the menu (tag exactly 4 chars a–z 0–9, value 0–99, default 1;
  * duplicates replace); (k) a 6px $warning dot on the Weight field when the family lacks the
  * weight, with a tooltip naming the weight actually rendered (QfSAK).
+ *
+ * Board 25 §6: (b) the Link… popover's invalid state (u0adcp) lives in `LinkPopover`; (d) font
+ * support (g95jKz): the Custom tag hint says whether the resolved face has the tag ("cv11 is in
+ * Inter" / "… isn't in … — it will be saved but has no effect"), and active tags without a row
+ * of their own get an OpenTypeFeatureRow (LFdEa) marked "not in font" when the face lacks them —
+ * checked against the face's GSUB / GPOS FeatureList (`fonts/font-features.ts`).
  */
 import type { LayoutResult } from "@kimo/layout"
 import {
@@ -35,6 +41,7 @@ import {
   MenuDivider,
   MenuItemDense,
   MissingWeightTooltip,
+  OpenTypeFeatureRow,
   PropRow,
   PropSection,
   Segmented,
@@ -47,6 +54,7 @@ import { FontPicker, missingWeight, useFontPickerEntries } from "../../fonts"
 import type { FontSystem } from "../../fonts/font-system"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
+import { matches } from "../../shortcuts/shortcuts"
 import { NumberField } from "../fields"
 import { SectionTitle } from "../m3/overrides"
 import { panelPlacement, type Sel, useKeepPopoverFocus, usePanel } from "../panel-context"
@@ -155,6 +163,13 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
     else window.open(url, "_blank", "noopener,noreferrer")
   }
   const family = font === MIXED ? null : font
+  // Board 25 §6 (d): the resolved face's OpenType features (null = can't be inspected).
+  const fontFeatures = useFontFeatures(
+    moreOpen ? fonts : null,
+    family,
+    typeof weight === "number" ? weight : 400,
+    italic === true,
+  )
   const shippedWeights = useShippedWeights(fonts, family)
   const weightWarning =
     family && typeof weight === "number" ? missingWeight(family, weight, shippedWeights) : null
@@ -173,13 +188,13 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
   keys.current = { toggleItalic, openLink: () => setLinkOpen(true) }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.defaultPrevented) return
+      if (e.defaultPrevented) return
       const t = e.target as HTMLElement | null
       if (t?.closest("input, textarea, select, [contenteditable='true']")) return
-      if (e.code === "KeyI") {
+      if (matches("italic", e)) {
         e.preventDefault()
         keys.current.toggleItalic()
-      } else if (e.code === "KeyK") {
+      } else if (matches("link", e)) {
         e.preventDefault()
         keys.current.openLink()
       }
@@ -526,6 +541,7 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
           linked={href !== "" && href !== MIXED}
           features={features}
           family={family}
+          fontFeatures={fontFeatures}
           onClose={() => setMoreOpen(false)}
           onItalic={() => {
             setMoreOpen(false)
@@ -770,6 +786,42 @@ export function toggledFeature(features: Features, tag: string): FeatureValue | 
   return on ? undefined : true
 }
 
+/**
+ * Board 25 §6 (d): active tags the menu has no row for (custom tags, stylistic sets that are
+ * on), in insertion order — each gets an {@link OpenTypeFeatureRow}.
+ */
+export function customFeatures(features: Features): string[] {
+  const rows = new Set(FEATURE_ITEMS.map((f) => f.tag))
+  return Object.entries(features)
+    .filter(([tag, v]) => !rows.has(tag) && v !== false && v !== 0)
+    .map(([tag]) => tag)
+}
+
+/** Board 25 §6 (d): the feature tags of the face the canvas renders (family, weight, style). */
+function useFontFeatures(
+  fonts: FontSystem | null,
+  family: string | null,
+  weight: number,
+  italic: boolean,
+): ReadonlySet<string> | null {
+  const key = `${family}|${weight}|${italic}`
+  const [state, setState] = useState<{ key: string; tags: ReadonlySet<string> | null } | null>(null)
+  useEffect(() => {
+    if (!fonts || !family || family.startsWith("$")) return
+    let live = true
+    void fonts
+      .features({ family, weight, style: italic ? "italic" : "normal" })
+      .catch(() => null)
+      .then((tags) => {
+        if (live) setState({ key: `${family}|${weight}|${italic}`, tags })
+      })
+    return () => {
+      live = false
+    }
+  }, [fonts, family, weight, italic])
+  return state?.key === key ? state.tags : null
+}
+
 /** Board 24 (b): a custom tag's value; 1 (the default) is stored as plain "on". */
 export function customFeatureValue(value: number): FeatureValue {
   return value === 1 ? true : value
@@ -811,6 +863,7 @@ function TextMoreMenu({
   linked,
   features,
   family,
+  fontFeatures,
   onClose,
   onItalic,
   onLink,
@@ -823,6 +876,8 @@ function TextMoreMenu({
   linked: boolean
   features: Features
   family: string | null
+  /** Board 25 §6 (d): the resolved face's feature tags; null = unknown (no hint, no mark). */
+  fontFeatures: ReadonlySet<string> | null
   onClose(): void
   onItalic(): void
   onLink(): void
@@ -904,12 +959,24 @@ function TextMoreMenu({
           className="rp-text-menu__item"
           onSelect={() => setSets((cur) => (cur ? null : (document.activeElement as HTMLElement)))}
         />
+        {customFeatures(features).map((tag) => (
+          // Board 25 §6 (d) LFdEa: an active tag without a row of its own, marked "not in
+          // font" when the resolved face lacks it (rule v0gB4).
+          <OpenTypeFeatureRow
+            key={tag}
+            tag={tag}
+            notInFont={fontFeatures !== null && !fontFeatures.has(tag)}
+            className="rp-text-menu__feature-row"
+            onRemove={() => onFeature(tag, undefined)}
+          />
+        ))}
         {custom ? (
           // Board 24 (b) Ehror: the last OpenType row expands inline (no dialog).
           <div className="rp-text-menu__custom" role="presentation">
             <CustomTagField
               autoFocus
               family={family}
+              inFont={(tag) => (fontFeatures ? fontFeatures.has(tag) : null)}
               data-testid="text-custom-tag"
               onAdd={(tag, value) => {
                 setCustom(false)

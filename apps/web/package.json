@@ -15,7 +15,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "e2e": "tsx e2e/run.ts",
     "e2e:perf": "tsx e2e/perf/run.ts",
-    "test": "bun test ./test"
+    "test": "bun test ./test",
+    "gen:notices": "bun scripts/gen-notices.ts",
+    "check:generated": "bun scripts/gen-notices.ts --check"
   },
   "dependencies": {
     "@kimo/ai-agent": "workspace:*",

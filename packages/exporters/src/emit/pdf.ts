@@ -18,6 +18,9 @@ import {
   PDFDocument,
   type PDFFont,
   type PDFImage,
+  PDFNumber,
+  PDFOperator,
+  type PDFOperatorNames,
   type PDFPage,
   popGraphicsState,
   pushGraphicsState,
@@ -25,7 +28,7 @@ import {
   StandardFonts,
   setCharacterSpacing,
 } from "pdf-lib"
-import { svgPathToOperators } from "pdf-lib/cjs/api/svgPath"
+import { svgPathToOperators as cjsPathOperators } from "pdf-lib/cjs/api/svgPath"
 import type { ExportIssueCode, IRDocument, IRPaint, IRStroke } from "../ir/types"
 import { rrectPath, shapePath } from "./geometry"
 import { applyCase, buildScene, multiply, type SceneNode, type SceneOptions } from "./scene"
@@ -40,6 +43,31 @@ export interface PdfOptions extends SceneOptions {
   assets?: (src: string) => Uint8Array | null
   /** Output file name. Default `export.pdf`. */
   path?: string
+  /**
+   * Bleed in PDF points around every page (board 25 "Include bleed"). The page grows by the
+   * bleed on each side, the design is drawn inside it and the TrimBox marks the design's edge.
+   * Default 0 (the page is the frame).
+   */
+  bleed?: number
+}
+
+/**
+ * SVG path → PDF path operators. pdf-lib exports the parser only from its CommonJS build, while
+ * a browser bundle resolves `pdf-lib` to the ES build: `pushOperators` then rejects the CommonJS
+ * `PDFOperator` instances (instanceof against another class). Re-create each operator with the
+ * entry build's classes so both builds agree (no-op copy under one build).
+ */
+function svgPathToOperators(d: string): PDFOperator[] {
+  return cjsPathOperators(d).map((op) => {
+    const o = op as unknown as { name: string; args: unknown[] }
+    return PDFOperator.of(
+      o.name as PDFOperatorNames,
+      o.args.map((a) => {
+        const n = a as { asNumber?: () => number }
+        return typeof n.asNumber === "function" ? PDFNumber.of(n.asNumber()) : (a as PDFNumber)
+      }),
+    )
+  })
 }
 
 const S: Matrix = [1, 0, 0, -1, 0, 0]
@@ -100,8 +128,13 @@ export async function emitPdf(ir: IRDocument, options: PdfOptions): Promise<Expo
   for (const root of ir.roots) {
     const scene = buildScene(root, options)
     if (!scene) continue
-    const page = doc.addPage([scene.w, scene.h])
-    const F: Matrix = [1, 0, 0, -1, 0, scene.h]
+    const b = options.bleed && options.bleed > 0 ? options.bleed : 0
+    const page = doc.addPage([scene.w + 2 * b, scene.h + 2 * b])
+    if (b > 0) {
+      page.setBleedBox(0, 0, scene.w + 2 * b, scene.h + 2 * b)
+      page.setTrimBox(b, b, scene.w, scene.h)
+    }
+    const F: Matrix = [1, 0, 0, -1, b, scene.h + b]
     await drawNode(page, scene, F, 1)
   }
 

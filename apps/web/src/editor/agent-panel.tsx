@@ -3,8 +3,8 @@
  * Agent tab controller per window over the window's AI providers (`getAiProviders`) and the
  * in-window tool host, the canvas selection → attachment chips, the canvas surfaces
  * (`agentCanvasProps`), prompt-node runs (canvas footer Run + LayerRow/Prompt play), the
- * side-by-side placement on free canvas, the Home hand-off and the canvas context menu commands
- * (board 22 rules: note "Convert to prompt", prompt + frame "Set as target", orphan "Clear flag").
+ * side-by-side placement on free canvas and the Home hand-off. The canvas context menu lives in
+ * `CanvasMenu.tsx` (board 25 §3).
  *
  * Tools ({@link agentToolsFor}): on desktop, when the window's document is hosted by the document
  * host, the agent's calls run there through the host RPC `agentCall` (`createHostTools`) under
@@ -16,7 +16,6 @@
 import { type NoteView, type PromptNodeView, shimLaunch } from "@kimo/ai-agent"
 import type { LayoutResult } from "@kimo/layout"
 import type { KimoPlatform } from "@kimo/platform"
-import { MenuDense } from "@kimo/ui"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import {
   AgentPanel,
@@ -33,13 +32,12 @@ import {
 } from "../agent-panel"
 import { useAiProviders } from "../ai-settings"
 import { SIDE_BY_SIDE_GAP, sideBySideAnchor } from "../canvas/agent-canvas"
-import type { AgentCanvasProps, CanvasHandle, CanvasPointerInfo } from "../canvas/contract"
+import type { AgentCanvasProps, CanvasHandle } from "../canvas/contract"
 import { type HostClient, HostedDocumentSession } from "../host/client"
 import type { Bus } from "../lib/hooks"
 import type { FileDocumentSession } from "../platform/session"
 import { useFileId } from "./agents"
 import type { PromptRowStatus } from "./LeftPanel"
-import { M3MenuItem } from "./m3/menus"
 import type { FileSession } from "./session"
 
 type Box = { x: number; y: number; w: number; h: number }
@@ -348,84 +346,4 @@ function promptInput(session: FileSession, id: string, boxOf: (id: string) => Bo
       return b ? { id: fid, ...(str(f?.name) ? { name: str(f?.name) } : {}), box: b } : null
     },
   }
-}
-
-// --- Canvas context menu (board 22 rules) --------------------------------------------------------
-
-/**
- * The agent commands of the canvas context menu, from the board 22 rules: a note → "Convert to
- * prompt" (cf2sC rule Insert); a prompt + a frame selected → "Set as target" (rule Target); an
- * orphaned placeholder (owner not live) → "Clear flag" (DzQcZ rule Orphans). Null when the
- * right-clicked node has none of them. The menu is the MenuDense / MenuItem/Dense component.
- */
-export function agentMenuItems(
-  session: FileSession,
-  info: CanvasPointerInfo,
-  live: ReadonlySet<string>,
-): { id: string; label: string; icon: string; run(c: CanvasHandle): void }[] {
-  const out: { id: string; label: string; icon: string; run(c: CanvasHandle): void }[] = []
-  const hit = info.hit
-  const node = hit ? (session.store.getNode(hit) as Record<string, unknown> | undefined) : undefined
-  const sel = session.ui.getState().selection
-  if (hit && node?.type === "note")
-    out.push({
-      id: "convert",
-      label: "Convert to prompt",
-      icon: "sparkles",
-      run: (c) => void c.convertNoteToPrompt?.(hit),
-    })
-  const prompt = sel.find((id) => session.store.getNode(id)?.type === "prompt")
-  const frame = sel.find((id) => session.store.getNode(id)?.type === "frame")
-  if (sel.length === 2 && prompt && frame)
-    out.push({
-      id: "target",
-      label: "Set as target",
-      icon: "crosshair",
-      run: (c) => void c.setPromptTarget?.(prompt, frame),
-    })
-  const ph = node?.placeholder as { by?: unknown } | boolean | undefined
-  const owner = ph && typeof ph === "object" ? str(ph.by) : undefined
-  if (hit && node?.type === "frame" && ph && (!owner || !live.has(owner)))
-    out.push({
-      id: "clear",
-      label: "Clear flag",
-      icon: "flag-off",
-      run: (c) => void c.clearPlaceholder?.(hit),
-    })
-  return out
-}
-
-export function AgentContextMenu({
-  at,
-  items,
-  canvas,
-  onClose,
-}: {
-  at: { x: number; y: number }
-  items: ReturnType<typeof agentMenuItems>
-  canvas: { current: CanvasHandle | null }
-  onClose(): void
-}) {
-  return (
-    <MenuDense
-      width={200}
-      label="Canvas"
-      anchor={{ x: at.x, y: at.y, width: 0, height: 0 }}
-      onClose={onClose}
-      autoFocus
-      data-testid="agent-context-menu"
-    >
-      {items.map((it) => (
-        <M3MenuItem
-          key={it.id}
-          icon={it.icon}
-          label={it.label}
-          onSelect={() => {
-            onClose()
-            if (canvas.current) it.run(canvas.current)
-          }}
-        />
-      ))}
-    </MenuDense>
-  )
 }

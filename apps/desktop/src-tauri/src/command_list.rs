@@ -64,4 +64,5 @@ pub const COMMANDS: &[&str] = &[
     "kimo_settings_get_all",
     "kimo_settings_set",
     "kimo_launch_take_initial",
+    "kimo_help_show_logs",
 ];

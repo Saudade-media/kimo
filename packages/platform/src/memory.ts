@@ -17,6 +17,7 @@ import {
   type FontCacheEntry,
   type GitChange,
   type GitState,
+  type HelpMenuAction,
   type KimoPlatform,
   type Lease,
   type LeaseHolder,
@@ -73,6 +74,8 @@ export interface MemoryControl {
   readonly calls: string[]
   /** Local fonts the host reports. */
   setLocalFonts(families: LocalFontFamily[], bytes?: Record<string, Uint8Array>): void
+  /** Board 25 §7 (b): a native Help menu item picked (desktop `kimo://help-menu`). */
+  helpMenu(action: HelpMenuAction): void
 }
 
 export type MemoryPlatform = KimoPlatform & {
@@ -84,6 +87,8 @@ export type MemoryPlatform = KimoPlatform & {
 export interface MemoryPlatformOptions {
   os?: "macos" | "windows" | "linux"
   appVersion?: string
+  /** CPU architecture (Rust `std::env::consts::ARCH`); default "aarch64". */
+  arch?: string
   pid?: number
   host?: string
   /** Recovery directory path (informative). */
@@ -264,6 +269,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
   // --- launch ---
   const initial: OpenRequest[] = []
   const openEvents = new Emitter<[OpenRequest]>()
+  const helpEvents = new Emitter<[HelpMenuAction]>()
 
   let persisted: Record<string, unknown> = { ...(options.settings ?? {}) }
   const settings = createSettingsStore({
@@ -295,6 +301,13 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
     kind: "memory",
     os,
     appVersion,
+    arch: options.arch ?? "aarch64",
+    help: {
+      onMenu: (l) => helpEvents.on(l),
+      showLogs: async () => {
+        calls.push("showLogs")
+      },
+    },
     capabilities,
     mcp: createMemoryMcpHost({ status: { version: appVersion } }),
     skills: createMemorySkills(options.skills),
@@ -625,6 +638,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
     },
     control: {
       now,
+      helpMenu: (a) => helpEvents.emit(a),
       tick(ms) {
         clock += ms
       },

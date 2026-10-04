@@ -39,8 +39,56 @@ export interface StoredProvider {
   /** Cloud platforms (relay routing). */
   region?: string
   project?: string
+  /** Bedrock: AWS profile / environment / SSO; Vertex: ADC / service account; Foundry: Entra ID / API key. */
+  credentials?: string
+  /** Bedrock: the AWS profile name (`~/.aws/config`). */
+  profile?: string
+  /** Foundry: the resource (`https://<resource>.services.ai.azure.com`). */
+  resource?: string
   /** User-added custom endpoint (removable). */
   custom?: boolean
+  /** Custom endpoints: the auth header (board 25 UqJ1i). Default by wire. */
+  auth?: AuthScheme
+  /** Custom endpoints: the origin the key was first sent to (board 25 rule "Origin pin"). */
+  pinnedOrigin?: string
+  /** Added with "Add provider" and its first Test never passed ("Not verified"). */
+  unverified?: boolean
+}
+
+/** Board 25 Auth header: Bearer (Authorization: Bearer) · x-api-key · Custom… (header name). */
+export interface AuthScheme {
+  scheme: "bearer" | "x-api-key" | "custom"
+  /** `custom` only: the header name. */
+  header?: string
+}
+
+/** The header line a scheme sends ("Authorization: Bearer <key>"). */
+export function authPreview(a: AuthScheme, key = "<key>"): string {
+  if (a.scheme === "bearer") return `Authorization: Bearer ${key}`
+  if (a.scheme === "x-api-key") return `x-api-key: ${key}`
+  return `${a.header?.trim() || "X-Custom-Header"}: ${key}`
+}
+
+/** A custom endpoint's auth: its stored scheme, else by wire (Anthropic → x-api-key). */
+export function authOf(p: Pick<StoredProvider, "auth" | "wire">): AuthScheme {
+  return p.auth ?? (p.wire === "anthropic" ? { scheme: "x-api-key" } : { scheme: "bearer" })
+}
+
+/** `https://host[:port]` of a URL, or null. */
+export function originOf(url: string | undefined): string | null {
+  if (!url) return null
+  try {
+    return new URL(url).origin
+  } catch {
+    return null
+  }
+}
+
+/** Board 25 "Origin pin": the key is withheld when the base URL's host left the pinned origin. */
+export function keyWithheld(p: Pick<StoredProvider, "pinnedOrigin" | "baseURL">): boolean {
+  if (!p.pinnedOrigin) return false
+  const o = originOf(p.baseURL)
+  return o !== null && o !== p.pinnedOrigin
 }
 
 /** One finished turn's usage, fed by the agent panel ({@link AiConfig.ledger}). */
@@ -60,7 +108,19 @@ export interface StoredTest {
   latencyMs: number
   detail: string
   errorKind?: string
+  /** HTTP status of the failed request. */
+  status?: number
   at: number
+  /** The failed request, for the Details expander (board 25 FhxWF). */
+  trace?: TestTrace
+}
+
+/** Board 25 FhxWF Details: request line, status + latency, response body (≤ 400), auth (masked). */
+export interface TestTrace {
+  request: string
+  response: string
+  body: string
+  auth: string
 }
 
 export interface AiConfig {
@@ -185,7 +245,13 @@ export function providerRows(config: AiConfig): StoredProvider[] {
     // The cloud row stores whichever platform the user set up (bedrock | vertex | foundry).
     const stored =
       b.id === "bedrock"
-        ? (config.providers.bedrock ?? config.providers.vertex ?? config.providers.foundry)
+        ? ((["bedrock", "vertex", "foundry"] as const)
+            .filter((k) => config.configured.includes(k))
+            .map((k) => config.providers[k])
+            .find(Boolean) ??
+          config.providers.bedrock ??
+          config.providers.vertex ??
+          config.providers.foundry)
         : config.providers[b.id]
     return stored ? { ...b, ...stored, label: b.label } : b
   })
@@ -262,6 +328,9 @@ export function providerPill(status: string): { tone: PillTone; label: string } 
       return { tone: "warning", label: "Desktop only" }
     case "failed":
       return { tone: "danger", label: "Test failed" }
+    case "unverified":
+      // Board 25 rule "Add provider": a failing first Test still adds it, "Not verified".
+      return { tone: "warning", label: "Not verified" }
     default:
       return { tone: "neutral", label: "Not set" }
   }
@@ -343,6 +412,80 @@ export function testLabel(t: { ok: boolean; errorKind?: string }): string {
     default:
       return "Connection failed"
   }
+}
+
+/** Board 25 failed-test strip (c7lVl): tone, lucide icon name, label, mono detail. */
+export interface TestStrip {
+  tone: "success" | "danger" | "warning"
+  icon: "circle-check" | "circle-x" | "wifi-off" | "shield-x" | "triangle-alert" | "clock-alert"
+  label: string
+  detail: string
+}
+
+/** Test timeout (board 25 AbbSR "no response in 15 s"). */
+export const TEST_TIMEOUT_MS = 15_000
+
+/**
+ * The strip for a test result (board 25 rules: danger circle-x / wifi-off / shield-x /
+ * clock-alert, warning triangle-alert only when the endpoint answers but something is off).
+ */
+export function testStrip(
+  t: Pick<StoredTest, "ok" | "latencyMs" | "detail" | "errorKind"> & {
+    status?: number
+  },
+): TestStrip {
+  if (t.ok)
+    return {
+      tone: "success",
+      icon: "circle-check",
+      label: "Connection OK",
+      detail: `${t.latencyMs} ms · ${t.detail}`,
+    }
+  switch (t.errorKind) {
+    case "network":
+    case "offline":
+      return { tone: "danger", icon: "wifi-off", label: "Can't reach endpoint", detail: t.detail }
+    case "cors":
+      return {
+        tone: "danger",
+        icon: "shield-x",
+        label: "Blocked by the browser",
+        detail: "CORS · use desktop or a proxy",
+      }
+    case "timeout":
+      return {
+        tone: "danger",
+        icon: "clock-alert",
+        label: "Timed out",
+        detail: /^no response/.test(t.detail)
+          ? t.detail
+          : `no response in ${Math.round(TEST_TIMEOUT_MS / 1000)} s`,
+      }
+    case "model_missing":
+    case "unknown_model":
+      return {
+        tone: "warning",
+        icon: "triangle-alert",
+        label: "Reachable · model missing",
+        detail: t.detail,
+      }
+    case "auth":
+      return {
+        tone: "danger",
+        icon: "circle-x",
+        label: "Connection failed",
+        detail: `${t.status ?? 401} · invalid api key`,
+      }
+    default:
+      return { tone: "danger", icon: "circle-x", label: "Connection failed", detail: t.detail }
+  }
+}
+
+/** Masked key for the Details auth line ("acme_live_…7c21"). */
+export function maskForTrace(key: string | null): string {
+  if (!key) return "<none>"
+  const m = /^([a-z]+[_-](?:[a-z]+[_-])?)/i.exec(key)
+  return `${m?.[1] ?? key.slice(0, 3)}…${key.slice(-4)}`
 }
 
 // --- Local agents ------------------------------------------------------------------------------

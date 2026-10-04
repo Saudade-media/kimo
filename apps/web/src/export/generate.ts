@@ -6,7 +6,17 @@
 import type { KimoDocument, Libraries } from "@kimo/core-schema"
 import type { ExportFile, IconLoader, IRDocument, IRNode, RasterSource } from "@kimo/exporters"
 import type { LayoutResult, TextMeasurer } from "@kimo/layout"
-import { type ExportFormat, type ExportToggles, PNG_SCALES, targetsOf } from "./model"
+import {
+  DEFAULT_PDF_TOGGLES,
+  DEFAULT_PNG_SCALE,
+  type ExportFormat,
+  type ExportToggles,
+  type ImageKind,
+  PDF_BLEED_PT,
+  type PdfToggles,
+  type PngScale,
+  targetsOf,
+} from "./model"
 
 /** What the dialog exports: the open document, the canvas selection and the engine seams. */
 export interface ExportSource {
@@ -22,6 +32,18 @@ export interface ExportSource {
   layout?(): LayoutResult | null
   /** Icon glyphs (the renderer's `IconProvider`). */
   icons?: IconLoader | null
+  /** PDF "Embed fonts": font file bytes for a face (null: Helvetica is used). */
+  fonts?: (family: string, weight: number, italic: boolean) => Uint8Array | null
+}
+
+/** Per-format choices beyond board 07's three toggles (board 25 § 2). */
+export interface ExportChoices {
+  /** SVG / PNG row: what the preview bar's toggle selects (default svg). */
+  image?: ImageKind
+  /** PNG scale (default 2×). */
+  scale?: PngScale
+  /** PDF options. */
+  pdf?: PdfToggles
 }
 
 export interface ExportSummary {
@@ -35,13 +57,15 @@ export interface ExportSummary {
 export interface GeneratedExport {
   /** Text files, shown as file tabs in the preview. */
   files: ExportFile[]
-  /** Binary files (PNG) — only when generated with `binary: true`. */
+  /** Binary files (PNG, PDF) — only when generated with `binary: true`. */
   binary: ExportFile[]
-  /** Files the export will write (text + PNG, PNG counted before it is rendered). */
+  /** Files the export will write (text + binary, binary counted before it is rendered). */
   count: number
   summary: ExportSummary
   /** Messages for targets that could not run (e.g. SVG before the renderer is ready). */
   errors: string[]
+  /** The exported roots (PNG / PDF preview renders the first). */
+  roots: { id: string; name: string }[]
 }
 
 const loadExporters = () => import("@kimo/exporters")
@@ -67,7 +91,7 @@ export async function generateExport(
   source: ExportSource,
   format: ExportFormat,
   toggles: ExportToggles,
-  options: { binary?: boolean } = {},
+  options: { binary?: boolean } & ExportChoices = {},
 ): Promise<GeneratedExport> {
   const ex = await loadExporters()
   const doc = source.document()
@@ -83,16 +107,21 @@ export async function generateExport(
     layerNames: toggles.layerNames,
     ...(source.icons ? { icons: source.icons } : {}),
   }
-  const targets = targetsOf(format)
+  const targets = targetsOf(format, options.image ?? "svg")
+  const scale = options.scale ?? DEFAULT_PNG_SCALE
+  const pdf = options.pdf ?? DEFAULT_PDF_TOGGLES
   const files: ExportFile[] = []
   const errors: string[] = []
   let ir: IRDocument | null = null
+  const engine = {
+    ...(layout ? { layout } : {}),
+    ...(renderer ? { measureText: renderer.textMeasurer() } : {}),
+  }
   for (const target of targets.text) {
     try {
       const result = await ex.exportDocument(doc, target, {
         ...base,
-        ...(target === "svg" && layout ? { layout } : {}),
-        ...(target === "svg" && renderer ? { measureText: renderer.textMeasurer() } : {}),
+        ...(target === "svg" ? engine : {}),
       })
       ir ??= result.ir
       files.push(...result.files)
@@ -107,10 +136,64 @@ export async function generateExport(
   const binary: ExportFile[] = []
   if (targets.png && options.binary) {
     if (!renderer) errors.push("png export needs a renderer (raster)")
-    else
-      for (const scale of PNG_SCALES)
-        binary.push(...(await ex.emitPng(ir, { raster: renderer, scale })))
+    else binary.push(...(await ex.emitPng(ir, { raster: renderer, scale })))
   }
-  const count = files.length + (targets.png ? ir.roots.length * PNG_SCALES.length : 0)
-  return { files, binary, count, summary: summaryOf(ir, source.fileName), errors }
+  if (targets.pdf && options.binary) {
+    try {
+      const result = await ex.exportDocument(doc, "pdf", {
+        ...base,
+        ...engine,
+        ...(pdf.embedFonts && source.fonts ? { fonts: source.fonts } : {}),
+        ...(pdf.bleed ? { bleed: PDF_BLEED_PT } : {}),
+      })
+      binary.push(...result.files)
+    } catch (e) {
+      errors.push(e instanceof Error ? e.message : String(e))
+    }
+  }
+  const count = files.length + (targets.png ? ir.roots.length : 0) + (targets.pdf ? 1 : 0)
+  return {
+    files,
+    binary,
+    count,
+    summary: summaryOf(ir, source.fileName),
+    errors,
+    roots: ir.roots.map((r) => ({ id: r.id, name: r.name ?? r.key })),
+  }
+}
+
+/**
+ * PNG / PDF preview (rule "PNG preview"): the first exported root rendered at `scale` through
+ * the exporter's `emitPng` (same file name as the export), with its canvas size.
+ */
+export async function previewRaster(
+  source: ExportSource,
+  scale: number,
+): Promise<{ file: ExportFile; w: number; h: number } | { error: string } | null> {
+  const ex = await loadExporters()
+  const doc = source.document()
+  const libraries = source.libraries?.()
+  const selection = source.selection()
+  const ir = ex.buildIR(doc, {
+    ...(libraries ? { libraries } : {}),
+    ...(selection.length ? { ids: selection } : {}),
+  })
+  const root = ir.roots[0]
+  if (!root) return null
+  const renderer = source.renderer?.() ?? null
+  if (!renderer) return { error: "The preview needs the canvas renderer" }
+  try {
+    const [file] = await ex.emitPng({ ...ir, roots: [root] }, { raster: renderer, scale })
+    if (!file) return null
+    // Canvas size = the PNG's own size (IHDR) ÷ scale; the layout box when it is not a PNG.
+    const bytes = file.contents as Uint8Array
+    const png = bytes.byteLength > 24 && bytes[0] === 0x89 && bytes[1] === 0x50
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    const box = source.layout?.()?.nodes.get(root.id)
+    const w = png ? view.getUint32(16) / scale : (box?.local.w ?? 0)
+    const h = png ? view.getUint32(20) / scale : (box?.local.h ?? 0)
+    return { file, w, h }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
 }

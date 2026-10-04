@@ -144,6 +144,18 @@ describe("raster and vector seams", () => {
       height: root?.local.h ?? 0,
     })
   })
+  test("PDF bleed grows the page on every side and marks the trim box", async () => {
+    const { doc, libraries } = fixture("wrap-edge")
+    const layout = await layoutDocument(doc, { libraries, measureText: fakeMeasurer })
+    const ir = buildIR(doc, { libraries, layout })
+    const file = await emitPdf(ir, { layout, measureText: fakeMeasurer, bleed: 8.5 })
+    const page = (await PDFDocument.load(file.contents as Uint8Array)).getPage(0)
+    const root = layout.nodes.get("Edges00001")
+    const w = root?.local.w ?? 0
+    const h = root?.local.h ?? 0
+    expect(page.getSize()).toEqual({ width: w + 17, height: h + 17 })
+    expect(page.getTrimBox()).toEqual({ x: 8.5, y: 8.5, width: w, height: h })
+  })
   test("icons load once into a synchronous lookup", async () => {
     const { doc, libraries } = fixture("styling-m2")
     const ir = buildIR(doc, { libraries })

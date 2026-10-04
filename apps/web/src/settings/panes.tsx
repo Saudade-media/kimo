@@ -1,17 +1,11 @@
 /**
  * Settings panes (board 19): Files & autosave (XmeDB content), Fonts & privacy (gzQqN), General
- * (W7KFDa), Updates (NxkQV), About & licenses (l3JMJ). Each pane is a Title Bar (56, sans 16 /
- * 600) and a list of SettingRow (MuoTX); the last row drops its stroke. Every control writes
+ * (W7KFDa), Updates (NxkQV); About & licenses is board 25 (AboutPane.tsx). Each pane is a
+ * Title Bar (56, sans 16 / 600) and a list of SettingRow (MuoTX); the last row drops its stroke.
+ * Every control writes
  * `platform.settings` immediately (no Save button).
  */
-import {
-  type FileRef,
-  type KimoPlatform,
-  REPO_URL_PLACEHOLDER,
-  type SettingKey,
-  type Settings,
-  type SettingsSchema,
-} from "@kimo/platform"
+import type { FileRef, KimoPlatform, SettingKey, Settings, SettingsSchema } from "@kimo/platform"
 import { Button, Select, SettingRow, Toggle } from "@kimo/ui"
 import { cloneElement, isValidElement, type ReactNode } from "react"
 import { useAsync, useUpdaterStatus } from "./hooks"
@@ -36,8 +30,6 @@ export interface PaneProps {
   set: <K extends SettingKey>(key: K, value: SettingsSchema[K]) => void
   /** The font cache was cleared (the font system re-reads it). */
   onFontCacheCleared?: () => void
-  /** Open-source licenses: how many packages, and where the NOTICE lives. */
-  licenses?: { count: number | null; url: string | null }
 }
 
 export function PaneTitle({ children }: { children: string }) {
@@ -454,58 +446,6 @@ export function UpdatesPane(props: PaneProps) {
     <>
       <PaneTitle>Updates</PaneTitle>
       {markLast(rows)}
-    </>
-  )
-}
-
-// --- About & licenses ---------------------------------------------------------------------------
-
-export function AboutPane(props: PaneProps) {
-  const { platform } = props
-  const count = props.licenses?.count ?? null
-  const url = props.licenses?.url ?? `${REPO_URL_PLACEHOLDER}/blob/main/NOTICE`
-  return (
-    <>
-      <PaneTitle>About & licenses</PaneTitle>
-      <div className="settings-identity">
-        <span className="settings-identity__logo" aria-hidden="true">
-          <span className="settings-identity__mark">k</span>
-        </span>
-        <div className="settings-identity__text">
-          <span className="settings-identity__name">Kimo {platform.appVersion}</span>
-          <span className="settings-identity__license">MIT License · local-first, no account</span>
-        </div>
-      </div>
-      {markLast([
-        <SettingRow
-          key="licenses"
-          label="Open-source licenses"
-          description={
-            count === null
-              ? "Kimo and the packages it ships with."
-              : `Kimo and the ${count} packages it ships with.`
-          }
-          control={
-            <RowButton onClick={() => void platform.files.openExternalUrl(url).catch(() => {})}>
-              View
-            </RowButton>
-          }
-        />,
-        <SettingRow
-          key="source"
-          label="Source code"
-          description="Report issues and read the .kimo format spec."
-          control={
-            <RowButton
-              onClick={() =>
-                void platform.files.openExternalUrl(REPO_URL_PLACEHOLDER).catch(() => {})
-              }
-            >
-              Open repo
-            </RowButton>
-          }
-        />,
-      ])}
     </>
   )
 }

@@ -74,6 +74,8 @@ export interface ExportOptions {
   fonts?: (family: string, weight: number, italic: boolean) => Uint8Array | null
   /** PDF asset bytes. */
   assets?: (src: string) => Uint8Array | null
+  /** PDF bleed in points on every side (default 0). */
+  bleed?: number
 }
 
 export interface ExportResult {
@@ -185,6 +187,7 @@ export async function exportDocument(
           ...(icons ? { icons } : {}),
           ...(options.fonts ? { fonts: options.fonts } : {}),
           ...(options.assets ? { assets: options.assets } : {}),
+          ...(options.bleed ? { bleed: options.bleed } : {}),
         }),
       ]
       break

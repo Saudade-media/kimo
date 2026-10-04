@@ -137,6 +137,47 @@ export interface MockFetchOptions {
   delayMs?: number
 }
 
+/** Board 25 custom endpoint fixtures (`*.acme.internal`, OpenAI-compatible). */
+export const ACME_KEY = "acme_live_test_7c21"
+export const ACME_MODELS = ["llama-3.3-70b", "qwen2.5-coder"]
+
+/**
+ * `llm.acme.internal/v1`: models list + chat completions with {@link ACME_KEY} (any header);
+ * `down.acme.internal`: DNS failure; `slow.acme.internal`: never answers (until aborted).
+ */
+function acmeRoute(
+  req: Request,
+  key: string | null,
+  signal: AbortSignal | undefined,
+): Promise<Response> | null {
+  const host = new URL(req.url).hostname
+  if (!host.endsWith("acme.internal")) return null
+  if (host === "down.acme.internal")
+    return Promise.reject(new TypeError(`getaddrinfo ENOTFOUND ${host}`))
+  if (host === "slow.acme.internal")
+    return new Promise((_, reject) =>
+      signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))),
+    )
+  if (key !== ACME_KEY)
+    return Promise.resolve(Response.json({ error: { code: "invalid_api_key" } }, { status: 401 }))
+  if (req.url.endsWith("/models"))
+    return Promise.resolve(
+      Response.json({ object: "list", data: ACME_MODELS.map((id) => ({ id, object: "model" })) }),
+    )
+  return req.text().then((body) => {
+    const model = (JSON.parse(body || "{}") as { model?: string }).model ?? ""
+    if (!ACME_MODELS.includes(model))
+      return Response.json(
+        { error: { message: `The model ${model} does not exist`, code: "model_not_found" } },
+        { status: 404 },
+      )
+    return new Response(
+      `data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "OK" }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n`,
+      { headers: { "content-type": "text/event-stream" } },
+    )
+  })
+}
+
 /** Routed fetch for the Anthropic endpoints (`/v1/models`, `/v1/messages`). */
 export function createMockFetch(options: MockFetchOptions = {}): typeof fetch & {
   calls: { url: string; method: string; key: string | null }[]
@@ -148,9 +189,12 @@ export function createMockFetch(options: MockFetchOptions = {}): typeof fetch & 
     const key =
       req.headers.get("x-api-key") ??
       req.headers.get("authorization")?.replace(/^Bearer /, "") ??
+      [...req.headers.entries()].find(([, v]) => v.startsWith("acme_"))?.[1] ??
       null
     calls.push({ url: req.url, method: req.method, key })
     if (options.delayMs) await new Promise((r) => setTimeout(r, options.delayMs))
+    const acme = acmeRoute(req, key, init?.signal ?? undefined)
+    if (acme) return acme
     if (req.url.includes("localhost:11434")) {
       if (req.url.endsWith("/models"))
         return Response.json({ object: "list", data: [{ id: "llama3.3:70b", object: "model" }] })
@@ -200,6 +244,7 @@ export function createTestAiSettings(
     fetch?: typeof fetch
     storage?: KeyValueStorage
     now?: () => number
+    testTimeoutMs?: number
   } = {},
 ): AiSettingsController {
   const platform = options.platform ?? "desktop"
@@ -236,5 +281,6 @@ export function createTestAiSettings(
     fetchFor: (p) => (platform === "desktop" ? relay(p) : f),
     home: "/Users/me",
     ...(options.now ? { now: options.now } : {}),
+    ...(options.testTimeoutMs ? { testTimeoutMs: options.testTimeoutMs } : {}),
   })
 }

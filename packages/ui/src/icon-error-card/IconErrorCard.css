@@ -1,0 +1,13 @@
+/*
+ * IconErrorCard: the AgentErrorCard (Ny3kQ) danger visual with an icon slot (board 25
+ * `u5xjVk`). Layout and colors come from AgentErrorCard.css; the slot only sizes the glyph.
+ */
+.kimo-icon-error-card__icon {
+  display: inline-flex;
+}
+
+.kimo-icon-error-card__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -3,6 +3,12 @@ import { Button } from "../button/Button"
 import { cx, mergeRefs } from "../internal/util"
 import { useDismiss, useFocusTrap } from "../popover/usePopover"
 
+/** Board 25 §6 "Confirm width": `sm` quick confirm 400, `md` form 480 (Dialog default), `export` 880. */
+export type DialogSize = "sm" | "md" | "export"
+
+/** Pixel width of each {@link DialogSize}. */
+export const DIALOG_WIDTH: Readonly<Record<DialogSize, number>> = { sm: 400, md: 480, export: 880 }
+
 /** Props for {@link Dialog}. Remaining `<div>` props go to the dialog frame. */
 export interface DialogProps extends Omit<ComponentPropsWithRef<"div">, "title" | "children"> {
   /** 16px lucide icon in the Icon Wrap (`file-clock`, `life-buoy`, `file-up`). */
@@ -36,8 +42,13 @@ export interface DialogProps extends Omit<ComponentPropsWithRef<"div">, "title" 
   /** Escape, outside press and Cancel. */
   onCancel: () => void
   onConfirm: () => void
-  /** Frame width (component 480; instances 600, 640, 672, …). */
+  /** Frame width (component 480; instances 600, 640, 672, …). Overrides `size`. */
   width?: number
+  /**
+   * Board 25 §6 rule "Confirm width" (vy0fg › R2j1Av `dialog.size = 'sm'`): quick confirms
+   * (close untitled, discard, delete) are `sm` = 400 px; forms keep the 480 default (`md`).
+   */
+  size?: DialogSize
   /**
    * Rendered in place (gallery specimen), not as an open modal: no global Escape / outside
    * press registration and no initial focus. Default false.
@@ -70,6 +81,7 @@ export function Dialog({
   onCancel,
   onConfirm,
   width,
+  size,
   inline = false,
   className,
   style,
@@ -98,7 +110,13 @@ export function Dialog({
         tone === "success" && "kimo-dialog--success",
         className,
       )}
-      style={width !== undefined ? { width, ...style } : style}
+      style={
+        width !== undefined
+          ? { width, ...style }
+          : size !== undefined
+            ? { width: DIALOG_WIDTH[size], ...style }
+            : style
+      }
       onKeyDown={(e) => {
         onKeyDown?.(e)
         if (e.defaultPrevented) return

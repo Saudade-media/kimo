@@ -1,0 +1,69 @@
+/*
+ * OpenType custom feature row: desing.pen board 25 §6 (d) g95jKz › Feature · ss02 (LFdEa).
+ * row, gap 8, alignItems center, fill_container
+ *   ├ Check (FVAKK) check 14 × 14 text-primary
+ *   ├ Tag (G7TNL) mono 11 / 500 text-primary
+ *   ├ Support (uM7QP) "not in font" sans 11 / 400 text-tertiary
+ *   ├ Spacer (PKwlG) fill × 1
+ *   └ Remove (ercGd) x 12 × 12 text-tertiary
+ */
+.kimo-ot-feature-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.kimo-ot-feature-row__check {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-primary);
+}
+.kimo-ot-feature-row__tag {
+  flex: none;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+  white-space: nowrap;
+}
+.kimo-ot-feature-row__support {
+  flex: none;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+.kimo-ot-feature-row__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+.kimo-ot-feature-row__remove {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+.kimo-ot-feature-row__remove:hover {
+  color: var(--kimo-text-primary);
+}
+.kimo-ot-feature-row__remove > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}

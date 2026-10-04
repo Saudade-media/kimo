@@ -25,6 +25,7 @@ import type {
   FontCacheEntry,
   GitChange,
   GitState,
+  HelpMenuAction,
   HostOS,
   LeaseHolder,
   LocalFontFamily,
@@ -102,6 +103,8 @@ export interface TauriCommandMap {
   kimo_fs_open_default: { args: { path: string }; result: null }
   /** https only. */
   kimo_open_url: { args: { url: string }; result: null }
+  /** Board 25 §7 (b): reveals `~/.kimo/mcp/server.log` (or opens its folder). */
+  kimo_help_show_logs: { args: Record<string, never>; result: null }
 
   // --- dialogs (each pick widens the fs scope) ---
   kimo_dialog_open_file: {
@@ -222,6 +225,8 @@ export interface TauriEventMap {
   /** Broadcast to every window. */
   "kimo://settings-changed": { key: SettingKey; value: unknown }
   "kimo://open-request": OpenRequest
+  /** Board 25 §7 (b): a native Help menu item, sent to the focused editor window. */
+  "kimo://help-menu": { action: HelpMenuAction }
 }
 
 export type TauriEvent = keyof TauriEventMap
@@ -302,6 +307,7 @@ export const TAURI_COMMANDS = [
   "kimo_settings_get_all",
   "kimo_settings_set",
   "kimo_launch_take_initial",
+  "kimo_help_show_logs",
 ] as const satisfies readonly TauriCommand[]
 
 /** All event names. */
@@ -315,4 +321,5 @@ export const TAURI_EVENTS = [
   "kimo://close-requested",
   "kimo://settings-changed",
   "kimo://open-request",
+  "kimo://help-menu",
 ] as const satisfies readonly TauriEvent[]

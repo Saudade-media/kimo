@@ -1,6 +1,6 @@
 /**
  * M6 canvas scenarios (board 22 D0zDSY, board 24 iLW1l): note / prompt cards, placeholder
- * frames (outline, skeleton, tag + tooltip, Interrupted, clear → flash + ready chip), scope
+ * frames (outline, skeleton, tag + tooltip, orphan 'Agent stopped', clear → flash + ready chip), scope
  * outlines + ScopeTags, persona cursor + selection, rejected pill, prompt footer with Run, target
  * chip and connector, the Layers rows and the Note / Prompt toolbar entries.
  *
@@ -250,9 +250,18 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
   const tagLabel = await measure(page, '[data-node-id="holder0001"] .agent-canvas__tag-label')
   check(tagLabel?.fontSize === "11px" && tagLabel?.fontWeight === "500", `tag label 11/500`)
   const orphan = await measure(page, '[data-testid="placeholder-tag"][data-node-id="orphan0001"]')
+  // Board 25 §3 (UMRAO): orphans read "Agent stopped · <name>" on bg-muted.
+  const muted = await page.evaluate(() => {
+    const el = document.createElement("span")
+    el.style.color = "var(--kimo-bg-muted)"
+    document.body.append(el)
+    const c = getComputedStyle(el).color
+    el.remove()
+    return c
+  })
   check(
-    orphan?.text === "Interrupted" && orphan?.bg === "rgb(178, 106, 0)",
-    `orphan tag warning, got ${orphan?.text} ${orphan?.bg}`,
+    !!orphan?.text?.startsWith("Agent stopped · ") && orphan?.bg === muted,
+    `orphan tag grey, got ${orphan?.text} ${orphan?.bg}`,
   )
 
   // Tooltip on hover (vqqTf): 280 wide, padding 12, buttons 26 high.

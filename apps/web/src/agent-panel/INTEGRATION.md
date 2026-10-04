@@ -112,18 +112,43 @@ one WebGL context (`agentMarkRendererStats()`); ≤ 12 px, `static`, no WebGL an
 `disconnected` (error at 50 %). Personas: `teal` (lead), `iris`, `violet`, `rose`, `ember`,
 `moss` — assign them with `PersonaAllocator` / `assignPersonas` (rule PqjaS).
 
-## Not designed (decided here, flagged for review)
+## Board 25 "v1 Polish" §5 (p55vU) — designed, built 1:1
 
-- First run in the Agent tab (no provider, no signed-in CLI): an EmptyState "Connect a model to
-  start" with "Open AI providers" (the Home first-run card is builder 3's).
-- In-app approval inside the thread: a neutral AgentErrorCard-shaped card (hand icon) with the
-  M5 approval choices; it waits until answered (Stop = Deny).
-- Refusal / generic error cards reuse AgentErrorCard tones (warning / danger, icons
-  shield-alert / triangle-alert).
-- Steps of older finished turns are collapsed (board A shows only the live turn's steps).
-- The "Using …" skills row shows only when a turn used more than the default `kimo-design`.
-- Side by side / split children run only on API providers (in-process M5 clients); a CLI model
-  in those modes surfaces an error card. Iterate works with CLIs (one prompt per pass).
+- **First run** (`FirstRun.tsx`, rules GXL4Z): `state.onboarding` replaces Thread Header +
+  Thread; the composer stays, disabled at 50 % with "Connect a model to start"
+  (`state.composerDisabled`). (a) FrS9y: no API provider passed its Test (`rt.apiReady`) and a
+  signed-in CLI (board 23 order) the user hasn't chosen yet (`rt.cliConfirmed` = Settings
+  default is a CLI) → AgentMark/32/Listening, "Meet Kimo", the detected-CLI card, "Use Claude
+  Code" (`controller.chooseCli` → `ai.setDefault({provider: "cli:…", model: "default"})`), "Or
+  add an API key →" (= `onOpenSettings`). (b) D8covN: nothing found → AgentMark/32/Static, the
+  inline Anthropic key card; paste or Connect → `controller.connectKey` → `rt.connectKey`
+  (`ai.setKey` + Test; on web it also sets the Anthropic browser opt-in — pressing Connect is
+  the opt-in). A pass switches to an empty thread; a failure keeps the card with the field in
+  danger and the Test's reason (not drawn). "Have Claude Code?…" shows on desktop only.
+- **Approval** (`ApprovalCard` in `@kimo/ui`, OlhpU): one thread-level card per pending
+  in-app approval (`state.approvals`, oldest first; host approvals forwarded by
+  `createHostTools` land in the same queue), "Kimo wants to" + AgentMark/12/Listening +
+  "paused", op rows from `approvalOps(request, {nodeName, parentName})` (icon · verb + target ·
+  scope), Allow once / Always this session / Spacer / Deny. Waits indefinitely; Stop denies all.
+  The composer placeholder becomes "Kimo is waiting for your approval…". More than one pending:
+  the header shows "N waiting" (Session Cost pill look — not drawn).
+- **Refusal** (`RefusalCard`, dIkT6): neutral card (bg-subtle, border, hand), the model's own
+  text as the reason (the agent bubble is not drawn for a refusal), "Edit request" →
+  `controller.editRequest(turnId)` prefills the composer.
+- **Generic error** (u8mh7l): `IconErrorCard` (circle-x) "Something went wrong", the provider
+  message + "Nothing was changed on the canvas." when no op landed, Retry (or Open settings
+  for unknown model / unsupported platform) + Copy error. Specific states keep AgentErrorCard.
+
+`<AgentPanel>` new optional props for RightPanel: `nodeNameOf(id)` / `parentNameOf(id)` (op row
+"in Pricing"), `platform` (default: Tauri → desktop).
+
+### Still not designed (decided here)
+
+- Approval op icons other than trash-2 / variable (pencil, plus, component, save, download,
+  file-plus, folder-open, square-dashed) and their copy.
+- Steps of older finished turns are collapsed; the "Using …" row shows only for non-default
+  skills.
+- Side by side / split children run only on API providers; Iterate works with CLIs.
 
 ## Wired (M6 integration)
 
@@ -142,9 +167,11 @@ one WebGL context (`agentMarkRendererStats()`); ≤ 12 px, `static`, no WebGL an
   and the controller passes `gap: SIDE_BY_SIDE_GAP` (40) to `planSideBySide`.
 - Home hand-off: the right panel opens on the Agent tab when `hasHomeHandoff(path)`, and
   `useHomeHandoff` starts it. "Ask Kimo" / ⌘K and placeholder "Review" open the Agent tab.
-- Canvas context menu (MenuDense): note → Convert to prompt; a prompt + a frame selected → Set
-  as target; an orphaned placeholder → Clear flag (board 22 rules). "Resume" on an orphan is not
-  wired (the orphan's session may be another window's / gone).
+- Canvas context menu (board 25 §3, `editor/CanvasMenu.tsx` + `editor/context-menu.ts`): agent
+  group first — note → Convert to prompt; prompt → Run prompt · Set as target (pick mode);
+  placeholder → Clear flag; orphan → Resume agent (`resume.ts`: `placeholderSession`,
+  `resumeAgentSession` = `openSession` + `send` continuation on the same session origin) or "Ask
+  Kimo to finish" when the session is gone (`askKimoToFinish`: new session, composer prefilled).
 - Window title "<Agent> editing" (`useWindowTitle(doc, agent)`), browser library tab title
   (`useWebTabTitle`), Home on an untitled document asks first (`requestClose`).
 - ⇧P = Prompt, P = Pen: the editor's single-key matcher now compares `⇧<key>` when Shift is

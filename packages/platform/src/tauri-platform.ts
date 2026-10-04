@@ -29,6 +29,7 @@ import {
   type FileRef,
   type GitChange,
   type GitState,
+  type HelpMenuAction,
   type KimoPlatform,
   type LeaseHolder,
   MACOS_CHROME,
@@ -119,6 +120,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
   const fullscreenEvents = new Emitter<[boolean]>()
   const settingsEvents = new Emitter<[string, unknown]>()
   const openEvents = new Emitter<[OpenRequest]>()
+  const helpEvents = new Emitter<[HelpMenuAction]>()
   let closeHandler: (() => Promise<boolean> | boolean) | null = null
   let windowState: WindowState = { focused: true, fullscreen: false, trafficLightPosition: null }
   let updaterStatus: UpdaterStatus = { state: "idle" }
@@ -154,6 +156,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     "kimo://close-requested": (p) => void onCloseRequested(p),
     "kimo://settings-changed": ({ key, value }) => settingsEvents.emit(key, value),
     "kimo://open-request": (r) => openEvents.emit(r),
+    "kimo://help-menu": ({ action }) => helpEvents.emit(action),
   }
   const unlisteners = await Promise.all(
     (Object.keys(handlers) as TauriEvent[]).map((e) =>
@@ -267,6 +270,13 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     kind: "desktop",
     os,
     appVersion: info.version,
+    arch: info.arch,
+    help: {
+      onMenu: (l) => helpEvents.on(l),
+      showLogs: async () => {
+        await call("kimo_help_show_logs", none)
+      },
+    },
     capabilities,
     // M6 user skills (ADR 0014 §10): own command list (TAURI_SKILLS_COMMANDS), not TAURI_COMMANDS.
     skills: createTauriSkills({

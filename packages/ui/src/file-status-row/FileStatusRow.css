@@ -1,0 +1,89 @@
+/*
+ * FileStatusRow: desing.pen 25 › 2 Export dialog › Progress (WnLfR) › File List (MfSnB) rows
+ * (OJUH8, XlOLw, a0z3e) and Error (ixYdn) › File List (fb8Bv).
+ * row fill, gap 8, padding [6, 0], alignItems center
+ *   ├ Icon 14: written circle-check success · writing loader-circle text-primary · queued /
+ *   │   skipped circle-dashed text-tertiary · failed circle-x danger
+ *   ├ Name mono xs (11) 500 text-primary
+ *   ├ Spacer fill
+ *   └ Status sans xs 400: text-tertiary (written, queued, skipped) · text-secondary (writing…)
+ *       · danger (failed)
+ */
+.kimo-file-status {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 0;
+}
+
+.kimo-file-status__icon {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-file-status--written .kimo-file-status__icon {
+  color: var(--kimo-success);
+}
+
+.kimo-file-status--writing .kimo-file-status__icon {
+  color: var(--kimo-text-primary);
+  animation: kimo-file-status-spin 1s linear infinite;
+}
+
+.kimo-file-status--failed .kimo-file-status__icon {
+  color: var(--kimo-danger);
+}
+
+@keyframes kimo-file-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-file-status--writing .kimo-file-status__icon {
+    animation: none;
+  }
+}
+
+.kimo-file-status__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  white-space: nowrap;
+  color: var(--kimo-text-primary);
+}
+
+.kimo-file-status__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+.kimo-file-status__status {
+  flex: none;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-file-status--writing .kimo-file-status__status {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-file-status--failed .kimo-file-status__status {
+  color: var(--kimo-danger);
+}

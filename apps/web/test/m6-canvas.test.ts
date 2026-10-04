@@ -280,8 +280,9 @@ describe("DOM projection", () => {
       text: "Kimo · building Features · 14 ops",
       state: "building",
     })
+    // Board 25 §3 (UMRAO): an orphan reads "Agent stopped · <name>".
     expect(d.tags.find((t) => t.id === "orphan")).toMatchObject({
-      text: "Interrupted",
+      text: expect.stringMatching(/^Agent stopped · /),
       state: "interrupted",
     })
     // ScopeTags: split inside top-right (6 px), side by side 3 px above the 3 px outset outline.

@@ -64,23 +64,56 @@ else "Untitled"; never overwriting (" 2", " 3"…). Desktop writes `<files.newFi
 {document})`). "Design by hand instead": desktop `manager.newUntitled()`, web an empty library
 file; the card stays dismissed until a provider is added.
 
-## Not designed (marked in code)
+## Board 25 "v1 Polish" §4 (bM295) — designed, built 1:1
 
-- Web pane: the Local agents group is hidden (CLIs are desktop only); intro/desc copy adapted.
-- "Add provider" form (custom endpoint: name, base URL, wire, models, local/no key) and the
-  cloud row's Set up fields (platform, region, project).
-- Failed Test result uses the Test Result frame in `danger-soft` / `danger`, CORS adds the matrix
-  "how" hint.
-- No "Make default" control: the Default badge follows the precedence (the controller has
-  `setDefault` for the Agent tab picker).
-- Home: chip presets prefill "A landing page for …" etc.; the composer's model chip opens
-  Settings › AI providers (no picker on Home).
+- **Add provider** (`AddProviderDialog.tsx`, uOwr0): the title row's "Add provider" opens a
+  520 px modal over `kimo-dialog-scrim`. Type (Custom endpoint / OpenAI / Gemini / OpenRouter;
+  the built-in types drop Base URL + Auth header), Name, Base URL, Auth header (SegmentedText
+  Bearer / x-api-key / Custom… + header-name field, preview line), API key, Models (chips;
+  Fetch /models = `ctl.fetchModels`; first = agent, second = fast), Origin Pin Note, Storage.
+  Footer: Test connection (`ctl.testDraft`, strip shown in the body) · Cancel · Add provider
+  (`ctl.addProvider` → adds, then runs the Test; a failing Test still adds it, pill "Not
+  verified" = `StoredProvider.unverified`).
+- **Auth scheme** (`StoredProvider.auth`): `relayAuthFor` sends `authorization: Bearer`,
+  `x-api-key` or the custom header name (lower-cased) to the Rust relay; on web the scheme the
+  adapter doesn't send natively goes in `ProviderConfig.headers`.
+- **Origin pin** (`pinnedOrigin`): set on the first passing Test of a keyed custom endpoint;
+  `keyWithheld(p)` when the base URL's origin differs → the web config omits the key and
+  `relayAuthFor` returns `{kind: "none"}` (the Rust relay pins on its own too); the key field
+  gets a danger stroke + "Re-enter key"; `setKey` clears the pin. Same-host path changes are
+  fine.
+- **Cloud cards** (`CloudCards.tsx`, YewZG / bSx6y / g7Uzta): the cloud row's Set up expands one
+  card per cloud; `ctl.setCloud(kind, {region, project, credentials, profile, resource, model})`
+  keeps every cloud's fields and makes `kind` the routed one. Foundry's resource goes in the
+  relay's `project` slot (what `prepare_foundry` reads). Vertex "Service account JSON…" copies
+  the file into the keychain (`setKey("vertex", json)`).
+- **Failed test** (`TestResult.tsx`, c7lVl): strip variants by `testStrip()` — circle-x
+  Connection failed (401 · invalid api key), wifi-off Can't reach endpoint, shield-x Blocked by
+  the browser, clock-alert Timed out (15 s, `deps.testTimeoutMs`), warning triangle-alert
+  Reachable · model missing (`/models` answered without the agent model). "Details" expands
+  FhxWF with `StoredTest.trace` (request line, status + latency, first 400 chars of the body,
+  masked auth line) + Retry test / Copy details. The offending field (key / base URL) gets a
+  danger stroke.
+
+### Still not designed (decided here)
+
+- Web pane: the Local agents group is hidden (CLIs are desktop only).
+- No "Make default" control: the Default badge follows the precedence.
+- Add provider: the free-text model input after the chips; local base URLs (localhost) need no
+  key; Desc copy of the non-custom types; EyeOff while the key is revealed.
+- Cloud cards: region / credential option lists; Foundry Auth "API key" adds a key row (the
+  relay does not support Entra ID yet — the Test fails with its message). Bedrock profile /
+  credential source are stored but the relay still resolves credentials itself (env /
+  `~/.aws`); passing them needs a `AiRelayRequest` cloud-auth extension (platform + Rust).
+- Desktop drafts (Fetch /models, Test connection) stash the key under
+  `provider.custom:draft` for the call and delete it after.
 
 ## Tests
 
-- Unit: `apps/web/test/m6-ai-settings.test.ts` (copy, precedence, controller over memory secrets
+- Unit: `apps/web/test/board25-ai-agent.test.ts` (board 25 §4/§5) and
+  `apps/web/test/m6-ai-settings.test.ts` (copy, precedence, controller over memory secrets
   + fake CLI host + mocked fetch, persistence, Home submit/never-overwrite, hand-off).
-- E2E: `apps/web/e2e/m6-ai.e2e.ts` on `e2e/m6-ai-harness` (desktop + web pane, Home submit, first
+- E2E: `apps/web/e2e/board25-ai-agent.e2e.ts` (board 25, measured) and `apps/web/e2e/m6-ai.e2e.ts` on `e2e/m6-ai-harness` (desktop + web pane, Home submit, first
   run, wrong key / design by hand), one measured pass per surface.
 - Test doubles: `ai-settings/testing.ts` (`createFakeCliHost`, `createMockFetch`,
   `createTestAiSettings`).

@@ -438,3 +438,441 @@
   min-width: 0;
   height: 1px;
 }
+
+/* =============================================================================================
+ * Board 25 "v1 Polish" § 2 Export dialog additions (O3Abm), values per node:
+ *
+ * (a) Preview · PNG KeMal: column fill, fill bg-subtle, radius-lg
+ *   ├ Preview Bar R7Ypoo: row fill, gap 8, padding [8, 8, 8, 12], center — Image Format plpsW
+ *   │   (SegmentedText, labels xs), Scale k7fVi5 (SegmentedText 1× 2× 3×, labels xs), Spacer,
+ *   │   Zoom to fit l2y9N (IconButton 28, fill transparent, icon scan 14)
+ *   ├ Image Area Im0LX: fill × 244, padding 20, center, fill bg-canvas, stroke top + bottom 1
+ *   │   └ Rendered PNG: stroke 1 border, shadow 0 2 6 $shadow
+ *   └ Preview Meta c5Fg1: row fill, gap 8, padding [8, 12], center — File mono xs 500 primary,
+ *       Spacer, Size mono xs tertiary
+ * (e) Path bd8wM (untitled): column gap 6 — Label, Folder Row W2BJk (gap 6, center: Folder
+ *   Field lVRRr fill × 32, gap 8, padding [0, 10], bg-subtle, stroke 1 border-strong,
+ *   radius-sm, folder 14 tertiary, placeholder sans sm tertiary · Choose hB829 Button/Secondary
+ *   h 32 padding [0, 12], folder-open 14, label sm), Hint RcYcb (gap 6: info 12 tertiary, text
+ *   sans xs tertiary 1.45); Export X8qvM opacity 0.4
+ * (d) Path m2be2 (web): Label "Download as", Zip name OMYHv (PropField A9DDs fill × 32: gap 8,
+ *   padding [0, 8], bg-subtle, radius-sm, prefix "zip" mono xs tertiary, value mono sm), Hint;
+ *   Footer p1I8RQ: gap 8 center — Note sans sm tertiary, Spacer, Copy code / Download .zip
+ *   (h 28, padding [0, 12], icon 14, label sm)
+ * (b) Progress WnLfR: File List MfSnB (FileStatusRow), Progress ZxZlz (ProgressTrack), gap 14;
+ *   Footer ygCvj: Spacer, Cancel (Button/Ghost), Exporting… (Button/Primary, loader-circle,
+ *   opacity 0.6)
+ * (c) Error ixYdn: Export error u5xjVk (IconErrorCard), File List fb8Bv; Footer svqrC: Close
+ *   (Ghost), Retry N files (Primary, rotate-ccw)
+ * (g) Review P8d2o: Header ixvG9 row gap 12, padding [20, 20, 14, 24] (Back UURNz / Close
+ *   IconButton 32 pill bg-muted) · Body SAawQ row gap 16, padding [0, 20] (Files mex2e 300,
+ *   column gap 2; Diff rAfV3 fill, bg-subtle, radius-lg: Header Bvfsp gap 8 padding [8, 12]
+ *   bottom 1 border — File mono xs 600 primary, Dir mono xs tertiary, Spacer, Meta sans xs
+ *   tertiary; Lines eD4fV column padding [6, 0]) · Footer Ao5Tp gap 8, padding [16, 20, 20, 24]
+ *   (info 14, Summary sans sm tertiary, Spacer, Keep all Ghost, Overwrite all Secondary
+ *   replace-all, Write N files Primary download)
+ * ============================================================================================= */
+
+/* --- (a) PNG / PDF preview --------------------------------------------------------------------- */
+
+.export-preview-bar {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 8px 8px 12px;
+}
+
+.export-seg .kimo-seg-text__label {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-icon-button.export-fit {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+}
+
+.kimo-icon-button.export-fit:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+
+.export-image-area {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 244px;
+  padding: 20px;
+  overflow: hidden;
+  background: var(--kimo-bg-canvas);
+  box-shadow:
+    inset 0 1px 0 0 var(--kimo-border),
+    inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.export-image-area--actual {
+  justify-content: flex-start;
+  align-items: flex-start;
+  overflow: auto;
+}
+
+.export-image {
+  box-sizing: border-box;
+  display: block;
+  flex: none;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: 1px solid var(--kimo-border);
+  box-shadow: 0 2px 6px 0 var(--kimo-shadow);
+}
+
+.export-image-area--actual .export-image {
+  max-width: none;
+  max-height: none;
+}
+
+.export-image-area__note {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 1.45;
+  text-align: center;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-preview-meta {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+}
+
+.export-preview-meta__file,
+.export-preview-meta__size {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  white-space: nowrap;
+}
+
+.export-preview-meta__file {
+  font-weight: var(--kimo-font-weight-medium);
+  color: var(--kimo-text-primary);
+}
+
+.export-preview-meta__size {
+  font-weight: var(--kimo-font-weight-regular);
+  color: var(--kimo-text-tertiary);
+}
+
+/* --- (e) Untitled desktop file / (d) web "Download as" --------------------------------------- */
+
+.export-folder-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.export-folder-field {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--kimo-border-strong);
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.export-folder-field__icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-folder-field__icon > svg,
+.export-hint__icon > svg,
+.export-review__identical-icon > svg {
+  display: block;
+}
+
+.export-folder-field__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  color: var(--kimo-text-primary);
+}
+
+.export-folder-field--empty .export-folder-field__text {
+  font-family: var(--kimo-font-sans);
+  color: var(--kimo-text-tertiary);
+}
+
+/* hB829: Button/Secondary with padding [0, 12], icon 14, label text-sm (height 32 kept). */
+.kimo-button.export-choose {
+  flex: none;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+.kimo-button.export-choose .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.export-hint {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+
+.export-hint__icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-hint__text {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-zip {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+}
+
+.export-zip:focus-within {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.export-zip__prefix {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  color: var(--kimo-text-tertiary);
+}
+
+.export-zip__value {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  color: var(--kimo-text-primary);
+}
+
+/* X8qvM: Export disabled until a folder is set, at 40 % opacity. */
+.kimo-button.export-submit--blocked {
+  opacity: 0.4;
+}
+
+/* U1D5f: Exporting… at 60 % opacity, spinner. */
+.kimo-button.export-submit--running {
+  opacity: 0.6;
+}
+
+.kimo-button.export-submit--running .kimo-button__icon > svg {
+  animation: export-spin 1s linear infinite;
+}
+
+@keyframes export-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-button.export-submit--running .kimo-button__icon > svg {
+    animation: none;
+  }
+}
+
+/* --- (b) Progress / (c) Error ---------------------------------------------------------------- */
+
+.export-run {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-height: 0;
+  padding: 0 24px 0 28px;
+  overflow-y: auto;
+}
+
+.export-run__list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* --- (g) Review ------------------------------------------------------------------------------ */
+
+.export-header.export-header--review {
+  padding: 20px 20px 14px 24px;
+}
+
+.export-review {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  min-height: 0;
+  padding: 0 20px;
+}
+
+.export-review__files {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 300px;
+}
+
+.export-review__identical {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+}
+
+.export-review__identical-icon {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-review__identical-text {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  color: var(--kimo-text-tertiary);
+}
+
+.export-diff {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  max-height: 420px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-subtle);
+}
+
+.export-diff__header {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.export-diff__file,
+.export-diff__dir {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px; /* Pencil text box: mono 11 → 15 */
+  white-space: pre;
+}
+
+.export-diff__file {
+  font-weight: var(--kimo-font-weight-semibold);
+  color: var(--kimo-text-primary);
+}
+
+.export-diff__dir {
+  font-weight: var(--kimo-font-weight-regular);
+  color: var(--kimo-text-tertiary);
+}
+
+.export-diff__meta {
+  flex: none;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+  color: var(--kimo-text-tertiary);
+}
+
+.export-diff__lines {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  padding: 6px 0;
+  overflow: auto;
+}
+
+.export-footer.export-footer--review {
+  padding: 16px 20px 20px 24px;
+}

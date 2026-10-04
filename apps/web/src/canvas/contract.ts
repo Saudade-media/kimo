@@ -455,6 +455,8 @@ export interface CanvasPointerInfo {
   world: Point
   /** Top-most hit node id, or null for empty canvas. */
   hit: string | null
+  /** The node a click at this point selects (click policy), or null for empty canvas. */
+  target?: string | null
 }
 
 /** Props of `<CanvasHost>`. */

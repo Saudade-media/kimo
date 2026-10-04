@@ -26,6 +26,7 @@ import {
 import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
 import { useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
+import { matches } from "../shortcuts/shortcuts"
 import "./canvas-m2.css"
 import { AgentCanvasDom } from "./AgentCanvasDom"
 import { type AgentDomState, EMPTY_DOM } from "./agent-canvas"
@@ -657,7 +658,7 @@ function TextEditor({
         e.stopPropagation()
         // Escape commits and exits, like Figma (deliberate): there is no separate cancel. An
         // existing text emptied this way is deleted, as in Figma; ⌘Z restores it in one step.
-        if (e.key === "Escape" || (e.key === "Enter" && (e.metaKey || e.ctrlKey))) {
+        if (matches("finishText", e)) {
           e.preventDefault()
           commit()
         }

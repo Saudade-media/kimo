@@ -35,7 +35,8 @@
 /*
  * PlaceholderFrame Tag (EKCy7 iyhUZ): height 20, fill agent (persona hue in split), radius-xs,
  * gap 4, padding [0, 7, 0, 5], align center; AgentMark 12; Label 11/500 on-accent.
- * Orphan (DwvTl): "Interrupted" in warning.
+ * Orphan (board 25 §3 UMRAO, rule jMJaL): Tag fill bg-muted; Icon unplug 11 text-secondary;
+ * Label "Agent stopped · <name>" text-secondary (shimmer off in the renderer).
  */
 .agent-canvas__tag {
   position: absolute;
@@ -52,7 +53,14 @@
   pointer-events: auto;
 }
 .agent-canvas__tag--interrupted {
-  background: var(--kimo-warning, #b26a00);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+.agent-canvas__tag-icon {
+  display: block;
+  flex: none;
+  width: 11px;
+  height: 11px;
 }
 .agent-canvas__tag-label,
 .agent-canvas__scope-label {

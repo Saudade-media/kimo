@@ -10,14 +10,16 @@
  *   └ Footer (aO5B5) row, gap 6, padding [8, 12], center, stroke top 1 border
  *       Copy report Button/Ghost h 24 [0, 6] copy 14 · Spacer · Cancel Button/Ghost h 24 [0, 8] ·
  *       Import without these Button/Secondary h 24 [0, 8]; labels sans 11 / 500
- * The vignette's toast is fill_container in its 381 stage (349 wide); the toast keeps that width.
+ * Width: board 25 §6 (c) J30Nk decides 360 px (toasts collapse to fit-content, max 360).
+ *   More (fj8Nh) row, gap 8, padding [4, 12], center: Indent 24 × 1 · Count sans 11 / 500
+ *   text-primary · Why sans 11 / 400 text-tertiary
  */
 .kimo-svg-rejection {
   box-sizing: border-box;
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 349px;
+  width: 360px;
   max-width: 100%;
   overflow: hidden;
   border-radius: var(--kimo-radius-lg);
@@ -137,9 +139,30 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Not designed: the "+N more" row past 5 reasons keeps the row metrics, text tertiary. */
-.kimo-svg-rejection__reason--more .kimo-svg-rejection__why {
+/* Board 25 §6 (c) More (fj8Nh): Indent (p9n3w) 24 × 1 holds the line column. */
+.kimo-svg-rejection__indent {
+  flex: none;
+  width: 24px;
+  height: 1px;
+}
+.kimo-svg-rejection__more-count,
+.kimo-svg-rejection__more-why {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+.kimo-svg-rejection__more-count {
+  flex: none;
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-medium);
+}
+.kimo-svg-rejection__more-why {
+  min-width: 0;
+  overflow: hidden;
   color: var(--kimo-text-tertiary);
+  font-weight: var(--kimo-font-weight-regular);
+  text-overflow: ellipsis;
 }
 
 .kimo-svg-rejection__footer {

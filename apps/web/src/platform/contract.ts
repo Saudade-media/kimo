@@ -374,8 +374,21 @@ export type Banner =
       resolved: number
       total: number
     }
-  /** Board 18 "Ready to commit" (info), after Mark resolved & save while git still merges. */
-  | { kind: "merge-ready"; severity: "info"; fileName: string }
+  /**
+   * Board 18 "Ready to commit" (info), after Mark resolved & save while git still merges.
+   * Board 25 §6 (e) tzFIU / LsjRG: shown on success-soft; `resolved` conflicts ("3 conflicts
+   * resolved and saved to …"), `copied` once "Commit in terminal…" copied `command`, `nodes`
+   * the resolved conflicts' nodes (Review changes).
+   */
+  | {
+      kind: "merge-ready"
+      severity: "info"
+      fileName: string
+      resolved?: number
+      copied?: boolean
+      command?: string
+      nodes?: readonly string[]
+    }
 
 export type BannerKind = Banner["kind"]
 
@@ -424,12 +437,16 @@ export type BannerActionId =
   | "copy-commit-command"
   /** Board 24 (n) step 2: every conflict resolved, not saved yet → "Save" (Mark resolved & save). */
   | "mark-resolved-save"
+  /** Board 25 §6 (e) tzFIU Secondary Action: selects + reveals the merge's resolved nodes. */
+  | "review-changes"
 
 export interface BannerAction {
   id: BannerActionId
   label: string
   /** Button component: Ghost / Secondary / Primary as on the board (rightmost = primary). */
   variant: "ghost" | "secondary" | "primary"
+  /** Leading lucide icon (board 25 §6 (e) LsjRG "Copied": `check`). */
+  icon?: "check"
 }
 
 export interface BannerCopy {
@@ -448,6 +465,16 @@ export function revealLabel(os: HostOS): string {
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+/** POSIX-shell escaping of a path argument ("Pricing page.kimo" → "Pricing\\ page.kimo"). */
+export function shellEscapePath(p: string): string {
+  return p.replace(/([^A-Za-z0-9_@%+=:,./-])/g, "\\$1")
+}
+
+/** Board 25 §6 (e) LsjRG: the command "Commit in terminal…" copies. */
+export function commitCommand(fileName: string): string {
+  return `git add ${shellEscapePath(fileName)} && git commit`
+}
 const OPERATION_TITLE: Record<GitOperation, string> = {
   rebase: "Rebase",
   merge: "Merge",
@@ -557,7 +584,8 @@ export function bannerCopy(
               ? `Merging ${b.info.theirs} → ${b.info.ours}`
               : "Merge in progress",
           body: "All conflicts resolved. Save to mark them resolved for git.",
-          // The vignette's ghost "Abort merge" has no git abort behind it yet (flagged).
+          // Board 25 §6 (f) aEUZq: no "Abort merge" in v1 — Kimo doesn't run git, and a disabled
+          // stand-in would promise a path that doesn't exist (hidden, not greyed out).
           actions: [{ id: "mark-resolved-save", label: "Save", variant: "primary" }],
         }
       const into =
@@ -573,12 +601,25 @@ export function bannerCopy(
         ],
       }
     }
-    case "merge-ready":
+    case "merge-ready": {
+      // Board 25 §6 (e): Kimo never runs git — the primary copies the commit command, then
+      // confirms "Copied" (check); the banner stays until git is clean.
+      const command = b.command ?? commitCommand(b.fileName)
       return {
         title: "Ready to commit",
-        body: `git still shows the merge as in progress. Stage ${b.fileName} and commit to finish it.`,
-        actions: [{ id: "copy-commit-command", label: "Copy command", variant: "secondary" }],
+        body: b.copied
+          ? `Copied '${command}' — run it in your terminal.`
+          : b.resolved
+            ? `${plural(b.resolved, "conflict")} resolved and saved to ${b.fileName}.`
+            : `Resolved and saved to ${b.fileName}.`,
+        actions: [
+          { id: "review-changes", label: "Review changes", variant: "secondary" },
+          b.copied
+            ? { id: "copy-commit-command", label: "Copied", variant: "primary", icon: "check" }
+            : { id: "copy-commit-command", label: "Commit in terminal…", variant: "primary" },
+        ],
       }
+    }
   }
 }
 

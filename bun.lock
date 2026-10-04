@@ -26,6 +26,19 @@
       "name": "@kimo/server",
       "version": "0.0.0",
     },
+    "apps/site": {
+      "name": "@kimo/site",
+      "version": "0.0.0",
+      "dependencies": {
+        "@kimo/core-schema": "workspace:*",
+        "@kimo/design-tokens": "workspace:*",
+        "marked": "^18.0.0",
+      },
+      "devDependencies": {
+        "playwright": "^1.63.0",
+        "tsx": "^4.23.15",
+      },
+    },
     "apps/web": {
       "name": "@kimo/web",
       "version": "0.0.0",
@@ -301,6 +314,8 @@
 
     "@kimo/server": ["@kimo/server@workspace:apps/server"],
 
+    "@kimo/site": ["@kimo/site@workspace:apps/site"],
+
     "@kimo/sync": ["@kimo/sync@workspace:packages/sync"],
 
     "@kimo/ui": ["@kimo/ui@workspace:packages/ui"],
@@ -506,6 +521,8 @@
     "lucide-react": ["lucide-react@1.49.0", "", { "peerDependencies": { "@types/react": "*", "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react"] }, "sha512-ApfaNM4/7jBrVopqLJ84Jz8TMQ1Q1JeZ1PmKh25aeS3E1FTVcMkSh1bEQB7dfzdIrwXRP8p3z4AJjTIHHb5IIA=="],
 
     "lucide-static": ["lucide-static@1.49.0", "", {}, "sha512-gSjtl7bR2v26oDInh2Wua1PrF2BRRXl9inhnLWcFfnRqRShmgZvlFRisPHqTfU7kxsuZU8ThNjAFotbInrzKow=="],
+
+    "marked": ["marked@18.0.14", "", { "bin": { "marked": "bin/marked.js" } }, "sha512-mBHK6FBHuBAlhgRe88w9F0O1AbwwXJUcQibUbC/QcdTbVGAD7aWza+xt3N6oT/jCZx3/OMeS+8rnuiHZcQ9s7A=="],
 
     "nanoid": ["nanoid@3.3.19", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-Y2tUNy4ouw6tq5oDSKeQYGOyhkUBhNOcGV/02KC+6kd9eDGqdZd++mjMiIDilrBYvjEnCYvVtsuHCuP+okSfug=="],
 

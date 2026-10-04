@@ -6,19 +6,25 @@
  *   New file ⌘N (file-plus) · Open… ⌘O (folder-open) · Open recent ▸ (history) · Save ⌘S (save)
  *   · Save as… ⇧⌘S (file-output) · ─ · Reveal in Finder (folder-search; desktop only) · Clean up
  *   assets… (brush-cleaning) · ─ · Settings… ⌘, (settings)
+ *   · ─ · Help ▸ (Windows / Linux / web; board 25 §7 (b) A0qRF: macOS has the native Help menu)
  *
  * Desktop (A1jsC) opens from the breadcrumb's file name, web (cPHVm) from the topbar file name:
  * the menu's top-left is the trigger's left edge, 12px below it. "Open recent" opens the
  * submenu (Aw9t8, width 232) on hover after 120 ms, overlapping the menu by 4px: recent files
  * (name · folder in mono meta), a divider, "Clear recent". Off macOS the shortcuts read
  * Ctrl+… / Shift+Ctrl+…, and Reveal reads "Show in Explorer" / "Show in folder".
+ *
+ * Help (A0qRF, without the macOS-only Search row): Kimo documentation · Keyboard shortcuts ⌘/ ·
+ * What's new · ─ · Report an issue… · Copy diagnostics · ─ · Show logs (desktop only); opens like
+ * Open recent (same delay, overlap and raise).
  */
 import type { FileRef, HostOS, RecentFile } from "@kimo/platform"
 import { basenameOf } from "@kimo/platform"
 import { MenuDense, MenuDivider, MenuItemDense } from "@kimo/ui"
-import { type KeyboardEvent, useEffect, useRef, useState } from "react"
+import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react"
 import { Icon } from "../lib/icons"
 import { revealLabel } from "../platform/contract"
+import { type HelpAction, helpItems } from "../settings/help"
 
 /** What the File menu runs. Absent actions hide their item. */
 export interface FileMenuActions {
@@ -32,6 +38,17 @@ export interface FileMenuActions {
   onCleanUpAssets(): void
   onSettings(): void
 }
+
+/** File › Help (board 25 §7 (b)): shown off macOS desktop, where the native Help menu has it. */
+export interface FileMenuHelp {
+  version: string
+  /** "Show logs" (desktop only). */
+  logs: boolean
+  run(action: HelpAction): void
+}
+
+/** Help submenu width (A0qRF). */
+export const HELP_MENU_WIDTH = 256
 
 /** Menu shortcut text per OS (board 20 note VJFSo: "Ctrl/Shift+Ctrl off macOS"). */
 export function menuShortcut(os: HostOS, key: string, shift = false): string {
@@ -61,15 +78,19 @@ export interface FileMenuProps extends FileMenuActions {
   recents: readonly RecentFile[] | null
   onClearRecent(): void
   onClose(): void
+  /** The Help submenu; absent (or on macOS desktop) hides it. */
+  help?: FileMenuHelp
 }
 
 export function FileMenu(props: FileMenuProps) {
   const { anchor, os, recents, onClose } = props
-  const [sub, setSub] = useState<HTMLElement | null>(null)
+  const [sub, setSub] = useState<{ kind: "recent" | "help"; el: HTMLElement } | null>(null)
   /** Opened from the keyboard (→ / Enter): the submenu takes focus. */
   const [subFocus, setSubFocus] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const recentItem = useRef<HTMLButtonElement>(null)
+  const helpItem = useRef<HTMLButtonElement>(null)
+  const help = props.help && os !== "macos" ? props.help : null
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current)
@@ -80,13 +101,13 @@ export function FileMenu(props: FileMenuProps) {
     if (timer.current) clearTimeout(timer.current)
     timer.current = null
   }
-  const openSub = (now = false, focus = false) => {
+  const openSub = (now = false, focus = false, kind: "recent" | "help" = "recent") => {
     clearTimer()
-    const el = recentItem.current
+    const el = (kind === "help" ? helpItem : recentItem).current
     if (!el) return
     setSubFocus(focus)
-    if (now) setSub(el)
-    else timer.current = setTimeout(() => setSub(el), SUBMENU_DELAY_MS)
+    if (now) setSub({ kind, el })
+    else timer.current = setTimeout(() => setSub({ kind, el }), SUBMENU_DELAY_MS)
   }
   const closeSub = () => {
     clearTimer()
@@ -101,7 +122,13 @@ export function FileMenu(props: FileMenuProps) {
     clearTimer()
     if (sub) timer.current = setTimeout(() => setSub(null), SUBMENU_DELAY_MS)
   }
-  const r = sub?.getBoundingClientRect()
+  const r = sub?.el.getBoundingClientRect()
+  const subAnchor = r && {
+    x: r.x,
+    y: r.y - SUBMENU_RAISE,
+    width: r.width + 4 /* menu padding */,
+    height: r.height,
+  }
   return (
     <MenuDense
       anchor={anchor}
@@ -132,10 +159,10 @@ export function FileMenu(props: FileMenuProps) {
         icon={<Icon name="history" size={14} />}
         label="Open recent"
         submenu
-        aria-expanded={sub !== null}
-        highlighted={sub !== null}
+        aria-expanded={sub?.kind === "recent"}
+        highlighted={sub?.kind === "recent"}
         onPointerEnter={() => openSub()}
-        onSelect={() => (sub ? closeSub() : openSub(true, true))}
+        onSelect={() => (sub?.kind === "recent" ? closeSub() : openSub(true, true))}
         onKeyDown={(e) => {
           if (e.key === "ArrowRight") {
             e.preventDefault()
@@ -180,14 +207,47 @@ export function FileMenu(props: FileMenuProps) {
         onPointerEnter={hoverOther}
         onSelect={run(props.onSettings)}
       />
-      {sub && r && (
-        <RecentSubmenu
-          anchor={{
-            x: r.x,
-            y: r.y - SUBMENU_RAISE,
-            width: r.width + 4 /* menu padding */,
-            height: r.height,
+      {help && (
+        <>
+          <MenuDivider />
+          <MenuItemDense
+            ref={helpItem}
+            icon={<Icon name="circle-help" size={14} />}
+            label="Help"
+            submenu
+            aria-expanded={sub?.kind === "help"}
+            highlighted={sub?.kind === "help"}
+            onPointerEnter={() => openSub(false, false, "help")}
+            onSelect={() => (sub?.kind === "help" ? closeSub() : openSub(true, true, "help"))}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") {
+                e.preventDefault()
+                openSub(true, true, "help")
+              }
+            }}
+          />
+        </>
+      )}
+      {sub?.kind === "help" && subAnchor && help && (
+        <HelpSubmenu
+          anchor={subAnchor}
+          os={os}
+          help={help}
+          autoFocus={subFocus}
+          onPointerEnter={clearTimer}
+          onRun={(a) => {
+            onClose()
+            help.run(a)
           }}
+          onBack={() => {
+            closeSub()
+            helpItem.current?.focus()
+          }}
+        />
+      )}
+      {sub?.kind === "recent" && subAnchor && (
+        <RecentSubmenu
+          anchor={subAnchor}
           recents={recents}
           autoFocus={subFocus}
           onPointerEnter={clearTimer}
@@ -258,6 +318,57 @@ function RecentSubmenu({
       {list.length === 0 && <MenuItemDense label="No recent files" disabled />}
       <MenuDivider />
       <MenuItemDense label="Clear recent" disabled={list.length === 0} onSelect={onClear} />
+    </MenuDense>
+  )
+}
+
+/** File › Help (A0qRF items; the macOS Search row is the system's, so it is not here). */
+function HelpSubmenu({
+  anchor,
+  os,
+  help,
+  autoFocus,
+  onPointerEnter,
+  onRun,
+  onBack,
+}: {
+  anchor: { x: number; y: number; width: number; height: number }
+  os: HostOS
+  help: FileMenuHelp
+  autoFocus: boolean
+  onPointerEnter(): void
+  onRun(action: HelpAction): void
+  onBack(): void
+}) {
+  return (
+    <MenuDense
+      anchor={anchor}
+      placement={{ side: "right", align: "start", offset: -SUBMENU_OVERLAP }}
+      width={HELP_MENU_WIDTH}
+      label="Help"
+      autoFocus={autoFocus}
+      className="file-menu__help"
+      data-testid="file-menu-help"
+      onPointerEnter={onPointerEnter}
+      onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "ArrowLeft" || e.key === "Escape") {
+          e.preventDefault()
+          e.stopPropagation()
+          onBack()
+        }
+      }}
+    >
+      {helpItems({ version: help.version, os, logs: help.logs }).map((it) => (
+        <Fragment key={it.id}>
+          {it.divider && <MenuDivider />}
+          <MenuItemDense
+            icon={<Icon name={it.icon} size={14} />}
+            label={it.label}
+            {...(it.id === "shortcuts" ? { meta: menuShortcut(os, "/") } : {})}
+            onSelect={() => onRun(it.id)}
+          />
+        </Fragment>
+      ))}
     </MenuDense>
   )
 }

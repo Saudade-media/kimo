@@ -13,7 +13,7 @@ export interface SvgRejectionItem {
   why: string
 }
 
-/** The vignette lists at most 5 reasons, then "+N more". */
+/** Board 25 §6 (c) rule fHWNq `MAX_REASON_ROWS = 5`: at most 5 reason rows, then "+N more". */
 export const SVG_REJECTION_MAX_ROWS = 5
 
 /** Props for {@link SvgRejectionDetails}. Remaining `<div>` props go to the frame. */
@@ -29,6 +29,11 @@ export interface SvgRejectionDetailsProps extends Omit<ComponentPropsWithRef<"di
 }
 
 /**
+ * Board 25 §6 (c) "SVG rejection · '+N more' · width" (J30Nk): the expanded toast is 360 px;
+ * past {@link SVG_REJECTION_MAX_ROWS} reasons a More row (fj8Nh: row, gap 8, padding [4, 12],
+ * center) shows Indent 24 × 1 · Count "+N more" sans 11 / 500 text-primary · Why "in the copied
+ * report" sans 11 text-tertiary, aligned to the code column.
+ *
  * Board 24 (j) "SVG rejection · details" (nx2kl › Toast · expanded wcrmf): the rejection toast
  * grown in place (no modal). Column, fill bg-overlay, stroke 1 border, radius-lg, shadow 0 8 24
  * shadow-strong, clip.
@@ -73,9 +78,11 @@ export function SvgRejectionDetails({
           </li>
         ))}
         {more > 0 && (
-          <li className="kimo-svg-rejection__reason kimo-svg-rejection__reason--more">
-            <span className="kimo-svg-rejection__line" />
-            <span className="kimo-svg-rejection__why">{`+${more} more`}</span>
+          // Board 25 §6 (c) More (fj8Nh): not a link — Copy report carries the full list.
+          <li className="kimo-svg-rejection__reason kimo-svg-rejection__more">
+            <span className="kimo-svg-rejection__indent" aria-hidden="true" />
+            <span className="kimo-svg-rejection__more-count">{`+${more} more`}</span>
+            <span className="kimo-svg-rejection__more-why">in the copied report</span>
           </li>
         )}
       </ul>

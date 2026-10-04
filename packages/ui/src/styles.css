@@ -116,3 +116,17 @@
 @import "./svg-rejection/SvgRejectionDetails.css";
 @import "./weight-warning/WeightWarning.css";
 @import "./conflict-more-menu/ConflictMoreMenu.css";
+@import "./canvas-context-menu/CanvasContextMenu.css";
+@import "./shortcuts-sheet/ShortcutsSheet.css";
+@import "./opentype-feature-row/OpenTypeFeatureRow.css";
+
+/* Board 25 v1 Polish: Code tab + Export dialog additions. */
+@import "./code-line/CodeLine.css";
+@import "./file-chip/FileChip.css";
+@import "./file-status-row/FileStatusRow.css";
+@import "./progress-track/ProgressTrack.css";
+@import "./diff-line/DiffLine.css";
+@import "./review-file-row/ReviewFileRow.css";
+@import "./notice-card/NoticeCard.css";
+@import "./icon-error-card/IconErrorCard.css";
+@import "./approval-card/ApprovalCard.css";

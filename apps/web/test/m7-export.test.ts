@@ -16,6 +16,7 @@ import {
   codeLines,
   crc32,
   DEFAULT_TOGGLES,
+  defaultZipName,
   describeExport,
   EXPORT_FORMATS,
   exportLabel,
@@ -23,11 +24,11 @@ import {
   footerNote,
   lineNumber,
   planWrite,
+  safeFileName,
   targetsOf,
   tokenizeLine,
   writePlan,
   zipFiles,
-  zipNameOf,
 } from "../src/export/model"
 
 const FIXTURE = join(
@@ -46,8 +47,9 @@ describe("board 07 copy and formats", () => {
     expect(EXPORT_FORMATS.map((f) => [f.icon, f.title, f.sub])).toEqual([
       ["atom", "React + Tailwind", "TSX · Tailwind v4"],
       ["code-xml", "HTML + CSS", "Static markup, CSS variables"],
-      ["braces", "Design tokens", "CSS vars · W3C JSON"],
-      ["image", "SVG / PNG", "Assets at 1×, 2×, 3×"],
+      ["braces", "Design tokens", "W3C DTCG JSON + CSS"],
+      ["image", "SVG / PNG", "Vector or raster per frame"],
+      ["file-text", "PDF", "Vector · one page per frame"],
     ])
     expect(DEFAULT_TOGGLES).toEqual({ variables: true, components: true, layerNames: false })
   })
@@ -55,18 +57,24 @@ describe("board 07 copy and formats", () => {
     expect(describeExport("Hero", { frames: 1, layers: 12, variables: 4 })).toBe(
       "Hero · 1 frame · 12 layers · 4 variables",
     )
-    expect(footerNote(3, true, "x.zip")).toBe(
+    expect(footerNote(3, false)).toBe("3 files")
+    expect(footerNote(3, true)).toBe(
       "3 files · existing files are diffed, never overwritten silently",
     )
     expect(exportLabel(3)).toBe("Export 3 files")
     expect(exportLabel(1)).toBe("Export 1 file")
-    expect(zipNameOf("Marketing site")).toBe("Marketing site.zip")
+    expect(safeFileName("Marketing site", "zip")).toBe("Marketing site.zip")
+    expect(safeFileName("a/b.zip", "zip")).toBe("a-b.zip")
+    expect(defaultZipName("Hero")).toBe("kimo-export-hero.zip")
+    expect(defaultZipName("Home — Desktop")).toBe("kimo-export-home-desktop.zip")
   })
   test("targets per format", () => {
     expect(targetsOf("react").text).toEqual(["react-tailwind"])
     expect(targetsOf("html").text).toEqual(["html-css"])
     expect(targetsOf("tokens").text).toEqual(["tokens-css", "tokens-dtcg"])
-    expect(targetsOf("assets")).toEqual({ text: ["svg"], png: true })
+    expect(targetsOf("assets")).toEqual({ text: ["svg"], png: false, pdf: false })
+    expect(targetsOf("assets", "png")).toEqual({ text: [], png: true, pdf: false })
+    expect(targetsOf("pdf")).toEqual({ text: [], png: false, pdf: true })
   })
 })
 
@@ -144,10 +152,15 @@ describe("generation through @kimo/exporters", () => {
     const html = (g: typeof on) => g.files.find((f) => f.path === "index.html")?.contents as string
     expect(html(on)).not.toBe(html(off))
   })
-  test("assets: SVG needs the renderer, PNGs are counted per scale", async () => {
+  test("assets: SVG needs the renderer; PNG is one file per frame at the chosen scale", async () => {
     const g = await generateExport(source, "assets", DEFAULT_TOGGLES)
-    expect(g.count).toBe(g.files.length + g.summary.frames * 3)
     expect(g.errors.length).toBeGreaterThan(0)
+    const png = await generateExport(source, "assets", DEFAULT_TOGGLES, { image: "png", scale: 3 })
+    expect(png.files).toEqual([])
+    expect(png.count).toBe(png.summary.frames)
+    const pdf = await generateExport(source, "pdf", DEFAULT_TOGGLES)
+    expect(pdf.count).toBe(1)
+    expect(pdf.roots.length).toBe(pdf.summary.frames)
   })
   test("selection narrows the export", async () => {
     const all = await generateExport(source, "html", DEFAULT_TOGGLES)
@@ -222,9 +235,10 @@ describe("web: zip", () => {
 
 describe("dialog render", () => {
   test("structure and copy (before the first generation)", () => {
+    const desktop = { ...createMemoryPlatform(), kind: "desktop" as const }
     const html = renderToString(
       h(ExportDialog, {
-        platform: createMemoryPlatform(),
+        platform: desktop,
         source,
         fileRef: "/Users/me/loom/site.kimo",
         onClose: () => {},
@@ -237,6 +251,7 @@ describe("dialog render", () => {
       "HTML + CSS",
       "Design tokens",
       "SVG / PNG",
+      "PDF",
       "Options",
       "Variables as CSS custom properties",
       "Split instances into components",
@@ -245,5 +260,40 @@ describe("dialog render", () => {
       "Export 0 files",
     ])
       expect(html).toContain(s)
+  })
+  test("board 25: web footer and untitled desktop file", () => {
+    const web = renderToString(
+      h(ExportDialog, { platform: createMemoryPlatform(), source, onClose: () => {} }),
+    )
+    for (const s of ["Download as", "kimo-export-layout-matrix.zip", "Download .zip", "0 files"])
+      expect(web).toContain(s)
+    expect(web).not.toContain("Output folder")
+    const untitled = renderToString(
+      h(ExportDialog, {
+        platform: { ...createMemoryPlatform(), kind: "desktop" as const },
+        source,
+        fileRef: null,
+        onClose: () => {},
+      }),
+    )
+    for (const s of [
+      "Output folder",
+      "No folder chosen",
+      "Choose…",
+      "not saved yet",
+      "export-submit--blocked",
+    ])
+      expect(untitled).toContain(s)
+  })
+  test("preset: format from the Code tab", () => {
+    const html = renderToString(
+      h(ExportDialog, {
+        platform: createMemoryPlatform(),
+        source,
+        preset: { format: "tokens", ids: [] },
+        onClose: () => {},
+      }),
+    )
+    expect(html).toMatch(/aria-checked="true" data-format="tokens"/)
   })
 })

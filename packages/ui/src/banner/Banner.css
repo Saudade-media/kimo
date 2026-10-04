@@ -31,6 +31,11 @@
   background: var(--kimo-danger-soft);
 }
 
+/* Board 25 §6 (e) tzFIU: "Ready to commit" keeps the board 18 look on success-soft. */
+.kimo-banner--success {
+  background: var(--kimo-success-soft);
+}
+
 .kimo-banner__icon {
   display: inline-flex;
   flex: none;
@@ -45,6 +50,10 @@
 
 .kimo-banner--danger .kimo-banner__icon {
   color: var(--kimo-danger);
+}
+
+.kimo-banner--success .kimo-banner__icon {
+  color: var(--kimo-success);
 }
 
 .kimo-banner__icon > svg {
@@ -105,4 +114,10 @@
 
 .kimo-icon-button.kimo-banner__dismiss {
   flex: none;
+}
+
+/* Board 25 §6 (e) LsjRG Primary Action "Copied": icon `check` 14 (gap 6, on-accent). */
+.kimo-banner__action .kimo-button__icon {
+  width: 14px;
+  height: 14px;
 }

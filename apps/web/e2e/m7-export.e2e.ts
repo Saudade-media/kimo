@@ -23,7 +23,11 @@ async function harnessUrl(ctx: E2EContext): Promise<string> {
     base: "./",
     logLevel: "error",
     plugins: [react()],
-    build: { outDir: join(here, ".dist", "m7-export"), emptyOutDir: true, target: "es2022" },
+    build: {
+      outDir: join(process.env.KIMO_E2E_OUTDIR ?? join(here, ".dist"), "m7-export"),
+      emptyOutDir: true,
+      target: "es2022",
+    },
   }).then(() => "m7-export/index.html")
   return `${ctx.url}${await built}`
 }
@@ -213,7 +217,8 @@ export const scenarios: Scenario[] = [
       })
       const c = checker(ctx, "Export dialog (AsO2h, light, 1440 × 900)")
       c.box("Scrim WWuf4", m.scrim, { w: 1440, h: 900, bg: "rgba(10, 10, 10, 0.3)" })
-      c.box("Dialog m2Oi5", m.dialog, { w: 880, h: 597, radius: 32, bg: t["--kimo-bg-app"] })
+      // Board 25 (O3Abm) adds the PDF row D7dje (52 + gap 6) to board 07's 597.
+      c.box("Dialog m2Oi5", m.dialog, { w: 880, h: 655, radius: 32, bg: t["--kimo-bg-app"] })
       c.box("Header r6NKt7", m.header, { w: 880, h: 84, gap: 12, pad: "24 24 16 28" })
       c.box("Titles uVedp", m.titles, { w: 784, h: 44, gap: 4, dir: "column" })
       c.box("Title TTr17", m.title, {
@@ -225,9 +230,9 @@ export const scenarios: Scenario[] = [
       })
       c.box("Desc OBcKu", m.desc, { fs: 13, color: t["--kimo-text-secondary"] })
       c.box("Close Ax7lX", m.close, { w: 32, h: 32, radius: 999, bg: t["--kimo-bg-muted"] })
-      c.box("Body xu5Kq", m.body, { w: 880, h: 437, gap: 20, pad: "0 24 0 24" })
-      c.box("Options P50z4", m.options, { w: 264, h: 437, gap: 20, pad: "4 0 0 4" })
-      c.box("Format sKgSl", m.format, { w: 260, h: 247, gap: 6 })
+      c.box("Body xu5Kq", m.body, { w: 880, h: 495, gap: 20, pad: "0 24 0 24" })
+      c.box("Options P50z4", m.options, { w: 264, h: 495, gap: 20, pad: "4 0 0 4" })
+      c.box("Format sKgSl", m.format, { w: 260, h: 305, gap: 6 })
       c.box("Format Label T4qdI", m.formatLabel, {
         fs: 12,
         fw: "500",
@@ -350,8 +355,21 @@ export const scenarios: Scenario[] = [
         before,
       )
 
-      // Export: tokens.css already exists with other contents → kept, never overwritten.
+      // Export: tokens.css already exists with other contents → the review step (board 25
+      // P8d2o); a file Kimo never wrote defaults to Keep, "Write 2 files" writes the new ones.
       await page.locator(".export-submit").click()
+      await page.locator(".export-review").waitFor()
+      expect(
+        (await page
+          .locator('.kimo-review-row[data-file="tokens.css"] [aria-checked="true"]')
+          .getAttribute("data-value")) === "keep",
+        "hand-edited tokens.css defaults to Keep",
+      )
+      expect(
+        (await page.locator(".export-write").textContent()) === "Write 2 files",
+        "Write 2 files",
+      )
+      await page.locator(".export-write").click()
       await page.waitForFunction(() => (window as unknown as Win).__export.outcomes.length === 1)
       const outcome = await page.evaluate(() => (window as unknown as Win).__export.outcomes[0])
       ctx.log(`export outcome: ${JSON.stringify(outcome)}`)
@@ -375,6 +393,8 @@ export const scenarios: Scenario[] = [
       await page.evaluate(() => (window as unknown as Win).__export.open())
       await page.locator(".export-tab").first().waitFor()
       await page.locator(".export-submit").click()
+      // tokens.css still differs: the review step again (Keep), nothing else to write.
+      await page.locator(".export-write").click()
       await page.waitForFunction(() => (window as unknown as Win).__export.outcomes.length === 2)
       const again = await page.evaluate(() => (window as unknown as Win).__export.outcomes[1])
       expect(
@@ -390,7 +410,12 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await open(ctx, "platform=web")
-      expect((await page.locator(".export-group--path").count()) === 0, "no output folder on web")
+      // Board 25 (d): "Output folder" becomes "Download as" on web.
+      expect(
+        (await page.locator(".export-group--download").count()) === 1 &&
+          (await page.locator(".export-folder").count()) === 0,
+        "Download as instead of an output folder on web",
+      )
       const m = await measure(page, { dialog: ".export-dialog", body: ".export-body" })
       const c = checker(ctx, "Export dialog (web)")
       c.box("Dialog m2Oi5", m.dialog, { w: 880 })
@@ -402,7 +427,10 @@ export const scenarios: Scenario[] = [
       await page.locator(".export-submit").click()
       await page.waitForFunction(() => (window as unknown as Win).__export.downloads.length === 1)
       const d = await page.evaluate(() => (window as unknown as Win).__export.downloads[0])
-      expect(d?.name === "Layout matrix.zip" && d.size > 100, `zip download (${JSON.stringify(d)})`)
+      expect(
+        d?.name === "kimo-export-matrix.zip" && d.size > 100,
+        `zip download (${JSON.stringify(d)})`,
+      )
     },
   },
 ]

@@ -1,0 +1,19 @@
+/*
+ * "Set as target" pick mode (board 25 rule wabqA / GKMcf): crosshair cursor over the canvas,
+ * the frame under the pointer outlined in $agent at the canvas hover width (1.5, renderer
+ * OVERLAY_SPEC hoverWidth / connector width).
+ */
+.editor__canvas--picking,
+.editor__canvas--picking * {
+  /* biome-ignore lint/complexity/noImportantStyles: the canvas sets its cursor inline per tool */
+  cursor: crosshair !important;
+}
+
+.editor__pick-outline {
+  position: absolute;
+  box-sizing: border-box;
+  /* box-shadow, not border: Chromium floors a 1.5px border to 1 device px at DPR 1. */
+  box-shadow: inset 0 0 0 1.5px var(--kimo-agent);
+  pointer-events: none;
+  z-index: 5;
+}

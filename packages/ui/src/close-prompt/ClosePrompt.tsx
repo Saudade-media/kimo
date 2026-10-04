@@ -1,6 +1,7 @@
 import { FileQuestionMark } from "lucide-react"
 import { type ComponentPropsWithRef, useId, useRef } from "react"
 import { Button } from "../button/Button"
+import { middleTruncate } from "../file-row/middle-truncate"
 import { cx, mergeRefs } from "../internal/util"
 import { useFocusTrap } from "../popover/usePopover"
 
@@ -20,6 +21,17 @@ export interface ClosePromptProps extends Omit<ComponentPropsWithRef<"div">, "ti
   inline?: boolean
 }
 
+/**
+ * Board 25 §6 (a) AyYDq: the title stays on one line at 400 px up to ~28-character file names;
+ * longer names truncate in the middle ("Brand explo…ation 3"), keeping the start and the end
+ * (where the distinguishing number usually is).
+ */
+export const CLOSE_PROMPT_MAX_NAME = 28
+
+/** The file name as the title shows it ({@link CLOSE_PROMPT_MAX_NAME} characters at most). */
+export const closePromptName = (fileName: string): string =>
+  middleTruncate(fileName, CLOSE_PROMPT_MAX_NAME, (t) => [...t].length)
+
 /** "its 12 frames" / "its 1 frame" / "its contents" (no frames). */
 export function closePromptLoss(frames: number): string {
   if (frames <= 0) return "its contents are"
@@ -27,6 +39,9 @@ export function closePromptLoss(frames: number): string {
 }
 
 /**
+ * Board 25 §6 (a) AyYDq: a quick confirm, 400 px (`DIALOG_WIDTH.sm`); one-line title with
+ * the file name middle-truncated past {@link CLOSE_PROMPT_MAX_NAME} characters.
+ *
  * Board 24 (i) "Untitled file · close prompt" (a3Y0Fb › Dialog · Close untitled n7Xrg): column,
  * gap 14, padding 20, bg-overlay, stroke 1 border, radius-xl, shadow 0 16 48 shadow-strong.
  *   Head (cjNpC) row, gap 12: Icon Wrap (J3qcm) 32 pill bg-muted › `file-question-mark` 16
@@ -79,8 +94,12 @@ export function ClosePrompt({
           <FileQuestionMark />
         </span>
         <div className="kimo-close-prompt__text">
-          <h2 id={titleId} className="kimo-close-prompt__title">
-            {`Save “${fileName}” before closing?`}
+          <h2
+            id={titleId}
+            className="kimo-close-prompt__title"
+            title={[...fileName].length > CLOSE_PROMPT_MAX_NAME ? fileName : undefined}
+          >
+            {`Save “${closePromptName(fileName)}” before closing?`}
           </h2>
           <p id={descId} className="kimo-close-prompt__desc">
             {`This file has never been saved. If you don't save, ${closePromptLoss(frames)} gone for good.`}

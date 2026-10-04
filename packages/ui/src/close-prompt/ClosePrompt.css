@@ -13,8 +13,9 @@
  *       ├ Spacer (pibrT) fill × 1
  *       ├ Cancel (JCqPk) Button/Ghost h 28, padding [0, 10], label 12 / 500
  *       └ Save… (nUfbg) Button/Primary h 28, padding [0, 10], label 12 / 500
- * The vignette draws it fill_container in a 381 stage (349); the modal width is not specified,
- * 400 here (flagged).
+ * Width: board 25 §6 (a) AyYDq decides 400 px (quick confirm, `dialog.size = 'sm'`); the
+ * title (Dvraw) stays on one line — names past 28 characters are middle-truncated in JS, and
+ * the CSS ellipsis is only a backstop for very wide glyphs.
  */
 .kimo-close-prompt {
   box-sizing: border-box;
@@ -76,6 +77,9 @@
   font-size: var(--kimo-text-base);
   font-weight: var(--kimo-font-weight-semibold);
   line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kimo-close-prompt__desc {
   color: var(--kimo-text-secondary);

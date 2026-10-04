@@ -84,8 +84,9 @@ describe("createTauriPlatform", () => {
       trafficLights: true,
       settingsWindow: true,
     })
-    // All nine events have a listener.
-    expect(t.listeners.size).toBe(9)
+    // All ten events have a listener.
+    expect(t.listeners.size).toBe(10)
+    expect(p.arch).toBe("aarch64")
     p.dispose()
     expect([...t.listeners.values()].every((s) => s.size === 0)).toBe(true)
   })
@@ -240,6 +241,15 @@ describe("createTauriPlatform", () => {
     p.launch.onOpenRequest((r) => opened.push(r))
     t.emit("kimo://open-request", { source: "deep-link", refs: ["/a.kimo"], node: "Abc123xyz9" })
     expect(opened).toEqual([{ source: "deep-link", refs: ["/a.kimo"], node: "Abc123xyz9" }])
+
+    // Board 25 §7 (b): native Help items reach the focused editor; logs are revealed in Rust.
+    const help: unknown[] = []
+    p.help?.onMenu((a) => help.push(a))
+    t.emit("kimo://help-menu", { action: "shortcuts" })
+    t.emit("kimo://help-menu", { action: "report-issue" })
+    expect(help).toEqual(["shortcuts", "report-issue"])
+    await p.help?.showLogs()
+    expect(t.last("kimo_help_show_logs")).toEqual({})
     p.dispose()
   })
 

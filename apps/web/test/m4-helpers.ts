@@ -5,7 +5,13 @@
  */
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { type KimoDocument, parse, serialize, type ThreeWayMerge } from "@kimo/core-schema"
+import {
+  type KimoDocument,
+  MIGRATIONS,
+  parse,
+  serialize,
+  type ThreeWayMerge,
+} from "@kimo/core-schema"
 import { createEmptyDocument, type DocStore } from "@kimo/editor-state"
 import { createMemoryPlatform, type MemoryPlatform } from "@kimo/platform/memory"
 import { createSessionManager, type FileSessionManager } from "../src/platform/session"
@@ -40,12 +46,12 @@ export function addNode(text: string, id: string): string {
   return serialize(d)
 }
 
+/** A format 0.1 file: opening it runs the real 0.1 → 1.0 migration (consent flow). */
 export const OLD_FORMAT = docText("Checkout")
-  .replace('"format": "0.1.0"', '"format": "0.0.3"')
-  .replace("kimo-0.1.json", "kimo-0.0.json")
-export const migrations = [
-  { from: "0.0", to: "0.1", description: "test step", migrate: (d: unknown) => d },
-] as never
+  .replace('"format": "1.0.0"', '"format": "0.1.0"')
+  .replace("kimo-1.0.json", "kimo-0.1.json")
+/** The shipped migration registry (explicit so the tests say which chain they exercise). */
+export const migrations = MIGRATIONS
 
 /** Inserts a rect as the user. */
 export function edit(store: DocStore, id: string): void {

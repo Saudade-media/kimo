@@ -112,7 +112,7 @@ describe("stored conflicts: format", () => {
 
   test("header conflicts may only address meta/themes/imports/assets/components", () => {
     const d = attachConflicts(doc({}), {
-      CfHdr00001: { kind: "header", path: "/format", ours: "0.1.0", applied: "ours" },
+      CfHdr00001: { kind: "header", path: "/format", ours: "1.0.0", applied: "ours" },
     } as Loose)
     expect(codes(validate(d).errors)).toContain("CONFLICT_PATH_INVALID")
   })

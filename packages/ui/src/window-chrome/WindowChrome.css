@@ -175,7 +175,7 @@
   user-select: none;
 }
 
-/* Board 20 Topbar · Windows/Linux (N1mtd): padding [0, 12], the k logo instead of the lights. */
+/* Board 20 Topbar · Windows/Linux (N1mtd): padding [0, 12], the KimoLogo instead of the lights. */
 .kimo-desktop-topbar--native {
   padding: 0 12px;
 }

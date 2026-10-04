@@ -20,8 +20,8 @@ const RUNS = Number(process.env.KIMO_PROPERTY_RUNS ?? 100)
 
 const base = (): KimoDocument =>
   ({
-    $schema: "https://kimo.design/schema/kimo-0.1.json",
-    format: "0.1.0",
+    $schema: "https://kimo.design/schema/kimo-1.0.json",
+    format: "1.0.0",
     themes: { density: ["comfortable", "compact"], mode: ["light", "dark"] },
     variables: {
       ink: { type: "color", value: "#111111" },

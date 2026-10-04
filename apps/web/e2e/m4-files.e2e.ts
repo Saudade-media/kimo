@@ -304,16 +304,16 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "m4-files: migration consent (Esc = read-only, Upgrade and save writes 0.1)",
+    name: "m4-files: migration consent (Esc = read-only, Upgrade and save writes 1.0)",
     async run(ctx) {
       const { page } = ctx
       const legacy = `${ROOT}/legacy.kimo`
       await load(page)
       await open(page, legacy)
-      const dialog = page.getByRole("dialog", { name: /^Upgrade legacy\.kimo to format 0\.1\?$/ })
+      const dialog = page.getByRole("dialog", { name: /^Upgrade legacy\.kimo to format 1\.0\?$/ })
       await dialog.waitFor()
-      expect((await text(page, ".kimo-files-migration__format-from")) === '"0.0"', "from")
-      expect((await text(page, ".kimo-files-migration__format-to")) === '"0.1"', "to")
+      expect((await text(page, ".kimo-files-migration__format-from")) === '"0.1"', "from")
+      expect((await text(page, ".kimo-files-migration__format-to")) === '"1.0"', "to")
       expect(
         (await text(page, ".kimo-dialog__footnote")) === "⌘S also counts as consent",
         "footnote",
@@ -323,7 +323,7 @@ export const scenarios: Scenario[] = [
       await page.getByRole("button", { name: "Upgrade and save" }).click()
       await page.waitForFunction(() => !document.querySelector(".kimo-files-migration"))
       const disk = await page.evaluate((f) => window.__kimoFiles.control.readFile(f), legacy)
-      expect(disk?.includes('"format": "0.1.0"') && disk.includes("Pending001"), "upgraded on disk")
+      expect(disk?.includes('"format": "1.0.0"') && disk.includes("Pending001"), "upgraded on disk")
       await waitText(page, ".kimo-save-status__label", "Saved to disk")
       // A fresh window, Escape: read-only, never written.
       await load(page)

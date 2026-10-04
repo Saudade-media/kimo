@@ -25,7 +25,13 @@ import {
   type IconPickerRequest,
 } from "../canvas/contract"
 import { CanvasConflictOverlay, useNextConflictShortcut } from "../conflicts"
-import { ExportDialog, type ExportPreset, type ExportSource, exportToastOf } from "../export"
+import {
+  ExportDialog,
+  type ExportPreset,
+  type ExportSource,
+  exportToastOf,
+  pdfFontsFrom,
+} from "../export"
 import { BannerHost, FailedLoadView, MigrationDialog, ToastHost, useWebTabTitle } from "../files"
 import { createFontSystem, loadDocumentFontFaces, MissingFontsHost } from "../fonts"
 import * as assetsModule from "../lib/assets"
@@ -283,6 +289,11 @@ function EditorShell({
       renderer: () => canvas.current?.renderer ?? null,
       layout: () => canvas.current?.layout() ?? null,
       icons,
+      // PDF "Embed fonts": the faces the canvas renders with.
+      fonts: pdfFontsFrom(() => {
+        const fonts = canvas.current?.renderer?.fonts
+        return fonts?.faceBytes ? (f, w, s) => fonts.faceBytes?.(f, w, s) ?? null : null
+      }),
     }),
     [doc, name, session, m3, icons],
   )

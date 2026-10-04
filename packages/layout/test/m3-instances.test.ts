@@ -494,7 +494,7 @@ describe("M3 effective themes through instances (§10.4, multi-axis)", () => {
 
   test("library content: bindings and pins are namespaced (alias:name)", async () => {
     const lib = {
-      format: "0.1.0",
+      format: "1.0.0",
       themes: { size: ["md", "lg"] },
       variables: {
         gap: { type: "number", value: [{ value: 3 }, { value: 9, when: { size: "lg" } }] },

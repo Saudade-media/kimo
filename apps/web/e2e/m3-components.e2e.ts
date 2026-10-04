@@ -461,7 +461,7 @@ async function variables({ page, url }: E2EContext) {
 async function libraries({ page, url }: E2EContext) {
   await openEditor(page, url)
   const lib = {
-    format: "0.1.0",
+    format: "1.0.0",
     meta: { name: "Kimo UI" },
     nodes: {
       button01: {

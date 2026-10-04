@@ -12,7 +12,7 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | `REVISION_CONFLICT` | `baseRevision` is behind (`detail.current`, `detail.changed`) | Re-query the changed nodes, rebuild the ops, retry with the new revision |
 | `NODE_NOT_FOUND` | An id or `@key` does not exist (`nodeId`, `path` = op index) | Check the id. A `@key` only works within the call that created it |
 | `NODE_EXISTS` | An insert reused an existing id | Let Kimo mint ids. Use `key` |
-| `INVALID_PROPERTY` | A field is unknown for the node type or has a bad value | Compare with `schema` / `kimo://schema/0.1` |
+| `INVALID_PROPERTY` | A field is unknown for the node type or has a bad value | Compare with `schema` / `kimo://schema/1.0` |
 | `INVALID_INPUT` | The tool input failed its schema (`path` points at it) | Fix the named field. Check spelling and types, and remember no `null` |
 | `SCHEMA_VIOLATION` | The resulting document would be invalid (`detail` has the validator issue) | Read the issue code (e.g. `FEATURE_NOT_DECLARED`, `VARIABLE_MISSING`, `INSTANCE_VISUAL_FIELD`) and change the op |
 | `INSTANCE_STRUCTURE` | Tried to add/delete/move children inside an instance | Use `set_override` (`visible:false`, `slot`, `replace`), or `detach` |

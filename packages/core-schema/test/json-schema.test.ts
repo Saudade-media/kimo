@@ -6,7 +6,7 @@ import { buildJsonSchema, SCHEMA_ID } from "../src/index"
 import { FIXTURES } from "./helpers"
 
 const file = JSON.parse(
-  readFileSync(join(FIXTURES, "..", "schema", "kimo-0.1.schema.json"), "utf8"),
+  readFileSync(join(FIXTURES, "..", "schema", "kimo-1.0.schema.json"), "utf8"),
 )
 
 describe("generated JSON Schema", () => {
@@ -27,7 +27,7 @@ describe("generated JSON Schema", () => {
   })
   test("compiles with a standard JSON Schema compiler", () => {
     const v = Schema.Compile(file)
-    expect(v.Check({ $schema: SCHEMA_ID, format: "0.1.0", nodes: {} })).toBe(true)
-    expect(v.Check({ $schema: SCHEMA_ID, format: "0.1.0" })).toBe(false)
+    expect(v.Check({ $schema: SCHEMA_ID, format: "1.0.0", nodes: {} })).toBe(true)
+    expect(v.Check({ $schema: SCHEMA_ID, format: "1.0.0" })).toBe(false)
   })
 })

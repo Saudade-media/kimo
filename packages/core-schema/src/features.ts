@@ -3,7 +3,7 @@
  * construct it uses. A reader that does not know a listed feature opens the file read-only.
  */
 
-/** Every feature defined by format 0.1, with the construct it unlocks. */
+/** Every feature defined by format 1.0, with the construct it unlocks. */
 export const FEATURES = {
   "layout/wrap": "Frame `layout.wrap` and `layout.crossGap`.",
   "layout/stretch-baseline": 'Frame `layout.align` values "stretch" and "baseline".',
@@ -19,7 +19,7 @@ export const FEATURES = {
     "Stored merge conflicts: root `conflicts` table and `merge` labels (written by `kimo merge`).",
 } as const
 
-/** A feature flag known to format 0.1. */
+/** A feature flag known to format 1.0. */
 export type Feature = keyof typeof FEATURES
 
 /** All known feature flags, sorted. */

@@ -3,7 +3,8 @@
 | Document | What it is |
 |---|---|
 | [teardown.md](teardown.md) | The pen.dev teardown and the Kimo plan: principles (8), architecture (9), `.kimo` format draft (10), MCP tool set (11), roadmap (12), risks (13). **The plan of record.** |
-| [spec/kimo-format-v0.1.md](spec/kimo-format-v0.1.md) | `.kimo` file format specification, v0.1 draft (normative types live in `@kimo/core-schema`) |
+| [spec/kimo-format-1.0.md](spec/kimo-format-1.0.md) | `.kimo` file format specification 1.0, stable (normative types live in `@kimo/core-schema`) |
+| [spec/kimo-format-v0.1.md](spec/kimo-format-v0.1.md) | The v0.1 draft, superseded by 1.0 and kept as a historical record |
 | [adr/](adr/README.md) | Architecture decision records, with the ADR process and template |
 | [scope-checklist.md](scope-checklist.md) | Every feature from teardown section 3 as a checkbox, tagged with its milestone |
 | [agents/](agents/index.md) | The MIT agent guides for coding agents (the same text `kimo_read_docs` serves): the `.kimo` model, `kimo_apply_ops` cookbook, layout, text, components, tokens, results and verification, error codes, web/mobile/tables/export workflows |

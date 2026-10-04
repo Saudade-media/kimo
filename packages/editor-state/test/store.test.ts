@@ -50,7 +50,7 @@ describe("import / export", () => {
   })
 
   test("newer formats are refused for editing", () => {
-    const newer = { ...createEmptyDocument(), format: "0.2.0" } as KimoDocument
+    const newer = { ...createEmptyDocument(), format: "1.1.0" } as KimoDocument
     expect(() => importDocument(newer)).toThrow(/FORMAT_NEWER/)
   })
 

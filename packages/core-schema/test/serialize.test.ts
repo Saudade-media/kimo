@@ -32,8 +32,8 @@ describe("canonical layout (10.2 rules 1–2)", () => {
 
   test("header members one per line, in canonical order, nodes last", () => {
     expect(lines.slice(1, 5)).toEqual([
-      `"$schema": "https://kimo.design/schema/kimo-0.1.json",`,
-      `"format": "0.1.0",`,
+      `"$schema": "https://kimo.design/schema/kimo-1.0.json",`,
+      `"format": "1.0.0",`,
       `"meta": {"name":"x"},`,
       `"variables": {`,
     ])
@@ -55,7 +55,7 @@ describe("canonical layout (10.2 rules 1–2)", () => {
 
   test("empty tables stay on one line", () => {
     expect(serialize(doc({}))).toBe(
-      `{\n"$schema": "https://kimo.design/schema/kimo-0.1.json",\n"format": "0.1.0",\n"nodes": {}\n}\n`,
+      `{\n"$schema": "https://kimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"nodes": {}\n}\n`,
     )
   })
 })
@@ -153,11 +153,11 @@ describe("canonical key order", () => {
       nodes: {},
       zz: 1,
       aa: [1],
-      format: "0.1.0",
-      $schema: "https://kimo.design/schema/kimo-0.1.json",
+      format: "1.0.0",
+      $schema: "https://kimo.design/schema/kimo-1.0.json",
     })
     expect(out).toBe(
-      `{\n"$schema": "https://kimo.design/schema/kimo-0.1.json",\n"format": "0.1.0",\n"aa": [1],\n"zz": 1,\n"nodes": {}\n}\n`,
+      `{\n"$schema": "https://kimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"aa": [1],\n"zz": 1,\n"nodes": {}\n}\n`,
     )
   })
 
@@ -167,11 +167,11 @@ describe("canonical key order", () => {
       zzz: 1,
       description: { b: 1, a: 2 },
       name: "x",
-      format: "0.1.0",
-      $schema: "https://kimo.design/schema/kimo-0.1.json",
+      format: "1.0.0",
+      $schema: "https://kimo.design/schema/kimo-1.0.json",
     })
     expect(out).toBe(
-      `{\n"$schema": "https://kimo.design/schema/kimo-0.1.json",\n"format": "0.1.0",\n"description": {"a":2,"b":1},\n"name": "x",\n"zzz": 1,\n"nodes": {}\n}\n`,
+      `{\n"$schema": "https://kimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"description": {"a":2,"b":1},\n"name": "x",\n"zzz": 1,\n"nodes": {}\n}\n`,
     )
   })
 
@@ -258,7 +258,7 @@ describe("parse", () => {
   })
   test("keeps __proto__ as data", () => {
     const d = parse(
-      `{"format":"0.1.0","nodes":{},"__proto__":{"polluted":true}}`,
+      `{"format":"1.0.0","nodes":{},"__proto__":{"polluted":true}}`,
     ) as unknown as Record<string, unknown>
     expect(Object.hasOwn(d, "__proto__")).toBe(true)
     expect(({} as Record<string, unknown>).polluted).toBeUndefined()

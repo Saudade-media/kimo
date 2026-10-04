@@ -5,7 +5,7 @@
  * - {@link RelayTransport}: an SDK `Transport` over relayed lines (the desktop host gets each
  *   socket line as `kimo://mcp-in` and answers with `kimo_mcp_send`);
  * - {@link createConnectionServer}: one `McpServer` per connection (tools from the registry,
- *   prompts, and the resources `kimo://schema/0.1`, `kimo://docs/{path}`, `kimo://doc/{docId}`,
+ *   prompts, and the resources `kimo://schema/1.0`, `kimo://docs/{path}`, `kimo://doc/{docId}`,
  *   `kimo://doc/{docId}/node/{id}`, `kimo://doc/{docId}/variables`);
  * - `WebStandardStreamableHTTPServerTransport` re-exported for the relayed HTTP endpoint.
  */
@@ -94,7 +94,7 @@ export function registerKimoResources(server: McpServer, conn: McpConnection): v
     (await conn.call(tool, input)).result
   server.registerResource(
     "kimo-schema",
-    "kimo://schema/0.1",
+    "kimo://schema/1.0",
     { title: ".kimo JSON Schema", mimeType: "application/schema+json" },
     async (uri) => ({
       contents: [{ uri: uri.href, mimeType: "application/schema+json", text: jsonSchemaText() }],

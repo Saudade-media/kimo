@@ -1,6 +1,6 @@
 {
   "name": "@kimo/sync",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "DocStore persistence/sync providers (local now, network later)",
   "license": "MIT",

@@ -1,5 +1,5 @@
 {
 "$schema": "https://kimo.design/schema/kimo-0.2.json",
-"format": "0.1.0",
+"format": "1.0.0",
 "nodes": {}
 }

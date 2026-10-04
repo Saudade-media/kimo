@@ -214,7 +214,7 @@ export const TextNode = Strict({
   style: opt(TextStyle),
 })
 
-/** Icon sets every v0.1 reader knows; other values are allowed and render as missing. */
+/** Icon sets every 1.x reader knows; other values are allowed and render as missing. */
 export const ICON_SETS = [
   "lucide",
   "feather",
@@ -351,7 +351,7 @@ export const NODE_SCHEMAS = {
   browser: BrowserNode,
 } as const satisfies Record<string, TSchema>
 
-/** A node type defined by format 0.1. */
+/** A node type defined by format 1.0. */
 export type NodeType = keyof typeof NODE_SCHEMAS
 export const NODE_TYPES = Object.keys(NODE_SCHEMAS) as NodeType[]
 
@@ -407,7 +407,7 @@ export const VISUAL_KEYS: ReadonlySet<string> = new Set(
     .filter((k) => !Object.hasOwn(InstanceNode.properties, k)),
 )
 
-/** True for a value whose `type` names a node type defined by format 0.1. */
+/** True for a value whose `type` names a node type defined by format 1.0. */
 export function isNodeType(type: unknown): type is NodeType {
   return typeof type === "string" && Object.hasOwn(NODE_SCHEMAS, type)
 }

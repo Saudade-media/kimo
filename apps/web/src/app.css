@@ -105,7 +105,8 @@ button {
   box-shadow: inset 0 -1px 0 0 var(--kimo-border);
 }
 
-/* Logo (HOU7D): 28 × 28, accent, radius-pill, centered; Mark 17 / 700, ls -0.5, on-accent */
+/* Logo (HOU7D → KimoLogo 28, board 26 §4 KlpS9): a 28 × 28 KimoLogo (bm1JR), fill
+   $text-primary (near-white in dark); no plate. The button is the hit target only. */
 .topbar__logo {
   display: flex;
   flex: none;
@@ -117,17 +118,16 @@ button {
   padding: 0;
   border: 0;
   border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-accent);
+  background: transparent;
+  color: var(--kimo-text-primary);
   cursor: pointer;
 }
 
-.topbar__mark {
-  color: var(--kimo-on-accent);
-  font-family: var(--kimo-font-sans);
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  line-height: normal;
+/* The mark is one 384-vertex path: keep it on its own compositor layer so the topbar repaints
+   while zooming (the zoom badge changes every frame) don't re-rasterize it (perf gate: zoom
+   p95 33 → 16.7 ms under SwiftShader). */
+.topbar__logo .kimo-logo {
+  will-change: transform;
 }
 
 /* File (wb5ft): gap 6, padding [0, 6], center; name 13 / 600 primary; chevron-down 14 tertiary */
@@ -759,31 +759,8 @@ button {
   padding: 4px 8px 16px 8px;
 }
 
-.home-sidebar__logo {
-  display: flex;
-  flex: none;
-  justify-content: center;
-  align-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-accent);
-}
-
-/* Mark (ja2Dx): 17 / 700 on-accent */
-.home-sidebar__mark {
-  color: var(--kimo-on-accent);
-  font-size: 17px;
-  font-weight: 700;
-}
-
-/* Wordmark (ugiBG): text-lg / 700, ls -0.3, primary */
-.home-sidebar__wordmark {
-  color: var(--kimo-text-primary);
-  font-size: var(--kimo-text-lg);
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
+/* Logo + Wordmark (LCbWN + ugiBG) → KimoLogo/Lockup (HmXpT, board 26 §4 KlpS9): mark 28 +
+   "Kimo" sans 18 / 600, ls -0.3, gap 10 — styled by @kimo/ui's .kimo-lockup. */
 
 /* Nav items (Lsf2o …): fill × 32, radius-md, gap 10, padding [0, 10], center */
 .home-nav {

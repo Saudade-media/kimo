@@ -62,10 +62,12 @@ For 1.0 the format becomes `1.0.0` and stays backward compatible within 1.x
 (spec §16.4).
 
 - [ ] Resolve the open spec items; nothing marked *draft* or *reserved* without a decision.
-- [ ] Rename `docs/spec/kimo-format-v0.1.md` → `kimo-format-v1.0.md`; drop "Draft".
+- [ ] Copy `docs/spec/kimo-format-v0.1.md` → `kimo-format-1.0.md` (status *Stable*, no "Draft");
+      keep the 0.1 file as a historical record that points to 1.0.
 - [ ] `@kimo/core-schema`: `FORMAT_VERSION` = `1.0.0`, `SCHEMA_URL` =
       `https://kimo.design/schema/kimo-1.0.json`, a `0.1 → 1.0` migration (even if it only
-      rewrites `format` and `$schema`), fixtures under `fixtures/forward/` updated.
+      rewrites `format` and `$schema`), fixtures under `fixtures/forward/` and
+      `fixtures/migrations/` updated; keep `schema/kimo-0.1.schema.json` as the frozen 0.1 schema.
 - [ ] `bun run --filter @kimo/core-schema build:schema`, then `bun run check:generated`.
 - [ ] `bun run build:examples` (the examples pick up the new version) and commit.
 - [ ] Publish the JSON Schema at `https://kimo.design/schema/kimo-1.0.json` (and keep 0.1).

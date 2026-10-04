@@ -87,7 +87,7 @@ export const JsonValue = (opts: Opts = {}) =>
           type: { type: "string", description: "Discriminator, when the value has one." },
         },
         additionalProperties: true,
-        description: "Structured value, validated against the .kimo schema (kimo://schema/0.1).",
+        description: "Structured value, validated against the .kimo schema (kimo://schema/1.0).",
       },
       {
         type: "array",

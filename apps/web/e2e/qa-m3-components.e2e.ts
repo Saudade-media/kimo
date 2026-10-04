@@ -856,7 +856,7 @@ async function libraryReadOnly({ page, url, log }: E2EContext) {
   const c = new Checks(log)
   await openEditor(page, url)
   const lib = {
-    format: "0.1.0",
+    format: "1.0.0",
     meta: { name: "Kimo UI" },
     themes: { mode: ["light", "dark"] },
     variables: {

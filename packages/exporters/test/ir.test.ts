@@ -6,8 +6,8 @@ import { FIXTURES, loadFixture } from "./helpers"
 
 const doc = (nodes: Record<string, Record<string, unknown>>, extra: Record<string, unknown> = {}) =>
   ({
-    $schema: "https://kimo.design/schema/kimo-0.1.json",
-    format: "0.1.0",
+    $schema: "https://kimo.design/schema/kimo-1.0.json",
+    format: "1.0.0",
     ...extra,
     nodes: Object.fromEntries(
       Object.entries(nodes).map(([id, n], i) => [id, { order: `a${i}`, ...n }]),

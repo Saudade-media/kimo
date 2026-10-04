@@ -56,11 +56,11 @@ const markers = [
   ...lines.slice(3),
 ].join("\n")
 const old = doc("Checkout", ["Rect000001"])
-  .replace('"format": "0.1.0"', '"format": "0.0.3"')
-  .replace("kimo-0.1.json", "kimo-0.0.json")
+  .replace('"format": "1.0.0"', '"format": "0.1.0"')
+  .replace("kimo-1.0.json", "kimo-0.1.json")
 const newer = `{
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
-"format": "0.1.0",
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
 "features": ["layout/grid","layout/wrap"],
 "nodes": {
 "Frame00001": {"type":"frame","parent":null,"order":"a0","layout":{"dir":"row","wrap":true}}
@@ -116,9 +116,6 @@ function createHarness() {
   const manager = createSessionManager({
     platform,
     merge: defaultMerge() ?? nodeMerge,
-    openOptions: {
-      migrations: [{ from: "0.0", to: "0.1", description: "harness", migrate: (d: unknown) => d }],
-    } as never,
     saveRetryMs: 30_000,
   })
   manager.install()

@@ -1,7 +1,7 @@
 /**
- * @kimo/core-schema — the `.kimo` file format (Draft v0.1): TypeBox schemas and static types,
+ * @kimo/core-schema — the `.kimo` file format (1.0, stable): TypeBox schemas and static types,
  * the generated JSON Schema, validation, normative defaults, canonical serialization,
- * versioning and migrations. Spec: docs/spec/kimo-format-v0.1.md.
+ * versioning and migrations. Spec: docs/spec/kimo-format-1.0.md.
  */
 
 export {
@@ -114,6 +114,7 @@ export {
   type ThreeWayMergeResult,
 } from "./merge/types"
 export {
+  MIGRATE_0_1_TO_1_0,
   MIGRATIONS,
   type MigrateOptions,
   type MigrateResult,

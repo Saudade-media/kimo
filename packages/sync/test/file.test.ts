@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { isCanonical, type Migration, parse, serialize } from "@kimo/core-schema"
+import { isCanonical, parse, serialize } from "@kimo/core-schema"
 import { createEmptyDocument, YjsDocStore } from "@kimo/editor-state"
 import {
   atomicWrite,
@@ -61,7 +61,7 @@ describe("FileProvider: load", () => {
   })
 
   test("refuse-save-after-failed-load: unparsable file is never written", async () => {
-    const { path, provider, store, fs } = setup('{"format": "0.1.0", oops')
+    const { path, provider, store, fs } = setup('{"format": "1.0.0", oops')
     await provider.attach(store)
     expect(provider.status).toBe("read-only")
     expect(provider.loadError?.code).toBe("LOAD_FAILED")
@@ -72,7 +72,7 @@ describe("FileProvider: load", () => {
     await expect(provider.upgradeAndSave()).rejects.toBeInstanceOf(SaveRefusedError)
     await provider.detach()
     expect(fs.writes).toEqual([])
-    expect(readFileSync(path, "utf8")).toBe('{"format": "0.1.0", oops')
+    expect(readFileSync(path, "utf8")).toBe('{"format": "1.0.0", oops')
   })
 
   test("newer format / unknown feature / invalid: read-only, content viewable, never saved", async () => {
@@ -283,16 +283,20 @@ describe("FileProvider: byte stability", () => {
 })
 
 describe("FileProvider: recovery (format not current)", () => {
-  const OLD = EXAMPLE.replace('"format": "0.1.0"', '"format": "0.0.3"').replace(
+  /** The example as a format 0.1 file: the real 0.1 → 1.0 migration applies. */
+  const OLD = EXAMPLE.replace('"format": "1.0.0"', '"format": "0.1.0"').replace(
+    "kimo-1.0.json",
     "kimo-0.1.json",
+  )
+  /** A format no migration reaches. */
+  const ANCIENT = EXAMPLE.replace('"format": "1.0.0"', '"format": "0.0.3"').replace(
+    "kimo-1.0.json",
     "kimo-0.0.json",
   )
-  const migrations: Migration[] = [
-    { from: "0.0", to: "0.1", description: "test step", migrate: (d) => d },
-  ]
 
   test("autosave goes to the recovery file until the upgrade is accepted", async () => {
-    const { dir, path, provider, store, fs } = setup(OLD, { open: { migrations } })
+    expect(OLD).toContain('"format": "0.1.0"')
+    const { dir, path, provider, store, fs } = setup(OLD)
     await provider.attach(store)
     expect(provider.needsUpgradeConsent).toBe(true)
     expect(provider.recoveryPath.startsWith(join(dir, "recovery"))).toBe(true)
@@ -301,7 +305,7 @@ describe("FileProvider: recovery (format not current)", () => {
     expect(r?.target).toBe("recovery")
     expect(readFileSync(path, "utf8")).toBe(OLD) // working file untouched
     const recovered = parse(readFileSync(provider.recoveryPath, "utf8"))
-    expect(recovered.format).toBe("0.1.0")
+    expect(recovered.format).toBe("1.0.0")
     expect(Object.keys(recovered.nodes)).toContain("Recover001")
     expect(fs.writes.every((w) => !w.startsWith(join(dir, ".design.kimo")))).toBe(true)
 
@@ -309,23 +313,23 @@ describe("FileProvider: recovery (format not current)", () => {
     expect(up.target).toBe("file")
     expect(provider.needsUpgradeConsent).toBe(false)
     const text = readFileSync(path, "utf8")
-    expect(parse(text).format).toBe("0.1.0")
+    expect(parse(text).format).toBe("1.0.0")
     expect(isCanonical(text)).toBe(true)
     expect(existsSync(provider.recoveryPath)).toBe(false)
     await provider.detach()
   })
 
   test("an explicit save counts as consent", async () => {
-    const { path, provider, store } = setup(OLD, { open: { migrations } })
+    const { path, provider, store } = setup(OLD)
     await provider.attach(store)
     await provider.saveFile()
-    expect(parse(readFileSync(path, "utf8")).format).toBe("0.1.0")
+    expect(parse(readFileSync(path, "utf8")).format).toBe("1.0.0")
     expect(provider.needsUpgradeConsent).toBe(false)
     await provider.detach()
   })
 
   test("older format without a migration path is read-only", async () => {
-    const { provider, store, fs } = setup(OLD)
+    const { provider, store, fs } = setup(ANCIENT)
     await provider.attach(store)
     expect(provider.status).toBe("read-only")
     expect(provider.loadError?.reasons[0]?.code).toBe("NO_MIGRATION_PATH")
@@ -349,7 +353,7 @@ describe("FileProvider: reload", () => {
   })
 
   test("a failed load's read-only state does not outlive the provider", async () => {
-    const bad = setup('{"format": "0.1.0", oops')
+    const bad = setup('{"format": "1.0.0", oops')
     await bad.provider.attach(bad.store)
     expect(bad.store.readOnly).not.toBeNull()
     await bad.provider.detach()
@@ -365,7 +369,7 @@ describe("FileProvider: reload", () => {
   })
 
   test("reload after a failed initial load is refused and never reports synced", async () => {
-    const { path, provider, store } = setup('{"format": "0.1.0", oops')
+    const { path, provider, store } = setup('{"format": "1.0.0", oops')
     await provider.attach(store)
     writeFileSync(path, EXAMPLE)
     await expect(provider.reload()).rejects.toBeInstanceOf(SaveRefusedError)

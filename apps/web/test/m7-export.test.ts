@@ -11,7 +11,7 @@ import { createMemoryPlatform } from "@kimo/platform/memory"
 import { createElement as h } from "react"
 import { renderToString } from "react-dom/server"
 import { ExportDialog } from "../src/export/ExportDialog"
-import { type ExportSource, generateExport } from "../src/export/generate"
+import { type ExportSource, generateExport, pdfFontsFrom } from "../src/export/generate"
 import {
   codeLines,
   crc32,
@@ -295,5 +295,35 @@ describe("dialog render", () => {
       }),
     )
     expect(html).toMatch(/aria-checked="true" data-format="tokens"/)
+  })
+})
+
+describe("PDF Embed fonts (ExportSource.fonts)", () => {
+  const ttf = new Uint8Array(
+    readFileSync(
+      join(import.meta.dir, "../../../packages/renderer/assets/fonts/Inter-Regular.ttf"),
+    ),
+  )
+  test("hands the canvas face's TTF/OTF bytes to the exporter", () => {
+    const asked: unknown[] = []
+    const fonts = pdfFontsFrom(() => (family, weight, style) => {
+      asked.push([family, weight, style])
+      return family === "Inter" ? ttf : null
+    })
+    expect(fonts("Inter", 400, false)).toBe(ttf)
+    expect(fonts("Inter", 700, true)).toBe(ttf)
+    expect(fonts("Nope", 400, false)).toBeNull()
+    expect(asked).toEqual([
+      ["Inter", 400, "normal"],
+      ["Inter", 700, "italic"],
+      ["Nope", 400, "normal"],
+    ])
+  })
+  test("WOFF 2 / unknown bytes and no renderer fall back (null → Helvetica)", () => {
+    const woff2 = new Uint8Array(64)
+    woff2.set([0x77, 0x4f, 0x46, 0x32]) // "wOF2"
+    expect(pdfFontsFrom(() => () => woff2)("Inter", 400, false)).toBeNull()
+    expect(pdfFontsFrom(() => () => new Uint8Array(64))("Inter", 400, false)).toBeNull()
+    expect(pdfFontsFrom(() => null)("Inter", 400, false)).toBeNull()
   })
 })

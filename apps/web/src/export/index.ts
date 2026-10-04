@@ -14,6 +14,7 @@ export {
   type ExportSummary,
   type GeneratedExport,
   generateExport,
+  pdfFontsFrom,
   previewRaster,
 } from "./generate"
 export {

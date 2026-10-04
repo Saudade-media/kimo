@@ -23,7 +23,7 @@ import {
 } from "../src/index"
 import { fixture, rng, VALID_FIXTURES } from "./helpers"
 
-const HEADER = { $schema: "https://kimo.design/schema/kimo-0.1.json", format: "0.1.0" }
+const HEADER = { $schema: "https://kimo.design/schema/kimo-1.0.json", format: "1.0.0" }
 
 const baseDoc = (): KimoDocument =>
   ({

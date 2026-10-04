@@ -43,7 +43,7 @@ export interface DiskTopbarProps extends FileMenuActions {
 }
 
 /**
- * Board 16 f6gZ3 topbar: inset (or the k logo off macOS) · breadcrumb · branch · drag region ·
+ * Board 16 f6gZ3 topbar: inset (or the KimoLogo off macOS) · breadcrumb · branch · drag region ·
  * SaveStatus · trailing. The breadcrumb's file name opens the board 20 File menu (A1jsC).
  */
 export function DiskTopbar({

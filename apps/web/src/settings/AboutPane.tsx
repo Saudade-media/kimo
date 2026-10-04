@@ -4,7 +4,8 @@
  *
  *   Title Bar (j9qn2) 56, center: Title sans 14 / 600 text-primary.
  *   Identity (urFVA) row, gap 16, padding [8, 0, 20, 0], center, bottom stroke 1 border:
- *     App Icon (mWCUl) 56 accent radius 14, Mark "k" sans 30 / 600 on-accent -1 ·
+ *     App Icon (mWCUl) 56 radius 14 — the app icon, ink plate #0A0A0A + white KimoLogo (board 26
+ *     §4 KlpS9; the mark is 60% of the plate as in the icon masters gTG4w: 308/512, 116/192) ·
  *     Text (kynKB) column gap 3 fill: Name sans 20 / 600 -0.3 · Version mono 11 text-secondary
  *     · Tagline sans 11 text-tertiary ·
  *     Actions (ipXh7) row gap 6: Copy version info (Button/Ghost, h 28, [0, 12], icon copy 14,
@@ -24,7 +25,7 @@
  * Everything is real: the version string ({@link versionInfo}), the links ({@link aboutLinks}),
  * and the licence list generated from the lockfiles ({@link NOTICES}).
  */
-import { Badge, Button, Dialog, Input } from "@kimo/ui"
+import { Badge, Button, Dialog, Input, KimoLogo } from "@kimo/ui"
 import {
   ArrowUpRight,
   BookOpen,
@@ -96,7 +97,7 @@ export function AboutPane({
       </div>
       <div className="about-identity" data-pen="urFVA">
         <span className="about-identity__icon" aria-hidden="true">
-          <span className="about-identity__mark">k</span>
+          <KimoLogo size={34} className="about-identity__mark" />
         </span>
         <div className="about-identity__text">
           <span className="about-identity__name">Kimo</span>

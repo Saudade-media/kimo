@@ -6,7 +6,7 @@ All notable changes to Kimo are documented here. The format follows
 (one version for all of them, bumped by `scripts/version.ts`).
 
 The `.kimo` **file format** has its own version (`format` in every document, spec in
-`docs/spec/`). It stays `0.1.x` through the 0.x releases and is frozen as format 1.0 for the 1.0
+`docs/spec/`). It stayed `0.1.x` through the 0.x releases and is frozen as format 1.0 for the 1.0
 release; format changes are listed under **Format** in each entry.
 
 Versions 0.1.0 to 0.7.0 are the development milestones M0–M7. They were not tagged or published;
@@ -14,7 +14,9 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
-Road to 1.0.0: release engineering and polish.
+## [1.0.0] - 2026-10-04
+
+The first public release: release engineering, polish, the new mark and the format 1.0 freeze.
 
 ### Added
 
@@ -35,7 +37,46 @@ Road to 1.0.0: release engineering and polish.
 - `scripts/version.ts`: one version across every workspace package, `tauri.conf.json`, both
   crates (and `Cargo.lock`) and the CLI's version strings; dry run by default.
 - `docs/release.md`: the release checklist (version bump, spec freeze, signing, notarization,
-  updater keys, smoke tests including real agents).
+  updater keys, smoke tests including real agents). `scripts/version.ts --exclude <dir>` leaves
+  a workspace out of a bump.
+- New mark (board 26, "Bloom with pucker"): `KimoLogo` (one even-odd path, 0–100 viewBox,
+  `currentColor`; the `KimoLogo/Small` cut is picked automatically at ≤ 24 px) and `KimoLockup`
+  in `@kimo/ui`. It replaces every old "k" mark: the web and desktop topbars, both Home sidebars
+  (lockup) and Settings › About (the app icon: ink plate + white mark). The desktop icon set
+  (`.icns`, `.ico`, PNGs, `source.svg`), the web favicons, apple-touch icon and web manifest, the
+  social card and the README header are exported from the design's icon masters.
+- PDF export with *Embed fonts* embeds the TrueType/OpenType faces the canvas renders with
+  (WOFF/WOFF 2 faces fall back to Helvetica with a `FONT_MISSING` issue).
+- Cloud providers on desktop: the credential choice reaches the relay. Bedrock can use
+  environment variables, a named profile (static keys or AWS SSO, with the profile's region) or
+  SSO only; Vertex a saved service account or Application Default Credentials; Foundry an API
+  key or Entra ID through the Azure CLI. Missing credentials come back as a 401 that says what to
+  do.
+
+### Fixed
+
+- The agent's approval card names the layers it touches ("in Pricing") instead of their ids.
+- The web build reports its real version in Settings › About and the release-notes link.
+
+### Format
+
+- **`.kimo` format 1.0.0 (stable).** Format 1.0 is format 0.1 declared stable: no field, default,
+  node type or feature changed, and it stays backward compatible within 1.x (spec §16.4).
+  Documents are written with `"format": "1.0.0"` and
+  `"$schema": "https://kimo.design/schema/kimo-1.0.json"`.
+- Spec: `docs/spec/kimo-format-1.0.md` (status *Stable*). The open draft items are decided: mesh
+  `points` and the shader protocol stay opaque (stored and round-tripped, rendering optional),
+  library-of-library references stay unresolved, and lints are not part of the format
+  (§20 row 29). `docs/spec/kimo-format-v0.1.md` is kept as a historical record.
+- Migration `0.1 → 1.0` (`MIGRATE_0_1_TO_1_0`, the first entry of `MIGRATIONS`): identity on the
+  content, rewrites the `format` and `$schema` header lines only. A 0.1 file opens migrated in
+  memory behind the existing upgrade-consent prompt (autosave goes to recovery until *Upgrade and
+  save* or an explicit save); files newer than 1.0 (`1.1.x`, `2.x`) open read-only. Fixtures:
+  `fixtures/migrations/`, `fixtures/forward/` moved to 1.1 / 2.0 / 1.0.7.
+- JSON Schema: `schema/kimo-1.0.schema.json` (`@kimo/core-schema/schema.json`); the frozen 0.1
+  schema stays at `schema/kimo-0.1.schema.json` (`@kimo/core-schema/schema-0.1.json`). The MCP
+  schema resource is now `kimo://schema/1.0`; `kimo version` reports `(format 1.0)`.
+- `examples/` regenerated at format 1.0.0 (header lines only; thumbnails unchanged).
 
 ## [0.7.0] - 2026-10-04 — M7: Export
 

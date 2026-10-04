@@ -37,7 +37,7 @@ export type LocateFailure =
   | { reason: "missing"; qid: string }
   | { reason: "alias-unknown"; alias: string }
   | { reason: "library-not-loaded"; alias: string }
-  /** A library referencing a library it imports itself: not resolved in 0.1 (§9.5). */
+  /** A library referencing a library it imports itself: not resolved in 1.0 (§9.5). */
   | { reason: "nested-library"; qid: string }
 
 /** `alias:id`, or the bare id for the consumer. */

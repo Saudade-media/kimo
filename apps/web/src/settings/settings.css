@@ -249,7 +249,8 @@
   padding: 8px 0 20px 0;
   box-shadow: inset 0 -1px 0 0 var(--kimo-border);
 }
-/* App Icon (mWCUl): 56 × 56, accent, radius 14, centered Mark "k" sans 30 / 600 on-accent -1. */
+/* App Icon (mWCUl) 56, radius 14 → the app icon (board 26 §4 KlpS9): ink plate #0A0A0A (the
+   icon masters' plate fill, gTG4w) + white KimoLogo, 60% of the plate as in the masters. */
 .about-identity__icon {
   display: flex;
   flex: none;
@@ -258,15 +259,8 @@
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  background: var(--kimo-accent);
-}
-.about-identity__mark {
-  color: var(--kimo-on-accent);
-  font-family: var(--kimo-font-sans);
-  font-size: 30px;
-  font-weight: var(--kimo-font-weight-semibold);
-  letter-spacing: -1px;
-  line-height: 36px; /* Pencil text box: round(30 × 1.21) */
+  background: #0a0a0a;
+  color: #ffffff;
 }
 /* Text (kynKB): column, gap 3, fill. */
 .about-identity__text {

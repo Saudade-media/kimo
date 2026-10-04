@@ -1,6 +1,6 @@
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
-"format": "0.1.0",
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
 "features": ["layout/wrap"],
 "nodes": {
 "Bell000002": {"type":"icon","parent":"Board00002","order":"a3","name":"Bell","w":24,"h":24,"weight":700,"set":"phosphor","icon":"bell"}

@@ -1,6 +1,6 @@
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
-"format": "0.1.0",
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
 "themes": {"brand":["kimo","acme"],"density":["regular","compact"],"mode":["light","dark"]},
 "variables": {
 "bg": {"type":"color","value":[{"value":"#FFFFFF"},{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#0B0B0F","when":{"mode":"dark"}},{"value":"#FFF8F0","when":{"brand":"acme","mode":"light"}}],"description":"Page background","group":"color.surface"}

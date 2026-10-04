@@ -197,7 +197,7 @@ export function structOrder(keys: string[]): string[] {
 }
 
 /**
- * Root members defined by format 0.1 (§4), in canonical order (`nodes` is always last). Any
+ * Root members defined by format 1.0 (§4), in canonical order (`nodes` is always last). Any
  * other root member is unknown and opaque. `merge` and `conflicts` (feature "merge/conflicts",
  * §21) are root-only: their names are not in {@link KEY_ORDER} (Appendix A stays frozen), so
  * they never rank keys below the root.

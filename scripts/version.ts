@@ -186,7 +186,12 @@ function main() {
   const write = args.includes("--write")
   const preIdx = args.indexOf("--preid")
   const preid = preIdx >= 0 ? (args[preIdx + 1] ?? "rc") : "rc"
-  const spec = args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--preid")
+  // --exclude <dir> (repeatable): leave a workspace out of this bump, e.g. one another
+  // branch owns; its version then shows as drift until it is bumped too.
+  const excluded = args.flatMap((a, i) => (args[i - 1] === "--exclude" ? [join(ROOT, a)] : []))
+  const spec = args.find(
+    (a, i) => !a.startsWith("--") && args[i - 1] !== "--preid" && args[i - 1] !== "--exclude",
+  )
 
   const probe = plan("\0")
   const versions = new Map<string, string[]>()
@@ -199,12 +204,14 @@ function main() {
   for (const m of probe.missing) console.log(`  ! no version found in ${m}`)
   if (!spec) {
     console.log("\nusage: bun scripts/version.ts <x.y.z | major | minor | patch | prerelease>")
-    console.log("       [--preid rc] [--write]   (dry run without --write)")
+    console.log("       [--preid rc] [--exclude <dir>]... [--write]   (dry run without --write)")
     process.exit(versions.size > 1 || probe.missing.length > 0 ? 1 : 0)
   }
 
   const next = nextVersion(probe.current, spec, preid)
-  const { edits, missing } = plan(next)
+  const planned = plan(next)
+  const missing = planned.missing
+  const edits = planned.edits.filter((e) => !excluded.some((d) => e.file.startsWith(`${d}/`)))
   if (missing.length > 0) {
     console.error("refusing to bump: some version sites were not found (see above)")
     process.exit(1)

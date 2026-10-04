@@ -18,10 +18,10 @@ export interface ResourceDef {
 
 export const RESOURCES: readonly ResourceDef[] = [
   {
-    uri: "kimo://schema/0.1",
+    uri: "kimo://schema/1.0",
     name: "kimo-schema",
     title: ".kimo JSON Schema",
-    description: "The normative JSON Schema (draft 2020-12) of the .kimo format, version 0.1.",
+    description: "The normative JSON Schema (draft 2020-12) of the .kimo format, version 1.0.",
     mimeType: "application/schema+json",
     template: false,
     subscribable: false,

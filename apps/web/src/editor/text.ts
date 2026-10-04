@@ -9,7 +9,7 @@
  * "Auto" removes it); letterSpacing (px = % × size / 100) → `style.letterSpacing` (px);
  * textAlign → `style.align`; textAlignVertical → `style.valign`; textGrowth → `grow`
  * (`fixed-width-height` is Kimo's `fixed`); underline / strikethrough → `style.decoration`;
- * textCase → `style.case` (upper / lower / title: already in format 0.1, render-time only, so
+ * textCase → `style.case` (upper / lower / title: already in format 1.0, render-time only, so
  * `content` keeps what was typed).
  */
 import type { NodeData, Op } from "@kimo/editor-state"

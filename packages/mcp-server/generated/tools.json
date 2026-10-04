@@ -1730,7 +1730,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "A node as .kimo data (fields per kimo://schema/0.1, defaults omitted) plus query metadata. Feeding the body back into insert/replace works."
+                  "description": "A node as .kimo data (fields per kimo://schema/1.0, defaults omitted) plus query metadata. Feeding the body back into insert/replace works."
                 },
                 "description": "Matched nodes and their children up to depth."
               },
@@ -1843,7 +1843,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/0.1 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
+                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
                     }
                   },
                   "additionalProperties": false,
@@ -1877,7 +1877,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/0.1. To remove a field use unset."
+                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/1.0. To remove a field use unset."
                     },
                     "unset": {
                       "type": "array",
@@ -1940,7 +1940,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/0.1 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
+                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
                     }
                   },
                   "additionalProperties": false,
@@ -2057,7 +2057,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/0.1. To remove a field use unset."
+                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/1.0. To remove a field use unset."
                     }
                   },
                   "additionalProperties": false,
@@ -2111,7 +2111,7 @@
                               }
                             },
                             "additionalProperties": true,
-                            "description": "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/0.1."
+                            "description": "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/1.0."
                           }
                         },
                         "additionalProperties": false
@@ -2377,7 +2377,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/0.1. To remove a field use unset."
+                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/1.0. To remove a field use unset."
                     },
                     "node": {
                       "type": "object",
@@ -2408,7 +2408,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/0.1 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
+                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
                     },
                     "content": {
                       "type": "array",
@@ -2441,7 +2441,7 @@
                           }
                         },
                         "additionalProperties": true,
-                        "description": "A .kimo node object without parent/order/at, validated against kimo://schema/0.1 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
+                        "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
                       },
                       "description": "kind=slot: nodes inserted into the slot."
                     }
@@ -2542,7 +2542,7 @@
                                   }
                                 },
                                 "additionalProperties": true,
-                                "description": "Structured value, validated against the .kimo schema (kimo://schema/0.1)."
+                                "description": "Structured value, validated against the .kimo schema (kimo://schema/1.0)."
                               },
                               {
                                 "type": "array",
@@ -2649,7 +2649,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "A .kimo PropDef (kimo://schema/0.1)."
+                      "description": "A .kimo PropDef (kimo://schema/1.0)."
                     }
                   },
                   "additionalProperties": false,
@@ -2764,7 +2764,7 @@
                         }
                       },
                       "additionalProperties": true,
-                      "description": "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/0.1."
+                      "description": "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/1.0."
                     }
                   },
                   "additionalProperties": false,
@@ -2809,7 +2809,7 @@
                             }
                           },
                           "additionalProperties": true,
-                          "description": "Structured value, validated against the .kimo schema (kimo://schema/0.1)."
+                          "description": "Structured value, validated against the .kimo schema (kimo://schema/1.0)."
                         },
                         {
                           "type": "array",

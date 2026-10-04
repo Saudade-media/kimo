@@ -138,17 +138,17 @@ export type AssetEntry = Static<typeof AssetEntry>
 /** Optional asset manifest: content-addressed file name (under `assets/`) → entry. */
 export const Assets = RecordOf(ASSET_FILE_PATTERN, AssetEntry)
 
-/** Pattern of `format` accepted by the 0.1 schema (any 0.1 patch). */
-export const FORMAT_0_1_PATTERN = "^0\\.1\\.(0|[1-9][0-9]*)$"
+/** Pattern of `format` accepted by the 1.0 schema (any 1.0 patch). */
+export const FORMAT_1_0_PATTERN = "^1\\.0\\.(0|[1-9][0-9]*)$"
 
-/** The `.kimo` document root (format 0.1). */
+/** The `.kimo` document root (format 1.0). */
 export const KimoDocument = Strict(
   {
     $schema: Type.String({
       pattern: SCHEMA_URL_PATTERN,
-      description: `For format 0.1: "${SCHEMA_URL}". Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate().`,
+      description: `For format 1.0: "${SCHEMA_URL}". Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate().`,
     }),
-    format: Type.String({ pattern: FORMAT_0_1_PATTERN }),
+    format: Type.String({ pattern: FORMAT_1_0_PATTERN }),
     features: opt(Type.Array(Type.String({ pattern: FEATURE_PATTERN }), { uniqueItems: true })),
     meta: opt(DocumentMeta),
     themes: opt(Themes),
@@ -162,12 +162,12 @@ export const KimoDocument = Strict(
     conflicts: opt(Conflicts),
     nodes: RecordOf(ID_PATTERN, Node),
   },
-  { title: "Kimo document (.kimo), format 0.1" },
+  { title: "Kimo document (.kimo), format 1.0" },
 )
 export type KimoDocument = Static<typeof KimoDocument>
 
 /** The header part of {@link KimoDocument}: everything but `nodes`, used for staged validation. */
 export const KimoHeader = Strict(
   { ...KimoDocument.properties, nodes: RecordOf(ID_PATTERN, Type.Unknown()) },
-  { title: "Kimo document header (format 0.1)" },
+  { title: "Kimo document header (format 1.0)" },
 )

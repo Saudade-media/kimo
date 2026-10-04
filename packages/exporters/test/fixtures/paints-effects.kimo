@@ -1,6 +1,6 @@
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
-"format": "0.1.0",
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
 "meta": {"name":"Paints and effects"},
 "nodes": {
 "Angular001": {"type":"rect","parent":"Paints0001","order":"a2","name":"Angular","x":300,"y":20,"w":120,"h":120,"radius":60,"fill":{"kind":"angular","stops":[{"at":0,"color":"#F59E0B"},{"at":1,"color":"#10B981"}],"rotation":30}}

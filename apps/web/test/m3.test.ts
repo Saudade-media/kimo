@@ -38,7 +38,7 @@ import {
 } from "../src/editor/m3/variables"
 
 const doc = (nodes: Record<string, Record<string, unknown>>, extra: Record<string, unknown> = {}) =>
-  ({ $schema: SCHEMA_URL, format: "0.1.0", nodes, ...extra }) as unknown as KimoDocument
+  ({ $schema: SCHEMA_URL, format: "1.0.0", nodes, ...extra }) as unknown as KimoDocument
 
 const card = () =>
   doc({
@@ -399,11 +399,11 @@ describe("libraries", () => {
     ).toThrow()
     expect(() =>
       parseLibrary(
-        JSON.stringify({ $schema: SCHEMA_URL, format: "0.1.0", nodes: { x: { type: "bogus" } } }),
+        JSON.stringify({ $schema: SCHEMA_URL, format: "1.0.0", nodes: { x: { type: "bogus" } } }),
       ),
     ).toThrow()
     expect(
-      parseLibrary(JSON.stringify({ $schema: SCHEMA_URL, format: "0.1.0", nodes: {} })).nodes,
+      parseLibrary(JSON.stringify({ $schema: SCHEMA_URL, format: "1.0.0", nodes: {} })).nodes,
     ).toEqual({})
   })
 

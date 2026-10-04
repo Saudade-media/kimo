@@ -50,7 +50,7 @@ const QueriedNode = Open(
   },
   {
     description:
-      "A node as .kimo data (fields per kimo://schema/0.1, defaults omitted) plus query metadata. Feeding the body back into insert/replace works.",
+      "A node as .kimo data (fields per kimo://schema/1.0, defaults omitted) plus query metadata. Feeding the body back into insert/replace works.",
   },
 )
 

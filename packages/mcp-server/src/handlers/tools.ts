@@ -426,7 +426,7 @@ export function createToolHandlerMap(
     if (!r.ok) return fail(r.error)
     const d = r.value
     const core = ctx.host as Partial<CoreDocumentHost>
-    const format = core.formatOf?.(d.ref.id) ?? "0.1"
+    const format = core.formatOf?.(d.ref.id) ?? "1.0"
     const reason = core.readOnlyReasonOf?.(d.ref.id) ?? d.store.readOnly?.reason ?? null
     const data: Record<string, unknown> = {
       doc: d.ref,

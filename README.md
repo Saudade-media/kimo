@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/readme-header.png" width="1280" alt="Kimo — the open, local-first design canvas for people and their coding agents." />
+</p>
+
 # Kimo
 
 Kimo is an open-source, local-first, agent-native design canvas: an MIT-licensed alternative to
@@ -89,7 +93,7 @@ Desktop development also needs the
 
 - [Docs index](docs/README.md)
 - [pen.dev teardown and the Kimo plan](docs/teardown.md): the plan of record
-- [`.kimo` format spec v0.1 (draft)](docs/spec/kimo-format-v0.1.md)
+- [`.kimo` format spec 1.0](docs/spec/kimo-format-1.0.md) (stable; the [v0.1 draft](docs/spec/kimo-format-v0.1.md) is kept for history)
 - [Architecture decision records](docs/adr/README.md)
 - [Scope checklist](docs/scope-checklist.md)
 - [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md),

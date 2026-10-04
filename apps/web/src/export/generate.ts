@@ -6,6 +6,7 @@
 import type { KimoDocument, Libraries } from "@kimo/core-schema"
 import type { ExportFile, IconLoader, IRDocument, IRNode, RasterSource } from "@kimo/exporters"
 import type { LayoutResult, TextMeasurer } from "@kimo/layout"
+import { fontFormat } from "@kimo/renderer"
 import {
   DEFAULT_PDF_TOGGLES,
   DEFAULT_PNG_SCALE,
@@ -34,6 +35,26 @@ export interface ExportSource {
   icons?: IconLoader | null
   /** PDF "Embed fonts": font file bytes for a face (null: Helvetica is used). */
   fonts?: (family: string, weight: number, italic: boolean) => Uint8Array | null
+}
+
+/**
+ * `ExportSource.fonts` over the canvas's font provider (`FontProvider.faceBytes`): the exact face
+ * the canvas renders a run with, so the PDF embeds the same glyphs. Only TrueType / OpenType
+ * files are handed to pdf-lib (a WOFF/WOFF 2 or unknown file → null, and the exporter falls back
+ * to Helvetica with a FONT_MISSING issue instead of failing the whole PDF).
+ */
+export function pdfFontsFrom(
+  faceBytes: () =>
+    | ((family: string, weight: number, style: "normal" | "italic") => Uint8Array | null)
+    | null
+    | undefined,
+): (family: string, weight: number, italic: boolean) => Uint8Array | null {
+  return (family, weight, italic) => {
+    const bytes = faceBytes()?.(family, weight, italic ? "italic" : "normal") ?? null
+    if (!bytes) return null
+    const format = fontFormat(bytes)
+    return format === "truetype" || format === "opentype" ? bytes : null
+  }
 }
 
 /** Per-format choices beyond board 07's three toggles (board 25 § 2). */

@@ -1,0 +1,4103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kimo.design/schema/kimo-1.0.json",
+  "description": "Structural schema of the .kimo file format 1.0.0. Semantic rules (referential integrity, override paths, variable types, …) are checked by validate() in @kimo/core-schema; see docs/spec/kimo-format-1.0.md. Known features: layout/wrap, layout/stretch-baseline, size/min-max, text/runs, tokens/composite, fill/mesh, fill/shader, node/script, node/browser, merge/conflicts.",
+  "type": "object",
+  "required": ["$schema", "format", "nodes"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "pattern": "^https://kimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$",
+      "description": "For format 1.0: \"https://kimo.design/schema/kimo-1.0.json\". Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate()."
+    },
+    "format": {
+      "type": "string",
+      "pattern": "^1\\.0\\.(0|[1-9][0-9]*)$"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true
+    },
+    "meta": {
+      "$ref": "#/$defs/DocumentMeta"
+    },
+    "themes": {
+      "$ref": "#/$defs/Themes"
+    },
+    "imports": {
+      "$ref": "#/$defs/Imports"
+    },
+    "variables": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[^\\s:$][^\\s:]{0,127}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Variable"
+      }
+    },
+    "assets": {
+      "$ref": "#/$defs/Assets"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Id"
+      },
+      "uniqueItems": true,
+      "description": "Optional index of component node ids."
+    },
+    "merge": {
+      "$ref": "#/$defs/MergeInfo"
+    },
+    "conflicts": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9]{6,24}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Conflict"
+      },
+      "minProperties": 1
+    },
+    "nodes": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9]{6,24}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Node"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "title": "Kimo document (.kimo), format 1.0",
+  "$defs": {
+    "AssetEntry": {
+      "type": "object",
+      "required": ["mime"],
+      "properties": {
+        "mime": {
+          "type": "string",
+          "pattern": "^[a-z]+/[a-z0-9.+-]+$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string",
+          "description": "Original file name (informative)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Assets": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[0-9a-f]{16}\\.[a-z0-9]{1,8}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/AssetEntry"
+      }
+    },
+    "BackdropBlurEffect": {
+      "type": "object",
+      "required": ["kind", "radius"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "backdrop-blur"
+        },
+        "radius": {
+          "$ref": "#/$defs/NonNegNum"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "BlendMode": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "darken",
+        "multiply",
+        "color-burn",
+        "linear-burn",
+        "lighten",
+        "screen",
+        "color-dodge",
+        "linear-dodge",
+        "overlay",
+        "soft-light",
+        "hard-light",
+        "difference",
+        "exclusion",
+        "hue",
+        "saturation",
+        "color",
+        "luminosity"
+      ]
+    },
+    "BlurEffect": {
+      "type": "object",
+      "required": ["kind", "radius"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "blur"
+        },
+        "radius": {
+          "$ref": "#/$defs/NonNegNum"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "BoolOrRef": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ]
+    },
+    "BooleanVariable": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "boolean"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoolOrRef"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/BoolOrRef"
+                  },
+                  "when": {
+                    "$ref": "#/$defs/ThemeSelection"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted group path for DTCG export."
+        }
+      },
+      "additionalProperties": false
+    },
+    "BrowserNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "w", "h", "url"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "browser"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "device": {
+          "type": "string",
+          "minLength": 1
+        },
+        "zoom": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "scrollX": {
+          "type": "number",
+          "default": 0
+        },
+        "scrollY": {
+          "type": "number",
+          "default": 0
+        },
+        "radius": {
+          "$ref": "#/$defs/Radius",
+          "default": 0
+        },
+        "stroke": {
+          "$ref": "#/$defs/Stroke"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Color": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HexColor"
+        },
+        {
+          "$ref": "#/$defs/OklchColor"
+        },
+        {
+          "$ref": "#/$defs/P3Color"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ]
+    },
+    "ColorVariable": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "color"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/Color"
+                  },
+                  "when": {
+                    "$ref": "#/$defs/ThemeSelection"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted group path for DTCG export."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ComponentDef": {
+      "type": "object",
+      "properties": {
+        "props": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/PropDef"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Conflict": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PropConflict"
+        },
+        {
+          "$ref": "#/$defs/NodeConflict"
+        },
+        {
+          "$ref": "#/$defs/MoveConflict"
+        },
+        {
+          "$ref": "#/$defs/VariableConflict"
+        },
+        {
+          "$ref": "#/$defs/HeaderConflict"
+        }
+      ]
+    },
+    "DimensionValue": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "const": "px"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DimensionVariable": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "dimension"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DimensionValue"
+                },
+                {
+                  "$ref": "#/$defs/Ref"
+                }
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/DimensionValue"
+                      },
+                      {
+                        "$ref": "#/$defs/Ref"
+                      }
+                    ]
+                  },
+                  "when": {
+                    "$ref": "#/$defs/ThemeSelection"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted group path for DTCG export."
+        }
+      },
+      "additionalProperties": false
+    },
+    "DocumentMeta": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "library": {
+          "type": "boolean",
+          "description": "True for a library (.lib.kimo) document."
+        },
+        "createdWith": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*(?:\\.[A-Za-z0-9_-]+)+$": {}
+      }
+    },
+    "Effect": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ShadowEffect"
+        },
+        {
+          "$ref": "#/$defs/BlurEffect"
+        },
+        {
+          "$ref": "#/$defs/BackdropBlurEffect"
+        }
+      ]
+    },
+    "Effects": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Effect"
+          }
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ]
+    },
+    "EllipseNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "w", "h"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "ellipse"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "fill": {
+          "$ref": "#/$defs/Paints"
+        },
+        "stroke": {
+          "$ref": "#/$defs/Stroke"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "innerRadius": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1,
+          "default": 0
+        },
+        "startAngle": {
+          "type": "number",
+          "default": 0
+        },
+        "sweepAngle": {
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360,
+          "default": 360
+        }
+      },
+      "additionalProperties": false
+    },
+    "FrameNode": {
+      "type": "object",
+      "required": ["type", "parent", "order"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "frame"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "fill": {
+          "$ref": "#/$defs/Paints"
+        },
+        "stroke": {
+          "$ref": "#/$defs/Stroke"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        },
+        "w": {
+          "$ref": "#/$defs/Size",
+          "default": {
+            "mode": "fit"
+          }
+        },
+        "h": {
+          "$ref": "#/$defs/Size",
+          "default": {
+            "mode": "fit"
+          }
+        },
+        "radius": {
+          "$ref": "#/$defs/Radius",
+          "default": 0
+        },
+        "clip": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": false
+        },
+        "layout": {
+          "$ref": "#/$defs/Layout"
+        },
+        "slot": {
+          "$ref": "#/$defs/SlotDef"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GradientPaint": {
+      "type": "object",
+      "required": ["kind", "stops"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["linear", "radial", "angular"]
+        },
+        "stops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GradientStop"
+          },
+          "minItems": 2
+        },
+        "center": {
+          "type": "array",
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 2,
+          "default": [0.5, 0.5]
+        },
+        "size": {
+          "type": "array",
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 2,
+          "default": [1, 1]
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0
+        },
+        "interpolation": {
+          "type": "string",
+          "enum": ["srgb", "oklab"],
+          "default": "srgb"
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "blend": {
+          "$ref": "#/$defs/BlendMode",
+          "default": "normal"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "GradientStop": {
+      "type": "object",
+      "required": ["color", "at"],
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/Color"
+        },
+        "at": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Position along the gradient, 0–1."
+        }
+      },
+      "additionalProperties": false
+    },
+    "GroupNode": {
+      "type": "object",
+      "required": ["type", "parent", "order"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "group"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        }
+      },
+      "additionalProperties": false
+    },
+    "HeaderConflict": {
+      "type": "object",
+      "required": ["kind", "path", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "header"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^(?:/(?:[^~/]|~[01])*)+$",
+          "description": "Pointer from the document root."
+        },
+        "base": {
+          "description": "Base value."
+        },
+        "ours": {
+          "description": "Our value."
+        },
+        "theirs": {
+          "description": "Their value."
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "HeaderConflict"
+    },
+    "HexColor": {
+      "type": "string",
+      "pattern": "^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+      "description": "sRGB hex color."
+    },
+    "IconNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "w", "h", "set", "icon"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "icon"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "set": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Icon set, e.g. lucide, feather, phosphor, material-outlined, material-rounded, material-sharp."
+        },
+        "icon": {
+          "$ref": "#/$defs/StringOrRef"
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 100,
+              "maximum": 700
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            }
+          ],
+          "description": "Material sets: the wght axis. phosphor: nearest of thin/light/regular/bold."
+        },
+        "strokeWidth": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            }
+          ],
+          "description": "Stroke sets (lucide, feather): stroke width in the set's 24-unit grid."
+        },
+        "color": {
+          "$ref": "#/$defs/Color"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]{6,24}$",
+      "description": "Node id."
+    },
+    "IdPath": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$",
+      "description": "QId segments joined by '/', one per instance boundary."
+    },
+    "ImagePaint": {
+      "type": "object",
+      "required": ["kind", "src"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "image"
+        },
+        "src": {
+          "type": "string",
+          "pattern": "^\\./assets/[0-9a-f]{16}\\.[a-z0-9]{1,8}$",
+          "description": "Content-addressed asset."
+        },
+        "fit": {
+          "type": "string",
+          "enum": ["cover", "contain", "stretch", "tile"],
+          "default": "cover"
+        },
+        "crop": {
+          "type": "array",
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 6,
+          "description": "Affine transform [a, b, c, d, tx, ty] in normalized image space."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "blend": {
+          "$ref": "#/$defs/BlendMode",
+          "default": "normal"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Imports": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,31}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^\\.{1,2}/(?:[^\\\\/\\s]+/)*[^\\\\/\\s]+$"
+      }
+    },
+    "InstanceNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "of"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "instance"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "of": {
+          "$ref": "#/$defs/QId"
+        },
+        "props": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {}
+          }
+        },
+        "args": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+          },
+          "additionalProperties": {}
+        },
+        "overrides": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Override"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Layout": {
+      "type": "object",
+      "required": ["dir"],
+      "properties": {
+        "dir": {
+          "type": "string",
+          "enum": ["row", "column"]
+        },
+        "gap": {
+          "$ref": "#/$defs/Num",
+          "default": 0
+        },
+        "crossGap": {
+          "$ref": "#/$defs/Num",
+          "default": 0
+        },
+        "pad": {
+          "$ref": "#/$defs/Padding",
+          "default": 0
+        },
+        "justify": {
+          "type": "string",
+          "enum": ["start", "center", "end", "between", "around", "evenly"],
+          "default": "start"
+        },
+        "align": {
+          "type": "string",
+          "enum": ["start", "center", "end", "stretch", "baseline"],
+          "default": "start"
+        },
+        "wrap": {
+          "type": "boolean",
+          "default": false
+        },
+        "includeStroke": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "MergeInfo": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Base label, e.g. a short commit."
+        },
+        "ours": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Our label, e.g. the current branch."
+        },
+        "theirs": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Their label, e.g. the merged branch."
+        },
+        "changes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Changes applied without conflict."
+        }
+      },
+      "additionalProperties": false,
+      "title": "MergeInfo"
+    },
+    "MeshPaint": {
+      "type": "object",
+      "required": ["kind", "cols", "rows", "colors", "points"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "mesh"
+        },
+        "cols": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Color"
+          }
+        },
+        "points": {
+          "type": "array",
+          "items": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "Meta": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*(?:\\.[A-Za-z0-9_-]+)+$"
+      },
+      "additionalProperties": {},
+      "description": "Namespaced extension data, e.g. 'kimo.export.tag'."
+    },
+    "ModelRef": {
+      "type": "object",
+      "required": ["provider", "model"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Provider id, e.g. anthropic."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Model id at that provider."
+        }
+      },
+      "additionalProperties": false
+    },
+    "MoveConflict": {
+      "type": "object",
+      "required": ["kind", "node", "base", "ours", "theirs", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "move"
+        },
+        "node": {
+          "$ref": "#/$defs/Id"
+        },
+        "base": {
+          "$ref": "#/$defs/Placement"
+        },
+        "ours": {
+          "$ref": "#/$defs/Placement"
+        },
+        "theirs": {
+          "$ref": "#/$defs/Placement"
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "MoveConflict"
+    },
+    "Node": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FrameNode"
+        },
+        {
+          "$ref": "#/$defs/GroupNode"
+        },
+        {
+          "$ref": "#/$defs/RectNode"
+        },
+        {
+          "$ref": "#/$defs/EllipseNode"
+        },
+        {
+          "$ref": "#/$defs/PolygonNode"
+        },
+        {
+          "$ref": "#/$defs/PathNode"
+        },
+        {
+          "$ref": "#/$defs/TextNode"
+        },
+        {
+          "$ref": "#/$defs/IconNode"
+        },
+        {
+          "$ref": "#/$defs/InstanceNode"
+        },
+        {
+          "$ref": "#/$defs/NoteNode"
+        },
+        {
+          "$ref": "#/$defs/PromptNode"
+        },
+        {
+          "$ref": "#/$defs/ScriptNode"
+        },
+        {
+          "$ref": "#/$defs/BrowserNode"
+        }
+      ]
+    },
+    "NodeConflict": {
+      "type": "object",
+      "required": ["kind", "node", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "node"
+        },
+        "node": {
+          "$ref": "#/$defs/Id"
+        },
+        "base": {
+          "$ref": "#/$defs/Node"
+        },
+        "ours": {
+          "$ref": "#/$defs/Node"
+        },
+        "theirs": {
+          "$ref": "#/$defs/Node"
+        },
+        "restored": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9]{6,24}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Node"
+          }
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "NodeConflict"
+    },
+    "NonNegNum": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ]
+    },
+    "NoteNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "content"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "note"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "content": {
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/$defs/TextStyle"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name of the person who wrote it (M6; e.g. the OS user name)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Num": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ]
+    },
+    "NumberVariable": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "number"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Num"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/Num"
+                  },
+                  "when": {
+                    "$ref": "#/$defs/ThemeSelection"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted group path for DTCG export."
+        }
+      },
+      "additionalProperties": false
+    },
+    "OklchColor": {
+      "type": "object",
+      "required": ["space", "l", "c", "h"],
+      "properties": {
+        "space": {
+          "type": "string",
+          "const": "oklch"
+        },
+        "l": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Lightness, 0–1."
+        },
+        "c": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Chroma, >= 0."
+        },
+        "h": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360,
+          "description": "Hue in degrees, [0, 360)."
+        },
+        "alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "OrderKey": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z]{1,64}$",
+      "description": "Fractional-index key; siblings sort by (order, id), by code unit."
+    },
+    "Override": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["set"],
+          "properties": {
+            "set": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {}
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["slot"],
+          "properties": {
+            "slot": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["replace"],
+          "properties": {
+            "replace": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "P3Color": {
+      "type": "object",
+      "required": ["space", "r", "g", "b"],
+      "properties": {
+        "space": {
+          "type": "string",
+          "const": "display-p3"
+        },
+        "r": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Red, 0–1."
+        },
+        "g": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Green, 0–1."
+        },
+        "b": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Blue, 0–1."
+        },
+        "alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "Padding": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "type": "array",
+          "additionalItems": false,
+          "items": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            }
+          ],
+          "minItems": 2
+        },
+        {
+          "type": "array",
+          "additionalItems": false,
+          "items": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            }
+          ],
+          "minItems": 4
+        }
+      ]
+    },
+    "Paint": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HexColor"
+        },
+        {
+          "$ref": "#/$defs/OklchColor"
+        },
+        {
+          "$ref": "#/$defs/P3Color"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "$ref": "#/$defs/SolidPaint"
+        },
+        {
+          "$ref": "#/$defs/GradientPaint"
+        },
+        {
+          "$ref": "#/$defs/ImagePaint"
+        },
+        {
+          "$ref": "#/$defs/MeshPaint"
+        },
+        {
+          "$ref": "#/$defs/ShaderPaint"
+        }
+      ]
+    },
+    "Paints": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HexColor"
+        },
+        {
+          "$ref": "#/$defs/OklchColor"
+        },
+        {
+          "$ref": "#/$defs/P3Color"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "$ref": "#/$defs/SolidPaint"
+        },
+        {
+          "$ref": "#/$defs/GradientPaint"
+        },
+        {
+          "$ref": "#/$defs/ImagePaint"
+        },
+        {
+          "$ref": "#/$defs/MeshPaint"
+        },
+        {
+          "$ref": "#/$defs/ShaderPaint"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Paint"
+          }
+        }
+      ]
+    },
+    "PathNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "d"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "path"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "fill": {
+          "$ref": "#/$defs/Paints"
+        },
+        "stroke": {
+          "$ref": "#/$defs/Stroke"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "d": {
+          "type": "string",
+          "minLength": 1,
+          "description": "SVG path data."
+        },
+        "fillRule": {
+          "type": "string",
+          "enum": ["nonzero", "evenodd"],
+          "default": "nonzero"
+        },
+        "viewBox": {
+          "type": "array",
+          "additionalItems": false,
+          "items": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ],
+          "minItems": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "Placeholder": {
+      "anyOf": [
+        {
+          "type": "boolean",
+          "const": true
+        },
+        {
+          "type": "object",
+          "properties": {
+            "by": {
+              "type": "string"
+            },
+            "since": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Placement": {
+      "type": "object",
+      "required": ["parent", "order"],
+      "properties": {
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        }
+      },
+      "additionalProperties": false,
+      "title": "Placement"
+    },
+    "PolygonNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "w", "h", "sides"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "polygon"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "fill": {
+          "$ref": "#/$defs/Paints"
+        },
+        "stroke": {
+          "$ref": "#/$defs/Stroke"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "sides": {
+          "type": "integer",
+          "minimum": 3
+        },
+        "radius": {
+          "$ref": "#/$defs/Radius",
+          "default": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "PromptNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "content"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "prompt"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "content": {
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/$defs/TextStyle"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name of the person who wrote it (M6; e.g. the OS user name)."
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "$ref": "#/$defs/ModelRef"
+            }
+          ],
+          "description": "Model for runs: {provider, model} (M6). A bare string is the legacy form: a model id that must resolve to exactly one configured provider, else the run fails loudly."
+        },
+        "target": {
+          "$ref": "#/$defs/Id"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PropConflict": {
+      "type": "object",
+      "required": ["kind", "node", "path", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "prop"
+        },
+        "node": {
+          "$ref": "#/$defs/Id"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^(?:/(?:[^~/]|~[01])*)+$",
+          "description": "Property path inside the node."
+        },
+        "base": {
+          "description": "Value in the merge base (absent = unset)."
+        },
+        "ours": {
+          "description": "Value on our side (absent = unset)."
+        },
+        "theirs": {
+          "description": "Value on their side (absent = unset)."
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "PropConflict"
+    },
+    "PropDef": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["type", "target", "field"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "text"
+            },
+            "target": {
+              "$ref": "#/$defs/IdPath"
+            },
+            "field": {
+              "type": "string",
+              "const": "content"
+            },
+            "default": {
+              "type": "string"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "target", "field"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "target": {
+              "$ref": "#/$defs/IdPath"
+            },
+            "field": {
+              "type": "string",
+              "const": "visible"
+            },
+            "default": {
+              "type": "boolean"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "target"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "instance"
+            },
+            "target": {
+              "$ref": "#/$defs/IdPath"
+            },
+            "default": {
+              "$ref": "#/$defs/QId"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "target", "field", "options"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "enum"
+            },
+            "target": {
+              "$ref": "#/$defs/IdPath"
+            },
+            "field": {
+              "type": "string",
+              "minLength": 1
+            },
+            "options": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {}
+              },
+              "minProperties": 1
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "target"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "slot"
+            },
+            "target": {
+              "$ref": "#/$defs/IdPath"
+            },
+            "order": {
+              "$ref": "#/$defs/OrderKey"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "QId": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}$",
+      "description": "Local node id, or alias:id for a node of an imported library."
+    },
+    "Radius": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "type": "array",
+          "additionalItems": false,
+          "items": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            },
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": ["$ref"],
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Variable binding."
+                }
+              ]
+            }
+          ],
+          "minItems": 4
+        }
+      ]
+    },
+    "RectNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "w", "h"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "rect"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "fill": {
+          "$ref": "#/$defs/Paints"
+        },
+        "stroke": {
+          "$ref": "#/$defs/Stroke"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "radius": {
+          "$ref": "#/$defs/Radius",
+          "default": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "Ref": {
+      "type": "object",
+      "required": ["$ref"],
+      "properties": {
+        "$ref": {
+          "type": "string",
+          "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Variable binding."
+    },
+    "ScriptNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "w", "h", "src"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "script"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "src": {
+          "type": "string",
+          "pattern": "^\\.{1,2}/(?:[^\\\\/\\s]+/)*[^\\\\/\\s]+$"
+        },
+        "inputs": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {}
+          }
+        },
+        "clip": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "ShaderPaint": {
+      "type": "object",
+      "required": ["kind", "src"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "shader"
+        },
+        "src": {
+          "type": "string",
+          "pattern": "^\\.{1,2}/(?:[^\\\\/\\s]+/)*[^\\\\/\\s]+$"
+        },
+        "uniforms": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {}
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ShadowEffect": {
+      "type": "object",
+      "required": ["kind", "x", "y", "blur", "color"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "shadow"
+        },
+        "inner": {
+          "type": "boolean",
+          "default": false
+        },
+        "x": {
+          "$ref": "#/$defs/Num"
+        },
+        "y": {
+          "$ref": "#/$defs/Num"
+        },
+        "blur": {
+          "$ref": "#/$defs/NonNegNum"
+        },
+        "spread": {
+          "$ref": "#/$defs/Num",
+          "default": 0
+        },
+        "color": {
+          "$ref": "#/$defs/Color"
+        },
+        "blend": {
+          "$ref": "#/$defs/BlendMode",
+          "default": "normal"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ShadowVariable": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "shadow"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ShadowEffect"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/ShadowEffect"
+                  }
+                },
+                {
+                  "$ref": "#/$defs/Ref"
+                }
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/ShadowEffect"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/ShadowEffect"
+                        }
+                      },
+                      {
+                        "$ref": "#/$defs/Ref"
+                      }
+                    ]
+                  },
+                  "when": {
+                    "$ref": "#/$defs/ThemeSelection"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted group path for DTCG export."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Size": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "$ref": "#/$defs/SizeFit"
+        },
+        {
+          "$ref": "#/$defs/SizeFill"
+        }
+      ]
+    },
+    "SizeFill": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "const": "fill"
+        },
+        "fallback": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "min": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "SizeFit": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "const": "fit"
+        },
+        "fallback": {
+          "type": "number",
+          "minimum": 0
+        },
+        "min": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "SlotDef": {
+      "type": "object",
+      "properties": {
+        "suggested": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QId"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "SolidPaint": {
+      "type": "object",
+      "required": ["kind", "color"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "solid"
+        },
+        "color": {
+          "$ref": "#/$defs/Color"
+        },
+        "blend": {
+          "$ref": "#/$defs/BlendMode",
+          "default": "normal"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "StringOrRef": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ]
+    },
+    "StringVariable": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrRef"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "$ref": "#/$defs/StringOrRef"
+                  },
+                  "when": {
+                    "$ref": "#/$defs/ThemeSelection"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted group path for DTCG export."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Stroke": {
+      "type": "object",
+      "required": ["paint"],
+      "properties": {
+        "paint": {
+          "$ref": "#/$defs/Paints"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            },
+            {
+              "$ref": "#/$defs/StrokeSides"
+            }
+          ],
+          "default": 1
+        },
+        "align": {
+          "type": "string",
+          "enum": ["inside", "center", "outside"],
+          "default": "inside"
+        },
+        "cap": {
+          "type": "string",
+          "enum": ["butt", "round", "square"],
+          "default": "butt"
+        },
+        "join": {
+          "type": "string",
+          "enum": ["miter", "bevel", "round"],
+          "default": "miter"
+        },
+        "miterLimit": {
+          "type": "number",
+          "minimum": 1,
+          "default": 4,
+          "description": "Miter length / stroke width above which a miter join is beveled (SVG)."
+        },
+        "dash": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "StrokeSides": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "$ref": "#/$defs/NonNegNum"
+        },
+        "r": {
+          "$ref": "#/$defs/NonNegNum"
+        },
+        "b": {
+          "$ref": "#/$defs/NonNegNum"
+        },
+        "l": {
+          "$ref": "#/$defs/NonNegNum"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TextContent": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TextSpan"
+          }
+        }
+      ]
+    },
+    "TextNode": {
+      "type": "object",
+      "required": ["type", "parent", "order", "content"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "text"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parent node id, or null for a root node. Always a node id, never a path."
+        },
+        "at": {
+          "$ref": "#/$defs/IdPath"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderKey"
+        },
+        "name": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["auto", "absolute"],
+          "default": "auto"
+        },
+        "theme": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "locked": {
+          "type": "boolean",
+          "default": false
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Degrees, CCW, around the top-left corner."
+        },
+        "opacity": {
+          "$ref": "#/$defs/UnitNum",
+          "default": 1
+        },
+        "visible": {
+          "$ref": "#/$defs/BoolOrRef",
+          "default": true
+        },
+        "flipX": {
+          "type": "boolean",
+          "default": false
+        },
+        "flipY": {
+          "type": "boolean",
+          "default": false
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "darken",
+            "multiply",
+            "color-burn",
+            "linear-burn",
+            "lighten",
+            "screen",
+            "color-dodge",
+            "linear-dodge",
+            "overlay",
+            "soft-light",
+            "hard-light",
+            "difference",
+            "exclusion",
+            "hue",
+            "saturation",
+            "color",
+            "luminosity",
+            "pass-through"
+          ],
+          "default": "normal"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/ComponentDef"
+            }
+          ],
+          "default": false
+        },
+        "placeholder": {
+          "$ref": "#/$defs/Placeholder"
+        },
+        "fill": {
+          "$ref": "#/$defs/Paints"
+        },
+        "stroke": {
+          "$ref": "#/$defs/Stroke"
+        },
+        "effects": {
+          "$ref": "#/$defs/Effects"
+        },
+        "w": {
+          "$ref": "#/$defs/Size"
+        },
+        "h": {
+          "$ref": "#/$defs/Size"
+        },
+        "content": {
+          "$ref": "#/$defs/TextContent"
+        },
+        "grow": {
+          "type": "string",
+          "enum": ["auto", "fixed-width", "fixed"],
+          "default": "auto"
+        },
+        "style": {
+          "$ref": "#/$defs/TextStyle"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TextSpan": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/$defs/TextStyle"
+        },
+        "href": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TextStyle": {
+      "type": "object",
+      "properties": {
+        "font": {
+          "$ref": "#/$defs/StringOrRef"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            }
+          ]
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            }
+          ]
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "lineHeight": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            },
+            {
+              "type": "object",
+              "required": ["px"],
+              "properties": {
+                "px": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "letterSpacing": {
+          "$ref": "#/$defs/Num"
+        },
+        "align": {
+          "type": "string",
+          "enum": ["left", "center", "right", "justify"]
+        },
+        "valign": {
+          "type": "string",
+          "enum": ["top", "middle", "bottom"]
+        },
+        "decoration": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["underline", "strike"]
+          },
+          "uniqueItems": true
+        },
+        "case": {
+          "type": "string",
+          "enum": ["upper", "lower", "title"]
+        },
+        "features": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9]{4}$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "description": "OpenType feature tags."
+        },
+        "href": {
+          "type": "string"
+        },
+        "typography": {
+          "$ref": "#/$defs/Ref"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ThemeSelection": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[^\\s:$][^\\s:]{0,127}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "Themes": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[^\\s:$][^\\s:]{0,127}$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      }
+    },
+    "TypographyValue": {
+      "type": "object",
+      "properties": {
+        "font": {
+          "$ref": "#/$defs/StringOrRef"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            }
+          ]
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            }
+          ]
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "lineHeight": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "$ref": "#/$defs/Ref"
+            },
+            {
+              "type": "object",
+              "required": ["px"],
+              "properties": {
+                "px": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "letterSpacing": {
+          "$ref": "#/$defs/Num"
+        },
+        "align": {
+          "type": "string",
+          "enum": ["left", "center", "right", "justify"]
+        },
+        "valign": {
+          "type": "string",
+          "enum": ["top", "middle", "bottom"]
+        },
+        "decoration": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["underline", "strike"]
+          },
+          "uniqueItems": true
+        },
+        "case": {
+          "type": "string",
+          "enum": ["upper", "lower", "title"]
+        },
+        "features": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9]{4}$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "description": "OpenType feature tags."
+        },
+        "href": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TypographyVariable": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "typography"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TypographyValue"
+                },
+                {
+                  "$ref": "#/$defs/Ref"
+                }
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/TypographyValue"
+                      },
+                      {
+                        "$ref": "#/$defs/Ref"
+                      }
+                    ]
+                  },
+                  "when": {
+                    "$ref": "#/$defs/ThemeSelection"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted group path for DTCG export."
+        }
+      },
+      "additionalProperties": false
+    },
+    "UnitNum": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        {
+          "$ref": "#/$defs/Ref"
+        }
+      ]
+    },
+    "Variable": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ColorVariable"
+        },
+        {
+          "$ref": "#/$defs/NumberVariable"
+        },
+        {
+          "$ref": "#/$defs/StringVariable"
+        },
+        {
+          "$ref": "#/$defs/BooleanVariable"
+        },
+        {
+          "$ref": "#/$defs/TypographyVariable"
+        },
+        {
+          "$ref": "#/$defs/ShadowVariable"
+        },
+        {
+          "$ref": "#/$defs/DimensionVariable"
+        }
+      ]
+    },
+    "VariableConflict": {
+      "type": "object",
+      "required": ["kind", "variable", "applied"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "variable"
+        },
+        "variable": {
+          "type": "string",
+          "pattern": "^[^\\s:$][^\\s:]{0,127}$",
+          "description": "Local variable."
+        },
+        "when": {
+          "$ref": "#/$defs/ThemeSelection"
+        },
+        "base": {
+          "description": "Base definition / themed value."
+        },
+        "ours": {
+          "description": "Our definition / themed value."
+        },
+        "theirs": {
+          "description": "Their definition / themed value."
+        },
+        "applied": {
+          "type": "string",
+          "enum": ["ours", "theirs", "base", "edited"],
+          "description": "Which side the document body holds now; `edited` = changed by hand."
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True once the user picked a side (or edited the target). Default false."
+        }
+      },
+      "additionalProperties": false,
+      "title": "VariableConflict"
+    }
+  }
+}

@@ -139,8 +139,9 @@ one WebGL context (`agentMarkRendererStats()`); ≤ 12 px, `static`, no WebGL an
   message + "Nothing was changed on the canvas." when no op landed, Retry (or Open settings
   for unknown model / unsupported platform) + Copy error. Specific states keep AgentErrorCard.
 
-`<AgentPanel>` new optional props for RightPanel: `nodeNameOf(id)` / `parentNameOf(id)` (op row
-"in Pricing"), `platform` (default: Tauri → desktop).
+`<AgentPanel>` optional props: `nodeNameOf(id)` / `parentNameOf(id)` (op row "in Pricing"),
+`platform` (default: Tauri → desktop). The editor wires the two name lookups in
+`useEditorAgentPanel` (`editor/agent-panel.tsx`, layer name or id; top-level nodes have no parent).
 
 ### Still not designed (decided here)
 

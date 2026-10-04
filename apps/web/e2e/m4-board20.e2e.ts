@@ -501,7 +501,7 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "board20: Windows topbar (k logo, padding 12, no lights) + title rule (measured)",
+    name: "board20: Windows topbar (KimoLogo, padding 12, no lights) + title rule (measured)",
     async run(ctx) {
       const { page } = ctx
       await editor(ctx, `${SITE}/home.kimo`, "windows")
@@ -523,7 +523,7 @@ export const scenarios: Scenario[] = [
       const m = await measure(page, {
         topbar: ".kimo-desktop-topbar",
         logo: ".kimo-desktop-topbar > .topbar__logo",
-        mark: ".kimo-desktop-topbar > .topbar__logo .topbar__mark",
+        mark: ".kimo-desktop-topbar > .topbar__logo .kimo-logo",
         crumb: ".kimo-desktop-breadcrumb",
       })
       const { check, flush } = checker(ctx)
@@ -533,9 +533,15 @@ export const scenarios: Scenario[] = [
       check("Topbar N1mtd", "gap", g("topbar").gap, 8)
       check("Logo uE2vu", "size", `${g("logo").w}×${g("logo").h}`, "28×28")
       check("Logo uE2vu", "left = padding 12", g("logo").x - g("topbar").x, 12)
-      check("Logo uE2vu", "fill accent", g("logo").bg, await token(page, "--kimo-accent"))
-      check("Mark LYcUf", "font-size", g("mark").fs, 17)
-      check("Mark LYcUf", "font-weight", g("mark").fw, "700")
+      // Board 26 §4 KlpS9: KimoLogo 28 (bm1JR), no plate, fill $text-primary.
+      check("Logo uE2vu", "no plate", g("logo").bg, "rgba(0, 0, 0, 0)")
+      check("KimoLogo bm1JR", "size", `${g("mark").w}×${g("mark").h}`, "28×28")
+      check(
+        "KimoLogo bm1JR",
+        "fill $text-primary",
+        g("mark").color,
+        await token(page, "--kimo-text-primary"),
+      )
       check("Breadcrumb", "after logo + gap 8", g("crumb").x - (g("logo").x + g("logo").w), 8)
       flush()
       // File menu: "Show in Explorer", Ctrl shortcuts.

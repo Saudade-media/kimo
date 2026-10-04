@@ -7,7 +7,7 @@ import { codes, FIXTURES, fixtureFiles, readFixture, uiLibrary } from "./helpers
 
 const libraries = { ui: uiLibrary() }
 const jsonSchema = JSON.parse(
-  readFileSync(join(FIXTURES, "..", "schema", "kimo-0.1.schema.json"), "utf8"),
+  readFileSync(join(FIXTURES, "..", "schema", "kimo-1.0.schema.json"), "utf8"),
 )
 const schemaValidator = Schema.Compile(jsonSchema)
 

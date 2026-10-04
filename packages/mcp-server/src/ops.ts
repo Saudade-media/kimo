@@ -11,7 +11,7 @@
  *   result maps every key to its real id.
  * - Positions: `index` among the destination siblings (default: append). Order keys are never
  *   exposed to agents.
- * - Node bodies are `.kimo` node objects (kimo://schema/0.1) without `parent`/`order`/`at`.
+ * - Node bodies are `.kimo` node objects (kimo://schema/1.0) without `parent`/`order`/`at`.
  * - `null` is never used: removal is `unset: [...]`, "inherit" is `inherit: true`.
  */
 import type { Variable } from "@kimo/core-schema"
@@ -93,7 +93,7 @@ export const NodeBody = Open(
   },
   {
     description:
-      "A .kimo node object without parent/order/at, validated against kimo://schema/0.1 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent.",
+      "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent.",
   },
 )
 
@@ -101,7 +101,7 @@ const FieldMap = Open(
   { name: Opt(Str({ description: "Layer name (example field)." })) },
   {
     description:
-      "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/0.1. To remove a field use unset.",
+      "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/1.0. To remove a field use unset.",
   },
 )
 const fieldList = (description: string) =>
@@ -115,7 +115,7 @@ const VariableBody = Open(
   },
   {
     description:
-      "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/0.1.",
+      "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/1.0.",
   },
 )
 
@@ -344,7 +344,7 @@ export const DeclarePropWire = Obj(
       {
         type: Enum(["text", "boolean", "instance", "enum", "slot"], { description: "Prop kind." }),
       },
-      { description: "A .kimo PropDef (kimo://schema/0.1)." },
+      { description: "A .kimo PropDef (kimo://schema/1.0)." },
     ),
   },
   { description: "declareProp (upsert)." },

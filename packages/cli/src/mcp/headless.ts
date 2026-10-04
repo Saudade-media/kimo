@@ -37,7 +37,7 @@ import { pathHash } from "../io"
 import { createFallbackHandlers, createFallbackHost } from "./fallback"
 import { canonical, createNodePlatform } from "./node-platform"
 
-export const CLI_VERSION = "0.0.0"
+export const CLI_VERSION = "1.0.0"
 
 export interface HeadlessOptions {
   kimoHome: string
@@ -232,7 +232,7 @@ export async function flushOnExit(
 
 /**
  * The document-independent resources (ADR 0013 §2): the guides as `kimo://docs/{path}` (same
- * text as kimo_read_docs) and the format schema `kimo://schema/0.1`.
+ * text as kimo_read_docs) and the format schema `kimo://schema/1.0`.
  */
 export function registerStaticResources(server: ReturnType<typeof createKimoMcpServer>): void {
   for (const [path, g] of Object.entries(GUIDES)) {
@@ -246,15 +246,15 @@ export function registerStaticResources(server: ReturnType<typeof createKimoMcpS
   }
   server.registerResource(
     "kimo-schema",
-    "kimo://schema/0.1",
+    "kimo://schema/1.0",
     {
       title: ".kimo JSON Schema",
-      description: "The normative JSON Schema (draft 2020-12) of the .kimo format, version 0.1.",
+      description: "The normative JSON Schema (draft 2020-12) of the .kimo format, version 1.0.",
       mimeType: "application/schema+json",
     },
     async () => ({
       contents: [
-        { uri: "kimo://schema/0.1", mimeType: "application/schema+json", text: jsonSchemaText() },
+        { uri: "kimo://schema/1.0", mimeType: "application/schema+json", text: jsonSchemaText() },
       ],
     }),
   )

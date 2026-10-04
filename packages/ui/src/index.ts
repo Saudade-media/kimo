@@ -151,6 +151,16 @@ export {
 } from "./instance-swap-field/InstanceSwapField"
 export { Kbd, type KbdProps } from "./kbd/Kbd"
 export {
+  KIMO_LOGO_SMALL_MAX,
+  KimoLockup,
+  type KimoLockupProps,
+  KimoLogo,
+  type KimoLogoProps,
+  type KimoLogoVariant,
+  kimoLogoVariant,
+} from "./kimo-logo/KimoLogo"
+export { KIMO_LOGO_PATH, KIMO_LOGO_SMALL_PATH, KIMO_LOGO_VIEWBOX } from "./kimo-logo/paths"
+export {
   LAYER_ROW_INDENT,
   LAYER_ROW_PADDING,
   LayerRow,

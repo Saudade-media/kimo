@@ -11,6 +11,7 @@ import { threeWayMerge } from "@kimo/core-schema"
 import type { KimoPlatform, OpenRequest, SettingsPane } from "@kimo/platform"
 import { createBrowserPlatform } from "@kimo/platform/browser"
 import { createContext, useContext } from "react"
+import webPackage from "../../package.json"
 import { conflictSessionFactory } from "../conflicts"
 import type { HostClient } from "../host/client"
 import {
@@ -38,7 +39,8 @@ export async function createAppPlatform(): Promise<KimoPlatform> {
     const { createDesktopPlatform } = await import("@kimo/desktop")
     return createDesktopPlatform()
   }
-  return createBrowserPlatform()
+  // The web build reports the release it was built from (the desktop host reads Tauri's).
+  return createBrowserPlatform({ appVersion: webPackage.version })
 }
 
 /** Edits a conflict pick could not apply (logged; the shell toasts store rejections itself). */

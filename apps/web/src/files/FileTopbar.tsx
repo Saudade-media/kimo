@@ -6,13 +6,13 @@
  * editor's own trailing controls (Zoom, Theme, Preview, Export).
  *
  * Board 20: off macOS (no inset: Windows / Linux with native decorations, and the web) the
- * topbar leads with the 28px k logo and takes padding [0, 12] (N1mtd); an untitled document
+ * topbar leads with the 28px KimoLogo and takes padding [0, 12] (N1mtd); an untitled document
  * shows no folder, no separator and no branch (Zvw7e); the file name shows pressed while the
  * File menu is open (Nl4Cz).
  */
 
 import { basenameOf, dirnameOf } from "@kimo/platform"
-import { BranchChip, DesktopBreadcrumb, DesktopTopbar, TrafficLights } from "@kimo/ui"
+import { BranchChip, DesktopBreadcrumb, DesktopTopbar, KimoLogo, TrafficLights } from "@kimo/ui"
 import type { MouseEvent, ReactNode } from "react"
 import type { FileDocumentSession } from "../platform/session"
 import { useSessionState, useWindowChrome } from "./hooks"
@@ -91,17 +91,17 @@ export interface FileTopbarProps {
   fileOpen?: boolean
   /** Zoom, Theme, Preview, Export from the editor topbar. */
   trailing?: ReactNode
-  /** The k logo's action (Home), shown when the window has no traffic-light inset. */
+  /** The logo's action (Home), shown when the window has no traffic-light inset. */
   onHome?: () => void
   /** Board 21 Agent Presence chip (drag region, before Save Status). */
   presence?: ReactNode
 }
 
-/** The 28px k logo (web topbar `Logo`, board 20 uE2vu): accent pill, "k" 17 / 700. */
+/** The 28px topbar logo: KimoLogo 28 (bm1JR), replacing the old "k" pill (board 26 §4 KlpS9). */
 export function TopbarLogo({ onClick }: { onClick?: (() => void) | undefined }) {
   return (
     <button type="button" className="topbar__logo" aria-label="Kimo home" onClick={onClick}>
-      <span className="topbar__mark">k</span>
+      <KimoLogo size={28} />
     </button>
   )
 }

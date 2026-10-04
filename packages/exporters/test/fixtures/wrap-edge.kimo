@@ -1,6 +1,6 @@
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
-"format": "0.1.0",
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
 "meta": {"name":"Wrap edges"},
 "nodes": {
 "Auto000001": {"type":"text","parent":"Edges00001","order":"a0","name":"Auto","content":"Auto text never wraps, even when long","style":{"font":"Inter","size":16}}

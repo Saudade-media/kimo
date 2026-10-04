@@ -142,8 +142,8 @@ export function expectFail(r: ToolResult<unknown>, code: string): ToolFailure {
 const DOC = (nodes: Record<string, unknown> = {}, extra: Record<string, unknown> = {}) =>
   `${JSON.stringify(
     {
-      $schema: "https://kimo.design/schema/kimo-0.1.json",
-      format: "0.1.0",
+      $schema: "https://kimo.design/schema/kimo-1.0.json",
+      format: "1.0.0",
       ...extra,
       nodes: {
         Board00001: {
@@ -298,7 +298,7 @@ const CASES: Record<ConformanceCase, Impl> = {
     async (h) => {
       const c = testClient(h)
       const path = `${h.root ?? "/conformance"}/broken.kimo`
-      const text = '{"format": "0.1.0", "nodes": {<<<<<<< HEAD\n'
+      const text = '{"format": "1.0.0", "nodes": {<<<<<<< HEAD\n'
       await h.writeFile(path, text)
       expectFail(await c.call("kimo_open", { path }), "LOAD_FAILED")
       expect(h.host.list().some((d) => d.ref.path === path)).toBe(false)
@@ -310,7 +310,7 @@ const CASES: Record<ConformanceCase, Impl> = {
   "kimo_save of a read-only (newer format) document fails READ_ONLY and leaves the file untouched":
     async (h) => {
       const c = testClient(h)
-      const text = DOC({}, { $schema: "https://kimo.design/schema/kimo-0.9.json", format: "0.9.0" })
+      const text = DOC({}, { $schema: "https://kimo.design/schema/kimo-1.9.json", format: "1.9.0" })
       const { path, docId } = await openFixture(h, c, text)
       const open = h.host.get(docId)
       expect(open.ok && open.value.ref.readOnly).toBe(true)

@@ -1,7 +1,7 @@
 /**
  * JSON Schema (draft 2020-12) generation from the TypeBox schemas, with shared sub-schemas
  * hoisted into `$defs`. `scripts/build-schema.ts` writes the result to
- * `schema/kimo-0.1.schema.json`.
+ * `schema/kimo-1.0.schema.json`.
  */
 import type { TSchema } from "typebox"
 import { FEATURES } from "./features"
@@ -140,7 +140,7 @@ const SCHEMA_SINGLE = [
   "contains",
 ]
 
-/** Builds the published JSON Schema for format 0.1. */
+/** Builds the published JSON Schema for format 1.0. */
 export function buildJsonSchema(): Record<string, unknown> {
   const defs = DEFS.map(([name, s]) => [name, plain(s) as Json] as const)
   const bySig = new Map<string, string>()
@@ -193,7 +193,7 @@ export function buildJsonSchema(): Record<string, unknown> {
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: SCHEMA_ID,
-    description: `Structural schema of the .kimo file format ${FORMAT_VERSION} (Draft). Semantic rules (referential integrity, override paths, variable types, …) are checked by validate() in @kimo/core-schema; see docs/spec/kimo-format-v0.1.md. Known features: ${Object.keys(FEATURES).join(", ")}.`,
+    description: `Structural schema of the .kimo file format ${FORMAT_VERSION}. Semantic rules (referential integrity, override paths, variable types, …) are checked by validate() in @kimo/core-schema; see docs/spec/kimo-format-1.0.md. Known features: ${Object.keys(FEATURES).join(", ")}.`,
     ...root,
     $defs: sortedDefs,
   }

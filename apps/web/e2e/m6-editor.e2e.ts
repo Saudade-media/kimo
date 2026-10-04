@@ -180,7 +180,7 @@ export const scenarios: Scenario[] = [
     name: "m6 editor: Home on an untitled document asks first (Cancel stays, Don't save leaves)",
     async run(ctx) {
       const { page } = ctx
-      // Windows / Linux topbar: the k logo is the way Home (board 20 KcXQz).
+      // Windows / Linux topbar: the KimoLogo is the way Home (board 20 KcXQz).
       await editor(ctx, "#/", "windows")
       await page.getByRole("button", { name: "New file" }).first().click()
       await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })

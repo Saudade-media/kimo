@@ -3,14 +3,19 @@
 //! endpoint with its own credentials:
 //!
 //! - **Bedrock**: AWS SigV4 (keychain JSON `{accessKeyId, secretAccessKey, sessionToken?}`, the
-//!   `AWS_*` env vars or `~/.aws/credentials`) or a Bedrock API key (a non-JSON keychain value,
-//!   or `AWS_BEARER_TOKEN_BEDROCK`) → `invoke[-with-response-stream]`; the AWS event stream is
-//!   re-encoded as Anthropic SSE so the SDK parses it unchanged.
+//!   `AWS_*` env vars, a profile's static keys in `~/.aws/credentials` / `~/.aws/config`, or an
+//!   IAM Identity Center (SSO) profile through the `aws sso login` token cache) or a Bedrock API
+//!   key (a non-JSON keychain value, or `AWS_BEARER_TOKEN_BEDROCK`) →
+//!   `invoke[-with-response-stream]`; the AWS event stream is re-encoded as Anthropic SSE so the
+//!   SDK parses it unchanged.
 //! - **Vertex**: Google ADC (keychain JSON, `GOOGLE_APPLICATION_CREDENTIALS`, or gcloud's
 //!   `application_default_credentials.json`; `authorized_user` and `service_account` types) →
 //!   `rawPredict` / `streamRawPredict` (already SSE).
 //! - **Foundry**: `https://<resource>.services.ai.azure.com/anthropic/…` with the keychain API
-//!   key. Entra ID tokens are not implemented (UNSUPPORTED with a clear message).
+//!   key, or a Microsoft Entra ID token from the Azure CLI (`az account get-access-token`).
+//!
+//! The provider card's credential choice arrives as the relay auth's `credentials` (and, for
+//! Bedrock, `profile`); see [`check_credentials`].
 //!
 //! Only `POST /v1/messages` is mapped; other paths answer an Anthropic-shaped 404.
 
@@ -123,6 +128,100 @@ fn env_nonempty(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.trim().is_empty())
 }
 
+/// Where credential lookups read the environment and the home directory (the process's, or a
+/// fixed set in tests).
+pub struct CloudEnv {
+    vars: Option<std::collections::HashMap<String, String>>,
+    home: Option<PathBuf>,
+}
+
+impl CloudEnv {
+    pub fn process() -> Self {
+        Self {
+            vars: None,
+            home: home(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn fixed(vars: &[(&str, &str)], home: Option<&Path>) -> Self {
+        Self {
+            vars: Some(
+                vars.iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect(),
+            ),
+            home: home.map(Path::to_path_buf),
+        }
+    }
+
+    fn var(&self, name: &str) -> Option<String> {
+        match &self.vars {
+            Some(m) => m.get(name).filter(|v| !v.trim().is_empty()).cloned(),
+            None => env_nonempty(name),
+        }
+    }
+
+    fn aws_file(&self, var: &str, name: &str) -> Option<PathBuf> {
+        self.var(var)
+            .map(PathBuf::from)
+            .or_else(|| self.home.as_ref().map(|h| h.join(".aws").join(name)))
+    }
+
+    /// `[section]` of `~/.aws/config` for a profile (`[default]` / `[profile <name>]`).
+    fn aws_config_profile(
+        &self,
+        profile: &str,
+    ) -> Option<std::collections::HashMap<String, String>> {
+        let text = std::fs::read_to_string(self.aws_file("AWS_CONFIG_FILE", "config")?).ok()?;
+        ini_section(&text, &format!("profile {profile}")).or_else(|| {
+            (profile == "default")
+                .then(|| ini_section(&text, "default"))
+                .flatten()
+        })
+    }
+}
+
+fn now_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Validates the provider card's credential choice (`auth.credentials`) and Bedrock profile.
+pub fn check_credentials(
+    platform: &str,
+    credentials: Option<&str>,
+    profile: Option<&str>,
+) -> R<()> {
+    let allowed: &[&str] = match platform {
+        "bedrock" => &["profile", "env", "sso"],
+        "vertex" => &["adc", "service-account"],
+        "foundry" => &["entra", "api-key"],
+        _ => &[],
+    };
+    if let Some(c) = credentials {
+        if !allowed.contains(&c) {
+            return Err(invalid(format!("Unknown {platform} credentials \"{c}\"")));
+        }
+    }
+    if let Some(p) = profile {
+        if platform != "bedrock" {
+            return Err(invalid("Only Bedrock takes an AWS profile"));
+        }
+        if p.is_empty()
+            || p.len() > 128
+            || !p
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'@' | b'+'))
+        {
+            return Err(invalid(format!("Invalid AWS profile \"{p}\"")));
+        }
+    }
+    Ok(())
+}
+
 /// `[section]` → key = value pairs of an INI file (AWS config/credentials).
 fn ini_section(text: &str, section: &str) -> Option<std::collections::HashMap<String, String>> {
     let mut cur: Option<String> = None;
@@ -162,84 +261,305 @@ pub enum BedrockAuth {
     SigV4(AwsCreds),
     /// Bedrock API key (`Authorization: Bearer`).
     Bearer(Secret),
+    /// An IAM Identity Center profile: the relay trades the cached `aws sso login` token for
+    /// role credentials ([`sso_credentials_request`]) before signing.
+    Sso(SsoRole),
 }
 
-/// Credentials in precedence order: keychain value, env, `~/.aws/credentials`.
-pub fn bedrock_auth(keychain: Option<&Secret>) -> R<BedrockAuth> {
-    if let Some(s) = keychain {
-        let v = s.expose().trim();
-        if v.starts_with('{') {
-            let j: Value = serde_json::from_str(v)
-                .map_err(|_| invalid("The saved Bedrock credentials are not valid JSON"))?;
-            let get = |k: &str| j.get(k).and_then(Value::as_str).map(String::from);
-            let (Some(a), Some(sk)) = (get("accessKeyId"), get("secretAccessKey")) else {
-                return Err(invalid(
-                    "Bedrock credentials need accessKeyId and secretAccessKey",
-                ));
-            };
-            return Ok(BedrockAuth::SigV4(AwsCreds {
-                access_key: a,
-                secret_key: Secret::new(sk),
-                session_token: get("sessionToken").map(Secret::new),
-            }));
-        }
-        return Ok(BedrockAuth::Bearer(Secret::new(v)));
+/// An SSO profile with a live cached access token.
+#[derive(Clone)]
+pub struct SsoRole {
+    pub profile: String,
+    pub region: String,
+    pub account_id: String,
+    pub role_name: String,
+    pub access_token: Secret,
+}
+
+impl SsoRole {
+    /// Cache key for the role credentials (never the token).
+    pub fn cache_key(&self) -> String {
+        format!(
+            "{}\u{0}{}\u{0}{}",
+            self.profile, self.account_id, self.role_name
+        )
     }
-    if let Some(t) = env_nonempty("AWS_BEARER_TOKEN_BEDROCK") {
-        return Ok(BedrockAuth::Bearer(Secret::new(t)));
-    }
-    if let (Some(a), Some(s)) = (
-        env_nonempty("AWS_ACCESS_KEY_ID"),
-        env_nonempty("AWS_SECRET_ACCESS_KEY"),
-    ) {
+}
+
+fn parse_keychain_bedrock(s: &Secret) -> R<BedrockAuth> {
+    let v = s.expose().trim();
+    if v.starts_with('{') {
+        let j: Value = serde_json::from_str(v)
+            .map_err(|_| invalid("The saved Bedrock credentials are not valid JSON"))?;
+        let get = |k: &str| j.get(k).and_then(Value::as_str).map(String::from);
+        let (Some(a), Some(sk)) = (get("accessKeyId"), get("secretAccessKey")) else {
+            return Err(invalid(
+                "Bedrock credentials need accessKeyId and secretAccessKey",
+            ));
+        };
         return Ok(BedrockAuth::SigV4(AwsCreds {
             access_key: a,
-            secret_key: Secret::new(s),
-            session_token: env_nonempty("AWS_SESSION_TOKEN").map(Secret::new),
+            secret_key: Secret::new(sk),
+            session_token: get("sessionToken").map(Secret::new),
         }));
     }
-    let profile = env_nonempty("AWS_PROFILE").unwrap_or_else(|| "default".into());
-    let path = env_nonempty("AWS_SHARED_CREDENTIALS_FILE")
-        .map(PathBuf::from)
-        .or_else(|| home().map(|h| h.join(".aws").join("credentials")));
-    if let Some(text) = path.and_then(|p| std::fs::read_to_string(p).ok()) {
-        if let Some(sec) = ini_section(&text, &profile) {
-            if let (Some(a), Some(s)) = (
-                sec.get("aws_access_key_id"),
-                sec.get("aws_secret_access_key"),
-            ) {
-                return Ok(BedrockAuth::SigV4(AwsCreds {
-                    access_key: a.clone(),
-                    secret_key: Secret::new(s.clone()),
-                    session_token: sec.get("aws_session_token").cloned().map(Secret::new),
-                }));
-            }
-            return Err(unsupported(format!(
-                "AWS profile \"{profile}\" has no static keys (SSO, credential_process and role profiles are not supported by the relay yet); save an access key or a Bedrock API key in Settings"
-            )));
+    Ok(BedrockAuth::Bearer(Secret::new(v)))
+}
+
+fn static_keys(sec: &std::collections::HashMap<String, String>) -> Option<AwsCreds> {
+    let (a, s) = (
+        sec.get("aws_access_key_id")?,
+        sec.get("aws_secret_access_key")?,
+    );
+    Some(AwsCreds {
+        access_key: a.clone(),
+        secret_key: Secret::new(s.clone()),
+        session_token: sec.get("aws_session_token").cloned().map(Secret::new),
+    })
+}
+
+/// Parses `expiresAt` of the SSO token cache (`2024-01-01T00:00:00Z`, older CLIs `…UTC`).
+fn parse_aws_time(s: &str) -> Option<u64> {
+    let s = s.trim();
+    let s = s
+        .strip_suffix("UTC")
+        .map(|p| format!("{p}Z"))
+        .unwrap_or(s.to_string());
+    time::OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339)
+        .ok()
+        .and_then(|t| u64::try_from(t.unix_timestamp()).ok())
+}
+
+/// The SSO role of a profile (`sso_session` → `[sso-session <name>]`, or the legacy inline
+/// `sso_start_url`/`sso_region`) with its cached token; `Ok(None)` when it is not an SSO profile.
+fn sso_role(
+    env: &CloudEnv,
+    sec: &std::collections::HashMap<String, String>,
+    profile: &str,
+    now_s: u64,
+) -> R<Option<SsoRole>> {
+    let (Some(account_id), Some(role_name)) = (sec.get("sso_account_id"), sec.get("sso_role_name"))
+    else {
+        return Ok(None);
+    };
+    let (cache_name, region) = if let Some(session) = sec.get("sso_session") {
+        let text = env
+            .aws_file("AWS_CONFIG_FILE", "config")
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .unwrap_or_default();
+        let ss = ini_section(&text, &format!("sso-session {session}")).ok_or_else(|| {
+            unsupported(format!(
+                "AWS profile \"{profile}\" names sso-session \"{session}\", which ~/.aws/config does not define"
+            ))
+        })?;
+        let region = ss
+            .get("sso_region")
+            .or_else(|| sec.get("sso_region"))
+            .cloned();
+        (session.clone(), region)
+    } else {
+        let Some(url) = sec.get("sso_start_url") else {
+            return Ok(None);
+        };
+        (url.clone(), sec.get("sso_region").cloned())
+    };
+    let region = region
+        .ok_or_else(|| unsupported(format!("AWS profile \"{profile}\" has no sso_region")))?;
+    check_label(&region, "SSO region")?;
+    if account_id.len() != 12 || !account_id.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(invalid(format!("Invalid sso_account_id \"{account_id}\"")));
+    }
+    let digest = ring::digest::digest(
+        &ring::digest::SHA1_FOR_LEGACY_USE_ONLY,
+        cache_name.as_bytes(),
+    );
+    let login = || {
+        unsupported(format!(
+            "The AWS SSO session of profile \"{profile}\" is missing or expired: run `aws sso login --profile {profile}`"
+        ))
+    };
+    let cache = env
+        .home
+        .as_ref()
+        .map(|h| {
+            h.join(".aws")
+                .join("sso")
+                .join("cache")
+                .join(format!("{}.json", hex::encode(digest.as_ref())))
+        })
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+        .ok_or_else(login)?;
+    let token = cache
+        .get("accessToken")
+        .and_then(Value::as_str)
+        .ok_or_else(login)?;
+    let expires = cache
+        .get("expiresAt")
+        .and_then(Value::as_str)
+        .and_then(parse_aws_time)
+        .ok_or_else(login)?;
+    if expires <= now_s + 60 {
+        return Err(login());
+    }
+    Ok(Some(SsoRole {
+        profile: profile.to_string(),
+        region,
+        account_id: account_id.clone(),
+        role_name: role_name.clone(),
+        access_token: Secret::new(token),
+    }))
+}
+
+/// Credentials per the provider's choice (`credentials`: `profile` | `env` | `sso`; omitted =
+/// the default chain). A key saved in the keychain always wins; then `env`: `AWS_*` only;
+/// `profile`: the profile's static keys (`~/.aws/credentials`, then `~/.aws/config`), else its
+/// SSO role; `sso`: the profile's SSO role only. The default chain is env, then the profile.
+pub fn bedrock_auth(
+    keychain: Option<&Secret>,
+    credentials: Option<&str>,
+    profile: Option<&str>,
+) -> R<BedrockAuth> {
+    bedrock_auth_in(
+        &CloudEnv::process(),
+        keychain,
+        credentials,
+        profile,
+        now_unix(),
+    )
+}
+
+pub fn bedrock_auth_in(
+    env: &CloudEnv,
+    keychain: Option<&Secret>,
+    credentials: Option<&str>,
+    profile: Option<&str>,
+    now_s: u64,
+) -> R<BedrockAuth> {
+    if let Some(s) = keychain {
+        return parse_keychain_bedrock(s);
+    }
+    let source = credentials.unwrap_or("auto");
+    if matches!(source, "auto" | "env") {
+        if let Some(t) = env.var("AWS_BEARER_TOKEN_BEDROCK") {
+            return Ok(BedrockAuth::Bearer(Secret::new(t)));
+        }
+        if let (Some(a), Some(s)) = (
+            env.var("AWS_ACCESS_KEY_ID"),
+            env.var("AWS_SECRET_ACCESS_KEY"),
+        ) {
+            return Ok(BedrockAuth::SigV4(AwsCreds {
+                access_key: a,
+                secret_key: Secret::new(s),
+                session_token: env.var("AWS_SESSION_TOKEN").map(Secret::new),
+            }));
+        }
+        if source == "env" {
+            return Err(unsupported(
+                "No AWS credentials in the environment: set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (or AWS_BEARER_TOKEN_BEDROCK), or choose an AWS profile",
+            ));
         }
     }
-    Err(unsupported(
-        "No AWS credentials: save an access key or Bedrock API key in Settings, or set AWS_ACCESS_KEY_ID / AWS_PROFILE",
+    let profile = profile
+        .filter(|p| !p.trim().is_empty())
+        .map(|p| p.trim().to_string())
+        .or_else(|| env.var("AWS_PROFILE"))
+        .unwrap_or_else(|| "default".into());
+    let creds_section = env
+        .aws_file("AWS_SHARED_CREDENTIALS_FILE", "credentials")
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|t| ini_section(&t, &profile));
+    let config_section = env.aws_config_profile(&profile);
+    if source != "sso" {
+        if let Some(c) = creds_section
+            .as_ref()
+            .and_then(static_keys)
+            .or_else(|| config_section.as_ref().and_then(static_keys))
+        {
+            return Ok(BedrockAuth::SigV4(c));
+        }
+    }
+    if let Some(sec) = &config_section {
+        if let Some(role) = sso_role(env, sec, &profile, now_s)? {
+            return Ok(BedrockAuth::Sso(role));
+        }
+    }
+    if source == "sso" {
+        return Err(unsupported(format!(
+            "AWS profile \"{profile}\" has no SSO configuration (sso_session or sso_start_url, sso_account_id, sso_role_name) in ~/.aws/config"
+        )));
+    }
+    if creds_section.is_some() || config_section.is_some() {
+        return Err(unsupported(format!(
+            "AWS profile \"{profile}\" has no static keys or SSO role (credential_process and assume-role profiles are not supported by the relay yet); save an access key or a Bedrock API key in Settings"
+        )));
+    }
+    Err(unsupported(format!(
+        "No AWS credentials: AWS profile \"{profile}\" is not in ~/.aws; save an access key or Bedrock API key in Settings, or set AWS_ACCESS_KEY_ID"
+    )))
+}
+
+/// The IAM Identity Center `GetRoleCredentials` call for an SSO role: (url, headers).
+pub fn sso_credentials_request(r: &SsoRole) -> R<(String, Vec<(String, String)>)> {
+    check_label(&r.region, "SSO region")?;
+    Ok((
+        format!(
+            "https://portal.sso.{}.amazonaws.com/federation/credentials?account_id={}&role_name={}",
+            r.region,
+            uri_encode(&r.account_id, true),
+            uri_encode(&r.role_name, true)
+        ),
+        vec![(
+            "x-amz-sso_bearer_token".into(),
+            r.access_token.expose().to_string(),
+        )],
     ))
 }
 
-/// Region: request field, then `AWS_REGION`, `AWS_DEFAULT_REGION`, `~/.aws/config`.
-pub fn bedrock_region(requested: Option<&str>) -> R<String> {
+/// `GetRoleCredentials` response → credentials and their expiry (unix seconds).
+pub fn parse_sso_credentials(v: &Value) -> R<(AwsCreds, Option<u64>)> {
+    let rc = v
+        .get("roleCredentials")
+        .ok_or_else(|| invalid("AWS SSO returned no roleCredentials"))?;
+    let get = |k: &str| rc.get(k).and_then(Value::as_str).map(String::from);
+    let (Some(a), Some(s)) = (get("accessKeyId"), get("secretAccessKey")) else {
+        return Err(invalid("AWS SSO role credentials are incomplete"));
+    };
+    Ok((
+        AwsCreds {
+            access_key: a,
+            secret_key: Secret::new(s),
+            session_token: get("sessionToken").map(Secret::new),
+        },
+        rc.get("expiration")
+            .and_then(Value::as_u64)
+            .map(|ms| ms / 1000),
+    ))
+}
+
+/// Region: request field, then `AWS_REGION`, `AWS_DEFAULT_REGION`, the profile's `region` in
+/// `~/.aws/config` (`profile`, else `AWS_PROFILE`, else `default`).
+pub fn bedrock_region(requested: Option<&str>, profile: Option<&str>) -> R<String> {
+    bedrock_region_in(&CloudEnv::process(), requested, profile)
+}
+
+pub fn bedrock_region_in(
+    env: &CloudEnv,
+    requested: Option<&str>,
+    profile: Option<&str>,
+) -> R<String> {
     let r = requested
         .map(String::from)
         .filter(|s| !s.is_empty())
-        .or_else(|| env_nonempty("AWS_REGION"))
-        .or_else(|| env_nonempty("AWS_DEFAULT_REGION"))
+        .or_else(|| env.var("AWS_REGION"))
+        .or_else(|| env.var("AWS_DEFAULT_REGION"))
         .or_else(|| {
-            let profile = env_nonempty("AWS_PROFILE").unwrap_or_else(|| "default".into());
-            let sec = if profile == "default" {
-                "default".to_string()
-            } else {
-                format!("profile {profile}")
-            };
-            let text = std::fs::read_to_string(home()?.join(".aws").join("config")).ok()?;
-            ini_section(&text, &sec)?.get("region").cloned()
+            let profile = profile
+                .filter(|p| !p.trim().is_empty())
+                .map(|p| p.trim().to_string())
+                .or_else(|| env.var("AWS_PROFILE"))
+                .unwrap_or_else(|| "default".into());
+            env.aws_config_profile(&profile)?.get("region").cloned()
         })
         .ok_or_else(|| invalid("No AWS region: set it on the Bedrock provider or AWS_REGION"))?;
     check_label(&r, "region")?;
@@ -364,6 +684,11 @@ pub fn prepare_bedrock(
         ),
     ];
     match auth {
+        BedrockAuth::Sso(_) => {
+            return Err(invalid(
+                "SSO credentials must be exchanged before the request is signed",
+            ));
+        }
         BedrockAuth::Bearer(t) => {
             headers.push(("authorization".into(), format!("Bearer {}", t.expose())));
         }
@@ -603,7 +928,19 @@ fn gcloud_adc_path() -> Option<PathBuf> {
     }
 }
 
-pub fn google_creds(keychain: Option<&Secret>) -> R<GoogleCreds> {
+/// Google credentials per the provider's choice (`credentials`): `service-account` → the
+/// keychain JSON only; `adc` → `GOOGLE_APPLICATION_CREDENTIALS` / gcloud ADC only (a stale
+/// keychain value is ignored); omitted → keychain, then ADC.
+pub fn google_creds(keychain: Option<&Secret>, credentials: Option<&str>) -> R<GoogleCreds> {
+    let keychain = match credentials {
+        Some("adc") => None,
+        Some("service-account") => Some(keychain.ok_or_else(|| {
+            unsupported(
+                "No service-account JSON is saved for Vertex: choose 'Service account JSON…' in Settings, or switch to application default credentials",
+            )
+        })?),
+        _ => keychain,
+    };
     let (source, text) = if let Some(s) = keychain {
         ("keychain".to_string(), s.expose().to_string())
     } else if let Some(p) = env_nonempty("GOOGLE_APPLICATION_CREDENTIALS") {
@@ -799,27 +1136,79 @@ pub fn prepare_vertex(
 
 // --- Foundry --------------------------------------------------------------------------------------
 
+/// How the relay authenticates to a Foundry resource.
+pub enum FoundryAuth {
+    /// The resource's API key (keychain).
+    Key(Secret),
+    /// A Microsoft Entra ID access token (Azure CLI).
+    Entra(Secret),
+}
+
+/// Entra ID resource the Foundry token is requested for.
+pub const FOUNDRY_ENTRA_RESOURCE: &str = "https://cognitiveservices.azure.com";
+
+/// `az account get-access-token --output json` → (token, expiry unix seconds if given).
+pub fn parse_az_token(stdout: &[u8]) -> R<(Secret, Option<u64>)> {
+    let v: Value = serde_json::from_slice(stdout)
+        .map_err(|_| invalid("The Azure CLI did not return a token (JSON expected)"))?;
+    let tok = v
+        .get("accessToken")
+        .and_then(Value::as_str)
+        .filter(|t| !t.is_empty())
+        .ok_or_else(|| invalid("The Azure CLI returned no accessToken"))?;
+    let exp = v.get("expires_on").and_then(|e| {
+        e.as_u64()
+            .or_else(|| e.as_str().and_then(|s| s.trim().parse().ok()))
+    });
+    Ok((Secret::new(tok), exp))
+}
+
+/// Candidate paths of the Azure CLI (PATH, then the usual install dirs; GUI apps on macOS start
+/// with a minimal PATH).
+pub fn azure_cli_candidates() -> Vec<PathBuf> {
+    let name = if cfg!(windows) { "az.cmd" } else { "az" };
+    let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).collect())
+        .unwrap_or_default();
+    if cfg!(windows) {
+        dirs.push(PathBuf::from(
+            r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin",
+        ));
+        dirs.push(PathBuf::from(
+            r"C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\wbin",
+        ));
+    } else {
+        for d in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"] {
+            dirs.push(PathBuf::from(d));
+        }
+    }
+    dirs.into_iter().map(|d| d.join(name)).collect()
+}
+
 pub fn prepare_foundry(
     path: &str,
     query: Option<&str>,
     body: Vec<u8>,
-    key: Option<&Secret>,
+    auth: &FoundryAuth,
     resource: Option<&str>,
 ) -> R<Prepared> {
     let resource = resource
         .filter(|s| !s.is_empty())
         .ok_or_else(|| invalid("No Foundry resource: set it (project) on the Foundry provider"))?;
     check_label(resource, "Foundry resource")?;
-    let key = key.ok_or_else(|| {
-        unsupported("Foundry with Entra ID is not supported by the relay yet; save the resource's API key in Settings")
-    })?;
     let q = query.map(|q| format!("?{q}")).unwrap_or_default();
-    Ok(Prepared {
-        url: format!("https://{resource}.services.ai.azure.com/anthropic{path}{q}"),
-        headers: vec![
+    let headers = match auth {
+        FoundryAuth::Key(key) => vec![
             ("x-api-key".into(), key.expose().to_string()),
             ("api-key".into(), key.expose().to_string()),
         ],
+        FoundryAuth::Entra(tok) => {
+            vec![("authorization".into(), format!("Bearer {}", tok.expose()))]
+        }
+    };
+    Ok(Prepared {
+        url: format!("https://{resource}.services.ai.azure.com/anthropic{path}{q}"),
+        headers,
         body,
         bedrock_stream: false,
     })
@@ -908,11 +1297,16 @@ mod tests {
 
     #[test]
     fn bedrock_api_key_from_keychain_is_bearer() {
-        let a = bedrock_auth(Some(&Secret::new("ABSKexample"))).unwrap();
+        let a = bedrock_auth(Some(&Secret::new("ABSKexample")), None, None).unwrap();
         assert!(matches!(a, BedrockAuth::Bearer(_)));
-        let a = bedrock_auth(Some(&Secret::new(
-            r#"{"accessKeyId":"AK","secretAccessKey":"SK"}"#,
-        )))
+        // A saved key wins over every credential source.
+        let a = bedrock_auth(
+            Some(&Secret::new(
+                r#"{"accessKeyId":"AK","secretAccessKey":"SK"}"#,
+            )),
+            Some("sso"),
+            Some("design"),
+        )
         .unwrap();
         assert!(matches!(a, BedrockAuth::SigV4(c) if c.access_key == "AK"));
     }
@@ -975,7 +1369,7 @@ mod tests {
             "/v1/messages",
             Some("beta=true"),
             body.to_vec(),
-            Some(&Secret::new("k")),
+            &FoundryAuth::Key(Secret::new("k")),
             Some("my-res"),
         )
         .unwrap();
@@ -983,8 +1377,27 @@ mod tests {
             p.url,
             "https://my-res.services.ai.azure.com/anthropic/v1/messages?beta=true"
         );
-        let e = prepare_foundry("/v1/messages", None, vec![], None, Some("r"));
-        assert_eq!(e.err().unwrap().code, "UNSUPPORTED");
+        assert!(p.headers.contains(&("x-api-key".into(), "k".into())));
+        let p = prepare_foundry(
+            "/v1/messages",
+            None,
+            vec![],
+            &FoundryAuth::Entra(Secret::new("eyJ")),
+            Some("r"),
+        )
+        .unwrap();
+        assert_eq!(
+            p.headers,
+            vec![("authorization".to_string(), "Bearer eyJ".to_string())]
+        );
+        let e = prepare_foundry(
+            "/v1/messages",
+            None,
+            vec![],
+            &FoundryAuth::Key(Secret::new("k")),
+            None,
+        );
+        assert_eq!(e.err().unwrap().code, "INVALID");
     }
 
     #[test]
@@ -1002,7 +1415,7 @@ mod tests {
         };
         assert!(google_token_request(&evil, 0).is_err());
         assert_eq!(
-            google_creds(Some(&Secret::new(r#"{"type":"external_account"}"#)))
+            google_creds(Some(&Secret::new(r#"{"type":"external_account"}"#)), None)
                 .err()
                 .unwrap()
                 .code,
@@ -1019,5 +1432,217 @@ mod tests {
         );
         assert_eq!(u.query.as_deref(), Some("beta=true"));
         assert!(parse_relay_url("kimo-relay://evil/v1/messages").is_err());
+    }
+
+    fn write(dir: &Path, rel: &str, text: &str) {
+        let p = dir.join(rel);
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(p, text).unwrap();
+    }
+
+    const NOW: u64 = 1_800_000_000; // 2027-01-15
+
+    fn sso_home() -> tempfile::TempDir {
+        let d = tempfile::tempdir().unwrap();
+        write(
+            d.path(),
+            ".aws/config",
+            "[default]\nregion = us-west-2\n\n[profile keys]\naws_access_key_id = AKCFG\naws_secret_access_key = SKCFG\nregion = eu-west-1\n\n[profile design]\nsso_session = acme\nsso_account_id = 123456789012\nsso_role_name = Designer\nregion = eu-central-1\n\n[sso-session acme]\nsso_start_url = https://acme.awsapps.com/start\nsso_region = us-east-1\n\n[profile legacy]\nsso_start_url = https://old.awsapps.com/start\nsso_region = eu-west-1\nsso_account_id = 210987654321\nsso_role_name = Admin\n\n[profile procs]\ncredential_process = /bin/echo\n",
+        );
+        write(
+            d.path(),
+            ".aws/credentials",
+            "[default]\naws_access_key_id = AKDEF\naws_secret_access_key = SKDEF\n\n[work]\naws_access_key_id = AKWORK\naws_secret_access_key = SKWORK\naws_session_token = TOK\n",
+        );
+        let sha = |s: &str| {
+            hex::encode(ring::digest::digest(
+                &ring::digest::SHA1_FOR_LEGACY_USE_ONLY,
+                s.as_bytes(),
+            ))
+        };
+        // Session-based profiles hash the session name; legacy ones the start URL.
+        write(
+            d.path(),
+            &format!(".aws/sso/cache/{}.json", sha("acme")),
+            r#"{"accessToken":"sso-token","expiresAt":"2027-01-15T09:00:00Z","region":"us-east-1"}"#,
+        );
+        write(
+            d.path(),
+            &format!(
+                ".aws/sso/cache/{}.json",
+                sha("https://old.awsapps.com/start")
+            ),
+            r#"{"accessToken":"old","expiresAt":"2020-01-01T00:00:00UTC"}"#,
+        );
+        d
+    }
+
+    #[test]
+    fn bedrock_credential_sources() {
+        let home = sso_home();
+        let h = Some(home.path());
+        let env_keys = [
+            ("AWS_ACCESS_KEY_ID", "AKENV"),
+            ("AWS_SECRET_ACCESS_KEY", "SKENV"),
+        ];
+        let ak = |a: BedrockAuth| match a {
+            BedrockAuth::SigV4(c) => c.access_key,
+            BedrockAuth::Bearer(_) => "bearer".into(),
+            BedrockAuth::Sso(r) => format!("sso:{}", r.role_name),
+        };
+        // Default chain: env first, then the profile.
+        let env = CloudEnv::fixed(&env_keys, h);
+        assert_eq!(
+            ak(bedrock_auth_in(&env, None, None, None, NOW).unwrap()),
+            "AKENV"
+        );
+        assert_eq!(
+            ak(bedrock_auth_in(&env, None, Some("env"), None, NOW).unwrap()),
+            "AKENV"
+        );
+        // `profile` ignores the environment and picks the named profile (over AWS_PROFILE).
+        let env = CloudEnv::fixed(&[env_keys[0], env_keys[1], ("AWS_PROFILE", "keys")], h);
+        let a = bedrock_auth_in(&env, None, Some("profile"), Some("work"), NOW).unwrap();
+        assert!(
+            matches!(&a, BedrockAuth::SigV4(c) if c.session_token.as_ref().map(|t| t.expose()) == Some("TOK"))
+        );
+        assert_eq!(ak(a), "AKWORK");
+        // Static keys in ~/.aws/config; AWS_PROFILE when no profile is given.
+        assert_eq!(
+            ak(bedrock_auth_in(&env, None, Some("profile"), None, NOW).unwrap()),
+            "AKCFG"
+        );
+        let env = CloudEnv::fixed(&[], h);
+        assert_eq!(
+            ak(bedrock_auth_in(&env, None, Some("profile"), None, NOW).unwrap()),
+            "AKDEF"
+        );
+        // `env` with nothing set is an error, never a silent fallback to a profile.
+        let e = bedrock_auth_in(&env, None, Some("env"), None, NOW)
+            .err()
+            .unwrap();
+        assert_eq!(e.code, "UNSUPPORTED");
+        assert!(e.message.contains("environment"));
+        // An SSO profile through `profile` or `sso`.
+        for src in [Some("profile"), Some("sso"), None] {
+            let a = bedrock_auth_in(&env, None, src, Some("design"), NOW).unwrap();
+            let BedrockAuth::Sso(r) = a else {
+                panic!("expected SSO")
+            };
+            assert_eq!(
+                (
+                    r.region.as_str(),
+                    r.account_id.as_str(),
+                    r.access_token.expose()
+                ),
+                ("us-east-1", "123456789012", "sso-token")
+            );
+        }
+        // `sso` on a static-key profile, an expired session, unsupported profile kinds.
+        let e = bedrock_auth_in(&env, None, Some("sso"), Some("work"), NOW)
+            .err()
+            .unwrap();
+        assert!(e.message.contains("no SSO configuration"));
+        let e = bedrock_auth_in(&env, None, Some("sso"), Some("legacy"), NOW)
+            .err()
+            .unwrap();
+        assert!(e.message.contains("aws sso login --profile legacy"));
+        let e = bedrock_auth_in(&env, None, Some("profile"), Some("procs"), NOW)
+            .err()
+            .unwrap();
+        assert!(e.message.contains("credential_process"));
+        let e = bedrock_auth_in(&env, None, None, Some("nope"), NOW)
+            .err()
+            .unwrap();
+        assert!(e.message.contains("\"nope\" is not in ~/.aws"));
+        // Expired 60 s early.
+        let e = bedrock_auth_in(&env, None, Some("sso"), Some("design"), 1_800_003_580).err();
+        assert!(e.is_some());
+    }
+
+    #[test]
+    fn bedrock_region_uses_the_chosen_profile() {
+        let home = sso_home();
+        let env = CloudEnv::fixed(&[], Some(home.path()));
+        assert_eq!(
+            bedrock_region_in(&env, None, Some("design")).unwrap(),
+            "eu-central-1"
+        );
+        assert_eq!(bedrock_region_in(&env, None, None).unwrap(), "us-west-2");
+        assert_eq!(
+            bedrock_region_in(&env, Some("ap-south-1"), Some("design")).unwrap(),
+            "ap-south-1"
+        );
+        let env = CloudEnv::fixed(&[("AWS_PROFILE", "keys")], Some(home.path()));
+        assert_eq!(bedrock_region_in(&env, None, None).unwrap(), "eu-west-1");
+    }
+
+    #[test]
+    fn sso_role_credentials_exchange() {
+        let r = SsoRole {
+            profile: "design".into(),
+            region: "us-east-1".into(),
+            account_id: "123456789012".into(),
+            role_name: "Design Role".into(),
+            access_token: Secret::new("tok"),
+        };
+        let (url, headers) = sso_credentials_request(&r).unwrap();
+        assert_eq!(
+            url,
+            "https://portal.sso.us-east-1.amazonaws.com/federation/credentials?account_id=123456789012&role_name=Design%20Role"
+        );
+        assert_eq!(
+            headers,
+            vec![("x-amz-sso_bearer_token".to_string(), "tok".to_string())]
+        );
+        let (c, exp) = parse_sso_credentials(&json!({"roleCredentials": {
+            "accessKeyId": "ASIA", "secretAccessKey": "s", "sessionToken": "t", "expiration": 1_800_000_000_000u64
+        }}))
+        .unwrap();
+        assert_eq!(c.access_key, "ASIA");
+        assert_eq!(exp, Some(1_800_000_000));
+        assert!(parse_sso_credentials(&json!({"message": "Session token not found"})).is_err());
+    }
+
+    #[test]
+    fn vertex_credential_choice() {
+        let sa =
+            Secret::new(r#"{"type":"service_account","client_email":"a@b","private_key":"x"}"#);
+        let c = google_creds(Some(&sa), Some("service-account")).unwrap();
+        assert_eq!(c.source, "keychain");
+        let e = google_creds(None, Some("service-account")).err().unwrap();
+        assert_eq!(e.code, "UNSUPPORTED");
+        assert!(e.message.contains("Service account JSON"));
+        // `adc` never reads the keychain (whatever ADC this machine has, it is not "keychain").
+        if let Ok(c) = google_creds(Some(&sa), Some("adc")) {
+            assert_ne!(c.source, "keychain");
+        }
+    }
+
+    #[test]
+    fn credential_choices_are_validated() {
+        assert!(check_credentials("bedrock", Some("sso"), Some("my.profile-1")).is_ok());
+        assert!(check_credentials("bedrock", Some("adc"), None).is_err());
+        assert!(check_credentials("bedrock", None, Some("bad profile")).is_err());
+        assert!(check_credentials("vertex", Some("service-account"), None).is_ok());
+        assert!(check_credentials("vertex", None, Some("p")).is_err());
+        assert!(check_credentials("foundry", Some("entra"), None).is_ok());
+        assert!(check_credentials("foundry", Some("cli"), None).is_err());
+    }
+
+    #[test]
+    fn az_token_output() {
+        let (t, e) = parse_az_token(
+            br#"{"accessToken":"eyJ0","expiresOn":"2027-01-15 10:00:00.000000","expires_on":1800003600,"tokenType":"Bearer"}"#,
+        )
+        .unwrap();
+        assert_eq!((t.expose(), e), ("eyJ0", Some(1_800_003_600)));
+        let (_, e) = parse_az_token(br#"{"accessToken":"x","expires_on":"1800003600"}"#).unwrap();
+        assert_eq!(e, Some(1_800_003_600));
+        assert!(parse_az_token(b"ERROR: Please run 'az login'").is_err());
+        assert!(parse_az_token(br#"{"accessToken":""}"#).is_err());
+        assert!(azure_cli_candidates()
+            .iter()
+            .all(|p| p.file_name().is_some()));
     }
 }

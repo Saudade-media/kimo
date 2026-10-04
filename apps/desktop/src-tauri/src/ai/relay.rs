@@ -47,6 +47,12 @@ pub enum RelayAuth {
         region: Option<String>,
         #[serde(default)]
         project: Option<String>,
+        /// The provider card's credential choice (`cloud::check_credentials`).
+        #[serde(default)]
+        credentials: Option<String>,
+        /// Bedrock: the AWS profile.
+        #[serde(default)]
+        profile: Option<String>,
     },
 }
 
@@ -66,6 +72,8 @@ pub struct RelayConfig {
     pub connect_timeout: Duration,
     pub head_timeout: Duration,
     pub idle_timeout: Duration,
+    /// The Azure CLI for Foundry Entra ID tokens (None: search PATH and the usual dirs).
+    pub azure_cli: Option<PathBuf>,
 }
 
 impl Default for RelayConfig {
@@ -74,6 +82,7 @@ impl Default for RelayConfig {
             connect_timeout: Duration::from_secs(20),
             head_timeout: Duration::from_secs(120),
             idle_timeout: Duration::from_secs(300),
+            azure_cli: None,
         }
     }
 }
@@ -194,6 +203,15 @@ impl KeyPins {
     }
 }
 
+/// The cloud fields of a request's relay auth.
+#[derive(Clone, Copy)]
+struct CloudChoice<'a> {
+    region: Option<&'a str>,
+    project: Option<&'a str>,
+    credentials: Option<&'a str>,
+    profile: Option<&'a str>,
+}
+
 enum Plan {
     Send {
         method: reqwest::Method,
@@ -220,6 +238,10 @@ pub struct Relay {
     cfg: RelayConfig,
     inflight: Mutex<HashMap<String, Arc<tokio::sync::Notify>>>,
     google_tokens: tokio::sync::Mutex<HashMap<String, (Secret, Instant)>>,
+    /// AWS SSO role credentials per (profile, account, role).
+    sso_creds: tokio::sync::Mutex<HashMap<String, (cloud::AwsCreds, Instant)>>,
+    /// The Azure CLI's Entra ID token for Foundry.
+    entra_token: tokio::sync::Mutex<Option<(Secret, Instant)>>,
 }
 
 impl Relay {
@@ -237,6 +259,8 @@ impl Relay {
             cfg,
             inflight: Mutex::new(HashMap::new()),
             google_tokens: tokio::sync::Mutex::new(HashMap::new()),
+            sso_creds: tokio::sync::Mutex::new(HashMap::new()),
+            entra_token: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -294,6 +318,17 @@ impl Relay {
             }
             (Target::Cloud(c), RelayAuth::Cloud { platform, .. }) if &c.platform != platform => {
                 return Err(invalid("Relay route and cloud platform differ"));
+            }
+            (
+                Target::Cloud(_),
+                RelayAuth::Cloud {
+                    platform,
+                    credentials,
+                    profile,
+                    ..
+                },
+            ) => {
+                cloud::check_credentials(platform, credentials.as_deref(), profile.as_deref())?;
             }
             (Target::Cloud(_), RelayAuth::Header { .. } | RelayAuth::None) => {
                 return Err(invalid("kimo-relay:// URLs need cloud auth"));
@@ -421,11 +456,20 @@ impl Relay {
             (
                 Target::Cloud(c),
                 RelayAuth::Cloud {
-                    region, project, ..
+                    region,
+                    project,
+                    credentials,
+                    profile,
+                    ..
                 },
             ) => {
-                self.plan_cloud(req, c, region.as_deref(), project.as_deref(), headers)
-                    .await
+                let choice = CloudChoice {
+                    region: region.as_deref(),
+                    project: project.as_deref(),
+                    credentials: credentials.as_deref(),
+                    profile: profile.as_deref(),
+                };
+                self.plan_cloud(req, c, choice, headers).await
             }
             _ => Err(invalid("Unsupported auth for this URL")),
         }
@@ -435,10 +479,15 @@ impl Relay {
         &self,
         req: &RelayRequest,
         c: &cloud::RelayUrl,
-        region: Option<&str>,
-        project: Option<&str>,
+        choice: CloudChoice<'_>,
         js_headers: Vec<(String, String)>,
     ) -> R<Plan> {
+        let CloudChoice {
+            region,
+            project,
+            credentials,
+            profile,
+        } = choice;
         let beta = js_headers
             .iter()
             .find(|(k, _)| k == "anthropic-beta")
@@ -457,7 +506,11 @@ impl Relay {
         let key = self.key(&req.provider).await?;
         let prepared = match c.platform.as_str() {
             "bedrock" => {
-                let auth = match cloud::bedrock_auth(key.as_ref()) {
+                let auth = match cloud::bedrock_auth(key.as_ref(), credentials, profile) {
+                    Ok(cloud::BedrockAuth::Sso(role)) => match self.sso_role_creds(&role).await {
+                        Ok(c) => cloud::BedrockAuth::SigV4(c),
+                        Err(e) => return Ok(synthetic(401, "authentication_error", &e.message)),
+                    },
                     Ok(a) => a,
                     Err(e) => return Ok(synthetic(401, "authentication_error", &e.message)),
                 };
@@ -465,11 +518,11 @@ impl Relay {
                     &req.body,
                     beta.as_deref(),
                     &auth,
-                    &cloud::bedrock_region(region)?,
+                    &cloud::bedrock_region(region, profile)?,
                 )?
             }
             "vertex" => {
-                let creds = match cloud::google_creds(key.as_ref()) {
+                let creds = match cloud::google_creds(key.as_ref(), credentials) {
                     Ok(c) => c,
                     Err(e) => return Ok(synthetic(401, "authentication_error", &e.message)),
                 };
@@ -486,18 +539,28 @@ impl Relay {
                 cloud::prepare_vertex(&req.body, &token, &project, &region, beta.as_deref())?
             }
             "foundry" => {
-                if key.is_none() {
-                    return Ok(synthetic(
-                        401,
-                        "authentication_error",
-                        "Foundry with Entra ID is not supported by the relay yet; save the resource's API key in Settings",
-                    ));
-                }
+                // `api-key`: the keychain key; `entra`: the Azure CLI's token; omitted: the key
+                // when one is saved, else Entra ID.
+                let auth = match (credentials, key) {
+                    (Some("api-key"), None) => {
+                        return Ok(synthetic(
+                            401,
+                            "authentication_error",
+                            "No API key is saved for Foundry: paste the resource's key in Settings, or switch to Microsoft Entra ID",
+                        ))
+                    }
+                    (Some("entra"), _) | (None, None) => match self.entra_token().await {
+                        Ok(t) => cloud::FoundryAuth::Entra(t),
+                        Err(e) => return Ok(synthetic(401, "authentication_error", &e.message)),
+                    },
+                    (_, Some(k)) => cloud::FoundryAuth::Key(k),
+                    (Some(_), None) => return Err(invalid("Unknown Foundry credentials")),
+                };
                 let mut p = cloud::prepare_foundry(
                     &c.path,
                     c.query.as_deref(),
                     req.body.clone(),
-                    key.as_ref(),
+                    &auth,
                     project,
                 )?;
                 p.headers.extend(js_headers.clone());
@@ -522,6 +585,115 @@ impl Relay {
             reqwest::Method::POST
         };
         Ok(Plan::Send { method, prepared })
+    }
+
+    /// Trades a cached `aws sso login` token for role credentials (cached until 5 min before
+    /// they expire).
+    async fn sso_role_creds(&self, role: &cloud::SsoRole) -> R<cloud::AwsCreds> {
+        let mut cache = self.sso_creds.lock().await;
+        let key = role.cache_key();
+        if let Some((c, until)) = cache.get(&key) {
+            if Instant::now() < *until {
+                return Ok(c.clone());
+            }
+        }
+        let (url, headers) = cloud::sso_credentials_request(role)?;
+        let mut rb = self.client.get(&url);
+        for (k, v) in headers {
+            rb = rb.header(k, v);
+        }
+        let resp = tokio::time::timeout(self.cfg.head_timeout, rb.send())
+            .await
+            .map_err(|_| crate::error::io_msg("AWS SSO request timed out"))?
+            .map_err(|e| {
+                crate::error::io_msg(format!("AWS SSO request failed: {}", e.without_url()))
+            })?;
+        let status = resp.status();
+        let v: Value = resp.json().await.unwrap_or(Value::Null);
+        if !status.is_success() {
+            let why = v
+                .get("message")
+                .and_then(Value::as_str)
+                .unwrap_or("no role credentials");
+            return Err(invalid(format!(
+                "AWS SSO refused the session of profile \"{}\" ({status}): {why}; run `aws sso login --profile {}`",
+                role.profile, role.profile
+            )));
+        }
+        let (creds, exp) = cloud::parse_sso_credentials(&v)?;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let ttl = exp.map(|e| e.saturating_sub(now)).unwrap_or(900);
+        cache.insert(
+            key,
+            (
+                creds.clone(),
+                Instant::now() + Duration::from_secs(ttl.saturating_sub(300)),
+            ),
+        );
+        Ok(creds)
+    }
+
+    /// A Microsoft Entra ID token for Foundry from the Azure CLI (`az login`), cached until
+    /// 5 min before it expires.
+    async fn entra_token(&self) -> R<Secret> {
+        let mut cache = self.entra_token.lock().await;
+        if let Some((t, until)) = cache.as_ref() {
+            if Instant::now() < *until {
+                return Ok(t.clone());
+            }
+        }
+        let az = match &self.cfg.azure_cli {
+            Some(p) => Some(p.clone()),
+            None => cloud::azure_cli_candidates().into_iter().find(|p| p.is_file()),
+        }
+        .ok_or_else(|| {
+            cloud::unsupported(
+                "Microsoft Entra ID needs the Azure CLI (`az login`); install it, or save the resource's API key in Settings",
+            )
+        })?;
+        let job = tauri::async_runtime::spawn_blocking(move || {
+            std::process::Command::new(&az)
+                .args([
+                    "account",
+                    "get-access-token",
+                    "--resource",
+                    cloud::FOUNDRY_ENTRA_RESOURCE,
+                    "--output",
+                    "json",
+                ])
+                .stdin(std::process::Stdio::null())
+                .output()
+        });
+        let out = tokio::time::timeout(self.cfg.head_timeout, job)
+            .await
+            .map_err(|_| crate::error::io_msg("The Azure CLI timed out"))?
+            .map_err(|e| crate::error::io_msg(format!("Azure CLI task failed: {e}")))?
+            .map_err(|e| crate::error::io_msg(format!("The Azure CLI could not run: {e}")))?;
+        if !out.status.success() {
+            let err = String::from_utf8_lossy(&out.stderr);
+            let first = err
+                .lines()
+                .map(str::trim)
+                .find(|l| !l.is_empty())
+                .unwrap_or("no token");
+            return Err(cloud::unsupported(format!(
+                "The Azure CLI has no Entra ID token ({first}); run `az login`, or save the resource's API key in Settings"
+            )));
+        }
+        let (tok, exp) = cloud::parse_az_token(&out.stdout)?;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let ttl = exp.map(|e| e.saturating_sub(now)).unwrap_or(3000);
+        *cache = Some((
+            tok.clone(),
+            Instant::now() + Duration::from_secs(ttl.saturating_sub(300)),
+        ));
+        Ok(tok)
     }
 
     async fn google_token(&self, creds: &cloud::GoogleCreds) -> R<Secret> {
@@ -1050,6 +1222,8 @@ mod tests {
                 platform: "vertex".into(),
                 region: None,
                 project: None,
+                credentials: None,
+                profile: None,
             },
         );
         q.method = "GET".into();
@@ -1076,5 +1250,216 @@ mod tests {
         )
         .unwrap();
         assert!(matches!(a, RelayAuth::Cloud { region: Some(r), .. } if r == "us-east-1"));
+    }
+
+    fn foundry(credentials: Option<&str>) -> RelayAuth {
+        RelayAuth::Cloud {
+            platform: "foundry".into(),
+            region: None,
+            project: Some("my-res".into()),
+            credentials: credentials.map(String::from),
+            profile: None,
+        }
+    }
+
+    enum Planned {
+        Send(Prepared),
+        Synthetic(u16, String),
+    }
+
+    async fn plan_of(r: &Relay, q: &RelayRequest) -> Planned {
+        let target = check_url(&q.url).unwrap();
+        match r.plan(q, &target).await.unwrap() {
+            Plan::Synthetic { status, body } => {
+                Planned::Synthetic(status, String::from_utf8(body).unwrap())
+            }
+            Plan::Send { prepared, .. } => Planned::Send(prepared),
+        }
+    }
+
+    async fn sent(r: &Relay, q: &RelayRequest) -> Prepared {
+        match plan_of(r, q).await {
+            Planned::Send(p) => p,
+            Planned::Synthetic(status, body) => panic!("expected a request, got {status} {body}"),
+        }
+    }
+
+    async fn refused(r: &Relay, q: &RelayRequest) -> (u16, String) {
+        match plan_of(r, q).await {
+            Planned::Synthetic(status, body) => (status, body),
+            Planned::Send(p) => panic!("expected a synthetic response, got a request to {}", p.url),
+        }
+    }
+
+    #[cfg(unix)]
+    fn fake_az(dir: &std::path::Path, script: &str) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let p = dir.join("az");
+        std::fs::write(&p, format!("#!/bin/sh\n{script}\n")).unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        p
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn foundry_entra_uses_the_azure_cli_token() {
+        let dir = tempfile::tempdir().unwrap();
+        let calls = dir.path().join("calls");
+        let az = fake_az(
+            dir.path(),
+            &format!(
+                "echo \"$@\" >> {}\necho '{{\"accessToken\":\"entra-tok\",\"expires_on\":4102444800}}'",
+                calls.display()
+            ),
+        );
+        let (r, secrets) = relay(
+            dir.path(),
+            RelayConfig {
+                azure_cli: Some(az),
+                ..RelayConfig::default()
+            },
+        );
+        // Entra wins over a saved key when chosen.
+        secrets.set("provider.foundry", "foundry-key-123").unwrap();
+        let q = req(
+            "f1",
+            "foundry",
+            "kimo-relay://foundry/v1/messages".into(),
+            foundry(Some("entra")),
+        );
+        let p = sent(&r, &q).await;
+        assert_eq!(
+            p.url,
+            "https://my-res.services.ai.azure.com/anthropic/v1/messages"
+        );
+        assert!(p
+            .headers
+            .contains(&("authorization".to_string(), "Bearer entra-tok".to_string())));
+        assert!(!p.headers.iter().any(|(_, v)| v.contains("foundry-key")));
+        // Cached: the CLI runs once.
+        sent(&r, &q).await;
+        let ran = std::fs::read_to_string(&calls).unwrap();
+        assert_eq!(ran.lines().count(), 1);
+        assert!(ran.contains("get-access-token --resource https://cognitiveservices.azure.com"));
+        // `api-key` (and the default with a saved key) use the keychain key.
+        for c in [Some("api-key"), None] {
+            let q = req(
+                "f2",
+                "foundry",
+                "kimo-relay://foundry/v1/messages".into(),
+                foundry(c),
+            );
+            let p = sent(&r, &q).await;
+            assert!(p
+                .headers
+                .contains(&("x-api-key".to_string(), "foundry-key-123".to_string())));
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn foundry_credential_errors_are_401() {
+        let dir = tempfile::tempdir().unwrap();
+        let az = fake_az(
+            dir.path(),
+            "echo 'ERROR: Please run az login to setup account.' >&2; exit 1",
+        );
+        let (r, _) = relay(
+            dir.path(),
+            RelayConfig {
+                azure_cli: Some(az),
+                ..RelayConfig::default()
+            },
+        );
+        let url = "kimo-relay://foundry/v1/messages".to_string();
+        let (status, body) = refused(
+            &r,
+            &req("e1", "foundry", url.clone(), foundry(Some("entra"))),
+        )
+        .await;
+        assert_eq!(status, 401);
+        assert!(body.contains("az login") && body.contains("authentication_error"));
+        // No key saved: the default falls back to Entra; `api-key` says what to do.
+        let (status, _) = refused(&r, &req("e2", "foundry", url.clone(), foundry(None))).await;
+        assert_eq!(status, 401);
+        let (status, body) =
+            refused(&r, &req("e3", "foundry", url, foundry(Some("api-key")))).await;
+        assert_eq!(status, 401);
+        assert!(body.contains("No API key is saved for Foundry"));
+    }
+
+    #[tokio::test]
+    async fn cloud_credential_choice_is_checked_at_start() {
+        let dir = tempfile::tempdir().unwrap();
+        let (r, _) = relay(dir.path(), RelayConfig::default());
+        let (sink, _rx) = ChannelSink::pair();
+        let bad = |credentials: Option<&str>, profile: Option<&str>| {
+            req(
+                "c1",
+                "bedrock",
+                "kimo-relay://bedrock/v1/messages".into(),
+                RelayAuth::Cloud {
+                    platform: "bedrock".into(),
+                    region: Some("us-east-1".into()),
+                    project: None,
+                    credentials: credentials.map(String::from),
+                    profile: profile.map(String::from),
+                },
+            )
+        };
+        assert!(r.start(bad(Some("adc"), None), sink.clone()).is_err());
+        assert!(r
+            .start(bad(Some("sso"), Some("a b")), sink.clone())
+            .is_err());
+        let mut v = bad(None, None);
+        v.url = "kimo-relay://vertex/v1/messages".into();
+        v.auth = RelayAuth::Cloud {
+            platform: "vertex".into(),
+            region: None,
+            project: None,
+            credentials: Some("service-account".into()),
+            profile: Some("x".into()),
+        };
+        assert!(r.start(v, sink).is_err());
+    }
+
+    #[tokio::test]
+    async fn vertex_service_account_choice_without_a_key_is_401() {
+        let dir = tempfile::tempdir().unwrap();
+        let (r, _) = relay(dir.path(), RelayConfig::default());
+        let q = req(
+            "v2",
+            "vertex",
+            "kimo-relay://vertex/v1/messages".into(),
+            RelayAuth::Cloud {
+                platform: "vertex".into(),
+                region: Some("us-east5".into()),
+                project: Some("p".into()),
+                credentials: Some("service-account".into()),
+                profile: None,
+            },
+        );
+        let (status, body) = refused(&r, &q).await;
+        assert_eq!(status, 401);
+        assert!(body.contains("Service account JSON"));
+    }
+
+    #[test]
+    fn cloud_auth_json_carries_the_credential_choice() {
+        let a: RelayAuth = serde_json::from_value(json!({
+            "kind": "cloud", "platform": "bedrock", "region": "eu-west-1",
+            "credentials": "sso", "profile": "design"
+        }))
+        .unwrap();
+        assert_eq!(
+            a,
+            RelayAuth::Cloud {
+                platform: "bedrock".into(),
+                region: Some("eu-west-1".into()),
+                project: None,
+                credentials: Some("sso".into()),
+                profile: Some("design".into()),
+            }
+        );
     }
 }

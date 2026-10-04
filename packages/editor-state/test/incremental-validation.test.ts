@@ -243,7 +243,7 @@ function run(start: () => YjsDocStore, actions: Action[]): void {
 const themedComponents = (): KimoDocument =>
   ({
     $schema: SCHEMA_URL,
-    format: "0.1.0",
+    format: "1.0.0",
     themes: { mode: ["light", "dark"] },
     variables: {
       ink: { type: "color", value: [{ value: "#000000", when: { mode: "light" } }] },
@@ -462,7 +462,7 @@ describe("incremental validation reach (M3 perf: 1k instances)", () => {
       }
     return {
       $schema: SCHEMA_URL,
-      format: "0.1.0",
+      format: "1.0.0",
       themes: { mode: ["light", "dark"] },
       variables: {
         ink: {

@@ -1,13 +1,13 @@
 /**
  * Board 20 Text section "Case": the control writes `style.case` (spec §8.2), already part of
- * format 0.1 — no new field. Valid values validate and round-trip; anything else is an error.
+ * format 0.1 (kept in 1.0) — no new field. Valid values validate and round-trip; anything else is an error.
  */
 import { describe, expect, test } from "bun:test"
 import { parse, serialize, validate } from "../src"
 
 const doc = (style: Record<string, unknown>) => ({
-  $schema: "https://kimo.design/schema/kimo-0.1.json",
-  format: "0.1.0",
+  $schema: "https://kimo.design/schema/kimo-1.0.json",
+  format: "1.0.0",
   nodes: {
     Text000001: { type: "text", parent: null, order: "a0", content: "Plan less.", style },
   },

@@ -392,8 +392,8 @@ describe("formats and failed loads", () => {
     expect(st.phase).toBe("needs-consent")
     expect(st.consent).toMatchObject({
       fileName: "marketing.kimo",
-      fromFormat: "0.0",
-      toFormat: "0.1",
+      fromFormat: "0.1",
+      toFormat: "1.0",
     })
     expect(st.consent?.approxChangedLines).toBeGreaterThan(0)
     edit(s.store, "Pending001")
@@ -404,7 +404,7 @@ describe("formats and failed loads", () => {
     await s.respondToConsent("upgrade")
     st = s.state()
     expect(st.phase).toBe("ready")
-    expect(parse(platform.control.readFile(FILE) as string).format).toBe("0.1.0")
+    expect(parse(platform.control.readFile(FILE) as string).format).toBe("1.0.0")
     expect(await platform.recovery.list()).toEqual([])
     await s.close()
   })

@@ -41,6 +41,8 @@ export function relayAuthFor(p: StoredProvider): AiRelayRequest["auth"] {
       platform: p.kind,
       ...(p.region ? { region: p.region } : {}),
       ...(project ? { project } : {}),
+      ...(p.credentials ? { credentials: p.credentials } : {}),
+      ...(p.kind === "bedrock" && p.profile?.trim() ? { profile: p.profile.trim() } : {}),
     }
   }
   // Board 25 "Origin pin": the base URL's host left the pinned origin → the key is withheld.

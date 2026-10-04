@@ -1,5 +1,5 @@
 import { KIMO_FILE_FILTER, type KimoPlatform } from "@kimo/platform"
-import { Button, FileCard, Input, Segmented } from "@kimo/ui"
+import { Button, FileCard, Input, KimoLockup, Segmented } from "@kimo/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   addWatchedFolder,
@@ -84,10 +84,7 @@ function WebHome() {
     <div className="home">
       <nav className="home-sidebar" aria-label="Library">
         <div className="home-sidebar__brand">
-          <span className="home-sidebar__logo">
-            <span className="home-sidebar__mark">k</span>
-          </span>
-          <span className="home-sidebar__wordmark">Kimo</span>
+          <KimoLockup />
         </div>
         <a className="home-nav home-nav--active" href="#/" aria-current="page">
           <span className="home-nav__icon">
@@ -292,10 +289,7 @@ function DesktopHome({ platform }: { platform: KimoPlatform }) {
       <nav className="home-sidebar home-sidebar--desktop" aria-label="Library">
         <TrafficLightInset platform={platform} leading={4} />
         <div className="home-sidebar__brand">
-          <span className="home-sidebar__logo">
-            <span className="home-sidebar__mark">k</span>
-          </span>
-          <span className="home-sidebar__wordmark">Kimo</span>
+          <KimoLockup />
         </div>
         <a className="home-nav home-nav--active" href="#/" aria-current="page">
           <span className="home-nav__icon">

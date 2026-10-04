@@ -46,7 +46,7 @@ export interface ValidateOptions {
   libraries?: Libraries
   /** File names present in the `assets/` folder; when given, every asset reference must exist. */
   assetFiles?: Iterable<string>
-  /** Features this reader supports (default: every feature known to format 0.1). */
+  /** Features this reader supports (default: every feature known to format 1.0). */
   supportedFeatures?: Iterable<string>
   /** Run the lints (warnings) of 10.6. Default true. */
   lints?: boolean

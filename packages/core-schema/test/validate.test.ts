@@ -63,7 +63,7 @@ const cases: Case[] = [
     good: doc({ Frame00001: frame(null, "a0", { radius: 4 }) }),
   },
   {
-    rule: "node types are the v0.1 set",
+    rule: "node types are the 1.0 set",
     code: "UNKNOWN_NODE_TYPE",
     bad: doc({ Node000001: { type: "image", parent: null, order: "a0" } }),
     good: doc({ Node000001: rect() }),
@@ -700,7 +700,7 @@ describe("validator behaviour", () => {
     expect(codes(validate({ ...HEADER, format: "0.0.9", nodes: {} }).errors)).toEqual([
       "FORMAT_OLDER",
     ])
-    expect(codes(validate({ ...HEADER, format: "0.2.0", nodes: {} }).errors)).toEqual([
+    expect(codes(validate({ ...HEADER, format: "1.1.0", nodes: {} }).errors)).toEqual([
       "FORMAT_NEWER",
     ])
   })

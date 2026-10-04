@@ -1,6 +1,6 @@
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
-"format": "0.1.0",
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
 "meta": {"name":"Streak — mobile screens"},
 "variables": {
 "color/accent": {"type":"color","value":"#6C4CF5","group":"color"}

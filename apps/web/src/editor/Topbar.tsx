@@ -7,13 +7,13 @@
  * (bg-muted, radius-sm) and its chevron flips up while the menu is open (s7QHW / rRmKs).
  *
  * A `.kimo` on disk uses board 16's Topbar/Desktop (XDqrb) instead (`files/FileTopbar`): the
- * traffic-light inset (or, off macOS, the k logo), `folder / file.kimo / page` breadcrumb,
+ * traffic-light inset (or, off macOS, the KimoLogo), `folder / file.kimo / page` breadcrumb,
  * branch chip and SaveStatus pill, followed by the same trailing controls
  * ({@link TopbarTrailing}). Its file name opens the same File menu.
  */
 import type { RecentFile } from "@kimo/platform"
 import type { SyncStatus } from "@kimo/sync"
-import { Button, IconButton, MenuItem } from "@kimo/ui"
+import { Button, IconButton, KimoLogo, MenuItem } from "@kimo/ui"
 import { useEffect, useState } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import { useUi } from "../lib/hooks"
@@ -195,7 +195,7 @@ export function Topbar(props: TopbarProps) {
   return (
     <header className="topbar">
       <button type="button" className="topbar__logo" aria-label="Kimo home" onClick={props.onHome}>
-        <span className="topbar__mark">k</span>
+        <KimoLogo size={28} />
       </button>
       {renaming ? (
         <input

@@ -241,6 +241,12 @@ export function useEditorAgentPanel({
         fileName={doc ? doc.fileName : session.meta.name}
         clis={ai.clis()}
         onOpenSettings={() => openSettings("ai-providers")}
+        nodeNameOf={(id) => nodeNameIn(session, id)}
+        parentNameOf={(id) => {
+          const n = session.store.getNode(id) as { parent?: unknown } | undefined
+          const parent = str(n?.parent)
+          return parent ? nodeNameIn(session, parent) : undefined
+        }}
       />
     ) : null
 
@@ -313,6 +319,12 @@ function useAgentSlice(
 }
 
 /** The document side of a prompt-node run (`PromptRunInput`). */
+/** A node's layer name (its id when unnamed); undefined when the node is gone. */
+function nodeNameIn(session: FileSession, id: string): string | undefined {
+  const n = session.store.getNode(id) as { name?: unknown } | undefined
+  return n ? (str(n.name) ?? id) : undefined
+}
+
 function promptInput(session: FileSession, id: string, boxOf: (id: string) => Box | null) {
   const n = session.store.getNode(id) as Record<string, unknown> | undefined
   if (n?.type !== "prompt") return null

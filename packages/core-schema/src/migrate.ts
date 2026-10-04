@@ -30,10 +30,22 @@ export interface Migration {
 }
 
 /**
- * The registry. Format 0.1 is the first format, so it is empty; every later format line adds
- * exactly one entry `{ from: previous, to: new }` with fixtures under `fixtures/migrations/`.
+ * 0.1 → 1.0: the spec freeze. Format 1.0 is format 0.1 declared stable (spec §16.4): every
+ * 0.1 document is a valid 1.0 document, so the step is the identity and only the header
+ * (`format`, `$schema`) changes, which the runner rewrites.
  */
-export const MIGRATIONS: readonly Migration[] = []
+export const MIGRATE_0_1_TO_1_0: Migration = {
+  from: "0.1",
+  to: "1.0",
+  description: "format 1.0 (stable): same content, new format header",
+  migrate: (doc) => doc,
+}
+
+/**
+ * The registry, oldest first. Every format line adds exactly one entry
+ * `{ from: previous, to: new }` with fixtures under `fixtures/migrations/`.
+ */
+export const MIGRATIONS: readonly Migration[] = [MIGRATE_0_1_TO_1_0]
 
 /** Outcome of {@link migrate}. */
 export type MigrateStatus =

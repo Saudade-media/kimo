@@ -1,6 +1,6 @@
 {
   "name": "@kimo/server",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Reserved Kimo server (multiplayer sync relay, sharing). Stub in v1.",
   "license": "MIT",

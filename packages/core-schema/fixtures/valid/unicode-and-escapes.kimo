@@ -1,6 +1,6 @@
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
-"format": "0.1.0",
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
 "meta": {"name":"Ünïcødé \"quotes\" and \\ backslashes","createdWith":"kimo 0.1.0"},
 "nodes": {
 "Txt0000001": {"type":"text","parent":null,"order":"a0","name":"Price","x":0,"y":0,"content":"$49/mo — line one\nline two\t🎨   sep","meta":{"acme.trace":{"id":7,"tags":["x"]},"kimo.export.tag":"h1"}}

@@ -1,13 +1,14 @@
 {
   "name": "@kimo/core-schema",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": ".kimo file format: types, JSON Schema, validation, canonical serialization, migrations",
   "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema.json": "./schema/kimo-0.1.schema.json"
+    "./schema.json": "./schema/kimo-1.0.schema.json",
+    "./schema-0.1.json": "./schema/kimo-0.1.schema.json"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

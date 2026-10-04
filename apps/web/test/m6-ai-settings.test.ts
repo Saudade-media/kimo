@@ -111,6 +111,41 @@ describe("model copy (board 23)", () => {
       region: "us-east-1",
     })
   })
+  test("relay auth carries the cloud credential choice (Bedrock profile / source, Vertex, Foundry)", () => {
+    const rows = providerRows(parseConfig(null))
+    const bedrock = rows[5] as StoredProvider
+    expect(
+      relayAuthFor({ ...bedrock, region: "eu-west-1", credentials: "sso", profile: " design " }),
+    ).toEqual({
+      kind: "cloud",
+      platform: "bedrock",
+      region: "eu-west-1",
+      credentials: "sso",
+      profile: "design",
+    })
+    expect(relayAuthFor({ ...bedrock, credentials: "env", profile: "  " })).toEqual({
+      kind: "cloud",
+      platform: "bedrock",
+      credentials: "env",
+    })
+    expect(
+      relayAuthFor({
+        ...bedrock,
+        kind: "vertex",
+        project: "acme",
+        credentials: "service-account",
+        profile: "ignored",
+      }),
+    ).toEqual({
+      kind: "cloud",
+      platform: "vertex",
+      project: "acme",
+      credentials: "service-account",
+    })
+    expect(
+      relayAuthFor({ ...bedrock, kind: "foundry", resource: "res", credentials: "entra" }),
+    ).toEqual({ kind: "cloud", platform: "foundry", project: "res", credentials: "entra" })
+  })
   test("precedence: signed-in Claude Code › other CLI › API default › none; web ignores CLIs", () => {
     const apis = [
       { id: "openai", agentModel: "gpt-4.1" },

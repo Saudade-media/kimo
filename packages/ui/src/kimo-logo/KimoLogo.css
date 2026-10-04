@@ -1,0 +1,27 @@
+/* KimoLogo (bm1JR) / KimoLogo/Small (cGzzf): the path fills the frame; fill $text-primary via
+   currentColor, so a parent can recolor it (the app icon's white mark on ink). */
+.kimo-logo {
+  display: block;
+  flex: none;
+  color: inherit;
+}
+
+/* KimoLogo/Lockup (HmXpT): row, gap 10, align center. */
+.kimo-lockup {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  color: var(--kimo-text-primary);
+}
+
+/* Wordmark (nEfPM): "Kimo", sans 18 / 600, letter-spacing -0.3, text-primary. */
+.kimo-lockup__wordmark {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: normal;
+  white-space: nowrap;
+}

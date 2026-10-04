@@ -71,7 +71,18 @@ export interface AiRelayRequest {
         kind: "cloud"
         platform: "bedrock" | "vertex" | "foundry"
         region?: string
+        /** Vertex: the Google Cloud project; Foundry: the resource. */
         project?: string
+        /**
+         * The provider card's credential choice. Bedrock: `profile` (static keys or SSO of
+         * {@link profile}), `env` (`AWS_*` only) or `sso`; Vertex: `adc` (gcloud / env, never the
+         * keychain) or `service-account` (the keychain JSON); Foundry: `entra` (Azure CLI token)
+         * or `api-key` (the keychain key). Omitted: keychain first, then the platform's chain.
+         * A key saved in the keychain always wins for Bedrock.
+         */
+        credentials?: string
+        /** Bedrock: the AWS profile name (`~/.aws/config`); default `AWS_PROFILE`, then `default`. */
+        profile?: string
       }
 }
 

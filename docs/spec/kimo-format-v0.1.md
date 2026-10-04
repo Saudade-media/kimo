@@ -1,5 +1,7 @@
 # The `.kimo` File Format — Draft v0.1
 
+> **Historical.** This draft is superseded by the stable [1.0 specification](kimo-format-1.0.md). Format 1.0 is this draft declared stable; 0.1 files open through the `0.1 → 1.0` migration. Kept unchanged as a record.
+
 | | |
 |---|---|
 | **Status** | **Draft v0.1** (format version `0.1.0`). Not frozen; breaking changes are allowed until 1.0 and are delivered through migrations (§16). |

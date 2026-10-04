@@ -1,5 +1,5 @@
 /**
- * Writes `schema/kimo-0.1.schema.json` from the TypeBox schemas.
+ * Writes `schema/kimo-1.0.schema.json` from the TypeBox schemas.
  *
  *   bun scripts/build-schema.ts          write the file
  *   bun scripts/build-schema.ts --check  exit 1 if the committed file is stale
@@ -14,7 +14,7 @@ import { jsonSchemaText } from "../src/json-schema"
 
 const pkgDir = join(dirname(fileURLToPath(import.meta.url)), "..")
 const repoRoot = join(pkgDir, "..", "..")
-const outFile = join(pkgDir, "schema", "kimo-0.1.schema.json")
+const outFile = join(pkgDir, "schema", "kimo-1.0.schema.json")
 
 function format(text: string): string {
   const proc = Bun.spawnSync(

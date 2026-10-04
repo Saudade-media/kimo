@@ -6,10 +6,10 @@
  */
 
 /** The format version this package reads and writes. */
-export const FORMAT_VERSION = "0.1.0"
+export const FORMAT_VERSION = "1.0.0"
 
 /** `$schema` URL written into every document of this format version. */
-export const SCHEMA_URL = "https://kimo.design/schema/kimo-0.1.json"
+export const SCHEMA_URL = "https://kimo.design/schema/kimo-1.0.json"
 
 /** JSON Schema `$id` of the generated schema (same as {@link SCHEMA_URL}). */
 export const SCHEMA_ID = SCHEMA_URL

@@ -59,4 +59,4 @@ Some constructs need a feature listed in the document's `features`: `layout/wrap
 `layout/stretch-baseline`, `size/min-max`, `text/runs`, `tokens/composite`. If you get
 `FEATURE_NOT_DECLARED`, see `errors`. Prefer the ungated form when one exists.
 
-The normative JSON Schema is the resource `kimo://schema/0.1`.
+The normative JSON Schema is the resource `kimo://schema/1.0`.

@@ -41,8 +41,8 @@ function workspace() {
   writeFileSync(
     file,
     serialize({
-      $schema: "https://kimo.design/schema/kimo-0.1.json",
-      format: "0.1.0",
+      $schema: "https://kimo.design/schema/kimo-1.0.json",
+      format: "1.0.0",
       nodes: { Page000001: { type: "frame", parent: null, order: "a0", name: "Home", w: 1440 } },
     } as Loose),
   )
@@ -115,7 +115,7 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
     expect(ops.data.markdown).toContain("@key")
     const res = await c.readResource({ uri: "kimo://docs/ops" })
     expect((res.contents[0] as Loose).text).toBe(ops.data.markdown)
-    const schema = await c.readResource({ uri: "kimo://schema/0.1" })
+    const schema = await c.readResource({ uri: "kimo://schema/1.0" })
     expect(JSON.parse((schema.contents[0] as Loose).text).$schema).toContain("2020-12")
   })
 

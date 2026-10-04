@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "ai-agent",
-  "description": "M6 built-in agent (ADR 0014 §4, §11): editor windows and the document host manage provider keys in the OS keychain (values never returned), relay AI requests through Rust (kimo_ai_request / kimo_ai_abort, streamed on kimo://ai-response) and detect, spawn and drive the user's agent CLIs (kimo://cli-output, kimo://cli-exit).",
+  "description": "M6 built-in agent (ADR 0014 \u00a74, \u00a711): editor windows and the document host manage provider keys in the OS keychain (values never returned), relay AI requests through Rust (kimo_ai_request / kimo_ai_abort, streamed on kimo://ai-response) and detect, spawn and drive the user's agent CLIs (kimo://cli-output, kimo://cli-exit); list, read and watch the user's skills in ~/.kimo/skills (kimo://skills-changed).",
   "windows": ["main", "editor-*", "document-host"],
   "permissions": [
     "core:event:allow-listen",
@@ -21,6 +21,11 @@
     "allow-kimo-cli-spawn",
     "allow-kimo-cli-write",
     "allow-kimo-cli-close-stdin",
-    "allow-kimo-cli-kill"
+    "allow-kimo-cli-kill",
+    "allow-kimo-skills-root",
+    "allow-kimo-skills-list",
+    "allow-kimo-skills-read",
+    "allow-kimo-skills-watch",
+    "allow-kimo-skills-unwatch"
   ]
 }

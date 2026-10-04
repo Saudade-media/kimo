@@ -37,6 +37,12 @@ export const HOST_EVENTS = {
   windowState: "kimo://host-window-state",
   /** Host → every window: the host (re)started; windows re-attach. */
   ready: "kimo://host-ready",
+  /**
+   * Host → the window running an in-app agent: `{id, origin, request: ApprovalRequest}`. The
+   * window shows it as the agent's in-thread card (no timeout) and answers with the RPC
+   * `agentApproval {id, outcome}`.
+   */
+  agentApproval: "kimo://host-agent-approval",
 } as const
 
 interface TauriInternals {

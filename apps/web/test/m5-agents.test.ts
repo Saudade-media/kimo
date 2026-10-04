@@ -179,6 +179,7 @@ describe("formatting and policies", () => {
     expect(configSnippet("vscode", "/k")).toContain('"servers"')
     expect(configSnippet("gemini-cli", "/k")).toContain('"trust": false')
     expect(configSnippet("codex", "/k")).toMatch(/^\[mcp_servers\.kimo\]/)
+    expect(configSnippet("codex", "/k")).toContain('default_tools_approval_mode = "approve"')
     expect(maskToken("kimo_pat_abcdef123f9a")).toBe("kimo_pat_••••••••••••3f9a")
     expect(diffLines("{}\n", '{\n  "kimo": 1\n}\n')).toContain('+   "kimo": 1')
   })

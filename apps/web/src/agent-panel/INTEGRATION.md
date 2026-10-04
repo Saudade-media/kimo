@@ -49,8 +49,9 @@ useEffect(() => session.ui.subscribe((s) => agentPanel?.setSelection(
   custom endpoints), on the web the page's fetch.
 - **Tools**: `createInWindowTools` runs the M5 registry in process over the window's store
   (`agent:kimo.<session>.<n>` origins, per-op `checkScope`, in-app approvals that wait until
-  answered). A desktop window whose store is a document-host replica may instead pass a
-  `ToolHostFactory` backed by the document host's handlers (same `ToolHostSpec`).
+  answered). A desktop window whose document is hosted by the document host uses
+  `createHostTools({client, ref})` instead (host RPC `agentCall`, same `ToolHostSpec`); see
+  "Tools on desktop" below.
 - **Sessions**: IndexedDB `kimo-sessions` by default (web and desktop webview); pass `sessions`
   to use the desktop `~/.kimo/sessions/<fileId>/<id>.json` store when the platform has one.
 
@@ -149,16 +150,27 @@ one WebGL context (`agentMarkRendererStats()`); ≤ 12 px, `static`, no WebGL an
 - ⇧P = Prompt, P = Pen: the editor's single-key matcher now compares `⇧<key>` when Shift is
   held.
 
-### Tools on desktop: in-window, over the document host's replica (decision)
+### Tools on desktop: through the document host (`agentCall`)
 
-Desktop agents keep `createInWindowTools` over the window's store, which on desktop is the
-document host's Yjs replica (`HostedDocumentSession`). Agent edits therefore reach the host and
-every MCP client with their `agent:kimo.<session>.<n>` origin, and the window's own undo stack
-undoes them per origin (`kimo_history`, "Undo turn"). Routing the calls through the host's
-`McpHostRuntime` instead was not done because that runtime only knows `mcp:<client>.<session>`
-connections: no `agent:` origins (undo / attribution would change owner), no per-op
-`checkScope` targets (split / side-by-side scopes are enforced in `scopedTargets` here), and its
-approvals go to the board 21 presence prompt rather than the thread card that waits until
-answered. Consequence: in-app agents do not appear in the host's presence list / activity log
-for MCP clients (they show on this window's canvas and Agent tab). Closing that needs a host RPC
-`agentCall` with an `agent:` identity, the window's scope targets and approval forwarding.
+`editor/agent-panel.tsx` `agentToolsFor` picks the tool host per window: when the host client is
+connected and the session is a `HostedDocumentSession` attached to the host (`hosted`), the
+factory is `createHostTools` (`agent-panel/host-tools.ts`); otherwise (web, an older shell with
+no host, untitled documents) it is `createInWindowTools`. With the host:
+
+- Every registry call is the RPC `agentCall {spec: {origin, label, session, policy}, name,
+  input}`. The host runs it on a runtime connection with identity `{client: "kimo", label,
+  session, transport: "in-process"}` and origin `agent:kimo.<session>.<n>` (one per window and
+  origin; a new turn's policy replaces the old one). The agent therefore appears in the host's
+  presence (`kimo://mcp-connections`, topbar chips, `kimo_get_state.agents`) and activity log
+  next to MCP clients, can be paused, and Activity › Undo (`agentUndo`) reaches it.
+- Undo / attribution stay per origin: edits land on the host store as the agent's origin (its own
+  undo stack, "Undo turn" / regenerate via `kimo_history`), reach this window's replica as
+  `remote:agent:…` (never on the user's ⌘Z) and an MCP client's undo never touches them.
+- Scope: the window sends `policy.nodes`; the host runs the same `checkScope`
+  (`scopeViolations`) against the authoritative tree → OUT_OF_SCOPE as before.
+- Approvals: forwarded to this window (`kimo://host-agent-approval`) and shown as the agent's
+  in-thread card; they wait until answered (Stop = deny), never on the board 21 prompt queue.
+  The RPC has no timeout; a host restart fails the call TIMEOUT (retryable).
+- Agent-only tools (`kimo_spawn_agents`) run in the window. `dispose()` (editor unmount) and the
+  window's `release` close its agent connections.
+- The model sees the registry's `desktop` tool column (the in-window host uses `web`).

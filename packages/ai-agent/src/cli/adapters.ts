@@ -271,7 +271,8 @@ const toml = (s: string) => JSON.stringify(s)
 
 /**
  * `codex exec --json` (resume: `codex exec resume <thread> --json`). Kimo's MCP server via
- * `-c mcp_servers.kimo.*`; the shell sandbox is read-only so it cannot write files.
+ * `-c mcp_servers.kimo.*` (tools approved on Codex's side: `default_tools_approval_mode`); the
+ * shell sandbox is read-only so it cannot write files.
  */
 export function codexInvocation(i: CliTurnInput) {
   const args = ["exec"]
@@ -287,6 +288,11 @@ export function codexInvocation(i: CliTurnInput) {
     `mcp_servers.kimo.command=${toml(i.mcp.command)}`,
     "-c",
     `mcp_servers.kimo.args=[${i.mcp.args.map(toml).join(",")}]`,
+    // `codex exec` cannot answer Codex's own MCP approval prompt, and under its default `auto`
+    // mode (with the read-only sandbox) every non-read-only Kimo tool would ask and fail. Kimo's
+    // policy, scopes and approvals (ADR 0013 §6) guard the edits instead.
+    "-c",
+    'mcp_servers.kimo.default_tools_approval_mode="approve"',
   )
   if (i.model !== "default") args.push("--model", i.model)
   args.push(

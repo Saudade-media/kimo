@@ -9,6 +9,7 @@ import { PlatformError, type PlatformErrorCode } from "./errors"
 import { basenameOf, dirnameOf, isKimoPath } from "./links"
 import { createMemoryMcpHost, type MemoryMcpHost } from "./mcp-memory"
 import { createSettingsStore } from "./settings-store"
+import { createMemorySkills, type MemorySkills } from "./skills"
 import {
   type AcquireResult,
   type FileRef,
@@ -74,7 +75,11 @@ export interface MemoryControl {
   setLocalFonts(families: LocalFontFamily[], bytes?: Record<string, Uint8Array>): void
 }
 
-export type MemoryPlatform = KimoPlatform & { control: MemoryControl; mcp: MemoryMcpHost }
+export type MemoryPlatform = KimoPlatform & {
+  control: MemoryControl
+  mcp: MemoryMcpHost
+  skills: MemorySkills
+}
 
 export interface MemoryPlatformOptions {
   os?: "macos" | "windows" | "linux"
@@ -87,6 +92,8 @@ export interface MemoryPlatformOptions {
   files?: Record<FileRef, string>
   /** Initial settings. */
   settings?: Record<string, unknown>
+  /** Initial user skills: folder name → SKILL.md text. */
+  skills?: Record<string, string>
 }
 
 const enc = new TextEncoder()
@@ -290,6 +297,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
     appVersion,
     capabilities,
     mcp: createMemoryMcpHost({ status: { version: appVersion } }),
+    skills: createMemorySkills(options.skills),
     files: {
       async readText(ref) {
         const f = must(ref)

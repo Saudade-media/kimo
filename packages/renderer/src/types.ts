@@ -823,6 +823,12 @@ export interface FontProvider {
   register(bytes: Uint8Array, key: FontFaceKey): void
   /** Fires after a face finishes loading. Returns an unsubscribe function. */
   onFontLoaded(listener: (key: FontFaceKey) => void): () => void
+  /**
+   * The registered font file Paragraph uses for this face (nearest weight/style of the family),
+   * or null when the family is not registered. PDF export embeds it so glyphs and line breaks
+   * match the canvas.
+   */
+  faceBytes?(family: string, weight: number, style: FontStyle): Uint8Array | null
   /** Deterministic last-resort family (bundled Inter). */
   readonly fallbackFamily: string
 }
@@ -980,6 +986,11 @@ export interface Renderer {
   readonly fonts: FontProvider
   /** Icon glyph source (M2; optional so M1 fakes keep compiling). */
   readonly icons?: IconProvider
+  /**
+   * Loads every font face the subtree's text uses (needs `setDocument` + `setLayout`). Layout
+   * measured afterwards uses the real faces (exports, MCP renders). Optional for fakes.
+   */
+  ensureFonts?(nodeId: string): Promise<void>
 
   /**
    * PNG bytes of one node's subtree at `scale`, rendered on a CPU raster surface (works

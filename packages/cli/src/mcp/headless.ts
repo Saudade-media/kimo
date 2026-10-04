@@ -315,6 +315,7 @@ export async function runHeadless(o: HeadlessOptions): Promise<number> {
     }
     return ctx
   }
+  const opened = new Set<string>()
   const handlers = new Proxy(runtime.handlers, {
     get(t, name) {
       return async (input: Record<string, unknown>, c: ToolContext) => {
@@ -324,7 +325,18 @@ export async function runHeadless(o: HeadlessOptions): Promise<number> {
           name,
         ) as ToolHandlers[keyof ToolHandlers]
         try {
-          return await h(input, c)
+          const out = await h(input, c)
+          // stderr names every file this process opens (the agent host's log shows which).
+          const doc = out.result.ok ? out.result.doc : undefined
+          if (
+            (name === "kimo_open" || name === "kimo_create") &&
+            doc?.path &&
+            !opened.has(doc.path)
+          ) {
+            opened.add(doc.path)
+            log(`headless: ${name === "kimo_create" ? "created" : "opened"} ${doc.path}`)
+          }
+          return out
         } finally {
           autosave.sync()
         }
@@ -345,7 +357,9 @@ export async function runHeadless(o: HeadlessOptions): Promise<number> {
   serverRef.current = server
   registerStaticResources(server)
   const transport = new StdioServerTransport(o.stdin ?? process.stdin, o.stdout ?? process.stdout)
-  log(`headless (${runtime.impl}), files: ${policy.files.join(", ")}, level ${policy.level}`)
+  log(
+    `headless${runtime.impl === "fallback" ? " (fallback host)" : ""}, files: ${policy.files.join(", ")}, level ${policy.level}`,
+  )
 
   await server.connect(transport)
   const ppid = process.ppid

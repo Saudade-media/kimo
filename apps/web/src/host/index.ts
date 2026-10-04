@@ -8,6 +8,8 @@
  *   `onFocus` (kimo_focus) and `reportSelection`. See INTEGRATION.md.
  */
 import type { KimoPlatform } from "@kimo/platform"
+import type { FontSource } from "@kimo/renderer"
+import { createFontSystem, type FontSystem } from "../fonts/font-system"
 import { DEFAULT_SVG_OPTIONS, importSvgAsVectors } from "../svg-import/convert"
 import { type HostBridge, tauriBridge } from "./bridge"
 import { HostClient } from "./client"
@@ -55,6 +57,15 @@ export const svgImporter = (
   return { ops: r.ops, rootId: r.rootId }
 }
 
+/** The platform font sources (local → cache → Google per settings) for the host's scene. */
+function hostFontSources(platform: KimoPlatform): () => readonly FontSource[] {
+  let fonts: FontSystem | null = null
+  return () => {
+    fonts ??= createFontSystem({ platform })
+    return fonts.sources
+  }
+}
+
 let service: DocumentHostService | null = null
 
 /**
@@ -70,7 +81,10 @@ export async function startHostRoute(
     bridge,
     version: platform.appVersion,
     svgImport: svgImporter,
-    scene: browserScene,
+    // SVG / PDF exports and renders measure text with the canvas's fonts: bundled, the
+    // document's font assets (scene), then the platform's local fonts and font cache (Google
+    // is skipped: the host's renderer is offline).
+    scene: { ...browserScene, fontSources: hostFontSources(platform) },
   })
   return service
 }

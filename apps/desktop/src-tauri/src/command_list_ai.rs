@@ -24,11 +24,27 @@ pub const CLI_COMMANDS: &[&str] = &[
     "kimo_cli_kill",
 ];
 
-/// The Settings window detects CLIs and manages keys, but never spawns or drives processes.
+/// User skills (ADR 0014 §10), mirrored from `TAURI_SKILLS_COMMANDS`
+/// (packages/platform/src/skills.ts). Editor windows and the document host only.
+pub const SKILLS_COMMANDS: &[&str] = &[
+    "kimo_skills_root",
+    "kimo_skills_list",
+    "kimo_skills_read",
+    "kimo_skills_watch",
+    "kimo_skills_unwatch",
+];
+
+/// The Settings window detects CLIs and manages keys, but never spawns or drives processes
+/// (and never loads skills).
 pub const AI_SETTINGS_EXCLUDED: &[&str] = &[
     "kimo_cli_prepare_workspace",
     "kimo_cli_spawn",
     "kimo_cli_write",
     "kimo_cli_close_stdin",
     "kimo_cli_kill",
+    "kimo_skills_root",
+    "kimo_skills_list",
+    "kimo_skills_read",
+    "kimo_skills_watch",
+    "kimo_skills_unwatch",
 ];

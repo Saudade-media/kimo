@@ -147,7 +147,7 @@ export function decideOpen(input: {
 export interface HeadlessOptions {
   /** Idle autosave in ms; 0 disables (then only kimo_save writes). Default 2000, like the app. */
   autosaveMs: number
-  /** File allow-list globs (`--allow`); default `<cwd>/**`. */
+  /** File allow-list globs (`--files`); default `<cwd>/**`. */
   allow: string[]
   /** On stdin EOF / SIGTERM with unsaved edits: flush autosave, else write a recovery file. */
   onExit: "save" | "recovery"

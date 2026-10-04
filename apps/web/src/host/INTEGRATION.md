@@ -86,13 +86,26 @@ Window ↔ host events are JS only; Rust just routes them, and both sides need
 
 | Event | Direction | Payload |
 |---|---|---|
-| `kimo://host-rpc` | window → host | `{from, id, method, args}`. Methods: `ping`, `open`, `release`, `command`, `agentUndo`, `mcpState` (connections, pending prompts, paused clients) and `mcpPause` (`{client, paused}`). |
+| `kimo://host-rpc` | window → host | `{from, id, method, args}`. Methods: `ping`, `open`, `release`, `command`, `agentUndo`, `mcpState` (connections, pending prompts, paused clients), `mcpPause` (`{client, paused}`) and the in-app agent calls `agentCall` (`{spec: {origin, label, session, policy}, name, input}` → `{result, images?}`; no timeout on the window side), `agentApproval` (`{id, outcome}`), `agentRelease` (`{origins?}`) and `agentDocId` (`{ref}` → `{docId}`). |
 | `kimo://host-rpc-reply` | host → window | `{id, ok, value?, error?}` |
 | `kimo://host-sync` | both | `{from, msg: HostSyncMessage}` (`@kimo/sync` host-sync, base64 Yjs updates with their origin) |
 | `kimo://host-session-state` | host → windows showing the file | `{ref, state: SessionState}` |
 | `kimo://host-focus` | host → windows showing the file | `{ref, ids, select, zoom}` |
 | `kimo://host-window-state` | window → host | `{from, ref, selection}` |
+| `kimo://host-agent-approval` | host → the agent's window | `{id, origin, request: ApprovalRequest}`: an in-app agent's approval, shown as its in-thread card; answered with `agentApproval`. |
 | `kimo://host-ready` | host → all | Emitted when the host (re)starts; windows reopen and resync, and the replica keeps edits it has not sent yet. |
+
+## In-app agents (`agentCall`, ADR 0014 §5)
+
+On desktop the Agent tab's tools run here: `editor/agent-panel.tsx` `agentToolsFor` picks
+`createHostTools({client, ref})` when the window's session is hosted (`HostedDocumentSession.hosted`),
+else `createInWindowTools`. The host opens one runtime connection per (window, agent origin)
+with `origin: agent:kimo.<session>.<n>`, the window's policy (`policy.nodes` = scope, checked
+with `scopeViolations` / `checkScope` on the host store) and a `requestApproval` that forwards
+to the window and waits until answered. So the agent is in `kimo://mcp-connections`, the
+activity log, `kimo_get_state.agents`, pause and `agentUndo`; its edits reach the replica as
+`remote:agent:…` (never on the user's ⌘Z) and an MCP client's undo never touches them.
+`release` of the window's last document (or `agentRelease`) closes its agent connections.
 
 ## Tests
 
@@ -104,4 +117,9 @@ Window ↔ host events are JS only; Rust just routes them, and both sides need
   - the Rust relay contract against a fake event bus.
 - `e2e/m5-host.e2e.ts` (harness `e2e/m5-host-harness`): the real editor as a host client. An MCP
   edit shows up in the layers panel; ⌘Z undoes only the user's rename; the agent's undo removes
-  its card from the editor.
+  its card from the editor. An in-app agent through `agentCall` (`__kimoHost.agentCall`): its
+  edit shows in the layers panel, presence and the Activity tab; the MCP client sees it in
+  `kimo_get_state.agents` and cannot undo it; ⌘Z keeps it; a scoped child gets OUT_OF_SCOPE.
+- `test/m6-host-agent.test.ts`: `agentCall` origins, presence, activity, per-origin undo,
+  `checkScope` in the host, forwarded approvals (no MCP timeout; Stop / release answer deny) and
+  the host / in-window tool host choice.

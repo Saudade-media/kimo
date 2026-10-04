@@ -222,3 +222,49 @@ pub async fn kimo_cli_kill(app: AppHandle, process_id: String, signal: Option<St
     let signal = signal.unwrap_or_else(|| "SIGTERM".into());
     blocking(move || s.cli.kill(&process_id, &signal)).await
 }
+
+// --- User skills (ADR 0014 §10) -------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn kimo_skills_root(app: AppHandle) -> R<String> {
+    let s = svc(&app)?;
+    Ok(crate::util::path_str(s.skills.root()))
+}
+
+#[tauri::command]
+pub async fn kimo_skills_list(app: AppHandle) -> R<Vec<crate::skills::SkillFile>> {
+    let s = svc(&app)?;
+    blocking(move || s.skills.list()).await
+}
+
+#[tauri::command]
+pub async fn kimo_skills_read(app: AppHandle, name: String) -> R<Option<crate::skills::SkillFile>> {
+    let s = svc(&app)?;
+    blocking(move || s.skills.read(&name)).await
+}
+
+#[tauri::command]
+pub async fn kimo_skills_watch(app: AppHandle, window: WebviewWindow, watch_id: String) -> R<()> {
+    let s = svc(&app)?;
+    let sink = sink(&app, &window);
+    blocking(move || {
+        s.skills.watch(
+            &watch_id,
+            std::time::Duration::from_millis(250),
+            Arc::new(move |id: &str| {
+                sink.emit(
+                    crate::skills::EV_SKILLS_CHANGED,
+                    crate::skills::changed_payload(id),
+                )
+            }),
+        )
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn kimo_skills_unwatch(app: AppHandle, watch_id: String) -> R<()> {
+    let s = svc(&app)?;
+    s.skills.unwatch(&watch_id);
+    Ok(())
+}

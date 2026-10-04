@@ -34,11 +34,14 @@ pub struct AiServices {
     pub secrets: Arc<secrets::Secrets>,
     pub relay: Arc<relay::Relay>,
     pub cli: Arc<cli::CliHost>,
+    /// `~/.kimo/skills` (ADR 0014 §10).
+    pub skills: Arc<crate::skills::SkillsService>,
 }
 
 impl AiServices {
     pub fn new(home: PathBuf, kimo_home: PathBuf, shim_path: String) -> Self {
         let ai_dir = kimo_home.join("ai");
+        let skills = Arc::new(crate::skills::SkillsService::new(&kimo_home));
         let secrets = Arc::new(secrets::Secrets::new(
             secrets::default_store(),
             ai_dir.join("secret-accounts.json"),
@@ -56,6 +59,7 @@ impl AiServices {
             secrets,
             relay,
             cli,
+            skills,
         }
     }
 

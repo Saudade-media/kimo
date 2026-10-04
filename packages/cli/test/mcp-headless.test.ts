@@ -81,6 +81,29 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
     expect(tools).not.toContain("kimo_script")
   })
 
+  test('stderr: the mode label is "headless" and names each file opened', async () => {
+    const ws = workspace()
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [MAIN, "mcp", "--headless"],
+      cwd: ws.project,
+      env: { HOME: ws.home, KIMO_HOME: ws.kimoHome, PATH: process.env.PATH ?? "" },
+      stderr: "pipe",
+    })
+    let err = ""
+    transport.stderr?.on("data", (b: Buffer) => {
+      err += b.toString("utf8")
+    })
+    const c = new Client({ name: "stderr-agent", version: "1.0.0" })
+    await c.connect(transport)
+    clients.push(c)
+    expect((await call(c, "kimo_open", { path: ws.file })).ok).toBe(true)
+    await new Promise((r) => setTimeout(r, 100))
+    expect(err).toMatch(/kimo mcp: headless, files: .+, level edit\+delete/)
+    expect(err).not.toContain("memory-host")
+    expect(err).toMatch(/kimo mcp: headless: opened .*site\.kimo/)
+  })
+
   test("kimo_read_docs serves the guides", async () => {
     const ws = workspace()
     const c = await connect(ws)

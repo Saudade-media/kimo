@@ -16,7 +16,7 @@ import type {
   ResolvedTextStyle,
   TextMeasurer,
 } from "@kimo/layout"
-import type { Renderer } from "@kimo/renderer"
+import type { FontSource, Renderer } from "@kimo/renderer"
 import type { ToolImage } from "../envelope"
 import type { HostResult } from "../runtime"
 import { err, errorMessage, ok, toBase64 } from "./util"
@@ -37,6 +37,29 @@ export interface RenderedImage extends ToolImage {
 /** Loads an asset referenced by a document (`./assets/<hash>.png`), or null. */
 export type AssetLoader = (src: string) => Promise<Uint8Array | null>
 
+/** Icon glyph loader (the renderer's `IconProvider`, structurally `@kimo/exporters` `IconLoader`). */
+export interface SceneIconLoader {
+  load(set: string, name: string, weight?: number): Promise<unknown>
+}
+
+/**
+ * What the SVG / PDF emitters need so their text matches the canvas (ADR 0015): a layout
+ * measured with the renderer's Paragraph after every face the document uses was loaded
+ * (bundled Inter / JetBrains Mono, the document's font assets, the host's font sources such as
+ * the platform font cache), that same measurer, and the font files Paragraph used.
+ */
+export interface ExportKit {
+  layout: LayoutResult
+  measureText: TextMeasurer
+  /** Font file of a face as Paragraph resolved it (TTF/OTF only; null → the emitter's fallback). */
+  fonts(family: string, weight: number, italic: boolean): Uint8Array | null
+  /** Asset bytes preloaded for the emitters' synchronous lookups (`./assets/<name>`). */
+  assets(src: string): Uint8Array | null
+  icons?: SceneIconLoader
+  /** False when CanvasKit is unavailable (approximate measurer, no font files). */
+  exact: boolean
+}
+
 export interface SceneService {
   /** Layout of the committed state (cached per store revision). Null when unavailable. */
   layout(store: DocStore): Promise<LayoutResult | null>
@@ -49,6 +72,12 @@ export interface SceneService {
   ): Promise<HostResult<RenderedImage[]>>
   /** Whether a font face loads (null when the renderer is unavailable). */
   checkFont(family: string, weight: number, italic: boolean): Promise<boolean | null>
+  /** Layout, measurer, fonts and assets for SVG / PDF export of the committed state. */
+  exportKit?(
+    store: DocStore,
+    assets: AssetLoader,
+    options?: { theme?: Record<string, string> },
+  ): Promise<HostResult<ExportKit>>
   dispose(): void
 }
 
@@ -59,6 +88,79 @@ export interface SceneServiceOptions {
   createLayoutEngine?: () => Promise<LayoutEngine>
   /** Disallow network font fetches (default true headless). */
   offlineFonts?: boolean
+  /**
+   * Font sources after the document's own font assets (desktop: the platform font cache /
+   * local fonts / Google per settings). Read before every render and export.
+   */
+  fontSources?: () => readonly FontSource[]
+}
+
+const FONT_EXT = /\.(ttf|otf|woff2?)$/i
+
+/** Asset file names (`<hash>.<ext>`) of a document that are font files. */
+function documentFontAssets(store: DocStore): string[] {
+  const manifest = (store.toHeader().assets ?? {}) as Record<string, { mime?: string }>
+  return Object.entries(manifest)
+    .filter(([name, e]) => FONT_EXT.test(name) || /^font\//i.test(e?.mime ?? ""))
+    .map(([name]) => name)
+    .filter((name) => /^[^\\/]+$/.test(name))
+}
+
+/** Every `./assets/<name>` string a document references (image fills, …). */
+function referencedAssets(store: DocStore): string[] {
+  const out = new Set<string>()
+  const visit = (v: unknown) => {
+    if (typeof v === "string") {
+      if (/^\.\/assets\/[^\\/]+$/.test(v)) out.add(v)
+    } else if (Array.isArray(v)) for (const x of v) visit(x)
+    else if (v && typeof v === "object") for (const x of Object.values(v)) visit(x)
+  }
+  for (const id of store.nodeIds()) visit(store.getNode(id))
+  return [...out]
+}
+
+/** The document's font assets as a renderer font source (spec §12: fonts live in `assets/`). */
+function documentFontSource(store: DocStore, assets: AssetLoader | undefined): FontSource {
+  type Face = { family: string; weight: number; style: "normal" | "italic"; bytes: Uint8Array }
+  let faces: Promise<Face[]> | null = null
+  const load = () => {
+    faces ??= (async () => {
+      if (!assets) return []
+      const names = documentFontAssets(store)
+      if (!names.length) return []
+      const { readFontInfo } = await import("@kimo/renderer")
+      const out: Face[] = []
+      for (const name of names) {
+        const bytes = await assets(`./assets/${name}`).catch(() => null)
+        const info = bytes ? await readFontInfo(bytes) : null
+        if (bytes && info)
+          out.push({
+            family: info.family,
+            weight: info.weight,
+            style: info.italic ? "italic" : "normal",
+            bytes,
+          })
+      }
+      return out
+    })()
+    return faces
+  }
+  return {
+    name: "document",
+    async fetch(key) {
+      const fam = (await load()).filter((f) => f.family.toLowerCase() === key.family.toLowerCase())
+      let best: Face | undefined
+      let score = Number.POSITIVE_INFINITY
+      for (const f of fam) {
+        const d = (f.style === key.style ? 0 : 10_000) + Math.abs(f.weight - key.weight)
+        if (d < score) {
+          best = f
+          score = d
+        }
+      }
+      return best ? { bytes: best.bytes, weight: best.weight, style: best.style } : null
+    },
+  }
 }
 
 /** Approximate measurer used when CanvasKit cannot load (bounds stay usable). */
@@ -130,8 +232,17 @@ export function createSceneService(options: SceneServiceOptions = {}): SceneServ
     return engineP
   }
 
-  /** Builds the scene pipeline for `store` (optionally themed). */
-  async function pipeline(store: DocStore, theme?: Record<string, string>, assets?: AssetLoader) {
+  /**
+   * Builds the scene pipeline for `store` (optionally themed). With `fonts`, every face the
+   * text under `fonts` uses is loaded first (document font assets, then the host's sources) and
+   * the layout is measured again, so line breaks match the canvas once its fonts arrived.
+   */
+  async function pipeline(
+    store: DocStore,
+    theme?: Record<string, string>,
+    assets?: AssetLoader,
+    fonts?: readonly string[],
+  ) {
     const layoutMod = await import("@kimo/layout")
     const r = await renderer()
     const e = await engine()
@@ -139,17 +250,29 @@ export function createSceneService(options: SceneServiceOptions = {}): SceneServ
     const header = () => store.toHeader() as never
     const view = layoutMod.createInstanceView(base, { header })
     const resolve = layoutMod.createResolver(header, view)
-    const layout = e.compute({
-      nodes: base,
-      expanded: view,
-      resolve,
-      measureText: r ? r.textMeasurer() : approximateMeasurer,
-    })
+    const compute = () =>
+      e.compute({
+        nodes: base,
+        expanded: view,
+        resolve,
+        measureText: r ? r.textMeasurer() : approximateMeasurer,
+      })
+    let layout = compute()
     const scene = {
       nodes: view,
       header,
       resolve,
       assets: { load: async (src: string) => (assets ? assets(src) : null) },
+    }
+    if (r && fonts?.length) {
+      await r.init({
+        fontSources: [documentFontSource(store, assets), ...(options.fontSources?.() ?? [])],
+      })
+      r.setDocument(scene as never)
+      r.setLayout(layout)
+      const gen = (r.fonts as { generation?: number }).generation
+      await Promise.all(fonts.map((id) => r.ensureFonts?.(id).catch(() => {})))
+      if ((r.fonts as { generation?: number }).generation !== gen) layout = compute()
     }
     return { r, layout, scene }
   }
@@ -181,7 +304,7 @@ export function createSceneService(options: SceneServiceOptions = {}): SceneServ
       return serial(async (): Promise<HostResult<RenderedImage[]>> => {
         let p: Awaited<ReturnType<typeof pipeline>>
         try {
-          p = await pipeline(store, opts.theme, assets)
+          p = await pipeline(store, opts.theme, assets, ids)
         } catch (e) {
           return err("INTERNAL", `Layout failed: ${errorMessage(e)}`)
         }
@@ -221,6 +344,43 @@ export function createSceneService(options: SceneServiceOptions = {}): SceneServ
           }
         }
         return ok(out)
+      })
+    },
+    exportKit(store, assets, opts = {}) {
+      return serial(async (): Promise<HostResult<ExportKit>> => {
+        let p: Awaited<ReturnType<typeof pipeline>>
+        try {
+          p = await pipeline(store, opts.theme, assets, store.children(null))
+        } catch (e) {
+          return err("INTERNAL", `Layout failed: ${errorMessage(e)}`)
+        }
+        const files = new Map<string, Uint8Array | null>()
+        for (const src of referencedAssets(store))
+          files.set(src, await assets(src).catch(() => null))
+        const r = p.r
+        const { fontFormat, FALLBACK_FAMILY } = r
+          ? await import("@kimo/renderer")
+          : { fontFormat: () => null, FALLBACK_FAMILY: "Inter" }
+        const fontFile = (family: string, weight: number, italic: boolean) => {
+          const style = italic ? "italic" : "normal"
+          const fp = r?.fonts
+          // Paragraph falls back to Inter for a family no source had: embed what it measured.
+          const bytes =
+            fp?.faceBytes?.(family, weight, style) ??
+            fp?.faceBytes?.(FALLBACK_FAMILY, weight, style) ??
+            null
+          // pdf-lib embeds TrueType / OpenType only.
+          const f = bytes ? fontFormat(bytes) : null
+          return f === "truetype" || f === "opentype" ? bytes : null
+        }
+        return ok({
+          layout: p.layout,
+          measureText: r ? r.textMeasurer() : approximateMeasurer,
+          fonts: fontFile,
+          assets: (src) => files.get(src) ?? null,
+          ...(r?.icons ? { icons: r.icons } : {}),
+          exact: !!r,
+        })
       })
     },
     async checkFont(family, weight, italic) {

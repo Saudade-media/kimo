@@ -175,13 +175,35 @@ export function jsonEntry(host: HostId, launcher: Launcher): Record<string, unkn
   return { type: "stdio", ...base }
 }
 
-/** The TOML table for Codex. */
-export function tomlTable(launcher: Launcher): string {
+/**
+ * Codex per-server tool approval (`mcp_servers.<id>.default_tools_approval_mode`, values
+ * `auto | prompt | writes | approve`; developers.openai.com/codex/config-reference, codex-rs
+ * `AppToolApproval`, checked 2026-10-04). `auto` (Codex's default) asks before every tool that
+ * is not annotated read-only, and `codex exec` — scripted runs, and how Kimo's built-in agent
+ * drives Codex (`--sandbox read-only`) — cannot answer that prompt, so `kimo_apply_ops` would
+ * fail. `approve` lets Codex call Kimo's tools without its own prompt; Kimo's per-client policy,
+ * scopes and approval prompts (ADR 0013 §6) still guard every edit in the app.
+ *
+ * Kimo-spawned Codex runs (the built-in agent's CLI adapter) always pass `approve` on the command
+ * line. The installer, which edits the user's own `~/.codex/config.toml`, writes it only on
+ * explicit opt-in (`kimo mcp install --auto-approve`), so the user's interactive Codex keeps its
+ * own prompts by default.
+ */
+export const CODEX_TOOLS_APPROVAL_MODE = "approve"
+export const CODEX_APPROVAL_MODES = ["auto", "prompt", "writes", "approve"] as const
+export type CodexApprovalMode = (typeof CODEX_APPROVAL_MODES)[number]
+
+/**
+ * The TOML table for Codex. The approval line is written only when `approvalMode` is given
+ * (opt-in, or a valid value the user set by hand in our table, which a reinstall keeps).
+ */
+export function tomlTable(launcher: Launcher, approvalMode?: CodexApprovalMode): string {
   const q = (s: string) => JSON.stringify(s)
+  const approval = approvalMode ? `default_tools_approval_mode = ${q(approvalMode)}\n` : ""
   if (launcher.kind === "http")
-    return `[mcp_servers.${SERVER_KEY}]\nurl = ${q(launcher.url)}\nhttp_headers = { Authorization = ${q(`Bearer ${launcher.token}`)} }\n`
+    return `[mcp_servers.${SERVER_KEY}]\nurl = ${q(launcher.url)}\nhttp_headers = { Authorization = ${q(`Bearer ${launcher.token}`)} }\n${approval}`
   const args = launcherArgs(launcher, "codex")
-  return `[mcp_servers.${SERVER_KEY}]\ncommand = ${q(launcher.command)}\nargs = [${args.map(q).join(", ")}]\n`
+  return `[mcp_servers.${SERVER_KEY}]\ncommand = ${q(launcher.command)}\nargs = [${args.map(q).join(", ")}]\n${approval}`
 }
 
 const rootKey = (host: HostId) => (host === "vscode" ? "servers" : "mcpServers")
@@ -196,8 +218,10 @@ export function planEdit(
   path: string,
   before: string | null,
   launcher: Launcher | null,
+  options: { codexApproval?: CodexApprovalMode } = {},
 ): PlanResult {
-  if (HOST_INFO[host].format === "toml") return planToml(path, before, launcher)
+  if (HOST_INFO[host].format === "toml")
+    return planToml(path, before, launcher, options.codexApproval)
   let doc: Record<string, unknown> = {}
   if (before !== null && before.trim() !== "") {
     try {
@@ -234,7 +258,12 @@ export function planEdit(
   return { ok: true, path, before, after: changed ? after : before, changed }
 }
 
-function planToml(path: string, before: string | null, launcher: Launcher | null): PlanResult {
+function planToml(
+  path: string,
+  before: string | null,
+  launcher: Launcher | null,
+  codexApproval?: CodexApprovalMode,
+): PlanResult {
   const text = before ?? ""
   const problem = tomlProblem(text)
   if (problem)
@@ -243,7 +272,7 @@ function planToml(path: string, before: string | null, launcher: Launcher | null
       path,
       code: "UNPARSABLE",
       message: `${path} does not look like valid TOML (${problem}); it was left untouched. Add the snippet by hand.`,
-      snippet: launcher ? tomlTable(launcher) : "",
+      snippet: launcher ? tomlTable(launcher, codexApproval) : "",
     }
   const lines = text.split("\n")
   const isOurs = (l: string) => {
@@ -253,18 +282,25 @@ function planToml(path: string, before: string | null, launcher: Launcher | null
   const out: string[] = []
   let skipping = false
   let removed = false
+  let inMain = false
+  let kept: CodexApprovalMode | undefined
   for (const l of lines) {
     if (/^\s*\[/.test(l)) {
       skipping = isOurs(l)
+      inMain = l.trim() === `[mcp_servers.${SERVER_KEY}]`
       if (skipping) removed = true
     }
+    // The user's own approval mode in our table survives a reinstall.
+    const m = inMain && /^\s*default_tools_approval_mode\s*=\s*["']([a-z]+)["']/.exec(l)
+    if (m && (CODEX_APPROVAL_MODES as readonly string[]).includes(m[1] as string))
+      kept = m[1] as CodexApprovalMode
     if (!skipping) out.push(l)
   }
   let after = out.join("\n").replace(/\n{3,}$/, "\n\n")
   if (launcher) {
     if (after.length && !after.endsWith("\n")) after += "\n"
     if (after.trim().length) after += "\n"
-    after += tomlTable(launcher)
+    after += tomlTable(launcher, codexApproval ?? kept)
   }
   if (!launcher && !removed) return { ok: true, path, before, after: before, changed: false }
   const changed = after !== text
@@ -414,6 +450,8 @@ export interface InstallOptions extends PathContext {
   scope: InstallScope
   /** Compute and return the plan without writing. */
   dryRun?: boolean
+  /** Codex only: write `default_tools_approval_mode` (opt-in, `--auto-approve`). */
+  codexApproval?: CodexApprovalMode
 }
 
 export interface ApplyResult {
@@ -449,7 +487,7 @@ function apply(
   const path = configPath(host, o.scope, o)
   for (let attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
     const before = fs.read(path)
-    const plan = planEdit(host, path, before, launcher)
+    const plan = planEdit(host, path, before, launcher, { codexApproval: o.codexApproval })
     if (!plan.ok || !plan.changed || o.dryRun || plan.after === null) return { plan }
     let backup: string | undefined
     if (before !== null) {

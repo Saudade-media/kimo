@@ -45,7 +45,7 @@ export interface MemoryDocumentHostOptions {
   scene?: SceneService | SceneServiceOptions
   /** `openDocument` options (libraries, migrations). */
   openOptions?: OpenOptions
-  /** Policy for every client (default HEADLESS_POLICY; `--allow` globs go in `files`). */
+  /** Policy for every client (default HEADLESS_POLICY; `--files` globs go in `files`). */
   clientPolicy?: ClientPolicy
   /** Activity persistence (default memory). */
   activity?: ActivityStore

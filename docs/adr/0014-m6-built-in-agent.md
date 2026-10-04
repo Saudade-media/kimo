@@ -105,6 +105,26 @@ Adapters:
   host builder supplies the `ToolContext` (origin **`agent:kimo.<session>.<n>`**, lead n = 0),
   handlers and `DispatchOptions`; `createRegistryToolHost` adapts them and appends agent-only
   tools. Tool order is the registry's (stable for prompt caching); stubs are hidden.
+- **Where the tools run** (`apps/web/src/agent-panel`). On desktop, when the window's document
+  is hosted by the document host, the `ToolHostFactory` is `createHostTools`: every registry
+  call is the host RPC **`agentCall {spec: {origin, label, session, policy}, name, input}`**,
+  which runs it on a runtime connection opened with `McpHostRuntime.connect(identity, {origin,
+  policy, scope, requestApproval})` — identity `{client: "kimo", label, session, transport:
+  "in-process"}`, origin `agent:kimo.<session>.<n>`, one connection per (window, origin); the
+  turn's policy replaces the previous one (`setPolicy`). So in-app agents are in the host's
+  presence list (`kimo://mcp-connections`, `kimo_get_state.agents`), its activity log, pause and
+  `agentUndo`, next to MCP clients. Their edits land on the host store under their own origin
+  (own undo stack; the window's replica receives `remote:agent:…`, never on the user's ⌘Z, and
+  an MCP client's `kimo_history` never undoes them). The window's scope travels as
+  `policy.nodes` and the host runs the same `checkScope` (`scopeViolations`) against the
+  authoritative tree, so OUT_OF_SCOPE is unchanged. Approvals are forwarded to the window
+  (`kimo://host-agent-approval {id, origin, request}` → the agent's in-thread card → RPC
+  `agentApproval {id, outcome}`), never to the board 21 prompt queue, and wait until answered;
+  the window's `agentCall` has no RPC timeout (a host restart fails it TIMEOUT retryable).
+  `agentRelease` / the window's `release` close its agent connections (open prompts answer
+  deny). Agent-only tools (`kimo_spawn_agents`) still run in the window. With no host (web, an
+  older shell) or an untitled document the window falls back to `createInWindowTools` (the
+  registry in process over the window's store, same origins, scope check and approvals).
 - **In-app approvals wait indefinitely** (`IN_APP_APPROVAL_TIMEOUT_MS = Infinity`); external
   MCP keeps 2 minutes. The host's `requestApproval` for `agent:*` origins must not time out;
   Stop answers pending prompts with `deny`.
@@ -192,8 +212,14 @@ The format already had `placeholder`, `note` and `prompt`. Additive changes (sti
 
 Built-in skills `kimo-design`, `kimo-layout`, `kimo-tokens` (written for Kimo, MIT) plus the
 user's `~/.kimo/skills/<name>/SKILL.md` (YAML front matter `name`, `description`; hot-reloaded by
-the host). A user skill may not shadow a built-in. "/" in the composer opens the menu; toggles
-enable skills for new turns; a leading `/name` forces a skill for one turn. Active skills append
+the host). A user skill may not shadow a built-in. The host source is `platform.skills`
+(`@kimo/platform` `src/skills.ts`, a `SkillSource`; absent in the browser): on desktop the
+commands `kimo_skills_root`, `kimo_skills_list`, `kimo_skills_read {name}`, `kimo_skills_watch /
+_unwatch {watchId}` and the event `kimo://skills-changed {watchId}` (granted by `ai-agent`, not
+Settings). Rust reads only `<root>/<dir>/SKILL.md` with a plain folder name, whose canonical path
+stays under the canonical root (symlink escapes refused), a regular UTF-8 file ≤ 256 KiB; a
+missing root lists empty; the watch creates the root and is recursive (debounced 250 ms). "/" in
+the composer opens the menu; toggles enable skills for new turns; a leading `/name` forces a skill for one turn. Active skills append
 to the stable (cached) system prompt in name order; the thread shows which skills a turn used.
 
 ### 11. Local agent CLIs (`src/cli`, `@kimo/platform` `src/cli-agents.ts`)
@@ -211,8 +237,11 @@ to the stable (cached) system prompt in name order; the thread shows which skill
     [--model m] [--effort low|max] [--resume <session>]`; the prompt (and images) is one
     stream-json user line on stdin.
   - Codex: `codex exec [resume <thread>] --json --skip-git-repo-check --sandbox read-only --cd
-    <workspace> -c mcp_servers.kimo.command=… -c mcp_servers.kimo.args=[…] [-m m] -c
-    model_reasoning_effort=… -` (prompt on stdin).
+    <workspace> -c mcp_servers.kimo.command=… -c mcp_servers.kimo.args=[…] -c
+    mcp_servers.kimo.default_tools_approval_mode="approve" [-m m] -c
+    model_reasoning_effort=… -` (prompt on stdin). `approve` keeps Codex from stopping at its own
+    tool prompt (nobody can answer it under `exec`); Kimo's policy and approvals still guard
+    every call (ADR 0013 §9).
   - Gemini CLI: `gemini --output-format stream-json --allowed-mcp-server-names kimo [--model m]
     [--resume id] --prompt …` with a workspace `.gemini/settings.json` (Kimo MCP server
     trusted; `write_file`, `replace`, `run_shell_command`, `web_fetch` excluded).

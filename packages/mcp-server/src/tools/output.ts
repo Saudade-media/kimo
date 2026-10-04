@@ -7,9 +7,9 @@ import { ALL_HOSTS, defineTool, docId, NOT_WEB, nodeIdField, READ, WRITE } from 
 
 export const kimoRender = defineTool({
   name: "kimo_render",
-  title: "Render nodes to PNG",
+  title: "Render nodes to PNG or SVG",
   description:
-    "Renders nodes to PNG images attached to the result (MCP image content), using the same CanvasKit engine as the canvas. Always reflects every committed edit, including one made earlier in the same turn. Use after building a section to check layout, clipping and contrast. Keep scale modest (images cost tokens): maxSize caps the longest side. format svg arrives with code export (UNSUPPORTED for now).",
+    "Renders nodes to PNG images attached to the result (MCP image content), using the same CanvasKit engine as the canvas. Always reflects every committed edit, including one made earlier in the same turn. Use after building a section to check layout, clipping and contrast. Keep scale modest (images cost tokens): maxSize caps the longest side. format svg returns standalone SVG markup per node in data.images[].svg (the code exporter's SVG, text laid out with the canvas fonts) instead of image content.",
   input: Obj({
     docId,
     ids: Arr(nodeIdField("Node id."), {
@@ -17,7 +17,11 @@ export const kimoRender = defineTool({
       minItems: 1,
       maxItems: 8,
     }),
-    format: Opt(Enum(["png", "svg"], { description: "Default png." })),
+    format: Opt(
+      Enum(["png", "svg"], {
+        description: "Default png. svg: markup in data (scale and maxSize do not apply).",
+      }),
+    ),
     scale: Opt(Num({ description: "Pixel ratio (default 1, max 4).", minimum: 0.1, maximum: 4 })),
     maxSize: Opt(
       Int({
@@ -39,12 +43,18 @@ export const kimoRender = defineTool({
         nodeId: Str({ description: "Node." }),
         width: Int({ description: "Pixels.", minimum: 0 }),
         height: Int({ description: "Pixels.", minimum: 0 }),
-        index: Int({
-          description: "Index of the image content block in the MCP result.",
-          minimum: 0,
-        }),
+        index: Opt(
+          Int({
+            description: "png: index of the image content block in the MCP result.",
+            minimum: 0,
+          }),
+        ),
+        svg: Opt(Str({ description: "svg: the standalone SVG markup of the node." })),
       }),
-      { description: "One entry per rendered node; pixels are in the result's image content." },
+      {
+        description:
+          "One entry per rendered node; png pixels are in the result's image content, svg markup in svg.",
+      },
     ),
   }),
   annotations: READ,

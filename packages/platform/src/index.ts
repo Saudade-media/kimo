@@ -46,6 +46,7 @@ export {
   type UpdateChannel,
 } from "./settings"
 export { createSettingsStore, type SettingsBackend } from "./settings-store"
+export * from "./skills"
 export { createTauriPlatform, type TauriBridge } from "./tauri-platform"
 export * from "./types"
 export { createBatcher, DEFAULT_WATCH_DEBOUNCE_MS, Emitter, sha256Hex } from "./util"

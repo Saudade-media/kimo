@@ -6,12 +6,12 @@
  * side-by-side placement on free canvas, the Home hand-off and the canvas context menu commands
  * (board 22 rules: note "Convert to prompt", prompt + frame "Set as target", orphan "Clear flag").
  *
- * Tools: every window runs the M5 registry in process over its own store
- * (`createInWindowTools`). On desktop that store is the document host's replica, so agent edits
- * reach the host — and every MCP client — through the Yjs sync with their `agent:kimo.*` origin;
- * the window keeps the agent's undo stack. Routing the calls through the host runtime instead is
- * not done: its connections are `mcp:*` identities (no `agent:` origins, no per-op `checkScope`
- * targets, approvals go to the board 21 prompt instead of the thread) — see INTEGRATION.md.
+ * Tools ({@link agentToolsFor}): on desktop, when the window's document is hosted by the document
+ * host, the agent's calls run there through the host RPC `agentCall` (`createHostTools`) under
+ * its `agent:kimo.<session>.<n>` identity — host presence + activity log next to MCP clients,
+ * the window's scope checked per op in the host, approvals forwarded to the in-thread card. With
+ * no host (web, older shell) or an untitled document, the M5 registry runs in process over the
+ * window's own store (`createInWindowTools`). See agent-panel/INTEGRATION.md.
  */
 import { type NoteView, type PromptNodeView, shimLaunch } from "@kimo/ai-agent"
 import type { LayoutResult } from "@kimo/layout"
@@ -24,6 +24,7 @@ import {
   type AgentPanelViewState,
   agentCanvasProps,
   createAgentPanelController,
+  createHostTools,
   createInWindowTools,
   createPlatformAgentRuntime,
   hasHomeHandoff,
@@ -33,7 +34,7 @@ import {
 import { useAiProviders } from "../ai-settings"
 import { SIDE_BY_SIDE_GAP, sideBySideAnchor } from "../canvas/agent-canvas"
 import type { AgentCanvasProps, CanvasHandle, CanvasPointerInfo } from "../canvas/contract"
-import type { HostClient } from "../host/client"
+import { type HostClient, HostedDocumentSession } from "../host/client"
 import type { Bus } from "../lib/hooks"
 import type { FileDocumentSession } from "../platform/session"
 import { useFileId } from "./agents"
@@ -119,7 +120,9 @@ export function useEditorAgentPanel({
 
   const tools = useMemo(
     () =>
-      createInWindowTools({
+      agentToolsFor({
+        hostClient,
+        doc,
         store: session.store,
         path: toolPath,
         selection: () => [...session.ui.getState().selection],
@@ -130,8 +133,9 @@ export function useEditorAgentPanel({
         },
         version: platform.appVersion,
       }),
-    [session, toolPath, canvas, platform],
+    [hostClient, doc, session, toolPath, canvas, platform],
   )
+  useEffect(() => () => tools.dispose?.(), [tools])
 
   const boxOf = (id: string): Box | null => {
     const b = layout.get()?.nodes.get(id)?.world
@@ -159,6 +163,8 @@ export function useEditorAgentPanel({
         mcpLaunch: (cli) => shimLaunch(latest.current.shim ?? "kimo-mcp", cli),
         openSettings: () => latest.current.openSettings("ai-providers"),
         openLink: (url) => void platform.files.openExternalUrl(url).catch(() => {}),
+        // Desktop: ~/.kimo/skills (listed, read and watched by Rust); absent on the web.
+        ...(platform.skills ? { skills: platform.skills } : {}),
       }),
       fileId,
       fileName: latest.current.fileName,
@@ -203,9 +209,6 @@ export function useEditorAgentPanel({
       push(last)
     })
   }, [controller, session])
-
-  // Desktop: kimo_focus from the document host also reaches the in-window agent's window.
-  void hostClient
 
   // Home → Agent tab: take the hand-off once and start (origin "home", Single, scope page).
   useHomeHandoff(controller, handoffPath, openAgentTab)
@@ -253,6 +256,30 @@ export function useEditorAgentPanel({
     initialAgentTab,
     editingAgent: agent?.editing ?? null,
   }
+}
+
+/**
+ * The agent's tool host for this window: the document host's (`agentCall`) when the window's
+ * document is hosted, else the in-window registry over the window's store.
+ */
+export function agentToolsFor(
+  o: Parameters<typeof createInWindowTools>[0] & {
+    hostClient: HostClient | null
+    doc: FileDocumentSession | null
+  },
+): {
+  kind: "host" | "in-window"
+  factory: ReturnType<typeof createInWindowTools>["factory"]
+  docId(): string
+  dispose?(): void
+} {
+  const { hostClient, doc, ...inWindow } = o
+  if (hostClient && doc instanceof HostedDocumentSession && doc.hosted) {
+    const t = createHostTools({ client: hostClient, ref: doc.ref })
+    return { kind: "host", factory: t.factory, docId: t.docId, dispose: t.dispose }
+  }
+  const t = createInWindowTools(inWindow)
+  return { kind: "in-window", factory: t.factory, docId: t.docId }
 }
 
 /** The slice of the panel state the canvas / layers / title need (stable between tokens). */

@@ -42,6 +42,38 @@ type HostHook = {
   }>
 }
 
+type AgentHook = {
+  agentCall(
+    tool: string,
+    input: Record<string, unknown>,
+    o?: { n?: number; scope?: string[] },
+  ): Promise<{
+    ok: boolean
+    summary: string
+    data?: Record<string, unknown>
+    created?: { key: string; id: string }[]
+    undoToken?: string
+    errors?: { code: string }[]
+  }>
+}
+
+/** An in-app agent's call through the host RPC `agentCall` (ADR 0014 §5). */
+const agentCall = (
+  page: Page,
+  tool: string,
+  input: Record<string, unknown>,
+  o: { n?: number; scope?: string[] } = {},
+) =>
+  page.evaluate(
+    ([t, i, opts]) =>
+      (window as unknown as { __kimoHost: AgentHook }).__kimoHost.agentCall(
+        t as string,
+        i as Record<string, unknown>,
+        opts as { n?: number; scope?: string[] },
+      ),
+    [tool, input, o] as const,
+  )
+
 const call = (page: Page, tool: string, input: unknown) =>
   page.evaluate(
     ([t, i]) => (window as unknown as { __kimoHost: HostHook }).__kimoHost.call(t as string, i),
@@ -72,6 +104,133 @@ const replicaHas = (page: Page, id: string) =>
   )
 
 export const scenarios: Scenario[] = [
+  {
+    name: "m5-host: an in-app agent through agentCall — presence, activity, MCP attribution, undo isolation, scope",
+    async run(ctx) {
+      const { page } = ctx
+      await page.setViewportSize({ width: 1440, height: 900 })
+      const base = await harnessUrl(ctx)
+      await page.goto(`${base}?kimo-debug`)
+      await page.waitForFunction(() => !!(window as unknown as { __kimoHost?: unknown }).__kimoHost)
+      const file = await page.evaluate(
+        () => (window as unknown as { __kimoHost: HostHook }).__kimoHost.FILE,
+      )
+      await page.evaluate((f) => {
+        location.hash = `#/disk/${encodeURIComponent(f)}`
+      }, file)
+      await page.locator(".canvas-host canvas").first().waitFor({ timeout: 20_000 })
+      await layerRow(page, "Home").first().waitFor({ timeout: 15_000 })
+      const opened = await call(page, "kimo_open", { path: file })
+      expect(opened.ok, `kimo_open: ${opened.summary}`)
+      const docId = (opened.data as { doc: { id: string } }).doc.id
+
+      // A user edit first (the window's own undo stack).
+      await page.evaluate(() => {
+        const k = (window as unknown as { __kimo: { session: { apply(o: unknown): boolean } } })
+          .__kimo
+        k.session.apply({ op: "update", id: "Frame00001", set: { name: "User rename" } })
+      })
+      await layerRow(page, "User rename").first().waitFor({ timeout: 10_000 })
+
+      // The in-app agent (lead, agent:kimo.e2e.0) inserts a card through the document host.
+      const applied = await agentCall(page, "kimo_apply_ops", {
+        label: "Insert Kimo card",
+        ops: [
+          {
+            op: "insert",
+            key: "card",
+            parent: "Frame00001",
+            node: { type: "rect", name: "Kimo card", x: 40, y: 40, w: 120, h: 80 },
+          },
+        ],
+      })
+      expect(applied.ok, `agent kimo_apply_ops: ${applied.summary}`)
+      const cardId = applied.created?.[0]?.id as string
+      await page.waitForFunction(
+        (id) =>
+          !!(
+            window as unknown as {
+              __kimo?: { session: { store: { hasNode(id: string): boolean } } }
+            }
+          ).__kimo?.session.store.hasNode(id),
+        cardId,
+        { timeout: 10_000 },
+      )
+      const tree = page.locator(".layer-tree")
+      const disclosure = tree.locator('[data-node-id="Frame00001"] [aria-label="Expand"]')
+      if ((await disclosure.count()) > 0) await disclosure.first().click()
+      await layerRow(page, "Kimo card").first().waitFor({ timeout: 10_000 })
+
+      // Presence: the window's McpHostApi lists the agent next to the MCP client.
+      await page.waitForFunction(
+        async () => {
+          const mcp = (
+            window as unknown as {
+              __kimoHost: {
+                platform: {
+                  mcp: { connections(): Promise<{ origin: string; identity: { label: string } }[]> }
+                }
+              }
+            }
+          ).__kimoHost.platform.mcp
+          const list = await mcp.connections()
+          return (
+            list.some((c) => c.origin === "agent:kimo.e2e.0" && c.identity.label === "Kimo") &&
+            list.some((c) => c.origin.startsWith("mcp:claude-code."))
+          )
+        },
+        undefined,
+        { timeout: 10_000 },
+      )
+
+      // Activity tab: the agent's labelled edit, attributed to Kimo.
+      await page.getByRole("tab", { name: "Activity" }).click()
+      const activity = page.locator("[data-testid=agent-activity]")
+      await activity.waitFor({ timeout: 10_000 })
+      await activity.getByText("Insert Kimo card").first().waitFor({ timeout: 10_000 })
+
+      // The MCP client sees the agent on the document and cannot undo its edit.
+      const state = await call(page, "kimo_get_state", { docId })
+      const agents =
+        (state.data as { documents: { agents: { origin: string; label: string }[] }[] })
+          .documents[0]?.agents ?? []
+      expect(
+        agents.some((a) => a.origin === "agent:kimo.e2e.0" && a.label === "Kimo"),
+        `kimo_get_state agents: ${JSON.stringify(agents)}`,
+      )
+      const mcpUndo = await call(page, "kimo_history", { docId, action: "undo" })
+      expect(!mcpUndo.ok, "the MCP client has nothing of its own to undo")
+      expect(await replicaHas(page, cardId), "the agent's card survives the MCP client's undo")
+
+      // ⌘Z in the editor: undoes the user's rename only.
+      await page.locator(".canvas-host").click({ position: { x: 20, y: 20 } })
+      await page.keyboard.press("Meta+z")
+      await layerRow(page, "Home").first().waitFor({ timeout: 10_000 })
+      expect(await replicaHas(page, cardId), "the agent's card survives the user's undo")
+
+      // A scoped child (agent:kimo.e2e.1, scope = the card) cannot touch the frame.
+      const out = await agentCall(
+        page,
+        "kimo_apply_ops",
+        { ops: [{ op: "update", id: "Frame00001", set: { name: "Out of scope" } }] },
+        { n: 1, scope: [cardId] },
+      )
+      expect(
+        !out.ok && out.errors?.[0]?.code === "OUT_OF_SCOPE",
+        `scoped child: ${out.summary} ${JSON.stringify(out.errors)}`,
+      )
+      expect((await replicaName(page, "Frame00001")) === "Home", "nothing applied")
+
+      // The agent's own undo (Undo turn) removes its card from the editor.
+      const undo = await agentCall(page, "kimo_history", {
+        action: "undo",
+        token: applied.undoToken,
+      })
+      expect(undo.ok, `agent kimo_history undo: ${undo.summary}`)
+      await layerRow(page, "Kimo card").waitFor({ state: "detached", timeout: 10_000 })
+      if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "m5-host-agent-call.png") })
+    },
+  },
   {
     name: "m5-host: an MCP edit appears in the editor; the user's undo never undoes agent ops",
     async run(ctx) {

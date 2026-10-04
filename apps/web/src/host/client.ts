@@ -14,6 +14,13 @@ import { HOST_EVENTS, HOST_LABEL, type HostBridge } from "./bridge"
 
 type Reply = { id: string; ok: boolean; value?: unknown; error?: string }
 
+/** An approval the document host forwards for one of this window's in-app agents. */
+export interface HostAgentApproval {
+  id: string
+  origin: string
+  request: unknown
+}
+
 /** A `kimo_focus` request for this window. */
 export interface HostFocusRequest {
   ref: string
@@ -27,7 +34,11 @@ let rpcSeq = 0
 export class HostClient {
   private readonly pending = new Map<
     string,
-    { resolve(v: unknown): void; reject(e: Error): void }
+    { resolve(v: unknown): void; reject(e: Error): void; untimed?: boolean }
+  >()
+  private readonly agentApprovalHandlers = new Map<
+    string,
+    (a: HostAgentApproval) => Promise<string>
   >()
   private readonly stateListeners = new Map<string, Set<(s: SessionState) => void>>()
   private readonly focusListeners = new Set<(f: HostFocusRequest) => void>()
@@ -73,19 +84,37 @@ export class HostClient {
         for (const l of [...this.syncListeners]) l(msg)
       }),
       await b.listen(HOST_EVENTS.ready, () => {
+        // Calls without a timeout (agent calls waiting on an approval) died with the old host.
+        for (const [id, p] of [...this.pending])
+          if (p.untimed) {
+            this.pending.delete(id)
+            p.reject(new Error("the document host restarted"))
+          }
         for (const l of [...this.readyListeners]) l()
+      }),
+      await b.listen<HostAgentApproval>(HOST_EVENTS.agentApproval, (a) => {
+        const h = this.agentApprovalHandlers.get(a.origin)
+        const answer = h ? h(a).catch(() => "deny") : Promise.resolve("deny")
+        void answer.then((outcome) =>
+          this.call("agentApproval", { id: a.id, outcome }).catch(() => {}),
+        )
       }),
     )
   }
 
+  /** `timeoutMs` = Infinity: no timeout (rejected only when the host restarts or on dispose). */
   call<T = unknown>(method: string, args: Record<string, unknown>, timeoutMs = 30_000): Promise<T> {
     const id = `${this.bridge.label}:${++rpcSeq}`
     return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id)
-        reject(new Error(`document host did not answer ${method}`))
-      }, timeoutMs)
+      const untimed = !Number.isFinite(timeoutMs)
+      const timer = untimed
+        ? undefined
+        : setTimeout(() => {
+            this.pending.delete(id)
+            reject(new Error(`document host did not answer ${method}`))
+          }, timeoutMs)
       this.pending.set(id, {
+        ...(untimed ? { untimed } : {}),
         resolve: (v) => {
           clearTimeout(timer)
           resolve(v as T)
@@ -148,6 +177,18 @@ export class HostClient {
     })
   }
 
+  /**
+   * Answers approvals the host forwards for the in-app agent `origin` (its in-thread card).
+   * The handler resolves with the outcome (`deny`, `once`, `session`).
+   */
+  onAgentApproval(origin: string, handler: (a: HostAgentApproval) => Promise<string>): () => void {
+    this.agentApprovalHandlers.set(origin, handler)
+    return () => {
+      if (this.agentApprovalHandlers.get(origin) === handler)
+        this.agentApprovalHandlers.delete(origin)
+    }
+  }
+
   /** Undo an agent's op group (AgentsController.undoEntry). */
   agentUndo(
     ref: string,
@@ -181,6 +222,11 @@ export class HostedDocumentSession extends FileDocumentSession {
     readonly client: HostClient,
   ) {
     super(ref, manager, store)
+  }
+
+  /** True when the document host is this session's authority (not untitled, attached). */
+  get hosted(): boolean {
+    return !this.local && this.hostSync !== null
   }
 
   override async init(options: OpenOptions = {}): Promise<void> {

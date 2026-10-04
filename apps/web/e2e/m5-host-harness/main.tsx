@@ -7,12 +7,14 @@ import "@kimo/design-tokens/editor.css"
 import "@kimo/ui/styles.css"
 import "../../src/fonts.css"
 import "../../src/app.css"
+import { agentOrigin, childPolicy, leadPolicy } from "@kimo/ai-agent"
 import { createEmptyDocument, serialize } from "@kimo/editor-state"
 import { DEFAULT_POLICY } from "@kimo/mcp-server"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "../../src/App"
+import { createHostTools } from "../../src/agent-panel/host-tools"
 import {
   browserScene,
   createDesktopMcpHost,
@@ -79,6 +81,7 @@ async function boot() {
   const windowMcp = await createDesktopMcpHost({ bridge: net.bridge("main"), client, os: "macos" })
   Object.defineProperty(platform, "mcp", { value: windowMcp, configurable: true })
   manager.install()
+  let agentTools: ReturnType<typeof createHostTools> | null = null
   const mcp = service.runtime.connect(
     { client: "claude-code", label: "Claude Code", transport: "in-process" },
     { policy: { ...DEFAULT_POLICY, files: ["/Users/me/**"] } },
@@ -90,6 +93,30 @@ async function boot() {
       service,
       manager,
       call: async (tool: string, input: unknown) => (await mcp.call(tool, input)).result,
+      /**
+       * An in-app agent's call through the host RPC `agentCall` (the editor's host tool host):
+       * `n` = 0 for the lead (unscoped), else a child scoped to `scope`.
+       */
+      agentCall: async (
+        tool: string,
+        input: Record<string, unknown>,
+        o: { n?: number; scope?: string[] } = {},
+      ) => {
+        agentTools ??= createHostTools({ client, ref: FILE })
+        if (!agentTools.docId()) await agentTools.refresh()
+        const n = o.n ?? 0
+        const host = agentTools.factory({
+          origin: agentOrigin("e2e", n),
+          label: n ? `Agent ${n + 1}` : "Kimo",
+          session: "e2e",
+          policy: o.scope ? childPolicy(o.scope) : leadPolicy(),
+          requestApproval: async () => "deny",
+        })
+        const input2 = { docId: agentTools.docId(), ...input }
+        return (
+          await host.call({ id: tool, name: tool, input: input2 }, new AbortController().signal)
+        ).result
+      },
     },
   })
   initTheme()

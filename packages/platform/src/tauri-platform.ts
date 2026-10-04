@@ -12,8 +12,10 @@
 import type { AppliedCapabilities } from "./capabilities"
 import { PlatformError, type PlatformErrorCode } from "./errors"
 import { basenameOf } from "./links"
+import type { InvokeLike, ListenLike } from "./secrets"
 import { isSettingKey, type SettingKey } from "./settings"
 import { createSettingsStore } from "./settings-store"
+import { createTauriSkills } from "./skills"
 import type {
   TauriCommand,
   TauriCommandMap,
@@ -266,6 +268,14 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     os,
     appVersion: info.version,
     capabilities,
+    // M6 user skills (ADR 0014 §10): own command list (TAURI_SKILLS_COMMANDS), not TAURI_COMMANDS.
+    skills: createTauriSkills({
+      invoke: (cmd, args) =>
+        (bridge.invoke as unknown as InvokeLike)(cmd, args).catch((e: unknown) => {
+          throw toPlatformError(e)
+        }),
+      listen: bridge.listen as unknown as ListenLike,
+    }),
     files: {
       readText: (ref) => call("kimo_fs_read_text", { path: ref }),
       readBytes: async (ref) => toBytes(await call("kimo_fs_read_bytes", { path: ref })),

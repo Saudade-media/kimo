@@ -53,6 +53,8 @@ export const MCP_USAGE = `kimo mcp — Kimo for coding agents (MCP over stdio)
       --files        headless file allow-list glob, repeatable (default <cwd>/**)
 
   kimo mcp install [--host <host>|all] [--project] [--dir <path>] [--dry-run] [--json]
+                   [--auto-approve]  Codex only: let Codex call Kimo tools without its own prompt
+                                     (Kimo's permissions and approvals still apply)
                    [--command <shim path> | --cli] [--transport stdio|http]
   kimo mcp remove  [--host <host>|all] [--project] [--dir <path>] [--dry-run] [--json]
   kimo mcp status  [--host <host>|all] [--project] [--dir <path>] [--json]
@@ -299,7 +301,7 @@ async function runConfig(
   only(
     p,
     sub === "install"
-      ? [...common, "--dry-run", "--command", "--cli", "--transport"]
+      ? [...common, "--dry-run", "--command", "--cli", "--transport", "--auto-approve"]
       : sub === "remove"
         ? [...common, "--dry-run"]
         : common,
@@ -353,7 +355,12 @@ async function runConfig(
       }
       const r =
         sub === "install"
-          ? install(host, launcher, { ...ctx, scope, dryRun })
+          ? install(host, launcher, {
+              ...ctx,
+              scope,
+              dryRun,
+              ...(p.flags.has("--auto-approve") ? { codexApproval: "approve" as const } : {}),
+            })
           : remove(host, { ...ctx, scope, dryRun })
       rows.push(rowOf(sub, host, r.plan, dryRun, r.backup))
     } catch (e) {

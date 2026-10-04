@@ -22,6 +22,7 @@ pub mod recents;
 pub mod recovery;
 pub mod scope;
 pub mod settings;
+pub mod skills;
 mod state;
 pub mod updater;
 pub mod util;
@@ -250,6 +251,11 @@ pub fn run() {
             ai_commands::kimo_cli_write,
             ai_commands::kimo_cli_close_stdin,
             ai_commands::kimo_cli_kill,
+            ai_commands::kimo_skills_root,
+            ai_commands::kimo_skills_list,
+            ai_commands::kimo_skills_read,
+            ai_commands::kimo_skills_watch,
+            ai_commands::kimo_skills_unwatch,
         ])
         .build(tauri::generate_context!())
         .expect("error while building the Kimo desktop app");
@@ -562,11 +568,13 @@ mod tests {
     fn ai_command_surface_matches_platform_ts() {
         let secrets = ts_list("secrets.ts", "TAURI_SECRETS_COMMANDS");
         let cli = ts_list("cli-agents.ts", "TAURI_CLI_COMMANDS");
-        assert_eq!((secrets.len(), cli.len()), (7, 9));
+        let skills = ts_list("skills.ts", "TAURI_SKILLS_COMMANDS");
+        assert_eq!((secrets.len(), cli.len(), skills.len()), (7, 9, 5));
         let own = |l: &[&str]| l.iter().map(|s| s.to_string()).collect::<Vec<_>>();
         assert_eq!(own(super::command_list_ai::SECRETS_COMMANDS), secrets);
         assert_eq!(own(super::command_list_ai::CLI_COMMANDS), cli);
-        let all: BTreeSet<String> = secrets.iter().chain(&cli).cloned().collect();
+        assert_eq!(own(super::command_list_ai::SKILLS_COMMANDS), skills);
+        let all: BTreeSet<String> = secrets.iter().chain(&cli).chain(&skills).cloned().collect();
 
         let lib =
             std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib.rs")).unwrap();
@@ -664,6 +672,19 @@ mod tests {
             "CLI_WORKSPACES_DIR = \".kimo/{}\"",
             super::ai::cli::WORKSPACES_DIR
         )));
+        // User skills (ADR 0014 §10): event, root and size cap match skills.ts.
+        let skills = read("skills.ts");
+        assert_eq!(
+            ts_list("skills.ts", "TAURI_SKILLS_EVENTS"),
+            vec![super::skills::EV_SKILLS_CHANGED.to_string()]
+        );
+        assert!(skills.contains(&format!(
+            "USER_SKILLS_ROOT = \".kimo/{}\"",
+            super::skills::SKILLS_DIR
+        )));
+        assert_eq!(super::skills::MAX_SKILL_BYTES, 256 * 1024);
+        assert!(skills.contains("USER_SKILL_MAX_BYTES = 256 * 1024"));
+        assert!(skills.contains("SKILL_DIR_RE = /^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$/"));
     }
 
     /// `SETTINGS_PANES` (window.rs) mirrors the `SettingsPane` union in platform types.ts, in

@@ -41,7 +41,7 @@ SDK adapter), `./installer` (node:fs). `apps/web` may import it (types only in M
 | `kimo_open` | read (+ file allow-list) | read-only | Never writes; LOAD_FAILED leaves the file untouched; DOCUMENT_LOCKED with holder; `readOnly` |
 | `kimo_query` | read | read-only | Selectors (ids, under, topLevel, name, type, text, component), depth with `"…"` elision, resolveVariables + theme, resolveInstances, include bounds/problems/geometry/origin/overrides, fields, cursor pagination. Never a whole-document dump |
 | `kimo_apply_ops` | edit → delete if any destructive op | destructive hint | ≤ 500 typed ops (§5), `baseRevision`, `dryRun`, `label`, `render` |
-| `kimo_render` | read | read-only | PNG via the headless CanvasKit raster (`Renderer.exportRaster`), always post-commit; ≤ 8 nodes, `maxSize`; svg UNSUPPORTED until M7 |
+| `kimo_render` | read | read-only | PNG via the headless CanvasKit raster (`Renderer.exportRaster`), always post-commit; ≤ 8 nodes, `maxSize`. `format: svg` (M7): `@kimo/exporters` `svgOf` per node, markup in `data.images[].svg` (no image content), text measured with the canvas's Paragraph and fonts (ADR 0015) |
 | `kimo_get_variables` | read | read-only | Incl. libraries, resolve per theme, usages |
 | `kimo_list_components` | read | read-only | Local + library, declared props, slots, instance counts |
 | `kimo_find_space` | read | read-only | ≈ FindEmptySpace |
@@ -51,7 +51,7 @@ SDK adapter), `./installer` (node:fs). `apps/web` may import it (types only in M
 | `kimo_focus` | read | view-only write | NO_WINDOW warning headless |
 | `kimo_import` | edit | write | svg, image, tokens-dtcg, tokens-css; dryRun + baseRevision |
 | `kimo_assets` | read → edit for import | write | list, import, fonts, check_font; generate/job_status UNSUPPORTED in M5 |
-| `kimo_export` | read + `export` grant | idempotent write | M5 targets `png`, `kimo`; code/token targets listed, UNSUPPORTED until M7; FILE_EXISTS unless `overwrite` |
+| `kimo_export` | read + `export` grant | idempotent write | `png`, `kimo`, and (M7, ADR 0015) `react-tailwind`, `html-css`, `tokens-*`, `tailwind-theme`, `svg`, `pdf` via `exportDocument` (inline without `outDir`); svg/pdf get the scene's export kit: layout + Paragraph measurer after the document's faces loaded (bundled Inter / JetBrains Mono, document font assets, the host's local fonts and font cache), and PDF embeds those font files; FILE_EXISTS unless `overwrite` |
 | `kimo_create` | edit + `files.create` grant | write | FILE_EXISTS, never overwrites |
 | `kimo_close` | read → edit (save) / delete (discard) | destructive hint | Refuses dirty docs unless save/discard |
 | `kimo_styles` | read → edit for apply | write | Presets; content can arrive later (may list none) |
@@ -141,7 +141,8 @@ composition, which was the main benefit of pen.dev's `execute` (5.8).
   `read` / `edit` / `edit+delete`, file allow-list (globs), node scope (M6 children), grants
   (`globals, components, save, export, files.create`), `onExceed: ask | deny`,
   `confirmDestructive`. Defaults: unknown clients `edit`, no extra files, ask, confirm
-  destructive; headless `edit+delete`, `--allow` globs (default `<cwd>/**`), deny (no UI).
+  destructive; headless `--allow <level>` (default `edit+delete`), `--files <glob>…` (default
+  `<cwd>/**`), deny (no UI).
 - **Authorization order** (`authorize`): file allow-list → node scope → level → grants →
   destructive confirmation. Files already open in the app count as allowed.
 - **Approvals**: an out-of-policy call becomes an `ApprovalRequest` shown in every window
@@ -194,7 +195,13 @@ Full text: [docs/spec/socket.md](../spec/socket.md); types in `src/protocol.ts`.
 
 ### 8. Attach vs headless (`kimo mcp`)
 
-`kimo mcp [--attach | --headless] [--allow <glob>…] [--no-autosave] [--client <slug>]`, stdio:
+`kimo mcp [--attach | --headless] [--allow <level>] [--files <glob>]… [--no-autosave]
+[--client <slug>] [--experimental]`, stdio (as `kimo mcp --help` prints it). `--allow` is the
+headless permission level (`read` | `edit` | `edit+delete`, default `edit+delete`); `--files` is a
+repeatable file allow-list glob (default `<cwd>/**`). For compatibility an `--allow` value that
+looks like a path or glob (contains `/` or `*`) is taken as a `--files` glob. `--experimental`
+lists stub tools. On start headless prints `kimo mcp: headless, files: <globs>, level <level>` to
+stderr, then `kimo mcp: headless: opened|created <path>` for each document it opens.
 
 - **auto** (default): attach when the endpoint file's pid is alive and the socket accepts a
   hello, else headless. **`--attach`**: attach or APP_NOT_RUNNING. **`--headless`**: never
@@ -225,7 +232,7 @@ against each host's docs, 2026-10):
 | Host | User scope | Project scope | Entry |
 |---|---|---|---|
 | Claude Code | `~/.claude.json` → `mcpServers.kimo` | `.mcp.json` | `{type:"stdio", command, args:["--client","claude-code"]}` |
-| Codex | `~/.codex/config.toml` → `[mcp_servers.kimo]` | `.codex/config.toml` | `command = …`, `args = ["--client","codex"]` |
+| Codex | `~/.codex/config.toml` → `[mcp_servers.kimo]` | `.codex/config.toml` | `command = …`, `args = ["--client","codex"]`, `default_tools_approval_mode = "approve"` only with `--auto-approve` (opt-in); a valid value the user set in the table is kept on reinstall |
 | Gemini CLI | `~/.gemini/settings.json` → `mcpServers.kimo` | `.gemini/settings.json` | `{command, args, timeout: 600000, trust: false}` (HTTP: `httpUrl`) |
 | Cursor | `~/.cursor/mcp.json` → `mcpServers.kimo` | `.cursor/mcp.json` | `{type:"stdio", command, args}` |
 | VS Code | user-profile `mcp.json` (macOS `~/Library/Application Support/Code/User/`, Linux `~/.config/Code/User/`, Windows `%APPDATA%\Code\User\`) → `servers.kimo` | `.vscode/mcp.json` | `{type:"stdio", command, args}` |
@@ -234,6 +241,21 @@ against each host's docs, 2026-10):
 `kimo_mcp_status`) or `kimo` with `args ["mcp", "--client", <host>]`. HTTP entries carry the
 per-host bearer (Codex: `http_headers`). Host rows use generic icons (terminal / editor), never
 vendor logos. Tests use a temp HOME only.
+
+Codex approval mode (checked 2026-10-04 against the Codex config reference,
+<https://developers.openai.com/codex/config-reference>, codex-rs `AppToolApproval` /
+`mcp_tool_call.rs`, and codex-cli 0.146.0 locally): `mcp_servers.<id>.default_tools_approval_mode`
+takes `auto | prompt | writes | approve` (default `auto`; per tool:
+`mcp_servers.<id>.tools.<tool>.approval_mode`). `auto` asks before any tool not annotated
+read-only (and before every `destructiveHint` tool) unless `approval_policy = "never"` with full
+disk write; `writes` asks for every non-read-only tool; `prompt` always asks; `approve` never asks.
+Scripted `codex exec` cannot answer a prompt, so with `auto` every `kimo_apply_ops` would fail.
+The built-in agent's Codex adapter (Kimo-spawned, non-interactive) therefore passes
+`-c mcp_servers.kimo.default_tools_approval_mode="approve"` on its command line. The installer,
+which edits the user's own `~/.codex/config.toml`, writes the key only on explicit opt-in
+(`kimo mcp install --auto-approve`), so the user's interactive Codex keeps its own prompts by
+default (lead decision, 2026-10-04). Kimo's own per-client policy, scopes and approvals (§6) still
+guard every call.
 
 ### 10. Tests and exit criteria
 

@@ -14,6 +14,8 @@ import type { Revision } from "@kimo/editor-state"
 import {
   type ActivityEntry,
   type ActivityStore,
+  type ApprovalOutcome,
+  type ApprovalRequest,
   type BackendDocument,
   type ClientIdentity,
   type ClientPolicy,
@@ -41,6 +43,7 @@ import type {
   TauriMcpEventMap,
 } from "@kimo/platform"
 import { HostSyncHub, type HostSyncMessage, type HostSyncTransport } from "@kimo/sync"
+import { scopeViolations } from "../agent-panel/tools"
 import { isUntitledRef, type SessionState } from "../platform/contract"
 import {
   createSessionManager,
@@ -84,6 +87,17 @@ interface Relay {
   cwd?: string
   close(): Promise<void>
   receive?(line: string): void
+}
+
+/** What a window sends with `agentCall`: the agent's identity and policy (ADR 0014 §5). */
+export interface AgentCallSpec {
+  /** `agent:kimo.<session>.<n>`. */
+  origin: `agent:${string}`
+  /** "Kimo", "Agent 2". */
+  label: string
+  session: string
+  /** The window's policy for this agent: `nodes` = its scope (checkScope runs in the host). */
+  policy: ClientPolicy
 }
 
 export interface DocumentHostService {
@@ -585,6 +599,72 @@ export async function startDocumentHostService(
     })
   }
 
+  // --- In-app agents (agentCall, ADR 0014 §5) ----------------------------------------------------
+  // One runtime connection per (window, agent origin): presence, activity, pause and agentUndo
+  // see the agent next to MCP clients; edits carry `agent:kimo.<session>.<n>` on the host store,
+  // so its undo stack and attribution are the agent's own (the window's replica receives them
+  // as `remote:agent:…` and its ⌘Z never undoes them). Approvals go back to the window's
+  // in-thread card and wait until answered.
+  const agentConns = new Map<string, { conn: McpConnection; from: string }>()
+  const agentPrompts = new Map<
+    string,
+    { from: string; origin: string; resolve(o: ApprovalOutcome): void }
+  >()
+  let promptSeq = 0
+  const agentKey = (from: string, origin: string) => `${from}\u0000${origin}`
+  const closeAgent = (key: string) => {
+    const a = agentConns.get(key)
+    if (!a) return
+    agentConns.delete(key)
+    for (const [id, p] of agentPrompts)
+      if (p.from === a.from && p.origin === a.conn.origin) {
+        agentPrompts.delete(id)
+        p.resolve("deny")
+      }
+    a.conn.close()
+  }
+  const closeAgentsOf = (from: string, origins?: readonly string[]) => {
+    for (const [key, a] of [...agentConns])
+      if (a.from === from && (!origins || origins.includes(a.conn.origin))) closeAgent(key)
+  }
+  const agentConnection = (spec: AgentCallSpec, from: string): McpConnection => {
+    if (!/^agent:[a-z0-9-]+\.[a-z0-9]+\.\d+$/i.test(spec.origin))
+      throw new Error(`Invalid agent origin ${String(spec.origin)}`)
+    const key = agentKey(from, spec.origin)
+    const live = agentConns.get(key)
+    if (live && !live.conn.closed) {
+      if (JSON.stringify(live.conn.policy) !== JSON.stringify(spec.policy))
+        live.conn.setPolicy(spec.policy)
+      return live.conn
+    }
+    const conn = runtime.connect(
+      {
+        client: "kimo",
+        label: spec.label,
+        session: spec.session,
+        transport: "in-process",
+      },
+      {
+        policy: spec.policy,
+        origin: spec.origin,
+        scope: (def, input, store, policy) => scopeViolations(store, policy, def.name, input),
+        requestApproval: (request: ApprovalRequest) =>
+          new Promise<ApprovalOutcome>((resolve) => {
+            const id = `ap${(++promptSeq).toString(36)}`
+            agentPrompts.set(id, { from, origin: spec.origin, resolve })
+            void bridge
+              .emitTo(from, HOST_EVENTS.agentApproval, { id, origin: spec.origin, request })
+              .catch(() => {
+                agentPrompts.delete(id)
+                resolve("deny")
+              })
+          }),
+      },
+    )
+    agentConns.set(key, { conn, from })
+    return conn
+  }
+
   // --- Window RPC -------------------------------------------------------------------------------
   type Rpc = { from: string; id: string; method: string; args: Record<string, unknown> }
   const rpc: Record<string, (args: Record<string, unknown>, from: string) => Promise<unknown>> = {
@@ -604,6 +684,8 @@ export async function startDocumentHostService(
     async release(args, from) {
       const ref = String(args.ref)
       viewers.get(ref)?.delete(from)
+      // The window's in-app agents end with it (pending prompts answer deny).
+      if (![...viewers.values()].some((s) => s.has(from))) closeAgentsOf(from)
       selections.get(ref)?.delete(from)
       const s = manager.get(ref)
       const usedByAgent = runtime.presence.list().some((p) => {
@@ -659,6 +741,35 @@ export async function startDocumentHostService(
       else runtime.pause(client)
       return { paused: runtime.paused() }
     },
+    /**
+     * One tool call of an in-app agent (ADR 0014 §5): the same dispatch as MCP clients
+     * (validate → authorize with the window's scope → approval → handler → activity) under the
+     * agent's own origin. Never throws for tool failures: the envelope comes back.
+     */
+    async agentCall(args, from) {
+      const conn = agentConnection(args.spec as AgentCallSpec, from)
+      const out = await conn.call(String(args.name), args.input ?? {})
+      return {
+        result: out.result,
+        ...(out.images ? { images: out.images } : {}),
+      }
+    },
+    /** The window's answer to a forwarded approval (Stop answers deny). */
+    async agentApproval(args, from) {
+      const p = agentPrompts.get(String(args.id))
+      if (!p || p.from !== from) return { ok: false }
+      agentPrompts.delete(String(args.id))
+      const o = String(args.outcome)
+      p.resolve(o === "once" || o === "session" ? (o as ApprovalOutcome) : "deny")
+      return { ok: true }
+    },
+    /** Ends the window's agent connections (all, or `origins`): presence drops them. */
+    async agentRelease(args, from) {
+      closeAgentsOf(from, Array.isArray(args.origins) ? (args.origins as string[]) : undefined)
+      return { ok: true }
+    },
+    /** The host's docId of `ref` (the agent's `docId` in tool calls), null when not open. */
+    agentDocId: async (args) => ({ docId: host.docIdForPath(String(args.ref)) ?? null }),
     /** Undo an agent's op group from the activity log (AgentsController.undoEntry). */
     async agentUndo(args) {
       // Any live connection of that origin: relayed socket/HTTP clients and in-process ones.
@@ -714,6 +825,7 @@ export async function startDocumentHostService(
     relays,
     viewers: (ref) => [...(viewers.get(ref) ?? [])],
     async dispose() {
+      for (const key of [...agentConns.keys()]) closeAgent(key)
       for (const r of [...relays.values()]) await r.close()
       runtime.dispose()
       hub.dispose()

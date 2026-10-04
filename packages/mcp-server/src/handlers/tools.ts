@@ -39,7 +39,7 @@ import type { CoreDocumentHost } from "./core-host"
 import { EXTENSION, imageSize, parseCssTokens, parseDtcg, sniffFont, sniffImage } from "./importers"
 import { journalFor } from "./journal"
 import { runQuery } from "./query"
-import { createSceneService, type SceneService } from "./scene"
+import { approximateMeasurer, createSceneService, type ExportKit, type SceneService } from "./scene"
 import {
   basename,
   dirname,
@@ -1209,16 +1209,11 @@ export function createToolHandlerMap(
   const render: ToolHandler = async (input, ctx): Out => {
     const d = docOrFail(ctx, input)
     if (isOutput(d)) return d
-    if (input.format === "svg")
-      return fail({
-        code: "UNSUPPORTED",
-        message: "SVG renders arrive with code export (M7).",
-        suggestion: "Use format png.",
-      })
     const ids = input.ids as string[]
     for (const id of ids)
       if (!d.store.getNode(id) && !id.includes("/"))
         return fail({ code: "NODE_NOT_FOUND", message: `Node ${id} does not exist.`, nodeId: id })
+    if (input.format === "svg") return renderSvg(d, ids, input, ctx)
     const r = await ctx.host.render(d.ref.id, ids, {
       scale: numberOr(input.scale, 1),
       maxSize: numberOr(input.maxSize, 1600),
@@ -1242,6 +1237,109 @@ export function createToolHandlerMap(
         },
       ),
       r.value,
+    )
+  }
+
+  /** `./assets/<name>` of a document, read through the host (null when unreadable). */
+  const assetLoader =
+    (d: HostDocument, ctx: ToolContext) =>
+    async (src: string): Promise<Uint8Array | null> => {
+      if (!/^\.\/assets\/[^\\/]+$/.test(src) || !/^[\\/]|^[A-Za-z]:/.test(d.ref.path)) return null
+      const r = await ctx.host.readFile(joinPath(dirname(d.ref.path), src.slice(2)))
+      return r.ok ? r.value : null
+    }
+
+  /**
+   * Layout + Paragraph measurer + font files for SVG / PDF (ADR 0015): text is laid out with the
+   * faces the canvas uses (bundled, document font assets, host font sources), so line breaks
+   * match. Falls back to the cached layout when the scene has no export kit.
+   */
+  async function exportKitFor(
+    d: HostDocument,
+    ctx: ToolContext,
+    theme?: Record<string, string>,
+  ): Promise<ExportKit | ToolError> {
+    if (scene.exportKit) {
+      const k = await scene.exportKit(d.store, assetLoader(d, ctx), theme ? { theme } : {})
+      return k.ok ? k.value : k.error
+    }
+    const layout = await scene.layout(d.store)
+    if (!layout)
+      return {
+        code: "INTERNAL",
+        message: "The layout engine is unavailable.",
+        retryable: true,
+      }
+    return {
+      layout,
+      measureText: approximateMeasurer,
+      fonts: () => null,
+      assets: () => null,
+      exact: false,
+    }
+  }
+
+  /** `kimo_render format=svg`: `@kimo/exporters` `svgOf` per node, returned as text in `data`. */
+  async function renderSvg(d: HostDocument, ids: string[], input: In, ctx: ToolContext): Out {
+    const theme = themeOf(input.theme as never) as Record<string, string> | undefined
+    const kit = await exportKitFor(d, ctx, theme)
+    if ("code" in kit) return fail(kit)
+    let doc = d.store.toDocument() as KimoDocument
+    if (theme) doc = withRootTheme(doc, theme)
+    const ex = await import("@kimo/exporters")
+    const ir = ex.buildIR(doc, { libraries: libs(d.ref.id), ids, layout: kit.layout })
+    const icons = kit.icons ? await ex.loadIcons(ir, kit.icons as never) : undefined
+    const images: { nodeId: string; width: number; height: number; svg: string }[] = []
+    for (const id of ids) {
+      const root = ir.roots.find((r) => r.id === id)
+      const box = kit.layout.nodes.get(id)?.world
+      let svg = root
+        ? ex.svgOf(ir, root, {
+            layout: kit.layout,
+            measureText: kit.measureText,
+            ...(icons ? { icons } : {}),
+          })
+        : null
+      if (!svg || !box)
+        return fail({
+          code: "NODE_NOT_FOUND",
+          message: `Node ${id} is not on the canvas (or not laid out).`,
+          nodeId: id,
+        })
+      if (typeof input.background === "string" && /^#[0-9a-f]{3,8}$/i.test(input.background))
+        svg = svg.replace(
+          /(<svg\b[^>]*>)/,
+          `$1<rect width="100%" height="100%" fill="${input.background}"/>`,
+        )
+      images.push({
+        nodeId: id,
+        width: Math.max(0, Math.ceil(box.w)),
+        height: Math.max(0, Math.ceil(box.h)),
+        svg,
+      })
+    }
+    const issues = ir.issues.filter((i) => !i.nodeId || ids.includes(i.nodeId))
+    return done(
+      success({ images }, `Rendered ${images.length} SVG(s) at revision ${d.store.revision.seq}.`, {
+        doc: d.ref,
+        revision: sameRev(d.store.revision),
+        warnings: [
+          ...(kit.exact
+            ? []
+            : [
+                {
+                  code: "APPROXIMATE_TEXT",
+                  message:
+                    "CanvasKit is unavailable here: text was measured approximately; line breaks may differ from the canvas.",
+                },
+              ]),
+          ...issues.slice(0, 20).map((i) => ({
+            code: i.code,
+            message: i.message,
+            ...(i.nodeId ? { nodeId: i.nodeId } : {}),
+          })),
+        ],
+      }),
     )
   }
 
@@ -1279,14 +1377,18 @@ export function createToolHandlerMap(
     }[] = []
     let issues: { code: string; message: string; nodeId?: string }[] | undefined
     if (code) {
-      // ADR 0015: one IR for every target; SVG/PDF read the committed layout.
-      const layout = target === "svg" || target === "pdf" ? await scene.layout(d.store) : undefined
-      if (layout === null)
-        return fail({
-          code: "INTERNAL",
-          message: `The layout engine is unavailable; ${target} export needs it.`,
-          retryable: true,
-        })
+      // ADR 0015: one IR for every target; SVG/PDF read the committed layout, measured with the
+      // canvas's Paragraph and fonts (document font assets, cached fonts), and PDF embeds them.
+      let kit: ExportKit | undefined
+      if (target === "svg" || target === "pdf") {
+        const k = await exportKitFor(d, ctx)
+        if ("code" in k)
+          return fail({
+            ...k,
+            message: `${k.message} ${target} export needs the layout.`,
+          })
+        kit = k
+      }
       let result: ExportResult
       try {
         // Lazy: the exporters (and pdf-lib) load on the first code export only.
@@ -1300,7 +1402,15 @@ export function createToolHandlerMap(
             ...(typeof input.variables === "boolean" ? { variables: input.variables } : {}),
             ...(typeof input.components === "boolean" ? { components: input.components } : {}),
             ...(typeof input.layerNames === "boolean" ? { layerNames: input.layerNames } : {}),
-            ...(layout ? { layout } : {}),
+            ...(kit
+              ? {
+                  layout: kit.layout,
+                  measureText: kit.measureText,
+                  fonts: kit.fonts,
+                  assets: kit.assets,
+                  ...(kit.icons ? { icons: kit.icons as never } : {}),
+                }
+              : {}),
           },
         )
       } catch (e) {
@@ -1538,3 +1648,15 @@ export const BUILTIN_STYLES: readonly StylePreset[] = [
     },
   },
 ]
+
+/** The document with `theme` merged into every top-level node's pinned theme (themed renders). */
+function withRootTheme(doc: KimoDocument, theme: Record<string, string>): KimoDocument {
+  const nodes = (doc as unknown as { nodes: Record<string, Record<string, unknown>> }).nodes
+  const out: Record<string, Record<string, unknown>> = {}
+  for (const [id, n] of Object.entries(nodes))
+    out[id] =
+      n.parent == null
+        ? { ...n, theme: { ...((n.theme as Record<string, string> | undefined) ?? {}), ...theme } }
+        : n
+  return { ...doc, nodes: out } as unknown as KimoDocument
+}

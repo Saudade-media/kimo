@@ -5,12 +5,14 @@
  * (canonical paths, open-document check, node scope). Used by the desktop document host (one
  * connection per relayed socket/HTTP client) and by headless `kimo mcp` (one stdio client).
  */
-import type { NodeData } from "@kimo/editor-state"
+import type { DocStore, NodeData } from "@kimo/editor-state"
 import type { WireOp } from "../ops"
 import {
   type ActivityEntry,
   type AgentPresence,
+  type ApprovalOutcome,
   type ApprovalPreview,
+  type ApprovalRequest,
   type ClientIdentity,
   type ClientPolicy,
   DEFAULT_POLICY,
@@ -53,11 +55,41 @@ export interface McpHostRuntimeOptions {
   now?: () => number
 }
 
+/** Options of {@link McpHostRuntime.connect}. */
+export interface ConnectOptions {
+  policy?: ClientPolicy
+  cwd?: string
+  /**
+   * In-app agents (ADR 0014 §5, host RPC `agentCall`): the connection's origin is
+   * `agent:kimo.<session>.<n>` instead of `mcp:<client>.<session>`, so undo stacks and
+   * attribution stay the agent's own.
+   */
+  origin?: `agent:${string}`
+  /**
+   * Replaces the approval broker for this connection: in-app agents forward the request to the
+   * window's in-thread card, which waits until answered (no 2-minute timeout).
+   */
+  requestApproval?: (request: ApprovalRequest) => Promise<ApprovalOutcome>
+  /**
+   * Replaces the built-in node-scope check for `policy.nodes` (the M6 `checkScope`: moves across
+   * the scope edge, scope roots, globals, component origins). Returns out-of-scope ids.
+   */
+  scope?: (
+    def: ToolDef,
+    input: Record<string, unknown>,
+    store: DocStore,
+    policy: ClientPolicy,
+  ) => string[]
+}
+
 /** One connected client. */
 export interface McpConnection {
   readonly identity: ClientIdentity
-  readonly origin: `mcp:${string}`
+  readonly origin: `mcp:${string}` | `agent:${string}`
+  /** The current policy (in-app agents change it per turn with {@link setPolicy}). */
   readonly policy: ClientPolicy
+  /** Replaces the policy for later calls (scope of the next turn); session allowances stay. */
+  setPolicy(policy: ClientPolicy): void
   readonly allowances: SessionAllowances
   /** A fresh per-call context (createKimoMcpServer calls it once per tool call). */
   context(): ToolContext
@@ -82,7 +114,7 @@ export interface McpHostRuntime {
   /** Opens a connection. `session` defaults to 6 random base-36 chars. */
   connect(
     identity: Omit<ClientIdentity, "session"> & { session?: string },
-    options?: { policy?: ClientPolicy; cwd?: string },
+    options?: ConnectOptions,
   ): McpConnection
   connections(): McpConnection[]
   /**
@@ -224,11 +256,11 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
 
   function connect(
     idIn: Omit<ClientIdentity, "session"> & { session?: string },
-    opts: { policy?: ClientPolicy; cwd?: string } = {},
+    opts: ConnectOptions = {},
   ): McpConnection {
     const identity: ClientIdentity = { ...idIn, session: idIn.session ?? randomId(6) }
-    const origin = originOf(identity)
-    const policy = opts.policy ?? basePolicy(identity)
+    const origin = opts.origin ?? originOf(identity)
+    let policy = opts.policy ?? basePolicy(identity)
     const allowances = emptyAllowances()
     const abort = new AbortController()
     const at = now()
@@ -262,7 +294,9 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         host,
         requestApproval: async (req) => {
           presence.update(origin, { state: "waiting-approval" })
-          const o = await approvals.request(req)
+          const o = opts.requestApproval
+            ? await opts.requestApproval(req).catch((): ApprovalOutcome => "deny")
+            : await approvals.request(req)
           presence.update(origin, { state: "idle" })
           return o
         },
@@ -293,7 +327,9 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
           t.path = r.value.ref.path
           t.pathAlreadyOpen = true
           if (policy.nodes.length) {
-            const out = outOfScope(def, input, r.value.store, policy.nodes)
+            const out = opts.scope
+              ? opts.scope(def, input, r.value.store, policy)
+              : outOfScope(def, input, r.value.store, policy.nodes)
             if (out.length) t.outOfScope = out
           }
         }
@@ -376,7 +412,13 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
     const conn: McpConnection = {
       identity,
       origin,
-      policy,
+      get policy() {
+        return policy
+      },
+      setPolicy(next) {
+        policy = next
+        presence.update(origin, { policy: next })
+      },
       allowances,
       context,
       targets,

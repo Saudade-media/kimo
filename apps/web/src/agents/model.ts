@@ -1029,7 +1029,7 @@ export const NOW_COPY: Record<McpConnectionInfo["state"], { label: string; tool:
 export function configSnippet(host: McpHostId, command: string): string {
   const args = ["--client", host]
   if (host === "codex")
-    return `[mcp_servers.kimo]\ncommand = ${JSON.stringify(command)}\nargs = ${JSON.stringify(args)}\n`
+    return `[mcp_servers.kimo]\ncommand = ${JSON.stringify(command)}\nargs = ${JSON.stringify(args)}\ndefault_tools_approval_mode = "approve"\n`
   const entry =
     host === "gemini-cli"
       ? { command, args, timeout: 600000, trust: false }

@@ -11,6 +11,7 @@ fn main() {
         .chain(MCP_COMMANDS)
         .chain(SECRETS_COMMANDS)
         .chain(CLI_COMMANDS)
+        .chain(SKILLS_COMMANDS)
         .copied()
         .collect();
     let _ = (MCP_HOST_ONLY_COMMANDS, AI_SETTINGS_EXCLUDED);

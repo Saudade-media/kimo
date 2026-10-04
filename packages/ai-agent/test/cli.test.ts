@@ -375,6 +375,7 @@ describe("invocations", () => {
     expect(args[args.indexOf("--sandbox") + 1]).toBe("read-only")
     expect(args).toContain('mcp_servers.kimo.command="/k"')
     expect(args).toContain('mcp_servers.kimo.args=["--client","codex"]')
+    expect(args).toContain('mcp_servers.kimo.default_tools_approval_mode="approve"')
     expect(args.at(-1)).toBe("-")
   })
 

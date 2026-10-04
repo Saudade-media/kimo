@@ -75,6 +75,8 @@ export class CkFontProvider implements FontProvider {
   /** Bumped on every registration (paragraph caches key on it). */
   generation = 0
   private readonly faces = new Map<string, { weight: number; style: FontStyle }[]>()
+  /** Registered font files by face id (PDF export embeds the faces the canvas measured with). */
+  private readonly bytes = new Map<string, Uint8Array>()
   private readonly pending = new Map<string, Promise<FontLoadResult>>()
   private readonly missing = new Set<string>()
   private readonly served = new Set<string>()
@@ -127,6 +129,7 @@ export class CkFontProvider implements FontProvider {
     if (!list.some((f) => f.weight === key.weight && f.style === key.style))
       list.push({ weight: key.weight, style: key.style })
     this.faces.set(fam, list)
+    if (!this.bytes.has(faceId(key))) this.bytes.set(faceId(key), bytes)
     this.missing.delete(fam)
     this.generation++
     if (notify) for (const l of this.listeners) l(key)
@@ -141,6 +144,17 @@ export class CkFontProvider implements FontProvider {
       list.some((f) => f.weight === weight && f.style === style) ||
       this.served.has(faceId({ family, weight, style }))
     )
+  }
+
+  /**
+   * The font file of the face Paragraph uses for (family, weight, style): the nearest registered
+   * face of the family, or null when the family is not registered (the fallback is used).
+   */
+  faceBytes(family: string, weight: number, style: FontStyle): Uint8Array | null {
+    const list = this.faces.get(family.toLowerCase())
+    const f = list && nearestFace(list, weight, style)
+    if (!f) return null
+    return this.bytes.get(faceId({ family, weight: f.weight, style: f.style })) ?? null
   }
 
   /** Families/faces known missing (no source had them): don't retry. */
@@ -211,6 +225,7 @@ export class CkFontProvider implements FontProvider {
 
   dispose(): void {
     this.listeners.clear()
+    this.bytes.clear()
     this.provider.delete()
   }
 }

@@ -124,6 +124,23 @@ export function storeScopeTree(store: DocStore): ScopeTree {
   }
 }
 
+/**
+ * Out-of-scope node ids of one call under a scoped policy (`checkScope`, ADR 0014 §8): the same
+ * rules in the window (in-window tools) and in the document host (`agentCall`).
+ */
+export function scopeViolations(
+  store: DocStore,
+  policy: ClientPolicy,
+  toolName: string,
+  input: Record<string, unknown>,
+): string[] {
+  if (!policy.nodes.length || toolName !== "kimo_apply_ops" || !Array.isArray(input.ops)) return []
+  const violations = checkScope(input.ops as WireOp[], storeScopeTree(store), policy.nodes, {
+    globalsGrant: policy.grants.includes("globals"),
+  })
+  return [...new Set(violations.map((v) => v.nodeId || `ops[${v.index}]`))]
+}
+
 /** The `targets` resolver: path of the doc + per-op scope check for scoped policies. */
 export function scopedTargets(
   host: CoreDocumentHost,
@@ -139,13 +156,8 @@ export function scopedTargets(
         t.pathAlreadyOpen = true
       }
     }
-    if (policy.nodes.length && def.name === "kimo_apply_ops" && Array.isArray(input.ops)) {
-      const violations = checkScope(input.ops as WireOp[], storeScopeTree(store), policy.nodes, {
-        globalsGrant: policy.grants.includes("globals"),
-      })
-      if (violations.length)
-        t.outOfScope = [...new Set(violations.map((v) => v.nodeId || `ops[${v.index}]`))]
-    }
+    const out = scopeViolations(store, policy, def.name, input)
+    if (out.length) t.outOfScope = out
     return t
   }
 }

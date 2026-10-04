@@ -17,6 +17,7 @@ import type { AppliedCapabilities } from "./capabilities"
 import type { DeepLink } from "./links"
 import type { McpHostApi } from "./mcp"
 import type { SettingKey, Settings, SettingsSchema, UpdateChannel } from "./settings"
+import type { SkillsApi } from "./skills"
 
 export type Unsubscribe = () => void
 
@@ -60,6 +61,11 @@ export interface KimoPlatform {
    * scripted; absent in the browser (no MCP server there).
    */
   readonly mcp?: McpHostApi
+  /**
+   * M6 user skills (`~/.kimo/skills/<name>/SKILL.md`, ADR 0014 §10): desktop over Rust,
+   * memory scripted; absent in the browser. Structurally a `@kimo/ai-agent` `SkillSource`.
+   */
+  readonly skills?: SkillsApi
   /** Stops watchers and listeners (window teardown). */
   dispose(): void
 }

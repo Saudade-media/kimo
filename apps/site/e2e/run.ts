@@ -265,10 +265,6 @@ const SPECS: MeasureSpec[] = [
       [/^Scrim$/, "the scrim covers the viewport (900 tall here, 844 in the frame)"],
       [/^Drawer$/, "the drawer is the viewport's height"],
       [/^Drawer\/Head\/Spacer$/, "follows the label width"],
-      [
-        /^Drawer\/Nav\/Group · (Editor|Components & variables|Built-in agent|Export)(\/|$)/,
-        "group omitted: the repository has no docs for it yet (no placeholder pages)",
-      ],
     ],
   },
   {
@@ -386,7 +382,10 @@ async function interactions(browser: Browser, base: string) {
   await m.goto(`${base}/`, { waitUntil: "load" })
   await m.locator("[data-drawer-open]").filter({ visible: true }).first().click()
   await m.locator("#drawer .drawer__panel").waitFor({ state: "visible" })
-  expect(await m.locator("#drawer a.nav-group[href='/docs/']").isVisible(), "landing drawer lists Docs")
+  expect(
+    await m.locator("#drawer a.nav-group[href='/docs/']").isVisible(),
+    "landing drawer lists Docs",
+  )
   await m.keyboard.press("Escape")
   await m.locator("#drawer").waitFor({ state: "hidden" })
   notes.push("landing menu drawer opens and closes")

@@ -1,16 +1,25 @@
 /**
  * The docs' information architecture: the left-nav groups of board 26 (Docs · Article) filled
  * with the repository's own markdown. A group with no source in the repo is not shown (no
- * placeholder pages). Long single files are split into one page per top-level section:
+ * placeholder pages). The user guide lives in docs/guide/<group>/ (see GUIDE below). Long single files are split into one page per top-level section:
  *
- *   docs/spec/kimo-format-v0.1.md   one page per "## N." section (+ appendices)
+ *   docs/spec/kimo-format-1.0.md    one page per "## N." section (+ appendices)
  *   packages/cli/README.md          an overview + one page per "## `kimo …`" command
  */
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { REPO_ROOT } from "../config"
 
-export type GroupId = "getting-started" | "agents" | "spec" | "cli" | "contributing"
+export type GroupId =
+  | "getting-started"
+  | "editor"
+  | "components"
+  | "agents"
+  | "built-in-agent"
+  | "export"
+  | "spec"
+  | "cli"
+  | "contributing"
 export type PageKind = "article" | "spec" | "cli"
 
 export interface DocPage {
@@ -34,6 +43,8 @@ export interface DocPage {
   sectionNo?: string
   /** "git merge driver" on CLI command pages. */
   badge?: string
+  /** GitHub anchor of the heading a split page starts at ("6-sizing-and-layout"). */
+  anchor?: string
   /** `kimo_read_docs {path}` for pages agents read too. */
   readDocsPath?: string
 }
@@ -142,7 +153,7 @@ function agentsPages(): DocPage[] {
   return pages
 }
 
-export const SPEC_SOURCE = "docs/spec/kimo-format-v0.1.md"
+export const SPEC_SOURCE = "docs/spec/kimo-format-1.0.md"
 
 /** The spec's preamble table (Status, Schema, …) as rows of markdown. */
 export function specHeader(): [string, string][] {
@@ -174,6 +185,7 @@ function specPages(): DocPage[] {
       editPath: SPEC_SOURCE,
       body: s.body,
       depth: 2,
+      anchor: githubSlug(s.heading),
       sectionNo: num ? `§${num[1]}` : app ? `App. ${app[1]}` : undefined,
     }
   })
@@ -210,21 +222,86 @@ function cliPages(): DocPage[] {
       editPath: CLI_SOURCE,
       body: s.body,
       depth: 2,
+      anchor: githubSlug(s.heading),
       badge,
     }
   })
   return [overview, ...cmds]
 }
 
+type GuideGroup = "getting-started" | "editor" | "components" | "built-in-agent" | "export"
+
+/**
+ * The user guide (docs/guide/<group>/<page>.md), in nav order. A group's first page is served at
+ * /docs/<group>/, the rest at /docs/<group>/<page>/. `examples/README.md` joins Getting started.
+ */
+export const GUIDE: Record<GuideGroup, { label: string; icon: string; pages: string[] }> = {
+  "getting-started": {
+    label: "Getting started",
+    icon: "rocket",
+    pages: ["install", "first-file", "saving-and-recovery", "troubleshooting", "privacy"],
+  },
+  editor: {
+    label: "Editor",
+    icon: "mouse-pointer-2",
+    pages: [
+      "canvas",
+      "selection-and-layers",
+      "properties",
+      "pen-and-paths",
+      "snapping-and-measuring",
+      "images-icons-svg",
+      "notes-and-prompts",
+      "shortcuts",
+    ],
+  },
+  components: {
+    label: "Components & variables",
+    icon: "component",
+    pages: ["components", "variables-and-themes", "libraries"],
+  },
+  "built-in-agent": {
+    label: "Built-in agent",
+    icon: "sparkles",
+    pages: ["providers", "agent-tab", "skills", "prompts-and-placeholders"],
+  },
+  export: {
+    label: "Export",
+    icon: "code-xml",
+    pages: ["export-dialog", "code-tab", "agents"],
+  },
+}
+
+function guidePages(id: GuideGroup): DocPage[] {
+  return GUIDE[id].pages.map((name, i) =>
+    article(id, i === 0 ? `/docs/${id}/` : `/docs/${id}/${name}/`, `docs/guide/${id}/${name}.md`),
+  )
+}
+
+function guideGroup(id: GuideGroup, extra: DocPage[] = []): Group {
+  const g = GUIDE[id]
+  return { id, label: g.label, icon: g.icon, pages: [...guidePages(id), ...extra] }
+}
+
 export function loadGroups(): Group[] {
+  const gs = guidePages("getting-started")
   return [
     {
       id: "getting-started",
-      label: "Getting started",
-      icon: "rocket",
-      pages: [article("getting-started", "/docs/examples/", "examples/README.md")],
+      label: GUIDE["getting-started"].label,
+      icon: GUIDE["getting-started"].icon,
+      // Install, first file, saving · Examples · Troubleshooting, Privacy
+      pages: [
+        ...gs.slice(0, 3),
+        article("getting-started", "/docs/examples/", "examples/README.md"),
+        ...gs.slice(3),
+      ],
     },
+    guideGroup("editor"),
+    guideGroup("components"),
     { id: "agents", label: "Agents & MCP", icon: "plug", pages: agentsPages() },
+    guideGroup("built-in-agent"),
+    guideGroup("export"),
     { id: "spec", label: "File format spec", icon: "braces", pages: specPages() },
     { id: "cli", label: "CLI", icon: "terminal", pages: cliPages() },
     {

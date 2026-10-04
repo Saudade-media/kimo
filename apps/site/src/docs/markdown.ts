@@ -36,6 +36,8 @@ export interface LinkContext {
   bySource: Map<string, DocPage>
   /** "source#anchor" → page url (split files keep their anchors working across pages) */
   anchors: Map<string, string>
+  /** "source#anchor" keys that name a whole split page (linked without the anchor). */
+  pageAnchors?: Set<string>
 }
 
 const RFC_KEYWORDS =
@@ -53,6 +55,7 @@ export function resolveHref(
   if (rawPath === "") {
     // Same file: the anchor may live on another page of a split file.
     const url = anchor ? ctx.anchors.get(`${source}#${anchor}`) : undefined
+    if (url && ctx.pageAnchors?.has(`${source}#${anchor}`)) return url
     if (url && page && url !== page.url) return `${url}#${anchor}`
     return `#${anchor ?? ""}`
   }
@@ -61,6 +64,7 @@ export function resolveHref(
   if (hit) {
     if (anchor) {
       const url = ctx.anchors.get(`${target}#${anchor}`)
+      if (url && ctx.pageAnchors?.has(`${target}#${anchor}`)) return url
       return `${url ?? hit.url}#${anchor}`
     }
     return hit.url

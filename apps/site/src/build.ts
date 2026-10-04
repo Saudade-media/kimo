@@ -191,18 +191,15 @@ function buildDocs(
       if (!anchors.has(k)) anchors.set(k, p.url)
     }
   }
-  // A split section's own heading ("## 6. Sizing and layout") anchors to its page.
+  // A split section's own heading ("## 6. Sizing and layout") is its page: links to it drop the
+  // anchor (the page has no element with that id; its title is the heading).
+  const pageAnchors = new Set<string>()
   for (const p of pages)
-    if (p.depth === 2) {
-      const heading = p.sectionNo?.startsWith("§") ? `${p.sectionNo.slice(1)}. ${p.title}` : p.title
-      const id = heading
-        .toLowerCase()
-        .replace(/`/g, "")
-        .replace(/[^\p{L}\p{N} _-]/gu, "")
-        .replace(/ /g, "-")
-      anchors.set(`${p.source}#${id}`, p.url)
+    if (p.depth === 2 && p.anchor) {
+      anchors.set(`${p.source}#${p.anchor}`, p.url)
+      pageAnchors.add(`${p.source}#${p.anchor}`)
     }
-  const ctx: LinkContext = { cfg, bySource, anchors }
+  const ctx: LinkContext = { cfg, bySource, anchors, pageAnchors }
   const specPage = pages.find((p) => p.source === SPEC_SOURCE)
   const header = specHeader().map(([k, v]) => {
     const r = specPage ? renderMarkdown(v, { ...specPage, kind: "article" }, ctx) : null

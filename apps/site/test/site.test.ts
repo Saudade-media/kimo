@@ -1,10 +1,22 @@
 import { describe, expect, test } from "bun:test"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { FORMAT_VERSION, SCHEMA_URL } from "@kimo/core-schema"
+import { SHORTCUT_LIST } from "../../web/src/shortcuts/shortcuts"
 import { searchIndex } from "../src/client/site"
-import { loadConfig } from "../src/config"
+import { loadConfig, REPO_ROOT } from "../src/config"
 import { highlight, langOf, tokenizeLine } from "../src/docs/highlight"
 import { renderMarkdown, resolveHref } from "../src/docs/markdown"
-import { allPages, githubSlug, loadGroups, sourceIndex, splitH2 } from "../src/docs/sources"
+import { SHORTCUTS_PAGE, SHORTCUTS_SOURCE, shortcutsMarkdown } from "../src/docs/shortcuts"
+import {
+  allPages,
+  GUIDE,
+  githubSlug,
+  loadGroups,
+  SPEC_SOURCE,
+  sourceIndex,
+  splitH2,
+} from "../src/docs/sources"
 import { landingKimoLines } from "../src/landing/shared"
 import { lineHeight } from "../src/node"
 
@@ -53,6 +65,49 @@ describe("information architecture", () => {
       "packages/mcp-server/guides/ops.md",
     )
   })
+  test("groups follow board 26's docs nav", () => {
+    expect(groups.map((g) => g.label)).toEqual([
+      "Getting started",
+      "Editor",
+      "Components & variables",
+      "Agents & MCP",
+      "Built-in agent",
+      "Export",
+      "File format spec",
+      "CLI",
+      "Contributing",
+    ])
+    expect(groups.map((g) => g.icon)).toEqual([
+      "rocket",
+      "mouse-pointer-2",
+      "component",
+      "plug",
+      "sparkles",
+      "code-xml",
+      "braces",
+      "terminal",
+      "git-pull-request",
+    ])
+  })
+  test("the user guide: every listed page exists, the first is its group's root", () => {
+    for (const [id, g] of Object.entries(GUIDE)) {
+      const ps = pages.filter((p) => p.source.startsWith(`docs/guide/${id}/`))
+      expect(ps.map((p) => p.source)).toEqual(g.pages.map((n) => `docs/guide/${id}/${n}.md`))
+      expect(ps[0]?.url).toBe(`/docs/${id}/`)
+    }
+    expect(pages[0]?.url).toBe("/docs/getting-started/")
+    expect(pages.some((p) => p.url === "/docs/examples/")).toBe(true)
+  })
+  test("the spec pages render the frozen 1.0 spec", () => {
+    expect(SPEC_SOURCE).toBe("docs/spec/kimo-format-1.0.md")
+  })
+  test("the shortcuts page is generated from the app's SHORTCUTS and up to date", () => {
+    const md = readFileSync(join(REPO_ROOT, SHORTCUTS_PAGE), "utf8")
+    expect(md).toBe(shortcutsMarkdown())
+    const p = pages.find((x) => x.source === SHORTCUTS_PAGE)
+    expect(p?.editPath).toBe(SHORTCUTS_SOURCE)
+    for (const s of SHORTCUT_LIST) expect(md).toContain(`| ${s.label.replace(/\|/g, "\\|")} |`)
+  })
   test("docs/release.md is not published", () => {
     expect(pages.some((p) => p.source === "docs/release.md")).toBe(false)
   })
@@ -95,6 +150,21 @@ describe("markdown", () => {
     expect(resolveHref("SECURITY.md", "CONTRIBUTING.md", ctx)).toBe(cfg.blob("SECURITY.md"))
     expect(resolveHref("docs/adr", "CONTRIBUTING.md", ctx)).toBe(cfg.tree("docs/adr"))
     expect(resolveHref("https://bun.sh", "CONTRIBUTING.md", ctx)).toBe("https://bun.sh")
+  })
+  test("links to a split page's own heading go to that page, without the anchor", () => {
+    const spec = pages.find((p) => p.url === "/docs/spec/sizing-and-layout/")
+    const merge = pages.find((p) => p.url === "/docs/cli/merge/")
+    expect(spec?.anchor).toBe("6-sizing-and-layout")
+    expect(merge?.anchor).toBe("kimo-merge-the-git-merge-driver")
+    const key = `${SPEC_SOURCE}#6-sizing-and-layout`
+    const c = {
+      ...ctx,
+      anchors: new Map([[key, "/docs/spec/sizing-and-layout/"]]),
+      pageAnchors: new Set([key]),
+    }
+    expect(
+      resolveHref("../../spec/kimo-format-1.0.md#6-sizing-and-layout", "docs/guide/x/y.md", c),
+    ).toBe("/docs/spec/sizing-and-layout/")
   })
 })
 

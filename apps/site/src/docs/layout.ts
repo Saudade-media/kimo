@@ -612,7 +612,14 @@ function pageFooter(cfg: SiteConfig, v: DocView) {
       text({ node: "Label", fs: 13, color: "text-secondary" }, "Edit this page on GitHub"),
     ),
     text(
-      { node: "Source", font: "mono", fs: 12, color: "text-tertiary" },
+      // Long repo paths (docs/guide/…) wrap instead of widening the page at 390.
+      {
+        node: "Source",
+        font: "mono",
+        fs: 12,
+        color: "text-tertiary",
+        css: "white-space:normal;overflow-wrap:anywhere;flex-shrink:1;min-width:0",
+      },
       `${v.page.source} · MIT`,
     ),
   )

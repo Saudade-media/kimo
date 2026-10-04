@@ -1,0 +1,12 @@
+EFFECT_APPROXIMATED Blur000001 effects are not exported to PDF
+EFFECT_APPROXIMATED Shadow0001 SVG drop shadows have no spread
+EFFECT_APPROXIMATED Shadow0001 blend modes are not exported to PDF
+EFFECT_APPROXIMATED Shadow0001 effects are not exported to PDF
+EFFECT_APPROXIMATED Shadow0001 inner shadows are not exported to SVG
+GRADIENT_APPROXIMATED Angular001 PDF gradients use the mean color
+GRADIENT_APPROXIMATED Linear0001 PDF gradients use the mean color
+GRADIENT_APPROXIMATED Paints0001 SVG has no conic gradient; the angular gradient's mean color is used
+GRADIENT_APPROXIMATED Radial0001 PDF gradients use the mean color
+GRADIENT_APPROXIMATED Star000001 PDF gradients use the mean color
+STROKE_APPROXIMATED Clip000001 outside strokes are exported centered
+STROKE_APPROXIMATED PerSide001 per-side strokes are exported as a uniform stroke

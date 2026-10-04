@@ -1,0 +1,160 @@
+/** Emitter units: tokens, CSS mapping, Tailwind utilities, colors, PNG seam, PDF validity. */
+import { describe, expect, test } from "bun:test"
+import { parseColor as rendererParseColor } from "@kimo/renderer"
+import { PDFDocument } from "pdf-lib"
+import {
+  buildIR,
+  CssWriter,
+  emitPdf,
+  emitPng,
+  exportDocument,
+  type IRGradientPaint,
+  layoutDocument,
+  loadIcons,
+  parseColor,
+  tokenPath,
+} from "../src"
+import { utility } from "../src/css/tailwind"
+import { FIXTURES, fakeIcons, fakeMeasurer, loadFixture } from "./helpers"
+
+const fixture = (name: string) => {
+  const f = FIXTURES.find((x) => x.name === name)
+  if (!f) throw new Error(name)
+  return loadFixture(f)
+}
+
+describe("colors", () => {
+  test("same sRGB as the renderer (hex, OKLCH gamut-mapped, Display-P3)", () => {
+    for (const c of [
+      "#12345678",
+      "#ABC",
+      { space: "oklch", l: 0.7, c: 0.4, h: 30 },
+      { space: "oklch", l: 0.18, c: 0.01, h: 270, alpha: 0.5 },
+      { space: "display-p3", r: 1, g: 0, b: 0 },
+    ])
+      expect(parseColor(c)).toEqual(rendererParseColor(c) as never)
+  })
+})
+
+describe("tokens", () => {
+  test("token paths: group then name, no repeated segment, alias first", () => {
+    expect(tokenPath({ name: "surface/card", group: "color.surface" })).toEqual([
+      "color",
+      "surface",
+      "card",
+    ])
+    expect(tokenPath({ name: "ink" })).toEqual(["ink"])
+    expect(tokenPath({ name: "ui:accent" })).toEqual(["ui", "accent"])
+  })
+  test("themed CSS: zero-specificity rules in entry order, reset on themed elements", async () => {
+    const { doc, libraries } = fixture("components-m3")
+    const { files } = await exportDocument(doc, "tokens-css", { libraries })
+    const css = files[0]?.contents as string
+    expect(css).toContain(
+      [
+        "/* surface/card */",
+        ":where([data-kimo-theme]) { --surface-card: #FFFFFF; }",
+        ':where([data-mode="light"]) { --surface-card: #FFFFFF; }',
+        ':where([data-mode="dark"]) { --surface-card: var(--ink-900); }',
+        ':where([data-density="compact"][data-mode="light"]) { --surface-card: color(display-p3 0.98 0.97 0.95); }',
+      ].join("\n"),
+    )
+  })
+  test("DTCG aliases are references; themes live in $extensions", async () => {
+    const { doc, libraries } = fixture("components-m3")
+    const { files } = await exportDocument(doc, "tokens-dtcg", { libraries })
+    const json = JSON.parse(files[0]?.contents as string)
+    const card = json.color.surface.card
+    expect(card.$type).toBe("color")
+    expect(card.$extensions["kimo.themes"][2]).toEqual({
+      when: { mode: "dark" },
+      value: "{ink-900}",
+    })
+  })
+})
+
+describe("CSS mapping", () => {
+  const w = new CssWriter({ variables: false })
+  const grad = (rotation: number): IRGradientPaint => ({
+    kind: "linear",
+    stops: [
+      { at: 0, color: { css: "#000000", rgba: [0, 0, 0, 1] } },
+      { at: 1, color: { css: "#FFFFFF", rgba: [1, 1, 1, 1] } },
+    ],
+    center: [0.5, 0.5],
+    size: [1, 1],
+    rotation,
+    interpolation: "srgb",
+    opacity: 1,
+    blend: "normal",
+  })
+  test("linear gradients: rotation 0 points up (stop 0 at the bottom)", () => {
+    expect(w.gradient(grad(0), 100, 100)).toBe("linear-gradient(0deg, #000000 0%, #FFFFFF 100%)")
+    expect(w.gradient(grad(90), 100, 100)).toBe("linear-gradient(270deg, #000000 0%, #FFFFFF 100%)")
+  })
+  test("linear gradients on non-square boxes keep the canvas isolines", () => {
+    // 45° CCW in a 200×100 box: the normal of the scaled isolines, not 315deg.
+    expect(w.gradient(grad(45), 200, 100)).toMatch(/^linear-gradient\(333\.435deg/)
+  })
+  test("Tailwind: tokens, keywords, arbitrary values", () => {
+    const tokens = (ns: string, ref: string) => (ns === "color" ? ref : null)
+    expect(
+      utility(
+        { prop: "background-color", value: "var(--x)", token: { ns: "color", ref: "x" } },
+        tokens,
+      ),
+    ).toBe("bg-x")
+    expect(utility({ prop: "justify-content", value: "space-between" }, tokens)).toBe(
+      "justify-between",
+    )
+    expect(utility({ prop: "width", value: "12.5px" }, tokens)).toBe("w-[12.5px]")
+    expect(utility({ prop: "box-shadow", value: "0px 1px 2px 0px #000" }, tokens)).toBe(
+      "shadow-[0px_1px_2px_0px_#000]",
+    )
+    expect(utility({ prop: "font-feature-settings", value: '"liga" 0' }, tokens)).toBe(
+      "[font-feature-settings:'liga'_0]",
+    )
+  })
+})
+
+describe("raster and vector seams", () => {
+  test("PNG goes through the renderer's exportRaster", async () => {
+    const { doc, libraries } = fixture("layout-matrix")
+    const calls: [string, number | undefined][] = []
+    const raster = {
+      exportRaster: async (id: string, o?: { scale?: number }) => {
+        calls.push([id, o?.scale])
+        return new Uint8Array([137, 80, 78, 71])
+      },
+    }
+    const files = await emitPng(buildIR(doc, { libraries }), { raster, scale: 3 })
+    expect(files.map((f) => f.path)).toEqual(["matrix@3x.png"])
+    expect(calls).toEqual([["Matrix0001", 3]])
+  })
+  test("PDF: one page per root at the root's size, loadable", async () => {
+    const { doc, libraries } = fixture("wrap-edge")
+    const layout = await layoutDocument(doc, { libraries, measureText: fakeMeasurer })
+    const ir = buildIR(doc, { libraries, layout })
+    const file = await emitPdf(ir, { layout, measureText: fakeMeasurer })
+    const pdf = await PDFDocument.load(file.contents as Uint8Array)
+    expect(pdf.getPageCount()).toBe(1)
+    const root = layout.nodes.get("Edges00001")
+    expect(pdf.getPage(0).getSize()).toEqual({
+      width: root?.local.w ?? 0,
+      height: root?.local.h ?? 0,
+    })
+  })
+  test("icons load once into a synchronous lookup", async () => {
+    const { doc, libraries } = fixture("styling-m2")
+    const ir = buildIR(doc, { libraries })
+    const seen: string[] = []
+    const lookup = await loadIcons(ir, {
+      load: async (s, n, w) => {
+        seen.push(`${s}/${n}/${w ?? ""}`)
+        return fakeIcons.get(s, n, w)
+      },
+    })
+    expect(seen).toEqual(["lucide/star/", "material-rounded/home/300", "phosphor/bell/700"])
+    expect(lookup.get("phosphor", "bell", 700)?.paths.length).toBe(1)
+  })
+})

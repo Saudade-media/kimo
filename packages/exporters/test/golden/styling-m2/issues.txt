@@ -1,0 +1,6 @@
+EFFECT_APPROXIMATED HeroImg002 SVG has no background blur
+EFFECT_APPROXIMATED HeroImg002 effects are not exported to PDF
+EFFECT_APPROXIMATED Mult000002 blend modes are not exported to PDF
+GRADIENT_APPROXIMATED HeroImg002 PDF gradients use the mean color
+GRADIENT_APPROXIMATED HeroImg002 gradient on a content-sized box is mapped as if square
+STROKE_APPROXIMATED HeroImg002 per-side strokes are exported as a uniform stroke

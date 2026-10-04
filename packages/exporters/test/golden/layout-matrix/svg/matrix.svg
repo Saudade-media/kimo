@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="338" viewBox="0 0 900 338" fill="none">
+  <defs>
+    <clipPath id="k-clip1"><path d="M0 0H420V84H0Z"/></clipPath>
+  </defs>
+  <g>
+    <path d="M0 0H900V338H0Z" fill="#E2E8F0"/>
+    <g transform="translate(24 24)">
+      <path d="M0 0H420V84H0Z" fill="#FFFFFF"/>
+      <g transform="translate(18 12)"><path d="M0 0H60V40H0Z" fill="#6366F1"/></g>
+      <g transform="translate(86 12)"><path d="M0 0H68.5V24H0Z" fill="#8B5CF6"/></g>
+      <g transform="translate(162.5 12)"><path d="M0 0H205.5V56H0Z" fill="#D946EF"/></g>
+      <g transform="translate(376 12)"><path d="M4 0H22A8 8 0 0 1 30 8V44A12 12 0 0 1 18 56H16A16 16 0 0 1 0 40V4A4 4 0 0 1 4 0Z" fill="#F43F5E"/></g>
+      <g transform="translate(300 4)"><path d="M0 0H20V20H0Z" fill="#EF4444"/></g>
+      <path d="M0 0H420V84H0Z" fill="none" stroke-width="4" stroke="#94A3B8" clip-path="url(#k-clip1)"/>
+    </g>
+    <g transform="translate(456 24)">
+      <path d="M0 0H240V200H0Z" fill="#FFFFFF"/>
+      <g transform="translate(16 8)"><path d="M0 0H208V30H0Z" fill="#A855F7"/></g>
+      <g transform="translate(80 34)"><path d="M0 0H80V108H0Z" fill="#EC4899"/></g>
+      <g transform="translate(90 138)"><path d="M0 0H60V54H0Z" fill="#F97316"/></g>
+    </g>
+    <g transform="translate(24 234)">
+      <path d="M0 0H300V60H0Z" fill="#FFFFFF"/>
+      <g transform="translate(73.333 40)"><path d="M0 0H40V20H0Z" fill="#0F766E"/></g>
+      <g transform="matrix(-1 0 0 1 226.667 20)"><path d="M0 0H40V40H0Z" fill="#115E59"/></g>
+    </g>
+    <g transform="translate(336 234)">
+      <path d="M0 0H120V40H0Z" fill="#FECACA"/>
+      <g transform="translate(6 6)"><path d="M0 0H40V20H0Z" fill="#B91C1C"/></g>
+    </g>
+    <g transform="translate(468 234)">
+      <path d="M0 0H124.641V54.641H0Z" fill="#F1F5F9"/>
+      <g transform="translate(10 6)"><path d="M0 0H50V30H0Z" fill="#0EA5E9"/></g>
+      <g transform="matrix(0.866 -0.5 0.5 0.866 70 20)"><path d="M0 0H40V40H0Z" fill="#14B8A6"/></g>
+    </g>
+    <g transform="translate(604.641 234)"><path d="M0 0H64V48H0Z" fill="#FDE68A"/></g>
+    <g transform="translate(680.641 234)">
+      <g><path d="M0 0H30V30H0Z" fill="#22C55E"/></g>
+      <g transform="translate(40 20)"><path d="M0 10A20 10 0 1 0 40 10A20 10 0 1 0 0 10Z" fill="#3B82F6"/></g>
+    </g>
+    <g transform="translate(772.641 234)">
+      <path d="M0 0H103.359V80H0Z" fill="#CBD5E1"/>
+      <g transform="translate(2.34 15)" opacity="0.6"><path d="M0 0H50V50H0Z" fill="#475569"/></g>
+      <g transform="translate(63.019 25)">
+        <path d="M0 0H38V30H0Z" fill="#334155"/>
+        <g transform="translate(4 4)"><path d="M0 0H30V10H0Z" fill="#F8FAFC"/></g>
+        <g transform="translate(4 16)"><path d="M0 0H30V10H0Z" fill="#E2E8F0"/></g>
+      </g>
+    </g>
+  </g>
+</svg>

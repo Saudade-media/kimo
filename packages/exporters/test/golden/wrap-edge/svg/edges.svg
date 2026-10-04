@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="566" viewBox="0 0 640 566" fill="none">
+  <g>
+    <path d="M0 0H640V566H0Z" fill="#FFFFFF"/>
+    <g transform="translate(20 20)">
+      <text font-family="Inter" font-size="16" font-weight="400" fill="#000000" xml:space="preserve"><tspan x="0" y="12.8">Auto text never wraps, even when long</tspan></text>
+    </g>
+    <g transform="translate(20 52)">
+      <text font-family="Inter" font-size="14" font-weight="400" fill="#000000" xml:space="preserve"><tspan x="0" y="11.2">First line</tspan><tspan x="0" y="32.2">Second, longer line</tspan><tspan x="0" y="53.2"/><tspan x="0" y="74.2">After a blank</tspan></text>
+    </g>
+    <g transform="translate(20 148)">
+      <text font-family="Inter" font-size="16" font-weight="400" fill="#000000" xml:space="preserve"><tspan x="0" y="12.8">Wrap exactly </tspan><tspan x="0" y="32.8">here at the </tspan><tspan x="0" y="52.8">edge</tspan></text>
+    </g>
+    <g transform="translate(20 220)">
+      <text font-family="Inter" font-size="16" font-weight="400" fill="#000000" xml:space="preserve"><tspan x="0" y="12.8">Wrap exactly </tspan><tspan x="0" y="32.8">here at the </tspan><tspan x="0" y="52.8">edge</tspan></text>
+    </g>
+    <g transform="translate(20 292)">
+      <text font-family="Inter" font-size="14" font-weight="400" fill="#000000" xml:space="preserve"><tspan x="0" y="11.2">Supercalifragilistic </tspan><tspan x="0" y="28.7">word</tspan></text>
+    </g>
+    <g transform="translate(20 339)">
+      <g><path d="M8 0H24A8 8 0 0 1 32 8V24A8 8 0 0 1 24 32H8A8 8 0 0 1 0 24V8A8 8 0 0 1 8 0Z" fill="#E11D48"/></g>
+      <g transform="translate(40 6.9)">
+        <text font-family="Inter" font-size="13" font-weight="400" fill="#000000" xml:space="preserve"><tspan x="0" y="10.4">This paragraph fills the remaining width of the row and wraps at its edge.</tspan></text>
+      </g>
+    </g>
+    <g transform="translate(20 383)">
+      <text font-family="Inter" font-size="14" font-weight="600" letter-spacing="1.5" fill="#000000" xml:space="preserve"><tspan x="0" y="11.2">LETTER SPACING CHANGES </tspan><tspan x="0" y="28.7">WHERE LINES BREAK</tspan></text>
+    </g>
+    <g transform="translate(20 430)">
+      <text font-family="Inter" font-size="15" font-weight="400" fill="#000000" xml:space="preserve"><tspan x="0" y="12">Centered text that wraps </tspan><tspan x="52.5" y="34">onto lines</tspan></text>
+    </g>
+    <g transform="translate(20 486)">
+      <text font-family="Inter" font-size="14" font-weight="400" fill="#334155" xml:space="preserve"><tspan x="0" y="11.2">Fixed box, middle</tspan></text>
+    </g>
+  </g>
+</svg>

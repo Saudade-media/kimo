@@ -1,0 +1,6 @@
+@theme inline {
+  --color-ink-900: var(--ink-900);
+  --spacing-space-card-pad: calc(var(--space-card-pad) * 1px);
+  --color-surface-card: var(--surface-card);
+  --color-text-default: var(--text-default);
+}

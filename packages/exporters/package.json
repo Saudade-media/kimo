@@ -1,0 +1,31 @@
+{
+  "name": "@kimo/exporters",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic export: document subtree \u2192 IR \u2192 React+Tailwind v4, HTML/CSS, design tokens (DTCG, CSS vars, Tailwind @theme), SVG, PDF; PNG through the renderer",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test ./test",
+    "test:update-goldens": "UPDATE_GOLDENS=1 bun test ./test",
+    "verify": "bun run harness/verify.ts"
+  },
+  "dependencies": {
+    "@kimo/core-schema": "workspace:*",
+    "@kimo/layout": "workspace:*",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@kimo/renderer": "workspace:*",
+    "@types/react": "^19.3.0",
+    "playwright": "^1.63.0"
+  },
+  "files": [
+    "src"
+  ]
+}

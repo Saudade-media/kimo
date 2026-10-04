@@ -1,0 +1,30 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Paints and effects"},
+"nodes": {
+"Angular001": {"type":"rect","parent":"Paints0001","order":"a2","name":"Angular","x":300,"y":20,"w":120,"h":120,"radius":60,"fill":{"kind":"angular","stops":[{"at":0,"color":"#F59E0B"},{"at":1,"color":"#10B981"}],"rotation":30}}
+
+, "Blur000001": {"type":"rect","parent":"Paints0001","order":"a6","name":"Blurred","x":20,"y":300,"w":100,"h":60,"fill":"#6366F1","effects":[{"kind":"blur","radius":6}]}
+
+, "Clip000001": {"type":"frame","parent":"Paints0001","order":"a7","name":"Clip","x":160,"y":300,"w":120,"h":80,"radius":16,"clip":true,"fill":"#E5E7EB","stroke":{"paint":"#111827","width":3,"align":"outside"}}
+
+, "ClipKid001": {"type":"ellipse","parent":"Clip000001","order":"a0","x":60,"y":30,"w":100,"h":100,"fill":"#DC2626"}
+
+, "Dashed0001": {"type":"rect","parent":"Paints0001","order":"a4","name":"Dashed","x":20,"y":170,"w":120,"h":80,"fill":"#FFFFFF","stroke":{"paint":"#0F172A","width":2,"align":"center","dash":[6,3]}}
+
+, "Linear0001": {"type":"rect","parent":"Paints0001","order":"a0","name":"Linear","x":20,"y":20,"w":200,"h":100,"fill":{"kind":"linear","stops":[{"at":0,"color":"#3B82F6"},{"at":0.5,"color":"#A855F7"},{"at":1,"color":"#EC4899"}],"rotation":30}}
+
+, "Paints0001": {"type":"frame","parent":null,"order":"a0","name":"Paints","x":0,"y":0,"w":480,"h":420,"fill":"#F8FAFC"}
+
+, "PerSide001": {"type":"rect","parent":"Paints0001","order":"a5","name":"Per side","x":180,"y":170,"w":120,"h":80,"fill":"#FEF3C7","stroke":{"paint":"#92400E","width":{"t":4,"b":1}}}
+
+, "Radial0001": {"type":"rect","parent":"Paints0001","order":"a1","name":"Radial","x":235,"y":20,"w":50,"h":120,"fill":{"kind":"radial","stops":[{"at":0,"color":"#FFFFFF"},{"at":1,"color":"#1E3A8A"}],"center":[0.5,0.4],"size":[0.8,0.6]}}
+
+, "Ring000001": {"type":"ellipse","parent":"Paints0001","order":"a3","name":"Ring","x":340,"y":170,"w":100,"h":100,"innerRadius":0.5,"startAngle":90,"sweepAngle":-270,"fill":"#0891B2","stroke":{"paint":"#164E63","width":2}}
+
+, "Shadow0001": {"type":"rect","parent":"Paints0001","order":"a8","name":"Shadows","x":320,"y":300,"w":120,"h":80,"radius":10,"opacity":0.9,"blend":"multiply","fill":"#FFFFFF","effects":[{"kind":"shadow","x":0,"y":4,"blur":12,"spread":2,"color":"#0000002E"},{"kind":"shadow","inner":true,"x":0,"y":-2,"blur":4,"color":"#0000001A"}]}
+
+, "Star000001": {"type":"polygon","parent":"Paints0001","order":"a9","name":"Pentagon","x":440,"y":20,"w":30,"h":30,"rotation":-20,"sides":5,"radius":3,"fill":{"kind":"radial","stops":[{"at":0,"color":"#FDE047"},{"at":1,"color":"#CA8A04"}]}}
+}
+}

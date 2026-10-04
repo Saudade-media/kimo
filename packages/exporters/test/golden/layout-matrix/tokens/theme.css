@@ -1,0 +1,4 @@
+@theme inline {
+  --spacing-gap-m: calc(var(--gap-m) * 1px);
+  --spacing-pad-l: calc(var(--pad-l) * 1px);
+}

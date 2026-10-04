@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1214.4" viewBox="0 0 1440 1214.4" fill="none">
+  <defs>
+    <clipPath id="k-clip1"><path d="M18.75 0H91.25A18.75 18.75 0 0 1 110 18.75V18.75A18.75 18.75 0 0 1 91.25 37.5H18.75A18.75 18.75 0 0 1 0 18.75V18.75A18.75 18.75 0 0 1 18.75 0Z"/></clipPath>
+    <filter id="k-fx1" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="rgb(0 0 0)" flood-opacity="0.239"/></filter>
+    <pattern id="k-img2" patternUnits="userSpaceOnUse" width="1200" height="720"><image href="./assets/9f2c1ab04e7d3c55.png" width="1200" height="720" preserveAspectRatio="xMidYMid slice"/></pattern>
+    <clipPath id="k-clip2"><path d="M0 0H1440V1214.4H0Z"/></clipPath>
+  </defs>
+  <g>
+    <path d="M0 0H1440V1214.4H0Z" fill="#FFFFFF"/>
+    <g clip-path="url(#k-clip2)">
+      <g transform="translate(336 96)">
+        <text font-family="Inter" font-size="64" font-weight="700" fill="#111111" xml:space="preserve"><tspan x="0" y="51.2">Design next to your code</tspan></text>
+      </g>
+      <g transform="translate(640.5 190.4)">
+        <g>
+          <path d="M18.75 0H140.25A18.75 18.75 0 0 1 159 18.75V18.75A18.75 18.75 0 0 1 140.25 37.5H18.75A18.75 18.75 0 0 1 0 18.75V18.75A18.75 18.75 0 0 1 18.75 0Z" fill="#4F46E5"/>
+          <g transform="translate(20 10)">
+            <text font-family="Inter" font-size="14" font-weight="600" fill="#FFFFFF" xml:space="preserve"><tspan x="0" y="11.2">Get Kimo — $49/mo</tspan></text>
+          </g>
+        </g>
+      </g>
+      <g transform="translate(120 251.9)">
+        <path d="M16 0H1184A16 16 0 0 1 1200 16V106.5A16 16 0 0 1 1184 122.5H16A16 16 0 0 1 0 106.5V16A16 16 0 0 1 16 0Z" fill="#FFFFFF"/>
+        <g transform="translate(24 24)">
+          <text font-family="Inter" font-size="20" font-weight="600" fill="#000000" xml:space="preserve"><tspan x="0" y="16">Card title</tspan></text>
+        </g>
+        <g transform="translate(24 61)">
+          <g>
+            <g transform="translate(20 10)">
+              <text font-family="Inter" font-size="14" font-weight="600" fill="#4F46E5" xml:space="preserve"><tspan x="0" y="11.2">Learn more</tspan></text>
+            </g>
+            <path d="M18.75 0H91.25A18.75 18.75 0 0 1 110 18.75V18.75A18.75 18.75 0 0 1 91.25 37.5H18.75A18.75 18.75 0 0 1 0 18.75V18.75A18.75 18.75 0 0 1 18.75 0Z" fill="none" stroke-width="2" stroke="#4F46E5" clip-path="url(#k-clip1)"/>
+          </g>
+        </g>
+      </g>
+      <g transform="translate(120 398.4)" filter="url(#k-fx1)"><path d="M8 0H1192A8 8 0 0 1 1200 8V712A8 8 0 0 1 1192 720H8A8 8 0 0 1 0 712V8A8 8 0 0 1 8 0Z" fill="url(#k-img2)"/></g>
+    </g>
+  </g>
+</svg>

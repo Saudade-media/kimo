@@ -1,0 +1,5 @@
+EFFECT_APPROXIMATED G7img00001 SVG drop shadows have no spread
+EFFECT_APPROXIMATED G7img00001 effects are not exported to PDF
+FONT_MISSING - no font file for Inter 600; Helvetica used
+FONT_MISSING - no font file for Inter 700; Helvetica used
+PAINT_UNSUPPORTED - image ./assets/9f2c1ab04e7d3c55.png could not be embedded

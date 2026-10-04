@@ -1,0 +1,5 @@
+EFFECT_APPROXIMATED Grid000001 effects are not exported to PDF
+FONT_MISSING - no font file for Inter 400; Helvetica used
+FONT_MISSING - no font file for Inter 700; Helvetica used
+PAINT_UNSUPPORTED Cell000001 paint kind mesh is not exported
+PAINT_UNSUPPORTED Cell000002 paint kind shader is not exported

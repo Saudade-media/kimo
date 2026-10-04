@@ -1,0 +1,70 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["layout/stretch-baseline","layout/wrap","size/min-max"],
+"meta": {"name":"Layout matrix"},
+"variables": {
+"gap-m": {"type":"number","value":12}
+
+, "pad-l": {"type":"number","value":24}
+},
+"nodes": {
+"AbsRect001": {"type":"rect","parent":"RowFrame01","order":"a9","name":"Absolute","x":300,"y":4,"position":"absolute","w":20,"h":20,"fill":"#EF4444"}
+
+, "BoxFit0001": {"type":"frame","parent":"Matrix0001","order":"a4","name":"Box fit","fill":"#F1F5F9"}
+
+, "BoxKid0001": {"type":"rect","parent":"BoxFit0001","order":"a0","x":10,"y":6,"w":50,"h":30,"fill":"#0EA5E9"}
+
+, "BoxKid0002": {"type":"rect","parent":"BoxFit0001","order":"a1","x":70,"y":20,"w":40,"h":40,"rotation":30,"fill":"#14B8A6"}
+
+, "ColFrame01": {"type":"frame","parent":"Matrix0001","order":"a1","name":"Column","w":240,"h":200,"fill":"#FFFFFF","layout":{"dir":"column","gap":-4,"pad":[8,16],"justify":"between","align":"center"}}
+
+, "ColKid0001": {"type":"rect","parent":"ColFrame01","order":"a0","w":{"mode":"fill"},"h":30,"fill":"#A855F7"}
+
+, "ColKid0002": {"type":"rect","parent":"ColFrame01","order":"a1","w":80,"h":{"mode":"fill","weight":2},"fill":"#EC4899"}
+
+, "ColKid0003": {"type":"rect","parent":"ColFrame01","order":"a2","w":60,"h":{"mode":"fill"},"fill":"#F97316"}
+
+, "EmptyFb001": {"type":"frame","parent":"Matrix0001","order":"a5","name":"Empty fallback","w":{"mode":"fit","fallback":64},"h":{"mode":"fit","fallback":48},"fill":"#FDE68A","layout":{"dir":"row"}}
+
+, "Group00001": {"type":"group","parent":"Matrix0001","order":"a6","name":"Group"}
+
+, "GrpKid0001": {"type":"rect","parent":"Group00001","order":"a0","x":20,"y":10,"w":30,"h":30,"fill":"#22C55E"}
+
+, "GrpKid0002": {"type":"ellipse","parent":"Group00001","order":"a1","x":60,"y":30,"w":40,"h":20,"fill":"#3B82F6"}
+
+, "Matrix0001": {"type":"frame","parent":null,"order":"a0","name":"Matrix","x":0,"y":0,"w":900,"fill":"#E2E8F0","layout":{"dir":"row","gap":{"$ref":"gap-m"},"crossGap":10,"pad":{"$ref":"pad-l"},"wrap":true}}
+
+, "MinMax0001": {"type":"frame","parent":"Matrix0001","order":"a3","name":"Min max","w":{"mode":"fit","min":120,"max":160},"h":{"mode":"fit","min":40},"fill":"#FECACA","layout":{"dir":"row","gap":4,"pad":6}}
+
+, "MinMaxK001": {"type":"rect","parent":"MinMax0001","order":"a0","w":40,"h":20,"fill":"#B91C1C"}
+
+, "RowFrame01": {"type":"frame","parent":"Matrix0001","order":"a0","name":"Row","w":420,"fill":"#FFFFFF","stroke":{"paint":"#94A3B8","width":2},"layout":{"dir":"row","gap":8,"pad":[10,12,14,16],"align":"stretch","includeStroke":true}}
+
+, "RowKid0001": {"type":"rect","parent":"RowFrame01","order":"a0","w":60,"h":40,"fill":"#6366F1"}
+
+, "RowKid0002": {"type":"rect","parent":"RowFrame01","order":"a1","w":{"mode":"fill"},"h":24,"fill":"#8B5CF6"}
+
+, "RowKid0003": {"type":"rect","parent":"RowFrame01","order":"a2","w":{"mode":"fill","weight":3},"h":{"mode":"fill"},"fill":"#D946EF"}
+
+, "RowKid0004": {"type":"rect","parent":"RowFrame01","order":"a3","w":30,"h":56,"radius":[4,8,12,16],"fill":"#F43F5E"}
+
+, "Spread0001": {"type":"frame","parent":"Matrix0001","order":"a2","name":"Evenly","w":300,"h":60,"fill":"#FFFFFF","layout":{"dir":"row","justify":"evenly","align":"end"}}
+
+, "SpreadK001": {"type":"rect","parent":"Spread0001","order":"a0","w":40,"h":20,"fill":"#0F766E"}
+
+, "SpreadK002": {"type":"rect","parent":"Spread0001","order":"a1","w":40,"h":40,"flipX":true,"fill":"#115E59"}
+
+, "SpreadK003": {"type":"rect","parent":"Spread0001","order":"a2","w":40,"h":30,"visible":false,"fill":"#134E4A"}
+
+, "Wrapper001": {"type":"frame","parent":"Matrix0001","order":"a7","name":"Around","w":{"mode":"fill"},"h":80,"fill":"#CBD5E1","layout":{"dir":"row","gap":6,"justify":"around","align":"center"}}
+
+, "WrapperK01": {"type":"rect","parent":"Wrapper001","order":"a0","w":50,"h":50,"opacity":0.6,"fill":"#475569"}
+
+, "WrapperK02": {"type":"frame","parent":"Wrapper001","order":"a1","name":"Nested fit","fill":"#334155","layout":{"dir":"column","gap":2,"pad":4}}
+
+, "WrapperK03": {"type":"rect","parent":"WrapperK02","order":"a0","w":30,"h":10,"fill":"#F8FAFC"}
+
+, "WrapperK04": {"type":"rect","parent":"WrapperK02","order":"a1","w":{"mode":"fill"},"h":10,"fill":"#E2E8F0"}
+}
+}

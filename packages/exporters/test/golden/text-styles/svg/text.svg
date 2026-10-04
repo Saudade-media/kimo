@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="208.65" viewBox="0 0 480 208.65" fill="none">
+  <g>
+    <path d="M0 0H480V208.65H0Z" fill="#FFFFFF"/>
+    <g transform="translate(24 24)">
+      <text font-family="Inter" font-size="32" font-weight="700" letter-spacing="-0.5" fill="#18181B" xml:space="preserve"><tspan x="0" y="25.6">Export exactly</tspan></text>
+    </g>
+    <g transform="translate(24 72.4)">
+      <text font-family="Inter" font-size="16" font-weight="400" fill="#000000" xml:space="preserve">
+        <tspan x="0" y="12.8">Mixed <tspan font-weight="700">bold</tspan> and <tspan text-decoration="underline">linked</tspan> runs in one paragraph.</tspan>
+      </text>
+    </g>
+    <g transform="translate(24 106.4)">
+      <text font-family="Inter" font-size="14" font-weight="400" font-style="italic" text-decoration="underline line-through" style="font-feature-settings:&quot;liga&quot; 0, &quot;tnum&quot; 1" fill="#000000" xml:space="preserve"><tspan x="0" y="11.2">Underlined, struck, italic, tabular 0123</tspan></text>
+    </g>
+    <g transform="translate(24 133.9)">
+      <path d="M12 0H72.5A12 12 0 0 1 84.5 12V38.75A12 12 0 0 1 72.5 50.75H12A12 12 0 0 1 0 38.75V12A12 12 0 0 1 12 0Z" fill="#18181B"/>
+      <g transform="translate(16 16)">
+        <text font-family="Inter" font-size="15" font-weight="600" fill="#FAFAFA" xml:space="preserve"><tspan x="0" y="12">On dark</tspan></text>
+      </g>
+    </g>
+  </g>
+</svg>

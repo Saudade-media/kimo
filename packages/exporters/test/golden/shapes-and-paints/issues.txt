@@ -1,0 +1,13 @@
+EFFECT_APPROXIMATED Group00001 SVG drop shadows have no spread
+EFFECT_APPROXIMATED Group00001 effects are not exported to PDF
+EFFECT_APPROXIMATED Photo00001 SVG has no background blur
+EFFECT_APPROXIMATED Photo00001 effects are not exported to PDF
+EFFECT_APPROXIMATED Photo00001 inner shadows are not exported to SVG
+GRADIENT_APPROXIMATED Board00001 PDF gradients use the mean color
+GRADIENT_APPROXIMATED Board00001 SVG gradients interpolate in sRGB
+GRADIENT_APPROXIMATED Board00001 SVG has no conic gradient; the angular gradient's mean color is used
+GRADIENT_APPROXIMATED Donut00001 PDF gradients use the mean color
+GRADIENT_APPROXIMATED Donut00001 SVG has no conic gradient; the angular gradient's mean color is used
+PAINT_UNSUPPORTED - image ./assets/9f2c1ab04e7d3c55.png could not be embedded
+PAINT_UNSUPPORTED Board00001 image tile/crop is exported as cover
+STROKE_APPROXIMATED Board00001 per-side strokes are exported as a uniform stroke

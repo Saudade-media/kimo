@@ -1,0 +1,30 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Wrap edges"},
+"nodes": {
+"Auto000001": {"type":"text","parent":"Edges00001","order":"a0","name":"Auto","content":"Auto text never wraps, even when long","style":{"font":"Inter","size":16}}
+
+, "AutoNl0001": {"type":"text","parent":"Edges00001","order":"a1","name":"Auto newlines","content":"First line\nSecond, longer line\n\nAfter a blank","style":{"font":"Inter","size":14,"lineHeight":1.5}}
+
+, "Center0001": {"type":"text","parent":"Edges00001","order":"a7","name":"Centered","w":180,"content":"Centered text that wraps onto lines","grow":"fixed-width","style":{"font":"Inter","size":15,"lineHeight":{"px":22},"align":"center"}}
+
+, "Edges00001": {"type":"frame","parent":null,"order":"a0","name":"Edges","x":0,"y":0,"w":640,"fill":"#FFFFFF","layout":{"dir":"column","gap":12,"pad":20}}
+
+, "Exact00001": {"type":"text","parent":"Edges00001","order":"a2","name":"Exact fit","w":120,"content":"Wrap exactly here at the edge","grow":"fixed-width","style":{"font":"Inter","size":16,"lineHeight":1.25}}
+
+, "FillRow001": {"type":"frame","parent":"Edges00001","order":"a5","name":"Fill row","w":{"mode":"fill"},"layout":{"dir":"row","gap":8,"align":"center"}}
+
+, "FillTxt001": {"type":"text","parent":"FillRow001","order":"a1","name":"Fill text","w":{"mode":"fill"},"content":"This paragraph fills the remaining width of the row and wraps at its edge.","grow":"fixed-width","style":{"font":"Inter","size":13,"lineHeight":1.4}}
+
+, "Fixed00001": {"type":"text","parent":"Edges00001","order":"a8","name":"Fixed middle","w":200,"h":60,"content":"Fixed box, middle","grow":"fixed","style":{"font":"Inter","size":14,"valign":"middle"},"fill":"#334155"}
+
+, "Icon000001": {"type":"rect","parent":"FillRow001","order":"a0","w":32,"h":32,"radius":8,"fill":"#E11D48"}
+
+, "LongWord01": {"type":"text","parent":"Edges00001","order":"a4","name":"Long word","w":90,"content":"Supercalifragilistic word","grow":"fixed-width","style":{"font":"Inter","size":14}}
+
+, "Narrow0001": {"type":"text","parent":"Edges00001","order":"a3","name":"Narrow","w":121,"content":"Wrap exactly here at the edge","grow":"fixed-width","style":{"font":"Inter","size":16,"lineHeight":1.25}}
+
+, "Spaced0001": {"type":"text","parent":"Edges00001","order":"a6","name":"Tracking","w":220,"content":"Letter spacing changes where lines break","grow":"fixed-width","style":{"font":"Inter","size":14,"weight":600,"letterSpacing":1.5,"case":"upper"}}
+}
+}

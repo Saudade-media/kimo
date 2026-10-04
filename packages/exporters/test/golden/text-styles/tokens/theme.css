@@ -1,0 +1,6 @@
+@theme inline {
+  --text-body: calc(var(--body) * 1px);
+  --color-ink: var(--ink);
+  --font-sans: var(--sans), sans-serif;
+  --color-surface: var(--surface);
+}

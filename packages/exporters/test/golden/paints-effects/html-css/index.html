@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paints and effects</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <section class="k-paints" data-layer="Paints" data-kimo-theme="">
+      <div class="k-linear" data-layer="Linear"></div>
+      <div class="k-radial" data-layer="Radial"></div>
+      <div class="k-angular" data-layer="Angular"></div>
+      <svg class="k-ring" data-layer="Ring" viewBox="0 0 100 100" overflow="visible" aria-hidden="true">
+        <defs>
+          <clipPath id="ring-1-clip1"><path d="M50 0A50 50 0 1 1 0 50L25 50A25 25 0 1 0 50 25Z"></path></clipPath>
+        </defs>
+        <path d="M50 0A50 50 0 1 1 0 50L25 50A25 25 0 1 0 50 25Z" fill="currentColor"></path>
+        <path d="M50 0A50 50 0 1 1 0 50L25 50A25 25 0 1 0 50 25Z" fill="none" stroke-width="4" stroke="#164E63" clip-path="url(#ring-1-clip1)"></path>
+      </svg>
+      <div class="k-dashed" data-layer="Dashed"></div>
+      <div class="k-per-side" data-layer="Per side"></div>
+      <div class="k-blurred" data-layer="Blurred"></div>
+      <div class="k-clip" data-layer="Clip"><div class="k-ellipse"></div></div>
+      <div class="k-shadows" data-layer="Shadows"></div>
+      <svg class="k-pentagon" data-layer="Pentagon" viewBox="0 0 30 30" overflow="visible" aria-hidden="true">
+        <defs>
+          <radialGradient id="pentagon-2-rg1" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="scale(30 30) translate(0.5 0.5) rotate(0) scale(0.5 0.5)"><stop offset="0" stop-color="#FDE047"></stop><stop offset="1" stop-color="#CA8A04"></stop></radialGradient>
+        </defs>
+        <path d="M7.867 5.182L13.237 1.281A3 3 0 0 1 16.763 1.281L27.502 9.084A3 3 0 0 1 28.592 12.438L24.49 25.062A3 3 0 0 1 21.637 27.135L8.363 27.135A3 3 0 0 1 5.51 25.062L1.408 12.438A3 3 0 0 1 2.498 9.084Z" fill="url(#pentagon-2-rg1)"></path>
+      </svg>
+    </section>
+</body>
+</html>

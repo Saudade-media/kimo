@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="196" viewBox="0 0 1280 196" fill="none">
+  <g>
+    <path d="M0 0H1280V196H0Z" fill="#FFFFFF"/>
+    <g transform="translate(24 24)">
+      <path d="M0 0H64V44H0Z" fill="#0B0B0F"/>
+      <g transform="translate(12 12)">
+        <text font-family="Inter" font-size="16" font-weight="400" fill="#F4F4F5" xml:space="preserve"><tspan x="0" y="12.8">Hello</tspan></text>
+      </g>
+    </g>
+    <g transform="translate(24 92)"><path d="M0 0H200V80H0Z" fill="#FFF8F0"/></g>
+  </g>
+</svg>

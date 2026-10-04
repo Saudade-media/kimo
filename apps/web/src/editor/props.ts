@@ -86,6 +86,13 @@ export function typeIcon(node: NodeData): string {
         h > w
       )
         return "smartphone"
+      // Auto layout frames show a stack glyph for their direction (board 21 `Y7KP0`).
+      const layout = node.layout
+      if (isObj(layout)) {
+        if (layout.wrap === true) return "layout-grid"
+        if (layout.dir === "row") return "columns-3"
+        if (layout.dir === "column") return "rows-3"
+      }
       return "frame"
     }
     case "text":

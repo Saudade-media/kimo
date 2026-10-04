@@ -126,6 +126,15 @@ describe("strokes and effects", () => {
 describe("kinds, icons and ops", () => {
   test("icons follow board 03", () => {
     expect(typeIcon(node({ type: "frame" }))).toBe("frame")
+    // Auto layout frames show a stack glyph per direction (board 21 Y7KP0).
+    expect(typeIcon(node({ type: "frame", layout: { dir: "row" } }))).toBe("columns-3")
+    expect(typeIcon(node({ type: "frame", layout: { dir: "column" } }))).toBe("rows-3")
+    expect(typeIcon(node({ type: "frame", layout: { dir: "row", wrap: true } }))).toBe(
+      "layout-grid",
+    )
+    expect(typeIcon(node({ type: "frame", component: true, layout: { dir: "row" } }))).toBe(
+      "component",
+    )
     expect(typeIcon(node({ type: "frame", parent: null, w: 280, h: 560 }))).toBe("smartphone")
     expect(typeIcon(node({ type: "text" }))).toBe("type")
     expect(

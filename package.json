@@ -16,7 +16,10 @@
     "format": "biome format --write .",
     "check": "bun run lint && bun run typecheck && bun run check:generated && bun run test",
     "check:generated": "bun run --filter '*' check:generated && bun scripts/gen-scope-checklist.ts --check",
-    "gen:scope-checklist": "bun scripts/gen-scope-checklist.ts"
+    "gen:scope-checklist": "bun scripts/gen-scope-checklist.ts",
+    "build:examples": "bun scripts/build-examples.ts",
+    "check:examples": "bun scripts/build-examples.ts --check && kimo validate --strict examples/*/*.kimo",
+    "version:plan": "bun scripts/version.ts"
   },
   "devDependencies": {
     "@kimo/cli": "workspace:*",

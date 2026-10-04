@@ -1,0 +1,350 @@
+# Release: a `v*` tag builds the desktop installers on macOS, Windows and Linux (with the
+# kimo-mcp shim bundled as a sidecar), the static web app and a dry run of the CLI package, and
+# collects everything in a DRAFT GitHub release. Nothing is published: a maintainer reviews the
+# draft and publishes it by hand (docs/release.md).
+#
+# `workflow_dispatch` runs the same builds without a tag or a release (artifacts only), to test
+# packaging and signing on a branch.
+#
+# Secrets (repository → Settings → Secrets and variables → Actions). Every one is optional: a
+# missing secret skips that signing step and the build is unsigned, so forks and dry runs work.
+#
+#   macOS code signing (Developer ID Application certificate)
+#     APPLE_CERTIFICATE             base64 of the exported .p12
+#     APPLE_CERTIFICATE_PASSWORD    password of the .p12
+#     APPLE_SIGNING_IDENTITY        "Developer ID Application: <Name> (<TEAMID>)"
+#   macOS notarization (either an Apple ID or an App Store Connect API key)
+#     APPLE_ID, APPLE_PASSWORD (app-specific password), APPLE_TEAM_ID
+#     APPLE_API_ISSUER, APPLE_API_KEY (key id), APPLE_API_KEY_P8 (base64 of AuthKey_<id>.p8)
+#   Windows Authenticode
+#     WINDOWS_CERTIFICATE           base64 of the .pfx (OV/EV code signing certificate)
+#     WINDOWS_CERTIFICATE_PASSWORD  password of the .pfx
+#   Updater (tauri-plugin-updater; `bunx tauri signer generate`)
+#     TAURI_SIGNING_PRIVATE_KEY           the private key (content, not a path)
+#     TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
+#   Variables
+#     TAURI_UPDATER_PUBKEY          the matching public key; replaces UPDATER_PUBKEY_PLACEHOLDER
+#                                   in tauri.conf.json at build time
+#     WINDOWS_TIMESTAMP_URL         optional, default http://timestamp.digicert.com
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      release_id: ${{ steps.draft.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: versions agree (tag, tauri.conf.json, packages, crates)
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          bun scripts/version.ts # exits 1 when any version site drifts
+          version="$(bun -e 'console.log(require("./apps/desktop/src-tauri/tauri.conf.json").version)')"
+          if [ "$REF_TYPE" = "tag" ] && [ "$REF_NAME" != "v$version" ]; then
+            echo "::error::tag $REF_NAME does not match the app version $version (bun scripts/version.ts)"
+            exit 1
+          fi
+          case "$version" in *-*) pre=true ;; *) pre=false ;; esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
+      - name: create the draft release
+        id: draft
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          id="$(gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
+            -f tag_name="$TAG" -f name="Kimo ${TAG#v}" \
+            -F draft=true -F prerelease="$PRERELEASE" \
+            -f body="Draft built by the release workflow. See CHANGELOG.md; checklist in docs/release.md." \
+            --jq .id)"
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
+
+  desktop:
+    name: desktop (${{ matrix.name }})
+    needs: prepare
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal
+            os: macos-latest
+            target: universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            bundles: app,dmg
+          - name: Windows x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            bundles: msi,nsis
+          - name: Linux x64
+            # The oldest supported runner: AppImage / deb link against its glibc.
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
+            bundles: appimage,deb
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev \
+            libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev \
+            build-essential patchelf file
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+          key: release-${{ matrix.target }}
+      - run: bun install --frozen-lockfile
+
+      # kimo-mcp → src-tauri/binaries/kimo-mcp-<triple> (universal: lipo of both macOS arches),
+      # bundled through tauri.bundle.conf.json `externalBin`.
+      - name: build and stage the kimo-mcp shim
+        run: bun apps/desktop/scripts/build-shim.ts --target ${{ matrix.target }}
+
+      - name: signing environment (only the secrets that are set)
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          # An empty variable would make the Tauri CLI try (and fail) to use it, so only the
+          # secrets that are actually set are exported to the build steps.
+          export_var() {
+            local name="$1" value="$2"
+            [ -n "$value" ] || return 0
+            {
+              echo "$name<<__KIMO_EOF__"
+              echo "$value"
+              echo "__KIMO_EOF__"
+            } >> "$GITHUB_ENV"
+          }
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+                     APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID APPLE_API_ISSUER APPLE_API_KEY; do
+              export_var "$v" "${!v}"
+            done
+            if [ -n "$APPLE_API_KEY_P8" ]; then
+              key="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY}.p8"
+              echo "$APPLE_API_KEY_P8" | base64 --decode > "$key"
+              export_var APPLE_API_KEY_PATH "$key"
+            fi
+            [ -n "$APPLE_CERTIFICATE" ] || echo "::warning::APPLE_CERTIFICATE not set: the macOS app is unsigned and not notarized"
+          fi
+          export_var TAURI_SIGNING_PRIVATE_KEY "$TAURI_SIGNING_PRIVATE_KEY"
+          export_var TAURI_SIGNING_PRIVATE_KEY_PASSWORD "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
+
+      - name: import the Windows code signing certificate
+        id: wincert
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE) {
+            Write-Output "::warning::WINDOWS_CERTIFICATE not set: the Windows installers are unsigned"
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP "kimo-signing.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $pfx
+          "thumbprint=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+      # Build-time config merged after tauri.conf.json and tauri.bundle.conf.json: the updater
+      # public key, signed updater artifacts (only with a signing key), Windows signing.
+      - name: release config
+        env:
+          UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+          HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+          WIN_THUMBPRINT: ${{ steps.wincert.outputs.thumbprint }}
+          WIN_TIMESTAMP: ${{ vars.WINDOWS_TIMESTAMP_URL }}
+          OUT: ${{ runner.temp }}/kimo-release.conf.json
+        run: |
+          bun -e '
+            const e = process.env
+            const updater = e.HAS_UPDATER_KEY === "true" && !!e.UPDATER_PUBKEY
+            if (e.HAS_UPDATER_KEY === "true" && !e.UPDATER_PUBKEY)
+              console.log("::warning::TAURI_SIGNING_PRIVATE_KEY is set but the TAURI_UPDATER_PUBKEY variable is not: no updater artifacts")
+            if (!updater) console.log("::warning::no updater signing: latest.json is not produced")
+            const conf = { bundle: { createUpdaterArtifacts: updater } }
+            if (updater) conf.plugins = { updater: { pubkey: e.UPDATER_PUBKEY } }
+            if (e.WIN_THUMBPRINT)
+              conf.bundle.windows = {
+                certificateThumbprint: e.WIN_THUMBPRINT,
+                digestAlgorithm: "sha256",
+                timestampUrl: e.WIN_TIMESTAMP || "http://timestamp.digicert.com",
+              }
+            require("node:fs").writeFileSync(e.OUT, JSON.stringify(conf, null, 2))
+            console.log(JSON.stringify({ ...conf, plugins: updater ? "(pubkey set)" : undefined }, null, 2))
+          '
+
+      - name: build installers (tauri-action)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: bun run tauri
+          args: >-
+            --target ${{ matrix.target }}
+            --bundles ${{ matrix.bundles }}
+            --config src-tauri/tauri.bundle.conf.json
+            --config ${{ runner.temp }}/kimo-release.conf.json
+          releaseId: ${{ needs.prepare.outputs.release_id }}
+          includeUpdaterJson: true
+          updaterJsonPreferNativeAssets: true
+
+      - name: keep the bundles as workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle
+          if-no-files-found: error
+          retention-days: 14
+
+  web:
+    name: web app (static build)
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter @kimo/web build
+      - name: package
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: tar -C apps/web/dist -czf "kimo-web-$VERSION.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kimo-web-${{ needs.prepare.outputs.version }}
+          path: apps/web/dist
+          if-no-files-found: error
+      - name: attach to the draft release
+        if: needs.prepare.outputs.release_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: gh release upload "$TAG" "kimo-web-$VERSION.tar.gz" --clobber
+
+  cli:
+    name: "@kimo/cli (publish dry run)"
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: smoke test
+        run: |
+          bun packages/cli/src/main.ts --version
+          bun packages/cli/src/main.ts validate --strict examples/*/*.kimo
+      # The package is `private` until its workspace dependencies are bundled or published
+      # (docs/release.md). The dry run lifts the flag in this throwaway checkout only, to check
+      # what would be packed; nothing is uploaded to a registry.
+      - name: bun publish --dry-run
+        working-directory: packages/cli
+        env:
+          # `bun publish` refuses to start without a token even with --dry-run; a dry run
+          # uploads nothing, so a placeholder is enough (no real token in this job).
+          NPM_CONFIG_TOKEN: dry-run-placeholder
+        run: |
+          bun -e '
+            const fs = require("node:fs")
+            const p = JSON.parse(fs.readFileSync("package.json", "utf8"))
+            delete p.private
+            fs.writeFileSync("package.json", JSON.stringify(p, null, 2) + "\n")
+          '
+          bun publish --dry-run
+
+  finalize:
+    name: updater manifest
+    needs: [prepare, desktop, web, cli]
+    if: needs.prepare.outputs.release_id != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # tauri-action uploads `latest.json`; the app's updater endpoint (tauri.conf.json) reads
+      # `latest-stable.json`, so the stable channel gets a copy. Prereleases keep latest.json only.
+      - name: latest.json → latest-stable.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+        run: |
+          if ! gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p latest.json; then
+            echo "::warning::no latest.json on the draft (updater signing not configured)"
+            exit 0
+          fi
+          for p in darwin-aarch64 darwin-x86_64 windows-x86_64 linux-x86_64; do
+            jq -e --arg p "$p" '.platforms | keys | any(startswith($p))' latest.json > /dev/null \
+              || echo "::warning::latest.json has no $p entry"
+          done
+          if [ "$PRERELEASE" = "false" ]; then
+            cp latest.json latest-stable.json
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" latest-stable.json --clobber
+          fi
+          {
+            echo "## Draft release $TAG"
+            echo
+            echo "Review the assets, run the smoke tests in docs/release.md, then publish the draft."
+          } >> "$GITHUB_STEP_SUMMARY"

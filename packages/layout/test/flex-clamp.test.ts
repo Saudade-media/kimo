@@ -47,6 +47,28 @@ describe("dimension-bound lengths", () => {
     // Wraps to a second line 8 below the first (crossGap).
     expect(l.box("c")).toEqual([4, 42, 150, 10])
   })
+  test("bindings inside a padding array resolve (2- and 4-value forms)", async () => {
+    const l = await lay(
+      {
+        two: {
+          type: "frame",
+          parent: null,
+          layout: { dir: "row", pad: [{ $ref: "v" }, { $ref: "h" }] },
+        },
+        a: box("two", 10, 10),
+        four: {
+          type: "frame",
+          parent: null,
+          x: 100,
+          layout: { dir: "row", pad: [{ $ref: "v" }, 3, { $ref: "h" }, 5] },
+        },
+        b: box("four", 10, 10),
+      },
+      { variables: { v: dim(6), h: { type: "number", value: 9 } } as never },
+    )
+    expect(l.box("a")).toEqual([9, 6, 10, 10])
+    expect(l.box("b")).toEqual([5, 6, 10, 10])
+  })
   test("a themed dimension and an alias of one resolve too", async () => {
     const l = await lay(
       {

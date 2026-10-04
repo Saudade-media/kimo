@@ -1,0 +1,26 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Pricing card (merge demo)"},
+"nodes": {
+"mgBtnLabel": {"type":"text","parent":"mgButton01","order":"a0","name":"Label","content":"Start free trial","style":{"font":"Inter","size":15,"weight":600},"fill":"#FFFFFF"}
+
+, "mgButton01": {"type":"frame","parent":"mgCard0001","order":"a3","name":"Button","w":{"mode":"fill"},"radius":12,"fill":"#18181B","layout":{"dir":"row","pad":14,"justify":"center"}}
+
+, "mgCard0001": {"type":"frame","parent":null,"order":"a0","name":"Pricing card","x":0,"y":0,"w":360,"radius":20,"fill":"#FFFFFF","stroke":{"paint":"#E4E4E7"},"layout":{"dir":"column","gap":16,"pad":28}}
+
+, "mgFeat0001": {"type":"text","parent":"mgFeatList","order":"a0","name":"Feature","content":"✓  Unlimited files","style":{"font":"Inter","size":15},"fill":"#3F3F46"}
+
+, "mgFeat0002": {"type":"text","parent":"mgFeatList","order":"a1","name":"Feature","content":"✓  Version history","style":{"font":"Inter","size":15},"fill":"#3F3F46"}
+
+, "mgFeat0003": {"type":"text","parent":"mgFeatList","order":"a2","name":"Feature","content":"✓  Shared libraries","style":{"font":"Inter","size":15},"fill":"#3F3F46"}
+
+, "mgFeat0004": {"type":"text","parent":"mgFeatList","order":"a3","name":"Feature","content":"✓  Priority support","style":{"font":"Inter","size":15},"fill":"#3F3F46"}
+
+, "mgFeatList": {"type":"frame","parent":"mgCard0001","order":"a2","name":"Features","w":{"mode":"fill"},"layout":{"dir":"column","gap":10}}
+
+, "mgPlan0001": {"type":"text","parent":"mgCard0001","order":"a0","name":"Plan","content":"Pro","style":{"font":"Inter","size":18,"weight":600},"fill":"#52525B"}
+
+, "mgPrice001": {"type":"text","parent":"mgCard0001","order":"a1","name":"Price","content":"$15/mo","style":{"font":"Inter","size":44,"weight":800,"letterSpacing":-1.5},"fill":"#18181B"}
+}
+}

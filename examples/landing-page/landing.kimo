@@ -1,0 +1,171 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Lumen — landing page"},
+"variables": {
+"color/accent": {"type":"color","value":"#E4572E","group":"color"}
+
+, "color/bg": {"type":"color","value":"#FBFAF7","group":"color"}
+
+, "color/border": {"type":"color","value":"#E8E3D9","group":"color"}
+
+, "color/ink": {"type":"color","value":"#17140F","group":"color"}
+
+, "color/muted": {"type":"color","value":"#6B655B","group":"color"}
+
+, "color/on-accent": {"type":"color","value":"#FFFFFF","group":"color"}
+
+, "color/surface": {"type":"color","value":"#FFFFFF","group":"color"}
+
+, "radius/card": {"type":"number","value":20,"group":"radius"}
+
+, "radius/pill": {"type":"number","value":999,"group":"radius"}
+},
+"nodes": {
+"lp0001": {"type":"frame","parent":"lpPageDesk","order":"a0","name":"Nav","w":{"mode":"fill"},"layout":{"dir":"row","pad":[24,80],"justify":"between","align":"center"}}
+
+, "lp0002": {"type":"frame","parent":"lp0001","order":"a0","name":"Brand","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "lp0003": {"type":"ellipse","parent":"lp0002","order":"a0","name":"Logo","w":28,"h":28,"fill":{"kind":"angular","stops":[{"at":0,"color":"#E4572E"},{"at":0.5,"color":"#F3A712"},{"at":1,"color":"#E4572E"}]}}
+
+, "lp0004": {"type":"text","parent":"lp0002","order":"a1","name":"Wordmark","content":"Lumen","style":{"font":"Inter","size":20,"weight":700,"letterSpacing":-0.4},"fill":{"$ref":"color/ink"}}
+
+, "lp0005": {"type":"frame","parent":"lp0001","order":"a1","name":"Links","layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lp0006": {"type":"text","parent":"lp0005","order":"a0","name":"Product","content":"Product","style":{"font":"Inter","size":15,"weight":500},"fill":{"$ref":"color/muted"}}
+
+, "lp0007": {"type":"text","parent":"lp0005","order":"a1","name":"Pricing","content":"Pricing","style":{"font":"Inter","size":15,"weight":500},"fill":{"$ref":"color/muted"}}
+
+, "lp0008": {"type":"text","parent":"lp0005","order":"a2","name":"Customers","content":"Customers","style":{"font":"Inter","size":15,"weight":500},"fill":{"$ref":"color/muted"}}
+
+, "lp0009": {"type":"text","parent":"lp0005","order":"a3","name":"Docs","content":"Docs","style":{"font":"Inter","size":15,"weight":500},"fill":{"$ref":"color/muted"}}
+
+, "lp0010": {"type":"frame","parent":"lp0001","order":"a2","name":"Sign in","radius":{"$ref":"radius/pill"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","pad":[10,18]}}
+
+, "lp0011": {"type":"text","parent":"lp0010","order":"a0","name":"Label","content":"Sign in","style":{"font":"Inter","size":14,"weight":600},"fill":{"$ref":"color/ink"}}
+
+, "lp0012": {"type":"frame","parent":"lpPageDesk","order":"a1","name":"Hero","w":{"mode":"fill"},"layout":{"dir":"column","gap":28,"pad":[72,120,96,120],"align":"center"}}
+
+, "lp0013": {"type":"frame","parent":"lp0012","order":"a0","name":"Announcement","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","gap":8,"pad":[6,14,6,6],"align":"center"}}
+
+, "lp0014": {"type":"frame","parent":"lp0013","order":"a0","name":"Tag","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent"},"layout":{"dir":"row","pad":[2,8]}}
+
+, "lp0015": {"type":"text","parent":"lp0014","order":"a0","name":"Tag label","content":"New","style":{"font":"Inter","size":12,"weight":700},"fill":{"$ref":"color/on-accent"}}
+
+, "lp0016": {"type":"text","parent":"lp0013","order":"a1","name":"Message","content":"Funnels now update in real time","style":{"font":"Inter","size":13,"weight":500},"fill":{"$ref":"color/ink"}}
+
+, "lp0017": {"type":"text","parent":"lp0012","order":"a1","name":"Headline","w":880,"content":"Analytics your whole team actually reads","grow":"fixed-width","style":{"font":"Inter","size":68,"weight":800,"lineHeight":1.05,"letterSpacing":-2,"align":"center"},"fill":{"$ref":"color/ink"}}
+
+, "lp0018": {"type":"text","parent":"lp0012","order":"a2","name":"Subhead","w":640,"content":"Lumen turns product events into plain-language answers. No SQL, no dashboards nobody opens — just the numbers that move your week.","grow":"fixed-width","style":{"font":"Inter","size":19,"weight":400,"lineHeight":1.5,"align":"center"},"fill":{"$ref":"color/muted"}}
+
+, "lp0019": {"type":"frame","parent":"lp0012","order":"a3","name":"Actions","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lp0020": {"type":"frame","parent":"lp0019","order":"a0","name":"Primary CTA","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent"},"effects":[{"kind":"shadow","x":0,"y":8,"blur":24,"spread":-8,"color":"#E4572E80"}],"layout":{"dir":"row","gap":8,"pad":[14,24],"align":"center"}}
+
+, "lp0021": {"type":"text","parent":"lp0020","order":"a0","name":"Label","content":"Start free trial","style":{"font":"Inter","size":16,"weight":600},"fill":{"$ref":"color/on-accent"}}
+
+, "lp0022": {"type":"icon","parent":"lp0020","order":"a1","name":"Icon/arrow-right","w":18,"h":18,"set":"lucide","icon":"arrow-right","color":{"$ref":"color/on-accent"}}
+
+, "lp0023": {"type":"frame","parent":"lp0019","order":"a1","name":"Secondary CTA","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","gap":8,"pad":[14,24],"align":"center"}}
+
+, "lp0024": {"type":"icon","parent":"lp0023","order":"a0","name":"Icon/play","w":16,"h":16,"set":"lucide","icon":"play","color":{"$ref":"color/ink"}}
+
+, "lp0025": {"type":"text","parent":"lp0023","order":"a1","name":"Label","content":"Watch the demo","style":{"font":"Inter","size":16,"weight":600},"fill":{"$ref":"color/ink"}}
+
+, "lp0026": {"type":"frame","parent":"lp0012","order":"a4","name":"Product shot","w":1120,"h":520,"radius":{"$ref":"radius/card"},"clip":true,"fill":{"kind":"linear","stops":[{"at":0,"color":"#FFE8D6"},{"at":1,"color":"#FBD3C1"}],"rotation":180},"effects":[{"kind":"shadow","x":0,"y":30,"blur":60,"spread":-20,"color":"#17140F33"}],"layout":{"dir":"column","pad":[40,56,0,56]}}
+
+, "lp0027": {"type":"frame","parent":"lp0026","order":"a0","name":"Window","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":[14,14,0,0],"fill":{"$ref":"color/surface"},"layout":{"dir":"column"}}
+
+, "lp0028": {"type":"frame","parent":"lp0027","order":"a0","name":"Window bar","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":8,"pad":[14,18],"align":"center"}}
+
+, "lp0029": {"type":"ellipse","parent":"lp0028","order":"a0","name":"Dot","w":12,"h":12,"fill":"#FF5F57"}
+
+, "lp0030": {"type":"ellipse","parent":"lp0028","order":"a1","name":"Dot","w":12,"h":12,"fill":"#FEBC2E"}
+
+, "lp0031": {"type":"ellipse","parent":"lp0028","order":"a2","name":"Dot","w":12,"h":12,"fill":"#28C840"}
+
+, "lp0032": {"type":"frame","parent":"lp0027","order":"a1","name":"Window body","w":{"mode":"fill"},"h":{"mode":"fill"},"layout":{"dir":"row","gap":24,"pad":28}}
+
+, "lp0033": {"type":"frame","parent":"lp0032","order":"a0","name":"Question","w":300,"h":{"mode":"fill"},"radius":12,"fill":"#F6F3EE","layout":{"dir":"column","gap":12,"pad":20}}
+
+, "lp0034": {"type":"text","parent":"lp0033","order":"a0","name":"Prompt","w":260,"content":"Why did sign-ups dip on Tuesday?","grow":"fixed-width","style":{"font":"Inter","size":16,"weight":600,"lineHeight":1.35},"fill":{"$ref":"color/ink"}}
+
+, "lp0035": {"type":"text","parent":"lp0033","order":"a1","name":"Answer","w":260,"content":"Mobile sign-ups fell 18% after the 2.4 release. Desktop was flat. The new SMS step is where people drop.","grow":"fixed-width","style":{"font":"Inter","size":14,"lineHeight":1.5},"fill":{"$ref":"color/muted"}}
+
+, "lp0036": {"type":"frame","parent":"lp0032","order":"a1","name":"Chart","w":{"mode":"fill"},"h":{"mode":"fill"},"layout":{"dir":"row","gap":10,"pad":[8,0,0,0],"align":"end"}}
+
+, "lp0037": {"type":"rect","parent":"lp0036","order":"a0","name":"Bar 1","w":{"mode":"fill"},"h":120,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0038": {"type":"rect","parent":"lp0036","order":"a1","name":"Bar 2","w":{"mode":"fill"},"h":150,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0039": {"type":"rect","parent":"lp0036","order":"a2","name":"Bar 3","w":{"mode":"fill"},"h":138,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0040": {"type":"rect","parent":"lp0036","order":"a3","name":"Bar 4","w":{"mode":"fill"},"h":170,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0041": {"type":"rect","parent":"lp0036","order":"a4","name":"Bar 5","w":{"mode":"fill"},"h":96,"radius":[6,6,0,0],"fill":{"$ref":"color/accent"}}
+
+, "lp0042": {"type":"rect","parent":"lp0036","order":"a5","name":"Bar 6","w":{"mode":"fill"},"h":182,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0043": {"type":"rect","parent":"lp0036","order":"a6","name":"Bar 7","w":{"mode":"fill"},"h":196,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0044": {"type":"rect","parent":"lp0036","order":"a7","name":"Bar 8","w":{"mode":"fill"},"h":210,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0045": {"type":"rect","parent":"lp0036","order":"a8","name":"Bar 9","w":{"mode":"fill"},"h":228,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0046": {"type":"rect","parent":"lp0036","order":"a9","name":"Bar 10","w":{"mode":"fill"},"h":240,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0047": {"type":"rect","parent":"lp0036","order":"aA","name":"Bar 11","w":{"mode":"fill"},"h":262,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0048": {"type":"rect","parent":"lp0036","order":"aB","name":"Bar 12","w":{"mode":"fill"},"h":280,"radius":[6,6,0,0],"fill":"#F1E4D8"}
+
+, "lp0049": {"type":"frame","parent":"lpPageDesk","order":"a2","name":"Features","w":{"mode":"fill"},"layout":{"dir":"column","gap":48,"pad":[0,120,96,120],"align":"center"}}
+
+, "lp0050": {"type":"text","parent":"lp0049","order":"a0","name":"Section title","content":"Everything you need, nothing you don't","style":{"font":"Inter","size":40,"weight":700,"letterSpacing":-1},"fill":{"$ref":"color/ink"}}
+
+, "lp0051": {"type":"frame","parent":"lp0049","order":"a1","name":"Feature grid","w":{"mode":"fill"},"layout":{"dir":"row","gap":24}}
+
+, "lp0052": {"type":"frame","parent":"lp0051","order":"a0","name":"Ask in plain words","w":{"mode":"fill"},"radius":{"$ref":"radius/card"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":14,"pad":28}}
+
+, "lp0053": {"type":"frame","parent":"lp0052","order":"a0","name":"Icon tile","w":44,"h":44,"radius":12,"fill":"#FDEBE4","layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lp0054": {"type":"icon","parent":"lp0053","order":"a0","name":"Icon/message-circle","w":22,"h":22,"set":"lucide","icon":"message-circle","color":{"$ref":"color/accent"}}
+
+, "lp0055": {"type":"text","parent":"lp0052","order":"a1","name":"Title","content":"Ask in plain words","style":{"font":"Inter","size":20,"weight":700},"fill":{"$ref":"color/ink"}}
+
+, "lp0056": {"type":"text","parent":"lp0052","order":"a2","name":"Copy","w":300,"content":"Type a question, get a chart and a sentence that explains it.","grow":"fixed-width","style":{"font":"Inter","size":15,"lineHeight":1.55},"fill":{"$ref":"color/muted"}}
+
+, "lp0057": {"type":"frame","parent":"lp0051","order":"a1","name":"Alerts that matter","w":{"mode":"fill"},"radius":{"$ref":"radius/card"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":14,"pad":28}}
+
+, "lp0058": {"type":"frame","parent":"lp0057","order":"a0","name":"Icon tile","w":44,"h":44,"radius":12,"fill":"#FDEBE4","layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lp0059": {"type":"icon","parent":"lp0058","order":"a0","name":"Icon/bell-ring","w":22,"h":22,"set":"lucide","icon":"bell-ring","color":{"$ref":"color/accent"}}
+
+, "lp0060": {"type":"text","parent":"lp0057","order":"a1","name":"Title","content":"Alerts that matter","style":{"font":"Inter","size":20,"weight":700},"fill":{"$ref":"color/ink"}}
+
+, "lp0061": {"type":"text","parent":"lp0057","order":"a2","name":"Copy","w":300,"content":"Lumen watches your metrics and pings you only when something moves.","grow":"fixed-width","style":{"font":"Inter","size":15,"lineHeight":1.55},"fill":{"$ref":"color/muted"}}
+
+, "lp0062": {"type":"frame","parent":"lp0051","order":"a2","name":"Built for teams","w":{"mode":"fill"},"radius":{"$ref":"radius/card"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":14,"pad":28}}
+
+, "lp0063": {"type":"frame","parent":"lp0062","order":"a0","name":"Icon tile","w":44,"h":44,"radius":12,"fill":"#FDEBE4","layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lp0064": {"type":"icon","parent":"lp0063","order":"a0","name":"Icon/users","w":22,"h":22,"set":"lucide","icon":"users","color":{"$ref":"color/accent"}}
+
+, "lp0065": {"type":"text","parent":"lp0062","order":"a1","name":"Title","content":"Built for teams","style":{"font":"Inter","size":20,"weight":700},"fill":{"$ref":"color/ink"}}
+
+, "lp0066": {"type":"text","parent":"lp0062","order":"a2","name":"Copy","w":300,"content":"Share answers in Slack, pin them to a board, comment in context.","grow":"fixed-width","style":{"font":"Inter","size":15,"lineHeight":1.55},"fill":{"$ref":"color/muted"}}
+
+, "lp0067": {"type":"frame","parent":"lpPageDesk","order":"a3","name":"Footer","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"t":1}},"layout":{"dir":"row","pad":[28,80],"justify":"between","align":"center"}}
+
+, "lp0068": {"type":"text","parent":"lp0067","order":"a0","name":"Copyright","content":"© 2026 Lumen Labs","style":{"font":"Inter","size":13},"fill":{"$ref":"color/muted"}}
+
+, "lp0069": {"type":"frame","parent":"lp0067","order":"a1","name":"Footer links","layout":{"dir":"row","gap":24}}
+
+, "lp0070": {"type":"text","parent":"lp0069","order":"a0","name":"Privacy","content":"Privacy","style":{"font":"Inter","size":13},"fill":{"$ref":"color/muted"}}
+
+, "lp0071": {"type":"text","parent":"lp0069","order":"a1","name":"Terms","content":"Terms","style":{"font":"Inter","size":13},"fill":{"$ref":"color/muted"}}
+
+, "lp0072": {"type":"text","parent":"lp0069","order":"a2","name":"Status","content":"Status","style":{"font":"Inter","size":13},"fill":{"$ref":"color/muted"}}
+
+, "lpPageDesk": {"type":"frame","parent":null,"order":"a0","name":"Landing — Desktop","x":0,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column","align":"center"}}
+}
+}

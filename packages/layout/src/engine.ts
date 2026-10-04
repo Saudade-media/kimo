@@ -480,12 +480,14 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
   const padding = (e: Entry, layout: Record<string, unknown>): [number, number, number, number] => {
     const p = value(e, layout.pad, "/layout/pad")
     let out: [number, number, number, number] = [0, 0, 0, 0]
+    // Each array entry may itself be a variable binding (e.g. [$space/xs, $space/m]).
+    const entry = (x: unknown, i: number) => num(value(e, x, `/layout/pad/${i}`)) ?? 0
     if (typeof p === "number") out = [p, p, p, p]
     else if (Array.isArray(p) && p.length === 2) {
-      const [v, h] = p.map((x) => num(x) ?? 0) as [number, number]
+      const [v, h] = p.map(entry) as [number, number]
       out = [v, h, v, h]
     } else if (Array.isArray(p) && p.length === 4)
-      out = p.map((x) => num(x) ?? 0) as [number, number, number, number]
+      out = p.map(entry) as [number, number, number, number]
     out = out.map((x) => (Number.isFinite(x) && x > 0 ? x : 0)) as typeof out
     if (layout.includeStroke === true && isObject(e.data.stroke)) {
       const w = value(e, e.data.stroke.width, "/stroke/width")
@@ -493,7 +495,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
         const s = w === undefined ? 1 : Math.max(0, w)
         out = [out[0] + s, out[1] + s, out[2] + s, out[3] + s]
       } else if (isObject(w)) {
-        const s = (k: string) => Math.max(0, num(w[k]) ?? 0)
+        const s = (k: string) => Math.max(0, num(value(e, w[k], `/stroke/width/${k}`)) ?? 0)
         out = [out[0] + s("t"), out[1] + s("r"), out[2] + s("b"), out[3] + s("l")]
       }
     }

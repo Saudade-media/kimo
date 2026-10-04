@@ -1,0 +1,164 @@
+# Every push to main and every pull request: the same gate as `bun run check`, plus the example
+# documents, the browser e2e suite (one retry, flaky scenarios reported) and the exporters'
+# box-diff harness. Rust lives in rust.yml.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Playwright browsers in a fixed place so the cache key below matches.
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+
+jobs:
+  check:
+    name: lint, typecheck, generated, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json # reads the root "packageManager" field
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run check:generated
+      - run: bun run test
+      - name: examples (reproducible + kimo validate --strict)
+        run: bun run check:examples
+      - name: build web app
+        run: bun run --filter @kimo/web build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  e2e:
+    name: e2e (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      # The Playwright driver runs under Node via tsx (apps/web/e2e/run.ts explains why).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: playwright version
+        id: pw
+        working-directory: apps/web
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+      - name: install Chromium
+        working-directory: apps/web
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then
+            bunx playwright install-deps chromium
+          else
+            bunx playwright install --with-deps chromium
+          fi
+      - name: run scenarios (one retry; a pass on retry is reported as flaky)
+        working-directory: apps/web
+        env:
+          KIMO_E2E_RETRIES: "1"
+          KIMO_E2E_SHOTS: ${{ runner.temp }}/e2e-shots
+        run: |
+          mkdir -p "$KIMO_E2E_SHOTS"
+          set -o pipefail
+          bun run e2e 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      - name: flaky / infra report
+        if: always()
+        run: |
+          log="$RUNNER_TEMP/e2e.log"
+          [ -f "$log" ] || exit 0
+          {
+            echo "## e2e"
+            echo
+            grep -E '^(all scenarios passed|[0-9]+ scenario\(s\) failed)' "$log" || echo "no summary line (runner crashed?)"
+            echo
+            if grep -q '↻' "$log"; then
+              echo "### Passed on retry (flaky or infra)"
+              echo
+              grep '↻' "$log" | sed 's/^ *↻ /- /'
+              echo
+            fi
+            if grep -q '✗' "$log"; then
+              echo "### Failed"
+              echo
+              grep -A1 '✗' "$log" | sed 's/^ *✗ /- /'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Annotate flaky scenarios so they show on the PR without failing it.
+          grep '↻' "$log" | sed 's/^ *↻ //' | while IFS= read -r line; do
+            echo "::warning title=flaky e2e scenario::${line}"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-report
+          path: |
+            ${{ runner.temp }}/e2e.log
+            ${{ runner.temp }}/e2e-shots
+          if-no-files-found: ignore
+          retention-days: 14
+
+  exporters-boxdiff:
+    name: exporters box-diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: playwright version
+        id: pw
+        working-directory: packages/exporters
+        run: echo "version=$(bun -e "console.log(require('playwright/package.json').version)")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+      - name: install Chromium
+        working-directory: packages/exporters
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then
+            bunx playwright install-deps chromium
+          else
+            bunx playwright install --with-deps chromium
+          fi
+      - name: box diff (exported HTML vs layout, every fixture)
+        run: bun run --filter @kimo/exporters verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exporters-boxdiff
+          path: packages/exporters/harness/out
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,291 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"meta": {"name":"Streak — mobile screens"},
+"variables": {
+"color/accent": {"type":"color","value":"#6C4CF5","group":"color"}
+
+, "color/accent-soft": {"type":"color","value":"#ECE7FF","group":"color"}
+
+, "color/bg": {"type":"color","value":"#F5F4FF","group":"color"}
+
+, "color/ink": {"type":"color","value":"#15132B","group":"color"}
+
+, "color/line": {"type":"color","value":"#E6E3F5","group":"color"}
+
+, "color/muted": {"type":"color","value":"#6E6A8C","group":"color"}
+
+, "color/on-accent": {"type":"color","value":"#FFFFFF","group":"color"}
+
+, "color/surface": {"type":"color","value":"#FFFFFF","group":"color"}
+
+, "space/screen": {"type":"number","value":24,"group":"space"}
+},
+"nodes": {
+"ma0001": {"type":"frame","parent":null,"order":"a0","name":"Components","x":0,"y":1100,"radius":24,"fill":"#FFFFFF","layout":{"dir":"column","gap":32,"pad":40}}
+
+, "ma0002": {"type":"frame","parent":"maHabitRow","order":"a0","name":"Icon tile","w":44,"h":44,"radius":14,"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "ma0003": {"type":"frame","parent":"maHabitRow","order":"a1","name":"Texts","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
+
+, "ma0004": {"type":"frame","parent":"maHabitRow","order":"a2","name":"Status","w":28,"h":28}
+
+, "ma0005": {"type":"ellipse","parent":"ma0004","order":"a0","name":"Ring","x":0,"y":0,"w":28,"h":28,"stroke":{"paint":{"$ref":"color/line"},"width":2}}
+
+, "ma0006": {"type":"icon","parent":"maRowChk01","order":"a0","name":"Icon/check","w":16,"h":16,"strokeWidth":3,"set":"lucide","icon":"check","color":{"$ref":"color/on-accent"}}
+
+, "ma0007": {"type":"frame","parent":"maTabBar01","order":"a0","name":"Today","layout":{"dir":"column","gap":4,"align":"center"}}
+
+, "ma0008": {"type":"frame","parent":"maTabBar01","order":"a1","name":"Stats","layout":{"dir":"column","gap":4,"align":"center"}}
+
+, "ma0009": {"type":"frame","parent":"maTabBar01","order":"a2","name":"Friends","layout":{"dir":"column","gap":4,"align":"center"}}
+
+, "ma0010": {"type":"frame","parent":"maTabBar01","order":"a3","name":"Me","layout":{"dir":"column","gap":4,"align":"center"}}
+
+, "ma0011": {"type":"frame","parent":"maScreens1","order":"a0","name":"Welcome","w":390,"h":844,"radius":44,"clip":true,"fill":{"$ref":"color/bg"},"effects":[{"kind":"shadow","x":0,"y":24,"blur":48,"spread":-16,"color":"#15132B40"}],"layout":{"dir":"column"}}
+
+, "ma0012": {"type":"frame","parent":"ma0011","order":"a0","name":"Status bar","w":{"mode":"fill"},"layout":{"dir":"row","pad":[16,28,8,28],"justify":"between","align":"center"}}
+
+, "ma0013": {"type":"text","parent":"ma0012","order":"a0","name":"Time","content":"9:41","style":{"font":"Inter","size":15,"weight":600},"fill":{"$ref":"color/ink"}}
+
+, "ma0014": {"type":"frame","parent":"ma0012","order":"a1","name":"Indicators","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ma0015": {"type":"icon","parent":"ma0014","order":"a0","name":"Icon/signal","w":16,"h":16,"set":"lucide","icon":"signal","color":{"$ref":"color/ink"}}
+
+, "ma0016": {"type":"icon","parent":"ma0014","order":"a1","name":"Icon/wifi","w":16,"h":16,"set":"lucide","icon":"wifi","color":{"$ref":"color/ink"}}
+
+, "ma0017": {"type":"icon","parent":"ma0014","order":"a2","name":"Icon/battery-full","w":20,"h":20,"set":"lucide","icon":"battery-full","color":{"$ref":"color/ink"}}
+
+, "ma0018": {"type":"frame","parent":"ma0011","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/screen"},"pad":[24,24,40,24]}}
+
+, "ma0019": {"type":"frame","parent":"ma0018","order":"a0","name":"Illustration","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":32,"clip":true,"fill":{"kind":"radial","stops":[{"at":0,"color":"#B9A8FF"},{"at":0.55,"color":"#6C4CF5"},{"at":1,"color":"#2E1B8F"}],"center":[0.3,0.25],"size":[1.4,1.4]},"layout":{"dir":"column","pad":24,"justify":"end"}}
+
+, "ma0020": {"type":"ellipse","parent":"ma0019","order":"a0","name":"Orb","x":170,"y":40,"position":"absolute","w":140,"h":140,"fill":"#FFFFFF33"}
+
+, "ma0021": {"type":"text","parent":"ma0019","order":"a1","name":"Streak count","content":"21","style":{"font":"Inter","size":96,"weight":800,"letterSpacing":-4},"fill":{"$ref":"color/on-accent"}}
+
+, "ma0022": {"type":"text","parent":"ma0019","order":"a2","name":"Streak label","content":"days in a row","style":{"font":"Inter","size":18,"weight":600},"fill":{"$ref":"color/on-accent"}}
+
+, "ma0023": {"type":"text","parent":"ma0018","order":"a1","name":"Title","content":"Build habits that stick","style":{"font":"Inter","size":32,"weight":800,"lineHeight":1.1,"letterSpacing":-1},"fill":{"$ref":"color/ink"}}
+
+, "ma0024": {"type":"text","parent":"ma0018","order":"a2","name":"Body","w":342,"content":"Tiny daily check-ins, gentle reminders and a streak worth protecting.","grow":"fixed-width","style":{"font":"Inter","size":16,"weight":400,"lineHeight":1.5},"fill":{"$ref":"color/muted"}}
+
+, "ma0025": {"type":"frame","parent":"ma0018","order":"a3","name":"Get started","w":{"mode":"fill"},"radius":16,"fill":{"$ref":"color/accent"},"layout":{"dir":"row","pad":16,"justify":"center"}}
+
+, "ma0026": {"type":"text","parent":"ma0025","order":"a0","name":"Label","content":"Get started","style":{"font":"Inter","size":17,"weight":600},"fill":{"$ref":"color/on-accent"}}
+
+, "ma0027": {"type":"frame","parent":"ma0018","order":"a4","name":"Sign in","w":{"mode":"fill"},"layout":{"dir":"row","justify":"center"}}
+
+, "ma0028": {"type":"text","parent":"ma0027","order":"a0","name":"Label","content":"I already have an account","style":{"font":"Inter","size":15,"weight":600},"fill":{"$ref":"color/accent"}}
+
+, "ma0029": {"type":"frame","parent":"maScreens1","order":"a1","name":"Today","w":390,"h":844,"radius":44,"clip":true,"fill":{"$ref":"color/bg"},"effects":[{"kind":"shadow","x":0,"y":24,"blur":48,"spread":-16,"color":"#15132B40"}],"layout":{"dir":"column"}}
+
+, "ma0030": {"type":"frame","parent":"ma0029","order":"a0","name":"Status bar","w":{"mode":"fill"},"layout":{"dir":"row","pad":[16,28,8,28],"justify":"between","align":"center"}}
+
+, "ma0031": {"type":"text","parent":"ma0030","order":"a0","name":"Time","content":"9:41","style":{"font":"Inter","size":15,"weight":600},"fill":{"$ref":"color/ink"}}
+
+, "ma0032": {"type":"frame","parent":"ma0030","order":"a1","name":"Indicators","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ma0033": {"type":"icon","parent":"ma0032","order":"a0","name":"Icon/signal","w":16,"h":16,"set":"lucide","icon":"signal","color":{"$ref":"color/ink"}}
+
+, "ma0034": {"type":"icon","parent":"ma0032","order":"a1","name":"Icon/wifi","w":16,"h":16,"set":"lucide","icon":"wifi","color":{"$ref":"color/ink"}}
+
+, "ma0035": {"type":"icon","parent":"ma0032","order":"a2","name":"Icon/battery-full","w":20,"h":20,"set":"lucide","icon":"battery-full","color":{"$ref":"color/ink"}}
+
+, "ma0036": {"type":"frame","parent":"ma0029","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"layout":{"dir":"column","gap":16,"pad":[12,24]}}
+
+, "ma0037": {"type":"frame","parent":"ma0036","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "ma0038": {"type":"frame","parent":"ma0037","order":"a0","name":"Titles","layout":{"dir":"column","gap":2}}
+
+, "ma0039": {"type":"text","parent":"ma0038","order":"a0","name":"Date","content":"Saturday, Oct 4","style":{"font":"Inter","size":14,"weight":500},"fill":{"$ref":"color/muted"}}
+
+, "ma0040": {"type":"text","parent":"ma0038","order":"a1","name":"Title","content":"Today","style":{"font":"Inter","size":32,"weight":800,"letterSpacing":-1},"fill":{"$ref":"color/ink"}}
+
+, "ma0041": {"type":"frame","parent":"ma0037","order":"a1","name":"Avatar","w":44,"h":44,"radius":22,"fill":"#FFC857","layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "ma0042": {"type":"text","parent":"ma0041","order":"a0","name":"Initials","content":"AL","style":{"font":"Inter","size":15,"weight":700},"fill":{"$ref":"color/ink"}}
+
+, "ma0043": {"type":"frame","parent":"ma0036","order":"a1","name":"Progress card","w":{"mode":"fill"},"radius":22,"fill":{"kind":"linear","stops":[{"at":0,"color":"#6C4CF5"},{"at":1,"color":"#9B7BFF"}],"rotation":120},"layout":{"dir":"column","gap":12,"pad":20}}
+
+, "ma0044": {"type":"text","parent":"ma0043","order":"a0","name":"Label","content":"3 of 5 done","style":{"font":"Inter","size":20,"weight":700},"fill":{"$ref":"color/on-accent"}}
+
+, "ma0045": {"type":"frame","parent":"ma0043","order":"a1","name":"Track","w":{"mode":"fill"},"h":8,"radius":4,"fill":"#FFFFFF40"}
+
+, "ma0046": {"type":"rect","parent":"ma0045","order":"a0","name":"Value","x":0,"y":0,"w":181,"h":8,"radius":4,"fill":"#FFFFFF"}
+
+, "ma0047": {"type":"text","parent":"ma0043","order":"a2","name":"Hint","content":"Two more to keep your 21-day streak","style":{"font":"Inter","size":13,"weight":500},"fill":{"$ref":"color/on-accent"}}
+
+, "ma0048": {"type":"frame","parent":"ma0036","order":"a2","name":"Habits","w":{"mode":"fill"},"layout":{"dir":"column","gap":10}}
+
+, "ma0049": {"type":"instance","parent":"ma0048","order":"a0","name":"Morning run","of":"maHabitRow","props":{"w":{"mode":"fill"}},"args":{"done":true,"meta":"5 km · 7:00","name":"Morning run"},"overrides":{"maRowIcon1":{"set":{"icon":"footprints"}}}}
+
+, "ma0050": {"type":"instance","parent":"ma0048","order":"a1","name":"Read 20 pages","of":"maHabitRow","props":{"w":{"mode":"fill"}},"args":{"done":true,"meta":"Daily","name":"Read 20 pages"},"overrides":{"maRowIcon1":{"set":{"icon":"book-open"}}}}
+
+, "ma0051": {"type":"instance","parent":"ma0048","order":"a2","name":"Drink water","of":"maHabitRow","props":{"w":{"mode":"fill"}},"args":{"done":false,"meta":"6 of 8 glasses","name":"Drink water"},"overrides":{"maRowIcon1":{"set":{"icon":"glass-water"}}}}
+
+, "ma0052": {"type":"instance","parent":"ma0048","order":"a3","name":"Meditate","of":"maHabitRow","props":{"w":{"mode":"fill"}},"args":{"done":true,"meta":"10 min","name":"Meditate"},"overrides":{"maRowIcon1":{"set":{"icon":"leaf"}}}}
+
+, "ma0053": {"type":"instance","parent":"ma0048","order":"a4","name":"No phone after 10","of":"maHabitRow","props":{"w":{"mode":"fill"}},"args":{"done":false,"meta":"Evening","name":"No phone after 10"},"overrides":{"maRowIcon1":{"set":{"icon":"moon"}}}}
+
+, "ma0054": {"type":"instance","parent":"ma0029","order":"a2","name":"Tab bar","of":"maTabBar01","overrides":{"maTabTodayI":{"set":{"color":{"$ref":"color/accent"}}},"maTabTodayL":{"set":{"fill":{"$ref":"color/accent"}}}}}
+
+, "ma0055": {"type":"frame","parent":"maScreens1","order":"a2","name":"Habit detail","w":390,"h":844,"radius":44,"clip":true,"fill":{"$ref":"color/bg"},"effects":[{"kind":"shadow","x":0,"y":24,"blur":48,"spread":-16,"color":"#15132B40"}],"layout":{"dir":"column"}}
+
+, "ma0056": {"type":"frame","parent":"ma0055","order":"a0","name":"Status bar","w":{"mode":"fill"},"layout":{"dir":"row","pad":[16,28,8,28],"justify":"between","align":"center"}}
+
+, "ma0057": {"type":"text","parent":"ma0056","order":"a0","name":"Time","content":"9:41","style":{"font":"Inter","size":15,"weight":600},"fill":{"$ref":"color/ink"}}
+
+, "ma0058": {"type":"frame","parent":"ma0056","order":"a1","name":"Indicators","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ma0059": {"type":"icon","parent":"ma0058","order":"a0","name":"Icon/signal","w":16,"h":16,"set":"lucide","icon":"signal","color":{"$ref":"color/ink"}}
+
+, "ma0060": {"type":"icon","parent":"ma0058","order":"a1","name":"Icon/wifi","w":16,"h":16,"set":"lucide","icon":"wifi","color":{"$ref":"color/ink"}}
+
+, "ma0061": {"type":"icon","parent":"ma0058","order":"a2","name":"Icon/battery-full","w":20,"h":20,"set":"lucide","icon":"battery-full","color":{"$ref":"color/ink"}}
+
+, "ma0062": {"type":"frame","parent":"ma0055","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/screen"},"pad":[12,24]}}
+
+, "ma0063": {"type":"frame","parent":"ma0062","order":"a0","name":"Nav","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "ma0064": {"type":"icon","parent":"ma0063","order":"a0","name":"Icon/chevron-left","w":26,"h":26,"set":"lucide","icon":"chevron-left","color":{"$ref":"color/ink"}}
+
+, "ma0065": {"type":"text","parent":"ma0063","order":"a1","name":"Title","content":"Morning run","style":{"font":"Inter","size":17,"weight":700},"fill":{"$ref":"color/ink"}}
+
+, "ma0066": {"type":"icon","parent":"ma0063","order":"a2","name":"Icon/ellipsis","w":24,"h":24,"set":"lucide","icon":"ellipsis","color":{"$ref":"color/ink"}}
+
+, "ma0067": {"type":"frame","parent":"ma0062","order":"a1","name":"Streak","w":{"mode":"fill"},"layout":{"dir":"row","gap":12,"align":"end"}}
+
+, "ma0068": {"type":"text","parent":"ma0067","order":"a0","name":"Number","content":"21","style":{"font":"Inter","size":64,"weight":800,"letterSpacing":-3},"fill":{"$ref":"color/accent"}}
+
+, "ma0069": {"type":"text","parent":"ma0067","order":"a1","name":"Unit","content":"day streak","style":{"font":"Inter","size":17,"weight":600},"fill":{"$ref":"color/muted"}}
+
+, "ma0070": {"type":"frame","parent":"ma0062","order":"a2","name":"Calendar","w":{"mode":"fill"},"radius":22,"fill":{"$ref":"color/surface"},"layout":{"dir":"column","gap":8,"pad":18}}
+
+, "ma0071": {"type":"frame","parent":"ma0070","order":"a0","name":"Week 1","w":{"mode":"fill"},"layout":{"dir":"row","gap":8}}
+
+, "ma0072": {"type":"rect","parent":"ma0071","order":"a0","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#ECE7FF"}
+
+, "ma0073": {"type":"rect","parent":"ma0071","order":"a1","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#C9BCFF"}
+
+, "ma0074": {"type":"rect","parent":"ma0071","order":"a2","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0075": {"type":"rect","parent":"ma0071","order":"a3","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0076": {"type":"rect","parent":"ma0071","order":"a4","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#C9BCFF"}
+
+, "ma0077": {"type":"rect","parent":"ma0071","order":"a5","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0078": {"type":"rect","parent":"ma0071","order":"a6","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0079": {"type":"frame","parent":"ma0070","order":"a1","name":"Week 2","w":{"mode":"fill"},"layout":{"dir":"row","gap":8}}
+
+, "ma0080": {"type":"rect","parent":"ma0079","order":"a0","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#ECE7FF"}
+
+, "ma0081": {"type":"rect","parent":"ma0079","order":"a1","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0082": {"type":"rect","parent":"ma0079","order":"a2","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0083": {"type":"rect","parent":"ma0079","order":"a3","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#ECE7FF"}
+
+, "ma0084": {"type":"rect","parent":"ma0079","order":"a4","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#C9BCFF"}
+
+, "ma0085": {"type":"rect","parent":"ma0079","order":"a5","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0086": {"type":"rect","parent":"ma0079","order":"a6","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#ECE7FF"}
+
+, "ma0087": {"type":"frame","parent":"ma0070","order":"a2","name":"Week 3","w":{"mode":"fill"},"layout":{"dir":"row","gap":8}}
+
+, "ma0088": {"type":"rect","parent":"ma0087","order":"a0","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0089": {"type":"rect","parent":"ma0087","order":"a1","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0090": {"type":"rect","parent":"ma0087","order":"a2","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0091": {"type":"rect","parent":"ma0087","order":"a3","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0092": {"type":"rect","parent":"ma0087","order":"a4","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0093": {"type":"rect","parent":"ma0087","order":"a5","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0094": {"type":"rect","parent":"ma0087","order":"a6","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0095": {"type":"frame","parent":"ma0070","order":"a3","name":"Week 4","w":{"mode":"fill"},"layout":{"dir":"row","gap":8}}
+
+, "ma0096": {"type":"rect","parent":"ma0095","order":"a0","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0097": {"type":"rect","parent":"ma0095","order":"a1","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0098": {"type":"rect","parent":"ma0095","order":"a2","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0099": {"type":"rect","parent":"ma0095","order":"a3","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0100": {"type":"rect","parent":"ma0095","order":"a4","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0101": {"type":"rect","parent":"ma0095","order":"a5","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0102": {"type":"rect","parent":"ma0095","order":"a6","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0103": {"type":"frame","parent":"ma0070","order":"a4","name":"Week 5","w":{"mode":"fill"},"layout":{"dir":"row","gap":8}}
+
+, "ma0104": {"type":"rect","parent":"ma0103","order":"a0","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0105": {"type":"rect","parent":"ma0103","order":"a1","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0106": {"type":"rect","parent":"ma0103","order":"a2","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0107": {"type":"rect","parent":"ma0103","order":"a3","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0108": {"type":"rect","parent":"ma0103","order":"a4","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0109": {"type":"rect","parent":"ma0103","order":"a5","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#6C4CF5"}
+
+, "ma0110": {"type":"rect","parent":"ma0103","order":"a6","name":"Day","w":{"mode":"fill"},"h":34,"radius":9,"fill":"#9B7BFF"}
+
+, "ma0111": {"type":"frame","parent":"ma0062","order":"a3","name":"Stats","w":{"mode":"fill"},"layout":{"dir":"row","gap":12}}
+
+, "ma0112": {"type":"frame","parent":"ma0111","order":"a0","name":"Best streak","w":{"mode":"fill"},"radius":18,"fill":{"$ref":"color/surface"},"layout":{"dir":"column","gap":4,"pad":16}}
+
+, "ma0113": {"type":"text","parent":"ma0112","order":"a0","name":"Label","content":"Best streak","style":{"font":"Inter","size":13,"weight":500},"fill":{"$ref":"color/muted"}}
+
+, "ma0114": {"type":"text","parent":"ma0112","order":"a1","name":"Value","content":"34 days","style":{"font":"Inter","size":22,"weight":800},"fill":{"$ref":"color/ink"}}
+
+, "ma0115": {"type":"frame","parent":"ma0111","order":"a1","name":"This month","w":{"mode":"fill"},"radius":18,"fill":{"$ref":"color/surface"},"layout":{"dir":"column","gap":4,"pad":16}}
+
+, "ma0116": {"type":"text","parent":"ma0115","order":"a0","name":"Label","content":"This month","style":{"font":"Inter","size":13,"weight":500},"fill":{"$ref":"color/muted"}}
+
+, "ma0117": {"type":"text","parent":"ma0115","order":"a1","name":"Value","content":"92%","style":{"font":"Inter","size":22,"weight":800},"fill":{"$ref":"color/ink"}}
+
+, "ma0118": {"type":"instance","parent":"ma0055","order":"a2","name":"Tab bar","of":"maTabBar01","x":0,"y":760,"position":"absolute","overrides":{"maTabStatsI":{"set":{"color":{"$ref":"color/accent"}}},"maTabStatsL":{"set":{"fill":{"$ref":"color/accent"}}}}}
+
+, "maHabitRow": {"type":"frame","parent":"ma0001","order":"a0","name":"Habit row","component":{"props":{"done":{"type":"boolean","order":"a2","target":"maRowChk01","field":"visible","default":true},"meta":{"type":"text","order":"a1","target":"maRowMeta1","field":"content","default":"Daily"},"name":{"type":"text","order":"a0","target":"maRowName1","field":"content","default":"Habit"}}},"w":342,"radius":18,"fill":{"$ref":"color/surface"},"layout":{"dir":"row","gap":14,"pad":[14,16],"align":"center"}}
+
+, "maRowChk01": {"type":"frame","parent":"ma0004","order":"a1","name":"Check","x":0,"y":0,"w":28,"h":28,"radius":14,"fill":{"$ref":"color/accent"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "maRowIcon1": {"type":"icon","parent":"ma0002","order":"a0","name":"Icon","w":22,"h":22,"set":"lucide","icon":"sparkles","color":{"$ref":"color/accent"}}
+
+, "maRowMeta1": {"type":"text","parent":"ma0003","order":"a1","name":"Meta","content":"Daily","style":{"font":"Inter","size":13,"weight":400},"fill":{"$ref":"color/muted"}}
+
+, "maRowName1": {"type":"text","parent":"ma0003","order":"a0","name":"Name","content":"Habit","style":{"font":"Inter","size":16,"weight":600},"fill":{"$ref":"color/ink"}}
+
+, "maScreens1": {"type":"frame","parent":null,"order":"a1","name":"Screens","x":0,"y":0,"fill":"#DCD8F0","layout":{"dir":"row","gap":56,"pad":64}}
+
+, "maTabBar01": {"type":"frame","parent":"ma0001","order":"a1","name":"Tab bar","component":true,"w":390,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/line"},"width":{"t":1}},"layout":{"dir":"row","pad":[12,16,30,16],"justify":"around"}}
+
+, "maTabFriendsI": {"type":"icon","parent":"ma0009","order":"a0","name":"Icon","w":24,"h":24,"set":"lucide","icon":"users","color":{"$ref":"color/muted"}}
+
+, "maTabFriendsL": {"type":"text","parent":"ma0009","order":"a1","name":"Label","content":"Friends","style":{"font":"Inter","size":11,"weight":600},"fill":{"$ref":"color/muted"}}
+
+, "maTabMeI00": {"type":"icon","parent":"ma0010","order":"a0","name":"Icon","w":24,"h":24,"set":"lucide","icon":"circle-user","color":{"$ref":"color/muted"}}
+
+, "maTabMeL00": {"type":"text","parent":"ma0010","order":"a1","name":"Label","content":"Me","style":{"font":"Inter","size":11,"weight":600},"fill":{"$ref":"color/muted"}}
+
+, "maTabStatsI": {"type":"icon","parent":"ma0008","order":"a0","name":"Icon","w":24,"h":24,"set":"lucide","icon":"chart-no-axes-column","color":{"$ref":"color/muted"}}
+
+, "maTabStatsL": {"type":"text","parent":"ma0008","order":"a1","name":"Label","content":"Stats","style":{"font":"Inter","size":11,"weight":600},"fill":{"$ref":"color/muted"}}
+
+, "maTabTodayI": {"type":"icon","parent":"ma0007","order":"a0","name":"Icon","w":24,"h":24,"set":"lucide","icon":"calendar-check","color":{"$ref":"color/muted"}}
+
+, "maTabTodayL": {"type":"text","parent":"ma0007","order":"a1","name":"Label","content":"Today","style":{"font":"Inter","size":11,"weight":600},"fill":{"$ref":"color/muted"}}
+}
+}

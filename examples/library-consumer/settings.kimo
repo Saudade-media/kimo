@@ -1,0 +1,38 @@
+{
+"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"format": "0.1.0",
+"features": ["tokens/composite"],
+"meta": {"name":"Account settings (uses Kimo DS)"},
+"imports": {"ds":"../design-system/kimo-ds.lib.kimo"},
+"nodes": {
+"ac0001": {"type":"frame","parent":"acSettings","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "ac0002": {"type":"frame","parent":"ac0001","order":"a0","name":"Titles","layout":{"dir":"column","gap":4}}
+
+, "ac0003": {"type":"text","parent":"ac0002","order":"a0","name":"Title","content":"Account settings","style":{"size":28,"typography":{"$ref":"ds:type/heading"}},"fill":{"$ref":"ds:color/ink"}}
+
+, "ac0004": {"type":"text","parent":"ac0002","order":"a1","name":"Subtitle","content":"Manage your profile and workspace.","style":{"typography":{"$ref":"ds:type/body"}},"fill":{"$ref":"ds:color/muted"}}
+
+, "ac0005": {"type":"instance","parent":"ac0001","order":"a1","of":"ds:DsBadge001","args":{"label":"Pro plan"}}
+
+, "ac0006": {"type":"instance","parent":"acSettings","order":"a1","name":"Profile","of":"ds:DsCard0001","props":{"w":{"mode":"fill"}},"args":{"body":"This is how teammates see you in comments and on the canvas.","title":"Profile"},"overrides":{"ds:DsCrdActn1":{"slot":true},"ds:DsCrdCont1":{"slot":true}}}
+
+, "ac0007": {"type":"instance","parent":"ac0006","at":"ds:DsCrdCont1","order":"a0","of":"ds:DsInput001","props":{"w":{"mode":"fill"}},"args":{"label":"Full name","placeholder":"Ada Lovelace","showHint":false}}
+
+, "ac0008": {"type":"instance","parent":"ac0006","at":"ds:DsCrdCont1","order":"a1","of":"ds:DsInput001","props":{"w":{"mode":"fill"}},"args":{"hint":"Used for sign-in and notifications.","label":"Email","placeholder":"ada@analytical.engine"}}
+
+, "ac0009": {"type":"instance","parent":"ac0006","at":"ds:DsCrdActn1","order":"a0","of":"ds:DsBtnSec01","args":{"label":"Cancel"}}
+
+, "ac0010": {"type":"instance","parent":"ac0006","at":"ds:DsCrdActn1","order":"a1","of":"ds:DsBtnPrim1","args":{"label":"Save changes"}}
+
+, "ac0011": {"type":"instance","parent":"acSettings","order":"a2","name":"Danger zone","of":"ds:DsCard0001","props":{"w":{"mode":"fill"}},"args":{"body":"Deleting the workspace removes every file, comment and version. This cannot be undone.","title":"Danger zone"},"overrides":{"ds:DsCrdActn1":{"slot":true},"ds:DsCrdCont1":{"slot":true}}}
+
+, "ac0012": {"type":"instance","parent":"ac0011","at":"ds:DsCrdActn1","order":"a0","of":"ds:DsBtnDng01","args":{"label":"Delete workspace"}}
+
+, "ac0013": {"type":"instance","parent":"acBoard001","order":"a1","name":"Settings page — dark","of":"acSettings","theme":{"ds:mode":"dark"}}
+
+, "acBoard001": {"type":"frame","parent":null,"order":"a0","name":"Settings — light and dark","x":0,"y":0,"fill":"#C9CCD3","layout":{"dir":"row","gap":64,"pad":64}}
+
+, "acSettings": {"type":"frame","parent":"acBoard001","order":"a0","name":"Settings page","component":true,"w":760,"radius":18,"fill":{"$ref":"ds:color/bg"},"layout":{"dir":"column","gap":24,"pad":40}}
+}
+}

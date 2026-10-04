@@ -2,7 +2,7 @@
   "name": "@kimo/cli",
   "version": "0.0.0",
   "private": true,
-  "description": "kimo command line: semantic git merge driver, asset garbage collection, validation",
+  "description": "kimo command line: semantic git merge driver, asset garbage collection, validation, MCP server and host installer",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -16,6 +16,13 @@
     "test": "bun test ./test"
   },
   "dependencies": {
-    "@kimo/core-schema": "workspace:*"
+    "@kimo/core-schema": "workspace:*",
+    "@kimo/editor-state": "workspace:*",
+    "@kimo/mcp-server": "workspace:*",
+    "@kimo/platform": "workspace:*",
+    "@modelcontextprotocol/server": "2.3.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.0"
   }
 }

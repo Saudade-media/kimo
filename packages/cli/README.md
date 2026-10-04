@@ -12,6 +12,8 @@ bun packages/cli/src/main.ts --help # the same, without the bin link
 | `kimo merge <base> <ours> <theirs> [path]` | Semantic three-way merge of `.kimo` files; the git merge driver | 0 clean · 1 conflicts stored · 2 not mergeable |
 | `kimo gc <file> [--yes]` | Removes asset files nothing references | 0 ok · 2 unreadable · 3 locked |
 | `kimo validate <file…>` | Schema, references, cycles and lints | 0 valid · 1 errors · 2 unreadable |
+| `kimo mcp [--attach\|--headless]` | MCP server for coding agents on stdio | 0 when the agent host disconnects |
+| `kimo mcp install\|remove\|status` | The `kimo` entry in agent host configs | 0 ok · 1 a config was refused (unparsable) or kept changing |
 
 Malformed command lines exit with 64.
 
@@ -77,3 +79,68 @@ Imported libraries are read relative to each file. The `assets/` folder listing 
 so references to missing asset files are errors. Stored merge conflicts are warnings
 (`CONFLICT_OPEN`), so a half-resolved merge still opens. Use `--strict` in CI to flag
 unfinished merges.
+
+## `kimo mcp`: Kimo for coding agents
+
+`kimo mcp` speaks MCP on stdin/stdout (ADR 0013 §8). Agents get the same tool set as the
+desktop app (`kimo_get_state`, `kimo_open`, `kimo_query`, `kimo_apply_ops`, `kimo_render`, …)
+and read the guides with `kimo_read_docs` (also in [docs/agents](../../docs/agents/index.md)).
+
+- **Auto (default).** When the Kimo app is running (`~/.kimo/mcp/endpoint.json` names a live pid
+  and the socket accepts the `kimo/hello` with the token from `~/.kimo/mcp/token`), it relays
+  to the app. Agent edits then appear live in the editor, with the app's permissions and approval
+  prompts. Otherwise it runs **headless**.
+- **`--attach`.** Relay only. Without the app, `initialize` and `tools/list` are answered locally
+  and every tool call returns `APP_NOT_RUNNING`. It attaches when the app starts and replays the
+  session's `initialize`. If the app restarts, calls in flight fail with `TIMEOUT` (retryable)
+  and the relay reconnects for 30 s.
+- **`--headless`.** Files are opened in memory by this process. It takes the file's lease
+  (`kimo mcp (headless)`), so the app and other processes see the file as locked. It saves
+  atomically with read-back, autosaves after 2 s idle (`--no-autosave` leaves saving to
+  `kimo_save`), and saves on exit, or writes `~/.kimo/recovery/<id>.kimo` if that fails. There is
+  no UI, so anything that would need an approval is denied.
+  - `--allow read|edit|edit+delete` sets the permission level (default `edit+delete`).
+  - `--files <glob>` sets the file allow-list, repeatable (default `<cwd>/**`). A glob passed
+    to `--allow` is also accepted (ADR spelling).
+
+The process exits when stdin closes or when its parent process disappears.
+
+### Installing into agent hosts
+
+```sh
+kimo mcp install                       # every agent host found on this machine
+kimo mcp install --host claude-code    # or codex, gemini, cursor, vscode, all
+kimo mcp install --project --dir .     # project files (.mcp.json, .codex/config.toml, …)
+kimo mcp install --dry-run             # show the change, write nothing
+kimo mcp status                        # installed / outdated / not installed, per host
+kimo mcp remove --host all
+```
+
+| Host | User scope (default) | Project scope |
+|---|---|---|
+| Claude Code | `~/.claude.json` → `mcpServers.kimo` | `.mcp.json` |
+| Codex | `~/.codex/config.toml` → `[mcp_servers.kimo]` | `.codex/config.toml` |
+| Gemini CLI | `~/.gemini/settings.json` → `mcpServers.kimo` | `.gemini/settings.json` |
+| Cursor | `~/.cursor/mcp.json` → `mcpServers.kimo` | `.cursor/mcp.json` |
+| VS Code | user `mcp.json` (macOS `~/Library/Application Support/Code/User/`) → `servers.kimo` | `.vscode/mcp.json` |
+
+Rules: the installer changes only the `kimo` entry and keeps every other key, entry and the
+file's indentation and permissions. It backs up to `~/.kimo/mcp/backups/<host>-<ts>.bak` before
+each write and writes atomically. Running it twice changes nothing. A file it cannot parse
+(JSON with comments, broken TOML) is never rewritten: it prints the snippet to paste instead
+and exits 1.
+
+**Claude Code and `~/.claude.json`.** Claude Code rewrites this file often. Kimo keeps the
+user scope as the default, because that is where Claude Code users expect servers. Every write
+is **compare-and-swap**: the file is re-read just before the atomic rename, and if Claude Code
+changed it in the meantime, the edit is recomputed from the new content (up to 5 times). A
+concurrent write is merged, never lost. Use `--project` for a checked-in `.mcp.json` instead.
+
+**Which command is written.** If the Kimo app is installed, the installer writes its bundled
+`kimo-mcp` shim (`/Applications/Kimo.app/Contents/MacOS/kimo-mcp`, also looked up in
+`Contents/Resources/`, `~/Applications`, `/usr/bin`, `/opt/Kimo` and `%LOCALAPPDATA%\Programs\Kimo`)
+with `--client <host>`. Otherwise it writes `bunx @kimo/cli mcp --client <host>`. Override the
+command with `--command <path>` or `$KIMO_MCP_SHIM`, or force the CLI with `--cli`. Re-running
+`install` after installing the app switches existing entries over (`status` shows them as
+outdated until then). `--transport http` writes the Streamable HTTP entry with the per-host
+token from `~/.kimo/mcp/http-tokens.json` (turn on HTTP in Settings › Agents first).

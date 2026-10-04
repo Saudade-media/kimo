@@ -1,0 +1,109 @@
+/*
+ * AgentClientRow: desing.pen 21 > Components (M5) > AgentClientRow (hp5kw).
+ * frame: row, gap 12, padding [12, 0], alignItems center, fill_container, stroke bottom 1 border
+ *   ├ Orb (s6KNcG) AgentOrb 28
+ *   ├ Text (g1h7Xi) column, gap 2, fill
+ *   │   ├ Name Row (p0JJGd) row, gap 6, center: Name sans 12 / 500 · Version mono 11 tertiary
+ *   │   └ Meta (ZSMNf) sans 11 text-secondary
+ *   ├ Scope (H8RP2y) Badge (jrIWa): padding [2, 8], radius-pill, bg-muted / text-secondary;
+ *   │   writable (EbQQD): agent-soft / agent
+ *   └ Chevron (QknTo) lucide chevron-right 14 text-tertiary (expanded: chevron-down, no stroke)
+ */
+.kimo-agent-client-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-agent-client-row:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.kimo-agent-client-row--expanded {
+  box-shadow: none; /* EbQQD stroke: [] */
+}
+
+.kimo-agent-client-row__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kimo-agent-client-row__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.kimo-agent-client-row__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-agent-client-row__version {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-agent-client-row__meta {
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-agent-client-row__scope {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-agent-client-row__scope--writable {
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+
+.kimo-agent-client-row__scope-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+.kimo-agent-client-row__chevron {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}

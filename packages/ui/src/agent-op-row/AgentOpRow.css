@@ -1,0 +1,96 @@
+/*
+ * AgentOpRow: desing.pen 21 > Components (M5) > AgentOpRow (m9RhF).
+ * frame: row, gap 8, padding [5, 12], alignItems center, fill_container
+ *   ├ Op (GWVaR) 52 × 18, justify/align center, agent-soft, radius-xs
+ *   │   └ Op Name (DuXnB) mono 11 / 500 agent   (delete: danger-soft / danger)
+ *   ├ Target (y7h2K) mono 11 text-primary
+ *   ├ Detail (Rkonz) mono 11 text-secondary, fill, fixed-width
+ *   └ Revert (k16ep0) lucide undo-2 14 text-tertiary
+ */
+.kimo-agent-op-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px;
+}
+
+.kimo-agent-op-row__op {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 52px;
+  height: 18px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+
+.kimo-agent-op-row--danger .kimo-agent-op-row__op {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.kimo-agent-op-row__op-name {
+  overflow: hidden;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-agent-op-row__target,
+.kimo-agent-op-row__detail {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.kimo-agent-op-row__target {
+  flex: none;
+  color: var(--kimo-text-primary);
+}
+
+.kimo-agent-op-row__detail {
+  overflow: hidden;
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-secondary);
+  text-overflow: ellipsis;
+}
+
+.kimo-agent-op-row__revert {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-agent-op-row__revert:hover {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-agent-op-row__revert:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.kimo-agent-op-row__revert > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

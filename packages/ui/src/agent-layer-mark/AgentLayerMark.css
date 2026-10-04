@@ -1,0 +1,47 @@
+/*
+ * LayerRow/Agent: desing.pen 21 > Components (M5) > LayerRow/Agent (PwDCI).
+ * A LayerRow instance whose Spacer (TZNCu) is replaced by "Agent Mark" (OEkBe): frame
+ * fill_container, padding [0, 0, 0, 2], alignItems center; Agent Dot (n5D1xb) ellipse 6 × 6
+ * agent. Composes with every LayerRow variant: add the class `kimo-layer-row--agent` to a
+ * LayerRow / LayerRowM3 / LayerRowConflict (rule "Layer dots": rows an uncommitted agent group
+ * touched; ancestors don't get dots).
+ */
+.kimo-layer-row--agent .kimo-layer-row__spacer,
+.kimo-layer-row--agent .kimo-layer-row-m3__spacer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 6px;
+  padding: 0 0 0 2px;
+}
+
+.kimo-layer-row--agent .kimo-layer-row__spacer::before,
+.kimo-layer-row--agent .kimo-layer-row-m3__spacer::before {
+  content: "";
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-agent);
+}
+
+.kimo-agent-layer-mark {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+  padding: 0 0 0 2px;
+}
+
+.kimo-agent-layer-mark__dot {
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-agent);
+}

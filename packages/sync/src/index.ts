@@ -23,6 +23,18 @@ export {
   SaveRefusedError,
   type SaveResult,
 } from "./file-session"
+export {
+  base64ToBytes,
+  bytesToBase64,
+  createTransportPair,
+  HostSyncHub,
+  type HostSyncMessage,
+  type HostSyncTransport,
+  originalOrigin,
+  remoteOriginFor,
+  WindowSyncProvider,
+  type WindowSyncProviderOptions,
+} from "./host-sync"
 export { MemoryHub, MemoryProvider } from "./memory"
 export type {
   Awareness,

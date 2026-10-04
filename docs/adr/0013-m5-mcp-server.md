@@ -254,7 +254,7 @@ vendor logos. Tests use a temp HOME only.
 
 `@kimo/platform/src/mcp.ts`: `McpHostApi` (status, connections, approvals, activity, policies,
 HTTP toggle/token rotation, installer), structural mirrors of the server types, and the Tauri
-surface `TAURI_MCP_COMMANDS` (14 commands) + `TauriMcpEventMap` (9 events). They are kept out
+surface `TAURI_MCP_COMMANDS` (14 commands, 24 after addendum 2) + `TauriMcpEventMap` (9 events). They are kept out
 of the frozen `TAURI_COMMANDS` so the existing Rust mirror test keeps passing; the shell adds a
 `command_list_mcp.rs` mirror. `apps/web/src/platform/contract.ts` "M5 agents": compile-time
 equality of the mirrors, `AgentChip`, `ApprovalPromptView` (countdown, queue, `approvalChoices`
@@ -319,3 +319,48 @@ section of `apps/web/src/platform/contract.ts`, `docs/spec/socket.md`. Suggested
 6. Tool-context size: `kimo_apply_ops` alone is ~23 KB. If hosts complain, move op schemas to
    `kimo_read_docs path=ops` and type `ops[]` items loosely (server still validates).
 7. Suggestion mode (11.4: agent batches as pending suggestions) is not in M5.
+
+## Addendum (2026-10-04, ADR 0014)
+
+- **`kimo_spawn_agents`** (excluded from M5, §2) arrives in M6 as an **agent-only tool** defined
+  in `@kimo/ai-agent` (`createSpawnTool`), not in this registry: only the in-app lead receives it.
+  Children are in-process M5 clients with origin `agent:kimo.<session>.<n>`, `ClientPolicy.nodes`
+  = their frame, no grants and `onExceed: deny`; the host's `DispatchOptions.targets` fills
+  `CallTargets.outOfScope` from `checkScope` (ADR 0014 §8). The registry may absorb the tool
+  later if external hosts need it.
+- The M6 agent calls this registry **in process** through `dispatch` (no socket). In-app
+  approvals for `agent:*` origins wait indefinitely; `APPROVAL_TIMEOUT_MS` (2 minutes) still
+  applies to external MCP clients, including local agent CLIs that Kimo spawns (they connect
+  through the shim with `--client <cli>` from `~/.kimo/cli-workspaces/<session>/`).
+
+## Addendum 2 (2026-10-04, M5 integration)
+
+Additive contract changes that close the gaps the editor UI builder reported (no field or
+command was removed or renamed):
+
+- `KimoPlatform.mcp?: McpHostApi` (absent in the browser). `McpHostApi` gains `server` (start /
+  stop / restart, `settings`, `setStartOnLaunch`, `setPort`, `isPortFree`, `token(client)`,
+  `log`, `revealLog`), `clients` (pause / resume / paused) and `history.undo(path, origin,
+  undoToken?)`.
+- `McpServerStatus` gains optional `running`, `version`, `startOnLaunch`, `httpPort`, `logPath`,
+  `home`, `backupDir` and `error: McpServerError` (`EADDRINUSE 127.0.0.1:<port>` with
+  `suggestedPort` when HTTP fell back to an ephemeral port, `ENDPOINT_IN_USE`, `SOCKET_FAILED`,
+  `HTTP_FAILED`). Settings persist in `~/.kimo/mcp/server.json` (`startOnLaunch`, default on)
+  and `http.json` (`port`); the server log is `~/.kimo/mcp/server.log` (0600, rotated at 512 KiB).
+- `TAURI_MCP_COMMANDS` grows from 14 to 24: `kimo_mcp_server_start`, `_stop`, `_restart`,
+  `kimo_mcp_server_settings_get`, `_set`, `kimo_mcp_port_check`, `kimo_mcp_http_token_get`,
+  `kimo_mcp_log_info`, `kimo_mcp_log_reveal` (granted to `mcp-host` and `mcp-ui`) and the
+  host-only `kimo_mcp_scope_allow` (the document host widens Rust's deny-by-default fs scope to a
+  path an MCP call was authorized for, before opening / creating / exporting it). Mirrored in
+  `command_list_mcp.rs`; the parity test checks all three.
+- The desktop CSP allows `'wasm-unsafe-eval'` (CanvasKit / Yoga in the document host's renders),
+  and `validateInput` falls back to the interpreting `@cfworker/json-schema` validator where
+  `new Function` is refused (Ajv needs eval; the CSP keeps forbidding it).
+- `McpConnectionInfo` / `AgentPresence`: `call {tool, label, startedAt}` while a call runs,
+  `focus` (changed node ids) and `paused`. `McpActivityEntry` / `ActivityEntry`: `label`,
+  `opCount`, `revisionBefore`. `ApprovalRequest.preview.kinds`: op kind per node id, filled by a
+  quiet dry run (`DispatchOptions.preview`, no activity entry, untracked handlers).
+- Pause is real: `McpHostRuntime.pause(client)` makes `DispatchOptions.beforeCall` hold every
+  new call of that client before validation and authorization until `resume` (a call already
+  running finishes; a held call fails TIMEOUT retryable if the connection closes). It no longer
+  rewrites the client's policy. Windows reach it through the document host RPC `mcpPause`.

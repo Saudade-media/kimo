@@ -9,6 +9,29 @@
  * {@link FileSessionProvider}; the UI renders {@link SessionState} only. Copy strings here are
  * the design's; components are named by their `desing.pen` component (and node id).
  */
+
+import {
+  type CliDetection as AgentCliDetection,
+  type CliProcessHost as AgentCliProcessHost,
+  type ConnectionTest as AgentConnectionTest,
+  type ErrorCard as AgentErrorCard,
+  type ErrorCardAction as AgentErrorCardAction,
+  type GenericCliConfig as AgentGenericCliConfig,
+  type Mode as AgentMode,
+  type ModeConfig as AgentModeConfig,
+  type ModelSelection as AgentModelSelection,
+  type PromptRunState as AgentPromptRunState,
+  type ProviderKind as AgentProviderKind,
+  type Reach as AgentReach,
+  type ReachRow as AgentReachRow,
+  type ReviewDecision as AgentReviewDecision,
+  type SessionMeta as AgentSessionMeta,
+  type Skill as AgentSkill,
+  type ThinkingMode as AgentThinkingMode,
+  type TurnRecord as AgentTurnRecord,
+  IN_APP_APPROVAL_TIMEOUT_MS,
+  MAX_AGENTS,
+} from "@kimo/ai-agent"
 import type {
   AppliedState,
   ConflictKind,
@@ -28,6 +51,7 @@ import {
 } from "@kimo/mcp-server"
 import type { HostStatus as InstallerHostStatus } from "@kimo/mcp-server/installer"
 import type {
+  CliProcessHostLike,
   FileRef,
   GitOperation,
   GitState,
@@ -876,3 +900,303 @@ export interface AgentsController {
 
 /** Host API the controller needs (re-exported for builders). */
 export type AgentsHost = McpHostApi
+
+// ===============================================================================================
+// M6 built-in agent (ADR 0014): the agent panel, sessions, model picker, modes, error cards,
+// Settings › AI providers (API keys + local CLIs) and prompt-node run state, as designed on board
+// 22 "Built-in Agent (M6)" of `desing.pen` (D0zDSY). The runtime lives in `@kimo/ai-agent`;
+// keys and CLI processes go through `@kimo/platform` (`SecretsApi`, `createRelayFetch`,
+// `CliAgentsApi`). Everything the agent does is drawn in the `agent` teal.
+// ===============================================================================================
+
+/** The platform's CLI host mirror stays identical to the agent's interface. */
+export type CliHostMirrorMatches = Assert<Same<CliProcessHostLike, AgentCliProcessHost>>
+
+/** In-app approvals wait indefinitely (external MCP keeps AGENT_APPROVAL_TIMEOUT_MS). */
+export const AGENT_IN_APP_APPROVAL_TIMEOUT_MS = IN_APP_APPROVAL_TIMEOUT_MS
+/** Lead decision: ≤ 6 parallel agents in side by side / split. */
+export const AGENT_MAX_PARALLEL = MAX_AGENTS
+
+/** Settings › AI providers › Usage & limits (stored in settings, not in the keychain). */
+export interface AgentUsageSettings {
+  /** 0 = no limit. When reached the agent finishes the current op batch, then stops and asks. */
+  monthlyLimitUsd: number
+  /** Ask before a turn expected to cost more than this (side by side × N counts as one turn). */
+  warnPerTurnUsd: number
+  /** Per message tokens and cost, and the session total in the thread header. */
+  showCost: boolean
+  /** Settings "Default": overrides the provider precedence when usable. */
+  defaultModel: AgentModelSelection | null
+}
+
+export const AGENT_USAGE_DEFAULTS: AgentUsageSettings = {
+  monthlyLimitUsd: 0,
+  warnPerTurnUsd: 1,
+  showCost: true,
+  defaultModel: null,
+}
+
+/** One row of the Agent tab's model picker (board 22 C): grouped by provider, default first. */
+export interface ModelPickerGroup {
+  /** `anthropic`, `openai`, `custom:ollama`, `cli:claude-code`, … */
+  provider: string
+  label: string
+  family: "api" | "cli"
+  isDefault: boolean
+  /** False → an "Add a key…" / "Sign in…" row that opens Settings. */
+  available: boolean
+  /** "no key", "not signed in", "desktop only", "local". */
+  tag?: string
+  /** Subscription CLIs show tokens/turns, never dollars. */
+  billing: AgentTurnRecord["billing"]
+  models: { id: string; label: string; role?: "agent" | "fast" | "local"; thinking: boolean }[]
+}
+
+/** An AgentStep row (running = teal loader). */
+export interface AgentStepView {
+  callId: string
+  tool: string
+  label: string
+  state: "running" | "done" | "failed"
+  summary?: string
+  changed: string[]
+  undoToken?: string
+  errorCode?: string
+}
+
+/** MessageMeta (S0S1S) under every finished agent message. */
+export interface MessageMetaView {
+  tokensIn: number
+  tokensOut: number
+  /** Estimated dollars (API), null for subscription CLIs (show "subscription"). */
+  costUsd: number | null
+  billing: NonNullable<AgentTurnRecord["billing"]>
+  wallMs: number
+  /** Only the last turn (its op groups are on top of the undo stack). */
+  canRegenerate: boolean
+}
+
+export interface AttachmentChipView {
+  id: string
+  kind: "selection" | "image"
+  label: string
+  nodeIds?: string[]
+  /** png / jpeg / webp ≤ 5 MB, base64. */
+  image?: { mimeType: "image/png" | "image/jpeg" | "image/webp"; data: string }
+}
+
+export type AgentMessageView =
+  | {
+      kind: "user"
+      id: string
+      text: string
+      attachments: AttachmentChipView[]
+      /** "Using brand-voice · kimo-design". */
+      skills: string[]
+      /** Tagged "From Home" on the first message of a Home hand-off. */
+      fromHome: boolean
+    }
+  | {
+      kind: "agent"
+      id: string
+      turnId: string
+      text: string
+      streaming: boolean
+      steps: AgentStepView[]
+      meta?: MessageMetaView
+      /** Inline error / interrupt card (never a modal). */
+      card?: AgentErrorCard
+    }
+
+/** One agent of a side by side / split run (mode summary + presence chips). */
+export interface ModeAgentRowView {
+  origin: string
+  /** "Lead", "Agent 1", … */
+  label: string
+  /** Scope frame name ("Hero"); "page" for the lead. */
+  scopeName: string
+  modelLabel: string
+  ops: number
+  rejected: number
+  costUsd: number | null
+  state: "running" | "done" | "stopped" | "error" | "paused"
+}
+
+export interface ModeSummaryView {
+  mode: Exclude<AgentMode, "single">
+  agents: ModeAgentRowView[]
+  done: number
+  total: number
+  costUsd: number | null
+  tokens: number
+  /** Iterate: "pass 2 of 3 · review" and the review card. */
+  iterate?: { pass: number; of: number; reviewing: boolean; summary: string; changes: number }
+}
+
+export interface AgentComposerView {
+  state: "idle" | "streaming" | "waiting-approval" | "paused"
+  text: string
+  /** Typing while streaming queues follow-ups, sent when the turn ends. */
+  queued: string[]
+  model: AgentModelSelection | null
+  thinking: AgentThinkingMode
+  /** Off / Auto / Max shown only for models that support it. */
+  thinkingAvailable: boolean
+  mode: AgentModeConfig
+  attachments: AttachmentChipView[]
+  /** "/" menu open with the filter text. */
+  slash: { open: boolean; filter: string } | null
+}
+
+/** Agent tab state for one window/document. */
+export interface AgentPanelState {
+  session: AgentSessionMeta | null
+  messages: AgentMessageView[]
+  composer: AgentComposerView
+  header: {
+    title: string
+    costUsd: number | null
+    tokens: number
+    billing: MessageMetaView["billing"]
+  }
+  sessionsOpen: boolean
+  sessions: { thisFile: AgentSessionMeta[]; otherFiles: AgentSessionMeta[]; query: string }
+  skills: { builtin: AgentSkill[]; user: AgentSkill[]; enabled: string[]; errors: string[] }
+  picker: ModelPickerGroup[]
+  modeSummary: ModeSummaryView | null
+  /** In-app approval prompt (no countdown: waits until answered or Stop). */
+  approval: ApprovalPromptView | null
+  /** No provider and no signed-in CLI: the first-run card replaces the thread. */
+  firstRun: boolean
+}
+
+/** What the Agent tab calls. Implemented in apps/web/src/agents over `@kimo/ai-agent`. */
+export interface AgentPanelController {
+  readonly state: AgentPanelState
+  subscribe(listener: (s: AgentPanelState) => void): Unsubscribe
+  /** Sends (or queues while streaming). `/name` tokens force skills for this turn. */
+  send(text: string): Promise<void>
+  /** Esc / Stop: aborts the stream; the in-flight op batch commits or rolls back atomically. */
+  stop(): void
+  regenerate(turnId: string): Promise<void>
+  /** "Undo turn" on the Stopped card / meta: undoes the turn's op groups newest first. */
+  undoTurn(turnId: string): Promise<{ ok: boolean; stale: boolean }>
+  continueTurn(): Promise<void>
+  newSession(): void
+  openSession(id: string): Promise<void>
+  deleteSession(id: string): Promise<void>
+  searchSessions(query: string): void
+  toggleHistory(): void
+  setModel(selection: AgentModelSelection): void
+  setThinking(mode: AgentThinkingMode): void
+  setMode(config: AgentModeConfig): void
+  toggleSkill(name: string, enabled: boolean): void
+  addImage(image: NonNullable<AttachmentChipView["image"]>): void
+  removeAttachment(id: string): void
+  answerApproval(id: string, choice: McpApprovalChoice): Promise<void>
+  /** Error card actions. */
+  cardAction(turnId: string, action: AgentErrorCardAction): void
+  /** Iterate review: next pass (optional steer), stop, or revert to a pass (0 = original). */
+  review(decision: AgentReviewDecision): Promise<void>
+  stopAll(): void
+}
+
+// --- Settings › AI providers --------------------------------------------------------------------
+
+export interface ProviderRowView {
+  id: string
+  kind: AgentProviderKind
+  label: string
+  status: "connected" | "key-saved" | "not-set" | "desktop-only" | "local"
+  isDefault: boolean
+  baseURL: string
+  models: { agent: string; fast: string }
+  /** Last 4 characters of the key ("3f9a"); never the key. */
+  keyHint: string | null
+  storage: "keychain" | "localStorage"
+  /** Anthropic on web only: "Allow Anthropic calls from the browser". */
+  allowBrowser?: boolean
+  lastTest?: AgentConnectionTest
+  reach: { web: AgentReach; desktop: AgentReach }
+}
+
+/** Settings › AI providers › Local agents (desktop only). */
+export interface CliAgentRowView {
+  detection: AgentCliDetection
+  isDefault: boolean
+  /** "Signed in · max · me@example.com", "Not signed in — run `claude auth login`". */
+  status: string
+}
+
+export interface AgentUsageView {
+  /** "Oct 1 – Oct 31". */
+  period: string
+  costUsd: number
+  limitUsd: number
+  tokens: number
+  sessions: number
+  byProvider: {
+    provider: string
+    label: string
+    costUsd: number | null
+    tokens: number
+    billing: MessageMetaView["billing"]
+  }[]
+}
+
+export interface AiProvidersState {
+  platform: "desktop" | "web"
+  providers: ProviderRowView[]
+  clis: CliAgentRowView[]
+  usage: AgentUsageView
+  settings: AgentUsageSettings
+  matrix: readonly AgentReachRow[]
+}
+
+export interface AiProvidersController {
+  readonly state: AiProvidersState
+  subscribe(listener: (s: AiProvidersState) => void): Unsubscribe
+  /** Paste → auto Test (board 22). Desktop: keychain `kimo` / `provider.<id>`; web: localStorage. */
+  setKey(providerId: string, key: string): Promise<AgentConnectionTest>
+  deleteKey(providerId: string): Promise<void>
+  test(providerId: string): Promise<AgentConnectionTest>
+  setModels(providerId: string, models: { agent: string; fast: string }): Promise<void>
+  setBaseURL(providerId: string, baseURL: string | null): Promise<void>
+  setAllowBrowser(providerId: string, allow: boolean): Promise<void>
+  addCustom(config: {
+    label: string
+    baseURL: string
+    wire: "openai-chat" | "openai-responses" | "anthropic"
+    models: { agent: string; fast: string }
+    free?: boolean
+  }): Promise<string>
+  removeProvider(providerId: string): Promise<void>
+  setDefault(selection: AgentModelSelection | null): Promise<void>
+  setUsageSettings(patch: Partial<Omit<AgentUsageSettings, "defaultModel">>): Promise<void>
+  redetectClis(): Promise<AgentCliDetection[]>
+  addGenericCli(config: AgentGenericCliConfig): Promise<void>
+}
+
+// --- Home composer & prompt nodes ---------------------------------------------------------------
+
+/** Home composer hand-off (board 22 "Home composer rules"). */
+export interface HomeAgentHandoff {
+  prompt: string
+  /** Chip preset ("Landing page", "Mobile app"…) → frame preset. */
+  preset?: string
+  /** Created file (title from the fast model, never overwriting: FILE_EXISTS → " 2"). */
+  path: string
+  /** Session origin "home"; mode Single, scope page; first root frame placeholder: true. */
+  sessionId: string
+}
+
+export interface HomeAgentCardState {
+  /** providers.length = 0 and no signed-in CLI → card replaces the chips, send disabled. */
+  noProvider: boolean
+  /** "Design by hand instead" dismissed until a provider is added. */
+  dismissed: boolean
+  platform: "desktop" | "web"
+}
+
+/** Prompt-node run state, keyed by `promptRunKey(fileId, nodeId)` (app data, not the file). */
+export type PromptRunStates = Record<string, AgentPromptRunState>

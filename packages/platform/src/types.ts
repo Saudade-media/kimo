@@ -15,6 +15,7 @@
  */
 import type { AppliedCapabilities } from "./capabilities"
 import type { DeepLink } from "./links"
+import type { McpHostApi } from "./mcp"
 import type { SettingKey, Settings, SettingsSchema, UpdateChannel } from "./settings"
 
 export type Unsubscribe = () => void
@@ -54,6 +55,11 @@ export interface KimoPlatform {
   readonly window: WindowApi
   readonly settings: SettingsApi
   readonly launch: LaunchApi
+  /**
+   * M5 MCP server surface (ADR 0013 §11): desktop over Rust + the document host, memory
+   * scripted; absent in the browser (no MCP server there).
+   */
+  readonly mcp?: McpHostApi
   /** Stops watchers and listeners (window teardown). */
   dispose(): void
 }
@@ -503,7 +509,7 @@ export const REPO_URL_PLACEHOLDER = "https://github.com/kimo-design/kimo"
 // ===============================================================================================
 
 /** Settings panes (board 19). */
-export type SettingsPane = "general" | "files" | "fonts" | "updates" | "about"
+export type SettingsPane = "general" | "files" | "fonts" | "agents-mcp" | "updates" | "about"
 
 export interface WindowApi {
   /** Window label: `main`, `settings`, `editor-<n>`; `web` in the browser. */

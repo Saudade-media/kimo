@@ -109,6 +109,16 @@ export interface SessionManagerOptions {
   saveRetryMs?: number
   /** Recovery entries owned by this process are hidden from the launch dialog. Default true. */
   hideOwnRecovery?: boolean
+  /**
+   * M5 (ADR 0013 §12, ADR 0002): builds each session. Desktop editor windows pass the document
+   * host's factory (`apps/web/src/host`), so the session's store is a replica of the host's and
+   * the host owns the lease, autosave and recovery. Default: a local `FileDocumentSession`.
+   */
+  createSession?: (
+    ref: FileRef,
+    manager: FileSessionManager,
+    store: DocStore,
+  ) => FileDocumentSession
 }
 
 const READER_FORMAT = majorMinor(FORMAT_VERSION)
@@ -1024,6 +1034,7 @@ export class FileSessionManager implements SessionManager {
   readonly createConflictSession: SessionManagerOptions["createConflictSession"]
   readonly saveRetryMs: number | undefined
   private readonly createStore: () => DocStore
+  private readonly createSession: SessionManagerOptions["createSession"]
   private readonly hideOwn: boolean
   private readonly byRef = new Map<FileRef, FileDocumentSession>()
   private readonly opening = new Map<FileRef, Promise<FileDocumentSession>>()
@@ -1040,6 +1051,7 @@ export class FileSessionManager implements SessionManager {
     this.now = options.now ?? Date.now
     this.createConflictSession = options.createConflictSession
     this.createStore = options.createStore ?? (() => createDocStore())
+    this.createSession = options.createSession
     this.hideOwn = options.hideOwnRecovery ?? true
     this.saveRetryMs = options.saveRetryMs
   }
@@ -1066,7 +1078,10 @@ export class FileSessionManager implements SessionManager {
     if (pending) return pending
     if (!isUntitledRef(ref)) this.lastFolder = dirnameOf(ref)
     const p = (async () => {
-      const session = new FileDocumentSession(ref, this, this.createStore())
+      const store = this.createStore()
+      const session = this.createSession
+        ? this.createSession(ref, this, store)
+        : new FileDocumentSession(ref, this, store)
       this.byRef.set(ref, session)
       await session.init(options)
       this.changed()

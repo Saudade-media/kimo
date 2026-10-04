@@ -181,7 +181,9 @@
 }
 
 .kimo-desktop-topbar__drag {
-  display: block;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   flex: 1 1 0;
   min-width: 0;
   height: 48px;

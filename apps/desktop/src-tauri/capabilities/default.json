@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Least privilege (ADR 0012 §5): the editor and Settings windows may call exactly the kimo_* commands of TauriCommandMap and listen to kimo:// events. No plugin default sets: dialogs, opener, updater and deep links are driven from Rust.",
-  "windows": ["main", "editor-*", "settings"],
+  "windows": ["main", "editor-*", "settings", "document-host"],
   "permissions": [
     "core:event:allow-listen",
     "core:event:allow-unlisten",

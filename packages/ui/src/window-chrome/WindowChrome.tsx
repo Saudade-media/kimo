@@ -175,6 +175,11 @@ export interface DesktopTopbarProps extends Omit<ComponentPropsWithRef<"header">
   branch?: ReactNode
   /** Save Status pill (Oxn3z). */
   status?: ReactNode
+  /**
+   * Board 21 Agent Presence (cIMyI): inside the Drag Region (justify end, align center), right
+   * before Save Status.
+   */
+  presence?: ReactNode
   /** Zoom, Theme, Preview, Export (the editor's own controls). */
   trailing?: ReactNode
   /**
@@ -199,6 +204,7 @@ export function DesktopTopbar({
   breadcrumb,
   branch,
   status,
+  presence,
   trailing,
   logo,
   className,
@@ -217,7 +223,9 @@ export function DesktopTopbar({
       {logo ?? <TrafficLights inset={inset} focused={focused} drawLights={drawLights} />}
       {breadcrumb}
       {branch}
-      <span className="kimo-desktop-topbar__drag" data-tauri-drag-region="" />
+      <span className="kimo-desktop-topbar__drag" data-tauri-drag-region="">
+        {presence}
+      </span>
       {status}
       {trailing}
     </header>

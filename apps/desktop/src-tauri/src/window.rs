@@ -14,7 +14,14 @@ use tauri::{
 };
 
 pub const SETTINGS_LABEL: &str = "settings";
-pub const SETTINGS_PANES: &[&str] = &["general", "files", "fonts", "updates", "about"];
+pub const SETTINGS_PANES: &[&str] = &[
+    "general",
+    "files",
+    "fonts",
+    "agents-mcp",
+    "updates",
+    "about",
+];
 /// Board 19 "Settings Window" (XmeDB): a fixed 840×536 window.
 pub const SETTINGS_SIZE: (f64, f64) = (840.0, 536.0);
 /// Native traffic lights (02d WindowChrome/TrafficLights L2zCG: close dot at {16, 18}); the
@@ -252,9 +259,35 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
                 .unwrap()
                 .retain(|_, (l, _)| *l != label);
             st.close_allowed.lock().unwrap().remove(&label);
+            if label == crate::mcp::HOST_LABEL {
+                crate::mcp::on_host_destroyed(app);
+            } else {
+                exit_if_no_user_windows(app, &label);
+            }
         }
         _ => {}
     }
+}
+
+/// The hidden document host keeps Tauri from seeing "all windows closed", so the app exits
+/// itself when the last user-facing window goes (as it did before M5), or when a quit is under
+/// way and the last editor window has closed.
+fn exit_if_no_user_windows<Rt: Runtime>(app: &AppHandle<Rt>, destroyed: &str) {
+    let remaining: Vec<String> = app
+        .webview_windows()
+        .into_keys()
+        .filter(|l| l != destroyed && l != crate::mcp::HOST_LABEL)
+        .collect();
+    let quitting = crate::mcp::service(app)
+        .is_some_and(|m| m.quitting.load(std::sync::atomic::Ordering::SeqCst));
+    if should_exit(&remaining, quitting) {
+        app.exit(0);
+    }
+}
+
+pub fn should_exit(remaining_user_windows: &[String], quitting: bool) -> bool {
+    remaining_user_windows.is_empty()
+        || (quitting && !remaining_user_windows.iter().any(|l| is_editor_label(l)))
 }
 
 /// Quit: ask every editor window (each flushes, then closes); the app exits when the last one
@@ -282,6 +315,17 @@ mod tests {
     fn settings_window_matches_board_19() {
         assert_eq!(SETTINGS_SIZE, (840.0, 536.0));
         assert_eq!(TRAFFIC_LIGHTS, Point { x: 16, y: 18 });
+    }
+
+    #[test]
+    fn exits_when_the_last_user_window_goes() {
+        let s = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        assert!(should_exit(&s(&[]), false));
+        assert!(!should_exit(&s(&["main"]), false));
+        assert!(!should_exit(&s(&[SETTINGS_LABEL]), false));
+        // Quitting: Settings alone does not keep the app alive.
+        assert!(should_exit(&s(&[SETTINGS_LABEL]), true));
+        assert!(!should_exit(&s(&["editor-2"]), true));
     }
 
     #[test]

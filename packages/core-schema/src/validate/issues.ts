@@ -62,6 +62,7 @@ export const ISSUE_CODES = {
   // Lints
   TEXT_INVISIBLE: "A text node's fill paints nothing.",
   FIT_ALL_FILL: "A `fit` frame whose children all `fill` the same axis (circular sizing).",
+  PROMPT_TARGET_MISSING: "A prompt's `target` names no frame of this document.",
   VARIABLE_UNUSED: "A variable is not referenced (not reported for library documents).",
 } as const
 
@@ -94,6 +95,7 @@ export const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "THEME_NO_MATCH",
   "TEXT_INVISIBLE",
   "FIT_ALL_FILL",
+  "PROMPT_TARGET_MISSING",
   "VARIABLE_UNUSED",
   "CONFLICT_OPEN",
   "CONFLICT_STALE",

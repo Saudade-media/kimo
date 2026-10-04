@@ -85,6 +85,7 @@ describe("route and copy", () => {
   test("#/settings/<pane>", () => {
     expect(parseSettingsHash("#/settings")).toBe("general")
     expect(parseSettingsHash("#/settings/fonts")).toBe("fonts")
+    expect(parseSettingsHash("#/settings/agents-mcp")).toBe("agents-mcp")
     expect(parseSettingsHash("#/settings/nope")).toBe("general")
     expect(parseSettingsHash("#/file/abc")).toBeNull()
     expect(settingsHash("about")).toBe("#/settings/about")
@@ -92,6 +93,7 @@ describe("route and copy", () => {
       "General",
       "Files & autosave",
       "Fonts & privacy",
+      "Agents & MCP",
       "Updates",
       "About & licenses",
     ])

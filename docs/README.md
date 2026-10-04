@@ -6,7 +6,8 @@
 | [spec/kimo-format-v0.1.md](spec/kimo-format-v0.1.md) | `.kimo` file format specification, v0.1 draft (normative types live in `@kimo/core-schema`) |
 | [adr/](adr/README.md) | Architecture decision records, with the ADR process and template |
 | [scope-checklist.md](scope-checklist.md) | Every feature from teardown section 3 as a checkbox, tagged with its milestone |
-| [kimo CLI](../packages/cli/README.md) | `kimo merge` (semantic git merge driver), `kimo gc`, `kimo validate`: usage and exit codes |
+| [agents/](agents/index.md) | The MIT agent guides for coding agents (the same text `kimo_read_docs` serves): the `.kimo` model, `kimo_apply_ops` cookbook, layout, text, components, tokens, results and verification, error codes, web/mobile/tables/export workflows |
+| [kimo CLI](../packages/cli/README.md) | `kimo merge` (semantic git merge driver), `kimo gc`, `kimo validate`, `kimo mcp` (MCP server, attach or headless) and `kimo mcp install/remove/status`: usage and exit codes |
 
 Repository-level documents:
 
@@ -24,7 +25,7 @@ Repository-level documents:
 These are referenced by the plan and will be added with their milestones:
 
 - `spec/socket.md`: the desktop socket JSON-RPC protocol (M5, [ADR 0008](adr/0008-mcp-sidecar-in-rust.md))
-- MCP tool reference and the MIT agent guides served by `kimo_read_docs` (M5)
+- MCP tool reference (M5)
 - Per-provider browser-support matrix ([ADR 0006](adr/0006-llm-provider-interface.md), M6)
 - Format changelog and migration policy (with the first format change; frozen at v1.0)
 

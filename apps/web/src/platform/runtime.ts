@@ -12,11 +12,19 @@ import type { KimoPlatform, OpenRequest, SettingsPane } from "@kimo/platform"
 import { createBrowserPlatform } from "@kimo/platform/browser"
 import { createContext, useContext } from "react"
 import { conflictSessionFactory } from "../conflicts"
-import { createSessionManager, type FileDocumentSession, type FileSessionManager } from "./session"
+import type { HostClient } from "../host/client"
+import {
+  createSessionManager,
+  type FileDocumentSession,
+  type FileSessionManager,
+  type SessionManagerOptions,
+} from "./session"
 
 export interface AppRuntime {
   platform: KimoPlatform
   manager: FileSessionManager
+  /** Desktop: this window's document host client (kimo_focus, selection reports, agent undo). */
+  hostClient?: HostClient | null
 }
 
 /** True inside the Tauri webview (same test as `@kimo/desktop` `isTauri`). */
@@ -36,12 +44,19 @@ export async function createAppPlatform(): Promise<KimoPlatform> {
 /** Edits a conflict pick could not apply (logged; the shell toasts store rejections itself). */
 const onConflictReject = (message: string) => console.warn("Kimo: conflict pick rejected", message)
 
-/** The window's session manager over `platform` (call once per window). */
-export function createAppSessionManager(platform: KimoPlatform): FileSessionManager {
+/**
+ * The window's session manager over `platform` (call once per window). With `createSession`
+ * (M5 desktop: the document host's factory), sessions are replicas of the host's documents.
+ */
+export function createAppSessionManager(
+  platform: KimoPlatform,
+  createSession?: SessionManagerOptions["createSession"],
+): FileSessionManager {
   return createSessionManager({
     platform,
     merge: threeWayMerge,
     createConflictSession: conflictSessionFactory({ onReject: onConflictReject }) as never,
+    ...(createSession ? { createSession } : {}),
   })
 }
 
@@ -55,9 +70,38 @@ export async function createAppRuntime(
   const platform = await createAppPlatform()
   // Settings drive the theme and autosave: read them before the first render.
   await platform.settings.ready.catch(() => undefined)
-  const manager = createAppSessionManager(platform)
+  // M5: the hidden document host (`#/host`, ADR 0002 Option A) holds every open document and
+  // serves MCP. It renders nothing and never takes launch requests: the promise never settles.
+  if (inTauri() && /^#\/host\/?$/.test(location.hash)) {
+    const { startHostRoute } = await import("../host")
+    await startHostRoute(platform)
+    return new Promise<AppRuntime>(() => {})
+  }
+  // Desktop editor windows are clients of the document host when one answers; otherwise (an
+  // older shell, the browser) sessions stay local to the window as in M4.
+  let createSession: SessionManagerOptions["createSession"]
+  let hostClient: HostClient | null = null
+  if (inTauri()) {
+    const settingsWindow = /^#\/settings(\/|$)/.test(location.hash)
+    const host = await import("../host")
+    // The Settings window only needs the host for Agents & MCP (prompts, pause); it waits less.
+    const client = await host
+      .connectWindowToHost(undefined, settingsWindow ? 3000 : undefined)
+      .catch(() => null)
+    hostClient = client
+    if (client && !settingsWindow) createSession = host.hostedSessionFactory(client)
+    // M5: the window's `platform.mcp` (Rust relay + document host).
+    const mcp = await host
+      .createDesktopMcpHost({ bridge: host.tauriBridge(), client, os: platform.os })
+      .catch((e: unknown) => {
+        console.warn("Kimo: MCP surface unavailable", e)
+        return null
+      })
+    if (mcp) Object.defineProperty(platform, "mcp", { value: mcp, enumerable: true })
+  }
+  const manager = createAppSessionManager(platform, createSession)
   // The desktop Settings window (`#/settings/<pane>`) edits settings only: it never opens files.
-  if (/^#\/settings(\/|$)/.test(location.hash)) return { platform, manager }
+  if (/^#\/settings(\/|$)/.test(location.hash)) return { platform, manager, hostClient }
   manager.install(onOpened)
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
@@ -70,7 +114,7 @@ export async function createAppRuntime(
       if (session) onOpened(session, request)
     }
   })()
-  return { platform, manager }
+  return { platform, manager, hostClient }
 }
 
 export const RuntimeContext = createContext<AppRuntime | null>(null)

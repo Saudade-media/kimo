@@ -1,0 +1,97 @@
+/*
+ * AgentHostRow: desing.pen 21 > Components (M5) > AgentHostRow (fRQJO).
+ * frame: row, gap 12, padding [12, 0], alignItems center, fill_container, stroke bottom 1 border
+ *   ├ Host Tile (TUMTu) 32 × 32, justify/align center, bg-muted, radius-md
+ *   │   └ Host Icon (V2yoe) lucide 16 text-primary
+ *   ├ Text (tRE0D) column, gap 2, fill
+ *   │   ├ Name Row (sbQqL) row, gap 8, center: Name (svVcp) sans 12 / 500 · Status (ADF2h)
+ *   │   └ Config Path (YxpAP) mono 11 text-tertiary
+ *   └ Actions (CwR2U) row, gap 6, justify end, center
+ */
+.kimo-agent-host-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+.kimo-agent-host-row__tile {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.kimo-agent-host-row__icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.kimo-agent-host-row__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kimo-agent-host-row__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kimo-agent-host-row__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.kimo-agent-host-row__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-agent-host-row__path {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kimo-agent-host-row__actions {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Not found (rLxUT): icon text-tertiary, name text-secondary. */
+.kimo-agent-host-row--muted .kimo-agent-host-row__tile {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-agent-host-row--muted .kimo-agent-host-row__name {
+  color: var(--kimo-text-secondary);
+}

@@ -142,11 +142,23 @@ export interface ApprovalRequest {
   reason: ApprovalReason
   /** One line for the prompt ("Delete 3 layers in Hero"). */
   summary: string
-  /** Optional dry-run preview: counts and the first changed ids. */
-  preview?: { inserted: number; updated: number; deleted: number; nodeIds: string[] }
+  /** Optional dry-run preview: counts, the first changed ids and the op kind per id. */
+  preview?: ApprovalPreview
   requestedAt: number
   /** requestedAt + APPROVAL_TIMEOUT_MS. */
   expiresAt: number
+}
+
+/** What a node would undergo if the call ran (moves count as updates). */
+export type PreviewOpKind = "insert" | "update" | "delete"
+
+export interface ApprovalPreview {
+  inserted: number
+  updated: number
+  deleted: number
+  nodeIds: string[]
+  /** Op kind per entry of `nodeIds`. */
+  kinds?: Record<string, PreviewOpKind>
 }
 
 /** The three buttons. `session` is offered only when {@link sessionAllowable}. */
@@ -285,6 +297,12 @@ export interface ActivityEntry {
   outcome?: ApprovalOutcome
   /** Undo token of the op group (edits), so the UI can offer "Undo agent edit". */
   undoToken?: string
+  /** Op group label ("Insert Card"); edits only. */
+  label?: string
+  /** Resolved ops the call committed (edits / dry runs). */
+  opCount?: number
+  /** Revision before the call, for edits. */
+  revisionBefore?: { epoch: string; seq: number }
 }
 
 /** Keeps the newest {@link ACTIVITY_LIMIT} entries. */
@@ -306,6 +324,10 @@ export interface AgentPresence {
   focus: string[]
   /** What it is doing right now (tool running), or idle. */
   state: "idle" | "reading" | "editing" | "rendering" | "waiting-approval"
+  /** The running call (absent when idle). */
+  call?: { tool: string; label: string; startedAt: number }
+  /** Paused by the user: calls wait until resumed. */
+  paused?: boolean
   connectedAt: number
   lastActivityAt: number
   policy: ClientPolicy

@@ -82,4 +82,15 @@
 @import "./conflict-row/ConflictRow.css";
 @import "./conflict-marker/ConflictMarker.css";
 @import "./canvas-conflict-marker/CanvasConflictMarker.css";
+
+/* M5 agents (board 21). */
+@import "./agent-orb/AgentOrb.css";
+@import "./agent-presence-chip/AgentPresenceChip.css";
+@import "./segmented-text/SegmentedText.css";
+@import "./agent-tone-pill/AgentTonePill.css";
+@import "./agent-host-row/AgentHostRow.css";
+@import "./agent-client-row/AgentClientRow.css";
+@import "./agent-op-row/AgentOpRow.css";
+@import "./activity-row/ActivityRow.css";
+@import "./agent-layer-mark/AgentLayerMark.css";
 @import "./gallery/Gallery.css";

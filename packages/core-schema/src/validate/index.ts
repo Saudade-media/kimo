@@ -1398,6 +1398,16 @@ class Validation {
           )
         }
       }
+      if (n.type === "prompt" && typeof n.target === "string") {
+        const t = this.nodes[n.target]
+        if (!isObject(t) || t.type !== "frame") {
+          this.sink.add(
+            "PROMPT_TARGET_MISSING",
+            ptr("nodes", id, "target"),
+            `"${n.target}" is not a frame of this document; a run creates a new frame instead`,
+          )
+        }
+      }
       if (n.type === "frame" && isObject(n.layout)) {
         const flow = (kids.get(id) ?? []).filter(
           (c) => c.position !== "absolute" && this.visual(c, "visible") !== false,

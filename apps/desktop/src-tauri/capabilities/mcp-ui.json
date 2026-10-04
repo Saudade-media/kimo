@@ -1,0 +1,30 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "mcp-ui",
+  "description": "M5 agents UI (ADR 0013 §11): editor and Settings windows read the MCP relay status and connections, disconnect agents, toggle HTTP, rotate host tokens, run the installer's config reads/writes, read activity, edit policies, start/stop/restart the server, read and set its settings (start on launch, HTTP port), check a port, read a host's bearer, read and reveal the server log, and emit approval answers to the document host. The relay's host-side commands are not granted here.",
+  "windows": ["main", "editor-*", "settings"],
+  "permissions": [
+    "core:event:allow-emit",
+    "core:event:allow-emit-to",
+    "allow-kimo-mcp-status",
+    "allow-kimo-mcp-connections",
+    "allow-kimo-mcp-disconnect",
+    "allow-kimo-mcp-http-set-enabled",
+    "allow-kimo-mcp-http-token-rotate",
+    "allow-kimo-mcp-config-read",
+    "allow-kimo-mcp-config-write",
+    "allow-kimo-mcp-activity-append",
+    "allow-kimo-mcp-activity-read",
+    "allow-kimo-mcp-policies-get",
+    "allow-kimo-mcp-policies-set",
+    "allow-kimo-mcp-server-start",
+    "allow-kimo-mcp-server-stop",
+    "allow-kimo-mcp-server-restart",
+    "allow-kimo-mcp-server-settings-get",
+    "allow-kimo-mcp-server-settings-set",
+    "allow-kimo-mcp-port-check",
+    "allow-kimo-mcp-http-token-get",
+    "allow-kimo-mcp-log-info",
+    "allow-kimo-mcp-log-reveal"
+  ]
+}

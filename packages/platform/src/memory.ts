@@ -7,6 +7,7 @@
 import type { AppliedCapabilities } from "./capabilities"
 import { PlatformError, type PlatformErrorCode } from "./errors"
 import { basenameOf, dirnameOf, isKimoPath } from "./links"
+import { createMemoryMcpHost, type MemoryMcpHost } from "./mcp-memory"
 import { createSettingsStore } from "./settings-store"
 import {
   type AcquireResult,
@@ -73,7 +74,7 @@ export interface MemoryControl {
   setLocalFonts(families: LocalFontFamily[], bytes?: Record<string, Uint8Array>): void
 }
 
-export type MemoryPlatform = KimoPlatform & { control: MemoryControl }
+export type MemoryPlatform = KimoPlatform & { control: MemoryControl; mcp: MemoryMcpHost }
 
 export interface MemoryPlatformOptions {
   os?: "macos" | "windows" | "linux"
@@ -288,6 +289,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
     os,
     appVersion,
     capabilities,
+    mcp: createMemoryMcpHost({ status: { version: appVersion } }),
     files: {
       async readText(ref) {
         const f = must(ref)

@@ -4,17 +4,21 @@
  *   kimo merge <base> <ours> <theirs> [path] [-o out] [-L ours,base,theirs] [--marker-size n]
  *   kimo gc <file> [--yes] [--json]
  *   kimo validate <file...> [--json] [--strict] [--no-lints]
+ *   kimo mcp [--attach|--headless] …          (MCP server over stdio, ADR 0013 §8)
+ *   kimo mcp install|remove|status [--host …]  (agent host configs, ADR 0013 §9)
  *
  * {@link run} is the whole program as a function, so tests run it in process.
  */
 import { GC_EXIT, runGc } from "./gc"
 import { type CliIO, processIO } from "./io"
+import { MCP_USAGE, type McpStreams, McpUsageError, runMcp } from "./mcp/command"
 import { type MergeArgs, runMerge } from "./merge"
 import { runValidate, VALIDATE_EXIT } from "./validate"
 
 export { MERGE_EXIT, referencedAssets } from "@kimo/core-schema"
 export { GC_EXIT, type GcArgs, type GcPlan, planGc, runGc } from "./gc"
 export { type CliIO, liveLease, pathHash, processIO, writeFileAtomic } from "./io"
+export { MCP_USAGE, type McpStreams, runMcp } from "./mcp/command"
 export { type MergeArgs, runMerge } from "./merge"
 export { runValidate, VALIDATE_EXIT, type ValidateArgs, validateFile } from "./validate"
 
@@ -38,6 +42,14 @@ Usage:
   kimo validate <file...> [--json] [--strict] [--no-lints]
       Validates documents (with their libraries and assets/ listing). Exit 0 valid,
       1 errors (or warnings with --strict), 2 unreadable or newer format.
+
+  kimo mcp [--attach | --headless] [--allow <level>] [--files <glob>]...
+      MCP server for coding agents on stdio: attaches to the running Kimo app, else
+      edits files headless. See kimo mcp --help.
+
+  kimo mcp install | remove | status [--host <host>|all] [--project] [--dry-run]
+      Adds/removes/shows the kimo entry in Claude Code, Codex, Gemini CLI, Cursor and
+      VS Code configs (backup first; only the kimo entry changes).
 
   kimo help | --help    kimo version | --version
 `
@@ -81,7 +93,11 @@ function only(flags: Map<string, string[]>, allowed: readonly string[]) {
 }
 
 /** Runs one command line; resolves to the process exit code. */
-export async function run(argv: readonly string[], io: CliIO = processIO): Promise<number> {
+export async function run(
+  argv: readonly string[],
+  io: CliIO = processIO,
+  streams: McpStreams = {},
+): Promise<number> {
   const [command, ...rest] = argv
   try {
     switch (command) {
@@ -136,6 +152,8 @@ export async function run(argv: readonly string[], io: CliIO = processIO): Promi
           io,
         )
       }
+      case "mcp":
+        return await runMcp(rest, io, streams)
       case "version":
       case "--version":
       case "-v":
@@ -155,11 +173,17 @@ export async function run(argv: readonly string[], io: CliIO = processIO): Promi
       io.stderr(`kimo: ${e.message}\n\n${USAGE}`)
       return USAGE_EXIT
     }
+    if (e instanceof McpUsageError) {
+      io.stderr(`kimo mcp: ${e.message}\n\n${MCP_USAGE}`)
+      return USAGE_EXIT
+    }
     io.stderr(`kimo: ${(e as Error).stack ?? String(e)}\n`)
-    return command === "merge"
-      ? 2
-      : command === "gc"
-        ? GC_EXIT.unreadable
-        : VALIDATE_EXIT.unreadable
+    return command === "mcp"
+      ? 1
+      : command === "merge"
+        ? 2
+        : command === "gc"
+          ? GC_EXIT.unreadable
+          : VALIDATE_EXIT.unreadable
   }
 }

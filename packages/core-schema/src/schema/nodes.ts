@@ -251,14 +251,37 @@ const noteProps = {
   h: sizeOpt(),
   content: Type.String(),
   style: opt(TextStyle),
+  author: opt(
+    Type.String({
+      minLength: 1,
+      description: "Display name of the person who wrote it (M6; e.g. the OS user name).",
+    }),
+  ),
 }
 
 export const NoteNode = Strict({ type: Type.Literal("note"), ...noteProps })
 
+/**
+ * A typed model selection (ADR 0006 §4, ADR 0014): never a delimited string. `provider` is a
+ * provider id configured in the app (`anthropic`, `openai`, `gemini`, `openrouter`, `custom:<n>`…).
+ */
+export const ModelRef = Strict({
+  provider: Type.String({ minLength: 1, description: "Provider id, e.g. anthropic." }),
+  model: Type.String({ minLength: 1, description: "Model id at that provider." }),
+})
+export type ModelRef = Static<typeof ModelRef>
+
 export const PromptNode = Strict({
   type: Type.Literal("prompt"),
   ...noteProps,
-  model: opt(Type.String({ minLength: 1 })),
+  model: opt(
+    Type.Union([Type.String({ minLength: 1 }), ModelRef], {
+      description:
+        "Model for runs: {provider, model} (M6). A bare string is the legacy form: a model id that must resolve to exactly one configured provider, else the run fails loudly.",
+    }),
+  ),
+  /** Frame the run is scoped to (M6); absent = a new frame next to the prompt. */
+  target: opt(Id),
 })
 
 /** Feature "node/script". */

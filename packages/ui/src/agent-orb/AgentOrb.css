@@ -1,0 +1,19 @@
+/*
+ * AgentOrb: desing.pen 21 > Components (M5) > AgentOrb (dT6Po).
+ * ellipse 20 × 20, fill linear gradient rotation 225: agent (0) → agent-2 (1).
+ * Instances on a solid agent fill add stroke on-accent (1 or 1.5, inside).
+ */
+.kimo-agent-orb {
+  box-sizing: border-box;
+  display: block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--kimo-agent) 0%, var(--kimo-agent-2) 100%);
+}
+
+.kimo-agent-orb[data-ring] {
+  --kimo-orb-ring: 1px; /* runtime: the instance's stroke width, set inline */
+  box-shadow: inset 0 0 0 var(--kimo-orb-ring, 1px) var(--kimo-on-accent);
+}

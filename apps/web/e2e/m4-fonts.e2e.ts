@@ -143,7 +143,12 @@ export const scenarios: Scenario[] = [
       await open(ctx)
       await hook(page, (k) => k.show({ kind: "settings", pane: "files" }))
       await page.waitForSelector(".settings-window")
-      expect((await page.locator(".settings-nav-item").count()) === 5, "five panes")
+      expect((await page.locator(".settings-nav-item").count()) === 6, "six panes")
+      expect(
+        (await page.locator(".settings-nav-item").nth(3).getAttribute("data-pane")) ===
+          "agents-mcp",
+        "Agents & MCP sits between Fonts & privacy and Updates",
+      )
       expect(
         (await page.locator(".settings-title").textContent()) === "Files & autosave",
         "opens on Files & autosave",
@@ -182,10 +187,10 @@ export const scenarios: Scenario[] = [
         undefined,
         { timeout: 2000 },
       )
-      // ↓ moves between panes; Escape closes.
+      // ↓ moves between panes (Fonts & privacy → Agents & MCP); Escape closes.
       await page.locator('.settings-nav-item[data-pane="fonts"]').focus()
       await page.keyboard.press("ArrowDown")
-      expect((await page.locator(".settings-title").textContent()) === "Updates", "arrow nav")
+      expect((await page.locator(".settings-title").textContent()) === "Agents & MCP", "arrow nav")
       await page.keyboard.press("Escape")
       await page.waitForSelector(".settings-window", { state: "detached" })
     },

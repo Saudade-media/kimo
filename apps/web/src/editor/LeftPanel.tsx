@@ -5,7 +5,16 @@
  * (top border, gap 8, padding [10, 12]: files icon, "N pages", spacer, Kbd ⌘P).
  */
 import type { DocStore, NodeData, Op } from "@kimo/editor-state"
-import { EmptyState, Input, Kbd, LayerRow, LayerRowConflict, LayerRowM3, Tabs } from "@kimo/ui"
+import {
+  AGENT_LAYER_ROW_CLASS,
+  EmptyState,
+  Input,
+  Kbd,
+  LayerRow,
+  LayerRowConflict,
+  LayerRowM3,
+  Tabs,
+} from "@kimo/ui"
 import { type KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { UiStore } from "../canvas/contract"
 import { type EditorConflictSession, useOpenConflictNodes } from "../conflicts"
@@ -30,11 +39,14 @@ export function LeftPanel({
   session,
   m3,
   conflicts = null,
+  agentNodes = NO_AGENT_NODES,
 }: {
   session: FileSession
   m3: M3Controller
   /** Board 18: nodes owning an open conflict show LayerRow/Conflict (VpvIr). */
   conflicts?: EditorConflictSession | null
+  /** Board 21: rows an uncommitted agent group touched get `LayerRow/Agent` (PwDCI). */
+  agentNodes?: ReadonlySet<string>
 }) {
   const [tab, setTab] = useState<LeftTab>("layers")
   const conflictNodes = useOpenConflictNodes(conflicts)
@@ -62,6 +74,7 @@ export function LeftPanel({
             query={query}
             m3={m3}
             conflictNodes={conflictNodes}
+            agentNodes={agentNodes}
           />
         </>
       )}
@@ -86,6 +99,8 @@ interface Row {
   hasChildren: boolean
   parent: string | null
 }
+
+const NO_AGENT_NODES: ReadonlySet<string> = new Set()
 
 /** LayerRow height (28) + Layer Tree gap (1): the virtualized row pitch. */
 const ROW_PITCH = 29
@@ -112,6 +127,7 @@ function LayerTree({
   query,
   m3,
   conflictNodes,
+  agentNodes,
 }: {
   store: DocStore
   ui: UiStore
@@ -119,6 +135,7 @@ function LayerTree({
   query: string
   m3: M3Controller
   conflictNodes: ReadonlyMap<string, unknown>
+  agentNodes: ReadonlySet<string>
 }) {
   const shape = useTreeRevision(store)
   // M3: instances mirror their main's full child list through the expanded view (composite ids).
@@ -411,6 +428,7 @@ function LayerTree({
           selected={selected.has(r.id)}
           tabbable={r.id === tabbable}
           conflict={conflictNodes.has(r.id)}
+          agent={agentNodes.has(r.id)}
           actions={actions}
         />
       ))}
@@ -448,6 +466,7 @@ const LayerItem = memo(function LayerItem({
   selected,
   tabbable,
   conflict,
+  agent,
   actions,
 }: {
   store: DocStore
@@ -460,6 +479,8 @@ const LayerItem = memo(function LayerItem({
   tabbable: boolean
   /** Owns an open merge conflict (board 18 "Layers" rule). */
   conflict: boolean
+  /** Touched by an uncommitted agent group (board 21 LayerRow/Agent). */
+  agent: boolean
   actions: RowActions
 }) {
   const real = useNode(store, row.id)
@@ -468,6 +489,7 @@ const LayerItem = memo(function LayerItem({
   const n = (real ? (view.getNode(row.id) ?? real) : view.getNode(row.id)) as NodeData | undefined
   if (!n) return null
   const { id, depth } = row
+  const agentClass = agent ? AGENT_LAYER_ROW_CLASS : undefined
   const hidden = n.visible === false
   const locked = n.locked === true
   const kind = layerKind(view, id)
@@ -481,6 +503,7 @@ const LayerItem = memo(function LayerItem({
   if (conflict)
     return (
       <LayerRowConflict
+        className={agentClass}
         data-node-id={id}
         tabIndex={tabbable ? 0 : -1}
         name={nodeName(n)}
@@ -501,6 +524,7 @@ const LayerItem = memo(function LayerItem({
         : undefined
     return (
       <LayerRowM3
+        className={agentClass}
         kind={kind}
         name={
           kind === "replaced"
@@ -539,6 +563,7 @@ const LayerItem = memo(function LayerItem({
   const dot = inInstance && isOverridden(view, id)
   return (
     <LayerRow
+      className={agentClass}
       data-node-id={id}
       data-overridden={dot || undefined}
       tabIndex={tabbable ? 0 : -1}

@@ -1,0 +1,158 @@
+# Agents & MCP (board 21 KGdvA): integration
+
+Every surface is a mount point exported from `apps/web/src/agents` (importing the module loads
+`agents.css`). One `AgentsControllerExt` per editor window drives them all. Nothing here edits the
+shared files; the wiring below goes into `Editor.tsx`, `Topbar.tsx`, `LeftPanel.tsx`,
+`RightPanel.tsx` and `settings/SettingsView.tsx`.
+
+## 1. Controller (Editor.tsx, one per window)
+
+```ts
+import { createAgentsController } from "../agents"
+
+const agents = useMemo(() => createAgentsController({
+  host: platform.mcp,                 // McpHostApi (see "Platform gap" below)
+  fileId,                             // sha256(path)[:16] on desktop, same key as activity/leases
+  filePath: session.ref.path,         // approvals for other files don't draw a dry run here
+  docId: session.docId,               // McpConnectionInfo.docs
+  store: session.store,               // op log → session ops, layer dots, node names
+  history,                            // optional AgentHistory (see below)
+  onFocus: (ids) => { ui.select(ids); viewport.zoomTo(ids) },   // kimo_focus semantics
+}), [session])
+useEffect(() => () => agents.dispose(), [agents])
+```
+
+`history` should call the document host's `kimo_history` undo for that origin (guarded replay,
+`undoToken`). Without it the controller undoes on the window's `store` (`store.undo(origin)`),
+which is right only when the window's store is the document-host replica that owns the
+`mcp:*` undo stacks (in-process host / tests).
+
+## 2. Topbar (Topbar.tsx / DesktopTopbar drag region)
+
+Rule "Presence chip": inside the drag region (`justify-content: flex-end; align-items: center`),
+right-aligned, immediately before Save status.
+
+```tsx
+<div className="…drag-region">
+  <AgentPresence
+    controller={agents}
+    onShowOnCanvas={(ids) => { ui.select(ids); viewport.zoomTo(ids) }}
+    onOpenClientSettings={(client) => openSettings(platform, "agents-mcp", { client })}
+  />
+</div>
+<SaveStatus … />
+```
+
+The chip opens the session popover (hIfmx) 16 px under it and the approval prompt (weJXw) 18 px
+under it by itself (Esc = Deny anywhere outside text fields / menus / dialogs). With no chip the
+prompt anchors top-right under the topbar.
+
+## 3. Banner (under the topbar, with the other file banners)
+
+```tsx
+<AgentPausedBanner controller={agents} onShowOps={openActivityTab} onSaveCopy={saveCopy} />
+```
+
+One per file; renders only while an agent is paused by READ_ONLY / DOCUMENT_LOCKED.
+
+## 4. Canvas layer (Editor canvas host, above the canvas element, below the selection UI)
+
+```tsx
+<div className="canvas-host" style={{ position: "relative" }}>
+  <canvas … />
+  <AgentCanvasLayer
+    controller={agents}
+    project={(id) => {                         // node → box in the host's CSS px
+      const b = layout.get()?.nodes.get(id)?.world
+      if (!b) return null
+      const p = viewport.worldToScreen(b)     // whatever the canvas uses
+      return { x: p.x, y: p.y, w: b.w * zoom, h: b.h * zoom, radius: radiusOf(id) * zoom }
+    }}
+    viewportKey={`${zoom}:${panX}:${panY}:${layoutVersion}`}
+  />
+</div>
+```
+
+The layer is `position:absolute; inset:0; pointer-events:none` (only the Dry Run Bar takes
+clicks). It draws the attribution outline + tag + agent cursor, dry-run ghosts and the bar.
+
+## 5. Left panel (LeftPanel.tsx)
+
+Rows an uncommitted agent group touched get `LayerRow/Agent` (PwDCI): add the class to any row
+variant (`LayerRow`, `LayerRowM3`, `LayerRowConflict`); the CSS turns its Spacer into the 6 px
+agent dot.
+
+```tsx
+import { AGENT_LAYER_ROW_CLASS } from "@kimo/ui"
+const { touched } = useAgentsState(agents)
+<LayerRow className={touched.has(id) ? AGENT_LAYER_ROW_CLASS : undefined} … />
+```
+
+## 6. Right panel (RightPanel.tsx): 4th tab "Activity"
+
+Decision on the board (rule "Placement"): a fourth tab after Agent. The tab body is the whole
+panel below the Tabs frame (`display:flex; flex-direction:column`, fills the height):
+
+```tsx
+{tab === "activity" && (
+  <AgentActivityPanel
+    controller={agents}
+    fileId={fileId}
+    onHighlight={(ids) => canvas.setAgentHighlight(ids)}   // hover: $agent outline on targets
+    onExport={(json, name) => platform.dialogs.saveFile({ defaultName: name }).then(…)}  // optional
+  />
+)}
+```
+
+Without `onExport` it downloads a Blob.
+
+## 7. Settings (settings/SettingsView.tsx + model.ts + @kimo/platform SettingsPane)
+
+Rule "Placement": a sidebar item **between Fonts & privacy and Updates**, id `agents-mcp`,
+label "Agents & MCP", lucide `bot`. `agents.css` already colours its icon `$agent`
+(`.settings-nav-item[data-pane="agents-mcp"]`). Add `"agents-mcp"` to `SettingsPane`
+(`@kimo/platform`) and `SETTINGS_PANES`, then:
+
+```tsx
+{pane === "agents-mcp" && (
+  <AgentsMcpPane
+    host={platform.mcp}
+    server={serverControls}           // optional, see below
+    home={homeDir}
+    machine={os === "macos" ? "this Mac" : "this computer"}
+    expandedClient={deepLinkClient}   // from the popover's settings button
+    onOpenActivity={() => focusEditorActivityTab()}
+  />
+)}
+```
+
+The pane renders inside `.settings-content` (it relies on its `[0, 32, 24, 32]` padding and the
+`settings-title-bar` / `settings-title` classes); the failed-state banner spans the padding.
+
+`server: AgentsServerControls` carries what `McpHostApi` doesn't have: `version`, `restart`,
+`stop`, `start`, `startOnLaunch`, `askBeforeDestructive`, `port {value, set, isFree}`,
+`token {value, regenerate}`, `error` (failed to start: code, message, port, suggestedPort) and
+`log {path, lastError, reveal}`. Each control is hidden when its field is absent.
+
+## Platform surface (closed by the M5 integration, ADR 0013 addendum 2)
+
+- `KimoPlatform.mcp?: McpHostApi`: desktop windows get it from `createDesktopMcpHost`
+  (`src/host/mcp-api.ts`: Rust `kimo_mcp_*` commands + the document host's `mcpState` /
+  `mcpPause` / `agentUndo` RPCs + the `kimo://mcp-*` events); the memory platform has a scripted
+  one (`createMemoryMcpHost`, also `src/agents/testing.ts`); the browser has none.
+- `McpHostApi.server` (start / stop / restart, start on launch, HTTP port + `isPortFree`, the
+  HTTP bearer, log path + reveal; status carries `running`, `error`, `logPath`, `home`),
+  `McpHostApi.clients` (a real pause: the runtime holds the client's calls before
+  authorization until resumed) and `McpHostApi.history.undo(path, origin, token)` (the
+  controller's default undo when `filePath` is set; `hostHistory: false` keeps the store undo).
+- `McpConnectionInfo.call {tool, label, startedAt}`, `focus`, `paused`;
+  `McpActivityEntry.label`, `opCount`, `revisionBefore`; `McpApprovalRequest.preview.kinds`
+  (op kind per node from a quiet dry run in the host runtime).
+- Wired in `editor/agents.tsx` (`useEditorAgents`) → `Editor.tsx`, `disk.tsx` /
+  `FileTopbar` (`presence` slot in the desktop drag region), `LeftPanel.tsx` (`agentNodes`),
+  `RightPanel.tsx` (`activity` tab + `openActivity` bus) and `settings/AgentsPane.tsx`.
+
+Not done: the session popover's "client settings" deep link opens the pane but does not expand
+the client (the Settings window route carries the pane only); "Ask before destructive" has no
+global setting behind it (per-client `confirmDestructive` lives in each policy); the Settings
+window's "Open activity" has no cross-window channel to the editor's Activity tab.

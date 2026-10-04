@@ -4,6 +4,7 @@
 //! document content (ADR 0002): documents are only touched by the atomic write + read-back.
 
 pub mod command_list;
+pub mod command_list_mcp;
 mod commands;
 pub mod error;
 pub mod fonts;
@@ -11,6 +12,8 @@ pub mod fs_ops;
 pub mod git;
 pub mod leases;
 pub mod links;
+pub mod mcp;
+mod mcp_commands;
 pub mod menu;
 pub mod recents;
 pub mod recovery;
@@ -48,13 +51,15 @@ pub fn run() {
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
         let st = state::state(app);
         let args: Vec<String> = argv.into_iter().skip(1).collect();
+        // `kimo-mcp --launch` while the app already runs: nothing to show.
+        let background = args.iter().any(|a| a == mcp::BACKGROUND_FLAG);
         // Deep links in argv reach the deep-link plugin (single-instance "deep-link" feature).
         let reqs: Vec<_> =
             links::requests_from_args(&args, std::path::Path::new(&cwd), "second-instance")
                 .into_iter()
                 .filter(|r| r.source != "deep-link")
                 .collect();
-        if reqs.is_empty() {
+        if reqs.is_empty() && !background {
             if let Some(w) = window::primary_editor(app) {
                 let _ = w.unminimize();
                 let _ = w.set_focus();
@@ -79,14 +84,24 @@ pub fn run() {
             let config_dir = app.path().app_config_dir()?;
             let data_dir = app.path().app_data_dir()?;
             let version = app.package_info().version.to_string();
+            let home = kimo_home(app);
             let st = Arc::new(AppState::new(
-                kimo_home(app),
+                home.clone(),
                 &config_dir,
                 &data_dir,
-                version,
+                version.clone(),
             ));
             app.manage(st.clone());
             let handle = app.handle().clone();
+
+            // M5 (ADR 0013 §7): socket/pipe + optional HTTP listeners, then the hidden
+            // document host they relay to. `--background` (kimo-mcp --launch) skips the editor.
+            let background = std::env::args().any(|a| a == mcp::BACKGROUND_FLAG);
+            let relay = mcp::McpService::start(&handle, home, version, background);
+            app.manage(relay);
+            if let Err(e) = mcp::create_host_window(&handle) {
+                eprintln!("kimo: {}", e.message);
+            }
 
             // Cold-start argv (Windows/Linux file association, `kimo open`, deep links).
             let cwd = std::env::current_dir().unwrap_or_default();
@@ -116,7 +131,9 @@ pub fn run() {
                 }
             });
 
-            window::create_editor_window(&handle, "main").map_err(|e| e.to_string())?;
+            if !background {
+                window::create_editor_window(&handle, "main").map_err(|e| e.to_string())?;
+            }
             Ok(())
         })
         .on_window_event(window::on_window_event)
@@ -183,6 +200,30 @@ pub fn run() {
             commands::kimo_settings_get_all,
             commands::kimo_settings_set,
             commands::kimo_launch_take_initial,
+            mcp_commands::kimo_mcp_status,
+            mcp_commands::kimo_mcp_connections,
+            mcp_commands::kimo_mcp_disconnect,
+            mcp_commands::kimo_mcp_send,
+            mcp_commands::kimo_mcp_http_respond,
+            mcp_commands::kimo_mcp_host_ready,
+            mcp_commands::kimo_mcp_http_set_enabled,
+            mcp_commands::kimo_mcp_http_token_rotate,
+            mcp_commands::kimo_mcp_config_read,
+            mcp_commands::kimo_mcp_config_write,
+            mcp_commands::kimo_mcp_activity_append,
+            mcp_commands::kimo_mcp_activity_read,
+            mcp_commands::kimo_mcp_policies_get,
+            mcp_commands::kimo_mcp_policies_set,
+            mcp_commands::kimo_mcp_server_start,
+            mcp_commands::kimo_mcp_server_stop,
+            mcp_commands::kimo_mcp_server_restart,
+            mcp_commands::kimo_mcp_server_settings_get,
+            mcp_commands::kimo_mcp_server_settings_set,
+            mcp_commands::kimo_mcp_port_check,
+            mcp_commands::kimo_mcp_http_token_get,
+            mcp_commands::kimo_mcp_log_info,
+            mcp_commands::kimo_mcp_log_reveal,
+            mcp_commands::kimo_mcp_scope_allow,
         ])
         .build(tauri::generate_context!())
         .expect("error while building the Kimo desktop app");
@@ -222,11 +263,19 @@ pub fn run() {
         RunEvent::ExitRequested { api, code, .. } => {
             // Quit asks every editor window first (flush-before-close); the app exits when the
             // last one is gone. `app.exit(code)` / restart pass through.
-            if code.is_none() && window::request_quit(app) {
-                api.prevent_exit();
+            if code.is_none() {
+                if let Some(m) = mcp::service(app) {
+                    m.quitting.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+                if window::request_quit(app) {
+                    api.prevent_exit();
+                }
             }
         }
         RunEvent::Exit => {
+            if let Some(m) = mcp::service(app) {
+                m.shutdown_blocking();
+            }
             state::state(app).leases.release_all_own();
         }
         _ => {}
@@ -323,5 +372,136 @@ mod tests {
             })
             .collect();
         assert!(extra.is_empty(), "unexpected permissions: {extra:?}");
+    }
+
+    fn capability(name: &str) -> (BTreeSet<String>, BTreeSet<String>) {
+        let cap: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(format!(
+                "{}/capabilities/{name}.json",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+        let set = |k: &str| -> BTreeSet<String> {
+            cap[k]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter_map(|p| p.as_str().map(String::from))
+                .collect()
+        };
+        (set("windows"), set("permissions"))
+    }
+
+    /// ADR 0013 §11: "the shell adds a `command_list_mcp.rs` mirror" of `TAURI_MCP_COMMANDS`.
+    #[test]
+    fn mcp_command_surface_matches_platform_ts() {
+        let ts = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../packages/platform/src/mcp.ts"
+        ))
+        .unwrap();
+        let block = ts
+            .split("export const TAURI_MCP_COMMANDS = [")
+            .nth(1)
+            .unwrap()
+            .split(']')
+            .next()
+            .unwrap();
+        let ts_cmds: Vec<String> = block
+            .lines()
+            .filter_map(|l| {
+                l.trim()
+                    .strip_prefix('"')?
+                    .split('"')
+                    .next()
+                    .map(String::from)
+            })
+            .collect();
+        assert_eq!(ts_cmds.len(), 24);
+        let rust: Vec<String> = super::command_list_mcp::MCP_COMMANDS
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            rust, ts_cmds,
+            "command_list_mcp.rs must mirror TAURI_MCP_COMMANDS"
+        );
+
+        let lib =
+            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib.rs")).unwrap();
+        let handler = lib
+            .split("generate_handler![")
+            .nth(1)
+            .unwrap()
+            .split("])")
+            .next()
+            .unwrap();
+        let registered: BTreeSet<String> = handler
+            .lines()
+            .filter_map(|l| {
+                l.trim()
+                    .strip_prefix("mcp_commands::")?
+                    .strip_suffix(',')
+                    .map(String::from)
+            })
+            .collect();
+        assert_eq!(registered, ts_cmds.iter().cloned().collect::<BTreeSet<_>>());
+
+        let perm = |c: &str| format!("allow-{}", c.replace('_', "-"));
+        let host_only: BTreeSet<String> = super::command_list_mcp::MCP_HOST_ONLY_COMMANDS
+            .iter()
+            .map(|c| perm(c))
+            .collect();
+        let (host_windows, host_perms) = capability("mcp-host");
+        assert_eq!(
+            host_windows,
+            BTreeSet::from([super::mcp::HOST_LABEL.to_string()])
+        );
+        let (ui_windows, ui_perms) = capability("mcp-ui");
+        assert!(!ui_windows.contains(super::mcp::HOST_LABEL));
+        for c in &ts_cmds {
+            assert!(host_perms.contains(&perm(c)), "mcp-host misses {c}");
+            let p = perm(c);
+            assert_eq!(
+                ui_perms.contains(&p),
+                !host_only.contains(&p),
+                "mcp-ui grant for {c}"
+            );
+        }
+        for p in host_perms.iter().chain(&ui_perms) {
+            assert!(
+                p.starts_with("allow-kimo-mcp-") || p.starts_with("core:event:allow-"),
+                "unexpected permission {p}"
+            );
+        }
+        // The host also needs the M4 surface (documents, leases, recovery).
+        let (default_windows, _) = capability("default");
+        assert!(default_windows.contains(super::mcp::HOST_LABEL));
+    }
+
+    /// The events Rust emits are the ones `TauriMcpEventMap` declares.
+    #[test]
+    fn mcp_event_names_match_platform_ts() {
+        let ts = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../packages/platform/src/mcp.ts"
+        ))
+        .unwrap();
+        let map = ts
+            .split("export interface TauriMcpEventMap {")
+            .nth(1)
+            .unwrap()
+            .split("\n}")
+            .next()
+            .unwrap();
+        use super::mcp::hub::{EV_CONNECTION, EV_HTTP_REQUEST, EV_IN, EV_STATUS};
+        for ev in [EV_IN, EV_CONNECTION, EV_HTTP_REQUEST, EV_STATUS] {
+            assert!(
+                map.contains(&format!("\"{ev}\"")),
+                "{ev} not in TauriMcpEventMap"
+            );
+        }
     }
 }

@@ -7,6 +7,7 @@
  * The main entry has no DOM or Node imports and runs anywhere.
  */
 export type { AppliedCapabilities } from "./capabilities"
+export * from "./cli-agents"
 export {
   codeForErrno,
   isPlatformError,
@@ -27,6 +28,8 @@ export {
   resolveAgainstFile,
 } from "./links"
 export * from "./mcp"
+export * from "./mcp-memory"
+export * from "./secrets"
 export {
   type Appearance,
   type ExternalChangePolicy,

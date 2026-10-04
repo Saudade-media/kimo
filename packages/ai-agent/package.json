@@ -1,0 +1,24 @@
+{
+  "name": "@kimo/ai-agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Kimo built-in agent (M6): provider interface + adapters, agent loop over the M5 tool registry, skills, sessions, modes, placeholder and prompt-node semantics",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
+    "@kimo/core-schema": "workspace:*",
+    "@kimo/mcp-server": "workspace:*"
+  },
+  "files": [
+    "src"
+  ]
+}

@@ -37,6 +37,7 @@ const DEFS: [string, TSchema][] = [
   ["InstanceNode", N.InstanceNode],
   ["NoteNode", N.NoteNode],
   ["PromptNode", N.PromptNode],
+  ["ModelRef", N.ModelRef],
   ["ScriptNode", N.ScriptNode],
   ["BrowserNode", N.BrowserNode],
   ["Variable", Doc.Variable],

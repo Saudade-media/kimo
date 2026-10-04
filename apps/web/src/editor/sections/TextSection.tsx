@@ -12,10 +12,28 @@
  *     text-secondary · Spacer · Segmented (AL4la ×3, Y3EBJm ×3, E5X5j7 ×4).
  * Every control is one undo step per gesture (scrubs collapse); a multi-selection shows "Mixed"
  * and no selected segment where the nodes differ.
+ *
+ * Board 21 "Text section · “…” menu" (N6MWL): the header ellipsis (pressed: 20 × 20 bg-muted,
+ * ellipsis text-primary) opens Menu/Dense ndO4D (256, below, right-aligned, flips up): Style
+ * (Italic ⌘I, Link… ⌘K), OpenType features (liga / calt checked by default, tnum, zero, smcp,
+ * frac, Stylistic sets ss01–20 submenu, Custom tag…), Reset text style. Italic on → an "Italic"
+ * row with Toggle/On (G0AWh7); active non-default tags → a "Features" row of removable chips
+ * (SE1Ap). Only §8.2 TextStyle fields without a row: italic, href, features.
  */
 import type { LayoutResult } from "@kimo/layout"
-import { MenuDense, MenuItemDense, PropRow, PropSection, Segmented } from "@kimo/ui"
+import {
+  IconButton,
+  Input,
+  MenuDense,
+  MenuDivider,
+  MenuItemDense,
+  PropRow,
+  PropSection,
+  Segmented,
+  Toggle,
+} from "@kimo/ui"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import "./text-more.css"
 import { FontPicker, useFontPickerEntries } from "../../fonts"
 import type { FontSystem } from "../../fonts/font-system"
 import { Icon } from "../../lib/icons"
@@ -111,10 +129,44 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
   const decoration = sharedText(nodes, decorationOf)
   const textCase = sharedText(nodes, caseOf)
   const italic = sharedText(nodes, (n) => styleOf(n).italic === true)
+  const href = sharedText(nodes, (n) =>
+    typeof styleOf(n).href === "string" ? (styleOf(n).href as string) : "",
+  )
+  const features = featuresOf(nodes[0] ?? null)
 
   const [fontOpen, setFontOpen] = useState(false)
   const [weightOpen, setWeightOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [linkOpen, setLinkOpen] = useState(false)
+  const italicMissing = useItalicMissing(
+    fonts,
+    font === MIXED ? null : font,
+    typeof weight === "number" ? weight : 400,
+  )
+  const toggleItalic = () =>
+    editor.apply(
+      styleOps(sel, "italic", () => (italic === true ? undefined : true)),
+      italic === true ? "Remove italic" : "Set italic",
+    )
+  // ⌘I italic, ⌘K link (rules "Italic", "Link…"), outside text fields.
+  const keys = useRef({ toggleItalic, openLink: () => setLinkOpen(true) })
+  keys.current = { toggleItalic, openLink: () => setLinkOpen(true) }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.defaultPrevented) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest("input, textarea, select, [contenteditable='true']")) return
+      if (e.code === "KeyI") {
+        e.preventDefault()
+        keys.current.toggleItalic()
+      } else if (e.code === "KeyK") {
+        e.preventDefault()
+        keys.current.openLink()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
   const fontTrigger = useRef<HTMLButtonElement>(null)
   const weightTrigger = useRef<HTMLButtonElement>(null)
   const moreAnchor = useRef<HTMLSpanElement>(null)
@@ -127,6 +179,7 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
 
   return (
     <PropSection
+      className={moreOpen ? "rp-text-section rp-text-section--more-open" : "rp-text-section"}
       title={<SectionTitle label="Text" fields={["style", "grow", "content"]} />}
       action={{
         label: "More text options",
@@ -140,6 +193,21 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
       data-testid="text-section"
     >
       <div className="rp-body">
+        {linkOpen && (
+          // Not designed: rule "Link…" — an inline URL field under the header.
+          <LinkField
+            value={href === MIXED ? "" : href}
+            onCommit={(url) => {
+              setLinkOpen(false)
+              const v = url.trim()
+              editor.apply(
+                styleOps(sel, "href", () => (v === "" ? undefined : v)),
+                v === "" ? "Remove link" : "Set link",
+              )
+            }}
+            onCancel={() => setLinkOpen(false)}
+          />
+        )}
         {/* Family Row (RWKxU) */}
         <PropRow className="rp-row">
           <button
@@ -316,6 +384,50 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
             )
           }
         />
+        {/* Italic Row (G0AWh7): only while italic is on */}
+        {italic !== false && (
+          <div className="rp-toggle-row" data-testid="text-italic-row">
+            <span className="rp-toggle-row__label">Italic</span>
+            <span className="rp-spacer" />
+            <Toggle
+              checked={italic === true}
+              label="Italic"
+              onChange={(on) =>
+                editor.apply(
+                  styleOps(sel, "italic", () => (on ? true : undefined)),
+                  on ? "Set italic" : "Remove italic",
+                )
+              }
+            />
+          </div>
+        )}
+        {/* Features Row (SE1Ap): active non-default tags as removable chips */}
+        {activeFeatures(features).length > 0 && (
+          <div className="rp-toggle-row" data-testid="text-features-row">
+            <span className="rp-toggle-row__label">Features</span>
+            <span className="rp-spacer" />
+            {activeFeatures(features).map(([tag, v]) => (
+              <span key={tag} className="rp-feature-chip" data-tag={tag}>
+                <span className="rp-feature-chip__tag">{featureChipLabel(tag, v)}</span>
+                <button
+                  type="button"
+                  className="rp-feature-chip__remove"
+                  aria-label={`Remove ${tag}`}
+                  onClick={() => editor.apply(featureOps(sel, tag, undefined), `Remove ${tag}`)}
+                >
+                  <Icon name="x" size={10} />
+                </button>
+              </span>
+            ))}
+            <IconButton
+              className="rp-feature-add"
+              tone="quiet"
+              label="Add feature"
+              icon={<Icon name="plus" size={12} />}
+              onClick={() => setMoreOpen(true)}
+            />
+          </div>
+        )}
       </div>
       {fontOpen && fontTrigger.current && (
         <FontPickerHost
@@ -353,27 +465,27 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
         />
       )}
       {moreOpen && moreAnchor.current && (
-        // Not designed: the header's ellipsis holds the style flag the board's controls leave out.
-        <MenuDense
-          anchor={moreAnchor.current}
-          placement={{ side: "bottom", align: "end" }}
-          width={168}
-          label="More text options"
-          autoFocus
+        <TextMoreMenu
+          anchor={moreAnchor.current.closest("button") ?? moreAnchor.current}
+          italic={italic === true}
+          italicMissing={italicMissing}
+          linked={href !== "" && href !== MIXED}
+          features={features}
           onClose={() => setMoreOpen(false)}
-        >
-          <MenuItemDense
-            label="Italic"
-            checked={italic === true}
-            onSelect={() => {
-              setMoreOpen(false)
-              editor.apply(
-                styleOps(sel, "italic", () => (italic === true ? undefined : true)),
-                "Set italic",
-              )
-            }}
-          />
-        </MenuDense>
+          onItalic={() => {
+            setMoreOpen(false)
+            toggleItalic()
+          }}
+          onLink={() => {
+            setMoreOpen(false)
+            setLinkOpen(true)
+          }}
+          onFeature={(tag, value) => editor.apply(featureOps(sel, tag, value), `Set ${tag}`)}
+          onReset={() => {
+            setMoreOpen(false)
+            editor.apply(resetStyleOps(sel), "Reset text style")
+          }}
+        />
       )}
     </PropSection>
   )
@@ -543,4 +655,330 @@ function useShippedWeights(fonts: FontSystem | null, family: string | null): Set
     }
   }, [fonts, family])
   return state?.family === family ? state.weights : null
+}
+
+// --- Board 21 "…" menu (N6MWL) -----------------------------------------------------------------
+
+type FeatureValue = boolean | number
+type Features = Readonly<Record<string, FeatureValue>>
+
+/** Font-default features: shown checked when absent; unchecking writes `false`. */
+const DEFAULT_ON = new Set(["liga", "calt"])
+
+/** The OpenType rows of the menu (ndO4D), in board order. */
+export const FEATURE_ITEMS: readonly { tag: string; label: string }[] = [
+  { tag: "liga", label: "Standard ligatures" },
+  { tag: "calt", label: "Contextual alternates" },
+  { tag: "tnum", label: "Tabular numbers" },
+  { tag: "zero", label: "Slashed zero" },
+  { tag: "smcp", label: "Small caps" },
+  { tag: "frac", label: "Fractions" },
+]
+
+/** ss01 … ss20. */
+export const STYLISTIC_SETS = Array.from(
+  { length: 20 },
+  (_, i) => `ss${String(i + 1).padStart(2, "0")}`,
+)
+
+function featuresOf(node: Sel["node"] | null): Features {
+  const f = node ? styleOf(node).features : undefined
+  if (!f || typeof f !== "object" || Array.isArray(f)) return {}
+  const out: Record<string, FeatureValue> = {}
+  for (const [k, v] of Object.entries(f as Record<string, unknown>))
+    if (typeof v === "boolean" || typeof v === "number") out[k] = v
+  return out
+}
+
+/** Checked state of a tag (rule: liga / calt checked by default). */
+export function featureOn(features: Features, tag: string): boolean {
+  const v = features[tag]
+  if (v === undefined) return DEFAULT_ON.has(tag)
+  return v !== false && v !== 0
+}
+
+/** Tags that differ from the font defaults (Features row chips), in insertion order. */
+export function activeFeatures(features: Features): [string, FeatureValue][] {
+  return Object.entries(features).filter(([tag, v]) => !(DEFAULT_ON.has(tag) && v === true))
+}
+
+export function featureChipLabel(tag: string, v: FeatureValue): string {
+  if (v === false) return `${tag} off`
+  if (typeof v === "number") return `${tag} = ${v}`
+  return tag
+}
+
+/** The value a menu toggle writes: back to the default removes the key. */
+export function toggledFeature(features: Features, tag: string): FeatureValue | undefined {
+  const on = featureOn(features, tag)
+  if (DEFAULT_ON.has(tag)) return on ? false : undefined
+  return on ? undefined : true
+}
+
+/** "salt = 2" / "salt" → [tag, value]; null when invalid (4-char OpenType tag). */
+export function parseCustomTag(input: string): [string, FeatureValue] | null {
+  const m = /^\s*([A-Za-z0-9]{4})\s*(?:=\s*(\d{1,5}))?\s*$/.exec(input)
+  if (!m?.[1]) return null
+  return [m[1], m[2] !== undefined ? Number(m[2]) : true]
+}
+
+function featureOps(sel: readonly Sel[], tag: string, value: FeatureValue | undefined) {
+  return styleOps(sel, "features", (node) => {
+    const next: Record<string, FeatureValue> = { ...featuresOf(node) }
+    if (value === undefined) delete next[tag]
+    else next[tag] = value
+    return Object.keys(next).length === 0 ? undefined : next
+  })
+}
+
+/** Rule "Reset text style": drops italic, href, features, decoration and case; keeps the rest. */
+const RESET_KEYS = ["italic", "href", "features", "decoration", "case"] as const
+
+export function resetStyleOps(sel: readonly Sel[]) {
+  return sel.map(({ id, node }) => {
+    const next = { ...styleOf(node) }
+    for (const k of RESET_KEYS) delete next[k]
+    return Object.keys(next).length === 0
+      ? { op: "update" as const, id, unset: ["style"] }
+      : { op: "update" as const, id, set: { style: next } }
+  })
+}
+
+function TextMoreMenu({
+  anchor,
+  italic,
+  italicMissing,
+  linked,
+  features,
+  onClose,
+  onItalic,
+  onLink,
+  onFeature,
+  onReset,
+}: {
+  anchor: HTMLElement
+  italic: boolean
+  italicMissing: boolean
+  linked: boolean
+  features: Features
+  onClose(): void
+  onItalic(): void
+  onLink(): void
+  onFeature(tag: string, value: FeatureValue | undefined): void
+  onReset(): void
+}) {
+  const [sets, setSets] = useState<HTMLElement | null>(null)
+  const [custom, setCustom] = useState(false)
+  // Opens with the first item (Italic) highlighted, as in the vignette (n2stOD), not the first
+  // checked feature: wait for the anchored menu to become visible, then focus it.
+  useEffect(() => {
+    let frames = 0
+    let raf = 0
+    const tick = () => {
+      const first = document.querySelector<HTMLElement>(
+        '[data-testid="text-more-menu"] .kimo-menu-item-dense',
+      )
+      const menu = first?.closest<HTMLElement>(".kimo-menu-dense")
+      if (first && menu && getComputedStyle(menu).visibility !== "hidden") first.focus()
+      else if (frames++ < 30) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return (
+    <>
+      <MenuDense
+        anchor={anchor}
+        placement={{ side: "bottom", align: "end" }}
+        width={256}
+        label="More text options"
+        className="rp-text-menu"
+        data-testid="text-more-menu"
+        onClose={() => {
+          if (!sets) onClose()
+        }}
+      >
+        <div className="rp-text-menu__group" role="presentation">
+          <span className="rp-text-menu__group-label">Style</span>
+        </div>
+        <MenuItemDense
+          label="Italic"
+          checked={italic}
+          meta="⌘I"
+          className={
+            italicMissing ? "rp-text-menu__item rp-text-menu__item--missing" : "rp-text-menu__item"
+          }
+          title={italicMissing ? "This family has no italic face: synthetic oblique" : undefined}
+          onSelect={onItalic}
+        />
+        <MenuItemDense
+          label="Link…"
+          checked={linked}
+          meta="⌘K"
+          className="rp-text-menu__item"
+          onSelect={onLink}
+        />
+        <MenuDivider />
+        <div className="rp-text-menu__group" role="presentation">
+          <span className="rp-text-menu__group-label">OpenType features</span>
+        </div>
+        {FEATURE_ITEMS.map((f) => (
+          <MenuItemDense
+            key={f.tag}
+            label={f.label}
+            checked={featureOn(features, f.tag)}
+            meta={f.tag}
+            data-tag={f.tag}
+            className="rp-text-menu__item"
+            onSelect={() => onFeature(f.tag, toggledFeature(features, f.tag))}
+          />
+        ))}
+        <MenuItemDense
+          label="Stylistic sets"
+          checked={STYLISTIC_SETS.some((t) => featureOn(features, t))}
+          meta="ss01–20 ›"
+          aria-haspopup="menu"
+          aria-expanded={!!sets}
+          className="rp-text-menu__item"
+          onSelect={() => setSets((cur) => (cur ? null : (document.activeElement as HTMLElement)))}
+        />
+        {custom ? (
+          // Not designed: rule "Custom tag… takes a 4-char tag and an optional number".
+          <CustomTagField
+            onCommit={(tag, value) => {
+              setCustom(false)
+              onFeature(tag, value)
+            }}
+            onCancel={() => setCustom(false)}
+          />
+        ) : (
+          <MenuItemDense
+            label="Custom tag…"
+            checked={false}
+            meta="tag = n"
+            className="rp-text-menu__item"
+            onSelect={() => setCustom(true)}
+          />
+        )}
+        <MenuDivider />
+        <MenuItemDense
+          label="Reset text style"
+          checked={false}
+          className="rp-text-menu__item"
+          onSelect={onReset}
+        />
+      </MenuDense>
+      {sets && (
+        <MenuDense
+          anchor={sets}
+          placement={{ side: "left", align: "start" }}
+          width={120}
+          label="Stylistic sets"
+          className="rp-text-menu"
+          data-testid="text-sets-menu"
+          autoFocus
+          onClose={() => setSets(null)}
+        >
+          {STYLISTIC_SETS.map((tag) => (
+            <MenuItemDense
+              key={tag}
+              label={tag}
+              mono
+              checked={featureOn(features, tag)}
+              className="rp-text-menu__item"
+              onSelect={() => onFeature(tag, toggledFeature(features, tag))}
+            />
+          ))}
+        </MenuDense>
+      )}
+    </>
+  )
+}
+
+function CustomTagField({
+  onCommit,
+  onCancel,
+}: {
+  onCommit(tag: string, value: FeatureValue): void
+  onCancel(): void
+}) {
+  const [text, setText] = useState("")
+  const parsed = parseCustomTag(text)
+  return (
+    <div className="rp-text-menu__custom">
+      <Input
+        dense
+        autoFocus
+        aria-label="Custom OpenType tag"
+        placeholder="salt = 2"
+        value={text}
+        aria-invalid={text !== "" && !parsed}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          if (e.key === "Enter" && parsed) onCommit(parsed[0], parsed[1])
+          else if (e.key === "Escape") onCancel()
+        }}
+      />
+    </div>
+  )
+}
+
+function LinkField({
+  value,
+  onCommit,
+  onCancel,
+}: {
+  value: string
+  onCommit(url: string): void
+  onCancel(): void
+}) {
+  const [text, setText] = useState(value)
+  return (
+    <div className="rp-text-link" data-testid="text-link-field">
+      <Input
+        dense
+        autoFocus
+        aria-label="Link URL"
+        placeholder="https://"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => onCommit(text)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault()
+            onCommit(text)
+          } else if (e.key === "Escape") {
+            e.preventDefault()
+            e.stopPropagation()
+            onCancel()
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+/** True when the resolved family ships no italic face at this weight (rule "Italic"). */
+function useItalicMissing(
+  fonts: FontSystem | null,
+  family: string | null,
+  weight: number,
+): boolean {
+  const [missing, setMissing] = useState<{ key: string; missing: boolean } | null>(null)
+  const key = `${family}|${weight}`
+  useEffect(() => {
+    if (!fonts || !family || family.startsWith("$")) return
+    let live = true
+    void fonts
+      .availability({ family, weight, style: "italic" })
+      .catch(() => "missing" as const)
+      .then((a) => {
+        if (live) setMissing({ key: `${family}|${weight}`, missing: a === "missing" })
+      })
+    return () => {
+      live = false
+    }
+  }, [fonts, family, weight])
+  return missing?.key === key ? missing.missing : false
 }

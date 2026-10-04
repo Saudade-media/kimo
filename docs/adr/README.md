@@ -18,7 +18,8 @@ cites the sections of the [teardown](../teardown.md) (the plan of record) it imp
 | [0010](0010-m2-styling-and-tools.md) | M2 styling, canvas overlays and tools: format additions and contracts | Accepted |
 | [0011](0011-m3-components-and-variables.md) | M3 components, instances, variables and libraries: format additions, expansion and contracts | Accepted |
 | [0012](0012-m4-desktop-and-files.md) | M4 desktop and files: stored merge conflicts, `@kimo/platform`, the document session and the Tauri command surface | Accepted |
-| [0013](0013-m5-mcp-server.md) | M5 MCP server: one tool registry, typed ops, the `kimo-socket/1` protocol, attach vs headless, permissions and the host installer | Accepted |
+| [0013](0013-m5-mcp-server.md) | M5 MCP server: one tool registry, typed ops, the `kimo-socket/1` protocol, attach vs headless, permissions and the host installer | Accepted (addendum: [0014](0014-m6-built-in-agent.md)) |
+| [0014](0014-m6-built-in-agent.md) | M6 built-in agent: provider interface and adapters, local agent CLIs, the in-process tool loop, modes with enforced scopes, sessions, skills, placeholders and prompt nodes | Accepted |
 
 ## Process
 

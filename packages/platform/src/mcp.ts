@@ -50,9 +50,22 @@ export interface McpApprovalRequest {
   path?: string
   reason: McpApprovalReason
   summary: string
-  preview?: { inserted: number; updated: number; deleted: number; nodeIds: string[] }
+  preview?: McpApprovalPreview
   requestedAt: number
   expiresAt: number
+}
+
+/** What a node would undergo if the call ran (dry run; moves count as updates). */
+export type McpPreviewOpKind = "insert" | "update" | "delete"
+
+/** Dry-run preview of an approval (counts, the first changed ids, the op kind per id). */
+export interface McpApprovalPreview {
+  inserted: number
+  updated: number
+  deleted: number
+  nodeIds: string[]
+  /** Op kind per entry of `nodeIds` (M5 addendum; absent from older hosts). */
+  kinds?: Record<string, McpPreviewOpKind>
 }
 
 export type McpApprovalChoice = "once" | "session" | "deny"
@@ -88,6 +101,12 @@ export interface McpActivityEntry {
   code?: string
   outcome?: McpApprovalOutcome
   undoToken?: string
+  /** Op group label ("Insert Card", "Import svg"); edits only. */
+  label?: string
+  /** Number of resolved ops the call committed (edits / dry runs). */
+  opCount?: number
+  /** Revision before the call, for edits (with `revision` = after). */
+  revisionBefore?: { epoch: string; seq: number }
 }
 
 export type McpHostId = "claude-code" | "codex" | "gemini-cli" | "cursor" | "vscode"
@@ -118,6 +137,47 @@ export interface McpServerStatus {
   shimPath: string
   protocol: string
   connections: number
+  /** The socket/pipe listener runs (false after Settings › Stop). M5 addendum fields below. */
+  running?: boolean
+  /** App version serving MCP ("0.5.0"). */
+  version?: string
+  /** Settings › "Start server when Kimo opens". */
+  startOnLaunch?: boolean
+  /** Configured HTTP port (the listener may have fallen back, see `error`). */
+  httpPort?: number
+  /** `~/.kimo/mcp/server.log`. */
+  logPath?: string
+  /** The user's home directory (installer user scope). */
+  home?: string
+  /** `~/.kimo/mcp/backups` (installer backups before each config write). */
+  backupDir?: string
+  /** Last start failure (cleared on a successful start). */
+  error?: McpServerError | null
+}
+
+/** A server start failure (Settings › Agents error banner + port fix row). */
+export interface McpServerError {
+  /** "EADDRINUSE 127.0.0.1:47820", "ENDPOINT_IN_USE", "SOCKET_FAILED", … */
+  code: string
+  message: string
+  /** The port that failed and a free one to switch to. */
+  port?: number
+  suggestedPort?: number
+  time: number
+}
+
+/** Persisted server settings (`~/.kimo/mcp/server.json`, `http.json`). */
+export interface McpServerSettings {
+  startOnLaunch: boolean
+  httpPort: number
+}
+
+/** The call a connection is running right now. */
+export interface McpCallInfo {
+  tool: string
+  /** "Applying 4 ops", "Rendering Card", the op group label when given. */
+  label: string
+  startedAt: number
 }
 
 export interface McpConnectionInfo {
@@ -130,6 +190,12 @@ export interface McpConnectionInfo {
   state: "idle" | "reading" | "editing" | "rendering" | "waiting-approval"
   /** docIds this connection touched. */
   docs: string[]
+  /** The running call (absent when idle). M5 addendum. */
+  call?: McpCallInfo
+  /** Nodes it is editing or last changed (canvas focus / agent cursor). */
+  focus?: string[]
+  /** Paused by the user (Settings / session popover): its calls wait until resumed. */
+  paused?: boolean
 }
 
 // --- API -----------------------------------------------------------------------------------------
@@ -166,6 +232,35 @@ export interface McpHostApi {
     setEnabled(enabled: boolean): Promise<McpServerStatus>
     /** New bearer token for one host's HTTP entry (revokes the old one). */
     rotateToken(client: string): Promise<string>
+  }
+  /** Server lifecycle and settings (Settings › Agents & MCP). */
+  server: {
+    start(): Promise<McpServerStatus>
+    stop(): Promise<McpServerStatus>
+    restart(): Promise<McpServerStatus>
+    settings(): Promise<McpServerSettings>
+    setStartOnLaunch(enabled: boolean): Promise<McpServerSettings>
+    /** Persists the HTTP port and moves a running listener there. */
+    setPort(port: number): Promise<McpServerSettings>
+    /** True when nothing listens on 127.0.0.1:`port` (or it is ours). */
+    isPortFree(port: number): Promise<boolean>
+    /** The current HTTP bearer of one host (null when it has none). */
+    token(client: string): Promise<string | null>
+    log(): Promise<{ path: string; lastError?: string }>
+    revealLog(): Promise<void>
+  }
+  /** Per-client pause: every call of the client's connections waits until resumed. */
+  clients: {
+    pause(client: string): Promise<void>
+    resume(client: string): Promise<void>
+    paused(): Promise<string[]>
+  }
+  /**
+   * Per-call undo for the window (`kimo_history` undo as that origin, guarded replay). With
+   * `undoToken`, refuses (stale) when that group is no longer on top.
+   */
+  history: {
+    undo(path: string, origin: string, undoToken?: string): Promise<{ ok: boolean; stale: boolean }>
   }
   installer: {
     status(scope: "user" | "project", project?: string): Promise<McpHostConfigStatus[]>
@@ -229,6 +324,20 @@ export interface TauriMcpCommandMap {
   kimo_mcp_activity_read: { args: { fileId: string; limit: number }; result: McpActivityEntry[] }
   kimo_mcp_policies_get: { args: Record<string, never>; result: Record<string, McpClientPolicy> }
   kimo_mcp_policies_set: { args: { client: string; policy: McpClientPolicy | null }; result: null }
+  kimo_mcp_server_start: { args: Record<string, never>; result: McpServerStatus }
+  kimo_mcp_server_stop: { args: Record<string, never>; result: McpServerStatus }
+  kimo_mcp_server_restart: { args: Record<string, never>; result: McpServerStatus }
+  kimo_mcp_server_settings_get: { args: Record<string, never>; result: McpServerSettings }
+  kimo_mcp_server_settings_set: {
+    args: { startOnLaunch?: boolean; httpPort?: number }
+    result: McpServerSettings
+  }
+  kimo_mcp_port_check: { args: { port: number }; result: boolean }
+  kimo_mcp_http_token_get: { args: { client: string }; result: string | null }
+  kimo_mcp_log_info: { args: Record<string, never>; result: { path: string; lastError?: string } }
+  kimo_mcp_log_reveal: { args: Record<string, never>; result: null }
+  /** Document host only: widen the fs scope to a path an MCP call was authorized for. */
+  kimo_mcp_scope_allow: { args: { path: string }; result: null }
 }
 
 export type TauriMcpCommand = keyof TauriMcpCommandMap
@@ -248,6 +357,16 @@ export const TAURI_MCP_COMMANDS = [
   "kimo_mcp_activity_read",
   "kimo_mcp_policies_get",
   "kimo_mcp_policies_set",
+  "kimo_mcp_server_start",
+  "kimo_mcp_server_stop",
+  "kimo_mcp_server_restart",
+  "kimo_mcp_server_settings_get",
+  "kimo_mcp_server_settings_set",
+  "kimo_mcp_port_check",
+  "kimo_mcp_http_token_get",
+  "kimo_mcp_log_info",
+  "kimo_mcp_log_reveal",
+  "kimo_mcp_scope_allow",
 ] as const satisfies readonly TauriMcpCommand[]
 
 export interface TauriMcpEventMap {

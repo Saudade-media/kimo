@@ -1,0 +1,64 @@
+/*
+ * AgentTonePill: StatusPill (SVobH) instances on board 21 (ADF2h overrides, oS7G6, FsRta).
+ * frame: row, gap 5, padding [2, 8, 2, 6], alignItems center, radius-pill
+ *   ├ Dot   (dmG7C) ellipse 6 × 6
+ *   └ Label (tJyiu) sans 11 / 500
+ */
+.kimo-agent-pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: var(--kimo-radius-pill);
+  white-space: nowrap;
+}
+
+.kimo-agent-pill__dot {
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.kimo-agent-pill__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+.kimo-agent-pill--success {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+.kimo-agent-pill--success .kimo-agent-pill__dot {
+  background: var(--kimo-success);
+}
+
+.kimo-agent-pill--warning {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+.kimo-agent-pill--warning .kimo-agent-pill__dot {
+  background: var(--kimo-warning);
+}
+
+.kimo-agent-pill--neutral {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+.kimo-agent-pill--neutral .kimo-agent-pill__dot {
+  background: var(--kimo-text-tertiary);
+}
+
+.kimo-agent-pill--danger {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+.kimo-agent-pill--danger .kimo-agent-pill__dot {
+  background: var(--kimo-danger);
+}

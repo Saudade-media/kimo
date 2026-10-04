@@ -18,7 +18,7 @@ export interface PaneInfo {
   id: SettingsPane
   label: string
   /** Lucide icon name (Nav · … Icon). */
-  icon: "settings" | "hard-drive" | "shield" | "refresh-cw" | "info"
+  icon: "settings" | "hard-drive" | "shield" | "bot" | "refresh-cw" | "info"
 }
 
 /** Sidebar order (XmeDB > Sidebar h7qQD). */
@@ -26,6 +26,7 @@ export const SETTINGS_PANES: readonly PaneInfo[] = [
   { id: "general", label: "General", icon: "settings" },
   { id: "files", label: "Files & autosave", icon: "hard-drive" },
   { id: "fonts", label: "Fonts & privacy", icon: "shield" },
+  { id: "agents-mcp", label: "Agents & MCP", icon: "bot" },
   { id: "updates", label: "Updates", icon: "refresh-cw" },
   { id: "about", label: "About & licenses", icon: "info" },
 ]

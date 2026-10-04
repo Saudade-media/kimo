@@ -9,6 +9,7 @@
  */
 import { fromJsonSchema, McpServer } from "@modelcontextprotocol/server"
 import { Ajv } from "@modelcontextprotocol/server/validators/ajv"
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/server/validators/cf-worker"
 import type { ToolError } from "./envelope"
 import { toCallToolResult } from "./envelope"
 import { type ListOptions, listTools, toMcpDescriptor } from "./registry"
@@ -33,11 +34,54 @@ const passThrough: Parameters<typeof fromJsonSchema>[1] & object = {
 const ajv = new Ajv({ strict: true, allErrors: true })
 const compiled = new Map<string, ReturnType<typeof ajv.compile>>()
 
+/**
+ * Ajv compiles validators with `new Function`, which a Content-Security-Policy without
+ * `'unsafe-eval'` forbids (the desktop app's hidden document host webview). There the
+ * interpreting `@cfworker/json-schema` validator takes over: same schemas, one INVALID_INPUT
+ * error with its message instead of Ajv's per-path list.
+ */
+let evalAllowed: boolean | undefined
+function canEval(): boolean {
+  if (evalAllowed === undefined) {
+    try {
+      evalAllowed = new Function("return true")() === true
+    } catch {
+      evalAllowed = false
+    }
+  }
+  return evalAllowed
+}
+const interpreter = new CfWorkerJsonSchemaValidator({ shortcircuit: false })
+const interpreted = new Map<string, (input: unknown) => { valid: boolean; errorMessage?: string }>()
+
+function validateInterpreted(def: ToolDef, input: unknown): ToolError[] {
+  let v = interpreted.get(def.name)
+  if (!v) {
+    v = interpreter.getValidator(toMcpDescriptor(def).inputSchema as never)
+    interpreted.set(def.name, v)
+  }
+  const r = v(input)
+  if (r.valid) return []
+  return [{ code: "INVALID_INPUT", message: r.errorMessage ?? "Input is invalid.", path: "" }]
+}
+
 /** Ajv validation of a tool input → INVALID_INPUT errors with JSON paths. */
+/** Test seam: force the eval-free validator (CSP webviews). */
+export function setEvalAllowedForTests(allowed: boolean | undefined): void {
+  evalAllowed = allowed
+}
+
 export function validateInput(def: ToolDef, input: unknown): ToolError[] {
+  if (!canEval()) return validateInterpreted(def, input)
   let v = compiled.get(def.name)
   if (!v) {
-    v = ajv.compile(toMcpDescriptor(def).inputSchema)
+    try {
+      v = ajv.compile(toMcpDescriptor(def).inputSchema)
+    } catch (e) {
+      if (!(e instanceof EvalError)) throw e
+      evalAllowed = false
+      return validateInterpreted(def, input)
+    }
     compiled.set(def.name, v)
   }
   if (v(input)) return []
@@ -57,6 +101,8 @@ export interface KimoServerOptions extends ListOptions {
   /** Builds the per-connection context once the client has initialized. */
   context: () => ToolContext
   targets: DispatchOptions["targets"]
+  preview?: DispatchOptions["preview"]
+  beforeCall?: DispatchOptions["beforeCall"]
 }
 
 export function createKimoMcpServer(options: KimoServerOptions): McpServer {
@@ -79,6 +125,8 @@ export function createKimoMcpServer(options: KimoServerOptions): McpServer {
         const out = await dispatch(def.name, args, options.context(), options.handlers, {
           validate: validateInput,
           targets: options.targets,
+          ...(options.preview ? { preview: options.preview } : {}),
+          ...(options.beforeCall ? { beforeCall: options.beforeCall } : {}),
         })
         return toCallToolResult(out.result, out.images) as never
       },

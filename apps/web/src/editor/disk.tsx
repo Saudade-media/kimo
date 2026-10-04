@@ -4,7 +4,7 @@
  * breadcrumb's file name, and the deep-link node focus.
  */
 import { basenameOf, dirnameOf } from "@kimo/platform"
-import { useCallback, useEffect, useSyncExternalStore } from "react"
+import { type ReactNode, useCallback, useEffect, useSyncExternalStore } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import type { EditorConflictSession } from "../conflicts"
 import { FileTopbar } from "../files"
@@ -38,6 +38,8 @@ export interface DiskTopbarProps extends FileMenuActions {
   onExport(): void
   onPreview(): void
   onHome(): void
+  /** Board 21 Agent Presence (drag region, before Save Status). */
+  presence?: ReactNode
 }
 
 /**
@@ -52,6 +54,7 @@ export function DiskTopbar({
   onExport,
   onPreview,
   onHome,
+  presence,
   ...menu
 }: DiskTopbarProps) {
   const fileMenu = useFileMenu(menu)
@@ -63,6 +66,7 @@ export function DiskTopbar({
         fileOpen={fileMenu.open}
         onHome={onHome}
         onFileClick={(e) => fileMenu.toggle(e.currentTarget)}
+        presence={presence}
         trailing={
           <TopbarTrailing ui={ui} canvas={canvas} onPreview={onPreview} onExport={onExport} />
         }

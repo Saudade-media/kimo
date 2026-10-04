@@ -7,6 +7,11 @@ edition = "2021"
 rust-version = "1.77.2"
 publish = false
 
+# `kimo-mcp` (the stdio shim bundled in the app, ADR 0008 / 0013 §7) shares this lockfile, target
+# dir and release profile. The app uses its library for the kimo-socket/1 protocol pieces.
+[workspace]
+members = ["kimo-mcp"]
+
 [lib]
 # `_lib` suffix avoids a name clash with the bin target on Windows (cargo#8519).
 name = "kimo_desktop_lib"
@@ -36,6 +41,14 @@ gethostname = "1"
 uuid = { version = "1", features = ["v4"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
+# M5 MCP relay (ADR 0013 §7): socket/pipe + loopback Streamable HTTP listeners.
+kimo-mcp = { path = "kimo-mcp" }
+tokio = { version = "1", features = ["net", "io-util", "time", "sync", "macros", "rt"] }
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+getrandom = "0.3"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

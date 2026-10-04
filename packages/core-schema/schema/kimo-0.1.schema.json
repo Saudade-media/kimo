@@ -1541,6 +1541,23 @@
       "additionalProperties": {},
       "description": "Namespaced extension data, e.g. 'kimo.export.tag'."
     },
+    "ModelRef": {
+      "type": "object",
+      "required": ["provider", "model"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Provider id, e.g. anthropic."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Model id at that provider."
+        }
+      },
+      "additionalProperties": false
+    },
     "MoveConflict": {
       "type": "object",
       "required": ["kind", "node", "base", "ours", "theirs", "applied"],
@@ -1792,6 +1809,11 @@
         },
         "style": {
           "$ref": "#/$defs/TextStyle"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name of the person who wrote it (M6; e.g. the OS user name)."
         }
       },
       "additionalProperties": false
@@ -2633,9 +2655,25 @@
         "style": {
           "$ref": "#/$defs/TextStyle"
         },
-        "model": {
+        "author": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Display name of the person who wrote it (M6; e.g. the OS user name)."
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "$ref": "#/$defs/ModelRef"
+            }
+          ],
+          "description": "Model for runs: {provider, model} (M6). A bare string is the legacy form: a model id that must resolve to exactly one configured provider, else the run fails loudly."
+        },
+        "target": {
+          "$ref": "#/$defs/Id"
         }
       },
       "additionalProperties": false

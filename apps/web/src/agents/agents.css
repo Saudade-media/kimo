@@ -1,0 +1,1093 @@
+/*
+ * Board 21 "Agents & MCP" (KGdvA) editor + settings surfaces. Node ids per block; values are the
+ * nodes' own (padding / gap / sizes / fills / type). Text line heights follow the Pencil text
+ * boxes: Inter 11 → 13, 12 → 15, 13 → 16, 14 → 17, 16 → 19; JetBrains Mono 11 → 15; lineHeight
+ * 1.45 → round(size × 1.45).
+ */
+
+.agents-spacer {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Link texts (accent-text, sans 12 / 500 "Show on canvas"; sans 11 / 500 "Undo session"). */
+.agents-link {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-accent-text);
+  font-family: var(--kimo-font-sans);
+  font-weight: var(--kimo-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+}
+.agents-link:hover {
+  text-decoration: underline;
+}
+.agents-link:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+.agents-link--sm {
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+}
+.agents-link--xs {
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+
+/* Button instances on board 21: h 28, padding [0, 12], label 12, icon 14 (Button sm). */
+.kimo-button.agents-button {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+}
+.kimo-button.agents-button--30 {
+  height: 30px;
+}
+.kimo-button.agents-button--pad14 {
+  padding: 0 14px;
+}
+.kimo-button.agents-button--pad10 {
+  padding: 0 10px;
+}
+/* Ghost instances whose label/icon are overridden to text-primary (Copy config, Rescan, …). */
+.kimo-button.agents-button--ghost-primary {
+  color: var(--kimo-text-primary);
+}
+/* Deny (LTfdO): Ghost as authored, label text-secondary. */
+.kimo-button.agents-button--ghost-secondary {
+  color: var(--kimo-text-secondary);
+}
+/* Disconnect (lNqUC): ghost, icon + label danger. */
+.kimo-button.agents-button--danger {
+  color: var(--kimo-danger);
+}
+.agents-dry-bar .kimo-button.agents-dry-bar__toggle {
+  height: 32px;
+  font-size: var(--kimo-text-sm);
+}
+.agents-dry-bar .kimo-button.agents-dry-bar__toggle .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* IconButton instances: fill #00000000, 24 (icon 14) / 22 (icon 13). */
+.kimo-icon-button.agents-icon-button {
+  background: transparent;
+}
+.kimo-icon-button.agents-icon-button:hover:not(:disabled) {
+  background: var(--kimo-bg-hover);
+}
+.kimo-icon-button.agents-icon-button--13 .kimo-icon-button__icon {
+  width: 13px;
+  height: 13px;
+}
+.kimo-icon-button.agents-icon-button--22 {
+  width: 22px;
+  height: 22px;
+}
+.kimo-icon-button.agents-icon-button--22 .kimo-icon-button__icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Presence (topbar drag region, Agent Presence cIMyI). The region is justify end / center.
+ */
+.agents-presence {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  -webkit-app-region: no-drag;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Session Popover (hIfmx): column, w 380, bg-overlay, stroke 1 border, radius-lg,
+ * shadow 0 8 24 shadow-strong, clip.
+ */
+.agents-session {
+  box-sizing: border-box;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-height: calc(100vh - 80px);
+  overflow: hidden auto;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+}
+.agents-session__section {
+  display: flex;
+  flex-direction: column;
+}
+.agents-session__section + .agents-session__section {
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+/* Header (eLfuF): row, gap 10, padding [12, 12, 10, 12], center. */
+.agents-session__header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 12px 10px 12px;
+}
+/* Text (ULvMC): column, gap 2, fill. */
+.agents-session__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* Name Row (PPHrc): row, gap 6, center. */
+.agents-session__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.agents-session__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 16px;
+  white-space: nowrap;
+}
+.agents-session__version {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.agents-session__scope {
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Now (esKwa): row, gap 8, padding [8, 12], center, fill agent-soft. */
+.agents-session__now {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+.agents-session__spinner {
+  display: block;
+  flex: none;
+  animation: agents-spin 1s linear infinite;
+}
+@keyframes agents-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agents-session__spinner {
+    animation: none;
+  }
+}
+.agents-session__now-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.agents-session__now-tool {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* List Header (l7Meg6): row, gap 8, padding [10, 12, 4, 12], center. */
+.agents-session__list-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px 4px 12px;
+}
+.agents-session__list-icon {
+  display: block;
+  flex: none;
+  color: var(--kimo-accent-text);
+}
+.agents-session__list-label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* Ops (fM9DY): column, padding [2, 0, 8, 0]. */
+.agents-session__ops {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 2px 0 8px 0;
+}
+
+/* Actions (Z9p0c): row, gap 8, padding [10, 12], center, top stroke 1 border. */
+.agents-session__actions {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+.agents-session__revision {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Approval Prompt (weJXw): column, gap 14, padding 20, w 400, bg-overlay, stroke 1 border,
+ * radius-xl, shadow 0 16 48 shadow-strong.
+ */
+.agents-approval {
+  box-sizing: border-box;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 400px;
+  padding: 20px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px 0 var(--kimo-shadow-strong);
+}
+/* Head (CDPPh): row, gap 12. */
+.agents-approval__head {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+/* Text (XMYt8): column, gap 4, fill. */
+.agents-approval__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.agents-approval__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 17px;
+}
+.agents-approval__desc {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 17px; /* 12 × 1.45 = 17.4 */
+}
+/* Targets (dBQHl): column, padding [4, 0], bg-subtle, stroke 1 border, radius-md. */
+.agents-approval__targets {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 4px 0;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Meta (zqzx0): row, gap 8, center. */
+.agents-approval__meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.agents-approval__call {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Footer (AUE48): row, gap 8, center. */
+.agents-approval__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.agents-approval__footnote {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Canvas layer: stacked over the canvas, never intercepts pointer events (except the bar).
+ */
+.agents-canvas-layer {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Agent Outline (LMWYr): stroke 1.5 agent, the node's radius. Fades 2 s after commit. */
+.agents-attribution {
+  transition: opacity 400ms ease-out;
+}
+.agents-attribution--faded {
+  opacity: 0;
+}
+.agents-attribution__outline {
+  box-sizing: border-box;
+  position: absolute;
+  /* stroke 1.5 inside: a box-shadow keeps the fractional width (borders snap to 1 device px) */
+  box-shadow: inset 0 0 0 1.5px var(--kimo-agent);
+}
+/* Agent Attribution (GSUtG): row, gap 4, padding [0, 6, 0, 3], center, h 18, agent, radius-xs. */
+.agents-attribution__tag {
+  box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px 0 3px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-agent);
+  white-space: nowrap;
+}
+.agents-attribution__tag-label {
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+}
+/* Agent Cursor (IJH2i): column, gap 2: Pointer 18 agent · Pill. */
+.agents-cursor {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.agents-cursor__pointer {
+  display: block;
+  color: var(--kimo-agent);
+}
+/* Pill (pIYVd): row, gap 6, padding [4, 10, 4, 4], center, agent, radius 999, shadow 0 4 12. */
+.agents-cursor__pill {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--kimo-agent);
+  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
+  white-space: nowrap;
+}
+.agents-cursor__label {
+  color: var(--kimo-on-accent);
+  font-family: var(--kimo-font-sans);
+  font-size: 12px;
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+}
+
+/* Ghost (Atu30): column, gap 6: Label Row (gap 6, center) · Box (stroke 1.5, radius-xs). */
+.agents-ghost {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agents-ghost__label-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 16px;
+}
+.agents-ghost__name {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+  white-space: nowrap;
+}
+/* Op Chip (RLWzg): padding [0, 5], center, h 16, radius-xs; Op mono 11 / 500. */
+.agents-ghost__chip {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+.agents-ghost__op {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+}
+.agents-ghost__box {
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1.5px var(--kimo-agent);
+}
+/* delete: box opacity 0.4 + danger stroke; the canvas-coloured veil fades the node under it. */
+.agents-ghost--delete .agents-ghost__chip {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+.agents-ghost--delete .agents-ghost__box {
+  box-shadow: inset 0 0 0 1.5px var(--kimo-danger);
+  background: color-mix(in srgb, var(--kimo-bg-canvas) 60%, transparent);
+  opacity: 0.4;
+}
+/* insert: agent-soft fill + agent stroke. */
+.agents-ghost--insert .agents-ghost__box {
+  background: color-mix(in srgb, var(--kimo-agent-soft) 70%, transparent);
+}
+
+/* Dry Run Bar (P1Ulp): row, gap 10, padding [0, 6, 0, 16], center, h 44, bg-overlay, stroke 1
+   border, radius-pill, shadow 0 8 24 shadow-strong. Bottom-centre of the canvas. */
+.agents-dry-bar {
+  box-sizing: border-box;
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 6px 0 16px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+.agents-dry-bar__icon {
+  display: block;
+  flex: none;
+  color: var(--kimo-agent);
+}
+.agents-dry-bar__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px;
+}
+/* Count (wuupD …): padding [0, 8], center, h 20, radius-pill; Label mono 11 / 500. */
+.agents-count {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-pill);
+}
+.agents-count__label {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+}
+.agents-count--delete {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+.agents-count--insert {
+  background: var(--kimo-agent-soft);
+  color: var(--kimo-agent);
+}
+.agents-count--update {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Activity tab (O3WOp › Right Panel Pbaa8, below Tabs): column, fill.
+ */
+.agents-activity {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  background: var(--kimo-bg-app);
+}
+/* Filters (nDEoh): row, gap 8, padding [8, 12], bottom stroke 1 border. */
+.agents-activity__filters {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+.agents-activity__select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Rows + Spacer (sI8aG, fill) scroll together. */
+.agents-activity__list {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+.agents-activity__group {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+}
+/* Group (RnyZP): row, gap 8, padding [8, 12], center, bg-subtle, bottom stroke 1 border. */
+.agents-activity__group-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+.agents-activity__group-name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.agents-activity__group-meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.agents-activity__empty {
+  margin: 0;
+  padding: 24px 12px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+  text-align: center;
+}
+/* Footer (ng9cE): row, gap 8, padding [10, 12], center, top stroke 1 border. */
+.agents-activity__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+.agents-activity__retention {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Settings › Agents & MCP pane (Yr0Ck). Rendered inside `.settings-content` (padding [0, 32, 24,
+ * 32]); the failed-state banner (CBm2G) spans the pane above that padding.
+ */
+.agents-pane {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.agents-pane__content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.agents-pane > .kimo-banner {
+  flex: none;
+  margin: 0 -32px;
+  width: auto;
+}
+.agents-pane__content > * {
+  flex: none;
+}
+.agents-pane__title-bar {
+  flex: none;
+}
+
+/* Server Card (CV3Ow): column, gap 12, padding 16, bg-subtle, stroke 1 border, radius-lg. */
+.agents-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Head (T1ZNV): row, gap 8, center, h 28 (buttons). */
+.agents-card__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+}
+.agents-card__icon {
+  display: block;
+  flex: none;
+  color: var(--kimo-text-primary);
+}
+.agents-card__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 16px;
+  white-space: nowrap;
+}
+.agents-card__version,
+.agents-card__code {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.agents-card__code {
+  color: var(--kimo-danger);
+}
+/* Endpoints (kfAxw): column, gap 6. */
+.agents-card__endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.agents-card__note {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 16px; /* 11 × 1.45 = 15.95 */
+}
+/* Port Fix (QMxSi): row, gap 8, padding [4, 0, 0, 96], center. */
+.agents-card__port-fix {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0 0 96px;
+}
+.agents-card__hint {
+  color: var(--kimo-success);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  white-space: nowrap;
+}
+.agents-card__hint--taken {
+  color: var(--kimo-danger);
+}
+
+/* Endpoint (Gq9F1): row, gap 8, center, h 28; Label w 88 sans 12 text-secondary. */
+.agents-endpoint {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+}
+.agents-endpoint__label {
+  flex: none;
+  width: 88px;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+}
+/* Value Field (H2xoI): row, gap 6, padding [0, 4, 0, 8], center, h 28, bg-app, stroke 1 border,
+   radius-sm. Failed state (Yowvj / kgdne): padding [0, 8] with a 13 px state icon. */
+.agents-endpoint__field {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.agents-endpoint__field--state {
+  padding: 0 8px;
+}
+.agents-endpoint__field--error {
+  background: var(--kimo-danger-soft);
+  box-shadow: inset 0 0 0 1px var(--kimo-danger);
+}
+.agents-endpoint__value {
+  overflow: hidden;
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agents-endpoint__field--error .agents-endpoint__value {
+  color: var(--kimo-danger);
+}
+.agents-endpoint__state {
+  display: block;
+  flex: none;
+}
+.agents-endpoint__state--ok {
+  color: var(--kimo-success);
+}
+.agents-endpoint__state--error {
+  color: var(--kimo-danger);
+}
+
+/* Control (Ndf4A): row, gap 8, justify end, center; Port PropField w 84 (fix: 96, selection). */
+.agents-pane__control {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+.agents-pane__port {
+  flex: none;
+  width: 84px;
+}
+.agents-pane__port--fix {
+  width: 96px;
+  box-shadow: inset 0 0 0 1px var(--kimo-selection);
+}
+.agents-pane__port .kimo-prop-field__prefix,
+.agents-pane__port input {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}
+
+/* Group · Connect an agent (bBFhl): column, gap 2, padding [24, 0, 4, 0]. */
+.agents-pane__group {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 24px 0 4px 0;
+}
+/* Title Row (JjD3R): row, gap 8, center (28 with the Rescan button; 16 for clients). */
+.agents-pane__group-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.agents-pane__group-title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 16px;
+  white-space: nowrap;
+}
+.agents-pane__group-desc {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 16px;
+}
+.agents-pane__count {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* Permissions (mCEsz): column, gap 10, padding 12, bg-subtle, stroke 1 border, radius-md. */
+.agents-perms {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Perm · Can (fw68E): row, gap 12, center; Label w 88 sans 12 text-secondary. */
+.agents-perms__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.agents-perms__label {
+  flex: none;
+  width: 88px;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+}
+.agents-perms__folder,
+.agents-perms__note {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+/* Footer (Zu8bi): row, gap 8, padding [2, 0, 0, 0], center. */
+.agents-perms__footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0 0 0;
+}
+
+/* Activity Log Link (xEuqc): row, gap 10, padding [16, 0, 0, 0], center. */
+.agents-pane__log-link {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 0 0 0;
+}
+.agents-pane__log-icon {
+  display: block;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+.agents-pane__log-text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agents-pane__log-label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+}
+.agents-pane__log-desc {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+
+/* Empty (k6tqC) EmptyState instance: icon bot in agent. */
+.agents-pane__empty .kimo-empty-state__icon {
+  color: var(--kimo-agent);
+}
+/* How To (xp9u8): column, gap 10, padding [20, 0, 4, 0]. */
+.agents-pane__howto {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 20px 0 4px 0;
+}
+/* Step (jl5SY): row, gap 10, center; Num 20 × 20 bg-muted pill, N mono 11 / 500 secondary. */
+.agents-pane__step {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.agents-pane__step-num {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+.agents-pane__step-n {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px;
+}
+.agents-pane__step-text {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+}
+/* Prompt Example (B8x04a): row, gap 8, padding [8, 6, 8, 12], center, bg-subtle, stroke 1 border,
+   radius-md. */
+.agents-pane__prompt {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 6px 8px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+.agents-pane__prompt-text {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+/* Hosts Title (Z5uEa): padding [20, 0, 0, 0]. */
+.agents-pane__hosts-title {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  padding: 20px 0 0 0;
+}
+.agents-pane__more {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+
+/* Diff preview (not designed). */
+.agents-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agents-diff__path {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}
+.agents-diff__text {
+  max-height: 200px;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-subtle);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: pre;
+}
+.agents-diff__error {
+  color: var(--kimo-danger);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+}
+
+/* Settings nav item for this pane (J9yS0): the only coloured nav icon (bot in agent). */
+.settings-nav-item[data-pane="agents-mcp"] .settings-nav-item__icon {
+  color: var(--kimo-agent);
+}

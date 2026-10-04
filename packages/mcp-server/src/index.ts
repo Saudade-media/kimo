@@ -8,6 +8,8 @@
  * (node:fs) are separate entries.
  */
 export * from "./envelope"
+export * from "./guides"
+export * from "./handlers/index"
 export * from "./ops"
 export * from "./policy"
 export * from "./protocol"

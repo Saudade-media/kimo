@@ -12,7 +12,7 @@ import type { NodeData } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
 import { Badge, EmptyState, Tabs } from "@kimo/ui"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { ConflictsPanel, conflictsTabLabel, type EditorConflictSession } from "../conflicts"
 import type { FontSystem } from "../fonts/font-system"
 import type { AssetStore } from "../lib/assets"
@@ -41,7 +41,7 @@ import { FillSection, StrokeSection } from "./sections/PaintSections"
 import { TextSection } from "./sections/TextSection"
 import type { FileSession } from "./session"
 
-type RightTab = "design" | "code" | "agent" | "conflicts"
+type RightTab = "design" | "code" | "agent" | "activity" | "conflicts"
 const NO_REV = createBus(0)
 
 const TABS = [
@@ -66,6 +66,13 @@ export interface RightPanelProps {
   review?: Bus<number>
   /** The window's font system (Text section). */
   fonts?: FontSystem | null
+  /**
+   * Board 21 (rule "Placement"): the agents' Activity panel; adds a 4th tab "Activity" after
+   * Agent while non-null (desktop files with an MCP host).
+   */
+  activity?: ReactNode
+  /** Bumped to open the Activity tab (Paused banner "Show ops", Settings "Open activity"). */
+  openActivity?: Bus<number>
 }
 
 export function RightPanel({
@@ -77,8 +84,21 @@ export function RightPanel({
   conflicts = null,
   review,
   fonts = null,
+  activity = null,
+  openActivity,
 }: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>("design")
+  const activityRev = useBusValue(openActivity ?? NO_REV)
+  const activitySeen = useRef(activityRev)
+  useEffect(() => {
+    if (activityRev === activitySeen.current) return
+    activitySeen.current = activityRev
+    if (activity) setTab("activity")
+  }, [activityRev, activity])
+  const hasActivity = activity != null
+  useEffect(() => {
+    if (!hasActivity) setTab((t) => (t === "activity" ? "design" : t))
+  }, [hasActivity])
   const counts = useConflictCounts(conflicts)
   // Open the tab when a document opens with (or a merge brings) open conflicts; drop it once
   // "Mark resolved & save" finished the merge (the session becomes null).
@@ -100,13 +120,13 @@ export function RightPanel({
     reviewed.current = reviewRev
     if (conflicts) setTab("conflicts")
   }, [reviewRev, conflicts])
-  const items = useMemo(
-    () =>
-      conflicts && counts
-        ? [...TABS, { value: "conflicts" as const, label: conflictsTabLabel(counts.open) }]
-        : TABS,
-    [conflicts, counts],
-  )
+  const items = useMemo(() => {
+    const base: { value: RightTab; label: string }[] = [...TABS]
+    if (hasActivity) base.push({ value: "activity", label: "Activity" })
+    if (conflicts && counts)
+      base.push({ value: "conflicts", label: conflictsTabLabel(counts.open) })
+    return base
+  }, [conflicts, counts, hasActivity])
   return (
     // Board 05 (EHux2): the panel widens to 360 while the Agent tab is open.
     <aside
@@ -114,6 +134,7 @@ export function RightPanel({
       aria-label="Properties panel"
     >
       <Tabs label="Right panel" items={items} value={tab} onChange={setTab} />
+      {tab === "activity" && activity}
       {tab === "conflicts" && conflicts && (
         <ConflictsPanel session={conflicts} getNode={(id) => session.store.getNode(id)} />
       )}

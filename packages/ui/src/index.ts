@@ -161,6 +161,7 @@ export { LibraryRow, type LibraryRowProps } from "./library-row/LibraryRow"
 export * from "./m4-files"
 export * from "./m4-fonts"
 export * from "./m4-merge"
+export * from "./m5-agents"
 export { Menu, MenuItem, type MenuItemProps, type MenuProps } from "./menu/Menu"
 export {
   MenuDense,

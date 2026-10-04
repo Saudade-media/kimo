@@ -8,6 +8,12 @@
  *   TOML) line is preserved byte for byte where the format allows.
  * - Every write is preceded by a backup `~/.kimo/mcp/backups/<host>-<timestamp>.bak` and done
  *   atomically (temp + rename). `plan()` returns the before/after text for a diff preview.
+ * - Writes are compare-and-swap: the target is re-read right before the rename and, when another
+ *   program changed it meanwhile, the plan is recomputed from the new text (up to
+ *   {@link CAS_ATTEMPTS} times). This is what makes the user-scope default for Claude Code
+ *   (`~/.claude.json`, which Claude Code itself rewrites often) safe: ADR 0013 open question 2,
+ *   decided for user scope + CAS rather than defaulting to project `.mcp.json`.
+ * - File permissions of an existing config are kept; new files are created 0600.
  * - A file that cannot be parsed (JSON with comments, broken TOML) is never rewritten: the plan
  *   fails with `UNPARSABLE` and carries the snippet to paste by hand.
  * - No secrets in configs for stdio (the shim reads the socket token itself). The optional HTTP
@@ -16,7 +22,15 @@
  *   file edits are testable with a temp HOME and behave the same everywhere.
  * - Tests never touch the real HOME: every function takes `home` explicitly.
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs"
 import { dirname, join } from "node:path"
 
 export const SERVER_KEY = "kimo"
@@ -123,8 +137,11 @@ export function configPath(host: HostId, scope: InstallScope, ctx: PathContext):
 export type Launcher =
   /** The Rust shim inside the app bundle (attach only). */
   | { kind: "shim"; command: string }
-  /** `kimo mcp` from the CLI (auto attach/headless). */
-  | { kind: "cli"; command: string }
+  /**
+   * `kimo mcp` from the CLI (auto attach/headless). `prefixArgs` go before `mcp` (e.g.
+   * `bunx @kimo/cli mcp …` = command `bunx`, prefixArgs `["@kimo/cli"]`).
+   */
+  | { kind: "cli"; command: string; prefixArgs?: string[] }
   /** Streamable HTTP on localhost (desktop app must run). */
   | { kind: "http"; url: string; token: string }
 
@@ -135,6 +152,16 @@ export const DEFAULT_SHIM_PATH: Record<HostOs, string> = {
   windows: "C:\\Program Files\\Kimo\\kimo-mcp.exe",
 }
 
+/** The argv after `command` for a stdio launcher. */
+export function launcherArgs(
+  launcher: Exclude<Launcher, { kind: "http" }>,
+  host: HostId,
+): string[] {
+  return launcher.kind === "cli"
+    ? [...(launcher.prefixArgs ?? []), "mcp", "--client", host]
+    : ["--client", host]
+}
+
 /** The entry object for JSON hosts (`mcpServers.kimo` / `servers.kimo`). */
 export function jsonEntry(host: HostId, launcher: Launcher): Record<string, unknown> {
   if (launcher.kind === "http") {
@@ -142,7 +169,7 @@ export function jsonEntry(host: HostId, launcher: Launcher): Record<string, unkn
     if (host === "gemini-cli") return { httpUrl: launcher.url, headers }
     return { type: "http", url: launcher.url, headers }
   }
-  const args = launcher.kind === "cli" ? ["mcp", "--client", host] : ["--client", host]
+  const args = launcherArgs(launcher, host)
   const base: Record<string, unknown> = { command: launcher.command, args }
   if (host === "gemini-cli") return { ...base, timeout: 600_000, trust: false }
   return { type: "stdio", ...base }
@@ -153,7 +180,7 @@ export function tomlTable(launcher: Launcher): string {
   const q = (s: string) => JSON.stringify(s)
   if (launcher.kind === "http")
     return `[mcp_servers.${SERVER_KEY}]\nurl = ${q(launcher.url)}\nhttp_headers = { Authorization = ${q(`Bearer ${launcher.token}`)} }\n`
-  const args = launcher.kind === "cli" ? ["mcp", "--client", "codex"] : ["--client", "codex"]
+  const args = launcherArgs(launcher, "codex")
   return `[mcp_servers.${SERVER_KEY}]\ncommand = ${q(launcher.command)}\nargs = [${args.map(q).join(", ")}]\n`
 }
 
@@ -209,6 +236,15 @@ export function planEdit(
 
 function planToml(path: string, before: string | null, launcher: Launcher | null): PlanResult {
   const text = before ?? ""
+  const problem = tomlProblem(text)
+  if (problem)
+    return {
+      ok: false,
+      path,
+      code: "UNPARSABLE",
+      message: `${path} does not look like valid TOML (${problem}); it was left untouched. Add the snippet by hand.`,
+      snippet: launcher ? tomlTable(launcher) : "",
+    }
   const lines = text.split("\n")
   const isOurs = (l: string) => {
     const t = l.trim()
@@ -233,6 +269,69 @@ function planToml(path: string, before: string | null, launcher: Launcher | null
   if (!launcher && !removed) return { ok: true, path, before, after: before, changed: false }
   const changed = after !== text
   return { ok: true, path, before, after: changed ? after : before, changed }
+}
+
+/**
+ * Structural TOML check (not a full parser): every top-level line must be blank, a comment, a
+ * `[table]` / `[[array]]` header or a `key = value` pair, with brackets, braces and multi-line
+ * strings balanced. Enough to refuse files we would corrupt by appending a table. Returns the
+ * first problem, or null.
+ */
+export function tomlProblem(text: string): string | null {
+  let depth = 0
+  let multi: '"""' | "'''" | null = null
+  const lines = text.split("\n")
+  for (let n = 0; n < lines.length; n++) {
+    const line = (lines[n] as string).replace(/\r$/, "")
+    let i = 0
+    const t = line.trim()
+    if (!multi && depth === 0) {
+      if (t === "" || t.startsWith("#")) continue
+      if (t.startsWith("[")) {
+        if (!/^\[\[?\s*[A-Za-z0-9_\-."' ]+\s*\]\]?\s*(#.*)?$/.test(t))
+          return `line ${n + 1}: bad table header`
+        continue
+      }
+      if (
+        !/^(?:[A-Za-z0-9_-]+|"[^"]*"|'[^']*')(?:\s*\.\s*(?:[A-Za-z0-9_-]+|"[^"]*"|'[^']*'))*\s*=/.test(
+          t,
+        )
+      )
+        return `line ${n + 1}: expected key = value`
+      i = line.indexOf("=") + 1
+    }
+    for (; i < line.length; i++) {
+      const c = line[i] as string
+      if (multi) {
+        if (line.startsWith(multi, i)) {
+          i += 2
+          multi = null
+        } else if (c === "\\" && multi === '"""') i++
+        continue
+      }
+      if (line.startsWith('"""', i) || line.startsWith("'''", i)) {
+        multi = line.slice(i, i + 3) as '"""' | "'''"
+        i += 2
+        continue
+      }
+      if (c === "#") break
+      if (c === '"' || c === "'") {
+        let j = i + 1
+        while (j < line.length && line[j] !== c) j += c === '"' && line[j] === "\\" ? 2 : 1
+        if (j >= line.length) return `line ${n + 1}: unterminated string`
+        i = j
+        continue
+      }
+      if (c === "[" || c === "{") depth++
+      else if (c === "]" || c === "}") {
+        depth--
+        if (depth < 0) return `line ${n + 1}: unbalanced ${c}`
+      }
+    }
+  }
+  if (multi) return "unterminated multi-line string"
+  if (depth !== 0) return "unbalanced brackets"
+  return null
 }
 
 function detectIndent(text: string | null): number | null {
@@ -267,7 +366,12 @@ export interface HostStatus {
 /** Minimal fs the executor needs (tests use a temp HOME with the real fs). */
 export interface InstallerFs {
   read(path: string): string | null
-  writeAtomic(path: string, text: string): void
+  /**
+   * Atomic replace (temp + rename). With `expect` (the text the plan was computed from, null =
+   * the file did not exist), the implementation re-reads the target right before the rename and
+   * returns false without touching it when the content moved (compare-and-swap).
+   */
+  writeAtomic(path: string, text: string, expect?: string | null): boolean | undefined
   now(): number
 }
 
@@ -279,11 +383,29 @@ export const nodeInstallerFs: InstallerFs = {
       return null
     }
   },
-  writeAtomic(path, text) {
+  writeAtomic(path, text, expect) {
     mkdirSync(dirname(path), { recursive: true })
-    const tmp = `${path}.kimo-tmp-${process.pid}`
-    writeFileSync(tmp, text, { mode: 0o600 })
-    renameSync(tmp, path)
+    let mode = 0o600
+    try {
+      // Keep the permissions of an existing config (e.g. 0644 settings files).
+      mode = statSync(path).mode & 0o777
+    } catch {
+      // New file.
+    }
+    const tmp = `${path}.kimo-tmp-${process.pid}-${Date.now().toString(36)}`
+    writeFileSync(tmp, text, { mode })
+    try {
+      chmodSync(tmp, mode)
+      if (expect !== undefined && nodeInstallerFs.read(path) !== expect) {
+        rmSync(tmp, { force: true })
+        return false
+      }
+      renameSync(tmp, path)
+    } catch (e) {
+      rmSync(tmp, { force: true })
+      throw e
+    }
+    return true
   },
   now: () => Date.now(),
 }
@@ -300,6 +422,24 @@ export interface ApplyResult {
   backup?: string
 }
 
+/** Attempts before giving up when another program keeps rewriting the file (CAS misses). */
+export const CAS_ATTEMPTS = 5
+
+/** Raised when the config kept changing under us for {@link CAS_ATTEMPTS} attempts. */
+export class ConcurrentEditError extends Error {
+  override readonly name = "ConcurrentEditError"
+  constructor(readonly path: string) {
+    super(`${path} kept changing while Kimo tried to update it; nothing was written. Try again.`)
+  }
+}
+
+/**
+ * Plan → backup → compare-and-swap write. The plan is recomputed from a fresh read when the file
+ * changed between our read and the rename (e.g. Claude Code rewriting `~/.claude.json`), so a
+ * concurrent writer's change is merged rather than clobbered. The remaining window is the
+ * rename itself (microseconds), which no file-based protocol can close without the other
+ * program's cooperation.
+ */
 function apply(
   fs: InstallerFs,
   host: HostId,
@@ -307,16 +447,19 @@ function apply(
   o: InstallOptions,
 ): ApplyResult {
   const path = configPath(host, o.scope, o)
-  const before = fs.read(path)
-  const plan = planEdit(host, path, before, launcher)
-  if (!plan.ok || !plan.changed || o.dryRun || plan.after === null) return { plan }
-  let backup: string | undefined
-  if (before !== null) {
-    backup = join(o.home, ".kimo", "mcp", "backups", `${host}-${fs.now()}.bak`)
-    fs.writeAtomic(backup, before)
+  for (let attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
+    const before = fs.read(path)
+    const plan = planEdit(host, path, before, launcher)
+    if (!plan.ok || !plan.changed || o.dryRun || plan.after === null) return { plan }
+    let backup: string | undefined
+    if (before !== null) {
+      backup = join(o.home, ".kimo", "mcp", "backups", `${host}-${fs.now()}.bak`)
+      fs.writeAtomic(backup, before)
+    }
+    if (fs.writeAtomic(path, plan.after, before) === false) continue
+    return backup ? { plan, backup } : { plan }
   }
-  fs.writeAtomic(path, plan.after)
-  return backup ? { plan, backup } : { plan }
+  throw new ConcurrentEditError(path)
 }
 
 export function install(

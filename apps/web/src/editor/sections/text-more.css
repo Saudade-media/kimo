@@ -1,0 +1,119 @@
+/*
+ * Board 21 "Text section · “…” menu" (N6MWL): the pressed header action, Menu/Dense ndO4D group
+ * labels, the Italic / Features rows (G0AWh7 / SE1Ap) and the not-designed inline fields.
+ */
+
+/* Pressed "…" (c3QSj → COwZb): 20 × 20, bg-muted, radius-sm, ellipsis 14 text-primary. The 3 px
+   negative margin keeps the header height of the 14 × 14 action. */
+.rp-text-section--more-open .kimo-prop-section__action {
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -3px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+/* Group Label · Style (b22Odo): padding [6, 8, 2, 30]; Label mono 11 text-tertiary. */
+.rp-text-menu__group {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  padding: 6px 8px 2px 30px;
+}
+.rp-text-menu__group-label {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 15px;
+}
+
+/* In this menu a check is a toggle (liga u0As6w: check on, no fill, label 400), not "the
+   current value" of a Select: neutralize MenuItem/Dense's checked fill and weight. */
+.rp-text-menu .kimo-menu-item-dense--checked:not(:hover):not(:focus):not([data-highlighted]) {
+  background: transparent;
+}
+.rp-text-menu .kimo-menu-item-dense--checked .kimo-menu-item-dense__label {
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+/* Italic without an italic face: warning dot before the meta (synthetic oblique, lint). */
+.rp-text-menu__item--missing .kimo-menu-item-dense__meta::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--kimo-warning);
+  vertical-align: middle;
+}
+
+/* Feature chip (dp2ps): h 22, bg-muted, radius-pill, gap 4, padding [0, 6, 0, 8], center;
+   Tag mono 11 text-primary; Remove x 10 text-tertiary. */
+.rp-feature-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px 0 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+.rp-feature-chip__tag {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.rp-feature-chip__remove {
+  display: inline-flex;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+.rp-feature-chip__remove:hover {
+  color: var(--kimo-text-primary);
+}
+.rp-feature-chip__remove > svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+/* Add feature (BYcRE): IconButton 22 × 22, fill #00000000, plus 12 text-tertiary. */
+.kimo-icon-button.rp-feature-add {
+  width: 22px;
+  height: 22px;
+}
+.kimo-icon-button.rp-feature-add .kimo-icon-button__icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* Not designed: Link… URL field (under the header) and the Custom tag field (in the menu). */
+.rp-text-link {
+  display: flex;
+  width: 100%;
+}
+.rp-text-menu__custom {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  padding: 2px 4px;
+}

@@ -37,6 +37,7 @@ import { Icon } from "../lib/icons"
 import { cssToken, useTheme } from "../lib/theme"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { diskPath, navigate } from "../router"
+import { useAgentTouched, useEditorAgents } from "./agents"
 import { DiskTopbar, useConflicts, useFocusNode, useWindowTitle } from "./disk"
 import type { FileMenuActions } from "./FileMenu"
 import { FloatingToolbar } from "./FloatingToolbar"
@@ -164,7 +165,7 @@ function EditorShell({
   session: FileSession
   focusNode?: string | null
 }) {
-  const { platform, manager } = useRuntime()
+  const { platform, manager, hostClient = null } = useRuntime()
   const openSettings = useOpenSettings()
   /** The document session of a file on disk (null: browser library). */
   const doc = session.document
@@ -473,6 +474,19 @@ function EditorShell({
     return () => window.removeEventListener("keydown", onKey)
   }, [session, activate, save, saveAs, openFile, newFile, m3])
 
+  // Board 21: agents (presence chip, approvals, canvas attribution, layer dots, Activity tab).
+  const agents = useEditorAgents({
+    platform,
+    hostClient,
+    session,
+    doc,
+    canvas,
+    layout,
+    openSettings: () => openSettings("agents-mcp"),
+    onSaveCopy: () => void saveAs(),
+  })
+  const agentNodes = useAgentTouched(agents.controller)
+
   const fileMenu: FileMenuActions = {
     onNewFile: () => void newFile(),
     onOpenFile: () => void openFile(),
@@ -500,6 +514,7 @@ function EditorShell({
             onHome={() => navigate("/")}
             onExport={download}
             onPreview={() => {}}
+            presence={agents.presence}
           />
         ) : (
           <Topbar
@@ -516,8 +531,9 @@ function EditorShell({
           />
         )}
         {doc && <BannerHost session={doc} />}
+        {agents.banner}
         <div className="editor__body">
-          <LeftPanel session={session} m3={m3} conflicts={conflicts} />
+          <LeftPanel session={session} m3={m3} conflicts={conflicts} agentNodes={agentNodes} />
           <main
             ref={canvasEl}
             className="editor__canvas"
@@ -568,6 +584,7 @@ function EditorShell({
                 console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
               }}
             />
+            {agents.canvasLayer}
             {conflicts && (
               <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />
             )}
@@ -598,6 +615,8 @@ function EditorShell({
             conflicts={conflicts}
             review={review}
             fonts={fonts}
+            activity={agents.activity}
+            openActivity={agents.openActivity}
           />
         </div>
         {panels.variables && (

@@ -93,6 +93,8 @@ export interface FileTopbarProps {
   trailing?: ReactNode
   /** The k logo's action (Home), shown when the window has no traffic-light inset. */
   onHome?: () => void
+  /** Board 21 Agent Presence chip (drag region, before Save Status). */
+  presence?: ReactNode
 }
 
 /** The 28px k logo (web topbar `Logo`, board 20 uE2vu): accent pill, "k" 17 / 700. */
@@ -111,6 +113,7 @@ export function FileTopbar({
   onFileClick,
   fileOpen,
   trailing,
+  presence,
   onHome,
 }: FileTopbarProps) {
   const chrome = useWindowChrome(session.manager.platform)
@@ -133,6 +136,7 @@ export function FileTopbar({
       }
       branch={session.untitled ? null : <FileBranchChip session={session} />}
       status={<SaveStatusPill session={session} />}
+      presence={presence}
       trailing={trailing}
     />
   )

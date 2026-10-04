@@ -142,6 +142,8 @@ export interface ToolContext {
 export interface HandlerOutput<T = unknown> {
   result: ToolResult<T>
   images?: ToolImage[]
+  /** Op group label of an edit (activity log only; never sent to the client). */
+  label?: string
 }
 
 export type ToolHandler = (
@@ -285,6 +287,14 @@ export interface DispatchOptions {
   validate(def: ToolDef, input: unknown): ToolError[]
   /** Resolves call targets for authorization (paths canonicalized, scope checked). */
   targets(def: ToolDef, input: Record<string, unknown>, ctx: ToolContext): Promise<CallTargets>
+  /** Runs before validation; a paused client waits here until resumed (or disconnected). */
+  beforeCall?(def: ToolDef, ctx: ToolContext): Promise<void>
+  /** Dry-run preview for an approval prompt (op kind per node); failures leave it out. */
+  preview?(
+    def: ToolDef,
+    input: Record<string, unknown>,
+    ctx: ToolContext,
+  ): Promise<ApprovalRequest["preview"] | undefined>
 }
 
 /** Runs one tool call end to end. Never throws: everything becomes an envelope. */
@@ -298,6 +308,13 @@ export async function dispatch(
   const def = toolByName(name)
   if (!def) return { result: failure({ code: "INVALID_INPUT", message: `Unknown tool ${name}.` }) }
   const input = (rawInput ?? {}) as Record<string, unknown>
+  if (options.beforeCall) {
+    await options.beforeCall(def, ctx)
+    if (ctx.signal.aborted)
+      return {
+        result: failure({ code: "TIMEOUT", message: "The connection closed.", retryable: true }),
+      }
+  }
   const invalid = options.validate(def, input)
   if (invalid.length) return { result: failure(invalid) }
 
@@ -317,6 +334,9 @@ export async function dispatch(
   }
   if (auth.kind === "ask") {
     const now = ctx.now()
+    const preview = options.preview
+      ? await options.preview(def, input, ctx).catch(() => undefined)
+      : undefined
     const request: ApprovalRequest = {
       id: ctx.newId(),
       client: ctx.identity,
@@ -324,6 +344,7 @@ export async function dispatch(
       ...(auth.path ? { path: auth.path } : {}),
       reason: auth.reason,
       summary: summarizeReason(def, auth.reason),
+      ...(preview ? { preview } : {}),
       requestedAt: now,
       expiresAt: now + APPROVAL_TIMEOUT_MS,
     }

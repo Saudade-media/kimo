@@ -17,6 +17,16 @@ import type {
   ThreeWayMerge,
 } from "@kimo/core-schema"
 import type { DocStore } from "@kimo/editor-state"
+import {
+  ACTIVITY_LIMIT,
+  type ActivityEntry,
+  APPROVAL_TIMEOUT_MS,
+  type ApprovalOutcome,
+  type ApprovalRequest,
+  type ClientIdentity,
+  type ClientPolicy,
+} from "@kimo/mcp-server"
+import type { HostStatus as InstallerHostStatus } from "@kimo/mcp-server/installer"
 import type {
   FileRef,
   GitOperation,
@@ -24,6 +34,17 @@ import type {
   HostOS,
   KimoPlatform,
   LeaseHolder,
+  McpActivityEntry,
+  McpApprovalChoice,
+  McpApprovalOutcome,
+  McpApprovalRequest,
+  McpClientIdentity,
+  McpClientPolicy,
+  McpConnectionInfo,
+  McpHostApi,
+  McpHostConfigStatus,
+  McpHostId,
+  McpServerStatus,
   OpenRequest,
   RecoveryReason as PlatformRecoveryReason,
   RecoveryEntry,
@@ -774,3 +795,84 @@ export interface SessionManager {
 /** The semantic three-way merge used for external changes and git "Keep my edits"
  * (core-schema; `kimo merge` uses the same function). */
 export type SessionMerge = ThreeWayMerge
+
+// ===============================================================================================
+// M5 agents (ADR 0013 §11): presence, approvals and the activity log as the editor shows them.
+// The document host produces this state from `@kimo/mcp-server`; windows read it through
+// `@kimo/platform`'s `McpHostApi`. Visuals come from the M5 boards in `desing.pen` (agent teal
+// for anything an agent does; generic host icons, never vendor logos).
+// ===============================================================================================
+
+/** The platform mirrors stay identical to the MCP server's types. */
+export type McpPolicyMatches = Assert<Same<McpClientPolicy, ClientPolicy>>
+export type McpIdentityMatches = Assert<Same<McpClientIdentity, ClientIdentity>>
+export type McpApprovalMatches = Assert<Same<McpApprovalRequest, ApprovalRequest>>
+export type McpActivityMatches = Assert<Same<McpActivityEntry, ActivityEntry>>
+export type McpOutcomeMatches = Assert<Same<McpApprovalOutcome, ApprovalOutcome>>
+export type McpHostRowMatches = Assert<Same<McpHostConfigStatus, InstallerHostStatus>>
+
+/** Approval timeout shown as a countdown on the prompt (lead decision: 2 minutes → deny). */
+export const AGENT_APPROVAL_TIMEOUT_MS = APPROVAL_TIMEOUT_MS
+/** Activity entries kept per file (lead decision). */
+export const AGENT_ACTIVITY_LIMIT = ACTIVITY_LIMIT
+
+/** One agent chip in the topbar / Agents panel. */
+export interface AgentChip {
+  connectionId: string
+  origin: string
+  /** "Claude Code", "Codex", … */
+  label: string
+  /** Generic icon by host kind. */
+  icon: "terminal" | "editor" | "agent"
+  state: McpConnectionInfo["state"]
+  /** Nodes to tint with the agent color on the canvas (its last edit / current focus). */
+  focus: string[]
+  /** Relative "2 min ago" is formatted by the UI from this. */
+  lastActivityAt: number
+}
+
+/** The approval prompt (one at a time, oldest first; others queue with a count). */
+export interface ApprovalPromptView {
+  request: McpApprovalRequest
+  /** Queue size including this one. */
+  queued: number
+  /** Buttons in order. "Allow for this session" is absent for file and scope reasons. */
+  choices: McpApprovalChoice[]
+  /** ms left before it auto-denies. */
+  remainingMs: number
+}
+
+/** Builds the buttons for a request (lead decision: session allowance never covers files). */
+export function approvalChoices(r: McpApprovalRequest): McpApprovalChoice[] {
+  return r.reason.kind === "file" || r.reason.kind === "scope"
+    ? ["deny", "once"]
+    : ["deny", "session", "once"]
+}
+
+/** Agents state for one window. */
+export interface AgentsState {
+  server: McpServerStatus | null
+  chips: AgentChip[]
+  prompt: ApprovalPromptView | null
+  /** Activity of the window's document, newest last (≤ AGENT_ACTIVITY_LIMIT). */
+  activity: McpActivityEntry[]
+  /** Settings › Agents host rows. */
+  hosts: McpHostConfigStatus[]
+}
+
+/** What the Agents UI calls. Implemented over `McpHostApi` + the window's `DocumentSession`. */
+export interface AgentsController {
+  readonly state: AgentsState
+  subscribe(listener: (s: AgentsState) => void): Unsubscribe
+  answer(id: string, choice: McpApprovalChoice): Promise<void>
+  disconnect(connectionId: string): Promise<void>
+  /** Undo an agent's op group from the activity log (uses the entry's undoToken; guarded). */
+  undoEntry(entry: McpActivityEntry): Promise<{ ok: boolean; stale: boolean }>
+  focusEntry(entry: McpActivityEntry): void
+  setPolicy(client: string, policy: McpClientPolicy | null): Promise<void>
+  installHost(host: McpHostId, scope: "user" | "project"): Promise<McpHostConfigStatus>
+  removeHost(host: McpHostId, scope: "user" | "project"): Promise<McpHostConfigStatus>
+}
+
+/** Host API the controller needs (re-exported for builders). */
+export type AgentsHost = McpHostApi

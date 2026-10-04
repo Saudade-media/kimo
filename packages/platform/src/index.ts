@@ -26,6 +26,7 @@ export {
   parseDeepLink,
   resolveAgainstFile,
 } from "./links"
+export * from "./mcp"
 export {
   type Appearance,
   type ExternalChangePolicy,

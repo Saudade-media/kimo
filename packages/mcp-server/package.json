@@ -1,0 +1,30 @@
+{
+  "name": "@kimo/mcp-server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Kimo MCP tool registry (single source), socket protocol, host attach/headless runtime and host installer",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./installer": "./src/installer.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test test",
+    "gen:tools": "bun scripts/gen-tools.ts",
+    "check:generated": "bun scripts/gen-tools.ts --check"
+  },
+  "dependencies": {
+    "@kimo/core-schema": "workspace:*",
+    "@kimo/editor-state": "workspace:*",
+    "@modelcontextprotocol/node": "^2.1.1",
+    "@modelcontextprotocol/server": "2.3.0",
+    "typebox": "^1.3.34"
+  },
+  "files": [
+    "src",
+    "generated"
+  ]
+}

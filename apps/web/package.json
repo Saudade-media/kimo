@@ -23,6 +23,7 @@
     "@kimo/desktop": "workspace:*",
     "@kimo/editor-state": "workspace:*",
     "@kimo/layout": "workspace:*",
+    "@kimo/mcp-server": "workspace:*",
     "@kimo/platform": "workspace:*",
     "@kimo/renderer": "workspace:*",
     "@kimo/sync": "workspace:*",

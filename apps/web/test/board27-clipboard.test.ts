@@ -460,6 +460,40 @@ describe("the built-in agent and pages (board 27 §1)", () => {
       ops: [{ op: "insert", parent: "root", node: { page: "PageB00001" } }],
     })
   })
+  test("a streamed call gets the same page defaults op by op (ADR 0013 §4.7)", async () => {
+    const { withPageDefaults, pageAwareToolHost } = await import("../src/editor/pages/agent")
+    const input = {
+      docId: "d1",
+      ops: [
+        { op: "insert", parent: "root", node: { type: "frame" } },
+        { op: "move", id: "Rect000001", parent: "root" },
+        { op: "instantiate", of: "Btn0000001", parent: "root" },
+        { op: "instantiate", of: "Btn0000001", parent: "root" },
+      ],
+    }
+    const events: { kind: string; index?: number; value?: unknown }[] = []
+    const host = pageAwareToolHost(
+      {
+        tools: () => [],
+        call: async () => ({}) as never,
+        stream: () => ({
+          push: () => {},
+          event: (e) => {
+            events.push(e as never)
+          },
+          abort: () => {},
+          onProgress: () => () => {},
+        }),
+      },
+      () => "PageB00001",
+    )
+    const s = host.stream?.({ id: "c1", name: "kimo_apply_ops" })
+    const json = JSON.stringify(input)
+    for (let i = 0; i < json.length; i += 5) s?.push(json.slice(i, i + 5))
+    const streamed = events.filter((e) => e.kind === "item")
+    expect(streamed.map((e) => e.index)).toEqual([0, 1, 2, 3, 4, 5, 6])
+    expect(streamed.map((e) => e.value)).toEqual(withPageDefaults(input.ops, "PageB00001"))
+  })
   test("the system context names the active page", async () => {
     const { buildSystemPrompt } = await import("@kimo/ai-agent")
     const p = buildSystemPrompt({

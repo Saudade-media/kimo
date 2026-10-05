@@ -31,6 +31,7 @@ import {
   type HostFiles,
   type McpConnection,
   type McpHostRuntime,
+  type PartialEvent,
   type SceneService,
   type SceneServiceOptions,
   type SvgImporter,
@@ -679,6 +680,25 @@ export async function startDocumentHostService(
     return conn
   }
 
+  // --- Streamed edits (ADR 0013 §4.7) -------------------------------------------------------------
+  const feedStream = async (conn: McpConnection, args: Record<string, unknown>) => {
+    const s = conn.openStream(String(args.callId))
+    if (!s) return null
+    for (const e of (Array.isArray(args.events) ? args.events : []) as PartialEvent[]) s.event(e)
+    await s.settled()
+    return s.progress()
+  }
+  /** The live MCP connection of a CLI session: its relay's cwd is the session workspace. */
+  const cliConnection = (workspace: string): McpConnection | null => {
+    if (!workspace) return null
+    const tail = (p: string) => p.replace(/\/+$/, "").split(/[\\/]/).slice(-2).join("/")
+    const live = [...relays.values()].filter((r) => r.conn && !r.conn.closed && r.cwd)
+    const hit =
+      live.find((r) => r.cwd === workspace) ??
+      live.find((r) => tail(r.cwd as string) === tail(workspace))
+    return hit?.conn ?? null
+  }
+
   // --- Window RPC -------------------------------------------------------------------------------
   type Rpc = { from: string; id: string; method: string; args: Record<string, unknown> }
   const rpc: Record<string, (args: Record<string, unknown>, from: string) => Promise<unknown>> = {
@@ -762,11 +782,46 @@ export async function startDocumentHostService(
      */
     async agentCall(args, from) {
       const conn = agentConnection(args.spec as AgentCallSpec, from)
-      const out = await conn.call(String(args.name), args.input ?? {})
+      const out = await conn.call(
+        String(args.name),
+        args.input ?? {},
+        typeof args.callId === "string" ? { callId: args.callId } : {},
+      )
       return {
         result: out.result,
         ...(out.images ? { images: out.images } : {}),
       }
+    },
+    /**
+     * Streamed edits (ADR 0013 §4.7): the next complete ops of a call the in-app agent's model
+     * is still writing. They apply provisionally under the agent's origin; `agentCall` with the
+     * same `callId` commits them. Answers the stream's progress (pointer, last layer).
+     */
+    async agentStream(args, from) {
+      const conn = agentConnection(args.spec as AgentCallSpec, from)
+      return { progress: await feedStream(conn, args) }
+    },
+    async agentStreamClose(args, from) {
+      const conn = agentConnection(args.spec as AgentCallSpec, from)
+      conn.closeStream(String(args.callId), String(args.reason ?? "Stopped."))
+      return { ok: true }
+    },
+    /**
+     * Streamed edits of a local CLI the window runs (Claude Code): the window parses the CLI's
+     * stream-json and forwards each complete op; the CLI's own MCP connection (matched by its
+     * session workspace, the shim's cwd) applies them, and its `tools/call` (with
+     * `_meta["claudecode/toolUseId"]`) commits them. Null progress: no such connection yet.
+     */
+    async cliStream(args) {
+      const conn = cliConnection(String(args.workspace ?? ""))
+      return { progress: conn ? await feedStream(conn, args) : null }
+    },
+    async cliStreamClose(args) {
+      cliConnection(String(args.workspace ?? ""))?.closeStream(
+        String(args.callId),
+        String(args.reason ?? "Stopped."),
+      )
+      return { ok: true }
     },
     /** The window's answer to a forwarded approval (Stop answers deny). */
     async agentApproval(args, from) {

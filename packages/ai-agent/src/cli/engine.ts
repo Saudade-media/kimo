@@ -17,6 +17,7 @@ import { ProviderError } from "../errors"
 import type { AgentEvent, OpGroup, TurnRecord, TurnStatus } from "../loop"
 import { type StepNames, stepLabel } from "../progress"
 import { LineSplitter } from "../providers/sse"
+import type { ToolStream } from "../toolhost"
 import {
   type AssistantMessage,
   addUsage,
@@ -56,6 +57,13 @@ export interface RunCliTurnOptions {
   now?: () => number
   /** Layer names for step labels ("Editing 6 layers in Pricing"). */
   names?: StepNames
+  /**
+   * Streamed edits (ADR 0013 §4.7): opens the provisional stream of a tool call the CLI's model
+   * is writing. The editor forwards it to the document host, which serves the CLI's MCP
+   * connection (`workspace` identifies it) and commits it when the call arrives. Absent: the
+   * CLI's calls apply when they arrive, as before.
+   */
+  toolStream?: (call: { id: string; name: string; workspace: string }) => ToolStream | undefined
 }
 
 /** The MCP launch for a CLI: bundled shim with `--client <cli>` (ADR 0013 §9 entry shape). */
@@ -84,9 +92,34 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
   const opGroups: OpGroup[] = []
   let opsApplied = 0
   const stepTools = new Map<string, string>()
+  /** Tool calls the CLI's model is writing (streamed edits), by tool-use id. */
+  const live = new Map<string, ToolStream | null>()
+  let workspace = ""
 
   const handle = (e: CliEvent) => {
     switch (e.type) {
+      case "tool_input_delta": {
+        let s = live.get(e.callId)
+        if (s === undefined) {
+          s = o.toolStream?.({ id: e.callId, name: e.tool, workspace }) ?? null
+          live.set(e.callId, s)
+          s?.onProgress((p) => {
+            if (p.state !== "open" || !p.applied) return
+            o.onEvent({
+              type: "step_stream",
+              callId: e.callId,
+              tool: e.tool,
+              state: p.state,
+              applied: p.applied,
+              changed: p.changed,
+              ...(p.name ? { name: p.name } : {}),
+              ...(p.pointer ? { pointer: p.pointer } : {}),
+            })
+          })
+        }
+        s?.push(e.partialJson)
+        break
+      }
       case "session":
         cliSessionId = e.id || cliSessionId
         if (e.mcpConnected === false)
@@ -116,6 +149,8 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
         })
         break
       case "step_end": {
+        // The call ran: the host committed or rolled back its stream.
+        live.delete(e.callId)
         const tool = e.tool || stepTools.get(e.callId) || ""
         const env = parseEnvelope(e.output)
         let summary = e.output.slice(0, 200)
@@ -181,7 +216,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
       throw fail("unsupported_platform", `${label} is not installed.`)
     if (o.detection.signedIn === false)
       throw fail("auth", `${label} is not signed in. Run its login, then retry.`)
-    const workspace = await o.host.prepareWorkspace(o.session, [])
+    workspace = await o.host.prepareWorkspace(o.session, [])
     const prompt = o.user.content
       .filter((p) => p.type === "text")
       .map((p) => (p as { text: string }).text)
@@ -242,6 +277,9 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
     status = err.kind === "aborted" ? "stopped" : "error"
     failure = err
   }
+  // Calls the CLI never made (stopped, crashed): undo what they streamed.
+  for (const s of live.values()) s?.abort("The call never arrived.")
+  live.clear()
 
   // The reply is the text after the last tool call; a turn that ended on a tool call keeps its
   // last note so the thread is never blank.

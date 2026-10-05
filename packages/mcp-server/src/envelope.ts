@@ -168,7 +168,7 @@ export interface ToolFailure {
   rolledBack: true
   /** Current revision when known, so the agent can re-read and retry. */
   revision?: { before: RevisionToken; after: RevisionToken }
-  /** kimo_script only: retry handle for {retryId, edits}. */
+  /** kimo_apply_ops: retry handle; send {docId, retryId, edits} to fix and rerun this call. */
   retryId?: string
 }
 
@@ -233,7 +233,7 @@ export function envelopeSchema<T extends TSchema>(data: T, opts: { mutating: boo
       ),
       errors: Opt(Arr(ToolErrorSchema, { description: "Present when ok is false." })),
       rolledBack: Opt(Bool({ description: "Present (true) when ok is false." })),
-      retryId: Opt(Str({ description: "kimo_script retry handle." })),
+      retryId: Opt(Str({ description: "Fix and rerun this call: {docId, retryId, edits}." })),
       data: Opt(
         Type.Unsafe<Static<T>>({
           ...toJsonSchema(data),

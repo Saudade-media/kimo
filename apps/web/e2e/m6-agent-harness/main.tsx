@@ -133,6 +133,44 @@ const script: Script = (req) => {
           ],
           delayMs: 60,
         }
+  // Streamed edits (ADR 0013 §4.7): the call's input streams slowly, so its layers land one by
+  // one before the call itself ends.
+  if (text.includes("Stream a pricing card"))
+    return afterTool(req)
+      ? { text: "Added a pricing card to Pricing." }
+      : {
+          text: "Building the pricing card\n",
+          tools: [
+            {
+              name: "kimo_apply_ops",
+              input: {
+                docId: docId(),
+                ops: [
+                  {
+                    op: "insert",
+                    key: "card",
+                    parent: "Pricing0001",
+                    node: { type: "frame", name: "Pro card", x: 0, y: 0, w: 240, h: 300 },
+                  },
+                  ...["Pro", "$49/mo", "Unlimited files", "Priority support"].map((t, i) => ({
+                    op: "insert",
+                    parent: "@card",
+                    node: {
+                      type: "text",
+                      name: `Line ${i + 1}`,
+                      content: t,
+                      x: 16,
+                      y: 16 + i * 32,
+                      style: { size: 16 },
+                      fill: "#111111",
+                    },
+                  })),
+                ],
+              },
+            },
+          ],
+          streamInput: { chunk: 12, delayMs: 25 },
+        }
   if (text.includes("landing"))
     return afterTool(req)
       ? { text: "Sections are in." }

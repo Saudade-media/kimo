@@ -116,6 +116,33 @@ describe("ProgressTracker", () => {
   })
 })
 
+describe("stepLabel of a patch-retry", () => {
+  test("a retry call says it fixes the last edit", () => {
+    expect(
+      stepLabel({
+        id: "c",
+        name: "kimo_apply_ops",
+        input: { docId: "d", retryId: "r_1", edits: [] },
+      }),
+    ).toBe("Fixing the last edit")
+  })
+})
+
+describe("ProgressTracker while a call streams", () => {
+  test("'Adding <layer>…' replaces the note and stays when the call's step starts", () => {
+    const t = new ProgressTracker()
+    t.text("Building the pricing section\n")
+    expect(t.status.text).toBe("Building the pricing section")
+    t.streaming("Adding Pro card…")
+    expect(t.status).toEqual({ text: "Adding Pro card…", source: "tool" })
+    t.step("Adding 5 layers in Pricing")
+    expect(t.status.text).toBe("Adding Pro card…")
+    // The next step without streaming falls back to its own label.
+    t.step("Rendering")
+    expect(t.status.text).toBe("Rendering")
+  })
+})
+
 describe("replyOf", () => {
   test("the last assistant text: notes before tool calls are not the reply", () => {
     const msgs: ChatMessage[] = [

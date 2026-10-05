@@ -981,7 +981,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   }
 
   function trackCanvas(origin: string, e: AgentEvent) {
-    if (e.type === "step_start") {
+    if (e.type === "step_stream") {
+      // A call the model is still writing landed more layers (ADR 0013 §4.7): the area and
+      // the pointer follow the last one added, as they do when a whole call lands.
+      if (e.changed.length) moveCursor(origin, e.changed, e.pointer)
+    } else if (e.type === "step_start") {
       // The cursor moves to the layers this step reads or edits; a batch that only inserts
       // keeps the last area (its nodes have no box until it lands), else its insert parents.
       const tg = callTargets(e.tool, e.input)
@@ -1092,6 +1096,15 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       ...(i.fromHome ? { fromHome: true } : {}),
       ...(activePage ? { page: activePage } : {}),
       ...docContext(isCliProvider(i.model.provider), i.scope),
+      // Streamed edits (ADR 0013 §4.7): API providers stream tool input through the tool host;
+      // Claude Code does when the runtime forwards its stream (desktop with a document host).
+      ...((
+        isCliProvider(i.model.provider)
+          ? i.model.provider === "cli:claude-code" && !!rt.cliToolStream
+          : true
+      )
+        ? { streamed: true }
+        : {}),
     })
     const failRecord = (err: ProviderError): TurnRecord => {
       const record: TurnRecord = {
@@ -1160,6 +1173,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         onEvent: i.onEvent,
         now,
         names: stepNames,
+        ...(rt.cliToolStream ? { toolStream: (c) => rt.cliToolStream?.(c) } : {}),
       })
     }
     const provider = providerFor(rt, resolved.config)
@@ -1287,6 +1301,19 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           break
         case "message_end":
           tracker.messageEnd()
+          break
+        case "step_stream":
+          // Board 31 status while a call streams: what just landed ("Adding Pricing card…").
+          if (e.name) tracker.streaming(`Adding ${e.name}…`)
+          else {
+            // Edits of existing layers only: name the layer when it is known.
+            const edited = e.changed[0] ? o.nodeName?.(e.changed[0]) : undefined
+            tracker.streaming(edited ? `Editing ${edited}…` : "Editing…")
+          }
+          {
+            const cursor = canvas.cursors.find((c) => c.origin === origin)
+            patchProgress(cursor ? { follow: followOf(cursor) } : {})
+          }
           break
         case "step_start": {
           tracker.step(e.label)
@@ -1671,7 +1698,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       trackCanvas(origin, e)
       const row = modeRun?.agents.find((a) => a.origin === origin)
       if (!row || !modeRun) return
-      if (e.type === "step_start") patchRow(origin, { mark: "working", state: "running" })
+      if (e.type === "step_start" || e.type === "step_stream")
+        patchRow(origin, { mark: "working", state: "running" })
       else if (e.type === "step_end") {
         if (e.ok && e.undoToken) {
           patchRow(origin, { ops: row.ops + Math.max(1, e.changed.length) })

@@ -15,14 +15,21 @@ import type { ToolError } from "./envelope"
 import { toCallToolResult } from "./envelope"
 import { type ListOptions, listTools, toMcpDescriptor, validationSchemaOf } from "./registry"
 import { PROMPTS } from "./resources"
-import { type DispatchOptions, dispatch, type ToolContext, type ToolHandlers } from "./runtime"
+import {
+  type DispatchOptions,
+  dispatch,
+  type HandlerOutput,
+  type ToolContext,
+  type ToolHandlers,
+} from "./runtime"
+import { CLAUDE_CODE_TOOL_USE_META } from "./stream"
 import type { ToolDef } from "./tools/define"
 
 export const SERVER_NAME = "kimo"
 
 /** Server-level instructions sent at initialize (kept short; guides live in kimo_read_docs). */
 export const SERVER_INSTRUCTIONS =
-  "Kimo is a local design canvas (.kimo files). Find the docId in your context or with kimo_get_state (kimo_open opens files); read with kimo_query; edit only with kimo_apply_ops (baseRevision from your last result); check with kimo_render. Build step by step: plan the sections, then one finished section per call (40 new layers per call is a ceiling, not a target), one short status line before each call; fix the data.problems a result lists before moving on and finish with kimo_validate check:true clean. Copy existing frames or pages instead of re-creating them. Results are JSON envelopes; branch on errors[].code. Write to the user plainly: what changed and where, layer names quoted, no filler, hype words or emoji. Guides: kimo_read_docs."
+  "Kimo is a local design canvas (.kimo files). Find the docId in your context or with kimo_get_state (kimo_open opens files); read with kimo_query; edit only with kimo_apply_ops (baseRevision from your last result). Show work early, no long planning: the first call makes the page frame with its first finished section, then one finished section per call (the new-layer limit is a ceiling, not a target), one short status line before each call. Pass render:true on the call that finishes a section instead of a separate kimo_render; fix the data.problems a result lists before moving on and finish with kimo_validate check:true clean. A failed call returns retryId: fix it with {docId, retryId, edits} instead of resending it. Copy existing frames or pages instead of re-creating them. Results are JSON envelopes; branch on errors[].code. Write to the user plainly: what changed and where, layer names quoted, no filler, hype words or emoji. Guides: kimo_read_docs."
 
 const passThrough: Parameters<typeof fromJsonSchema>[1] & object = {
   getValidator: (() => (input: unknown) => ({
@@ -109,6 +116,16 @@ export interface KimoServerOptions extends ListOptions {
   targets: DispatchOptions["targets"]
   preview?: DispatchOptions["preview"]
   beforeCall?: DispatchOptions["beforeCall"]
+  /**
+   * Wraps each tool call (ADR 0013 §4.7): the host runs it with the provisional stream of its
+   * tool-use id (`_meta["claudecode/toolUseId"]`) so a streamed edit commits or rolls back.
+   */
+  around?: (
+    name: string,
+    input: Record<string, unknown>,
+    toolUseId: string | undefined,
+    run: (ctx: ToolContext) => Promise<HandlerOutput>,
+  ) => Promise<HandlerOutput>
 }
 
 export function createKimoMcpServer(options: KimoServerOptions): McpServer {
@@ -127,13 +144,25 @@ export function createKimoMcpServer(options: KimoServerOptions): McpServer {
         outputSchema: fromJsonSchema<Record<string, unknown>>(d.outputSchema as never, passThrough),
         annotations: d.annotations,
       },
-      async (args) => {
-        const out = await dispatch(def.name, args, options.context(), options.handlers, {
-          validate: validateInput,
-          targets: options.targets,
-          ...(options.preview ? { preview: options.preview } : {}),
-          ...(options.beforeCall ? { beforeCall: options.beforeCall } : {}),
-        })
+      async (args, extra) => {
+        const run = (ctx: ToolContext) =>
+          dispatch(def.name, args, ctx, options.handlers, {
+            validate: validateInput,
+            targets: options.targets,
+            ...(options.preview ? { preview: options.preview } : {}),
+            ...(options.beforeCall ? { beforeCall: options.beforeCall } : {}),
+          })
+        const meta = (extra as { mcpReq?: { _meta?: Record<string, unknown> } } | undefined)?.mcpReq
+          ?._meta
+        const id = meta?.[CLAUDE_CODE_TOOL_USE_META]
+        const out = options.around
+          ? await options.around(
+              def.name,
+              (args ?? {}) as Record<string, unknown>,
+              typeof id === "string" ? id : undefined,
+              run,
+            )
+          : await run(options.context())
         return toCallToolResult(out.result, out.images) as never
       },
     )

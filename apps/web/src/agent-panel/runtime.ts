@@ -24,6 +24,7 @@ import {
   type SessionMeta,
   type SessionStore,
   type SkillSource,
+  type ToolStream,
 } from "@kimo/ai-agent"
 import { createTauriCliHost, type KimoPlatform } from "@kimo/platform"
 import type { AiSettingsController } from "../ai-settings/controller"
@@ -62,6 +63,12 @@ export interface AgentPanelRuntime {
   cliHost?: CliProcessHost | null
   /** How a CLI launches Kimo's MCP server (bundled shim with `--client <cli>`). */
   mcpLaunch?(cli: string): KimoMcpLaunch
+  /**
+   * Streamed edits of a local CLI (ADR 0013 §4.7): forwards a tool call the CLI's model is
+   * writing to whatever serves the CLI's MCP connection (desktop: the document host).
+   * Absent: CLI edits land when their call arrives.
+   */
+  cliToolStream?(call: { id: string; name: string; workspace: string }): ToolStream | undefined
   /** The document side (in-window tools or the document host's). */
   tools: ToolHostFactory
   sessions: SessionStore
@@ -112,6 +119,7 @@ export function createAppAgentRuntime(o: {
   fetchFor?: (config: ProviderConfig) => typeof fetch
   cliHost?: CliProcessHost | null
   mcpLaunch?: (cli: string) => KimoMcpLaunch
+  cliToolStream?: AgentPanelRuntime["cliToolStream"]
   skills?: SkillSource
   openSettings?: AgentPanelRuntime["openSettings"]
   openLink?: AgentPanelRuntime["openLink"]
@@ -135,6 +143,7 @@ export function createAppAgentRuntime(o: {
     ...(o.fetchFor ? { fetchFor: o.fetchFor } : {}),
     cliHost: o.cliHost ?? null,
     ...(o.mcpLaunch ? { mcpLaunch: o.mcpLaunch } : {}),
+    ...(o.cliToolStream ? { cliToolStream: o.cliToolStream } : {}),
     tools: o.tools,
     sessions: o.sessions ?? createIndexedDbSessionStore(),
     promptRuns: o.promptRuns ?? createPromptRunStore(),

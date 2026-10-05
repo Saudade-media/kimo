@@ -135,6 +135,11 @@ export type CliEvent =
   | { type: "thinking_delta"; text: string }
   /** A whole assistant text block (CLIs without partial streaming). */
   | { type: "text"; text: string }
+  /**
+   * A tool call's input as the model writes it (Claude Code `input_json_delta`, ADR 0013 §4.7):
+   * the first fragment opens the stream (`tool` is the Kimo tool name).
+   */
+  | { type: "tool_input_delta"; callId: string; tool: string; partialJson: string }
   | { type: "step_start"; callId: string; tool: string; input: Record<string, unknown> }
   | { type: "step_end"; callId: string; tool: string; ok: boolean; output: string }
   | { type: "usage"; usage: Usage }

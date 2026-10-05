@@ -110,6 +110,7 @@ export function stepLabel(call: ToolCallRequest, names: StepNames = {}): string 
   const nameOf = (id: unknown) => (typeof id === "string" ? names.name?.(id) : undefined)
   switch (call.name) {
     case "kimo_apply_ops": {
+      if (typeof i.retryId === "string") return "Fixing the last edit"
       const d = Array.isArray(i.ops) ? describeOps(i.ops as Op[], names) : null
       return d ?? (str(i.label) ? `Editing · ${i.label}` : "Editing")
     }
@@ -196,6 +197,8 @@ export class ProgressTracker {
   private segment = ""
   /** The segment as of the last committed model message (a retry discards back to it). */
   private committed = ""
+  /** The running call streamed: its step keeps the "Adding …" status. */
+  private streamed = false
 
   /**
    * Streamed text. Only complete lines or sentences become the status, so a reply being written
@@ -226,8 +229,26 @@ export class ProgressTracker {
     this.committed = this.segment
   }
 
+  /**
+   * A call the model is still writing landed layers (streamed edits, ADR 0013 §4.7): the status
+   * names what just landed ("Adding Pricing card…"). The note written before the call ends here.
+   */
+  streaming(text: string): void {
+    this.streamed = true
+    this.status = { text, source: "tool" }
+    this.segment = ""
+    this.committed = ""
+  }
+
   /** A tool call starts: its note (if any) stays, else the tool's label. */
   step(label: string): void {
+    // The call already streamed ("Adding …"): keep that status until the call lands.
+    if (this.streamed) {
+      this.streamed = false
+      this.segment = ""
+      this.committed = ""
+      return
+    }
     const note = noteOf(this.segment)
     this.status = note ? { text: note, source: "note" } : { text: label, source: "tool" }
     this.segment = ""

@@ -31,10 +31,11 @@ import {
   type ToolContext,
   type ToolHandlers,
 } from "../runtime"
+import type { ApplyStream } from "../stream"
 import type { ToolDef } from "../tools/define"
 import { ActivityLog, type ActivityStore, ApprovalBroker, PresenceTracker } from "./activity"
 import { createToolHandlers } from "./create"
-import type { ToolHandlerOptions } from "./tools"
+import { streamEngineOf, type ToolHandlerOptions } from "./tools"
 import { fileIdOf, randomId } from "./util"
 
 export interface McpHostRuntimeOptions {
@@ -96,8 +97,26 @@ export interface McpConnection {
   context(): ToolContext
   /** Target resolution for `authorize` (canonical paths, open docs, node scope). */
   targets: DispatchOptions["targets"]
-  /** Validates, authorizes, asks and runs one call (in-process callers and tests). */
-  call(name: string, input: unknown): Promise<HandlerOutput>
+  /**
+   * Validates, authorizes, asks and runs one call (in-process callers and tests). `callId`
+   * names the model's tool-use id: a streamed `kimo_apply_ops` commits its provisional group.
+   */
+  call(name: string, input: unknown, options?: { callId?: string }): Promise<HandlerOutput>
+  /**
+   * Streamed edits (ADR 0013 §4.7): the provisional stream of a tool-use id, opened on first
+   * use (the editor window forwards the model's partial input before the call arrives). Null
+   * when the connection is closed. From then on the connection's calls get the streamed limit.
+   */
+  openStream(callId: string): ApplyStream | null
+  /**
+   * The stream a call commits: by tool-use id (`_meta["claudecode/toolUseId"]`), else the
+   * newest open stream on the same document whose applied ops start the call's ops.
+   */
+  streamFor(callId: string | undefined, input: Record<string, unknown>): ApplyStream | undefined
+  /** Rolls back and forgets the stream of a call that will never run (stop, retry). */
+  closeStream(callId: string, reason?: string): void
+  /** True once the caller streamed a call (its calls use STREAM_MAX_NEW_LAYERS). */
+  readonly streamed: boolean
   /** Dry-run preview for approval prompts (op kind per node). */
   preview: NonNullable<DispatchOptions["preview"]>
   /** Waits while the client is paused (every call, before authorization). */
@@ -338,6 +357,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
 
     const context = (): ToolContext => {
       const call: { docId?: string; path?: string } = {}
+      const streamedNow = streams.size > 0 || everStreamed
       const ctx: ToolContext & { __call: typeof call } = {
         __call: call,
         identity,
@@ -366,6 +386,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         signal: abort.signal,
         now,
         newId: () => randomId(10),
+        ...(streamedNow ? { streamed: true } : {}),
       }
       return ctx
     }
@@ -407,7 +428,8 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
     }
 
     const tracked: ToolHandlers = new Proxy(handlers, {
-      get(target, name: string) {
+      get(target, name: string | symbol) {
+        if (typeof name !== "string") return (target as never)[name]
         const h = target[name as keyof ToolHandlers]
         return async (input: Record<string, unknown>, ctx: ToolContext) => {
           const p = presence.get(origin)
@@ -451,8 +473,9 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
 
     const preview: McpConnection["preview"] = async (def, input, ctx) => {
       if (def.name !== "kimo_apply_ops" || typeof input.docId !== "string") return undefined
-      // Untracked handlers and no activity: a dry run only feeds the prompt.
-      const quiet: ToolContext = { ...ctx, recordActivity: () => {} }
+      // Untracked handlers and no activity: a dry run only feeds the prompt (never a stream's).
+      const { stream: _s, ...rest } = ctx
+      const quiet: ToolContext = { ...rest, recordActivity: () => {} }
       const out = await handlers.kimo_apply_ops({ ...input, dryRun: true }, quiet)
       if (!out.result.ok) return undefined
       return previewOf(out.result as never)
@@ -470,6 +493,75 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         })
       }
     }
+    // --- Streamed edits (ADR 0013 §4.7) ----------------------------------------------------
+    const engine = streamEngineOf(handlers)
+    const streams = new Map<string, ApplyStream>()
+    let everStreamed = false
+    const dispatchOptions = (): DispatchOptions => ({
+      validate: options.validate ?? (() => []),
+      targets,
+      preview,
+      beforeCall,
+    })
+    const openStream = (callId: string): ApplyStream | null => {
+      if (conn.closed || !engine) return null
+      const live = streams.get(callId)
+      if (live) return live
+      // Bounded: the oldest stream whose call never came is rolled back.
+      if (streams.size >= 8) {
+        const [oldId, old] = streams.entries().next().value as [string, ApplyStream]
+        old.close()
+        streams.delete(oldId)
+      }
+      everStreamed = true
+      const s = engine.open({ callId, ctx: context(), dispatch: dispatchOptions() })
+      s.onProgress((p) => {
+        if (p.state === "open" && p.applied > 0) {
+          presence.update(origin, {
+            state: "editing",
+            lastActivityAt: now(),
+            ...(p.pointer ? { pointer: p.pointer } : {}),
+            ...(p.changed.length ? { focus: p.changed.slice(0, 50) } : {}),
+            call: {
+              tool: "kimo_apply_ops",
+              label: p.name ? `Adding ${p.name}` : `Applying ${p.applied} ops`,
+              startedAt: presence.get(origin)?.call?.startedAt ?? now(),
+            },
+          })
+        }
+      })
+      streams.set(callId, s)
+      return s
+    }
+    const streamFor = (
+      callId: string | undefined,
+      input: Record<string, unknown>,
+    ): ApplyStream | undefined => {
+      if (callId) return streams.get(callId)
+      const ops = Array.isArray(input.ops) ? input.ops : []
+      const open = [...streams.values()].reverse()
+      return open.find((s) => {
+        const p = s.progress()
+        return p.state !== "rolled-back" && p.state !== "committed" && p.applied <= ops.length
+      })
+    }
+    /** Runs a call with its stream, then closes the stream (rollback unless committed). */
+    const runWith = async (
+      stream: ApplyStream | undefined,
+      run: (ctx: ToolContext) => Promise<HandlerOutput>,
+    ): Promise<HandlerOutput> => {
+      const ctx = context()
+      if (stream) ctx.stream = stream
+      try {
+        return await run(ctx)
+      } finally {
+        if (stream) {
+          stream.close("The call did not commit the streamed ops.")
+          for (const [id, s] of streams) if (s === stream) streams.delete(id)
+        }
+      }
+    }
+
     const conn: McpConnection = {
       identity,
       origin,
@@ -487,16 +579,29 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
       preview,
       beforeCall,
       closed: false,
-      call: (name, input) =>
-        dispatch(name, input, context(), tracked, {
-          validate: options.validate ?? (() => []),
-          targets,
-          preview,
-          beforeCall,
-        }),
+      call: (name, input, o) =>
+        runWith(
+          name === "kimo_apply_ops"
+            ? streamFor(o?.callId, (input ?? {}) as Record<string, unknown>)
+            : undefined,
+          (ctx) => dispatch(name, input, ctx, tracked, dispatchOptions()),
+        ),
+      openStream,
+      streamFor,
+      closeStream(callId, reason) {
+        const st = streams.get(callId)
+        if (!st) return
+        st.close(reason)
+        streams.delete(callId)
+      },
+      get streamed() {
+        return everStreamed
+      },
       close() {
         if (conn.closed) return
         ;(conn as { closed: boolean }).closed = true
+        for (const s of streams.values()) s.close("The connection closed.")
+        streams.clear()
         abort.abort()
         approvals.cancelSession(identity.session)
         presence.remove(origin)
@@ -512,6 +617,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
     }
     // MCP servers built per connection should use these presence-tracking handlers.
     ;(conn as McpConnection & { handlers: ToolHandlers }).handlers = tracked
+    ;(conn as McpConnection & { runWith: typeof runWith }).runWith = runWith
     conns.add(conn)
     return conn
   }
@@ -542,6 +648,29 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
       approvals.dispose()
     },
   }
+}
+
+/**
+ * Runs an MCP `tools/call` of a connection with the stream it commits (for
+ * `createKimoMcpServer`): by `_meta["claudecode/toolUseId"]`, else the prefix match.
+ */
+export function connectionCall(
+  conn: McpConnection,
+  name: string,
+  input: Record<string, unknown>,
+  toolUseId: string | undefined,
+  run: (ctx: ToolContext) => Promise<HandlerOutput>,
+): Promise<HandlerOutput> {
+  const runWith = (
+    conn as McpConnection & {
+      runWith?: (
+        s: ApplyStream | undefined,
+        r: (ctx: ToolContext) => Promise<HandlerOutput>,
+      ) => Promise<HandlerOutput>
+    }
+  ).runWith
+  if (!runWith) return run(conn.context())
+  return runWith(name === "kimo_apply_ops" ? conn.streamFor(toolUseId, input) : undefined, run)
 }
 
 /** Handlers of a connection with presence tracking (for `createKimoMcpServer`). */

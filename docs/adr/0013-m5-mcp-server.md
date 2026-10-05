@@ -483,3 +483,74 @@ when a result has it.
   part that shrinks and scrolls. More than 8 target rows are grouped by kind (Delete / Insert /
   Update), 3 rows each plus "and N more", with **Show all N** / **Show fewer**. The in-thread
   approval card is capped at `min(70vh, the thread's height)` with its op rows scrolling.
+
+## Addendum 6 (2026-10-05): streamed edits and patch-retry
+
+A Claude Code turn showed its first layer about 17 s after send, after 4 to 5 model calls: the
+model writes a whole `kimo_apply_ops` call (often 20 to 40 ops, 10 s or more of output) and
+nothing lands until the call is complete. Providers already stream tool input (Anthropic
+`input_json_delta` with `eager_input_streaming`, OpenAI argument deltas, Claude Code's
+`--include-partial-messages`), so the ops can land while the model writes them.
+
+### 4.7 Streamed edits
+
+- **Parser** (`src/partial-json.ts`, `PartialJsonObject`): takes the partial input in order and
+  reports each top-level field and each element of `ops` the moment it closes (one pass, string
+  and escape state, `JSON.parse` of the closed slice only). Chunks may split anywhere; input that
+  is not an object stops it. Fuzz-tested with random inputs and chunking.
+- **Engine** (`src/handlers/stream.ts`, `StreamEngine`, one per handler set; `streamEngineOf`):
+  an `ApplyStream` per tool-use id. Each complete op goes through the rules of a whole call, per
+  op: schema validation, the call's targets (`DispatchOptions.targets`, so node scopes see the
+  ops streamed so far), `authorize` (level, grants, destructive confirmation), the streamed batch
+  limit, then `compileWireOps` with the call's `@key` state so far (`CompileState`, `offset`),
+  the features it writes (`featureOp`), and `store.apply` under the caller's origin. An op that
+  needs approval or fails **holds** the stream (no prompt, nothing more applied); an op that
+  references a key a later op defines, or that the store rejects until more ops arrive, waits
+  (at most 64 ops).
+- **One undo step** (`DocStore.groupUndo` / `discardUndo`, `@kimo/editor-state`): the stream's
+  transactions merge into one stack item of the origin (Yjs `captureTimeout` raised while the
+  group is open, `stopCapturing` at both ends). Rollback undoes that item and drops its redo
+  entry. One stream per (store, origin) applies at a time; another waits for the slot. Any other
+  edit of the same origin (a normal call, an undo) rolls the open stream back first.
+- **Commit** (`kimo_apply_ops` with `ToolContext.stream`): the call commits the group when its
+  `docId` matches, its `ops` start with the applied ops (deep JSON equality), its `baseRevision`
+  (if any) is the revision the stream started at, it is not a dry run or retry, and every layer
+  the stream added still exists. The rest of its ops are applied in the group, the group ends,
+  and the result is the normal envelope (`revision.before` = the stream's start, `problems`,
+  `pointer`, `render`, one `undoToken`). Otherwise the stream rolls back and the call runs the
+  normal way, which reports what went wrong. The dispatcher's validation, authorization and
+  approval run on the whole call first; a denied call never reaches the handler and the caller's
+  `close()` rolls the stream back. Callers always close a stream after the call (no-op once
+  committed); Stop, a retried model call and a truncated (`max_tokens`) call close it unrun.
+- **Limit**: a streamed call may add `STREAM_MAX_NEW_LAYERS = 150` new layers (still a ceiling,
+  a whole section per call); `ToolContext.streamed` marks a caller that streams (a connection
+  that opened a stream, a built-in agent tool host), whose later calls get the same limit.
+  Non-streamed clients keep `AGENT_MAX_NEW_LAYERS = 40`.
+- **Built-in agent** (`ToolHost.stream`, ADR 0014 addendum 4): in-window tools open an engine
+  stream directly; on desktop the window parses the input and forwards complete ops to the
+  document host (`agentStream` / `agentStreamClose`, `agentCall` carries `callId`).
+- **Claude Code** (`McpConnection.openStream / streamFor / closeStream`): the editor window
+  parses the CLI's stream-json (`input_json_delta`, keyed by tool-use id) and forwards complete
+  ops with host RPC `cliStream` (the CLI's MCP connection is the relay whose hello `cwd` is the
+  session workspace). Claude Code sends `_meta: {"claudecode/toolUseId": "toolu_…"}` on
+  `tools/call` (checked on 2.1.289), so `createKimoMcpServer`'s `around` hook runs the call with
+  that stream (`connectionCall`); without the id, the newest open stream of the connection is
+  tried and the prefix check decides. **Codex and Gemini CLI** are not streamed: `codex exec
+  --json` reports a tool call only when it starts running, and Gemini CLI's stream-json carries
+  whole `tool_use` events; their calls apply when they arrive with the 40-layer limit.
+- **Presence**: each landed batch moves the connection's pointer and focus and sets the call
+  label to "Adding <layer>".
+- **Collaborators**: provisional ops are ordinary transactions, so other windows and
+  collaborators see layers appear as they stream and vanish if the stream rolls back. Activity
+  rows are written once, by the call.
+
+### 4.8 Patch-retry
+
+`kimo_apply_ops` failures that editing the call can fix (validation, schema, missing nodes,
+revision conflicts, the batch limit; not permissions, read-only, timeouts) carry `retryId`
+(`ToolFailure.retryId`). `{docId, retryId, edits: [{find, replace, all?}]}` patches the failed
+call's compact JSON text (`find` written with pretty spacing is normalized), parses it and runs it
+as a normal call, validated in full; a failure returns a new `retryId`. Handles are per caller
+origin, consumed on use, bounded (64) and expire after 15 minutes (`src/retry.ts`, `RETRIES`,
+handled in `dispatch`). The advertised schema grew `retryId` and `edits` (`ops` optional;
+missing both is `INVALID_INPUT`); its size budget is 4,050 characters.

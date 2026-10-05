@@ -39,7 +39,7 @@ import { readGuide as builtinGuide } from "../guides"
 import type { WireOp } from "../ops"
 import type { HandlerOutput, HostDocument, ToolContext, ToolHandler } from "../runtime"
 import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
-import { AGENT_MAX_NEW_LAYERS } from "../tools/write"
+import { AGENT_MAX_NEW_LAYERS, STREAM_MAX_NEW_LAYERS } from "../tools/write"
 import { CHECK_MAX_LIST, type CheckProblem, checkDesign, formatProblems } from "./check"
 import { compileWireOps, pointerTarget, touchedIds, wirePath } from "./compile"
 import type { CoreDocumentHost } from "./core-host"
@@ -47,6 +47,7 @@ import { EXTENSION, imageSize, parseCssTokens, parseDtcg, sniffFont, sniffImage 
 import { journalFor } from "./journal"
 import { runQuery } from "./query"
 import { approximateMeasurer, createSceneService, type ExportKit, type SceneService } from "./scene"
+import { type LandedGroup, type LandedMeta, StreamEngine } from "./stream"
 import {
   basename,
   dirname,
@@ -234,6 +235,19 @@ Loop: kimo_get_state → kimo_open → kimo_query → kimo_apply_ops (baseRevisi
 
 // --- Handlers ----------------------------------------------------------------------------------
 
+/** How `commit` / `landed` describe an edit. */
+interface CommitMeta {
+  label: string
+  wireIndex?: number[]
+  created?: { key: string; id: string }[]
+  notes?: { code: string; message: string; nodeId?: string }[]
+  data?: (r: { inserted: number; updated: number; deleted: number }) => Record<string, unknown>
+  summary: (r: { inserted: number; updated: number; deleted: number; dryRun: boolean }) => string
+  render?: boolean
+  /** Board 31 "Check": list problems in the layers this edit changed (`data.problems`). */
+  check?: boolean
+}
+
 export function createToolHandlerMap(
   hostScene: SceneService | undefined,
   options: ToolHandlerOptions,
@@ -241,6 +255,12 @@ export function createToolHandlerMap(
   const scene = options.scene ?? hostScene ?? createSceneService()
   const tokens = new Map<string, UndoRecord>()
   const libs = (docId: string): Libraries => options.libraries?.(docId) ?? {}
+  /** Streamed edits (ADR 0013 §4.7): provisional apply while the model writes the call. */
+  const streams = new StreamEngine({
+    libs,
+    featureOp: (store, ops) => featureOp(store, ops),
+    landed: (ctx, d, input, group, meta) => landedStream(ctx, d, input, group, meta),
+  })
 
   /** One committed (or dry-run) op group → success envelope pieces. */
   function recordUndo(store: DocStore, origin: LocalOrigin): string | undefined {
@@ -276,26 +296,12 @@ export function createToolHandlerMap(
     d: HostDocument,
     input: In,
     ops: Op[],
-    meta: {
-      label: string
-      wireIndex?: number[]
-      created?: { key: string; id: string }[]
-      notes?: { code: string; message: string; nodeId?: string }[]
-      data?: (r: { inserted: number; updated: number; deleted: number }) => Record<string, unknown>
-      summary: (r: {
-        inserted: number
-        updated: number
-        deleted: number
-        dryRun: boolean
-      }) => string
-      render?: boolean
-      /** Board 31 "Check": list problems in the layers this edit changed (`data.problems`). */
-      check?: boolean
-    },
+    meta: CommitMeta,
   ): Promise<HandlerOutput> {
-    const before = d.store.revision
     const base = input.baseRevision as RevisionToken | undefined
     const dryRun = input.dryRun === true
+    // An open streamed edit of this agent is rolled back first: two groups never merge.
+    if (!dryRun) streams.interrupt(d.store, ctx.origin, ctx.stream)
     const r = d.store.apply(ops, {
       origin: asLocal(ctx.origin),
       label: typeof input.label === "string" ? input.label : meta.label,
@@ -322,6 +328,19 @@ export function createToolHandlerMap(
           : {}),
       })
     }
+    return landed(ctx, d, input, r, meta)
+  }
+
+  /** The success envelope of a landed op group (one `apply`, or a committed stream). */
+  async function landed(
+    ctx: ToolContext,
+    d: HostDocument,
+    input: In,
+    r: LandedGroup & { dryRun?: boolean },
+    meta: CommitMeta,
+  ): Promise<HandlerOutput> {
+    const before = r.before
+    const dryRun = r.dryRun === true
     const inserted = r.created.length
     const deleted = r.deleted.length
     const updated = new Set(
@@ -656,6 +675,7 @@ export function createToolHandlerMap(
           { revision: sameRev(before) },
         )
     }
+    streams.interrupt(store, origin)
     const res = action === "undo" ? store.undo(origin) : store.redo(origin)
     if (!res.ok && !res.stale)
       return fail(
@@ -951,7 +971,56 @@ export function createToolHandlerMap(
 
   // --- Write tools -----------------------------------------------------------------------------
 
+  /**
+   * Spec §13: a gated construct and its feature go in the same edit. Agents reach gates through
+   * plain field values (layout.align "stretch", text runs, size min/max, …), so the edit
+   * declares what it writes (appended: wire indexes of the compiled ops stay unchanged).
+   */
+  function featureOp(store: DocStore, ops: readonly Op[]): Op | null {
+    const features = (store.toHeader().features ?? []) as readonly string[]
+    const missing = [...featuresWrittenBy(ops)].filter((f) => !features.includes(f))
+    return missing.length
+      ? ({ op: "setHeader", set: { features: [...features, ...missing].sort() } } as Op)
+      : null
+  }
+
+  /** What kimo_apply_ops says about a landed edit (direct or streamed). */
+  function applyMeta(
+    input: In,
+    wireCount: number,
+    c: Pick<LandedMeta, "created" | "notes"> & { wireIndex?: number[] },
+  ): CommitMeta {
+    return {
+      label: `${wireCount} op${wireCount === 1 ? "" : "s"}`,
+      ...(c.wireIndex ? { wireIndex: c.wireIndex } : {}),
+      created: c.created,
+      notes: c.notes,
+      render: input.render === true,
+      check: true,
+      data: (n) => ({ applied: wireCount, ...n, notes: c.notes }),
+      summary: (n) =>
+        `${n.dryRun ? "Dry run: would apply" : "Applied"} ${wireCount} op(s): ${n.inserted} inserted, ${n.updated} updated, ${n.deleted} deleted.`,
+    }
+  }
+
+  /** A streamed edit committed (one undo step): the same result as a direct call. */
+  function landedStream(
+    ctx: ToolContext,
+    d: HostDocument,
+    input: In,
+    group: LandedGroup,
+    meta: LandedMeta,
+  ): Promise<HandlerOutput> {
+    return landed(ctx, d, input, group, applyMeta(input, meta.wireCount, meta))
+  }
+
   const applyOps: ToolHandler = async (input, ctx): Out => {
+    // A streamed call (ADR 0013 §4.7): commit what already landed, or roll it back and run
+    // the call the normal way below.
+    if (ctx.stream && input.dryRun !== true) {
+      const out = await streams.finalize(ctx.stream, input, ctx)
+      if (out) return out
+    }
     const d = docOrFail(ctx, input)
     if (isOutput(d)) return d
     if (d.store.readOnly) return fail(readOnlyError(d), { revision: sameRev(d.store.revision) })
@@ -959,30 +1028,22 @@ export function createToolHandlerMap(
     const cur = d.store.revision
     if (base && (base.epoch !== cur.epoch || base.seq !== cur.seq))
       return fail(conflict(d, base), { revision: sameRev(cur) })
+    if (!Array.isArray(input.ops))
+      return fail({
+        code: "INVALID_INPUT",
+        message: "Give ops (or retryId with edits to fix a failed call).",
+        path: "ops",
+      })
     const wire = input.ops as WireOp[]
-    const tooLarge = batchTooLarge(wire)
+    const limit = ctx.stream || ctx.streamed ? STREAM_MAX_NEW_LAYERS : AGENT_MAX_NEW_LAYERS
+    const tooLarge = batchTooLarge(wire, limit)
     if (tooLarge) return fail(tooLarge, { revision: sameRev(cur) })
     const compiled = compileWireOps(d.store, wire, { libraries: libs(d.ref.id) })
     if (!compiled.ok) return fail(compiled.errors, { revision: sameRev(cur) })
     const ops = compiled.ops as unknown as Op[]
-    // Spec §13: a gated construct and its feature go in the same edit. Agents reach gates
-    // through plain field values (layout.align "stretch", text runs, size min/max, …), so the
-    // edit declares what it writes (appended: wire indexes of the compiled ops stay unchanged).
-    const features = (d.store.toHeader().features ?? []) as readonly string[]
-    const missing = [...featuresWrittenBy(ops)].filter((f) => !features.includes(f))
-    if (missing.length)
-      ops.push({ op: "setHeader", set: { features: [...features, ...missing].sort() } } as Op)
-    return commit(ctx, d, input, ops, {
-      label: `${wire.length} op${wire.length === 1 ? "" : "s"}`,
-      wireIndex: compiled.wireIndex,
-      created: compiled.created,
-      notes: compiled.notes,
-      render: input.render === true,
-      check: true,
-      data: (c) => ({ applied: wire.length, ...c, notes: compiled.notes }),
-      summary: (c) =>
-        `${c.dryRun ? "Dry run: would apply" : "Applied"} ${wire.length} op(s): ${c.inserted} inserted, ${c.updated} updated, ${c.deleted} deleted.`,
-    })
+    const feature = featureOp(d.store, ops)
+    if (feature) ops.push(feature)
+    return commit(ctx, d, input, ops, applyMeta(input, wire.length, compiled))
   }
 
   const importTool: ToolHandler = async (input, ctx): Out => {
@@ -1643,7 +1704,7 @@ export function createToolHandlerMap(
       suggestion: "Use kimo_apply_ops (up to 500 ops per call with @key references).",
     })
 
-  return {
+  const map: Record<string, ToolHandler> & { [STREAM_ENGINE]?: StreamEngine } = {
     kimo_get_state: getState,
     kimo_read_docs: readDocs,
     kimo_open: open,
@@ -1665,6 +1726,16 @@ export function createToolHandlerMap(
     kimo_styles: styles,
     kimo_script: script,
   }
+  map[STREAM_ENGINE] = streams
+  return map
+}
+
+/** Where a handler set keeps its {@link StreamEngine} (see {@link streamEngineOf}). */
+export const STREAM_ENGINE: unique symbol = Symbol.for("kimo.streamEngine")
+
+/** The streamed-edit engine of a handler set (undefined for hand-made handler sets). */
+export function streamEngineOf(handlers: object): StreamEngine | undefined {
+  return (handlers as { [STREAM_ENGINE]?: StreamEngine })[STREAM_ENGINE]
 }
 
 // --- Misc --------------------------------------------------------------------------------------

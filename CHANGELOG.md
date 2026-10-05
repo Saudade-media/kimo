@@ -20,6 +20,33 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Added
 
+- Streamed agent edits. Layers appear on the canvas while the agent is still writing an edit:
+  each op of a `kimo_apply_ops` call lands as soon as the model has written it, the status reads
+  "Adding <layer>…" and the agent's pointer follows the last layer added. When the call arrives
+  it commits everything as one undo step with the usual result; if it differs, fails, needs an
+  approval that is refused, or the agent is stopped, the streamed layers are removed again
+  (collaborators may see them appear and vanish). Works for the built-in agent with every API
+  provider (Anthropic, OpenAI-compatible, Gemini) and for Claude Code in the desktop app, whose
+  partial tool input the window forwards to the document host and whose call is matched by
+  `_meta["claudecode/toolUseId"]`. Ops that need approval stop the streaming until the whole
+  call is approved. Streamed calls may add up to 150 new layers (`STREAM_MAX_NEW_LAYERS`), a
+  whole section per call; Codex, Gemini CLI and other MCP clients keep 40. Measured with Claude
+  Code (Sonnet), 3 runs each: "add a testimonials section to the landing page" shows its first
+  layer after 9.0 s instead of 13.9 s, "design a pricing page" after 8.7 s instead of 30.1 s.
+- Patch-retry for edits. A failed `kimo_apply_ops` call returns a `retryId`; the agent fixes it
+  with `{docId, retryId, edits: [{find, replace, all?}]}` (compact JSON of the failed call)
+  instead of sending the whole call again. Handles are per agent, used once and expire after 15
+  minutes.
+- Agents show work sooner: no long planning before the first edit, `render: true` on the call
+  that finishes a section instead of a separate render call.
+- Layers added by agents grow in (board 35 "Agent build motion"). Each new layer from the
+  built-in agent or an MCP client fades in, scales up from 96 % and rises 6 px over 200 ms
+  (cubic-bezier(0.2, 0, 0, 1)); auto-layout siblings slide and parents resize to their new boxes
+  over the same 200 ms. Layers from one call start in layer order, 16 ms apart, tightened so the
+  call finishes within 600 ms; more than 200 new layers fade in their common parent once. The
+  renderer draws the motion only: the document, exports, `kimo_render`, thumbnails and hit
+  testing use the final state. Your own edits, undo / redo and collaborators stay instant, and
+  with reduced motion nothing moves (the landing flash stays).
 - Auto-approve (board 34). The built-in agent has a shield next to the mode chip that turns on
   auto-approve for the current session, after one confirm. While it is on, every approval is
   given at once (opening, creating, saving and exporting files, edits outside the agent's area,
@@ -29,7 +56,7 @@ The first public release: release engineering, polish, the new mark and the form
   off. MCP clients get the same option per client in Settings › Agents & MCP › Permissions,
   saved in the client's policy (`autoApprove`), which also covers the export, save and
   files.create grants; the presence chip shows an Auto-approve pill. Limits that are not
-  approvals still apply: 40 new layers per edit, path and read-only checks, the frames of
+  approvals still apply: the new-layer limit per edit, path and read-only checks, the frames of
   agents started by side by side or split, and clients set to deny.
 - The approval prompt stays on screen with many changes: its height is capped at 70 % of the
   window (less when the space below the agent chip is smaller), the change list scrolls inside

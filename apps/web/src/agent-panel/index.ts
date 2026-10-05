@@ -27,7 +27,12 @@ export {
 export * from "./format"
 export { hasHomeHandoff, peekHomeHandoff, useHomeHandoff } from "./handoff"
 export { useAgentPanelState } from "./hooks"
-export { createHostTools, type HostTools, type HostToolsOptions } from "./host-tools"
+export {
+  createHostTools,
+  type HostTools,
+  type HostToolsOptions,
+  rpcToolStream,
+} from "./host-tools"
 export { ModelMenu, ModeMenu, SkillsMenu } from "./Menus"
 export {
   AgentCursorPill,

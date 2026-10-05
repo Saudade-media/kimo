@@ -12,6 +12,12 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 
 The agent builds in steps you can watch: it plans the sections, then adds one finished section per edit, with its real content. After every edit the design looks complete so far, with no empty boxes waiting to be filled. Each edit lands on the canvas as soon as it is made, the layers it changed flash briefly in the agent's color, and the agent's cursor moves to the last layer it added. The canvas never moves by itself.
 
+### New layers grow in
+
+Layers an agent adds grow into place instead of popping in. This covers the built-in agent and agents connected over MCP. Each new layer fades in, scales up from 96 % and rises 6 px over 200 ms. Layers next to it in an auto-layout frame slide to their new places over the same 200 ms, and the frame grows with them. When an MCP client adds many layers in one call, they appear one after another in layer order, 16 ms apart, and the whole batch finishes within 600 ms. A call that adds more than 200 layers fades in the frame that holds them once instead.
+
+The motion is drawn on screen only. The file holds the final values from the first frame, so exports, `kimo_render`, thumbnails and selection never see a layer halfway in. Your own edits, undo and redo, and edits from collaborators draw at once. With **Reduce motion** on (System Settings › Accessibility › Display, or the matching setting on Windows and Linux) layers appear at once; the color flash still plays.
+
 After each edit Kimo tells the agent about clear problems in what it just built: an empty frame, text that doesn't fit its box or is cut off, a layer of zero size or outside its parent, a missing variable, a shape that draws nothing. The agent fixes them before it moves on and checks the whole page once more before it replies. You don't see these checks; they only shape what lands on the canvas.
 
 Instead of streaming text, the thread shows one status line that updates in place:
@@ -34,7 +40,11 @@ Under each reply, **N steps** opens the list of tool steps the agent took. It is
 
 ## Edit size
 
-One agent edit can add at most 40 new layers. That is a ceiling, not a target: an edit holds one finished section, often 8 to 25 layers, and a large section is split into finished parts (its heading, then its cards). Bigger designs are built in several edits, which is what lets you watch them grow. Copies, duplicates and component instances don't count, so "make a variant of this page with a pricing table" copies the page in one step and then adds only the pricing section. The limit applies to every agent, both the built-in one and Claude Code, Codex or Gemini CLI connected over MCP. It never applies to your own paste, import or duplicate.
+Layers appear on the canvas while the agent is still writing an edit: each one lands as soon as the agent has written it, and the status reads "Adding <layer>…" with the agent's pointer on that layer. When the edit is complete it becomes one undo step. If the agent is stopped or the edit turns out invalid, the layers it had added so far are removed again. This works for the built-in agent with every API provider and for Claude Code in the desktop app. Codex and Gemini CLI edits land when each edit is complete.
+
+An edit that streams this way can add at most 150 new layers; other agents (Codex, Gemini CLI, any MCP client) at most 40. The limit is a ceiling, not a target: an edit holds one finished section, and a larger section is split into finished parts (its heading, then its cards). Copies, duplicates and component instances don't count, so "make a variant of this page with a pricing table" copies the page in one step and then adds only the pricing section. The limit never applies to your own paste, import or duplicate.
+
+When an edit fails, the agent fixes it by sending only the changed text instead of the whole edit again.
 
 ## Modes
 
@@ -75,7 +85,7 @@ Auto-approve is off in every new session, and when you reopen an earlier one. It
 
 Some limits are not approvals, so auto-approve doesn't lift them:
 
-- one edit adds at most 40 new layers,
+- one edit adds at most 150 new layers (40 for agents whose edits do not stream),
 - file paths are checked (an absolute `.kimo` path for documents, `..` resolved, an existing file isn't overwritten unless the call says so),
 - read-only and locked documents stay read-only,
 - agents started by side by side and split stay inside their own frame.

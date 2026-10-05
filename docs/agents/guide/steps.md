@@ -4,22 +4,27 @@
 
 The person watches the canvas while you work, so show progress early and often, and leave the
 canvas finished-looking after every call. A `kimo_apply_ops` call may insert at most 40 new
-layers (`BATCH_TOO_LARGE` otherwise, nothing applied); `copy`, `instantiate`, page duplicates and
-edits of existing layers are never counted. 40 is a ceiling, not a target.
+layers, or 150 when your client streams tool input (Kimo's agent, Claude Code in the app: each op
+lands while you write the call). Over it: `BATCH_TOO_LARGE`, nothing applied. `copy`,
+`instantiate`, page duplicates and edits of existing layers are never counted. The limit is a
+ceiling, not a target.
 
 ## Plan, then one finished section per call
 
-1. **Plan the sections** (Nav, Hero, Features, Pricing, Footer) before the first call.
+1. **Name the sections** (Nav, Hero, Features, Pricing, Footer) and start: no long planning.
 2. **First call:** the page frame (`placeholder: true`) with its first finished section. Never
    an empty shell or empty, named section frames to fill later.
-3. **One finished section per call**, with its real content, sized to what it needs (often 8 to
-   25 new layers). Write a one-line note before each call ("Building the pricing section"):
-   Kimo shows it as your live status. A section that needs more than 40 becomes complete
-   sub-blocks, one per call (its heading row, then its card grid), each finished on its own.
+3. **One finished section per call**, with its real content. Streamed: the whole section in
+   one call. Not streamed: size it to the section (often 8 to 25 new layers). Write a one-line
+   note before each call ("Building the pricing section"): Kimo shows it as your live status. A
+   section over the limit becomes complete sub-blocks, one per call (its heading row, then its
+   card grid), each finished on its own.
 4. **Fix what the result reports.** `data.problems` lists problems in the layers you just
    changed (`<id> <kind>: <fix>`: empty frame, text overflowing or clipped, zero size, outside
    its parent, missing variable, invisible shape). Fix them in the next call, before moving on.
-   `kimo_render` the section and fix what looks wrong.
+   Pass `render: true` on the call that finishes a section (no separate `kimo_render`) and fix
+   what looks wrong. A failed call returns `retryId`: send `{docId, retryId, edits:[{find,
+   replace}]}` with only the text to change.
 5. **Finish clean:** `unset` the page's `placeholder`, run `kimo_validate {check: true}` until it
    lists no problems, then reply in one to three short sentences: what changed and where.
 
@@ -60,5 +65,5 @@ the original and adds the pricing section with its finished heading:
 `@v2/<original id>` addresses a node inside the copy in the same call; `created[]` lists
 `v2/<original id>` for later calls. The next call adds the plan cards: build the first card
 completely (name, price, features, button), copy it twice and edit the copies' text, well
-under 40 inserts. Render once, `unset` the variant's `placeholder` and finish with
+under the limit. Render once, `unset` the variant's `placeholder` and finish with
 `kimo_validate {check: true}`.

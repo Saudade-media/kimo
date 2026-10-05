@@ -2,7 +2,7 @@
 import type { ActivityKind } from "../policy"
 import type { DocumentHost, HandlerOutput, ToolHandler, ToolHandlers } from "../runtime"
 import type { CoreDocumentHost } from "./core-host"
-import { createToolHandlerMap, type ToolHandlerOptions } from "./tools"
+import { createToolHandlerMap, STREAM_ENGINE, type ToolHandlerOptions } from "./tools"
 
 /** Activity kind for a successful call. */
 function kindOf(tool: string, input: Record<string, unknown>): ActivityKind {
@@ -86,6 +86,9 @@ export function createToolHandlers(
 ): ToolHandlers {
   const map = createToolHandlerMap((host as Partial<CoreDocumentHost>).scene, options)
   const out = {} as Record<string, ToolHandler>
-  for (const [name, h] of Object.entries(map)) out[name] = withActivity(name, h)
+  for (const [name, h] of Object.entries(map))
+    out[name] = withActivity(name, h)
+    // Streamed edits (ADR 0013 §4.7) reach the engine through the handler set.
+  ;(out as { [STREAM_ENGINE]?: unknown })[STREAM_ENGINE] = map[STREAM_ENGINE as never]
   return out as ToolHandlers
 }

@@ -22,12 +22,21 @@ export * from "./memory-host"
 export { computeProblems, type QueryInput, type QueryOutput, runQuery, textOf } from "./query"
 export * from "./scene"
 export {
+  jsonEqual,
+  type LandedGroup,
+  type OpenStreamOptions,
+  STREAM_LIMIT,
+  StreamEngine,
+} from "./stream"
+export {
   type AgentSummary,
   BUILTIN_STYLES,
   batchTooLarge,
   newLayerCount,
+  STREAM_ENGINE,
   type StylePreset,
   type SvgImporter,
+  streamEngineOf,
   subtreeDocument,
   type ToolHandlerOptions,
 } from "./tools"

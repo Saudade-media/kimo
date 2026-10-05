@@ -904,7 +904,8 @@ describe("board 31: live status, step by step, steps toggle state", () => {
         { name: "kimo_apply_ops", input: { docId: holder.docId, ops } },
       ]
       if (i === 0)
-        return { text: "Building the pricing section\n", tools: tool(rects("Hero000001", 41)) }
+        // Over the streamed limit (the built-in agent streams tool input: 150).
+        return { text: "Building the pricing section\n", tools: tool(rects("Hero000001", 151)) }
       if (i === 1) return { text: "", tools: tool(rects("Hero000001", 20)) }
       if (i === 2)
         return {

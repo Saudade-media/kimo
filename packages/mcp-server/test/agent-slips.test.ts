@@ -329,3 +329,42 @@ describe("model-facing results", () => {
     expect(r.opCount).toBe(r.ops.length)
   })
 })
+
+describe("lenient node bodies (measured Claude Code slips)", () => {
+  test("a text color in style is the node fill; frame layout fields beside layout go inside it", async () => {
+    const s = setup()
+    const path = "/w/slips.kimo"
+    const docId = await newDoc(s, path)
+    const r = expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [
+          {
+            op: "insert",
+            key: "row",
+            parent: "DesktopFrm1",
+            node: { type: "frame", name: "Row", layout: { dir: "row" }, gap: 12, padding: 8 },
+          },
+          {
+            op: "insert",
+            key: "col",
+            parent: "@row",
+            node: { type: "frame", name: "Col", dir: "column", gap: 4 },
+          },
+          {
+            op: "insert",
+            key: "t",
+            parent: "@col",
+            node: { type: "text", content: "Hi", style: { size: 14, fill: "#222222" } },
+          },
+        ],
+      }),
+    )
+    const doc = await saved(s, docId, path)
+    expect(doc.nodes[idOf(r, "row")]?.layout).toEqual({ dir: "row", gap: 12, pad: 8 })
+    expect(doc.nodes[idOf(r, "col")]?.layout).toEqual({ dir: "column", gap: 4 })
+    const t = doc.nodes[idOf(r, "t")] as Record<string, unknown>
+    expect(t.fill).toBe("#222222")
+    expect(t.style).toEqual({ size: 14 })
+  })
+})

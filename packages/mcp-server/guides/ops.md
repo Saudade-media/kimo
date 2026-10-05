@@ -6,19 +6,19 @@
   "ops": [ … up to 500 … ] }
 ```
 
-One transaction (any failure: nothing changes, `rolledBack: true`), one undo step.
-
-Max 40 `insert`s per call (`BATCH_TOO_LARGE`), a ceiling; `copy` is free. See `guide/steps`.
+One transaction (any failure: nothing changes), one undo step. Max 40 `insert`s per call, 150
+streamed (`BATCH_TOO_LARGE`), a ceiling; `copy` is free. A failure returns `retryId`:
+`{docId, retryId, edits:[{find, replace, all?}]}` patches the call (compact JSON), reruns it.
 
 **References.** Any `id`, `parent`, `instance`, `component`, `frame` or `node` field takes a node id
 or `@key` of a node created earlier in the call. After `{"op":"copy","key":"v2",…}`,
 `@v2/<original id>` is the copy of that node, so one call can copy a page and insert into the
 copy's sections. `created[]` also lists the copies of the copied root's first two levels as
-`v2/<original id>` → new id, for later calls. `parent: "root"` = top level. `index` is the
-position among siblings (0 = first); omit it to append.
+`v2/<original id>` → new id, for later calls. `parent: "root"` = top level. `index` = position
+among siblings (0 first; omit to append).
 
-**Clearing fields.** `{"op":"update","id":…,"unset":["effects"]}`; a `null` value in `set`
-does the same (`"set":{"effects":null}`). Never put `unset` inside `set` or a node body.
+**Clearing fields.** `{"op":"update","id":…,"unset":["effects"]}`, or `null` in `set`
+(`"set":{"effects":null}`). Never put `unset` inside `set` or a node body.
 
 **Features** (`layout/wrap`, `text/runs`, …) are declared for you by the edit that needs them.
 
@@ -34,7 +34,7 @@ does the same (`"set":{"effects":null}`). Never put `unset` inside `set` or a no
 ]
 ```
 
-Children are separate `insert` ops, never inside a body.
+Children are separate `insert`s, never in a body.
 
 ## Edit
 
@@ -73,23 +73,23 @@ Also `swap_instance`, `reset_override`, `detach`, `declare_prop`, `remove_prop`,
 {"op":"set_theme_pin","node":"@card","axis":"mode","value":"dark"}
 ```
 
-Also: `update_variable`, `rename_variable`, `delete_variable {detach?}`, `set_variables`,
-`set_theme_axes`.
+Also `update_variable`, `rename_variable`, `delete_variable {detach?}`, `set_variables`, `set_theme_axes`.
 
 ## Pages
 
 ```json
 {"op":"page","action":"add","name":"Checkout","key":"checkout"}
 {"op":"insert","parent":"root","node":{"type":"frame","name":"Cart","w":390,"h":844,"page":"<page id>"}}
-{"op":"page","action":"rename","id":"<page id>","name":"Cart flow"}
 {"op":"page","action":"move","id":"<page id>","index":0}
 ```
 
+Also `rename {id, name}`.
+
 `created[]` maps the add's `key` to the page id. A top-level insert without `page` lands on the
-first page. `delete` removes the page and its top-level nodes; never the last page.
+first page. `delete` removes a page and its top-level nodes (never the last page).
 
 ## Habits that work
 
-- Pass `baseRevision` from your previous result (`REVISION_CONFLICT` instead of overwriting).
-- New top-level frame: x/y from the outline's boxes or `kimo_find_space {docId, w, h}`.
+- Pass `baseRevision` from your last result (`REVISION_CONFLICT` instead of overwriting).
+- New top-level frame: x/y from the outline's boxes or `kimo_find_space`.
 - Mark work in progress with `placeholder: true` on the frame; `unset` it at the end.

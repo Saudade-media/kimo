@@ -5,6 +5,7 @@ import { SERVER_INSTRUCTIONS } from "@kimo/mcp-server/server"
 import {
   aiTellPhrases,
   BASE_SYSTEM_PROMPT,
+  basePrompt,
   buildSystemPrompt,
   KIMO_DESIGN_SKILL,
   REPLY_STYLE,
@@ -38,6 +39,19 @@ describe("REPLY_STYLE in every prompt", () => {
   test("the rules stay short (re-sent with every model call)", () => {
     expect(REPLY_STYLE.length).toBeLessThanOrEqual(700)
     expect(BASE_SYSTEM_PROMPT.length).toBeLessThanOrEqual(3200)
+    expect(basePrompt({ streamed: true }).length).toBeLessThanOrEqual(3200)
+  })
+
+  test("streamed agents get the streamed call size; others the 40-layer one", () => {
+    const streamed = buildSystemPrompt({ mode: "single", skills: [], streamed: true }).stable
+    expect(streamed).toContain("one by one while you write the call")
+    expect(streamed).toContain("150 new layers per call is a ceiling")
+    expect(BASE_SYSTEM_PROMPT).toContain("40 new layers per call is a ceiling")
+    for (const p of [streamed, BASE_SYSTEM_PROMPT]) {
+      expect(p).toContain("Show work early")
+      expect(p).toContain("render: true")
+      expect(p).toContain("retryId")
+    }
   })
 })
 

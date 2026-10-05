@@ -45,16 +45,39 @@ export type CompileResult =
       /** `@key` (or node name / id) → new id, in creation order. */
       created: { key: string; id: string }[]
       notes: CompiledNote[]
+      /** The `@key` state after this call (feed it to the next part of a streamed call). */
+      state: CompileState
     }
-  | { ok: false; errors: ToolError[] }
+  | {
+      ok: false
+      errors: ToolError[]
+      /** Set when the failure is an `@key` reference to a node no op has created yet. */
+      unresolved?: string
+    }
+
+/**
+ * `@key` names a part of a call created (keys and copies). A streamed call is compiled in parts
+ * (each batch of ops as it arrives); the state carries the names of the earlier parts.
+ */
+export interface CompileState {
+  keys: ReadonlyMap<string, string>
+  copies: ReadonlyMap<string, ReadonlyMap<string, string>>
+}
 
 export interface CompileOptions {
   newId?: () => string
   libraries?: Libraries
+  /** Names created by earlier parts of the same call (streamed calls). */
+  state?: CompileState
+  /** Index of `wire[0]` in the whole call (error paths and `wireIndex` use whole-call indexes). */
+  offset?: number
 }
 
 class CompileError extends Error {
-  constructor(readonly error: ToolError) {
+  constructor(
+    readonly error: ToolError,
+    readonly unresolved?: string,
+  ) {
     super(error.message)
   }
 }
@@ -77,15 +100,17 @@ export function compileWireOps(
 ): CompileResult {
   const newId = options.newId ?? (() => generateId())
   const scratch = scratchOf(store)
-  const keys = new Map<string, string>()
+  const offset = options.offset ?? 0
+  const keys = new Map<string, string>(options.state?.keys ?? [])
   /** Copy key → original id → id of its copy (for `@key/<id>` references). */
-  const copies = new Map<string, Map<string, string>>()
+  const copies = new Map<string, ReadonlyMap<string, string>>(options.state?.copies ?? [])
   const out: NormalizedOp[] = []
   const wireIndex: number[] = []
   const created: { key: string; id: string }[] = []
   const notes: CompiledNote[] = []
   try {
-    wire.forEach((op, i) => {
+    wire.forEach((op, at) => {
+      const i = at + offset
       const path = `ops[${i}]`
       const resolve = (ref: string): string => {
         if (!ref.startsWith("@")) return ref
@@ -94,22 +119,28 @@ export function compileWireOps(
           // `@copyKey/<original id>`: the copy of that node inside a subtree copied earlier.
           const inside = copies.get(ref.slice(1, slash))?.get(ref.slice(slash + 1))
           if (!inside)
-            throw new CompileError({
-              code: "INVALID_INPUT",
-              message: `${ref} does not name a node inside a subtree copied earlier in this call.`,
-              path,
-              suggestion: "Use @<copy key>/<id of the original node>, after the copy op.",
-            })
+            throw new CompileError(
+              {
+                code: "INVALID_INPUT",
+                message: `${ref} does not name a node inside a subtree copied earlier in this call.`,
+                path,
+                suggestion: "Use @<copy key>/<id of the original node>, after the copy op.",
+              },
+              copies.has(ref.slice(1, slash)) ? undefined : ref,
+            )
           return inside
         }
         const id = keys.get(ref.slice(1))
         if (!id)
-          throw new CompileError({
-            code: "INVALID_INPUT",
-            message: `${ref} does not name a node created earlier in this call.`,
-            path,
-            suggestion: "Give the creating op a key and place it before this op.",
-          })
+          throw new CompileError(
+            {
+              code: "INVALID_INPUT",
+              message: `${ref} does not name a node created earlier in this call.`,
+              path,
+              suggestion: "Give the creating op a key and place it before this op.",
+            },
+            ref,
+          )
         return id
       }
       const remember = (key: string | undefined, id: string, fallback?: unknown) => {
@@ -197,12 +228,13 @@ export function compileWireOps(
       }
     })
   } catch (e) {
-    if (e instanceof CompileError) return { ok: false, errors: [e.error] }
+    if (e instanceof CompileError)
+      return { ok: false, errors: [e.error], ...(e.unresolved ? { unresolved: e.unresolved } : {}) }
     throw e
   } finally {
     scratch.destroy()
   }
-  return { ok: true, ops: out, wireIndex, created, notes }
+  return { ok: true, ops: out, wireIndex, created, notes, state: { keys, copies } }
 }
 
 /** At most this many `created` entries for the inside of one copy (depth 1–2). */
@@ -236,9 +268,25 @@ function lenientUpdate(
   return out
 }
 
+const isPlain = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v)
+
+/** Layout fields agents write next to a frame's `layout` instead of inside it. */
+const LAYOUT_SLIPS: Record<string, string> = {
+  dir: "dir",
+  gap: "gap",
+  pad: "pad",
+  padding: "pad",
+  justify: "justify",
+  align: "align",
+}
+
 /**
- * A new node body as meant: a `null` field is an absent field, and a text node's `text` string
- * (the most common slip, borrowed from other formats) is its `content`.
+ * A new node body as meant: a `null` field is an absent field, a text node's `text` string (the
+ * most common slip, borrowed from other formats) is its `content`, a text color written in its
+ * `style` (`fill` / `color`) is the node's `fill`, and a frame's layout fields written beside
+ * `layout` (or with `dir`) go inside it. Measured with Claude Code: these slips each cost a
+ * failed call and a round trip.
  */
 function lenientNode<T extends Record<string, unknown>>(node: T): T {
   let out: Record<string, unknown> = node
@@ -247,6 +295,25 @@ function lenientNode<T extends Record<string, unknown>>(node: T): T {
   if (out.type === "text" && typeof out.text === "string" && out.content === undefined) {
     const { text, ...rest } = out
     out = { ...rest, content: text }
+  }
+  if (out.type === "text" && isPlain(out.style) && out.fill === undefined) {
+    const { fill, color, ...style } = out.style
+    const paint = fill ?? color
+    if (typeof paint === "string" || isPlain(paint) || Array.isArray(paint))
+      out = { ...out, style, fill: paint }
+  }
+  if (out.type === "frame" && (isPlain(out.layout) || typeof out.dir === "string")) {
+    const layout: Record<string, unknown> = { ...(isPlain(out.layout) ? out.layout : {}) }
+    const rest: Record<string, unknown> = {}
+    let moved = false
+    for (const [k, v] of Object.entries(out)) {
+      const to = LAYOUT_SLIPS[k]
+      if (to && layout[to] === undefined) {
+        layout[to] = v
+        moved = true
+      } else rest[k] = v
+    }
+    if (moved) out = { ...rest, layout }
   }
   return sizeAliases(out) as T
 }

@@ -123,7 +123,8 @@ describe("tool schemas", () => {
     kimo_read_docs: 560,
     kimo_open: 420,
     kimo_query: 2300,
-    kimo_apply_ops: 3800,
+    // Patch-retry fields (retryId, edits): a fix costs a few find/replace pairs, not the call.
+    kimo_apply_ops: 4050,
     kimo_render: 1250,
     kimo_get_variables: 1100,
     kimo_list_components: 650,

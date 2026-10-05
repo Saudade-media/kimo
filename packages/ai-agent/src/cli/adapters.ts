@@ -183,8 +183,18 @@ export function claudeParser(): CliStreamParser {
             if (b?.type === "tool_use" && b.id)
               blockTool.set(Number(ev.index), { id: b.id, name: b.name ?? "" })
           } else if (ev.type === "content_block_delta") {
-            const d = ev.delta as { type?: string; text?: string; thinking?: string } | undefined
-            if (d?.type === "text_delta" && d.text) {
+            const d = ev.delta as
+              | { type?: string; text?: string; thinking?: string; partial_json?: string }
+              | undefined
+            const tool = blockTool.get(Number(ev.index))
+            if (d?.type === "input_json_delta" && tool && d.partial_json)
+              out.push({
+                type: "tool_input_delta",
+                callId: tool.id,
+                tool: kimoToolName(tool.name),
+                partialJson: d.partial_json,
+              })
+            else if (d?.type === "text_delta" && d.text) {
               sawPartialText = true
               out.push({ type: "text_delta", text: d.text })
             } else if (d?.type === "thinking_delta" && d.thinking)

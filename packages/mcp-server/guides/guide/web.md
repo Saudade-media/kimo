@@ -13,10 +13,11 @@
 
 ## Section by section
 
-Build one finished section per call, sized to what it needs (often 8 to 25 new layers; 40 is a
-ceiling, not a target, and more fails with `BATCH_TOO_LARGE`). A bigger section becomes
-complete sub-blocks, one per call. Write a one-line note before each call ("Building the
-pricing section"), fix what `data.problems` reports, render it, then continue:
+Build one finished section per call (the new-layer limit, 40 or 150 when streamed, is a
+ceiling, not a target; more fails with `BATCH_TOO_LARGE`). A bigger section becomes complete
+sub-blocks, one per call. Write a one-line note before each call ("Building the pricing
+section"), fix what `data.problems` reports, pass `render: true` on the call that finishes the
+section, then continue:
 
 - **Section frame:** `w:{"mode":"fill"}`, `layout:{dir:"column", align:"center", pad:[96,24]}`.
 - **Content column** inside it: fixed `w:1200` (or 1120/960), `layout:{dir:"column", gap:24}`.

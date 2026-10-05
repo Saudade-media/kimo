@@ -32,6 +32,11 @@ export type ScriptStep =
       usage?: Partial<Usage>
       /** ms between streamed chunks (default 0). */
       delayMs?: number
+      /**
+       * Streams each tool call's input as partial JSON (ADR 0013 §4.7): `chunk` characters every
+       * `delayMs` ms, so streamed edits land before the call ends. Default: no partial input.
+       */
+      streamInput?: { chunk: number; delayMs: number }
       stop?: "end_turn" | "refusal" | "max_tokens"
     }
   | { error: ProviderErrorKind; message?: string; status?: number; retryAfterMs?: number }
@@ -100,6 +105,14 @@ export function createMockProvider(
       for (const [k, t] of (step.tools ?? []).entries()) {
         const id = `call_${i}_${k}`
         yield { type: "tool_call_start", id, name: t.name }
+        if (step.streamInput) {
+          const json = JSON.stringify(t.input)
+          const { chunk, delayMs } = step.streamInput
+          for (let at = 0; at < json.length; at += chunk) {
+            if (delayMs) await sleep(delayMs, req.signal)
+            yield { type: "tool_call_delta", id, partialJson: json.slice(at, at + chunk) }
+          }
+        }
         content.push({ type: "tool_call", id, name: t.name, input: t.input })
       }
       if (delay) await sleep(delay, req.signal)

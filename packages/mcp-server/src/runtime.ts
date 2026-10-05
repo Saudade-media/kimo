@@ -36,6 +36,8 @@ import {
   type SessionAllowances,
 } from "./policy"
 import { type ToolName, toolByName } from "./registry"
+import { type RetryEdit, RetryStore } from "./retry"
+import type { ApplyStream } from "./stream"
 import type { ToolDef } from "./tools/define"
 
 // --- Document host -----------------------------------------------------------------------------
@@ -139,6 +141,13 @@ export interface ToolContext {
   signal: AbortSignal
   now(): number
   newId(): string
+  /**
+   * The provisional stream of this call (ADR 0013 §4.7): set when the caller streamed the
+   * tool input; `kimo_apply_ops` commits or rolls it back. The caller closes it after dispatch.
+   */
+  stream?: ApplyStream
+  /** The caller streams tool input (built-in agent, Claude Code via the window): the batch limit is STREAM_MAX_NEW_LAYERS. */
+  streamed?: boolean
 }
 
 export interface HandlerOutput<T = unknown> {
@@ -299,6 +308,20 @@ export interface DispatchOptions {
   ): Promise<ApprovalRequest["preview"] | undefined>
 }
 
+/** Patch-retry handles of failed kimo_apply_ops calls (ADR 0013 §4.8), per caller origin. */
+export const RETRIES = new RetryStore()
+
+/** Failures a retry cannot fix by editing the call (permissions, host state, timeouts). */
+const NOT_RETRYABLE = new Set([
+  "PERMISSION_DENIED",
+  "OUT_OF_SCOPE",
+  "READ_ONLY",
+  "DOCUMENT_NOT_OPEN",
+  "TIMEOUT",
+  "INTERNAL",
+  "UNSUPPORTED",
+])
+
 /** Runs one tool call end to end. Never throws: everything becomes an envelope. */
 export async function dispatch(
   name: string,
@@ -307,9 +330,36 @@ export async function dispatch(
   handlers: ToolHandlers,
   options: DispatchOptions,
 ): Promise<HandlerOutput> {
+  let input = (rawInput ?? {}) as Record<string, unknown>
+  if (name !== "kimo_apply_ops") return dispatchOnce(name, input, ctx, handlers, options)
+  if (typeof input.retryId === "string") {
+    // The retry call itself must be well formed before its edits are applied.
+    const def = toolByName(name) as ToolDef
+    const invalid = options.validate(def, input)
+    if (invalid.length) return { result: failure(invalid) }
+    const edits = Array.isArray(input.edits) ? (input.edits as RetryEdit[]) : []
+    const p = RETRIES.patch(ctx.origin, input.retryId, edits)
+    if (!p.ok) return { result: failure(p.error) }
+    input = p.input
+  }
+  const out = await dispatchOnce(name, input, ctx, handlers, options)
+  const r = out.result
+  if (!r.ok && !r.errors.some((e) => NOT_RETRYABLE.has(e.code))) {
+    const id = RETRIES.put(ctx.origin, input)
+    if (id) return { ...out, result: { ...r, retryId: id } }
+  }
+  return out
+}
+
+async function dispatchOnce(
+  name: string,
+  input: Record<string, unknown>,
+  ctx: ToolContext,
+  handlers: ToolHandlers,
+  options: DispatchOptions,
+): Promise<HandlerOutput> {
   const def = toolByName(name)
   if (!def) return { result: failure({ code: "INVALID_INPUT", message: `Unknown tool ${name}.` }) }
-  const input = (rawInput ?? {}) as Record<string, unknown>
   if (options.beforeCall) {
     await options.beforeCall(def, ctx)
     if (ctx.signal.aborted)

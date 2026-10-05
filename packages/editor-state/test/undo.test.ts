@@ -137,3 +137,44 @@ describe("per-origin undo/redo", () => {
     expect(s.canUndo("user")).toBe(false)
   })
 })
+
+describe("grouped undo (streamed agent edits)", () => {
+  test("groupUndo merges an origin's groups into one step; the step before stays separate", () => {
+    const s = emptyStore()
+    ok(s.apply({ op: "insert", id: "Before0001", node: rect("before") }, { origin: "agent:a1" }))
+    const end = s.groupUndo("agent:a1")
+    for (let i = 0; i < 3; i++)
+      ok(
+        s.apply({ op: "insert", id: `Stream000${i}`, node: rect(`s${i}`) }, { origin: "agent:a1" }),
+      )
+    // A user edit in between lands on the user's own stack.
+    ok(s.apply({ op: "update", id: "Before0001", set: { name: "user" } }, { origin: "user" }))
+    ok(s.apply({ op: "insert", id: "Stream0003", node: rect("s3") }, { origin: "agent:a1" }))
+    end()
+    end()
+    ok(s.apply({ op: "insert", id: "After00001", node: rect("after") }, { origin: "agent:a1" }))
+    expect(s.undo("agent:a1").ok).toBe(true)
+    expect(s.hasNode("After00001")).toBe(false)
+    expect(s.hasNode("Stream0003")).toBe(true)
+    expect(s.undo("agent:a1").ok).toBe(true)
+    for (let i = 0; i < 4; i++) expect(s.hasNode(`Stream000${i}`)).toBe(false)
+    expect(s.hasNode("Before0001")).toBe(true)
+    expect(s.getNode("Before0001")?.name).toBe("user")
+  })
+
+  test("discardUndo rolls the open group back and leaves nothing to redo", () => {
+    const s = emptyStore()
+    ok(s.apply({ op: "insert", id: "Keep000001", node: rect("keep") }, { origin: "agent:a1" }))
+    const top = s.topUndo("agent:a1")
+    const end = s.groupUndo("agent:a1")
+    ok(s.apply({ op: "insert", id: "Prov000001", node: rect("p1") }, { origin: "agent:a1" }))
+    ok(s.apply({ op: "insert", id: "Prov000002", node: rect("p2") }, { origin: "agent:a1" }))
+    expect(s.discardUndo("agent:a1").ok).toBe(true)
+    end()
+    expect(s.hasNode("Prov000001")).toBe(false)
+    expect(s.hasNode("Prov000002")).toBe(false)
+    expect(s.hasNode("Keep000001")).toBe(true)
+    expect(s.canRedo("agent:a1")).toBe(false)
+    expect(s.topUndo("agent:a1")).toBe(top)
+  })
+})

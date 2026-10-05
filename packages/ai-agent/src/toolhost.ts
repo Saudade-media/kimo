@@ -6,10 +6,14 @@
  * them into a {@link ToolHost} the loop can drive, plus agent-only tools (`kimo_spawn_agents`).
  */
 import {
+  type ApplyStream,
   type DispatchOptions,
   dispatch,
   failure,
   listTools,
+  type PartialEvent,
+  type StreamProgress,
+  streamEngineOf,
   type ToolContext,
   type ToolHandlers,
   type ToolImage,
@@ -30,10 +34,29 @@ export interface ToolCallRequest {
   input: Record<string, unknown>
 }
 
+/**
+ * A tool call the model is still writing (ADR 0013 §4.7). The loop pushes the streamed partial
+ * input; the host applies complete ops provisionally and reports progress. The call itself
+ * (`ToolHost.call` with the same id) commits or rolls back; `abort` rolls back a call that will
+ * never run (stop, retry, a truncated input).
+ */
+export interface ToolStream {
+  push(partialJson: string): void
+  /** Already-parsed input events (a wrapper that maps ops parses once and forwards these). */
+  event?(e: PartialEvent): void
+  abort(reason: string): void
+  onProgress(listener: (p: StreamProgress) => void): () => void
+}
+
 /** What the agent loop needs from the document side. */
 export interface ToolHost {
   /** Tools offered to the model (stable order: prompt caching depends on it). */
   tools(): ToolSpec[]
+  /**
+   * Optional: starts streaming a tool call (only `kimo_apply_ops` streams; undefined for the
+   * rest and for hosts without streamed edits).
+   */
+  stream?(call: { id: string; name: string }): ToolStream | undefined
   /**
    * Runs one call. Never throws: failures are envelopes. `signal` is only for abandoning a
    * call that has not started; an in-flight op batch always commits or rolls back atomically.
@@ -87,8 +110,30 @@ export function createRegistryToolHost(opts: RegistryToolHostOptions): ToolHost 
   ]
   const extra = new Map((opts.extra ?? []).map((t) => [t.spec.name, t]))
   const allowed = new Set(specs.map((s) => s.name))
+  const engine = streamEngineOf(opts.handlers)
+  const streams = new Map<string, ApplyStream>()
+  let streamed = false
   return {
     tools: () => specs,
+    stream(call) {
+      if (call.name !== "kimo_apply_ops" || !allowed.has(call.name) || !engine) return undefined
+      streamed = true
+      const s = engine.open({
+        callId: call.id,
+        ctx: { ...opts.context, signal: new AbortController().signal, streamed: true },
+        dispatch: opts.dispatch,
+      })
+      streams.set(call.id, s)
+      return {
+        push: (chunk) => s.feed(chunk),
+        event: (e) => s.event(e),
+        abort: (reason) => {
+          s.close(reason)
+          streams.delete(call.id)
+        },
+        onProgress: (l) => s.onProgress(l),
+      }
+    },
     async call(call, signal) {
       if (!allowed.has(call.name))
         return {
@@ -100,9 +145,20 @@ export function createRegistryToolHost(opts: RegistryToolHostOptions): ToolHost 
       const own = extra.get(call.name)
       if (own) return own.run(call.input, signal)
       // A fresh, never-aborted signal: Stop must not tear an op batch in half (board 22).
-      const ctx: ToolContext = { ...opts.context, signal: new AbortController().signal }
-      const out = await dispatch(call.name, call.input, ctx, opts.handlers, opts.dispatch)
-      return out.images ? { result: out.result, images: out.images } : { result: out.result }
+      const stream = streams.get(call.id)
+      streams.delete(call.id)
+      const ctx: ToolContext = {
+        ...opts.context,
+        signal: new AbortController().signal,
+        ...(streamed ? { streamed: true } : {}),
+        ...(stream ? { stream } : {}),
+      }
+      try {
+        const out = await dispatch(call.name, call.input, ctx, opts.handlers, opts.dispatch)
+        return out.images ? { result: out.result, images: out.images } : { result: out.result }
+      } finally {
+        stream?.close("The call did not commit the streamed ops.")
+      }
     },
   }
 }

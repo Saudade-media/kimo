@@ -100,3 +100,88 @@ test("validateInput works without eval (CSP webview: the document host)", async 
     setEvalAllowedForTests(undefined)
   }
 })
+
+test("tools/call commits the stream named by _meta claudecode/toolUseId (Claude Code)", async () => {
+  const platform = createMemoryPlatform()
+  const host = createMemoryDocumentHost({
+    platform,
+    autosaveMs: 0,
+    validate: validateInput,
+    clientPolicy: { ...HEADLESS_POLICY, level: "edit", files: ["/w/**"] },
+  })
+  const conn = host.runtime.connect({
+    client: "claude-code",
+    label: "Claude Code",
+    transport: "socket",
+  })
+  const out: Record<string, unknown>[] = []
+  const transport = new RelayTransport((line) => {
+    out.push(JSON.parse(line))
+  })
+  const server = createConnectionServer(conn, { version: "0.5.0", host: "desktop" })
+  await server.connect(transport)
+  const next = async (id: number) => {
+    for (let i = 0; i < 200; i++) {
+      const m = out.find((x) => x.id === id)
+      if (m) return m as { result?: Record<string, unknown> }
+      await new Promise((r) => setTimeout(r, 5))
+    }
+    throw new Error(`no response ${id}`)
+  }
+  transport.receive({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "claude-code", version: "2" },
+    },
+  } as never)
+  await next(1)
+  transport.receive({ jsonrpc: "2.0", method: "notifications/initialized" } as never)
+  transport.receive({
+    jsonrpc: "2.0",
+    id: 2,
+    method: "tools/call",
+    params: { name: "kimo_create", arguments: { path: "/w/s.kimo", template: "blank" } },
+  } as never)
+  const created = (await next(2)).result?.structuredContent as {
+    data: { doc: { id: string } }
+  }
+  const docId = created.data.doc.id
+  const args = {
+    docId,
+    ops: [
+      {
+        op: "insert",
+        key: "f",
+        parent: "root",
+        node: { type: "frame", name: "Streamed", w: 10, h: 10 },
+      },
+    ],
+  }
+  // The window forwarded the model's partial input before the call arrives.
+  const s = conn.openStream("toolu_meta1")
+  s?.feed(JSON.stringify(args))
+  await s?.settled()
+  expect(s?.progress().applied).toBe(1)
+  transport.receive({
+    jsonrpc: "2.0",
+    id: 3,
+    method: "tools/call",
+    params: {
+      name: "kimo_apply_ops",
+      arguments: args,
+      _meta: { "claudecode/toolUseId": "toolu_meta1" },
+    },
+  } as never)
+  const r = (await next(3)).result?.structuredContent as { ok: boolean; undoToken: string }
+  expect(r.ok).toBe(true)
+  expect(s?.progress().state).toBe("committed")
+  const d = host.get(docId)
+  if (!d.ok) throw new Error("doc")
+  expect(d.value.store.nodeIds().map((id) => d.value.store.getNode(id)?.name)).toEqual(["Streamed"])
+  await server.close()
+  host.dispose()
+})

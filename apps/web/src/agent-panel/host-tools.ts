@@ -14,11 +14,14 @@
  * Falls back to {@link createInWindowTools} when no host is connected or the document is
  * untitled (local to the window) — see `editor/agent-panel.tsx`.
  */
-import { registryToolSpecs, type ToolHost } from "@kimo/ai-agent"
+import { registryToolSpecs, type ToolHost, type ToolStream } from "@kimo/ai-agent"
 import {
   type ApprovalOutcome,
   type ApprovalRequest,
   failure,
+  type PartialEvent,
+  PartialJsonObject,
+  type StreamProgress,
   type ToolImage,
   type ToolResult,
 } from "@kimo/mcp-server"
@@ -86,8 +89,19 @@ export function createHostTools(o: HostToolsOptions): HostTools {
       session: spec.session,
       policy: spec.policy,
     }
+    /** Streamed calls: the RPC chain of each (the call waits for it, so order holds). */
+    const sends = new Map<string, { sent: () => Promise<void>; ran: () => void }>()
     const host: ToolHost = {
       tools: () => specs,
+      stream(call) {
+        if (call.name !== "kimo_apply_ops" || !allowed.has(call.name)) return undefined
+        const s = rpcToolStream(o.client, "agentStream", "agentStreamClose", {
+          spec: wire,
+          callId: call.id,
+        })
+        sends.set(call.id, { sent: s.sent, ran: s.ran })
+        return s.stream
+      },
       async call(call, signal) {
         if (!allowed.has(call.name))
           return {
@@ -99,13 +113,19 @@ export function createHostTools(o: HostToolsOptions): HostTools {
         const own = extra.get(call.name)
         if (own) return own.run(call.input, signal)
         if (!docId) await refresh()
+        // Every streamed op reached the host before the call that commits them; the call closes
+        // the host's stream itself, so a later abort needs no RPC.
+        const streamed = sends.get(call.id)
+        sends.delete(call.id)
+        await streamed?.sent()
+        streamed?.ran()
         try {
           // No timeout: an approval waits until the person answers (ADR 0014 §5). Like the
           // in-window host, the signal never tears a running batch: the host commits or rolls
           // it back atomically.
           const r = await o.client.call<{ result: ToolResult; images?: ToolImage[] }>(
             "agentCall",
-            { spec: wire, name: call.name, input: call.input },
+            { spec: wire, name: call.name, input: call.input, callId: call.id },
             Number.POSITIVE_INFINITY,
           )
           return r.images?.length ? { result: r.result, images: r.images } : { result: r.result }
@@ -133,6 +153,86 @@ export function createHostTools(o: HostToolsOptions): HostTools {
       for (const off of approvalOffs.values()) off()
       approvalOffs.clear()
       if (origins.length) void o.client.call("agentRelease", { origins }).catch(() => {})
+    },
+  }
+}
+
+/**
+ * A {@link ToolStream} that forwards a streamed call to the document host (ADR 0013 §4.7): the
+ * window parses the partial input and sends each complete op (and field) as it closes, in
+ * order, over host RPC `method`; the reply carries the host's progress (pointer, last layer).
+ * `abort` rolls the host's provisional ops back (`closeMethod`).
+ */
+export function rpcToolStream(
+  client: Pick<HostClient, "call">,
+  method: string,
+  closeMethod: string,
+  args: Record<string, unknown>,
+): { stream: ToolStream; sent: () => Promise<void>; ran: () => void } {
+  const parser = new PartialJsonObject("ops")
+  const listeners = new Set<(p: StreamProgress) => void>()
+  let chain: Promise<void> = Promise.resolve()
+  let closed = false
+  let failed = false
+  /** Events not sent yet: they go in one RPC when the one in flight answers. */
+  let queue: PartialEvent[] = []
+  let inFlight = false
+  const send = (events: PartialEvent[]) => {
+    queue.push(...events)
+    if (inFlight) return
+    inFlight = true
+    chain = chain.then(async () => {
+      while (queue.length && !closed && !failed) {
+        const batch = queue
+        queue = []
+        try {
+          const r = await client.call<{ progress: StreamProgress | null }>(method, {
+            ...args,
+            events: batch,
+          })
+          if (!r.progress) {
+            // The host has no stream for this call: the call applies when it arrives.
+            failed = true
+            break
+          }
+          for (const l of [...listeners]) l(r.progress)
+        } catch {
+          failed = true
+        }
+      }
+      inFlight = false
+    })
+  }
+  const stream: ToolStream = {
+    push(chunk) {
+      const events = parser
+        .push(chunk)
+        .filter((e) => e.kind === "field" || e.kind === "item" || e.kind === "end")
+      if (events.length) send(events)
+    },
+    event(e) {
+      send([e])
+    },
+    abort(reason) {
+      if (closed) return
+      closed = true
+      chain = chain.then(() =>
+        client.call(closeMethod, { ...args, reason }).then(
+          () => {},
+          () => {},
+        ),
+      )
+    },
+    onProgress(l) {
+      listeners.add(l)
+      return () => listeners.delete(l)
+    },
+  }
+  return {
+    stream,
+    sent: () => chain,
+    ran: () => {
+      closed = true
     },
   }
 }

@@ -415,3 +415,31 @@ The first call alone went from ~27.8k to ~14k tokens (system prompt + tools).
   and restored by `messagesFromTurns`.
 - **Still enforced**: scopes are not approvals for spawned agents (`childPolicy` denies), the
   40-new-layer batch limit and the document host's path and read-only checks stay as they are.
+
+## Addendum 4 (2026-10-05): streamed edits
+
+ADR 0013 addendum 6 describes the engine. The agent side:
+
+- **Loop** (`src/loop.ts`): `tool_call_start` opens `ToolHost.stream?({id, name})` (only
+  `kimo_apply_ops` streams), `tool_call_delta` pushes the partial input. Streams of an attempt
+  that fails (retry, offline), is stopped, or ends with `max_tokens` are aborted (rolled back);
+  after the calls run, the host has committed or rolled back each one. New event `step_stream`
+  (`state`, `applied`, `name`, `pointer`, `changed`) comes before the call's `step_start`.
+- **Tool hosts**: `createRegistryToolHost` opens engine streams in process and passes the stream
+  to the call's context; the desktop host tools (`host-tools.ts`, `rpcToolStream`) parse in the
+  window and send complete ops to the document host, batching while an RPC is in flight, and
+  wait for the sends before `agentCall`. `pageAwareToolHost` maps streamed ops with the same
+  per-op page defaults (`pageDefaulter`) so they match the call it rewrites.
+- **CLI** (`src/cli/engine.ts`): the Claude Code parser emits `tool_input_delta` for
+  `input_json_delta`; `RunCliTurnOptions.toolStream` (the panel runtime's `cliToolStream`,
+  desktop only) forwards it with the session workspace. Streams whose call never came are
+  aborted at turn end.
+- **Status and pointer**: `step_stream` moves the agent's work area and pointer to what just
+  landed (`moveCursor`) and the status reads "Adding <layer name>…" (`ProgressTracker.streaming`,
+  kept until the call lands).
+- **Prompt** (`basePrompt({streamed})`, skill `kimo-design`, guides, server instructions and the
+  Rust offline copy): show work early (no long planning; the first call is the page frame with
+  its first finished section), a whole section per streamed call (150 new layers is a
+  ceiling), `render: true` on the call that finishes a section instead of a separate
+  `kimo_render`, and `{docId, retryId, edits}` to fix a failed call. Agents whose input does not
+  stream (Codex, Gemini CLI, Claude Code without a document host) get the 40-layer text.

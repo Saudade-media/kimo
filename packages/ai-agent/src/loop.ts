@@ -12,7 +12,7 @@
  *
  * Every turn ends by clearing the placeholders it owns. Errors never roll back applied ops.
  */
-import { failure, modelText, type ToolResult } from "@kimo/mcp-server"
+import { failure, modelText, type StreamProgress, type ToolResult } from "@kimo/mcp-server"
 import { backoffDelay, DEFAULT_RETRY, type RetryPolicy, sleep } from "./backoff"
 import { type ErrorCard, errorCard } from "./cards"
 import { isAbort, isProviderError, ProviderError } from "./errors"
@@ -21,7 +21,7 @@ import { PlaceholderTracker } from "./placeholder"
 import { type CostEstimate, estimateCost } from "./pricing"
 import { type StepNames, stepLabel } from "./progress"
 import type { Provider } from "./providers/provider"
-import type { ToolCallRequest, ToolHost, ToolOutcome } from "./toolhost"
+import type { ToolCallRequest, ToolHost, ToolOutcome, ToolStream } from "./toolhost"
 import {
   type AssistantMessage,
   addUsage,
@@ -105,6 +105,21 @@ export type AgentEvent =
       undoToken?: string
       errorCode?: string
     }
+  /**
+   * A `kimo_apply_ops` call the model is still writing landed more ops (ADR 0013 §4.7): the
+   * status reads "Adding <name>…" and the pointer follows the last layer added. Comes before
+   * the call's `step_start`; the call then commits or rolls these ops back.
+   */
+  | {
+      type: "step_stream"
+      callId: string
+      tool: string
+      state: StreamProgress["state"]
+      applied: number
+      name?: string
+      pointer?: string
+      changed: string[]
+    }
   | { type: "usage"; usage: Usage; cost: CostEstimate }
   | { type: "message_end"; message: AssistantMessage; stopReason: StopReason }
   | { type: "retry"; card: ErrorCard }
@@ -158,6 +173,12 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
   const waitForOnline = o.waitForOnline ?? ((s: AbortSignal) => pollOnline(online, s))
   const label = o.providerLabel ?? o.provider.config.label
   const placeholders = new PlaceholderTracker(o.origin)
+  /** Tool calls the model is writing, by call id (streamed edits, ADR 0013 §4.7). */
+  const live = new Map<string, ToolStream>()
+  const abortLive = (reason: string) => {
+    for (const s of live.values()) s.abort(reason)
+    live.clear()
+  }
   const appended: ChatMessage[] = [o.user]
   const opGroups: OpGroup[] = []
   let usage: Usage = { ...ZERO_USAGE }
@@ -201,6 +222,25 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
             signal: o.signal,
           })) {
             if (ev.type === "text_delta" || ev.type === "thinking_delta") o.onEvent(ev)
+            else if (ev.type === "tool_call_start") {
+              const s = o.tools.stream?.({ id: ev.id, name: ev.name })
+              if (s) {
+                live.set(ev.id, s)
+                s.onProgress((p) => {
+                  if (p.state !== "open" || !p.applied) return
+                  o.onEvent({
+                    type: "step_stream",
+                    callId: ev.id,
+                    tool: ev.name,
+                    state: p.state,
+                    applied: p.applied,
+                    changed: p.changed,
+                    ...(p.name ? { name: p.name } : {}),
+                    ...(p.pointer ? { pointer: p.pointer } : {}),
+                  })
+                })
+              }
+            } else if (ev.type === "tool_call_delta") live.get(ev.id)?.push(ev.partialJson)
             else if (ev.type === "usage") {
               o.onEvent({ type: "usage", usage: addUsage(usage, ev.usage), cost: cost() })
             } else if (ev.type === "message_end") end = ev
@@ -211,6 +251,8 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
             })
         } catch (e) {
           const err = toProviderError(e, o.provider.id)
+          // The partial calls of this attempt never run: undo what they streamed.
+          abortLive(err.kind === "aborted" ? "Stopped." : "The model call is retried.")
           if (err.kind === "aborted") throw err
           if (err.kind === "offline") {
             o.onEvent({ type: "discard_partial" })
@@ -261,7 +303,8 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
         break
       }
       if (end.stopReason === "max_tokens") {
-        // A truncated tool input may still parse; never run it.
+        // A truncated tool input may still parse; never run it (nor keep what it streamed).
+        abortLive("The tool input was cut off.")
         appended.push(
           errorResults(calls, "The tool input was cut off (max_tokens). Send a smaller call."),
         )
@@ -326,6 +369,8 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
         })
         results.push(resultPart(call, r, out.images))
       }
+      // The calls ran (each committed or rolled back its stream); stop-skipped ones roll back.
+      abortLive("Stopped.")
       appended.push({ role: "tool", results })
       if (o.signal.aborted) throw abortError(o.provider.id)
     }
@@ -334,6 +379,7 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
     status = err.kind === "aborted" ? "stopped" : "error"
     card = errorCard(err, { providerLabel: label, opsApplied })
   }
+  abortLive("The turn ended.")
 
   // --- Turn end: clear owned placeholders (done, stopped, error alike) -------------------------
   for (const c of placeholders.clearingCalls()) {

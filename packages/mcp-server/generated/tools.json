@@ -248,7 +248,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -899,7 +899,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -1194,7 +1194,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -1670,7 +1670,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -1793,12 +1793,11 @@
     {
       "name": "kimo_apply_ops",
       "title": "Edit with typed ops",
-      "description": "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key, then use @key later in the call. At most 40 insert ops per call, a ceiling not a target: one finished section per call, no empty frames to fill later; copy, instantiate and edits are unlimited. Fix data.problems in your next call. Features a value needs are declared for you. Pass baseRevision from your last result.",
+      "description": "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key, then use @key later in the call. New layers per call: at most 40 (150 when streamed), a ceiling: one finished section per call, no empty frames to fill later. Fix data.problems next. Pass baseRevision from your last result. A failed call returns retryId: send {docId, retryId, edits} instead of the whole call.",
       "inputSchema": {
         "type": "object",
         "required": [
-          "docId",
-          "ops"
+          "docId"
         ],
         "properties": {
           "docId": {
@@ -1881,6 +1880,36 @@
           "render": {
             "type": "boolean",
             "description": "Attach a PNG of the changed top-level frames."
+          },
+          "retryId": {
+            "type": "string",
+            "description": "From a failed call: rerun it patched by edits, no ops."
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "find",
+                "replace"
+              ],
+              "properties": {
+                "find": {
+                  "type": "string",
+                  "description": "Text in the failed call (compact JSON)."
+                },
+                "replace": {
+                  "type": "string",
+                  "description": "New text."
+                },
+                "all": {
+                  "type": "boolean",
+                  "description": "Every match."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "With retryId."
           }
         },
         "additionalProperties": false
@@ -2117,7 +2146,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -2586,7 +2615,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -2943,7 +2972,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -3312,7 +3341,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -3718,7 +3747,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -4021,7 +4050,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -4388,7 +4417,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -4847,7 +4876,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -5184,7 +5213,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -5529,7 +5558,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -5934,7 +5963,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -6412,7 +6441,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -6773,7 +6802,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -7137,7 +7166,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",
@@ -7455,7 +7484,7 @@
           },
           "retryId": {
             "type": "string",
-            "description": "kimo_script retry handle."
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
           },
           "data": {
             "type": "object",

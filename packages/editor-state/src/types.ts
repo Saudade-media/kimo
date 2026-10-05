@@ -195,6 +195,17 @@ export interface DocStore {
    * entry it pushed is still the top one before collapsing it with `undo`.
    */
   topUndo(origin: LocalOrigin): object | null
+  /**
+   * Merges every op group `origin` applies from now on into ONE undo step, until the returned
+   * function runs (idempotent). A streamed agent edit lands as many transactions while the model
+   * writes it and is undone as one. The step starts fresh (never merges into the step before).
+   */
+  groupUndo(origin: LocalOrigin): () => void
+  /**
+   * Undoes `origin`'s top undo step and forgets it (nothing to redo): rolls back a provisional
+   * edit. No-op result (`ok: false`) when the stack is empty.
+   */
+  discardUndo(origin: LocalOrigin): UndoResult
   /** Clears one origin's undo/redo stacks, or every origin's. */
   clearHistory(origin?: LocalOrigin): void
   /** The op log, oldest first (bounded). */

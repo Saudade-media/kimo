@@ -73,6 +73,26 @@ const CLAUDE_STREAM = [
     },
   },
   {
+    type: "stream_event",
+    session_id: "sess-claude-1",
+    parent_tool_use_id: null,
+    event: {
+      type: "content_block_delta",
+      index: 1,
+      delta: { type: "input_json_delta", partial_json: '{"docId":"d_1","label":"Insert ' },
+    },
+  },
+  {
+    type: "stream_event",
+    session_id: "sess-claude-1",
+    parent_tool_use_id: null,
+    event: {
+      type: "content_block_delta",
+      index: 1,
+      delta: { type: "input_json_delta", partial_json: 'Waitlist Form","ops":[]}' },
+    },
+  },
+  {
     type: "assistant",
     session_id: "sess-claude-1",
     parent_tool_use_id: null,
@@ -468,6 +488,7 @@ describe("running a turn through a fake CLI", () => {
     const [claude] = await detectClis(host(), [claudeCodeAdapter])
     if (!claude) throw new Error()
     const events: AgentEvent[] = []
+    const streamed: string[] = []
     const rec = await runCliTurn({
       turnId: "t1",
       adapter: claudeCodeAdapter,
@@ -481,7 +502,25 @@ describe("running a turn through a fake CLI", () => {
       mcp: shimLaunch("/kimo-mcp", "claude-code"),
       signal: new AbortController().signal,
       onEvent: (e) => events.push(e),
+      // Streamed edits: the partial tool input goes to the document host as it streams.
+      toolStream: (call) => {
+        streamed.push(`open ${call.id} ${call.name} ${call.workspace.split("/").pop()}`)
+        return {
+          push: (j) => {
+            streamed.push(j)
+          },
+          abort: (r) => {
+            streamed.push(`abort ${r}`)
+          },
+          onProgress: () => () => {},
+        }
+      },
     })
+    expect(streamed).toEqual([
+      "open toolu_9 kimo_apply_ops abc123",
+      '{"docId":"d_1","label":"Insert ',
+      'Waitlist Form","ops":[]}',
+    ])
     expect(rec.status).toBe("done")
     expect(
       events

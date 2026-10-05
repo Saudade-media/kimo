@@ -19,7 +19,7 @@ import {
 } from "@modelcontextprotocol/server"
 import { GUIDES, readGuide } from "../guides"
 import { createKimoMcpServer, validateInput } from "../server"
-import { connectionHandlers, type McpConnection } from "./host-runtime"
+import { connectionCall, connectionHandlers, type McpConnection } from "./host-runtime"
 
 export { WebStandardStreamableHTTPServerTransport }
 
@@ -83,6 +83,7 @@ export function createConnectionServer(
     targets: conn.targets,
     preview: conn.preview,
     beforeCall: conn.beforeCall,
+    around: (name, input, toolUseId, run) => connectionCall(conn, name, input, toolUseId, run),
   })
   registerKimoResources(server, conn)
   return server

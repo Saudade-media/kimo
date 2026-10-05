@@ -37,7 +37,8 @@ Tool descriptions stay short (every model call carries them); the details are he
 
 ## Editing
 
-- `kimo_apply_ops`: see `ops`. Limits: 500 ops per call, of which at most 40 `insert`s.
+- `kimo_apply_ops`: see `ops`. Limits: 500 ops per call, of which at most 40 `insert`s (150
+  streamed: ops land while the model writes the call). Failures carry `retryId` (see `ops`).
   `dryRun` returns the would-be ops; `render: true` attaches a PNG of the changed top-level
   frames. Results leave out `ops` / `inverse` (a dry run keeps `ops`). `data.problems` lists
   problems in the changed layers: fix them next.

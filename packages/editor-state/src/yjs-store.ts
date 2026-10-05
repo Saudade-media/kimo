@@ -684,6 +684,28 @@ export class YjsDocStore implements DocStore {
     return stack?.[stack.length - 1] ?? null
   }
 
+  groupUndo(origin: LocalOrigin): () => void {
+    this.assertAlive()
+    const m = this.managerFor(origin)
+    // The first transaction starts a new stack item; later ones merge into it (Yjs merges
+    // while `now - lastChange < captureTimeout`).
+    m.stopCapturing()
+    m.captureTimeout = Number.POSITIVE_INFINITY
+    let open = true
+    return () => {
+      if (!open) return
+      open = false
+      m.captureTimeout = 0
+      m.stopCapturing()
+    }
+  }
+
+  discardUndo(origin: LocalOrigin): UndoResult {
+    const r = this.replay(origin, "undo")
+    if (r.ok || r.stale) this.managers.get(origin)?.redoStack.pop()
+    return r
+  }
+
   clearHistory(origin?: LocalOrigin): void {
     if (origin !== undefined) this.managers.get(origin)?.clear()
     else for (const m of this.managers.values()) m.clear()

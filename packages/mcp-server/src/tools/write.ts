@@ -44,6 +44,13 @@ export const MAX_OPS_PER_CALL = 500
  */
 export const AGENT_MAX_NEW_LAYERS = 40
 
+/**
+ * The limit for streamed calls (ADR 0013 §4.7): when the caller streams the tool input, each op
+ * lands on the canvas while the model writes the call, so progress is visible without splitting
+ * the work into many calls. A whole section per call is the norm; this is still a ceiling.
+ */
+export const STREAM_MAX_NEW_LAYERS = 150
+
 type JsonSchema = {
   type?: string
   enum?: string[]
@@ -110,22 +117,35 @@ function applyOpsAdvertised(input: TSchema): TSchema {
 
 const applyOpsInput = Obj({
   docId,
-  ops: Arr(WireOpSchema, {
-    description: "Ops, applied in order as one undoable edit.",
-    minItems: 1,
-    maxItems: MAX_OPS_PER_CALL,
-  }),
+  ops: Opt(
+    Arr(WireOpSchema, {
+      description: "Ops, applied in order as one undoable edit.",
+      minItems: 1,
+      maxItems: MAX_OPS_PER_CALL,
+    }),
+  ),
   baseRevision,
   dryRun,
   label,
   render: Opt(Bool({ description: "Attach a PNG of the changed top-level frames." })),
+  retryId: Opt(Str({ description: "From a failed call: rerun it patched by edits, no ops." })),
+  edits: Opt(
+    Arr(
+      Obj({
+        find: Str({ description: "Text in the failed call (compact JSON)." }),
+        replace: Str({ description: "New text." }),
+        all: Opt(Bool({ description: "Every match." })),
+      }),
+      { description: "With retryId.", maxItems: 50 },
+    ),
+  ),
 })
 
 export const kimoApplyOps = defineTool({
   name: "kimo_apply_ops",
   title: "Edit with typed ops",
   description:
-    "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key, then use @key later in the call. At most 40 insert ops per call, a ceiling not a target: one finished section per call, no empty frames to fill later; copy, instantiate and edits are unlimited. Fix data.problems in your next call. Features a value needs are declared for you. Pass baseRevision from your last result.",
+    "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key, then use @key later in the call. New layers per call: at most 40 (150 when streamed), a ceiling: one finished section per call, no empty frames to fill later. Fix data.problems next. Pass baseRevision from your last result. A failed call returns retryId: send {docId, retryId, edits} instead of the whole call.",
   input: applyOpsInput,
   advertise: applyOpsAdvertised(applyOpsInput),
   data: Obj({
@@ -150,7 +170,8 @@ export const kimoApplyOps = defineTool({
   }),
   annotations: WRITE_MAYBE_DESTRUCTIVE,
   scope: "edit",
-  scopeFor: (i) => ((i.ops as WireOp[]).some(isDestructive) ? "delete" : "edit"),
+  scopeFor: (i) =>
+    Array.isArray(i.ops) && (i.ops as WireOp[]).some(isDestructive) ? "delete" : "edit",
   doc: "required",
   mutating: true,
   timeoutMs: 60_000,

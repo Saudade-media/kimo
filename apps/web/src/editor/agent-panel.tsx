@@ -30,6 +30,7 @@ import {
   hasHomeHandoff,
   modelLabel,
   peekHomeHandoff,
+  rpcToolStream,
   skillsFolderAction,
   storeOutline,
   useHomeHandoff,
@@ -189,6 +190,19 @@ export function useEditorAgentPanel({
         (spec) => pageAwareToolHost(tools.factory(spec), pageForAgent),
         {
           mcpLaunch: (cli) => shimLaunch(latest.current.shim ?? "kimo-mcp", cli),
+          // Streamed edits (ADR 0013 §4.7): a CLI's partial tool calls reach the document host,
+          // which serves the CLI's MCP connection.
+          ...(hostClient
+            ? {
+                cliToolStream: (call: { id: string; name: string; workspace: string }) =>
+                  call.name === "kimo_apply_ops"
+                    ? rpcToolStream(hostClient, "cliStream", "cliStreamClose", {
+                        workspace: call.workspace,
+                        callId: call.id,
+                      }).stream
+                    : undefined,
+              }
+            : {}),
           openSettings: () => latest.current.openSettings("ai-providers"),
           openLink: (url) => void platform.files.openExternalUrl(url).catch(() => {}),
           // Desktop: ~/.kimo/skills (listed, read and watched by Rust); absent on the web.
@@ -234,7 +248,7 @@ export function useEditorAgentPanel({
       },
       sideBySideGap: SIDE_BY_SIDE_GAP,
     })
-  }, [ai, fileId, tools, platform, store, pageForAgent])
+  }, [ai, fileId, tools, platform, store, pageForAgent, hostClient])
   useEffect(() => () => controller?.dispose(), [controller])
   // Board 32: the macOS Dock tile animates while this window's agent turns run.
   useDockAgentActivity(platform, controller)

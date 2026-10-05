@@ -1035,6 +1035,24 @@ export class RendererError extends Error {
  * `dispose`. All `set*` calls are cheap and only mark state; drawing happens in `render()`
  * (synchronous) or on the next animation frame after `requestFrame()` (coalesced).
  */
+/**
+ * Board 35: how one node is drawn this frame, on top of its laid-out state. Offsets are world
+ * px relative to the parent's own motion (children ride with their parent); `scale` is about
+ * the node's world box center; `opacity` multiplies the node's own; `w` / `h` replace the drawn
+ * size of a frame or rectangle (a parent growing during a reflow).
+ */
+export interface NodeMotion {
+  opacity?: number
+  dx?: number
+  dy?: number
+  scale?: number
+  w?: number
+  h?: number
+}
+
+/** Node id → its motion this frame (see {@link Renderer.setMotion}). */
+export type MotionFrame = ReadonlyMap<string, NodeMotion>
+
 export interface Renderer {
   /** Loads CanvasKit and the bundled fonts. Idempotent. */
   init(options?: RendererInitOptions): Promise<void>
@@ -1051,6 +1069,12 @@ export interface Renderer {
   setLayout(layout: LayoutResult): void
   setViewport(viewport: Viewport): void
   setOverlay(overlay: Overlay): void
+  /**
+   * Board 35 "Agent build motion": per-node draw offsets for the frames of an entrance / reflow
+   * animation (null = none). Render only: layout, hit testing, overlays, `exportRaster` and
+   * `snapshot` keep drawing the final state. Optional for fakes.
+   */
+  setMotion?(motion: MotionFrame | null): void
 
   /** Draws now (no-op when not attached). */
   render(): void

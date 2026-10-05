@@ -63,6 +63,7 @@ import { pageScopedSource, withActivePage } from "../editor/pages/model"
 import { manifestOps } from "../lib/asset-manifest"
 import { type Combo, matchCombo, matches, pointerHeld, shortcut } from "../shortcuts/shortcuts"
 import { AgentCanvasModel, type AgentDomState, SHIMMER_FRAME_MS } from "./agent-canvas"
+import { BuildMotion } from "./agent-motion"
 import {
   canMove,
   cloneOps,
@@ -766,6 +767,12 @@ export class CanvasController {
           else if (!this.offPage(id)) this.dirty.add(id)
         }
         if (c.header && this.pagesKeyNow() !== this.pagesKey) this.fullPending = true
+        // Board 35: layers agents add on this page grow in (render only).
+        const lr = this.layoutResult
+        this.buildMotion.noteChange(
+          c,
+          (id) => !!lr?.nodes.has(id) || this.offPage(id) || c.cause === "load",
+        )
         // M6: placeholder frames and prompt nodes are tracked incrementally.
         if (c.cause === "load") this.agent.scanAll()
         else this.agent.scan(c.nodes)
@@ -812,6 +819,7 @@ export class CanvasController {
     this.disposed = true
     if (this.raf) cancelAnimationFrame(this.raf)
     if (this.agentRaf) cancelAnimationFrame(this.agentRaf)
+    if (this.motionRaf) cancelAnimationFrame(this.motionRaf)
     for (const c of this.cleanups.splice(0)) c()
     this.renderer.dispose()
     this.engine.dispose()
@@ -857,6 +865,7 @@ export class CanvasController {
     this.pagesKey = this.pagesKeyNow()
     this.src.invalidate()
     this.resolver.invalidate()
+    const before = this.layoutResult
     try {
       this.layoutResult = this.engine.compute(this.input())
     } catch (e) {
@@ -865,6 +874,9 @@ export class CanvasController {
     }
     this.renderer.invalidate()
     this.renderer.setLayout(this.layoutResult)
+    // Board 35: an agent insert can land in a full pass too (a font load in the same frame).
+    this.buildMotion.afterLayout(before, this.layoutResult)
+    if (before) this.scheduleMotionFrame()
     this.opts.onLayout?.(this.layoutResult)
   }
 
@@ -914,6 +926,7 @@ export class CanvasController {
       if (paintOnly) this.renderer.invalidate()
       if (ids.length > 0) {
         // The engine re-expands only the instances the edit affects (its dependency index).
+        const before = this.layoutResult
         try {
           this.layoutResult = this.engine.update(this.input(), { nodes: ids })
         } catch {
@@ -923,6 +936,8 @@ export class CanvasController {
         }
         this.renderer.invalidate(ids)
         this.renderer.setLayout(this.layoutResult)
+        this.buildMotion.afterLayout(before, this.layoutResult)
+        this.scheduleMotionFrame()
         this.opts.onLayout?.(this.layoutResult)
       }
     }
@@ -4536,6 +4551,12 @@ export class CanvasController {
   })
   private agentRaf = 0
   private agentLast = 0
+  /** Board 35: entrance / reflow motion of layers agents add (render only). */
+  readonly buildMotion = new BuildMotion(
+    { getNode: (id) => this.store.getNode(id) as Record<string, unknown> | undefined },
+    () => this.agent.reducedMotion,
+  )
+  private motionRaf = 0
   /** Scene labels read the live props (no setDocument per prop change). */
   private readonly sceneLabels = {
     promptModel: (m: unknown): string => {
@@ -4575,6 +4596,23 @@ export class CanvasController {
       this.agent.prune()
       this.updateOverlay()
     })
+  }
+
+  /**
+   * Board 35: one motion frame per display frame while agent-added layers grow in; the frame
+   * after the last one clears the motion (the renderer draws the final state again).
+   */
+  private scheduleMotionFrame(): void {
+    if (this.motionRaf || this.disposed) return
+    const tick = () => {
+      this.motionRaf = 0
+      if (this.disposed) return
+      const m = this.buildMotion.frame(this.layoutResult)
+      this.renderer.setMotion?.(m)
+      this.renderer.renderPending()
+      if (m) this.motionRaf = requestAnimationFrame(tick)
+    }
+    tick()
   }
 
   /** DOM pieces of the agent surfaces (CanvasHost renders them). */

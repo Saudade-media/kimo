@@ -42,6 +42,7 @@ import {
   type HitTestOptions,
   type HitTestRectOptions,
   type IconProvider,
+  type MotionFrame,
   type Overlay,
   type OverlayTheme,
   type Point,
@@ -240,6 +241,9 @@ export class CanvasKitRenderer implements Renderer {
   private layout: LayoutResult | null = null
   private viewport: Viewport = { x: 0, y: 0, zoom: 1 }
   private overlay: Overlay = EMPTY_OVERLAY
+  /** Board 35: this frame's node motion and the roots that hold it (see {@link setMotion}). */
+  private motion: MotionFrame | null = null
+  private readonly motionRoots = new Set<string>()
   private roots = new Map<string, RootEntry>()
   private rootOrder: string[] = []
   /** Root grouping of the last `setLayout` (reused while the paint order array is the same). */
@@ -719,6 +723,36 @@ export class CanvasKitRenderer implements Renderer {
 
   setOverlay(overlay: Overlay): void {
     this.overlay = overlay
+    this.requestFrame()
+  }
+
+  /**
+   * Board 35 "Agent build motion": the roots holding a node with motion draw straight from the
+   * painter with `motion` (no picture recorded or reused) until it is cleared; their cached
+   * final-state pictures stay for afterwards. Hit testing, overlays and exports ignore it.
+   */
+  setMotion(motion: MotionFrame | null): void {
+    if (!motion?.size) {
+      if (!this.motion) return
+      this.motion = null
+      this.motionRoots.clear()
+      this.requestFrame()
+      return
+    }
+    this.motion = motion
+    this.motionRoots.clear()
+    const nodes = this.scene?.nodes
+    const laid = this.layout?.nodes
+    if (nodes && laid)
+      for (const id of motion.keys()) {
+        let root = id
+        for (let i = 0; i < 4096; i++) {
+          const p = nodes.getNode(root)?.parent
+          if (typeof p !== "string" || !laid.has(p)) break
+          root = p
+        }
+        this.motionRoots.add(root)
+      }
     this.requestFrame()
   }
 
@@ -1354,6 +1388,27 @@ export class CanvasKitRenderer implements Renderer {
         if (!e) continue
         const l = ctx.layout.nodes.get(root)
         if (l && !l.visible) continue
+        // Board 35: a root with moving layers draws live from the painter this frame.
+        if (this.motion && this.motionRoots.has(root)) {
+          let lb: Rect | null = null
+          for (const id of e.ids) {
+            const nl = ctx.layout.nodes.get(id)
+            if (nl) lb = union(lb, nl.world)
+          }
+          const m = 256
+          if (
+            lb &&
+            !intersects({ x: lb.x - m, y: lb.y - m, w: lb.w + 2 * m, h: lb.h + 2 * m }, visible)
+          ) {
+            culled += e.ids.length
+            continue
+          }
+          const counters: DrawCounters = { nodes: 0, draws: 0 }
+          this.need().painter.drawNode(canvas, { ...ctx, motion: this.motion }, root, counters)
+          drawn += counters.nodes
+          draws += counters.draws
+          continue
+        }
         // A top-level instance root draws from its shared picture (no root picture).
         if (!e.picture && e.wrap) {
           if (this.sharedInstances && this.shared.get(e.wrap.key) === e.wrap.sp) {
@@ -1584,7 +1639,14 @@ export class CanvasKitRenderer implements Renderer {
   snapshot(): Uint8Array {
     const { ck } = this.need()
     if (!this.surface) throw new RendererError("NOT_INITIALIZED", "no surface attached")
-    this.render()
+    // Board 35: snapshots show the final state, never an in-between motion frame.
+    const motion = this.motion
+    this.motion = null
+    try {
+      this.render()
+    } finally {
+      this.motion = motion
+    }
     const img = this.surface.makeImageSnapshot()
     const bytes = img.encodeToBytes(ck.ImageFormat.PNG, 100)
     img.delete()

@@ -35,6 +35,8 @@ import type { TextEngine, TextFill } from "./text"
 import {
   type AgentCanvasTheme,
   DEFAULT_AGENT_CANVAS_THEME,
+  type MotionFrame,
+  type NodeMotion,
   type Rect,
   type RenderScene,
 } from "./types"
@@ -70,6 +72,8 @@ export interface PaintContext {
   layout: LayoutResult
   /** M6: display labels for chrome (prompt model pill). */
   labels?: RenderScene["labels"]
+  /** Board 35: per-node motion of the frame being drawn (on-screen frames only). */
+  motion?: MotionFrame
 }
 
 export interface DrawCounters {
@@ -121,18 +125,60 @@ export class Painter {
   /** Draws `id` and its subtree. The canvas matrix must be the world → device matrix. */
   drawNode(canvas: Canvas, ctx: PaintContext, id: string, counters: DrawCounters): void {
     if (this.depth === 0) this.blendMemo.clear()
+    const m = ctx.motion?.get(id)
+    // Board 35: a layer waiting for its entrance draws nothing yet.
+    if (m && (m.opacity ?? 1) <= 0) return
     this.depth++
+    let saves = 0
     try {
+      if (m) saves = this.applyMotion(canvas, ctx, id, m)
       if (!this.subtree?.(canvas, ctx, id, counters)) this.drawOne(canvas, ctx, id, counters)
     } finally {
+      while (saves-- > 0) canvas.restore()
       this.depth--
     }
   }
 
-  private drawOne(canvas: Canvas, ctx: PaintContext, id: string, counters: DrawCounters): void {
+  /**
+   * Board 35: offsets the canvas for `id` and its subtree (translate, scale about the world box
+   * center, opacity layer). Returns how many saves to restore.
+   */
+  private applyMotion(canvas: Canvas, ctx: PaintContext, id: string, m: NodeMotion): number {
     const l = ctx.layout.nodes.get(id)
+    if (!l) return 0
+    canvas.save()
+    const dx = m.dx ?? 0
+    const dy = m.dy ?? 0
+    if (dx !== 0 || dy !== 0) canvas.translate(dx, dy)
+    const s = m.scale ?? 1
+    if (s !== 1) {
+      const cx = l.world.x + l.world.w / 2
+      const cy = l.world.y + l.world.h / 2
+      canvas.translate(cx, cy)
+      canvas.scale(s, s)
+      canvas.translate(-cx, -cy)
+    }
+    const o = m.opacity ?? 1
+    if (o >= 1) return 1
+    const p = new this.ck.Paint()
+    p.setAlphaf(o)
+    canvas.saveLayer(p)
+    p.delete()
+    return 2
+  }
+
+  private drawOne(canvas: Canvas, ctx: PaintContext, id: string, counters: DrawCounters): void {
+    let l = ctx.layout.nodes.get(id)
     const node = ctx.nodes.getNode(id)
     if (!l || !node || !l.visible) return
+    // Board 35: a frame / rectangle resizing in a reflow draws at its in-between size.
+    const mo = ctx.motion?.get(id)
+    if (
+      mo &&
+      (mo.w !== undefined || mo.h !== undefined) &&
+      (node.type === "frame" || node.type === "rect")
+    )
+      l = { ...l, local: { ...l.local, w: mo.w ?? l.local.w, h: mo.h ?? l.local.h } }
     // Spec §5.5: a PNG/PDF of a parent skips notes and prompts (they are not the design).
     if (this.skipAgentNodes && this.depth > 1 && (node.type === "note" || node.type === "prompt"))
       return

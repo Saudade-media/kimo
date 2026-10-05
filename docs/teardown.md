@@ -689,7 +689,7 @@ Putting create/read/update/delete into one sandboxed JS tool lets an agent loop 
 2. **The file is the product.** `.kimo` must be readable, diffable, mergeable and stable. Format changes come with semver, migrations and a published changelog.
 3. **Local-first, no account.** Every feature, including CLI export and MCP, works offline with no sign-in. Exceptions: the model call itself, and first use of a Google Font not yet cached (fonts are cached as document assets on first use; an offline font pack and a "no third-party fetch" setting are available). Any cloud feature is optional and self-hostable. On web, which providers work without a backend differs per provider (see Key storage in 9.2).
 4. **Never lose work.** Atomic writes, autosave, crash recovery, refusing to save over a file after a failed load, and verified saves.
-5. **Agents are first-class, humans stay in control.** Typed and declarative tools, enforced scopes, attributed edits, per-origin undo, suggestion and dry-run mode.
+5. **Agents edit; people stay in control.** Typed and declarative tools, enforced scopes, attributed edits, per-origin undo, suggestion and dry-run mode.
 6. **Provider-agnostic by construction.** Claude is the default. Anthropic, OpenAI, Gemini, OpenRouter and any OpenAI- or Anthropic-compatible endpoint are supported. No vendored agent CLIs.
 7. **Deterministic over prompted.** Exporters and token sync are code, not prompts. The agent is for creative work, not plumbing.
 8. **Familiar and fast.** Figma-like interaction, a WebGL canvas, and identical raster output across the browser canvas, the headless renderer and PNG export. Code export (HTML/React) is laid out by the browser, so it matches geometry exactly but text only within a tolerance (see M7).

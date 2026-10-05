@@ -39,7 +39,7 @@ The first public release: release engineering, polish, the new mark and the form
   (`latest.json`, copied to `latest-stable.json` for the stable channel), the static web app and
   a dry run of the `@kimo/cli` package. Nothing is published automatically.
 - `examples/`: a landing page, mobile screens, a themed dashboard (mode × density), a design
-  system library and a document that imports it, and a three-way merge demo — generated from
+  system library and a document that imports it, and a three-way merge demo, generated from
   typed ops by `scripts/build-examples.ts`, checked in CI with `kimo validate --strict`, with
   headless-rendered thumbnails.
 - `scripts/version.ts`: one version across every workspace package, `tauri.conf.json`, both
@@ -92,14 +92,14 @@ The first public release: release engineering, polish, the new mark and the form
   underline, strikethrough, line height, letter spacing, link); ⌘B / ⌘I / ⌘U / ⇧⌘X, ⌘K for a
   link; the Text and Fill sections show "Mixed" for a range (board 30).
 - Launch loader: the animated mark shows on first paint, before the app's code loads (board 29).
-- Agent progress (board 31): while a turn runs the Agent tab shows one live status line — the
+- Agent progress (board 31): while a turn runs the Agent tab shows one live status line: the
   agent's own short note for the current step, else what the tool is doing ("Adding 12 layers in
   Pricing"), with the elapsed time and a **Follow** chip that zooms to the layers it just
   changed. The reply appears when the turn ends. Layers the agent edits flash in its hue as each
   edit lands; the viewport never moves on its own.
 - Agents build step by step: a skeleton first, then one section per edit. `kimo_apply_ops`
   refuses a call that inserts more than 40 new layers (`AGENT_MAX_NEW_LAYERS`, new error code
-  `BATCH_TOO_LARGE` with `{limit, newLayers}`) for every agent client — the built-in panel,
+  `BATCH_TOO_LARGE` with `{limit, newLayers}`) for every agent client: the built-in panel,
   Claude Code, Codex, Gemini CLI and any MCP client. Copies, duplicates and component instances
   are never limited, and agents are told to copy existing frames or pages for variants instead
   of re-creating them (new guide `guide/steps`).
@@ -257,7 +257,7 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Added
 
-- Desktop app (Tauri v2): all platform commands in Rust — atomic save with read-back, file
+- Desktop app (Tauri v2): all platform commands in Rust: atomic save with read-back, file
   watching, single-writer leases, crash recovery, git operation detection and merge-driver
   install, local fonts and a font cache, updater, macOS overlay title bar, settings window,
   `.kimo` file association, `kimo://` deep links, single instance. ADR 0012.

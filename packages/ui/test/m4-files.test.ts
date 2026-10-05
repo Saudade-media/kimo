@@ -34,7 +34,7 @@ describe("Banner", () => {
     const html = renderToString(
       h(Banner, {
         tone: "warning",
-        title: "Rebase in progress — autosave paused",
+        title: "Rebase in progress · autosave paused",
         body: "Your 6 unsaved edits are kept in memory.",
         actions: [
           { id: "git-discard", label: "Discard", variant: "ghost" },

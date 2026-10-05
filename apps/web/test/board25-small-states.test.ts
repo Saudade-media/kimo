@@ -197,7 +197,7 @@ describe("(d) OpenType · font support (g95jKz, rule v0gB4)", () => {
   test("hint copy (rule kkH4N): in font / isn't in font / unknown → format hint", () => {
     expect(customTagHint("cv11", "Inter", true)).toBe("cv11 is in Inter")
     expect(customTagHint("zero", "Inter Display", false)).toBe(
-      "zero isn't in Inter Display — it will be saved but has no effect",
+      "zero isn't in Inter Display. It's saved but has no effect",
     )
     expect(customTagHint("zero", "Inter", null)).toBe("4 characters, a–z 0–9")
     expect(customTagHint("zer", "Inter", false)).toBe("4 characters, a–z 0–9")
@@ -229,7 +229,7 @@ describe("(e) 'Ready to commit' (tzFIU / LsjRG)", () => {
     ])
     const b = bannerCopy({ ...ready, copied: true }, fmt)
     expect(b.body).toBe(
-      "Copied 'git add Pricing\\ page.kimo && git commit' — run it in your terminal.",
+      "Copied 'git add Pricing\\ page.kimo && git commit'. Run it in your terminal.",
     )
     expect(b.actions[1]).toEqual({
       id: "copy-commit-command",

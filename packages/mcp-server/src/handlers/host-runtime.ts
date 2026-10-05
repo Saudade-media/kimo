@@ -128,6 +128,52 @@ export interface McpHostRuntime {
   dispose(): void
 }
 
+/**
+ * The existing layers a call reads or edits, from its input alone (the agent cursor's area while
+ * the call runs). `ids`: nodes the call edits or reads (update / replace / move / delete …, query
+ * `select.ids` / `under`, render `ids`); `parents`: where inserts, copies and instances land.
+ * `@key` refs (nodes created in the same call), "root" and IdPaths' instance children are left
+ * out: they have no box yet.
+ */
+export function callTargets(
+  name: string,
+  input: Record<string, unknown>,
+): { ids: string[]; parents: string[] } {
+  const ids: string[] = []
+  const parents: string[] = []
+  const real = (v: unknown): v is string =>
+    typeof v === "string" && v !== "" && v !== "root" && !v.startsWith("@") && !v.includes("/")
+  const add = (to: string[], v: unknown) => {
+    if (real(v) && !to.includes(v) && to.length < 50) to.push(v)
+  }
+  if (name === "kimo_apply_ops") {
+    for (const raw of Array.isArray(input.ops) ? input.ops : []) {
+      if (!raw || typeof raw !== "object") continue
+      const op = raw as Record<string, unknown>
+      if (op.op === "insert" || op.op === "instantiate") add(parents, op.parent)
+      else if (op.op === "copy") {
+        add(ids, op.id)
+        add(parents, op.parent)
+      } else {
+        for (const k of ["id", "instance", "frame", "node", "component"]) add(ids, op[k])
+        if (Array.isArray(op.ids)) for (const v of op.ids) add(ids, v)
+        if (op.op === "move") add(parents, op.parent)
+      }
+    }
+    return { ids, parents }
+  }
+  const sel = input.select
+  if (sel && typeof sel === "object") {
+    const s = sel as Record<string, unknown>
+    if (Array.isArray(s.ids)) for (const v of s.ids) add(ids, v)
+    add(ids, s.under)
+  }
+  if (Array.isArray(input.ids)) for (const v of input.ids) add(ids, v)
+  add(ids, input.id)
+  if (name === "kimo_find_space") add(parents, input.parent)
+  return { ids, parents }
+}
+
 /** Short present-tense label of a running call ("Applying 4 ops", "Rendering"). */
 export function callLabel(name: string, input: Record<string, unknown>): string {
   if (typeof input.label === "string" && input.label.trim()) return input.label.trim()
@@ -359,10 +405,16 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         return async (input: Record<string, unknown>, ctx: ToolContext) => {
           const p = presence.get(origin)
           const docs = p?.docs ?? []
+          // The agent cursor moves to the layers this call edits or reads; a batch that only
+          // inserts keeps the last area (its new nodes have no box until it lands) unless there
+          // is none yet, then it uses the insert parents.
+          const tg = callTargets(name, input)
+          const focus = tg.ids.length ? tg.ids : p?.focus?.length ? undefined : tg.parents
           presence.update(origin, {
             state: STATE_OF[name] ?? "reading",
             call: { tool: name, label: callLabel(name, input), startedAt: now() },
             lastActivityAt: now(),
+            ...(focus?.length ? { focus } : {}),
             ...(typeof input.docId === "string" && !docs.includes(input.docId)
               ? { docs: [...docs, input.docId] }
               : {}),

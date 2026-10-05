@@ -98,7 +98,7 @@ describe("Issues tab model (rule AiMJh)", () => {
       }),
     )
     expect(report).toBe(
-      "Kimo export issues: 1 issue (1 error)\n\nA.tsx — 1 issue\n  error    icon x  [Nav › Icon]\n",
+      "Kimo export issues: 1 issue (1 error)\n\nA.tsx: 1 issue\n  error    icon x  [Nav › Icon]\n",
     )
   })
 

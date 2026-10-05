@@ -305,12 +305,12 @@ describe("conversion", () => {
 })
 
 describe("board 20: unsafe SVGs are rejected whole (M4Pij9 / fW1JW)", () => {
-  test("a script: Couldn't import logo.svg — it contains a script, with the line", async () => {
+  test("a script: Couldn't import logo.svg: it contains a script, with the line", async () => {
     const text = `<svg xmlns="http://www.w3.org/2000/svg">\n<path d="M0 0L1 1"/>\n<script>alert(1)</script>\n</svg>`
     const err = await prepareSvg(text, "logo.svg").catch((e: unknown) => e)
     expect(err).toBeInstanceOf(SvgRejectedError)
     const r = err as SvgRejectedError
-    expect(r.message).toBe("Couldn't import logo.svg — it contains a script")
+    expect(r.message).toBe("Couldn't import logo.svg: it contains a script")
     expect(r.details).toEqual(["<script> · line 3"])
   })
 
@@ -324,7 +324,7 @@ describe("board 20: unsafe SVGs are rejected whole (M4Pij9 / fW1JW)", () => {
       `<image href="https://cdn.example/badge.png" width="1" height="1"/><use href="https://evil.example/x.svg#a"/>`,
     )
     const err = (await prepareSvg(text, "badge.svg").catch((e: unknown) => e)) as SvgRejectedError
-    expect(err.message).toBe("Couldn't import badge.svg — it loads an external file")
+    expect(err.message).toBe("Couldn't import badge.svg: it loads an external file")
     expect(svgRejection(["fill:url(https://x/y#a)"], "")?.reason).toBe("external")
   })
 

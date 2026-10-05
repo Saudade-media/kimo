@@ -199,7 +199,7 @@ export const scenarios: Scenario[] = [
       expect(/^This turn may cost about \$\d+\.\d+$/.test(title), `title with $: ${title}`)
       expect(
         (await card.locator(".kimo-cost-warning__desc").textContent())?.startsWith(
-          "Above your $0.05 per-turn warning — ",
+          "Above your $0.05 per-turn warning: ",
         ),
         "desc names the threshold",
       )
@@ -264,7 +264,7 @@ export const scenarios: Scenario[] = [
       await textarea.press("Enter")
       await card.waitFor()
       const off = (await card.textContent()) ?? ""
-      expect(/This turn is large — ~\d+(\.\d)?k tokens/.test(off), `tokens wording: ${off}`)
+      expect(/This turn is large: ~\d+(\.\d)?k tokens/.test(off), `tokens wording: ${off}`)
       expect(!off.includes("$"), "no $ in the card when Show cost is off")
       // Send anyway → sent; meta and header keep tokens, no $.
       await card.locator("button:has-text('Send anyway')").click()

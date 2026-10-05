@@ -206,7 +206,7 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
           />
         </Row>
         <Hint pen="PdJoH">
-          Or 'Service account JSON…' — the file is copied into the Keychain, then the path is
+          Or use 'Service account JSON…'. The file is copied into the Keychain, then the path is
           forgotten.
         </Hint>
       </div>

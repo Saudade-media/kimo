@@ -574,7 +574,7 @@ export function cliStatusText(d: CliDetection): string {
       return ["Signed in", d.plan, d.account].filter(Boolean).join(" · ")
     case "not-signed-in":
     case "unknown":
-      return `Not signed in — run \`${CLI_SIGN_IN[d.id] ?? d.id}\``
+      return `Not signed in · run \`${CLI_SIGN_IN[d.id] ?? d.id}\``
     default:
       return "Not found"
   }

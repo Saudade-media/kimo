@@ -184,7 +184,7 @@ async function deleteBecomesHide({ page, url }: E2EContext) {
   await page.locator('.m3-toast[data-tone="danger"]', { hasText: "hidden instead" }).waitFor()
   expect(
     (await toasts(page)).some(
-      (t) => t === "Can't delete Title inside an instance — hidden instead",
+      (t) => t === "Can't delete Title inside an instance. It was hidden instead",
     ),
     "board 15 toast copy",
   )

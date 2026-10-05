@@ -58,10 +58,10 @@ export function gcMoreLabel(rest: readonly AssetFile[]): string {
 
 export const GC_NOTHING_TITLE = "Nothing to clean up"
 
-/** "Every asset is in use — each file in assets/ is referenced by … in marketing.kimo." (same
+/** "Every asset is in use. Each file in assets/ is referenced by … in marketing.kimo." (same
  * sentence as `kimo gc`). */
 export function gcNothingDescription(fileName: string): string {
-  return `Every asset is in use — each file in assets/ is referenced by a node, fill, component or variable in ${fileName}.`
+  return `Every asset is in use. Each file in assets/ is referenced by a node, fill, component or variable in ${fileName}.`
 }
 
 /** Body Summary: "12 assets · 31.4 MB". */

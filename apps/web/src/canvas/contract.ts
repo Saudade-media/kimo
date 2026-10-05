@@ -388,7 +388,7 @@ export type CanvasError =
 
 /**
  * M3 (board 15 `qJRq1`): a non-error notice after an applied command, e.g. "Can't delete
- * Features inside an instance — hidden instead" (Toast/Danger with Undo), or "1 override no
+ * Features inside an instance. It was hidden instead" (Toast/Danger with Undo), or "1 override no
  * longer resolves — Marketing kit changed" (Toast/Warning `qINpv` with Review). Toasts stack
  * bottom-center 12 px above the floating toolbar, newest at the bottom, at most 3; danger 6 s,
  * warning 4 s, hover pauses.
@@ -403,11 +403,11 @@ export interface CanvasNotice {
 
 /** Board 15 toast copy for refusals, by plan error code (`{name}` = the layer / item name). */
 export const M3_TOAST_COPY = {
-  HIDDEN_INSTEAD: "Can't delete {name} inside an instance — hidden instead",
-  LIBRARY_READ_ONLY: "{name} is from a linked library — edit it in its source file",
+  HIDDEN_INSTEAD: "Can't delete {name} inside an instance. It was hidden instead",
+  LIBRARY_READ_ONLY: "{name} is from a linked library. Edit it in its source file",
   CYCLE: "Can't nest a main component inside its own instance",
-  ALIAS_CYCLE: "Can't alias {name} to itself — that would create a cycle",
-  OVERRIDE_UNRESOLVED: "{count} override no longer resolves — {library} changed",
+  ALIAS_CYCLE: "Can't alias {name} to itself. That would create a cycle",
+  OVERRIDE_UNRESOLVED: "{count} override no longer resolves because {library} changed",
 } as const
 
 // --- M3: instances on the canvas (boards 11, 12, 13) ------------------------------------------
@@ -668,6 +668,12 @@ export interface CanvasAgentCursor {
   origin: string
   /** Node the current op targets. */
   nodeId: string
+  /**
+   * The whole area the agent works on (the layers the current step reads or edits, else the
+   * ones its last landed edit created / changed). The cursor sits at the top-left of their union
+   * box (+4, +4); absent = `[nodeId]`.
+   */
+  nodeIds?: readonly string[]
   /** "setting Headline font…" (the pill reads "<label> · <text>"). */
   text: string
   state: CanvasAgentMarkState

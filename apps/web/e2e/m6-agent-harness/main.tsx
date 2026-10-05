@@ -58,6 +58,31 @@ const lastUser = (req: ProviderRequest) => {
 const afterTool = (req: ProviderRequest) => req.messages[req.messages.length - 1]?.role === "tool"
 
 /** Scripted replies by the prompt's keywords (mocked provider, no network). */
+/** Board 33 §1 (ME2DT) reply text: the same Markdown as the Pencil "before" vignette. */
+export const FORMATTED_REPLY = [
+  'Added two sections to "Landing — Desktop (Analytics)", above the footer.',
+  "",
+  "- **Pricing:** your three plans, unchanged.",
+  "- **FAQ:** six questions, collapsed.",
+  "  - Uses the analytics heading style.",
+  "",
+  "To move FAQ above Pricing:",
+  "",
+  "1. Select FAQ in the Layers panel.",
+  "2. Press `⌥↑` once.",
+  "",
+  "Answers use the `faq/answer` style:",
+  "",
+  "```",
+  "font: Inter 15/24",
+  "color: $text-secondary",
+  "```",
+  "",
+  "Prices are *placeholders*.",
+  "",
+  "Copy from [pricing.md](https://kimo.dev/pricing).",
+].join("\n")
+
 const script: Script = (req) => {
   const text = lastUser(req)
   const brief = /Your brief: ([^\n]*)/.exec(req.system.volatile ?? "")?.[1] ?? ""
@@ -149,6 +174,9 @@ const script: Script = (req) => {
       }),
     }
   if (text.includes("auth")) return { error: "auth", status: 401, message: "invalid x-api-key" }
+  // Board 33 §1: a reply with every block of the Markdown subset.
+  if (text.includes("formatted reply"))
+    return { text: FORMATTED_REPLY, usage: { inputTokens: 900, outputTokens: 120 }, delayMs: 10 }
   // Board 25 §5: refusal (dIkT6), generic error (u8mh7l), approval outside the scope (OlhpU).
   if (text.includes("Stripe"))
     return {

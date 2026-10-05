@@ -517,10 +517,10 @@ export function GalleryM3({ theme }: { theme?: "light" | "dark" }) {
           </Column>
           <Column caption="Toast/Danger · Toast/Warning" pen="I59DkV">
             <Toast tone="danger" actionLabel="Reorder" data-pen="FVd5q">
-              Can't move a child of an auto layout frame — reorder instead
+              Can't move a child of an auto layout frame. Reorder instead
             </Toast>
             <Toast tone="warning" actionLabel="Review" data-pen="qINpv">
-              1 override no longer resolves — Marketing kit changed
+              1 override no longer resolves because Marketing kit changed
             </Toast>
           </Column>
         </Items>
@@ -764,7 +764,7 @@ export function GalleryM3({ theme }: { theme?: "light" | "dark" }) {
               },
               {
                 icon: <List />,
-                text: "Props label, showBadge, size and icon are dropped — values stay",
+                text: "Props label, showBadge, size and icon are dropped, values stay",
               },
             ]}
             confirmLabel="Detach"
@@ -804,7 +804,7 @@ export function GalleryM3({ theme }: { theme?: "light" | "dark" }) {
               },
               {
                 icon: <SquareDashed />,
-                text: "Without a cache (fresh clone) detach is unavailable — locate the file instead",
+                text: "Without a cache (fresh clone), detach isn't available. Locate the file instead",
               },
               { icon: <List />, text: "Undo restores the import and the instances" },
             ]}

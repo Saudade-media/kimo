@@ -64,10 +64,10 @@ describe("board 27 §3 raster rules", () => {
     expect(dropPillText(1, 1)).toBe("Drop 1 image")
     expect(dropPillText(2, 3)).toBe("1 of 3 can't be imported")
     expect(rejectionText("photo.heic", "unsupported")).toBe(
-      "photo.heic isn't supported — use PNG, JPEG, WebP or GIF",
+      "photo.heic isn't supported. Use PNG, JPEG, WebP or GIF",
     )
     expect(rejectionText("scan.png", "too-large", 42 * 1048576)).toBe(
-      "scan.png is 42 MB — the limit is 20 MB per image",
+      "scan.png is 42 MB. The limit is 20 MB per image",
     )
     expect(MAX_ASSET_BYTES).toBe(20 * 1048576)
     expect(formatMb(2.1 * 1048576)).toBe("2.1 MB")
@@ -135,7 +135,7 @@ describe("importRasterFiles", () => {
     })
     expect(ui.getState().selection).toEqual(r.created)
     expect(toasts.map((t) => t.tone)).toEqual(["warning", "success"])
-    expect(toasts[0]?.text).toBe("photo.heic isn't supported — use PNG, JPEG, WebP or GIF")
+    expect(toasts[0]?.text).toBe("photo.heic isn't supported. Use PNG, JPEG, WebP or GIF")
     expect(toasts[1]).toMatchObject({
       icon: "clipboard-check",
       text: "Pasted “team@2x” · 1200 × 800 at the viewport centre",
@@ -187,6 +187,6 @@ describe("importRasterFiles", () => {
     const big = { name: "scan.png", size: 42 * 1048576, type: "image/png" } as unknown as File
     const r = await importRasterFiles({ session, m3, canvas: () => null }, [big], { kind: "paste" })
     expect(r.created).toEqual([])
-    expect(toasts[0]?.text).toBe("scan.png is 42 MB — the limit is 20 MB per image")
+    expect(toasts[0]?.text).toBe("scan.png is 42 MB. The limit is 20 MB per image")
   })
 })

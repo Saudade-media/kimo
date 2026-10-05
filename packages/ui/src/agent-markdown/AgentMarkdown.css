@@ -1,0 +1,102 @@
+/*
+ * AgentMarkdown: desing.pen board 33 "Reply formatting" (ME2DT) › Reply · Formatted (c3sxuV) ›
+ * Bubble (Xt0Hx): vertical, gap 8. Text inherits the Message/Agent text (sans 13 / 20px,
+ * text-primary). Every block resets the UA margins/paddings it would otherwise get.
+ */
+.kimo-md {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  white-space: normal;
+}
+
+.kimo-md__p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Strong (z1uAH): weight 600. Em (HQXhs): italic. */
+.kimo-md__strong {
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-md__em {
+  font-style: italic;
+}
+
+/* Inline Code (r2gx8K): fill bg-app, radius-xs, padding [0, 4] › Code mono 12 / 1.5. */
+.kimo-md__code {
+  padding: 0 4px;
+  border-radius: var(--kimo-radius-xs);
+  background: var(--kimo-bg-app);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  line-height: 18px; /* 1.5 × 12 */
+}
+
+/* Code Block (m8kcbO): bg-app, 1px border, radius-sm, padding [8, 10] › mono 12 / 1.5. */
+.kimo-md__pre {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-app);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  line-height: 18px; /* 1.5 × 12 */
+  white-space: pre;
+  overflow-x: auto;
+  overflow-wrap: normal;
+}
+
+.kimo-md__pre > code {
+  font: inherit;
+}
+
+/* Bullet / Numbered List (pAvP9 / E2CvXB): vertical, gap 4. */
+.kimo-md__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Nested List (PzF9i): padding-left 20. */
+.kimo-md__list--nested {
+  padding-left: 20px;
+}
+
+/* Item (EZwNh): row, gap 6 › Marker (CiNk2) width 14, text-tertiary · Content (tUzLV). */
+.kimo-md__item {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.kimo-md__marker {
+  flex: none;
+  min-width: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-md__content {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Link (RTfof): text-primary, underline. */
+.kimo-md__link {
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

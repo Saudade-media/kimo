@@ -78,7 +78,7 @@ export class SvgRejectedError extends SvgImportError {
     details: string[],
     items: SvgRemovedItem[] = [],
   ) {
-    super(`Couldn't import ${fileName} — it ${REASON_TEXT[reason]}`)
+    super(`Couldn't import ${fileName}: it ${REASON_TEXT[reason]}`)
     this.fileName = fileName
     this.reason = reason
     this.details = details

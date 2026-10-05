@@ -234,7 +234,7 @@ describe("kimo gc", () => {
     const again = capture(undefined, p.env)
     expect(await run(["gc", p.file], again.io)).toBe(0)
     expect(again.out()).toContain(
-      "Nothing to clean up. Every asset is in use — each file in assets/",
+      "Nothing to clean up. Every asset is in use. Each file in assets/",
     )
   })
 

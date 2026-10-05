@@ -6,6 +6,7 @@
  */
 import { AgentMark, CompactButton } from "@kimo/ui"
 import { useEffect, useRef, useState } from "react"
+import { CURSOR_GLIDE_MS, glideEase, unionBox } from "../canvas/agent-area"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
 import { AgentIcon } from "./icons"
@@ -30,6 +31,13 @@ export interface AgentCanvasLayerProps {
   fadeMs?: number
   /** Off-screen cursor pill click: pan to the node (board 24 g rule 3). */
   onPanTo?: (nodeId: string) => void
+  /**
+   * World box of a node and world → layer projection: the cursor glides between work areas in
+   * world space (board 31 "Position lock": a pan mid-glide moves it with the canvas). Without
+   * them the cursor jumps.
+   */
+  world?: (id: string) => ProjectedBox | null
+  toLayer?: (p: { x: number; y: number }) => { x: number; y: number }
 }
 
 /** Cursor hides after this much idle time (board 24 g rule 5). */
@@ -102,6 +110,8 @@ export function AgentCanvasLayer({
   viewportKey,
   fadeMs = 2000,
   onPanTo,
+  world,
+  toLayer,
 }: AgentCanvasLayerProps) {
   const state = useAgentsState(controller)
   const layer = useRef<HTMLDivElement>(null)
@@ -142,6 +152,7 @@ export function AgentCanvasLayer({
           }
           reservedTop={dry || state.dryRun ? 52 : 0}
           {...(onPanTo ? { onPanTo } : {})}
+          {...(world && toLayer ? { world, toLayer } : {})}
         />
       ))}
       {dry?.ghosts.map((g) => {
@@ -163,6 +174,8 @@ function Attribution({
   stack,
   reservedTop,
   onPanTo,
+  world,
+  toLayer,
 }: {
   chip: AgentChipView
   project: AgentCanvasLayerProps["project"]
@@ -171,15 +184,37 @@ function Attribution({
   stack: number
   reservedTop: number
   onPanTo?: (id: string) => void
+  world?: AgentCanvasLayerProps["world"]
+  toLayer?: AgentCanvasLayerProps["toLayer"]
 }) {
+  const area = world ? unionBox(chip.focus.slice(0, 50).map((f) => world(f))) : null
+  const glide = useWorldGlide(area ? { x: area.x, y: area.y } : null)
   const writing = chip.state === "editing" || Date.now() - chip.lastActivityAt < fadeMs
   if (chip.presence === "paused") return null
-  const id = chip.focus.find((f) => project(f) !== null)
-  if (!id) return null
-  const box = project(id)
-  if (!box) return null
+  // The work area: the union of the focus layers' boxes.
+  const boxes = chip.focus.slice(0, 50).flatMap((f) => {
+    const b = project(f)
+    return b ? [{ id: f, b }] : []
+  })
+  const first = boxes[0]
+  if (!first) return null
+  const id = first.id
+  const u = unionBox(boxes.map((x) => x.b))
+  if (!u) return null
+  // A box that contains the whole area is the area (it keeps its corner radius).
+  const box: ProjectedBox =
+    boxes.find(
+      (x) =>
+        x.b.x <= u.x + 0.5 &&
+        x.b.y <= u.y + 0.5 &&
+        x.b.x + x.b.w >= u.x + u.w - 0.5 &&
+        x.b.y + x.b.h >= u.y + u.h - 0.5,
+    )?.b ?? u
+  // Cursor anchor: the glided world point of the area's top-left, projected now.
+  const at = glide && toLayer ? toLayer(glide) : { x: box.x, y: box.y }
+  const anchor: ProjectedBox = { ...box, x: at.x, y: at.y }
   const idle = Date.now() - chip.lastActivityAt > CURSOR_IDLE_MS && chip.state !== "editing"
-  const place = view.w > 0 ? placeCursor(box, view, { stack, reservedTop }) : null
+  const place = view.w > 0 ? placeCursor(anchor, view, { stack, reservedTop }) : null
   const markState = chip.state === "editing" ? "working" : "idle"
   return (
     <div
@@ -228,7 +263,7 @@ function Attribution({
           data-testid="agent-cursor"
           data-flip-x={place?.flipX || undefined}
           data-flip-y={place?.flipY || undefined}
-          style={{ left: place?.x ?? box.x + 4, top: place?.y ?? box.y + 4 }}
+          style={{ left: place?.x ?? anchor.x + 4, top: place?.y ?? anchor.y + 4 }}
         >
           <AgentIcon name="mouse-pointer-2" size={18} className="agents-cursor__pointer" />
           <div className="agents-cursor__pill">
@@ -239,6 +274,46 @@ function Attribution({
       )}
     </div>
   )
+}
+
+/**
+ * World-space glide of the cursor anchor between work areas (CURSOR_GLIDE_MS, ease-out): the
+ * returned point is in world space and the caller projects it with the current viewport, so the
+ * cursor never trails a pan or zoom. Reduced motion jumps.
+ */
+function useWorldGlide(target: { x: number; y: number } | null): { x: number; y: number } | null {
+  const g = useRef<{
+    from: { x: number; y: number }
+    to: { x: number; y: number }
+    at: number
+  } | null>(null)
+  const [, setFrame] = useState(0)
+  const now = performance.now()
+  if (target) {
+    const cur = g.current
+    if (!cur) g.current = { from: target, to: target, at: now - CURSOR_GLIDE_MS }
+    else if (Math.abs(cur.to.x - target.x) > 0.5 || Math.abs(cur.to.y - target.y) > 0.5) {
+      const reduced =
+        typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches
+      g.current = { from: reduced ? target : pointAt(cur, now), to: target, at: now }
+    }
+  }
+  const cur = g.current
+  const gliding = !!cur && now - cur.at < CURSOR_GLIDE_MS
+  useEffect(() => {
+    if (!gliding) return
+    const raf = requestAnimationFrame(() => setFrame((n) => n + 1))
+    return () => cancelAnimationFrame(raf)
+  })
+  return target && cur ? pointAt(cur, now) : null
+}
+
+function pointAt(
+  g: { from: { x: number; y: number }; to: { x: number; y: number }; at: number },
+  t: number,
+): { x: number; y: number } {
+  const k = glideEase((t - g.at) / CURSOR_GLIDE_MS)
+  return { x: g.from.x + (g.to.x - g.from.x) * k, y: g.from.y + (g.to.y - g.from.y) * k }
 }
 
 const OP_LABEL: Record<GhostKind, string> = { delete: "delete", insert: "insert", update: "update" }

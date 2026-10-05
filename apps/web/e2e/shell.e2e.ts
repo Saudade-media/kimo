@@ -55,7 +55,7 @@ export const scenarios: Scenario[] = [
       const { page, url } = ctx
       await page.goto(url)
       await page.getByRole("heading", { name: "Recents" }).waitFor()
-      await page.getByRole("heading", { name: "What are we designing today?" }).waitFor()
+      await page.getByRole("heading", { name: "What do you want to design?" }).waitFor()
       expect(await page.getByRole("button", { name: "New file" }).isVisible(), "New file button")
       expect(await page.getByRole("button", { name: "Open file" }).isVisible(), "Open file button")
       // M6 Home composer (board 22 w9bz9): no provider yet → the first-run card, Send disabled.

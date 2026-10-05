@@ -71,7 +71,7 @@ export function MigrationDialogView({
           <div className="kimo-files-migration__item">
             <ShieldCheck className="kimo-files-migration__icon" />
             <span className="kimo-files-migration__text">
-              Until you choose, autosave goes to a recovery file — never to {r.fileName}.
+              Until you choose, autosave goes to a recovery file, never to {r.fileName}.
             </span>
           </div>
         </div>

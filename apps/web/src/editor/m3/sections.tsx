@@ -966,7 +966,7 @@ export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
       {slot && (
         <div className="rp-body">
           <p className="m3-slot-help">
-            Instances can replace this frame's children. Suggestions are advisory — any layer can go
+            Instances can replace this frame's children. Suggestions are advisory: any layer can go
             in.
           </p>
           <div className="m3-expose-row">

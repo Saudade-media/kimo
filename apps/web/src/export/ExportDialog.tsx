@@ -837,7 +837,7 @@ export function ExportDialog({
                     ))}
                     {issueCount === 0 && (
                       <div className="export-issues-empty">
-                        No issues — nothing was approximated.
+                        No issues. Nothing was approximated.
                       </div>
                     )}
                     <div className="export-issues-note">Warnings never block export.</div>

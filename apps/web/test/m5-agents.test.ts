@@ -257,7 +257,7 @@ describe("approval prompt (rule Approval)", () => {
     const r = approval()
     expect(approvalTitle(r, store)).toBe("Codex wants to delete 2 frames")
     expect(approvalDescription(r, "edit")).toBe(
-      "Its permission is Edit, so deletes need your OK. Nothing is applied while you decide — the canvas shows a dry run.",
+      "Its permission is Edit, so deletes need your OK. Nothing is applied while you decide. The canvas shows a dry run.",
     )
     expect(approvalTargets(r, store).map((t) => `${t.op} ${t.target} ${t.detail}`)).toEqual([
       "delete Card 1 frame",

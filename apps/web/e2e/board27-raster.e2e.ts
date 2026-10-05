@@ -284,7 +284,7 @@ export const scenarios: Scenario[] = [
         .waitFor({ timeout: 5000 })
       await page
         .locator(".m3-toast", {
-          hasText: "photo.heic isn't supported — use PNG, JPEG, WebP or GIF",
+          hasText: "photo.heic isn't supported. Use PNG, JPEG, WebP or GIF",
         })
         .waitFor({ timeout: 5000 })
       expect(
@@ -328,7 +328,7 @@ export const scenarios: Scenario[] = [
         true,
       )
       await page
-        .locator(".m3-toast", { hasText: "scan.png is 21 MB — the limit is 20 MB per image" })
+        .locator(".m3-toast", { hasText: "scan.png is 21 MB. The limit is 20 MB per image" })
         .waitFor({ timeout: 5000 })
       const afterDrop = await page.evaluate(
         () => window.__kimo?.session.store.nodeIds().length ?? 0,

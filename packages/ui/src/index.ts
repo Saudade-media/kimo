@@ -13,6 +13,17 @@ export {
   Message,
   type MessageProps,
 } from "./agent/Agent"
+export { AgentMarkdown, type AgentMarkdownProps } from "./agent-markdown/AgentMarkdown"
+export {
+  type MdBlock,
+  type MdInline,
+  type MdList,
+  type MdListItem,
+  parseInline,
+  parseMarkdown,
+  safeHref,
+  stripMarkdown,
+} from "./agent-markdown/parse"
 // --- M3: Components and tokens (boards 02c, 11–15) ---------------------------------------
 export {
   AliasChip,

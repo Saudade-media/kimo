@@ -130,7 +130,7 @@ export const scenarios: Scenario[] = [
       const sub = await pop.locator(".svg-import__option-sub").textContent()
       expect(
         sub ===
-          "2 stroked paths become filled shapes — they scale without changing weight. Dashes are kept as segments.",
+          "2 stroked paths become filled shapes, so they scale without changing weight. Dashes are kept as segments.",
         `sub: ${sub}`,
       )
       const sw = pop.getByRole("switch", { name: "Outline strokes" })

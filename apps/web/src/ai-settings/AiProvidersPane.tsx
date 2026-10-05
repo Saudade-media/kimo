@@ -106,7 +106,7 @@ const CLI_ICONS: Record<string, ReactNode> = {
 /** Board 23 copy (L56aX), with the machine / store names of this host. */
 function introCopy(s: AiSettingsState): string {
   if (s.platform === "web")
-    return "Bring your own API key — usage is billed by the provider, never by Kimo. Keys stay in this browser (localStorage, this origin only); they are never written to .kimo files, settings JSON or logs. Local agent CLIs run in the desktop app."
+    return "Bring your own API key. The provider bills the usage, not Kimo. Keys stay in this browser (localStorage, this origin only) and are never written to .kimo files, settings JSON or logs. Local agent CLIs run in the desktop app."
   const machine = s.os === "macos" ? "this Mac" : "this computer"
   const store =
     s.os === "windows"
@@ -114,7 +114,7 @@ function introCopy(s: AiSettingsState): string {
       : s.os === "linux"
         ? "the Secret Service"
         : "the macOS Keychain"
-  return `Use a coding-agent CLI you are already signed in to, or bring your own API key — usage is billed by your subscription or by the provider, never by Kimo. Keys stay on ${machine}, in ${store}; they are never written to .kimo files, settings JSON or logs.`
+  return `Use a coding-agent CLI you are already signed in to, or bring your own API key. Your subscription or the provider bills the usage, not Kimo. Keys stay on ${machine}, in ${store}, and are never written to .kimo files, settings JSON or logs.`
 }
 
 export interface AiProvidersPaneProps {
@@ -230,8 +230,8 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
         </div>
         <p className="ai-group__desc" data-pen="HDutC">
           {s.platform === "desktop"
-            ? "Used when no local agent is signed in, or when a session or prompt node picks one explicitly. A model is always {provider, model} — an unknown one fails loudly, never falls back."
-            : "Used by the agent in this browser, or when a session or prompt node picks one explicitly. A model is always {provider, model} — an unknown one fails loudly, never falls back."}
+            ? "Used when no local agent is signed in, or when a session or prompt node picks one explicitly. A model is always {provider, model}. An unknown one fails with an error and never falls back."
+            : "Used by the agent in this browser, or when a session or prompt node picks one explicitly. A model is always {provider, model}. An unknown one fails with an error and never falls back."}
         </p>
       </div>
       {adding && (
@@ -984,7 +984,7 @@ function BaseUrlField({
         <div className="ai-add__pin" data-pen="W2ERTF">
           <Pin className="ai-add__pin-icon" aria-hidden="true" />
           <p className="ai-add__pin-text">
-            This key is pinned to the first origin it's sent to —{" "}
+            This key is pinned to the first origin it's sent to:{" "}
             {hostOf(ctl.storedOf(row.id)?.pinnedOrigin ?? originOf(row.baseURL) ?? "this endpoint")}
             . If the base URL later points at another host, Kimo withholds the key until you
             re-enter it.

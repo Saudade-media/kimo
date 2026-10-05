@@ -105,7 +105,7 @@ export function AboutPane({
             {`Version ${versionLine(info)}`}
           </span>
           <span className="about-identity__tagline">
-            Open-source, local-first, agent-native design canvas · MIT
+            Local-first design canvas for you and your agents · MIT
           </span>
         </div>
         <div className="about-identity__actions">

@@ -109,7 +109,7 @@ async function variablesCrud({ page, url, log }: E2EContext) {
   c.ok(!r.ok && r.code === "CYCLE", `2-step alias cycle refused: ${r.code}`)
   c.ok(
     (await toasts(page)).some(
-      (t) => t.text === "Can't alias brand/accent to itself — that would create a cycle",
+      (t) => t.text === "Can't alias brand/accent to itself. That would create a cycle",
     ),
     "cycle toast copy names the variable",
   )

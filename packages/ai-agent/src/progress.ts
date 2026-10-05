@@ -147,6 +147,7 @@ export function noteOf(text: string): string {
     .map((l) =>
       l
         .replace(/^\s*(?:[-*•>]|#{1,6}|\d+[.)])\s+/, "")
+        .replace(/!?\[([^\]\n]*)\]\([^)\n]*\)?/g, "$1")
         .replace(/[*_`]+/g, "")
         .trim(),
     )

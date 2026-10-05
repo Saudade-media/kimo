@@ -231,7 +231,7 @@ export function ChildMenu({
             m3.run({ cmd: "resetOverride", instance, path }, `Reset overrides on ${name}`)
         })}
       />
-      <M3MenuItem icon="trash-2" label="Delete — not in instances" disabled />
+      <M3MenuItem icon="trash-2" label="Delete (not in instances)" disabled />
     </MenuDense>
   )
 }
@@ -266,7 +266,7 @@ export function AddPropMenu({
       <M3MenuItem icon="list" label="Enum" meta="E" onSelect={pick("enum")} />
       <M3MenuItem icon="diamond" label="Instance swap" meta="I" onSelect={pick("instance")} />
       <MenuDivider />
-      <M3MenuItem icon="square-dashed" label="Slot — mark a frame" disabled />
+      <M3MenuItem icon="square-dashed" label="Slot (mark a frame)" disabled />
     </MenuDense>
   )
 }

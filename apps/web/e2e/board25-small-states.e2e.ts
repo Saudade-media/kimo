@@ -275,7 +275,7 @@ export const scenarios: Scenario[] = [
         "Hint x9tphT",
         "not in font copy",
         zero,
-        "zero isn't in Inter — it will be saved but has no effect",
+        "zero isn't in Inter. It's saved but has no effect",
       )
       check("Hint x9tphT", "color tertiary (never warning)", hm.hint?.color, tertiary)
       check("Hint x9tphT", "font-size", hm.hint?.fs, 11)
@@ -413,7 +413,7 @@ export const scenarios: Scenario[] = [
         "Body x6Z0vQ (copied)",
         "copy",
         await banner.locator(".kimo-banner__body").innerText(),
-        "Copied 'git add marketing.kimo && git commit' — run it in your terminal.",
+        "Copied 'git add marketing.kimo && git commit'. Run it in your terminal.",
       )
       flush()
       await shot(ctx, "ready-to-commit-copied")

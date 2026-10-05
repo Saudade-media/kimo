@@ -198,17 +198,17 @@ export function HomeComposer({ platform, controller, onOpen, dwellMs = 450 }: Ho
           <div className="home-ai__title-row" data-pen="r8BkUL">
             <AgentMark size={32} state={submitting ? "thinking" : "listening"} />
             <h2 id="home-ai-title" className="home-ai__title">
-              What are we designing today?
+              What do you want to design?
             </h2>
           </div>
         ) : (
           <h2 id="home-ai-title" className="home-ai__title">
-            What are we designing today?
+            What do you want to design?
           </h2>
         )}
         {!showCard && (
           <p className="home-ai__desc">
-            Describe it and the agent drafts it on a new canvas — every change is a reviewable diff.
+            Describe it and the agent drafts it on a new canvas. Every change is a reviewable diff.
           </p>
         )}
       </div>
@@ -435,8 +435,8 @@ function FirstRunCard({
           <h3 className="home-ai-card__title">Add an API key to use the agent</h3>
           <p className="home-ai-card__desc">
             {web
-              ? "Kimo doesn't sell models. Bring your own key — it's stored in this browser only and requests go straight to the provider."
-              : `Kimo doesn't sell models. Bring your own key — it stays in your ${store} and requests go straight to the provider.`}
+              ? "Kimo doesn't sell models. Bring your own key. It's stored in this browser only, and requests go straight to the provider."
+              : `Kimo doesn't sell models. Bring your own key. It stays in your ${store}, and requests go straight to the provider.`}
           </p>
         </div>
       </div>

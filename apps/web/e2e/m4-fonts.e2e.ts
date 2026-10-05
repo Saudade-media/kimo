@@ -389,10 +389,7 @@ export const scenarios: Scenario[] = [
             .error,
       )
       const rejected = await hook(page, (k) => k.svgState.error)
-      expect(
-        rejected === "Couldn't import evil.svg — it contains a script",
-        `rejected: ${rejected}`,
-      )
+      expect(rejected === "Couldn't import evil.svg: it contains a script", `rejected: ${rejected}`)
       expect((await pop.count()) === 0, "no import popover for a rejected SVG")
       await page.waitForTimeout(200)
       expect(dialogs.length === 0, `no script ran: ${dialogs.join(",")}`)

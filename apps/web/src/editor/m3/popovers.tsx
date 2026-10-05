@@ -175,7 +175,7 @@ export function OverridesPopover({
     >
       <div className="m3-overrides-popover__list">
         {entries.length === 0 && (
-          <div className="m3-overrides-popover__empty">No overrides — matches the main.</div>
+          <div className="m3-overrides-popover__empty">No overrides. It matches the main.</div>
         )}
         {entries.map((e) => (
           <div className="m3-override-entry" key={`${e.kind}:${e.path}`} data-entry={e.path}>

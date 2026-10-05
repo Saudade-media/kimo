@@ -386,7 +386,7 @@ export function CodeTab({
           </div>
           <p className="code-tab__truncation-desc">
             The Code tab renders at most {CODE_TAB_MAX_LINES} lines per file. Export writes the full
-            output — nothing is dropped.
+            output, with nothing dropped.
           </p>
           <div className="code-tab__truncation-actions">
             <CompactButton

@@ -608,7 +608,7 @@ export function approvalTitle(r: McpApprovalRequest, store?: DocStore | null): s
 
 /** The prompt description (Desc Ckwa6). */
 export function approvalDescription(r: McpApprovalRequest, level: McpPermissionLevel): string {
-  const tail = "Nothing is applied while you decide — the canvas shows a dry run."
+  const tail = "Nothing is applied while you decide. The canvas shows a dry run."
   const reason = r.reason
   switch (reason.kind) {
     case "destructive":

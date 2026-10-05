@@ -81,7 +81,7 @@ export const copiedToast = (path: string) => `Copied ${path}`
 export const unsupportedTitle = (kind: string) => `${kind} nodes have no code`
 
 export const UNSUPPORTED_DESC =
-  "Notes, prompts and placeholder tags live only on the canvas — every exporter skips them. Select a frame, shape, text or instance."
+  "Notes, prompts and placeholder tags exist only on the canvas, and exporters skip them. Select a frame, shape, text or instance."
 
 /** Node types the exporters skip (`@kimo/exporters` SKIPPED). */
 export const UNSUPPORTED_TYPES: ReadonlySet<string> = new Set(["note", "prompt"])

@@ -81,9 +81,10 @@ import {
   type UserMessage,
   ZERO_USAGE,
 } from "@kimo/ai-agent"
-import type { ApprovalOutcome, ApprovalRequest } from "@kimo/mcp-server"
+import { type ApprovalOutcome, type ApprovalRequest, callTargets } from "@kimo/mcp-server"
 import type { McpApprovalChoice } from "@kimo/platform"
 import { type AgentMarkState, type Persona, PersonaAllocator } from "@kimo/ui"
+import { workAreaIds } from "../canvas/agent-area"
 import {
   type AgentComposerView,
   type AgentMessageView,
@@ -169,7 +170,14 @@ export interface CanvasAgentState {
     roots: string[]
     mode: "single" | "side-by-side" | "split" | "iterate"
   }[]
-  cursors: { origin: string; nodeId: string; text: string; state: AgentMarkState }[]
+  cursors: {
+    origin: string
+    nodeId: string
+    /** The work area (cursor at its union box's top-left); see `CanvasAgentCursor.nodeIds`. */
+    nodeIds?: string[]
+    text: string
+    state: AgentMarkState
+  }[]
   rejections: { key: string; origin: string; nodeId: string; text: string }[]
   /** Board 31 landing flash: the top-most layers each successful edit changed (newest last). */
   landed: { key: string; origin: string; ids: string[] }[]
@@ -269,6 +277,12 @@ export interface AgentPanelControllerExt extends AgentPanelController {
   editHeldMessage(): void
   /** Cost warning "Settings" link (Settings › AI providers). */
   openCostSettings(): void
+  /** A link in a reply (http, https or mailto; board 33): the system browser. */
+  openLink(url: string): void
+  /** Board 33 §2 queued message ×: drops it from the queue. */
+  removeQueued(index: number): void
+  /** Board 33 §2 queued message click / Edit: drops it and puts its text back in the composer. */
+  editQueued(index: number): void
   /** Copies a message's text (MessageMeta copy). */
   copyText(messageId: string): string
   /**
@@ -897,29 +911,39 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     }
   }
 
+  /** Points the origin's cursor at the work area of the existing layers in `ids` (no-op if none). */
+  function moveCursor(origin: string, ids: readonly string[]) {
+    const area = workAreaIds(
+      ids.filter((id) => !o.nodeName || o.nodeName(id) !== undefined),
+      (id) => o.parentOf?.(id) ?? null,
+    ).slice(0, 50)
+    if (!area.length) return
+    canvas = {
+      ...canvas,
+      cursors: [
+        ...canvas.cursors.filter((c) => c.origin !== origin),
+        // Board 31: the canvas label is the agent's name only; status lives in the panel.
+        {
+          origin,
+          nodeId: area[0] as string,
+          nodeIds: area,
+          text: canvas.info[origin]?.label ?? "Kimo",
+          state: "working",
+        },
+      ],
+    }
+  }
+
   function trackCanvas(origin: string, e: AgentEvent) {
     if (e.type === "step_start") {
-      const ops = Array.isArray(e.input.ops) ? (e.input.ops as Record<string, unknown>[]) : []
-      const target = ops
-        .map((op) =>
-          typeof op.id === "string" ? op.id : typeof op.parent === "string" ? op.parent : null,
-        )
-        .find((x): x is string => !!x && x !== "root")
-      if (target)
-        canvas = {
-          ...canvas,
-          cursors: [
-            ...canvas.cursors.filter((c) => c.origin !== origin),
-            // Board 31: the canvas label is the agent's name only; status lives in the panel.
-            {
-              origin,
-              nodeId: target,
-              text: canvas.info[origin]?.label ?? "Kimo",
-              state: "working",
-            },
-          ],
-        }
+      // The cursor moves to the layers this step reads or edits; a batch that only inserts
+      // keeps the last area (its nodes have no box until it lands), else its insert parents.
+      const tg = callTargets(e.tool, e.input)
+      const had = canvas.cursors.some((c) => c.origin === origin)
+      moveCursor(origin, tg.ids.length ? tg.ids : had ? [] : tg.parents)
     } else if (e.type === "step_end") {
+      // A landed edit: the cursor moves to what it created / changed (not the page frame).
+      if (e.ok && e.changed.length) moveCursor(origin, e.changed)
       const inf = canvas.info[origin]
       if (inf && e.ok) {
         const changed = e.changed.length
@@ -1219,10 +1243,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           break
         case "step_start": {
           tracker.step(e.label)
+          // Follow targets the cursor's area (the layers this step reads or edits).
           const cursor = canvas.cursors.find((c) => c.origin === origin)
-          const cur = messages.find((m) => m.id === msgId)
-          const follow = cur?.kind === "agent" ? (cur.progress?.follow ?? []) : []
-          patchProgress(follow.length || !cursor ? {} : { follow: [cursor.nodeId] })
+          if (cursor) patchProgress({ follow: cursor.nodeIds ?? [cursor.nodeId] })
           updateAgentMessage(msgId, (m) => ({
             ...m,
             steps: [
@@ -1263,7 +1286,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
             ),
           }))
           if (e.ok && e.changed.length && e.undoToken) {
-            const ids = topMost(e.changed)
+            const cursor = canvas.cursors.find((c) => c.origin === origin)
+            const ids = cursor ? (cursor.nodeIds ?? [cursor.nodeId]) : topMost(e.changed)
             if (ids.length) patchProgress({ follow: ids })
           }
           break
@@ -2321,6 +2345,22 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     },
     openCostSettings() {
       rt.openSettings?.("ai-providers")
+    },
+    openLink(url) {
+      if (rt.openLink) rt.openLink(url)
+      else window.open(url, "_blank", "noopener,noreferrer")
+    },
+    removeQueued(index) {
+      if (index < 0 || index >= queued.length) return
+      queued = queued.filter((_, i) => i !== index)
+      emit()
+    },
+    editQueued(index) {
+      const t = queued[index]
+      if (t === undefined) return
+      queued = queued.filter((_, i) => i !== index)
+      text = text.trim() ? `${t}\n${text}` : t
+      emit()
     },
     stop() {
       abort?.abort()

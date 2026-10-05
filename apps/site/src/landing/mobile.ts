@@ -275,7 +275,7 @@ function openFormat() {
     eyebrow("01 · OPEN FORMAT"),
     title32("The file is the product."),
     body16(
-      "A .kimo file is plain JSON next to your code. A flat node table, so git merges cleanly — and kimo merge settles the rest.",
+      "A .kimo file is plain JSON next to your code. A flat node table, so git merges cleanly, and kimo merge settles the rest.",
     ),
     codeBlock("Code · landing.kimo", "landing.kimo", [
       [
@@ -399,14 +399,14 @@ function agents() {
       ctitle("An agent in the editor, on the subscription you already pay for."),
       text(
         { node: "Body", tag: "p", fs: 15, lh: 1.5, color: "text-secondary", w: "fill" },
-        "Claude Code, Codex or Gemini CLI — or your own API key. No Kimo account, no metering.",
+        "Claude Code, Codex or Gemini CLI, or your own API key. No Kimo account, no metering.",
       ),
     ),
     frame(
       { node: "Personas", w: "fill", layout: "column", gap: 12, p: [12, 0, 0, 0] },
       text(
         { node: "Caption", tag: "p", fs: 14, lh: 1.5, color: "text-secondary", w: "fill" },
-        "Several agents, one canvas — each with its own mark and scope.",
+        "Several agents on one canvas, each with its own mark and scope.",
       ),
       frame(
         { node: "Marks", gap: 10 },
@@ -425,7 +425,7 @@ function exportSection() {
     eyebrow("03 · DESIGN → CODE"),
     title32("Export is code, not a prompt."),
     body16(
-      "React + Tailwind, HTML + CSS, DTCG tokens, SVG · PNG · PDF — deterministic generators, the same ones behind the live Code tab.",
+      "React + Tailwind, HTML + CSS, DTCG tokens, SVG · PNG · PDF. Deterministic generators, the same ones behind the live Code tab.",
     ),
     frame(
       { node: "Proof stage", w: "fill", bg: "bg-canvas", r: 20, p: [16, 0], jc: "center" },
@@ -457,7 +457,7 @@ function components() {
       p: [64, 20],
     },
     eyebrow("04 · COMPONENTS & VARIABLES"),
-    title32("A real design system, not a pile of frames."),
+    title32("A design system with components, variables and themes."),
     body16(
       "Components with props and slots, instances with overrides, and themed variables across light/dark, density and brand.",
     ),
@@ -500,8 +500,8 @@ function localFirst() {
       p: [64, 20],
     },
     eyebrow("05 · LOCAL-FIRST & PRIVACY"),
-    title32("Your files, your machine, your keys."),
-    body16("No account and no backend — nothing to sign in to, nothing to shut down."),
+    title32("Your files and keys stay on your machine."),
+    body16("No account and no backend. Nothing to sign in to, nothing to shut down."),
     frame(
       { node: "Facts", w: "fill", layout: "column" },
       fact(
@@ -548,7 +548,7 @@ function openSource(l: Links, people: Contributor[] | null) {
       },
       eyebrow("06 · OPEN SOURCE"),
       title32("MIT, all the way down."),
-      body16("The app, format spec, JSON Schema, MCP tool schemas and agent guides — all MIT."),
+      body16("The app, format spec, JSON Schema, MCP tool schemas and agent guides are all MIT."),
       button("Button · View source on GitHub", "accent", l.repo, "View source on GitHub", 48, 15, [
         "github-logo",
         18,

@@ -95,7 +95,7 @@ export function routeOps(view: RouteView, real: RealLookup, ops: readonly Op[]):
     p.touchedOverrides = true
     const cur = p.overrides[path]
     if (isObj(cur) && !isObj(cur.set))
-      return `"${path}" already has a ${Object.keys(cur)[0]} override — reset it first`
+      return `"${path}" already has a ${Object.keys(cur)[0]} override. Reset it first`
     const next: Rec = { ...(isObj(cur) && isObj(cur.set) ? cur.set : {}), ...set }
     for (const k of unset) delete next[k]
     if (Object.keys(next).length) p.overrides[path] = { set: next }
@@ -113,7 +113,7 @@ export function routeOps(view: RouteView, real: RealLookup, ops: readonly Op[]):
     const p = pend(instance)
     const cur = p.overrides[path]
     if (isObj(cur) && cur.slot === true) return null
-    if (isObj(cur) && cur.replace === true) return `"${path}" is replaced — reset it first`
+    if (isObj(cur) && cur.replace === true) return `"${path}" is replaced. Reset it first`
     p.overrides[path] = { slot: true }
     p.touchedOverrides = true
     return null
@@ -178,7 +178,7 @@ export function routeOps(view: RouteView, real: RealLookup, ops: readonly Op[]):
           return {
             ok: false,
             code: "INSTANCE_CONTENT",
-            message: "Layers inside an instance can't be moved — detach it first",
+            message: "Layers inside an instance can't be moved. Detach it first",
           }
         const parent = op.parent
         if (typeof parent !== "string" || !view.isVirtual(parent)) {

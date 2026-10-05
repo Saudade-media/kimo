@@ -38,7 +38,7 @@ export function placeholderSession(
 
 /** The continuation sent to a resumed session. */
 export function resumeMessage(frameName: string): string {
-  return `Continue building ${frameName} — the previous run stopped before it finished.`
+  return `Continue building ${frameName}. The previous run stopped before it finished.`
 }
 
 /** The composer text of "Ask Kimo to finish". */

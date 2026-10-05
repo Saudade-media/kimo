@@ -149,7 +149,7 @@ describe("About pane render", () => {
     )
     for (const s of [
       "Version 1.0.0 (",
-      "Open-source, local-first, agent-native design canvas · MIT",
+      "Local-first design canvas for you and your agents · MIT",
       "Copy version info",
       "Documentation",
       "kimo.design/docs",

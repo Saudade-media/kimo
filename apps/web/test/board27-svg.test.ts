@@ -56,10 +56,10 @@ describe("stroked path count", () => {
 
   test("sub line copy (G3tQz) and the disabled copy", () => {
     expect(outlineStrokesSub(6)).toBe(
-      "6 stroked paths become filled shapes — they scale without changing weight. Dashes are kept as segments.",
+      "6 stroked paths become filled shapes, so they scale without changing weight. Dashes are kept as segments.",
     )
     expect(outlineStrokesSub(1)).toBe(
-      "1 stroked path becomes a filled shape — it scales without changing weight. Dashes are kept as segments.",
+      "1 stroked path becomes a filled shape, so it scales without changing weight. Dashes are kept as segments.",
     )
     expect(outlineStrokesSub(0)).toBe("No strokes in this file")
   })

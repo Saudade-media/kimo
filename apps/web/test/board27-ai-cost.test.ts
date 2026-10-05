@@ -148,12 +148,12 @@ describe("card copy and Show cost (r9hTk)", () => {
     expect(costWarningCopy(w, true)).toEqual({
       title: "This turn may cost about $0.42",
       description:
-        "Above your $0.25 per-turn warning — 14 frames + 3 images in context. Trim the selection or send anyway.",
+        "Above your $0.25 per-turn warning: 14 frames + 3 images in context. Trim the selection or send anyway.",
     })
   })
   test("off: wording switches to tokens, no $", () => {
     const c = costWarningCopy(w, false)
-    expect(c.title).toBe("This turn is large — ~180k tokens")
+    expect(c.title).toBe("This turn is large: ~180k tokens")
     expect(`${c.title}${c.description}`).not.toContain("$")
   })
   test("context phrase", () => {

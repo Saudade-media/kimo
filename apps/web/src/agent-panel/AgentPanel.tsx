@@ -11,6 +11,7 @@ import type { CliDetection } from "@kimo/ai-agent"
 import {
   AgentErrorCard,
   type AgentErrorCardAction,
+  AgentMarkdown,
   AgentStatus,
   AgentStep,
   ApprovalCard,
@@ -25,6 +26,7 @@ import {
   ModeChip,
   RefusalCard,
   StepsToggle,
+  stripMarkdown,
 } from "@kimo/ui"
 import {
   BookOpen,
@@ -44,6 +46,7 @@ import {
   SquarePen,
   Trash2,
   Variable,
+  X,
 } from "lucide-react"
 import {
   type ClipboardEvent,
@@ -175,11 +178,16 @@ export function AgentPanel({
   useLayoutEffect(() => {
     const el = thread.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [state.messages.length, lastLen, state.modeRun])
+  }, [state.messages.length, lastLen, state.modeRun, state.composer.queued.length])
 
   useEffect(() => {
     if (state.menu !== "model") setAgentModelTarget(null)
   }, [state.menu])
+
+  const editQueued = (i: number) => {
+    controller.editQueued(i)
+    setTimeout(() => textarea.current?.focus(), 0)
+  }
 
   const addFiles = async (files: Iterable<File>) => {
     for (const f of files) {
@@ -323,6 +331,44 @@ export function AgentPanel({
               {state.modeRun?.mode === "iterate" && state.modeRun.iterate && (
                 <ReviewCard controller={controller} run={state.modeRun} />
               )}
+              {state.composer.queued.map((q, i) => (
+                // Board 33 §2 JISdq: sent while a turn runs, muted at the bottom of the thread.
+                <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the queue is positional (FIFO)
+                  key={`${i}:${q}`}
+                  className="agent-panel__queued-message"
+                  data-testid="agent-queued-message"
+                  data-pen="JISdq"
+                >
+                  <button
+                    type="button"
+                    className="agent-panel__queued-bubble"
+                    title="Edit"
+                    onClick={() => editQueued(i)}
+                  >
+                    {q}
+                  </button>
+                  <div className="agent-panel__queued-meta">
+                    <span className="agent-panel__queued-label">Queued</span>
+                    <IconButton
+                      size="sm"
+                      tone="quiet"
+                      label="Edit queued message"
+                      icon={<Pencil />}
+                      data-testid="agent-queued-edit"
+                      onClick={() => editQueued(i)}
+                    />
+                    <IconButton
+                      size="sm"
+                      tone="quiet"
+                      label="Remove queued message"
+                      icon={<X />}
+                      data-testid="agent-queued-remove"
+                      onClick={() => controller.removeQueued(i)}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>
@@ -380,7 +426,7 @@ export function AgentPanel({
                 : state.approvals.length > 0
                   ? "Kimo is waiting for your approval…"
                   : state.busy
-                    ? "Queue a follow-up — sent when this turn ends"
+                    ? "Queue a follow-up for when this turn ends"
                     : "Ask Kimo to design or edit…"
             }
             textareaRef={textarea}
@@ -452,11 +498,6 @@ export function AgentPanel({
             onSend={() => void controller.send(state.composer.text)}
             onStop={() => controller.stop()}
           />
-          {state.composer.queued.length > 0 && (
-            <p className="agent-panel__queued" data-testid="agent-queued">
-              {state.composer.queued.length} queued · sent when this turn ends
-            </p>
-          )}
           <input
             ref={fileInput}
             type="file"
@@ -590,7 +631,12 @@ function ThreadItem({
         <>
           {card?.kind !== "refusal" && (m.text || !card) && (
             <Message from="agent" markState={markOf(false, m.steps, card)}>
-              {m.text}
+              {/* Board 33 ME2DT: the reply's Markdown subset, React elements only. */}
+              <AgentMarkdown
+                data-testid="agent-reply"
+                source={m.text}
+                onOpenLink={(url) => controller.openLink(url)}
+              />
             </Message>
           )}
           {m.steps.length > 0 && (
@@ -638,7 +684,7 @@ function ThreadItem({
               data-testid="agent-error-card"
               data-pen="dIkT6"
               title="Kimo won't do this one"
-              reason={m.text.trim() || card.body}
+              reason={stripMarkdown(m.text) || card.body}
               onEditRequest={() => onEditRequest(m.turnId)}
             />
           ) : card.kind === "error" ? (

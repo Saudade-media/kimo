@@ -5,9 +5,9 @@ import { cx } from "../internal/util"
 /** Props for {@link CostWarningCard}. Remaining `<div>` props go to the card. */
 export interface CostWarningCardProps
   extends Omit<ComponentPropsWithRef<"div">, "children" | "title"> {
-  /** "This turn may cost about $0.42" / "This turn is large — ~180k tokens". */
+  /** "This turn may cost about $0.42" / "This turn is large: ~180k tokens". */
   title: string
-  /** "Above your $0.25 per-turn warning — 14 frames + 3 images in context. …". */
+  /** "Above your $0.25 per-turn warning: 14 frames + 3 images in context. …". */
   description: string
   onSendAnyway: () => void
   onEditMessage: () => void

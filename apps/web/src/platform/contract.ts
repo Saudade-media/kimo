@@ -502,7 +502,7 @@ export function bannerCopy(
           ? ""
           : ` with the feature${b.features.length === 1 ? "" : "s"} ${b.features.map((f) => `"${f}"`).join(", ")}`
       return {
-        title: "Read-only — made with a newer Kimo",
+        title: "Read-only: made with a newer Kimo",
         body: `${b.fileName} uses format ${b.fileFormat}${feat}; this app reads up to ${b.readerFormat}. Nothing will be overwritten.`,
         actions: [
           { id: "whats-new", label: "What's new", variant: "ghost" },
@@ -523,7 +523,7 @@ export function bannerCopy(
     }
     case "git-operation":
       return {
-        title: `${b.operation ? OPERATION_TITLE[b.operation] : "Git operation"} in progress — autosave paused`,
+        title: `${b.operation ? OPERATION_TITLE[b.operation] : "Git operation"} in progress · autosave paused`,
         body: `Your ${plural(b.unsavedEdits, "unsaved edit")} ${b.unsavedEdits === 1 ? "is" : "are"} kept in memory.`,
         actions: [
           { id: "git-discard", label: "Discard", variant: "ghost" },
@@ -535,7 +535,7 @@ export function bannerCopy(
       const f = b.failure
       if (f.code === "PERMISSION")
         return {
-          title: "Couldn't save — permission denied",
+          title: "Couldn't save: permission denied",
           body: `${fmt.displayDir(f.path)} is read-only for your user (${f.errno ?? "EACCES"}). Save a copy somewhere else.`,
           actions: [{ id: "save-as", label: "Save as…", variant: "primary" }],
         }
@@ -608,7 +608,7 @@ export function bannerCopy(
       return {
         title: "Ready to commit",
         body: b.copied
-          ? `Copied '${command}' — run it in your terminal.`
+          ? `Copied '${command}'. Run it in your terminal.`
           : b.resolved
             ? `${plural(b.resolved, "conflict")} resolved and saved to ${b.fileName}.`
             : `Resolved and saved to ${b.fileName}.`,
@@ -632,7 +632,7 @@ export const GIT_MARKERS_EXPLANATION =
 // ===============================================================================================
 
 export type Toast =
-  /** Toast: "marketing.kimo changed on disk — reloaded" · Undo. */
+  /** Toast: "marketing.kimo changed on disk and was reloaded" · Undo. */
   | { kind: "external-reloaded"; fileName: string; undo: ReloadUndoToken }
   /** Toast: "Merged 4 changes from disk with your 6 edits" · Undo. */
   | { kind: "external-merged"; changes: number; localEdits: number; undo: ReloadUndoToken }
@@ -649,7 +649,7 @@ export function toastCopy(t: Toast): { text: string; action: string; component: 
   switch (t.kind) {
     case "external-reloaded":
       return {
-        text: `${t.fileName} changed on disk — reloaded`,
+        text: `${t.fileName} changed on disk and was reloaded`,
         action: "Undo",
         component: "Toast",
       }
@@ -661,13 +661,13 @@ export function toastCopy(t: Toast): { text: string; action: string; component: 
       }
     case "external-conflicts":
       return {
-        text: `Changed on disk while you were editing — ${plural(t.conflicts, "conflict")}`,
+        text: `Changed on disk while you were editing: ${plural(t.conflicts, "conflict")}`,
         action: "Review",
         component: "Toast/Warning",
       }
     case "merge-saved":
       return {
-        text: `Resolved ${plural(t.resolved, "conflict")} — saved ${t.fileName}`,
+        text: `Resolved ${plural(t.resolved, "conflict")} and saved ${t.fileName}`,
         action: "Undo",
         component: "Toast",
       }

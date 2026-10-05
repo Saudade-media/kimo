@@ -219,7 +219,7 @@ function landingPage(): Builder {
     style: { font: "Inter", size: 13, weight: 500 },
     fill: ink,
   })
-  b.text(hero, "Headline", "Analytics your whole team actually reads", {
+  b.text(hero, "Headline", "Analytics your whole team can read", {
     grow: "fixed-width",
     w: 880,
     style: {
@@ -235,7 +235,7 @@ function landingPage(): Builder {
   b.text(
     hero,
     "Subhead",
-    "Lumen turns product events into plain-language answers. No SQL, no dashboards nobody opens — just the numbers that move your week.",
+    "Lumen turns product events into plain-language answers. No SQL and no dashboards to maintain, only the numbers your team asks about.",
     {
       grow: "fixed-width",
       w: 640,
@@ -348,7 +348,7 @@ function landingPage(): Builder {
     w: FILL,
     layout: { dir: "column", gap: 48, align: "center", pad: [0, 120, 96, 120] },
   })
-  b.text(features, "Section title", "Everything you need, nothing you don't", {
+  b.text(features, "Section title", "What Lumen does", {
     style: { font: "Inter", size: 40, weight: 700, letterSpacing: -1 },
     fill: ink,
   })

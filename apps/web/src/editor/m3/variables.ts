@@ -288,7 +288,8 @@ export function entryStates(entries: readonly Entry[], theme: Theme): string[] {
   })
   return entries.map((e, i) => {
     const keys = Object.keys(e.when ?? {})
-    if (!keys.length) return winner < 0 ? "used — nothing matches" : "used only if nothing matches"
+    if (!keys.length)
+      return winner < 0 ? "used because nothing matches" : "used only if nothing matches"
     if (i === winner) return "wins in preview"
     const w = e.when ?? {}
     if (keys.every((k) => theme[k] === w[k])) return "shadowed"

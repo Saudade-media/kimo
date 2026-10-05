@@ -241,7 +241,7 @@ export class M3Controller {
             this.announced.add(e.alias)
             this.toast({
               tone: "warning",
-              text: `${e.name} changed since last open — ${e.changes.length} change${e.changes.length === 1 ? "" : "s"}`,
+              text: `${e.name} changed since last open: ${e.changes.length} change${e.changes.length === 1 ? "" : "s"}`,
               action: { label: "Review", run: () => this.openPanel({ libraryChanges: e.alias }) },
             })
           }
@@ -463,7 +463,7 @@ export class M3Controller {
     console.warn(`Kimo: "${label}" rejected:`, rejected.map((e) => e.message).join("; "))
     this.toast({
       tone: "danger",
-      text: `${label} wasn't applied — it would leave the file invalid`,
+      text: `${label} wasn't applied. It would leave the file invalid`,
     })
   }
 

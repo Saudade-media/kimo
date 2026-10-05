@@ -264,8 +264,8 @@ export const scenarios: Scenario[] = [
       const text = (await dlg.textContent()) ?? ""
       expect(text.includes("Replace “Card” with “Card v2”?"), `title (${text})`)
       expect(text.includes("1 instance update"), "instances line")
-      expect(text.includes("1 override kept — matched by layer name"), "kept line")
-      expect(text.includes("1 override can't be matched — review after"), "unmatched line")
+      expect(text.includes("1 override kept, matched by layer name"), "kept line")
+      expect(text.includes("1 override can't be matched. Review them after"), "unmatched line")
       const T = await tokens(page, TOKENS)
       const m = await measure(page, {
         dialog: "[data-testid=replace-main-dialog] .kimo-dialog",

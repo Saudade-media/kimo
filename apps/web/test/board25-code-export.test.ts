@@ -347,7 +347,7 @@ describe("§ 2 progress, error, toast, PNG", () => {
     )
     expect(e.title).toBe("Couldn't write Button.tsx")
     expect(e.description).toBe(
-      "Permission denied (EACCES) — ~/loom/src/components is read-only. Hero.tsx was written; tokens.css was not started.",
+      "Permission denied (EACCES). ~/loom/src/components is read-only. Hero.tsx was written; tokens.css was not started.",
     )
     expect(describeWriteError({ errno: "ENOSPC" }, "a", "/x", [], []).description).toContain(
       "Disk full (ENOSPC)",

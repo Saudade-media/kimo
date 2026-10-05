@@ -13,7 +13,7 @@ Library items are referenced as `alias:name`: a `ds:Button` instance, a binding 
 
 ## When a library changes
 
-Kimo reads each library from disk when you open the file and compares it with what it saw last time. If it changed, a toast says `<name> changed since last open — N changes`; **Review** lists the components and variables that were added, changed or removed. **Got it** accepts them.
+Kimo reads each library from disk when you open the file and compares it with what it saw last time. If it changed, a toast says `<name> changed since last open: N changes`; **Review** lists the components and variables that were added, changed or removed. **Got it** accepts them.
 
 If the library can't be found, the Assets tab shows a banner with **Locate…** and **Unlink**.
 

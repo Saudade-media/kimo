@@ -214,7 +214,7 @@ export function LayerRowM3({
         <OverrideDot
           tone="warning"
           className="kimo-layer-row-m3__broken"
-          title="Broken overrides — review in the instance panel"
+          title="Broken overrides. Review them in the instance panel"
         />
       ) : (
         overridden && (

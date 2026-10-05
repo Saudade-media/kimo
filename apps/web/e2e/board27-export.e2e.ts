@@ -230,9 +230,7 @@ export const scenarios: Scenario[] = [
       await page.locator(".export-copy-report").click()
       const copied = await page.evaluate(() => (window as unknown as Win).__export.copied.at(-1))
       expect(
-        (copied ?? "").startsWith(
-          "Kimo export issues: 3 issues (1 error)\n\nGrid.tsx — 3 issues\n",
-        ),
+        (copied ?? "").startsWith("Kimo export issues: 3 issues (1 error)\n\nGrid.tsx: 3 issues\n"),
         `report: ${copied}`,
       )
       // Never blocks: the Export button stays enabled.

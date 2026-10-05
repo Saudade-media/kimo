@@ -64,7 +64,7 @@ export async function detachInstance(m3: M3Controller, id: string): Promise<bool
             },
           ]
         : []),
-      ...(count("args") ? [{ icon: "list", text: "Props are dropped — values stay" }] : []),
+      ...(count("args") ? [{ icon: "list", text: "Props are dropped, values stay" }] : []),
     ],
     confirm: "Detach",
     dontAskKey: "detach",
@@ -89,7 +89,7 @@ export function goToMain(m3: M3Controller, id: string): void {
   if (alias !== null) {
     m3.toast({
       tone: "warning",
-      text: `${componentName(m3.doc(), m3.libraries(), of)} is from a linked library — edit it in its source file`,
+      text: `${componentName(m3.doc(), m3.libraries(), of)} is from a linked library. Edit it in its source file`,
     })
     return
   }
@@ -133,7 +133,7 @@ export function createComponent(
   if (real.length > 1) {
     const boxes = real.map((id) => layout?.nodes.get(id)?.local).filter((b) => !!b)
     if (boxes.length !== real.length) {
-      m3.toast({ tone: "danger", text: "Can't measure the selection yet — try again" })
+      m3.toast({ tone: "danger", text: "Can't measure the selection yet. Try again" })
       return false
     }
     const x = Math.min(...boxes.map((b) => b.x))
@@ -196,7 +196,7 @@ export async function unlinkLibrary(m3: M3Controller, alias: string): Promise<bo
       },
       {
         icon: "square-dashed",
-        text: "Without a cache (fresh clone) detach is unavailable — locate the file instead",
+        text: "Without a cache (fresh clone), detach isn't available. Locate the file instead",
       },
       { icon: "list", text: "Undo restores the import and the instances" },
     ],

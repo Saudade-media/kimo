@@ -302,7 +302,7 @@ describe("missing fonts dialog + picker", () => {
     expect(filterFontEntries(entries, "all", "Lora", "blocked")).toEqual([])
     expect(searchPlaceholder(1642)).toBe("Search 1,642 fonts")
     expect(offlineNote(214)).toBe(
-      "Offline — Google shows the 214 fonts already cached. Others download when you're back online.",
+      "You're offline. Google shows the 214 fonts already cached. Others download when you're back online.",
     )
     const html = renderToString(
       h(FontPicker, { value: "Inter", entries, google: "blocked", onPick: () => {}, inline: true }),

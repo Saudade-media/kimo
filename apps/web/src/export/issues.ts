@@ -107,7 +107,7 @@ export function issuesReport(groups: readonly IssueGroup[], title = "Kimo export
   const errors = groups.reduce((n, g) => n + g.issues.filter((i) => i.level === "error").length, 0)
   const lines = [`${title}: ${issuesLabel(total)} (${errors} error${errors === 1 ? "" : "s"})`]
   for (const g of groups) {
-    lines.push("", `${g.file} — ${issuesLabel(g.issues.length)}`)
+    lines.push("", `${g.file}: ${issuesLabel(g.issues.length)}`)
     for (const i of g.issues)
       lines.push(`  ${i.level === "error" ? "error  " : "warning"}  ${i.message}  [${i.path}]`)
   }

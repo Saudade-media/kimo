@@ -6,7 +6,7 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 
 - **Selection.** The layers selected on the canvas appear as chips in the composer. They tell the agent what to work on and set its [scope](#scope). Remove a chip to leave a layer out.
 - **Images.** Paste, drop or attach PNG, JPEG or WebP images up to 5 MB each.
-- **Follow-ups.** While a turn runs you can keep typing: messages are queued and sent when the turn ends.
+- **Follow-ups.** While a turn runs you can keep typing. Queued messages show greyed in the thread, and you can edit or remove them before they run. They are sent when the turn ends.
 
 ## While the agent works
 
@@ -14,11 +14,11 @@ The agent builds in steps you can watch: first a skeleton (the frame and its emp
 
 Instead of streaming text, the thread shows one status line that updates in place:
 
-- **What it is doing now** — the agent's own short note for the current step ("Building the pricing section"), or, when it wrote none, what the tool is doing ("Adding 12 layers in Pricing", "Reading the Home page"). Its reasoning is never shown.
+- **What it is doing now:** the agent's own short note for the current step ("Building the pricing section"), or, when it wrote none, what the tool is doing ("Adding 12 layers in Pricing", "Reading the Home page"). Its reasoning is never shown.
 - **Elapsed time** and the number of steps so far.
-- **Follow** — zooms the canvas to the layers the agent just changed. It jumps once per click.
+- **Follow:** zooms the canvas to the layers the agent just changed. It jumps once per click.
 
-The written reply appears when the turn ends.
+The written reply appears when the turn ends. Replies show formatted text: paragraphs, bullet and numbered lists, **bold**, *italic*, inline code, code blocks and links (http, https and mailto). Links open in your browser.
 
 ### In the Dock (macOS)
 
@@ -32,7 +32,7 @@ Under each reply, **N steps** opens the list of tool steps the agent took. It is
 
 ## Edit size
 
-One agent edit can add at most 40 new layers. Bigger designs are built in several edits, which is what lets you watch them grow. Copies, duplicates and component instances don't count, so "make a variant of this page with a pricing table" copies the page in one step and then adds only the pricing section. The limit applies to every agent — the built-in one and Claude Code, Codex or Gemini CLI connected over MCP — and never to your own paste, import or duplicate.
+One agent edit can add at most 40 new layers. Bigger designs are built in several edits, which is what lets you watch them grow. Copies, duplicates and component instances don't count, so "make a variant of this page with a pricing table" copies the page in one step and then adds only the pricing section. The limit applies to every agent, both the built-in one and Claude Code, Codex or Gemini CLI connected over MCP. It never applies to your own paste, import or duplicate.
 
 ## Modes
 

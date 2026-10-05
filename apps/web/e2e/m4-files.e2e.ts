@@ -342,7 +342,7 @@ export const scenarios: Scenario[] = [
       await waitText(page, ".kimo-save-status__label", "Read-only")
       expect((await banner(page).getAttribute("data-tone")) === "info", "info banner")
       expect(
-        (await text(page, ".kimo-banner__title")) === "Read-only — made with a newer Kimo",
+        (await text(page, ".kimo-banner__title")) === "Read-only: made with a newer Kimo",
         "title",
       )
       expect((await text(page, ".kimo-banner__body")).includes('"layout/grid"'), "feature named")
@@ -402,7 +402,7 @@ export const scenarios: Scenario[] = [
       await waitText(
         page,
         '[data-toast="external-reloaded"] .kimo-toast__label',
-        "marketing.kimo changed on disk — reloaded",
+        "marketing.kimo changed on disk and was reloaded",
       )
       await shot(ctx, "toast-reloaded")
       await page.locator('[data-toast="external-reloaded"] .kimo-toast__action').click()
@@ -439,7 +439,7 @@ export const scenarios: Scenario[] = [
       await waitText(
         page,
         '[data-toast="external-conflicts"] .kimo-toast__label',
-        /^Changed on disk while you were editing — \d+ conflicts?$/,
+        /^Changed on disk while you were editing: \d+ conflicts?$/,
       )
       expect(
         (await text(page, '[data-toast="external-conflicts"] .kimo-toast__action')) === "Review",
@@ -473,7 +473,7 @@ export const scenarios: Scenario[] = [
       }, ROOT)
       await waitText(page, ".kimo-save-status__label", "Autosave paused · rebase")
       expect(
-        (await text(page, ".kimo-banner__title")) === "Rebase in progress — autosave paused",
+        (await text(page, ".kimo-banner__title")) === "Rebase in progress · autosave paused",
         "title",
       )
       expect(
@@ -539,7 +539,7 @@ export const scenarios: Scenario[] = [
         k.control.setReadOnly(f, true)
         k.edit("Perm000001")
       }, FILE)
-      await waitText(page, ".kimo-banner__title", "Couldn't save — permission denied", 6000)
+      await waitText(page, ".kimo-banner__title", "Couldn't save: permission denied", 6000)
       expect(
         (await text(page, ".kimo-banner__body")) ===
           "~/Projects/loom is read-only for your user (EACCES). Save a copy somewhere else.",

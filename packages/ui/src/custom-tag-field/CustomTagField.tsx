@@ -25,7 +25,7 @@ export function customTagHint(tag: string, family: string | null, inFont: boolea
   if (!isOpenTypeTag(tag) || !family || inFont === null) return CUSTOM_TAG_FORMAT_HINT
   return inFont
     ? `${tag} is in ${family}`
-    : `${tag} isn't in ${family} — it will be saved but has no effect`
+    : `${tag} isn't in ${family}. It's saved but has no effect`
 }
 
 /** Props for {@link CustomTagField}. Remaining `<div>` props go to the frame. */
@@ -34,7 +34,7 @@ export interface CustomTagFieldProps extends Omit<ComponentPropsWithRef<"div">, 
   family?: string | null
   /**
    * Board 25 §6 (d) rule v0gB4 `font.features.has(tag)`: true → "cv11 is in Inter", false →
-   * "zero isn't in Inter — it will be saved but has no effect" (tertiary, never a warning),
+   * "zero isn't in Inter. It's saved but has no effect" (tertiary, never a warning),
    * null/undefined (unknown: the font can't be inspected) → the plain format hint. Unknown and
    * missing tags are still allowed.
    */

@@ -54,9 +54,9 @@
 
 , "lp0016": {"type":"text","parent":"lp0013","order":"a1","name":"Message","content":"Funnels now update in real time","style":{"font":"Inter","size":13,"weight":500},"fill":{"$ref":"color/ink"}}
 
-, "lp0017": {"type":"text","parent":"lp0012","order":"a1","name":"Headline","w":880,"content":"Analytics your whole team actually reads","grow":"fixed-width","style":{"font":"Inter","size":68,"weight":800,"lineHeight":1.05,"letterSpacing":-2,"align":"center"},"fill":{"$ref":"color/ink"}}
+, "lp0017": {"type":"text","parent":"lp0012","order":"a1","name":"Headline","w":880,"content":"Analytics your whole team can read","grow":"fixed-width","style":{"font":"Inter","size":68,"weight":800,"lineHeight":1.05,"letterSpacing":-2,"align":"center"},"fill":{"$ref":"color/ink"}}
 
-, "lp0018": {"type":"text","parent":"lp0012","order":"a2","name":"Subhead","w":640,"content":"Lumen turns product events into plain-language answers. No SQL, no dashboards nobody opens — just the numbers that move your week.","grow":"fixed-width","style":{"font":"Inter","size":19,"weight":400,"lineHeight":1.5,"align":"center"},"fill":{"$ref":"color/muted"}}
+, "lp0018": {"type":"text","parent":"lp0012","order":"a2","name":"Subhead","w":640,"content":"Lumen turns product events into plain-language answers. No SQL and no dashboards to maintain, only the numbers your team asks about.","grow":"fixed-width","style":{"font":"Inter","size":19,"weight":400,"lineHeight":1.5,"align":"center"},"fill":{"$ref":"color/muted"}}
 
 , "lp0019": {"type":"frame","parent":"lp0012","order":"a3","name":"Actions","layout":{"dir":"row","gap":12,"align":"center"}}
 
@@ -120,7 +120,7 @@
 
 , "lp0049": {"type":"frame","parent":"lpPageDesk","order":"a2","name":"Features","w":{"mode":"fill"},"layout":{"dir":"column","gap":48,"pad":[0,120,96,120],"align":"center"}}
 
-, "lp0050": {"type":"text","parent":"lp0049","order":"a0","name":"Section title","content":"Everything you need, nothing you don't","style":{"font":"Inter","size":40,"weight":700,"letterSpacing":-1},"fill":{"$ref":"color/ink"}}
+, "lp0050": {"type":"text","parent":"lp0049","order":"a0","name":"Section title","content":"What Lumen does","style":{"font":"Inter","size":40,"weight":700,"letterSpacing":-1},"fill":{"$ref":"color/ink"}}
 
 , "lp0051": {"type":"frame","parent":"lp0049","order":"a1","name":"Feature grid","w":{"mode":"fill"},"layout":{"dir":"row","gap":24}}
 

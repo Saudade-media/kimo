@@ -102,7 +102,7 @@ export function GalleryM4FilesSections() {
           <Banner
             data-pen="R6VHG"
             title="Opened read-only"
-            body="This file uses format 0.3 — update Kimo to edit it."
+            body="This file uses format 0.3. Update Kimo to edit it."
             actions={[
               { id: "notes", label: "Release notes", variant: "ghost" },
               { id: "check", label: "Check for updates", variant: "primary" },

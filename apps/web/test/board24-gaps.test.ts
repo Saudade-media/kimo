@@ -185,7 +185,7 @@ describe("(j) SVG rejection details (nx2kl)", () => {
   test("each removed construct with its line, code and why, in source order", async () => {
     const err = (await prepareSvg(source, "logo.svg").catch((e: unknown) => e)) as SvgRejectedError
     expect(err).toBeInstanceOf(SvgRejectedError)
-    expect(err.message).toBe("Couldn't import logo.svg — it contains a script")
+    expect(err.message).toBe("Couldn't import logo.svg: it contains a script")
     expect(err.items.map((i) => [i.line, i.code, i.why])).toEqual([
       [4, "<script>", "scripts are never imported"],
       [6, 'href="https://cdn…/x.svg#a"', "external refs blocked"],

@@ -573,7 +573,7 @@ export const scenarios: Scenario[] = [
       const desc = await dialog.locator(".kimo-dialog__desc").innerText()
       expect(
         desc ===
-          "Every asset is in use — each file in assets/ is referenced by a node, fill, component or variable in home.kimo.",
+          "Every asset is in use. Each file in assets/ is referenced by a node, fill, component or variable in home.kimo.",
         `desc: ${desc}`,
       )
       const m = await measure(page, {
@@ -630,7 +630,7 @@ export const scenarios: Scenario[] = [
       })
       await toast.waitFor({ timeout: 5000 })
       const text = (await toast.innerText()).replace(/\s+/g, " ")
-      expect(text.includes("— it contains a script"), `toast: ${text}`)
+      expect(text.includes(": it contains a script"), `toast: ${text}`)
       expect((await toast.getAttribute("data-tone")) === "danger", "Toast/Danger")
       // Board 24 (j): Details grows the toast in place into the removed-items list.
       await toast.getByRole("button", { name: "Details" }).click()

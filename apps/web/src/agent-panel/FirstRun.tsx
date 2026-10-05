@@ -147,7 +147,7 @@ function KeyCard({
       <AgentMark size={32} static />
       <h3 className="agent-first-run__title">Connect a model</h3>
       <p className="agent-first-run__desc">
-        Bring your own key — usage is billed by the provider, never by Kimo.
+        Bring your own key. The provider bills the usage, not Kimo.
       </p>
       <div className="agent-first-run__card agent-first-run__card--key" data-pen="rPDtX">
         <label className="agent-first-run__label-row" htmlFor="agent-first-run-key">

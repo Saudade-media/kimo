@@ -22,7 +22,7 @@ export const SERVER_NAME = "kimo"
 
 /** Server-level instructions sent at initialize (kept short; guides live in kimo_read_docs). */
 export const SERVER_INSTRUCTIONS =
-  "Kimo is a local design canvas (.kimo files). Find the docId in your context or with kimo_get_state (kimo_open opens files); read with kimo_query; edit only with kimo_apply_ops (baseRevision from your last result); check with kimo_render. Build step by step: a skeleton, then one section per call (at most 40 new layers per call), one short status line before each call. Copy existing frames or pages instead of re-creating them. Results are JSON envelopes; branch on errors[].code. Guides: kimo_read_docs."
+  "Kimo is a local design canvas (.kimo files). Find the docId in your context or with kimo_get_state (kimo_open opens files); read with kimo_query; edit only with kimo_apply_ops (baseRevision from your last result); check with kimo_render. Build step by step: a skeleton, then one section per call (at most 40 new layers per call), one short status line before each call. Copy existing frames or pages instead of re-creating them. Results are JSON envelopes; branch on errors[].code. Write to the user plainly: what changed and where, layer names quoted, no filler, hype words or emoji. Guides: kimo_read_docs."
 
 const passThrough: Parameters<typeof fromJsonSchema>[1] & object = {
   getValidator: (() => (input: unknown) => ({

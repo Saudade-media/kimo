@@ -117,7 +117,7 @@ describe("FileDocumentProvider on platform.files", () => {
     await waitFor(() => s.failure !== null)
     expect(s.failure).toMatchObject({ code: "PERMISSION", errno: "EACCES" })
     const copy = bannerCopy(s.state().banner as never, fmt)
-    expect(copy.title).toBe("Couldn't save — permission denied")
+    expect(copy.title).toBe("Couldn't save: permission denied")
     expect(copy.body).toBe(
       "~/Projects/loom is read-only for your user (EACCES). Save a copy somewhere else.",
     )
@@ -166,7 +166,7 @@ describe("FileDocumentProvider on platform.files", () => {
     await waitFor(() => s.state().toasts.length > 0, 2000, "reload toast")
     const toast = s.state().toasts[0]
     expect(toast?.kind).toBe("external-reloaded")
-    expect(toastCopy(toast as never).text).toBe("marketing.kimo changed on disk — reloaded")
+    expect(toastCopy(toast as never).text).toBe("marketing.kimo changed on disk and was reloaded")
     expect(s.store.getNode("Rect000001")?.name).toBe("Ext")
     await s.undoExternal((toast as unknown as { undo: never }).undo)
     expect(s.store.getNode("Rect000001")?.name).toBe("Rect000001")
@@ -215,7 +215,7 @@ describe("external changes", () => {
     const st = s.state()
     expect(st.toasts[0]?.kind).toBe("external-conflicts")
     expect(toastCopy(st.toasts[0] as never)).toMatchObject({
-      text: "Changed on disk while you were editing — 1 conflict",
+      text: "Changed on disk while you were editing: 1 conflict",
       action: "Review",
       component: "Toast/Warning",
     })
@@ -251,7 +251,7 @@ describe("git operations", () => {
     expect(saveStatusLabel(st.saveStatus)).toBe("Autosave paused · rebase")
     expect(st.banner?.kind).toBe("git-operation")
     const copy = bannerCopy(st.banner as never, fmt)
-    expect(copy.title).toBe("Rebase in progress — autosave paused")
+    expect(copy.title).toBe("Rebase in progress · autosave paused")
     expect(copy.body).toBe("Your 1 unsaved edit is kept in memory.")
     expect(copy.actions.map((a) => a.label)).toEqual([
       "Discard",
@@ -376,7 +376,7 @@ describe("formats and failed loads", () => {
     expect(st.phase).toBe("read-only")
     expect(st.saveStatus).toEqual({ kind: "read-only", cause: "newer-format" })
     expect(st.banner).toMatchObject({ kind: "newer-format", features: ["layout/grid"] })
-    expect(bannerCopy(st.banner as never, fmt).title).toBe("Read-only — made with a newer Kimo")
+    expect(bannerCopy(st.banner as never, fmt).title).toBe("Read-only: made with a newer Kimo")
     await s.save()
     expect(platform.control.readFile(FILE)).toBe(text)
     await s.close()

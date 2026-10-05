@@ -252,7 +252,7 @@ async function canvasEditsRouteToOverrides({ page, url }: E2EContext) {
     await page.evaluate(() =>
       (window as unknown as W).__kimo.m3.toasts
         .get()
-        .some((t) => t.text === "Can't delete Badge inside an instance — hidden instead"),
+        .some((t) => t.text === "Can't delete Badge inside an instance. It was hidden instead"),
     ),
     "board 15 hidden-instead toast",
   )

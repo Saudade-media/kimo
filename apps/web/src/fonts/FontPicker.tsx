@@ -59,7 +59,7 @@ export function searchPlaceholder(n: number): string {
 
 /** The offline note (wYmyJ) copy. */
 export function offlineNote(cachedGoogle: number): string {
-  return `Offline — Google shows the ${cachedGoogle} font${cachedGoogle === 1 ? "" : "s"} already cached. Others download when you're back online.`
+  return `You're offline. Google shows the ${cachedGoogle} font${cachedGoogle === 1 ? "" : "s"} already cached. Others download when you're back online.`
 }
 
 export const BLOCKED_NOTE =

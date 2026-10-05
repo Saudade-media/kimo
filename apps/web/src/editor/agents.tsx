@@ -206,6 +206,11 @@ function AgentCanvasHost({
         }
       }}
       viewportKey={layoutNow ? `${viewport.zoom}:${viewport.x}:${viewport.y}` : "none"}
+      world={(id) => layoutNow?.nodes.get(id)?.world ?? null}
+      toLayer={(p) => ({
+        x: (p.x - viewport.x) * viewport.zoom,
+        y: (p.y - viewport.y) * viewport.zoom,
+      })}
     />
   )
 }

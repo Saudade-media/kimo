@@ -242,7 +242,7 @@ function hero(cfg: SiteConfig, l: Links) {
       ),
       text(
         { node: "Pill text", fs: 13, color: "text-secondary" },
-        "MIT · local-first · agent-native",
+        "MIT · local-first · MCP built in",
       ),
       frame(
         {
@@ -274,7 +274,7 @@ function hero(cfg: SiteConfig, l: Links) {
     ),
     text(
       { node: "Subhead", tag: "p", fs: 20, lh: 1.5, ta: "center", color: "text-secondary", w: 720 },
-      "Kimo is a free, MIT-licensed design tool. Your designs are plain JSON files in your repo, Claude Code, Codex, Gemini CLI or any MCP client can read and edit them, and the built-in agent runs on the CLI subscription you already have.",
+      "Kimo is a free, MIT-licensed design tool. Your designs are plain JSON files in your repo. Claude Code, Codex, Gemini CLI or any MCP client can read and edit them, and the built-in agent runs on the CLI subscription you already have.",
     ),
     frame(
       { node: "Download row", gap: 10, p: [8, 0, 0, 0], ai: "center" },
@@ -422,7 +422,7 @@ function openFormat(cfg: SiteConfig) {
           "Point · A flat node table",
           "table-2",
           "A flat node table",
-          "Every node is one keyed entry, so two people adding layers touch different lines — git merges cleanly most of the time.",
+          "Every node is one keyed entry, so two people adding layers touch different lines, and git merges cleanly most of the time.",
         ),
         point(
           "Point · kimo merge for the rest",
@@ -638,7 +638,7 @@ function agents() {
         ),
         text(
           { node: "Body", tag: "p", fs: 16, lh: 1.55, color: "text-secondary", w: "fill" },
-          "The agent panel runs on your signed-in Claude Code, Codex or Gemini CLI — or on your own API key for Anthropic, OpenAI, Gemini, OpenRouter or any compatible endpoint. No Kimo account. No metering.",
+          "The agent panel runs on your signed-in Claude Code, Codex or Gemini CLI, or on your own API key for Anthropic, OpenAI, Gemini, OpenRouter or any compatible endpoint. No Kimo account. No metering.",
         ),
         frame(
           { node: "Providers", w: "fill", bg: "bg-app", r: 14, st: "border", layout: "column" },
@@ -743,7 +743,7 @@ function exportSection() {
       title48("Title", "Export is code, not a prompt."),
       body18(
         "Body",
-        "The same deterministic generators power the live Code tab and the Export dialog. Same input, same output — reviewable in a diff, runnable in CI.",
+        "The same deterministic generators power the live Code tab and the Export dialog. Same input, same output, so you can review it in a diff and run it in CI.",
       ),
       frame(
         { node: "Targets", w: "fill", layout: "column", p: [12, 0, 0, 0] },
@@ -845,10 +845,10 @@ function components() {
     frame(
       { node: "Copy", w: 460, layout: "column", gap: 20 },
       eyebrow("Eyebrow", "04 · COMPONENTS & VARIABLES"),
-      title48("Title", "A real design system, not a pile of frames."),
+      title48("Title", "A design system with components, variables and themes."),
       body18(
         "Body",
-        "Components with typed props and slots, instances with flat overrides, and multi-axis themed variables — light/dark, density, brand — resolved the same way on canvas, in export and for agents.",
+        "Components with typed props and slots, instances with flat overrides, and multi-axis themed variables (light/dark, density, brand), resolved the same way on canvas, in export and for agents.",
       ),
       frame(
         { node: "Points", w: "fill", layout: "column", gap: 10, p: [8, 0, 0, 0] },
@@ -892,7 +892,7 @@ function localFirst() {
     frame(
       { node: "Heading", w: 900, layout: "column", gap: 20 },
       eyebrow("Eyebrow", "05 · LOCAL-FIRST & PRIVACY"),
-      title48("Title", "Your files, your machine, your keys."),
+      title48("Title", "Your files and keys stay on your machine."),
       body18(
         "Body",
         "Kimo has no account and no backend. There is nothing to sign in to, and nothing to shut down.",
@@ -904,7 +904,7 @@ function localFirst() {
         "Fact · No account",
         "user-x",
         "No account",
-        "Every feature — editor, CLI, MCP, export — works without signing in.",
+        "The editor, CLI, MCP and export all work without signing in.",
         0,
       ),
       fact(
@@ -962,7 +962,7 @@ function openSource(cfg: SiteConfig, l: Links, people: Contributor[] | null, siz
         title48("Title", "MIT, all the way down."),
         body18(
           "Body",
-          "Not just the app. The format spec, JSON Schema, MCP tool schemas, socket protocol and agent guides are all MIT — no clause against reading, forking or training on any of it.",
+          "The app is MIT, and so are the format spec, JSON Schema, MCP tool schemas, socket protocol and agent guides. No clause forbids reading, forking or training on any of it.",
         ),
         frame(
           { node: "Actions", gap: 10, p: [8, 0, 0, 0] },

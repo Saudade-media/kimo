@@ -92,8 +92,7 @@ export function sampleOps(newId: () => string = () => generateId()): Op[] {
   add(hero, {
     type: "text",
     name: "Subhead",
-    content:
-      "Loom turns messy roadmaps into calm weekly plans your whole team can actually follow.",
+    content: "Loom turns messy roadmaps into calm weekly plans your team can follow.",
     fill: MUTED,
     w: 440,
     grow: "fixed-width",

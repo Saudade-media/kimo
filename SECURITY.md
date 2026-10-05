@@ -2,8 +2,13 @@
 
 ## Supported versions
 
-Kimo is pre-release (milestone M0). Until v1.0, only the latest commit on the default branch
-receives security fixes. After v1.0 this section will list supported release lines.
+| Version | Supported |
+| --- | --- |
+| 1.0.x | Yes |
+| < 1.0 | No (development milestones, never released) |
+
+Security fixes ship as 1.0.x patch releases. Desktop apps receive them through the built-in
+updater.
 
 ## Reporting a vulnerability
 

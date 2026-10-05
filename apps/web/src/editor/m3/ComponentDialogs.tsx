@@ -143,14 +143,14 @@ function ReplaceMainDialog({
     {
       icon: "check",
       tone: "success",
-      text: `${p.kept} override${p.kept === 1 ? "" : "s"} kept — matched by layer name`,
+      text: `${p.kept} override${p.kept === 1 ? "" : "s"} kept, matched by layer name`,
     },
   ]
   if (p.unmatched > 0)
     lines.push({
       icon: "triangle-alert",
       tone: "warning",
-      text: `${p.unmatched} override${p.unmatched === 1 ? "" : "s"} can't be matched — review after`,
+      text: `${p.unmatched} override${p.unmatched === 1 ? "" : "s"} can't be matched. Review them after`,
     })
   return (
     <div className="m3-scrim" data-testid="replace-main-dialog">
@@ -159,7 +159,7 @@ function ReplaceMainDialog({
         tone="component"
         icon={<Icon name="replace" size={16} />}
         title={`Replace “${mainName}” with “${srcName}”?`}
-        description={`“${srcName}” becomes the main component — same id, same props. The old main's layers are discarded.`}
+        description={`“${srcName}” becomes the main component, with the same id and props. The old main's layers are discarded.`}
         confirmLabel="Replace"
         onCancel={onClose}
         onConfirm={() => {

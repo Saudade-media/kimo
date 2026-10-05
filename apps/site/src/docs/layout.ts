@@ -635,7 +635,7 @@ function content(cfg: SiteConfig, v: DocView) {
   const p = v.page
   const agentsNote =
     p.group === "agents"
-      ? html`<div class="only-desktop">${raw(callout("note", "Agents read these docs too", `Every page in Agents &amp; MCP is served to agents by <code>kimo_read_docs</code>, word for word. If a page here is wrong, so is your agent — <a href="${esc(`${cfg.repoUrl}/issues`)}" rel="noopener">file an issue</a>.`))}</div><div class="only-mobile">${raw(callout("note", "", "Agents read these docs too, via <code>kimo_read_docs</code>."))}</div>`
+      ? html`<div class="only-desktop">${raw(callout("note", "Agents read these docs too", `Every page in Agents &amp; MCP is served to agents by <code>kimo_read_docs</code>, word for word. If a page here is wrong, your agent is wrong too. Please <a href="${esc(`${cfg.repoUrl}/issues`)}" rel="noopener">file an issue</a>.`))}</div><div class="only-mobile">${raw(callout("note", "", "Agents read these docs too, via <code>kimo_read_docs</code>."))}</div>`
       : null
   // The RFC 2119 legend sits after the first block of normative text (before the 2nd heading).
   let body = v.r.html

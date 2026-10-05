@@ -669,12 +669,12 @@ export function describeWriteError(
     case "EPERM":
     case "EROFS":
     case "PERMISSION":
-      reason = `Permission denied (${errno ?? "EACCES"}) — ${where} is read-only.`
+      reason = `Permission denied (${errno ?? "EACCES"}). ${where} is read-only.`
       break
     case "ENOSPC":
     case "EDQUOT":
     case "DISK_FULL":
-      reason = `Disk full (${errno ?? "ENOSPC"}) — not enough space in ${where}.`
+      reason = `Disk full (${errno ?? "ENOSPC"}). Not enough space in ${where}.`
       break
     case "EEXIST":
     case "CHANGED":

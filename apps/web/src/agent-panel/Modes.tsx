@@ -263,7 +263,7 @@ export function ReviewCard({
       <div className="agent-review__next">
         <input
           className="agent-review__steer"
-          placeholder="Steer the next pass (optional) — e.g. “less contrast on the button”"
+          placeholder="Steer the next pass (optional), e.g. “less contrast on the button”"
           aria-label="Steer the next pass"
           value={steer}
           onChange={(e) => setSteer(e.currentTarget.value)}

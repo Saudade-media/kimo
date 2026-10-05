@@ -20,7 +20,7 @@ If Kimo quit without saving, it asks **Recover unsaved changes?** on the next st
 
 Kimo watches open files. If one changes on disk (a `git pull`, another editor, an agent writing the file):
 
-- With no unsaved edits, Kimo reloads it: `<file> changed on disk — reloaded`, with **Undo**.
+- With no unsaved edits, Kimo reloads it: `<file> changed on disk and was reloaded`, with **Undo**.
 - With unsaved edits, **Merge & tell me** (the default) merges both sides: `Merged N changes from disk with your M edits`. Choose **Ask first** in Settings to decide each time.
 - When both sides changed the same thing, the **Conflicts** panel opens and autosave pauses until you resolve each conflict. `⌘'` and `⇧⌘'` move between conflicts.
 

@@ -67,7 +67,7 @@ describe("model copy (board 23)", () => {
     )
     expect(cliStatusText(claude)).toBe("Signed in · max")
     const codex = cli({ id: "codex", label: "Codex", signedIn: false, billing: null })
-    expect(cliStatusText(codex)).toBe("Not signed in — run `codex login`")
+    expect(cliStatusText(codex)).toBe("Not signed in · run `codex login`")
     expect(cliMeta(cli({ installed: false }), "gemini", null)).toBe(
       "Not on PATH · install it, then Re-check",
     )

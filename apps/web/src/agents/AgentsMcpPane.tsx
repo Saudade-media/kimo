@@ -354,7 +354,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
           <div className="agents-pane__howto">
             <span className="agents-pane__group-title">How to connect</span>
             {[
-              "Install Kimo in your agent below — one click, additive, with a backup.",
+              "Install Kimo in your agent below. It adds one entry and keeps a backup.",
               "Restart the agent (or run /mcp) so it picks up the kimo server.",
               "Ask it to open a file:",
             ].map((text, i) => (
@@ -469,8 +469,8 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
             </Button>
           </div>
           <span className="agents-pane__group-desc">
-            Adds one `kimo` entry to the host’s MCP config — additive, with a backup and a diff
-            preview. Other entries are never rewritten.
+            Adds one `kimo` entry to the host’s MCP config, with a backup and a diff preview. Other
+            entries are never rewritten.
           </span>
         </div>
         {views.map(hostRow)}

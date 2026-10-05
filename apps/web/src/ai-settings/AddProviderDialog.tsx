@@ -55,10 +55,10 @@ const DEFAULT_NAME: Record<ProviderType, string> = {
 
 /** Copy (uOwr0 l0KL0); other types are not drawn: one line about the key instead. */
 const DESC: Record<ProviderType, string> = {
-  custom: "Any OpenAI-compatible endpoint — Ollama, LM Studio, vLLM, a company gateway.",
-  openai: "OpenAI's API with your key — usage is billed by OpenAI, never by Kimo.",
-  gemini: "Google's Gemini API with your key — usage is billed by Google, never by Kimo.",
-  openrouter: "OpenRouter with your key — usage is billed by OpenRouter, never by Kimo.",
+  custom: "Any OpenAI-compatible endpoint: Ollama, LM Studio, vLLM or a company gateway.",
+  openai: "OpenAI's API with your key. OpenAI bills the usage, not Kimo.",
+  gemini: "Google's Gemini API with your key. Google bills the usage, not Kimo.",
+  openrouter: "OpenRouter with your key. OpenRouter bills the usage, not Kimo.",
 }
 
 /** Local runtimes need no key (Ollama, LM Studio on localhost). */
@@ -331,7 +331,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
             <div className="ai-add__pin" data-pen="W2ERTF">
               <Pin className="ai-add__pin-icon" aria-hidden="true" />
               <p className="ai-add__pin-text">
-                This key is pinned to the first origin it's sent to — {host || "this endpoint"}. If
+                This key is pinned to the first origin it's sent to: {host || "this endpoint"}. If
                 the base URL later points at another host, Kimo withholds the key until you re-enter
                 it.
               </p>

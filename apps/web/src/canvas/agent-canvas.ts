@@ -16,8 +16,10 @@ import {
   type PlaceholderOverlay,
   type Viewport,
 } from "@kimo/renderer"
+import { CURSOR_GLIDE_MS, glideEase, unionBox } from "./agent-area"
 import type {
   AgentCanvasProps,
+  CanvasAgentCursor,
   CanvasAgentMarkState,
   CanvasAgentPersona,
   CanvasPromptRun,
@@ -51,6 +53,8 @@ export const PERSONA_ORDER: readonly CanvasAgentPersona[] = [
 export function personaFor(n: number): CanvasAgentPersona {
   return n <= 0 ? "agent" : (PERSONA_ORDER[(n - 1) % PERSONA_ORDER.length] as CanvasAgentPersona)
 }
+
+type Pt = { x: number; y: number }
 
 interface Flash {
   at: number
@@ -185,6 +189,12 @@ export class AgentCanvasModel {
   private readonly rejectedSeen = new Map<string, number>()
   /** Board 31 landing flashes: key → when it was first seen. */
   private readonly landedSeen = new Map<string, number>()
+  /**
+   * Agent cursors' world anchors (top-left of the work area): the cursor glides from `from` to
+   * `to` in world space, so a pan or zoom mid-glide moves it with the canvas (board 31
+   * "Position lock").
+   */
+  private readonly glides = new Map<string, { from: Pt; to: Pt; at: number }>()
   private reduced: boolean
 
   constructor(
@@ -267,9 +277,45 @@ export class AgentCanvasModel {
     return false
   }
 
-  /** True while something animates (shimmer, flash, ready chip, rejected pill). */
+  /** The ids of a cursor's work area that are laid out (cursor `nodeIds`, else `nodeId`). */
+  private cursorIds(c: CanvasAgentCursor, layout: LayoutResult): string[] {
+    const ids = c.nodeIds?.length ? c.nodeIds : [c.nodeId]
+    return ids.filter((id) => layout.nodes.get(id)?.visible).slice(0, 50)
+  }
+
+  /**
+   * Re-targets each cursor at the top-left of its work area (world). Areas resolve once the
+   * layout has the new nodes; a changed target starts a glide from where the cursor is now.
+   */
+  private syncCursors(layout: LayoutResult): void {
+    const t = this.now()
+    const seen = new Set<string>()
+    for (const c of this.props?.cursors ?? []) {
+      const area = unionBox(this.cursorIds(c, layout).map((id) => layout.nodes.get(id)?.world))
+      if (!area) continue
+      seen.add(c.origin)
+      const to = { x: area.x, y: area.y }
+      const g = this.glides.get(c.origin)
+      if (!g) {
+        this.glides.set(c.origin, { from: to, to, at: t - CURSOR_GLIDE_MS })
+        continue
+      }
+      if (Math.abs(g.to.x - to.x) < 0.5 && Math.abs(g.to.y - to.y) < 0.5) continue
+      const from = this.reducedMotion ? to : this.glideAt(g, t)
+      this.glides.set(c.origin, { from, to, at: t })
+    }
+    for (const k of this.glides.keys()) if (!seen.has(k)) this.glides.delete(k)
+  }
+
+  private glideAt(g: { from: Pt; to: Pt; at: number }, t: number): Pt {
+    const k = glideEase((t - g.at) / CURSOR_GLIDE_MS)
+    return { x: g.from.x + (g.to.x - g.from.x) * k, y: g.from.y + (g.to.y - g.from.y) * k }
+  }
+
+  /** True while something animates (shimmer, flash, ready chip, rejected pill, cursor glide). */
   animating(): boolean {
     const t = this.now()
+    for (const g of this.glides.values()) if (t - g.at < CURSOR_GLIDE_MS) return true
     if (!this.reducedMotion && this.building()) return true
     for (const f of this.flashes.values()) if (t - f.at < READY_CHIP_MS) return true
     for (const at of this.rejectedSeen.values()) if (t - at < REJECT_MS) return true
@@ -303,6 +349,7 @@ export class AgentCanvasModel {
   /** Renderer overlay fields (merged into the controller's overlay). */
   overlay(layout: LayoutResult): Partial<Overlay> {
     if (!this.active()) return {}
+    this.syncCursors(layout)
     const t = this.now()
     const live = this.live()
     const placeholders: PlaceholderOverlay[] = []
@@ -341,9 +388,11 @@ export class AgentCanvasModel {
           fit: s.mode === "split" ? ("flush" as const) : ("outset" as const),
         })),
     )
-    const agentSelections = (p?.cursors ?? [])
-      .filter((c) => layout.nodes.has(c.nodeId))
-      .map((c) => ({ id: c.nodeId, persona: this.persona(c.origin) }))
+    const agentSelections = (p?.cursors ?? []).flatMap((c) =>
+      this.cursorIds(c, layout)
+        .slice(0, 24)
+        .map((id) => ({ id, persona: this.persona(c.origin) })),
+    )
     const rejected = (p?.rejections ?? [])
       .filter(
         (r) => t - (this.rejectedSeen.get(r.key) ?? t) < REJECT_MS && layout.nodes.has(r.nodeId),
@@ -369,6 +418,7 @@ export class AgentCanvasModel {
   /** DOM pieces in screen space (canvas CSS px). */
   dom(layout: LayoutResult | null, v: Viewport, size: { w: number; h: number }): AgentDomState {
     if (!layout || !this.active()) return EMPTY_DOM
+    this.syncCursors(layout)
     const t = this.now()
     const live = this.live()
     const p = this.props
@@ -486,7 +536,8 @@ export class AgentCanvasModel {
       })
     }
 
-    // Persona cursors: anchor = target top-left (+4, +4); pills stack per node, lead on top.
+    // Persona cursors: anchor = work area top-left (+4, +4), gliding in world space between
+    // areas; pills stack per anchor, lead on top.
     const cursors: CursorView[] = []
     const perNode = new Map<string, number>()
     const sorted = [...(p?.cursors ?? [])].sort(
@@ -495,13 +546,15 @@ export class AgentCanvasModel {
         (p?.agent(b.origin)?.persona === "agent" ? 0 : 1),
     )
     for (const c of sorted) {
-      const r = screen(c.nodeId)
-      if (!r) continue
-      const stack = perNode.get(c.nodeId) ?? 0
-      perNode.set(c.nodeId, stack + 1)
+      const g = this.glides.get(c.origin)
+      if (!g) continue
+      const w = this.glideAt(g, t)
+      const key = `${Math.round(g.to.x)}:${Math.round(g.to.y)}`
+      const stack = perNode.get(key) ?? 0
+      perNode.set(key, stack + 1)
       const info = p?.agent(c.origin)
-      const left = r.x + 4
-      const top = r.y + 4
+      const left = (w.x - v.x) * v.zoom + 4
+      const top = (w.y - v.y) * v.zoom + 4
       cursors.push({
         origin: c.origin,
         left,

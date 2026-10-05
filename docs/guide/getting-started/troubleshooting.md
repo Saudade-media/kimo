@@ -4,7 +4,7 @@
 
 **"Locked by another process."** Another Kimo window or the headless MCP server has the file open for writing. Close it there, or choose **Open read-only**. If the process named in the details is no longer running, **Retry** takes over its lock.
 
-**"Couldn't save — permission denied."** The folder isn't writable. Use **Save as…** to save somewhere else.
+**"Couldn't save: permission denied."** The folder isn't writable. Use **Save as…** to save somewhere else.
 
 **"Saved, but the read-back didn't match."** Something changed the file right after Kimo wrote it, often an antivirus or a sync client. **Show diff** compares the two; **Save as…** keeps a safe copy.
 
@@ -12,7 +12,7 @@
 
 **"It still contains git conflict markers."** The file was merged by git line by line and contains `<<<<<<<` markers, which Kimo can't load. Resolve the merge in git, then set up the semantic merge driver (**Settings › Files & autosave › Git merge driver**) so it doesn't happen again.
 
-**"Read-only — made with a newer Kimo."** The file uses a newer format than this version knows. Update Kimo.
+**"Read-only: made with a newer Kimo."** The file uses a newer format than this version knows. Update Kimo.
 
 **Autosave paused.** Kimo pauses while git is busy in the repository, or while merge conflicts are open. It resumes on its own once the git operation ends or the conflicts are resolved.
 

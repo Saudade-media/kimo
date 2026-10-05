@@ -100,7 +100,7 @@ export const scenarios: Scenario[] = [
       )
       expect(
         (await composer(page).getAttribute("placeholder")) ===
-          "Queue a follow-up — sent when this turn ends",
+          "Queue a follow-up for when this turn ends",
         "streaming placeholder",
       )
       expect(
@@ -319,9 +319,13 @@ export const scenarios: Scenario[] = [
       // Typing while streaming queues a follow-up; Stop aborts → Stopped card, queue dropped.
       await composer(page).fill("follow-up")
       await composer(page).press("Enter")
-      await page.locator("[data-testid=agent-queued]").waitFor()
+      // Board 33 §2: the queued message shows at once, muted, at the bottom of the thread.
+      const queuedMsg = page.locator("[data-testid=agent-queued-message]")
+      await queuedMsg.waitFor()
+      expect((await queuedMsg.innerText()).startsWith("follow-up"), "queued text")
       await page.locator(".kimo-composer-agent__send--stop").click()
       await idle(page)
+      expect((await queuedMsg.count()) === 0, "Stop drops the queue")
       const card = page.locator("[data-testid=agent-error-card]")
       await card.waitFor()
       expect((await card.getAttribute("data-kind")) === "stopped", "Stopped card")

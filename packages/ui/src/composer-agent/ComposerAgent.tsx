@@ -19,7 +19,7 @@ export interface ComposerAgentProps
   extends Omit<ComponentPropsWithRef<"div">, "children" | "onChange" | "onSubmit"> {
   value: string
   onChange?: (value: string) => void
-  /** "Ask Kimo to design or edit…" / "Queue a follow-up — sent when this turn ends". */
+  /** "Ask Kimo to design or edit…" / "Queue a follow-up for when this turn ends". */
   placeholder?: string
   /** Attachment chips / thumbs (row FLTbw). Omitted or empty: the row is not rendered. */
   attachments?: ReactNode

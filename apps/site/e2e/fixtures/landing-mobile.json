@@ -3777,7 +3777,7 @@
       "x": 0,
       "y": 3774,
       "w": 390,
-      "h": 776,
+      "h": 811,
       "f": "rgb(245, 244, 242) r0px"
     },
     {
@@ -3793,13 +3793,13 @@
       "x": 20,
       "y": 3869,
       "w": 350,
-      "h": 70,
+      "h": 105,
       "t": "32px 500 35px -0.9px rgb(10, 10, 10)"
     },
     {
       "path": "Components & variables/Body",
       "x": 20,
-      "y": 3955,
+      "y": 3990,
       "w": 350,
       "h": 75,
       "t": "16px 400 25px 0px rgb(107, 111, 117)"
@@ -3807,7 +3807,7 @@
     {
       "path": "Components & variables/Panel crop",
       "x": 20,
-      "y": 4046,
+      "y": 4081,
       "w": 350,
       "h": 440,
       "f": "rgb(255, 255, 255) r16px"
@@ -3815,7 +3815,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)",
       "x": 55,
-      "y": 4046,
+      "y": 4081,
       "w": 280,
       "h": 852,
       "f": "rgb(255, 255, 255) r0px"
@@ -3823,14 +3823,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Tabs",
       "x": 55,
-      "y": 4046,
+      "y": 4081,
       "w": 280,
       "h": 37
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Tabs/Design",
       "x": 63,
-      "y": 4054,
+      "y": 4089,
       "w": 64.5,
       "h": 25,
       "f": "rgb(242, 241, 239) r999px"
@@ -3838,7 +3838,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Tabs/Design/Label",
       "x": 75,
-      "y": 4059,
+      "y": 4094,
       "w": 40.5,
       "h": 15,
       "t": "12px 600 15px 0px rgb(10, 10, 10)"
@@ -3846,14 +3846,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Tabs/Code",
       "x": 129.5,
-      "y": 4054,
+      "y": 4089,
       "w": 54.5,
       "h": 25
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Tabs/Code/Label",
       "x": 141.5,
-      "y": 4059,
+      "y": 4094,
       "w": 30.5,
       "h": 15,
       "t": "12px 500 15px 0px rgb(107, 111, 117)"
@@ -3861,14 +3861,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Tabs/Agent",
       "x": 186,
-      "y": 4054,
+      "y": 4089,
       "w": 58,
       "h": 25
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Tabs/Agent/Label",
       "x": 198,
-      "y": 4059,
+      "y": 4094,
       "w": 34,
       "h": 15,
       "t": "12px 500 15px 0px rgb(107, 111, 117)"
@@ -3876,21 +3876,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Selection",
       "x": 55,
-      "y": 4083,
+      "y": 4118,
       "w": 280,
       "h": 37
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Selection/Icon",
       "x": 67,
-      "y": 4092.5,
+      "y": 4127.5,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Selection/Name",
       "x": 89,
-      "y": 4091.5,
+      "y": 4126.5,
       "w": 62,
       "h": 16,
       "t": "13px 600 16px 0px rgb(10, 10, 10)"
@@ -3898,14 +3898,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Selection/Spacer",
       "x": 159,
-      "y": 4099,
+      "y": 4134,
       "w": 95,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Selection/Kind",
       "x": 262,
-      "y": 4091,
+      "y": 4126,
       "w": 61,
       "h": 17,
       "f": "rgba(124, 58, 237, 0.08) r999px"
@@ -3913,7 +3913,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Selection/Kind/Label",
       "x": 270,
-      "y": 4093,
+      "y": 4128,
       "w": 45,
       "h": 13,
       "t": "11px 500 13px 0px rgb(124, 58, 237)"
@@ -3921,21 +3921,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance",
       "x": 55,
-      "y": 4120,
+      "y": 4155,
       "w": 280,
       "h": 151
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Header",
       "x": 67,
-      "y": 4132,
+      "y": 4167,
       "w": 256,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Header/Title",
       "x": 67,
-      "y": 4132,
+      "y": 4167,
       "w": 50,
       "h": 15,
       "t": "12px 600 15px 0px rgb(10, 10, 10)"
@@ -3943,35 +3943,35 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Header/Spacer",
       "x": 123,
-      "y": 4139,
+      "y": 4174,
       "w": 180,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Header/Action",
       "x": 309,
-      "y": 4132.5,
+      "y": 4167.5,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body",
       "x": 67,
-      "y": 4155,
+      "y": 4190,
       "w": 256,
       "h": 100
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row",
       "x": 67,
-      "y": 4155,
+      "y": 4190,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row/Component Chip",
       "x": 67,
-      "y": 4155,
+      "y": 4190,
       "w": 222,
       "h": 28,
       "f": "rgba(124, 58, 237, 0.08) r6px"
@@ -3979,14 +3979,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row/Component Chip/Glyph",
       "x": 75,
-      "y": 4163,
+      "y": 4198,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row/Component Chip/Component Name",
       "x": 93,
-      "y": 4161.5,
+      "y": 4196.5,
       "w": 72,
       "h": 15,
       "t": "12px 500 15px 0px rgb(10, 10, 10)"
@@ -3994,14 +3994,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row/Component Chip/Spacer",
       "x": 171,
-      "y": 4168.5,
+      "y": 4203.5,
       "w": 79.5,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row/Component Chip/Source",
       "x": 256.5,
-      "y": 4162.5,
+      "y": 4197.5,
       "w": 24.5,
       "h": 13,
       "t": "11px 400 13px 0px rgb(154, 157, 162)"
@@ -4009,7 +4009,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row/Go to main",
       "x": 295,
-      "y": 4155,
+      "y": 4190,
       "w": 28,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4017,21 +4017,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Component Row/Go to main/Icon",
       "x": 302,
-      "y": 4162,
+      "y": 4197,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row",
       "x": 67,
-      "y": 4191,
+      "y": 4226,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Swap",
       "x": 67,
-      "y": 4191,
+      "y": 4226,
       "w": 81.5,
       "h": 28,
       "f": "rgb(242, 241, 239) r999px"
@@ -4039,14 +4039,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Swap/Icon",
       "x": 82.5,
-      "y": 4198.5,
+      "y": 4233.5,
       "w": 13,
       "h": 13
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Swap/Label",
       "x": 100.5,
-      "y": 4197.5,
+      "y": 4232.5,
       "w": 32,
       "h": 15,
       "t": "12px 500 15px 0px rgb(10, 10, 10)"
@@ -4054,7 +4054,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Detach",
       "x": 154.5,
-      "y": 4191,
+      "y": 4226,
       "w": 81.5,
       "h": 28,
       "f": "rgb(242, 241, 239) r999px"
@@ -4062,14 +4062,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Detach/Icon",
       "x": 165.5,
-      "y": 4198.5,
+      "y": 4233.5,
       "w": 13,
       "h": 13
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Detach/Label",
       "x": 183.5,
-      "y": 4197.5,
+      "y": 4232.5,
       "w": 41,
       "h": 15,
       "t": "12px 500 15px 0px rgb(10, 10, 10)"
@@ -4077,7 +4077,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Reset",
       "x": 241.5,
-      "y": 4191,
+      "y": 4226,
       "w": 81.5,
       "h": 28,
       "f": "rgb(242, 241, 239) r999px"
@@ -4085,14 +4085,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Reset/Icon",
       "x": 257,
-      "y": 4198.5,
+      "y": 4233.5,
       "w": 13,
       "h": 13
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Actions Row/Reset/Label",
       "x": 275,
-      "y": 4197.5,
+      "y": 4232.5,
       "w": 32.5,
       "h": 15,
       "t": "12px 500 15px 0px rgb(10, 10, 10)"
@@ -4100,7 +4100,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Overrides Summary",
       "x": 67,
-      "y": 4227,
+      "y": 4262,
       "w": 256,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4108,14 +4108,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Overrides Summary/Override",
       "x": 75,
-      "y": 4235,
+      "y": 4270,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Overrides Summary/Override/Dot",
       "x": 78,
-      "y": 4238,
+      "y": 4273,
       "w": 6,
       "h": 6,
       "f": "rgb(124, 58, 237) r50%"
@@ -4123,7 +4123,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Overrides Summary/Breakdown",
       "x": 93,
-      "y": 4234.5,
+      "y": 4269.5,
       "w": 147.5,
       "h": 13,
       "t": "11px 400 13px 0px rgb(107, 111, 117)"
@@ -4131,35 +4131,35 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Overrides Summary/Spacer",
       "x": 246.5,
-      "y": 4240.5,
+      "y": 4275.5,
       "w": 50.5,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Instance/Body/Overrides Summary/Open",
       "x": 303,
-      "y": 4235,
+      "y": 4270,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties",
       "x": 55,
-      "y": 4271,
+      "y": 4306,
       "w": 280,
       "h": 223
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Header",
       "x": 67,
-      "y": 4283,
+      "y": 4318,
       "w": 256,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Header/Title",
       "x": 67,
-      "y": 4283,
+      "y": 4318,
       "w": 60,
       "h": 15,
       "t": "12px 600 15px 0px rgb(10, 10, 10)"
@@ -4167,42 +4167,42 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Header/Action",
       "x": 309,
-      "y": 4283.5,
+      "y": 4318.5,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body",
       "x": 67,
-      "y": 4306,
+      "y": 4341,
       "w": 256,
       "h": 172
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label",
       "x": 67,
-      "y": 4306,
+      "y": 4341,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label/Label Cell",
       "x": 67,
-      "y": 4312.5,
+      "y": 4347.5,
       "w": 84,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label/Label Cell/Override",
       "x": 67,
-      "y": 4314,
+      "y": 4349,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label/Label Cell/Override/Dot",
       "x": 70,
-      "y": 4317,
+      "y": 4352,
       "w": 6,
       "h": 6,
       "f": "rgb(124, 58, 237) r50%"
@@ -4210,7 +4210,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label/Label Cell/Label",
       "x": 81,
-      "y": 4312.5,
+      "y": 4347.5,
       "w": 33,
       "h": 15,
       "t": "11px 400 15px 0px rgb(10, 10, 10)"
@@ -4218,7 +4218,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label/Field",
       "x": 159,
-      "y": 4306,
+      "y": 4341,
       "w": 164,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4226,14 +4226,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label/Field/Icon",
       "x": 167,
-      "y": 4314,
+      "y": 4349,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/label/Field/Value",
       "x": 185,
-      "y": 4312.5,
+      "y": 4347.5,
       "w": 77.5,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4241,28 +4241,28 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge",
       "x": 67,
-      "y": 4342,
+      "y": 4377,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge/Label Cell",
       "x": 67,
-      "y": 4348.5,
+      "y": 4383.5,
       "w": 84,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge/Label Cell/Override",
       "x": 67,
-      "y": 4350,
+      "y": 4385,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge/Label Cell/Override/Dot",
       "x": 70,
-      "y": 4353,
+      "y": 4388,
       "w": 6,
       "h": 6,
       "f": "rgb(124, 58, 237) r50%"
@@ -4270,7 +4270,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge/Label Cell/Label",
       "x": 81,
-      "y": 4348.5,
+      "y": 4383.5,
       "w": 59.5,
       "h": 15,
       "t": "11px 400 15px 0px rgb(10, 10, 10)"
@@ -4278,14 +4278,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge/Spacer",
       "x": 159,
-      "y": 4355.5,
+      "y": 4390.5,
       "w": 128,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge/Toggle",
       "x": 295,
-      "y": 4348,
+      "y": 4383,
       "w": 28,
       "h": 16,
       "f": "rgb(10, 10, 10) r999px"
@@ -4293,7 +4293,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/showBadge/Toggle/Knob",
       "x": 309,
-      "y": 4350,
+      "y": 4385,
       "w": 12,
       "h": 12,
       "f": "rgb(255, 255, 255) r50%"
@@ -4301,28 +4301,28 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size",
       "x": 67,
-      "y": 4378,
+      "y": 4413,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size/Label Cell",
       "x": 67,
-      "y": 4384.5,
+      "y": 4419.5,
       "w": 84,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size/Label Cell/Override",
       "x": 67,
-      "y": 4386,
+      "y": 4421,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size/Label Cell/Override/Dot",
       "x": 70,
-      "y": 4389,
+      "y": 4424,
       "w": 6,
       "h": 6,
       "f": "rgb(124, 58, 237) r50%"
@@ -4330,7 +4330,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size/Label Cell/Label",
       "x": 81,
-      "y": 4384.5,
+      "y": 4419.5,
       "w": 26.5,
       "h": 15,
       "t": "11px 400 15px 0px rgb(107, 111, 117)"
@@ -4338,7 +4338,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size/Select",
       "x": 159,
-      "y": 4378,
+      "y": 4413,
       "w": 164,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4346,7 +4346,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size/Select/Value",
       "x": 167,
-      "y": 4384.5,
+      "y": 4419.5,
       "w": 18,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4354,35 +4354,35 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/size/Select/Chevron",
       "x": 301,
-      "y": 4385,
+      "y": 4420,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon",
       "x": 67,
-      "y": 4414,
+      "y": 4449,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Label Cell",
       "x": 67,
-      "y": 4420.5,
+      "y": 4455.5,
       "w": 84,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Label Cell/Override",
       "x": 67,
-      "y": 4422,
+      "y": 4457,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Label Cell/Override/Dot",
       "x": 70,
-      "y": 4425,
+      "y": 4460,
       "w": 6,
       "h": 6,
       "f": "rgb(124, 58, 237) r50%"
@@ -4390,7 +4390,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Label Cell/Label",
       "x": 81,
-      "y": 4420.5,
+      "y": 4455.5,
       "w": 26.5,
       "h": 15,
       "t": "11px 400 15px 0px rgb(107, 111, 117)"
@@ -4398,7 +4398,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Swap",
       "x": 159,
-      "y": 4414,
+      "y": 4449,
       "w": 164,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4406,7 +4406,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Swap/Preview",
       "x": 163,
-      "y": 4418,
+      "y": 4453,
       "w": 20,
       "h": 20,
       "f": "rgb(255, 255, 255) r4px"
@@ -4414,14 +4414,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Swap/Preview/Preview Icon",
       "x": 167,
-      "y": 4422,
+      "y": 4457,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Swap/Value",
       "x": 189,
-      "y": 4420.5,
+      "y": 4455.5,
       "w": 62.5,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4429,49 +4429,49 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Swap/Spacer",
       "x": 257.5,
-      "y": 4427.5,
+      "y": 4462.5,
       "w": 19.5,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Swap/Glyph",
       "x": 283,
-      "y": 4422,
+      "y": 4457,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/icon/Swap/Chevron",
       "x": 301,
-      "y": 4421,
+      "y": 4456,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)",
       "x": 67,
-      "y": 4450,
+      "y": 4485,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Label Cell",
       "x": 67,
-      "y": 4456.5,
+      "y": 4491.5,
       "w": 84,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Label Cell/Override",
       "x": 67,
-      "y": 4458,
+      "y": 4493,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Label Cell/Override/Dot",
       "x": 70,
-      "y": 4461,
+      "y": 4496,
       "w": 6,
       "h": 6,
       "f": "rgb(124, 58, 237) r50%"
@@ -4479,7 +4479,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Label Cell/Label",
       "x": 81,
-      "y": 4456.5,
+      "y": 4491.5,
       "w": 46,
       "h": 15,
       "t": "11px 400 15px 0px rgb(10, 10, 10)"
@@ -4487,21 +4487,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content",
       "x": 159,
-      "y": 4450,
+      "y": 4485,
       "w": 164,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content/Icon",
       "x": 159,
-      "y": 4458,
+      "y": 4493,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content/Meta",
       "x": 177,
-      "y": 4456.5,
+      "y": 4491.5,
       "w": 56,
       "h": 15,
       "t": "12px 400 15px 0px rgb(107, 111, 117)"
@@ -4509,21 +4509,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content/Spacer",
       "x": 239,
-      "y": 4463.5,
+      "y": 4498.5,
       "w": 3,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content/Select",
       "x": 248,
-      "y": 4452,
+      "y": 4487,
       "w": 45,
       "h": 24
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content/Select/Label",
       "x": 254,
-      "y": 4457.5,
+      "y": 4492.5,
       "w": 33,
       "h": 13,
       "t": "11px 500 13px 0px rgb(107, 111, 117)"
@@ -4531,35 +4531,35 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content/Clear",
       "x": 299,
-      "y": 4452,
+      "y": 4487,
       "w": 24,
       "h": 24
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Properties/Body/actions (slot)/Content/Clear/Icon",
       "x": 305,
-      "y": 4458,
+      "y": 4493,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer",
       "x": 55,
-      "y": 4494,
+      "y": 4529,
       "w": 280,
       "h": 79
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Header",
       "x": 67,
-      "y": 4506,
+      "y": 4541,
       "w": 256,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Header/Title",
       "x": 67,
-      "y": 4506,
+      "y": 4541,
       "w": 32,
       "h": 15,
       "t": "12px 600 15px 0px rgb(10, 10, 10)"
@@ -4567,21 +4567,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Body",
       "x": 67,
-      "y": 4529,
+      "y": 4564,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Body/Row",
       "x": 67,
-      "y": 4529,
+      "y": 4564,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Body/Row/Blend mode",
       "x": 67,
-      "y": 4529,
+      "y": 4564,
       "w": 152,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4589,7 +4589,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Body/Row/Blend mode/Value",
       "x": 75,
-      "y": 4535.5,
+      "y": 4570.5,
       "w": 41,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4597,14 +4597,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Body/Row/Blend mode/Chevron",
       "x": 197,
-      "y": 4536,
+      "y": 4571,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Body/Row/Opacity",
       "x": 227,
-      "y": 4529,
+      "y": 4564,
       "w": 96,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4612,7 +4612,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Layer/Body/Row/Opacity/Value",
       "x": 255,
-      "y": 4535.5,
+      "y": 4570.5,
       "w": 32,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4620,21 +4620,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position",
       "x": 55,
-      "y": 4573,
+      "y": 4608,
       "w": 280,
       "h": 187
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Header",
       "x": 67,
-      "y": 4585,
+      "y": 4620,
       "w": 256,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Header/Title",
       "x": 67,
-      "y": 4585,
+      "y": 4620,
       "w": 46.5,
       "h": 15,
       "t": "12px 600 15px 0px rgb(10, 10, 10)"
@@ -4642,21 +4642,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body",
       "x": 67,
-      "y": 4608,
+      "y": 4643,
       "w": 256,
       "h": 136
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row",
       "x": 67,
-      "y": 4608,
+      "y": 4643,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row/X",
       "x": 67,
-      "y": 4608,
+      "y": 4643,
       "w": 124,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4664,7 +4664,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row/X/Prefix",
       "x": 75,
-      "y": 4614.5,
+      "y": 4649.5,
       "w": 6.5,
       "h": 15,
       "t": "11px 400 15px 0px rgb(154, 157, 162)"
@@ -4672,7 +4672,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row/X/Value",
       "x": 89.5,
-      "y": 4614.5,
+      "y": 4649.5,
       "w": 19,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4680,7 +4680,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row/Y",
       "x": 199,
-      "y": 4608,
+      "y": 4643,
       "w": 124,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4688,7 +4688,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row/Y/Prefix",
       "x": 207,
-      "y": 4614.5,
+      "y": 4649.5,
       "w": 6.5,
       "h": 15,
       "t": "11px 400 15px 0px rgb(154, 157, 162)"
@@ -4696,7 +4696,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row/Y/Value",
       "x": 221.5,
-      "y": 4614.5,
+      "y": 4649.5,
       "w": 7.5,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4704,14 +4704,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1",
       "x": 67,
-      "y": 4644,
+      "y": 4679,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/W",
       "x": 67,
-      "y": 4644,
+      "y": 4679,
       "w": 124,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4719,7 +4719,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/W/Prefix",
       "x": 75,
-      "y": 4650.5,
+      "y": 4685.5,
       "w": 6.5,
       "h": 15,
       "t": "11px 400 15px 0px rgb(154, 157, 162)"
@@ -4727,7 +4727,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/W/Value",
       "x": 89.5,
-      "y": 4650.5,
+      "y": 4685.5,
       "w": 20,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4735,14 +4735,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/W/Spacer",
       "x": 117.5,
-      "y": 4657.5,
+      "y": 4692.5,
       "w": 22.5,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/W/Mode",
       "x": 148,
-      "y": 4651.5,
+      "y": 4686.5,
       "w": 15,
       "h": 13,
       "t": "11px 500 13px 0px rgb(107, 111, 117)"
@@ -4750,14 +4750,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/W/Chevron",
       "x": 171,
-      "y": 4652,
+      "y": 4687,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/H",
       "x": 199,
-      "y": 4644,
+      "y": 4679,
       "w": 124,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4765,7 +4765,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/H/Prefix",
       "x": 207,
-      "y": 4650.5,
+      "y": 4685.5,
       "w": 6.5,
       "h": 15,
       "t": "11px 400 15px 0px rgb(154, 157, 162)"
@@ -4773,7 +4773,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/H/Value",
       "x": 221.5,
-      "y": 4650.5,
+      "y": 4685.5,
       "w": 22.5,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4781,14 +4781,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/H/Spacer",
       "x": 252,
-      "y": 4657.5,
+      "y": 4692.5,
       "w": 13.5,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/H/Mode",
       "x": 273.5,
-      "y": 4651.5,
+      "y": 4686.5,
       "w": 21.5,
       "h": 13,
       "t": "11px 500 13px 0px rgb(107, 111, 117)"
@@ -4796,21 +4796,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#1/H/Chevron",
       "x": 303,
-      "y": 4652,
+      "y": 4687,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#2",
       "x": 67,
-      "y": 4680,
+      "y": 4715,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#2/Rotation",
       "x": 67,
-      "y": 4680,
+      "y": 4715,
       "w": 124,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4818,7 +4818,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#2/Rotation/Value",
       "x": 95,
-      "y": 4686.5,
+      "y": 4721.5,
       "w": 13,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4826,7 +4826,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#2/Radius",
       "x": 199,
-      "y": 4680,
+      "y": 4715,
       "w": 124,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4834,7 +4834,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Row#2/Radius/Value",
       "x": 227,
-      "y": 4686.5,
+      "y": 4721.5,
       "w": 12.5,
       "h": 15,
       "t": "12px 400 15px 0px rgb(10, 10, 10)"
@@ -4842,14 +4842,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Absolute Toggle Row",
       "x": 67,
-      "y": 4716,
+      "y": 4751,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Absolute Toggle Row/Label",
       "x": 67,
-      "y": 4722.5,
+      "y": 4757.5,
       "w": 98.5,
       "h": 15,
       "t": "12px 400 15px 0px rgb(107, 111, 117)"
@@ -4857,14 +4857,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Absolute Toggle Row/Spacer",
       "x": 173.5,
-      "y": 4729.5,
+      "y": 4764.5,
       "w": 114,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Absolute Toggle Row/Absolute Toggle",
       "x": 295,
-      "y": 4722,
+      "y": 4757,
       "w": 28,
       "h": 16,
       "f": "rgb(221, 219, 215) r999px"
@@ -4872,7 +4872,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Position/Body/Absolute Toggle Row/Absolute Toggle/Knob",
       "x": 297,
-      "y": 4724,
+      "y": 4759,
       "w": 12,
       "h": 12,
       "f": "rgb(255, 255, 255) r50%"
@@ -4880,21 +4880,21 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill",
       "x": 55,
-      "y": 4760,
+      "y": 4795,
       "w": 280,
       "h": 79
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Header",
       "x": 67,
-      "y": 4772,
+      "y": 4807,
       "w": 256,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Header/Title",
       "x": 67,
-      "y": 4772,
+      "y": 4807,
       "w": 16.5,
       "h": 15,
       "t": "12px 600 15px 0px rgb(10, 10, 10)"
@@ -4902,14 +4902,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Header/Override",
       "x": 89.5,
-      "y": 4773.5,
+      "y": 4808.5,
       "w": 12,
       "h": 12
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Header/Override/Dot",
       "x": 92.5,
-      "y": 4776.5,
+      "y": 4811.5,
       "w": 6,
       "h": 6,
       "f": "rgb(124, 58, 237) r50%"
@@ -4917,35 +4917,35 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Header/Spacer",
       "x": 107.5,
-      "y": 4779,
+      "y": 4814,
       "w": 195.5,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Header/Action",
       "x": 309,
-      "y": 4772.5,
+      "y": 4807.5,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body",
       "x": 67,
-      "y": 4795,
+      "y": 4830,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid",
       "x": 67,
-      "y": 4795,
+      "y": 4830,
       "w": 256,
       "h": 28
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Field",
       "x": 67,
-      "y": 4795,
+      "y": 4830,
       "w": 204,
       "h": 28,
       "f": "rgb(249, 248, 246) r6px"
@@ -4953,7 +4953,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Field/Swatch",
       "x": 73,
-      "y": 4801,
+      "y": 4836,
       "w": 16,
       "h": 16,
       "f": "rgb(42, 30, 20) r4px"
@@ -4961,7 +4961,7 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Field/Value",
       "x": 97,
-      "y": 4801,
+      "y": 4836,
       "w": 43,
       "h": 16,
       "t": "12px 400 16px 0px rgb(10, 10, 10)"
@@ -4969,14 +4969,14 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Field/Spacer",
       "x": 148,
-      "y": 4808.5,
+      "y": 4843.5,
       "w": 77,
       "h": 1
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Field/Opacity",
       "x": 233,
-      "y": 4801.5,
+      "y": 4836.5,
       "w": 32,
       "h": 15,
       "t": "12px 400 15px 0px rgb(154, 157, 162)"
@@ -4984,49 +4984,49 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Eye",
       "x": 273,
-      "y": 4797,
+      "y": 4832,
       "w": 24,
       "h": 24
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Eye/Icon",
       "x": 278,
-      "y": 4802,
+      "y": 4837,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Remove",
       "x": 299,
-      "y": 4797,
+      "y": 4832,
       "w": 24,
       "h": 24
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Fill/Body/Solid/Remove/Icon",
       "x": 304,
-      "y": 4802,
+      "y": 4837,
       "w": 14,
       "h": 14
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Theme",
       "x": 55,
-      "y": 4839,
+      "y": 4874,
       "w": 280,
       "h": 43
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Theme/Header",
       "x": 67,
-      "y": 4851,
+      "y": 4886,
       "w": 256,
       "h": 15
     },
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Theme/Header/Title",
       "x": 67,
-      "y": 4851,
+      "y": 4886,
       "w": 40.5,
       "h": 15,
       "t": "12px 600 15px 0px rgb(10, 10, 10)"
@@ -5034,15 +5034,15 @@
     {
       "path": "Components & variables/Panel crop/Right Panel · instance props (copied from board 11)/Theme/Header/Action",
       "x": 309,
-      "y": 4851.5,
+      "y": 4886.5,
       "w": 14,
       "h": 14
     },
-    { "path": "Local-first & privacy", "x": 0, "y": 4550, "w": 390, "h": 636 },
+    { "path": "Local-first & privacy", "x": 0, "y": 4585, "w": 390, "h": 636 },
     {
       "path": "Local-first & privacy/Eyebrow",
       "x": 20,
-      "y": 4614,
+      "y": 4649,
       "w": 184.5,
       "h": 15,
       "t": "11px 400 15px 0.5px rgb(154, 157, 162)"
@@ -5050,7 +5050,7 @@
     {
       "path": "Local-first & privacy/Title",
       "x": 20,
-      "y": 4645,
+      "y": 4680,
       "w": 350,
       "h": 70,
       "t": "32px 500 35px -0.9px rgb(10, 10, 10)"
@@ -5058,37 +5058,37 @@
     {
       "path": "Local-first & privacy/Body",
       "x": 20,
-      "y": 4731,
+      "y": 4766,
       "w": 350,
       "h": 50,
       "t": "16px 400 25px 0px rgb(107, 111, 117)"
     },
-    { "path": "Local-first & privacy/Facts", "x": 20, "y": 4797, "w": 350, "h": 325 },
+    { "path": "Local-first & privacy/Facts", "x": 20, "y": 4832, "w": 350, "h": 325 },
     {
       "path": "Local-first & privacy/Facts/Fact · No account",
       "x": 20,
-      "y": 4797,
+      "y": 4832,
       "w": 350,
       "h": 76
     },
     {
       "path": "Local-first & privacy/Facts/Fact · No account/Icon",
       "x": 20,
-      "y": 4813,
+      "y": 4848,
       "w": 20,
       "h": 20
     },
     {
       "path": "Local-first & privacy/Facts/Fact · No account/Text",
       "x": 54,
-      "y": 4813,
+      "y": 4848,
       "w": 316,
       "h": 44
     },
     {
       "path": "Local-first & privacy/Facts/Fact · No account/Text/Title",
       "x": 54,
-      "y": 4813,
+      "y": 4848,
       "w": 88.5,
       "h": 19,
       "t": "16px 600 19px 0px rgb(10, 10, 10)"
@@ -5096,7 +5096,7 @@
     {
       "path": "Local-first & privacy/Facts/Fact · No account/Text/Detail",
       "x": 54,
-      "y": 4836,
+      "y": 4871,
       "w": 316,
       "h": 21,
       "t": "14px 400 21px 0px rgb(107, 111, 117)"
@@ -5104,28 +5104,28 @@
     {
       "path": "Local-first & privacy/Facts/Fact · Works offline",
       "x": 20,
-      "y": 4873,
+      "y": 4908,
       "w": 350,
       "h": 97
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Works offline/Icon",
       "x": 20,
-      "y": 4889,
+      "y": 4924,
       "w": 20,
       "h": 20
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Works offline/Text",
       "x": 54,
-      "y": 4889,
+      "y": 4924,
       "w": 316,
       "h": 65
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Works offline/Text/Title",
       "x": 54,
-      "y": 4889,
+      "y": 4924,
       "w": 103,
       "h": 19,
       "t": "16px 600 19px 0px rgb(10, 10, 10)"
@@ -5133,7 +5133,7 @@
     {
       "path": "Local-first & privacy/Facts/Fact · Works offline/Text/Detail",
       "x": 54,
-      "y": 4912,
+      "y": 4947,
       "w": 316,
       "h": 42,
       "t": "14px 400 21px 0px rgb(107, 111, 117)"
@@ -5141,28 +5141,28 @@
     {
       "path": "Local-first & privacy/Facts/Fact · Never lose work",
       "x": 20,
-      "y": 4970,
+      "y": 5005,
       "w": 350,
       "h": 76
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Never lose work/Icon",
       "x": 20,
-      "y": 4986,
+      "y": 5021,
       "w": 20,
       "h": 20
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Never lose work/Text",
       "x": 54,
-      "y": 4986,
+      "y": 5021,
       "w": 316,
       "h": 44
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Never lose work/Text/Title",
       "x": 54,
-      "y": 4986,
+      "y": 5021,
       "w": 125,
       "h": 19,
       "t": "16px 600 19px 0px rgb(10, 10, 10)"
@@ -5170,7 +5170,7 @@
     {
       "path": "Local-first & privacy/Facts/Fact · Never lose work/Text/Detail",
       "x": 54,
-      "y": 5009,
+      "y": 5044,
       "w": 316,
       "h": 21,
       "t": "14px 400 21px 0px rgb(107, 111, 117)"
@@ -5178,28 +5178,28 @@
     {
       "path": "Local-first & privacy/Facts/Fact · Keys stay with you",
       "x": 20,
-      "y": 5046,
+      "y": 5081,
       "w": 350,
       "h": 76
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Keys stay with you/Icon",
       "x": 20,
-      "y": 5062,
+      "y": 5097,
       "w": 20,
       "h": 20
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Keys stay with you/Text",
       "x": 54,
-      "y": 5062,
+      "y": 5097,
       "w": 316,
       "h": 44
     },
     {
       "path": "Local-first & privacy/Facts/Fact · Keys stay with you/Text/Title",
       "x": 54,
-      "y": 5062,
+      "y": 5097,
       "w": 144.5,
       "h": 19,
       "t": "16px 600 19px 0px rgb(10, 10, 10)"
@@ -5207,16 +5207,16 @@
     {
       "path": "Local-first & privacy/Facts/Fact · Keys stay with you/Text/Detail",
       "x": 54,
-      "y": 5085,
+      "y": 5120,
       "w": 316,
       "h": 21,
       "t": "14px 400 21px 0px rgb(107, 111, 117)"
     },
-    { "path": "Open source", "x": 0, "y": 5186, "w": 390, "h": 509 },
+    { "path": "Open source", "x": 0, "y": 5221, "w": 390, "h": 509 },
     {
       "path": "Open source/Card",
       "x": 20,
-      "y": 5186,
+      "y": 5221,
       "w": 350,
       "h": 445,
       "f": "rgb(249, 248, 246) r24px"
@@ -5224,7 +5224,7 @@
     {
       "path": "Open source/Card/Eyebrow",
       "x": 44,
-      "y": 5210,
+      "y": 5245,
       "w": 113.5,
       "h": 15,
       "t": "11px 400 15px 0.5px rgb(154, 157, 162)"
@@ -5232,7 +5232,7 @@
     {
       "path": "Open source/Card/Title",
       "x": 44,
-      "y": 5241,
+      "y": 5276,
       "w": 302,
       "h": 70,
       "t": "32px 500 35px -0.9px rgb(10, 10, 10)"
@@ -5240,7 +5240,7 @@
     {
       "path": "Open source/Card/Body",
       "x": 44,
-      "y": 5327,
+      "y": 5362,
       "w": 302,
       "h": 75,
       "t": "16px 400 25px 0px rgb(107, 111, 117)"
@@ -5248,7 +5248,7 @@
     {
       "path": "Open source/Card/Button · View source on GitHub",
       "x": 44,
-      "y": 5418,
+      "y": 5453,
       "w": 302,
       "h": 48,
       "f": "rgb(10, 10, 10) r999px"
@@ -5256,14 +5256,14 @@
     {
       "path": "Open source/Card/Button · View source on GitHub/Icon",
       "x": 100,
-      "y": 5433,
+      "y": 5468,
       "w": 18,
       "h": 18
     },
     {
       "path": "Open source/Card/Button · View source on GitHub/Label",
       "x": 126,
-      "y": 5433,
+      "y": 5468,
       "w": 164,
       "h": 18,
       "t": "15px 500 18px 0px rgb(255, 255, 255)"
@@ -5271,7 +5271,7 @@
     {
       "path": "Open source/Card/Button · Read CONTRIBUTING.md",
       "x": 44,
-      "y": 5482,
+      "y": 5517,
       "w": 302,
       "h": 48,
       "f": "rgb(255, 255, 255) r999px"
@@ -5279,14 +5279,14 @@
     {
       "path": "Open source/Card/Button · Read CONTRIBUTING.md/Icon",
       "x": 91,
-      "y": 5497,
+      "y": 5532,
       "w": 18,
       "h": 18
     },
     {
       "path": "Open source/Card/Button · Read CONTRIBUTING.md/Label",
       "x": 117,
-      "y": 5497,
+      "y": 5532,
       "w": 182.5,
       "h": 18,
       "t": "15px 500 18px 0px rgb(10, 10, 10)"
@@ -5294,16 +5294,16 @@
     {
       "path": "Open source/Card/Caption",
       "x": 44,
-      "y": 5546,
+      "y": 5581,
       "w": 288,
       "h": 13,
       "t": "10px 400 13px 0.4px rgb(154, 157, 162)"
     },
-    { "path": "Open source/Card/Avatars", "x": 44, "y": 5575, "w": 224, "h": 32 },
+    { "path": "Open source/Card/Avatars", "x": 44, "y": 5610, "w": 224, "h": 32 },
     {
       "path": "Open source/Card/Avatars/Avatar slot",
       "x": 44,
-      "y": 5575,
+      "y": 5610,
       "w": 32,
       "h": 32,
       "f": "rgb(242, 241, 239) r50%"
@@ -5311,7 +5311,7 @@
     {
       "path": "Open source/Card/Avatars/Avatar slot#1",
       "x": 76,
-      "y": 5575,
+      "y": 5610,
       "w": 32,
       "h": 32,
       "f": "rgb(242, 241, 239) r50%"
@@ -5319,7 +5319,7 @@
     {
       "path": "Open source/Card/Avatars/Avatar slot#2",
       "x": 108,
-      "y": 5575,
+      "y": 5610,
       "w": 32,
       "h": 32,
       "f": "rgb(242, 241, 239) r50%"
@@ -5327,7 +5327,7 @@
     {
       "path": "Open source/Card/Avatars/Avatar slot#3",
       "x": 140,
-      "y": 5575,
+      "y": 5610,
       "w": 32,
       "h": 32,
       "f": "rgb(242, 241, 239) r50%"
@@ -5335,7 +5335,7 @@
     {
       "path": "Open source/Card/Avatars/Avatar slot#4",
       "x": 172,
-      "y": 5575,
+      "y": 5610,
       "w": 32,
       "h": 32,
       "f": "rgb(242, 241, 239) r50%"
@@ -5343,7 +5343,7 @@
     {
       "path": "Open source/Card/Avatars/Avatar slot#5",
       "x": 204,
-      "y": 5575,
+      "y": 5610,
       "w": 32,
       "h": 32,
       "f": "rgb(242, 241, 239) r50%"
@@ -5351,18 +5351,18 @@
     {
       "path": "Open source/Card/Avatars/Avatar slot#6",
       "x": 236,
-      "y": 5575,
+      "y": 5610,
       "w": 32,
       "h": 32,
       "f": "rgb(242, 241, 239) r50%"
     },
-    { "path": "Final CTA", "x": 0, "y": 5695, "w": 390, "h": 497, "f": "rgb(245, 244, 242) r0px" },
-    { "path": "Final CTA/KimoLogo", "x": 167, "y": 5759, "w": 56, "h": 56 },
-    { "path": "Final CTA/KimoLogo/Mark", "x": 167, "y": 5759, "w": 56, "h": 56 },
+    { "path": "Final CTA", "x": 0, "y": 5730, "w": 390, "h": 497, "f": "rgb(245, 244, 242) r0px" },
+    { "path": "Final CTA/KimoLogo", "x": 167, "y": 5794, "w": 56, "h": 56 },
+    { "path": "Final CTA/KimoLogo/Mark", "x": 167, "y": 5794, "w": 56, "h": 56 },
     {
       "path": "Final CTA/Title",
       "x": 57,
-      "y": 5831,
+      "y": 5866,
       "w": 275.5,
       "h": 41,
       "t": "34px 500 41px -1px rgb(10, 10, 10)"
@@ -5370,16 +5370,16 @@
     {
       "path": "Final CTA/Body",
       "x": 20,
-      "y": 5888,
+      "y": 5923,
       "w": 350,
       "h": 48,
       "t": "16px 400 24px 0px rgb(107, 111, 117)"
     },
-    { "path": "Final CTA/Downloads", "x": 20, "y": 5952, "w": 350, "h": 176 },
+    { "path": "Final CTA/Downloads", "x": 20, "y": 5987, "w": 350, "h": 176 },
     {
       "path": "Final CTA/Downloads/Button · Download for macOS",
       "x": 20,
-      "y": 5960,
+      "y": 5995,
       "w": 350,
       "h": 52,
       "f": "rgb(10, 10, 10) r999px"
@@ -5387,23 +5387,23 @@
     {
       "path": "Final CTA/Downloads/Button · Download for macOS/Icon",
       "x": 106,
-      "y": 5977,
+      "y": 6012,
       "w": 18,
       "h": 18
     },
     {
       "path": "Final CTA/Downloads/Button · Download for macOS/Label",
       "x": 132,
-      "y": 5977,
+      "y": 6012,
       "w": 151.5,
       "h": 18,
       "t": "15px 500 18px 0px rgb(255, 255, 255)"
     },
-    { "path": "Final CTA/Downloads/Other platforms", "x": 20, "y": 6022, "w": 350, "h": 48 },
+    { "path": "Final CTA/Downloads/Other platforms", "x": 20, "y": 6057, "w": 350, "h": 48 },
     {
       "path": "Final CTA/Downloads/Other platforms/Button · Windows",
       "x": 20,
-      "y": 6022,
+      "y": 6057,
       "w": 170,
       "h": 48,
       "f": "rgb(255, 255, 255) r999px"
@@ -5411,14 +5411,14 @@
     {
       "path": "Final CTA/Downloads/Other platforms/Button · Windows/Icon",
       "x": 59,
-      "y": 6037,
+      "y": 6072,
       "w": 18,
       "h": 18
     },
     {
       "path": "Final CTA/Downloads/Other platforms/Button · Windows/Label",
       "x": 85,
-      "y": 6037,
+      "y": 6072,
       "w": 66.5,
       "h": 18,
       "t": "15px 500 18px 0px rgb(10, 10, 10)"
@@ -5426,7 +5426,7 @@
     {
       "path": "Final CTA/Downloads/Other platforms/Button · Linux",
       "x": 200,
-      "y": 6022,
+      "y": 6057,
       "w": 170,
       "h": 48,
       "f": "rgb(255, 255, 255) r999px"
@@ -5434,14 +5434,14 @@
     {
       "path": "Final CTA/Downloads/Other platforms/Button · Linux/Icon",
       "x": 252.5,
-      "y": 6037,
+      "y": 6072,
       "w": 18,
       "h": 18
     },
     {
       "path": "Final CTA/Downloads/Other platforms/Button · Linux/Label",
       "x": 278.5,
-      "y": 6037,
+      "y": 6072,
       "w": 38.5,
       "h": 18,
       "t": "15px 500 18px 0px rgb(10, 10, 10)"
@@ -5449,36 +5449,36 @@
     {
       "path": "Final CTA/Downloads/Button · Open in browser",
       "x": 20,
-      "y": 6080,
+      "y": 6115,
       "w": 350,
       "h": 48
     },
     {
       "path": "Final CTA/Downloads/Button · Open in browser/Label",
       "x": 136,
-      "y": 6095,
+      "y": 6130,
       "w": 118,
       "h": 18,
       "t": "15px 500 18px 0px rgb(10, 10, 10)"
     },
-    { "path": "Footer", "x": 0, "y": 6192, "w": 390, "h": 326 },
-    { "path": "Footer/Brand", "x": 20, "y": 6232, "w": 81.5, "h": 28 },
-    { "path": "Footer/Brand/KimoLogo", "x": 20, "y": 6232, "w": 28, "h": 28 },
-    { "path": "Footer/Brand/KimoLogo/Mark", "x": 20, "y": 6232, "w": 28, "h": 28 },
+    { "path": "Footer", "x": 0, "y": 6227, "w": 390, "h": 326 },
+    { "path": "Footer/Brand", "x": 20, "y": 6267, "w": 81.5, "h": 28 },
+    { "path": "Footer/Brand/KimoLogo", "x": 20, "y": 6267, "w": 28, "h": 28 },
+    { "path": "Footer/Brand/KimoLogo/Mark", "x": 20, "y": 6267, "w": 28, "h": 28 },
     {
       "path": "Footer/Brand/Wordmark",
       "x": 58,
-      "y": 6235,
+      "y": 6270,
       "w": 43.5,
       "h": 22,
       "t": "18px 600 22px -0.3px rgb(10, 10, 10)"
     },
-    { "path": "Footer/Columns", "x": 20, "y": 6288, "w": 350, "h": 120 },
-    { "path": "Footer/Columns/Column · Product", "x": 20, "y": 6288, "w": 106, "h": 94 },
+    { "path": "Footer/Columns", "x": 20, "y": 6323, "w": 350, "h": 120 },
+    { "path": "Footer/Columns/Column · Product", "x": 20, "y": 6323, "w": 106, "h": 94 },
     {
       "path": "Footer/Columns/Column · Product/Heading",
       "x": 20,
-      "y": 6288,
+      "y": 6323,
       "w": 49.5,
       "h": 16,
       "t": "13px 600 16px 0px rgb(10, 10, 10)"
@@ -5486,7 +5486,7 @@
     {
       "path": "Footer/Columns/Column · Product/Link · Download",
       "x": 20,
-      "y": 6314,
+      "y": 6349,
       "w": 61.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
@@ -5494,7 +5494,7 @@
     {
       "path": "Footer/Columns/Column · Product/Link · Open in browser",
       "x": 20,
-      "y": 6340,
+      "y": 6375,
       "w": 101.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
@@ -5502,16 +5502,16 @@
     {
       "path": "Footer/Columns/Column · Product/Link · Changelog",
       "x": 20,
-      "y": 6366,
+      "y": 6401,
       "w": 66.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
     },
-    { "path": "Footer/Columns/Column · Docs", "x": 142, "y": 6288, "w": 106, "h": 120 },
+    { "path": "Footer/Columns/Column · Docs", "x": 142, "y": 6323, "w": 106, "h": 120 },
     {
       "path": "Footer/Columns/Column · Docs/Heading",
       "x": 142,
-      "y": 6288,
+      "y": 6323,
       "w": 32,
       "h": 16,
       "t": "13px 600 16px 0px rgb(10, 10, 10)"
@@ -5519,7 +5519,7 @@
     {
       "path": "Footer/Columns/Column · Docs/Link · Getting started",
       "x": 142,
-      "y": 6314,
+      "y": 6349,
       "w": 91.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
@@ -5527,7 +5527,7 @@
     {
       "path": "Footer/Columns/Column · Docs/Link · Agents & MCP",
       "x": 142,
-      "y": 6340,
+      "y": 6375,
       "w": 88.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
@@ -5535,7 +5535,7 @@
     {
       "path": "Footer/Columns/Column · Docs/Link · Format spec",
       "x": 142,
-      "y": 6366,
+      "y": 6401,
       "w": 76.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
@@ -5543,16 +5543,16 @@
     {
       "path": "Footer/Columns/Column · Docs/Link · CLI",
       "x": 142,
-      "y": 6392,
+      "y": 6427,
       "w": 20.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
     },
-    { "path": "Footer/Columns/Column · Community", "x": 264, "y": 6288, "w": 106, "h": 94 },
+    { "path": "Footer/Columns/Column · Community", "x": 264, "y": 6323, "w": 106, "h": 94 },
     {
       "path": "Footer/Columns/Column · Community/Heading",
       "x": 264,
-      "y": 6288,
+      "y": 6323,
       "w": 73,
       "h": 16,
       "t": "13px 600 16px 0px rgb(10, 10, 10)"
@@ -5560,7 +5560,7 @@
     {
       "path": "Footer/Columns/Column · Community/Link · GitHub",
       "x": 264,
-      "y": 6314,
+      "y": 6349,
       "w": 42.5,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
@@ -5568,7 +5568,7 @@
     {
       "path": "Footer/Columns/Column · Community/Link · Contributing",
       "x": 264,
-      "y": 6340,
+      "y": 6375,
       "w": 76,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
@@ -5576,16 +5576,16 @@
     {
       "path": "Footer/Columns/Column · Community/Link · Security",
       "x": 264,
-      "y": 6366,
+      "y": 6401,
       "w": 51,
       "h": 16,
       "t": "13px 400 16px 0px rgb(107, 111, 117)"
     },
-    { "path": "Footer/Bottom", "x": 20, "y": 6436, "w": 350, "h": 50 },
+    { "path": "Footer/Bottom", "x": 20, "y": 6471, "w": 350, "h": 50 },
     {
       "path": "Footer/Bottom/Legal",
       "x": 20,
-      "y": 6452,
+      "y": 6487,
       "w": 251,
       "h": 15,
       "t": "11px 400 15px 0px rgb(154, 157, 162)"
@@ -5593,7 +5593,7 @@
     {
       "path": "Footer/Bottom/Disclaimer",
       "x": 20,
-      "y": 6473,
+      "y": 6508,
       "w": 188,
       "h": 13,
       "t": "11px 400 13px 0px rgb(154, 157, 162)"

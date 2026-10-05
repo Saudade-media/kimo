@@ -15,6 +15,7 @@ import type {
   McpHostId,
   McpServerStatus,
 } from "@kimo/platform"
+import { workAreaIds } from "../canvas/agent-area"
 import {
   AGENT_ACTIVITY_LIMIT,
   type AgentChip,
@@ -192,6 +193,15 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
     return -Infinity
   }
 
+  /** The work area of `ids` (cursor / outline at their union box; see `workAreaIds`). */
+  function areaOf(ids: readonly string[]): string[] {
+    if (!store) return [...ids]
+    return workAreaIds(
+      ids.filter((id) => store.hasNode(id)),
+      (id) => (store.getNode(id) as { parent?: string | null } | undefined)?.parent ?? null,
+    )
+  }
+
   function lastFocus(origin: string): string[] {
     for (let i = activity.length - 1; i >= 0; i--) {
       const e = activity[i] as McpActivityEntry
@@ -249,11 +259,10 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         label: c.identity.label,
         icon: chipIcon(c),
         state: c.state,
-        focus: c.focus?.length
-          ? [...c.focus]
-          : seen?.last.length
-            ? [...seen.last]
-            : lastFocus(c.origin),
+        // The work area: a resized page frame never wins over the section inside it.
+        focus: areaOf(
+          c.focus?.length ? c.focus : seen?.last.length ? seen.last : lastFocus(c.origin),
+        ),
         lastActivityAt: Math.max(c.lastActivityAt, wrote === -Infinity ? 0 : wrote),
         client,
         presence,

@@ -129,9 +129,9 @@ export function rejectionText(
   bytes = 0,
 ): string {
   if (reason === "too-large")
-    return `${name} is ${Math.round(bytes / MB)} MB — the limit is ${MAX_ASSET_BYTES / MB} MB per image`
+    return `${name} is ${Math.round(bytes / MB)} MB. The limit is ${MAX_ASSET_BYTES / MB} MB per image`
   if (reason === "undecodable") return `${name} could not be read as an image`
-  return `${name} isn't supported — use PNG, JPEG, WebP or GIF`
+  return `${name} isn't supported. Use PNG, JPEG, WebP or GIF`
 }
 
 /** Drop pill copy (vgvYj "Drop Pill"): "Drop 2 images" or "1 of 3 can't be imported". */

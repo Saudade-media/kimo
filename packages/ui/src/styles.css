@@ -23,6 +23,7 @@
 @import "./empty-state/EmptyState.css";
 @import "./file-card/FileCard.css";
 @import "./agent/Agent.css";
+@import "./agent-markdown/AgentMarkdown.css";
 
 /* M2: Layout and styling (boards 02b, 09). */
 @import "./menu-dense/MenuDense.css";

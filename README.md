@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/assets/readme-header.png" width="1280" alt="Kimo — the open, local-first design canvas for people and their coding agents." />
+  <img src="docs/assets/readme-header.png" width="1280" alt="Kimo, the open, local-first design canvas for people and their coding agents." />
 </p>
 
 # Kimo
 
-Kimo is an open-source, local-first, agent-native design canvas: an MIT-licensed alternative to
-pen.dev. Designs live in your repository as `.kimo` files, a published, versioned, plain-JSON
+Kimo is an open-source, local-first design canvas that people and coding agents edit together:
+an MIT-licensed alternative to pen.dev. Designs live in your repository as `.kimo` files, a published, versioned, plain-JSON
 format laid out as a flat node table so it diffs and merges in git. You edit them on a fast
 WebGL canvas with Figma-like interactions, and AI agents edit the same documents through an open,
 typed MCP tool set and a built-in, provider-agnostic agent loop (Claude by default, bring your own
@@ -24,7 +24,7 @@ Condensed from [teardown section 8.1](docs/teardown.md#81-principles):
    sign-in. Cloud features are optional and self-hostable.
 4. **Never lose work.** Atomic writes, autosave, crash recovery, verified saves, and no save after
    a failed load.
-5. **Agents are first-class, humans stay in control.** Typed declarative tools, enforced scopes,
+5. **Agents edit; people stay in control.** Typed declarative tools, enforced scopes,
    attributed edits, per-origin undo, suggestion and dry-run modes.
 6. **Provider-agnostic by construction.** Claude is the default; other providers and compatible
    endpoints are supported. No vendored agent CLIs.
@@ -34,15 +34,11 @@ Condensed from [teardown section 8.1](docs/teardown.md#81-principles):
 
 ## Status
 
-**Milestone M0 (Foundations).** Nothing here is usable as a design tool yet. M0 delivers the
-monorepo, CI, ADRs, the `.kimo` v0.1 spec draft, the scope checklist and these packages and apps:
-`@kimo/core-schema` (types, JSON Schema, defaults table, canonical serializer, validator),
-`@kimo/editor-state` (Yjs document store, op layer, undo, tree repair), `@kimo/sync` (file
-autosave and IndexedDB providers), `@kimo/design-tokens` (the editor's tokens and their build),
-`@kimo/ui` (editor chrome components), the `@kimo/web` editor shell, the `@kimo/desktop` Tauri
-shell and the reserved `@kimo/server` stub. See the
-[roadmap](docs/teardown.md#12-v1-milestones-and-roadmap) and the
-[scope checklist](docs/scope-checklist.md).
+**Version 1.0.0.** The editor, the `.kimo` format 1.0, the MCP server, the built-in agent and
+code export are complete on the web and on desktop (macOS, Windows, Linux). See the
+[changelog](CHANGELOG.md) for what is in it and the [user guide](docs/guide/) to get started.
+Signed installers and automatic updates are wired up but need signing keys before the first
+public release (see [docs/release.md](docs/release.md)).
 
 ## Monorepo map
 
@@ -105,8 +101,7 @@ Desktop development also needs the
 Foundations through 07 Export dialog; see [ADR 0007](docs/adr/0007-editor-design-system.md)).
 The filename's spelling is historical; token generation references it, so do not rename it.
 
-To be honest about the bootstrap problem: until Kimo can open and edit its own designs, this
-file is a pen.dev (Pencil) document and is edited with pen.dev/Pencil, a proprietary tool.
+There is a bootstrap problem: until Kimo can open and edit its own designs, this file is a pen.dev (Pencil) document and is edited with pen.dev/Pencil, a proprietary tool.
 `packages/design-tokens/src/tokens.json` is transcribed from its variables and checked against a
 `GetVariables()` snapshot, the CSS/TS tokens are generated from `tokens.json`, and the
 `packages/ui` components are hand-built to the file's component nodes using those tokens. Once Kimo reaches parity for

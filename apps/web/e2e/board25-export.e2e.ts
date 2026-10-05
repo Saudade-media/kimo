@@ -324,7 +324,7 @@ export const scenarios: Scenario[] = [
         )
         const d = await page.locator(".export-error .kimo-error-card__desc").textContent()
         expect(
-          d?.startsWith("Permission denied (EACCES) — ~/loom is read-only."),
+          d?.startsWith("Permission denied (EACCES). ~/loom is read-only."),
           `error desc (${d})`,
         )
         const retry = await page.locator(".export-retry").textContent()

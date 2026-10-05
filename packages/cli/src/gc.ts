@@ -27,7 +27,7 @@ export const GC_EXIT = { ok: 0, unreadable: 2, locked: 3 } as const
 
 /** Board 20 "Nothing to clean up" (nsxuR) description, shared with the editor dialog. */
 export function gcNothingSentence(fileName: string): string {
-  return `Every asset is in use — each file in assets/ is referenced by a node, fill, component or variable in ${fileName}.`
+  return `Every asset is in use. Each file in assets/ is referenced by a node, fill, component or variable in ${fileName}.`
 }
 
 export interface GcArgs {

@@ -927,7 +927,7 @@ async function libraryReadOnly({ page, url, log }: E2EContext) {
   c.ok(!r.ok && r.code === "LIBRARY_READ_ONLY", `library prop declaration refused: ${r.code}`)
   c.ok(
     (await toasts(page)).some((t) =>
-      / is from a linked library — edit it in its source file$/.test(t.text),
+      / is from a linked library. Edit it in its source file$/.test(t.text),
     ),
     `read-only toast copy: ${JSON.stringify(await toasts(page))}`,
   )

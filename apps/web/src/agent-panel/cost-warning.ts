@@ -126,7 +126,7 @@ export function contextPhrase(e: Pick<TurnEstimate, "frames" | "images">): strin
 /**
  * Card copy. Show cost on: "This turn may cost about $0.42" / "Above your $0.25 per-turn warning
  * — 14 frames + 3 images in context. Trim the selection or send anyway." Off (no $ anywhere):
- * "This turn is large — ~180k tokens" / "Above your per-turn warning — …".
+ * "This turn is large: ~180k tokens" / "Above your per-turn warning: …".
  */
 export function costWarningCopy(
   w: CostWarningView,
@@ -135,11 +135,11 @@ export function costWarningCopy(
   const ctx = contextPhrase(w.estimate)
   if (!showCost)
     return {
-      title: `This turn is large — ~${formatTokens(w.estimate.tokens)} tokens`,
-      description: `Above your per-turn warning — ${ctx}. Trim the selection or send anyway.`,
+      title: `This turn is large: ~${formatTokens(w.estimate.tokens)} tokens`,
+      description: `Above your per-turn warning: ${ctx}. Trim the selection or send anyway.`,
     }
   return {
     title: `This turn may cost about ${formatUsd(w.estimate.usd)}`,
-    description: `Above your ${formatUsd(w.thresholdUsd)} per-turn warning — ${ctx}. Trim the selection or send anyway.`,
+    description: `Above your ${formatUsd(w.thresholdUsd)} per-turn warning: ${ctx}. Trim the selection or send anyway.`,
   }
 }

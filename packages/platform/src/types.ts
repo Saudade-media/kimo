@@ -81,6 +81,11 @@ export interface KimoPlatform {
    * Copy selection as PNG, View › Preview); desktop only.
    */
   readonly menu?: EditorMenuApi
+  /**
+   * Board 32 "Dock activity": reports built-in agent turns so the macOS Dock tile animates
+   * while any agent works; desktop only (Rust ignores it on Windows / Linux).
+   */
+  readonly dock?: DockActivityApi
   /** Stops watchers and listeners (window teardown). */
   dispose(): void
 }
@@ -106,6 +111,15 @@ export interface HelpHostApi {
   onMenu(listener: (action: HelpMenuAction) => void): () => void
   /** Reveals Kimo's log file (`~/.kimo/mcp/server.log`) in Finder / Explorer / the file manager. */
   showLogs(): Promise<void>
+}
+
+/** Board 32: the Dock tile's agent-activity reports (`kimo_dock_agent_activity`). */
+export interface DockActivityApi {
+  /**
+   * `source` (unique per agent controller in this window) is working or not. Re-send `true`
+   * at least every 5 s while working: Rust drops a source silent for 15 s (reloads, crashes).
+   */
+  setAgentWorking(source: string, working: boolean): Promise<void>
 }
 
 // ===============================================================================================

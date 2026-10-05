@@ -225,6 +225,13 @@ async fn handle(
             ))
         }
     };
+    // Board 32: a tools/call animates the macOS Dock tile until the host answers.
+    let _busy = crate::dock_activity::is_tools_call(&body).then(|| {
+        crate::dock_activity::McpCallGuard::new(
+            &format!("http:{client}"),
+            &uuid::Uuid::new_v4().to_string(),
+        )
+    });
     let request = json!({
         "requestId": "",
         "method": method,

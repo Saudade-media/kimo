@@ -16,7 +16,9 @@
     "check:rust": "cargo check --workspace --manifest-path src-tauri/Cargo.toml",
     "typecheck": "tsc -p tsconfig.json",
     "test:rust": "cargo test --workspace --manifest-path src-tauri/Cargo.toml",
-    "build:shim": "bun scripts/build-shim.ts"
+    "build:shim": "bun scripts/build-shim.ts",
+    "dock-frames": "bun scripts/dock-frames.ts",
+    "check:generated": "bun scripts/dock-frames.ts --check"
   },
   "dependencies": {
     "@kimo/platform": "workspace:*",

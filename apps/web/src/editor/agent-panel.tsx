@@ -38,6 +38,7 @@ import { SIDE_BY_SIDE_GAP, sideBySideAnchor } from "../canvas/agent-canvas"
 import type { AgentCanvasProps, CanvasHandle } from "../canvas/contract"
 import { type HostClient, HostedDocumentSession } from "../host/client"
 import type { Bus } from "../lib/hooks"
+import { useDockAgentActivity } from "../platform/dock-activity"
 import type { FileDocumentSession } from "../platform/session"
 import { useFileId } from "./agents"
 import type { PromptRowStatus } from "./LeftPanel"
@@ -229,6 +230,8 @@ export function useEditorAgentPanel({
     })
   }, [ai, fileId, tools, platform, store, pageForAgent])
   useEffect(() => () => controller?.dispose(), [controller])
+  // Board 32: the macOS Dock tile animates while this window's agent turns run.
+  useDockAgentActivity(platform, controller)
 
   // Canvas selection → removable attachment chips (the scope of Single mode).
   useEffect(() => {

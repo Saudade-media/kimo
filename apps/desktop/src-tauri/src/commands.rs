@@ -634,6 +634,21 @@ pub async fn kimo_fonts_open_cache_folder(app: AppHandle, st: St<'_>) -> R<()> {
         .map_err(|e| io_msg(format!("Could not open the font cache: {e}")))
 }
 
+/// Board 32 "Dock activity": one agent controller of this window started, still runs (re-sent
+/// every 5 s) or ended a turn. The macOS Dock tile animates while any source works.
+#[tauri::command]
+pub async fn kimo_dock_agent_activity(
+    window: WebviewWindow,
+    source: String,
+    working: bool,
+) -> R<()> {
+    if source.is_empty() || source.len() > 128 {
+        return Err(invalid("source must be 1–128 characters"));
+    }
+    crate::dock_activity::report_agent(&format!("{}:{source}", window.label()), working);
+    Ok(())
+}
+
 /// Board 25 §7 (b) "Show logs in Finder": reveals `~/.kimo/mcp/server.log` (Kimo's only log
 /// file), or opens its folder when nothing has been logged yet.
 #[tauri::command]

@@ -20,6 +20,12 @@ Instead of streaming text, the thread shows one status line that updates in plac
 
 The written reply appears when the turn ends.
 
+### In the Dock (macOS)
+
+While any agent is working, Kimo's Dock icon animates: the outer shape of the mark turns clockwise and the opening in its centre turns the other way, one step every two seconds, with a soft glow behind the mark. It counts a built-in agent turn in any window, and an agent connected over MCP (Claude Code, Codex, Gemini CLI, Cursor…) while one of its tool calls is running and for 2 seconds after. The icon keeps going for another 1.5 seconds after the last activity, so a burst of calls doesn't make it flicker. It then finishes the current turn of the animation and goes back to the normal icon.
+
+With **Reduce motion** on (System Settings › Accessibility › Display) nothing rotates: only the glow slowly brightens and fades. The animation is pre-rendered and uses no CPU while nothing is working. On Windows and Linux the icon doesn't change.
+
 ## Replies
 
 Under each reply, **N steps** opens the list of tool steps the agent took. It is folded by default and opens by itself when a step failed. Hover a reply to see its tokens, cost and time (`4.5k new tokens · $0.034 · 11.2s`), **Copy** and **Regenerate**. Tokens count only what the turn really spent: input not served from the prompt cache plus output. Cached re-reads of the conversation are left out; the tooltip shows the split. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed.

@@ -522,6 +522,7 @@ impl Hub {
             if peek.is_response() {
                 if let Some(k) = &key {
                     c.inflight.remove(k);
+                    crate::dock_activity::mcp_call_finished(conn, k);
                 }
             }
             c.last_activity = now_ms();
@@ -772,6 +773,12 @@ impl Hub {
             };
             // Any traffic counts as liveness for the heartbeat too.
             acked.store(sent.load(Ordering::SeqCst), Ordering::SeqCst);
+            // Board 32: a tools/call in flight animates the macOS Dock tile.
+            if peek.method.as_deref() == Some("tools/call") && peek.is_request() {
+                if let Some(k) = peek.id_key() {
+                    crate::dock_activity::mcp_call_started(&conn_id, &k);
+                }
+            }
             self.route_in(&conn_id, line, kind);
         }
 
@@ -791,6 +798,7 @@ impl Hub {
             }
             g.queue.retain(|q| q.conn != conn);
             g.replay.retain(|(c, _)| c != conn);
+            crate::dock_activity::mcp_connection_closed(conn);
             self.sink
                 .to_host(EV_CONNECTION, Self::connection_event(conn, None, "closed"));
         }

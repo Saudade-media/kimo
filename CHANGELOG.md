@@ -20,6 +20,13 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Added
 
+- The macOS Dock icon animates while an agent works (board 32 "Dock activity"): during a
+  built-in agent turn in any window, or while an MCP client's tool call runs (and for 2 s
+  after), the mark's outer shape turns clockwise and its opening counter-clockwise, one 60°
+  step per 2 s loop with a soft white glow. It stops 1.5 s after the last activity, at the end
+  of the current beat, and the normal icon comes back. Reduce motion keeps the mark still and
+  only pulses the glow. Pre-rendered frames, nothing runs while idle; Windows and Linux keep
+  the static icon.
 - CI split into `check` (lint, typecheck, generated files, unit tests, examples, web build),
   browser e2e in Chromium with one retry and a flaky/infra report in the job summary, and the
   exporters' box-diff harness; `rust` runs rustfmt, clippy (`-D warnings`) and the test suites on

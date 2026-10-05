@@ -281,6 +281,11 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       },
     },
     menu: { onAction: (l) => menuEvents.on(l) },
+    dock: {
+      setAgentWorking: async (source, working) => {
+        await call("kimo_dock_agent_activity", { source, working })
+      },
+    },
     capabilities,
     // M6 user skills (ADR 0014 §10): own command list (TAURI_SKILLS_COMMANDS), not TAURI_COMMANDS.
     skills: createTauriSkills({

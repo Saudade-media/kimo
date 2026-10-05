@@ -106,6 +106,8 @@ export interface TauriCommandMap {
   kimo_open_url: { args: { url: string }; result: null }
   /** Board 25 §7 (b): reveals `~/.kimo/mcp/server.log` (or opens its folder). */
   kimo_help_show_logs: { args: Record<string, never>; result: null }
+  /** Board 32: a built-in agent turn started / is still running / ended (macOS Dock tile). */
+  kimo_dock_agent_activity: { args: { source: string; working: boolean }; result: null }
 
   // --- dialogs (each pick widens the fs scope) ---
   kimo_dialog_open_file: {
@@ -328,6 +330,7 @@ export const TAURI_COMMANDS = [
   "kimo_settings_set",
   "kimo_launch_take_initial",
   "kimo_help_show_logs",
+  "kimo_dock_agent_activity",
 ] as const satisfies readonly TauriCommand[]
 
 /** All event names. */

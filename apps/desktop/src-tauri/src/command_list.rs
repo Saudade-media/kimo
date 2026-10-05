@@ -70,4 +70,5 @@ pub const COMMANDS: &[&str] = &[
     "kimo_settings_set",
     "kimo_launch_take_initial",
     "kimo_help_show_logs",
+    "kimo_dock_agent_activity",
 ];

@@ -43,3 +43,17 @@ export function enterTarget(doc: DocReader, hit: string, current: string | undef
   const i = path.indexOf(current)
   return i >= 0 && i + 1 < path.length ? (path[i + 1] as string) : hit
 }
+
+/**
+ * Multi-click drilling: one click of a rapid sequence after the first. `path` is the path to the
+ * leaf under the first click (fixed for the sequence), `level` the index selected so far. Moves
+ * exactly one level deeper; at the leaf it stays (`atLeaf`: a text leaf then enters edit).
+ */
+export function drillStep(
+  path: readonly string[],
+  level: number,
+): { level: number; id: string; atLeaf: boolean } {
+  const last = path.length - 1
+  const next = Math.min(level + 1, last)
+  return { level: next, id: path[next] as string, atLeaf: level >= last }
+}

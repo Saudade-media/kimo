@@ -173,7 +173,7 @@ import { cssColor, runCss } from "./rich-text/css"
 import { type Attrs, runsOf, virtualNode } from "./rich-text/model"
 import type { RichEditGeometry, RunCss } from "./rich-text/RichTextEditor"
 import { publishTextSession, RichTextSession } from "./rich-text/session"
-import { enterTarget, pickTarget } from "./selection"
+import { drillStep, enterTarget, pickTarget } from "./selection"
 import { candidatesIn, fmtUnits, snap, snapPoint } from "./snapping"
 import type { CanvasToolStore } from "./tool-state"
 
@@ -557,6 +557,14 @@ export class CanvasController {
   private fullPending = false
   private raf = 0
   private pendingPointer: { e: PointerEvent; p: Point } | null = null
+  /** The plain press being handled (set by `onDown`, read by the `mousedown` that follows it). */
+  private downInfo: { path: string[] } | null = null
+  /**
+   * Multi-click drilling: the path to the leaf under the FIRST click of a rapid sequence, fixed
+   * for the whole sequence (later clicks never re-hit-test), and the depth selected so far.
+   */
+  private drillSeq: { path: string[]; level: number; enter: boolean; skipDbl: boolean } | null =
+    null
 
   private el: HTMLElement | null = null
   private size = { w: 0, h: 0, dpr: 1 }
@@ -1810,6 +1818,8 @@ export class CanvasController {
         this.updateOverlay()
       }
     })
+    on(el, "mousedown", (e) => this.onMultiDown(e))
+    on(el, "click", (e) => this.onMultiClick(e))
     on(el, "dblclick", (e) => this.onDoubleClick(e))
     on(el, "wheel", (e) => this.onWheel(e), { passive: false })
     on(el, "contextmenu", (e) => {
@@ -1884,6 +1894,7 @@ export class CanvasController {
   }
 
   private onDown(e: PointerEvent): void {
+    this.downInfo = null
     if (this.isOverlayTarget(e.target)) return
     const el = this.el as HTMLElement
     if (this.editing) this.commitText(null)
@@ -2038,6 +2049,8 @@ export class CanvasController {
       return
     }
     const target = artboard ?? this.pick(deepest, before, pointerHeld("selectInside", e))
+    if (!artboard && !add && !e.metaKey && !e.ctrlKey && !e.altKey)
+      this.downInfo = { path: pathOf(this.vdoc, deepest) }
     const isRoot = this.store.getNode(target)?.parent === null
     // Dragging on an unselected root frame's background draws a marquee over its children.
     const scope =
@@ -2507,7 +2520,66 @@ export class CanvasController {
     return true
   }
 
+  /**
+   * Multi-click drilling: in a rapid click sequence (the browser's `detail`, which follows the
+   * OS double-click interval and slop) every click after the first selects one level deeper on
+   * the path fixed by the first click. Runs on `mousedown`, right after the `pointerdown` that
+   * handled the press, so each level shows at once.
+   */
+  private onMultiDown(e: MouseEvent): void {
+    const info = this.downInfo
+    this.downInfo = null
+    if (e.button !== 0 || this.isOverlayTarget(e.target)) return
+    if (e.detail <= 1) {
+      // A new sequence: the press just selected a layer on the path to the pointer's deepest hit.
+      this.drillSeq = null
+      const sel = this.ui.getState().selection
+      if (!info || sel.length !== 1 || this.pathEdit || this.armed) return
+      const level = info.path.indexOf(sel[0] as string)
+      if (level >= 0) this.drillSeq = { path: info.path, level, enter: false, skipDbl: false }
+      return
+    }
+    const q = this.drillSeq
+    if (!q || this.ui.getState().tool !== "select" || this.pathEdit || this.armed || this.editing)
+      return
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      this.drillSeq = null
+      return
+    }
+    const ui = this.ui.getState()
+    if (ui.selection.length !== 1 || ui.selection[0] !== q.path[q.level]) {
+      this.drillSeq = null
+      return
+    }
+    const step = drillStep(q.path, q.level)
+    if (!step.atLeaf) {
+      q.level = step.level
+      ui.select([step.id])
+      q.skipDbl = true
+      return
+    }
+    // At the leaf: a text enters edit on this click (after the press settles, see onMultiClick).
+    if (isTextual(this.src.getNode(step.id)?.type)) {
+      q.enter = true
+      q.skipDbl = true
+    }
+  }
+
+  private onMultiClick(e: MouseEvent): void {
+    const q = this.drillSeq
+    if (!q?.enter || e.detail < 2) return
+    q.enter = false
+    if (this.ui.getState().tool !== "select" || this.editing) return
+    const id = q.path[q.path.length - 1] as string
+    if (this.ui.getState().selection[0] === id) this.beginTextEdit(id)
+  }
+
   private onDoubleClick(e: MouseEvent): void {
+    if (this.drillSeq?.skipDbl) {
+      // The sequence already stepped (or entered text) for this click.
+      this.drillSeq.skipDbl = false
+      return
+    }
     if (this.isOverlayTarget(e.target) || this.ui.getState().tool !== "select") return
     if (this.pathEdit) {
       // Board 27 §5 (J5Vng): double-click an anchor toggles Sharp ⇄ Smooth.

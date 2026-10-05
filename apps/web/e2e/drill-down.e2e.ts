@@ -313,6 +313,69 @@ function deepDoc() {
   }
 }
 
+/** `n` rapid clicks (the browser's click count rises with each), `jitter` px of drift per click. */
+async function rapid(page: Page, pt: { x: number; y: number }, n: number, jitter = 0) {
+  for (let i = 1; i <= n; i++) {
+    const x = pt.x + (i % 2 ? jitter : -jitter) * (i > 1 ? 1 : 0)
+    const y = pt.y + (i % 3 ? jitter : 0) * (i > 1 ? 1 : 0)
+    await page.mouse.move(x, y)
+    await page.mouse.down({ clickCount: i })
+    await page.mouse.up({ clickCount: i })
+  }
+  await settle(page)
+}
+const editing = (page: Page) => page.getByRole("textbox", { name: "Edit text" }).count()
+
+async function multiClick(ctx: E2EContext, file: string, mode: "deepest" | "deepest-virtual") {
+  const { page, url } = ctx
+  await openDoc(page, url, file)
+  const { path, pt } = await target(page, mode)
+  const leaf = path.length - 1
+  const leafType = await page.evaluate(
+    (id) => window.__kimo.session.store.getNode(id)?.type ?? "virtual",
+    path[leaf] as string,
+  )
+  const textLeaf = leafType === "text" || leafType === "virtual"
+  // n rapid clicks: n = 1 → level 1, 2 → level 2 … until the leaf; never a step skipped.
+  for (let n = 1; n <= leaf; n++) {
+    await page.evaluate(() => window.__kimo.session.ui.getState().select([]))
+    await page.waitForTimeout(450)
+    await rapid(page, pt, n)
+    if (await editing(page)) await page.keyboard.press("Escape")
+    const s = await sel(page)
+    expect(s.length === 1 && s[0] === path[n], `${n} clicks → level ${n} (${path[n]}), got ${s}`)
+  }
+  // Jitter of 1–3 px between clicks keeps the first click's path.
+  for (const j of [1, 2, 3]) {
+    await page.evaluate(() => window.__kimo.session.ui.getState().select([]))
+    await page.waitForTimeout(450)
+    await rapid(page, pt, 4, j)
+    const s = await sel(page)
+    expect(s[0] === path[4], `jitter ${j}px: 4 clicks → ${path[4]}, got ${s}`)
+  }
+  // A pause ends the sequence: the next single click is a plain click (top-level layer).
+  await page.evaluate(() => window.__kimo.session.ui.getState().select([]))
+  await page.waitForTimeout(450)
+  await rapid(page, pt, 3)
+  await page.waitForTimeout(600)
+  await rapid(page, pt, 1)
+  let s = await sel(page)
+  expect(s[0] === path[3], `after a pause a click keeps depth, no extra step: ${s}`)
+  await page.evaluate(() => window.__kimo.session.ui.getState().select([]))
+  await page.waitForTimeout(450)
+  await rapid(page, pt, 1)
+  s = await sel(page)
+  expect(s[0] === path[1], `fresh single click selects ${path[1]}, got ${s}`)
+  // One more click than levels: a text leaf enters edit, anything else stays on the leaf.
+  await page.evaluate(() => window.__kimo.session.ui.getState().select([]))
+  await page.waitForTimeout(450)
+  await rapid(page, pt, leaf + 1)
+  s = await sel(page)
+  expect(s[0] === path[leaf], `leaf stays selected, got ${s}`)
+  if (textLeaf && leafType === "text")
+    expect((await editing(page)) === 1, "the click after the text leaf enters text edit")
+}
+
 export const scenarios: Scenario[] = [
   {
     name: "drill-down: landing page, click then double-clicks reach the leaf",
@@ -347,5 +410,13 @@ export const scenarios: Scenario[] = [
       await sweep(ctx, deepDoc(), 1)
       await sweep(ctx, deepDoc(), 0.3)
     },
+  },
+  {
+    name: "multi-click: 1…n rapid clicks drill one level each (landing page)",
+    run: (ctx) => multiClick(ctx, "landing-page/landing.kimo", "deepest"),
+  },
+  {
+    name: "multi-click: through component instances (design system)",
+    run: (ctx) => multiClick(ctx, "design-system/kimo-ds.lib.kimo", "deepest"),
   },
 ]

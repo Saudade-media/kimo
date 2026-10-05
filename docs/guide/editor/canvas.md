@@ -68,6 +68,16 @@ You can style part of a text. Select some characters, then:
 
 Only the selected characters change. With nothing selected, the shortcuts style the next characters you type. New characters take the style of the character before the caret. Pasting inserts plain text. `⌘Z` inside the text undoes your last typing burst or style change; when you finish, the whole edit is one undo step. Clicking in the right panel keeps the text in edit mode, with the selection still highlighted.
 
+## Selecting and drilling down
+
+A click selects the top-level layer under the pointer (the section, not what is inside it). To reach a deeper layer, click again quickly at the same spot: each extra click in the sequence goes one level deeper toward the layer under the first click, so a double-click goes one level, a triple-click two, and so on until the last layer. Kimo uses your system's double-click speed and distance, and it keeps the first click's target for the whole sequence, so a slightly shaky hand doesn't switch branch. On a text, the click after reaching it enters text editing. Inside text editing, triple-click keeps its usual meaning of selecting the line.
+
+`⌘`-click selects the deepest layer directly. `↵` selects the first child, `⇧↵` or `Esc` selects the parent (at the top level, `Esc` clears the selection). Component instances drill the same way, through their inner layers and slots.
+
+### Moving sections
+
+Dragging a layer moves it among its siblings by default: an insertion bar shows where it lands, so you can reorder whole sections in an auto layout frame. A layer goes into another container only when that is clearly meant: it fits inside (at most 80% of that container's width and height), and the pointer is well inside it, away from its edges (12 px, and a quarter of an auto layout frame's length). Otherwise hold the pointer still over the container for about half a second to drop inside it. `⌘` makes it an absolute child, `Esc` cancels.
+
 ## Undo
 
 `⌘Z` undoes and `⇧⌘Z` (or `⌘Y`) redoes. Each drag or command is one step. Undo is per author: `⌘Z` undoes your own edits, never an agent's (an agent's turn has its own **Undo turn**).

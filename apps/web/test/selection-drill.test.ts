@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { DocReader } from "../src/canvas/commands"
-import { enterTarget, pickTarget } from "../src/canvas/selection"
+import { drillStep, enterTarget, pickTarget } from "../src/canvas/selection"
 
 /** page > hero > shot > card > row > label (+ an instance-style composite child id). */
 const chain = ["page", "hero", "shot", "card", "row", "label", "label/inner"]
@@ -28,5 +28,22 @@ describe("drill-down selection chain", () => {
       cur = next
     }
     expect(seen).toEqual(chain.slice(1))
+  })
+})
+
+describe("multi-click drilling", () => {
+  test("every click after the first goes exactly one level deeper on the fixed path", () => {
+    const path = [...chain]
+    let level = path.indexOf(pickTarget(doc, "label/inner", [], false))
+    const seen = [path[level]]
+    for (let click = 2; click <= 9; click++) {
+      const s = drillStep(path, level)
+      level = s.level
+      seen.push(s.id)
+      // Stays on the leaf and reports it (a text leaf enters edit then).
+      if (click > path.length - 1) expect(s.atLeaf).toBe(true)
+    }
+    expect(seen.slice(0, 6)).toEqual(chain.slice(1))
+    expect(seen[seen.length - 1]).toBe("label/inner")
   })
 })

@@ -12,6 +12,8 @@ import {
   EASE_IN,
   EASE_OUT,
   encodePng,
+  GRID,
+  loadTreated,
   MOTION,
   markSubpaths,
   motionParams,
@@ -20,6 +22,10 @@ import {
   reducedParams,
   renderFrame,
   rotate,
+  SIZE,
+  TREAT,
+  treatAngles,
+  treatInputs,
   unfilterScanlines,
 } from "../scripts/dock-frames"
 
@@ -98,12 +104,45 @@ describe("dock frames · output", () => {
     expect(unfilterScanlines(data, 32, 32)).toEqual(rgba)
   })
 
-  test("the committed frames and include_bytes! table are up to date", () => {
+  test("the committed frames, treated rotations and include_bytes! table are up to date", () => {
     const set = buildFrames()
     expect(set.motion.length).toBe(MOTION.frames)
     expect(set.reduced.length).toBe(REDUCED.frames)
     expect(set.motion[0]).toBe(0)
     expect(set.reduced[0]).toBe(0)
+    expect(set.flat.length).toBe(set.images.length)
     expect(checkCommitted(set)).toEqual([])
+  })
+})
+
+describe("dock frames · system icon treatment (board 32 rule)", () => {
+  const { manifest, byAngle } = loadTreated()
+  const set = buildFrames(byAngle)
+  const idle = byAngle.get(0) as Uint8Array
+
+  test("one treated rotation per motion angle, rendered from the current inputs", () => {
+    expect(manifest.angles).toEqual(treatAngles())
+    expect(manifest.angles[0]).toBe(0)
+    expect(manifest.inputs).toBe(treatInputs())
+  })
+
+  test("frame 0 is the idle Dock icon, pixel for pixel", () => {
+    expect(set.images[0]?.rgba).toEqual(idle)
+  })
+
+  test("every frame keeps the idle plate and rim: only rotation and glow change", () => {
+    const c = SIZE / 2
+    // The bloom reaches 75 px (Ø 600 on the 1024 grid at 256 px); beyond it nothing may differ.
+    const bloomR = (GRID.bloom.diameter / 2) * (SIZE / GRID.size)
+    for (const img of set.images)
+      for (let i = 0; i < SIZE * SIZE; i++) {
+        const r = Math.hypot((i % SIZE) + 0.5 - c, Math.floor(i / SIZE) + 0.5 - c)
+        if (r < Math.max(bloomR, TREAT.outer)) continue
+        for (let ch = 0; ch < 4; ch++)
+          if (img.rgba[i * 4 + ch] !== idle[i * 4 + ch])
+            throw new Error(`${img.name} differs at ${i}`)
+      }
+    // Rest and reduced-motion frames without glow are the idle icon itself.
+    for (const i of set.motion.slice(42)) expect(set.images[i]?.rgba).toEqual(idle)
   })
 })

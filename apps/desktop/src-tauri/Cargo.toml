@@ -58,7 +58,7 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 # Board 32 "Dock activity": the animated Dock tile (NSDockTile content view, reduce-motion check).
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSGeometry"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSGeometry", "NSProcessInfo"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = [
   "std",
   "NSAccessibility",

@@ -91,7 +91,7 @@ impl Activity {
 /// One playback step.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Step {
-    /// Show this image of [`crate::dock_frames::IMAGES`].
+    /// Show this image of [`crate::dock_frames::IMAGES`] (or `FLAT_IMAGES`, same indices).
     Show(usize),
     /// Hand the tile back to the normal icon.
     Done,
@@ -245,6 +245,11 @@ impl Drop for McpCallGuard {
     }
 }
 
+/// Board 32 rule "Icon treatment": the treated frames match the Dock's idle icon from macOS 26.
+pub fn treated_icons(macos_major: isize) -> bool {
+    macos_major >= 26
+}
+
 /// True when a JSON-RPC message (object or batch) contains a `tools/call` request.
 pub fn is_tools_call(body: &[u8]) -> bool {
     fn one(v: &serde_json::Value) -> bool {
@@ -296,7 +301,7 @@ fn play(app: tauri::AppHandle) {
 
 #[cfg(target_os = "macos")]
 mod mac {
-    use crate::dock_frames::IMAGES;
+    use crate::dock_frames::{FLAT_IMAGES, IMAGES};
     use objc2::rc::Retained;
     use objc2::{AnyThread, MainThreadMarker};
     use objc2_app_kit::{NSApplication, NSImage, NSImageScaling, NSImageView, NSWorkspace};
@@ -312,6 +317,17 @@ mod mac {
 
     thread_local! {
         static TILE: RefCell<Option<Tile>> = const { RefCell::new(None) };
+    }
+
+    /// macOS 26+ draws app icons with the system icon treatment (rim, depth, shaded mark), and
+    /// the frames carry the same treatment; earlier macOS shows the flat icon.
+    fn frames() -> &'static [&'static [u8]] {
+        let os = objc2_foundation::NSProcessInfo::processInfo().operatingSystemVersion();
+        if super::treated_icons(os.majorVersion) {
+            &IMAGES
+        } else {
+            &FLAT_IMAGES
+        }
     }
 
     /// System Settings › Accessibility › Display › Reduce motion (read at each start).
@@ -331,11 +347,11 @@ mod mac {
                 view.setImageScaling(NSImageScaling::ScaleNone);
                 Tile {
                     view,
-                    images: vec![None; IMAGES.len()],
+                    images: vec![None; frames().len()],
                     attached: false,
                 }
             });
-            let Some(bytes) = IMAGES.get(index) else {
+            let Some(bytes) = frames().get(index) else {
                 return;
             };
             if tile.images[index].is_none() {
@@ -405,7 +421,7 @@ mod mac {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dock_frames::{IMAGES, SIZE};
+    use crate::dock_frames::{FLAT_IMAGES, IMAGES, SIZE};
 
     #[test]
     fn restore_icon_outside_a_bundle() {
@@ -543,7 +559,9 @@ mod tests {
         for k in 1..REDUCED.len() {
             assert_eq!(REDUCED[k], REDUCED[REDUCED.len() - k]);
         }
-        for png in IMAGES {
+        assert_eq!(IMAGES.len(), FLAT_IMAGES.len());
+        assert!(treated_icons(26) && !treated_icons(15));
+        for png in IMAGES.iter().chain(FLAT_IMAGES.iter()) {
             assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
         }
     }

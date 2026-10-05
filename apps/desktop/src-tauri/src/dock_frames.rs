@@ -8,7 +8,7 @@ pub const MOTION_FPS: u32 = 30;
 /// Reduced-motion loop: 30 frames at 10 fps (3000 ms).
 pub const REDUCED_FPS: u32 = 10;
 
-/// Unique PNG frames; image 0 is the static icon.
+/// macOS 26+: PNG frames carrying the system icon treatment; image 0 is the idle Dock icon.
 pub static IMAGES: [&[u8]; 57] = [
     include_bytes!("../icons/dock/frame-00.png"),
     include_bytes!("../icons/dock/frame-01.png"),
@@ -67,6 +67,67 @@ pub static IMAGES: [&[u8]; 57] = [
     include_bytes!("../icons/dock/frame-54.png"),
     include_bytes!("../icons/dock/frame-55.png"),
     include_bytes!("../icons/dock/frame-56.png"),
+];
+
+/// Earlier macOS (flat app icons): the same frames without the treatment, same indices.
+pub static FLAT_IMAGES: [&[u8]; 57] = [
+    include_bytes!("../icons/dock/flat-00.png"),
+    include_bytes!("../icons/dock/flat-01.png"),
+    include_bytes!("../icons/dock/flat-02.png"),
+    include_bytes!("../icons/dock/flat-03.png"),
+    include_bytes!("../icons/dock/flat-04.png"),
+    include_bytes!("../icons/dock/flat-05.png"),
+    include_bytes!("../icons/dock/flat-06.png"),
+    include_bytes!("../icons/dock/flat-07.png"),
+    include_bytes!("../icons/dock/flat-08.png"),
+    include_bytes!("../icons/dock/flat-09.png"),
+    include_bytes!("../icons/dock/flat-10.png"),
+    include_bytes!("../icons/dock/flat-11.png"),
+    include_bytes!("../icons/dock/flat-12.png"),
+    include_bytes!("../icons/dock/flat-13.png"),
+    include_bytes!("../icons/dock/flat-14.png"),
+    include_bytes!("../icons/dock/flat-15.png"),
+    include_bytes!("../icons/dock/flat-16.png"),
+    include_bytes!("../icons/dock/flat-17.png"),
+    include_bytes!("../icons/dock/flat-18.png"),
+    include_bytes!("../icons/dock/flat-19.png"),
+    include_bytes!("../icons/dock/flat-20.png"),
+    include_bytes!("../icons/dock/flat-21.png"),
+    include_bytes!("../icons/dock/flat-22.png"),
+    include_bytes!("../icons/dock/flat-23.png"),
+    include_bytes!("../icons/dock/flat-24.png"),
+    include_bytes!("../icons/dock/flat-25.png"),
+    include_bytes!("../icons/dock/flat-26.png"),
+    include_bytes!("../icons/dock/flat-27.png"),
+    include_bytes!("../icons/dock/flat-28.png"),
+    include_bytes!("../icons/dock/flat-29.png"),
+    include_bytes!("../icons/dock/flat-30.png"),
+    include_bytes!("../icons/dock/flat-31.png"),
+    include_bytes!("../icons/dock/flat-32.png"),
+    include_bytes!("../icons/dock/flat-33.png"),
+    include_bytes!("../icons/dock/flat-34.png"),
+    include_bytes!("../icons/dock/flat-35.png"),
+    include_bytes!("../icons/dock/flat-36.png"),
+    include_bytes!("../icons/dock/flat-37.png"),
+    include_bytes!("../icons/dock/flat-38.png"),
+    include_bytes!("../icons/dock/flat-39.png"),
+    include_bytes!("../icons/dock/flat-40.png"),
+    include_bytes!("../icons/dock/flat-41.png"),
+    include_bytes!("../icons/dock/flat-42.png"),
+    include_bytes!("../icons/dock/flat-43.png"),
+    include_bytes!("../icons/dock/flat-44.png"),
+    include_bytes!("../icons/dock/flat-45.png"),
+    include_bytes!("../icons/dock/flat-46.png"),
+    include_bytes!("../icons/dock/flat-47.png"),
+    include_bytes!("../icons/dock/flat-48.png"),
+    include_bytes!("../icons/dock/flat-49.png"),
+    include_bytes!("../icons/dock/flat-50.png"),
+    include_bytes!("../icons/dock/flat-51.png"),
+    include_bytes!("../icons/dock/flat-52.png"),
+    include_bytes!("../icons/dock/flat-53.png"),
+    include_bytes!("../icons/dock/flat-54.png"),
+    include_bytes!("../icons/dock/flat-55.png"),
+    include_bytes!("../icons/dock/flat-56.png"),
 ];
 
 /// Motion frame → image index.

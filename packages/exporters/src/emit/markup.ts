@@ -76,10 +76,17 @@ export class Markup {
     }
     if (node.text) {
       const t = node.text
-      if (t.runs.length === 1) out.children.push(text(t.runs[0]?.text ?? ""))
+      const r0 = t.runs[0]
+      const plain =
+        t.runs.length === 1 &&
+        r0 !== undefined &&
+        !r0.color &&
+        !r0.href &&
+        h.writer.textStyle(r0.style, t.style).length === 0
+      if (plain || t.runs.length === 0) out.children.push(text(r0?.text ?? ""))
       else
         t.runs.forEach((r, i) => {
-          const decls = h.writer.textStyle(r.style, t.style)
+          const decls = [...h.writer.textStyle(r.style, t.style), ...h.writer.runColor(r.color)]
           const ra: [string, AttrValue][] = decls.length ? h.runAttrs(node, i, decls) : []
           if (r.href) ra.push(["href", r.href])
           out.children.push(el(r.href ? "a" : "span", ra, [text(r.text)]))

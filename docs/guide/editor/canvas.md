@@ -59,6 +59,15 @@ A new shape goes into the frame under the pointer. Frames with auto layout, lock
 
 With the Text tool, click to start a new text, or click an existing text to edit it. Press `⌘↵` or `Esc` to finish; an empty text is discarded. Double-click a text with the Move tool to edit it. Text formatting is in the [properties panel](properties.md#text).
 
+While you edit, the text stays exactly where and how it is drawn: same width, same line breaks, same font, size and spacing, at any zoom. A text with **Auto height** or **Fixed size** keeps wrapping at its width.
+
+You can style part of a text. Select some characters, then:
+
+- press `⌘B` (bold), `⌘I` (italic), `⌘U` (underline), `⇧⌘X` (strikethrough) or `⌘K` (link), or
+- change the font, weight, size, line height, letter spacing, decoration, case or link in the **Text** section, or the color in **Fill**.
+
+Only the selected characters change. With nothing selected, the shortcuts style the next characters you type. New characters take the style of the character before the caret. Pasting inserts plain text. `⌘Z` inside the text undoes your last typing burst or style change; when you finish, the whole edit is one undo step. Clicking in the right panel keeps the text in edit mode, with the selection still highlighted.
+
 ## Undo
 
 `⌘Z` undoes and `⇧⌘Z` (or `⌘Y`) redoes. Each drag or command is one step. Undo is per author: `⌘Z` undoes your own edits, never an agent's (an agent's turn has its own **Undo turn**).

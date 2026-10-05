@@ -233,6 +233,13 @@ export async function emitPdf(ir: IRDocument, options: PdfOptions): Promise<Expo
           let x = line.x
           for (const seg of line.segments) {
             const st = seg.style
+            // A span's own color (TextSpan `fill`) paints this segment.
+            const sc = seg.color
+              ? {
+                  rgb: rgb(seg.color.rgba[0], seg.color.rgba[1], seg.color.rgba[2]),
+                  a: seg.color.rgba[3],
+                }
+              : c
             const f = await font(st.family.v, st.weight.v, st.italic)
             const str = encodable(f, applyCase(seg.text, null))
             const ls = st.letterSpacing.v
@@ -243,8 +250,8 @@ export async function emitPdf(ir: IRDocument, options: PdfOptions): Promise<Expo
                 y: -line.baseline,
                 size: st.size.v,
                 font: f,
-                color: c.rgb,
-                opacity: a * c.a,
+                color: sc.rgb,
+                opacity: a * sc.a,
               })
             })
             x += f.widthOfTextAtSize(str, st.size.v) + ls * [...str].length

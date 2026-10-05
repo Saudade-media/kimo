@@ -129,6 +129,11 @@ export const TEXT_STYLE_DEFAULTS: ResolvedTextStyle = {
 export interface ResolvedTextRun {
   text: string
   style: ResolvedTextStyle
+  /**
+   * A span's own `fill` (feature "text/runs"), resolved: a color literal (hex string or color
+   * object) painted instead of the node's fill. Absent = the node's fill.
+   */
+  fill?: unknown
 }
 
 /** What to measure: the node's resolved content (case transform NOT yet applied). */

@@ -197,6 +197,8 @@ export interface IRTextRun {
   /** The run's own style (node style with the span style applied). */
   style: IRTextStyle
   href?: string
+  /** The span's own solid color (TextSpan `fill`, feature "text/runs"); absent = the node fills. */
+  color?: IRColor
 }
 
 export interface IRText {

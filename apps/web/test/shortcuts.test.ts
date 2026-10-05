@@ -74,6 +74,7 @@ describe("SHORTCUTS table", () => {
       "src/editor/Editor.tsx",
       "src/canvas/controller.ts",
       "src/canvas/CanvasHost.tsx",
+      "src/canvas/rich-text/RichTextEditor.tsx",
       "src/editor/LeftPanel.tsx",
       "src/editor/sections/TextSection.tsx",
       "src/conflicts/shortcut.ts",

@@ -266,10 +266,17 @@ export function resolveText(
   const content = node.content
   let runs: ResolvedTextRun[]
   if (Array.isArray(content)) {
-    runs = content.filter(isObject).map((span) => ({
-      text: typeof span.text === "string" ? span.text : "",
-      style: resolveTextStyle(nodeId, span.style, resolve, style),
-    }))
+    runs = content.filter(isObject).map((span) => {
+      const run: ResolvedTextRun = {
+        text: typeof span.text === "string" ? span.text : "",
+        style: resolveTextStyle(nodeId, span.style, resolve, style),
+      }
+      if (span.fill !== undefined) {
+        const fill = resolve.value(nodeId, span.fill)
+        if (fill !== undefined && fill !== null) run.fill = fill
+      }
+      return run
+    })
   } else {
     const v = resolve.value(nodeId, content)
     runs = [{ text: typeof v === "string" ? v : "", style }]

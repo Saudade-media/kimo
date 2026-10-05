@@ -977,6 +977,10 @@ class Builder {
           style: this.textStyle(id, span.style, style),
         }
         if (typeof span.href === "string") run.href = span.href
+        if (span.fill !== undefined) {
+          const c = this.color(id, span.fill)
+          if (c) run.color = c
+        }
         runs.push(run)
       }
     } else {

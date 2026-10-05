@@ -67,6 +67,7 @@ saves. Never send `null`. To clear a field, use `update {unset:["field"]}`.
 
 Some constructs need a feature listed in the document's `features`: `layout/wrap`,
 `layout/stretch-baseline`, `size/min-max`, `text/runs`, `tokens/composite`. If you get
-`FEATURE_NOT_DECLARED`, see `errors`. Prefer the ungated form when one exists.
+`FEATURE_NOT_DECLARED`, see `errors`. Prefer the ungated form when one exists. `text/runs` is
+declared for you when `kimo_apply_ops` writes span content.
 
 The normative JSON Schema is the resource `kimo://schema/1.0`.

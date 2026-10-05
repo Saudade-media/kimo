@@ -50,6 +50,8 @@ import {
 } from "@kimo/ui"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import "./text-more.css"
+import { realId } from "../../canvas/rich-text/panel-bridge"
+import type { RichTextSession } from "../../canvas/rich-text/session"
 import { FontPicker, missingWeight, useFontPickerEntries } from "../../fonts"
 import type { FontSystem } from "../../fonts/font-system"
 import { Icon } from "../../lib/icons"
@@ -135,7 +137,16 @@ const options = <V extends string>(
 const one = <T,>(v: T | Mixed): T | null => (v === MIXED ? null : v)
 const round = (n: number) => Math.round(n * 100) / 100
 
-export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSystem | null }) {
+export function TextSection({
+  sel,
+  fonts,
+  editing = null,
+}: {
+  sel: readonly Sel[]
+  fonts: FontSystem | null
+  /** Board 30: the live text edit of the selected text (values are its selection's). */
+  editing?: RichTextSession | null
+}) {
   const { editor, layout } = usePanel()
   const nodes = sel.map((s) => s.node)
   const font = sharedText(nodes, fontOf)
@@ -210,8 +221,11 @@ export function TextSection({ sel, fonts }: { sel: readonly Sel[]; fonts: FontSy
   const moreAnchor = useRef<HTMLSpanElement>(null)
   useKeepPopoverFocus(fontOpen)
 
+  // Board 30: ⌘K while editing opens the Link… popover for the editor's selection.
+  useEffect(() => editing?.onLinkRequest(() => setLinkOpen(true)), [editing])
+
   const laid = (id: string) => {
-    const b = (layout.get() as LayoutResult | null)?.nodes.get(id)?.local
+    const b = (layout.get() as LayoutResult | null)?.nodes.get(realId(id))?.local
     return b ? { w: b.w, h: b.h } : null
   }
 

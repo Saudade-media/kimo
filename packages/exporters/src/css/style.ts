@@ -474,6 +474,11 @@ export class CssWriter {
   // --- Text ---------------------------------------------------------------------------------
 
   /** Font/line declarations of a text style (paragraph or run). */
+  /** A run's own color (TextSpan `fill`, feature "text/runs"): `color`, or nothing. */
+  runColor(c: IRColor | undefined): Decl[] {
+    return c ? [this.d("color", this.color(c), this.tok("color", c.ref))] : []
+  }
+
   textStyle(s: IRTextStyle, base: IRTextStyle | null): Decl[] {
     const out: Decl[] = []
     const d = this.d.bind(this)

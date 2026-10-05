@@ -109,6 +109,9 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Ask Kimo | `⌘K` | `Ctrl+K` |
 | Link… (text selected) | `⌘K` | `Ctrl+K` |
 | Italic (text selected) | `⌘I` | `Ctrl+I` |
+| Bold (editing text) | `⌘B` | `Ctrl+B` |
+| Underline (editing text) | `⌘U` | `Ctrl+U` |
+| Strikethrough (editing text) | `⇧⌘X` | `Ctrl+Shift+X` |
 | Finish editing text | `⌘↵` or `Esc` | `Ctrl+↵` or `Esc` |
 
 ## Conflicts

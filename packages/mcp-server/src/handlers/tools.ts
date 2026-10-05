@@ -865,7 +865,14 @@ export function createToolHandlerMap(
     const wire = input.ops as WireOp[]
     const compiled = compileWireOps(d.store, wire, { libraries: libs(d.ref.id) })
     if (!compiled.ok) return fail(compiled.errors, { revision: sameRev(cur) })
-    return commit(ctx, d, input, compiled.ops as unknown as Op[], {
+    const ops = compiled.ops as unknown as Op[]
+    // Spec §13: a gated construct and its feature go in the same edit. Text runs are the one
+    // gate an agent reaches through plain node fields, so declare `text/runs` for it (appended:
+    // wire indexes of the compiled ops stay unchanged).
+    const features = (d.store.toHeader().features ?? []) as readonly string[]
+    if (!features.includes("text/runs") && writesTextRuns(ops))
+      ops.push({ op: "setHeader", set: { features: [...features, "text/runs"].sort() } } as Op)
+    return commit(ctx, d, input, ops, {
       label: `${wire.length} op${wire.length === 1 ? "" : "s"}`,
       wireIndex: compiled.wireIndex,
       created: compiled.created,
@@ -1669,4 +1676,28 @@ function withRootTheme(doc: KimoDocument, theme: Record<string, string>): KimoDo
         ? { ...n, theme: { ...((n.theme as Record<string, string> | undefined) ?? {}), ...theme } }
         : n
   return { ...doc, nodes: out } as unknown as KimoDocument
+}
+
+/** True when an op writes text content as spans (feature "text/runs", spec §8.1). */
+export function writesTextRuns(ops: readonly unknown[]): boolean {
+  const isSpans = (v: unknown) =>
+    Array.isArray(v) &&
+    v.length > 0 &&
+    v.every(
+      (s) =>
+        typeof s === "object" &&
+        s !== null &&
+        typeof (s as { text?: unknown }).text === "string" &&
+        (s as { type?: unknown }).type === undefined,
+    )
+  const walk = (v: unknown, depth: number): boolean => {
+    if (depth > 12 || typeof v !== "object" || v === null) return false
+    if (Array.isArray(v)) return v.some((x) => walk(x, depth + 1))
+    for (const [k, x] of Object.entries(v)) {
+      if (k === "content" && isSpans(x)) return true
+      if (walk(x, depth + 1)) return true
+    }
+    return false
+  }
+  return ops.some((o) => walk(o, 0))
 }

@@ -3844,6 +3844,9 @@
         },
         "href": {
           "type": "string"
+        },
+        "fill": {
+          "$ref": "#/$defs/Color"
         }
       },
       "additionalProperties": false

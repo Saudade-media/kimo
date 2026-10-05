@@ -526,6 +526,61 @@ const cases: Case[] = [
     ),
   },
   {
+    rule: "a text span's fill binds a color variable (board 30)",
+    code: "VARIABLE_TYPE_MISMATCH",
+    bad: doc(
+      {
+        Text000001: {
+          type: "text",
+          parent: null,
+          order: "a0",
+          content: [{ text: "a" }, { text: "b", fill: { $ref: "n" } }],
+        },
+      },
+      { features: ["text/runs"], variables: { n: { type: "number", value: 1 } } },
+    ),
+    good: doc(
+      {
+        Text000001: {
+          type: "text",
+          parent: null,
+          order: "a0",
+          content: [
+            { text: "a", fill: "#E5484D" },
+            { text: "b", fill: { $ref: "c" } },
+          ],
+        },
+      },
+      { features: ["text/runs"], variables: { c: { type: "color", value: "#2F6BFF" } } },
+    ),
+  },
+  {
+    rule: "a text span's fill is a color, not a paint (board 30)",
+    code: "SCHEMA",
+    bad: doc(
+      {
+        Text000001: {
+          type: "text",
+          parent: null,
+          order: "a0",
+          content: [{ text: "a", fill: { kind: "solid", color: "#000" } }],
+        },
+      },
+      { features: ["text/runs"] },
+    ),
+    good: doc(
+      {
+        Text000001: {
+          type: "text",
+          parent: null,
+          order: "a0",
+          content: [{ text: "a", fill: { space: "oklch", l: 0.6, c: 0.2, h: 25 } }],
+        },
+      },
+      { features: ["text/runs"] },
+    ),
+  },
+  {
     rule: "feature gates apply inside instance props",
     code: "FEATURE_NOT_DECLARED",
     bad: doc(card(true, { Inst000001: inst({ props: { layout: { dir: "row", wrap: true } } }) })),

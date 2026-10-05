@@ -11,6 +11,7 @@ import type {
   Paint,
   Paragraph,
 } from "canvaskit-wasm"
+import { parseColor } from "./color"
 import type { CkFontProvider } from "./fonts"
 
 /** How the glyphs are painted: a color, or a CanvasKit paint (gradient/image shader). */
@@ -122,8 +123,11 @@ export class TextEngine {
     )
     const color = fill && "color" in fill ? fill.color : null
     for (const run of input.runs) {
-      const ts = new ck.TextStyle(this.ckStyle(run.style, color))
-      if (fill && "paint" in fill) builder.pushPaintStyle(ts, fill.paint, this.noBackground())
+      // A span's own fill (feature "text/runs") paints that run instead of the node's fill.
+      const own = run.fill === undefined || !fill ? null : parseColor(run.fill)
+      const ts = new ck.TextStyle(this.ckStyle(run.style, own ? ck.Color4f(...own) : color))
+      if (!own && fill && "paint" in fill)
+        builder.pushPaintStyle(ts, fill.paint, this.noBackground())
       else builder.pushStyle(ts)
       builder.addText(applyCase(run.text, run.style.case))
       builder.pop()

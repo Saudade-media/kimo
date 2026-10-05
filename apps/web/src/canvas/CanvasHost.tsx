@@ -28,7 +28,6 @@ import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } 
 import { useDocHeader } from "../lib/header"
 import { useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
-import { matches } from "../shortcuts/shortcuts"
 import "./canvas-m2.css"
 import "./structure.css"
 import { AgentCanvasDom } from "./AgentCanvasDom"
@@ -46,6 +45,7 @@ import { CanvasController, MEASURING_OFFSET, type TextEditState } from "./contro
 import { HintPill, ZoomBadge } from "./hints"
 import type { StructureDom } from "./insertion"
 import { PathEditBar } from "./PathEditBar"
+import { RichTextEditor } from "./rich-text/RichTextEditor"
 import { StructureOverlay } from "./StructureOverlay"
 import { canvasToolStore } from "./tool-state"
 
@@ -576,8 +576,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
           key={textEdit.id ?? "new"}
           state={textEdit}
           uiStore={uiStore}
-          onInput={(v) => ctl.current?.setDraftText(v)}
-          onCommit={(v) => ctl.current?.commitText(v)}
+          onCommit={() => ctl.current?.commitText(null)}
         />
       )}
       {ready && gridOn && <ZoomBadge ui={uiStore} rulers={props.rulers ?? false} />}
@@ -693,72 +692,24 @@ function rendererError(e: Error): RendererError {
   return e instanceof RendererError ? e : new RendererError("WASM_LOAD_FAILED", e.message)
 }
 
+/** Board 30: the rich-text overlay, projected through the live viewport. */
 function TextEditor({
   state,
   uiStore,
-  onInput,
   onCommit,
 }: {
   state: TextEditState
   uiStore: CanvasHostProps["uiStore"]
-  onInput(value: string): void
-  onCommit(value: string): void
+  onCommit(): void
 }) {
   const viewport = useUi(uiStore, (s) => s.viewport)
-  const ref = useRef<HTMLTextAreaElement | null>(null)
-  const committed = useRef(false)
-  useEffect(() => {
-    const t = ref.current
-    if (!t) return
-    t.focus({ preventScroll: true })
-    t.select()
-  }, [])
-  const z = viewport.zoom
-  const s = state.style
-  const lh = s.lineHeight
-  const commit = () => {
-    if (committed.current || !ref.current) return
-    committed.current = true
-    onCommit(ref.current.value)
-  }
   return (
-    <textarea
-      ref={ref}
-      data-canvas-overlay=""
-      className="canvas-host__text-editor"
-      aria-label="Edit text"
-      defaultValue={state.value}
-      spellCheck={false}
-      rows={1}
-      onInput={(e) => onInput(e.currentTarget.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        e.stopPropagation()
-        // Escape commits and exits, like Figma (deliberate): there is no separate cancel. An
-        // existing text emptied this way is deleted, as in Figma; ⌘Z restores it in one step.
-        if (matches("finishText", e)) {
-          e.preventDefault()
-          commit()
-        }
-      }}
-      style={{
-        left: (state.at.x - viewport.x) * z,
-        top: (state.at.y - viewport.y) * z,
-        minWidth: state.box ? state.box.w * z : 4,
-        // M6: note / prompt bodies wrap inside the card's body box.
-        ...(state.kind && state.box
-          ? { width: state.box.w * z, maxWidth: state.box.w * z, whiteSpace: "pre-wrap" as const }
-          : {}),
-        minHeight: state.box ? state.box.h * z : undefined,
-        fontFamily: `"${s.fontFamily}", var(--kimo-font-sans)`,
-        fontSize: s.fontSize * z,
-        fontWeight: s.fontWeight,
-        fontStyle: s.italic ? "italic" : "normal",
-        letterSpacing: s.letterSpacing * z,
-        lineHeight: !lh ? "normal" : "px" in lh ? `${lh.px * z}px` : lh.multiplier,
-        textAlign: s.align,
-        color: state.color || undefined,
-      }}
+    <RichTextEditor
+      session={state.session}
+      geometry={state.geometry}
+      viewport={viewport}
+      css={state.css}
+      onCommit={onCommit}
     />
   )
 }

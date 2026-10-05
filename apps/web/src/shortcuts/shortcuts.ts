@@ -539,6 +539,29 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     combos: [{ codes: ["KeyI"], mod: true, shift: false, alt: false, label: "I" }],
   },
   {
+    // Board 30 "Rich text": while editing a text, style the selected characters (or the next
+    // typed ones at a collapsed caret). ⌘I and ⌘K also apply to the range while editing.
+    id: "bold",
+    label: "Bold (editing text)",
+    scope: "text-edit",
+    group: "agent-text",
+    combos: [{ codes: ["KeyB"], mod: true, shift: false, alt: false, label: "B" }],
+  },
+  {
+    id: "underline",
+    label: "Underline (editing text)",
+    scope: "text-edit",
+    group: "agent-text",
+    combos: [{ codes: ["KeyU"], mod: true, shift: false, alt: false, label: "U" }],
+  },
+  {
+    id: "strikethrough",
+    label: "Strikethrough (editing text)",
+    scope: "text-edit",
+    group: "agent-text",
+    combos: [{ codes: ["KeyX"], mod: true, shift: true, alt: false, label: "X" }],
+  },
+  {
     id: "finishText",
     label: "Finish editing text",
     scope: "text-edit",

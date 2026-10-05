@@ -190,13 +190,16 @@ function textEls(s: SceneNode, fonts: Set<string>, painter: SvgPainter): El[] {
       ["y", n(line.baseline)],
     ])
     for (const seg of line.segments) {
-      if (seg.style === p || line.segments.length === 1) tspan.children.push(text(seg.text))
-      else {
-        const own = style(seg.style).filter(
-          ([k, v]) => !style(p).some(([pk, pv]) => pk === k && pv === v),
+      // A span's own color (TextSpan `fill`) overrides the text's paint for that segment.
+      const own: [string, string][] = seg.color ? [["fill", seg.color.css]] : []
+      if (seg.style !== p && line.segments.length > 1)
+        own.push(
+          ...style(seg.style).filter(
+            ([k, v]) => !style(p).some(([pk, pv]) => pk === k && pv === v),
+          ),
         )
-        tspan.children.push(el("tspan", own, [text(seg.text)]))
-      }
+      if (own.length === 0) tspan.children.push(text(seg.text))
+      else tspan.children.push(el("tspan", own, [text(seg.text)]))
     }
     out.children.push(tspan)
   }

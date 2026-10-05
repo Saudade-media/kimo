@@ -80,6 +80,10 @@ The first public release: release engineering, polish, the new mark and the form
 - The Missing fonts dialog explains when No third-party fetch (or Google Fonts off) blocks
   Google, with Open settings.
 - The Code tab follows the Export dialog's Tailwind theme and Map variables choices.
+- Rich text: style part of a text box while editing (family, weight, size, color, italic,
+  underline, strikethrough, line height, letter spacing, link); ⌘B / ⌘I / ⌘U / ⇧⌘X, ⌘K for a
+  link; the Text and Fill sections show "Mixed" for a range (board 30).
+- Launch loader: the animated mark shows on first paint, before the app's code loads (board 29).
 
 ### Changed
 
@@ -92,6 +96,10 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Fixed
 
+- Editing a text box keeps its width and wrapping (the editor used to reflow it to one line).
+- Desktop launch no longer waits 10 s for the document host (a ping sent before the host
+  listened was lost); files opened at launch are host-backed again.
+- The desktop editor window loads in dev (the MCP installer's Node imports are split out).
 - Per-corner radii render; bound per-side stroke widths and padding entries resolve in the
   renderer, the exporters and the panel.
 - The agent's approval card names the layers it touches ("in Pricing") instead of their ids.
@@ -124,6 +132,7 @@ The first public release: release engineering, polish, the new mark and the form
 - Font manifest entries are no longer linted `ASSET_UNUSED` (they are used by family); §12 rule 3
   defines the `<Family>-<Style>.<ext>` manifest name readers use for WOFF2 fonts. No schema
   change.
+- Text spans may carry their own `fill` (a color or a color binding) under `text/runs` (§8.1).
 
 ## [0.7.0] - 2026-10-04 — M7: Export
 

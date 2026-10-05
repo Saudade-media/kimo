@@ -42,6 +42,7 @@ import { ImageCropSection } from "./sections/ImageCropSection"
 import { AutoLayoutSection, LayerSection, PositionSection } from "./sections/LayoutSections"
 import { FillSection, StrokeSection } from "./sections/PaintSections"
 import { PolygonSection } from "./sections/PolygonSection"
+import { RichTextScope } from "./sections/RichTextScope"
 import { TextSection } from "./sections/TextSection"
 import type { FileSession } from "./session"
 
@@ -377,14 +378,22 @@ function DesignTab({
           <PositionSection sel={sel} />
           {/* Board 20 (YjE2h): Text after Position (Resizing drives the W/H modes there); auto
               layout is hidden for text nodes. */}
-          {allText && <TextSection sel={sel} fonts={fonts} />}
+          {allText && (
+            // Board 30: while editing (or for a text with runs) the section acts on ranges.
+            <RichTextScope sel={sel}>
+              {(view, editing) => <TextSection sel={view} fonts={fonts} editing={editing} />}
+            </RichTextScope>
+          )}
           {!allText && <AutoLayoutSection sel={sel} />}
           {all(new Set(["icon"])) && <IconSection sel={sel} />}
           {/* Board 27 §5 (b): Polygon & Star share one section. */}
           {all(new Set(["polygon"])) && <PolygonSection sel={sel} />}
-          {(all(HAS_FILL) ||
-            all(new Set(["icon"])) ||
-            (instance && all(new Set(["instance"])))) && <FillSection sel={sel} />}
+          {(all(HAS_FILL) || all(new Set(["icon"])) || (instance && all(new Set(["instance"])))) &&
+            (allText ? (
+              <RichTextScope sel={sel}>{(view) => <FillSection sel={view} />}</RichTextScope>
+            ) : (
+              <FillSection sel={sel} />
+            ))}
           {all(HAS_STROKE) && <StrokeSection sel={sel} />}
           <EffectsSection sel={sel} />
           {single && !themeFirst && (first.node.type === "frame" || m3kind === "instance") && (

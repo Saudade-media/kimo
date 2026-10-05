@@ -7,7 +7,7 @@
  * are honored.
  */
 import type { LayoutResult, Matrix, ResolvedTextStyle, TextMeasurer } from "@kimo/layout"
-import type { IRNode, IRTextStyle } from "../ir/types"
+import type { IRColor, IRNode, IRTextStyle } from "../ir/types"
 
 export interface SceneNode {
   node: IRNode
@@ -25,6 +25,8 @@ export interface SceneNode {
 export interface TextSegment {
   text: string
   style: IRTextStyle
+  /** The run's own color (TextSpan `fill`); absent = the node's text fill. */
+  color?: IRColor
 }
 
 export interface TextLine {
@@ -197,9 +199,14 @@ export function textLines(
     for (let k = a; k < b; k++) {
       const ch = chars[k] as { c: string; run: number }
       const last = segs[segs.length - 1]
-      const runStyle = (t.runs[ch.run] as { style: IRTextStyle }).style
-      if (last && last.style === runStyle) last.text += ch.c
-      else segs.push({ text: ch.c, style: runStyle })
+      const run = t.runs[ch.run] as { style: IRTextStyle; color?: IRColor }
+      if (last && last.style === run.style && last.color === run.color) last.text += ch.c
+      else
+        segs.push(
+          run.color
+            ? { text: ch.c, style: run.style, color: run.color }
+            : { text: ch.c, style: run.style },
+        )
     }
     const text = full.slice(a, b).replace(/\s+$/, "")
     const lw = text ? measure(text).w : 0

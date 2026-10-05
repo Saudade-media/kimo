@@ -479,20 +479,38 @@ button {
 }
 
 /* Inline text editor: transparent, sized to the content, drawn over the hidden canvas text */
-.canvas-host__text-editor {
+/* Board 30: the inline text editor lays out in world units and scales by the zoom (wrapping is
+   the same at every zoom); the outline width is divided by the zoom in the inline style. */
+.canvas-host__text-edit {
   position: absolute;
+  box-sizing: content-box;
+  display: flex;
+  flex-direction: column;
+  transform-origin: 0 0;
+}
+
+.canvas-host__text-editor {
   box-sizing: content-box;
   margin: 0;
   padding: 0;
   border: 0;
-  outline: 1.5px solid var(--kimo-selection);
+  outline: none;
   background: transparent;
-  resize: none;
-  overflow: hidden;
-  white-space: pre;
-  field-sizing: content;
+  min-height: 1lh;
   user-select: text;
   -webkit-user-select: text;
+  cursor: text;
+}
+
+/* Board 30 "Range highlight": $selection-soft behind the selected glyphs, focused (native
+   selection) or while the panel has focus (CSS highlight). */
+.canvas-host__text-editor ::selection,
+.canvas-host__text-editor::selection {
+  background-color: var(--kimo-selection-soft);
+}
+
+.canvas-host__text-editor::highlight(kimo-text-selection) {
+  background-color: var(--kimo-selection-soft);
 }
 
 .canvas-host__error {

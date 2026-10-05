@@ -9,6 +9,7 @@
  */
 import {
   declaredProps,
+  defaultTextFill,
   isLocated,
   isRef,
   jsonEqual,
@@ -35,6 +36,7 @@ import {
   type ResolveHeader,
   type Resolver,
   resolveText,
+  resolveTextStyle,
   TEXT_STYLE_DEFAULTS,
 } from "@kimo/layout"
 import {
@@ -167,6 +169,10 @@ import {
   starHandles,
   toggleAnchorKind,
 } from "./path-tools"
+import { cssColor, runCss } from "./rich-text/css"
+import { type Attrs, runsOf, virtualNode } from "./rich-text/model"
+import type { RichEditGeometry, RunCss } from "./rich-text/RichTextEditor"
+import { publishTextSession, RichTextSession } from "./rich-text/session"
 import { enterTarget, pickTarget } from "./selection"
 import { candidatesIn, fmtUnits, snap, snapPoint } from "./snapping"
 import type { CanvasToolStore } from "./tool-state"
@@ -255,6 +261,12 @@ export interface TextEditState {
   parent: string | null
   /** M6: editing a note / prompt body (wraps at `box.w`; absent = a text node). */
   kind?: "note" | "prompt"
+  /** Board 30: the live rich-text edit (runs, selection, local undo). */
+  session: RichTextSession
+  /** Board 30: where and how the overlay lays out (growth, alignment). */
+  geometry: RichEditGeometry
+  /** Board 30: a run's attributes as CSS (bindings resolved like the renderer's). */
+  css: (attrs: Attrs) => RunCss
 }
 
 /** Text-editable node types: text, and the bodies of notes and prompts (M6). */
@@ -891,6 +903,7 @@ export class CanvasController {
       }
     }
     if (this.editing?.id && !this.src.getNode(this.editing.id)) this.cancelText()
+    else if (this.editing?.id) this.refreshTextEdit()
     this.syncPathEdit()
     this.updateOverlay()
   }
@@ -913,6 +926,9 @@ export class CanvasController {
       else if (this.drag === null && this.starHandleWorld()) this.updateOverlay()
     }
     if (s.selection !== prev.selection) {
+      // Board 30: selecting something else (layers panel, ⌘A outside) commits the text edit.
+      const ed = this.editing?.id
+      if (ed && (s.selection.length !== 1 || s.selection[0] !== ed)) this.commitText(null)
       // Board 27: selecting something else commits the crop.
       const cid = this.cropMode.nodeId
       if (cid && (s.selection.length !== 1 || s.selection[0] !== cid)) this.cropMode.apply()
@@ -4449,6 +4465,14 @@ export class CanvasController {
       // M6: a note / prompt edits its body box (board 22 afq5v `utO8L`, poE5B `ITEfa`).
       const card = n.type === "note" || n.type === "prompt" ? n.type : null
       const body = card ? agentNodeBodyBox(card, l.local.w, l.local.h) : null
+      const color =
+        card === "note"
+          ? "var(--kimo-note-text, #3D3205)"
+          : card === "prompt"
+            ? "var(--kimo-text-primary, #0A0A0A)"
+            : (cssColor(fill) ?? "#000000")
+      const runs = runsOf(n, input.runs.map((r) => r.text).join(""))
+      const session = new RichTextSession(id, n, runs, !card)
       state = {
         id,
         at: body
@@ -4459,37 +4483,43 @@ export class CanvasController {
           : l.world,
         value: input.runs.map((r) => r.text).join(""),
         style: input.style,
-        color:
-          card === "note"
-            ? "var(--kimo-note-text, #3D3205)"
-            : card === "prompt"
-              ? "var(--kimo-text-primary, #0A0A0A)"
-              : typeof fill === "string"
-                ? fill
-                : "#000000",
+        color,
         parent: typeof n.parent === "string" ? n.parent : null,
+        session,
+        geometry: this.editGeometry(n, input.style, body, l.world),
+        css: this.runCssFor(id, n, card ? color : null),
       }
-      if (card) state.kind = card
+      if (card) {
+        state.kind = card
+        state.geometry.kind = card
+      }
       this.editingNode = { id, data: { ...n, content: "" } }
       this.renderer.invalidate([id])
       this.ui.getState().select([id])
     } else {
       if (!at) return
+      const node = { type: "text", style: { ...NEW_TEXT_STYLE } } as unknown as LayoutNodeData
+      const style = {
+        ...TEXT_STYLE_DEFAULTS,
+        fontFamily: NEW_TEXT_STYLE.font,
+        fontSize: NEW_TEXT_STYLE.size,
+      }
+      const session = new RichTextSession(null, node, runsOf(node, ""), true)
       state = {
         id: null,
         at,
         box: null,
         value: "",
-        style: {
-          ...TEXT_STYLE_DEFAULTS,
-          fontFamily: NEW_TEXT_STYLE.font,
-          fontSize: NEW_TEXT_STYLE.size,
-        },
+        style,
         color: "",
         parent,
+        session,
+        geometry: { at, box: null, grow: "auto", valign: "top", align: style.align },
+        css: this.runCssFor(null, node, null),
       }
       this.ui.getState().clearSelection()
     }
+    publishTextSession(this.ui, state.session)
     this.editing = state
     this.updateOverlay()
     this.opts.onTextEdit?.(state)
@@ -4499,26 +4529,145 @@ export class CanvasController {
   commitText(value: string | null): void {
     const s = this.editing
     if (!s) return
-    const text = value ?? this.lastText ?? s.value
+    const legacy = value ?? this.lastText
     this.closeText()
     const layout = this.layoutResult
+    const what = s.kind ?? "text"
     if (s.id) {
-      if (!this.src.getNode(s.id)) return
-      const what = s.kind ?? "text"
-      if (!text.trim()) this.apply([{ op: "delete", id: s.id }], `Delete ${what}`)
-      else if (text !== s.value)
-        this.apply([{ op: "update", id: s.id, set: { content: text } }], `Edit ${what}`)
+      const cur = this.src.getNode(s.id) as LayoutNodeData | undefined
+      if (!cur) return
+      if (legacy !== null) {
+        // A plain value from a caller (tests, legacy overlay): replaces the text as typed.
+        if (!legacy.trim()) this.apply([{ op: "delete", id: s.id }], `Delete ${what}`)
+        else if (legacy !== s.value)
+          this.apply([{ op: "update", id: s.id, set: { content: legacy } }], `Edit ${what}`)
+        return
+      }
+      if (!s.session.text.trim()) {
+        this.apply([{ op: "delete", id: s.id }], `Delete ${what}`)
+        return
+      }
+      if (!s.session.rich) {
+        if (s.session.text !== s.value)
+          this.apply([{ op: "update", id: s.id, set: { content: s.session.text } }], `Edit ${what}`)
+        return
+      }
+      const p = s.session.result(cur)
+      const set: Record<string, unknown> = {}
+      const unset: string[] = []
+      if (!jsonEqual(p.content as never, cur.content as never)) set.content = p.content
+      if (!jsonEqual((p.style ?? null) as never, (cur.style ?? null) as never)) {
+        if (p.style) set.style = p.style
+        else unset.push("style")
+      }
+      if (!jsonEqual((p.fill ?? null) as never, (cur.fill ?? null) as never)) {
+        if (p.fill !== undefined) set.fill = p.fill
+        else unset.push("fill")
+      }
+      if (!Object.keys(set).length && !unset.length) return
+      const op = {
+        op: "update",
+        id: s.id,
+        ...(Object.keys(set).length ? { set } : {}),
+        ...(unset.length ? { unset } : {}),
+      } as Op
+      this.apply([...this.runsFeatureOps(p.runs), op], `Edit ${what}`)
     } else {
+      const text = legacy ?? s.session.text
       if (text.trim() && layout) {
         const id = generateId()
         const op = createTextOp(this.store, layout, s.parent, s.at, text, id)
+        const extra: Op[] = []
+        if (legacy === null) {
+          const p = s.session.result()
+          const node = (op as unknown as { node: Record<string, unknown> }).node
+          node.content = p.content
+          if (p.style) node.style = p.style
+          else delete node.style
+          if (p.fill !== undefined) node.fill = p.fill
+          extra.push(...this.runsFeatureOps(p.runs))
+        }
         const tf = this.textFlow
         this.textFlow = null
         const ops = tf && tf.parent === s.parent ? this.flowOps([op], tf, false) : [op]
-        if (this.apply(ops, "Add text")) this.ui.getState().select([id])
+        if (this.apply([...extra, ...ops], "Add text")) this.ui.getState().select([id])
       }
       // A new text (typed or abandoned) ends the text tool, unless another tool was picked.
       if (this.ui.getState().tool === "text") this.ui.getState().setTool("select")
+    }
+  }
+
+  /**
+   * Board 30: the edited node changed underneath the overlay (Resizing, align, a remote edit):
+   * re-publish its box and paragraph style; the typed runs stay the overlay's.
+   */
+  private refreshTextEdit(): void {
+    const e = this.editing
+    if (!e?.id) return
+    const n = this.src.getNode(e.id) as LayoutNodeData | undefined
+    const l = this.layoutResult?.nodes.get(e.id)
+    if (!n || !l || e.kind) return
+    const style = resolveText(e.id, n, this.resolver).style
+    const geometry = this.editGeometry(n, style, null, l.world)
+    if (jsonEqual(geometry as never, e.geometry as never)) return
+    this.editingNode = { id: e.id, data: { ...n, content: "" } }
+    this.editing = { ...e, geometry, at: geometry.at, box: geometry.box, style }
+    this.opts.onTextEdit?.(this.editing)
+  }
+
+  /** Spec §13: span content and its feature go in the same edit. */
+  private runsFeatureOps(runs: boolean): Op[] {
+    if (!runs) return []
+    const have = (this.store.toHeader().features ?? []) as readonly string[]
+    if (have.includes("text/runs")) return []
+    return [{ op: "setHeader", set: { features: [...have, "text/runs"].sort() } } as Op]
+  }
+
+  /** Board 30: the overlay's layout for a text node (growth, alignment, the laid-out box). */
+  private editGeometry(
+    n: LayoutNodeData,
+    style: ResolvedTextStyle,
+    body: Rect | null,
+    world: Rect,
+  ): RichEditGeometry {
+    const grow = n.grow === "fixed-width" || n.grow === "fixed" ? n.grow : "auto"
+    return {
+      at: body ? { x: world.x + body.x, y: world.y + body.y } : { x: world.x, y: world.y },
+      box: body ? { x: world.x + body.x, y: world.y + body.y, w: body.w, h: body.h } : world,
+      grow,
+      valign: style.valign,
+      align: style.align,
+    }
+  }
+
+  /** Board 30: CSS of a run (its attributes over the node, resolved like the renderer). */
+  private runCssFor(
+    id: string | null,
+    node: LayoutNodeData,
+    fixedColor: string | null,
+  ): (attrs: Attrs) => RunCss {
+    const key = id ?? "__new_text__"
+    const base = agentNodeChrome(node.type)?.text ?? TEXT_STYLE_DEFAULTS
+    const deep = (v: unknown): unknown => {
+      if (isRef(v)) return this.resolver.value(key, v)
+      if (Array.isArray(v)) return v.map(deep)
+      if (typeof v === "object" && v !== null) {
+        const o = v as Record<string, unknown>
+        const out: Record<string, unknown> = { ...o }
+        if (o.color !== undefined) out.color = deep(o.color)
+        if (Array.isArray(o.stops)) out.stops = o.stops.map(deep)
+        return out
+      }
+      return v
+    }
+    return (attrs) => {
+      const v = virtualNode(node, attrs)
+      const style = resolveTextStyle(key, v.style, this.resolver, base)
+      const fill =
+        attrs.fill !== undefined
+          ? attrs.fill
+          : defaultTextFill({ ...(this.header as object), nodes: {} } as never)
+      return runCss(style, fixedColor ?? cssColor(deep(fill)) ?? "#000000")
     }
   }
 
@@ -4535,6 +4684,7 @@ export class CanvasController {
 
   private closeText(): void {
     const id = this.editingNode?.id
+    publishTextSession(this.ui, null)
     this.editing = null
     this.editingNode = null
     this.lastText = null

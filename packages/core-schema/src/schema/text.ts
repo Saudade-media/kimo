@@ -2,7 +2,7 @@
  * Text styling and rich-text runs (teardown 10.3: `TextStyle`, `TextSpan`).
  */
 import Type, { type Static } from "typebox"
-import { Num, RecordOf, Ref, Strict, StringEnum, StringOrRef } from "./primitives"
+import { Color, Num, RecordOf, Ref, Strict, StringEnum, StringOrRef } from "./primitives"
 
 const opt = Type.Optional
 
@@ -38,11 +38,15 @@ export type TextStyle = Static<typeof TextStyle>
 /** The value of a "typography" variable: a text style without a nested `typography`. */
 export const TypographyValue = Strict(textStyleProps)
 
-/** A rich-text run (feature "text/runs"). Styles apply on top of the node's `style`. */
+/**
+ * A rich-text run (feature "text/runs"). Styles apply on top of the node's `style`; `fill` (a
+ * solid color or a color binding) paints this run instead of the node's `fill`.
+ */
 export const TextSpan = Strict({
   text: Type.String(),
   style: opt(TextStyle),
   href: opt(Type.String()),
+  fill: opt(Color),
 })
 export type TextSpan = Static<typeof TextSpan>
 

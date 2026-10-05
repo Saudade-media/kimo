@@ -30,8 +30,13 @@ defines one, else black. So you rarely need to set it, and you should not set `f
 - `content` is literal. `"$49"` is just text. To bind a string variable use
   `{"$ref":"copy/cta"}`.
 - Line breaks: `\n` inside the string.
-- Mixed styles in one node (feature `text/runs`):
-  `"content":[{"text":"Save "},{"text":"40%","style":{"weight":700}}]`.
+- Mixed styles in one node (feature `text/runs`, declared for you when an op writes spans):
+  `"content":[{"text":"Save "},{"text":"40%","style":{"weight":700},"fill":"#E5484D"}]`.
+  A span's `style` applies on top of the node's `style` (font, size, weight, italic,
+  lineHeight, letterSpacing, decoration, case, features); its `fill` is a color or a color
+  binding for that span only; its `href` links that span. `align` and `valign` stay on the
+  node. Merge neighbouring spans that look the same, and write a plain string when every span
+  would be equal.
 - Typography tokens (feature `tokens/composite`): `"style":{"typography":{"$ref":"heading/l"}}`.
   Inline fields override the token.
 

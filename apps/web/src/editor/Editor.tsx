@@ -10,9 +10,10 @@
  * window's font system (Document → Local → Cache → Google, board 19).
  */
 
+import { referencedAssets } from "@kimo/core-schema"
 import { createLayoutEngine, type LayoutResult } from "@kimo/layout"
 import { KIMO_FILE_FILTER } from "@kimo/platform"
-import type { DocumentFontFace, OverlayTheme } from "@kimo/renderer"
+import type { DocumentFontFace, FontFaceKey, OverlayTheme } from "@kimo/renderer"
 import { browserIconProvider, createRenderer } from "@kimo/renderer/browser"
 import { EmptyState } from "@kimo/ui"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
@@ -35,7 +36,14 @@ import {
   pdfFontsFrom,
 } from "../export"
 import { BannerHost, FailedLoadView, MigrationDialog, ToastHost, useWebTabTitle } from "../files"
-import { createFontSystem, loadDocumentFontFaces, MissingFontsHost } from "../fonts"
+import {
+  createFontSystem,
+  type DocumentFontAsset,
+  isFontAsset,
+  loadDocumentFontFaces,
+  MissingFontsHost,
+} from "../fonts"
+import { storeFontAsset, withFontManifest } from "../fonts/store-font-asset"
 import * as assetsModule from "../lib/assets"
 import { contentHash, createAssetStore, createFolderAssetStore, manifestEntry } from "../lib/assets"
 import * as filesModule from "../lib/files"
@@ -210,13 +218,31 @@ function EditorShell({
     [doc, platform, session.id],
   )
   useEffect(() => () => assets.dispose(), [assets])
-  // Fonts (board 19): one font system per editor window, Document → Local → Cache → Google.
-  const faces = useRef<readonly DocumentFontFace[]>([])
+  // Fonts (board 19): one font system per editor window, Document → Local → Pack → Cache →
+  // Google. Board 28: a face fetched from Google is stored once in the file's assets/ (never a
+  // document edit); writes list it in the `assets` manifest (`withFontManifest`).
+  const faces = useRef<readonly DocumentFontAsset[]>([])
+  const storeFetched = useRef<(face: FontFaceKey, bytes: Uint8Array) => void>(() => {})
+  storeFetched.current = (face, bytes) => void storeFontAsset(face, bytes, assets)
+  /** The document as written: font assets the text uses join the manifest (board 28). */
+  const prepareWrite = useCallback(
+    <D extends object>(d: D): D =>
+      withFontManifest(d, faces.current, (k) => assets.entrySync(`./assets/${k}`)),
+    [assets],
+  )
+  useEffect(() => {
+    if (!doc) return
+    doc.prepareWrite = prepareWrite
+    return () => {
+      doc.prepareWrite = (d) => d
+    }
+  }, [doc, prepareWrite])
   const fonts = useMemo(
     () =>
       createFontSystem({
         platform,
         documentFaces: () => faces.current,
+        onRemoteFetched: (face, bytes) => storeFetched.current(face, bytes),
         // Board 25 §6 (d): OpenType font support reads the face the canvas renders with.
         faceBytes: (k) =>
           canvas.current?.renderer?.fonts.faceBytes?.(k.family, k.weight, k.style) ?? null,
@@ -224,6 +250,9 @@ function EditorShell({
     [platform],
   )
   useEffect(() => () => fonts.dispose(), [fonts])
+  // Fonts that resolve differently now (document fonts loaded, the offline pack downloaded):
+  // families the canvas gave up on are asked again.
+  useEffect(() => fonts.subscribe(() => canvas.current?.renderer?.retryFonts?.()), [fonts])
   const offlineFonts = useSyncExternalStore(fonts.subscribe, fonts.offline)
   useEffect(() => {
     let live = true
@@ -232,8 +261,24 @@ function EditorShell({
         | Readonly<Record<string, { mime?: string; name?: string }>>
         | undefined
       const keys = await assets.keys().catch(() => [] as string[])
-      const next = await loadDocumentFontFaces(manifest, keys, (k) => assets.bytes(k))
-      if (!live || (next.length === 0 && faces.current.length === 0)) return
+      // Faces stored this session are not in the manifest yet: their entries (name = face)
+      // come from the asset store. Without a manifest, the entries of the referenced assets
+      // are read too, so a write may add one (withFontManifest).
+      const known: Record<string, { mime?: string; name?: string }> = {}
+      for (const k of keys) {
+        const e = assets.entrySync(`./assets/${k}`)
+        if (e) known[k] = e
+      }
+      if (!manifest && keys.some((k) => isFontAsset(k)))
+        for (const r of referencedAssets(session.store.toDocument() as never))
+          await assets.info(`./assets/${r}`).catch(() => null)
+      const next = await loadDocumentFontFaces({ ...known, ...manifest }, keys, (k) =>
+        assets.bytes(k),
+      )
+      const sig = (l: readonly DocumentFontFace[]) =>
+        l.map((f) => `${f.family}/${f.weight}/${f.style}`).join("|")
+      // Unchanged faces (an image URL resolved, an image stored): no font invalidation.
+      if (!live || sig(next) === sig(faces.current)) return
       faces.current = next
       fonts.invalidate()
     }
@@ -384,7 +429,16 @@ function EditorShell({
   useEffect(() => {
     if (!debugHookEnabled()) return
     const w = window as unknown as { __kimo?: unknown }
-    w.__kimo = { session, canvas: () => canvas.current, m3, doc, platform, fonts }
+    w.__kimo = {
+      session,
+      canvas: () => canvas.current,
+      m3,
+      doc,
+      platform,
+      fonts,
+      // Board 28: the document as a save writes it (font assets join the manifest).
+      prepareWrite,
+    }
     // Source-path keyed modules for e2e scripts, which import them directly on the dev server
     // and read them from here against a production bundle.
     ;(window as unknown as { __kimoModules?: unknown }).__kimoModules = {
@@ -394,7 +448,7 @@ function EditorShell({
     return () => {
       if ((w.__kimo as { session?: unknown } | undefined)?.session === session) w.__kimo = undefined
     }
-  }, [session, m3, doc, platform, fonts])
+  }, [session, m3, doc, platform, fonts, prepareWrite])
 
   const rename = useCallback(
     (next: string) => {
@@ -405,12 +459,12 @@ function EditorShell({
   )
   const download = useCallback(
     () =>
-      void exportFile(session.store, name, assets).then((file) => {
+      void exportFile(session.store, name, assets, prepareWrite).then((file) => {
         if (file.missingAssets.length)
           console.warn(`Kimo: images not in this browser: ${file.missingAssets.join(", ")}`)
         return saveFile(file)
       }),
-    [session.store, name, assets],
+    [session.store, name, assets, prepareWrite],
   )
   const saveAs = useCallback(async () => {
     // Browser library: Save as… writes through the File System Access picker when granted,
@@ -957,6 +1011,7 @@ function EditorShell({
           fileName={doc ? doc.fileName : name}
           doc={() => session.store.toDocument()}
           apply={(ops, label) => session.store.apply(ops, { origin: "user", label })}
+          openFontSettings={() => openSettings("fonts")}
           addDocumentFont={async (f) => {
             // "Choose font file…": a document asset (spec §12) + its manifest entry.
             const key = `${await contentHash(f.bytes)}.${f.ext}`

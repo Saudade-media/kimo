@@ -251,6 +251,7 @@ export const GUIDE: Record<GuideGroup, { label: string; icon: string; pages: str
       "pen-and-paths",
       "snapping-and-measuring",
       "images-icons-svg",
+      "fonts",
       "notes-and-prompts",
       "shortcuts",
     ],

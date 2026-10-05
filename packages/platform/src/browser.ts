@@ -12,7 +12,7 @@
  * - Git, reveal, updater, deep links, traffic lights: `UNSUPPORTED` (see `capabilities`).
  */
 import type { AppliedCapabilities } from "./capabilities"
-import { PlatformError } from "./errors"
+import { PlatformError, unsupported } from "./errors"
 import { basenameOf, dirnameOf, isKimoPath } from "./links"
 import { googleFontsAllowed, type SettingKey } from "./settings"
 import { createSettingsStore } from "./settings-store"
@@ -21,6 +21,7 @@ import {
   type FileRef,
   type FileStat,
   type FontCacheEntry,
+  type FontsApi,
   type KimoPlatform,
   type LeaseHolder,
   type LocalFontFamily,
@@ -730,6 +731,7 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
         },
         clear: () => idbClear("fonts"),
       },
+      pack: cacheStoragePack(),
       async fetchRemote(url) {
         if (!googleFontsAllowed(settings.all()))
           throw new PlatformError("BLOCKED", "Google Fonts are off (No third-party fetch)")
@@ -803,6 +805,90 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
     },
   }
   return platform
+}
+
+/** Cache Storage name of the offline font pack (board 28). */
+export const FONT_PACK_CACHE = "kimo-font-pack"
+
+/**
+ * The offline font pack in Cache Storage (`kimo-font-pack`): one response per face under
+ * `/__kimo/font-pack/<key>` plus `/__kimo/font-pack/index.json` (key → entry). Cache Storage
+ * survives reloads and is evicted only with the site's data. Unavailable (insecure context,
+ * tests): reads are empty and `put` rejects with UNSUPPORTED.
+ */
+function cacheStoragePack(): FontsApi["pack"] {
+  const base = () => new URL("/__kimo/font-pack/", location.origin)
+  const open = async () => {
+    if (typeof caches === "undefined") return null
+    try {
+      return await caches.open(FONT_PACK_CACHE)
+    } catch {
+      return null
+    }
+  }
+  const indexUrl = () => new URL("index.json", base()).href
+  const readIndex = async (c: Cache): Promise<Record<string, FontCacheEntry>> => {
+    try {
+      const r = await c.match(indexUrl())
+      return r ? ((await r.json()) as Record<string, FontCacheEntry>) : {}
+    } catch {
+      return {}
+    }
+  }
+  let chain: Promise<unknown> = Promise.resolve()
+  const serial = <T>(fn: () => Promise<T>): Promise<T> => {
+    const next = chain.then(fn, fn)
+    chain = next.catch(() => {})
+    return next
+  }
+  const pack: FontsApi["pack"] = {
+    async get(key) {
+      if (!/^[0-9a-f]{16}$/.test(key)) return null
+      const c = await open()
+      const r = c ? await c.match(new URL(key, base()).href) : undefined
+      if (!r) return null
+      const bytes = new Uint8Array(await r.arrayBuffer())
+      return (await sha256Hex(bytes)).slice(0, 16) === key ? bytes : null
+    },
+    put: (meta, bytes) =>
+      serial(async () => {
+        const c = await open()
+        if (!c) unsupported("The offline font pack", "this browser")
+        const key = (await sha256Hex(bytes)).slice(0, 16)
+        const entry: FontCacheEntry = {
+          ...meta,
+          key,
+          bytes: bytes.byteLength,
+          cachedAt: Date.now(),
+        }
+        await (c as Cache).put(
+          new URL(key, base()).href,
+          new Response(bytes as Uint8Array<ArrayBuffer>, {
+            headers: { "content-type": "application/octet-stream" },
+          }),
+        )
+        const idx = await readIndex(c as Cache)
+        idx[key] = entry
+        await (c as Cache).put(
+          indexUrl(),
+          new Response(JSON.stringify(idx), { headers: { "content-type": "application/json" } }),
+        )
+        return entry
+      }),
+    async list() {
+      const c = await open()
+      return c ? Object.values(await readIndex(c)) : []
+    },
+    async stats() {
+      const all = await pack.list()
+      return { count: all.length, bytes: all.reduce((s, e) => s + e.bytes, 0), dir: null }
+    },
+    clear: () =>
+      serial(async () => {
+        if (typeof caches !== "undefined") await caches.delete(FONT_PACK_CACHE).catch(() => false)
+      }),
+  }
+  return pack
 }
 
 function styleWeight(style: string): number {

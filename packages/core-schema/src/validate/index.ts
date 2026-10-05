@@ -1411,7 +1411,10 @@ class Validation {
   private assets(): void {
     const manifest = (this.doc as unknown as Obj).assets
     if (!this.lints || this.scope || !isObject(manifest)) return
-    for (const file of Object.keys(manifest)) {
+    for (const [file, entry] of Object.entries(manifest)) {
+      // Spec §12 rule 3: font files are used by family name, never by path.
+      const mime = isObject(entry) && typeof entry.mime === "string" ? entry.mime : ""
+      if (/^font\//i.test(mime) || /\.(ttf|otf|woff2?)$/i.test(file)) continue
       if (!this.usedAssets.has(file))
         this.sink.add("ASSET_UNUSED", ptr("assets", file), `Asset "${file}" is not referenced`)
     }

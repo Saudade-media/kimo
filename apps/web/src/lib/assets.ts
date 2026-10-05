@@ -42,6 +42,14 @@ export function mimeForExtension(ext: string): string | null {
   return ext.toLowerCase() === "jpeg" ? "image/jpeg" : null
 }
 
+/** Font files stored as document assets (board 28: Google faces stored on first use). */
+const FONT_EXT_MIME: Readonly<Record<string, string>> = {
+  ttf: "font/ttf",
+  otf: "font/otf",
+  woff: "font/woff",
+  woff2: "font/woff2",
+}
+
 /** File picker `accept` for image intake (the formats {@link sniffImage} recognizes). */
 export const IMAGE_ACCEPT = Object.keys(EXT).join(",")
 
@@ -178,7 +186,11 @@ export function createFolderAssetStore(platform: KimoPlatform, kimoRef: FileRef)
   const dir = `${dirnameOf(kimoRef).replace(/\/$/, "")}/assets`
   const mimeOf = (key: string) => {
     const ext = key.slice(key.lastIndexOf(".") + 1).toLowerCase()
-    return mimeForExtension(ext) ?? (ext === "svg" ? "image/svg+xml" : "application/octet-stream")
+    return (
+      mimeForExtension(ext) ??
+      FONT_EXT_MIME[ext] ??
+      (ext === "svg" ? "image/svg+xml" : "application/octet-stream")
+    )
   }
   return assetStoreOver({
     async get(key) {
@@ -319,7 +331,9 @@ function assetStoreOver(rows: RowBackend): AssetStore {
       const size =
         entry.width !== undefined && entry.height !== undefined
           ? { width: entry.width, height: entry.height }
-          : await imageSize(data)
+          : mime.startsWith("image/")
+            ? await imageSize(data)
+            : null
       return store({
         key,
         src: `./assets/${key}`,

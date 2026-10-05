@@ -1641,6 +1641,14 @@ export class CanvasKitRenderer implements Renderer {
   // --- export -------------------------------------------------------------------------------
 
   /** Loads every font face the subtree's text uses (export, MCP renders). */
+  retryFonts(): void {
+    if (!this.fontProvider) return
+    this.fontProvider.retryMissing()
+    this.textEngine?.invalidate()
+    this.dropAll(false)
+    this.requestFrame()
+  }
+
   async ensureFonts(nodeId: string): Promise<void> {
     const { fonts } = this.need()
     const ctx = this.context()

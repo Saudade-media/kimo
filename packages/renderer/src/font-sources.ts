@@ -13,6 +13,7 @@
  * lists the families/weights a document uses and {@link detectMissingFonts} returns those no
  * source can provide (never fetching font files to decide).
  */
+import { fontFamilyKey } from "./font-info"
 import { BUNDLED_FAMILIES, type NetworkFontSource, nearestFace, parseFontFaceCss } from "./fonts"
 import type { FontFaceKey, FontSource, FontStyle } from "./types"
 
@@ -34,7 +35,7 @@ export interface FontHostCacheEntry {
   family: string
   weight: number
   italic: boolean
-  source: "google" | "document" | "file"
+  source: "google" | "document" | "file" | "pack"
 }
 
 export interface FontHost {
@@ -54,6 +55,14 @@ export interface FontHost {
     list(): Promise<readonly FontHostCacheEntry[]>
   }
   fetchRemote(url: string): Promise<Uint8Array>
+  /**
+   * The optional offline font pack (board 28 "Offline font pack"): a curated set of Google
+   * faces kept on this device, read like the cache. Absent on hosts without one.
+   */
+  readonly pack?: {
+    get(key: string): Promise<Uint8Array | null>
+    list(): Promise<readonly FontHostCacheEntry[]>
+  }
 }
 
 /** When network font fetches are allowed. Read on every fetch, so settings apply live. */
@@ -101,7 +110,7 @@ export interface PlatformFontSourcesOptions {
 }
 
 export interface PlatformFontSources {
-  /** Ordered sources for `RendererInitOptions.fontSources`: document, local, cache, google. */
+  /** Ordered sources for `RendererInitOptions.fontSources`: document, local, pack, cache, google. */
   readonly sources: readonly NetworkFontSource[]
   /** Best available source for a face without fetching font files. */
   availability(key: FontFaceKey): Promise<FontAvailability>
@@ -120,11 +129,12 @@ export function googleCssUrl(family: string): string {
   return `https://fonts.googleapis.com/css2?family=${fam}:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900`
 }
 
-/** Builds the four sources and the availability probe over a platform font host. */
+/** Builds the sources and the availability probe over a platform font host. */
 export function createPlatformFontSources(opts: PlatformFontSourcesOptions): PlatformFontSources {
   const { host, policy } = opts
   let local: Promise<readonly FontHostLocalFamily[]> | null = null
   let cache: Promise<readonly FontHostCacheEntry[]> | null = null
+  let pack: Promise<readonly FontHostCacheEntry[]> | null = null
   const cssFaces = new Map<string, Promise<ReturnType<typeof parseFontFaceCss> | null>>()
   const googleKnown = new Set<string>()
 
@@ -132,10 +142,16 @@ export function createPlatformFontSources(opts: PlatformFontSourcesOptions): Pla
     (local ??= host.listLocal().catch(() => [] as readonly FontHostLocalFamily[]))
   const cacheEntries = () =>
     (cache ??= host.cache.list().catch(() => [] as readonly FontHostCacheEntry[]))
+  const packEntries = () =>
+    (pack ??= (host.pack?.list() ?? Promise.resolve([])).catch(
+      () => [] as readonly FontHostCacheEntry[],
+    ))
   const networkAllowed = () => policy.googleAllowed() && policy.online()
 
   const docFace = (key: FontFaceKey) => {
-    const faces = (opts.documentFaces?.() ?? []).filter((f) => lc(f.family) === lc(key.family))
+    // Spaces and case are ignored: a WOFF2 asset's family comes from its manifest name.
+    const k = fontFamilyKey(key.family)
+    const faces = (opts.documentFaces?.() ?? []).filter((f) => fontFamilyKey(f.family) === k)
     return nearestFace(faces, key.weight, key.style)
   }
   const localFace = async (key: FontFaceKey) => {
@@ -146,6 +162,12 @@ export function createPlatformFontSources(opts: PlatformFontSourcesOptions): Pla
   }
   const cachedFace = async (key: FontFaceKey) => {
     const faces = (await cacheEntries())
+      .filter((e) => lc(e.family) === lc(key.family))
+      .map((e) => ({ ...e, style: styleOf(e.italic) }))
+    return nearestFace(faces, key.weight, key.style)
+  }
+  const packFace = async (key: FontFaceKey) => {
+    const faces = (await packEntries())
       .filter((e) => lc(e.family) === lc(key.family))
       .map((e) => ({ ...e, style: styleOf(e.italic) }))
     return nearestFace(faces, key.weight, key.style)
@@ -187,6 +209,15 @@ export function createPlatformFontSources(opts: PlatformFontSourcesOptions): Pla
       const f = await localFace(key)
       if (!f) return null
       return { bytes: await host.loadLocal(f.postscriptName), weight: f.weight, style: f.style }
+    },
+  }
+  const packSource: NetworkFontSource = {
+    name: "pack",
+    async fetch(key) {
+      const f = await packFace(key)
+      if (!f) return null
+      const bytes = await host.pack?.get(f.key)
+      return bytes ? { bytes, weight: f.weight, style: f.style } : null
     },
   }
   const cacheSource: NetworkFontSource = {
@@ -233,23 +264,25 @@ export function createPlatformFontSources(opts: PlatformFontSourcesOptions): Pla
   }
 
   return {
-    sources: [documentSource, localSource, cacheSource, googleSource],
+    sources: [documentSource, localSource, packSource, cacheSource, googleSource],
     async availability(key) {
       if (BUNDLED_FAMILIES.has(lc(key.family))) return "bundled"
       if (docFace(key)) return "document"
       if (await localFace(key)) return "local"
-      if (await cachedFace(key)) return "cached"
+      if ((await packFace(key)) || (await cachedFace(key))) return "cached"
       if (networkAllowed()) return (await googleFaces(key.family)) ? "google" : "missing"
       return (await this.knownGoogleFamilies()).has(lc(key.family)) ? "offline" : "missing"
     },
     async knownGoogleFamilies() {
       const out = new Set(googleKnown)
       for (const e of await cacheEntries()) if (e.source === "google") out.add(lc(e.family))
+      for (const e of await packEntries()) out.add(lc(e.family))
       return out
     },
     invalidate() {
       local = null
       cache = null
+      pack = null
       cssFaces.clear()
     },
   }

@@ -32,6 +32,8 @@ pub struct AppState {
     pub recovery: RecoveryStore,
     pub fonts: LocalFonts,
     pub font_cache: FontCache,
+    /// Offline font pack (board 28): `<app data dir>/font-pack`, kept apart from the cache.
+    pub font_pack: FontCache,
     pub updater: UpdaterState,
     /// `<window label>:<watchId>` → watcher (fs, lease and git watches).
     pub watches: Mutex<HashMap<String, Watch>>,
@@ -66,6 +68,7 @@ impl AppState {
             },
             fonts: LocalFonts::default(),
             font_cache: FontCache::new(kimo_home.join("fonts")),
+            font_pack: FontCache::new(data_dir.join("font-pack")),
             updater: UpdaterState::default(),
             watches: Mutex::new(HashMap::new()),
             launch: Mutex::new(LaunchQueue::default()),

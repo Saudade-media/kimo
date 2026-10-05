@@ -198,3 +198,92 @@ export function fsEmbeddable(fsType: number): boolean {
   if (usage & 0x8 || usage & 0x4) return true
   return false
 }
+
+// --- Font asset names (spec §12 rule 3) -------------------------------------------------------
+
+const WEIGHT_NAMES: readonly [number, string][] = [
+  [100, "Thin"],
+  [200, "ExtraLight"],
+  [300, "Light"],
+  [400, "Regular"],
+  [500, "Medium"],
+  [600, "SemiBold"],
+  [700, "Bold"],
+  [800, "ExtraBold"],
+  [900, "Black"],
+]
+
+const WEIGHT_WORDS: readonly [RegExp, number][] = [
+  [/thin|hairline/i, 100],
+  [/extra-?light|ultra-?light/i, 200],
+  [/light/i, 300],
+  [/medium/i, 500],
+  [/semi-?bold|demi-?bold/i, 600],
+  [/extra-?bold|ultra-?bold/i, 800],
+  [/black|heavy/i, 900],
+  [/bold/i, 700],
+]
+
+/**
+ * The manifest `name` Kimo writes for a font it stores in `assets/` (a fetched Google face):
+ * `<Family>-<Style>.<ext>` with the family verbatim ("Space Grotesk-SemiBold.woff2",
+ * "Lora-BoldItalic.ttf"). WOFF2 cannot be inspected without Brotli, so readers take the face
+ * from this name ({@link parseFontFileName}).
+ */
+export function fontAssetName(
+  family: string,
+  weight: number,
+  style: "normal" | "italic",
+  ext: string,
+): string {
+  let word = "Regular"
+  let best = Number.POSITIVE_INFINITY
+  for (const [w, name] of WEIGHT_NAMES)
+    if (Math.abs(w - weight) < best) {
+      best = Math.abs(w - weight)
+      word = name
+    }
+  const styleWord = style === "italic" ? (word === "Regular" ? "Italic" : `${word}Italic`) : word
+  return `${family.replace(/[\\/]/g, " ").trim()}-${styleWord}.${ext}`
+}
+
+/**
+ * Family / weight / style from a font file name (`Fraunces-SemiBoldItalic.woff2`,
+ * `Space Grotesk-Bold.woff2`). A family without spaces is split on case changes
+ * (`SpaceGrotesk` → `Space Grotesk`); compare families with {@link fontFamilyKey}, which
+ * ignores spaces and case, so `McLaren` still matches.
+ */
+export function parseFontFileName(
+  name: string,
+): { family: string; weight: number; style: "normal" | "italic" } | null {
+  const base = name.replace(/^.*[\\/]/, "").replace(/\.[a-z0-9]+$/i, "")
+  if (!base) return null
+  const [famRaw, styleRaw = ""] = base.split(/[-_](?=[^-_]*$)/)
+  const raw = (styleRaw ? famRaw : base) ?? ""
+  const family = (/\s/.test(raw) ? raw : raw.replace(/([a-z])([A-Z])/g, "$1 $2"))
+    .replace(/_+/g, " ")
+    .trim()
+  if (!family) return null
+  const weight = WEIGHT_WORDS.find(([re]) => re.test(styleRaw))?.[1] ?? 400
+  const style = /italic|oblique/i.test(styleRaw) ? "italic" : "normal"
+  return { family, weight, style }
+}
+
+/** Family comparison key: lowercase, no whitespace ("Space Grotesk" ≡ "SpaceGrotesk"). */
+export function fontFamilyKey(family: string): string {
+  return family.toLowerCase().replace(/\s+/g, "")
+}
+
+/** File extension for font bytes (`woff2`, `woff`, `otf`, `ttf`), from the magic number. */
+export function fontExtension(bytes: Uint8Array): "woff2" | "woff" | "otf" | "ttf" | null {
+  const f = fontFormat(bytes)
+  return f === "woff2"
+    ? "woff2"
+    : f === "woff"
+      ? "woff"
+      : f === "opentype"
+        ? "otf"
+        : f
+          ? "ttf"
+          : null
+}

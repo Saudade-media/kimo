@@ -2,7 +2,7 @@
  * The app's font system (board 19 "Fonts"): one {@link FontSystem} per editor window, built on
  * `platform.fonts` + `platform.settings`. It feeds the canvas renderer (`fontSources`,
  * `offlineFonts`), the Missing fonts dialog and the font picker, in the resolution order
- * **Document → Local → Cache → Google** (`@kimo/renderer` `createPlatformFontSources`).
+ * **Document → Local → Pack → Cache → Google** (`@kimo/renderer` `createPlatformFontSources`).
  *
  * Privacy (teardown 9.2, ADR 0012): Google Fonts are fetched only while
  * `googleFontsAllowed(settings)` and the browser is online; `fetchRemote` itself rejects with
@@ -20,11 +20,13 @@ import {
   type FontAvailability,
   type FontFaceKey,
   type FontUsage,
+  fontFamilyKey,
   type MissingFont,
   type NetworkFontSource,
   type PlatformFontSources,
 } from "@kimo/renderer"
 import { fontFeatureTags } from "./font-features"
+import { fontPackController } from "./font-pack"
 
 /** Settings that change what fonts resolve to. */
 export const FONT_SETTING_KEYS: readonly SettingKey[] = [
@@ -108,6 +110,22 @@ export function createFontSystem(options: FontSystemOptions): FontSystem {
     inner.invalidate()
     emit()
   })
+  // Board 28: the offline font pack finished downloading or was removed (the first read of
+  // the pack is not a change).
+  const pack = fontPackController(platform)
+  const packFaces = (st: ReturnType<typeof pack.state>) =>
+    st.status === "ready" ? st.faces : st.status === "error" ? st.faces : 0
+  let lastPack: number | null = pack.state().status === "loading" ? null : packFaces(pack.state())
+  const offPack = pack.subscribe((st) => {
+    if (st.status === "downloading" || st.status === "loading") return
+    const n = packFaces(st)
+    const first = lastPack === null
+    if (n === lastPack) return
+    lastPack = n
+    if (first) return
+    inner.invalidate()
+    emit()
+  })
   // Network changes do not emit: "Not cached + offline renders the fallback … no layout
   // reflow on reconnect until the user reloads" (02d Font rules). Fetch / settings do.
   const google = inner.sources.find((s) => s.network) as NetworkFontSource
@@ -122,14 +140,17 @@ export function createFontSystem(options: FontSystemOptions): FontSystem {
       const f = family.toLowerCase()
       if (BUNDLED_FAMILIES.has(f)) return null
       const out = new Set<number>()
+      const k = fontFamilyKey(family)
       for (const d of options.documentFaces?.() ?? [])
-        if (d.family.toLowerCase() === f && d.style !== "italic") out.add(d.weight)
+        if (fontFamilyKey(d.family) === k && d.style !== "italic") out.add(d.weight)
       const local = await platform.fonts.listLocal().catch(() => [])
       for (const fam of local)
         if (fam.family.toLowerCase() === f)
           for (const st of fam.styles) if (!st.italic) out.add(st.weight)
       const cached = await platform.fonts.cache.list().catch(() => [])
       for (const e of cached) if (e.family.toLowerCase() === f && !e.italic) out.add(e.weight)
+      const packed = await (platform.fonts.pack?.list() ?? Promise.resolve([])).catch(() => [])
+      for (const e of packed) if (e.family.toLowerCase() === f && !e.italic) out.add(e.weight)
       if (
         googleAllowed() &&
         online() &&
@@ -171,6 +192,7 @@ export function createFontSystem(options: FontSystemOptions): FontSystem {
     },
     dispose() {
       offSettings()
+      offPack()
       listeners.clear()
     },
   }

@@ -25,7 +25,7 @@ import type { M3Controller } from "../editor/m3/controller"
 import { useBusValue } from "../editor/m3/controller"
 import { kindLabel, MIXED, nodeName, shared, typeIcon } from "../editor/props"
 import type { FileSession } from "../editor/session"
-import { readExportToggles } from "../export/model"
+import { EXPORT_OPTIONS_EVENT, readExportTailwind, readExportToggles } from "../export/model"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import "./code-tab.css"
@@ -140,8 +140,24 @@ export function CodeTab({
   const generatedFor = useRef("")
   const pausedRef = useRef(false)
   const ids = useMemo(() => (supportedKey ? supportedKey.split("\u0000") : []), [supportedKey])
-  const toggles = useMemo(() => readExportToggles(storage), [storage])
-  const key = `${supportedKey}\u0001${framework}`
+  // Export's remembered options (toggles, Tailwind theme): re-read when the dialog changes them
+  // (board 28 (d): the tab has no Tailwind control of its own).
+  const [optionsRev, setOptionsRev] = useState(0)
+  useEffect(() => {
+    const bump = () => setOptionsRev((n) => n + 1)
+    globalThis.addEventListener?.(EXPORT_OPTIONS_EVENT, bump)
+    globalThis.addEventListener?.("storage", bump)
+    return () => {
+      globalThis.removeEventListener?.(EXPORT_OPTIONS_EVENT, bump)
+      globalThis.removeEventListener?.("storage", bump)
+    }
+  }, [])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: optionsRev = the options changed
+  const toggles = useMemo(() => readExportToggles(storage), [storage, optionsRev])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: optionsRev = the options changed
+  const tailwind = useMemo(() => readExportTailwind(storage), [storage, optionsRev])
+  const optionsKey = `${JSON.stringify(toggles)}${JSON.stringify(tailwind)}`
+  const key = `${supportedKey}\u0001${framework}\u0001${optionsKey}`
   // biome-ignore lint/correctness/useExhaustiveDependencies: rev = the document changed
   useEffect(() => {
     if (ids.length === 0) {
@@ -159,6 +175,7 @@ export function CodeTab({
         ids,
         framework,
         toggles,
+        tailwind,
       ).then((g) => {
         if (n !== seq.current) return
         generatedFor.current = key
@@ -171,7 +188,7 @@ export function CodeTab({
     }
     const t = setTimeout(run, LIVE_DEBOUNCE_MS)
     return () => clearTimeout(t)
-  }, [key, rev, ids, framework, toggles, icons, session, m3])
+  }, [key, rev, ids, framework, toggles, tailwind, icons, session, m3])
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new target starts on its root file
   useEffect(() => {
     setActive(null)

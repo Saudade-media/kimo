@@ -181,7 +181,12 @@ export const scenarios: Scenario[] = [
         (await hook(page, (k) => k.platform.settings.get("privacy.noThirdPartyFetch"))) === true,
         "No third-party fetch on",
       )
-      expect((await page.locator(".kimo-setting-row--dimmed").count()) === 1, "Google Fonts dimmed")
+      // Board 28: the Offline font pack row dims with it (its download goes to Google too).
+      expect(
+        (await page.locator(".kimo-setting-row--dimmed").count()) === 2 &&
+          (await page.locator('[data-setting="font-pack"].kimo-setting-row--dimmed').count()) === 1,
+        "Google Fonts + Offline font pack dimmed",
+      )
       expect(
         await page.getByRole("switch", { name: "Google Fonts" }).isDisabled(),
         "Google Fonts toggle disabled",

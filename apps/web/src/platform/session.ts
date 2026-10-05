@@ -200,6 +200,11 @@ export class FileDocumentSession implements DocumentSession {
   readonly store: DocStore
   provider: FileDocumentProvider | null = null
   conflicts: ConflictSession | null = null
+  /**
+   * Derived header data added to every write of this file without editing the store (board 28:
+   * the editor lists the font assets the text uses in the `assets` manifest). Pure, idempotent.
+   */
+  prepareWrite: (doc: KimoDocument) => KimoDocument = (doc) => doc
 
   private _ref: FileRef
   private phase: SessionPhase = "opening"
@@ -364,7 +369,7 @@ export class FileDocumentSession implements DocumentSession {
   /** Writes the untitled document to its recovery entry (autosave target until saved). */
   async writeUntitledSnapshot(): Promise<void> {
     if (!this.untitled || this.untitledEdits === 0) return
-    const doc = this.store.toDocument()
+    const doc = this.prepareWrite(this.store.toDocument())
     await this.platform.recovery
       .write({
         id: untitledRecoveryId(this._ref),
@@ -465,6 +470,7 @@ export class FileDocumentSession implements DocumentSession {
       now: manager.now,
       name: this.fileName,
       ...(manager.saveRetryMs !== undefined ? { retryMs: manager.saveRetryMs } : {}),
+      prepareWrite: (doc) => this.prepareWrite(doc as KimoDocument) as typeof doc,
     })
     this.provider = p
     this.providerUnsubs.push(
@@ -849,7 +855,7 @@ export class FileDocumentSession implements DocumentSession {
 
   async saveAs(): Promise<FileRef | null> {
     const { platform } = this
-    const text = serialize(this.store.toDocument())
+    const text = serialize(this.prepareWrite(this.store.toDocument()))
     let target: FileRef | null = null
     const untitled = this.untitled
     try {
@@ -897,7 +903,7 @@ export class FileDocumentSession implements DocumentSession {
             label: "Update library paths",
           },
         )
-        out = serialize(this.store.toDocument())
+        out = serialize(this.prepareWrite(this.store.toDocument()))
       }
     }
     await platform.files.writeTextAtomic(target, out, { mkdirs: true })

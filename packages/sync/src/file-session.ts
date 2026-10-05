@@ -145,6 +145,12 @@ export interface FileDocumentProviderOptions {
   name?: string
   /** Clock (ms epoch). Default `Date.now`. */
   now?: () => number
+  /**
+   * Adds derived header data to the document right before it is written (file saves, recovery
+   * copies, the "ours" side of a merge), without editing the store: board 28 lists the font
+   * assets the text uses in the `assets` manifest here. Must be pure and idempotent.
+   */
+  prepareWrite?: (doc: KimoDoc) => KimoDoc
 }
 
 interface UndoSnapshot {
@@ -640,7 +646,7 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
     } catch {
       baseDoc = createEmptyDocument()
     }
-    const merged = this.merge({ base: baseDoc, ours: store.toDocument(), theirs: result.doc })
+    const merged = this.merge({ base: baseDoc, ours: this.toWrite(store), theirs: result.doc })
     const token = this.snapshot()
     this.withLoading(() => store.loadDocument(merged.doc, { origin: "file", validate: false }))
     this.base = text
@@ -784,7 +790,7 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
     if (!store || !this.canSave)
       throw new SaveRefusedError("READ_ONLY", "No recovery writes for a read-only file")
     if (!this.recovery) throw new SaveRefusedError("READ_ONLY", "No recovery store")
-    const text = serialize(store.toDocument())
+    const text = serialize(this.toWrite(store))
     // A periodic snapshot keeps the reason of a pending save failure (board 17 copy).
     if (reason === "snapshot" && this._lastFailure)
       reason =
@@ -809,13 +815,19 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
     return { id: r.id, path: this.recoveryPath, bytes: r.bytes, hash: r.hash }
   }
 
+  /** The document as written ({@link FileDocumentProviderOptions.prepareWrite}). */
+  private toWrite(store: { toDocument(): KimoDoc }): KimoDoc {
+    const doc = store.toDocument()
+    return this.opts.prepareWrite ? this.opts.prepareWrite(doc) : doc
+  }
+
   /** Serialized writes: one at a time, in call order. */
   private write(target: "file" | "recovery", force: boolean): Promise<SaveResult | null> {
     return this.enqueue(async (): Promise<SaveResult | null> => {
       const store = this._store
       if (!store || !this.canSave) throw new SaveRefusedError("READ_ONLY", "File is read-only")
       const revision = store.revision
-      const text = serialize(store.toDocument())
+      const text = serialize(this.toWrite(store))
       const editsAtStart = this._edits
       if (target === "recovery") {
         this._dirty = false

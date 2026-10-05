@@ -475,9 +475,22 @@ export interface FontCacheEntry {
   family: string
   weight: number
   italic: boolean
-  source: "google" | "document" | "file"
+  /** `pack`: the offline font pack ({@link FontsApi.pack}). */
+  source: "google" | "document" | "file" | "pack"
   bytes: number
   cachedAt: number
+}
+
+/** A content-addressed font store (the offline font pack). */
+export interface FontStoreApi {
+  get(key: string): Promise<Uint8Array | null>
+  put(
+    entry: Omit<FontCacheEntry, "key" | "bytes" | "cachedAt">,
+    bytes: Uint8Array,
+  ): Promise<FontCacheEntry>
+  list(): Promise<FontCacheEntry[]>
+  stats(): Promise<{ count: number; bytes: number; dir: string | null }>
+  clear(): Promise<void>
 }
 
 export interface FontsApi {
@@ -497,6 +510,14 @@ export interface FontsApi {
     stats(): Promise<{ count: number; bytes: number; dir: string | null }>
     clear(): Promise<void>
   }
+  /**
+   * The offline font pack (board 28 "Offline font pack"): curated Google faces downloaded once
+   * on request and kept apart from the cache (Clear does not touch it). Desktop: the app data
+   * dir `font-pack/` (same layout as the cache); browser: Cache Storage `kimo-font-pack`.
+   * Entries carry `source: "pack"`. `put` stores bytes only — the download goes through
+   * {@link fetchRemote}, so "No third-party fetch" blocks it.
+   */
+  readonly pack: FontStoreApi
   /**
    * Fetches a font file from `fonts.googleapis.com` / `fonts.gstatic.com` only. Rejects with
    * `BLOCKED` when "No third-party fetch" is on or Google Fonts is off, or for any other host.

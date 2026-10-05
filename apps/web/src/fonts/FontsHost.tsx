@@ -50,6 +50,14 @@ export async function replaceChoices(
   return out.slice(0, max)
 }
 
+/** Board 28 (c): which setting blocks Google (null: allowed — offline is not a block). */
+export function blockedBy(platform: KimoPlatform): "ntpf" | "google-off" | null {
+  const s = platform.settings.all()
+  if (s["privacy.noThirdPartyFetch"]) return "ntpf"
+  if (!s["fonts.google"]) return "google-off"
+  return null
+}
+
 /** The picker's Google state: blocked by "No third-party fetch", Google Fonts off, offline. */
 export function googleState(platform: KimoPlatform, system: FontSystem): GoogleFontsState {
   const s = platform.settings.all()
@@ -178,11 +186,14 @@ export interface MissingFontsHostProps {
   apply: (ops: Op[], label: string) => void
   /** Stores a picked font file as a document asset ("Choose font file…"). */
   addDocumentFont?: (font: PickedFont) => Promise<void>
+  /** Board 28 (c): the blocked banner's "Open settings" (Settings › Fonts & privacy). */
+  openFontSettings?: () => void
 }
 
 /** Detects missing fonts once per file per session and shows the dialog. */
 export function MissingFontsHost(props: MissingFontsHostProps) {
-  const { platform, system, fileKey, fileName, doc, apply, addDocumentFont } = props
+  const { platform, system, fileKey, fileName, doc, apply, addDocumentFont, openFontSettings } =
+    props
   const [fonts, setFonts] = useState<MissingFont[] | null>(null)
   const [choices, setChoices] = useState<ReplaceChoice[]>([])
   const [, bump] = useState(0)
@@ -217,6 +228,8 @@ export function MissingFontsHost(props: MissingFontsHostProps) {
         fonts={fonts}
         choices={choices}
         canFetch={system.googleAllowed() && system.online()}
+        blocked={blockedBy(platform)}
+        {...(openFontSettings ? { onOpenSettings: openFontSettings } : {})}
         onKeep={close}
         onReplace={(mapping) => {
           const ops = replaceFontOps(doc(), mapping)

@@ -94,6 +94,25 @@ export function readExportToggles(storage: Pick<Storage, "getItem"> | null): Exp
   }
 }
 
+/**
+ * The dialog's Tailwind theme choice (`kimo.export.tailwind`). Board 28 (d): the Code tab has no
+ * control of its own and uses this, so its files match what Export writes.
+ */
+export function readExportTailwind(storage: Pick<Storage, "getItem"> | null): TailwindChoices {
+  try {
+    const raw = storage?.getItem(`${STORE}.tailwind`)
+    const v = raw ? { ...DEFAULT_TAILWIND, ...(JSON.parse(raw) as object) } : DEFAULT_TAILWIND
+    return TAILWIND_THEMES.some((t) => t.value === v.theme) && typeof v.mapTokens === "boolean"
+      ? v
+      : DEFAULT_TAILWIND
+  } catch {
+    return DEFAULT_TAILWIND
+  }
+}
+
+/** Fired on `window` when the Export dialog remembers new options (the Code tab regenerates). */
+export const EXPORT_OPTIONS_EVENT = "kimo:export-options"
+
 /** `@kimo/exporters` targets per format (text targets first; PNG / PDF are binary). */
 export function targetsOf(
   format: ExportFormat,

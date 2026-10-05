@@ -422,6 +422,27 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
           await call("kimo_fonts_cache_clear", none)
         },
       },
+      pack: {
+        get: async (key) => {
+          const b = await call("kimo_fonts_pack_get", { key })
+          return b === null ? null : toBytes(b)
+        },
+        put: (meta, bytes) =>
+          call("kimo_fonts_pack_put", {
+            meta: {
+              family: meta.family,
+              weight: meta.weight,
+              italic: meta.italic,
+              source: meta.source,
+            },
+            base64: bytesToBase64(bytes),
+          }),
+        list: () => call("kimo_fonts_pack_list", none),
+        stats: () => call("kimo_fonts_pack_stats", none),
+        clear: async () => {
+          await call("kimo_fonts_pack_clear", none)
+        },
+      },
       fetchRemote: async (url) => toBytes(await call("kimo_fonts_fetch_remote", { url })),
       openCacheFolder: async () => {
         await call("kimo_fonts_open_cache_folder", none)

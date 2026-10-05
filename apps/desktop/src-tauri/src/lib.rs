@@ -196,6 +196,11 @@ pub fn run() {
             commands::kimo_fonts_cache_list,
             commands::kimo_fonts_cache_stats,
             commands::kimo_fonts_cache_clear,
+            commands::kimo_fonts_pack_get,
+            commands::kimo_fonts_pack_put,
+            commands::kimo_fonts_pack_list,
+            commands::kimo_fonts_pack_stats,
+            commands::kimo_fonts_pack_clear,
             commands::kimo_fonts_fetch_remote,
             commands::kimo_fonts_open_cache_folder,
             commands::kimo_help_show_logs,
@@ -353,7 +358,7 @@ mod tests {
     #[test]
     fn command_surface_matches_tauri_ts() {
         let ts = ts_commands();
-        assert_eq!(ts.len(), 63);
+        assert_eq!(ts.len(), 68);
         let rust: Vec<String> = super::command_list::COMMANDS
             .iter()
             .map(|s| s.to_string())

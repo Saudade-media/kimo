@@ -79,7 +79,13 @@ describe("font system over @kimo/platform (memory)", () => {
         { family: "Fraunces", weight: 600, style: "normal", load: async () => inter },
       ],
     })
-    expect(sys.sources.map((s) => s.name)).toEqual(["document", "local", "cache", "google-fonts"])
+    expect(sys.sources.map((s) => s.name)).toEqual([
+      "document",
+      "local",
+      "pack",
+      "cache",
+      "google-fonts",
+    ])
     expect(await sys.availability({ family: "Fraunces", weight: 600, style: "normal" })).toBe(
       "document",
     )
@@ -104,7 +110,7 @@ describe("font system over @kimo/platform (memory)", () => {
     expect(await offline.availability({ family: "Lora", weight: 700, style: "normal" })).toBe(
       "cached",
     )
-    const r = await offline.sources[2]?.fetch({ family: "Lora", weight: 400, style: "normal" })
+    const r = await offline.sources[3]?.fetch({ family: "Lora", weight: 400, style: "normal" })
     expect(r?.bytes.byteLength).toBe(inter.byteLength)
     expect(fetched.length).toBe(n)
   })
@@ -117,7 +123,7 @@ describe("font system over @kimo/platform (memory)", () => {
     sys.subscribe(() => changes++)
     expect(sys.offline()).toBe(true)
     expect(await sys.fetchFamily("Lora", [400])).toBe(false)
-    expect(await sys.sources[3]?.fetch({ family: "Lora", weight: 400, style: "normal" })).toBeNull()
+    expect(await sys.sources[4]?.fetch({ family: "Lora", weight: 400, style: "normal" })).toBeNull()
     expect(await sys.availability({ family: "Lora", weight: 400, style: "normal" })).toBe("missing")
     expect(fetched).toEqual([])
     // The platform itself refuses too.

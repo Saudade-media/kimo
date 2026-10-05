@@ -22,6 +22,10 @@
 
 **"Google Fonts are off or you're offline."** Turn on **Google Fonts** in **Settings › Fonts & privacy** (it's off while **No third-party fetch** is on), or install the font locally.
 
+**"Google Fonts are blocked."** **No third-party fetch** is on, so Kimo can't fetch the font. **Open settings** to turn it off, install the font, or use a family from the [offline font pack](../editor/fonts.md#offline-font-pack).
+
+**A file renders differently on another computer or in CI.** Commit the file's `assets/` folder: Google fonts a file uses are stored there on first use ([Fonts](../editor/fonts.md#google-fonts-are-stored-in-the-file)).
+
 **A weight is missing** (`Inter Bold (700) isn't installed`). Install that weight, or pick one that is.
 
 ## Agents

@@ -52,6 +52,7 @@ import {
   describeUntitled,
   describeWriteError,
   EXPORT_FORMATS,
+  EXPORT_OPTIONS_EVENT,
   type ExportFormat,
   type ExportToggles,
   exportLabel,
@@ -135,7 +136,11 @@ function readStore<T>(key: string, fallback: T): T {
 }
 function writeStore(key: string, value: unknown) {
   try {
-    storage()?.setItem(`${STORE}.${key}`, JSON.stringify(value))
+    const s = storage()
+    const json = JSON.stringify(value)
+    if (!s || s.getItem(`${STORE}.${key}`) === json) return
+    s.setItem(`${STORE}.${key}`, json)
+    globalThis.dispatchEvent?.(new Event(EXPORT_OPTIONS_EVENT))
   } catch {}
 }
 

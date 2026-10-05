@@ -1,5 +1,6 @@
 /** Board 19 fonts: font system, missing-font detection + dialog, font picker. See INTEGRATION.md. */
 export {
+  type DocumentFontAsset,
   FONT_MIME,
   isFontAsset,
   loadDocumentFontFaces,

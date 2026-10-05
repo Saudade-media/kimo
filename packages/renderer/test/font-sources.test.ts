@@ -100,7 +100,13 @@ describe("platform font sources: Document → Local → Cache → Google", () =>
         { family: "Fraunces", weight: 600, style: "normal", load: async () => interBold },
       ],
     })
-    expect(fs.sources.map((s) => s.name)).toEqual(["document", "local", "cache", "google-fonts"])
+    expect(fs.sources.map((s) => s.name)).toEqual([
+      "document",
+      "local",
+      "pack",
+      "cache",
+      "google-fonts",
+    ])
     const key = { family: "Fraunces", weight: 600, style: "normal" as const }
     for (const s of fs.sources) {
       const r = await s.fetch(key)
@@ -128,7 +134,7 @@ describe("platform font sources: Document → Local → Cache → Google", () =>
     })
     const key = { family: "Lora", weight: 700, style: "normal" as const }
     expect(await fs.availability(key)).toBe("google")
-    const google = fs.sources[3]
+    const google = fs.sources[4]
     const r = await google?.fetch(key)
     expect(r?.weight).toBe(700)
     expect(h.calls).toContain("cache.put Lora 700")
@@ -140,8 +146,8 @@ describe("platform font sources: Document → Local → Cache → Google", () =>
       policy: policy({ allowed: true, online: false }),
     })
     expect(await offline.availability(key)).toBe("cached")
-    expect(await offline.sources[2]?.fetch(key)).toMatchObject({ weight: 700 })
-    expect(await offline.sources[3]?.fetch(key)).toBeNull()
+    expect(await offline.sources[3]?.fetch(key)).toMatchObject({ weight: 700 })
+    expect(await offline.sources[4]?.fetch(key)).toBeNull()
     expect(h.calls.filter((c) => c.startsWith("fetch")).length).toBe(before)
   })
 
@@ -149,13 +155,13 @@ describe("platform font sources: Document → Local → Cache → Google", () =>
     const h = fakeHost({ google: { Lora: CSS.replaceAll("Fraunces", "Lora") } })
     const p = { allowed: true }
     const fs = createPlatformFontSources({ host: h.host, policy: policy(p) })
-    await fs.sources[3]?.fetch({ family: "Lora", weight: 600, style: "normal" })
+    await fs.sources[4]?.fetch({ family: "Lora", weight: 600, style: "normal" })
     const before = h.calls.filter((c) => c.startsWith("fetch")).length
     p.allowed = false
     h.settings.allowed = false
     fs.invalidate()
     expect(
-      await fs.sources[3]?.fetch({ family: "Space Grotesk", weight: 500, style: "normal" }),
+      await fs.sources[4]?.fetch({ family: "Space Grotesk", weight: 500, style: "normal" }),
     ).toBeNull()
     // Cached 600 serves 700 by nearest weight.
     expect(await fs.availability({ family: "Lora", weight: 700, style: "normal" })).toBe("cached")
@@ -170,7 +176,7 @@ describe("platform font sources: Document → Local → Cache → Google", () =>
     h.settings.allowed = false
     // Policy claims allowed (stale), host still refuses: the source resolves null.
     const fs = createPlatformFontSources({ host: h.host, policy: policy({ allowed: true }) })
-    expect(await fs.sources[3]?.fetch({ family: "Lora", weight: 400, style: "normal" })).toBeNull()
+    expect(await fs.sources[4]?.fetch({ family: "Lora", weight: 400, style: "normal" })).toBeNull()
     expect(await fs.availability({ family: "Lora", weight: 400, style: "normal" })).toBe("missing")
   })
 

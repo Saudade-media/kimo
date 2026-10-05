@@ -13,7 +13,7 @@
  * Replace N fonts.
  */
 import type { MissingFont } from "@kimo/renderer"
-import { Button, Dialog, FontRow, fontRowMeta } from "@kimo/ui"
+import { Banner, Button, Dialog, FontRow, fontRowMeta } from "@kimo/ui"
 import { Download, Type } from "lucide-react"
 import { useState } from "react"
 import { FontReplaceSelect, type ReplaceChoice } from "./ReplaceWithMenu"
@@ -27,6 +27,13 @@ export interface MissingFontsDialogProps {
   choices: readonly ReplaceChoice[]
   /** Google Fonts may be fetched now (allowed in Settings and online). */
   canFetch: boolean
+  /**
+   * Board 28 (c) X1mr3: Google is blocked by a setting — `ntpf` (No third-party fetch) or
+   * `google-off` (Google Fonts off). The body then opens with Banner/Warning.
+   */
+  blocked?: "ntpf" | "google-off" | null
+  /** Banner action "Open settings" (Settings › Fonts & privacy). */
+  onOpenSettings?: () => void
   /** "Replace N fonts": one undoable edit. */
   onReplace: (mapping: Record<string, string>) => void
   /** "Keep for now" / Escape. */
@@ -44,6 +51,14 @@ export interface MissingFontsDialogProps {
   /** Initial replacements (defaults: {@link suggestReplacement} for every missing family). */
   initialReplacements?: Record<string, string | null>
 }
+
+/** Board 28 (c) banner copy (zzcpD). */
+export const BLOCKED_BANNER_TITLE = "Google Fonts are blocked"
+export const BLOCKED_BANNER_BODY =
+  "No third-party fetch is on. Install them or use the offline font pack."
+export const GOOGLE_OFF_BANNER_TITLE = "Google Fonts are off"
+export const GOOGLE_OFF_BANNER_BODY =
+  "Turn them on in Settings, install them or use the offline font pack."
 
 /** "3 fonts aren't available" / "1 font isn't available". */
 export function missingFontsTitle(n: number): string {
@@ -64,6 +79,8 @@ export function MissingFontsDialog({
   fonts,
   choices,
   canFetch,
+  blocked = null,
+  onOpenSettings,
   onReplace,
   onKeep,
   onOpenFontsFolder,
@@ -108,6 +125,20 @@ export function MissingFontsDialog({
       data-pen="hQunF"
     >
       <div className="fonts-missing__body">
+        {/* Blocked, Kimo can't even ask Google whether a missing family is a Google one. */}
+        {blocked && fonts.length > 0 && (
+          <Banner
+            tone="warning"
+            className="fonts-missing__banner"
+            data-pen="zzcpD"
+            title={blocked === "ntpf" ? BLOCKED_BANNER_TITLE : GOOGLE_OFF_BANNER_TITLE}
+            body={blocked === "ntpf" ? BLOCKED_BANNER_BODY : GOOGLE_OFF_BANNER_BODY}
+            actions={
+              onOpenSettings ? [{ id: "settings", label: "Open settings", variant: "ghost" }] : []
+            }
+            onAction={() => onOpenSettings?.()}
+          />
+        )}
         {fonts.map((f) =>
           f.status === "missing" ? (
             <FontRow

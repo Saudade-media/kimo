@@ -11,7 +11,7 @@ The Code tab shows the code for whatever you have selected, live, without openin
 
 **Tokens** lists only the variables the selection uses, plus the variables they alias, as `tokens.json` and `tokens.css`.
 
-The code comes from the same generator as the [Export dialog](export-dialog.md) and follows the dialog's option switches (variables as custom properties, split components, layer names). It has no switches of its own.
+The code comes from the same generator as the [Export dialog](export-dialog.md) and follows the dialog's option switches (variables as custom properties, split components, layer names) and, for React + Tailwind, its **Tailwind theme** and **Map variables to theme tokens** choices: the `@theme` block in `tokens.css` (v4, the default), a `tailwind.config.ts` file tab (v3), or no theme. It has no switches of its own; changing an option in Export updates the open Code tab.
 
 ## Live updates
 

@@ -8,7 +8,7 @@
 
 import type { KimoDocument, Libraries } from "@kimo/core-schema"
 import type { ExportFile, IconLoader, IRDocument, IRVariable } from "@kimo/exporters"
-import type { ExportToggles } from "../export/model"
+import { DEFAULT_TAILWIND, type ExportToggles, type TailwindChoices } from "../export/model"
 import { type Framework, type LineRange, sourceMapOf } from "./model"
 
 export interface CodeSource {
@@ -59,6 +59,8 @@ export async function generateCode(
   roots: readonly string[],
   framework: Framework,
   toggles: ExportToggles,
+  /** Board 28 (d): Export's Tailwind theme + Map variables (React + Tailwind only). */
+  tailwind: TailwindChoices = DEFAULT_TAILWIND,
 ): Promise<GeneratedCode> {
   const ex = await loadExporters()
   const doc = source.document()
@@ -88,6 +90,9 @@ export async function generateCode(
       components: toggles.components,
       layerNames: toggles.layerNames,
       ...(source.icons ? { icons: source.icons } : {}),
+      ...(target === "react-tailwind"
+        ? { tailwindTheme: tailwind.theme, themeTokens: tailwind.mapTokens }
+        : {}),
     })
     // The same emitter with `data-kimo-id` (exportDocument's own IR options).
     const ir = ex.buildIR(doc, {
@@ -105,6 +110,8 @@ export async function generateCode(
             layerNames: toggles.layerNames,
             ids: true,
             ...(icons ? { icons } : {}),
+            theme: tailwind.theme,
+            ...(tailwind.mapTokens ? {} : { themeTokens: false }),
           })
         : ex.emitHtml(ir, {
             variables: toggles.variables,

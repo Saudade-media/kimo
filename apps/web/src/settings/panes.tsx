@@ -6,8 +6,9 @@
  * `platform.settings` immediately (no Save button).
  */
 import type { FileRef, KimoPlatform, SettingKey, Settings, SettingsSchema } from "@kimo/platform"
-import { Button, Select, SettingRow, Toggle } from "@kimo/ui"
-import { cloneElement, isValidElement, type ReactNode } from "react"
+import { Button, ProgressTrack, Select, SettingRow, Toggle } from "@kimo/ui"
+import { cloneElement, isValidElement, type ReactNode, useSyncExternalStore } from "react"
+import { fontPackController } from "../fonts/font-pack"
 import { useAsync, useUpdaterStatus } from "./hooks"
 import {
   autosaveDescription,
@@ -15,6 +16,9 @@ import {
   displayPath,
   extraFoldersDescription,
   fontCacheLabel,
+  fontPackDescription,
+  fontPackProgressLabel,
+  formatSize,
   homeOf,
   mergeDriverDescription,
   parseChoice,
@@ -285,6 +289,13 @@ export function FontsPane(props: PaneProps) {
         />
       )}
     />,
+    <FontPackRow
+      key="pack"
+      platform={platform}
+      blocked={blocked}
+      googleOn={settings["fonts.google"]}
+      home={home}
+    />,
     <SettingRow
       key="cache"
       label="Font cache"
@@ -343,6 +354,74 @@ export function FontsPane(props: PaneProps) {
       <PaneTitle>Fonts & privacy</PaneTitle>
       {markLast(rows)}
     </>
+  )
+}
+
+/**
+ * Board 28 "Offline font pack" (xW7Mh; states rCcF5 downloading, TEciq downloaded, UN6YR
+ * blocked): Value + Download · Progress 160 + Cancel · size + Remove · dimmed 45 %.
+ */
+function FontPackRow({
+  platform,
+  blocked,
+  googleOn,
+  home,
+}: {
+  platform: KimoPlatform
+  blocked: boolean
+  googleOn: boolean
+  home: string | null
+}) {
+  const pack = fontPackController(platform)
+  const state = useSyncExternalStore(pack.subscribe, pack.state, pack.state)
+  const off = blocked ? "ntpf" : googleOn ? null : "google-off"
+  const description = fontPackDescription(state, off, (d) => displayPath(d, home))
+  const estimate = pack.estimate()
+  let control: ReactNode
+  if (state.status === "downloading")
+    control = (
+      <>
+        <ProgressTrack
+          className="settings-pack-progress"
+          value={state.total ? state.done / state.total : 0}
+          label={fontPackProgressLabel(state.bytes, estimate)}
+        />
+        <RowButton variant="ghost" onClick={() => pack.cancel()}>
+          Cancel
+        </RowButton>
+      </>
+    )
+  else if (state.status === "ready")
+    control = (
+      <>
+        <ValueText>{formatSize(state.bytes)}</ValueText>
+        <RowButton variant="ghost" onClick={() => void pack.remove()}>
+          Remove
+        </RowButton>
+      </>
+    )
+  else
+    control = (
+      <>
+        <ValueText>{formatSize(estimate)}</ValueText>
+        <RowButton
+          disabled={
+            off !== null || state.status === "loading" || !platform.capabilities.remoteFonts
+          }
+          onClick={() => void pack.download()}
+        >
+          Download
+        </RowButton>
+      </>
+    )
+  return (
+    <SettingRow
+      label="Offline font pack"
+      description={description}
+      dimmed={off !== null && state.status !== "ready" && state.status !== "downloading"}
+      control={control}
+      data-setting="font-pack"
+    />
   )
 }
 

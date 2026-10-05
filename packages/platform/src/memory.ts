@@ -252,6 +252,7 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
   let localFonts: LocalFontFamily[] = []
   let localFontBytes: Record<string, Uint8Array> = {}
   const fontCache = new Map<string, { entry: FontCacheEntry; bytes: Uint8Array }>()
+  const fontPack = new Map<string, { entry: FontCacheEntry; bytes: Uint8Array }>()
 
   // --- updater ---
   let updaterStatus: UpdaterStatus = { state: "idle" }
@@ -565,6 +566,22 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
           dir: "/home/test/.kimo/fonts",
         }),
         clear: async () => fontCache.clear(),
+      },
+      pack: {
+        get: async (key) => fontPack.get(key)?.bytes ?? null,
+        async put(meta, bytes) {
+          const key = (await sha256Hex(bytes)).slice(0, 16)
+          const entry: FontCacheEntry = { ...meta, key, bytes: bytes.byteLength, cachedAt: clock }
+          fontPack.set(key, { entry, bytes })
+          return entry
+        },
+        list: async () => [...fontPack.values()].map((e) => e.entry),
+        stats: async () => ({
+          count: fontPack.size,
+          bytes: [...fontPack.values()].reduce((s, e) => s + e.entry.bytes, 0),
+          dir: "/home/test/.local/share/kimo/font-pack",
+        }),
+        clear: async () => fontPack.clear(),
       },
       async fetchRemote(url) {
         const s = settings.all()

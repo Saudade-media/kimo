@@ -69,6 +69,17 @@ The first public release: release engineering, polish, the new mark and the form
   - Agent: default provider and model, per-turn cost warning, the active page in context.
   - Export: an Issues tab, a Tailwind theme option, File › Export… (⇧⌘E), Copy selection as PNG
     (⇧⌘C).
+- Google fonts a file uses are stored in its `assets/` folder by content hash on first use and
+  listed in the manifest (`font/*`, name `<Family>-<Style>.<ext>`) when the file is saved, so the
+  file renders offline, in CI, in the `kimo` CLI and in headless render and export. The open
+  document is never edited for it (no undo step, opening a file never makes it dirty); files over
+  20 MB are skipped (board 28).
+- Offline font pack (Settings › Fonts & privacy): 16 curated Google families, 400–700, downloaded
+  once on request (desktop app data dir `font-pack`, browser Cache Storage), with progress,
+  Cancel and Remove; resolved after installed fonts and before the cache.
+- The Missing fonts dialog explains when No third-party fetch (or Google Fonts off) blocks
+  Google, with Open settings.
+- The Code tab follows the Export dialog's Tailwind theme and Map variables choices.
 
 ### Changed
 
@@ -110,6 +121,9 @@ The first public release: release engineering, polish, the new mark and the form
   schema stays at `schema/kimo-0.1.schema.json` (`@kimo/core-schema/schema-0.1.json`). The MCP
   schema resource is now `kimo://schema/1.0`; `kimo version` reports `(format 1.0)`.
 - `examples/` regenerated at format 1.0.0 (header lines only; thumbnails unchanged).
+- Font manifest entries are no longer linted `ASSET_UNUSED` (they are used by family); §12 rule 3
+  defines the `<Family>-<Style>.<ext>` manifest name readers use for WOFF2 fonts. No schema
+  change.
 
 ## [0.7.0] - 2026-10-04 — M7: Export
 

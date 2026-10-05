@@ -1081,6 +1081,12 @@ export interface Renderer {
    * measured afterwards uses the real faces (exports, MCP renders). Optional for fakes.
    */
   ensureFonts?(nodeId: string): Promise<void>
+  /**
+   * Fonts may resolve differently now (document fonts added, the offline font pack downloaded):
+   * forgets families known missing and re-records, so their text asks the sources again.
+   * Optional for fakes.
+   */
+  retryFonts?(): void
 
   /**
    * PNG bytes of one node's subtree at `scale`, rendered on a CPU raster surface (works

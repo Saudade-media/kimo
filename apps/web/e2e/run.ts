@@ -301,8 +301,14 @@ async function main() {
 // `import.meta.main` is Bun-only (Node ≥ 24.2); compare the entry script instead. Not awaited:
 // the scenario files import this module, and a top-level await here would leave it evaluating,
 // so under Node their dynamic import() would wait on it forever (ESM cycle + TLA).
-if (isEntry(import.meta.url))
+if (isEntry(import.meta.url)) {
+  // A promise a failed scenario left behind (a waitForEvent that times out after the scenario
+  // gave up) must not crash the driver: log it; the scenario already reported its failure.
+  process.on("unhandledRejection", (e) => {
+    console.error("e2e: unhandled rejection (ignored):", e instanceof Error ? e.message : e)
+  })
   main().catch((e) => {
     console.error(e)
     process.exit(1)
   })
+}

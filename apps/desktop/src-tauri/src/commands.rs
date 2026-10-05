@@ -578,6 +578,44 @@ pub async fn kimo_fonts_cache_clear(st: St<'_>) -> R<()> {
 }
 
 #[tauri::command]
+pub async fn kimo_fonts_pack_get(key: String, st: St<'_>) -> R<Response> {
+    let st = st.inner().clone();
+    Ok(match blocking(move || st.font_pack.get(&key)).await? {
+        Some(b) => bytes_response(b),
+        None => null_response(),
+    })
+}
+
+#[tauri::command]
+pub async fn kimo_fonts_pack_put(
+    meta: FontCacheMeta,
+    base64: String,
+    st: St<'_>,
+) -> R<FontCacheEntry> {
+    let bytes = decode_b64(&base64)?;
+    let st = st.inner().clone();
+    blocking(move || st.font_pack.put(meta, &bytes)).await
+}
+
+#[tauri::command]
+pub async fn kimo_fonts_pack_list(st: St<'_>) -> R<Vec<FontCacheEntry>> {
+    let st = st.inner().clone();
+    blocking(move || Ok(st.font_pack.list())).await
+}
+
+#[tauri::command]
+pub async fn kimo_fonts_pack_stats(st: St<'_>) -> R<CacheStats> {
+    let st = st.inner().clone();
+    blocking(move || Ok(st.font_pack.stats())).await
+}
+
+#[tauri::command]
+pub async fn kimo_fonts_pack_clear(st: St<'_>) -> R<()> {
+    let st = st.inner().clone();
+    blocking(move || st.font_pack.clear()).await
+}
+
+#[tauri::command]
 pub async fn kimo_fonts_fetch_remote(url: String, st: St<'_>) -> R<Response> {
     if !st.settings.google_fonts_allowed() {
         return Err(blocked(

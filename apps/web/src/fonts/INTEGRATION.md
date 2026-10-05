@@ -21,7 +21,7 @@ const fonts = createFontSystem({
   reconnect: 02d "no layout reflow on reconnect until the user reloads").
 - `editor/Topbar.tsx` "Web fonts" menu item: drive `platform.settings` `fonts.google` (or remove
   it; the setting now lives in Settings › Fonts & privacy). `lib/settings.ts` can then go.
-- Resolution order is Document → Local → Cache → Google. Google goes only through
+- Resolution order is Document → Local → Pack → Cache → Google (board 28 offline font pack). Google goes only through
   `platform.fonts.fetchRemote` (BLOCKED when No third-party fetch is on / Google off).
 - `CkFontProvider` now forgets known-missing families when `sources` or `offline` change, and
   has `retryMissing()`; the canvas re-init on `offlineFonts` change already triggers a retry.

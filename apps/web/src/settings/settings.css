@@ -201,6 +201,12 @@
 }
 
 /* Button instances (s0cL7 …): h 28, padding [0, 12], label sans 12 (Secondary / Ghost). */
+/* Board 28 rCcF5: Offline font pack downloading — Progress (width 160, column gap 6). */
+.kimo-progress.settings-pack-progress {
+  flex: none;
+  width: 160px;
+}
+
 .kimo-button.settings-button {
   flex: none;
   height: 28px;

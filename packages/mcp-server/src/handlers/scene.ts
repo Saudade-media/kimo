@@ -98,12 +98,15 @@ export interface SceneServiceOptions {
 const FONT_EXT = /\.(ttf|otf|woff2?)$/i
 
 /** Asset file names (`<hash>.<ext>`) of a document that are font files. */
-function documentFontAssets(store: DocStore): string[] {
-  const manifest = (store.toHeader().assets ?? {}) as Record<string, { mime?: string }>
+function documentFontAssets(store: DocStore): { file: string; name?: string }[] {
+  const manifest = (store.toHeader().assets ?? {}) as Record<
+    string,
+    { mime?: string; name?: string }
+  >
   return Object.entries(manifest)
-    .filter(([name, e]) => FONT_EXT.test(name) || /^font\//i.test(e?.mime ?? ""))
-    .map(([name]) => name)
-    .filter((name) => /^[^\\/]+$/.test(name))
+    .filter(([file, e]) => FONT_EXT.test(file) || /^font\//i.test(e?.mime ?? ""))
+    .filter(([file]) => /^[^\\/]+$/.test(file))
+    .map(([file, e]) => (typeof e?.name === "string" ? { file, name: e.name } : { file }))
 }
 
 /** Every `./assets/<name>` string a document references (image fills, …). */
@@ -126,18 +129,26 @@ function documentFontSource(store: DocStore, assets: AssetLoader | undefined): F
   const load = () => {
     faces ??= (async () => {
       if (!assets) return []
-      const names = documentFontAssets(store)
-      if (!names.length) return []
-      const { readFontInfo } = await import("@kimo/renderer")
+      const entries = documentFontAssets(store)
+      if (!entries.length) return []
+      const { readFontInfo, parseFontFileName } = await import("@kimo/renderer")
       const out: Face[] = []
-      for (const name of names) {
-        const bytes = await assets(`./assets/${name}`).catch(() => null)
-        const info = bytes ? await readFontInfo(bytes) : null
-        if (bytes && info)
+      for (const { file, name } of entries) {
+        const bytes = await assets(`./assets/${file}`).catch(() => null)
+        if (!bytes) continue
+        const info = await readFontInfo(bytes)
+        // WOFF2 (a face Kimo stored from Google in a browser) isn't inspectable: the manifest
+        // name carries the face ("Space Grotesk-SemiBold.woff2", board 28).
+        const meta = info
+          ? { family: info.family, weight: info.weight, style: info.italic ? "italic" : "normal" }
+          : name
+            ? parseFontFileName(name)
+            : null
+        if (meta)
           out.push({
-            family: info.family,
-            weight: info.weight,
-            style: info.italic ? "italic" : "normal",
+            family: meta.family,
+            weight: meta.weight,
+            style: meta.style as Face["style"],
             bytes,
           })
       }
@@ -148,7 +159,8 @@ function documentFontSource(store: DocStore, assets: AssetLoader | undefined): F
   return {
     name: "document",
     async fetch(key) {
-      const fam = (await load()).filter((f) => f.family.toLowerCase() === key.family.toLowerCase())
+      const k = key.family.toLowerCase().replace(/\s+/g, "")
+      const fam = (await load()).filter((f) => f.family.toLowerCase().replace(/\s+/g, "") === k)
       let best: Face | undefined
       let score = Number.POSITIVE_INFINITY
       for (const f of fam) {

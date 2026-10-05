@@ -51,6 +51,16 @@ const platform = createMemoryPlatform({
 
 /** Every remote request the app made (must stay empty while No third-party fetch is on). */
 const remote: string[] = []
+/**
+ * Board 28 offline font pack: with `pack.serve` on, every pack family gets one 400 face; with
+ * `pack.hold` set, face downloads wait for `releasePack()` (the e2e measures the Downloading
+ * state).
+ */
+const pack: { serve: boolean; hold: Promise<void> | null; release: () => void } = {
+  serve: false,
+  hold: null,
+  release: () => {},
+}
 const realFetch = platform.fonts.fetchRemote.bind(platform.fonts)
 ;(platform.fonts as { fetchRemote: (url: string) => Promise<Uint8Array> }).fetchRemote = async (
   url,
@@ -59,8 +69,17 @@ const realFetch = platform.fonts.fetchRemote.bind(platform.fonts)
   await realFetch(url) // BLOCKED + allowlist exactly as the platform enforces them
   if (url.includes("css2")) {
     const fam = /family=([^:&]+)/.exec(url)?.[1]?.replace(/\+/g, " ") ?? ""
+    if (pack.serve)
+      return new TextEncoder().encode(
+        `@font-face { font-family: '${fam}'; font-style: normal; font-weight: 400; src: url(https://fonts.gstatic.com/s/${encodeURIComponent(fam)}/400.ttf) format('truetype'); }`,
+      )
     if (fam === "Space Grotesk" || fam === "DM Sans") return new TextEncoder().encode(CSS(fam))
     throw new Error("400")
+  }
+  if (pack.serve) {
+    if (pack.hold) await pack.hold
+    // Distinct bytes per family (the pack is content-addressed).
+    return new TextEncoder().encode(`pack face ${url}`)
   }
   return new Uint8Array(await (await fetch(TTF_URL)).arrayBuffer())
 }
@@ -207,6 +226,7 @@ function Harness() {
           fileName="marketing.kimo"
           doc={doc}
           apply={apply}
+          openFontSettings={() => set({ kind: "settings", pane: "fonts" })}
         />
       )
       break
@@ -277,6 +297,15 @@ w.__kimoM4 = {
     return fonts.availability({ family, weight: 500, style: "normal" })
   },
   undo: () => store.undo("user"),
+  /** Board 28: serve the pack families (and optionally hold face downloads). */
+  servePack(hold: boolean) {
+    pack.serve = true
+    pack.hold = hold ? new Promise<void>((r) => (pack.release = r)) : null
+  },
+  releasePack() {
+    pack.release()
+    pack.hold = null
+  },
 }
 
 const style = document.createElement("style")

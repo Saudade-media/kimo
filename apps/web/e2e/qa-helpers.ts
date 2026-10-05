@@ -54,7 +54,11 @@ const armed = new WeakSet<Page>()
 export function nextFileChooser(page: Page, timeout = 10_000): Promise<FileChooser> {
   if (!armed.has(page))
     throw new Error("nextFileChooser: call armFileChooser(page) before the trigger")
-  return page.waitForEvent("filechooser", { timeout })
+  const p = page.waitForEvent("filechooser", { timeout })
+  // A scenario that fails before awaiting this leaves it pending: its later rejection (timeout,
+  // page closed) must not become an unhandled rejection that kills the whole driver.
+  p.catch(() => {})
+  return p
 }
 
 export async function openEditor(page: Page, url: string) {

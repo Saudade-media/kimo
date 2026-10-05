@@ -244,7 +244,7 @@ impl FontCache {
     }
 
     pub fn put(&self, meta: FontCacheMeta, bytes: &[u8]) -> R<FontCacheEntry> {
-        if !["google", "document", "file"].contains(&meta.source.as_str()) {
+        if !["google", "document", "file", "pack"].contains(&meta.source.as_str()) {
             return Err(invalid(format!("Unknown font source {:?}", meta.source)));
         }
         let _g = self.lock.lock().unwrap();
@@ -401,6 +401,33 @@ mod tests {
         assert!(json.get("cachedAt").is_some());
         c.clear().unwrap();
         assert_eq!(c.stats().count, 0);
+    }
+
+    #[test]
+    fn pack_is_a_separate_store() {
+        // Board 28: the offline font pack reuses the cache layout in its own dir; clearing
+        // the cache never touches it, and unknown sources are refused.
+        let d = tempfile::tempdir().unwrap();
+        let cache = FontCache::new(d.path().join("fonts"));
+        let pack = FontCache::new(d.path().join("font-pack"));
+        let meta = FontCacheMeta {
+            family: "Lora".into(),
+            weight: 600,
+            italic: false,
+            source: "pack".into(),
+        };
+        let e = pack.put(meta.clone(), b"OTTO-fake-lora").unwrap();
+        assert_eq!(e.source, "pack");
+        assert!(pack.dir.join(format!("{}.otf", e.key)).exists());
+        cache.clear().unwrap();
+        assert_eq!(pack.stats().count, 1);
+        let bad = FontCacheMeta {
+            source: "web".into(),
+            ..meta
+        };
+        assert_eq!(pack.put(bad, b"x").unwrap_err().code, "INVALID");
+        pack.clear().unwrap();
+        assert_eq!(pack.stats().count, 0);
     }
 
     #[test]

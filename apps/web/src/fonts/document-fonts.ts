@@ -5,7 +5,12 @@
  * `readFontInfo`); WOFF2 (not inspectable without Brotli) falls back to the manifest `name`
  * ("Fraunces-SemiBold.woff2").
  */
-import { type DocumentFontFace, readFontInfo } from "@kimo/renderer"
+import {
+  type DocumentFontFace,
+  fontAssetName,
+  parseFontFileName,
+  readFontInfo,
+} from "@kimo/renderer"
 
 export const FONT_MIME: Readonly<Record<string, string>> = {
   ttf: "font/ttf",
@@ -21,32 +26,15 @@ export function isFontAsset(key: string, mime?: string): boolean {
   return ext !== undefined && ext in FONT_MIME
 }
 
-const WEIGHT_WORDS: [RegExp, number][] = [
-  [/thin|hairline/i, 100],
-  [/extra-?light|ultra-?light/i, 200],
-  [/light/i, 300],
-  [/medium/i, 500],
-  [/semi-?bold|demi-?bold/i, 600],
-  [/extra-?bold|ultra-?bold/i, 800],
-  [/black|heavy/i, 900],
-  [/bold/i, 700],
-]
+/** Family / weight / style from a font file name (shared with headless render). */
+export { parseFontFileName }
 
-/** Family / weight / style from a font file name (`Fraunces-SemiBoldItalic.woff2`). */
-export function parseFontFileName(
-  name: string,
-): { family: string; weight: number; style: "normal" | "italic" } | null {
-  const base = name.replace(/^.*[\\/]/, "").replace(/\.[a-z0-9]+$/i, "")
-  if (!base) return null
-  const [famRaw, styleRaw = ""] = base.split(/[-_](?=[^-_]*$)/)
-  const family = (styleRaw ? famRaw : base)
-    ?.replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/[_]+/g, " ")
-    .trim()
-  if (!family) return null
-  const weight = WEIGHT_WORDS.find(([re]) => re.test(styleRaw))?.[1] ?? 400
-  const style = /italic|oblique/i.test(styleRaw) ? "italic" : "normal"
-  return { family, weight, style }
+/** A document font face plus its asset file (board 28: listed in the manifest on save). */
+export interface DocumentFontAsset extends DocumentFontFace {
+  /** `<hash>.<ext>` in `assets/`. */
+  key: string
+  /** Its manifest entry (`name` = `<Family>-<Style>.<ext>` when Kimo wrote it). */
+  entry: { mime: string; bytes?: number; name?: string }
 }
 
 /**
@@ -57,8 +45,8 @@ export async function loadDocumentFontFaces(
   manifest: Readonly<Record<string, { mime?: string; name?: string }>> | undefined,
   keys: readonly string[],
   read: (key: string) => Promise<Uint8Array | null>,
-): Promise<DocumentFontFace[]> {
-  const out: DocumentFontFace[] = []
+): Promise<DocumentFontAsset[]> {
+  const out: DocumentFontAsset[] = []
   const all = new Set([...keys, ...Object.keys(manifest ?? {})])
   for (const key of all) {
     const entry = manifest?.[key]
@@ -72,11 +60,19 @@ export async function loadDocumentFontFaces(
         ? parseFontFileName(entry.name)
         : null
     if (!meta) continue
+    const ext = /\.([a-z0-9]+)$/i.exec(key)?.[1]?.toLowerCase() ?? "ttf"
+    const style = meta.style as "normal" | "italic"
     out.push({
       family: meta.family,
       weight: meta.weight,
-      style: meta.style as "normal" | "italic",
+      style,
       load: async () => bytes,
+      key,
+      entry: {
+        mime: entry?.mime ?? FONT_MIME[ext] ?? "font/ttf",
+        bytes: bytes.byteLength,
+        name: entry?.name ?? fontAssetName(meta.family, meta.weight, style, ext),
+      },
     })
   }
   return out

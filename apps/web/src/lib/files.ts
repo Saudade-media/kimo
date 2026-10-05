@@ -258,10 +258,19 @@ export async function exportFile(
   store: DocStore,
   name: string,
   assets: AssetStore,
+  /** Board 28: the document as written (font assets the text uses join the manifest). */
+  prepare: (doc: KimoDocument) => KimoDocument = (d) => d,
 ): Promise<ExportedFile> {
-  const doc: KimoDocument = store.toDocument()
-  doc.meta = { ...doc.meta, name }
+  let doc: KimoDocument = store.toDocument()
   const refs = assetRefs(doc.nodes)
+  // A package (the design has images) also carries the font files its text uses, listed in its
+  // manifest (board 28). A plain `.kimo` stays plain: fonts alone don't turn it into a package.
+  if (refs.size) {
+    doc = prepare(doc)
+    for (const [key, e] of Object.entries((doc.assets ?? {}) as Record<string, { mime?: string }>))
+      if (/^font\//i.test(e?.mime ?? "")) refs.add(key)
+  }
+  doc.meta = { ...doc.meta, name }
   if (!refs.size)
     return {
       fileName: `${safeName(name)}.kimo`,

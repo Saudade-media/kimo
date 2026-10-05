@@ -19,7 +19,16 @@ export {
 /** Shared CanvasKit loader (SVG import's stroke outliner reuses the renderer's instance). */
 export { loadCanvasKit } from "./ck"
 export { parseColor, type RGBA, toHex } from "./color"
-export { type FontFileInfo, fontFormat, fsEmbeddable, readFontInfo } from "./font-info"
+export {
+  type FontFileInfo,
+  fontAssetName,
+  fontExtension,
+  fontFamilyKey,
+  fontFormat,
+  fsEmbeddable,
+  parseFontFileName,
+  readFontInfo,
+} from "./font-info"
 export {
   collectFontUsage,
   createPlatformFontSources,

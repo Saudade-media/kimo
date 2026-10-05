@@ -182,6 +182,18 @@ export interface TauriCommandMap {
     result: { count: number; bytes: number; dir: string }
   }
   kimo_fonts_cache_clear: { args: Record<string, never>; result: null }
+  // Offline font pack (board 28): `<app data dir>/font-pack/<key>.<ext>` + `index.json`.
+  kimo_fonts_pack_get: { args: { key: string }; result: ArrayBuffer | null }
+  kimo_fonts_pack_put: {
+    args: { meta: Omit<FontCacheEntry, "key" | "bytes" | "cachedAt">; base64: string }
+    result: FontCacheEntry
+  }
+  kimo_fonts_pack_list: { args: Record<string, never>; result: FontCacheEntry[] }
+  kimo_fonts_pack_stats: {
+    args: Record<string, never>
+    result: { count: number; bytes: number; dir: string }
+  }
+  kimo_fonts_pack_clear: { args: Record<string, never>; result: null }
   /** Allowlist: fonts.googleapis.com, fonts.gstatic.com. Rust re-checks the settings. */
   kimo_fonts_fetch_remote: { args: { url: string }; result: ArrayBuffer }
   kimo_fonts_open_cache_folder: { args: Record<string, never>; result: null }
@@ -295,6 +307,11 @@ export const TAURI_COMMANDS = [
   "kimo_fonts_cache_list",
   "kimo_fonts_cache_stats",
   "kimo_fonts_cache_clear",
+  "kimo_fonts_pack_get",
+  "kimo_fonts_pack_put",
+  "kimo_fonts_pack_list",
+  "kimo_fonts_pack_stats",
+  "kimo_fonts_pack_clear",
   "kimo_fonts_fetch_remote",
   "kimo_fonts_open_cache_folder",
   "kimo_updater_status",

@@ -241,3 +241,37 @@ export function shortTime(ms: number): string {
   const d = new Date(ms)
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`
 }
+
+// --- Offline font pack (board 28 xW7Mh / rCcF5 / TEciq / UN6YR) ----------------------------------
+
+/** "3.1 of 8.3 MB" (the total is the estimate until the received bytes pass it). */
+export function fontPackProgressLabel(bytes: number, estimate: number): string {
+  const total = Math.max(bytes, estimate)
+  const unit = total >= 1_000_000 ? 1_000_000 : 1000
+  const n = (v: number) => (v / unit).toFixed(1).replace(/\.0$/, "")
+  return `${n(bytes)} of ${n(total)} ${unit === 1_000_000 ? "MB" : "KB"}`
+}
+
+/** The pack row's description per state. */
+export function fontPackDescription(
+  s:
+    | { status: "loading" | "empty" }
+    | { status: "downloading"; done: number; total: number }
+    | { status: "ready"; faces: number; families: number; dir: string | null }
+    | { status: "error"; message: string },
+  blocked: "ntpf" | "google-off" | null,
+  dir: (d: string) => string,
+): string {
+  if (s.status === "downloading")
+    return s.total === 0
+      ? "Preparing the download…"
+      : `Downloading ${s.done} of ${s.total} faces… You can keep working; the fonts apply when it finishes.`
+  if (s.status === "ready")
+    return `${s.families} families · ${s.faces} faces · ${s.dir ? dir(s.dir) : "stored in this browser"}`
+  if (blocked === "ntpf")
+    return "Off while No third-party fetch is on. A pack already downloaded keeps working."
+  if (blocked === "google-off")
+    return "Off while Google Fonts is off. A pack already downloaded keeps working."
+  if (s.status === "error") return `The download stopped (${s.message}). Download resumes it.`
+  return "16 popular Google families, regular to bold, kept on this device so they render with no network."
+}

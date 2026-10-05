@@ -98,7 +98,6 @@ const STATIC: Record<string, string> = {
   kimo_assets: "Managing assets",
   kimo_activity: "Reading activity",
   kimo_spawn_agents: "Starting agents",
-  kimo_script: "Running a script",
 }
 
 /**
@@ -114,6 +113,9 @@ export function stepLabel(call: ToolCallRequest, names: StepNames = {}): string 
       const d = Array.isArray(i.ops) ? describeOps(i.ops as Op[], names) : null
       return d ?? (str(i.label) ? `Editing · ${i.label}` : "Editing")
     }
+    case "kimo_script":
+      if (typeof i.retryId === "string") return "Fixing the last script"
+      return str(i.label) ? `Building · ${i.label}` : "Building"
     case "kimo_query": {
       const sel = (i.select ?? {}) as Op
       const ids = Array.isArray(sel.ids) ? sel.ids : []

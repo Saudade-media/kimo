@@ -31,6 +31,7 @@ import {
   modelLabel,
   peekHomeHandoff,
   rpcToolStream,
+  STREAMED_TOOLS,
   skillsFolderAction,
   storeOutline,
   useHomeHandoff,
@@ -195,10 +196,11 @@ export function useEditorAgentPanel({
           ...(hostClient
             ? {
                 cliToolStream: (call: { id: string; name: string; workspace: string }) =>
-                  call.name === "kimo_apply_ops"
+                  STREAMED_TOOLS.has(call.name)
                     ? rpcToolStream(hostClient, "cliStream", "cliStreamClose", {
                         workspace: call.workspace,
                         callId: call.id,
+                        tool: call.name,
                       }).stream
                     : undefined,
               }

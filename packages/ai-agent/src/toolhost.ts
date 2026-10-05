@@ -53,8 +53,8 @@ export interface ToolHost {
   /** Tools offered to the model (stable order: prompt caching depends on it). */
   tools(): ToolSpec[]
   /**
-   * Optional: starts streaming a tool call (only `kimo_apply_ops` streams; undefined for the
-   * rest and for hosts without streamed edits).
+   * Optional: starts streaming a tool call (`kimo_apply_ops` and `kimo_script` stream;
+   * undefined for the rest and for hosts without streamed edits).
    */
   stream?(call: { id: string; name: string }): ToolStream | undefined
   /**
@@ -116,12 +116,13 @@ export function createRegistryToolHost(opts: RegistryToolHostOptions): ToolHost 
   return {
     tools: () => specs,
     stream(call) {
-      if (call.name !== "kimo_apply_ops" || !allowed.has(call.name) || !engine) return undefined
+      if (!allowed.has(call.name) || !engine?.streams(call.name)) return undefined
       streamed = true
       const s = engine.open({
         callId: call.id,
         ctx: { ...opts.context, signal: new AbortController().signal, streamed: true },
         dispatch: opts.dispatch,
+        tool: call.name,
       })
       streams.set(call.id, s)
       return {
@@ -170,5 +171,4 @@ export const CHILD_EXCLUDED_TOOLS: readonly string[] = [
   "kimo_create",
   "kimo_open",
   "kimo_close",
-  "kimo_script",
 ]

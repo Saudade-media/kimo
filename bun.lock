@@ -13,7 +13,7 @@
     },
     "apps/desktop": {
       "name": "@kimo/desktop",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/platform": "workspace:*",
         "@tauri-apps/api": "^2.12.1",
@@ -24,11 +24,11 @@
     },
     "apps/server": {
       "name": "@kimo/server",
-      "version": "0.0.0",
+      "version": "1.0.0",
     },
     "apps/site": {
       "name": "@kimo/site",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/core-schema": "workspace:*",
         "@kimo/design-tokens": "workspace:*",
@@ -41,7 +41,7 @@
     },
     "apps/web": {
       "name": "@kimo/web",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/ai-agent": "workspace:*",
         "@kimo/core-schema": "workspace:*",
@@ -71,7 +71,7 @@
     },
     "packages/ai-agent": {
       "name": "@kimo/ai-agent",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@anthropic-ai/sdk": "0.131.0",
         "@kimo/core-schema": "workspace:*",
@@ -80,7 +80,7 @@
     },
     "packages/cli": {
       "name": "@kimo/cli",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "bin": {
         "kimo": "./src/main.ts",
       },
@@ -97,7 +97,7 @@
     },
     "packages/core-schema": {
       "name": "@kimo/core-schema",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "typebox": "^1.3.34",
       },
@@ -107,11 +107,11 @@
     },
     "packages/design-tokens": {
       "name": "@kimo/design-tokens",
-      "version": "0.0.0",
+      "version": "1.0.0",
     },
     "packages/editor-state": {
       "name": "@kimo/editor-state",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/core-schema": "workspace:*",
         "yjs": "^13.6.33",
@@ -123,7 +123,7 @@
     },
     "packages/exporters": {
       "name": "@kimo/exporters",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/core-schema": "workspace:*",
         "@kimo/layout": "workspace:*",
@@ -138,7 +138,7 @@
     },
     "packages/layout": {
       "name": "@kimo/layout",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/core-schema": "workspace:*",
         "yoga-layout": "^3.2.1",
@@ -149,8 +149,10 @@
     },
     "packages/mcp-server": {
       "name": "@kimo/mcp-server",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
+        "@jitl/quickjs-singlefile-browser-release-sync": "0.32.0",
+        "@jitl/quickjs-singlefile-mjs-release-sync": "0.32.0",
         "@kimo/core-schema": "workspace:*",
         "@kimo/editor-state": "workspace:*",
         "@kimo/exporters": "workspace:*",
@@ -160,16 +162,18 @@
         "@kimo/sync": "workspace:*",
         "@modelcontextprotocol/node": "^2.1.1",
         "@modelcontextprotocol/server": "2.3.0",
+        "acorn": "^8.19.0",
+        "quickjs-emscripten-core": "0.32.0",
         "typebox": "^1.3.34",
       },
     },
     "packages/platform": {
       "name": "@kimo/platform",
-      "version": "0.0.0",
+      "version": "1.0.0",
     },
     "packages/renderer": {
       "name": "@kimo/renderer",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/core-schema": "workspace:*",
         "@kimo/layout": "workspace:*",
@@ -187,7 +191,7 @@
     },
     "packages/sync": {
       "name": "@kimo/sync",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/editor-state": "workspace:*",
         "y-indexeddb": "^9.0.12",
@@ -199,7 +203,7 @@
     },
     "packages/ui": {
       "name": "@kimo/ui",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@kimo/design-tokens": "workspace:*",
         "lucide-react": "^1.49.0",
@@ -289,6 +293,12 @@
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.28.2", "", { "os": "win32", "cpu": "x64" }, "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.17", "", { "peerDependencies": { "hono": "^4" } }, "sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ=="],
+
+    "@jitl/quickjs-ffi-types": ["@jitl/quickjs-ffi-types@0.32.0", "", {}, "sha512-v9T+GQpmk43VDJ7d72sf0Nexhk+ArvtUihW27dy7lqAl0zBObFKtSBBIm5RBjwIhE8VwsPPm9PNuvPvNqLWUEg=="],
+
+    "@jitl/quickjs-singlefile-browser-release-sync": ["@jitl/quickjs-singlefile-browser-release-sync@0.32.0", "", { "dependencies": { "@jitl/quickjs-ffi-types": "0.32.0" } }, "sha512-Hfdl7rh8dzxNWFRiYAYNbhn0RMF1/tO6SMH2mUW0aTibqwaAtqPRbi4WkwaIDlhNz8Z4dksJi1Zjl1R54Jsc/Q=="],
+
+    "@jitl/quickjs-singlefile-mjs-release-sync": ["@jitl/quickjs-singlefile-mjs-release-sync@0.32.0", "", { "dependencies": { "@jitl/quickjs-ffi-types": "0.32.0" } }, "sha512-h9g2Dri6WxKNjX6a1+sFAafOVxj1n5YIA1GAzMoSdIqK1M8cG07tz3GxKVC3Gbdutz14uQ3oc3Q2lll8otInhA=="],
 
     "@kimo/ai-agent": ["@kimo/ai-agent@workspace:packages/ai-agent"],
 
@@ -452,6 +462,8 @@
 
     "@webgpu/types": ["@webgpu/types@0.1.21", "", {}, "sha512-pUrWq3V5PiSGFLeLxoGqReTZmiiXwY3jRkIG5sLLKjyqNxrwm/04b4nw7LSmGWJcKk59XOM/YRTUwOzo4MMlow=="],
 
+    "acorn": ["acorn@8.19.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw=="],
+
     "bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
 
     "canvaskit-wasm": ["canvaskit-wasm@0.42.0", "", { "dependencies": { "@webgpu/types": "0.1.21" } }, "sha512-N3ikotmzYwDVAcpQKDMptBT2P5pIEWS9ywdmrQA2awwaMF9cxKEFuxZZHv9ay1Em9kDjxDsPtwUzDm1uNj136g=="],
@@ -545,6 +557,8 @@
     "postcss": ["postcss@8.5.28", "", { "dependencies": { "nanoid": "^3.3.18", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, "sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A=="],
 
     "pure-rand": ["pure-rand@8.4.2", "", {}, "sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng=="],
+
+    "quickjs-emscripten-core": ["quickjs-emscripten-core@0.32.0", "", { "dependencies": { "@jitl/quickjs-ffi-types": "0.32.0" } }, "sha512-QFnPfjFey8EqknSrSxe1hZrf1/8z7/6s1QzGOmKo6++02r7QRRX7ZoyNaZh7JuVjWsVW87KnQrbZqnHkOAzUyg=="],
 
     "react": ["react@19.3.0", "", {}, "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog=="],
 

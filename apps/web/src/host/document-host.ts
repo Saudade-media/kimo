@@ -682,9 +682,15 @@ export async function startDocumentHostService(
 
   // --- Streamed edits (ADR 0013 §4.7) -------------------------------------------------------------
   const feedStream = async (conn: McpConnection, args: Record<string, unknown>) => {
-    const s = conn.openStream(String(args.callId))
+    const s = conn.openStream(
+      String(args.callId),
+      typeof args.tool === "string" ? args.tool : "kimo_apply_ops",
+    )
     if (!s) return null
     for (const e of (Array.isArray(args.events) ? args.events : []) as PartialEvent[]) s.event(e)
+    // kimo_script streams its raw input (the host finds the complete statements).
+    for (const c of Array.isArray(args.chunks) ? args.chunks : [])
+      if (typeof c === "string") s.feed(c)
     await s.settled()
     return s.progress()
   }

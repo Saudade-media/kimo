@@ -37,7 +37,26 @@ import {
 } from "../envelope"
 import { readGuide as builtinGuide } from "../guides"
 import type { WireOp } from "../ops"
-import type { HandlerOutput, HostDocument, ToolContext, ToolHandler } from "../runtime"
+import { toolByName } from "../registry"
+import {
+  authorize,
+  type HandlerOutput,
+  type HostDocument,
+  type ToolContext,
+  type ToolHandler,
+} from "../runtime"
+import {
+  SCRIPT_COMPILER,
+  SCRIPT_PLAN,
+  type ScriptCompiler,
+  type ScriptPlan,
+  scriptLine,
+} from "../script/plan"
+import { defaultScriptRunner, type ScriptRunner } from "../script/runner"
+import type { Carry, WorldData } from "../script/session"
+import { ScriptStream } from "../script/stream"
+import { snapshotWorld } from "../script/world"
+import type { ToolDef } from "../tools/define"
 import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
 import { AGENT_MAX_NEW_LAYERS, STREAM_MAX_NEW_LAYERS } from "../tools/write"
 import { CHECK_MAX_LIST, type CheckProblem, checkDesign, formatProblems } from "./check"
@@ -142,6 +161,10 @@ export interface ToolHandlerOptions {
   /** Loaded libraries of a document (component/variable libraries). */
   libraries?: (docId: string) => Libraries
   styles?: readonly StylePreset[]
+  /** Input validation (kimo_script validates the ops it compiles like a kimo_apply_ops call). */
+  validate?: (def: ToolDef, input: unknown) => ToolError[]
+  /** Where kimo_script runs (default: a worker in browsers, in-process headless). */
+  scriptRunner?: ScriptRunner
 }
 
 type In = Record<string, unknown>
@@ -1697,12 +1720,183 @@ export function createToolHandlerMap(
     )
   }
 
-  const script: ToolHandler = async () =>
-    fail({
-      code: "UNSUPPORTED",
-      message: "kimo_script is not available in this version.",
-      suggestion: "Use kimo_apply_ops (up to 500 ops per call with @key references).",
-    })
+  // --- kimo_script (ADR 0013 addendum 7) -------------------------------------------------------
+
+  /** The runner of this handler set (a worker in browsers and the desktop host). */
+  let runner: ScriptRunner | null = null
+  const scriptRunner = () => {
+    runner ??= options.scriptRunner ?? defaultScriptRunner()
+    return runner
+  }
+  /** Globals each agent's scripts left for its next ones, by origin (bounded). */
+  const carries = new Map<string, { carry: Carry; names: string[] }>()
+  const carryOf = (origin: string): Carry => carries.get(origin)?.carry ?? {}
+  /** Keeps a landed script's top-level names for the origin's next script. */
+  async function keepCarry(origin: string, plan: ScriptPlan, refs: Record<string, string>) {
+    const carry = await plan.session.carry(plan.declared, refs)
+    carries.delete(origin)
+    carries.set(origin, { carry, names: Object.keys(carry) })
+    while (carries.size > 32) carries.delete(carries.keys().next().value as string)
+  }
+  async function worldOf(d: HostDocument): Promise<WorldData> {
+    return snapshotWorld(d.store, await scene.layout(d.store))
+  }
+  streams.deps.script = { runner: scriptRunner, world: worldOf, carry: carryOf }
+
+  /**
+   * Runs a script and returns the kimo_apply_ops call it compiles to (dispatch validates and
+   * authorizes that call, so approvals, scopes and batch limits see the real ops). A streamed
+   * call reuses its stream's world and carried globals, so it yields the ops already applied.
+   */
+  const compileScript: ScriptCompiler = async (input, ctx) => {
+    const d = docOrFail(ctx, input)
+    if (isOutput(d)) return { ok: false, output: d }
+    if (d.store.readOnly) return { ok: false, output: fail(readOnlyError(d)) }
+    if (typeof input.code !== "string")
+      return {
+        ok: false,
+        output: fail({
+          code: "INVALID_INPUT",
+          message: "Give code (or retryId with edits to fix a failed script).",
+          path: "code",
+        }),
+      }
+    const streamed = ctx.stream instanceof ScriptStream ? ctx.stream.scriptState() : null
+    const own = streamed && streamed.docId === d.ref.id ? streamed : null
+    const world = own?.world ?? (await worldOf(d))
+    const carry = own?.carry ?? carryOf(String(ctx.origin))
+    const page = typeof input.page === "string" ? input.page : undefined
+    const session = await scriptRunner().open(world, carry, undefined, page)
+    const out = await session.run(input.code)
+    if (!out.result.ok) {
+      session.dispose()
+      const line = out.result.line
+      return {
+        ok: false,
+        output: fail(
+          {
+            code: "INVALID_INPUT",
+            message: `${line ? `line ${line}: ` : ""}${out.result.message}`,
+            path: "code",
+            ...(line ? { detail: { kind: "script", line, prints: out.prints.slice(-10) } } : {}),
+            suggestion:
+              "Fix the script: {docId, retryId, edits: [{find, replace}]} patches its code.",
+          },
+          { revision: sameRev(d.store.revision) },
+        ),
+      }
+    }
+    const call: In = {
+      docId: input.docId,
+      ops: out.ops,
+      ...(input.baseRevision ? { baseRevision: input.baseRevision } : {}),
+      ...(input.render === true ? { render: true } : {}),
+      ...(input.dryRun === true ? { dryRun: true } : {}),
+      ...(typeof input.label === "string" ? { label: input.label } : {}),
+    }
+    return {
+      ok: true,
+      plan: {
+        call,
+        lines: out.lines,
+        prints: out.prints,
+        names: out.names,
+        declared: [
+          ...(carries.get(String(ctx.origin))?.names ?? []),
+          ...(await import("../script/statements")).topLevelNames(input.code),
+        ],
+        session,
+        dispose: () => session.dispose(),
+      },
+    }
+  }
+
+  const script: ToolHandler = async (input, ctx): Out => {
+    let plan = (input as { [SCRIPT_PLAN]?: ScriptPlan })[SCRIPT_PLAN]
+    const own = !plan
+    if (!plan) {
+      // Called directly (not through dispatch): compile and check the ops here.
+      const c = await compileScript(input, ctx)
+      if (!c.ok) return c.output
+      plan = c.plan
+      const applyDef = toolByName("kimo_apply_ops") as ToolDef
+      const invalid = options.validate?.(applyDef, plan.call) ?? []
+      if (invalid.length) {
+        plan.dispose()
+        return fail(invalid.slice(0, MAX_ERRORS).map((e) => scriptLine(e, plan?.lines ?? [])))
+      }
+      // Without dispatch nobody asked or checked node scopes: only what needs neither runs.
+      const auth = authorize(applyDef, plan.call, ctx, {})
+      if (auth.kind !== "allow" || ctx.policy.nodes.length) {
+        plan.dispose()
+        return fail({
+          code: "PERMISSION_DENIED",
+          message: "These ops need approval or a scope check: run kimo_script through dispatch.",
+        })
+      }
+    }
+    try {
+      const wire = plan.call.ops as WireOp[]
+      const d = docOrFail(ctx, input)
+      if (isOutput(d)) return d
+      if (!wire.length && plan.call.dryRun !== true) {
+        // Nothing to apply (a script that only read and printed): no op group, no undo step.
+        if (ctx.stream) ctx.stream.close("The script made no ops.")
+        await keepCarry(String(ctx.origin), plan, {})
+        return done(
+          success(
+            {
+              applied: 0,
+              inserted: 0,
+              updated: 0,
+              deleted: 0,
+              notes: [],
+              names: [],
+              prints: plan.prints,
+            },
+            `No ops. ${plan.prints.length} printed line(s).`,
+            { doc: d.ref, revision: sameRev(d.store.revision) },
+          ),
+        )
+      }
+      const out = await applyOps(plan.call, ctx)
+      const res = out.result
+      const lines = plan.lines
+      if (!res.ok)
+        return { ...out, result: { ...res, errors: res.errors.map((e) => scriptLine(e, lines)) } }
+      const created = (res as { created?: { key: string; id: string }[] }).created ?? []
+      const refs: Record<string, string> = {}
+      for (const c of created) refs[c.key] = c.id
+      const names: { name: string; id: string }[] = []
+      const seen = new Set<string>()
+      for (const [key, name] of plan.names) {
+        const id = refs[key]
+        if (!id || seen.has(name)) continue
+        seen.add(name)
+        names.push({ name, id })
+        if (names.length >= SCRIPT_MAX_NAMES) break
+      }
+      if (!res.dryRun) await keepCarry(String(ctx.origin), plan, refs)
+      // The script's keys (s1, s2, …) mean nothing to the agent: names and ids instead.
+      const { created: _c, ...rest } = res as typeof res & { created?: unknown }
+      const data = {
+        ...(res.data as object),
+        names,
+        ...(plan.prints.length ? { prints: plan.prints } : {}),
+      }
+      return {
+        ...out,
+        label: typeof input.label === "string" ? input.label : `Script (${wire.length} ops)`,
+        result: {
+          ...rest,
+          data,
+          summary: res.summary.replace(/^(Dry run: would apply|Applied)/, "$1 the script's"),
+        },
+      }
+    } finally {
+      if (own) plan.dispose()
+    }
+  }
 
   const map: Record<string, ToolHandler> & { [STREAM_ENGINE]?: StreamEngine } = {
     kimo_get_state: getState,
@@ -1727,6 +1921,7 @@ export function createToolHandlerMap(
     kimo_script: script,
   }
   map[STREAM_ENGINE] = streams
+  ;(map as { [SCRIPT_COMPILER]?: ScriptCompiler })[SCRIPT_COMPILER] = compileScript
   return map
 }
 
@@ -1852,6 +2047,8 @@ function withRootTheme(doc: KimoDocument, theme: Record<string, string>): KimoDo
 
 /** At most this many errors in a failed commit (the rest are counted in the summary). */
 const MAX_ERRORS = 5
+/** Max entries of a script result's name table (it reaches the model's next call). */
+const SCRIPT_MAX_NAMES = 80
 
 /** Features `kimo_apply_ops` declares on its own: every gate but stored merge conflicts. */
 const AUTO_FEATURES: ReadonlySet<Feature> = new Set<Feature>([

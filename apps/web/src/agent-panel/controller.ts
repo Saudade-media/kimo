@@ -2223,6 +2223,17 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         if (e.type === "step_start" && e.tool === "kimo_apply_ops" && Array.isArray(e.input.ops))
           for (const [k, op] of (e.input.ops as Record<string, unknown>[]).entries())
             rows.push(opRow(op, `${e.callId}:${k}`, origin))
+        // A script's input has no ops: list the layers its landed edit changed.
+        if (e.type === "step_end" && e.tool === "kimo_script" && e.ok)
+          for (const [k, id] of e.changed.slice(0, 40).entries())
+            rows.push({
+              key: `${e.callId}:${k}`,
+              op: "update",
+              target: o.nodeName?.(id) ?? id,
+              detail: "script",
+              persona: "teal",
+              origin,
+            })
         events(e)
       },
     })

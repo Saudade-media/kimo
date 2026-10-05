@@ -18,7 +18,6 @@ import {
 import {
   ALL_HOSTS,
   baseRevision,
-  DEFAULT_TIMEOUT_MS,
   defineTool,
   docId,
   dryRun,
@@ -141,6 +140,27 @@ const applyOpsInput = Obj({
   ),
 })
 
+/** What a landed kimo_apply_ops (or kimo_script) edit reports in `data`. */
+const APPLY_DATA = {
+  applied: Int({ description: "Wire ops applied.", minimum: 0 }),
+  inserted: Int({ description: "Nodes inserted.", minimum: 0 }),
+  updated: Int({ description: "Nodes updated or moved.", minimum: 0 }),
+  deleted: Int({ description: "Nodes deleted (whole subtrees counted).", minimum: 0 }),
+  notes: Arr(
+    Obj({
+      code: Str({ description: "Planner note (OVERRIDE_DROPPED, BINDING_DETACHED, …)." }),
+      message: Str({ description: "Explanation." }),
+      nodeId: Opt(Str({ description: "Node." })),
+    }),
+    { description: "Side effects the component/variable planners reported." },
+  ),
+  problems: Opt(
+    Arr(Str({ description: "<id> <kind>: <fix>." }), {
+      description: "Problems in the changed layers (empty frame, text overflow, …): fix them next.",
+    }),
+  ),
+}
+
 export const kimoApplyOps = defineTool({
   name: "kimo_apply_ops",
   title: "Edit with typed ops",
@@ -148,26 +168,7 @@ export const kimoApplyOps = defineTool({
     "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key, then use @key later in the call. New layers per call: at most 40 (150 when streamed), a ceiling: one finished section per call, no empty frames to fill later. Fix data.problems next. Pass baseRevision from your last result. A failed call returns retryId: send {docId, retryId, edits} instead of the whole call.",
   input: applyOpsInput,
   advertise: applyOpsAdvertised(applyOpsInput),
-  data: Obj({
-    applied: Int({ description: "Wire ops applied.", minimum: 0 }),
-    inserted: Int({ description: "Nodes inserted.", minimum: 0 }),
-    updated: Int({ description: "Nodes updated or moved.", minimum: 0 }),
-    deleted: Int({ description: "Nodes deleted (whole subtrees counted).", minimum: 0 }),
-    notes: Arr(
-      Obj({
-        code: Str({ description: "Planner note (OVERRIDE_DROPPED, BINDING_DETACHED, …)." }),
-        message: Str({ description: "Explanation." }),
-        nodeId: Opt(Str({ description: "Node." })),
-      }),
-      { description: "Side effects the component/variable planners reported." },
-    ),
-    problems: Opt(
-      Arr(Str({ description: "<id> <kind>: <fix>." }), {
-        description:
-          "Problems in the changed layers (empty frame, text overflow, …): fix them next.",
-      }),
-    ),
-  }),
+  data: Obj(APPLY_DATA),
   annotations: WRITE_MAYBE_DESTRUCTIVE,
   scope: "edit",
   scopeFor: (i) =>
@@ -216,40 +217,59 @@ export const kimoImport = defineTool({
 
 export const kimoScript = defineTool({
   name: "kimo_script",
-  title: "Run an edit script (disabled)",
+  title: "Build with a script",
   description:
-    "Sandboxed JavaScript whose API mirrors the ops and compiles to the same op log. Not available in this version: it returns UNSUPPORTED. Use kimo_apply_ops (one call can hold up to 500 ops with @key references).",
+    "Builds with a short sandboxed JavaScript program compiled to kimo_apply_ops ops: one undo step, the same checks, results and limit. Prefer it for building (loops and helpers keep calls short; layers appear as you write); kimo_apply_ops for a few precise edits. A failure names the line and returns retryId: send {docId, retryId, edits} to patch the code. Guide: script.",
   input: Obj({
     docId,
-    code: Opt(Str({ description: "Script source.", maxLength: 200_000 })),
-    retryId: Opt(Str({ description: "retryId of a failed run, with edits." })),
+    code: Opt(
+      Str({
+        description:
+          'JS. Insert(parent, node, index?) → ref (parent: "root", id or ref; node: an insert body, may have children: [nodes]); Update(ref, set, unset?); Move(ref, parent, index?); Delete(ref); Copy(ref, parent, set?) → ref; Instantiate(component, parent, {name?}) → ref; Op(kimo_apply_ops op) → ref; Get(id), Children(id|"root") → nodes before the script (fields, children, box); Print(…). Top-level names persist to your next script.',
+        maxLength: 200_000,
+      }),
+    ),
+    retryId: Opt(Str({ description: "retryId of a failed script, with edits." })),
     edits: Opt(
       Arr(
         Obj({
-          find: Str({
-            description: "Exact text in the stored script (must match once unless all).",
-          }),
+          find: Str({ description: "Exact text of the failed script's code (once unless all)." }),
           replace: Str({ description: "Replacement." }),
           all: Opt(Bool({ description: "Replace every match." })),
         }),
-        { description: "Patches to the stored failed script." },
+        { description: "Patches to its code." },
       ),
     ),
+    page: Opt(
+      Str({
+        description: "Page of top-level layers that set none.",
+        pattern: "^[A-Za-z0-9]{6,24}$",
+      }),
+    ),
     baseRevision,
+    render: Opt(Bool({ description: "Attach a render of the changed top-level frames." })),
     dryRun,
     label,
   }),
   data: Obj({
-    prints: Arr(Str({ description: "Printed line." }), { description: "Output lines." }),
+    ...APPLY_DATA,
+    names: Arr(
+      Obj({
+        name: Str({ description: "Layer name." }),
+        id: Str({ description: "Its node id." }),
+      }),
+      { description: "The named layers the script created (first of each name)." },
+    ),
+    prints: Opt(Arr(Str({ description: "Printed line." }), { description: "Print output." })),
   }),
   annotations: WRITE_MAYBE_DESTRUCTIVE,
+  // Dispatch authorizes the ops the script compiles to (as kimo_apply_ops), not this call.
   scope: "edit",
-  scopeFor: () => "delete",
   doc: "required",
   mutating: true,
-  timeoutMs: DEFAULT_TIMEOUT_MS,
+  timeoutMs: 60_000,
   availability: ALL_HOSTS,
-  status: "stub",
+  status: "m5",
 })
 
 export const ASSET_ACTIONS = [

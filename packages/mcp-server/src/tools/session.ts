@@ -137,6 +137,7 @@ export const DOC_PATHS = [
   "index",
   "schema",
   "ops",
+  "script",
   "components",
   "tokens",
   "layout",

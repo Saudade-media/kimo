@@ -209,6 +209,79 @@ describe("lenient update", () => {
     expect(bad.errors[0]?.message).toContain('"scale"')
   })
 
+  test("layout strings, padding / padX / padY, CSS names, bare fill / fit sizes, color strokes", async () => {
+    const s = setup()
+    const path = "/w/layout-slips.kimo"
+    const docId = await newDoc(s, path)
+    const r = expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [
+          {
+            op: "insert",
+            key: "a",
+            parent: "root",
+            node: { type: "frame", w: 600, layout: "vertical", gap: 12, padding: [8, 16] },
+          },
+          {
+            op: "insert",
+            key: "b",
+            parent: "@a",
+            node: { type: "frame", w: "fill", h: "fit", layout: "horizontal", padX: 24, padY: 10 },
+          },
+          {
+            op: "insert",
+            key: "c",
+            parent: "@a",
+            node: { type: "frame", layout: { dir: "row", padding: 4 } },
+          },
+          { op: "update", id: "@c", set: { layout: "column" } },
+          {
+            op: "insert",
+            key: "d",
+            parent: "@a",
+            node: {
+              type: "frame",
+              layout: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              stroke: "#E5E7EB",
+            },
+          },
+          {
+            op: "insert",
+            key: "e",
+            parent: "@a",
+            node: {
+              type: "frame",
+              layout: { dir: "row", justify: "flex-end" },
+              stroke: { color: "#000000", width: 2 },
+              cornerRadius: 12,
+            },
+          },
+        ],
+      }),
+    )
+    const doc = await saved(s, docId, path)
+    expect(doc.nodes[idOf(r, "a")]?.layout).toEqual({ dir: "column", gap: 12, pad: [8, 16] })
+    // h: {mode: "fit"} is the frame default, so the file leaves it out.
+    expect(doc.nodes[idOf(r, "b")]).toMatchObject({
+      w: { mode: "fill" },
+      layout: { dir: "row", pad: [10, 24] },
+    })
+    expect(doc.nodes[idOf(r, "b")]?.h).toBeUndefined()
+    expect(doc.nodes[idOf(r, "c")]?.layout).toEqual({ dir: "column" })
+    expect(doc.nodes[idOf(r, "d")]).toMatchObject({
+      layout: { dir: "row", align: "center", justify: "between" },
+      stroke: { paint: "#E5E7EB" }, // width 1 is the default
+    })
+    expect(doc.nodes[idOf(r, "e")]).toMatchObject({
+      layout: { dir: "row", justify: "end" },
+      stroke: { paint: "#000000", width: 2 },
+      radius: 12,
+    })
+  })
+
   test("null fields of a new node are dropped", async () => {
     const s = setup()
     const docId = await newDoc(s, "/w/nulls.kimo")

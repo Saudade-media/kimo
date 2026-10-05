@@ -649,6 +649,7 @@
               "index",
               "schema",
               "ops",
+              "script",
               "components",
               "tokens",
               "layout",
@@ -7643,6 +7644,521 @@
         "idempotentHint": false,
         "openWorldHint": false,
         "title": "Style presets"
+      }
+    },
+    {
+      "name": "kimo_script",
+      "title": "Build with a script",
+      "description": "Builds with a short sandboxed JavaScript program compiled to kimo_apply_ops ops: one undo step, the same checks, results and limit. Prefer it for building (loops and helpers keep calls short; layers appear as you write); kimo_apply_ops for a few precise edits. A failure names the line and returns retryId: send {docId, retryId, edits} to patch the code. Guide: script.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "docId"
+        ],
+        "properties": {
+          "docId": {
+            "type": "string",
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
+          },
+          "code": {
+            "type": "string",
+            "description": "JS. Insert(parent, node, index?) → ref (parent: \"root\", id or ref; node: an insert body, may have children: [nodes]); Update(ref, set, unset?); Move(ref, parent, index?); Delete(ref); Copy(ref, parent, set?) → ref; Instantiate(component, parent, {name?}) → ref; Op(kimo_apply_ops op) → ref; Get(id), Children(id|\"root\") → nodes before the script (fields, children, box); Print(…). Top-level names persist to your next script."
+          },
+          "retryId": {
+            "type": "string",
+            "description": "retryId of a failed script, with edits."
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "find",
+                "replace"
+              ],
+              "properties": {
+                "find": {
+                  "type": "string",
+                  "description": "Exact text of the failed script's code (once unless all)."
+                },
+                "replace": {
+                  "type": "string",
+                  "description": "Replacement."
+                },
+                "all": {
+                  "type": "boolean",
+                  "description": "Replace every match."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Patches to its code."
+          },
+          "page": {
+            "type": "string",
+            "description": "Page of top-level layers that set none."
+          },
+          "baseRevision": {
+            "type": "object",
+            "required": [
+              "epoch",
+              "seq"
+            ],
+            "properties": {
+              "epoch": {
+                "type": "string",
+                "description": "revision.after.epoch."
+              },
+              "seq": {
+                "type": "integer",
+                "description": "revision.after.seq.",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false,
+            "description": "revision.after of your last result; REVISION_CONFLICT if the document moved since."
+          },
+          "render": {
+            "type": "boolean",
+            "description": "Attach a render of the changed top-level frames."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Validate only; commit nothing."
+          },
+          "label": {
+            "type": "string",
+            "description": "History label."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "summary"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "True on success; false means errors[] is set and nothing changed."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short human-readable summary."
+          },
+          "doc": {
+            "type": "object",
+            "required": [
+              "id",
+              "path",
+              "dirty",
+              "readOnly"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "docId: d_<hash(path)>_<epoch>. Changes when the file is reloaded."
+              },
+              "path": {
+                "type": "string",
+                "description": "Canonical absolute path, or untitled:<id>."
+              },
+              "dirty": {
+                "type": "boolean",
+                "description": "Unsaved edits exist."
+              },
+              "readOnly": {
+                "type": "boolean",
+                "description": "Edits are refused (READ_ONLY)."
+              },
+              "lastSavedRevision": {
+                "type": "object",
+                "required": [
+                  "epoch",
+                  "seq"
+                ],
+                "properties": {
+                  "epoch": {
+                    "type": "string",
+                    "description": "Random id minted when the document was (re)loaded.",
+                    "minLength": 1
+                  },
+                  "seq": {
+                    "type": "integer",
+                    "description": "Commits since the epoch began.",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Opaque revision token {epoch, seq}. Pass back verbatim as baseRevision."
+              }
+            },
+            "additionalProperties": false,
+            "description": "The document the call acted on."
+          },
+          "revision": {
+            "type": "object",
+            "required": [
+              "before",
+              "after"
+            ],
+            "properties": {
+              "before": {
+                "type": "object",
+                "required": [
+                  "epoch",
+                  "seq"
+                ],
+                "properties": {
+                  "epoch": {
+                    "type": "string",
+                    "description": "Random id minted when the document was (re)loaded.",
+                    "minLength": 1
+                  },
+                  "seq": {
+                    "type": "integer",
+                    "description": "Commits since the epoch began.",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Opaque revision token {epoch, seq}. Pass back verbatim as baseRevision."
+              },
+              "after": {
+                "type": "object",
+                "required": [
+                  "epoch",
+                  "seq"
+                ],
+                "properties": {
+                  "epoch": {
+                    "type": "string",
+                    "description": "Random id minted when the document was (re)loaded.",
+                    "minLength": 1
+                  },
+                  "seq": {
+                    "type": "integer",
+                    "description": "Commits since the epoch began.",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Opaque revision token {epoch, seq}. Pass back verbatim as baseRevision."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Revision before and after the call (equal for reads and dry runs)."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "description": "Warning code (lint code such as TEXT_NO_FILL, or a host code)."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Explanation."
+                },
+                "nodeId": {
+                  "type": "string",
+                  "description": "Node the warning is about."
+                },
+                "fix": {
+                  "type": "string",
+                  "description": "Suggested fix."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Non-fatal issues to fix in a later call."
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "DOCUMENT_NOT_OPEN",
+                    "DOCUMENT_LOCKED",
+                    "LOAD_FAILED",
+                    "READ_ONLY",
+                    "REVISION_CONFLICT",
+                    "NODE_NOT_FOUND",
+                    "NODE_EXISTS",
+                    "INVALID_PROPERTY",
+                    "INVALID_INPUT",
+                    "SCHEMA_VIOLATION",
+                    "OUT_OF_SCOPE",
+                    "INSTANCE_STRUCTURE",
+                    "CYCLE",
+                    "BATCH_TOO_LARGE",
+                    "ASSET_NOT_FOUND",
+                    "FILE_EXISTS",
+                    "FILE_NOT_FOUND",
+                    "TIMEOUT",
+                    "PERMISSION_DENIED",
+                    "APP_NOT_RUNNING",
+                    "PROTOCOL_MISMATCH",
+                    "UNSUPPORTED",
+                    "RATE_LIMITED",
+                    "INTERNAL"
+                  ],
+                  "description": "Stable error code (see kimo://docs/errors)."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "What went wrong, for the agent."
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Input location, e.g. ops[3].id."
+                },
+                "nodeId": {
+                  "type": "string",
+                  "description": "Node the error is about."
+                },
+                "suggestion": {
+                  "type": "string",
+                  "description": "How to fix or what to call next."
+                },
+                "retryable": {
+                  "type": "boolean",
+                  "description": "True when the same call may succeed later unchanged."
+                },
+                "detail": {
+                  "type": "object",
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "description": "Detail discriminator (revision, lock, plan, schema)."
+                    }
+                  },
+                  "additionalProperties": true,
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Present when ok is false."
+          },
+          "rolledBack": {
+            "type": "boolean",
+            "description": "Present (true) when ok is false."
+          },
+          "retryId": {
+            "type": "string",
+            "description": "Fix and rerun this call: {docId, retryId, edits}."
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "applied",
+              "inserted",
+              "updated",
+              "deleted",
+              "notes",
+              "names"
+            ],
+            "properties": {
+              "applied": {
+                "type": "integer",
+                "description": "Wire ops applied.",
+                "minimum": 0
+              },
+              "inserted": {
+                "type": "integer",
+                "description": "Nodes inserted.",
+                "minimum": 0
+              },
+              "updated": {
+                "type": "integer",
+                "description": "Nodes updated or moved.",
+                "minimum": 0
+              },
+              "deleted": {
+                "type": "integer",
+                "description": "Nodes deleted (whole subtrees counted).",
+                "minimum": 0
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Planner note (OVERRIDE_DROPPED, BINDING_DETACHED, …)."
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Explanation."
+                    },
+                    "nodeId": {
+                      "type": "string",
+                      "description": "Node."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "Side effects the component/variable planners reported."
+              },
+              "problems": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "<id> <kind>: <fix>."
+                },
+                "description": "Problems in the changed layers (empty frame, text overflow, …): fix them next."
+              },
+              "names": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "id"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Layer name."
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "Its node id."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "description": "The named layers the script created (first of each name)."
+              },
+              "prints": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Printed line."
+                },
+                "description": "Print output."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Tool-specific result (present when ok)."
+          },
+          "ops": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "description": "Op kind."
+                }
+              },
+              "additionalProperties": true,
+              "description": "Normalized editor-state op."
+            },
+            "description": "Normalized forward ops."
+          },
+          "inverse": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "description": "Op kind."
+                }
+              },
+              "additionalProperties": true,
+              "description": "Normalized editor-state op."
+            },
+            "description": "Informational inverse ops (undo via kimo_history)."
+          },
+          "created": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "id"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "The op's key, or the node name when no key was given."
+                },
+                "id": {
+                  "type": "string",
+                  "description": "New node id."
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Nodes created by the call."
+          },
+          "opCount": {
+            "type": "integer",
+            "description": "Normalized ops committed (ops.length).",
+            "minimum": 0
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Node id."
+            },
+            "description": "Node ids touched by the call."
+          },
+          "undoToken": {
+            "type": "string",
+            "description": "Pass to kimo_history undo to revert exactly this call."
+          },
+          "pointer": {
+            "type": "string",
+            "description": "The last layer this edit added (else changed)."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "True when nothing was committed on purpose."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Kimo result envelope (kimo://docs/envelope)."
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "title": "Build with a script"
       }
     }
   ]

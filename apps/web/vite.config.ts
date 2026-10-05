@@ -29,6 +29,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  // kimo_script's sandbox worker loads QuickJS lazily (code-split): ES module workers.
+  worker: { format: "es" },
   build: {
     target: "es2022",
     outDir: "dist",

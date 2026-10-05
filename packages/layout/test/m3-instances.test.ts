@@ -335,7 +335,9 @@ describe("M3 incremental updates", () => {
       ),
       { numRuns: 120 },
     )
-  })
+    // 120 fresh Yoga engines: about 0.7 s alone, 3 to 5 s late in the full `bun test` run (the
+    // wasm work of earlier files slows it), so the 5 s default is too tight.
+  }, 20_000)
 
   test("a visual edit inside a main patches every instance without re-expanding", async () => {
     const e = createLayoutEngine()

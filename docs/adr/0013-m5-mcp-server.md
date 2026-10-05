@@ -55,7 +55,7 @@ SDK adapter), `./installer` (node:fs). `apps/web` may import it (types only in M
 | `kimo_create` | edit + `files.create` grant | write | FILE_EXISTS, never overwrites |
 | `kimo_close` | read → edit (save) / delete (discard) | destructive hint | Refuses dirty docs unless save/discard |
 | `kimo_styles` | read → edit for apply | write | Presets; content can arrive later (may list none) |
-| `kimo_script` | delete | destructive hint | **Stub** (§5) |
+| `kimo_script` | edit → as the ops it compiles to | destructive hint | **Stub** (§5); shipped in addendum 7: a sandboxed script compiled to these ops |
 
 The user-facing read categories in the M5 brief map as: documents/list + document/info →
 `kimo_get_state`; nodes/get (depth, resolve) + nodes/find → `kimo_query`; variables/get →
@@ -122,7 +122,7 @@ delete, replace, detach, remove_prop, delete_variable, unsets of variables/axes,
 value removal and slot removal with content deletion; `GLOBAL_OPS` and `COMPONENT_ORIGIN_OPS`
 feed the grant rules of 11.3.
 
-**`kimo_script` is a stub in M5**: schema frozen, status `stub`, hidden from `tools/list`
+**`kimo_script` is a stub in M5** (shipped in addendum 7): schema frozen, status `stub`, hidden from `tools/list`
 unless "Experimental tools" is on, returns UNSUPPORTED. Reason: a QuickJS sandbox is a security
 surface on its own, and typed ops with `@key` (500 per call) already give agents one-round-trip
 composition, which was the main benefit of pen.dev's `execute` (5.8).
@@ -554,3 +554,142 @@ as a normal call, validated in full; a failure returns a new `retryId`. Handles 
 origin, consumed on use, bounded (64) and expire after 15 minutes (`src/retry.ts`, `RETRIES`,
 handled in `dispatch`). The advertised schema grew `retryId` and `edits` (`ops` optional;
 missing both is `INVALID_INPUT`); its size budget is 4,050 characters.
+
+## Addendum 7 (2026-10-06): `kimo_script` ships
+
+§5 kept `kimo_script` as a stub: typed ops with `@key` already compose in one round trip, and a
+script sandbox is its own security surface. Streaming (addendum 6) changed the trade-off. A
+streamed call may now hold a whole section, so the size of what the model writes is the main
+cost of a building turn, and repeated structure (cards, rows, list items) is most of that size.
+A clean-room study measured a 30-layer section at about 4.3k characters as ops and about 1.2k as
+a script with a loop and a helper.
+
+### Decision, with data
+
+A prototype (QuickJS sandbox, the API below, compiled to wire ops, applied through the
+`kimo_apply_ops` path) was measured against streamed `kimo_apply_ops` with real Claude Code
+(2.1.289, Sonnet, effort low) in the app's topology (agent panel controller, `kimo mcp --attach`
+shim, document host runtime), 3 runs per cell. Medians unless noted:
+
+| | Pricing, ops | Pricing, script | Testimonials, ops | Testimonials, script |
+|---|---|---|---|---|
+| Output tokens | 3,528 | 2,097 (−41%) | 2,202 | 1,546 (−30%) |
+| Total tokens | 105.2k | 71.4k | 72.0k | 74.3k |
+| Model calls | 6 | 4 | 4 | 4 |
+| Failed calls (all 3 runs) | 3 | 3 | 1 | 0 |
+| First layer that stayed | 18.5 s | 13.8 s | 5.1 s | 5.3 s |
+| Total time | 27.6 s | 20.3 s | 19.3 s | 17.3 s |
+| Problems at the end (`kimo_validate check`) | 0 | 0 | 0 | 0 |
+| New layers | 27 | 44 | 12 | 18 |
+| Edit input (characters) | 5,240 | 3,600 | 2,934 | 1,699 |
+
+"Pricing" is "design a pricing page" on an empty file; "Testimonials" is "add a testimonials
+section to the landing page" on a copy of `examples/landing-page/landing.kimo`. The bar was at
+least 25% fewer output tokens, no slower first layer and no more failures: met (the testimonials
+first layer differs by 0.13 s, inside the run-to-run spread of 4.6 to 6.4 s). Scripts also built
+more per token (pricing: 48 output tokens per new layer against 130). The failures in both modes
+were schema slips in the first call (`padding` beside `layout`, string `layout`, a missing
+`paint`), fixed by one patch-retry.
+
+### After the build
+
+The shipped build, measured the same way with both modes on it (the ops-only runs hide
+`kimo_script` with `--disallowedTools` and drop the prompt's script sentence), 3 runs each:
+
+| | Pricing, ops only | Pricing, shipped | Testimonials, ops only | Testimonials, shipped |
+|---|---|---|---|---|
+| Output tokens | 5,419 | 1,742 (−68%) | 2,224 | 1,533 (−31%) |
+| Total tokens | 176.0k | 67.0k (−62%) | 75.1k | 73.9k |
+| Model calls | 9 | 4 | 4 | 4 |
+| Failed calls (all 3 runs) | 5 | 4 | 2 | 0 |
+| First layer that stayed | 15.0 s | 13.2 s | 5.3 s | 5.7 s |
+| Total time | 41.3 s | 22.0 s | 22.2 s | 17.0 s |
+| Problems at the end | 0 | 0 | 0 | 0 |
+| New layers | 32 | 37 | 12 | 18 |
+
+The testimonials first layer (5.7 s against 5.3 s) is inside both modes' spread (4.5 to 6.9 s
+and 4.9 to 6.4 s). The remaining failures are first-call slips in the node format; the ones seen
+more than once are now read as what they mean by the compiler both tools share
+(`lenientNode` / `lenientUpdate`): `layout: "row" | "column" | "horizontal" | "vertical"`,
+`padding` / `padX` / `padY` (beside or inside `layout`), `alignItems` / `justifyContent` and
+the CSS values `space-between`, `space-around`, `space-evenly`, `flex-start`, `flex-end`,
+`w` / `h` written as `"fill"` / `"fit"`, `stroke` written as a color or `{color, width}`, and
+`cornerRadius` / `borderRadius`.
+
+### The tool
+
+- **API** (`src/script/session.ts`): `Insert(parent, node, index?)` → ref (`node.children`
+  nests inserts), `Update`, `Move`, `Delete`, `Copy` → ref, `Instantiate` → ref, `Op(any wire
+  op)`, `Get(id)` / `Children(id | "root")` (the document as it was before the script, with
+  laid-out boxes), `Print`. Refs are generated keys (`"@s1"`, …); a copy's inner nodes are
+  `ref + "/<original id>"`. Each call appends wire ops and records the script line that made it.
+- **Sandbox**: QuickJS (quickjs-emscripten 0.32, MIT) with its own heap. Arguments and results
+  cross as JSON text; the one host function is held by the prelude's closure and deleted from
+  `globalThis` before the script runs, so no host object, prototype or function is reachable.
+  No I/O, network, timers or modules. Limits per run (`DEFAULT_LIMITS`): 3 s (deadline
+  interrupt), 6 s across a session's runs, 64 MB heap, 512 KB stack, 2,000 ops, 100 printed
+  lines / 20,000 characters, 256 KB and 64 levels of arguments per call. `Math.random` is seeded
+  and `Date` is fixed at 0, so the same code makes the same ops.
+- **Where it runs** (`src/script/runner.ts`): a Web Worker in browsers and the desktop document
+  host (`worker.ts`, the single-file browser build of QuickJS; a run that outlives its deadline
+  plus 2 s terminates the worker), in-process headless (CLI, tests). The editor's startup bundle
+  gains neither QuickJS nor acorn (both load on first use).
+- **Dispatch** (`src/runtime.ts`): a `kimo_script` call is compiled first (the handler set's
+  `SCRIPT_COMPILER`), then validated, scope-checked, authorized and, when needed, approved as
+  the `kimo_apply_ops` call it compiles to. Approval prompts carry `tool: "kimo_script"` and the
+  dry-run preview of the compiled ops; the batch limit counts compiled inserts (copies free);
+  node scopes (`checkScope`) see the real ops. The handler applies them through `applyOps`, so
+  the op log, origin, one undo step, `data.problems`, pointer, render and revisions are the same.
+  Called without dispatch, the handler runs only what needs neither approval nor a scope check.
+- **Result**: the `kimo_apply_ops` envelope with `data.names` (`[{name, id}]`, first 80 named
+  layers) and `data.prints`; `created` (the generated keys) is left out. Errors about a compiled
+  op name its script line (`line N: …`); a thrown error is `INVALID_INPUT`, `path: "code"`.
+- **Patch-retry**: failures carry `retryId`; `edits` patch the raw `code` text (no JSON
+  escaping), the patched call is validated in full.
+- **Globals**: top-level `const` / `let` / `var` / `function` / `class` names (acorn, MIT) carry
+  to the same origin's next script after a landed call: JSON data with refs turned into node ids
+  (a ref that named nothing becomes null), functions as `Function.prototype.toString` source.
+  Restored as configurable globals (a script may redeclare them), bounded by the run deadline,
+  64 KB and 200 names, 32 origins per handler set.
+- **Pages**: optional `page` input; top-level layers that set none go on it (the rules of
+  `withPageDefaults`). The editor's page-aware tool host fills it in, for streamed calls too.
+
+### Streaming
+
+`StreamEngine.open({tool: "kimo_script"})` wraps an ordinary `kimo_apply_ops` stream in a
+`ScriptStream` (`src/script/stream.ts`). The raw partial input is scanned for its string fields;
+when `docId` closes, the world snapshot and the caller's carried globals are taken and a session
+opens; each complete top-level statement of `code` (acorn tokens: `;` at depth 0, or a line end
+followed by a statement start; the prefix must parse) runs, and its ops go to the inner stream
+as items, where they are validated, authorized, limited and applied as in §4.7. The call reruns
+the whole script with the same world and carry and hands its ops to `finalize`; deterministic
+code yields the same ops, so the prefix check commits them. A statement that throws ends the
+streamed part; the call then fails and rolls back. Plumbing: `McpConnection.openStream(callId,
+tool)`, `streamFor` by tool-use id only for scripts, `ToolHost.stream` for both tools, host RPC
+`agentStream` / `cliStream` with `tool` and raw `chunks`, `STREAMED_TOOLS` in the window.
+
+### Prompts and clients
+
+The base prompt, the `kimo-design` skill, the MCP server instructions (and their copy in
+`kimo-mcp/src/offline.rs`) and the `kimo-design-screen` prompt prefer `kimo_script` for building
+and `kimo_apply_ops` for a few precise edits. The new guide `script` holds the API, an example
+(run by a test), streaming, globals and limits. `kimo_script` is no longer a stub: every host and
+MCP client lists it (status `m5`), spawned agents included (their node scopes apply to the
+compiled ops). Model-facing size: 2,175 characters (budget 2,200; the API is in the `code` field
+description, tool descriptions stay under 420); the whole `tools/list` budget went from 19.5k to
+21k characters.
+
+### Security review
+
+| Surface | Mitigation | Test |
+|---|---|---|
+| Host objects, prototypes, functions | JSON-only boundary; host function deleted from `globalThis`; no host values passed | sandbox has no host access; prototypes never touched |
+| Prototype pollution into the host | Host `JSON.parse` (own `__proto__` keys stay data); spreads copy data; `Get` reads own entries only; schema rejects unknown fields | polluting script's ops fail; `Get("__proto__")` is null |
+| CPU | Deadline interrupt per run and per session; worker terminated when it does not stop | deadline, total time, stuck worker |
+| Memory, stack | QuickJS heap and stack limits; insert nesting ≤ 64; argument depth ≤ 64 | memory, stack, depth limits |
+| Output size | ops, prints, names, carry and argument caps | limits test |
+| Carried code | Sandbox-only, restored under the deadline, sources via `Function.prototype.toString` | restored code bounded |
+| Authorization bypass | Compiled ops authorized as `kimo_apply_ops`; direct handler calls run only allow-level, unscoped ops | approvals, edit-level delete, node scopes |
+
+The wasm heap of the worker (or the CLI process) grows to the largest script's use and is not
+returned; a run cannot exceed the 64 MB limit.

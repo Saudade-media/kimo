@@ -78,7 +78,7 @@ export const PROMPTS: readonly PromptDef[] = [
     name: "kimo-design-screen",
     title: "Design a screen in Kimo",
     description:
-      "Plan and build a screen in an open .kimo document with kimo_apply_ops, verifying each section with kimo_render.",
+      "Plan and build a screen in an open .kimo document with kimo_script (kimo_apply_ops for small edits), verifying each section with render: true.",
     arguments: [
       { name: "docId", description: "Target document (from kimo_get_state).", required: true },
       { name: "brief", description: "What to design.", required: true },

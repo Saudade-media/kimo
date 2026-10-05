@@ -95,12 +95,10 @@ describe("tool schemas", () => {
     expect(TOOL_NAMES).not.toContain("kimo_spawn_agents")
   })
 
-  test("stub tools are hidden unless requested", () => {
+  test("kimo_script is offered (ADR 0013 addendum 7); no stub tools are left", () => {
     const names = listTools({ host: "desktop" }).map((t) => t.name)
-    expect(names).not.toContain("kimo_script")
-    expect(listTools({ host: "desktop", includeStubs: true }).map((t) => t.name)).toContain(
-      "kimo_script",
-    )
+    expect(names).toContain("kimo_script")
+    expect(listTools({ host: "desktop", includeStubs: true }).map((t) => t.name)).toEqual(names)
     expect(listTools({ host: "web" }).map((t) => t.name)).not.toContain("kimo_open")
   })
 
@@ -139,7 +137,9 @@ describe("tool schemas", () => {
     kimo_create: 500,
     kimo_close: 500,
     kimo_styles: 1130,
-    kimo_script: 1600,
+    // The API lives in the code field (descriptions are capped at 420); a script saves ~30-40%
+    // of output tokens on building turns (ADR 0013 addendum 7), far more than it costs here.
+    kimo_script: 2200,
   }
   for (const def of TOOLS)
     test(`${def.name}: model-facing size stays within its budget`, () => {
@@ -156,7 +156,8 @@ describe("tool schemas", () => {
         (a, d) => a + JSON.stringify({ n: d.name, d: d.description, i: d.inputSchema }).length,
         0,
       )
-    expect(total).toBeLessThan(19_500)
+    // 19.5k before kimo_script (addendum 7) joined the list.
+    expect(total).toBeLessThan(21_000)
   })
 
   test("the advertised schema drops validation-only keywords; the server keeps them", () => {

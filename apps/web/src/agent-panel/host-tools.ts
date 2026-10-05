@@ -94,10 +94,11 @@ export function createHostTools(o: HostToolsOptions): HostTools {
     const host: ToolHost = {
       tools: () => specs,
       stream(call) {
-        if (call.name !== "kimo_apply_ops" || !allowed.has(call.name)) return undefined
+        if (!STREAMED_TOOLS.has(call.name) || !allowed.has(call.name)) return undefined
         const s = rpcToolStream(o.client, "agentStream", "agentStreamClose", {
           spec: wire,
           callId: call.id,
+          tool: call.name,
         })
         sends.set(call.id, { sent: s.sent, ran: s.ran })
         return s.stream
@@ -157,11 +158,15 @@ export function createHostTools(o: HostToolsOptions): HostTools {
   }
 }
 
+/** Tools whose calls stream to the document host (ADR 0013 §4.7, addendum 7). */
+export const STREAMED_TOOLS: ReadonlySet<string> = new Set(["kimo_apply_ops", "kimo_script"])
+
 /**
  * A {@link ToolStream} that forwards a streamed call to the document host (ADR 0013 §4.7): the
  * window parses the partial input and sends each complete op (and field) as it closes, in
  * order, over host RPC `method`; the reply carries the host's progress (pointer, last layer).
- * `abort` rolls the host's provisional ops back (`closeMethod`).
+ * A kimo_script call (`args.tool`) forwards the raw input text instead (`chunks`): the host
+ * finds its complete statements. `abort` rolls the host's provisional ops back (`closeMethod`).
  */
 export function rpcToolStream(
   client: Pick<HostClient, "call">,
@@ -170,25 +175,30 @@ export function rpcToolStream(
   args: Record<string, unknown>,
 ): { stream: ToolStream; sent: () => Promise<void>; ran: () => void } {
   const parser = new PartialJsonObject("ops")
+  const raw = args.tool === "kimo_script"
   const listeners = new Set<(p: StreamProgress) => void>()
   let chain: Promise<void> = Promise.resolve()
   let closed = false
   let failed = false
   /** Events not sent yet: they go in one RPC when the one in flight answers. */
   let queue: PartialEvent[] = []
+  let chunks = ""
   let inFlight = false
-  const send = (events: PartialEvent[]) => {
+  const send = (events: PartialEvent[], text = "") => {
     queue.push(...events)
+    chunks += text
     if (inFlight) return
     inFlight = true
     chain = chain.then(async () => {
-      while (queue.length && !closed && !failed) {
+      while ((queue.length || chunks) && !closed && !failed) {
         const batch = queue
+        const text = chunks
         queue = []
+        chunks = ""
         try {
           const r = await client.call<{ progress: StreamProgress | null }>(method, {
             ...args,
-            events: batch,
+            ...(raw ? { chunks: [text] } : { events: batch }),
           })
           if (!r.progress) {
             // The host has no stream for this call: the call applies when it arrives.
@@ -205,6 +215,10 @@ export function rpcToolStream(
   }
   const stream: ToolStream = {
     push(chunk) {
+      if (raw) {
+        send([], chunk)
+        return
+      }
       const events = parser
         .push(chunk)
         .filter((e) => e.kind === "field" || e.kind === "item" || e.kind === "end")

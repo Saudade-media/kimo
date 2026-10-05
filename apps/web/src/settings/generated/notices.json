@@ -23,6 +23,27 @@
    "text": "84c72b48269d"
   },
   {
+   "name": "@jitl/quickjs-ffi-types",
+   "version": "0.32.0",
+   "license": "MIT",
+   "source": "npm",
+   "text": "64deeacc68be"
+  },
+  {
+   "name": "@jitl/quickjs-singlefile-browser-release-sync",
+   "version": "0.32.0",
+   "license": "MIT",
+   "source": "npm",
+   "text": "d3ef6c5c0127"
+  },
+  {
+   "name": "@jitl/quickjs-singlefile-mjs-release-sync",
+   "version": "0.32.0",
+   "license": "MIT",
+   "source": "npm",
+   "text": "d3ef6c5c0127"
+  },
+  {
    "name": "@material-symbols/svg-400",
    "version": "0.47.5",
    "license": "Apache-2.0",
@@ -98,6 +119,13 @@
    "license": "BSD-3-Clause",
    "source": "npm",
    "text": "56020a4cd757"
+  },
+  {
+   "name": "acorn",
+   "version": "8.19.0",
+   "license": "MIT",
+   "source": "npm",
+   "text": "d7838cc2ffd1"
   },
   {
    "name": "canvaskit-wasm",
@@ -189,6 +217,13 @@
    "license": "MIT",
    "source": "npm",
    "text": "2846bc882d87"
+  },
+  {
+   "name": "quickjs-emscripten-core",
+   "version": "0.32.0",
+   "license": "MIT",
+   "source": "npm",
+   "text": "64deeacc68be"
   },
   {
    "name": "react",

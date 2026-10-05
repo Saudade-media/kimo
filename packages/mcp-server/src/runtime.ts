@@ -37,6 +37,7 @@ import {
 } from "./policy"
 import { type ToolName, toolByName } from "./registry"
 import { type RetryEdit, RetryStore } from "./retry"
+import { SCRIPT_PLAN, type ScriptPlan, scriptCompilerOf, scriptLine } from "./script/plan"
 import type { ApplyStream } from "./stream"
 import type { ToolDef } from "./tools/define"
 
@@ -308,7 +309,7 @@ export interface DispatchOptions {
   ): Promise<ApprovalRequest["preview"] | undefined>
 }
 
-/** Patch-retry handles of failed kimo_apply_ops calls (ADR 0013 §4.8), per caller origin. */
+/** Patch-retry handles of failed kimo_apply_ops / kimo_script calls (ADR 0013 §4.8), per origin. */
 export const RETRIES = new RetryStore()
 
 /** Failures a retry cannot fix by editing the call (permissions, host state, timeouts). */
@@ -331,14 +332,20 @@ export async function dispatch(
   options: DispatchOptions,
 ): Promise<HandlerOutput> {
   let input = (rawInput ?? {}) as Record<string, unknown>
-  if (name !== "kimo_apply_ops") return dispatchOnce(name, input, ctx, handlers, options)
+  if (name !== "kimo_apply_ops" && name !== "kimo_script")
+    return dispatchOnce(name, input, ctx, handlers, options)
   if (typeof input.retryId === "string") {
     // The retry call itself must be well formed before its edits are applied.
     const def = toolByName(name) as ToolDef
     const invalid = options.validate(def, input)
     if (invalid.length) return { result: failure(invalid) }
     const edits = Array.isArray(input.edits) ? (input.edits as RetryEdit[]) : []
-    const p = RETRIES.patch(ctx.origin, input.retryId, edits)
+    const p = RETRIES.patch(
+      ctx.origin,
+      input.retryId,
+      edits,
+      name === "kimo_script" ? "code" : undefined,
+    )
     if (!p.ok) return { result: failure(p.error) }
     input = p.input
   }
@@ -353,11 +360,12 @@ export async function dispatch(
 
 async function dispatchOnce(
   name: string,
-  input: Record<string, unknown>,
+  rawInput: Record<string, unknown>,
   ctx: ToolContext,
   handlers: ToolHandlers,
   options: DispatchOptions,
 ): Promise<HandlerOutput> {
+  let input = rawInput
   const def = toolByName(name)
   if (!def) return { result: failure({ code: "INVALID_INPUT", message: `Unknown tool ${name}.` }) }
   if (options.beforeCall) {
@@ -370,8 +378,61 @@ async function dispatchOnce(
   const invalid = options.validate(def, input)
   if (invalid.length) return { result: failure(invalid) }
 
-  const targets = await options.targets(def, input, ctx)
-  const auth = authorize(def, input, ctx, targets)
+  // kimo_script (ADR 0013 addendum 7): run the script first, then validate and authorize the
+  // kimo_apply_ops call it compiles to, so approvals, scopes and limits see the real ops.
+  let authDef = def
+  let authInput = input
+  let plan: ScriptPlan | undefined
+  if (name === "kimo_script") {
+    const compile = scriptCompilerOf(handlers)
+    // A client that may not edit at all is refused before its code runs.
+    const pre = authorize(def, input, ctx, {})
+    if (compile && pre.kind === "deny") return { result: failure(pre.error) }
+    if (compile) {
+      let c: Awaited<ReturnType<typeof compile>>
+      try {
+        c = await compile(input, ctx)
+      } catch (e) {
+        return {
+          result: failure({
+            code: "INTERNAL",
+            message: `The script could not run: ${e instanceof Error ? e.message : String(e)}`,
+          }),
+        }
+      }
+      if (!c.ok) return c.output
+      plan = c.plan
+      authDef = toolByName("kimo_apply_ops") as ToolDef
+      authInput = plan.call
+      // A script that only read and printed compiles to no ops: nothing to validate.
+      const bad = (plan.call.ops as unknown[]).length ? options.validate(authDef, authInput) : []
+      if (bad.length) {
+        plan.dispose()
+        const lines = plan.lines
+        return { result: failure(bad.slice(0, 5).map((e) => scriptLine(e, lines))) }
+      }
+      input = Object.defineProperty({ ...input }, SCRIPT_PLAN, { value: plan, enumerable: false })
+    }
+  }
+  try {
+    return await authorizeAndRun(name, def, authDef, authInput, input, ctx, handlers, options)
+  } finally {
+    plan?.dispose()
+  }
+}
+
+async function authorizeAndRun(
+  name: string,
+  def: ToolDef,
+  authDef: ToolDef,
+  authInput: Record<string, unknown>,
+  input: Record<string, unknown>,
+  ctx: ToolContext,
+  handlers: ToolHandlers,
+  options: DispatchOptions,
+): Promise<HandlerOutput> {
+  const targets = await options.targets(authDef, authInput, ctx)
+  const auth = authorize(authDef, authInput, ctx, targets)
   if (auth.kind === "deny") {
     ctx.recordActivity({
       time: ctx.now(),
@@ -390,7 +451,7 @@ async function dispatchOnce(
     const auto = autoApproves(ctx.policy)
     const preview =
       options.preview && !auto
-        ? await options.preview(def, input, ctx).catch(() => undefined)
+        ? await options.preview(authDef, authInput, ctx).catch(() => undefined)
         : undefined
     const request: ApprovalRequest = {
       id: ctx.newId(),

@@ -262,6 +262,8 @@ function lenientUpdate(
     else set[k] = v
   }
   const out: Extract<WireOp, { op: "update" }> = { op: "update", id: op.id }
+  if (set.layout !== undefined) set.layout = layoutOf(set.layout)
+  if (set.stroke !== undefined) set.stroke = strokeOf(set.stroke)
   const sized = sizeAliases(set)
   if (Object.keys(sized).length) out.set = sized as typeof op.set
   if (unset.length) out.unset = [...new Set(unset)]
@@ -279,6 +281,8 @@ const LAYOUT_SLIPS: Record<string, string> = {
   padding: "pad",
   justify: "justify",
   align: "align",
+  justifyContent: "justify",
+  alignItems: "align",
 }
 
 /**
@@ -302,6 +306,23 @@ function lenientNode<T extends Record<string, unknown>>(node: T): T {
     if (typeof paint === "string" || isPlain(paint) || Array.isArray(paint))
       out = { ...out, style, fill: paint }
   }
+  if (out.stroke !== undefined) {
+    const stroke = strokeOf(out.stroke)
+    if (stroke !== out.stroke) out = { ...out, stroke }
+  }
+  if (out.type === "frame" && out.layout !== undefined) {
+    const layout = layoutOf(out.layout)
+    if (layout !== out.layout) out = { ...out, layout }
+  }
+  if (out.type === "frame" && (out.padX !== undefined || out.padY !== undefined)) {
+    // padX / padY beside the layout: its pad.
+    const { padX, padY, ...rest } = out
+    const layout = isPlain(rest.layout) ? rest.layout : {}
+    out =
+      layout.pad === undefined
+        ? { ...rest, layout: { ...layout, pad: [num(padY), num(padX)] } }
+        : rest
+  }
   if (out.type === "frame" && (isPlain(out.layout) || typeof out.dir === "string")) {
     const layout: Record<string, unknown> = { ...(isPlain(out.layout) ? out.layout : {}) }
     const rest: Record<string, unknown> = {}
@@ -313,20 +334,105 @@ function lenientNode<T extends Record<string, unknown>>(node: T): T {
         moved = true
       } else rest[k] = v
     }
-    if (moved) out = { ...rest, layout }
+    if (moved) out = { ...rest, layout: layoutOf(layout) }
   }
   return sizeAliases(out) as T
 }
 
-/** `width` / `height` are `w` / `h` (no node type has fields with those names). */
+const num = (v: unknown): number => (typeof v === "number" ? v : 0)
+
+/** Layout directions agents write as a bare string (`layout: "vertical"`). */
+const LAYOUT_DIRS: Record<string, "row" | "column"> = {
+  row: "row",
+  horizontal: "row",
+  column: "column",
+  col: "column",
+  vertical: "column",
+}
+
+/**
+ * A layout as meant: a direction string is `{dir}`, `padding` is `pad`, and `padX` / `padY`
+ * are `pad: [padY, padX]`. Anything else is returned unchanged (the schema reports it).
+ */
+function layoutOf(v: unknown): unknown {
+  if (typeof v === "string") {
+    const dir = LAYOUT_DIRS[v.toLowerCase()]
+    return dir ? { dir } : v
+  }
+  if (!isPlain(v)) return v
+  let out = v
+  if (out.padding !== undefined) {
+    const { padding, ...rest } = out
+    out = rest.pad === undefined ? { ...rest, pad: padding } : rest
+  }
+  if (out.padX !== undefined || out.padY !== undefined) {
+    const { padX, padY, ...rest } = out
+    out = rest.pad === undefined ? { ...rest, pad: [num(padY), num(padX)] } : rest
+  }
+  for (const [css, field] of [
+    ["justifyContent", "justify"],
+    ["alignItems", "align"],
+  ] as const)
+    if (out[css] !== undefined) {
+      const { [css]: v, ...rest } = out
+      out = rest[field] === undefined ? { ...rest, [field]: v } : rest
+    }
+  for (const field of ["justify", "align"] as const) {
+    const v = out[field]
+    const to = typeof v === "string" ? CSS_ALIGN[v] : undefined
+    if (to) out = { ...out, [field]: to }
+  }
+  return out
+}
+
+/** CSS alignment values → Kimo's. */
+const CSS_ALIGN: Record<string, string> = {
+  "space-between": "between",
+  "space-around": "around",
+  "space-evenly": "evenly",
+  "flex-start": "start",
+  "flex-end": "end",
+}
+
+/** A stroke written as a paint (`"#E5E7EB"`) or with `color` is `{paint, width}`. */
+function strokeOf(v: unknown): unknown {
+  if (typeof v === "string") return { paint: v, width: 1 }
+  if (!isPlain(v) || v.paint !== undefined || v.color === undefined) return v
+  const { color, ...rest } = v
+  return { width: 1, ...rest, paint: color }
+}
+
+/** A size written as a bare mode (`w: "fill"`) is `{mode}`. */
+function sizeOf(v: unknown): unknown {
+  return v === "fill" || v === "fit" ? { mode: v } : v
+}
+
+/**
+ * `width` / `height` are `w` / `h` (no node type has fields with those names), a bare
+ * `"fill"` / `"fit"` size is `{mode}`, and `cornerRadius` / `borderRadius` are `radius`.
+ */
 function sizeAliases<T extends Record<string, unknown>>(o: T): T {
-  if (!("width" in o) && !("height" in o)) return o
-  const { width, height, ...rest } = o as Record<string, unknown>
-  return {
-    ...rest,
-    ...(width !== undefined && rest.w === undefined ? { w: width } : {}),
-    ...(height !== undefined && rest.h === undefined ? { h: height } : {}),
-  } as T
+  let r: Record<string, unknown> = o
+  for (const css of ["cornerRadius", "borderRadius"])
+    if (r[css] !== undefined) {
+      // CSS / other tools' names for radius.
+      const { [css]: v, ...rest } = r
+      r = rest.radius === undefined ? { ...rest, radius: v } : rest
+    }
+  if ("width" in r || "height" in r) {
+    const { width, height, ...rest } = r
+    r = {
+      ...rest,
+      ...(width !== undefined && rest.w === undefined ? { w: width } : {}),
+      ...(height !== undefined && rest.h === undefined ? { h: height } : {}),
+    }
+  }
+  if (typeof r.w === "string" || typeof r.h === "string") {
+    r = { ...r }
+    if (typeof r.w === "string") r.w = sizeOf(r.w)
+    if (typeof r.h === "string") r.h = sizeOf(r.h)
+  }
+  return r as T
 }
 
 /** Maps a path of the final apply (`ops[j]...`) back to the wire op (`ops[i]`). */

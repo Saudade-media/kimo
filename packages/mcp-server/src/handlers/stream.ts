@@ -30,6 +30,7 @@ import {
   type HostDocument,
   type ToolContext,
 } from "../runtime"
+import { type ScriptDeps, ScriptStream } from "../script/stream"
 import type { ApplyStream, StreamProgress, StreamState } from "../stream"
 import type { ToolDef } from "../tools/define"
 import { STREAM_MAX_NEW_LAYERS } from "../tools/write"
@@ -65,6 +66,8 @@ export interface StreamDeps {
     group: LandedGroup,
     meta: LandedMeta,
   ): Promise<HandlerOutput>
+  /** kimo_script streams (absent: only kimo_apply_ops streams). */
+  script?: ScriptDeps
 }
 
 export interface OpenStreamOptions {
@@ -72,6 +75,8 @@ export interface OpenStreamOptions {
   /** The caller's context (origin, policy, allowances, host): the call will use the same. */
   ctx: ToolContext
   dispatch: Pick<DispatchOptions, "validate" | "targets">
+  /** The streamed tool: kimo_apply_ops (default) or kimo_script. */
+  tool?: string
 }
 
 /** Max ops waiting for a later op (an `@key` defined further on, a store check that needs more). */
@@ -136,7 +141,15 @@ export class StreamEngine {
   }
 
   open(o: OpenStreamOptions): ApplyStream {
-    return new Stream(this, o)
+    const s = new Stream(this, o)
+    if (o.tool === "kimo_script" && this.deps.script)
+      return new ScriptStream(s, o.ctx, this.deps.script)
+    return s
+  }
+
+  /** Tools whose calls stream. */
+  streams(tool: string): boolean {
+    return tool === "kimo_apply_ops" || (tool === "kimo_script" && !!this.deps.script)
   }
 
   /** @internal Takes the (store, origin) slot; false when another stream holds it. */
@@ -170,7 +183,8 @@ export class StreamEngine {
    */
   interrupt(store: DocStore, origin: string, except?: ApplyStream): void {
     const s = this.active.get(store)?.get(origin)
-    if (s && s !== except) s.rollback("Another edit of this agent landed first.")
+    const own = except instanceof ScriptStream ? except.inner : except
+    if (s && s !== own) s.rollback("Another edit of this agent landed first.")
   }
 
   /**
@@ -183,9 +197,10 @@ export class StreamEngine {
     input: Record<string, unknown>,
     ctx: ToolContext,
   ): Promise<HandlerOutput | null> {
-    if (!(stream instanceof Stream)) return null
     await stream.settled()
-    return stream.commit(input, ctx)
+    const s = stream instanceof ScriptStream ? stream.inner : stream
+    if (!(s instanceof Stream)) return null
+    return s.commit(input, ctx)
   }
 }
 

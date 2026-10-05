@@ -417,7 +417,7 @@ describe("imports, assets, styles, output", () => {
       await s.c.call("kimo_query", { docId, select: { topLevel: true } }),
       "DOCUMENT_NOT_OPEN",
     )
-    expectFail(await s.c.call("kimo_script", { docId, code: "1" }), "UNSUPPORTED")
+    expectFail(await s.c.call("kimo_script", { docId, code: "1" }), "DOCUMENT_NOT_OPEN")
   })
 })
 

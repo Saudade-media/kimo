@@ -46,7 +46,7 @@ test("a relayed connection serves initialize, tools/call and resources/read", as
   transport.receive({ jsonrpc: "2.0", method: "notifications/initialized" } as never)
   transport.receive({ jsonrpc: "2.0", id: 2, method: "tools/list" } as never)
   const list = await next(2)
-  expect((list.result?.tools as unknown[] | undefined)?.length).toBe(19)
+  expect((list.result?.tools as unknown[] | undefined)?.length).toBe(20)
   transport.receive({
     jsonrpc: "2.0",
     id: 3,

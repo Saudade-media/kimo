@@ -32,6 +32,7 @@ export {
   type HostTools,
   type HostToolsOptions,
   rpcToolStream,
+  STREAMED_TOOLS,
 } from "./host-tools"
 export { ModelMenu, ModeMenu, SkillsMenu } from "./Menus"
 export {

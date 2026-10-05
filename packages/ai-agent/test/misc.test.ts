@@ -448,10 +448,10 @@ describe("prompt nodes", () => {
 })
 
 describe("tool registry exposure", () => {
-  test("the agent sees the M5 registry minus stubs, in registry order", () => {
+  test("the agent sees the M5 registry, in registry order", () => {
     const specs = registryToolSpecs("desktop")
     expect(specs[0]?.name).toBe("kimo_get_state")
-    expect(specs.some((s) => s.name === "kimo_script")).toBe(false)
+    expect(specs.some((s) => s.name === "kimo_script")).toBe(true)
     expect(specs.every((s) => (s.inputSchema as { type: string }).type === "object")).toBe(true)
     expect(registryToolSpecs("desktop", ["kimo_save"]).some((s) => s.name === "kimo_save")).toBe(
       false,

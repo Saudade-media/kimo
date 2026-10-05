@@ -54,6 +54,8 @@ export class RetryStore {
     origin: string,
     retryId: string,
     edits: readonly RetryEdit[],
+    /** Patch this string field's raw text (kimo_script `code`) instead of the JSON text. */
+    field?: string,
   ): { ok: true; input: Record<string, unknown> } | { ok: false; error: ToolError } {
     this.sweep()
     const e = this.entries.get(retryId)
@@ -67,7 +69,12 @@ export class RetryStore {
           suggestion: "Send the whole call again with ops.",
         },
       }
+    let fieldInput: Record<string, unknown> | null = null
     let text = e.text
+    if (field) {
+      fieldInput = JSON.parse(e.text) as Record<string, unknown>
+      text = String(fieldInput[field] ?? "")
+    }
     for (let i = 0; i < edits.length; i++) {
       const ed = edits[i] as RetryEdit
       const path = `edits[${i}].find`
@@ -86,6 +93,10 @@ export class RetryStore {
           },
         }
       text = r
+    }
+    if (fieldInput && field) {
+      this.entries.delete(retryId)
+      return { ok: true, input: { ...fieldInput, [field]: text } }
     }
     let input: Record<string, unknown>
     try {

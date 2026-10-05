@@ -354,6 +354,16 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
             tool: call.name,
           })
           if (call.name === "kimo_apply_ops") placeholders.observe(call.input, r.created ?? [])
+          else if (call.name === "kimo_script") {
+            // A script's input has no ops: observe the applied (normalized) ones, keyed by id.
+            const ops = ((r.ops ?? []) as { op?: string; id?: string }[]).map((o) =>
+              o.op === "insert" && o.id ? { ...o, key: o.id } : o,
+            )
+            const ids = ops.flatMap((o) =>
+              o.op === "insert" && o.id ? [{ key: o.id, id: o.id }] : [],
+            )
+            placeholders.observe({ docId: call.input.docId, ops }, ids)
+          }
         }
         const pointer = r.ok && r.undoToken ? r.pointer : undefined
         o.onEvent({

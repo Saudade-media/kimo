@@ -171,6 +171,32 @@ const script: Script = (req) => {
           ],
           streamInput: { chunk: 12, delayMs: 25 },
         }
+  // kimo_script (ADR 0013 addendum 7): a script streams; each statement's layers land while the
+  // call is still being written, in the sandbox worker.
+  if (text.includes("Script a pricing card"))
+    return afterTool(req)
+      ? { text: "Added a pricing card to Pricing." }
+      : {
+          text: "Building the pricing card\n",
+          tools: [
+            {
+              name: "kimo_script",
+              input: {
+                docId: docId(),
+                code: [
+                  `const card = Insert("Pricing0001", {type: "frame", name: "Pro card", x: 0, y: 0, w: 240, h: 300})`,
+                  ...["Pro", "$49/mo", "Unlimited files", "Priority support"].map(
+                    (t, i) =>
+                      `Insert(card, {type: "text", name: "Line ${i + 1}", content: ${JSON.stringify(t)}, x: 16, y: ${16 + i * 32}, style: {size: 16}, fill: "#111111"})`,
+                  ),
+                  `Print(Get("Pricing0001").name)`,
+                  "",
+                ].join("\n"),
+              },
+            },
+          ],
+          streamInput: { chunk: 12, delayMs: 25 },
+        }
   if (text.includes("landing"))
     return afterTool(req)
       ? { text: "Sections are in." }

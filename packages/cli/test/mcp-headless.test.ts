@@ -78,7 +78,7 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
     expect(c.getInstructions()).toContain("kimo_get_state")
     const tools = (await c.listTools()).tools.map((t) => t.name)
     expect(tools).toEqual(listTools({ host: "headless" }).map((t) => t.name))
-    expect(tools).not.toContain("kimo_script")
+    expect(tools).toContain("kimo_script")
   })
 
   test('stderr: the mode label is "headless" and names each file opened', async () => {

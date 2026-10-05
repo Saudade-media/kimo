@@ -137,6 +137,53 @@ describe("streamed edits through the document host", () => {
     await h.service.dispose()
   })
 
+  test("built-in agent: a kimo_script streams statement by statement through the host", async () => {
+    const h = await setup()
+    const host: ToolHost = h.tools.factory({
+      origin: agentOrigin("s1", 0),
+      label: "Kimo",
+      session: "s1",
+      policy: leadPolicy(),
+      requestApproval: async () => "deny",
+    })
+    const code = `const page = Insert("root", {type: "frame", name: "Page", x: 0, y: 0, w: 400, h: 200})
+for (const t of ["Title", "Body"]) Insert(page, {type: "text", name: t, content: t, fill: "#111111"})
+`
+    const input = { docId: h.tools.docId(), code }
+    const json = JSON.stringify(input)
+    const s = host.stream?.({ id: "toolu_s", name: "kimo_script" })
+    if (!s) throw new Error("no stream")
+    // The first statement is complete once the next one starts.
+    s.push(json.slice(0, json.indexOf("for (")))
+    s.push("f")
+    await until(() => h.names().length === 1)
+    expect(h.names()).toEqual(["Page"])
+    s.push(json.slice(json.indexOf("for (") + 1))
+    const out = await host.call(
+      { id: "toolu_s", name: "kimo_script", input },
+      new AbortController().signal,
+    )
+    expect(out.result.ok).toBe(true)
+    expect(h.names()).toEqual(["Body", "Page", "Title"])
+    const undo = await host.call(
+      {
+        id: "u",
+        name: "kimo_history",
+        input: {
+          docId: input.docId,
+          action: "undo",
+          token: (out.result as { undoToken: string }).undoToken,
+        },
+      },
+      new AbortController().signal,
+    )
+    expect(undo.result.ok).toBe(true)
+    expect(h.names()).toEqual([])
+    h.tools.dispose()
+    h.client.dispose()
+    await h.service.dispose()
+  })
+
   test("built-in agent: Stop mid-stream rolls the host's provisional ops back", async () => {
     const h = await setup()
     const host = h.tools.factory({
@@ -313,6 +360,80 @@ describe("streamed edits through the document host", () => {
     // Committed, not re-applied.
     expect(h.hostStore().revision).toEqual(rev)
     expect(h.names()).toEqual(["Headline", "Hero"])
+    h.tools.dispose()
+    h.client.dispose()
+    await h.service.dispose()
+  })
+
+  test("Claude Code: a kimo_script streams raw input over cliStream; tools/call with _meta commits", async () => {
+    const h = await setup()
+    h.net.rustEmit(
+      "kimo://mcp-connection",
+      {
+        connectionId: "c_cli3",
+        state: "open",
+        transport: "socket",
+        hello: {
+          client: "claude-code",
+          pid: 1,
+          ppid: 2,
+          cwd: WORKSPACE,
+          relay: { name: "kimo-mcp", version: "1" },
+        },
+      },
+      HOST_LABEL,
+    )
+    const line = (o: unknown) =>
+      h.net.rustEmit(
+        "kimo://mcp-in",
+        { connectionId: "c_cli3", message: JSON.stringify(o) },
+        HOST_LABEL,
+      )
+    line({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "claude-code", version: "2" },
+      },
+    })
+    line({ jsonrpc: "2.0", method: "notifications/initialized" })
+    await until(() => h.sent.some((s) => JSON.parse(s.message).id === 1))
+    const docId = h.tools.docId()
+    const code = `const a = Insert("root", {type: "frame", name: "Hero", x: 0, y: 0, w: 400, h: 200})\nInsert(a, {type: "text", name: "Headline", content: "Headline", fill: "#111111"})\n`
+    const input = { docId, code }
+    const json = JSON.stringify(input)
+    const s = rpcToolStream(h.client, "cliStream", "cliStreamClose", {
+      workspace: WORKSPACE,
+      callId: "toolu_cli3",
+      tool: "kimo_script",
+    })
+    for (let i = 0; i < json.length; i += 11) s.stream.push(json.slice(i, i + 11))
+    await s.sent()
+    await until(() => h.names().length === 2)
+    const rev = h.hostStore().revision
+    line({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "kimo_script",
+        arguments: input,
+        _meta: { "claudecode/toolUseId": "toolu_cli3" },
+      },
+    })
+    await until(() => h.sent.some((m) => JSON.parse(m.message).id === 2))
+    const r = JSON.parse(h.sent.find((m) => JSON.parse(m.message).id === 2)?.message as string)
+    expect(r.result.structuredContent.ok).toBe(true)
+    expect(r.result.structuredContent.data.inserted).toBe(2)
+    expect(r.result.structuredContent.data.names.map((n: { name: string }) => n.name)).toEqual([
+      "Hero",
+      "Headline",
+    ])
+    // Committed, not re-applied.
+    expect(h.hostStore().revision).toEqual(rev)
     h.tools.dispose()
     h.client.dispose()
     await h.service.dispose()

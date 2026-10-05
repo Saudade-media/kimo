@@ -44,7 +44,7 @@ describe("REPLY_STYLE in every prompt", () => {
 
   test("streamed agents get the streamed call size; others the 40-layer one", () => {
     const streamed = buildSystemPrompt({ mode: "single", skills: [], streamed: true }).stable
-    expect(streamed).toContain("one by one while you write the call")
+    expect(streamed).toContain("Layers appear while you write the call")
     expect(streamed).toContain("150 new layers per call is a ceiling")
     expect(BASE_SYSTEM_PROMPT).toContain("40 new layers per call is a ceiling")
     for (const p of [streamed, BASE_SYSTEM_PROMPT]) {

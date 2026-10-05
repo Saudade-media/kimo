@@ -19,7 +19,9 @@ You edit through tools, and each call is one atomic, undoable change.
    one finished section per call (the limit is a ceiling, not a target), with a one-line note
    before each call saying what you are doing. Copy what already exists (a variant starts with
    one `copy` of the page) instead of re-creating it. A failed call returns `retryId`: fix it
-   with `{docId, retryId, edits:[{find, replace}]}`.
+   with `{docId, retryId, edits:[{find, replace}]}`. To build a section, `kimo_script` is
+   shorter: a JavaScript program whose `Insert` / `Update` / … calls compile to the same ops,
+   with loops and functions for repeated cards and rows (see `script`).
 4. Verify: each result's `data.problems` lists problems in what you just changed; fix them in
    the next call. `render: true` on an edit (or `kimo_render {docId, ids}`) returns a PNG, and
    `kimo_validate {check: true}` lists what is left. Finish with none.
@@ -35,6 +37,7 @@ Every result is a JSON envelope `{ok, summary, revision, warnings, errors}`, so 
 |---|---|
 | `schema` | Before your first edit: the node model, node types, fields, ids |
 | `ops` | Before your first edit: every `kimo_apply_ops` op, with examples |
+| `script` | Building with `kimo_script`: the API, streaming, globals, limits |
 | `layout` | Building anything with rows, columns, padding or fill/fit sizing |
 | `text` | Typography, text growth and wrapping, rich text runs |
 | `components` | Components, instances, overrides, declared props, slots |

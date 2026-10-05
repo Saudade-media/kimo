@@ -1,6 +1,8 @@
 /** `createToolHandlers`: the 20 handlers plus per-call activity entries. */
+
 import type { ActivityKind } from "../policy"
 import type { DocumentHost, HandlerOutput, ToolHandler, ToolHandlers } from "../runtime"
+import { SCRIPT_COMPILER } from "../script/plan"
 import type { CoreDocumentHost } from "./core-host"
 import { createToolHandlerMap, STREAM_ENGINE, type ToolHandlerOptions } from "./tools"
 
@@ -90,5 +92,7 @@ export function createToolHandlers(
     out[name] = withActivity(name, h)
     // Streamed edits (ADR 0013 §4.7) reach the engine through the handler set.
   ;(out as { [STREAM_ENGINE]?: unknown })[STREAM_ENGINE] = map[STREAM_ENGINE as never]
+  // kimo_script: dispatch compiles the script before authorizing the ops it makes.
+  ;(out as { [SCRIPT_COMPILER]?: unknown })[SCRIPT_COMPILER] = map[SCRIPT_COMPILER as never]
   return out as ToolHandlers
 }

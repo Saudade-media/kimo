@@ -54,6 +54,26 @@ export function withPageDefaults(ops: readonly unknown[], pageId: string): unkno
 }
 
 /**
+ * A streamed kimo_script call on `pageId`: the call gets `page` (below), so its streamed input
+ * gets the same field, written first, before the model's own fields.
+ */
+function scriptOnPage(inner: ToolStream, pageId: string): ToolStream {
+  let started = false
+  return {
+    push(chunk) {
+      if (started) return inner.push(chunk)
+      const at = chunk.indexOf("{")
+      if (at < 0) return inner.push(chunk)
+      started = true
+      inner.push(`${chunk.slice(0, at + 1)}"page":${JSON.stringify(pageId)},${chunk.slice(at + 1)}`)
+    },
+    ...(inner.event ? { event: inner.event.bind(inner) } : {}),
+    abort: (reason) => inner.abort(reason),
+    onProgress: (l) => inner.onProgress(l),
+  }
+}
+
+/**
  * Wraps a tool host so `kimo_apply_ops` calls default top-level nodes to `page()`. A streamed
  * call (ADR 0013 §4.7) gets the same mapping op by op, so its streamed ops match the call.
  */
@@ -65,6 +85,7 @@ export function pageAwareToolHost(host: ToolHost, page: () => string | null): To
           stream(call: { id: string; name: string }): ToolStream | undefined {
             const inner = host.stream?.(call)
             const id = page()
+            if (inner && id && call.name === "kimo_script") return scriptOnPage(inner, id)
             if (!inner?.event || !id || call.name !== "kimo_apply_ops") return inner
             const forward = inner.event.bind(inner)
             const parser = new PartialJsonObject("ops")
@@ -87,6 +108,8 @@ export function pageAwareToolHost(host: ToolHost, page: () => string | null): To
       : {}),
     call(call, signal) {
       const id = page()
+      if (id && call.name === "kimo_script" && call.input.page === undefined)
+        return host.call({ ...call, input: { ...call.input, page: id } }, signal)
       if (id && call.name === "kimo_apply_ops" && Array.isArray(call.input.ops))
         return host.call(
           { ...call, input: { ...call.input, ops: withPageDefaults(call.input.ops, id) } },

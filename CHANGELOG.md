@@ -33,6 +33,25 @@ The first public release: release engineering, polish, the new mark and the form
   whole section per call; Codex, Gemini CLI and other MCP clients keep 40. Measured with Claude
   Code (Sonnet), 3 runs each: "add a testimonials section to the landing page" shows its first
   layer after 9.0 s instead of 13.9 s, "design a pricing page" after 8.7 s instead of 30.1 s.
+- `kimo_script`: agents build with a short JavaScript program whose calls (`Insert`, `Update`,
+  `Move`, `Delete`, `Copy`, `Instantiate`, `Op`, `Get`, `Children`, `Print`) compile to
+  `kimo_apply_ops` ops, so loops and functions write repeated cards, rows and list items once.
+  The ops take the normal path: validation, permissions and approvals (prompts show the
+  compiled ops), node scopes, the batch limit, one undo step, `data.problems`, `render` and
+  patch-retry (`edits` patch the code). Each top-level statement lands on the canvas as soon as
+  the model has written it. Scripts run in a QuickJS sandbox (a Web Worker in the app) with no
+  access to files, the network or the editor, within 3 s, 64 MB and 2,000 ops; they are
+  deterministic, report errors by line, and leave their top-level names for the agent's next
+  script. The built-in agent, Claude Code and every MCP client get it; the prompts prefer it for
+  building and keep `kimo_apply_ops` for a few precise edits. Measured with Claude Code
+  (Sonnet), 3 runs each against `kimo_apply_ops` alone: "design a pricing page" uses 68% fewer
+  output tokens and 62% fewer tokens in all, finishes in 22 s instead of 41 s; "add a
+  testimonials section" uses 31% fewer output tokens with no failed calls (2 before). Guide:
+  `script`.
+- Fewer failed edits: `kimo_apply_ops` and `kimo_script` read more slips as what they mean:
+  `layout: "row"` / `"vertical"` and the like, `padding` / `padX` / `padY`, `alignItems` /
+  `justifyContent` and CSS values such as `space-between`, `w: "fill"`, a stroke written as a
+  color or `{color, width}`, and `cornerRadius` / `borderRadius`.
 - Patch-retry for edits. A failed `kimo_apply_ops` call returns a `retryId`; the agent fixes it
   with `{docId, retryId, edits: [{find, replace, all?}]}` (compact JSON of the failed call)
   instead of sending the whole call again. Handles are per agent, used once and expire after 15

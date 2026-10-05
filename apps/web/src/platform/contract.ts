@@ -1101,8 +1101,11 @@ export interface AgentStepView {
 
 /** MessageMeta (S0S1S) under every finished agent message. */
 export interface MessageMetaView {
+  /** Input not served from the prompt cache (input + cache writes). */
   tokensIn: number
   tokensOut: number
+  /** Cached input re-read (not counted in the label; shown in its tooltip). */
+  tokensCached?: number
   /** Estimated dollars (API), null for subscription CLIs (show "subscription"). */
   costUsd: number | null
   billing: NonNullable<AgentTurnRecord["billing"]>

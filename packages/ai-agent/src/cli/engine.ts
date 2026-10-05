@@ -45,7 +45,10 @@ export interface RunCliTurnOptions {
   model: ModelSelection
   thinking: ThinkingMode
   user: UserMessage
+  /** Stable instructions: the CLI's system prompt. */
   systemPrompt: string
+  /** This turn's volatile context (document, selection, outline): top of the user message. */
+  context?: string
   /** How the CLI launches Kimo's MCP server; the client slug should be the CLI id. */
   mcp: KimoMcpLaunch
   signal: AbortSignal
@@ -126,7 +129,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
             changed = env.changed ?? []
             if (env.undoToken && !env.dryRun) {
               undoToken = env.undoToken
-              opsApplied += env.ops?.length ?? 0
+              opsApplied += env.opCount ?? env.ops?.length ?? 0
               opGroups.push({
                 docId: env.doc?.id ?? "",
                 undoToken: env.undoToken,
@@ -191,6 +194,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
       prompt,
       ...(images.length ? { images } : {}),
       systemPrompt: o.systemPrompt,
+      ...(o.context ? { context: o.context } : {}),
       mcp: o.mcp,
       workspace,
     })

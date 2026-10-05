@@ -498,12 +498,15 @@ const CASES: Record<ConformanceCase, Impl> = {
       }),
     )
     const keys = Object.fromEntries((r.created ?? []).map((x) => [x.key, x.id]))
-    expect(Object.keys(keys).sort()).toEqual(["hero", "hero2", "title"])
+    // A copy also lists the copies of its top levels as `<copy key>/<original id>`.
+    expect(Object.keys(keys).sort()).toEqual(["hero", "hero2", `hero2/${keys.title}`, "title"])
     const d = h.host.get(docId)
     if (!d.ok) throw new Error()
     expect(d.value.store.getNode(keys.title as string)?.parent).toBe(keys.hero as string)
     expect(d.value.store.getNode(keys.hero as string)?.name).toBe("Hero 2")
-    expect(d.value.store.children(keys.hero2 as string)).toHaveLength(1)
+    expect(d.value.store.children(keys.hero2 as string)).toEqual([
+      keys[`hero2/${keys.title}`] as string,
+    ])
     expectFail(
       await c.call("kimo_apply_ops", {
         docId,

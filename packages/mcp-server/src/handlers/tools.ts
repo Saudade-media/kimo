@@ -5,7 +5,10 @@
  * revisions work the same for every surface (MCP, M6 agent, CLI).
  */
 import {
+  COMPOSITE_VARIABLE_TYPES,
   declaredProps,
+  type Feature,
+  featuresNeeded,
   instancesOf,
   isObject,
   isRef,
@@ -305,7 +308,16 @@ export function createToolHandlerMap(
               meta.wireIndex ? (p) => wirePath(p, meta.wireIndex as number[]) : undefined,
             ),
       )
-      return fail(errors, { revision: sameRev(r.revision) })
+      // Board 31 token pass: the first few issues are enough to fix the call (the same slip
+      // repeated on 20 nodes is one fix), so a failure stays short.
+      const more = errors.length - MAX_ERRORS
+      const first = errors[0]
+      return fail(errors.slice(0, MAX_ERRORS), {
+        revision: sameRev(r.revision),
+        ...(more > 0 && first
+          ? { summary: `${first.code}: ${first.message} (+${more} more issue(s))` }
+          : {}),
+      })
     }
     const inserted = r.created.length
     const deleted = r.deleted.length
@@ -323,6 +335,7 @@ export function createToolHandlerMap(
       revision: { before: toToken(before), after: toToken(r.revision) },
       ops: r.ops as unknown as Record<string, unknown>[],
       inverse: r.inverse as unknown as Record<string, unknown>[],
+      opCount: r.ops.length,
       created: meta.created ?? r.created.map((id) => ({ key: id, id })),
       changed,
       warnings,
@@ -897,12 +910,13 @@ export function createToolHandlerMap(
     const compiled = compileWireOps(d.store, wire, { libraries: libs(d.ref.id) })
     if (!compiled.ok) return fail(compiled.errors, { revision: sameRev(cur) })
     const ops = compiled.ops as unknown as Op[]
-    // Spec §13: a gated construct and its feature go in the same edit. Text runs are the one
-    // gate an agent reaches through plain node fields, so declare `text/runs` for it (appended:
-    // wire indexes of the compiled ops stay unchanged).
+    // Spec §13: a gated construct and its feature go in the same edit. Agents reach gates
+    // through plain field values (layout.align "stretch", text runs, size min/max, …), so the
+    // edit declares what it writes (appended: wire indexes of the compiled ops stay unchanged).
     const features = (d.store.toHeader().features ?? []) as readonly string[]
-    if (!features.includes("text/runs") && writesTextRuns(ops))
-      ops.push({ op: "setHeader", set: { features: [...features, "text/runs"].sort() } } as Op)
+    const missing = [...featuresWrittenBy(ops)].filter((f) => !features.includes(f))
+    if (missing.length)
+      ops.push({ op: "setHeader", set: { features: [...features, ...missing].sort() } } as Op)
     return commit(ctx, d, input, ops, {
       label: `${wire.length} op${wire.length === 1 ? "" : "s"}`,
       wireIndex: compiled.wireIndex,
@@ -1709,26 +1723,40 @@ function withRootTheme(doc: KimoDocument, theme: Record<string, string>): KimoDo
   return { ...doc, nodes: out } as unknown as KimoDocument
 }
 
-/** True when an op writes text content as spans (feature "text/runs", spec §8.1). */
-export function writesTextRuns(ops: readonly unknown[]): boolean {
-  const isSpans = (v: unknown) =>
-    Array.isArray(v) &&
-    v.length > 0 &&
-    v.every(
-      (s) =>
-        typeof s === "object" &&
-        s !== null &&
-        typeof (s as { text?: unknown }).text === "string" &&
-        (s as { type?: unknown }).type === undefined,
-    )
-  const walk = (v: unknown, depth: number): boolean => {
-    if (depth > 12 || typeof v !== "object" || v === null) return false
-    if (Array.isArray(v)) return v.some((x) => walk(x, depth + 1))
-    for (const [k, x] of Object.entries(v)) {
-      if (k === "content" && isSpans(x)) return true
-      if (walk(x, depth + 1)) return true
-    }
-    return false
+/** At most this many errors in a failed commit (the rest are counted in the summary). */
+const MAX_ERRORS = 5
+
+/** Features `kimo_apply_ops` declares on its own: every gate but stored merge conflicts. */
+const AUTO_FEATURES: ReadonlySet<Feature> = new Set<Feature>([
+  "layout/wrap",
+  "layout/stretch-baseline",
+  "size/min-max",
+  "text/runs",
+  "tokens/composite",
+  "fill/mesh",
+  "fill/shader",
+])
+
+/**
+ * The gated features compiled store ops write (spec §13): node bodies of inserts, field values
+ * of updates (walked with their field as key), composite variable types. Same gate table as the
+ * validator (`featuresNeeded`), so an edit never fails with FEATURE_NOT_DECLARED for a gate it
+ * can declare itself.
+ */
+export function featuresWrittenBy(ops: readonly unknown[]): Set<Feature> {
+  const out = new Set<Feature>()
+  const add = (s: Iterable<Feature>) => {
+    for (const f of s) if (AUTO_FEATURES.has(f)) out.add(f)
   }
-  return ops.some((o) => walk(o, 0))
+  for (const raw of ops) {
+    const o = raw as { op?: string; node?: unknown; set?: Record<string, unknown> }
+    if (o.op === "insert") add(featuresNeeded(o.node))
+    else if (o.op === "update" && o.set)
+      for (const [k, v] of Object.entries(o.set)) add(featuresNeeded(v, k))
+    else if (o.op === "setVariables" && o.set)
+      for (const v of Object.values(o.set))
+        if (COMPOSITE_VARIABLE_TYPES.has((v as { type?: never })?.type as never))
+          out.add("tokens/composite")
+  }
+  return out
 }

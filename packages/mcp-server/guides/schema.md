@@ -60,13 +60,14 @@ radius, default 0.38) to draw stars; an image fill with `fit: "crop"` shows its 
 ## Defaults and nulls
 
 A field equal to its default is the same as the field being absent, and Kimo omits it when it
-saves. Never send `null`. To clear a field, use `update {unset:["field"]}`.
+saves. The format never stores `null`. To clear a field, use `update {unset:["field"]}` (a `null`
+in `update.set` is read the same way; a `null` field in a new node body is dropped).
 
 ## Features
 
 Some constructs need a feature listed in the document's `features`: `layout/wrap`,
-`layout/stretch-baseline`, `size/min-max`, `text/runs`, `tokens/composite`. If you get
-`FEATURE_NOT_DECLARED`, see `errors`. Prefer the ungated form when one exists. `text/runs` is
-declared for you when `kimo_apply_ops` writes span content.
+`layout/stretch-baseline`, `size/min-max`, `text/runs`, `tokens/composite`. `kimo_apply_ops`
+declares them for you in the same edit that writes the gated value (for example
+`layout.align: "stretch"`), so you never set `features` yourself.
 
 The normative JSON Schema is the resource `kimo://schema/1.0`.

@@ -30,6 +30,7 @@ import {
   hasHomeHandoff,
   modelLabel,
   skillsFolderAction,
+  storeOutline,
   useHomeHandoff,
 } from "../agent-panel"
 import { useAiProviders } from "../ai-settings"
@@ -149,6 +150,13 @@ export function useEditorAgentPanel({
   }
   const boxRef = useRef(boxOf)
   boxRef.current = boxOf
+  /** The laid-out box only (no guess from raw fields): the agent outline's boxes. */
+  const worldBoxOf = (id: string): Box | null => {
+    const b = layout.get()?.nodes.get(id)?.world
+    return b ? { x: b.x, y: b.y, w: b.w, h: b.h } : null
+  }
+  const worldBoxRef = useRef(worldBoxOf)
+  worldBoxRef.current = worldBoxOf
 
   // Read at call time: the controller lives for the file, not for these values.
   const latest = useRef({ shim: mcp.shim, openSettings, fileName: "" })
@@ -197,6 +205,13 @@ export function useEditorAgentPanel({
         const n = store.getNode(id) as { parent?: unknown } | undefined
         return str(n?.parent) ?? null
       },
+      // Board 31 token pass: the turn context names the document and outlines its page.
+      outline: (selection) =>
+        storeOutline(store, selection, {
+          pageId: pageForAgent,
+          box: (id) => worldBoxRef.current(id),
+        }),
+      cliDocId: () => (tools.kind === "host" ? tools.docId() || null : null),
       // Side by side: the original's box, moved down when the row of `n` variants would land
       // on other root frames (`sideBySideAnchor`, board ZFOQf `agblr`).
       frameBox: (id, n = 1) => {

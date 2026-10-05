@@ -99,7 +99,7 @@ import {
   type ModelPickerGroup,
 } from "../platform/contract"
 import { type CostWarningView, estimateTurn, shouldWarn } from "./cost-warning"
-import { modelLabel } from "./format"
+import { modelLabel, newTokens } from "./format"
 import { type AgentPanelRuntime, providerFor } from "./runtime"
 
 // --- View types (contract + what the board draws beyond it) ---------------------------------------
@@ -301,6 +301,16 @@ export interface AgentPanelOptions {
   activePage?(): { id: string; name: string; count: number } | null
   /** A node's parent id (null at top level): step labels, Follow and landing flashes. */
   parentOf?(id: string): string | null
+  /**
+   * Board 31 token pass: the compact page outline for the turn context (`buildPageOutline`
+   * over the active page; `selection` outlined first and deepest), or null.
+   */
+  outline?(selection: readonly string[]): string | null
+  /**
+   * The docId a local CLI's MCP server sees for this file (the document host's), or null when
+   * the window is not hosted. API turns use {@link AgentPanelOptions.docId}.
+   */
+  cliDocId?(): string | null
   now?(): number
 }
 
@@ -395,8 +405,10 @@ export function messagesFromTurns(
 /** One finished turn's MessageMeta. */
 export function turnMeta(t: TurnRecord, canRegenerate: boolean): MessageMetaView {
   return {
-    tokensIn: t.usage.inputTokens + t.usage.cacheReadTokens + t.usage.cacheWriteTokens,
+    // Board 31: new tokens only; cached re-reads go to the tooltip.
+    tokensIn: t.usage.inputTokens + t.usage.cacheWriteTokens,
     tokensOut: t.usage.outputTokens,
+    tokensCached: t.usage.cacheReadTokens,
     costUsd: t.billing === "subscription" ? null : t.cost.usd,
     billing: t.billing ?? "api",
     wallMs: Math.max(0, t.endedAt - t.startedAt),
@@ -658,12 +670,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       model && isCliProvider(model.provider)
         ? ["claude-code", "codex"].includes(cliIdOf(model.provider))
         : false
-    const tokens = session
-      ? session.usage.inputTokens +
-        session.usage.outputTokens +
-        session.usage.cacheReadTokens +
-        session.usage.cacheWriteTokens
-      : 0
+    const tokens = session ? newTokens(session.usage) : 0
     const firstRun = !model && providers.length === 0 && !clis.some((c) => c.signedIn === true)
     const busy = composerState !== "idle"
     const approval = approvalQueue[0] ?? null
@@ -986,6 +993,22 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     })
   }
 
+  /** Board 31 token pass: what the turn context says about the document (never throws). */
+  function docContext(cli: boolean, scope: readonly { id: string }[] | undefined) {
+    let docId: string | null = null
+    let outline: string | null = null
+    try {
+      docId = (cli ? o.cliDocId?.() : o.docId()) || null
+    } catch {}
+    try {
+      outline = o.outline?.((scope ?? []).map((s) => s.id).filter(Boolean)) ?? null
+    } catch {}
+    return {
+      ...(docId ? { doc: { id: docId, name: o.fileName } } : {}),
+      ...(outline ? { outline } : {}),
+    }
+  }
+
   async function runAgent(i: AgentRunInput): Promise<TurnRecord> {
     const id = turnId()
     const activePage = o.activePage?.() ?? null
@@ -997,6 +1020,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       ...(i.brief ? { brief: i.brief } : {}),
       ...(i.fromHome ? { fromHome: true } : {}),
       ...(activePage ? { page: activePage } : {}),
+      ...docContext(isCliProvider(i.model.provider), i.scope),
     })
     const failRecord = (err: ProviderError): TurnRecord => {
       const record: TurnRecord = {
@@ -1057,7 +1081,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         model: i.model,
         thinking: i.thinking,
         user: i.user,
-        systemPrompt: [system.stable, system.volatile].filter(Boolean).join("\n\n"),
+        // Stable part = the CLI's system prompt; this turn's context leads the user message.
+        systemPrompt: system.stable,
+        ...(system.volatile ? { context: system.volatile } : {}),
         mcp: rt.mcpLaunch?.(cli) ?? shimLaunch("kimo-mcp", cli),
         signal: i.signal,
         onEvent: i.onEvent,
@@ -1264,7 +1290,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   /** Live streaming meta of the running message (board 22 A uZbJj). */
   function liveMeta(): { tokensIn: number; tokensOut: number; costUsd: number | null } {
     return {
-      tokensIn: liveUsage.inputTokens + liveUsage.cacheReadTokens + liveUsage.cacheWriteTokens,
+      tokensIn: liveUsage.inputTokens + liveUsage.cacheWriteTokens,
       tokensOut: liveUsage.outputTokens,
       costUsd: liveCost,
     }
@@ -1331,11 +1357,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       at: now(),
       provider: record.model.provider,
       label: rt.labelOf(record.model.provider),
-      tokens:
-        record.usage.inputTokens +
-        record.usage.outputTokens +
-        record.usage.cacheReadTokens +
-        record.usage.cacheWriteTokens,
+      tokens: newTokens(record.usage),
       costUsd: record.billing === "subscription" ? null : record.cost.usd,
       billing: record.billing ?? "api",
       sessionId: session.id,
@@ -1623,8 +1645,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           ...modeRun,
           tokens:
             modeRun.agents.reduce((n, a) => n + (a.origin === origin ? 0 : 0), 0) +
-            usage.inputTokens +
-            usage.outputTokens,
+            newTokens(usage),
         }
       } else if (e.type === "text_delta" && row.mark !== "working")
         patchRow(origin, { mark: "thinking" })

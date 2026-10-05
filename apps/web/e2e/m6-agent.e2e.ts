@@ -331,11 +331,12 @@ export const scenarios: Scenario[] = [
         "Stopped actions",
       )
       // Meta under turn 1, regenerate only on the last finished turn, steps of the live turn.
+      // Board 31: new tokens only; the split is the tokens cell's tooltip.
+      const metaTokens = page.locator("[data-testid=agent-message-meta] [data-part=tokens]").first()
+      expect((await metaTokens.innerText()).endsWith(" new tokens"), "meta tokens")
       expect(
-        (await page.locator("[data-testid=agent-message-meta]").first().innerText()).includes(
-          "in ·",
-        ),
-        "meta tokens",
+        ((await metaTokens.getAttribute("title")) ?? "").includes("new input +"),
+        "meta tokens tooltip",
       )
       await page.locator("[data-testid=agent-message-meta]").first().hover()
       await page.getByRole("button", { name: "Copy" }).first().click()

@@ -53,7 +53,8 @@ export function checkScope(
   const out: ScopeViolation[] = []
   const isIn = (ref: string): boolean => {
     if (ref === "root") return false
-    if (ref.startsWith("@")) return keys.get(ref.slice(1)) ?? false
+    // `@key/<id>` (a node inside a copy made in this call) is in scope when the copy is.
+    if (ref.startsWith("@")) return keys.get(ref.slice(1).split("/")[0] as string) ?? false
     return inScope(tree, scope, ref)
   }
   const flag = (index: number, op: string, nodeId: string, reason: ScopeViolation["reason"]) =>

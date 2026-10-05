@@ -95,12 +95,35 @@ The first public release: release engineering, polish, the new mark and the form
   Claude Code, Codex, Gemini CLI and any MCP client. Copies, duplicates and component instances
   are never limited, and agents are told to copy existing frames or pages for variants instead
   of re-creating them (new guide `guide/steps`).
+- Agent turns cost far fewer tokens (measured with the real Claude Code CLI on the landing
+  example, "create a variant to add a pricing table": ~250–300k tokens over 7–8 model calls
+  before, ~67–85k over 4–5 calls after):
+  - Kimo's prompt replaces the CLI's own coding-agent prompt instead of being appended to it
+    (Claude Code `--system-prompt` without its CLAUDE.md, memory and skill listing; Codex
+    `model_instructions_file`; Gemini CLI `GEMINI_SYSTEM_MD`). The per-turn context goes in the
+    user message, so a resumed session never sees a stale selection.
+  - Tool definitions are about a third of their size (descriptions trimmed to what a model
+    needs, details moved to the new `tools` guide, `kimo_apply_ops` ops advertised as a compact
+    generated grammar). The server still validates every call against the full strict schemas.
+  - Edit results leave out the normalized `ops` / `inverse` they used to echo back (`opCount`
+    instead; a dry run keeps `ops`), and a failed commit lists at most 5 issues.
+  - The turn context names the open document (`docId`) and carries a compact, bounded outline
+    of the page (ids, names, boxes, key fields; the selection in detail), so agents skip
+    exploratory reads.
+  - Fewer failed calls: `kimo_apply_ops` declares every feature a value needs (for example
+    `layout.align: "stretch"`), reads `null` in `update.set` as unset, `set.unset` as the op's
+    `unset`, a text node's `text` as `content` and `width` / `height` as `w` / `h`; unknown
+    fields get a one-line fix (`padding` → layout `pad`). After a `copy` with `key: "v"`,
+    `@v/<original id>` addresses a node inside the copy in the same call, and `created[]` lists
+    the copy's first two levels.
 
 ### Changed
 
 - ⇧⌘V is Paste in place; the Variables dialog moved to ⌥⇧⌘V.
 - Agent tab: no streamed text or live token counts while a turn runs; tokens, cost and time
-  show when hovering a finished reply. Each reply's steps are folded behind an "N steps" toggle
+  show when hovering a finished reply. Tokens are new tokens only ("21.1k new tokens": input not
+  served from the prompt cache plus output; the tooltip shows the cached input left out), and
+  the thread header and usage ledger count the same way. Each reply's steps are folded behind an "N steps" toggle
   (opened automatically when a step failed). The per-turn cost warning is unchanged.
 - Canvas agent labels (cursor pill, attribution tag, placeholder tag) show only the agent's
   name; what it is doing lives in the panel.

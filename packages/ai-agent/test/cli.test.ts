@@ -367,6 +367,26 @@ describe("invocations", () => {
     })
   })
 
+  test("Claude Code: Kimo's prompt replaces Claude Code's; context leads the user message", () => {
+    const { args, stdin, env } = claudeInvocation(
+      input({ context: "Document: docId d_1_2\nPage outline …" }),
+    )
+    const at = (flag: string) => args[args.indexOf(flag) + 1]
+    expect(at("--system-prompt")).toBe("You are Kimo.")
+    expect(args).not.toContain("--append-system-prompt")
+    expect(args).toContain("--disable-slash-commands")
+    expect(env).toEqual({
+      CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1",
+      CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+    })
+    const text = JSON.parse(stdin.trim()).message.content.at(-1).text as string
+    expect(text).toBe(
+      "<kimo-context>\nDocument: docId d_1_2\nPage outline …\n</kimo-context>\n\nAdd a waitlist form",
+    )
+    // The system prompt never carries the volatile context (Claude Code records it once).
+    expect(at("--system-prompt")).not.toContain("docId")
+  })
+
   test("Codex: exec --json, read-only sandbox, MCP via -c, resume", () => {
     const { args } = codexInvocation(
       input({ cliSessionId: "thr-1", mcp: shimLaunch("/k", "codex") }),
@@ -380,12 +400,32 @@ describe("invocations", () => {
     expect(args.at(-1)).toBe("-")
   })
 
+  test("Codex: Kimo's prompt is the base instructions file, on new and resumed turns", () => {
+    for (const cliSessionId of [undefined, "thr-1"]) {
+      const inv = codexInvocation(
+        input({
+          ...(cliSessionId ? { cliSessionId } : {}),
+          context: "ctx",
+          mcp: shimLaunch("/k", "codex"),
+        }),
+      )
+      expect(inv.args).toContain('model_instructions_file="/w/.kimo/instructions.md"')
+      expect(inv.workspaceFiles).toEqual([
+        { path: ".kimo/instructions.md", text: "You are Kimo.\n" },
+      ])
+      expect(inv.stdin).toBe("<kimo-context>\nctx\n</kimo-context>\n\nAdd a waitlist form")
+    }
+  })
+
   test("Gemini CLI: stream-json, workspace settings add Kimo MCP and exclude write/shell tools", () => {
     const inv = geminiInvocation(input({ mcp: shimLaunch("/k", "gemini-cli") }))
     expect(inv.args).toContain("stream-json")
     const settings = JSON.parse(inv.workspaceFiles?.[0]?.text ?? "{}")
     expect(settings.mcpServers.kimo.args).toEqual(["--client", "gemini-cli"])
     expect(settings.tools.exclude).toContain("run_shell_command")
+    expect(inv.env).toEqual({ GEMINI_SYSTEM_MD: "/w/.gemini/system.md" })
+    expect(inv.workspaceFiles?.[1]).toEqual({ path: ".gemini/system.md", text: "You are Kimo.\n" })
+    expect(inv.args[inv.args.indexOf("--prompt") + 1]).toBe("Add a waitlist form")
     const events = geminiParser().push(
       JSON.stringify({
         type: "tool_use",
@@ -518,7 +558,17 @@ describe("running a turn through a fake CLI", () => {
     const inv = JSON.parse(
       readFileSync(join(home, ".kimo", "cli-workspaces", "def456", "invocation.json"), "utf8"),
     )
-    expect(inv.stdin).toContain("You are Kimo.")
+    // Kimo's prompt replaces Codex's base instructions (workspace file), not the user message.
+    expect(inv.stdin).not.toContain("You are Kimo.")
+    expect(inv.args).toContain(
+      `model_instructions_file=${JSON.stringify(join(home, ".kimo", "cli-workspaces", "def456", ".kimo/instructions.md"))}`,
+    )
+    expect(
+      readFileSync(
+        join(home, ".kimo", "cli-workspaces", "def456", ".kimo", "instructions.md"),
+        "utf8",
+      ),
+    ).toBe("You are Kimo.\n")
   })
 
   test("Stop kills the CLI and ends the turn as stopped", async () => {

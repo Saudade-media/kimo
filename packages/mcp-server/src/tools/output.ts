@@ -9,31 +9,19 @@ export const kimoRender = defineTool({
   name: "kimo_render",
   title: "Render nodes to PNG or SVG",
   description:
-    "Renders nodes to PNG images attached to the result (MCP image content), using the same CanvasKit engine as the canvas. Always reflects every committed edit, including one made earlier in the same turn. Use after building a section to check layout, clipping and contrast. Keep scale modest (images cost tokens): maxSize caps the longest side. format svg returns standalone SVG markup per node in data.images[].svg (the code exporter's SVG, text laid out with the canvas fonts) instead of image content.",
+    "PNG of nodes (same engine as the canvas, always current) to check layout, clipping and contrast. Images cost tokens: keep scale low. format svg returns SVG markup in data instead.",
   input: Obj({
     docId,
-    ids: Arr(nodeIdField("Node id."), {
-      description: "Nodes to render (one image each).",
-      minItems: 1,
-      maxItems: 8,
-    }),
-    format: Opt(
-      Enum(["png", "svg"], {
-        description: "Default png. svg: markup in data (scale and maxSize do not apply).",
-      }),
-    ),
-    scale: Opt(Num({ description: "Pixel ratio (default 1, max 4).", minimum: 0.1, maximum: 4 })),
+    ids: Arr(nodeIdField("Node id."), { description: "One image each.", minItems: 1, maxItems: 8 }),
+    format: Opt(Enum(["png", "svg"], { description: "Default png." })),
+    scale: Opt(Num({ description: "Default 1.", minimum: 0.1, maximum: 4 })),
     maxSize: Opt(
-      Int({
-        description: "Longest side in px after scaling (default 1600, max 4096).",
-        minimum: 64,
-        maximum: 4096,
-      }),
+      Int({ description: "Longest side px (default 1600).", minimum: 64, maximum: 4096 }),
     ),
-    background: Opt(Str({ description: "Background color #rrggbb (default transparent)." })),
+    background: Opt(Str({ description: "#rrggbb (default transparent)." })),
     theme: Opt(
       Arr(Obj({ axis: Str({ description: "Axis." }), value: Str({ description: "Value." }) }), {
-        description: "Render with this theme.",
+        description: "Theme.",
       }),
     ),
   }),
@@ -95,39 +83,19 @@ export const kimoExport = defineTool({
   name: "kimo_export",
   title: "Export files",
   description:
-    "Deterministic export (export grant needed). png (one file per node, <nodeId>.png) and kimo (the subtrees as a standalone .kimo with the variables they use) are written to outDir (absolute; allow-list applies). Code and token targets — react-tailwind (<Root>.tsx pages, <Component>.tsx per component, tokens.css), html-css (index.html, styles.css, tokens.css), tokens-dtcg (tokens.json), tokens-css, tailwind-theme (@theme), svg (one per root), pdf (one page per root) — are written to outDir when given, otherwise returned inline (contents; pdf as base64). Exact values, variables kept as CSS custom properties unless variables=false. Never overwrites a different file unless overwrite=true (identical files are reported unchanged); nothing is written when any file conflicts. Returns paths with hashes and export issues (approximations).",
+    "Exports nodes as png, kimo, svg, pdf, code (react-tailwind, html-css) or tokens to outDir (absolute), or returns code/tokens inline without outDir. Never overwrites a different file unless overwrite=true. Details: kimo_read_docs path=guide/export.",
   input: Obj({
     docId,
-    target: Enum(EXPORT_TARGETS, { description: "Export format." }),
+    target: Enum(EXPORT_TARGETS, { description: "Format." }),
     ids: Opt(
-      Arr(nodeIdField("Node id."), {
-        description: "Nodes to export (default: all top-level frames).",
-        maxItems: 200,
-      }),
+      Arr(nodeIdField("Node id."), { description: "Default: top-level frames.", maxItems: 200 }),
     ),
-    outDir: Opt(
-      Str({
-        description:
-          "Absolute output directory (required for png and kimo; code/token targets return files inline without it).",
-        minLength: 1,
-      }),
-    ),
-    scale: Opt(Num({ description: "png: pixel ratio (default 2).", minimum: 0.1, maximum: 4 })),
-    overwrite: Opt(
-      Bool({ description: "Replace existing different files (otherwise FILE_EXISTS)." }),
-    ),
-    variables: Opt(
-      Bool({ description: "Code targets: variables as CSS custom properties (default true)." }),
-    ),
-    components: Opt(
-      Bool({ description: "react-tailwind: split instances into components (default true)." }),
-    ),
-    layerNames: Opt(
-      Bool({
-        description:
-          "Code targets: keep layer names as data attributes (default true for html-css, false for react-tailwind).",
-      }),
-    ),
+    outDir: Opt(Str({ description: "Absolute dir (required for png, kimo).", minLength: 1 })),
+    scale: Opt(Num({ description: "png scale (default 2).", minimum: 0.1, maximum: 4 })),
+    overwrite: Opt(Bool({ description: "Replace different files." })),
+    variables: Opt(Bool({ description: "Code: variables as CSS vars (default true)." })),
+    components: Opt(Bool({ description: "react-tailwind: components (default true)." })),
+    layerNames: Opt(Bool({ description: "Code: layer names as data attributes." })),
   }),
   data: Obj({
     files: Arr(

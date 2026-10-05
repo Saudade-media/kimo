@@ -78,6 +78,8 @@ export function compileWireOps(
   const newId = options.newId ?? (() => generateId())
   const scratch = scratchOf(store)
   const keys = new Map<string, string>()
+  /** Copy key → original id → id of its copy (for `@key/<id>` references). */
+  const copies = new Map<string, Map<string, string>>()
   const out: NormalizedOp[] = []
   const wireIndex: number[] = []
   const created: { key: string; id: string }[] = []
@@ -87,6 +89,19 @@ export function compileWireOps(
       const path = `ops[${i}]`
       const resolve = (ref: string): string => {
         if (!ref.startsWith("@")) return ref
+        const slash = ref.indexOf("/")
+        if (slash > 0) {
+          // `@copyKey/<original id>`: the copy of that node inside a subtree copied earlier.
+          const inside = copies.get(ref.slice(1, slash))?.get(ref.slice(slash + 1))
+          if (!inside)
+            throw new CompileError({
+              code: "INVALID_INPUT",
+              message: `${ref} does not name a node inside a subtree copied earlier in this call.`,
+              path,
+              suggestion: "Use @<copy key>/<id of the original node>, after the copy op.",
+            })
+          return inside
+        }
         const id = keys.get(ref.slice(1))
         if (!id)
           throw new CompileError({
@@ -112,12 +127,16 @@ export function compileWireOps(
       let ops: Op[]
       switch (op.op) {
         case "insert": {
-          const o = toStoreOp(op, resolve, newId)
+          const o = toStoreOp({ ...op, node: lenientNode(op.node) }, resolve, newId)
           ops = [o]
           remember(op.key, (o as { id: string }).id, op.node.name)
           break
         }
-        case "update":
+        case "update": {
+          const target = scratch.getNode(resolve(op.id))
+          ops = [toStoreOp(lenientUpdate(op, target?.type), resolve, newId)]
+          break
+        }
         case "move":
         case "delete":
         case "set_variables":
@@ -128,10 +147,15 @@ export function compileWireOps(
           const r = copyOps(scratch, op, resolve, newId, path)
           ops = r.ops
           remember(op.key, r.rootId, r.name)
+          if (op.key) copies.set(op.key, r.ids)
+          // The copies of the top levels, so later calls address them without a query.
+          const label = op.key ?? (typeof r.name === "string" && r.name ? r.name : r.rootId)
+          for (const [orig, id] of r.shallow.slice(0, COPY_CREATED_MAX))
+            created.push({ key: `${label}/${orig}`, id })
           break
         }
         case "replace":
-          ops = replaceOps(scratch, resolve(op.id), op.node as Record<string, unknown>, path)
+          ops = replaceOps(scratch, resolve(op.id), lenientNode(op.node), path)
           break
         case "page": {
           const r = pageOps(scratch, op, newId, path)
@@ -179,6 +203,63 @@ export function compileWireOps(
     scratch.destroy()
   }
   return { ok: true, ops: out, wireIndex, created, notes }
+}
+
+/** At most this many `created` entries for the inside of one copy (depth 1–2). */
+export const COPY_CREATED_MAX = 60
+
+/**
+ * Board 31 token pass: slips agents make with `update` are accepted as what they mean, instead
+ * of costing a failed call: `set.unset: [...]` is the op's own `unset`, a `null` value in `set`
+ * removes that field (the format itself never stores null), a text node's `text` string is
+ * its `content`, and `width` / `height` are `w` / `h`.
+ */
+function lenientUpdate(
+  op: Extract<WireOp, { op: "update" }>,
+  type?: unknown,
+): Extract<WireOp, { op: "update" }> {
+  if (!op.set) return op
+  const set: Record<string, unknown> = {}
+  const unset = [...(op.unset ?? [])]
+  for (const [k, v] of Object.entries(op.set)) {
+    if (k === "unset" && Array.isArray(v) && v.every((x) => typeof x === "string"))
+      unset.push(...(v as string[]))
+    else if (v === null) unset.push(k)
+    else if (k === "text" && type === "text" && typeof v === "string" && !("content" in op.set))
+      set.content = v
+    else set[k] = v
+  }
+  const out: Extract<WireOp, { op: "update" }> = { op: "update", id: op.id }
+  const sized = sizeAliases(set)
+  if (Object.keys(sized).length) out.set = sized as typeof op.set
+  if (unset.length) out.unset = [...new Set(unset)]
+  return out
+}
+
+/**
+ * A new node body as meant: a `null` field is an absent field, and a text node's `text` string
+ * (the most common slip, borrowed from other formats) is its `content`.
+ */
+function lenientNode<T extends Record<string, unknown>>(node: T): T {
+  let out: Record<string, unknown> = node
+  if (Object.values(node).some((v) => v === null))
+    out = Object.fromEntries(Object.entries(node).filter(([, v]) => v !== null))
+  if (out.type === "text" && typeof out.text === "string" && out.content === undefined) {
+    const { text, ...rest } = out
+    out = { ...rest, content: text }
+  }
+  return sizeAliases(out) as T
+}
+
+/** `width` / `height` are `w` / `h` (no node type has fields with those names). */
+function sizeAliases<T extends Record<string, unknown>>(o: T): T {
+  if (!("width" in o) && !("height" in o)) return o
+  const { width, height, ...rest } = o as Record<string, unknown>
+  return {
+    ...rest,
+    ...(width !== undefined && rest.w === undefined ? { w: width } : {}),
+    ...(height !== undefined && rest.h === undefined ? { h: height } : {}),
+  } as T
 }
 
 /** Maps a path of the final apply (`ops[j]...`) back to the wire op (`ops[i]`). */
@@ -277,7 +358,13 @@ function copyOps(
   resolve: (r: string) => string,
   newId: () => string,
   path: string,
-): { ops: Op[]; rootId: string; name: unknown } {
+): {
+  ops: Op[]
+  rootId: string
+  name: unknown
+  ids: Map<string, string>
+  shallow: [string, string][]
+} {
   const src = resolve(op.id)
   const root = scratch.getNode(src)
   if (!root)
@@ -295,7 +382,9 @@ function copyOps(
   for (const [k, v] of Object.entries(root)) if (!TREE_FIELDS.has(k)) rootBody[k] = v
   // A copy of a component main is a plain frame (instantiate makes instances).
   delete rootBody.component
-  Object.assign(rootBody, op.set ?? {})
+  for (const [k, v] of Object.entries(sizeAliases(op.set ?? {})))
+    if (v === null) delete rootBody[k]
+    else rootBody[k] = v
   const insertRoot: Op = {
     op: "insert",
     id: ids.get(src) as string,
@@ -316,7 +405,16 @@ function copyOps(
       queue.push(c)
     }
   }
-  return { ops, rootId: ids.get(src) as string, name: rootBody.name }
+  // Depth 1 and 2 of the copied subtree, breadth first (`ids` is in insertion order).
+  const depth = new Map<string, number>([[src, 0]])
+  const shallow: [string, string][] = []
+  for (const [orig, id] of ids) {
+    if (orig === src) continue
+    const d = (depth.get((scratch.getNode(orig) as NodeData).parent as string) ?? 9) + 1
+    depth.set(orig, d)
+    if (d <= 2) shallow.push([orig, id])
+  }
+  return { ops, rootId: ids.get(src) as string, name: rootBody.name, ids, shallow }
 }
 
 function replaceOps(

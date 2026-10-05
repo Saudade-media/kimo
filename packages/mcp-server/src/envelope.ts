@@ -142,6 +142,8 @@ export interface ToolSuccess<T> {
   ops?: Record<string, unknown>[]
   /** Informational inverse ops against `revision.after`; undo via kimo_history. */
   inverse?: Record<string, unknown>[]
+  /** Number of normalized ops committed (`ops.length`; the model-facing text omits `ops`). */
+  opCount?: number
   /** Created nodes: `key` is the op's `key` (or the node name), `id` the new node id. */
   created?: { key: string; id: string }[]
   /** Node ids touched (inserted, updated, moved, deleted). */
@@ -202,6 +204,7 @@ export function envelopeSchema<T extends TSchema>(data: T, opts: { mutating: boo
             { description: "Nodes created by the call." },
           ),
         ),
+        opCount: Opt(Int({ description: "Normalized ops committed (ops.length).", minimum: 0 })),
         changed: Opt(
           Arr(Str({ description: "Node id." }), { description: "Node ids touched by the call." }),
         ),
@@ -279,13 +282,40 @@ export interface CallToolResultLike {
   isError?: boolean
 }
 
-/** Envelope → MCP result: summary text, JSON text (for hosts without structuredContent), images. */
+/**
+ * The envelope as MCP clients and models get it (board 31 token pass): everything but the
+ * normalized `ops` and informational `inverse`, which echo the call back at full size (a
+ * 70-node copy is ~20k characters) and which models never need: `opCount`, `created`,
+ * `changed` and `undoToken` carry what they act on. A dry run keeps `ops` (the would-be ops are
+ * its answer). Claude Code hands the model `structuredContent` rather than the text blocks, so
+ * both get this view; in-process callers keep the full {@link ToolResult}.
+ */
+export function modelView(result: ToolResult): ToolResult {
+  if (!result.ok || (result.ops === undefined && result.inverse === undefined)) return result
+  const { ops, inverse: _inverse, ...rest } = result
+  return {
+    ...rest,
+    ...(rest.dryRun && ops ? { ops } : {}),
+    opCount: rest.opCount ?? ops?.length ?? 0,
+  } as ToolResult
+}
+
+/** The model-facing JSON text of a result ({@link modelView}). */
+export function modelText(result: ToolResult): string {
+  return JSON.stringify(modelView(result))
+}
+
+/**
+ * Envelope → MCP result: summary text, the JSON text (hosts without structuredContent),
+ * images; both the text and `structuredContent` are the {@link modelView}.
+ */
 export function toCallToolResult(result: ToolResult, images: ToolImage[] = []): CallToolResultLike {
-  const structured = result as unknown as Record<string, unknown>
+  const view = modelView(result)
+  const structured = view as unknown as Record<string, unknown>
   const out: CallToolResultLike = {
     content: [
       { type: "text", text: result.summary },
-      { type: "text", text: JSON.stringify(result) },
+      { type: "text", text: JSON.stringify(view) },
       ...images.map((i) => ({ type: "image" as const, data: i.data, mimeType: i.mimeType })),
     ],
     structuredContent: structured,

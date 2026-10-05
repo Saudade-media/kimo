@@ -1,8 +1,20 @@
 /**
  * Write tools: typed ops, imports, assets and the (stubbed) script tool (teardown 11.3).
  */
-import { isDestructive, type WireOp, WireOpSchema } from "../ops"
-import { Arr, Bool, Enum, Int, Num, Obj, Opt, Str } from "../schema"
+import { isDestructive, WIRE_OP_KINDS, WIRE_OP_SCHEMAS, type WireOp, WireOpSchema } from "../ops"
+import {
+  Arr,
+  Bool,
+  Enum,
+  Int,
+  Num,
+  Obj,
+  Open,
+  Opt,
+  Str,
+  type TSchema,
+  toJsonSchema,
+} from "../schema"
 import {
   ALL_HOSTS,
   baseRevision,
@@ -31,28 +43,90 @@ export const MAX_OPS_PER_CALL = 500
  */
 export const AGENT_MAX_NEW_LAYERS = 40
 
+type JsonSchema = {
+  type?: string
+  enum?: string[]
+  properties?: Record<string, JsonSchema>
+  required?: string[]
+  items?: JsonSchema
+  additionalProperties?: boolean
+}
+
+/** `a, b?, kind:x|y, list[], box?:{x,y}`: the fields of a closed object schema, compactly. */
+function fieldsOf(j: JsonSchema, skip = ""): string {
+  const req = new Set(j.required ?? [])
+  return Object.entries(j.properties ?? {})
+    .filter(([k]) => k !== skip)
+    .map(([k, v]) => {
+      const name = k + (req.has(k) ? "" : "?")
+      if (v.enum && k !== "type") return `${name}:${v.enum.join("|")}`
+      if (v.type === "array")
+        return v.items?.type === "object" && v.items.additionalProperties === false
+          ? `${name}:[{${fieldsOf(v.items)}}]`
+          : `${name}:[]`
+      if (v.type === "object" && v.additionalProperties === false) return `${name}:{${fieldsOf(v)}}`
+      return name
+    })
+    .join(", ")
+}
+
+/**
+ * The op grammar, one line per op kind, generated from the strict op schemas (so it cannot
+ * drift from what the server validates): `insert {key?, parent, at?, index?, node}`.
+ */
+export function opGrammar(): string {
+  return WIRE_OP_SCHEMAS.map((s) => {
+    const j = toJsonSchema(s) as JsonSchema
+    const tag = j.properties?.op?.enum?.[0]
+    return `${tag} {${fieldsOf(j, "op")}}`
+  }).join("\n")
+}
+
+/**
+ * Model-facing schema of kimo_apply_ops (board 31 token pass): each op is an open object whose
+ * `op` is enforced and whose fields are the generated grammar, about 2k characters instead of
+ * the 24k of the strict 25-member union. The server validates the strict union
+ * (`validationSchemaOf`), so nothing gets through that did before.
+ */
+function applyOpsAdvertised(input: TSchema): TSchema {
+  const j = toJsonSchema(input) as JsonSchema & { properties: Record<string, unknown> }
+  const op = Open(
+    { op: Enum(WIRE_OP_KINDS, { description: "Op kind; its fields are listed below." }) },
+    {
+      description: `One op (fields per kind; ? = optional). A ref is a node id, @key (a node created earlier in this call) or @copyKey/<original id> (that node inside a copy made earlier in this call); parent also takes "root". key names the new node; index = position among siblings (default: append); node = one .kimo node body {type, name?, …fields}, never with children (each child is its own insert with parent @key), e.g. {"type":"text","content":"Hello","style":{"size":16}} (kimo_read_docs path=schema); set = {field: value} (shallow; null removes the field).\n${opGrammar()}\nExamples: kimo_read_docs path=ops.`,
+    },
+  )
+  return {
+    ...j,
+    properties: {
+      ...j.properties,
+      ops: {
+        ...toJsonSchema(Arr(op, { description: "Ops, applied in order as one undoable edit." })),
+      },
+    },
+  } as unknown as TSchema
+}
+
+const applyOpsInput = Obj({
+  docId,
+  ops: Arr(WireOpSchema, {
+    description: "Ops, applied in order as one undoable edit.",
+    minItems: 1,
+    maxItems: MAX_OPS_PER_CALL,
+  }),
+  baseRevision,
+  dryRun,
+  label,
+  render: Opt(Bool({ description: "Attach a PNG of the changed top-level frames." })),
+})
+
 export const kimoApplyOps = defineTool({
   name: "kimo_apply_ops",
   title: "Edit with typed ops",
   description:
-    "The way to change a document. Sends an ordered list of typed ops applied atomically: all succeed or nothing changes. Ops: insert, update, replace, move, delete, copy, instantiate, make_component, detach, set_override, reset_override, set_args, swap_instance, declare_prop, remove_prop, set_slot, set_variables, set_theme_axes, create_variable, update_variable, rename_variable, delete_variable, set_theme_pin, theme_axis. Give new nodes a key and reference them later in the same call as @key (e.g. insert a frame with key hero, then insert a text node with parent @hero; a text node's string goes in content, not text). Pass baseRevision from your last read to avoid overwriting edits made since (REVISION_CONFLICT). dryRun=true validates and returns the diff without committing; render=true attaches a PNG of the changed top-level frames after commit. At most 40 inserts per call (BATCH_TOO_LARGE): a skeleton first, then one section per call. Copy, instantiate and edits are never limited: make a variant by copying the page. Deletes and other destructive ops may ask the user first. Read kimo_read_docs path=ops.",
-  input: Obj({
-    docId,
-    ops: Arr(WireOpSchema, {
-      description: "Ops, applied in order as one undoable edit.",
-      minItems: 1,
-      maxItems: MAX_OPS_PER_CALL,
-    }),
-    baseRevision,
-    dryRun,
-    label,
-    render: Opt(
-      Bool({
-        description:
-          "Attach a PNG of the affected top-level frames after commit (never for dryRun).",
-      }),
-    ),
-  }),
+    "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key and reference them later in the call as @key. At most 40 insert ops per call (BATCH_TOO_LARGE): a skeleton first, then one section per call; copy, instantiate and edits are unlimited, so start a variant with one copy. Features a value needs are declared for you. Pass baseRevision from your last result.",
+  input: applyOpsInput,
+  advertise: applyOpsAdvertised(applyOpsInput),
   data: Obj({
     applied: Int({ description: "Wire ops applied.", minimum: 0 }),
     inserted: Int({ description: "Nodes inserted.", minimum: 0 }),
@@ -83,25 +157,16 @@ export const kimoImport = defineTool({
   name: "kimo_import",
   title: "Import SVG, images or tokens",
   description:
-    "Imports content as ops: svg (editable vector layers), image (hashed into assets/ and placed as an image-filled rect), tokens-dtcg or tokens-css (variables, merged). Give exactly one source: an absolute file path or inline text (svg/tokens). Returns the ops it applied; supports dryRun and baseRevision like kimo_apply_ops.",
+    "Imports svg (vector layers), image (an image-filled rect) or tokens-dtcg / tokens-css (variables). One source: absolute path or inline text.",
   input: Obj({
     docId,
-    kind: Enum(IMPORT_KINDS, { description: "What to import." }),
-    path: Opt(Str({ description: "Absolute path of the source file (allow-list applies)." })),
-    text: Opt(
-      Str({
-        description: "Inline source (svg markup, DTCG JSON or CSS custom properties).",
-        maxLength: 2_000_000,
-      }),
-    ),
-    parent: Opt(
-      Str({
-        description: 'Where to place svg/image: node id or "root" (default root at a free spot).',
-      }),
-    ),
-    index: Opt(Int({ description: "Position among parent's children.", minimum: 0 })),
-    x: Opt(Num({ description: "X (absolute parents)." })),
-    y: Opt(Num({ description: "Y (absolute parents)." })),
+    kind: Enum(IMPORT_KINDS, { description: "Kind." }),
+    path: Opt(Str({ description: "Absolute source path." })),
+    text: Opt(Str({ description: "Inline source.", maxLength: 2_000_000 })),
+    parent: Opt(Str({ description: 'Node id or "root" (default: free spot).' })),
+    index: Opt(Int({ description: "Position.", minimum: 0 })),
+    x: Opt(Num({ description: "X." })),
+    y: Opt(Num({ description: "Y." })),
     name: Opt(Str({ description: "Layer name." })),
     baseRevision,
     dryRun,
@@ -172,14 +237,14 @@ export const kimoAssets = defineTool({
   name: "kimo_assets",
   title: "Assets and fonts",
   description:
-    "list: the document's assets (hash, type, size, used-by count). import: hash an image or font file (absolute path) into assets/ and return its ./assets/ reference to use in fills or fonts (no node is created; use kimo_import kind=image to place one). fonts: font families available (document, cached, local, Google catalog when allowed); check_font: whether a family/weight loads, so you never reference a font that cannot render. generate / job_status: generation jobs through configured providers (not available in this version: UNSUPPORTED).",
+    "list: assets. import: a file into assets/ (returns its ./assets/ ref; no node). fonts: available families. check_font: whether a family/weight renders. generate / job_status: not available yet.",
   input: Obj({
     docId,
-    action: Enum(ASSET_ACTIONS, { description: "What to do." }),
-    path: Opt(Str({ description: "import: absolute file path." })),
-    family: Opt(Str({ description: "check_font: family name; fonts: filter by name." })),
-    weight: Opt(Int({ description: "check_font: weight 100–900.", minimum: 100, maximum: 900 })),
-    italic: Opt(Bool({ description: "check_font: italic style." })),
+    action: Enum(ASSET_ACTIONS, { description: "Action." }),
+    path: Opt(Str({ description: "import: absolute path." })),
+    family: Opt(Str({ description: "check_font / fonts filter." })),
+    weight: Opt(Int({ description: "check_font weight.", minimum: 100, maximum: 900 })),
+    italic: Opt(Bool({ description: "check_font italic." })),
     prompt: Opt(Str({ description: "generate: prompt." })),
     jobId: Opt(Str({ description: "job_status: job id." })),
   }),

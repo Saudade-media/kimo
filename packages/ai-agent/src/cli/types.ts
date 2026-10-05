@@ -98,10 +98,25 @@ export interface CliTurnInput {
   thinking: ThinkingMode
   prompt: string
   images?: { mimeType: string; data: string }[]
-  /** Kimo instructions + skills (appended to the CLI's own system prompt where supported). */
+  /**
+   * Kimo's stable instructions + skills. They replace the CLI's own system prompt where the CLI
+   * allows it (Claude Code `--system-prompt`, Codex `model_instructions_file`, Gemini CLI
+   * `GEMINI_SYSTEM_MD`), so a turn carries no coding-agent prompt (board 31 token pass).
+   */
   systemPrompt: string
+  /**
+   * This turn's volatile context (document, selection, page outline, scope): sent at the top of
+   * the user message, never in the system prompt, because CLIs record the system prompt once per
+   * session (Claude Code `--system-prompt-snapshot`) and a resumed turn would see stale context.
+   */
+  context?: string
   mcp: KimoMcpLaunch
   workspace: string
+}
+
+/** The user message text of a turn: the volatile context first, then the request. */
+export function promptWithContext(i: Pick<CliTurnInput, "prompt" | "context">): string {
+  return i.context ? `<kimo-context>\n${i.context}\n</kimo-context>\n\n${i.prompt}` : i.prompt
 }
 
 export interface CliInvocation {

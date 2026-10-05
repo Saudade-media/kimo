@@ -58,65 +58,36 @@ export const kimoQuery = defineTool({
   name: "kimo_query",
   title: "Query nodes",
   description:
-    'Declarative read of nodes. select by ids, and/or filter by name (substring, case-insensitive), type, text content, component (instances of), or under (subtree of). depth controls how many levels of children are returned (0 = matched nodes only; elided children show as "…"). resolveVariables replaces $variable refs with values for the given theme; resolveInstances expands instance content as virtual nodes (instanceId/childId). include adds bounds, layout problems (clipping, collapse, missing fonts), path geometry, override origin. Results are a flat list, paginated with cursor. The whole document is never dumped: give at least one selector or under.',
+    "Reads nodes as .kimo data (a flat list; feed bodies back into insert/replace). select by ids or filters; depth = child levels (default 1, 0 = matches only). include bounds / problems for computed boxes and layout issues. Paginated by cursor.",
   input: Obj({
     docId,
     select: Obj(
       {
-        ids: Opt(
-          Arr(nodeIdField("Node id or IdPath."), { description: "Exact nodes.", maxItems: 500 }),
-        ),
-        under: Opt(
-          nodeIdField('Only nodes inside this subtree ("root" not allowed: use topLevel).'),
-        ),
-        topLevel: Opt(Bool({ description: "Match the top-level nodes." })),
-        name: Opt(Str({ description: "Name contains (case-insensitive)." })),
-        type: Opt(Arr(Str({ description: "Node type." }), { description: "Any of these types." })),
-        text: Opt(Str({ description: "Text content contains (text nodes)." })),
-        component: Opt(
-          Str({ description: "Instances of this component id (alias:id for libraries)." }),
-        ),
-        page: Opt(
-          Str({
-            description:
-              "Only nodes on this page (a page id from kimo_get_state; with topLevel: the page's top-level nodes).",
-          }),
-        ),
+        ids: Opt(Arr(nodeIdField("Node id or IdPath."), { description: "Nodes.", maxItems: 500 })),
+        under: Opt(nodeIdField("Subtree root.")),
+        topLevel: Opt(Bool({ description: "Top-level nodes." })),
+        name: Opt(Str({ description: "Name contains." })),
+        type: Opt(Arr(Str({ description: "Node type." }), { description: "Types." })),
+        text: Opt(Str({ description: "Text contains." })),
+        component: Opt(Str({ description: "Instances of this component." })),
+        page: Opt(Str({ description: "Page id." })),
       },
-      { description: "At least one of ids, under, topLevel, name, type, text, component, page." },
+      { description: "At least one selector." },
     ),
-    depth: Opt(
-      Int({
-        description: "Levels of children per match (default 1, max 10).",
-        minimum: 0,
-        maximum: 10,
-      }),
-    ),
-    resolveVariables: Opt(Bool({ description: "Replace variable refs by their values." })),
+    depth: Opt(Int({ description: "Child levels (default 1).", minimum: 0, maximum: 10 })),
+    resolveVariables: Opt(Bool({ description: "Variable refs → values." })),
     theme: Opt(
       Arr(Obj({ axis: Str({ description: "Axis." }), value: Str({ description: "Value." }) }), {
-        description: "Theme for resolveVariables (default: each node's effective theme).",
+        description: "Theme for resolveVariables.",
       }),
     ),
-    resolveInstances: Opt(Bool({ description: "Expand instance content as virtual nodes." })),
+    resolveInstances: Opt(Bool({ description: "Expand instance content." })),
     include: Opt(
-      Arr(Enum(QUERY_INCLUDES, { description: "Extra data." }), {
-        description: "Extra data per node.",
-      }),
+      Arr(Enum(QUERY_INCLUDES, { description: "Extra." }), { description: "Extra data." }),
     ),
-    fields: Opt(
-      Arr(Str({ description: "Field name." }), {
-        description: "Return only these .kimo fields (plus id/type/parent).",
-      }),
-    ),
-    limit: Opt(
-      Int({
-        description: "Max nodes per page (default 200, max 1000).",
-        minimum: 1,
-        maximum: 1000,
-      }),
-    ),
-    cursor: Opt(Str({ description: "nextCursor from the previous page." })),
+    fields: Opt(Arr(Str({ description: "Field." }), { description: "Only these fields." })),
+    limit: Opt(Int({ description: "Page size (default 200).", minimum: 1, maximum: 1000 })),
+    cursor: Opt(Str({ description: "nextCursor." })),
   }),
   data: Obj({
     nodes: Arr(QueriedNode, { description: "Matched nodes and their children up to depth." }),
@@ -148,23 +119,19 @@ export const kimoGetVariables = defineTool({
   name: "kimo_get_variables",
   title: "Get variables and themes",
   description:
-    "Variables (tokens) and theme axes of a document, including linked libraries' variables (alias:name). Filter by names or group prefix. resolve=true adds each value resolved for the given theme (default theme otherwise). Edit them with kimo_apply_ops ops create_variable / update_variable / rename_variable / delete_variable / theme_axis.",
+    "Variables (tokens) and theme axes, including linked libraries' (alias:name). resolve=true adds resolved values.",
   input: Obj({
     docId,
-    names: Opt(
-      Arr(Str({ description: "Variable name." }), { description: "Only these.", maxItems: 500 }),
-    ),
-    group: Opt(Str({ description: "Only variables whose group starts with this." })),
-    includeLibraries: Opt(
-      Bool({ description: "Include linked libraries' variables (default true)." }),
-    ),
+    names: Opt(Arr(Str({ description: "Name." }), { description: "Only these.", maxItems: 500 })),
+    group: Opt(Str({ description: "Group prefix." })),
+    includeLibraries: Opt(Bool({ description: "Default true." })),
     resolve: Opt(Bool({ description: "Add resolved values." })),
     theme: Opt(
       Arr(Obj({ axis: Str({ description: "Axis." }), value: Str({ description: "Value." }) }), {
         description: "Theme for resolve.",
       }),
     ),
-    includeUsages: Opt(Bool({ description: "Count bound nodes per variable (slower)." })),
+    includeUsages: Opt(Bool({ description: "Count bound nodes." })),
   }),
   data: Obj({
     variables: Arr(VariableOut, { description: "Variables, by name." }),
@@ -189,12 +156,12 @@ export const kimoListComponents = defineTool({
   name: "kimo_list_components",
   title: "List components",
   description:
-    "Components available in a document: local mains and linked-library components (alias:id), with declared props, slots and instance counts. Use the id with kimo_apply_ops instantiate; set props with set_args; fill slots with set_override kind=slot.",
+    "Components (local and library alias:id) with props, slots and instance counts, for ops instantiate, set_args and set_override.",
   input: Obj({
     docId,
-    query: Opt(Str({ description: "Name contains (case-insensitive)." })),
-    includeLibraries: Opt(Bool({ description: "Include linked libraries (default true)." })),
-    limit: Opt(Int({ description: "Max results (default 200).", minimum: 1, maximum: 1000 })),
+    query: Opt(Str({ description: "Name contains." })),
+    includeLibraries: Opt(Bool({ description: "Default true." })),
+    limit: Opt(Int({ description: "Default 200.", minimum: 1, maximum: 1000 })),
   }),
   data: Obj({
     components: Arr(
@@ -237,19 +204,14 @@ export const kimoListComponents = defineTool({
 export const kimoFindSpace = defineTool({
   name: "kimo_find_space",
   title: "Find empty canvas space",
-  description:
-    "Returns a free position on the canvas (or inside a frame) for a w×h box, so new top-level frames do not overlap existing work. Insert at the returned x/y with parent from the result.",
+  description: "A free x/y for a w×h box that overlaps nothing (next to near, default right).",
   input: Obj({
     docId,
-    w: Num({ description: "Width needed.", minimum: 1 }),
-    h: Num({ description: "Height needed.", minimum: 1 }),
-    near: Opt(nodeIdField("Search next to this node (default: the whole canvas).")),
-    direction: Opt(
-      Enum(["right", "below", "left", "above"], {
-        description: "Where to look first (default right).",
-      }),
-    ),
-    padding: Opt(Num({ description: "Gap to keep from other nodes (default 80).", minimum: 0 })),
+    w: Num({ description: "Width.", minimum: 1 }),
+    h: Num({ description: "Height.", minimum: 1 }),
+    near: Opt(nodeIdField("Node to search next to.")),
+    direction: Opt(Enum(["right", "below", "left", "above"], { description: "Default right." })),
+    padding: Opt(Num({ description: "Gap (default 80).", minimum: 0 })),
   }),
   data: Obj({
     x: Num({ description: "X." }),
@@ -269,11 +231,11 @@ export const kimoValidate = defineTool({
   name: "kimo_validate",
   title: "Validate",
   description:
-    "Schema validation plus lints (same engine as `kimo validate`): errors make the document invalid; warnings (e.g. TEXT_NO_FILL, CONFLICT_OPEN) are fixable issues. Restrict to ids to check a section you just built.",
+    "Schema errors and lint warnings (same engine as kimo validate); ids limits it to subtrees.",
   input: Obj({
     docId,
-    ids: Opt(Arr(nodeIdField("Node id."), { description: "Only these subtrees.", maxItems: 500 })),
-    lints: Opt(Bool({ description: "Include lint warnings (default true)." })),
+    ids: Opt(Arr(nodeIdField("Node id."), { description: "Subtrees.", maxItems: 500 })),
+    lints: Opt(Bool({ description: "Default true." })),
   }),
   data: Obj({
     valid: Bool({ description: "No errors." }),

@@ -3,7 +3,7 @@
  * teardown 10.6 and the spec's "Validation" section.
  */
 import Type from "typebox"
-import { isKnownFeature, KNOWN_FEATURES } from "../features"
+import { type Feature, isKnownFeature, KNOWN_FEATURES } from "../features"
 import { escapePointer, isObject } from "../json"
 import {
   effectiveTheme,
@@ -337,56 +337,7 @@ class Validation {
         this.sink.add("FEATURE_NOT_DECLARED", path, `${what} needs feature "${feature}"`)
       }
     }
-    for (const [id, n] of this.scoped()) {
-      const base = ptr("nodes", id)
-      if (n.type === "script") need("node/script", `${base}/type`, "A script node")
-      if (n.type === "browser") need("node/browser", `${base}/type`, "A browser node")
-      const gate = (v: unknown, path: string, key: string | null): boolean => {
-        // Opaque records (Appendix B) hold data, not paints or text styles.
-        if (key === "inputs" || key === "uniforms" || key === "args") return false
-        // Enum option values are values of the prop's `field`: gate them as that field.
-        if (key === "options" || key === "targets") return false
-        if (
-          isObject(v) &&
-          v.type === "enum" &&
-          typeof v.field === "string" &&
-          isObject(v.options)
-        ) {
-          for (const [opt, value] of Object.entries(v.options))
-            walk(value, `${path}/options/${escapePointer(opt)}`, v.field, gate)
-        }
-        // Board 27 §8 (a): each enum target value is a value of its field (last segment).
-        if (isObject(v) && v.type === "enum" && isObject(v.targets)) {
-          for (const [opt, list] of Object.entries(v.targets)) {
-            if (!Array.isArray(list)) continue
-            list.forEach((t, i) => {
-              if (!isObject(t) || typeof t.field !== "string") return
-              const leaf = t.field.split("/").pop() as string
-              walk(t.value, `${path}/targets/${escapePointer(opt)}/${i}/value`, leaf, gate)
-            })
-          }
-        }
-        if (key === "layout" && isObject(v)) {
-          // A value equal to its default never needs a feature (applyDefaults must stay valid).
-          if ("wrap" in v && v.wrap !== false) need("layout/wrap", `${path}/wrap`, "layout.wrap")
-          if ("crossGap" in v && v.crossGap !== 0)
-            need("layout/wrap", `${path}/crossGap`, "layout.crossGap")
-          if (v.align === "stretch" || v.align === "baseline")
-            need("layout/stretch-baseline", `${path}/align`, `layout.align "${v.align}"`)
-        }
-        if ((key === "w" || key === "h") && isObject(v) && ("min" in v || "max" in v))
-          need("size/min-max", path, "Size min/max")
-        if (key === "content" && Array.isArray(v)) need("text/runs", path, "Rich-text content")
-        if (key === "effects" && isRef(v))
-          need("tokens/composite", path, "Effects bound to a variable")
-        if (key === "style" && isObject(v) && v.typography !== undefined)
-          need("tokens/composite", `${path}/typography`, "style.typography")
-        if (isObject(v) && v.kind === "mesh") need("fill/mesh", path, "A mesh paint")
-        if (isObject(v) && v.kind === "shader") need("fill/shader", path, "A shader paint")
-        return true
-      }
-      walk(n, base, null, gate)
-    }
+    for (const [id, n] of this.scoped()) walk(n, ptr("nodes", id), null, featureGate(need))
     for (const [name, v] of this.scopedVariables()) {
       if (COMPOSITE_VARIABLE_TYPES.has(v.type as never))
         need("tokens/composite", ptr("variables", name, "type"), `A "${v.type}" variable`)
@@ -1537,6 +1488,75 @@ class Validation {
  * children; `key` is the nearest enclosing property name (array indices are skipped over).
  * `meta` subtrees are never visited.
  */
+/** Reports a gated construct: the feature it needs, where, and what it is. */
+export type FeatureNeed = (feature: Feature, path: string, what: string) => void
+
+/**
+ * The feature gates of format 1.0 as a {@link walk} visitor (spec §13): calls `need` for every
+ * gated construct inside a node body, or inside one field value when walked with that field's
+ * key. The validator and `kimo_apply_ops` (which declares the features an edit needs) share it.
+ */
+export function featureGate(need: FeatureNeed) {
+  const gate = (v: unknown, path: string, key: string | null): boolean => {
+    if (key === null && isObject(v)) {
+      if (v.type === "script") need("node/script", `${path}/type`, "A script node")
+      if (v.type === "browser") need("node/browser", `${path}/type`, "A browser node")
+    }
+    // Opaque records (Appendix B) hold data, not paints or text styles.
+    if (key === "inputs" || key === "uniforms" || key === "args") return false
+    // Enum option values are values of the prop's `field`: gate them as that field.
+    if (key === "options" || key === "targets") return false
+    if (isObject(v) && v.type === "enum" && typeof v.field === "string" && isObject(v.options)) {
+      for (const [opt, value] of Object.entries(v.options))
+        walk(value, `${path}/options/${escapePointer(opt)}`, v.field, gate)
+    }
+    // Board 27 §8 (a): each enum target value is a value of its field (last segment).
+    if (isObject(v) && v.type === "enum" && isObject(v.targets)) {
+      for (const [opt, list] of Object.entries(v.targets)) {
+        if (!Array.isArray(list)) continue
+        list.forEach((t, i) => {
+          if (!isObject(t) || typeof t.field !== "string") return
+          const leaf = t.field.split("/").pop() as string
+          walk(t.value, `${path}/targets/${escapePointer(opt)}/${i}/value`, leaf, gate)
+        })
+      }
+    }
+    if (key === "layout" && isObject(v)) {
+      // A value equal to its default never needs a feature (applyDefaults must stay valid).
+      if ("wrap" in v && v.wrap !== false) need("layout/wrap", `${path}/wrap`, "layout.wrap")
+      if ("crossGap" in v && v.crossGap !== 0)
+        need("layout/wrap", `${path}/crossGap`, "layout.crossGap")
+      if (v.align === "stretch" || v.align === "baseline")
+        need("layout/stretch-baseline", `${path}/align`, `layout.align "${v.align}"`)
+    }
+    if ((key === "w" || key === "h") && isObject(v) && ("min" in v || "max" in v))
+      need("size/min-max", path, "Size min/max")
+    if (key === "content" && Array.isArray(v)) need("text/runs", path, "Rich-text content")
+    if (key === "effects" && isRef(v)) need("tokens/composite", path, "Effects bound to a variable")
+    if (key === "style" && isObject(v) && v.typography !== undefined)
+      need("tokens/composite", `${path}/typography`, "style.typography")
+    if (isObject(v) && v.kind === "mesh") need("fill/mesh", path, "A mesh paint")
+    if (isObject(v) && v.kind === "shader") need("fill/shader", path, "A shader paint")
+    return true
+  }
+  return gate
+}
+
+/**
+ * Features a node body (`key` null) or a field value (`key` = the field) needs. Values equal to
+ * their default need none.
+ */
+export function featuresNeeded(value: unknown, key: string | null = null): Set<Feature> {
+  const out = new Set<Feature>()
+  walk(
+    value,
+    "",
+    key,
+    featureGate((f) => out.add(f)),
+  )
+  return out
+}
+
 function walk(
   value: unknown,
   path: string,

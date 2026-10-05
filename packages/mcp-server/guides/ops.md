@@ -6,14 +6,21 @@
   "ops": [ … up to 500 … ] }
 ```
 
-The list is one transaction: if any op fails, nothing changes (`rolledBack: true`).
-One call = one undo step, attributed to you.
+One transaction (any failure: nothing changes, `rolledBack: true`), one undo step.
 
 Max 40 `insert`s per call (`BATCH_TOO_LARGE`); `copy` is free. Build per section: `guide/steps`.
 
 **References.** Any `id`, `parent`, `instance`, `component`, `frame` or `node` field takes a node id
-or `@key` of a node created earlier in the call. `parent: "root"` = top level. `index` is the
+or `@key` of a node created earlier in the call. After `{"op":"copy","key":"v2",…}`,
+`@v2/<original id>` is the copy of that node, so one call can copy a page and insert into the
+copy's sections. `created[]` also lists the copies of the copied root's first two levels as
+`v2/<original id>` → new id, for later calls. `parent: "root"` = top level. `index` is the
 position among siblings (0 = first); omit it to append.
+
+**Clearing fields.** `{"op":"update","id":…,"unset":["effects"]}`; a `null` value in `set`
+does the same (`"set":{"effects":null}`). Never put `unset` inside `set` or a node body.
+
+**Features** (`layout/wrap`, `text/runs`, …) are declared for you by the edit that needs them.
 
 ## Build a subtree
 
@@ -27,7 +34,7 @@ position among siblings (0 = first); omit it to append.
 ]
 ```
 
-Children are separate `insert` ops; a node body never contains them.
+Children are separate `insert` ops, never inside a body.
 
 ## Edit
 
@@ -35,14 +42,13 @@ Children are separate `insert` ops; a node body never contains them.
 |---|---|---|
 | `update` | `{id, set?:{field:value}, unset?:[field]}` | Shallow: `set.layout` replaces the whole layout object |
 | `replace` | `{id, node}` | New body, same id and position. Destructive |
-| `move` | `{id, parent, index?, at?}` | Reparent or reorder. Cycles fail with `CYCLE` |
+| `move` | `{id, parent, index?, at?}` | Reparent or reorder |
 | `delete` | `{id}` | Removes the subtree. Destructive |
 | `copy` | `{id, parent, key?, index?, set?}` | Deep copy with fresh ids, optional root fields |
 
 ```json
 {"op":"update","id":"@title","set":{"content":"Team","style":{"size":24,"weight":700}}}
 {"op":"update","id":"Hq3Lm9aZ1x","unset":["effects"]}
-{"op":"move","id":"Hq3Lm9aZ1x","parent":"@card","index":0}
 {"op":"copy","id":"@card","key":"card2","parent":"root","set":{"x":360}}
 ```
 
@@ -53,13 +59,9 @@ Children are separate `insert` ops; a node body never contains them.
 {"op":"instantiate","of":"@card","key":"c1","parent":"@row"}
 {"op":"set_override","instance":"@c1","path":"Title00001","kind":"set","set":{"content":"Team"}}
 {"op":"set_args","instance":"@c1","args":[{"name":"label","value":"Buy"}]}
-{"op":"swap_instance","instance":"@c1","of":"Ghost00001"}
-{"op":"reset_override","instance":"@c1","all":true}
-{"op":"detach","id":"@c1"}
 ```
 
-Also: `declare_prop {component, name, def}`, `remove_prop`, `set_slot {frame, suggested?,
-remove?}`.
+Also `swap_instance`, `reset_override`, `detach`, `declare_prop`, `remove_prop`, `set_slot`.
 
 ## Variables and themes (details: `tokens`)
 
@@ -71,8 +73,8 @@ remove?}`.
 {"op":"set_theme_pin","node":"@card","axis":"mode","value":"dark"}
 ```
 
-Also: `update_variable`, `rename_variable` (rebinds every use), `delete_variable {detach?}`,
-low-level `set_variables` / `set_theme_axes`.
+Also: `update_variable`, `rename_variable`, `delete_variable {detach?}`, `set_variables`,
+`set_theme_axes`.
 
 ## Pages
 
@@ -83,14 +85,11 @@ low-level `set_variables` / `set_theme_axes`.
 {"op":"page","action":"move","id":"<page id>","index":0}
 ```
 
-`created[]` maps the add's `key` to the new page id (use it as `page` later). A top-level
-insert without `page` lands on the first page. `delete` removes the page and its
-top-level nodes (destructive); the last page can't be deleted.
+`created[]` maps the add's `key` to the page id. A top-level insert without `page` lands on the
+first page. `delete` removes the page and its top-level nodes; never the last page.
 
 ## Habits that work
 
-- Pass `baseRevision` from your previous result: you get `REVISION_CONFLICT` instead of
-  silently overwriting the user's edits.
-- `dryRun: true` checks a large batch: returns the would-be ops and warnings, commits nothing.
-- To place a new top-level frame, use the x/y from `kimo_find_space {docId, w, h}`.
+- Pass `baseRevision` from your previous result (`REVISION_CONFLICT` instead of overwriting).
+- New top-level frame: x/y from the outline's boxes or `kimo_find_space {docId, w, h}`.
 - Mark work in progress with `placeholder: true` on the frame; `unset` it at the end.

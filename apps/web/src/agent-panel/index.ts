@@ -39,6 +39,7 @@ export {
   ReviewCard,
   VariantActions,
 } from "./Modes"
+export { type StoreOutlineOptions, storeOutline, storeOutlineSource } from "./outline"
 export {
   createPromptRunStore,
   PROMPT_RUNS_KEY,

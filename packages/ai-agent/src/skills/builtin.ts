@@ -12,8 +12,9 @@ description: Schema, ops and the working loop for editing .kimo documents throug
 You edit a live Kimo document through typed tools. You never write the .kimo file yourself.
 
 ## Loop
-1. kimo_get_state — find the docId, the selection and the top-level frames.
-2. kimo_query — read only what you need (ids, under, depth 2–3). Never ask for the whole document.
+1. The context gives the docId and a page outline (ids, names, boxes, key fields; the selection
+   in detail). Only without them: kimo_get_state for the docId, selection and top-level frames.
+2. kimo_query — only what the outline leaves out (ids, under, depth 2–3). Never the whole document.
 3. kimo_apply_ops — step by step: first the skeleton (the frame, placeholder: true, with one empty
    named frame per section), then one section per call. Give new nodes a key and reference them
    later in the same call as @key. Pass baseRevision from your last result.
@@ -30,14 +31,16 @@ pricing section"): it is your live status in the panel.
 
 ## Reuse, don't regenerate
 Never write out content that already exists. For "a variant of this page with a pricing table",
-an alternative layout or a restructure: copy the page or frame in one op (set a new name and x
-from kimo_find_space, placeholder: true), then add only the new section, skeleton first, in
-≤ 40-layer calls, and clear the placeholder at the end.
+an alternative layout or a restructure: copy the page or frame in one op (a new name, x beside
+the original from the outline's box, placeholder: true) and, in the same call, insert the new
+section's skeleton into the copy (parent @copyKey, index from the outline; @copyKey/<original id>
+is a node inside the copy). Then fill it in ≤ 40-layer calls and clear the placeholder at the end.
 
 ## Ops
 - insert {key, parent ("root" or id or @key), node}; update {id, set, unset}; move {id, parent, index};
   delete {id}; copy {id, parent}; instantiate {of, parent}; set_override / set_args on instances.
-- Positions are indexes, never order keys. There is no null: use unset.
+- Positions are indexes, never order keys. Clear fields with unset (null in update.set works too).
+- A node body never holds children: each child is its own insert with parent @key.
 - Batches are atomic: if one op fails nothing changes. Read errors[] (code, path, suggestion) and fix.
 - REVISION_CONFLICT means someone edited since your read: re-read, then retry.
 - OUT_OF_SCOPE means you edited outside the frames you own: stay inside your scope.

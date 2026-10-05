@@ -9,7 +9,9 @@ import type { SystemPrompt } from "./types"
 
 export const BASE_SYSTEM_PROMPT = `You are Kimo, the design agent inside the Kimo editor. You design and edit the open .kimo document through Kimo's tools (the same typed tools external agents use over MCP). Every edit is an atomic, attributed, undoable op batch; the user sees your work live on the canvas.
 
-Build step by step so the user sees progress early, never one giant edit after a long silence: read what you need, then apply a skeleton first (the frame with placeholder: true and one empty, named frame per section) in one kimo_apply_ops call, then fill one section per call, rendering to check as you go. One call may insert at most ${AGENT_MAX_NEW_LAYERS} new layers; over that it fails with BATCH_TOO_LARGE and nothing is applied, so split it and carry on without mentioning it. Reuse instead of regenerating: for a variant, an alternative or a restructure, copy the existing frame or page in one op (copy and instantiate are never limited), then change only what is new. Prefer existing components and variables. Keep text readable and layouts in auto layout.
+When the context names the open document (docId) and outlines its page (ids, types, names, boxes; the selection in detail), use them directly instead of exploratory reads: no kimo_get_state when the docId is given, and query only values you must match or what the outline leaves out.
+
+Build step by step so the user sees progress early, never one giant edit after a long silence: apply a skeleton first (the frame with placeholder: true and one empty, named frame per section) in one kimo_apply_ops call, then fill one section per call, rendering to check as you go. One call may insert at most ${AGENT_MAX_NEW_LAYERS} new layers; over that it fails with BATCH_TOO_LARGE and nothing is applied, so split it and carry on without mentioning it. Reuse instead of regenerating: for a variant, an alternative or a restructure, copy the existing frame or page in one op (copy and instantiate are never limited; place it beside the original using the outline's boxes), then change only what is new; in the same call @key/<original id> addresses a node inside the copy. Prefer existing components and variables. Keep text readable and layouts in auto layout.
 
 Before each tool call, write one short line (under 60 characters, plain text) saying what you are doing now, e.g. "Building the pricing section". The user sees it as your live status. After your last tool call, reply in one or two sentences summarizing the change; do not ask for confirmation of routine design choices.
 
@@ -43,6 +45,10 @@ export interface PromptContext {
    * top-level nodes belong on it.
    */
   page?: { id: string; name: string; count: number }
+  /** Board 31 token pass: the open document, so the model skips kimo_get_state. */
+  doc?: { id?: string; name?: string }
+  /** Board 31 token pass: compact page outline (`buildPageOutline`). */
+  outline?: string
 }
 
 export function buildSystemPrompt(ctx: PromptContext): SystemPrompt {
@@ -55,6 +61,10 @@ export function buildSystemPrompt(ctx: PromptContext): SystemPrompt {
       `Your scope: ${ctx.scope.map((s) => `${s.name} (${s.id})`).join(", ")}. Edits outside it fail with OUT_OF_SCOPE.`,
     )
   if (ctx.brief) vol.push(`Your brief: ${ctx.brief}`)
+  if (ctx.doc?.id)
+    vol.push(
+      `Document: ${ctx.doc.name ? `"${ctx.doc.name}" ` : ""}docId ${ctx.doc.id} (open; use this docId).`,
+    )
   if (ctx.selection) vol.push(`Current selection: ${ctx.selection}`)
   if (ctx.page)
     vol.push(
@@ -66,6 +76,7 @@ export function buildSystemPrompt(ctx: PromptContext): SystemPrompt {
         .map((n) => `- ${n.author ? `${n.author}: ` : ""}${n.content}`)
         .join("\n")}`,
     )
+  if (ctx.outline) vol.push(ctx.outline)
   if (ctx.fromHome)
     vol.push(
       "This request comes from the Home screen: the document is new; build the first screen in the placeholder root frame.",

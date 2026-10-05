@@ -5,14 +5,15 @@
  *
  * Input validation is done by the dispatcher with Ajv so failures come back as INVALID_INPUT
  * envelopes (structured, with `path`), never as SDK prose: the SDK is given a pass-through
- * validator, while `tools/list` still advertises the full schemas.
+ * validator. Calls are validated against the strict schema (`validationSchemaOf`), while
+ * `tools/list` advertises the compact model-facing one (`advertisedInputSchema`).
  */
 import { fromJsonSchema, McpServer } from "@modelcontextprotocol/server"
 import { Ajv } from "@modelcontextprotocol/server/validators/ajv"
 import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/server/validators/cf-worker"
 import type { ToolError } from "./envelope"
 import { toCallToolResult } from "./envelope"
-import { type ListOptions, listTools, toMcpDescriptor } from "./registry"
+import { type ListOptions, listTools, toMcpDescriptor, validationSchemaOf } from "./registry"
 import { PROMPTS } from "./resources"
 import { type DispatchOptions, dispatch, type ToolContext, type ToolHandlers } from "./runtime"
 import type { ToolDef } from "./tools/define"
@@ -21,7 +22,7 @@ export const SERVER_NAME = "kimo"
 
 /** Server-level instructions sent at initialize (kept short; guides live in kimo_read_docs). */
 export const SERVER_INSTRUCTIONS =
-  "Kimo is a local design canvas (.kimo files). Start with kimo_get_state, open files with kimo_open, read with kimo_query, edit only with kimo_apply_ops (pass baseRevision from your last result), verify with kimo_render. Build step by step: a skeleton first, then one section per call (at most 40 new layers per call); write one short line saying what you are doing before each call. Copy existing frames or pages instead of re-creating them. Every call targets an explicit docId. Results are JSON envelopes {ok, summary, revision, warnings, errors}; branch on errors[].code. Read kimo_read_docs before your first edit."
+  "Kimo is a local design canvas (.kimo files). Find the docId in your context or with kimo_get_state (kimo_open opens files); read with kimo_query; edit only with kimo_apply_ops (baseRevision from your last result); check with kimo_render. Build step by step: a skeleton, then one section per call (at most 40 new layers per call), one short status line before each call. Copy existing frames or pages instead of re-creating them. Results are JSON envelopes; branch on errors[].code. Guides: kimo_read_docs."
 
 const passThrough: Parameters<typeof fromJsonSchema>[1] & object = {
   getValidator: (() => (input: unknown) => ({
@@ -57,7 +58,7 @@ const interpreted = new Map<string, (input: unknown) => { valid: boolean; errorM
 function validateInterpreted(def: ToolDef, input: unknown): ToolError[] {
   let v = interpreted.get(def.name)
   if (!v) {
-    v = interpreter.getValidator(toMcpDescriptor(def).inputSchema as never)
+    v = interpreter.getValidator(validationSchemaOf(def) as never)
     interpreted.set(def.name, v)
   }
   const r = v(input)
@@ -76,7 +77,7 @@ export function validateInput(def: ToolDef, input: unknown): ToolError[] {
   let v = compiled.get(def.name)
   if (!v) {
     try {
-      v = ajv.compile(toMcpDescriptor(def).inputSchema)
+      v = ajv.compile(validationSchemaOf(def))
     } catch (e) {
       if (!(e instanceof EvalError)) throw e
       evalAllowed = false
@@ -87,7 +88,12 @@ export function validateInput(def: ToolDef, input: unknown): ToolError[] {
   if (v(input)) return []
   return (v.errors ?? []).slice(0, 10).map((e) => ({
     code: "INVALID_INPUT" as const,
-    message: `${e.instancePath || "(input)"} ${e.message ?? "is invalid"}`,
+    // Name the offending key: "must NOT have additional properties" alone costs a guess.
+    message: `${e.instancePath || "(input)"} ${e.message ?? "is invalid"}${
+      e.keyword === "additionalProperties"
+        ? `: "${(e.params as { additionalProperty?: string }).additionalProperty}"`
+        : ""
+    }`,
     path: e.instancePath
       .replace(/^\//, "")
       .replace(/\/(\d+)/g, "[$1]")

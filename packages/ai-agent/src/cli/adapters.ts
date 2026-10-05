@@ -3,6 +3,19 @@
  * the installed CLIs' `--help` on 2026-10-04 (Claude Code 2.1.289, codex-cli 0.146.0); Gemini CLI
  * flags follow its docs (google-gemini/gemini-cli `docs/cli/headless.md`) and are marked for
  * re-verification in the ADR's open questions.
+ *
+ * Board 31 token pass (2026-10-05, measured with the real CLIs): Kimo's prompt REPLACES each
+ * CLI's own coding-agent prompt instead of being appended to it, and the per-turn context goes
+ * in the user message (`promptWithContext`).
+ * - Claude Code: `--system-prompt` (the default prompt and its per-machine sections are gone),
+ *   `--disable-slash-commands` (no skill listing), and CLAUDE_CODE_DISABLE_CLAUDE_MDS /
+ *   CLAUDE_CODE_DISABLE_AUTO_MEMORY so the user's own CLAUDE.md and memory (coding notes) stay
+ *   out of a design turn; user settings (auth, env, model) still apply.
+ * - Codex: `-c model_instructions_file=<workspace>/.kimo/instructions.md` replaces Codex's base
+ *   instructions (`base_instructions` is ignored by codex-cli 0.146; `developer_instructions`
+ *   only adds a message). Measured: 14.7k → 10.3k input tokens on a one-line turn.
+ * - Gemini CLI: `GEMINI_SYSTEM_MD=<workspace>/.gemini/system.md` replaces the built-in system
+ *   prompt (docs/cli/system-prompt.md; not installed here, so unverified).
  */
 import type { Usage } from "../types"
 import {
@@ -12,6 +25,7 @@ import {
   type CliStreamParser,
   type CliTurnInput,
   kimoToolName,
+  promptWithContext,
 } from "./types"
 
 const HOME_BINS = [
@@ -90,7 +104,8 @@ export const CLAUDE_CODE: CliAgentDef = {
  * `claude -p` with stream-json in and out. Built-in tools are disabled (`--tools ""`), only the
  * Kimo MCP server is loaded (`--strict-mcp-config`) and allowed (`--allowedTools mcp__kimo`),
  * and anything else is denied without prompting (`--permission-mode dontAsk`), so it cannot
- * write the .kimo file directly; Kimo's own approvals apply inside the MCP server.
+ * write the .kimo file directly; Kimo's own approvals apply inside the MCP server. Kimo's prompt
+ * replaces Claude Code's (`--system-prompt`; see the header).
  */
 export function claudeInvocation(i: CliTurnInput) {
   const mcp = { mcpServers: { kimo: { type: "stdio", command: i.mcp.command, args: i.mcp.args } } }
@@ -111,7 +126,8 @@ export function claudeInvocation(i: CliTurnInput) {
     "mcp__kimo",
     "--permission-mode",
     "dontAsk",
-    "--append-system-prompt",
+    "--disable-slash-commands",
+    "--system-prompt",
     i.systemPrompt,
   ]
   if (i.model !== "default") args.push("--model", i.model)
@@ -122,10 +138,16 @@ export function claudeInvocation(i: CliTurnInput) {
       type: "image",
       source: { type: "base64", media_type: im.mimeType, data: im.data },
     })),
-    { type: "text", text: i.prompt },
+    { type: "text", text: promptWithContext(i) },
   ]
   const stdin = `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`
-  return { args, stdin }
+  return { args, stdin, env: CLAUDE_ENV }
+}
+
+/** The user's CLAUDE.md files and auto-memory are coding notes, not design context. */
+export const CLAUDE_ENV: Readonly<Record<string, string>> = {
+  CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1",
+  CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
 }
 
 export function claudeParser(): CliStreamParser {
@@ -272,7 +294,8 @@ const toml = (s: string) => JSON.stringify(s)
 /**
  * `codex exec --json` (resume: `codex exec resume <thread> --json`). Kimo's MCP server via
  * `-c mcp_servers.kimo.*` (tools approved on Codex's side: `default_tools_approval_mode`); the
- * shell sandbox is read-only so it cannot write files.
+ * shell sandbox is read-only so it cannot write files. Kimo's prompt is Codex's base
+ * instructions (`model_instructions_file`), on every turn including resumes.
  */
 export function codexInvocation(i: CliTurnInput) {
   const args = ["exec"]
@@ -299,10 +322,18 @@ export function codexInvocation(i: CliTurnInput) {
     "-c",
     `model_reasoning_effort=${toml(i.thinking === "off" ? "low" : i.thinking === "max" ? "high" : "medium")}`,
   )
+  // Kimo's prompt replaces Codex's base instructions (written by the engine before spawning).
+  args.push("-c", `model_instructions_file=${toml(`${i.workspace}/${CODEX_INSTRUCTIONS}`)}`)
   args.push("-")
-  const prompt = i.cliSessionId ? i.prompt : `${i.systemPrompt}\n\n---\n\n${i.prompt}`
-  return { args, stdin: prompt }
+  return {
+    args,
+    stdin: promptWithContext(i),
+    workspaceFiles: [{ path: CODEX_INSTRUCTIONS, text: `${i.systemPrompt}\n` }],
+  }
 }
+
+/** Workspace file holding Kimo's instructions for Codex. */
+export const CODEX_INSTRUCTIONS = ".kimo/instructions.md"
 
 export function codexParser(): CliStreamParser {
   return {
@@ -424,7 +455,7 @@ export const GEMINI_CLI: CliAgentDef = {
 /**
  * `gemini --output-format stream-json` in the session workspace. The workspace
  * `.gemini/settings.json` adds the Kimo MCP server (trusted: Kimo's own approvals apply) and
- * excludes the built-in file-writing and shell tools.
+ * excludes the built-in file-writing and shell tools; `.gemini/system.md` is Kimo's prompt.
  */
 export function geminiInvocation(i: CliTurnInput) {
   const settings = {
@@ -434,14 +465,20 @@ export function geminiInvocation(i: CliTurnInput) {
   const args = ["--output-format", "stream-json", "--allowed-mcp-server-names", "kimo"]
   if (i.model !== "default") args.push("--model", i.model)
   if (i.cliSessionId) args.push("--resume", i.cliSessionId)
-  args.push("--prompt", i.cliSessionId ? i.prompt : `${i.systemPrompt}\n\n---\n\n${i.prompt}`)
+  args.push("--prompt", promptWithContext(i))
   return {
     args,
+    // Kimo's prompt replaces Gemini CLI's built-in system prompt.
+    env: { GEMINI_SYSTEM_MD: `${i.workspace}/${GEMINI_SYSTEM}` },
     workspaceFiles: [
       { path: ".gemini/settings.json", text: `${JSON.stringify(settings, null, 2)}\n` },
+      { path: GEMINI_SYSTEM, text: `${i.systemPrompt}\n` },
     ],
   }
 }
+
+/** Workspace file holding Kimo's system prompt for Gemini CLI (`GEMINI_SYSTEM_MD`). */
+export const GEMINI_SYSTEM = ".gemini/system.md"
 
 export function geminiParser(): CliStreamParser {
   return {
@@ -553,7 +590,7 @@ export function genericAdapter(c: GenericCliConfig): CliAdapter {
         mcpServers: { kimo: { command: i.mcp.command, args: i.mcp.args } },
       })
       const vals: Record<string, string> = {
-        prompt: i.prompt,
+        prompt: promptWithContext(i),
         model: i.model === "default" ? "" : i.model,
         system: i.systemPrompt,
         mcpConfigJson,
@@ -570,7 +607,7 @@ export function genericAdapter(c: GenericCliConfig): CliAdapter {
         }
         args.push(a.replace(/\{(\w+)\}/g, (_, k: string) => vals[k] ?? ""))
       }
-      return c.stdinPrompt ? { args, stdin: i.prompt } : { args }
+      return c.stdinPrompt ? { args, stdin: promptWithContext(i) } : { args }
     },
     parser: () =>
       c.output === "codex-jsonl"

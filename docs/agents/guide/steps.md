@@ -18,23 +18,26 @@ applied); `copy`, `instantiate`, page duplicates and edits of existing layers ar
 4. `unset` the page's `placeholder` when the last section is done, then reply in one or two
    sentences.
 
+## Read less
+
+Inside the Kimo app the turn context gives the `docId` and a page outline (ids, names, types,
+boxes, the selected subtree in detail). Use those ids directly; query only what the outline
+leaves out (field values you need to match, a truncated subtree).
+
 ## Reuse, don't regenerate
 
 Content that already exists is copied, never written out again. A variant, an alternative, a
 restructure or "the same page with …" starts with one `copy` of the existing frame or page
 (any number of layers, never limited), then only the new or changed parts are edited.
 
-"Create a variant of this page with a pricing table":
+"Create a variant of this page with a pricing table" (the outline says the Home frame is
+`Home0001` at 0,0 1440×3200 and its 4th child is the footer). One call copies the page next to
+the original and adds the section skeleton inside the copy:
 
 ```json
-[{"op":"copy","id":"<Home frame id>","key":"v2","parent":"root",
-  "set":{"name":"Home · Pricing variant","x":1540,"placeholder":true}}]
-```
-
-Then the new section in its own call (two inserts, two copies):
-
-```json
-[{"op":"insert","key":"pricing","parent":"<v2 id from created[]>","index":3,
+[{"op":"copy","id":"Home0001","key":"v2","parent":"root",
+  "set":{"name":"Home · Pricing variant","x":1540,"placeholder":true}},
+ {"op":"insert","key":"pricing","parent":"@v2","index":3,
   "node":{"type":"frame","name":"Pricing","w":{"mode":"fill"},
     "layout":{"dir":"row","gap":24,"pad":64}}},
  {"op":"insert","key":"p1","parent":"@pricing","node":{"type":"frame","name":"Plan · Taster",
@@ -43,5 +46,7 @@ Then the new section in its own call (two inserts, two copies):
  {"op":"copy","id":"@p1","parent":"@pricing","set":{"name":"Plan · Café"}}]
 ```
 
-Then one call per plan card's content (title, price, features, button), each well under 40
-inserts, and `unset` the variant's `placeholder` at the end.
+`@v2/<original id>` addresses a node inside the copy in the same call; `created[]` lists
+`v2/<original id>` for later calls. Then fill the plan cards (one call, well under 40 inserts:
+build the first card, copy it twice and edit the copies), render once, and `unset` the
+variant's `placeholder` at the end.

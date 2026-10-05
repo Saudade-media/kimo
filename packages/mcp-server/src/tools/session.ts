@@ -102,7 +102,7 @@ export const kimoGetState = defineTool({
   name: "kimo_get_state",
   title: "Get Kimo state",
   description:
-    "Start here. Lists every open Kimo document (docId, path, dirty, revision), the selection, top-level nodes with visibility hints, components, a variables/themes summary and other connected agents. Pass docId to describe one document only. Your permissions are in data.you. Then call kimo_read_docs for the schema and ops guides, kimo_open to open a .kimo file, or kimo_query to read nodes.",
+    "Open documents (docId, path, revision), selection, top-level nodes, pages, components, variables summary and your permissions. docId: that document only.",
   input: Obj({ docId: optDocId }),
   data: Obj({
     app: Obj(
@@ -148,14 +148,15 @@ export const DOC_PATHS = [
   "guide/mobile",
   "guide/tables",
   "guide/export",
+  "tools",
 ] as const
 
 export const kimoReadDocs = defineTool({
   name: "kimo_read_docs",
   title: "Read Kimo guides",
   description:
-    "Returns an MIT-licensed agent guide as markdown. No path = the index (what each guide covers). Read 'schema' (the .kimo node format) and 'ops' (kimo_apply_ops examples) before your first edit; 'errors' explains every error code. Guides are also MCP resources kimo://docs/{path}.",
-  input: Obj({ path: Opt(Enum(DOC_PATHS, { description: "Guide to read; omit for the index." })) }),
+    "Agent guide (markdown). No path = index. schema: node fields; ops: op examples; layout; text; components; tokens; errors: every error code; tools: tool details.",
+  input: Obj({ path: Opt(Enum(DOC_PATHS, { description: "Guide (omit for the index)." })) }),
   data: Obj({
     path: Str({ description: "Guide path." }),
     markdown: Str({ description: "Guide text." }),
@@ -176,10 +177,10 @@ export const kimoOpen = defineTool({
   name: "kimo_open",
   title: "Open a .kimo file",
   description:
-    "Opens a .kimo document by absolute path and returns its docId. Never writes the file. If it is already open, returns the existing docId. A file that fails to load returns LOAD_FAILED and stays untouched; a newer format opens read-only. If another process holds the file's lease you get DOCUMENT_LOCKED with the holder. Files outside your allow-list ask the user each time.",
+    "Opens a .kimo file by absolute path and returns its docId (the existing one when already open). Never writes the file.",
   input: Obj({
-    path: absPath("Absolute path of the .kimo file."),
-    readOnly: Opt(Bool({ description: "Open without taking the write lease." })),
+    path: absPath("Absolute .kimo path."),
+    readOnly: Opt(Bool({ description: "No write lease." })),
   }),
   data: Obj({
     doc: DocRefSchema,
@@ -205,11 +206,11 @@ export const kimoClose = defineTool({
   name: "kimo_close",
   title: "Close a document",
   description:
-    "Closes a document you opened. A dirty document is refused unless save=true (atomic save first) or discard=true (drops unsaved edits; asks the user). Documents the user has open in a window are never closed for them: you only drop your own reference.",
+    "Closes a document you opened. With unsaved edits: save=true or discard=true (asks the user).",
   input: Obj({
     docId,
-    save: Opt(Bool({ description: "Save before closing." })),
-    discard: Opt(Bool({ description: "Close even with unsaved edits (destructive; asks)." })),
+    save: Opt(Bool({ description: "Save first." })),
+    discard: Opt(Bool({ description: "Drop unsaved edits." })),
   }),
   data: Obj({
     closed: Bool({
@@ -230,15 +231,12 @@ export const kimoClose = defineTool({
 export const kimoCreate = defineTool({
   name: "kimo_create",
   title: "Create a .kimo file",
-  description:
-    "Creates a new .kimo document at an absolute path and opens it. Refuses to overwrite: an existing path returns FILE_EXISTS. Optional template seeds variables and a starter frame. Needs the files.create grant (asks otherwise).",
+  description: "Creates a new .kimo file at an absolute path (never overwrites) and opens it.",
   input: Obj({
-    path: absPath("Absolute path for the new file (must end in .kimo and not exist)."),
-    name: Opt(Str({ description: "Document name (meta.name)." })),
+    path: absPath("Absolute path ending in .kimo."),
+    name: Opt(Str({ description: "Document name." })),
     template: Opt(
-      Enum(["blank", "web", "mobile", "design-system"], {
-        description: "Starter content. Default blank.",
-      }),
+      Enum(["blank", "web", "mobile", "design-system"], { description: "Default blank." }),
     ),
   }),
   data: Obj({
@@ -261,7 +259,7 @@ export const kimoSave = defineTool({
   name: "kimo_save",
   title: "Save a document",
   description:
-    "Atomic save: temp file → fsync → rename → read back → SHA-256 compare. Reports bytes, hash and mtime only after the read-back matched; never says 'saved' otherwise. Autosave also runs in the desktop app; call this when you need a durable checkpoint (e.g. before running a build). Pass baseRevision to save only the state you reviewed.",
+    "Atomic save, verified by read-back. Autosave also runs; save for a durable checkpoint.",
   input: Obj({ docId, baseRevision }),
   data: Obj({
     path: Str({ description: "Saved path." }),
@@ -294,14 +292,12 @@ export const kimoHistory = defineTool({
   name: "kimo_history",
   title: "History and undo",
   description:
-    "list: recent op groups with author. undo / redo: undo or redo YOUR OWN last op group (your origin's undo stack; never the user's or another agent's edits). With token (undoToken from an earlier result) undo succeeds only if that group is on top of your stack. Replay is guarded: if later edits by others touched the same nodes, the result reports stale=true instead of clobbering them.",
+    "list: recent op groups. undo / redo: your own last op group only; token = the undoToken of the group you expect on top.",
   input: Obj({
     docId,
-    action: Enum(["list", "undo", "redo"], { description: "What to do." }),
-    token: Opt(Str({ description: "undo: the undoToken of the group you expect on top." })),
-    limit: Opt(
-      Int({ description: "list: entries, newest first (default 20).", minimum: 1, maximum: 200 }),
-    ),
+    action: Enum(["list", "undo", "redo"], { description: "Action." }),
+    token: Opt(Str({ description: "undo: undoToken." })),
+    limit: Opt(Int({ description: "list: entries (default 20).", minimum: 1, maximum: 200 })),
   }),
   data: Obj({
     entries: Opt(Arr(HistoryEntry, { description: "list: newest first." })),
@@ -322,19 +318,12 @@ export const kimoHistory = defineTool({
 export const kimoFocus = defineTool({
   name: "kimo_focus",
   title: "Show nodes in the editor",
-  description:
-    "Selects nodes and/or scrolls and zooms the editor to them, so the user sees your work. Changes only the view, never the document. Headless or with no window showing the document, it succeeds with a NO_WINDOW warning.",
+  description: "Selects and zooms the editor to nodes so the user sees them. View only.",
   input: Obj({
     docId,
-    ids: Arr(nodeIdField("Node id."), {
-      description: "Nodes to show.",
-      minItems: 1,
-      maxItems: 200,
-    }),
-    select: Opt(Bool({ description: "Also select them (default true)." })),
-    zoom: Opt(
-      Enum(["fit", "keep", "100"], { description: "fit (default), keep the zoom, or 100%." }),
-    ),
+    ids: Arr(nodeIdField("Node id."), { description: "Nodes.", minItems: 1, maxItems: 200 }),
+    select: Opt(Bool({ description: "Select them (default true)." })),
+    zoom: Opt(Enum(["fit", "keep", "100"], { description: "Default fit." })),
   }),
   data: Obj({ shown: Bool({ description: "A window showed the nodes." }) }),
   annotations: {
@@ -355,19 +344,16 @@ export const kimoStyles = defineTool({
   name: "kimo_styles",
   title: "Style presets",
   description:
-    "Open style presets. No name: list presets. name: the parameters the preset takes. name+params: prose guidance plus tokens. apply=true with docId writes the tokens as variables (one undoable edit; scope edit + globals grant).",
+    "Style presets. No name: list. name: its params. name+params: guidance and tokens; apply=true writes the tokens into docId as variables.",
   input: Obj({
-    name: Opt(Str({ description: "Preset name from the list." })),
+    name: Opt(Str({ description: "Preset." })),
     params: Opt(
       Open(
-        { palette: Opt(Str({ description: "Palette choice (example parameter)." })) },
-        {
-          description:
-            "Preset parameters as listed by kimo_styles {name}; validated by the preset.",
-        },
+        { palette: Opt(Str({ description: "Palette (example)." })) },
+        { description: "Preset params (from kimo_styles {name}); validated by the preset." },
       ),
     ),
-    apply: Opt(Bool({ description: "Write the tokens into docId as variables." })),
+    apply: Opt(Bool({ description: "Write tokens as variables." })),
     docId: optDocId,
     baseRevision,
   }),

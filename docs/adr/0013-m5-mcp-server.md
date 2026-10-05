@@ -411,3 +411,42 @@ first and then one section per call, nothing applied (`dryRun` is refused the sa
 - **UI:** the refusal is the agent's own correction: the panel drops the refused step, shows no
   card and keeps the status line (board 31 rule "Refusal is internal").
 
+
+## Addendum 4 (2026-10-05, board 31 token pass): what the model sees
+
+A Claude Code turn on the landing example ("create a variant to add a pricing table") read
+~250–300k tokens (614k in a 14-step run): every model call re-sends the system prompt, the tool
+list and the history, and the tool list alone was ~22k tokens. Measured with the real CLI:
+Claude Code sends each tool's `description` + `inputSchema` to the model but **not**
+`outputSchema`, and hands the model **`structuredContent`** (as JSON) instead of the text blocks
+when a result has it.
+
+- **Advertised vs strict input schema** (`src/registry.ts`). `toMcpDescriptor` (tools/list,
+  `generated/tools.json`, the built-in agent) advertises `advertisedInputSchema(def)`: the strict
+  schema minus validation-only keywords (`pattern`, lengths, item counts, `examples`, `title`,
+  `default`), or the tool's own `advertise` schema. `kimo_apply_ops` advertises each op as an open
+  object with an enforced `op` enum whose description is a grammar generated from the strict op
+  schemas (`insert {key?, parent, at?, index?, node}` …), ~3.4k characters instead of 24k. The
+  advertised schema is always a superset of the strict one. **Validation is unchanged**: the
+  server validates every call against `validationSchemaOf(def)` (the full strict TypeBox schema,
+  Ajv strict / cfworker), and `INVALID_INPUT` now names an unexpected key.
+- **Descriptions** are a few short sentences (budget per tool in `test/schemas.test.ts`, whole
+  list < 19.5k characters, was 48.7k); the details moved to the new guide `tools`
+  (`kimo_read_docs path=tools`). Output schemas are unchanged (not sent to models; MCP needs them
+  for `structuredContent`).
+- **Results** (`modelView`, `src/envelope.ts`): MCP results (text and `structuredContent`) and
+  the built-in loop's tool results omit `ops` / `inverse`, which echoed whole node bodies back
+  (a 73-node copy was ~24k characters); `opCount` replaces their length, a dry run keeps `ops`.
+  In-process callers still get the full envelope. A failed commit lists at most 5 issues and
+  counts the rest in `summary`.
+- **Fewer failed calls** (`src/handlers/compile.ts`, `src/handlers/tools.ts`):
+  `kimo_apply_ops` declares every feature gate the compiled ops write (`featuresWrittenBy`, the
+  validator's own gate table `featureGate` from `@kimo/core-schema`; text runs were the only one
+  before), and reads common slips as what they mean: `null` in `update.set` = unset,
+  `set.unset` = the op's `unset`, a text node's `text` string = `content`, `width` / `height` =
+  `w` / `h`, `null` fields of a new node dropped. Unknown fields get a one-line `suggestion`
+  (`schemaFix`: `padding` → layout `pad`, `fontSize` → `style.size`, `unset` → the op's `unset`).
+  The format itself is unchanged (still never stores `null`).
+- **Copies**: after `{op:"copy", key:"v"}`, `@v/<original id>` addresses that node's copy in the
+  same call (`NODE_REF_PATTERN`, scope checks follow the copy's key), and `created[]` lists the
+  copies of the copied root's first two levels as `v/<original id>` (at most 60).

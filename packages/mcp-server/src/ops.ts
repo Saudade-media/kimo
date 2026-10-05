@@ -12,7 +12,9 @@
  * - Positions: `index` among the destination siblings (default: append). Order keys are never
  *   exposed to agents.
  * - Node bodies are `.kimo` node objects (kimo://schema/1.0) without `parent`/`order`/`at`.
- * - `null` is never used: removal is `unset: [...]`, "inherit" is `inherit: true`.
+ * - `@key/<id>` names the copy of `<id>` inside the subtree copied by the copy op `key`.
+ * - Removal is `unset: [...]`, "inherit" is `inherit: true`. The format never stores `null`;
+ *   the compiler reads a `null` in `update.set` as unset and drops `null` fields of new nodes.
  */
 import type { Variable } from "@kimo/core-schema"
 import type { M3Command, Op } from "@kimo/editor-state"
@@ -34,8 +36,9 @@ import {
 
 // --- Shared fields -----------------------------------------------------------------------------
 
-/** Node id or `@key` back-reference. */
-export const NODE_REF_PATTERN = "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
+/** Node id, `@key` back-reference, or `@key/<id>` (the copy of `<id>` made by copy op `key`). */
+export const NODE_REF_PATTERN =
+  "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64}(?:/[A-Za-z0-9]{6,24})?)$"
 /** Qualified component id (`id` or `alias:id`) or `@key`. */
 export const COMPONENT_REF_PATTERN =
   "^(?:(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"

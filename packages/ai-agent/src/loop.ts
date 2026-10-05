@@ -12,7 +12,7 @@
  *
  * Every turn ends by clearing the placeholders it owns. Errors never roll back applied ops.
  */
-import { failure, type ToolResult } from "@kimo/mcp-server"
+import { failure, modelText, type ToolResult } from "@kimo/mcp-server"
 import { backoffDelay, DEFAULT_RETRY, type RetryPolicy, sleep } from "./backoff"
 import { type ErrorCard, errorCard } from "./cards"
 import { isAbort, isProviderError, ProviderError } from "./errors"
@@ -378,7 +378,7 @@ function resultPart(
     type: "tool_result",
     callId: call.id,
     name: call.name,
-    content: JSON.stringify(r),
+    content: modelText(r),
     isError: !r.ok,
     ...(imgs.length ? { images: imgs } : {}),
   }

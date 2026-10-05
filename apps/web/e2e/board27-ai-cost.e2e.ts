@@ -275,7 +275,7 @@ export const scenarios: Scenario[] = [
       )
       const meta =
         (await page.locator("[data-testid=agent-message-meta]").first().textContent()) ?? ""
-      expect(/in · .* out/.test(meta) && !meta.includes("$"), `meta keeps tokens: ${meta}`)
+      expect(/new tokens/.test(meta) && !meta.includes("$"), `meta keeps tokens: ${meta}`)
       const header = (await page.locator("[data-testid=agent-session-cost]").textContent()) ?? ""
       expect(/tok$/.test(header) && !header.includes("$"), `header keeps tokens: ${header}`)
       // Show cost back on → $ returns.

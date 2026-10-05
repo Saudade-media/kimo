@@ -162,6 +162,9 @@ export {
 export { buildTree, compareCodeUnits, compareSiblings, type Tree } from "./tree"
 export {
   DOCUMENT_LEVEL_CODES,
+  type FeatureNeed,
+  featureGate,
+  featuresNeeded,
   ISSUE_CODES,
   type IssueCode,
   type ValidateOptions,

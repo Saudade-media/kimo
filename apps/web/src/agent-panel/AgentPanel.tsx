@@ -61,7 +61,14 @@ import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
 import { markOf } from "./controller"
 import { costWarningCopy } from "./cost-warning"
 import { FirstRun } from "./FirstRun"
-import { costLabel, durationLabel, elapsedLabel, headerCostLabel, tokensLabel } from "./format"
+import {
+  costLabel,
+  durationLabel,
+  elapsedLabel,
+  headerCostLabel,
+  tokensLabel,
+  tokensTitle,
+} from "./format"
 import { useAgentPanelState } from "./hooks"
 import { ModelMenu, ModeMenu, SkillsMenu } from "./Menus"
 import { PlanCard, ReviewCard } from "./Modes"
@@ -609,6 +616,7 @@ function ThreadItem({
               data-testid="agent-message-meta"
               reveal="hover"
               tokens={tokensLabel(m.meta.tokensIn, m.meta.tokensOut)}
+              tokensTitle={tokensTitle(m.meta)}
               {...(state.showCost || m.meta.billing === "subscription"
                 ? { cost: costLabel(m.meta) }
                 : {})}

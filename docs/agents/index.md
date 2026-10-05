@@ -8,8 +8,10 @@ You edit through tools, and each call is one atomic, undoable change.
 
 ## The loop
 
-1. `kimo_get_state`: lists open documents (`docId`), selection, top-level frames, components,
-   variables and your permissions. Open more files with `kimo_open {path}`.
+1. Inside the Kimo app the turn context already names the document (`docId`) and outlines the
+   page (ids, names, types, boxes). Otherwise `kimo_get_state` lists open documents (`docId`),
+   selection, top-level frames, components, variables and your permissions. Open more files with
+   `kimo_open {path}`.
 2. Read before writing: `kimo_query {docId, select, depth}` for nodes, `kimo_get_variables` for
    tokens, `kimo_list_components` for reusable parts.
 3. Write with `kimo_apply_ops {docId, baseRevision, ops:[…]}`. Up to 500 typed ops in one call,
@@ -42,6 +44,7 @@ Every result is a JSON envelope `{ok, summary, revision, warnings, errors}`, so 
 | `guide/mobile` | Designing phone screens |
 | `guide/tables` | Data tables and lists |
 | `guide/export` | Exporting PNGs and handing designs to code |
+| `tools` | The details each tool description leaves out (limits, options, edge cases) |
 
 Read with `kimo_read_docs {path}`, or as the MCP resource `kimo://docs/{path}`.
 These guides are MIT licensed.

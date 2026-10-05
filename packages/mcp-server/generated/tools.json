@@ -5,14 +5,13 @@
     {
       "name": "kimo_get_state",
       "title": "Get Kimo state",
-      "description": "Start here. Lists every open Kimo document (docId, path, dirty, revision), the selection, top-level nodes with visibility hints, components, a variables/themes summary and other connected agents. Pass docId to describe one document only. Your permissions are in data.you. Then call kimo_read_docs for the schema and ops guides, kimo_open to open a .kimo file, or kimo_query to read nodes.",
+      "description": "Open documents (docId, path, revision), selection, top-level nodes, pages, components, variables summary and your permissions. docId: that document only.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           }
         },
         "additionalProperties": false
@@ -640,7 +639,7 @@
     {
       "name": "kimo_read_docs",
       "title": "Read Kimo guides",
-      "description": "Returns an MIT-licensed agent guide as markdown. No path = the index (what each guide covers). Read 'schema' (the .kimo node format) and 'ops' (kimo_apply_ops examples) before your first edit; 'errors' explains every error code. Guides are also MCP resources kimo://docs/{path}.",
+      "description": "Agent guide (markdown). No path = index. schema: node fields; ops: op examples; layout; text; components; tokens; errors: every error code; tools: tool details.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -660,9 +659,10 @@
               "guide/web",
               "guide/mobile",
               "guide/tables",
-              "guide/export"
+              "guide/export",
+              "tools"
             ],
-            "description": "Guide to read; omit for the index."
+            "description": "Guide (omit for the index)."
           }
         },
         "additionalProperties": false
@@ -944,7 +944,7 @@
     {
       "name": "kimo_open",
       "title": "Open a .kimo file",
-      "description": "Opens a .kimo document by absolute path and returns its docId. Never writes the file. If it is already open, returns the existing docId. A file that fails to load returns LOAD_FAILED and stays untouched; a newer format opens read-only. If another process holds the file's lease you get DOCUMENT_LOCKED with the holder. Files outside your allow-list ask the user each time.",
+      "description": "Opens a .kimo file by absolute path and returns its docId (the existing one when already open). Never writes the file.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -953,13 +953,11 @@
         "properties": {
           "path": {
             "type": "string",
-            "description": "Absolute path of the .kimo file.",
-            "minLength": 1,
-            "pattern": "^(?:/|[A-Za-z]:[\\\\/]|untitled:).*"
+            "description": "Absolute .kimo path."
           },
           "readOnly": {
             "type": "boolean",
-            "description": "Open without taking the write lease."
+            "description": "No write lease."
           }
         },
         "additionalProperties": false
@@ -1309,7 +1307,7 @@
     {
       "name": "kimo_query",
       "title": "Query nodes",
-      "description": "Declarative read of nodes. select by ids, and/or filter by name (substring, case-insensitive), type, text content, component (instances of), or under (subtree of). depth controls how many levels of children are returned (0 = matched nodes only; elided children show as \"…\"). resolveVariables replaces $variable refs with values for the given theme; resolveInstances expands instance content as virtual nodes (instanceId/childId). include adds bounds, layout problems (clipping, collapse, missing fonts), path geometry, override origin. Results are a flat list, paginated with cursor. The whole document is never dumped: give at least one selector or under.",
+      "description": "Reads nodes as .kimo data (a flat list; feed bodies back into insert/replace). select by ids or filters; depth = child levels (default 1, 0 = matches only). include bounds / problems for computed boxes and layout issues. Paginated by cursor.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -1319,8 +1317,7 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "select": {
             "type": "object",
@@ -1329,24 +1326,21 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "description": "Node id or IdPath.",
-                  "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+                  "description": "Node id or IdPath."
                 },
-                "description": "Exact nodes.",
-                "maxItems": 500
+                "description": "Nodes."
               },
               "under": {
                 "type": "string",
-                "description": "Only nodes inside this subtree (\"root\" not allowed: use topLevel).",
-                "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+                "description": "Subtree root."
               },
               "topLevel": {
                 "type": "boolean",
-                "description": "Match the top-level nodes."
+                "description": "Top-level nodes."
               },
               "name": {
                 "type": "string",
-                "description": "Name contains (case-insensitive)."
+                "description": "Name contains."
               },
               "type": {
                 "type": "array",
@@ -1354,33 +1348,33 @@
                   "type": "string",
                   "description": "Node type."
                 },
-                "description": "Any of these types."
+                "description": "Types."
               },
               "text": {
                 "type": "string",
-                "description": "Text content contains (text nodes)."
+                "description": "Text contains."
               },
               "component": {
                 "type": "string",
-                "description": "Instances of this component id (alias:id for libraries)."
+                "description": "Instances of this component."
               },
               "page": {
                 "type": "string",
-                "description": "Only nodes on this page (a page id from kimo_get_state; with topLevel: the page's top-level nodes)."
+                "description": "Page id."
               }
             },
             "additionalProperties": false,
-            "description": "At least one of ids, under, topLevel, name, type, text, component, page."
+            "description": "At least one selector."
           },
           "depth": {
             "type": "integer",
-            "description": "Levels of children per match (default 1, max 10).",
+            "description": "Child levels (default 1).",
             "minimum": 0,
             "maximum": 10
           },
           "resolveVariables": {
             "type": "boolean",
-            "description": "Replace variable refs by their values."
+            "description": "Variable refs → values."
           },
           "theme": {
             "type": "array",
@@ -1402,11 +1396,11 @@
               },
               "additionalProperties": false
             },
-            "description": "Theme for resolveVariables (default: each node's effective theme)."
+            "description": "Theme for resolveVariables."
           },
           "resolveInstances": {
             "type": "boolean",
-            "description": "Expand instance content as virtual nodes."
+            "description": "Expand instance content."
           },
           "include": {
             "type": "array",
@@ -1419,27 +1413,27 @@
                 "origin",
                 "overrides"
               ],
-              "description": "Extra data."
+              "description": "Extra."
             },
-            "description": "Extra data per node."
+            "description": "Extra data."
           },
           "fields": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Field name."
+              "description": "Field."
             },
-            "description": "Return only these .kimo fields (plus id/type/parent)."
+            "description": "Only these fields."
           },
           "limit": {
             "type": "integer",
-            "description": "Max nodes per page (default 200, max 1000).",
+            "description": "Page size (default 200).",
             "minimum": 1,
             "maximum": 1000
           },
           "cursor": {
             "type": "string",
-            "description": "nextCursor from the previous page."
+            "description": "nextCursor."
           }
         },
         "additionalProperties": false
@@ -1799,7 +1793,7 @@
     {
       "name": "kimo_apply_ops",
       "title": "Edit with typed ops",
-      "description": "The way to change a document. Sends an ordered list of typed ops applied atomically: all succeed or nothing changes. Ops: insert, update, replace, move, delete, copy, instantiate, make_component, detach, set_override, reset_override, set_args, swap_instance, declare_prop, remove_prop, set_slot, set_variables, set_theme_axes, create_variable, update_variable, rename_variable, delete_variable, set_theme_pin, theme_axis. Give new nodes a key and reference them later in the same call as @key (e.g. insert a frame with key hero, then insert a text node with parent @hero; a text node's string goes in content, not text). Pass baseRevision from your last read to avoid overwriting edits made since (REVISION_CONFLICT). dryRun=true validates and returns the diff without committing; render=true attaches a PNG of the changed top-level frames after commit. At most 40 inserts per call (BATCH_TOO_LARGE): a skeleton first, then one section per call. Copy, instantiate and edits are never limited: make a variant by copying the page. Deletes and other destructive ops may ask the user first. Read kimo_read_docs path=ops.",
+      "description": "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key and reference them later in the call as @key. At most 40 insert ops per call (BATCH_TOO_LARGE): a skeleton first, then one section per call; copy, instantiate and edits are unlimited, so start a variant with one copy. Features a value needs are declared for you. Pass baseRevision from your last result.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -1809,1293 +1803,52 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "ops": {
             "type": "array",
             "items": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "parent",
-                    "node"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "insert"
-                      ],
-                      "description": "Insert one node."
-                    },
-                    "key": {
-                      "type": "string",
-                      "description": "Your name for the created node; later ops in this call may reference it as @key.",
-                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
-                    },
-                    "parent": {
-                      "type": "string",
-                      "description": "Parent node id or @key. Use \"root\" for a top-level node on the canvas.",
-                      "pattern": "^(?:root|(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64}))$"
-                    },
-                    "at": {
-                      "type": "string",
-                      "description": "When parent is an instance: the slot IdPath that receives the node (slot content).",
-                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
-                    },
-                    "index": {
-                      "type": "integer",
-                      "description": "Position among the destination's children (0 = first). Default: append.",
-                      "minimum": 0
-                    },
-                    "node": {
-                      "type": "object",
-                      "required": [
-                        "type"
-                      ],
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "frame",
-                            "group",
-                            "rect",
-                            "ellipse",
-                            "polygon",
-                            "path",
-                            "text",
-                            "icon",
-                            "instance",
-                            "note",
-                            "prompt"
-                          ],
-                          "description": "Node type."
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Layer name."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Insert one node (children: further inserts with parent @key)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "id"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "update"
-                      ],
-                      "description": "Change fields of a node."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Node to change.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "set": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "description": "Layer name (example field)."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/1.0. To remove a field use unset."
-                    },
-                    "unset": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "description": "Field name."
-                      },
-                      "description": "Fields to remove (back to defaults)."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Shallow field update. type/parent cannot change (use replace/move)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "id",
-                    "node"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "replace"
-                      ],
-                      "description": "Replace a node's whole body."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Node to replace; its id and position are kept.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "node": {
-                      "type": "object",
-                      "required": [
-                        "type"
-                      ],
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "frame",
-                            "group",
-                            "rect",
-                            "ellipse",
-                            "polygon",
-                            "path",
-                            "text",
-                            "icon",
-                            "instance",
-                            "note",
-                            "prompt"
-                          ],
-                          "description": "Node type."
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Layer name."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Replace a node body (fields not given are removed). Destructive."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "id",
-                    "parent"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "move"
-                      ],
-                      "description": "Reparent and/or reorder."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Node to move.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "parent": {
-                      "type": "string",
-                      "description": "Parent node id or @key. Use \"root\" for a top-level node on the canvas.",
-                      "pattern": "^(?:root|(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64}))$"
-                    },
-                    "at": {
-                      "type": "string",
-                      "description": "When parent is an instance: the slot IdPath that receives the node (slot content).",
-                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
-                    },
-                    "index": {
-                      "type": "integer",
-                      "description": "Position among the destination's children (0 = first). Default: append.",
-                      "minimum": 0
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Move a node. Cycles are rejected (CYCLE)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "id"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "delete"
-                      ],
-                      "description": "Delete a node and its subtree."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Node to delete.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Delete a node subtree. Destructive. Inside an instance use set_override {visible:false} instead (INSTANCE_STRUCTURE)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "id",
-                    "parent"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "copy"
-                      ],
-                      "description": "Deep-copy a subtree."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Node to copy (copies of a component main become plain frames; use instantiate for instances).",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "key": {
-                      "type": "string",
-                      "description": "Your name for the created node; later ops in this call may reference it as @key.",
-                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
-                    },
-                    "parent": {
-                      "type": "string",
-                      "description": "Parent node id or @key. Use \"root\" for a top-level node on the canvas.",
-                      "pattern": "^(?:root|(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64}))$"
-                    },
-                    "at": {
-                      "type": "string",
-                      "description": "When parent is an instance: the slot IdPath that receives the node (slot content).",
-                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
-                    },
-                    "index": {
-                      "type": "integer",
-                      "description": "Position among the destination's children (0 = first). Default: append.",
-                      "minimum": 0
-                    },
-                    "set": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "description": "Layer name (example field)."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/1.0. To remove a field use unset."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Deep copy with fresh ids; optional field overrides on the copy's root."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "set_variables"
-                      ],
-                      "description": "Set or remove variables."
-                    },
-                    "set": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "name",
-                          "variable"
-                        ],
-                        "properties": {
-                          "name": {
-                            "type": "string",
-                            "description": "Variable name.",
-                            "pattern": "^[^\\s:$][^\\s:]{0,127}$"
-                          },
-                          "variable": {
-                            "type": "object",
-                            "required": [
-                              "type"
-                            ],
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "enum": [
-                                  "color",
-                                  "number",
-                                  "string",
-                                  "boolean",
-                                  "typography",
-                                  "shadow",
-                                  "dimension"
-                                ],
-                                "description": "Variable type."
-                              }
-                            },
-                            "additionalProperties": true,
-                            "description": "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/1.0."
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      "description": "Variables to create or overwrite (whole value)."
-                    },
-                    "unset": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "description": "Variable name.",
-                        "pattern": "^[^\\s:$][^\\s:]{0,127}$"
-                      },
-                      "description": "Variables to delete (bindings break: prefer delete_variable)."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Low-level variable write (merge). Document-global."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "set_theme_axes"
-                      ],
-                      "description": "Set or remove theme axes."
-                    },
-                    "set": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "axis",
-                          "values"
-                        ],
-                        "properties": {
-                          "axis": {
-                            "type": "string",
-                            "description": "Axis name."
-                          },
-                          "values": {
-                            "type": "array",
-                            "items": {
-                              "type": "string",
-                              "description": "Axis value."
-                            },
-                            "description": "Ordered values; the first is the default.",
-                            "minItems": 1
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      "description": "Axes to create or overwrite."
-                    },
-                    "unset": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "description": "Axis name."
-                      },
-                      "description": "Axes to delete."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Low-level theme axes write. Document-global."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "of",
-                    "parent"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "instantiate"
-                      ],
-                      "description": "Create an instance of a component."
-                    },
-                    "of": {
-                      "type": "string",
-                      "description": "Component id, alias:id for a linked library, or @key.",
-                      "pattern": "^(?:(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "key": {
-                      "type": "string",
-                      "description": "Your name for the created node; later ops in this call may reference it as @key.",
-                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
-                    },
-                    "parent": {
-                      "type": "string",
-                      "description": "Parent node id or @key. Use \"root\" for a top-level node on the canvas.",
-                      "pattern": "^(?:root|(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64}))$"
-                    },
-                    "at": {
-                      "type": "string",
-                      "description": "When parent is an instance: the slot IdPath that receives the node (slot content).",
-                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
-                    },
-                    "index": {
-                      "type": "integer",
-                      "description": "Position among the destination's children (0 = first). Default: append.",
-                      "minimum": 0
-                    },
-                    "x": {
-                      "type": "number",
-                      "description": "X in the parent's space (absolute parents only)."
-                    },
-                    "y": {
-                      "type": "number",
-                      "description": "Y in the parent's space (absolute parents only)."
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Layer name."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "createInstance."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "ids"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "make_component"
-                      ],
-                      "description": "Turn nodes into a component main."
-                    },
-                    "ids": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "description": "Node to include.",
-                        "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                      },
-                      "description": "One node, or several siblings with wrap.",
-                      "minItems": 1
-                    },
-                    "key": {
-                      "type": "string",
-                      "description": "Your name for the created node; later ops in this call may reference it as @key.",
-                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Component name."
-                    },
-                    "wrap": {
-                      "type": "object",
-                      "required": [
-                        "x",
-                        "y",
-                        "w",
-                        "h"
-                      ],
-                      "properties": {
-                        "x": {
-                          "type": "number",
-                          "description": "Wrapper x in the shared parent's space."
-                        },
-                        "y": {
-                          "type": "number",
-                          "description": "Wrapper y."
-                        },
-                        "w": {
-                          "type": "number",
-                          "description": "Wrapper width.",
-                          "minimum": 0
-                        },
-                        "h": {
-                          "type": "number",
-                          "description": "Wrapper height.",
-                          "minimum": 0
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Wrapper name."
-                        }
-                      },
-                      "additionalProperties": false,
-                      "description": "Required for several nodes: the new wrapping frame's box."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "createComponent. Needs the components grant for scoped agents."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "id"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "detach"
-                      ],
-                      "description": "Detach an instance into plain nodes."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Instance to detach.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "detachInstance. Destructive (the component link is lost)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "instance",
-                    "kind"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "set_override"
-                      ],
-                      "description": "Override something inside an instance."
-                    },
-                    "instance": {
-                      "type": "string",
-                      "description": "The instance.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "path": {
-                      "type": "string",
-                      "description": "IdPath of the descendant inside the instance (omit for the instance root's props).",
-                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
-                    },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "set",
-                        "slot",
-                        "replace"
-                      ],
-                      "description": "set = merge fields; slot = make path take content; replace = swap the node at path."
-                    },
-                    "set": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "description": "Layer name (example field)."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "Field → new value (shallow, whole value per top-level field), validated against kimo://schema/1.0. To remove a field use unset."
-                    },
-                    "node": {
-                      "type": "object",
-                      "required": [
-                        "type"
-                      ],
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "frame",
-                            "group",
-                            "rect",
-                            "ellipse",
-                            "polygon",
-                            "path",
-                            "text",
-                            "icon",
-                            "instance",
-                            "note",
-                            "prompt"
-                          ],
-                          "description": "Node type."
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "Layer name."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
-                    },
-                    "content": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "type"
-                        ],
-                        "properties": {
-                          "type": {
-                            "type": "string",
-                            "enum": [
-                              "frame",
-                              "group",
-                              "rect",
-                              "ellipse",
-                              "polygon",
-                              "path",
-                              "text",
-                              "icon",
-                              "instance",
-                              "note",
-                              "prompt"
-                            ],
-                            "description": "Node type."
-                          },
-                          "name": {
-                            "type": "string",
-                            "description": "Layer name."
-                          }
-                        },
-                        "additionalProperties": true,
-                        "description": "A .kimo node object without parent/order/at, validated against kimo://schema/1.0 (read kimo_read_docs path=schema). Children are separate insert ops naming this node's @key as parent."
-                      },
-                      "description": "kind=slot: nodes inserted into the slot."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "setOverride (kind set needs set; replace needs node)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "instance"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "reset_override"
-                      ],
-                      "description": "Remove overrides."
-                    },
-                    "instance": {
-                      "type": "string",
-                      "description": "The instance.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "path": {
-                      "type": "string",
-                      "description": "IdPath; omit with all=true to reset everything.",
-                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
-                    },
-                    "fields": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "description": "Field name."
-                      },
-                      "description": "Only these fields of a set override."
-                    },
-                    "all": {
-                      "type": "boolean",
-                      "description": "Reset every override of the instance."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "resetOverride / resetAllOverrides."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "instance",
-                    "args"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "set_args"
-                      ],
-                      "description": "Set declared component props on an instance."
-                    },
-                    "instance": {
-                      "type": "string",
-                      "description": "The instance.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "args": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "name",
-                          "value"
-                        ],
-                        "properties": {
-                          "name": {
-                            "type": "string",
-                            "description": "Declared prop name."
-                          },
-                          "value": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              },
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
-                                    "type": "string",
-                                    "description": "Discriminator, when the value has one."
-                                  }
-                                },
-                                "additionalProperties": true,
-                                "description": "Structured value, validated against the .kimo schema (kimo://schema/1.0)."
-                              },
-                              {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "type": {
-                                      "type": "string",
-                                      "description": "Discriminator."
-                                    }
-                                  },
-                                  "additionalProperties": true,
-                                  "description": "Array element, validated against the .kimo schema."
-                                }
-                              }
-                            ],
-                            "description": "Prop value."
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      "description": "Prop values per the component's declared props.",
-                      "minItems": 1
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "setArgs."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "instance",
-                    "of"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "swap_instance"
-                      ],
-                      "description": "Swap which component an instance (or nested instance) uses."
-                    },
-                    "instance": {
-                      "type": "string",
-                      "description": "The instance.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "of": {
-                      "type": "string",
-                      "description": "New component id or alias:id.",
-                      "pattern": "^(?:(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "path": {
-                      "type": "string",
-                      "description": "Nested instance IdPath; omit for the instance itself.",
-                      "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "swapInstance."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "component",
-                    "name",
-                    "def"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "declare_prop"
-                      ],
-                      "description": "Declare or update a component prop."
-                    },
-                    "component": {
-                      "type": "string",
-                      "description": "Component main.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Prop name."
-                    },
-                    "def": {
-                      "type": "object",
-                      "required": [
-                        "type"
-                      ],
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "text",
-                            "boolean",
-                            "instance",
-                            "enum",
-                            "slot"
-                          ],
-                          "description": "Prop kind."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "A .kimo PropDef (kimo://schema/1.0)."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "declareProp (upsert)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "component",
-                    "name"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "remove_prop"
-                      ],
-                      "description": "Remove a declared prop."
-                    },
-                    "component": {
-                      "type": "string",
-                      "description": "Component main.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Prop name."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "removeProp. Destructive (instance args for it are dropped)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "frame"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "set_slot"
-                      ],
-                      "description": "Mark a frame inside a component as a slot, or unmark it."
-                    },
-                    "frame": {
-                      "type": "string",
-                      "description": "Frame inside a component main.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "suggested": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "description": "Component id.",
-                        "pattern": "^(?:(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                      },
-                      "description": "Suggested components."
-                    },
-                    "remove": {
-                      "type": "boolean",
-                      "description": "Unmark the slot."
-                    },
-                    "deleteContent": {
-                      "type": "boolean",
-                      "description": "With remove: also delete instance slot content."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "setSlot."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "name",
-                    "variable"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "create_variable"
-                      ],
-                      "description": "Create a variable."
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "New name.",
-                      "pattern": "^[^\\s:$][^\\s:]{0,127}$"
-                    },
-                    "variable": {
-                      "type": "object",
-                      "required": [
-                        "type"
-                      ],
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": [
-                            "color",
-                            "number",
-                            "string",
-                            "boolean",
-                            "typography",
-                            "shadow",
-                            "dimension"
-                          ],
-                          "description": "Variable type."
-                        }
-                      },
-                      "additionalProperties": true,
-                      "description": "A .kimo Variable {type, value, group?, description?}; value may be themed [{when:{axis:value}, value}]. Validated against kimo://schema/1.0."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "createVariable (fails with INVALID_INPUT if it exists)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "name"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "update_variable"
-                      ],
-                      "description": "Edit a variable."
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Variable.",
-                      "pattern": "^[^\\s:$][^\\s:]{0,127}$"
-                    },
-                    "value": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "type": {
-                              "type": "string",
-                              "description": "Discriminator, when the value has one."
-                            }
-                          },
-                          "additionalProperties": true,
-                          "description": "Structured value, validated against the .kimo schema (kimo://schema/1.0)."
-                        },
-                        {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "Discriminator."
-                              }
-                            },
-                            "additionalProperties": true,
-                            "description": "Array element, validated against the .kimo schema."
-                          }
-                        }
-                      ],
-                      "description": "New value (whole, may be themed)."
-                    },
-                    "group": {
-                      "type": "string",
-                      "description": "DTCG group path."
-                    },
-                    "description": {
-                      "type": "string",
-                      "description": "Description."
-                    },
-                    "unset": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": [
-                          "group",
-                          "description"
-                        ],
-                        "description": "Field."
-                      },
-                      "description": "Fields to remove."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "updateVariable."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "from",
-                    "to"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "rename_variable"
-                      ],
-                      "description": "Rename a variable and rebind every use."
-                    },
-                    "from": {
-                      "type": "string",
-                      "description": "Current name.",
-                      "pattern": "^[^\\s:$][^\\s:]{0,127}$"
-                    },
-                    "to": {
-                      "type": "string",
-                      "description": "New name.",
-                      "pattern": "^[^\\s:$][^\\s:]{0,127}$"
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "renameVariable."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "name"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "delete_variable"
-                      ],
-                      "description": "Delete a variable."
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Variable.",
-                      "pattern": "^[^\\s:$][^\\s:]{0,127}$"
-                    },
-                    "detach": {
-                      "type": "boolean",
-                      "description": "Replace bindings with the resolved literal (otherwise IN_USE fails)."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "deleteVariable. Destructive."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "node",
-                    "axis"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "set_theme_pin"
-                      ],
-                      "description": "Pin a node's subtree to a theme value."
-                    },
-                    "node": {
-                      "type": "string",
-                      "description": "Node.",
-                      "pattern": "^(?:[A-Za-z0-9]{6,24}|@[A-Za-z0-9_-]{1,64})$"
-                    },
-                    "axis": {
-                      "type": "string",
-                      "description": "Axis name."
-                    },
-                    "value": {
-                      "type": "string",
-                      "description": "Axis value to pin."
-                    },
-                    "inherit": {
-                      "type": "boolean",
-                      "description": "Remove the pin (inherit from ancestors)."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "setThemePin (give value, or inherit=true)."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "action",
-                    "axis"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "theme_axis"
-                      ],
-                      "description": "Edit theme axes and their values."
-                    },
-                    "action": {
-                      "type": "string",
-                      "enum": [
-                        "create",
-                        "rename",
-                        "delete",
-                        "add_value",
-                        "move_value",
-                        "rename_value",
-                        "remove_value"
-                      ],
-                      "description": "What to do."
-                    },
-                    "axis": {
-                      "type": "string",
-                      "description": "Axis name (current name for rename)."
-                    },
-                    "to": {
-                      "type": "string",
-                      "description": "rename / rename_value: new name."
-                    },
-                    "value": {
-                      "type": "string",
-                      "description": "add_value / move_value / rename_value (old) / remove_value."
-                    },
-                    "values": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "description": "Value."
-                      },
-                      "description": "create: ordered values (first = default)."
-                    },
-                    "index": {
-                      "type": "integer",
-                      "description": "add_value / move_value position.",
-                      "minimum": 0
-                    },
-                    "force": {
-                      "type": "boolean",
-                      "description": "remove_value: also drop pins and themed entries using it."
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "createAxis/renameAxis/deleteAxis/addAxisValue/moveAxisValue/renameAxisValue/removeAxisValue. delete and remove_value are destructive."
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "op",
-                    "action"
-                  ],
-                  "properties": {
-                    "op": {
-                      "type": "string",
-                      "enum": [
-                        "page"
-                      ],
-                      "description": "Add, rename, move or delete a page."
-                    },
-                    "action": {
-                      "type": "string",
-                      "enum": [
-                        "add",
-                        "rename",
-                        "move",
-                        "delete"
-                      ],
-                      "description": "add (name, index?) · rename (id, name) · move (id, index) · delete (id; deletes its top-level nodes; never the last page)."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Page id (from kimo_get_state pages[].id).",
-                      "pattern": "^[A-Za-z0-9]{6,24}$"
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Page name (add / rename).",
-                      "minLength": 1
-                    },
-                    "index": {
-                      "type": "integer",
-                      "description": "Position among the pages (add / move; 0 = first).",
-                      "minimum": 0
-                    },
-                    "key": {
-                      "type": "string",
-                      "description": "Your name for the created node; later ops in this call may reference it as @key.",
-                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
-                    }
-                  },
-                  "additionalProperties": false,
-                  "description": "Pages are document-global. Put a top-level node on a page by setting its `page` field (insert node.page / update set.page); without `page` it is on the first page. The first add on a one-page document also gives that page an id (its nodes keep their page)."
-                }
+              "type": "object",
+              "required": [
+                "op"
               ],
-              "description": "One typed edit. See kimo_read_docs path=ops for examples."
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "insert",
+                    "update",
+                    "replace",
+                    "move",
+                    "delete",
+                    "copy",
+                    "set_variables",
+                    "set_theme_axes",
+                    "instantiate",
+                    "make_component",
+                    "detach",
+                    "set_override",
+                    "reset_override",
+                    "set_args",
+                    "swap_instance",
+                    "declare_prop",
+                    "remove_prop",
+                    "set_slot",
+                    "create_variable",
+                    "update_variable",
+                    "rename_variable",
+                    "delete_variable",
+                    "set_theme_pin",
+                    "theme_axis",
+                    "page"
+                  ],
+                  "description": "Op kind; its fields are listed below."
+                }
+              },
+              "additionalProperties": true,
+              "description": "One op (fields per kind; ? = optional). A ref is a node id, @key (a node created earlier in this call) or @copyKey/<original id> (that node inside a copy made earlier in this call); parent also takes \"root\". key names the new node; index = position among siblings (default: append); node = one .kimo node body {type, name?, …fields}, never with children (each child is its own insert with parent @key), e.g. {\"type\":\"text\",\"content\":\"Hello\",\"style\":{\"size\":16}} (kimo_read_docs path=schema); set = {field: value} (shallow; null removes the field).\ninsert {key?, parent, at?, index?, node}\nupdate {id, set?, unset?:[]}\nreplace {id, node}\nmove {id, parent, at?, index?}\ndelete {id}\ncopy {id, key?, parent, at?, index?, set?}\nset_variables {set?:[{name, variable}], unset?:[]}\nset_theme_axes {set?:[{axis, values:[]}], unset?:[]}\ninstantiate {of, key?, parent, at?, index?, x?, y?, name?}\nmake_component {ids:[], key?, name?, wrap?:{x, y, w, h, name?}}\ndetach {id}\nset_override {instance, path?, kind:set|slot|replace, set?, node?, content?:[]}\nreset_override {instance, path?, fields?:[], all?}\nset_args {instance, args:[{name, value}]}\nswap_instance {instance, of, path?}\ndeclare_prop {component, name, def}\nremove_prop {component, name}\nset_slot {frame, suggested?:[], remove?, deleteContent?}\ncreate_variable {name, variable}\nupdate_variable {name, value?, group?, description?, unset?:[]}\nrename_variable {from, to}\ndelete_variable {name, detach?}\nset_theme_pin {node, axis, value?, inherit?}\ntheme_axis {action:create|rename|delete|add_value|move_value|rename_value|remove_value, axis, to?, value?, values?:[], index?, force?}\npage {action:add|rename|move|delete, id?, name?, index?, key?}\nExamples: kimo_read_docs path=ops."
             },
-            "description": "Ops, applied in order as one undoable edit.",
-            "minItems": 1,
-            "maxItems": 500
+            "description": "Ops, applied in order as one undoable edit."
           },
           "baseRevision": {
             "type": "object",
@@ -3106,30 +1859,28 @@
             "properties": {
               "epoch": {
                 "type": "string",
-                "description": "Epoch from revision.after of an earlier result.",
-                "minLength": 1
+                "description": "revision.after.epoch."
               },
               "seq": {
                 "type": "integer",
-                "description": "Seq from revision.after of an earlier result.",
+                "description": "revision.after.seq.",
                 "minimum": 0
               }
             },
             "additionalProperties": false,
-            "description": "Fail with REVISION_CONFLICT unless the document is exactly at this revision (revision.after of your last read or edit). Recommended for every edit."
+            "description": "revision.after of your last result; REVISION_CONFLICT if the document moved since."
           },
           "dryRun": {
             "type": "boolean",
-            "description": "Validate and return the ops, inverse and warnings without committing."
+            "description": "Validate only; commit nothing."
           },
           "label": {
             "type": "string",
-            "description": "History label for this edit (shown in the editor's activity log).",
-            "maxLength": 120
+            "description": "History label."
           },
           "render": {
             "type": "boolean",
-            "description": "Attach a PNG of the affected top-level frames after commit (never for dryRun)."
+            "description": "Attach a PNG of the changed top-level frames."
           }
         },
         "additionalProperties": false
@@ -3486,6 +2237,11 @@
             },
             "description": "Nodes created by the call."
           },
+          "opCount": {
+            "type": "integer",
+            "description": "Normalized ops committed (ops.length).",
+            "minimum": 0
+          },
           "changed": {
             "type": "array",
             "items": {
@@ -3517,7 +2273,7 @@
     {
       "name": "kimo_render",
       "title": "Render nodes to PNG or SVG",
-      "description": "Renders nodes to PNG images attached to the result (MCP image content), using the same CanvasKit engine as the canvas. Always reflects every committed edit, including one made earlier in the same turn. Use after building a section to check layout, clipping and contrast. Keep scale modest (images cost tokens): maxSize caps the longest side. format svg returns standalone SVG markup per node in data.images[].svg (the code exporter's SVG, text laid out with the canvas fonts) instead of image content.",
+      "description": "PNG of nodes (same engine as the canvas, always current) to check layout, clipping and contrast. Images cost tokens: keep scale low. format svg returns SVG markup in data instead.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -3527,19 +2283,15 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "ids": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Node id.",
-              "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+              "description": "Node id."
             },
-            "description": "Nodes to render (one image each).",
-            "minItems": 1,
-            "maxItems": 8
+            "description": "One image each."
           },
           "format": {
             "type": "string",
@@ -3547,23 +2299,23 @@
               "png",
               "svg"
             ],
-            "description": "Default png. svg: markup in data (scale and maxSize do not apply)."
+            "description": "Default png."
           },
           "scale": {
             "type": "number",
-            "description": "Pixel ratio (default 1, max 4).",
+            "description": "Default 1.",
             "minimum": 0.1,
             "maximum": 4
           },
           "maxSize": {
             "type": "integer",
-            "description": "Longest side in px after scaling (default 1600, max 4096).",
+            "description": "Longest side px (default 1600).",
             "minimum": 64,
             "maximum": 4096
           },
           "background": {
             "type": "string",
-            "description": "Background color #rrggbb (default transparent)."
+            "description": "#rrggbb (default transparent)."
           },
           "theme": {
             "type": "array",
@@ -3585,7 +2337,7 @@
               },
               "additionalProperties": false
             },
-            "description": "Render with this theme."
+            "description": "Theme."
           }
         },
         "additionalProperties": false
@@ -3887,7 +2639,7 @@
     {
       "name": "kimo_get_variables",
       "title": "Get variables and themes",
-      "description": "Variables (tokens) and theme axes of a document, including linked libraries' variables (alias:name). Filter by names or group prefix. resolve=true adds each value resolved for the given theme (default theme otherwise). Edit them with kimo_apply_ops ops create_variable / update_variable / rename_variable / delete_variable / theme_axis.",
+      "description": "Variables (tokens) and theme axes, including linked libraries' (alias:name). resolve=true adds resolved values.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -3896,25 +2648,23 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "names": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Variable name."
+              "description": "Name."
             },
-            "description": "Only these.",
-            "maxItems": 500
+            "description": "Only these."
           },
           "group": {
             "type": "string",
-            "description": "Only variables whose group starts with this."
+            "description": "Group prefix."
           },
           "includeLibraries": {
             "type": "boolean",
-            "description": "Include linked libraries' variables (default true)."
+            "description": "Default true."
           },
           "resolve": {
             "type": "boolean",
@@ -3944,7 +2694,7 @@
           },
           "includeUsages": {
             "type": "boolean",
-            "description": "Count bound nodes per variable (slower)."
+            "description": "Count bound nodes."
           }
         },
         "additionalProperties": false
@@ -4290,7 +3040,7 @@
     {
       "name": "kimo_list_components",
       "title": "List components",
-      "description": "Components available in a document: local mains and linked-library components (alias:id), with declared props, slots and instance counts. Use the id with kimo_apply_ops instantiate; set props with set_args; fill slots with set_override kind=slot.",
+      "description": "Components (local and library alias:id) with props, slots and instance counts, for ops instantiate, set_args and set_override.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -4299,20 +3049,19 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "query": {
             "type": "string",
-            "description": "Name contains (case-insensitive)."
+            "description": "Name contains."
           },
           "includeLibraries": {
             "type": "boolean",
-            "description": "Include linked libraries (default true)."
+            "description": "Default true."
           },
           "limit": {
             "type": "integer",
-            "description": "Max results (default 200).",
+            "description": "Default 200.",
             "minimum": 1,
             "maximum": 1000
           }
@@ -4680,7 +3429,7 @@
     {
       "name": "kimo_find_space",
       "title": "Find empty canvas space",
-      "description": "Returns a free position on the canvas (or inside a frame) for a w×h box, so new top-level frames do not overlap existing work. Insert at the returned x/y with parent from the result.",
+      "description": "A free x/y for a w×h box that overlaps nothing (next to near, default right).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -4691,23 +3440,21 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "w": {
             "type": "number",
-            "description": "Width needed.",
+            "description": "Width.",
             "minimum": 1
           },
           "h": {
             "type": "number",
-            "description": "Height needed.",
+            "description": "Height.",
             "minimum": 1
           },
           "near": {
             "type": "string",
-            "description": "Search next to this node (default: the whole canvas).",
-            "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+            "description": "Node to search next to."
           },
           "direction": {
             "type": "string",
@@ -4717,11 +3464,11 @@
               "left",
               "above"
             ],
-            "description": "Where to look first (default right)."
+            "description": "Default right."
           },
           "padding": {
             "type": "number",
-            "description": "Gap to keep from other nodes (default 80).",
+            "description": "Gap (default 80).",
             "minimum": 0
           }
         },
@@ -5000,7 +3747,7 @@
     {
       "name": "kimo_validate",
       "title": "Validate",
-      "description": "Schema validation plus lints (same engine as `kimo validate`): errors make the document invalid; warnings (e.g. TEXT_NO_FILL, CONFLICT_OPEN) are fixable issues. Restrict to ids to check a section you just built.",
+      "description": "Schema errors and lint warnings (same engine as kimo validate); ids limits it to subtrees.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -5009,22 +3756,19 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "ids": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Node id.",
-              "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+              "description": "Node id."
             },
-            "description": "Only these subtrees.",
-            "maxItems": 500
+            "description": "Subtrees."
           },
           "lints": {
             "type": "boolean",
-            "description": "Include lint warnings (default true)."
+            "description": "Default true."
           }
         },
         "additionalProperties": false
@@ -5354,7 +4098,7 @@
     {
       "name": "kimo_history",
       "title": "History and undo",
-      "description": "list: recent op groups with author. undo / redo: undo or redo YOUR OWN last op group (your origin's undo stack; never the user's or another agent's edits). With token (undoToken from an earlier result) undo succeeds only if that group is on top of your stack. Replay is guarded: if later edits by others touched the same nodes, the result reports stale=true instead of clobbering them.",
+      "description": "list: recent op groups. undo / redo: your own last op group only; token = the undoToken of the group you expect on top.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -5364,8 +4108,7 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "action": {
             "type": "string",
@@ -5374,15 +4117,15 @@
               "undo",
               "redo"
             ],
-            "description": "What to do."
+            "description": "Action."
           },
           "token": {
             "type": "string",
-            "description": "undo: the undoToken of the group you expect on top."
+            "description": "undo: undoToken."
           },
           "limit": {
             "type": "integer",
-            "description": "list: entries, newest first (default 20).",
+            "description": "list: entries (default 20).",
             "minimum": 1,
             "maximum": 200
           }
@@ -5774,6 +4517,11 @@
             },
             "description": "Nodes created by the call."
           },
+          "opCount": {
+            "type": "integer",
+            "description": "Normalized ops committed (ops.length).",
+            "minimum": 0
+          },
           "changed": {
             "type": "array",
             "items": {
@@ -5805,7 +4553,7 @@
     {
       "name": "kimo_save",
       "title": "Save a document",
-      "description": "Atomic save: temp file → fsync → rename → read back → SHA-256 compare. Reports bytes, hash and mtime only after the read-back matched; never says 'saved' otherwise. Autosave also runs in the desktop app; call this when you need a durable checkpoint (e.g. before running a build). Pass baseRevision to save only the state you reviewed.",
+      "description": "Atomic save, verified by read-back. Autosave also runs; save for a durable checkpoint.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -5814,8 +4562,7 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "baseRevision": {
             "type": "object",
@@ -5826,17 +4573,16 @@
             "properties": {
               "epoch": {
                 "type": "string",
-                "description": "Epoch from revision.after of an earlier result.",
-                "minLength": 1
+                "description": "revision.after.epoch."
               },
               "seq": {
                 "type": "integer",
-                "description": "Seq from revision.after of an earlier result.",
+                "description": "revision.after.seq.",
                 "minimum": 0
               }
             },
             "additionalProperties": false,
-            "description": "Fail with REVISION_CONFLICT unless the document is exactly at this revision (revision.after of your last read or edit). Recommended for every edit."
+            "description": "revision.after of your last result; REVISION_CONFLICT if the document moved since."
           }
         },
         "additionalProperties": false
@@ -6142,7 +4888,7 @@
     {
       "name": "kimo_focus",
       "title": "Show nodes in the editor",
-      "description": "Selects nodes and/or scrolls and zooms the editor to them, so the user sees your work. Changes only the view, never the document. Headless or with no window showing the document, it succeeds with a NO_WINDOW warning.",
+      "description": "Selects and zooms the editor to nodes so the user sees them. View only.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -6152,23 +4898,19 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "ids": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Node id.",
-              "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+              "description": "Node id."
             },
-            "description": "Nodes to show.",
-            "minItems": 1,
-            "maxItems": 200
+            "description": "Nodes."
           },
           "select": {
             "type": "boolean",
-            "description": "Also select them (default true)."
+            "description": "Select them (default true)."
           },
           "zoom": {
             "type": "string",
@@ -6177,7 +4919,7 @@
               "keep",
               "100"
             ],
-            "description": "fit (default), keep the zoom, or 100%."
+            "description": "Default fit."
           }
         },
         "additionalProperties": false
@@ -6445,7 +5187,7 @@
     {
       "name": "kimo_import",
       "title": "Import SVG, images or tokens",
-      "description": "Imports content as ops: svg (editable vector layers), image (hashed into assets/ and placed as an image-filled rect), tokens-dtcg or tokens-css (variables, merged). Give exactly one source: an absolute file path or inline text (svg/tokens). Returns the ops it applied; supports dryRun and baseRevision like kimo_apply_ops.",
+      "description": "Imports svg (vector layers), image (an image-filled rect) or tokens-dtcg / tokens-css (variables). One source: absolute path or inline text.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -6455,8 +5197,7 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "kind": {
             "type": "string",
@@ -6466,33 +5207,32 @@
               "tokens-dtcg",
               "tokens-css"
             ],
-            "description": "What to import."
+            "description": "Kind."
           },
           "path": {
             "type": "string",
-            "description": "Absolute path of the source file (allow-list applies)."
+            "description": "Absolute source path."
           },
           "text": {
             "type": "string",
-            "description": "Inline source (svg markup, DTCG JSON or CSS custom properties).",
-            "maxLength": 2000000
+            "description": "Inline source."
           },
           "parent": {
             "type": "string",
-            "description": "Where to place svg/image: node id or \"root\" (default root at a free spot)."
+            "description": "Node id or \"root\" (default: free spot)."
           },
           "index": {
             "type": "integer",
-            "description": "Position among parent's children.",
+            "description": "Position.",
             "minimum": 0
           },
           "x": {
             "type": "number",
-            "description": "X (absolute parents)."
+            "description": "X."
           },
           "y": {
             "type": "number",
-            "description": "Y (absolute parents)."
+            "description": "Y."
           },
           "name": {
             "type": "string",
@@ -6507,26 +5247,24 @@
             "properties": {
               "epoch": {
                 "type": "string",
-                "description": "Epoch from revision.after of an earlier result.",
-                "minLength": 1
+                "description": "revision.after.epoch."
               },
               "seq": {
                 "type": "integer",
-                "description": "Seq from revision.after of an earlier result.",
+                "description": "revision.after.seq.",
                 "minimum": 0
               }
             },
             "additionalProperties": false,
-            "description": "Fail with REVISION_CONFLICT unless the document is exactly at this revision (revision.after of your last read or edit). Recommended for every edit."
+            "description": "revision.after of your last result; REVISION_CONFLICT if the document moved since."
           },
           "dryRun": {
             "type": "boolean",
-            "description": "Validate and return the ops, inverse and warnings without committing."
+            "description": "Validate only; commit nothing."
           },
           "label": {
             "type": "string",
-            "description": "History label for this edit (shown in the editor's activity log).",
-            "maxLength": 120
+            "description": "History label."
           }
         },
         "additionalProperties": false
@@ -6843,6 +5581,11 @@
             },
             "description": "Nodes created by the call."
           },
+          "opCount": {
+            "type": "integer",
+            "description": "Normalized ops committed (ops.length).",
+            "minimum": 0
+          },
           "changed": {
             "type": "array",
             "items": {
@@ -6874,7 +5617,7 @@
     {
       "name": "kimo_assets",
       "title": "Assets and fonts",
-      "description": "list: the document's assets (hash, type, size, used-by count). import: hash an image or font file (absolute path) into assets/ and return its ./assets/ reference to use in fills or fonts (no node is created; use kimo_import kind=image to place one). fonts: font families available (document, cached, local, Google catalog when allowed); check_font: whether a family/weight loads, so you never reference a font that cannot render. generate / job_status: generation jobs through configured providers (not available in this version: UNSUPPORTED).",
+      "description": "list: assets. import: a file into assets/ (returns its ./assets/ ref; no node). fonts: available families. check_font: whether a family/weight renders. generate / job_status: not available yet.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -6884,8 +5627,7 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "action": {
             "type": "string",
@@ -6897,25 +5639,25 @@
               "generate",
               "job_status"
             ],
-            "description": "What to do."
+            "description": "Action."
           },
           "path": {
             "type": "string",
-            "description": "import: absolute file path."
+            "description": "import: absolute path."
           },
           "family": {
             "type": "string",
-            "description": "check_font: family name; fonts: filter by name."
+            "description": "check_font / fonts filter."
           },
           "weight": {
             "type": "integer",
-            "description": "check_font: weight 100–900.",
+            "description": "check_font weight.",
             "minimum": 100,
             "maximum": 900
           },
           "italic": {
             "type": "boolean",
-            "description": "check_font: italic style."
+            "description": "check_font italic."
           },
           "prompt": {
             "type": "string",
@@ -7302,6 +6044,11 @@
             },
             "description": "Nodes created by the call."
           },
+          "opCount": {
+            "type": "integer",
+            "description": "Normalized ops committed (ops.length).",
+            "minimum": 0
+          },
           "changed": {
             "type": "array",
             "items": {
@@ -7333,7 +6080,7 @@
     {
       "name": "kimo_export",
       "title": "Export files",
-      "description": "Deterministic export (export grant needed). png (one file per node, <nodeId>.png) and kimo (the subtrees as a standalone .kimo with the variables they use) are written to outDir (absolute; allow-list applies). Code and token targets — react-tailwind (<Root>.tsx pages, <Component>.tsx per component, tokens.css), html-css (index.html, styles.css, tokens.css), tokens-dtcg (tokens.json), tokens-css, tailwind-theme (@theme), svg (one per root), pdf (one page per root) — are written to outDir when given, otherwise returned inline (contents; pdf as base64). Exact values, variables kept as CSS custom properties unless variables=false. Never overwrites a different file unless overwrite=true (identical files are reported unchanged); nothing is written when any file conflicts. Returns paths with hashes and export issues (approximations).",
+      "description": "Exports nodes as png, kimo, svg, pdf, code (react-tailwind, html-css) or tokens to outDir (absolute), or returns code/tokens inline without outDir. Never overwrites a different file unless overwrite=true. Details: kimo_read_docs path=guide/export.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -7343,8 +6090,7 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "target": {
             "type": "string",
@@ -7359,44 +6105,41 @@
               "tokens-css",
               "tailwind-theme"
             ],
-            "description": "Export format."
+            "description": "Format."
           },
           "ids": {
             "type": "array",
             "items": {
               "type": "string",
-              "description": "Node id.",
-              "pattern": "^(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24}(?:/(?:[A-Za-z][A-Za-z0-9_-]{0,31}:)?[A-Za-z0-9]{6,24})*$"
+              "description": "Node id."
             },
-            "description": "Nodes to export (default: all top-level frames).",
-            "maxItems": 200
+            "description": "Default: top-level frames."
           },
           "outDir": {
             "type": "string",
-            "description": "Absolute output directory (required for png and kimo; code/token targets return files inline without it).",
-            "minLength": 1
+            "description": "Absolute dir (required for png, kimo)."
           },
           "scale": {
             "type": "number",
-            "description": "png: pixel ratio (default 2).",
+            "description": "png scale (default 2).",
             "minimum": 0.1,
             "maximum": 4
           },
           "overwrite": {
             "type": "boolean",
-            "description": "Replace existing different files (otherwise FILE_EXISTS)."
+            "description": "Replace different files."
           },
           "variables": {
             "type": "boolean",
-            "description": "Code targets: variables as CSS custom properties (default true)."
+            "description": "Code: variables as CSS vars (default true)."
           },
           "components": {
             "type": "boolean",
-            "description": "react-tailwind: split instances into components (default true)."
+            "description": "react-tailwind: components (default true)."
           },
           "layerNames": {
             "type": "boolean",
-            "description": "Code targets: keep layer names as data attributes (default true for html-css, false for react-tailwind)."
+            "description": "Code: layer names as data attributes."
           }
         },
         "additionalProperties": false
@@ -7734,7 +6477,7 @@
     {
       "name": "kimo_create",
       "title": "Create a .kimo file",
-      "description": "Creates a new .kimo document at an absolute path and opens it. Refuses to overwrite: an existing path returns FILE_EXISTS. Optional template seeds variables and a starter frame. Needs the files.create grant (asks otherwise).",
+      "description": "Creates a new .kimo file at an absolute path (never overwrites) and opens it.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -7743,13 +6486,11 @@
         "properties": {
           "path": {
             "type": "string",
-            "description": "Absolute path for the new file (must end in .kimo and not exist).",
-            "minLength": 1,
-            "pattern": "^(?:/|[A-Za-z]:[\\\\/]|untitled:).*"
+            "description": "Absolute path ending in .kimo."
           },
           "name": {
             "type": "string",
-            "description": "Document name (meta.name)."
+            "description": "Document name."
           },
           "template": {
             "type": "string",
@@ -7759,7 +6500,7 @@
               "mobile",
               "design-system"
             ],
-            "description": "Starter content. Default blank."
+            "description": "Default blank."
           }
         },
         "additionalProperties": false
@@ -8106,7 +6847,7 @@
     {
       "name": "kimo_close",
       "title": "Close a document",
-      "description": "Closes a document you opened. A dirty document is refused unless save=true (atomic save first) or discard=true (drops unsaved edits; asks the user). Documents the user has open in a window are never closed for them: you only drop your own reference.",
+      "description": "Closes a document you opened. With unsaved edits: save=true or discard=true (asks the user).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -8115,16 +6856,15 @@
         "properties": {
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "save": {
             "type": "boolean",
-            "description": "Save before closing."
+            "description": "Save first."
           },
           "discard": {
             "type": "boolean",
-            "description": "Close even with unsaved edits (destructive; asks)."
+            "description": "Drop unsaved edits."
           }
         },
         "additionalProperties": false
@@ -8397,33 +7137,32 @@
     {
       "name": "kimo_styles",
       "title": "Style presets",
-      "description": "Open style presets. No name: list presets. name: the parameters the preset takes. name+params: prose guidance plus tokens. apply=true with docId writes the tokens as variables (one undoable edit; scope edit + globals grant).",
+      "description": "Style presets. No name: list. name: its params. name+params: guidance and tokens; apply=true writes the tokens into docId as variables.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "description": "Preset name from the list."
+            "description": "Preset."
           },
           "params": {
             "type": "object",
             "properties": {
               "palette": {
                 "type": "string",
-                "description": "Palette choice (example parameter)."
+                "description": "Palette (example)."
               }
             },
             "additionalProperties": true,
-            "description": "Preset parameters as listed by kimo_styles {name}; validated by the preset."
+            "description": "Preset params (from kimo_styles {name}); validated by the preset."
           },
           "apply": {
             "type": "boolean",
-            "description": "Write the tokens into docId as variables."
+            "description": "Write tokens as variables."
           },
           "docId": {
             "type": "string",
-            "description": "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
-            "pattern": "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
+            "description": "Document id (d_…) from the turn context, kimo_get_state or kimo_open."
           },
           "baseRevision": {
             "type": "object",
@@ -8434,17 +7173,16 @@
             "properties": {
               "epoch": {
                 "type": "string",
-                "description": "Epoch from revision.after of an earlier result.",
-                "minLength": 1
+                "description": "revision.after.epoch."
               },
               "seq": {
                 "type": "integer",
-                "description": "Seq from revision.after of an earlier result.",
+                "description": "revision.after.seq.",
                 "minimum": 0
               }
             },
             "additionalProperties": false,
-            "description": "Fail with REVISION_CONFLICT unless the document is exactly at this revision (revision.after of your last read or edit). Recommended for every edit."
+            "description": "revision.after of your last result; REVISION_CONFLICT if the document moved since."
           }
         },
         "additionalProperties": false
@@ -8804,6 +7542,11 @@
               "additionalProperties": false
             },
             "description": "Nodes created by the call."
+          },
+          "opCount": {
+            "type": "integer",
+            "description": "Normalized ops committed (ops.length).",
+            "minimum": 0
           },
           "changed": {
             "type": "array",

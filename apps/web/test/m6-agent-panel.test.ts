@@ -14,10 +14,13 @@ import {
   durationLabel,
   headerCostLabel,
   modelLabel,
+  newTokens,
   pickerGroups,
   relativeTime,
   sessionMetaLabel,
+  storeOutline,
   tokensLabel,
+  tokensTitle,
 } from "../src/agent-panel"
 import {
   createFakeCliHost,
@@ -48,6 +51,7 @@ const lastUserText = (req: ProviderRequest) => {
 function setup(
   script: Script,
   extra: Partial<Parameters<typeof createTestRuntime>[0]> = {},
+  panel: Partial<Parameters<typeof createAgentPanelController>[0]> = {},
 ): {
   c: AgentPanelControllerExt
   store: DocStore
@@ -70,6 +74,7 @@ function setup(
         | undefined
       return n ? { id, name: n.name, x: n.x, y: n.y, w: n.w, h: n.h } : null
     },
+    ...panel,
   })
   return { c, store, docId: tools.docId(), rt }
 }
@@ -124,8 +129,10 @@ describe("single turn: streaming, steps, meta, session (board 22 A)", () => {
     expect(a.steps).toHaveLength(1)
     expect(a.steps[0]?.state).toBe("done")
     expect(a.meta?.billing).toBe("api")
+    // Board 31: new tokens only (these fake turns have no cache reads).
     expect(a.meta?.tokensIn).toBe(3100)
     expect(a.meta?.tokensOut).toBe(1400)
+    expect(a.meta?.tokensCached).toBe(0)
     expect(a.meta?.canRegenerate).toBe(true)
     // (3100 × 4 + 1400 × 20) / 1e6 = 0.0404
     expect(a.meta?.costUsd).toBeCloseTo(0.0404, 6)
@@ -491,6 +498,61 @@ describe("local CLI (ADR 0014 §11): subscription billing, never dollars", () =>
     expect(host.spawned[1]?.args.join(" ")).toContain("--resume s-cli")
   })
 
+  test("board 31 token pass: docId + page outline in the turn context; CLIs get it in the user message", async () => {
+    const outlineOf = (sel: readonly string[]) => storeOutline(store0, sel) ?? "(empty page)"
+    const store0 = importDocument(doc())
+    // API turn: the docId and outline are in the system prompt's volatile part.
+    const api = setup(() => ({ text: "Done." }), {}, { outline: outlineOf })
+    api.c.setSelection([{ id: "Hero000001", name: "Hero", type: "frame" }])
+    await api.c.refresh()
+    await api.c.send("Tighten the hero")
+    const req = api.rt.providersMade[0]?.calls[0]
+    expect(req?.system.volatile).toContain(`docId ${api.docId}`)
+    expect(req?.system.volatile).toContain("Page outline")
+    expect(req?.system.volatile).toContain("Hero000001 frame")
+    expect(req?.system.stable).not.toContain("Page outline (")
+    // CLI turn: Kimo's stable prompt replaces Claude Code's; the context leads the user message.
+    const host = createFakeCliHost(() =>
+      [
+        { type: "system", subtype: "init", session_id: "s", mcp_servers: [] },
+        { type: "result", subtype: "success", is_error: false, session_id: "s", usage: {} },
+      ].map((l) => JSON.stringify(l)),
+    )
+    const cli = setup(
+      () => ({ text: "unused" }),
+      {
+        platform: "desktop",
+        clis: [
+          {
+            id: "claude-code",
+            label: "Claude Code",
+            installed: true,
+            path: "/usr/local/bin/claude",
+            signedIn: true,
+            billing: "subscription",
+          },
+        ],
+        cliHost: host,
+        defaultSelection: { provider: "cli:claude-code", model: "default" },
+      },
+      { outline: outlineOf, cliDocId: () => "d_host_1" },
+    )
+    cli.c.setSelection([{ id: "Hero000001", name: "Hero", type: "frame" }])
+    await cli.c.refresh()
+    await cli.c.send("Tighten the hero")
+    const args = host.spawned[0]?.args ?? []
+    const system = args[args.indexOf("--system-prompt") + 1] ?? ""
+    expect(system).toContain("You are Kimo")
+    expect(system).not.toContain("Page outline (")
+    expect(system).not.toContain("d_host_1")
+    const text = JSON.parse(host.spawned[0]?.stdin.trim() ?? "{}").message.content.at(-1)
+      .text as string
+    expect(text).toStartWith("<kimo-context>\n")
+    expect(text).toContain("docId d_host_1")
+    expect(text).toContain("Hero000001 frame")
+    expect(text).toEndWith("</kimo-context>\n\nTighten the hero")
+  })
+
   test("CLIs never run on web: unsupported_platform card", async () => {
     const { c } = setup(() => ({ text: "x" }), {
       platform: "web",
@@ -770,7 +832,13 @@ describe("Home hand-off", () => {
 
 describe("formats (board 22 copy)", () => {
   test("meta, header, session rows, times", () => {
-    expect(tokensLabel(3100, 1400)).toBe("3.1k in · 1.4k out")
+    expect(tokensLabel(3100, 1400)).toBe("4.5k new tokens")
+    expect(newTokens({ inputTokens: 16, cacheWriteTokens: 17_241, outputTokens: 3_914 })).toBe(
+      21_171,
+    )
+    expect(tokensTitle({ tokensIn: 17_257, tokensOut: 3_914, tokensCached: 74_351 })).toBe(
+      "17k new input + 3.9k output · 74k cached input not counted",
+    )
     expect(costLabel({ costUsd: 0.034, billing: "api" })).toBe("$0.034")
     expect(costLabel({ costUsd: null, billing: "api" })).toBe("—")
     expect(costLabel({ costUsd: 0.04, billing: "subscription" })).toBe("subscription")

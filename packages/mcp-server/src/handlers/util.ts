@@ -101,8 +101,66 @@ export function mapOpError(e: OpError, pathMap?: (p: string) => string): ToolErr
   if (code === "REVISION_CONFLICT")
     out.suggestion = "Re-read with kimo_query or kimo_get_state and retry with the new revision."
   if (code === "SCHEMA_VIOLATION")
-    out.suggestion = "Check the node body against kimo_read_docs path=schema."
+    out.suggestion =
+      (e.issue && schemaFix(e.issue.code, e.issue.path, e.issue.message)) ??
+      "Check the node body against kimo_read_docs path=schema."
   return out
+}
+
+/**
+ * One-line fixes for the field names agents most often borrow from CSS / Figma / other formats
+ * (board 31 token pass: an exact fix instead of a guide round trip).
+ */
+const FIELD_FIXES: Readonly<Record<string, string>> = {
+  unset:
+    'Clear fields with the update op\'s own "unset": ["field"] (a sibling of "set"), or set the field to null in "set".',
+  children: 'Children are separate insert ops with "parent": "@key" of this node.',
+  text: 'A text node\'s text goes in "content": {"type":"text","content":"Hello"}.',
+  string: 'A text node\'s text goes in "content": {"type":"text","content":"Hello"}.',
+  direction: 'Use layout "dir": "row" | "column".',
+  dir: 'Layout fields go inside "layout": {"dir": "row" | "column", "gap", "pad", "justify", "align"}.',
+  gap: 'Layout fields go inside "layout": {"dir": "row" | "column", "gap", "pad", "justify", "align"}.',
+  pad: 'Layout fields go inside "layout": {"dir": "row" | "column", "gap", "pad", "justify", "align"}.',
+  justify:
+    'Layout fields go inside "layout": {"dir": "row" | "column", "gap", "pad", "justify", "align"}.',
+  align: 'Child alignment goes in "layout": {"align": …}; text alignment in "style": {"align": …}.',
+  size: 'Text size goes in "style": {"size": n}; a box size is "w" / "h".',
+  weight: 'Text weight goes in "style": {"weight": n}.',
+  font: 'The font family goes in "style": {"font": "Inter"}.',
+  lineHeight: 'Use "style": {"lineHeight": 1.4} (or {"px": 24}).',
+  letterSpacing: 'Use "style": {"letterSpacing": n}.',
+  flexDirection: 'Use layout "dir": "row" | "column".',
+  layoutMode: 'Use layout "dir": "row" | "column".',
+  padding: 'Use layout "pad": n, [vertical, horizontal] or [top, right, bottom, left].',
+  spacing: 'Use layout "gap".',
+  itemSpacing: 'Use layout "gap".',
+  alignItems: 'Use layout "align": start | center | end | stretch | baseline.',
+  justifyContent: 'Use layout "justify": start | center | end | between | around | evenly.',
+  width: 'Use "w": a number, {"mode":"fit"} or {"mode":"fill"}.',
+  height: 'Use "h": a number, {"mode":"fit"} or {"mode":"fill"}.',
+  cornerRadius: 'Use "radius".',
+  borderRadius: 'Use "radius".',
+  fontSize: 'Text styles go in "style": {font, size, weight, lineHeight, letterSpacing, align}.',
+  fontWeight: 'Text styles go in "style": {font, size, weight, lineHeight, letterSpacing, align}.',
+  fontFamily: 'Text styles go in "style": {font, size, weight, lineHeight, letterSpacing, align}.',
+  textAlign: 'Use "style": {"align": "left" | "center" | "right" | "justify"}.',
+  color: 'Text and shape color is "fill" (icons: "color").',
+  background: 'Use "fill".',
+  backgroundColor: 'Use "fill".',
+  border: 'Use "stroke": {"paint": "#RRGGBB", "width": 1, "align": "inside"}.',
+  shadow: 'Use "effects": [{"kind":"shadow","x":0,"y":4,"blur":12,"color":"#0000001A"}].',
+  boxShadow: 'Use "effects": [{"kind":"shadow","x":0,"y":4,"blur":12,"color":"#0000001A"}].',
+}
+
+/** The one-line fix for a schema issue, when Kimo knows a better one than the guide link. */
+export function schemaFix(code: string, path: string, message = ""): string | undefined {
+  const name = (path.split("/").pop() ?? "").replace(/~1/g, "/").replace(/~0/g, "~")
+  if (code === "SCHEMA" && name === "content" && message.startsWith("Missing required"))
+    return 'A text node\'s text goes in "content": {"type":"text","content":"Hello"}.'
+  if (code !== "UNKNOWN_PROPERTY") return undefined
+  return Object.hasOwn(FIELD_FIXES, name)
+    ? FIELD_FIXES[name]
+    : `"${name}" is not a field here (kimo_read_docs path=schema lists the fields).`
 }
 
 /** core-schema planner refusal → envelope error (ADR 0013 §4). */

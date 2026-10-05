@@ -4,8 +4,10 @@ import { cx } from "../internal/util"
 
 /** Props for {@link MessageMeta}. Remaining `<div>` props go to the row. */
 export interface MessageMetaProps extends Omit<ComponentPropsWithRef<"div">, "children"> {
-  /** "3.1k in · 1.4k out". */
+  /** "21.1k new tokens" (board 31 hover meta: fresh input + output). */
   tokens: string
+  /** Tooltip of the tokens cell (the split: new input, output, cached input not counted). */
+  tokensTitle?: string
   /** "$0.034", "subscription", "est. $0.03", "—". Omitted: hidden (Settings › show cost off). */
   cost?: string
   /** "11.2s". */
@@ -32,6 +34,7 @@ export interface MessageMetaProps extends Omit<ComponentPropsWithRef<"div">, "ch
  */
 export function MessageMeta({
   tokens,
+  tokensTitle,
   cost,
   duration,
   onCopy,
@@ -58,7 +61,7 @@ export function MessageMeta({
         className,
       )}
     >
-      <span className="kimo-msg-meta__text" data-part="tokens">
+      <span className="kimo-msg-meta__text" data-part="tokens" title={tokensTitle}>
         {tokens}
       </span>
       {cost != null && (

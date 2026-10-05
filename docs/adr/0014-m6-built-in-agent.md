@@ -240,9 +240,10 @@ to the stable (cached) system prompt in name order; the thread shows which skill
 - Invocations (checked against `--help` of Claude Code 2.1.289 and codex-cli 0.146.0):
   - Claude Code: `claude -p --output-format stream-json --input-format stream-json --verbose
     --include-partial-messages --mcp-config <json> --strict-mcp-config --tools ""
-    --allowedTools mcp__kimo --permission-mode dontAsk --append-system-prompt <kimo>
-    [--model m] [--effort low|max] [--resume <session>]`; the prompt (and images) is one
-    stream-json user line on stdin.
+    --allowedTools mcp__kimo --permission-mode dontAsk --disable-slash-commands
+    --system-prompt <kimo> [--model m] [--effort low|max] [--resume <session>]`; the prompt (and
+    images) is one stream-json user line on stdin (addendum 2: `--system-prompt` replaced
+    `--append-system-prompt`).
   - Codex: `codex exec [resume <thread>] --json --skip-git-repo-check --sandbox read-only --cd
     <workspace> -c mcp_servers.kimo.command=… -c mcp_servers.kimo.args=[…] -c
     mcp_servers.kimo.default_tools_approval_mode="approve" [-m m] -c
@@ -349,3 +350,50 @@ list; each landed edit flashes its top-most changed layers on the canvas
 (`AgentCanvasProps.landed`, the placeholder-flash ring in the persona hue) and the status line's
 Follow chip zooms to them; canvas agent labels show the agent's name only.
 
+
+## Addendum 2 (2026-10-05, board 31 token pass)
+
+Measured with the real Claude Code CLI (`claude -p`, Sonnet, signed in) on the landing example,
+landing frame selected, "create a variant to add a pricing table", through the panel controller
+and headless `kimo mcp` (the harness has no `docId` in context, so both runs open the file):
+
+| | before (3 runs) | after (2 final runs) |
+|---|---|---|
+| model calls | 7–8 | 4–5 |
+| new input (input + cache write) | 32–34k | 11–13k |
+| cached input re-read | 217–270k | 54–74k |
+| output | 3.8–4.5k | 2.7–2.8k |
+| failed calls | 0 | 0 |
+| first layer / total | 10–11 s / 31–37 s | 17 s / 24 s |
+
+The first call alone went from ~27.8k to ~14k tokens (system prompt + tools).
+
+- **CLI prompts replace, never append** (`src/cli/adapters.ts`). Claude Code: `--system-prompt`
+  (flag checked on 2.1.289), `--disable-slash-commands`, env `CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`
+  and `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` (the user's CLAUDE.md and memory are coding notes; user
+  settings, auth and env still load; `--bare` would drop OAuth, `--safe-mode` drops our MCP
+  server). Codex 0.146: `-c model_instructions_file=<workspace>/.kimo/instructions.md` replaces
+  its base instructions (measured 14.7k → 10.3k input on a one-line turn; `base_instructions` is
+  ignored, `developer_instructions` only adds a message), on resumed turns too. Gemini CLI:
+  `GEMINI_SYSTEM_MD=<workspace>/.gemini/system.md` (from its docs; not installed here,
+  unverified). Built-in tools stay disabled / sandboxed as before.
+- **Volatile context in the user message.** `buildSystemPrompt` still splits stable/volatile; a
+  CLI turn sends the stable part as the system prompt and the volatile part (scope, selection,
+  document, outline) wrapped in `<kimo-context>` at the top of the user message
+  (`promptWithContext`), because Claude Code records the system prompt once per session
+  (`--system-prompt-snapshot on`) and a resumed turn would otherwise see the first turn's
+  selection. API turns keep it after the cache breakpoint.
+- **Turn context: document + page outline** (`src/outline.ts`, `AgentPanelOptions.outline` /
+  `cliDocId`). The context names the open document (`docId`: the window's for API turns, the
+  document host's for CLI turns, none when the window is not hosted) and carries
+  `buildPageOutline`: one line per node (id, type, name, canvas box, layout / fill / radius /
+  text style with format field names, text snippet), the selection first and as deep as fits,
+  other top-level nodes one level deep, `+N` for elided children, at most 12k characters (~3k
+  tokens) with a note naming `kimo_query` when shortened. The landing page is ~7k characters.
+  The base prompt and the `kimo-design` skill tell the model to use them instead of
+  `kimo_get_state` / exploratory queries and to start a variant with one copy plus the new
+  section's skeleton inside it (`@copyKey`, `@copyKey/<id>`). Render behaviour is unchanged.
+- **Hover tokens are new tokens** (`turnMeta`, `format.ts`): `tokensIn` = input + cache writes,
+  `tokensOut` = output, label "21.1k new tokens" with the split (and the cached input left out)
+  as the tooltip; the thread header, mode rows and the usage ledger count the same way. The
+  per-turn cost warning estimate is unchanged.

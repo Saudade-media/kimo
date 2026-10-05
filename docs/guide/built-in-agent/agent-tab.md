@@ -22,7 +22,7 @@ The written reply appears when the turn ends.
 
 ## Replies
 
-Under each reply, **N steps** opens the list of tool steps the agent took. It is folded by default and opens by itself when a step failed. Hover a reply to see its tokens, cost and time (`3.1k in · 1.4k out · $0.034 · 11.2s`), **Copy** and **Regenerate**. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed.
+Under each reply, **N steps** opens the list of tool steps the agent took. It is folded by default and opens by itself when a step failed. Hover a reply to see its tokens, cost and time (`4.5k new tokens · $0.034 · 11.2s`), **Copy** and **Regenerate**. Tokens count only what the turn really spent: input not served from the prompt cache plus output. Cached re-reads of the conversation are left out; the tooltip shows the split. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed.
 
 ## Edit size
 

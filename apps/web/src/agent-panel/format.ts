@@ -15,9 +15,28 @@ import {
 } from "@kimo/ai-agent"
 import type { MessageMetaView } from "../platform/contract"
 
-/** "3.1k in · 1.4k out". */
+/**
+ * Board 31 "Hover meta": tokens a turn really spent = input not served from the prompt cache
+ * (`input + cacheWrite`) + output. Cached re-reads of the prompt (every model call re-sends the
+ * whole conversation) are left out: they are what made a 14-step turn read "614k".
+ */
+export function newTokens(u: {
+  inputTokens: number
+  outputTokens: number
+  cacheWriteTokens: number
+}): number {
+  return u.inputTokens + u.cacheWriteTokens + u.outputTokens
+}
+
+/** "21.1k new tokens" (`tokensIn` = fresh input, `tokensOut` = output). */
 export function tokensLabel(tokensIn: number, tokensOut: number): string {
-  return `${formatTokens(tokensIn)} in · ${formatTokens(tokensOut)} out`
+  return `${formatTokens(tokensIn + tokensOut)} new tokens`
+}
+
+/** MessageMeta tooltip: "17k new input + 3.9k output · 74k cached input not counted". */
+export function tokensTitle(m: Pick<MessageMetaView, "tokensIn" | "tokensOut" | "tokensCached">) {
+  const cached = m.tokensCached ? ` · ${formatTokens(m.tokensCached)} cached input not counted` : ""
+  return `${formatTokens(m.tokensIn)} new input + ${formatTokens(m.tokensOut)} output${cached}`
 }
 
 /**

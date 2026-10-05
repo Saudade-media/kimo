@@ -35,9 +35,19 @@ export interface ToolDef<
 > {
   name: N
   title: string
-  /** Written for LLM agents: what it does, when to use it, what to call next. ≤ 1200 chars. */
+  /**
+   * Written for LLM agents, sent on every model call: what it does and when, in a few short
+   * sentences. Details live in the guides (`kimo_read_docs`). Size budget: test/schemas.test.ts.
+   */
   description: string
+  /** Strict input schema: the server validates every call against it. */
   input: I
+  /**
+   * Model-facing input schema when the strict one is too large to send on every call (a
+   * superset of `input`; see `advertisedInputSchema`). Default: `input` minus validation-only
+   * keywords.
+   */
+  advertise?: TSchema
   /** Schema of the envelope's `data`. The full output schema is {@link outputSchemaOf}. */
   data: D
   annotations: ToolAnnotations
@@ -96,8 +106,7 @@ export function outputSchemaOf(def: ToolDef) {
 export const DOC_ID_PATTERN = "^d_[A-Za-z0-9]{1,32}_[A-Za-z0-9]{1,32}$"
 
 export const docId = Str({
-  description:
-    "Target document id from kimo_get_state / kimo_open (d_<hash>_<epoch>). Required: there is never a fallback to the active document. A stale id returns DOCUMENT_NOT_OPEN with the current id.",
+  description: "Document id (d_…) from the turn context, kimo_get_state or kimo_open.",
   pattern: DOC_ID_PATTERN,
 })
 export const optDocId = Opt(docId)
@@ -105,23 +114,21 @@ export const optDocId = Opt(docId)
 export const baseRevision = Opt(
   Obj(
     {
-      epoch: Str({ description: "Epoch from revision.after of an earlier result.", minLength: 1 }),
-      seq: Int({ description: "Seq from revision.after of an earlier result.", minimum: 0 }),
+      epoch: Str({ description: "revision.after.epoch.", minLength: 1 }),
+      seq: Int({ description: "revision.after.seq.", minimum: 0 }),
     },
     {
       description:
-        "Fail with REVISION_CONFLICT unless the document is exactly at this revision (revision.after of your last read or edit). Recommended for every edit.",
+        "revision.after of your last result; REVISION_CONFLICT if the document moved since.",
     },
   ),
 )
 
-export const dryRun = Opt(
-  Bool({ description: "Validate and return the ops, inverse and warnings without committing." }),
-)
+export const dryRun = Opt(Bool({ description: "Validate only; commit nothing." }))
 
 export const label = Opt(
   Str({
-    description: "History label for this edit (shown in the editor's activity log).",
+    description: "History label.",
     maxLength: 120,
   }),
 )

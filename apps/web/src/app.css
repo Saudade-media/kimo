@@ -300,6 +300,11 @@ button {
   overflow-y: auto;
 }
 
+/* Rows, spacers and drop indicators keep their own height: the tree scrolls, rows never shrink. */
+.layer-tree > * {
+  flex: none;
+}
+
 /* Spacer (YFU0e): fill × fill */
 .left-panel__spacer {
   flex: 1 1 0;

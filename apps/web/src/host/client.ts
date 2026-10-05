@@ -31,6 +31,9 @@ export interface HostFocusRequest {
 
 let rpcSeq = 0
 
+/** {@link HostClient.connect} re-pings this often until the host answers. */
+export const PING_RETRY_MS = 150
+
 export class HostClient {
   private readonly pending = new Map<
     string,
@@ -48,17 +51,44 @@ export class HostClient {
 
   private constructor(readonly bridge: HostBridge) {}
 
-  /** Connects to the host; null when no host answers within `timeoutMs` (old shell, web). */
+  /**
+   * Connects to the host; null when no host answers within `timeoutMs` (old shell, web).
+   *
+   * The host webview starts in parallel with the editor windows, and an event emitted before the
+   * host listens is dropped (Tauri events are not queued). So the ping is repeated every
+   * {@link PING_RETRY_MS} and again as soon as the host announces `kimo://host-ready`, instead of
+   * one ping that would wait out the whole timeout when it raced the host's startup.
+   */
   static async connect(bridge: HostBridge, timeoutMs = 3000): Promise<HostClient | null> {
     const c = new HostClient(bridge)
     await c.install()
-    try {
-      await c.call("ping", {}, timeoutMs)
-      return c
-    } catch {
-      c.dispose()
-      return null
-    }
+    const deadline = Date.now() + timeoutMs
+    const answered = await new Promise<boolean>((resolve) => {
+      let done = false
+      const finish = (ok: boolean) => {
+        if (done) return
+        done = true
+        clearInterval(retry)
+        clearTimeout(expire)
+        offReady()
+        resolve(ok)
+      }
+      const ping = () => {
+        if (done) return
+        const left = Math.max(1, deadline - Date.now())
+        void c.call("ping", {}, left).then(
+          () => finish(true),
+          () => {},
+        )
+      }
+      const offReady = c.onReady(ping)
+      const retry = setInterval(ping, PING_RETRY_MS)
+      const expire = setTimeout(() => finish(false), timeoutMs)
+      ping()
+    })
+    if (answered) return c
+    c.dispose()
+    return null
   }
 
   private async install(): Promise<void> {

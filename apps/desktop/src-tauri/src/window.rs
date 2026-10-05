@@ -91,8 +91,42 @@ pub fn create_editor_window<Rt: Runtime>(app: &AppHandle<Rt>, label: &str) -> R<
         ));
     #[cfg(not(target_os = "macos"))]
     let b = b.decorations(true);
-    b.build()
-        .map_err(|e| io_msg(format!("Could not open a window: {e}")))
+    // Board 29 "Launch loader": paint the native window in $bg-app of the stored appearance
+    // before the page loads, so there is no white/black flash ahead of the loader.
+    let appearance = app
+        .try_state::<std::sync::Arc<crate::state::AppState>>()
+        .map(|s| s.settings.get("general.appearance"));
+    let appearance = appearance
+        .as_ref()
+        .and_then(|v| v.as_str())
+        .unwrap_or("system");
+    let b = match appearance {
+        "light" | "dark" => b.background_color(launch_background(appearance, false)),
+        _ => b,
+    };
+    let w = b
+        .build()
+        .map_err(|e| io_msg(format!("Could not open a window: {e}")))?;
+    if appearance != "light" && appearance != "dark" {
+        let os_dark = matches!(w.theme(), Ok(tauri::Theme::Dark));
+        let _ = w.set_background_color(Some(launch_background(appearance, os_dark)));
+    }
+    Ok(w)
+}
+
+/// $bg-app for the launch loader (board 29): light #FFFFFF, dark #0A0A0A. `system` (or any
+/// other value) follows the OS theme.
+pub fn launch_background(appearance: &str, os_dark: bool) -> tauri::window::Color {
+    let dark = match appearance {
+        "dark" => true,
+        "light" => false,
+        _ => os_dark,
+    };
+    if dark {
+        tauri::window::Color(0x0A, 0x0A, 0x0A, 0xFF)
+    } else {
+        tauri::window::Color(0xFF, 0xFF, 0xFF, 0xFF)
+    }
 }
 
 /// The window that receives open requests: `main`, else the first editor window.
@@ -330,6 +364,16 @@ mod tests {
         // Quitting: Settings alone does not keep the app alive.
         assert!(should_exit(&s(&[SETTINGS_LABEL]), true));
         assert!(!should_exit(&s(&["editor-2"]), true));
+    }
+
+    #[test]
+    fn launch_background_is_bg_app_of_the_appearance() {
+        use tauri::window::Color;
+        let (light, dark) = (Color(0xFF, 0xFF, 0xFF, 0xFF), Color(0x0A, 0x0A, 0x0A, 0xFF));
+        assert_eq!(launch_background("light", true), light);
+        assert_eq!(launch_background("dark", false), dark);
+        assert_eq!(launch_background("system", true), dark);
+        assert_eq!(launch_background("system", false), light);
     }
 
     #[test]

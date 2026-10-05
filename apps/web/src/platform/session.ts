@@ -134,6 +134,13 @@ export interface SessionManagerOptions {
     manager: FileSessionManager,
     store: DocStore,
   ) => FileDocumentSession
+  /**
+   * M5 desktop editor windows: `createSession` resolved later. The window renders before the
+   * document host answers; every open waits for this (the host's factory, or undefined when no
+   * host answered and sessions stay local) so files still go to the host when it runs.
+   * Ignored when `createSession` is given.
+   */
+  sessionFactory?: Promise<SessionManagerOptions["createSession"]>
 }
 
 const READER_FORMAT = majorMinor(FORMAT_VERSION)
@@ -1218,7 +1225,8 @@ export class FileSessionManager implements SessionManager {
   readonly createConflictSession: SessionManagerOptions["createConflictSession"]
   readonly saveRetryMs: number | undefined
   private readonly createStore: () => DocStore
-  private readonly createSession: SessionManagerOptions["createSession"]
+  private createSession: SessionManagerOptions["createSession"]
+  private sessionFactory: SessionManagerOptions["sessionFactory"]
   private readonly hideOwn: boolean
   private readonly byRef = new Map<FileRef, FileDocumentSession>()
   private readonly opening = new Map<FileRef, Promise<FileDocumentSession>>()
@@ -1236,6 +1244,18 @@ export class FileSessionManager implements SessionManager {
     this.createConflictSession = options.createConflictSession
     this.createStore = options.createStore ?? (() => createDocStore())
     this.createSession = options.createSession
+    if (!options.createSession && options.sessionFactory)
+      this.sessionFactory = options.sessionFactory.then(
+        (f) => {
+          this.createSession = f
+          this.sessionFactory = undefined
+          return f
+        },
+        () => {
+          this.sessionFactory = undefined
+          return undefined
+        },
+      )
     this.hideOwn = options.hideOwnRecovery ?? true
     this.saveRetryMs = options.saveRetryMs
   }
@@ -1266,6 +1286,7 @@ export class FileSessionManager implements SessionManager {
     if (pending) return pending
     if (!isUntitledRef(ref)) this.lastFolder = dirnameOf(ref)
     const p = (async () => {
+      if (this.sessionFactory) await this.sessionFactory
       const store = this.createStore()
       const session = this.createSession
         ? this.createSession(ref, this, store)

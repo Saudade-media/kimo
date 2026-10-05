@@ -43,6 +43,16 @@ Teardown 9.4 offers two options:
 4. **Web build.** In the browser there is one JS context; the tab is the document host and the
    UI in the same context. The same host module is used, without IPC.
 
+### Startup
+
+- The host and the first editor window load in parallel at launch. An editor window renders
+  (Home, or the launch loader) without waiting for the host. It connects by repeating its `ping`
+  RPC every 150 ms and again on `kimo://host-ready`, because Tauri events are not queued: a ping
+  sent before the host listens is lost.
+- Every open in an editor window waits for that answer (10 s at most; past that, the window falls
+  back to local M4 sessions). Files opened at launch (argv, file association, deep link) and
+  restored recovery entries therefore still become host-backed sessions whenever the host runs.
+
 ### Window reload behaviour
 
 - **A UI window reloads or crashes:** the host is unaffected, so no edit is lost and no MCP call

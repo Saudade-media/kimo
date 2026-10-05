@@ -24,7 +24,11 @@ import {
 export interface AppRuntime {
   platform: KimoPlatform
   manager: FileSessionManager
-  /** Desktop: this window's document host client (kimo_focus, selection reports, agent undo). */
+  /**
+   * Desktop: this window's document host client (kimo_focus, selection reports, agent undo).
+   * Editor windows render before the host answers: it is set (with `platform.mcp`) before the
+   * first open resolves, so the editor, which mounts on an open session, always sees it.
+   */
   hostClient?: HostClient | null
 }
 
@@ -53,12 +57,14 @@ const onConflictReject = (message: string) => console.warn("Kimo: conflict pick 
 export function createAppSessionManager(
   platform: KimoPlatform,
   createSession?: SessionManagerOptions["createSession"],
+  sessionFactory?: SessionManagerOptions["sessionFactory"],
 ): FileSessionManager {
   return createSessionManager({
     platform,
     merge: threeWayMerge,
     createConflictSession: conflictSessionFactory({ onReject: onConflictReject }) as never,
     ...(createSession ? { createSession } : {}),
+    ...(sessionFactory ? { sessionFactory } : {}),
   })
 }
 
@@ -81,18 +87,11 @@ export async function createAppRuntime(
   }
   // Desktop editor windows are clients of the document host when one answers; otherwise (an
   // older shell, the browser) sessions stay local to the window as in M4.
-  let createSession: SessionManagerOptions["createSession"]
-  let hostClient: HostClient | null = null
-  if (inTauri()) {
-    const settingsWindow = /^#\/settings(\/|$)/.test(location.hash)
-    const host = await import("../host")
-    // The Settings window only needs the host for Agents & MCP (prompts, pause); it waits less.
-    const client = await host
-      .connectWindowToHost(undefined, settingsWindow ? 3000 : undefined)
-      .catch(() => null)
-    hostClient = client
-    if (client && !settingsWindow) createSession = host.hostedSessionFactory(client)
-    // M5: the window's `platform.mcp` (Rust relay + document host).
+  if (!inTauri())
+    return finishRuntime({ platform, manager: createAppSessionManager(platform) }, onOpened)
+  const host = await import("../host")
+  // M5: the window's `platform.mcp` (Rust relay + document host).
+  const attach = async (client: HostClient | null) => {
     const mcp = await host
       .createDesktopMcpHost({ bridge: host.tauriBridge(), client, os: platform.os })
       .catch((e: unknown) => {
@@ -101,9 +100,44 @@ export async function createAppRuntime(
       })
     if (mcp) Object.defineProperty(platform, "mcp", { value: mcp, enumerable: true })
   }
-  const manager = createAppSessionManager(platform, createSession)
+  // The Settings window only needs the host for Agents & MCP (prompts, pause): it waits (less)
+  // before its first render and never opens files.
+  if (settingsRoute()) {
+    const hostClient = await host.connectWindowToHost(undefined, 3000).catch(() => null)
+    await attach(hostClient)
+    return { platform, manager: createAppSessionManager(platform), hostClient }
+  }
+  // Editor windows render right away (the host webview starts in parallel and may still be
+  // loading). Opens wait for the host's answer, so files go to the host-backed session whenever
+  // a host runs (ADR 0002 Option A, ADR 0013 §12 item 2); the editor only mounts after an open.
+  const factory: SessionManagerOptions["sessionFactory"] = host
+    .connectWindowToHost()
+    .catch(() => null)
+    .then(async (client) => {
+      runtime.hostClient = client
+      await attach(client)
+      return client ? host.hostedSessionFactory(client) : undefined
+    })
+  const runtime: AppRuntime = {
+    platform,
+    manager: createAppSessionManager(platform, undefined, factory),
+    hostClient: null,
+  }
+  return finishRuntime(runtime, onOpened)
+}
+
+function settingsRoute(): boolean {
+  return /^#\/settings(\/|$)/.test(location.hash)
+}
+
+/** Installs launch requests and opens the files the window was started with. */
+function finishRuntime(
+  runtime: AppRuntime,
+  onOpened: (session: FileDocumentSession, request: OpenRequest) => void,
+): AppRuntime {
+  const { platform, manager } = runtime
   // The desktop Settings window (`#/settings/<pane>`) edits settings only: it never opens files.
-  if (/^#\/settings(\/|$)/.test(location.hash)) return { platform, manager, hostClient }
+  if (settingsRoute()) return runtime
   manager.install(onOpened)
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
@@ -116,7 +150,7 @@ export async function createAppRuntime(
       if (session) onOpened(session, request)
     }
   })()
-  return { platform, manager, hostClient }
+  return runtime
 }
 
 export const RuntimeContext = createContext<AppRuntime | null>(null)

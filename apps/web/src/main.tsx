@@ -5,6 +5,7 @@ import "./app.css"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "./App"
+import { LaunchLoaderExit, setLaunchStatus } from "./launch-loader"
 import { initTheme, setTheme } from "./lib/theme"
 import { createAppRuntime, RuntimeContext } from "./platform/runtime"
 import { diskPath, navigate } from "./router"
@@ -25,7 +26,13 @@ void createAppRuntime((session, request) => navigate(diskPath(session.ref, reque
         <RuntimeContext.Provider value={runtime}>
           <App />
         </RuntimeContext.Provider>
+        <LaunchLoaderExit />
       </StrictMode>,
     )
+  },
+  (error: unknown) => {
+    // The launch loader (board 29) would otherwise spin forever; its status line says why.
+    setLaunchStatus("Kimo couldn't start. Reload the window to try again.")
+    throw error
   },
 )

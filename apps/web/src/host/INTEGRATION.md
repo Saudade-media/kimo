@@ -17,10 +17,13 @@ editor window ◀─kimo://host-session-state / host-focus───────�
 - `platform/runtime.ts` `createAppRuntime`:
   - In Tauri with `#/host`, it calls `startHostRoute(platform)` and **never resolves**. As a
     result the host route renders nothing and never calls `kimo_launch_take_initial`.
-  - In Tauri editor windows (any route except `#/settings`), it calls `connectWindowToHost()`,
-    which waits up to 10 s for a ping answer. When the host answers, the window's session
-    manager gets `createSession: hostedSessionFactory(client)`. When no host answers (an older
-    shell), sessions stay local, as in M4.
+  - In Tauri editor windows (any route except `#/settings`), it returns at once, so the window
+    renders without waiting for the host, and calls `connectWindowToHost()` in the background.
+    That re-pings every 150 ms and on `kimo://host-ready` (an event sent before the host listens
+    is lost), for up to 10 s. The session manager gets the result as `sessionFactory`: every
+    open waits for it, then uses `hostedSessionFactory(client)` when the host answered, or local
+    sessions (an older shell), as in M4. `runtime.hostClient` and `platform.mcp` are set before
+    that first open resolves. The Settings window still waits (3 s at most) before rendering.
 - `platform/session.ts` has a new `SessionManagerOptions.createSession`. A
   `HostedDocumentSession` is a `FileDocumentSession`:
   - its store is a replica that `WindowSyncProvider` keeps in sync with the host's store;

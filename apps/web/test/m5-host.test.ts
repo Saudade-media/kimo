@@ -208,6 +208,58 @@ describe("editor window ↔ document host", () => {
     expect(await platform.leases.inspect(ref)).toMatchObject({ self: true })
     await service.dispose()
   })
+
+  test("a window that pings before the host listens still connects; opens wait for the host", async () => {
+    // Launch: the editor window and the host webview start together, and an event sent before
+    // the host listens is dropped. The window renders at once; its opens wait for the host.
+    const ref = "/Users/me/site/launch.kimo"
+    const platform = createMemoryPlatform({
+      pid: 7001,
+      files: { [ref]: fileText() },
+      settings: { "files.autosave": false },
+    })
+    const net = createMemoryBridgeNetwork()
+    net.commands.set("kimo_mcp_policies_get", () => ({}))
+    const t0 = Date.now()
+    const connecting = HostClient.connect(net.bridge("main"), 5000)
+    const windowManager = createSessionManager({
+      platform,
+      sessionFactory: connecting.then((c) => (c ? hostedSessionFactory(c) : undefined)),
+    })
+    const opening = windowManager.open(ref)
+    await tick(200)
+    const service = await startDocumentHostService({
+      platform,
+      bridge: net.bridge(HOST_LABEL),
+      version: "0.5.0-test",
+      relay: false,
+      validate: validateInput as never,
+    })
+    const client = await connecting
+    expect(client).not.toBeNull()
+    expect(Date.now() - t0).toBeLessThan(1500)
+    const session = (await opening) as HostedDocumentSession
+    expect(session.hosted).toBe(true)
+    expect(service.viewers(ref)).toEqual(["main"])
+    client?.dispose()
+    await service.dispose()
+  })
+
+  test("opens fall back to local sessions when no host answers", async () => {
+    const ref = "/Users/me/site/local.kimo"
+    const platform = createMemoryPlatform({ pid: 7002, files: { [ref]: fileText() } })
+    const net = createMemoryBridgeNetwork()
+    const connecting = HostClient.connect(net.bridge("main"), 300)
+    const windowManager = createSessionManager({
+      platform,
+      sessionFactory: connecting.then((c) => (c ? hostedSessionFactory(c) : undefined)),
+    })
+    const session = await windowManager.open(ref)
+    expect(await connecting).toBeNull()
+    expect("hosted" in session).toBe(false)
+    expect(session.state().phase).toBe("ready")
+    await windowManager.dispose()
+  })
 })
 
 describe("window McpHostApi (createDesktopMcpHost)", () => {

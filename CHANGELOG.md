@@ -132,7 +132,7 @@ The first public release: release engineering, polish, the new mark and the form
   show when hovering a finished reply. Tokens are new tokens only ("21.1k new tokens": input not
   served from the prompt cache plus output; the tooltip shows the cached input left out), and
   the thread header and usage ledger count the same way. Each reply's steps are folded behind an "N steps" toggle
-  (opened automatically when a step failed). The per-turn cost warning is unchanged.
+  (always folded by default; a failed step adds a red count). The per-turn cost warning is unchanged.
 - Canvas agent labels (cursor pill, attribution tag, placeholder tag) show only the agent's
   name; what it is doing lives in the panel.
 - The image size limit is 20 MB (was 50 MB).

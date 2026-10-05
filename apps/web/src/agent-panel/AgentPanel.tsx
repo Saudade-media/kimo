@@ -542,8 +542,9 @@ function ThreadItem({
       },
     }))
   const failed = m.steps.filter((s) => s.state === "failed").length
-  // Board 31 Steps toggle: folded by default, open by itself when a step failed, not remembered.
-  const stepsOpen = stepsToggled ?? failed > 0
+  // Board 31 Steps toggle: always folded by default (a failed step only adds "· N failed"), not
+  // remembered.
+  const stepsOpen = stepsToggled ?? false
   const progress = m.progress
   const running = m.steps.findLast((s) => s.state === "running")
   const status = waiting

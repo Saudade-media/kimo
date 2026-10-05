@@ -54,6 +54,7 @@ export const ERROR_CODES = [
   "OUT_OF_SCOPE",
   "INSTANCE_STRUCTURE",
   "CYCLE",
+  "BATCH_TOO_LARGE",
   "ASSET_NOT_FOUND",
   "FILE_EXISTS",
   "FILE_NOT_FOUND",
@@ -86,7 +87,7 @@ export const ToolErrorSchema = Obj({
       { kind: Str({ description: "Detail discriminator (revision, lock, plan, schema)." }) },
       {
         description:
-          "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}.",
+          "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}.",
       },
     ),
   ),

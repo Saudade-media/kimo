@@ -273,11 +273,11 @@ describe("DOM projection", () => {
       }),
     )
     const d = m.dom(layout, { x: 0, y: 0, zoom: 1 }, SIZE)
-    // Tag inside the frame's 16 px padding (EKCy7), copy "<agent> · building <name> · N ops".
+    // Tag inside the frame's 16 px padding (EKCy7); board 31: the agent's name only.
     expect(d.tags.find((t) => t.id === "holder")).toMatchObject({
       left: 756,
       top: 68,
-      text: "Kimo · building Features · 14 ops",
+      text: "Kimo",
       state: "building",
     })
     // Board 25 §3 (UMRAO): an orphan reads "Agent stopped · <name>".
@@ -317,7 +317,7 @@ describe("DOM projection", () => {
     expect(d.cursors[0]).toMatchObject({
       left: 364,
       top: 56,
-      text: "Agent 1 · setting Headline font…",
+      text: "Agent 1",
       persona: "iris",
       stack: 0,
     })

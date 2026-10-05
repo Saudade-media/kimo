@@ -50,6 +50,7 @@ export {
   parseColor as parseMarkColor,
 } from "./agent-mark/renderer"
 export { AGENT_LIQUID_GLSL } from "./agent-mark/shader"
+export { AgentStatus, type AgentStatusProps } from "./agent-status/AgentStatus"
 export { AttachmentChip, type AttachmentChipProps } from "./attachment-chip/AttachmentChip"
 export { AttachmentThumb, type AttachmentThumbProps } from "./attachment-thumb/AttachmentThumb"
 export { CompactButton, type CompactButtonProps } from "./compact-button/CompactButton"
@@ -60,3 +61,4 @@ export { ModeOption, type ModeOptionProps } from "./mode-option/ModeOption"
 export { ScopeTag, type ScopeTagProps } from "./scope-tag/ScopeTag"
 export { SessionRow, type SessionRowProps } from "./session-row/SessionRow"
 export { SkillRow, type SkillRowProps } from "./skill-row/SkillRow"
+export { StepsToggle, type StepsToggleProps } from "./steps-toggle/StepsToggle"

@@ -36,6 +36,7 @@ import { readGuide as builtinGuide } from "../guides"
 import type { WireOp } from "../ops"
 import type { HandlerOutput, HostDocument, ToolContext, ToolHandler } from "../runtime"
 import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
+import { AGENT_MAX_NEW_LAYERS } from "../tools/write"
 import { compileWireOps, touchedIds, wirePath } from "./compile"
 import type { CoreDocumentHost } from "./core-host"
 import { EXTENSION, imageSize, parseCssTokens, parseDtcg, sniffFont, sniffImage } from "./importers"
@@ -57,6 +58,34 @@ import {
   toToken,
   toWarnings,
 } from "./util"
+
+// --- Batch limit (board 31) --------------------------------------------------------------------
+
+/**
+ * Freshly authored layers of a kimo_apply_ops call: its `insert` ops (each inserts exactly one
+ * node whose content the caller wrote out). Copies, instances, page duplicates and edits of
+ * existing layers are never counted.
+ */
+export function newLayerCount(ops: readonly WireOp[]): number {
+  let n = 0
+  for (const op of ops) if (op.op === "insert") n++
+  return n
+}
+
+/** BATCH_TOO_LARGE when a call authors more than {@link AGENT_MAX_NEW_LAYERS} new layers. */
+export function batchTooLarge(
+  ops: readonly WireOp[],
+  limit: number = AGENT_MAX_NEW_LAYERS,
+): ToolError | null {
+  const newLayers = newLayerCount(ops)
+  if (newLayers <= limit) return null
+  return {
+    code: "BATCH_TOO_LARGE",
+    message: `This call creates ${newLayers} new layers; one call may create at most ${limit}. Nothing was applied.`,
+    detail: { kind: "batch", limit, newLayers },
+    suggestion: `Split into sections of ≤ ${limit} new layers: apply the skeleton first (the page frame and its empty section frames), then one section per call, passing baseRevision from the previous result. To reuse existing content, copy it (copy is never limited) instead of inserting it again.`,
+  }
+}
 
 // --- Options -----------------------------------------------------------------------------------
 
@@ -863,6 +892,8 @@ export function createToolHandlerMap(
     if (base && (base.epoch !== cur.epoch || base.seq !== cur.seq))
       return fail(conflict(d, base), { revision: sameRev(cur) })
     const wire = input.ops as WireOp[]
+    const tooLarge = batchTooLarge(wire)
+    if (tooLarge) return fail(tooLarge, { revision: sameRev(cur) })
     const compiled = compileWireOps(d.store, wire, { libraries: libs(d.ref.id) })
     if (!compiled.ok) return fail(compiled.errors, { revision: sameRev(cur) })
     const ops = compiled.ops as unknown as Op[]

@@ -16,6 +16,11 @@ export interface MessageMetaProps extends Omit<ComponentPropsWithRef<"div">, "ch
   onRegenerate?: () => void
   /** Streaming meta (board 22 A uZbJj): spinner + "Streaming" in agent, live tokens, no actions. */
   streaming?: boolean
+  /**
+   * Board 31 "Hover meta": `hover` keeps the row's space but shows it only while the pointer is
+   * over the nearest `[data-meta-hover]` ancestor (the agent turn) or focus is inside it.
+   */
+  reveal?: "always" | "hover"
 }
 
 /**
@@ -32,6 +37,7 @@ export function MessageMeta({
   onCopy,
   onRegenerate,
   streaming = false,
+  reveal = "always",
   className,
   ...rest
 }: MessageMetaProps) {
@@ -44,7 +50,14 @@ export function MessageMeta({
       </div>
     )
   return (
-    <div {...rest} className={cx("kimo-msg-meta", className)}>
+    <div
+      {...rest}
+      className={cx(
+        "kimo-msg-meta",
+        reveal === "hover" && "kimo-msg-meta--reveal-hover",
+        className,
+      )}
+    >
       <span className="kimo-msg-meta__text" data-part="tokens">
         {tokens}
       </span>

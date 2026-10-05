@@ -138,16 +138,24 @@
   line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
 }
 
-/* Agent block: Steps (fpDaW gap 8) · Message/Agent · meta / card, thread gap 12 between. */
+/*
+ * Agent turn (board 31 "Agent Turn" O6NIQe): column, gap 8 › running: AgentStatus · card;
+ * finished: Message/Agent · StepsToggle · Steps (open) · MessageMeta (hover) · card.
+ */
 .agent-panel__agent {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
 }
 
 .agent-panel__agent > * {
   width: 100%;
+}
+
+/* StepsToggle hugs its content (only the label is clickable). */
+.agent-panel__agent > .kimo-steps-toggle {
+  width: auto;
 }
 
 .agent-panel__steps {

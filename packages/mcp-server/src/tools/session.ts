@@ -143,6 +143,7 @@ export const DOC_PATHS = [
   "text",
   "errors",
   "envelope",
+  "guide/steps",
   "guide/web",
   "guide/mobile",
   "guide/tables",

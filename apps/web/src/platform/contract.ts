@@ -1141,7 +1141,22 @@ export type AgentMessageView =
       meta?: MessageMetaView
       /** Inline error / interrupt card (never a modal). */
       card?: AgentErrorCard
+      /**
+       * Board 31: the live status line while the turn runs (absent once it ended). `status` is
+       * the agent's last note, else the running tool's label, else "Thinking…".
+       */
+      progress?: AgentProgressView
     }
+
+/** Board 31 AgentStatus: what a running turn is doing now. */
+export interface AgentProgressView {
+  status: string
+  source: "start" | "note" | "tool"
+  /** Turn start (ms, the controller's clock): the elapsed time ticks from it. */
+  startedAt: number
+  /** Layers the Follow chip zooms to (the last landed edit, else the node being worked on). */
+  follow: string[]
+}
 
 /** One agent of a side by side / split run (mode summary + presence chips). */
 export interface ModeAgentRowView {

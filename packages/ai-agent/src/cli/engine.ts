@@ -15,7 +15,7 @@ import type { ToolResult } from "@kimo/mcp-server"
 import { errorCard } from "../cards"
 import { ProviderError } from "../errors"
 import type { AgentEvent, OpGroup, TurnRecord, TurnStatus } from "../loop"
-import { stepLabel } from "../loop"
+import { type StepNames, stepLabel } from "../progress"
 import { LineSplitter } from "../providers/sse"
 import {
   type AssistantMessage,
@@ -51,6 +51,8 @@ export interface RunCliTurnOptions {
   signal: AbortSignal
   onEvent(e: AgentEvent): void
   now?: () => number
+  /** Layer names for step labels ("Editing 6 layers in Pricing"). */
+  names?: StepNames
 }
 
 /** The MCP launch for a CLI: bundled shim with `--client <cli>` (ADR 0013 §9 entry shape). */
@@ -68,7 +70,9 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
   o.onEvent({ type: "turn_start", turnId: o.turnId })
 
   let usage: Usage = { ...ZERO_USAGE }
+  /** Text since the last tool call (board 31: notes before tool calls, the reply after the last). */
   let text = ""
+  let lastNote = ""
   let cliSessionId = o.cliSessionId
   let reportedCostUsd: number | undefined
   let turns: number | undefined
@@ -97,12 +101,14 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
         o.onEvent({ type: "thinking_delta", text: e.text })
         break
       case "step_start":
+        if (text.trim()) lastNote = text
+        text = ""
         stepTools.set(e.callId, e.tool)
         o.onEvent({
           type: "step_start",
           callId: e.callId,
           tool: e.tool,
-          label: stepLabel({ id: e.callId, name: e.tool, input: e.input }),
+          label: stepLabel({ id: e.callId, name: e.tool, input: e.input }, o.names),
           input: e.input,
         })
         break
@@ -230,9 +236,12 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
     failure = err
   }
 
+  // The reply is the text after the last tool call; a turn that ended on a tool call keeps its
+  // last note so the thread is never blank.
+  const reply = text.trim() ? text : lastNote
   const message: AssistantMessage = {
     role: "assistant",
-    content: text ? [{ type: "text", text }] : [],
+    content: reply ? [{ type: "text", text: reply }] : [],
   }
   const record: TurnRecord = {
     id: o.turnId,

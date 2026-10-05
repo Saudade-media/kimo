@@ -246,7 +246,8 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
     `tag padding/gap ${tag?.padding} ${tag?.gap}`,
   )
   check(tag?.radius === "4px", `tag radius-xs, got ${tag?.radius}`)
-  check(tag?.text === "Kimo · building Features v2 · 14 ops", `tag copy, got "${tag?.text}"`)
+  // Board 31 "Canvas label": the agent's name only.
+  check(tag?.text === "Kimo", `tag copy, got "${tag?.text}"`)
   const tagLabel = await measure(page, '[data-node-id="holder0001"] .agent-canvas__tag-label')
   check(tagLabel?.fontSize === "11px" && tagLabel?.fontWeight === "500", `tag label 11/500`)
   const orphan = await measure(page, '[data-testid="placeholder-tag"][data-node-id="orphan0001"]')
@@ -511,10 +512,109 @@ async function layersAndToolbar({ page, url, log }: E2EContext) {
   expect(diffs.length === 0, `M6 layers/toolbar measured pass:\n${diffs.join("\n")}`)
 }
 
+/**
+ * Board 31 "Position lock": while the canvas pans and zooms (wheel, ctrl+wheel, space+drag,
+ * middle drag), every canvas frame is sampled right after the renderer draws it; the persona
+ * cursor and the placeholder tag must sit at a fixed offset from their layer's screen box as
+ * drawn in that frame (0 px drift, ±0.5).
+ */
+async function labelsStayLocked({ page, url, log }: E2EContext) {
+  await openEditor(page, url)
+  await fixture(page)
+  await setViewport(page, { x: 0, y: 0, zoom: 1 })
+  await settle(page)
+  await page.evaluate(() => {
+    const w = window as unknown as W & {
+      __drift: { frames: number; rows: { k: string; dx: number; dy: number }[] }
+    }
+    const canvas = w.__kimo.canvas() as unknown as {
+      renderer: { render(): void; viewport: { x: number; y: number; zoom: number } }
+    }
+    const layout = w.__kimo.canvas().layout()
+    const r = canvas.renderer
+    const host = document.querySelector(".canvas-host") as HTMLElement
+    w.__drift = { frames: 0, rows: [] }
+    const draw = r.render.bind(r)
+    r.render = () => {
+      draw()
+      const v = r.viewport
+      const h = host.getBoundingClientRect()
+      const at = (k: string, sel: string, id: string) => {
+        const el = document.querySelector(sel)
+        const b = layout?.nodes.get(id)?.world
+        if (!el || !b) return
+        const e = el.getBoundingClientRect()
+        w.__drift.rows.push({
+          k,
+          dx: e.x - h.x - (b.x - v.x) * v.zoom,
+          dy: e.y - h.y - (b.y - v.y) * v.zoom,
+        })
+      }
+      w.__drift.frames++
+      at("cursor", '[data-testid="persona-cursor"]', "hero000001")
+      at("tag", '[data-testid="placeholder-tag"][data-node-id="holder0001"]', "holder0001")
+    }
+  })
+  const host = await page.locator(".canvas-host").boundingBox()
+  const c = { x: (host?.x ?? 0) + 300, y: (host?.y ?? 0) + 300 }
+  await page.mouse.move(c.x, c.y)
+  for (let i = 0; i < 8; i++) {
+    await page.mouse.wheel(14, 9)
+    await page.waitForTimeout(16)
+  }
+  await page.keyboard.down("Control")
+  for (let i = 0; i < 6; i++) {
+    await page.mouse.wheel(0, i < 3 ? -18 : 12)
+    await page.waitForTimeout(16)
+  }
+  await page.keyboard.up("Control")
+  await page.locator(".canvas-host").focus()
+  await page.keyboard.down("Space")
+  await page.mouse.move(c.x, c.y)
+  await page.mouse.down()
+  await page.mouse.move(c.x - 120, c.y - 40, { steps: 12 })
+  await page.mouse.up()
+  await page.keyboard.up("Space")
+  await page.mouse.down({ button: "middle" })
+  await page.mouse.move(c.x + 60, c.y + 30, { steps: 10 })
+  await page.mouse.up({ button: "middle" })
+  await settle(page)
+  const d = await page.evaluate(
+    () =>
+      (
+        window as unknown as {
+          __drift: { frames: number; rows: { k: string; dx: number; dy: number }[] }
+        }
+      ).__drift,
+  )
+  const byKey = new Map<string, { dx: number; dy: number }[]>()
+  for (const r of d.rows) byKey.set(r.k, [...(byKey.get(r.k) ?? []), r])
+  const report: string[] = []
+  for (const [k, rows] of byKey) {
+    const xs = rows.map((r) => r.dx)
+    const ys = rows.map((r) => r.dy)
+    const spread = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
+    report.push(
+      `${k}: ${rows.length} frames, offset ${xs[0]?.toFixed(2)},${ys[0]?.toFixed(2)}, drift ${spread.toFixed(2)} px`,
+    )
+    expect(rows.length >= 10, `${k}: sampled ${rows.length} drawn frames`)
+    expect(spread <= 0.5, `${k}: drift ${spread.toFixed(2)} px while panning / zooming`)
+  }
+  log(`  position lock (${d.frames} canvas frames):\n    ${report.join("\n    ")}`)
+  expect(byKey.has("cursor") && byKey.has("tag"), "cursor and tag were on screen")
+  // The cursor keeps its +4, +4 anchor (board 24 g) in every frame.
+  for (const r of byKey.get("cursor") ?? [])
+    expect(Math.abs(r.dx - 4) <= 0.5 && Math.abs(r.dy - 4) <= 0.5, `cursor offset ${r.dx},${r.dy}`)
+}
+
 export const scenarios: Scenario[] = [
   {
     name: "m6 canvas: cards, placeholders, scopes, cursors, rejected, prompt footer",
     run: cardsAndPlaceholders,
   },
   { name: "m6 canvas: layer rows + Note / Prompt toolbar", run: layersAndToolbar },
+  {
+    name: "board31 canvas: agent labels stay locked to their layers while panning / zooming",
+    run: labelsStayLocked,
+  },
 ]

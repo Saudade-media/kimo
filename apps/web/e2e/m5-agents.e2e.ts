@@ -676,11 +676,14 @@ export const scenarios: Scenario[] = [
       c.box("Label (FnfGU)", m.pillLabel, { fs: 12, fw: "500", color: onAccent })
       c.flush()
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "m5-attribution.png") })
+      // Board 31 "Canvas label": the agent's name only (no layer, state or tool).
       expect(
-        (await page.locator(".agents-attribution__tag-label").innerText()).includes(
-          "Claude Code · Card 2",
-        ),
+        (await page.locator(".agents-attribution__tag-label").innerText()) === "Claude Code",
         "tag copy",
+      )
+      expect(
+        (await page.locator(".agents-cursor__label").innerText()) === "Claude Code",
+        "cursor copy",
       )
       // Commit (idle) → outline fades after 2 s.
       await page.evaluate(() => {

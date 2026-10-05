@@ -111,6 +111,10 @@
 @import "./session-row/SessionRow.css";
 @import "./agent-error-card/AgentErrorCard.css";
 @import "./composer-agent/ComposerAgent.css";
+
+/* Board 31: agent progress (status line, steps toggle). */
+@import "./agent-status/AgentStatus.css";
+@import "./steps-toggle/StepsToggle.css";
 @import "./gallery/Gallery.css";
 
 /* Board 24 gaps (link popover, custom tag, close prompt, SVG rejection, weight warning, +N menu). */

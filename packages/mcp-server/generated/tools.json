@@ -190,6 +190,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -235,7 +236,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -655,6 +656,7 @@
               "text",
               "errors",
               "envelope",
+              "guide/steps",
               "guide/web",
               "guide/mobile",
               "guide/tables",
@@ -838,6 +840,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -883,7 +886,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -1134,6 +1137,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -1179,7 +1183,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -1613,6 +1617,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -1658,7 +1663,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -1794,7 +1799,7 @@
     {
       "name": "kimo_apply_ops",
       "title": "Edit with typed ops",
-      "description": "The way to change a document. Sends an ordered list of typed ops applied atomically: all succeed or nothing changes. Ops: insert, update, replace, move, delete, copy, instantiate, make_component, detach, set_override, reset_override, set_args, swap_instance, declare_prop, remove_prop, set_slot, set_variables, set_theme_axes, create_variable, update_variable, rename_variable, delete_variable, set_theme_pin, theme_axis. Give new nodes a key and reference them later in the same call as @key (e.g. insert a frame with key hero, then insert a text node with parent @hero; a text node's string goes in content, not text). Pass baseRevision from your last read to avoid overwriting edits made since (REVISION_CONFLICT). dryRun=true validates and returns the diff without committing; render=true attaches a PNG of the changed top-level frames after commit. Deletes and other destructive ops may ask the user first. Read kimo_read_docs path=ops for examples.",
+      "description": "The way to change a document. Sends an ordered list of typed ops applied atomically: all succeed or nothing changes. Ops: insert, update, replace, move, delete, copy, instantiate, make_component, detach, set_override, reset_override, set_args, swap_instance, declare_prop, remove_prop, set_slot, set_variables, set_theme_axes, create_variable, update_variable, rename_variable, delete_variable, set_theme_pin, theme_axis. Give new nodes a key and reference them later in the same call as @key (e.g. insert a frame with key hero, then insert a text node with parent @hero; a text node's string goes in content, not text). Pass baseRevision from your last read to avoid overwriting edits made since (REVISION_CONFLICT). dryRun=true validates and returns the diff without committing; render=true attaches a PNG of the changed top-level frames after commit. At most 40 inserts per call (BATCH_TOO_LARGE): a skeleton first, then one section per call. Copy, instantiate and edits are never limited: make a variant by copying the page. Deletes and other destructive ops may ask the user first. Read kimo_read_docs path=ops.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -3302,6 +3307,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -3347,7 +3353,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -3757,6 +3763,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -3802,7 +3809,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -4115,6 +4122,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -4160,7 +4168,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -4484,6 +4492,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -4529,7 +4538,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -4891,6 +4900,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -4936,7 +4946,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -5192,6 +5202,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -5237,7 +5248,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -5551,6 +5562,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -5596,7 +5608,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -6002,6 +6014,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -6047,7 +6060,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -6342,6 +6355,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -6387,7 +6401,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -6690,6 +6704,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -6735,7 +6750,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -7086,6 +7101,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -7131,7 +7147,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -7558,6 +7574,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -7603,7 +7620,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -7920,6 +7937,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -7965,7 +7983,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -8284,6 +8302,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -8329,7 +8348,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -8603,6 +8622,7 @@
                     "OUT_OF_SCOPE",
                     "INSTANCE_STRUCTURE",
                     "CYCLE",
+                    "BATCH_TOO_LARGE",
                     "ASSET_NOT_FOUND",
                     "FILE_EXISTS",
                     "FILE_NOT_FOUND",
@@ -8648,7 +8668,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false

@@ -33,6 +33,7 @@ export function agentCanvasProps(
           : x.state,
     })),
     rejections: c.rejections,
+    landed: c.landed,
     onPauseAgent: () => controller.stop(),
     ...extra,
   }

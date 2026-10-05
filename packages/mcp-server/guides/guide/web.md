@@ -7,11 +7,13 @@
    colors, type scale, spacing, buttons.
 2. `kimo_find_space {docId, w:1440, h:900}` for a free spot.
 3. Insert the page frame: `w:1440`, `h:{"mode":"fit"}`, `layout:{dir:"column"}`, a background
-   fill, `placeholder:true`.
+   fill, `placeholder:true`, together with one empty, named frame per section (the skeleton).
+   A variant of an existing page starts with one `copy` of that page instead.
 
 ## Section by section
 
-Build one section per call, render it, then continue:
+Build one section per call (at most 40 new layers: `BATCH_TOO_LARGE` otherwise), with a
+one-line note before it ("Building the pricing section"), render it, then continue:
 
 - **Section frame:** `w:{"mode":"fill"}`, `layout:{dir:"column", align:"center", pad:[96,24]}`.
 - **Content column** inside it: fixed `w:1200` (or 1120/960), `layout:{dir:"column", gap:24}`.

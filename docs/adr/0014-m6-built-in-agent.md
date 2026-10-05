@@ -323,3 +323,29 @@ compile-time equality of `CliProcessHostLike` with the agent's `CliProcessHost`.
    clients); should the host extend it for CLIs Kimo itself spawned?
 7. Iterate passes across a CLI provider need the CLI to stop after one pass; enforced by prompt
    only today.
+
+## Addendum (2026-10-05, board 31 "Agent progress")
+
+**Status mechanism: narration, not a tool.** The panel no longer streams text or live tokens.
+While a turn runs it shows one status line (`AgentStatus`): the agent's own progress note, else
+the running tool described from its input (`stepLabel(call, names)`: "Adding 12 layers in
+Pricing", "Editing 6 layers in Hero", "Copying Home", "Reading the Home page", "Exporting PNG"),
+else "Thinking…". The system prompt and `kimo-design` skill ask the model to write one short line
+before each tool call; `ProgressTracker` (`src/progress.ts`) treats the text streamed since the
+last tool call as the note (only complete lines or sentences, so a reply never shows word by
+word) and `replyOf(messages)` takes the text after the last tool call as the reply, shown when
+the turn ends. The CLI engine keeps only that final segment as the turn's assistant message.
+
+Why not a `kimo_status` tool or an MCP notification: a tool costs a model round trip and tokens
+per step, shows up in every MCP client's tool list, and a notification has no portable way for
+the model to emit it across API providers and three CLIs. Narration needs nothing new on the wire:
+API streams and CLI stdout already arrive as `text_delta` / `step_start` events, so it works the
+same for every provider, and it degrades to tool-derived labels when a model writes no notes.
+Thinking text is never used.
+
+Also: steps fold behind an "N steps" toggle (auto-open on a failure, not remembered); MessageMeta
+shows on hover only; a `BATCH_TOO_LARGE` step (ADR 0013 addendum 3) is dropped from the steps
+list; each landed edit flashes its top-most changed layers on the canvas
+(`AgentCanvasProps.landed`, the placeholder-flash ring in the persona hue) and the status line's
+Follow chip zooms to them; canvas agent labels show the agent's name only.
+

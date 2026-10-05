@@ -17,6 +17,8 @@ export * from "./scene"
 export {
   type AgentSummary,
   BUILTIN_STYLES,
+  batchTooLarge,
+  newLayerCount,
   type StylePreset,
   type SvgImporter,
   subtreeDocument,

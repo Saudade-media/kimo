@@ -47,6 +47,7 @@ import {
   newSession,
   newSessionId,
   type OpGroup,
+  ProgressTracker,
   type PromptNodeView,
   type PromptRunState,
   type ProviderConfig,
@@ -56,6 +57,7 @@ import {
   planRegenerate,
   planSideBySide,
   type ReviewDecision,
+  replyOf,
   resolveRuntime,
   revertCalls,
   runChildren,
@@ -65,6 +67,8 @@ import {
   type SessionMeta,
   type Skill,
   type SkillCatalog,
+  START_STATUS,
+  type StepNames,
   shimLaunch,
   sumCosts,
   supportsThinkingControl,
@@ -167,6 +171,8 @@ export interface CanvasAgentState {
   }[]
   cursors: { origin: string; nodeId: string; text: string; state: AgentMarkState }[]
   rejections: { key: string; origin: string; nodeId: string; text: string }[]
+  /** Board 31 landing flash: the top-most layers each successful edit changed (newest last). */
+  landed: { key: string; origin: string; ids: string[] }[]
 }
 
 export type PanelMenu = "model" | "skills" | "mode" | null
@@ -293,7 +299,8 @@ export interface AgentPanelOptions {
   nodeName?(id: string): string | undefined
   /** Board 27 §1: the active page (null for a one-page document), for the system context. */
   activePage?(): { id: string; name: string; count: number } | null
-  /** Write mark text for a step ("Editing · Card"). */
+  /** A node's parent id (null at top level): step labels, Follow and landing flashes. */
+  parentOf?(id: string): string | null
   now?(): number
 }
 
@@ -370,11 +377,7 @@ export function messagesFromTurns(
             s.state = env.ok ? "done" : "failed"
           } catch {}
         }
-    const text = t.messages
-      .filter((m) => m.role === "assistant")
-      .map(textOf)
-      .filter(Boolean)
-      .join("\n\n")
+    const text = replyOf(t.messages)
     out.push({
       kind: "agent",
       id: `${t.id}:a`,
@@ -523,7 +526,14 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let abort: AbortController | null = null
   let composerState: AgentComposerView["state"] = "idle"
   let modeRun: ModeRunView | null = null
-  let canvas: CanvasAgentState = { live: [], info: {}, scopes: [], cursors: [], rejections: [] }
+  let canvas: CanvasAgentState = {
+    live: [],
+    info: {},
+    scopes: [],
+    cursors: [],
+    rejections: [],
+    landed: [],
+  }
   let undoneTurns: string[] = []
   let liveUsage: Usage = { ...ZERO_USAGE }
   let liveCost: number | null = 0
@@ -554,6 +564,39 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       return d?.billing ?? "subscription"
     }
     return providers.find((p) => p.id === sel.provider)?.free ? "local" : "api"
+  }
+
+  /** Layer names for step labels: undefined when unnamed (the shell falls back to the id). */
+  const layerName = (id: string): string | undefined => {
+    const n = o.nodeName?.(id)
+    return n && n !== id ? n : undefined
+  }
+  const stepNames: StepNames = {
+    name: layerName,
+    parentName: (id) => {
+      const p = o.parentOf?.(id)
+      return p ? layerName(p) : undefined
+    },
+  }
+
+  /** The top-most of `ids` (drops ids whose ancestor is listed too), at most `max`. */
+  function topMost(ids: readonly string[], max = 24): string[] {
+    const set = new Set(ids)
+    const out: string[] = []
+    for (const id of ids) {
+      let p = o.parentOf?.(id) ?? null
+      let covered = false
+      for (let guard = 0; p && guard < 256; guard++) {
+        if (set.has(p)) {
+          covered = true
+          break
+        }
+        p = o.parentOf?.(p) ?? null
+      }
+      if (!covered && !out.includes(id)) out.push(id)
+      if (out.length >= max) break
+    }
+    return out
   }
 
   function attachments(): AttachmentChipView[] {
@@ -860,7 +903,13 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           ...canvas,
           cursors: [
             ...canvas.cursors.filter((c) => c.origin !== origin),
-            { origin, nodeId: target, text: `${e.label.toLowerCase()}…`, state: "working" },
+            // Board 31: the canvas label is the agent's name only; status lives in the panel.
+            {
+              origin,
+              nodeId: target,
+              text: canvas.info[origin]?.label ?? "Kimo",
+              state: "working",
+            },
           ],
         }
     } else if (e.type === "step_end") {
@@ -871,6 +920,14 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           ...canvas,
           info: { ...canvas.info, [origin]: { ...inf, ops: inf.ops + (changed ? 1 : 0) } },
         }
+      }
+      if (e.ok && e.changed.length && e.undoToken) {
+        const ids = topMost(e.changed)
+        if (ids.length)
+          canvas = {
+            ...canvas,
+            landed: [...canvas.landed.slice(-7), { key: `${origin}:${e.callId}`, origin, ids }],
+          }
       }
       if (!e.ok && (e.errorCode === "OUT_OF_SCOPE" || e.errorCode === "PERMISSION_DENIED")) {
         const cursor = canvas.cursors.find((c) => c.origin === origin)
@@ -1005,6 +1062,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         signal: i.signal,
         onEvent: i.onEvent,
         now,
+        names: stepNames,
       })
     }
     const provider = providerFor(rt, resolved.config)
@@ -1024,6 +1082,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       onEvent: i.onEvent,
       skillsUsed: i.skills.map((s) => s.name),
       providerLabel: rt.labelOf(i.model.provider),
+      names: stepNames,
       ...(resolved.config.free ? { free: true } : {}),
       ...(rt.online ? { online: rt.online } : {}),
       ...(rt.waitForOnline ? { waitForOnline: rt.waitForOnline } : {}),
@@ -1083,30 +1142,61 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     messages = messages.map((m) => (m.kind === "agent" && m.id === id ? patch(m) : m))
   }
 
-  /** AgentEvent → thread view for the lead's message `msgId`. */
+  /**
+   * AgentEvent → thread view for the lead's message `msgId` (board 31): streamed text feeds the
+   * live status line (the agent's notes) and is not shown; the reply lands at turn end
+   * (`finishTurn`). A BATCH_TOO_LARGE refusal is the agent's own correction: it never shows as a
+   * step, a failure or a card.
+   */
   function threadHandler(msgId: string, origin: string) {
-    let committed = ""
+    const tracker = new ProgressTracker()
+    const fresh = () => ({
+      status: START_STATUS.text,
+      source: START_STATUS.source,
+      startedAt: now(),
+      follow: [] as string[],
+    })
+    const patchProgress = (
+      patch: Partial<NonNullable<Extract<AgentMessageView, { kind: "agent" }>["progress"]>>,
+    ) =>
+      updateAgentMessage(msgId, (m) => ({
+        ...m,
+        progress: {
+          ...(m.progress ?? fresh()),
+          status: tracker.status.text,
+          source: tracker.status.source,
+          ...patch,
+        },
+      }))
     return (e: AgentEvent) => {
       trackCanvas(origin, e)
       switch (e.type) {
         case "turn_start":
           liveUsage = { ...ZERO_USAGE }
           liveCost = 0
-          updateAgentMessage(msgId, (m) => ({ ...m, turnId: e.turnId }))
+          updateAgentMessage(msgId, (m) => ({
+            ...m,
+            turnId: e.turnId,
+            progress: m.progress ?? fresh(),
+          }))
           break
         case "text_delta":
-          updateAgentMessage(msgId, (m) => ({ ...m, text: m.text + e.text }))
+          tracker.text(e.text)
+          patchProgress({})
           break
         case "discard_partial":
-          updateAgentMessage(msgId, (m) => ({ ...m, text: committed }))
+          tracker.discard()
+          patchProgress({})
           break
         case "message_end":
-          committed =
-            messages.find((m) => m.id === msgId)?.kind === "agent"
-              ? (messages.find((m) => m.id === msgId) as { text: string }).text
-              : committed
+          tracker.messageEnd()
           break
-        case "step_start":
+        case "step_start": {
+          tracker.step(e.label)
+          const cursor = canvas.cursors.find((c) => c.origin === origin)
+          const cur = messages.find((m) => m.id === msgId)
+          const follow = cur?.kind === "agent" ? (cur.progress?.follow ?? []) : []
+          patchProgress(follow.length || !cursor ? {} : { follow: [cursor.nodeId] })
           updateAgentMessage(msgId, (m) => ({
             ...m,
             steps: [
@@ -1121,7 +1211,15 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
             ],
           }))
           break
+        }
         case "step_end":
+          if (!e.ok && e.errorCode === "BATCH_TOO_LARGE") {
+            updateAgentMessage(msgId, (m) => ({
+              ...m,
+              steps: m.steps.filter((s) => s.callId !== e.callId),
+            }))
+            break
+          }
           updateAgentMessage(msgId, (m) => ({
             ...m,
             steps: m.steps.map((s) =>
@@ -1138,6 +1236,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
                 : s,
             ),
           }))
+          if (e.ok && e.changed.length && e.undoToken) {
+            const ids = topMost(e.changed)
+            if (ids.length) patchProgress({ follow: ids })
+          }
           break
         case "usage":
           liveUsage = e.usage
@@ -1212,9 +1314,12 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       record.error &&
       !(record.status === "stopped" && record.opsApplied === 0 && false)
     updateAgentMessage(msgId, (m) => {
-      const { card: _c, ...rest } = m
+      const { card: _c, progress: _p, ...rest } = m
       return {
         ...rest,
+        // Board 31: the reply appears now — the text after the last tool call (mode runs set
+        // their own summary first).
+        text: rest.text || replyOf(record.messages),
         turnId: record.id,
         streaming: false,
         steps: rest.steps.map((st) => (st.state === "running" ? { ...st, state: "failed" } : st)),
@@ -1323,7 +1428,20 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         skills: skills.map((k) => k.name),
         fromHome: !!opts.fromHome,
       },
-      { kind: "agent", id: aid, turnId: "", text: "", streaming: true, steps: [] },
+      {
+        kind: "agent",
+        id: aid,
+        turnId: "",
+        text: "",
+        streaming: true,
+        steps: [],
+        progress: {
+          status: START_STATUS.text,
+          source: START_STATUS.source,
+          startedAt: now(),
+          follow: [],
+        },
+      },
     ]
     if (!opts.regenerateOf) {
       text = ""
@@ -1983,11 +2101,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       },
     })
     setLive(origin, "Kimo", "teal", false)
-    const summary = record.messages
-      .filter((m) => m.role === "assistant")
-      .map(textOf)
-      .join(" ")
-      .trim()
+    const summary = replyOf(record.messages)
     if (modeRun?.iterate) {
       const passes = [
         ...modeRun.iterate.passes,
@@ -2401,7 +2515,20 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           skills: [],
           fromHome: false,
         },
-        { kind: "agent", id: aid, turnId: "", text: "", streaming: true, steps: [] },
+        {
+          kind: "agent",
+          id: aid,
+          turnId: "",
+          text: "",
+          streaming: true,
+          steps: [],
+          progress: {
+            status: START_STATUS.text,
+            source: START_STATUS.source,
+            startedAt: now(),
+            follow: [],
+          },
+        },
       ]
       composerState = "streaming"
       abort = new AbortController()

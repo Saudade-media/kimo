@@ -19,6 +19,7 @@ import { isAbort, isProviderError, ProviderError } from "./errors"
 import type { ModelInfo } from "./models"
 import { PlaceholderTracker } from "./placeholder"
 import { type CostEstimate, estimateCost } from "./pricing"
+import { type StepNames, stepLabel } from "./progress"
 import type { Provider } from "./providers/provider"
 import type { ToolCallRequest, ToolHost, ToolOutcome } from "./toolhost"
 import {
@@ -137,26 +138,8 @@ export interface RunTurnOptions {
   free?: boolean
   /** Label for cards ("Anthropic"). */
   providerLabel?: string
-}
-
-const STEP_VERBS: Record<string, string> = {
-  kimo_get_state: "Reading state",
-  kimo_query: "Reading",
-  kimo_apply_ops: "Editing",
-  kimo_render: "Rendering",
-  kimo_get_variables: "Reading variables",
-  kimo_list_components: "Reading components",
-  kimo_read_docs: "Reading docs",
-  kimo_find_space: "Finding space",
-  kimo_validate: "Validating",
-  kimo_history: "Undo",
-}
-
-/** AgentStep label ("Editing · Insert Waitlist Form"). */
-export function stepLabel(call: ToolCallRequest): string {
-  const verb = STEP_VERBS[call.name] ?? call.name.replace(/^kimo_/, "").replace(/_/g, " ")
-  const label = typeof call.input.label === "string" ? call.input.label : ""
-  return label ? `${verb} · ${label}` : verb
+  /** Layer names for step labels ("Editing 6 layers in Pricing"). */
+  names?: StepNames
 }
 
 export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
@@ -295,7 +278,7 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
           type: "step_start",
           callId: call.id,
           tool: call.name,
-          label: stepLabel(req),
+          label: stepLabel(req, o.names),
           input: call.input,
         })
         let out: ToolOutcome

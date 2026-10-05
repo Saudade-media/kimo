@@ -19,11 +19,23 @@ import {
 /** Max ops per kimo_apply_ops call (larger edits: several calls with baseRevision). */
 export const MAX_OPS_PER_CALL = 500
 
+/**
+ * Max freshly authored layers per kimo_apply_ops call (board 31 "Batch limit", ADR 0013 §4.6):
+ * the number of `insert` ops — the nodes whose content the agent writes out. Copies (`copy` of a
+ * subtree, frame or page), `instantiate` and page duplicates are never counted, whatever their
+ * size; edits to existing layers (update, replace, move, delete, overrides…) are not limited.
+ * Over the limit the call fails with BATCH_TOO_LARGE and nothing is applied, so agents build a
+ * design step by step: a skeleton first, then one section per call. Every caller of this tool
+ * is an agent (built-in panel, Claude Code / Codex / Gemini CLI, any MCP client); user actions
+ * (paste, import, duplicate) never go through it.
+ */
+export const AGENT_MAX_NEW_LAYERS = 40
+
 export const kimoApplyOps = defineTool({
   name: "kimo_apply_ops",
   title: "Edit with typed ops",
   description:
-    "The way to change a document. Sends an ordered list of typed ops applied atomically: all succeed or nothing changes. Ops: insert, update, replace, move, delete, copy, instantiate, make_component, detach, set_override, reset_override, set_args, swap_instance, declare_prop, remove_prop, set_slot, set_variables, set_theme_axes, create_variable, update_variable, rename_variable, delete_variable, set_theme_pin, theme_axis. Give new nodes a key and reference them later in the same call as @key (e.g. insert a frame with key hero, then insert a text node with parent @hero; a text node's string goes in content, not text). Pass baseRevision from your last read to avoid overwriting edits made since (REVISION_CONFLICT). dryRun=true validates and returns the diff without committing; render=true attaches a PNG of the changed top-level frames after commit. Deletes and other destructive ops may ask the user first. Read kimo_read_docs path=ops for examples.",
+    "The way to change a document. Sends an ordered list of typed ops applied atomically: all succeed or nothing changes. Ops: insert, update, replace, move, delete, copy, instantiate, make_component, detach, set_override, reset_override, set_args, swap_instance, declare_prop, remove_prop, set_slot, set_variables, set_theme_axes, create_variable, update_variable, rename_variable, delete_variable, set_theme_pin, theme_axis. Give new nodes a key and reference them later in the same call as @key (e.g. insert a frame with key hero, then insert a text node with parent @hero; a text node's string goes in content, not text). Pass baseRevision from your last read to avoid overwriting edits made since (REVISION_CONFLICT). dryRun=true validates and returns the diff without committing; render=true attaches a PNG of the changed top-level frames after commit. At most 40 inserts per call (BATCH_TOO_LARGE): a skeleton first, then one section per call. Copy, instantiate and edits are never limited: make a variant by copying the page. Deletes and other destructive ops may ask the user first. Read kimo_read_docs path=ops.",
   input: Obj({
     docId,
     ops: Arr(WireOpSchema, {

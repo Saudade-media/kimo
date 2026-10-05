@@ -1,0 +1,53 @@
+/*
+ * StepsToggle: desing.pen 31 "Agent progress" › Components › StepsToggle (RWTLi),
+ * StepsToggle/Open (ZBNJa).
+ * row, gap 4, padding [0, 0, 0, 34], alignItems center
+ *   ├ Chevron 12 × 12 chevron-right text-tertiary (open: chevron-down text-secondary)
+ *   ├ Label   sans 11 / 500 text-tertiary (open: text-secondary)
+ *   └ Failed  sans 11 / 500 danger ("· 1 failed", only when a step failed)
+ */
+.kimo-steps-toggle {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 34px;
+  border: 0;
+  background: none;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-steps-toggle--open,
+.kimo-steps-toggle:hover {
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-steps-toggle:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
+.kimo-steps-toggle__chevron {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-steps-toggle__label,
+.kimo-steps-toggle__failed {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+.kimo-steps-toggle__failed {
+  color: var(--kimo-danger);
+}

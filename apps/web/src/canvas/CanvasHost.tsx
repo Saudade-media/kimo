@@ -22,6 +22,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react"
 import { activeRoots } from "../editor/pages/model"
 import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
@@ -125,18 +126,24 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       return [{ id, name, kind, pins }]
     })
   }, [store, shape, page, header])
-  const [compDom, setCompDom] = useState<ComponentDomOverlay | null>(null)
+  // Board 31 "Position lock": the DOM overlays that follow the viewport (component labels and
+  // slot badges, agent tags / cursors / chips) live in external stores read with
+  // useSyncExternalStore, so a viewport change re-renders them synchronously (SyncLane, before
+  // the frame is painted) instead of a scheduler task later — they never trail the canvas.
+  const compStore = useMemo(() => domStore<ComponentDomOverlay | null>(null), [])
+  const compDom = useSyncExternalStore(compStore.subscribe, compStore.get)
   // M6: agent DOM (placeholder tags, scope tags, cursors, prompt footers…), re-rendered only
   // when its projection changes (nothing at all while the document has no agent surfaces).
-  const [agentDom, setAgentDom] = useState<AgentDomState>(EMPTY_DOM)
+  const agentStore = useMemo(() => domStore<AgentDomState>(EMPTY_DOM), [])
+  const agentDom = useSyncExternalStore(agentStore.subscribe, agentStore.get)
   const agentKey = useRef("")
   const refreshAgentDom = useCallback(() => {
     const d = ctl.current?.agentDom() ?? EMPTY_DOM
     const key = d === EMPTY_DOM ? "" : JSON.stringify(d)
     if (key === agentKey.current) return
     agentKey.current = key
-    setAgentDom(d)
-  }, [])
+    agentStore.set(d)
+  }, [agentStore])
   const hovered = useUi(uiStore, (s) => s.hovered)
   // Harness / imperative override of the agent state (`CanvasHandle.setAgentCanvas`).
   const [agentOverride, setAgentOverride] = useState<AgentCanvasProps | null>(null)
@@ -155,8 +162,8 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     const key = empty ? "" : JSON.stringify(d)
     if (key === compKey.current) return
     compKey.current = key
-    setCompDom(empty ? null : d)
-  }, [])
+    compStore.set(empty ? null : d)
+  }, [compStore])
 
   // Labels are placed for one viewport (`placed`); a pan at the same zoom only translates the
   // whole layer (one style write instead of one per label). Labels outside the placed area
@@ -685,6 +692,24 @@ function withAgentCanvasTheme(theme: OverlayTheme, el: HTMLElement | null): Over
     if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v)) agentCanvas[key as keyof AgentCanvasTheme] = v
   }
   return { ...theme, agentCanvas }
+}
+
+/** A tiny external store (one value, listeners) for useSyncExternalStore-driven overlays. */
+function domStore<T>(initial: T) {
+  let value = initial
+  const listeners = new Set<() => void>()
+  return {
+    get: () => value,
+    set: (v: T) => {
+      if (Object.is(v, value)) return
+      value = v
+      for (const l of listeners) l()
+    },
+    subscribe: (l: () => void) => {
+      listeners.add(l)
+      return () => listeners.delete(l)
+    },
+  }
 }
 
 /** The renderer's own error, or a WASM_LOAD_FAILED wrapper for anything else it threw. */

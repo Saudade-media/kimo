@@ -11,6 +11,7 @@ import type { CliDetection } from "@kimo/ai-agent"
 import {
   AgentErrorCard,
   type AgentErrorCardAction,
+  AgentStatus,
   AgentStep,
   ApprovalCard,
   AttachmentChip,
@@ -23,6 +24,7 @@ import {
   MessageMeta,
   ModeChip,
   RefusalCard,
+  StepsToggle,
 } from "@kimo/ui"
 import {
   BookOpen,
@@ -59,7 +61,7 @@ import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
 import { markOf } from "./controller"
 import { costWarningCopy } from "./cost-warning"
 import { FirstRun } from "./FirstRun"
-import { costLabel, durationLabel, headerCostLabel, tokensLabel } from "./format"
+import { costLabel, durationLabel, elapsedLabel, headerCostLabel, tokensLabel } from "./format"
 import { useAgentPanelState } from "./hooks"
 import { ModelMenu, ModeMenu, SkillsMenu } from "./Menus"
 import { PlanCard, ReviewCard } from "./Modes"
@@ -83,6 +85,8 @@ export interface AgentPanelProps {
   parentNameOf?: (id: string) => string | undefined
   /** First run "Have Claude Code?…" hint (desktop only). Default: the host (Tauri → desktop). */
   platform?: "desktop" | "web"
+  /** Board 31 Follow chip: zoom the canvas to these layers. Omitted: no chip. */
+  onFollow?: (ids: string[]) => void
 }
 
 const OP_ICONS: Record<ApprovalOpIcon, typeof Trash2> = {
@@ -139,6 +143,7 @@ export function AgentPanel({
   nodeNameOf,
   parentNameOf,
   platform = inTauri() ? "desktop" : "web",
+  onFollow,
 }: AgentPanelProps) {
   const state = useAgentPanelState(controller)
   const thread = useRef<HTMLDivElement>(null)
@@ -148,7 +153,17 @@ export function AgentPanel({
 
   // Keep the newest content in view while streaming.
   const last = state.messages[state.messages.length - 1]
-  const lastLen = last ? last.text.length + (last.kind === "agent" ? last.steps.length : 0) : 0
+  const lastLen = last
+    ? last.text.length + (last.kind === "agent" ? last.steps.length + (last.progress ? 1 : 0) : 0)
+    : 0
+  // Board 31: the status line's elapsed clock ticks every second while a turn runs.
+  const [tick, setTick] = useState(() => now())
+  useEffect(() => {
+    if (!state.busy) return
+    setTick(now())
+    const t = setInterval(() => setTick(now()), 1000)
+    return () => clearInterval(t)
+  }, [state.busy, now])
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on new content.
   useLayoutEffect(() => {
     const el = thread.current
@@ -263,7 +278,9 @@ export function AgentPanel({
                 <ThreadItem
                   key={m.id}
                   m={m}
-                  latest={i === state.messages.length - 1 || i === state.messages.length - 2}
+                  nowMs={tick}
+                  waiting={i === state.messages.length - 1 && state.approvals.length > 0}
+                  {...(onFollow ? { onFollow } : {})}
                   state={state}
                   controller={controller}
                   onCopy={copy}
@@ -453,19 +470,24 @@ export function AgentPanel({
 
 function ThreadItem({
   m,
-  latest,
+  nowMs,
+  waiting,
+  onFollow,
   state,
   controller,
   onCopy,
   onEditRequest,
 }: {
   m: AgentMessageView
-  latest: boolean
+  nowMs: number
+  waiting: boolean
+  onFollow?: (ids: string[]) => void
   state: AgentPanelViewState
   controller: AgentPanelControllerExt
   onCopy(text: string): void
   onEditRequest(turnId: string): void
 }) {
+  const [stepsToggled, setStepsToggled] = useState<boolean | null>(null)
   if (m.kind === "user")
     return (
       <div className="agent-panel__user" data-testid="agent-user-message">
@@ -496,7 +518,6 @@ function ThreadItem({
       </div>
     )
   const card = m.card
-  const showSteps = m.streaming || latest || !!card
   const undone = state.undoneTurns.includes(m.turnId)
   const actions: AgentErrorCardAction[] = (card?.actions ?? [])
     .concat(card?.kind === "offline" && m.streaming ? ["stop"] : [])
@@ -513,48 +534,92 @@ function ThreadItem({
         controller.cardAction(m.turnId, id)
       },
     }))
+  const failed = m.steps.filter((s) => s.state === "failed").length
+  // Board 31 Steps toggle: folded by default, open by itself when a step failed, not remembered.
+  const stepsOpen = stepsToggled ?? failed > 0
+  const progress = m.progress
+  const running = m.steps.findLast((s) => s.state === "running")
+  const status = waiting
+    ? "Waiting for your approval"
+    : progress && progress.source !== "start"
+      ? progress.status
+      : running
+        ? running.label.replace(/…$/, "")
+        : (progress?.status ?? "Thinking…")
   return (
-    <div className="agent-panel__agent" data-testid="agent-message" data-turn={m.turnId}>
-      {showSteps && m.steps.length > 0 && (
-        <div className="agent-panel__steps" data-testid="agent-steps">
-          {m.steps.map((s) => (
-            <AgentStep key={s.callId} status={s.state} data-tool={s.tool}>
-              {s.label}
-            </AgentStep>
-          ))}
-        </div>
-      )}
-      {card?.kind !== "refusal" &&
-        (m.text || (m.streaming && m.steps.length === 0) || (!card && !m.streaming)) && (
-          <Message
-            from="agent"
-            streaming={m.streaming}
-            markState={markOf(m.streaming, m.steps, card)}
-            data-meta-hover=""
-          >
-            {m.text}
-          </Message>
-        )}
-      {m.streaming && state.live && (
-        <MessageMeta
-          streaming
-          tokens={`${tokensLabel(state.live.tokensIn, state.live.tokensOut)}${state.showCost && state.live.costUsd !== null && state.composer.model && !state.composer.model.provider.startsWith("cli:") ? ` · ${costLabel({ costUsd: state.live.costUsd, billing: "api" })}` : ""}`}
-          data-testid="agent-streaming-meta"
-        />
-      )}
-      {!m.streaming && m.meta && (
-        <MessageMeta
-          data-testid="agent-message-meta"
-          tokens={tokensLabel(m.meta.tokensIn, m.meta.tokensOut)}
-          {...(state.showCost || m.meta.billing === "subscription"
-            ? { cost: costLabel(m.meta) }
+    <div
+      className="agent-panel__agent"
+      data-testid="agent-message"
+      data-turn={m.turnId}
+      {...(m.streaming ? {} : { "data-meta-hover": "" })}
+    >
+      {m.streaming ? (
+        <AgentStatus
+          data-testid="agent-status"
+          data-pen="qi4M9"
+          data-source={
+            progress?.source === "start" && running ? "tool" : (progress?.source ?? "start")
+          }
+          status={status}
+          elapsed={elapsedLabel(nowMs - (progress?.startedAt ?? nowMs))}
+          {...(m.steps.length
+            ? { steps: `${m.steps.length} step${m.steps.length === 1 ? "" : "s"}` }
             : {})}
-          duration={durationLabel(m.meta.wallMs)}
-          onCopy={() => onCopy(m.text)}
-          {...(m.meta.canRegenerate
-            ? { onRegenerate: () => void controller.regenerate(m.turnId) }
+          markState={
+            waiting
+              ? "waiting"
+              : state.composer.state === "paused"
+                ? "paused"
+                : m.steps.length === 0 && progress?.source !== "note"
+                  ? "thinking"
+                  : "working"
+          }
+          {...(onFollow && progress?.follow.length
+            ? { onFollow: () => onFollow(progress.follow) }
             : {})}
         />
+      ) : (
+        <>
+          {card?.kind !== "refusal" && (m.text || !card) && (
+            <Message from="agent" markState={markOf(false, m.steps, card)}>
+              {m.text}
+            </Message>
+          )}
+          {m.steps.length > 0 && (
+            <StepsToggle
+              data-testid="agent-steps-toggle"
+              data-pen={stepsOpen ? "ZBNJa" : "RWTLi"}
+              count={m.steps.length}
+              failed={failed}
+              open={stepsOpen}
+              onClick={() => setStepsToggled(!stepsOpen)}
+            />
+          )}
+          {stepsOpen && m.steps.length > 0 && (
+            <div className="agent-panel__steps" data-testid="agent-steps">
+              {m.steps.map((s) => (
+                <AgentStep key={s.callId} status={s.state} data-tool={s.tool}>
+                  {s.label}
+                </AgentStep>
+              ))}
+            </div>
+          )}
+          {m.meta && (
+            <MessageMeta
+              data-testid="agent-message-meta"
+              reveal="hover"
+              tokens={tokensLabel(m.meta.tokensIn, m.meta.tokensOut)}
+              {...(state.showCost || m.meta.billing === "subscription"
+                ? { cost: costLabel(m.meta) }
+                : {})}
+              duration={durationLabel(m.meta.wallMs)}
+              onCopy={() => onCopy(m.text)}
+              {...(m.meta.canRegenerate
+                ? { onRegenerate: () => void controller.regenerate(m.turnId) }
+                : {})}
+            />
+          )}
+        </>
       )}
       {card && (
         <div className="agent-panel__indent">

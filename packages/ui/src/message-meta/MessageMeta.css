@@ -70,6 +70,18 @@
   opacity: 1;
 }
 
+/* Board 31 "Hover meta": invisible (space kept) until the agent turn is hovered or focused. */
+.kimo-msg-meta--reveal-hover {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+[data-meta-hover]:hover .kimo-msg-meta--reveal-hover,
+[data-meta-hover]:focus-within .kimo-msg-meta--reveal-hover,
+.kimo-msg-meta--reveal-hover:focus-within {
+  opacity: 1;
+}
+
 .kimo-msg-meta__spinner {
   display: block;
   flex: none;

@@ -173,10 +173,25 @@ const script: Script = (req) => {
     }
   if (text.includes("rate") && window.__m6.rateLimited++ === 0)
     return { error: "rate_limit", status: 429, retryAfterMs: 1500 }
+  // Board 31: a note before the tool call (the live status), then a slow final reply.
+  if (text.includes("slow") && !afterTool(req))
+    return {
+      text: "Adding the waitlist form\n",
+      tools: [
+        {
+          name: "kimo_apply_ops",
+          input: {
+            docId: docId(),
+            ops: [{ op: "update", id: "CtaRow0001", set: { name: "CTA Row" } }],
+          },
+        },
+      ],
+      usage: { inputTokens: 1400, outputTokens: 90 },
+    }
   if (text.includes("slow"))
     return {
-      text: "Adding an email field and a black Join button that reuses Button/Primary, then I'll wire the form.",
-      delayMs: 120,
+      text: "Added an email field and a black Join button that reuses Button/Primary.",
+      delayMs: 600,
       usage: { inputTokens: 2800, outputTokens: 312 },
     }
   if (text.includes("warm") && !afterTool(req))
@@ -284,6 +299,7 @@ const controller = createAgentPanelController({
   fileName: "Marketing site.kimo",
   docId,
   nodeName: (id) => (store.getNode(id) as { name?: string } | undefined)?.name,
+  parentOf: (id) => (store.getNode(id) as { parent?: string | null } | undefined)?.parent ?? null,
   frameBox: (id) => {
     const n = store.getNode(id) as unknown as
       | { name: string; x: number; y: number; w: number; h: number }
@@ -301,6 +317,7 @@ declare global {
       stats: typeof agentMarkRendererStats
       copied: string[]
       usage: typeof harnessUsage
+      followed: string[][]
     }
   }
 }
@@ -311,6 +328,7 @@ window.__m6 = {
   stats: agentMarkRendererStats,
   copied: [],
   usage: harnessUsage,
+  followed: [],
 }
 
 function PanelScene() {
@@ -341,6 +359,7 @@ function PanelScene() {
           return p?.name ?? "Page 1"
         }}
         onCopy={(t) => window.__m6.copied.push(t)}
+        onFollow={(ids) => window.__m6.followed.push(ids)}
       />
       <span hidden data-testid="busy">
         {String(state.busy)}

@@ -75,7 +75,7 @@ describe("agent loop", () => {
     // Opus 5.5: $4 / $20 per MTok.
     expect(rec.cost.usd).toBeCloseTo((2200 * 4 + 150 * 20) / 1e6, 10)
     const step = o.events.find((e) => e.type === "step_start")
-    expect(step && step.type === "step_start" && step.label).toBe("Editing · Insert Waitlist Form")
+    expect(step && step.type === "step_start" && step.label).toBe("Adding 1 layer")
     const end = o.events.find((e) => e.type === "step_end")
     expect(end && end.type === "step_end" && end.undoToken).toBe(rec.opGroups[0]?.undoToken)
     // Second request carries the tool result (the envelope JSON).

@@ -134,7 +134,6 @@ export function AgentCanvasLayer({
           chip={chip}
           project={project}
           fadeMs={fadeMs}
-          store={controller.store}
           view={view}
           stack={
             state.chips
@@ -160,7 +159,6 @@ function Attribution({
   chip,
   project,
   fadeMs,
-  store,
   view,
   stack,
   reservedTop,
@@ -169,7 +167,6 @@ function Attribution({
   chip: AgentChipView
   project: AgentCanvasLayerProps["project"]
   fadeMs: number
-  store: AgentsControllerExt["store"]
   view: { w: number; h: number }
   stack: number
   reservedTop: number
@@ -181,7 +178,6 @@ function Attribution({
   if (!id) return null
   const box = project(id)
   if (!box) return null
-  const name = (store?.getNode(id) as { name?: string } | undefined)?.name ?? id
   const idle = Date.now() - chip.lastActivityAt > CURSOR_IDLE_MS && chip.state !== "editing"
   const place = view.w > 0 ? placeCursor(box, view, { stack, reservedTop }) : null
   const markState = chip.state === "editing" ? "working" : "idle"
@@ -209,9 +205,8 @@ function Attribution({
         style={{ left: box.x, top: box.y - 21 }}
       >
         <AgentMark size={12} state={markState} />
-        <span className="agents-attribution__tag-label">
-          {chip.label} · {name}
-        </span>
+        {/* Board 31 "Canvas label": the agent's name only. */}
+        <span className="agents-attribution__tag-label">{chip.label}</span>
       </div>
       {/* Agent Cursor (IJH2i; board 24 g placement): anchor = node top-left + (4, 4) */}
       {!idle && place?.kind === "docked" && (
@@ -223,9 +218,7 @@ function Attribution({
           onClick={() => onPanTo?.(id)}
         >
           <AgentMark size={12} state={markState} />
-          <span className="agents-cursor-docked__label">
-            {chip.label} · {name}
-          </span>
+          <span className="agents-cursor-docked__label">{chip.label}</span>
           <AgentIcon name={place.arrow ?? "arrow-right"} size={12} />
         </button>
       )}
@@ -240,9 +233,7 @@ function Attribution({
           <AgentIcon name="mouse-pointer-2" size={18} className="agents-cursor__pointer" />
           <div className="agents-cursor__pill">
             <AgentMark size={12} state="working" />
-            <span className="agents-cursor__label">
-              {chip.label} · editing {name}…
-            </span>
+            <span className="agents-cursor__label">{chip.label}</span>
           </div>
         </div>
       )}

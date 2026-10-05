@@ -193,6 +193,10 @@ export function useEditorAgentPanel({
         const n = store.getNode(id) as { name?: unknown } | undefined
         return n ? (str(n.name) ?? id) : undefined
       },
+      parentOf: (id) => {
+        const n = store.getNode(id) as { parent?: unknown } | undefined
+        return str(n?.parent) ?? null
+      },
       // Side by side: the original's box, moved down when the row of `n` variants would land
       // on other root frames (`sideBySideAnchor`, board ZFOQf `agblr`).
       frameBox: (id, n = 1) => {
@@ -269,6 +273,11 @@ export function useEditorAgentPanel({
           const n = session.store.getNode(id) as { parent?: unknown } | undefined
           const parent = str(n?.parent)
           return parent ? nodeNameIn(session, parent) : undefined
+        }}
+        onFollow={(ids) => {
+          // Board 31 Follow: one jump to the layers the agent last landed; the selection stays.
+          const live = ids.filter((id) => session.store.getNode(id))
+          if (live.length) canvas.current?.zoomToFit(live, 96)
         }}
       />
     ) : null

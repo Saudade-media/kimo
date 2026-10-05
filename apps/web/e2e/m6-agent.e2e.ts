@@ -87,7 +87,13 @@ export const scenarios: Scenario[] = [
       await page.locator("[data-testid=agent-message-meta]").first().waitFor()
       // Second turn streams slowly: the composer turns into Stop and typing queues.
       await send(page, "Now a slow waitlist reply")
-      await page.locator("[data-testid=agent-streaming-meta]").waitFor()
+      // Board 31: one live status line (the agent's note), no streamed text, no token meta.
+      await page.waitForFunction(
+        () =>
+          document.querySelector("[data-testid=agent-status] .kimo-agent-status__text")
+            ?.textContent === "Adding the waitlist form",
+      )
+      await page.locator("[data-testid=agent-status] .kimo-agent-status__follow").waitFor()
       expect(
         (await page.locator(".kimo-composer-agent__send--stop").count()) === 1,
         "Send becomes Stop while streaming",
@@ -97,12 +103,28 @@ export const scenarios: Scenario[] = [
           "Queue a follow-up — sent when this turn ends",
         "streaming placeholder",
       )
-      await page.waitForFunction(() => !!document.querySelector(".kimo-message__caret"))
+      expect(
+        (await page.locator("[data-testid=agent-streaming-meta]").count()) === 0 &&
+          (await page.locator(".kimo-message__caret").count()) === 0,
+        "no streaming meta, no caret",
+      )
+      // The running turn shows no message bubble (the reply lands when the turn ends).
+      expect(
+        (await page
+          .locator("[data-testid=agent-message]")
+          .last()
+          .locator(".kimo-message")
+          .count()) === 0,
+        "no streamed bubble while running",
+      )
       const agent = await token(page, "--kimo-agent")
+      const agentSoft = await token(page, "--kimo-agent-soft")
       const accent = await token(page, "--kimo-accent")
       const bgMuted = await token(page, "--kimo-bg-muted")
       const tertiary = await token(page, "--kimo-text-tertiary")
-      const c = checker(ctx, "Agent panel A (RH3G0)")
+      const secondary = await token(page, "--kimo-text-secondary")
+      const primary = await token(page, "--kimo-text-primary")
+      const c = checker(ctx, "Agent panel A (RH3G0) + board 31 AgentStatus (qi4M9)")
       const m = await measure(page, {
         panel: "[data-testid=right-panel]",
         header: ".agent-panel__header",
@@ -113,15 +135,27 @@ export const scenarios: Scenario[] = [
         thread: "[data-testid=agent-thread]",
         userBubble: ".kimo-message--user .kimo-message__bubble",
         userText: ".kimo-message--user .kimo-message__text",
+        turn: "[data-testid=agent-message]",
         agentRow: ".kimo-message--agent",
         mark: ".kimo-message--agent .kimo-agent-mark",
         agentBubble: ".kimo-message--agent .kimo-message__bubble",
         agentText: ".kimo-message--agent .kimo-message__text",
+        toggle: "[data-testid=agent-steps-toggle]",
+        toggleChevron: "[data-testid=agent-steps-toggle] .kimo-steps-toggle__chevron",
+        toggleLabel: "[data-testid=agent-steps-toggle] .kimo-steps-toggle__label",
         meta: "[data-testid=agent-message-meta]",
         metaText: "[data-testid=agent-message-meta] .kimo-msg-meta__text",
-        streaming: "[data-testid=agent-streaming-meta]",
-        spinner: "[data-testid=agent-streaming-meta] .kimo-msg-meta__spinner",
-        streamLabel: "[data-testid=agent-streaming-meta] .kimo-msg-meta__streaming",
+        status: "[data-testid=agent-status]",
+        statusMark: "[data-testid=agent-status] .kimo-agent-mark",
+        statusBody: "[data-testid=agent-status] .kimo-agent-status__body",
+        statusText: "[data-testid=agent-status] .kimo-agent-status__text",
+        statusMeta: "[data-testid=agent-status] .kimo-agent-status__meta",
+        elapsed: "[data-testid=agent-status] .kimo-agent-status__elapsed",
+        sep: "[data-testid=agent-status] .kimo-agent-status__sep",
+        steps: "[data-testid=agent-status] .kimo-agent-status__steps",
+        follow: "[data-testid=agent-status] .kimo-agent-status__follow",
+        followIcon: "[data-testid=agent-status] .kimo-agent-status__follow-icon",
+        followLabel: "[data-testid=agent-status] .kimo-agent-status__follow-label",
         wrap: ".agent-panel__composer-wrap",
         comp: "[data-testid=agent-composer]",
         input: "[data-testid=agent-composer] textarea",
@@ -156,6 +190,7 @@ export const scenarios: Scenario[] = [
         (m.thread?.x ?? 0) + 360 - 16,
       )
       c.box("Message/User › Text (U0ugt)", m.userText, { fs: 13, lh: 19 })
+      c.box("Agent Turn (O6NIQe)", m.turn, { gap: 8, w: 328 })
       c.box("Message/Agent (QqwyN)", m.agentRow, { gap: 10, w: 328 })
       c.box("Mark → AgentMark/24 (I3H68)", m.mark, { w: 24, h: 24 })
       c.box("Message/Agent › Bubble (Q285wt)", m.agentBubble, {
@@ -165,15 +200,97 @@ export const scenarios: Scenario[] = [
         w: 294,
       })
       c.box("Message/Agent › Text (U8u5Kz)", m.agentText, { fs: 13, lh: 20 })
+      c.box("StepsToggle (RWTLi)", m.toggle, { gap: 4, pad: [0, 0, 0, 34] })
+      c.box("StepsToggle › Chevron (pCl6G)", m.toggleChevron, { w: 12, h: 12, color: tertiary })
+      c.box("StepsToggle › Label (q4g2Im)", m.toggleLabel, {
+        fs: 11,
+        fw: "500",
+        lh: 13,
+        color: tertiary,
+      })
+      c.check(
+        "StepsToggle",
+        "y = bubble bottom + 8",
+        m.toggle?.y ?? 0,
+        (m.agentBubble?.y ?? 0) + (m.agentBubble?.h ?? 0) + 8,
+      )
       c.box("MessageMeta (S0S1S)", m.meta, { gap: 8, pad: [0, 0, 0, 34] })
       c.box("MessageMeta › Tokens (T5Zhsf)", m.metaText, {
         fs: 11,
         ff: "JetBrains Mono",
         color: tertiary,
       })
-      c.box("Streaming Meta (uZbJj)", m.streaming, { gap: 8, pad: [0, 0, 0, 34] })
-      c.box("Spinner (ZaiWE)", m.spinner, { w: 12, h: 12, color: agent })
-      c.box("Streaming label (o4vAN3)", m.streamLabel, { fs: 11, fw: "500", color: agent })
+      c.box("AgentStatus (qi4M9)", m.status, { gap: 10, w: 328 })
+      c.box("AgentStatus › Mark (C6V1t)", m.statusMark, { w: 24, h: 24 })
+      c.box("AgentStatus › Body (XEBMm)", m.statusBody, { gap: 2 })
+      c.box("AgentStatus › Status (fCmi9)", m.statusText, {
+        fs: 13,
+        fw: "500",
+        lh: 16,
+        color: primary,
+      })
+      c.box("AgentStatus › Meta (aQEF6)", m.statusMeta, { gap: 6 })
+      c.box("AgentStatus › Elapsed (hKuC6)", m.elapsed, {
+        fs: 11,
+        ff: "JetBrains Mono",
+        lh: 15,
+        color: tertiary,
+      })
+      c.box("AgentStatus › Sep (RYf5K)", m.sep, { w: 3, h: 3, bg: tertiary })
+      c.box("AgentStatus › Steps (lzQvF)", m.steps, { fs: 11, lh: 13, color: tertiary })
+      c.box("AgentStatus › Follow (U7Zfmz)", m.follow, {
+        h: 22,
+        gap: 4,
+        pad: [0, 8, 0, 6],
+        radius: 999,
+        bg: agentSoft,
+      })
+      c.box("Follow › Icon (PODho)", m.followIcon, { w: 12, h: 12, color: agent })
+      c.box("Follow › Label (VODpi)", m.followLabel, { fs: 11, fw: "500", lh: 13, color: agent })
+      c.check(
+        "AgentStatus",
+        "body width = 328 − 24 − follow − 2 × 10",
+        m.statusBody?.w ?? 0,
+        328 - 24 - (m.follow?.w ?? 0) - 20,
+      )
+      const statusText = await page
+        .locator("[data-testid=agent-status] .kimo-agent-status__elapsed")
+        .innerText()
+      expect(/^\d+:\d\d$/.test(statusText), `elapsed clock m:ss, got ${statusText}`)
+      // Hover meta: invisible (space kept) until the finished turn is hovered.
+      const metaOpacity = () =>
+        page.evaluate(
+          () =>
+            getComputedStyle(document.querySelector("[data-testid=agent-message-meta]") as Element)
+              .opacity,
+        )
+      await page.mouse.move(1200, 880)
+      await page.waitForTimeout(200)
+      c.check("MessageMeta", "opacity (not hovered)", await metaOpacity(), "0")
+      await page.locator("[data-testid=agent-message]").first().hover()
+      await page.waitForTimeout(200)
+      c.check("MessageMeta", "opacity (turn hovered)", await metaOpacity(), "1")
+      // Steps toggle: folded by default, opens on click (chevron-down, text-secondary).
+      expect((await page.locator("[data-testid=agent-steps]").count()) === 0, "steps folded")
+      await page.locator("[data-testid=agent-steps-toggle]").first().click()
+      await page.locator("[data-testid=agent-steps]").first().waitFor()
+      const opened = await measure(page, {
+        label: "[data-testid=agent-steps-toggle] .kimo-steps-toggle__label",
+        steps: "[data-testid=agent-steps]",
+      })
+      c.box("StepsToggle/Open › Label (fLKQc)", opened.label, { color: secondary })
+      c.box("Steps", opened.steps, { gap: 8 })
+      // Follow: one jump to the last landed layers.
+      await page.locator("[data-testid=agent-status] .kimo-agent-status__follow").click()
+      expect(
+        await page.evaluate(
+          () =>
+            JSON.stringify(
+              (window as unknown as { __m6: { followed: string[][] } }).__m6.followed,
+            ) === JSON.stringify([["CtaRow0001"]]),
+        ),
+        "Follow zooms to the landed layer",
+      )
       c.box("Composer Wrap (mt5k9)", m.wrap, { pad: [0, 12, 12, 12], w: 360 })
       c.check(
         "Composer Wrap",

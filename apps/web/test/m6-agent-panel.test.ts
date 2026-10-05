@@ -63,6 +63,7 @@ function setup(
     fileName: "Pricing page.kimo",
     docId: () => tools.docId(),
     nodeName: (id) => (store.getNode(id) as { name?: string } | undefined)?.name,
+    parentOf: (id) => (store.getNode(id) as { parent?: string | null } | undefined)?.parent ?? null,
     frameBox: (id) => {
       const n = store.getNode(id) as
         | { name: string; x: number; y: number; w: number; h: number }
@@ -117,7 +118,9 @@ describe("single turn: streaming, steps, meta, session (board 22 A)", () => {
     expect(a?.kind).toBe("agent")
     if (a?.kind !== "agent") throw new Error()
     expect(a.streaming).toBe(false)
-    expect(a.text).toBe("Warming the hero. Warmed the palette.")
+    // Board 31: the note before the tool call was the live status; the reply is the final text.
+    expect(a.text).toBe("Warmed the palette.")
+    expect(a.progress).toBeUndefined()
     expect(a.steps).toHaveLength(1)
     expect(a.steps[0]?.state).toBe("done")
     expect(a.meta?.billing).toBe("api")
@@ -256,7 +259,12 @@ describe("scope, errors and stop (board 22 E)", () => {
     )
     await c.refresh()
     const running = c.send("first")
-    await until(() => c.state.busy && (c.state.messages[1]?.text.length ?? 0) > 0)
+    await until(() => c.state.busy && (c.state.live?.tokensOut ?? 0) > 0)
+    // An unfinished sentence is not a status yet (no word-by-word streaming).
+    const m1 = c.state.messages[1]
+    expect(m1?.kind === "agent" && m1.progress?.status).toBe("Thinking…")
+    // Board 31: streamed text is the live status, never the message text while running.
+    expect(c.state.messages[1]?.text).toBe("")
     expect(c.state.composer.state).toBe("streaming")
     expect(c.state.live?.tokensOut).toBeGreaterThan(0)
     await c.send("second")
@@ -810,5 +818,94 @@ describe("formats (board 22 copy)", () => {
     expect(sessionMetaLabel({ ...meta, costUsd: 0.64 }, { otherFile: true, clis: [] })).toBe(
       "Loom — Mobile app · $0.64",
     )
+  })
+})
+
+describe("board 31: live status, step by step, steps toggle state", () => {
+  const rects = (parent: string, n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      op: "insert",
+      parent,
+      node: { type: "rect", name: `Bar ${i}`, x: 0, y: i * 4, w: 10, h: 2 },
+    }))
+
+  test("notes become the status; an oversize edit stays internal; the reply lands at the end", async () => {
+    const holder = { docId: "" }
+    const { c, store, docId } = setup((_req, i) => {
+      const tool = (ops: unknown[]) => [
+        { name: "kimo_apply_ops", input: { docId: holder.docId, ops } },
+      ]
+      if (i === 0)
+        return { text: "Building the pricing section\n", tools: tool(rects("Hero000001", 41)) }
+      if (i === 1) return { text: "", tools: tool(rects("Hero000001", 20)) }
+      if (i === 2)
+        return {
+          text: "Tightening the card",
+          tools: tool([{ op: "update", id: "Card000001", set: { name: "Card tight" } }]),
+        }
+      return { text: "Added 20 bars to Hero and tightened the card." }
+    })
+    holder.docId = docId
+    await c.refresh()
+    const seen: string[] = []
+    const unsub = c.subscribe((st) => {
+      const a = st.messages[1]
+      if (a?.kind === "agent" && a.progress) {
+        const last = seen[seen.length - 1]
+        if (last !== a.progress.status) seen.push(a.progress.status)
+        // Never the running text in the message while the turn runs.
+        expect(a.text).toBe("")
+      }
+    })
+    await c.send("Add bars")
+    unsub()
+    expect(seen[0]).toBe("Thinking…")
+    expect(seen).toContain("Building the pricing section")
+    // Step 2 had no note: the tool's own label, with count and place.
+    expect(seen).toContain("Adding 20 layers in Hero")
+    expect(seen).toContain("Tightening the card")
+    const a = c.state.messages[1]
+    if (a?.kind !== "agent") throw new Error()
+    expect(a.progress).toBeUndefined()
+    expect(a.text).toBe("Added 20 bars to Hero and tightened the card.")
+    // The BATCH_TOO_LARGE call is not a step and nothing failed.
+    expect(a.steps.map((s) => s.state)).toEqual(["done", "done"])
+    expect(a.card).toBeUndefined()
+    expect(store.children("Hero000001")).toHaveLength(20)
+    // Landing flashes: top-most changed layers per landed edit, attributed to the lead.
+    expect(c.state.canvas.landed).toHaveLength(2)
+    expect(c.state.canvas.landed[1]?.ids).toEqual(["Card000001"])
+    // Canvas cursor pill: the agent's name only.
+    for (const cur of c.state.canvas.cursors) expect(cur.text).toBe("Kimo")
+  })
+
+  test("Follow targets the last landed layers while the turn runs", async () => {
+    const holder = { docId: "" }
+    let follow: string[] = []
+    const { c, docId } = setup((_req, i) =>
+      i === 0
+        ? {
+            text: "Renaming the card",
+            tools: [
+              {
+                name: "kimo_apply_ops",
+                input: {
+                  docId: holder.docId,
+                  ops: [{ op: "update", id: "Card000001", set: { name: "Card 2" } }],
+                },
+              },
+            ],
+          }
+        : { text: "Done.", delayMs: 20 },
+    )
+    holder.docId = docId
+    await c.refresh()
+    const unsub = c.subscribe((st) => {
+      const a = st.messages[1]
+      if (a?.kind === "agent" && a.progress?.follow.length) follow = a.progress.follow
+    })
+    await c.send("Rename")
+    unsub()
+    expect(follow).toEqual(["Card000001"])
   })
 })

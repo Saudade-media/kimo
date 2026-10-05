@@ -183,6 +183,8 @@ export class AgentCanvasModel {
   readonly prompts = new Map<string, string | undefined>()
   private readonly flashes = new Map<string, Flash>()
   private readonly rejectedSeen = new Map<string, number>()
+  /** Board 31 landing flashes: key → when it was first seen. */
+  private readonly landedSeen = new Map<string, number>()
   private reduced: boolean
 
   constructor(
@@ -207,6 +209,12 @@ export class AgentCanvasModel {
       if (!this.rejectedSeen.has(r.key)) this.rejectedSeen.set(r.key, t)
     }
     for (const k of this.rejectedSeen.keys()) if (!keys.has(k)) this.rejectedSeen.delete(k)
+    const landed = new Set<string>()
+    for (const l of props?.landed ?? []) {
+      landed.add(l.key)
+      if (!this.landedSeen.has(l.key)) this.landedSeen.set(l.key, t)
+    }
+    for (const k of this.landedSeen.keys()) if (!landed.has(k)) this.landedSeen.delete(k)
   }
 
   /** Full scan (load / first layout). */
@@ -265,6 +273,7 @@ export class AgentCanvasModel {
     if (!this.reducedMotion && this.building()) return true
     for (const f of this.flashes.values()) if (t - f.at < READY_CHIP_MS) return true
     for (const at of this.rejectedSeen.values()) if (t - at < REJECT_MS) return true
+    for (const at of this.landedSeen.values()) if (t - at < FLASH_MS) return true
     return false
   }
 
@@ -282,7 +291,8 @@ export class AgentCanvasModel {
       this.flashes.size > 0 ||
       !!this.props?.scopes?.length ||
       !!this.props?.cursors?.length ||
-      this.rejectedSeen.size > 0
+      this.rejectedSeen.size > 0 ||
+      this.landedSeen.size > 0
     )
   }
 
@@ -311,6 +321,17 @@ export class AgentCanvasModel {
       if (p < 1 && layout.nodes.has(id)) flashes.push({ id, progress: p, persona: f.persona })
     }
     const p = this.props
+    // Board 31: each landed edit flashes its top-most layers once (same ring as F1viK5).
+    for (const l of p?.landed ?? []) {
+      const at = this.landedSeen.get(l.key)
+      if (at === undefined) continue
+      const progress = (t - at) / FLASH_MS
+      if (progress >= 1) continue
+      const persona = this.persona(l.origin)
+      for (const id of l.ids)
+        if (layout.nodes.has(id) && !this.placeholders.has(id))
+          flashes.push({ id, progress, persona })
+    }
     const scopes = (p?.scopes ?? []).flatMap((s) =>
       s.roots
         .filter((id) => layout.nodes.has(id))
@@ -382,9 +403,8 @@ export class AgentCanvasModel {
         top: r.y + inset,
         state: orphan ? "interrupted" : "building",
         // Board 25 §3 kTwwU / rule jMJaL: an orphan reads "Agent stopped · <name>".
-        text: orphan
-          ? `Agent stopped · ${name}`
-          : `${label} · building ${name}${info?.ops ? ` · ${info.ops} ops` : ""}`,
+        // Board 31 "Canvas label": the agent's name only (no state, tool or counts).
+        text: orphan ? `Agent stopped · ${name}` : label,
         persona: info?.persona ?? "agent",
         label,
       })
@@ -488,7 +508,8 @@ export class AgentCanvasModel {
         top,
         flipX: size.w > 0 && left + 240 > size.w - 8,
         flipY: size.h > 0 && top + 18 + 2 + 22 > size.h - 8,
-        text: `${info?.label ?? "Agent"} · ${c.text}`,
+        // Board 31 "Canvas label": the agent's name only; status lives in the panel.
+        text: info?.label ?? "Agent",
         persona: info?.persona ?? "agent",
         state: c.state,
         stack,

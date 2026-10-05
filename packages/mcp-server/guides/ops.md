@@ -9,6 +9,8 @@
 The list is one transaction: if any op fails, nothing changes (`rolledBack: true`).
 One call = one undo step, attributed to you.
 
+Max 40 `insert`s per call (`BATCH_TOO_LARGE`); `copy` is free. Build per section: `guide/steps`.
+
 **References.** Any `id`, `parent`, `instance`, `component`, `frame` or `node` field takes a node id
 or `@key` of a node created earlier in the call. `parent: "root"` = top level. `index` is the
 position among siblings (0 = first); omit it to append.
@@ -90,6 +92,5 @@ top-level nodes (destructive); the last page can't be deleted.
 - Pass `baseRevision` from your previous result: you get `REVISION_CONFLICT` instead of
   silently overwriting the user's edits.
 - `dryRun: true` checks a large batch: returns the would-be ops and warnings, commits nothing.
-- Build one section per call (20–150 ops), then `kimo_render` it. No giant calls.
 - To place a new top-level frame, use the x/y from `kimo_find_space {docId, w, h}`.
 - Mark work in progress with `placeholder: true` on the frame; `unset` it at the end.

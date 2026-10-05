@@ -8,6 +8,7 @@ import {
   AGENT_LIQUID_GLSL,
   AgentErrorCard,
   AgentMark,
+  AgentStatus,
   AgentStep,
   AttachmentChip,
   AttachmentThumb,
@@ -30,6 +31,7 @@ import {
   ScopeTag,
   SessionRow,
   SkillRow,
+  StepsToggle,
 } from "../src/index"
 
 const root = join(import.meta.dir, "../../..")
@@ -207,6 +209,34 @@ describe("Board 22 components (zJmdL)", () => {
     expect(renderToString(h(MessageMeta, { tokens: "2.8k", streaming: true }))).toContain(
       ">Streaming<",
     )
+    expect(renderToString(h(MessageMeta, { tokens: "1k", reveal: "hover" }))).toContain(
+      "kimo-msg-meta--reveal-hover",
+    )
+  })
+  test("board 31: AgentStatus and StepsToggle", () => {
+    const st = renderToString(
+      h(AgentStatus, {
+        status: "Building the pricing section",
+        elapsed: "0:42",
+        steps: "5 steps",
+        onFollow: () => {},
+      }),
+    )
+    expect(st).toContain(">Building the pricing section<")
+    expect(st).toContain(">0:42<")
+    expect(st).toContain("kimo-agent-status__sep")
+    expect(st).toContain(">Follow<")
+    expect(st).toContain('data-state="working"')
+    const bare = renderToString(h(AgentStatus, { status: "Thinking…", elapsed: "0:01" }))
+    expect(bare).not.toContain("kimo-agent-status__sep")
+    expect(bare).not.toContain("Follow")
+    const closed = renderToString(h(StepsToggle, { count: 6, open: false }))
+    expect(closed).toContain(">6<!-- --> step<!-- -->s<")
+    expect(closed).toContain('aria-expanded="false"')
+    expect(closed).not.toContain("failed")
+    const failed = renderToString(h(StepsToggle, { count: 1, failed: 1, open: true }))
+    expect(failed).toContain("kimo-steps-toggle--open")
+    expect(failed).toContain("1<!-- --> failed")
   })
   test("chips, thumbs, mode chip / option, scope tag, rows, error card, composer", () => {
     expect(renderToString(h(AttachmentChip, { label: "Hero", onRemove: () => {} }))).toContain(

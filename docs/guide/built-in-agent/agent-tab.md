@@ -8,7 +8,25 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 - **Images.** Paste, drop or attach PNG, JPEG or WebP images up to 5 MB each.
 - **Follow-ups.** While a turn runs you can keep typing: messages are queued and sent when the turn ends.
 
-Each reply shows its tokens, cost and time (`3.1k in · 1.4k out · $0.034 · 11.2s`). **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed.
+## While the agent works
+
+The agent builds in steps you can watch: first a skeleton (the frame and its empty sections), then one section at a time. Each edit lands on the canvas as soon as it is made, and the layers it changed flash briefly in the agent's color. The canvas never moves by itself.
+
+Instead of streaming text, the thread shows one status line that updates in place:
+
+- **What it is doing now** — the agent's own short note for the current step ("Building the pricing section"), or, when it wrote none, what the tool is doing ("Adding 12 layers in Pricing", "Reading the Home page"). Its reasoning is never shown.
+- **Elapsed time** and the number of steps so far.
+- **Follow** — zooms the canvas to the layers the agent just changed. It jumps once per click.
+
+The written reply appears when the turn ends.
+
+## Replies
+
+Under each reply, **N steps** opens the list of tool steps the agent took. It is folded by default and opens by itself when a step failed. Hover a reply to see its tokens, cost and time (`3.1k in · 1.4k out · $0.034 · 11.2s`), **Copy** and **Regenerate**. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed.
+
+## Edit size
+
+One agent edit can add at most 40 new layers. Bigger designs are built in several edits, which is what lets you watch them grow. Copies, duplicates and component instances don't count, so "make a variant of this page with a pricing table" copies the page in one step and then adds only the pricing section. The limit applies to every agent — the built-in one and Claude Code, Codex or Gemini CLI connected over MCP — and never to your own paste, import or duplicate.
 
 ## Modes
 

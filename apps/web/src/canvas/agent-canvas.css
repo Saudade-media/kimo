@@ -231,7 +231,7 @@
 /*
  * Agent Cursor (board 24 GmEAl H6ncRy): vertical gap 2; Pointer mouse-pointer-2 18 in the
  * persona hue; Pill: persona fill, radius 999, shadow 0 4 12 shadow, gap 6, padding [4, 10, 4, 4],
- * AgentMark 12 + Label 12/500 on-accent. Eases 120 ms between anchors (decision G5).
+ * AgentMark 12 + Label 12/500 on-accent (the agent's name only, board 31).
  */
 .agent-canvas__cursor {
   position: absolute;
@@ -239,14 +239,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  transition:
-    left 120ms ease,
-    top 120ms ease;
-}
-@media (prefers-reduced-motion: reduce) {
-  .agent-canvas__cursor {
-    transition: none;
-  }
+  /* Board 31 "Position lock": no easing on position — it would trail the canvas while panning. */
 }
 .agent-canvas__cursor-pointer {
   display: inline-flex;

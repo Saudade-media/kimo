@@ -1075,16 +1075,7 @@
 .agents-cursor[data-flip-x][data-flip-y] {
   transform: translate(-100%, -100%);
 }
-.agents-cursor {
-  transition:
-    left 120ms ease,
-    top 120ms ease;
-}
-@media (prefers-reduced-motion: reduce) {
-  .agents-cursor {
-    transition: none;
-  }
-}
+/* Board 31 "Position lock": no easing on left/top (it trailed the canvas while panning). */
 /* Off-screen pointer (joR0E nLvHN): row, gap 4, padding [2, 8, 2, 3], center, agent, pill ›
    AgentMark 12 · Label sans 11 / 500 on-accent · Arrow 12 on-accent. Click pans to the node. */
 .agents-cursor-docked {

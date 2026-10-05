@@ -21,7 +21,7 @@ export const SERVER_NAME = "kimo"
 
 /** Server-level instructions sent at initialize (kept short; guides live in kimo_read_docs). */
 export const SERVER_INSTRUCTIONS =
-  "Kimo is a local design canvas (.kimo files). Start with kimo_get_state, open files with kimo_open, read with kimo_query, edit only with kimo_apply_ops (pass baseRevision from your last result), verify with kimo_render. Every call targets an explicit docId. Results are JSON envelopes {ok, summary, revision, warnings, errors}; branch on errors[].code. Read kimo_read_docs before your first edit."
+  "Kimo is a local design canvas (.kimo files). Start with kimo_get_state, open files with kimo_open, read with kimo_query, edit only with kimo_apply_ops (pass baseRevision from your last result), verify with kimo_render. Build step by step: a skeleton first, then one section per call (at most 40 new layers per call); write one short line saying what you are doing before each call. Copy existing frames or pages instead of re-creating them. Every call targets an explicit docId. Results are JSON envelopes {ok, summary, revision, warnings, errors}; branch on errors[].code. Read kimo_read_docs before your first edit."
 
 const passThrough: Parameters<typeof fromJsonSchema>[1] & object = {
   getValidator: (() => (input: unknown) => ({

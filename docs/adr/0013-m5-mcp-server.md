@@ -97,7 +97,7 @@ revision {before, after}, warnings, data` and for mutating tools `ops, inverse, 
 path, nodeId, suggestion, retryable, detail}], rolledBack: true, revision, retryId`. Codes:
 `DOCUMENT_NOT_OPEN, DOCUMENT_LOCKED, LOAD_FAILED, READ_ONLY, REVISION_CONFLICT, NODE_NOT_FOUND,
 NODE_EXISTS, INVALID_PROPERTY, INVALID_INPUT, SCHEMA_VIOLATION, OUT_OF_SCOPE,
-INSTANCE_STRUCTURE, CYCLE, ASSET_NOT_FOUND, FILE_EXISTS, FILE_NOT_FOUND, TIMEOUT,
+INSTANCE_STRUCTURE, CYCLE, BATCH_TOO_LARGE, ASSET_NOT_FOUND, FILE_EXISTS, FILE_NOT_FOUND, TIMEOUT,
 PERMISSION_DENIED, APP_NOT_RUNNING, PROTOCOL_MISMATCH, UNSUPPORTED, RATE_LIMITED, INTERNAL`
 (TIMEOUT, RATE_LIMITED and APP_NOT_RUNNING are `retryable`). MCP mapping: `structuredContent` =
 the envelope (validated by each tool's `outputSchema`), content = [summary text, envelope JSON
@@ -386,3 +386,28 @@ command was removed or renamed):
   new call of that client before validation and authorization until `resume` (a call already
   running finishes; a held call fails TIMEOUT retryable if the connection closes). It no longer
   rewrites the client's policy. Windows reach it through the document host RPC `mcpPause`.
+
+## Addendum 3 (2026-10-05, board 31 "Agent progress"): batch limit
+
+Agents used to send a whole page as one `kimo_apply_ops` call, so the person saw nothing for a
+minute and then everything at once. `kimo_apply_ops` now refuses a call whose **`insert` ops**
+exceed `AGENT_MAX_NEW_LAYERS = 40` (`src/tools/write.ts`), before compiling: failure
+`BATCH_TOO_LARGE`, `detail {kind: "batch", limit, newLayers}`, a suggestion to apply the skeleton
+first and then one section per call, nothing applied (`dryRun` is refused the same way).
+
+- **What counts:** freshly authored layers — the `insert` ops, each of which inserts exactly one
+  node whose content the caller wrote out (`newLayerCount`). `copy` (a subtree, frame or page),
+  `instantiate`, page duplicates, `replace` and every edit of existing layers (update, move,
+  delete, overrides, variables) are never counted, whatever their size: reusing content is
+  cheap and is what agents should do for variants ("copy the page, then insert the new
+  section").
+- **Who:** every caller of the tool is an agent — the built-in panel (in-window and document-host
+  tool hosts), local CLIs through the shim, any MCP client, headless `kimo mcp`. The editor's own
+  actions (paste, import, duplicate, side-by-side setup copies) never go through the limit;
+  `kimo_import` (one asset, not splittable) is not limited.
+- **Guidance:** tool description, server instructions, guides `ops`, `index`, `guide/web`, the new
+  `guide/steps` (skeleton-first loop, reuse-don't-regenerate, the "variant with a pricing table"
+  example) and `errors`; the built-in system prompt and `kimo-design` skill say the same.
+- **UI:** the refusal is the agent's own correction: the panel drops the refused step, shows no
+  card and keeps the status line (board 31 rule "Refusal is internal").
+

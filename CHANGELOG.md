@@ -84,10 +84,26 @@ The first public release: release engineering, polish, the new mark and the form
   underline, strikethrough, line height, letter spacing, link); ⌘B / ⌘I / ⌘U / ⇧⌘X, ⌘K for a
   link; the Text and Fill sections show "Mixed" for a range (board 30).
 - Launch loader: the animated mark shows on first paint, before the app's code loads (board 29).
+- Agent progress (board 31): while a turn runs the Agent tab shows one live status line — the
+  agent's own short note for the current step, else what the tool is doing ("Adding 12 layers in
+  Pricing"), with the elapsed time and a **Follow** chip that zooms to the layers it just
+  changed. The reply appears when the turn ends. Layers the agent edits flash in its hue as each
+  edit lands; the viewport never moves on its own.
+- Agents build step by step: a skeleton first, then one section per edit. `kimo_apply_ops`
+  refuses a call that inserts more than 40 new layers (`AGENT_MAX_NEW_LAYERS`, new error code
+  `BATCH_TOO_LARGE` with `{limit, newLayers}`) for every agent client — the built-in panel,
+  Claude Code, Codex, Gemini CLI and any MCP client. Copies, duplicates and component instances
+  are never limited, and agents are told to copy existing frames or pages for variants instead
+  of re-creating them (new guide `guide/steps`).
 
 ### Changed
 
 - ⇧⌘V is Paste in place; the Variables dialog moved to ⌥⇧⌘V.
+- Agent tab: no streamed text or live token counts while a turn runs; tokens, cost and time
+  show when hovering a finished reply. Each reply's steps are folded behind an "N steps" toggle
+  (opened automatically when a step failed). The per-turn cost warning is unchanged.
+- Canvas agent labels (cursor pill, attribution tag, placeholder tag) show only the agent's
+  name; what it is doing lives in the panel.
 - The image size limit is 20 MB (was 50 MB).
 - Docs:
   - Kimo collects no telemetry (SECURITY.md, teardown).
@@ -104,6 +120,8 @@ The first public release: release engineering, polish, the new mark and the form
   renderer, the exporters and the panel.
 - The agent's approval card names the layers it touches ("in Pricing") instead of their ids.
 - The web build reports its real version in Settings › About and the release-notes link.
+- Agent cursors, tags and component labels on the canvas no longer trail the layers while
+  panning or zooming (they eased between positions and re-rendered a frame late).
 
 ### Format
 

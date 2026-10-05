@@ -16,6 +16,7 @@ import { parseEnvelope, runCliTurn, shimLaunch } from "../src/cli/engine"
 import type { CliDetection, CliTurnInput } from "../src/cli/types"
 import type { AgentEvent } from "../src/loop"
 import { createNodeCliHost } from "../src/node"
+import { replyOf } from "../src/progress"
 import { resolveRuntime } from "../src/runtime"
 
 const envelope = {
@@ -447,6 +448,8 @@ describe("running a turn through a fake CLI", () => {
         .map((e) => (e as { text: string }).text)
         .join(""),
     ).toBe("Adding the form. Done.")
+    // Board 31: the note before the tool call is status; the reply is the text after it.
+    expect(replyOf(rec.messages)).toBe("Done.")
     const step = events.find((e) => e.type === "step_end")
     expect(step).toMatchObject({
       type: "step_end",

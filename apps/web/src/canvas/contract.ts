@@ -683,6 +683,16 @@ export interface CanvasAgentRejection {
   text: string
 }
 
+/**
+ * Board 31 "Landing flash": the top-most layers one successful agent edit changed. Each new key
+ * flashes them once (1.2 s, persona hue outline + soft ring); the viewport never moves.
+ */
+export interface CanvasAgentLanded {
+  key: string
+  origin: string
+  ids: readonly string[]
+}
+
 /** Prompt-node run state as the footer shows it (ADR 0014 §9, `@kimo/ai-agent` PromptRunState). */
 export type CanvasPromptRun = import("@kimo/ai-agent").PromptRunState
 
@@ -693,6 +703,8 @@ export interface AgentCanvasProps {
   scopes?: readonly CanvasAgentScope[]
   cursors?: readonly CanvasAgentCursor[]
   rejections?: readonly CanvasAgentRejection[]
+  /** Board 31: edits that just landed (flash their layers once per key). */
+  landed?: readonly CanvasAgentLanded[]
   /** Run state of a prompt node (app data keyed by `<fileId>/<nodeId>`); absent = never run. */
   promptRun?(nodeId: string): CanvasPromptRun | undefined
   /** Model pill text for a prompt's `model` ("Opus 5.5"); absent = the model id. */

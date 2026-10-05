@@ -17,7 +17,9 @@ Prompts and notes are not design: the [Code tab](../export/code-tab.md) and expo
 
 While an agent builds a frame, the frame carries a **placeholder** flag and the canvas shows who is working on it (`<agent> · building <name>`). It is a signal for people and other agents, not a lock: you can still edit the frame.
 
-An agent clears its placeholders when its turn ends, whether it finished, was stopped or failed. If a placeholder stays behind and its agent is no longer running, the tag reads **Interrupted**; right-click it for **Clear flag**, **Resume agent**, or **Ask Kimo to finish** when the session is gone.
+An agent clears its placeholders when its turn ends, whether it finished, was stopped or failed. This holds for local CLI agents too, including flags they set through MCP. When an MCP client disconnects, its placeholders are cleared. If a placeholder stays behind and its agent is no longer running, the tag reads **Interrupted**; right-click it for **Clear flag**, **Resume agent**, or **Ask Kimo to finish** when the session is gone.
+
+A placeholder never survives closing Kimo. Quitting or closing the window while an agent works stops the turn, clears its placeholders and saves the file. If Kimo is killed or crashes mid-turn, the placeholders still in the file are cleared the next time the file opens, because no agent can still be working on it.
 
 > [!NOTE]
 > When a **Side by side** turn ends (finished, stopped or failed), Kimo clears the flag on every variant frame an agent built into, and removes the frames that are still empty. Their rows read **Discarded**.

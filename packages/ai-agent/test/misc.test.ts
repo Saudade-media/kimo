@@ -296,6 +296,8 @@ describe("placeholders", () => {
     expect(isOrphanPlaceholder({ by: "agent:kimo.s.1" }, live)).toBe(false)
     expect(isOrphanPlaceholder({ by: "agent:kimo.old.1" }, live)).toBe(true)
     expect(isOrphanPlaceholder(true, live)).toBe(false)
+    // A bare `true` has no owner: it never outlasts every agent.
+    expect(isOrphanPlaceholder(true, new Set())).toBe(true)
     expect(
       placeholderTag(
         { by: "agent:kimo.old.1" },

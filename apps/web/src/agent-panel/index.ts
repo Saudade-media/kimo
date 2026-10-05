@@ -46,6 +46,7 @@ export {
   type PromptRunStore,
   persistable as persistablePromptRun,
 } from "./prompt-runs"
+export { type LiveOwner, releaseStalePlaceholders, stalePlaceholdersIn } from "./release"
 export {
   type AgentPanelRuntime,
   createAppAgentRuntime,

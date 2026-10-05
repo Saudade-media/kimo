@@ -7,7 +7,7 @@
  */
 import type { LayoutResult } from "@kimo/layout"
 import { type KimoPlatform, sha256Hex } from "@kimo/platform"
-import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import {
   AgentActivityPanel,
   AgentCanvasLayer,
@@ -167,6 +167,18 @@ export function useEditorAgents({
 }
 
 const noSubscribe = () => () => {}
+
+/** Origins of the MCP clients connected now (stable while the set does not change). */
+export function useConnectedOrigins(controller: AgentsControllerExt | null): ReadonlySet<string> {
+  const cache = useRef<ReadonlySet<string>>(NONE)
+  return useSyncExternalStore(controller ? controller.subscribe : noSubscribe, () => {
+    const next = controller?.state.connections.map((c) => c.origin) ?? []
+    const prev = cache.current
+    if (next.length === prev.size && next.every((o) => prev.has(o))) return prev
+    cache.current = next.length ? new Set(next) : NONE
+    return cache.current
+  })
+}
 
 /** Layer dots: the controller's touched set (stable while it does not change). */
 export function useAgentTouched(controller: AgentsControllerExt | null): ReadonlySet<string> {

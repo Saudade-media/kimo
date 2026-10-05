@@ -56,7 +56,7 @@ import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { exitSelection, PreviewOverlay, pickPreviewFrame, usePreviewTarget } from "../preview"
 import { diskPath, navigate } from "../router"
 import { useEditorAgentPanel } from "./agent-panel"
-import { useAgentTouched, useEditorAgents } from "./agents"
+import { useAgentTouched, useConnectedOrigins, useEditorAgents } from "./agents"
 import { refName } from "./bindings"
 import { useCanvasMenu } from "./CanvasMenu"
 import { useRasterDrop } from "./clipboard/RasterDrop"
@@ -70,6 +70,7 @@ import { createComponent, detachInstance, goToMain } from "./m3/actions"
 import { useCanvasDrop } from "./m3/CanvasDrop"
 import { M3Context, M3Controller, useBusValue, useLibraries } from "./m3/controller"
 import { ConfirmHost, ToastStack } from "./m3/feedback"
+import { useReleaseStalePlaceholders } from "./placeholder-release"
 import "./m3/m3.css"
 import "./m3/m3-panels.css"
 import "./m3/component-dialogs.css"
@@ -681,6 +682,7 @@ function EditorShell({
     onSaveCopy: () => void saveAs(),
   })
   const agentNodes = useAgentTouched(agents.controller)
+  const mcpOrigins = useConnectedOrigins(agents.controller)
 
   // M6: the built-in agent (Agent tab, canvas surfaces, prompt runs, Home hand-off).
   const openAgent = useMemo(() => createBus(0), [])
@@ -695,6 +697,27 @@ function EditorShell({
     layout,
     openSettings: (pane) => openSettings(pane),
     openAgentTab,
+  })
+  // Connected MCP clients count as live agents on the canvas (their placeholders read "building").
+  const agentCanvas = useMemo(
+    () =>
+      agentPanel.canvas && mcpOrigins.size
+        ? {
+            ...agentPanel.canvas,
+            liveOrigins: new Set([...agentPanel.canvas.liveOrigins, ...mcpOrigins]),
+          }
+        : agentPanel.canvas,
+    [agentPanel.canvas, mcpOrigins],
+  )
+  // An agent flag never outlives its agent: release stale ones on open, on MCP disconnect, on
+  // window close (after stopping the turn) and on unmount.
+  useReleaseStalePlaceholders({
+    session,
+    manager,
+    panel: agentPanel.controller,
+    agents: agents.controller,
+    keepOwner: agentPanel.handoffOwner,
+    pendingOwner: agentPanel.pendingHandoffOwner,
   })
   // Debug hook (see above): the Agent tab controller, for e2e scripts (board 25 §3 Resume agent).
   useEffect(() => {
@@ -866,7 +889,7 @@ function EditorShell({
               layerNames={viewPrefs.layerNames}
               nudge={viewPrefs.nudge}
               onLayout={layout.set}
-              agentCanvas={agentPanel.canvas}
+              agentCanvas={agentCanvas}
               noteAuthor={agentPanel.noteAuthor}
               onContextMenu={canvasMenu.onContextMenu}
               libraries={m3.libraries()}

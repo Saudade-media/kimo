@@ -202,6 +202,9 @@ export function failedLoadDetail(
 
 type Listener = (state: SessionState) => void
 
+/** Longest a close hook may hold the window back (stopping an agent turn and releasing flags). */
+export const CLOSE_HOOK_MS = 2500
+
 /** One open `.kimo` file (contract `DocumentSession`). */
 export class FileDocumentSession implements DocumentSession {
   readonly store: DocStore
@@ -1265,6 +1268,8 @@ export class FileSessionManager implements SessionManager {
     this.offClose = this.platform.window.onCloseRequested(async () => {
       // Board 24 (i): never-saved documents ask first; Cancel keeps the window open.
       if (!(await this.confirmCloseAll())) return false
+      // Quit mid-turn: agents stop and release what they flagged before the clean save.
+      await this.runCloseHooks()
       return (await this.flushAll()).ok
     })
     this.offOpen = this.platform.launch.onOpenRequest((req) => {
@@ -1392,6 +1397,36 @@ export class FileSessionManager implements SessionManager {
   async confirmCloseAll(): Promise<boolean> {
     for (const s of this.sessions()) if (!(await s.confirmClose())) return false
     return true
+  }
+
+  private readonly closeHooks = new Set<() => void | Promise<void>>()
+
+  /**
+   * Runs once the window is going to close (after "Save changes?" is confirmed) and before the
+   * final flush: the editor stops a running agent turn and releases its flags here. A hook that
+   * throws or hangs never blocks the close (each gets {@link CLOSE_HOOK_MS}).
+   */
+  addCloseHook(hook: () => void | Promise<void>): Unsubscribe {
+    this.closeHooks.add(hook)
+    return () => this.closeHooks.delete(hook)
+  }
+
+  async runCloseHooks(): Promise<void> {
+    for (const hook of [...this.closeHooks]) {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        await Promise.race([
+          Promise.resolve().then(hook),
+          new Promise<void>((resolve) => {
+            timer = setTimeout(resolve, CLOSE_HOOK_MS)
+          }),
+        ])
+      } catch {
+        // A failing hook must not keep the window open.
+      } finally {
+        clearTimeout(timer)
+      }
+    }
   }
 
   async flushAll(): Promise<{ ok: boolean; failed: FileRef[] }> {

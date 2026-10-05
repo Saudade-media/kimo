@@ -29,6 +29,7 @@ import {
   createPlatformAgentRuntime,
   hasHomeHandoff,
   modelLabel,
+  peekHomeHandoff,
   skillsFolderAction,
   storeOutline,
   useHomeHandoff,
@@ -65,6 +66,10 @@ export interface EditorAgentPanel {
   initialAgentTab: boolean
   /** "<Agent> editing" (window / tab title) while a turn runs. */
   editingAgent: string | null
+  /** The owner of the Home hand-off that was waiting when the editor opened (kept on open). */
+  handoffOwner: string | null
+  /** The owner of a hand-off still waiting to start now. */
+  pendingHandoffOwner(): string | null
 }
 
 export function useEditorAgentPanel({
@@ -97,6 +102,7 @@ export function useEditorAgentPanel({
   // Home hand-off key: the desktop FileRef or the web library file id.
   const handoffPath = doc ? doc.ref : session.id
   const [initialAgentTab] = useState(() => hasHomeHandoff(handoffPath))
+  const [handoffOwner] = useState(() => peekHomeHandoff(handoffPath)?.owner ?? null)
 
   // MCP status (desktop): the bundled shim CLIs launch, and the OS user (note author).
   const [mcp, setMcp] = useState<{ shim: string | null; user: string | undefined }>({
@@ -309,6 +315,8 @@ export function useEditorAgentPanel({
     runPrompt,
     initialAgentTab,
     editingAgent: agent?.editing ?? null,
+    handoffOwner,
+    pendingHandoffOwner: () => peekHomeHandoff(handoffPath)?.owner ?? null,
   }
 }
 

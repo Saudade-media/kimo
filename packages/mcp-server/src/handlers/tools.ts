@@ -40,7 +40,8 @@ import type { WireOp } from "../ops"
 import type { HandlerOutput, HostDocument, ToolContext, ToolHandler } from "../runtime"
 import { CODE_EXPORT_TARGETS, M5_EXPORT_TARGETS } from "../tools/output"
 import { AGENT_MAX_NEW_LAYERS } from "../tools/write"
-import { compileWireOps, touchedIds, wirePath } from "./compile"
+import { CHECK_MAX_LIST, type CheckProblem, checkDesign, formatProblems } from "./check"
+import { compileWireOps, pointerTarget, touchedIds, wirePath } from "./compile"
 import type { CoreDocumentHost } from "./core-host"
 import { EXTENSION, imageSize, parseCssTokens, parseDtcg, sniffFont, sniffImage } from "./importers"
 import { journalFor } from "./journal"
@@ -86,7 +87,7 @@ export function batchTooLarge(
     code: "BATCH_TOO_LARGE",
     message: `This call creates ${newLayers} new layers; one call may create at most ${limit}. Nothing was applied.`,
     detail: { kind: "batch", limit, newLayers },
-    suggestion: `Split into sections of ≤ ${limit} new layers: apply the skeleton first (the page frame and its empty section frames), then one section per call, passing baseRevision from the previous result. To reuse existing content, copy it (copy is never limited) instead of inserting it again.`,
+    suggestion: `Split into finished parts of ≤ ${limit} new layers: one complete section, or one complete sub-block of a large section (its heading row, then its card grid), per call, passing baseRevision from the previous result. Never leave empty frames to fill later. To reuse existing content, copy it (copy is never limited) instead of inserting it again.`,
   }
 }
 
@@ -288,6 +289,8 @@ export function createToolHandlerMap(
         dryRun: boolean
       }) => string
       render?: boolean
+      /** Board 31 "Check": list problems in the layers this edit changed (`data.problems`). */
+      check?: boolean
     },
   ): Promise<HandlerOutput> {
     const before = d.store.revision
@@ -342,6 +345,9 @@ export function createToolHandlerMap(
       dryRun,
     }
     if (undoToken) extra.undoToken = undoToken
+    // Board 31 "Agent cursor": the layer the agent's pointer moves to (the last one it added).
+    const pointer = dryRun ? undefined : pointerTarget(r.ops)
+    if (pointer) extra.pointer = pointer
     // When the commit moved the epoch (never in practice), keep docId in doc.
     let images: ToolImage[] | undefined
     if (meta.render && !dryRun && changed.length) {
@@ -354,11 +360,52 @@ export function createToolHandlerMap(
         else warnings.push({ code: "RENDER_FAILED", message: rr.error.message })
       }
     }
-    const data = meta.data ? meta.data(counts) : { ...counts }
+    const data: Record<string, unknown> = meta.data ? meta.data(counts) : { ...counts }
+    let summary = meta.summary({ ...counts, dryRun })
+    if (meta.check && !dryRun && changed.length) {
+      const problems = await checkEdit(d, r.ops, r.inverse)
+      if (problems.length) {
+        data.problems = formatProblems(problems)
+        summary += ` ${problems.length} problem(s) to fix before moving on (data.problems).`
+      }
+    }
     return {
-      ...done(success(data, meta.summary({ ...counts, dryRun }), extra), images),
+      ...done(success(data, summary, extra), images),
       label: typeof input.label === "string" ? input.label : meta.label,
     }
+  }
+
+  /**
+   * Board 31 "Check" for one landed edit: the layers it inserted or changed, their parents and
+   * the parents of what it deleted (an emptied or overflowing container), from the layout the
+   * other tools share (cached per revision).
+   */
+  async function checkEdit(
+    d: HostDocument,
+    ops: readonly unknown[],
+    inverse: readonly unknown[],
+  ): Promise<CheckProblem[]> {
+    const ids = new Set<string>()
+    const parentOf = (id: string) => {
+      const p = d.store.getNode(id)?.parent
+      if (typeof p === "string") ids.add(p)
+    }
+    for (const o of ops as { op: string; id?: string }[])
+      if (o.id && d.store.getNode(o.id)) {
+        ids.add(o.id)
+        parentOf(o.id)
+      }
+    for (const o of inverse as { op: string; node?: { parent?: unknown } }[])
+      if (o.op === "insert" && typeof o.node?.parent === "string" && d.store.getNode(o.node.parent))
+        ids.add(o.node.parent)
+    if (!ids.size) return []
+    let layout: Awaited<ReturnType<SceneService["layout"]>>
+    try {
+      layout = await scene.layout(d.store)
+    } catch {
+      return []
+    }
+    return checkDesign(d.store, layout, { ids })
   }
 
   // --- Session tools ---------------------------------------------------------------------------
@@ -874,24 +921,32 @@ export function createToolHandlerMap(
     let errors = toWarnings(r.errors)
     let warnings = input.lints === false ? [] : toWarnings(r.warnings)
     const ids = input.ids as string[] | undefined
+    let scope: Set<string> | undefined
     if (ids?.length) {
-      const scope = new Set<string>()
+      const inside = new Set<string>()
       const walk = (id: string) => {
-        scope.add(id)
+        inside.add(id)
         for (const c of d.store.children(id)) walk(c)
       }
       for (const id of ids) walk(id)
-      const keep = (w: ToolWarning) => w.nodeId !== undefined && scope.has(w.nodeId)
+      scope = inside
+      const keep = (w: ToolWarning) => w.nodeId !== undefined && inside.has(w.nodeId)
       errors = errors.filter(keep)
       warnings = warnings.filter(keep)
     }
-    return done(
-      success(
-        { valid: errors.length === 0, errors, warnings },
-        `${errors.length} error(s), ${warnings.length} warning(s).`,
-        { doc: d.ref, revision: sameRev(d.store.revision) },
-      ),
-    )
+    const data: Record<string, unknown> = { valid: errors.length === 0, errors, warnings }
+    let summary = `${errors.length} error(s), ${warnings.length} warning(s).`
+    if (input.check === true) {
+      // Board 31 "Check": the end-of-work pass, placeholders still set included.
+      const layout = await scene.layout(d.store)
+      const problems = checkDesign(d.store, layout, {
+        ...(scope ? { ids: scope } : {}),
+        placeholders: true,
+      })
+      data.problems = formatProblems(problems, CHECK_MAX_LIST)
+      summary += ` ${problems.length} problem(s).`
+    }
+    return done(success(data, summary, { doc: d.ref, revision: sameRev(d.store.revision) }))
   }
 
   // --- Write tools -----------------------------------------------------------------------------
@@ -923,6 +978,7 @@ export function createToolHandlerMap(
       created: compiled.created,
       notes: compiled.notes,
       render: input.render === true,
+      check: true,
       data: (c) => ({ applied: wire.length, ...c, notes: compiled.notes }),
       summary: (c) =>
         `${c.dryRun ? "Dry run: would apply" : "Applied"} ${wire.length} op(s): ${c.inserted} inserted, ${c.updated} updated, ${c.deleted} deleted.`,

@@ -435,6 +435,8 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
               lastActivityAt: now(),
             }
             if (r.ok && r.changed?.length) patch.focus = r.changed.slice(0, 50)
+            // Board 31 "Agent cursor": a landed edit moves the pointer to its last added layer.
+            if (r.ok && r.pointer) patch.pointer = r.pointer
             if (r.ok && r.doc && !(presence.get(origin)?.docs ?? []).includes(r.doc.id))
               patch.docs = [...(presence.get(origin)?.docs ?? []), r.doc.id]
             presence.update(origin, patch)

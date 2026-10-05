@@ -109,15 +109,31 @@ The first public release: release engineering, polish, the new mark and the form
 - Launch loader: the animated mark shows on first paint, before the app's code loads (board 29).
 - Agent progress (board 31): while a turn runs the Agent tab shows one live status line: the
   agent's own short note for the current step, else what the tool is doing ("Adding 12 layers in
-  Pricing"), with the elapsed time and a **Follow** chip that zooms to the layers it just
-  changed. The reply appears when the turn ends. Layers the agent edits flash in its hue as each
-  edit lands; the viewport never moves on its own.
-- Agents build step by step: a skeleton first, then one section per edit. `kimo_apply_ops`
-  refuses a call that inserts more than 40 new layers (`AGENT_MAX_NEW_LAYERS`, new error code
-  `BATCH_TOO_LARGE` with `{limit, newLayers}`) for every agent client: the built-in panel,
-  Claude Code, Codex, Gemini CLI and any MCP client. Copies, duplicates and component instances
-  are never limited, and agents are told to copy existing frames or pages for variants instead
-  of re-creating them (new guide `guide/steps`).
+  Pricing"), with the elapsed time and a **Follow** chip that zooms to the layer the agent's
+  cursor points at. The reply appears when the turn ends. Layers the agent edits flash in its
+  hue as each edit lands; the viewport never moves on its own.
+- The agent cursor follows the last layer the agent added (board 31 "Agent cursor"): after each
+  landed edit it glides to that layer's top-left (+4, +4), or to the last layer it changed when
+  the edit only changed layers. Reads, deletes and placeholder flags leave it where it is. Edit
+  results carry it as `pointer`, MCP presence as `pointer`, so the built-in agent, CLI agents and
+  MCP clients all point the same way, with no drift while panning or zooming.
+- Agents build step by step: they plan the sections, then add one finished section per edit,
+  with its real content, and never leave empty frames, placeholder-only boxes or half-built
+  sections between edits. `kimo_apply_ops` refuses a call that inserts more than 40 new layers
+  (`AGENT_MAX_NEW_LAYERS`, new error code `BATCH_TOO_LARGE` with `{limit, newLayers}`) for every
+  agent client: the built-in panel, Claude Code, Codex, Gemini CLI and any MCP client. The limit
+  is a ceiling, not a target (an edit is often 8 to 25 layers); a large section is split into
+  finished sub-blocks. Copies, duplicates and component instances are never limited, and agents
+  are told to copy existing frames or pages for variants instead of re-creating them (new guide
+  `guide/steps`).
+- Design check (board 31 "Check"): every `kimo_apply_ops` result lists clear problems in the
+  layers it changed as `data.problems`, at most 8 lines of `<id> <kind>: <fix>`: an empty frame
+  that draws nothing, zero size, text overflowing its box or cut by a clipping parent, a layer
+  hidden by or outside its parent, content overflowing a fixed-size auto-layout frame, text
+  stacked on text without auto layout, a missing variable, a shape with no visible fill or
+  stroke. `kimo_validate {check: true}` lists them for the whole document, placeholders still
+  set included. Agents fix them before moving on and finish with none. Every example file
+  checks clean.
 - Agent turns cost far fewer tokens (measured with the real Claude Code CLI on the landing
   example, "create a variant to add a pricing table": ~250–300k tokens over 7–8 model calls
   before, ~67–85k over 4–5 calls after):

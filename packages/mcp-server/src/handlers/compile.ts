@@ -455,3 +455,34 @@ export function touchedIds(ops: readonly NormalizedOp[]): string[] {
   for (const o of ops) if ("id" in o) seen.add(o.id)
   return [...seen]
 }
+
+/**
+ * Board 31 "Agent cursor": the layer an agent's pointer moves to after an edit lands — the last
+ * layer the edit added (the last `insert` in op order, so a copy counts as its last copied
+ * layer), else the last layer it changed. Deleted layers, header changes and edits that only set
+ * or clear `placeholder` never move it (undefined: the pointer stays where it is).
+ */
+export function pointerTarget(ops: readonly unknown[] | undefined): string | undefined {
+  if (!ops?.length) return undefined
+  const deleted = new Set<string>()
+  for (const raw of ops) {
+    const o = raw as { op?: string; id?: unknown }
+    if (o.op === "delete" && typeof o.id === "string") deleted.add(o.id)
+  }
+  let inserted: string | undefined
+  let changed: string | undefined
+  for (const raw of ops) {
+    const o = raw as { op?: string; id?: unknown; set?: unknown; unset?: unknown }
+    if (typeof o.id !== "string" || deleted.has(o.id)) continue
+    if (o.op === "insert") inserted = o.id
+    else if (o.op === "move") changed = o.id
+    else if (o.op === "update") {
+      const keys = [
+        ...Object.keys((o.set as Record<string, unknown> | undefined) ?? {}),
+        ...((o.unset as string[] | undefined) ?? []),
+      ]
+      if (keys.some((k) => k !== "placeholder")) changed = o.id
+    }
+  }
+  return inserted ?? changed
+}

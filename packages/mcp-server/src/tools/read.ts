@@ -231,16 +231,20 @@ export const kimoValidate = defineTool({
   name: "kimo_validate",
   title: "Validate",
   description:
-    "Schema errors and lint warnings (same engine as kimo validate); ids limits it to subtrees.",
+    "Schema errors and lints (as kimo validate); ids: subtrees only; check: design problems too.",
   input: Obj({
     docId,
     ids: Opt(Arr(nodeIdField("Node id."), { description: "Subtrees.", maxItems: 500 })),
     lints: Opt(Bool({ description: "Default true." })),
+    check: Opt(Bool({ description: "Default false." })),
   }),
   data: Obj({
     valid: Bool({ description: "No errors." }),
     errors: Arr(WarningSchema, { description: "Schema errors (code, message, nodeId)." }),
     warnings: Arr(WarningSchema, { description: "Lints." }),
+    problems: Opt(
+      Arr(Str({ description: "<id> <kind>: <fix>." }), { description: "Design problems (check)." }),
+    ),
   }),
   annotations: READ,
   scope: "read",

@@ -97,6 +97,11 @@ export type AgentEvent =
       ok: boolean
       summary: string
       changed: string[]
+      /**
+       * Board 31 "Agent cursor": the last layer this landed edit added (else the last it
+       * changed), where the canvas pointer moves. Absent for reads and failed calls.
+       */
+      pointer?: string
       undoToken?: string
       errorCode?: string
     }
@@ -307,6 +312,7 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
           })
           if (call.name === "kimo_apply_ops") placeholders.observe(call.input, r.created ?? [])
         }
+        const pointer = r.ok && r.undoToken ? r.pointer : undefined
         o.onEvent({
           type: "step_end",
           callId: call.id,
@@ -314,6 +320,7 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
           ok: r.ok,
           summary: r.summary,
           changed: r.ok ? (r.changed ?? []) : [],
+          ...(pointer ? { pointer } : {}),
           ...(r.ok && r.undoToken ? { undoToken: r.undoToken } : {}),
           ...(!r.ok && r.errors[0] ? { errorCode: r.errors[0].code } : {}),
         })

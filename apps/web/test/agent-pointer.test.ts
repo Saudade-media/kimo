@@ -1,7 +1,8 @@
 /**
- * Agent pointer (board 31 "Agent cursor"): the cursor sits on the area the agent works on (the
- * layers a step reads / edits, else what its last landed edit created or changed), never on the
- * page frame's 0:0 corner, and glides between areas in world space (no drift while panning).
+ * Agent pointer (board 31 "Agent cursor"): the cursor points at the last layer the agent's
+ * latest landed edit added (else the last one it changed); before any edit lands it sits on the
+ * area the agent works on, never on the page frame's 0:0 corner. It glides in world space (no
+ * drift while panning). The outline frames the whole work area.
  */
 import { describe, expect, test } from "bun:test"
 import type { KimoDocument } from "@kimo/core-schema"
@@ -126,7 +127,13 @@ describe("built-in agent cursor (agent panel → canvas)", () => {
                   name: "kimo_apply_ops",
                   input: {
                     docId: holder.docId,
-                    ops: [{ op: "insert", parent: "Landing0001", node: { type: "frame" } }],
+                    ops: [
+                      {
+                        op: "insert",
+                        parent: "Landing0001",
+                        node: { type: "frame", name: "Extra" },
+                      },
+                    ],
                   },
                 },
               ],
@@ -146,9 +153,11 @@ describe("built-in agent cursor (agent panel → canvas)", () => {
     holder.docId = tools.docId()
     await c.refresh()
     const areas: string[][] = []
+    const pointers: string[] = []
     let follow: string[] = []
     const unsub = c.subscribe((st) => {
       const cur = st.canvas.cursors[0]
+      if (cur?.pointerId && pointers.at(-1) !== cur.pointerId) pointers.push(cur.pointerId)
       const ids = cur ? [...(cur.nodeIds ?? [cur.nodeId])] : []
       const last = areas[areas.length - 1]
       if (ids.length && JSON.stringify(last) !== JSON.stringify(ids)) areas.push(ids)
@@ -164,9 +173,12 @@ describe("built-in agent cursor (agent panel → canvas)", () => {
     expect(areas).toContainEqual([faq])
     // The insert-only batch into the page frame kept the FAQ area, then landed on its new layer.
     expect(areas.some((a) => a.includes("Landing0001") && areas.indexOf(a) > 0)).toBe(false)
-    // Follow targets the cursor's area.
-    expect(follow.length).toBeGreaterThan(0)
-    expect(follow).not.toContain("Landing0001")
+    // The pointer followed the last added layer of each landed edit: the FAQ, then the frame
+    // the second edit added to the page.
+    const added = store.children("Landing0001").at(-1) as string
+    expect(pointers).toEqual([faq, added])
+    // Follow targets the layer the cursor points at.
+    expect(follow).toEqual([added])
     // Idle: the cursor is gone once the turn ends.
     expect(c.state.canvas.cursors).toHaveLength(0)
   })
@@ -228,7 +240,7 @@ describe("canvas cursor projection (AgentCanvasModel)", () => {
       () => clock.t,
     )
     m.scanAll()
-    const props = (nodeIds: string[]): AgentCanvasProps => ({
+    const props = (nodeIds: string[], pointerId?: string): AgentCanvasProps => ({
       liveOrigins: new Set(["agent:k"]),
       agent: () => ({ label: "Kimo", persona: "agent", ops: 0, paused: false }),
       cursors: [
@@ -236,6 +248,7 @@ describe("canvas cursor projection (AgentCanvasModel)", () => {
           origin: "agent:k",
           nodeId: nodeIds[0] as string,
           nodeIds,
+          ...(pointerId ? { pointerId } : {}),
           text: "Kimo",
           state: "working",
         },
@@ -275,5 +288,39 @@ describe("canvas cursor projection (AgentCanvasModel)", () => {
     clock.t += CURSOR_GLIDE_MS
     expect(at({ x: 0, y: 0, zoom: 1 })).toMatchObject({ left: 104, top: 904 })
     expect(m.animating()).toBe(false)
+  })
+
+  test("the anchor is the pointed layer's top-left (+4, +4), not the area's", async () => {
+    const { m, layout, clock, props } = await setup()
+    m.setProps(props(["AreaA00001", "AreaB00001"], "AreaB00001"))
+    m.overlay(layout)
+    const d = m.dom(layout, { x: 0, y: 0, zoom: 1 }, { w: 1440, h: 900 })
+    expect(d.cursors[0]).toMatchObject({ left: 904, top: 454 })
+    // A pointer that is not laid out falls back to the area.
+    m.setProps(props(["AreaA00001"], "Missing0001"))
+    m.overlay(layout)
+    clock.t += CURSOR_GLIDE_MS
+    expect(m.dom(layout, { x: 0, y: 0, zoom: 1 }, { w: 1440, h: 900 }).cursors[0]).toMatchObject({
+      left: 804,
+      top: 404,
+    })
+  })
+
+  test("a new last added layer glides the pointer in world space; pan and zoom never drift", async () => {
+    const { m, layout, clock, props } = await setup()
+    m.setProps(props(["AreaA00001", "AreaB00001"], "AreaA00001"))
+    m.overlay(layout)
+    m.setProps(props(["AreaA00001", "AreaC00001"], "AreaC00001"))
+    m.overlay(layout)
+    expect(m.animating()).toBe(true)
+    const at = (v: { x: number; y: number; zoom: number }) =>
+      m.dom(layout, v, { w: 1440, h: 900 }).cursors[0] as { left: number; top: number }
+    clock.t += CURSOR_GLIDE_MS / 3
+    const mid = at({ x: 0, y: 0, zoom: 1 })
+    const zoomed = at({ x: 120, y: -40, zoom: 0.5 })
+    expect(zoomed.left).toBeCloseTo((mid.left - 4 - 120) * 0.5 + 4, 5)
+    expect(zoomed.top).toBeCloseTo((mid.top - 4 + 40) * 0.5 + 4, 5)
+    clock.t += CURSOR_GLIDE_MS
+    expect(at({ x: 0, y: 0, zoom: 1 })).toMatchObject({ left: 104, top: 904 })
   })
 })

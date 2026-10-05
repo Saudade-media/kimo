@@ -37,7 +37,8 @@ export const MAX_OPS_PER_CALL = 500
  * subtree, frame or page), `instantiate` and page duplicates are never counted, whatever their
  * size; edits to existing layers (update, replace, move, delete, overrides…) are not limited.
  * Over the limit the call fails with BATCH_TOO_LARGE and nothing is applied, so agents build a
- * design step by step: a skeleton first, then one section per call. Every caller of this tool
+ * design step by step, one finished section (or finished sub-block) per call. The limit is a
+ * ceiling, not a target. Every caller of this tool
  * is an agent (built-in panel, Claude Code / Codex / Gemini CLI, any MCP client); user actions
  * (paste, import, duplicate) never go through it.
  */
@@ -124,7 +125,7 @@ export const kimoApplyOps = defineTool({
   name: "kimo_apply_ops",
   title: "Edit with typed ops",
   description:
-    "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key and reference them later in the call as @key. At most 40 insert ops per call (BATCH_TOO_LARGE): a skeleton first, then one section per call; copy, instantiate and edits are unlimited, so start a variant with one copy. Features a value needs are declared for you. Pass baseRevision from your last result.",
+    "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key, then use @key later in the call. At most 40 insert ops per call, a ceiling not a target: one finished section per call, no empty frames to fill later; copy, instantiate and edits are unlimited. Fix data.problems in your next call. Features a value needs are declared for you. Pass baseRevision from your last result.",
   input: applyOpsInput,
   advertise: applyOpsAdvertised(applyOpsInput),
   data: Obj({
@@ -139,6 +140,12 @@ export const kimoApplyOps = defineTool({
         nodeId: Opt(Str({ description: "Node." })),
       }),
       { description: "Side effects the component/variable planners reported." },
+    ),
+    problems: Opt(
+      Arr(Str({ description: "<id> <kind>: <fix>." }), {
+        description:
+          "Problems in the changed layers (empty frame, text overflow, …): fix them next.",
+      }),
     ),
   }),
   annotations: WRITE_MAYBE_DESTRUCTIVE,

@@ -401,6 +401,7 @@ export async function startDocumentHostService(
         docs: p.docs,
         ...(p.call ? { call: p.call } : {}),
         ...(p.focus.length ? { focus: p.focus } : {}),
+        ...(p.pointer ? { pointer: p.pointer } : {}),
         ...(p.paused ? { paused: true } : {}),
       }
     })

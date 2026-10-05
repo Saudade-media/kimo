@@ -284,14 +284,19 @@ export class AgentCanvasModel {
   }
 
   /**
-   * Re-targets each cursor at the top-left of its work area (world). Areas resolve once the
-   * layout has the new nodes; a changed target starts a glide from where the cursor is now.
+   * Re-targets each cursor (world): the top-left of the layer it points at (board 31 "Agent
+   * cursor": the last layer the latest landed edit added), else of its work area. Targets
+   * resolve once the layout has the new nodes; a changed target starts a glide from where the
+   * cursor is now.
    */
   private syncCursors(layout: LayoutResult): void {
     const t = this.now()
     const seen = new Set<string>()
     for (const c of this.props?.cursors ?? []) {
-      const area = unionBox(this.cursorIds(c, layout).map((id) => layout.nodes.get(id)?.world))
+      const p = c.pointerId ? layout.nodes.get(c.pointerId) : undefined
+      const area = p?.visible
+        ? p.world
+        : unionBox(this.cursorIds(c, layout).map((id) => layout.nodes.get(id)?.world))
       if (!area) continue
       seen.add(c.origin)
       const to = { x: area.x, y: area.y }
@@ -536,8 +541,8 @@ export class AgentCanvasModel {
       })
     }
 
-    // Persona cursors: anchor = work area top-left (+4, +4), gliding in world space between
-    // areas; pills stack per anchor, lead on top.
+    // Persona cursors: anchor = the pointed layer's top-left (else the work area's) + (4, 4),
+    // gliding in world space between targets; pills stack per anchor, lead on top.
     const cursors: CursorView[] = []
     const perNode = new Map<string, number>()
     const sorted = [...(p?.cursors ?? [])].sort(

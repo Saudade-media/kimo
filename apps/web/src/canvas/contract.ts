@@ -674,6 +674,12 @@ export interface CanvasAgentCursor {
    * box (+4, +4); absent = `[nodeId]`.
    */
   nodeIds?: readonly string[]
+  /**
+   * Board 31 "Agent cursor": the layer the cursor points at (its top-left +4, +4): the last
+   * layer the agent's latest landed edit added, else the last one it changed. Absent, or not
+   * laid out = the work area's top-left. The outline still frames the whole work area.
+   */
+  pointerId?: string
   /** "setting Headline font…" (the pill reads "<label> · <text>"). */
   text: string
   state: CanvasAgentMarkState

@@ -263,6 +263,8 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         focus: areaOf(
           c.focus?.length ? c.focus : seen?.last.length ? seen.last : lastFocus(c.origin),
         ),
+        // Board 31 "Agent cursor": the last layer its latest landed edit added.
+        ...(c.pointer && (!store || store.hasNode(c.pointer)) ? { pointer: c.pointer } : {}),
         lastActivityAt: Math.max(c.lastActivityAt, wrote === -Infinity ? 0 : wrote),
         client,
         presence,

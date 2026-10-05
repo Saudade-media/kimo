@@ -10,13 +10,15 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 
 ## While the agent works
 
-The agent builds in steps you can watch: first a skeleton (the frame and its empty sections), then one section at a time. Each edit lands on the canvas as soon as it is made, and the layers it changed flash briefly in the agent's color. The canvas never moves by itself.
+The agent builds in steps you can watch: it plans the sections, then adds one finished section per edit, with its real content. After every edit the design looks complete so far, with no empty boxes waiting to be filled. Each edit lands on the canvas as soon as it is made, the layers it changed flash briefly in the agent's color, and the agent's cursor moves to the last layer it added. The canvas never moves by itself.
+
+After each edit Kimo tells the agent about clear problems in what it just built: an empty frame, text that doesn't fit its box or is cut off, a layer of zero size or outside its parent, a missing variable, a shape that draws nothing. The agent fixes them before it moves on and checks the whole page once more before it replies. You don't see these checks; they only shape what lands on the canvas.
 
 Instead of streaming text, the thread shows one status line that updates in place:
 
 - **What it is doing now:** the agent's own short note for the current step ("Building the pricing section"), or, when it wrote none, what the tool is doing ("Adding 12 layers in Pricing", "Reading the Home page"). Its reasoning is never shown.
 - **Elapsed time** and the number of steps so far.
-- **Follow:** zooms the canvas to the layers the agent just changed. It jumps once per click.
+- **Follow:** zooms the canvas to the layer the agent's cursor points at, the last one it added. It jumps once per click.
 
 The written reply appears when the turn ends. Replies show formatted text: paragraphs, bullet and numbered lists, **bold**, *italic*, inline code, code blocks and links (http, https and mailto). Links open in your browser.
 
@@ -32,7 +34,7 @@ Under each reply, **N steps** opens the list of tool steps the agent took. It is
 
 ## Edit size
 
-One agent edit can add at most 40 new layers. Bigger designs are built in several edits, which is what lets you watch them grow. Copies, duplicates and component instances don't count, so "make a variant of this page with a pricing table" copies the page in one step and then adds only the pricing section. The limit applies to every agent, both the built-in one and Claude Code, Codex or Gemini CLI connected over MCP. It never applies to your own paste, import or duplicate.
+One agent edit can add at most 40 new layers. That is a ceiling, not a target: an edit holds one finished section, often 8 to 25 layers, and a large section is split into finished parts (its heading, then its cards). Bigger designs are built in several edits, which is what lets you watch them grow. Copies, duplicates and component instances don't count, so "make a variant of this page with a pricing table" copies the page in one step and then adds only the pricing section. The limit applies to every agent, both the built-in one and Claude Code, Codex or Gemini CLI connected over MCP. It never applies to your own paste, import or duplicate.
 
 ## Modes
 

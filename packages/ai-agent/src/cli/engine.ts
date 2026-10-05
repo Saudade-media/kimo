@@ -121,6 +121,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
         let summary = e.output.slice(0, 200)
         let changed: string[] = []
         let undoToken: string | undefined
+        let pointer: string | undefined
         let ok = e.ok
         if (env) {
           ok = env.ok
@@ -129,6 +130,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
             changed = env.changed ?? []
             if (env.undoToken && !env.dryRun) {
               undoToken = env.undoToken
+              pointer = env.pointer
               opsApplied += env.opCount ?? env.ops?.length ?? 0
               opGroups.push({
                 docId: env.doc?.id ?? "",
@@ -147,6 +149,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
           ok,
           summary,
           changed,
+          ...(pointer ? { pointer } : {}),
           ...(undoToken ? { undoToken } : {}),
           ...(env && !env.ok && env.errors[0] ? { errorCode: env.errors[0].code } : {}),
         })

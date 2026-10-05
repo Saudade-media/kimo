@@ -187,7 +187,10 @@ function Attribution({
   world?: AgentCanvasLayerProps["world"]
   toLayer?: AgentCanvasLayerProps["toLayer"]
 }) {
-  const area = world ? unionBox(chip.focus.slice(0, 50).map((f) => world(f))) : null
+  // Board 31 "Agent cursor": the pointer glides to the layer the last landed edit added (its
+  // top-left), else to the work area's top-left.
+  const pointed = world && chip.pointer ? world(chip.pointer) : null
+  const area = pointed ?? (world ? unionBox(chip.focus.slice(0, 50).map((f) => world(f))) : null)
   const glide = useWorldGlide(area ? { x: area.x, y: area.y } : null)
   const writing = chip.state === "editing" || Date.now() - chip.lastActivityAt < fadeMs
   if (chip.presence === "paused") return null
@@ -210,9 +213,13 @@ function Attribution({
         x.b.x + x.b.w >= u.x + u.w - 0.5 &&
         x.b.y + x.b.h >= u.y + u.h - 0.5,
     )?.b ?? u
-  // Cursor anchor: the glided world point of the area's top-left, projected now.
-  const at = glide && toLayer ? toLayer(glide) : { x: box.x, y: box.y }
-  const anchor: ProjectedBox = { ...box, x: at.x, y: at.y }
+  // Cursor anchor: the glided world point of the pointed layer's (else the area's) top-left,
+  // projected now.
+  const pointedBox = chip.pointer ? project(chip.pointer) : null
+  const target = pointedBox ?? box
+  const at = glide && toLayer ? toLayer(glide) : { x: target.x, y: target.y }
+  const anchor: ProjectedBox = { ...target, x: at.x, y: at.y }
+  const panTo = pointedBox && chip.pointer ? chip.pointer : id
   const idle = Date.now() - chip.lastActivityAt > CURSOR_IDLE_MS && chip.state !== "editing"
   const place = view.w > 0 ? placeCursor(anchor, view, { stack, reservedTop }) : null
   const markState = chip.state === "editing" ? "working" : "idle"
@@ -250,7 +257,7 @@ function Attribution({
           className="agents-cursor-docked"
           data-testid="agent-cursor-docked"
           style={{ left: place.x, top: place.y }}
-          onClick={() => onPanTo?.(id)}
+          onClick={() => onPanTo?.(panTo)}
         >
           <AgentMark size={12} state={markState} />
           <span className="agents-cursor-docked__label">{chip.label}</span>

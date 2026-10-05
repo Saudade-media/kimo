@@ -41,12 +41,16 @@ On failure: `{"ok":false,"summary":…,"errors":[{"code","message","path?","node
 
 After each meaningful write:
 
+0. **Problems.** A `kimo_apply_ops` result carries `data.problems` when the layers it changed
+   have clear problems (empty frame, text overflowing or clipped, zero size, outside its parent,
+   missing variable, invisible shape). Fix them in the next call.
 1. **Render.** `kimo_render {docId, ids:[frameId]}` (or `render:true` on `kimo_apply_ops`). It
    always shows the committed state. Look for clipped text, overlap and wrong spacing.
 2. **Measure.** `kimo_query {select:{ids:[…]}, include:["bounds","problems"]}`. Compare the
    actual boxes with what you intended.
-3. **Validate.** `kimo_validate {docId}` reports schema errors and lints (missing variables,
-   invisible text, circular sizing, unresolved overrides).
+3. **Validate.** `kimo_validate {docId, check: true}` reports schema errors, lints (missing
+   variables, invisible text, circular sizing, unresolved overrides) and the design problems of
+   the whole document, placeholders still set included. Finish with none.
 4. **Fix** with a small follow-up call, then repeat. Stop when render, bounds and validate all
    agree.
 

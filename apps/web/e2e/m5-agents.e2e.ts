@@ -685,6 +685,27 @@ export const scenarios: Scenario[] = [
         (await page.locator(".agents-cursor__label").innerText()) === "Claude Code",
         "cursor copy",
       )
+      // Board 31 "Agent cursor": with a pointed layer (the last one its edit added) the cursor
+      // sits on that layer's top-left (+4, +4); the outline keeps framing the work area.
+      await page.evaluate(() => {
+        const a = (window as unknown as Agents).__agents
+        ;(
+          a.host.control as unknown as { updateConnection(id: string, p: unknown): void }
+        ).updateConnection("conn-claude-code-k3x9qa", {
+          pointer: "Card000003",
+          lastActivityAt: Date.now(),
+        })
+      })
+      await page.waitForTimeout(400)
+      const pm = await measure(page, {
+        canvas: "[data-testid=canvas]",
+        outline: "[data-testid=agent-outline]",
+        cursor: "[data-testid=agent-cursor]",
+      })
+      const px = (pm.cursor?.x ?? 0) - (pm.canvas?.x ?? 0)
+      const py = (pm.cursor?.y ?? 0) - (pm.canvas?.y ?? 0)
+      expect(px === 372 && py === 156, `cursor on the pointed layer (372,156): ${px},${py}`)
+      expect((pm.outline?.x ?? 0) - (pm.canvas?.x ?? 0) === 216, "outline stays on the work area")
       // Commit (idle) → outline fades after 2 s.
       await page.evaluate(() => {
         const a = (window as unknown as Agents).__agents

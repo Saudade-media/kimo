@@ -17,7 +17,7 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | `INVALID_INPUT` | The tool input failed its schema (`path` points at it) | Fix the named field. Check spelling and types |
 | `SCHEMA_VIOLATION` | The resulting document would be invalid (`detail` has the validator issue) | Apply `suggestion` (a one-line fix for unknown fields such as `unset`, `padding`, `fontSize`), else read the issue code (`VARIABLE_MISSING`, `INSTANCE_VISUAL_FIELD`, …) and change the op |
 | `INSTANCE_STRUCTURE` | Tried to add/delete/move children inside an instance | Use `set_override` (`visible:false`, `slot`, `replace`), or `detach` |
-| `BATCH_TOO_LARGE` | More than 40 `insert`s in one call (`detail.newLayers`) | Skeleton first, then one section per call. `copy` is never limited (`guide/steps`) |
+| `BATCH_TOO_LARGE` | More than 40 `insert`s in one call (`detail.newLayers`) | One finished section (or sub-block) per call. `copy` is free (`guide/steps`) |
 | `CYCLE` | A move or instance would contain itself | Pick another parent or component |
 | `OUT_OF_SCOPE` | Edit outside the node subtrees assigned to you | Stay inside your scope, or ask the coordinator |
 | `PERMISSION_DENIED` | Policy level, allow-list, grant, or the user said no / didn't answer | Don't loop. Ask the user (Kimo › Settings › Agents), or take a non-destructive path |

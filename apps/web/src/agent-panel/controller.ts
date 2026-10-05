@@ -174,8 +174,10 @@ export interface CanvasAgentState {
   cursors: {
     origin: string
     nodeId: string
-    /** The work area (cursor at its union box's top-left); see `CanvasAgentCursor.nodeIds`. */
+    /** The work area (outline); see `CanvasAgentCursor.nodeIds`. */
     nodeIds?: string[]
+    /** Where the cursor points (the last layer the last landed edit added); see `pointerId`. */
+    pointerId?: string
     text: string
     state: AgentMarkState
   }[]
@@ -619,6 +621,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   }
 
   /** The top-most of `ids` (drops ids whose ancestor is listed too), at most `max`. */
+  /** Board 31 Follow: the layer the cursor points at, else its work area. */
+  function followOf(c: { nodeId: string; nodeIds?: string[]; pointerId?: string }): string[] {
+    return c.pointerId ? [c.pointerId] : (c.nodeIds ?? [c.nodeId])
+  }
+
   function topMost(ids: readonly string[], max = 24): string[] {
     const set = new Set(ids)
     const out: string[] = []
@@ -946,13 +953,16 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     }
   }
 
-  /** Points the origin's cursor at the work area of the existing layers in `ids` (no-op if none). */
-  function moveCursor(origin: string, ids: readonly string[]) {
-    const area = workAreaIds(
-      ids.filter((id) => !o.nodeName || o.nodeName(id) !== undefined),
-      (id) => o.parentOf?.(id) ?? null,
-    ).slice(0, 50)
+  /**
+   * Moves the origin's work area to the existing layers in `ids` (no-op if none). The pointer
+   * (board 31 "Agent cursor") moves to `pointer` when given, else stays on its layer.
+   */
+  function moveCursor(origin: string, ids: readonly string[], pointer?: string) {
+    const exists = (id: string) => !o.nodeName || o.nodeName(id) !== undefined
+    const area = workAreaIds(ids.filter(exists), (id) => o.parentOf?.(id) ?? null).slice(0, 50)
     if (!area.length) return
+    const prev = canvas.cursors.find((c) => c.origin === origin)?.pointerId
+    const pointerId = pointer && exists(pointer) ? pointer : prev
     canvas = {
       ...canvas,
       cursors: [
@@ -962,6 +972,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           origin,
           nodeId: area[0] as string,
           nodeIds: area,
+          ...(pointerId ? { pointerId } : {}),
           text: canvas.info[origin]?.label ?? "Kimo",
           state: "working",
         },
@@ -977,8 +988,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       const had = canvas.cursors.some((c) => c.origin === origin)
       moveCursor(origin, tg.ids.length ? tg.ids : had ? [] : tg.parents)
     } else if (e.type === "step_end") {
-      // A landed edit: the cursor moves to what it created / changed (not the page frame).
-      if (e.ok && e.changed.length) moveCursor(origin, e.changed)
+      // A landed edit: the area becomes what it created / changed (not the page frame) and the
+      // pointer moves to the last layer it added (board 31 "Agent cursor").
+      if (e.ok && e.changed.length) moveCursor(origin, e.changed, e.pointer)
       const inf = canvas.info[origin]
       if (inf && e.ok) {
         const changed = e.changed.length
@@ -1278,9 +1290,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           break
         case "step_start": {
           tracker.step(e.label)
-          // Follow targets the cursor's area (the layers this step reads or edits).
+          // Follow targets where the cursor points, else its area.
           const cursor = canvas.cursors.find((c) => c.origin === origin)
-          if (cursor) patchProgress({ follow: cursor.nodeIds ?? [cursor.nodeId] })
+          if (cursor) patchProgress({ follow: followOf(cursor) })
           updateAgentMessage(msgId, (m) => ({
             ...m,
             steps: [
@@ -1322,7 +1334,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           }))
           if (e.ok && e.changed.length && e.undoToken) {
             const cursor = canvas.cursors.find((c) => c.origin === origin)
-            const ids = cursor ? (cursor.nodeIds ?? [cursor.nodeId]) : topMost(e.changed)
+            const ids = cursor ? followOf(cursor) : topMost(e.changed)
             if (ids.length) patchProgress({ follow: ids })
           }
           break

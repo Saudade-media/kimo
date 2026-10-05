@@ -197,6 +197,8 @@ export interface McpConnectionInfo {
   call?: McpCallInfo
   /** Nodes it is editing or last changed (canvas focus / agent cursor). */
   focus?: string[]
+  /** Board 31 "Agent cursor": the last layer its latest landed edit added (or changed). */
+  pointer?: string
   /** Paused by the user (Settings / session popover): its calls wait until resumed. */
   paused?: boolean
 }

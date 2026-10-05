@@ -5,7 +5,14 @@
  * adds connections (origin per client session), approvals, activity and presence.
  */
 export * from "./activity"
-export { type CompileResult, compileWireOps, touchedIds, wirePath } from "./compile"
+export * from "./check"
+export {
+  type CompileResult,
+  compileWireOps,
+  pointerTarget,
+  touchedIds,
+  wirePath,
+} from "./compile"
 export * from "./core-host"
 export { createToolHandlers } from "./create"
 export * from "./host-runtime"

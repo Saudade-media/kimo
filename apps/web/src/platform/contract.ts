@@ -986,6 +986,8 @@ export interface AgentChip {
   state: McpConnectionInfo["state"]
   /** Nodes to tint with the agent color on the canvas (its last edit / current focus). */
   focus: string[]
+  /** Board 31 "Agent cursor": the layer the cursor points at (the last layer its edit added). */
+  pointer?: string
   /** Relative "2 min ago" is formatted by the UI from this. */
   lastActivityAt: number
 }
@@ -1159,7 +1161,10 @@ export interface AgentProgressView {
   source: "start" | "note" | "tool"
   /** Turn start (ms, the controller's clock): the elapsed time ticks from it. */
   startedAt: number
-  /** Layers the Follow chip zooms to (the last landed edit, else the node being worked on). */
+  /**
+   * Layers the Follow chip zooms to: the layer the agent cursor points at (the last layer the
+   * last landed edit added), else the layers being worked on.
+   */
   follow: string[]
 }
 

@@ -15,11 +15,13 @@ You edit through tools, and each call is one atomic, undoable change.
    tokens, `kimo_list_components` for reusable parts.
 3. Write with `kimo_apply_ops {docId, baseRevision, ops:[…]}`. Up to 500 typed ops in one call,
    applied all-or-nothing, of which at most 40 `insert`s (new layers). New nodes get `key`s; later
-   ops refer to them as `@key`. Build step by step: a skeleton first, then one section per call,
-   with a one-line note before each call saying what you are doing. Copy what already exists
-   (a variant starts with one `copy` of the page) instead of re-creating it.
-4. Verify: `kimo_render {docId, ids}` returns a PNG of the committed state, and `kimo_validate`
-   lists problems. Fix in a follow-up call.
+   ops refer to them as `@key`. Build step by step: plan the sections, then one finished section
+   per call (40 is a ceiling, not a target), with a one-line note before each call saying what
+   you are doing. Copy what already exists (a variant starts with one `copy` of the page)
+   instead of re-creating it.
+4. Verify: each result's `data.problems` lists problems in what you just changed; fix them in
+   the next call. `kimo_render {docId, ids}` returns a PNG of the committed state, and
+   `kimo_validate {check: true}` lists what is left. Finish with none.
 5. Save when asked (`kimo_save`), or let autosave do it.
 
 Every document tool needs an explicit `docId`. Nothing falls back to an "active" document.

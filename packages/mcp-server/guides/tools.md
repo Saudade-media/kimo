@@ -38,9 +38,9 @@ Tool descriptions stay short (every model call carries them); the details are he
 ## Editing
 
 - `kimo_apply_ops`: see `ops`. Limits: 500 ops per call, of which at most 40 `insert`s.
-  `dryRun` returns the would-be ops and warnings; `render: true` attaches a PNG of the changed
-  top-level frames (never for a dry run). Results leave out the normalized `ops` / `inverse`
-  (a dry run keeps `ops`); `opCount`, `created`, `changed` and `undoToken` are there.
+  `dryRun` returns the would-be ops; `render: true` attaches a PNG of the changed top-level
+  frames. Results leave out `ops` / `inverse` (a dry run keeps `ops`). `data.problems` lists
+  problems in the changed layers: fix them next.
 - `kimo_import`: `svg` (editable vector layers), `image` (hashed into `assets/`, placed as an
   image-filled rect), `tokens-dtcg` / `tokens-css` (variables, merged). Exactly one of `path`
   (absolute, allow-list applies) or `text`. Supports `dryRun` and `baseRevision`.

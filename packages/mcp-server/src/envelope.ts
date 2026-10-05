@@ -150,6 +150,11 @@ export interface ToolSuccess<T> {
   changed?: string[]
   /** Opaque token for kimo_history {action:"undo", token}: undoes exactly this group. */
   undoToken?: string
+  /**
+   * Board 31 "Agent cursor": the last layer this edit added (else the last it changed), where
+   * the agent's canvas pointer moves. Absent for reads, dry runs and placeholder-only edits.
+   */
+  pointer?: string
   dryRun?: boolean
   warnings: ToolWarning[]
   data: T
@@ -211,6 +216,7 @@ export function envelopeSchema<T extends TSchema>(data: T, opts: { mutating: boo
         undoToken: Opt(
           Str({ description: "Pass to kimo_history undo to revert exactly this call." }),
         ),
+        pointer: Opt(Str({ description: "The last layer this edit added (else changed)." })),
         dryRun: Opt(Bool({ description: "True when nothing was committed on purpose." })),
       }
     : {}

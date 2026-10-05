@@ -90,7 +90,7 @@ describe("newLayerCount", () => {
     const err = batchTooLarge([...at, rect("p", 99)])
     expect(err?.code).toBe("BATCH_TOO_LARGE")
     expect(err?.detail).toEqual({ kind: "batch", limit: 40, newLayers: 41 })
-    expect(err?.suggestion).toContain("skeleton first")
+    expect(err?.suggestion).toContain("one complete section")
     expect(err?.suggestion).toContain("≤ 40")
   })
 })
@@ -111,7 +111,7 @@ describe("kimo_apply_ops batch limit", () => {
     ]
     const r = expectFail(await c.call("kimo_apply_ops", { docId, ops }), "BATCH_TOO_LARGE")
     expect(r.errors[0]?.detail).toEqual({ kind: "batch", limit: 40, newLayers: 41 })
-    expect(r.errors[0]?.suggestion).toMatch(/Split into sections of ≤ 40 new layers/)
+    expect(r.errors[0]?.suggestion).toMatch(/Split into finished parts of ≤ 40 new layers/)
     const after = expectOk(await c.call<unknown>("kimo_get_state", { docId })).revision
     expect(after).toEqual(before)
     // dryRun is refused the same way.

@@ -6,14 +6,17 @@
 1. `kimo_get_state`, then `kimo_get_variables` and `kimo_list_components`. Reuse what exists:
    colors, type scale, spacing, buttons.
 2. `kimo_find_space {docId, w:1440, h:900}` for a free spot.
-3. Insert the page frame: `w:1440`, `h:{"mode":"fit"}`, `layout:{dir:"column"}`, a background
-   fill, `placeholder:true`, together with one empty, named frame per section (the skeleton).
-   A variant of an existing page starts with one `copy` of that page instead.
+3. Plan the sections. The first call inserts the page frame (`w:1440`, `h:{"mode":"fit"}`,
+   `layout:{dir:"column"}`, a background fill, `placeholder:true`) together with its first
+   finished section, never empty section frames to fill later. A variant of an existing page
+   starts with one `copy` of that page instead.
 
 ## Section by section
 
-Build one section per call (at most 40 new layers: `BATCH_TOO_LARGE` otherwise), with a
-one-line note before it ("Building the pricing section"), render it, then continue:
+Build one finished section per call, sized to what it needs (often 8 to 25 new layers; 40 is a
+ceiling, not a target, and more fails with `BATCH_TOO_LARGE`). A bigger section becomes
+complete sub-blocks, one per call. Write a one-line note before each call ("Building the
+pricing section"), fix what `data.problems` reports, render it, then continue:
 
 - **Section frame:** `w:{"mode":"fill"}`, `layout:{dir:"column", align:"center", pad:[96,24]}`.
 - **Content column** inside it: fixed `w:1200` (or 1120/960), `layout:{dir:"column", gap:24}`.
@@ -33,7 +36,7 @@ one-line note before it ("Building the pricing section"), render it, then contin
 ## Finish
 
 1. Render the whole page at `maxSize` 1600 to check rhythm and alignment.
-2. `kimo_validate`, and fix any lints.
+2. `kimo_validate {check: true}`, and fix lints and problems until it lists none.
 3. `update {id:page, unset:["placeholder"]}`.
 4. Turn repeated parts (cards, buttons, footer columns) into components if the user will
    iterate on them.

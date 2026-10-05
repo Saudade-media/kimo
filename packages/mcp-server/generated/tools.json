@@ -1793,7 +1793,7 @@
     {
       "name": "kimo_apply_ops",
       "title": "Edit with typed ops",
-      "description": "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key and reference them later in the call as @key. At most 40 insert ops per call (BATCH_TOO_LARGE): a skeleton first, then one section per call; copy, instantiate and edits are unlimited, so start a variant with one copy. Features a value needs are declared for you. Pass baseRevision from your last result.",
+      "description": "The only way to edit. Ops apply in order, all or nothing, as one undo step. Name new nodes with key, then use @key later in the call. At most 40 insert ops per call, a ceiling not a target: one finished section per call, no empty frames to fill later; copy, instantiate and edits are unlimited. Fix data.problems in your next call. Features a value needs are declared for you. Pass baseRevision from your last result.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -2174,6 +2174,14 @@
                   "additionalProperties": false
                 },
                 "description": "Side effects the component/variable planners reported."
+              },
+              "problems": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "<id> <kind>: <fix>."
+                },
+                "description": "Problems in the changed layers (empty frame, text overflow, …): fix them next."
               }
             },
             "additionalProperties": false,
@@ -2253,6 +2261,10 @@
           "undoToken": {
             "type": "string",
             "description": "Pass to kimo_history undo to revert exactly this call."
+          },
+          "pointer": {
+            "type": "string",
+            "description": "The last layer this edit added (else changed)."
           },
           "dryRun": {
             "type": "boolean",
@@ -3747,7 +3759,7 @@
     {
       "name": "kimo_validate",
       "title": "Validate",
-      "description": "Schema errors and lint warnings (same engine as kimo validate); ids limits it to subtrees.",
+      "description": "Schema errors and lints (as kimo validate); ids: subtrees only; check: design problems too.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -3769,6 +3781,10 @@
           "lints": {
             "type": "boolean",
             "description": "Default true."
+          },
+          "check": {
+            "type": "boolean",
+            "description": "Default false."
           }
         },
         "additionalProperties": false
@@ -4078,6 +4094,14 @@
                   "additionalProperties": false
                 },
                 "description": "Lints."
+              },
+              "problems": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "<id> <kind>: <fix>."
+                },
+                "description": "Design problems (check)."
               }
             },
             "additionalProperties": false,
@@ -4533,6 +4557,10 @@
           "undoToken": {
             "type": "string",
             "description": "Pass to kimo_history undo to revert exactly this call."
+          },
+          "pointer": {
+            "type": "string",
+            "description": "The last layer this edit added (else changed)."
           },
           "dryRun": {
             "type": "boolean",
@@ -5598,6 +5626,10 @@
             "type": "string",
             "description": "Pass to kimo_history undo to revert exactly this call."
           },
+          "pointer": {
+            "type": "string",
+            "description": "The last layer this edit added (else changed)."
+          },
           "dryRun": {
             "type": "boolean",
             "description": "True when nothing was committed on purpose."
@@ -6060,6 +6092,10 @@
           "undoToken": {
             "type": "string",
             "description": "Pass to kimo_history undo to revert exactly this call."
+          },
+          "pointer": {
+            "type": "string",
+            "description": "The last layer this edit added (else changed)."
           },
           "dryRun": {
             "type": "boolean",
@@ -7559,6 +7595,10 @@
           "undoToken": {
             "type": "string",
             "description": "Pass to kimo_history undo to revert exactly this call."
+          },
+          "pointer": {
+            "type": "string",
+            "description": "The last layer this edit added (else changed)."
           },
           "dryRun": {
             "type": "boolean",

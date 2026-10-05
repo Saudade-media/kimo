@@ -495,6 +495,13 @@ describe("controller (AgentsController over McpHostApi + DocStore)", () => {
       tool: "kimo_render",
     })
     expect(c.state.chips[0]?.focus).toEqual(["Card000003"])
+    // Board 31 "Agent cursor": the chip carries the pointed layer (the last one its edit added)
+    // while it exists; a deleted or unknown layer is dropped.
+    expect(c.state.chips[0]?.pointer).toBeUndefined()
+    host.control.updateConnection(id, { pointer: "Divider001" })
+    expect(c.state.chips[0]?.pointer).toBe("Divider001")
+    host.control.updateConnection(id, { pointer: "Gone000001" })
+    expect(c.state.chips[0]?.pointer).toBeUndefined()
     const req = {
       id: "ap-k",
       client: (c.state.connections[0] as McpConnectionInfo).identity,

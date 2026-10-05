@@ -26,6 +26,7 @@ const envelope = {
   ops: [{ op: "insert" }, { op: "insert" }, { op: "insert" }],
   changed: ["Form000001"],
   undoToken: "u-cli-1",
+  pointer: "Submit0001",
   warnings: [],
   data: {},
 }
@@ -496,6 +497,8 @@ describe("running a turn through a fake CLI", () => {
       tool: "kimo_apply_ops",
       ok: true,
       undoToken: "u-cli-1",
+      // Board 31 "Agent cursor": the pointer target travels with the step.
+      pointer: "Submit0001",
       summary: envelope.summary,
     })
     expect(rec.opGroups).toEqual([

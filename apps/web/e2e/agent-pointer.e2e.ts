@@ -2,9 +2,10 @@
  * Agent pointer (board 31 "Agent cursor"): a scripted built-in agent turn in the real editor
  * (real agent panel controller and loop, the Anthropic adapter over a routed Messages endpoint,
  * the in-window tools, the real canvas) edits a card at world (800, 400) that sits inside a page
- * frame at 0:0. The persona cursor must move into the card's screen rect (not the page frame's
- * 0:0 corner), stay locked to it while the canvas pans and zooms, the Follow target must be the
- * same area, and the cursor goes away once the turn ends.
+ * frame at 0:0. The persona cursor must point at the last layer the edit added (the badge, at
+ * its top-left + 4, inside the card's screen rect, never the page frame's 0:0 corner), stay
+ * locked to it while the canvas pans and zooms, Follow must target that same layer, and the
+ * cursor goes away once the turn ends.
  */
 import type { Page, Route } from "playwright"
 import { openEditor, settle, setViewport } from "./qa-helpers"
@@ -22,7 +23,7 @@ type W = {
       send(text: string): Promise<void>
       state: {
         busy: boolean
-        canvas: { cursors: { nodeId: string; nodeIds?: string[] }[] }
+        canvas: { cursors: { nodeId: string; nodeIds?: string[]; pointerId?: string }[] }
         messages: { kind: string; progress?: { follow: string[] } }[]
       }
     }
@@ -197,7 +198,7 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
     .waitForFunction(
       (pageId) => {
         const cur = (window as unknown as W).__kimo.agent?.state.canvas.cursors[0]
-        return !!cur && !(cur.nodeIds ?? [cur.nodeId]).includes(pageId)
+        return !!cur?.pointerId && !(cur.nodeIds ?? [cur.nodeId]).includes(pageId)
       },
       PAGE,
       { timeout: 20_000 },
@@ -247,20 +248,45 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
   expect(before.inside, `cursor inside the card's screen rect: ${JSON.stringify(before)}`)
   expect(before.display !== "none" && before.height > 0, "cursor rendered")
 
-  // Follow targets the same area as the cursor.
+  // The cursor points at the badge (the last added layer): its top-left + (4, 4).
+  const badge = await page.evaluate((card) => {
+    const w = window as unknown as W
+    const canvas = w.__kimo.canvas()
+    const v = canvas.renderer.viewport
+    const id = w.__kimo.agent?.state.canvas.cursors[0]?.pointerId ?? ""
+    const b = canvas.layout()?.nodes.get(id)?.world as Box
+    const host = (document.querySelector(".canvas-host") as HTMLElement).getBoundingClientRect()
+    const e = (
+      document.querySelector('[data-testid="persona-cursor"]') as HTMLElement
+    ).getBoundingClientRect()
+    return {
+      id,
+      isCard: id === card,
+      dx: e.x - (host.x + (b.x - v.x) * v.zoom + 4),
+      dy: e.y - (host.y + (b.y - v.y) * v.zoom + 4),
+    }
+  }, CARD)
+  log(`  pointer ${badge.id} offset ${badge.dx.toFixed(2)},${badge.dy.toFixed(2)}`)
+  expect(!badge.isCard && !!badge.id, `pointer on the added badge: ${JSON.stringify(badge)}`)
+  expect(
+    Math.abs(badge.dx) <= 0.5 && Math.abs(badge.dy) <= 0.5,
+    `cursor at the badge's top-left + 4: ${JSON.stringify(badge)}`,
+  )
+
+  // Follow targets the layer the cursor points at.
   const area = await page.evaluate(() => {
     const s = (window as unknown as W).__kimo.agent?.state
     const cur = s?.canvas.cursors[0]
     const a = s?.messages.findLast((m) => m.kind === "agent")
-    return { cursor: cur?.nodeIds ?? (cur ? [cur.nodeId] : []), follow: a?.progress?.follow ?? [] }
+    return { pointer: cur?.pointerId, follow: a?.progress?.follow ?? [] }
   })
   expect(
-    area.follow.length > 0 && JSON.stringify(area.follow) === JSON.stringify(area.cursor),
-    `Follow = cursor area: ${JSON.stringify(area)}`,
+    area.follow.length === 1 && area.follow[0] === area.pointer,
+    `Follow = the pointed layer: ${JSON.stringify(area)}`,
   )
 
   // Position lock: sample every drawn canvas frame while panning / zooming. The cursor's screen
-  // position must equal its work area's top-left (+4, +4) as drawn in that frame (≤ 0.5 px).
+  // position must equal the pointed layer's top-left (+4, +4) as drawn in that frame (≤ 0.5 px).
   await page.evaluate(() => {
     const w = window as unknown as W & { __lock: { rx: number; ry: number; zoom: number }[] }
     const canvas = w.__kimo.canvas()
@@ -274,7 +300,7 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
       const cur = w.__kimo.agent?.state.canvas.cursors[0]
       const el = document.querySelector('[data-testid="persona-cursor"]')
       if (!el || !cur) return
-      const boxes = (cur.nodeIds ?? [cur.nodeId])
+      const boxes = (cur.pointerId ? [cur.pointerId] : (cur.nodeIds ?? [cur.nodeId]))
         .map((id) => canvas.layout()?.nodes.get(id)?.world)
         .filter((x): x is Box => !!x)
       if (!boxes.length) return
@@ -335,7 +361,7 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
 
 export const scenarios: Scenario[] = [
   {
-    name: "agent pointer: a scripted edit moves the cursor into the edited card (not 0:0), locked while panning",
+    name: "agent pointer: a scripted edit moves the cursor to the layer it added (not 0:0), locked while panning",
     run: scriptedEdit,
   },
 ]

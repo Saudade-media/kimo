@@ -340,6 +340,11 @@ export interface AgentPresence {
   docs: string[]
   /** Nodes it is editing or last changed (for the canvas "agent" highlight). */
   focus: string[]
+  /**
+   * Board 31 "Agent cursor": the layer its pointer points at, the last layer its latest landed
+   * edit added (or changed). Reads never move it; absent until the first edit lands.
+   */
+  pointer?: string
   /** What it is doing right now (tool running), or idle. */
   state: "idle" | "reading" | "editing" | "rendering" | "waiting-approval"
   /** The running call (absent when idle). */

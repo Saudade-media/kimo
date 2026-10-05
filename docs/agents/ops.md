@@ -9,7 +9,7 @@
 
 One transaction (any failure: nothing changes, `rolledBack: true`), one undo step.
 
-Max 40 `insert`s per call (`BATCH_TOO_LARGE`); `copy` is free. Build per section: `guide/steps`.
+Max 40 `insert`s per call (`BATCH_TOO_LARGE`), a ceiling; `copy` is free. See `guide/steps`.
 
 **References.** Any `id`, `parent`, `instance`, `component`, `frame` or `node` field takes a node id
 or `@key` of a node created earlier in the call. After `{"op":"copy","key":"v2",…}`,

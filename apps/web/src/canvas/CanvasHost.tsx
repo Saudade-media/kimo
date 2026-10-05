@@ -5,6 +5,7 @@
  * "Artboard Label": 12/500 text-tertiary, 22 px above each root frame, constant screen size)
  * and the inline text editor.
  */
+
 import {
   AGENT_CANVAS_TOKENS,
   type AgentCanvasTheme,
@@ -29,6 +30,7 @@ import { contentHash, extensionFor, IMAGE_ACCEPT, MAX_ASSET_BYTES, sniffImage } 
 import { useDocHeader } from "../lib/header"
 import { useTreeRevision, useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
+import { pathOf } from "./commands"
 import "./canvas-m2.css"
 import "./structure.css"
 import { AgentCanvasDom } from "./AgentCanvasDom"
@@ -277,6 +279,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         ctl.current?.flush()
         return ctl.current?.layout ?? null
       },
+      viewPath: (id) => (ctl.current ? pathOf(ctl.current.vdoc, id) : []),
       activateTool(id) {
         const spec = CANVAS_TOOLS.find((t) => t.id === id)
         if (!spec?.enabled) return

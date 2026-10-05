@@ -766,6 +766,8 @@ export interface CanvasHandle {
    */
   penUndo(redo: boolean): boolean
   layout(): LayoutResult | null
+  /** Ancestor chain of a view id (composite ids included), root first. For tests and tooling. */
+  viewPath(id: string): string[]
   /** Activates a toolbar tool (image opens the picker; disabled tools are ignored). */
   activateTool(id: CanvasToolId): void
   /** M2: arms an image placement directly (drag-and-drop, paste); null cancels. */

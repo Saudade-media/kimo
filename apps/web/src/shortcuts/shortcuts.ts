@@ -359,7 +359,7 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     label: "Select children",
     scope: "canvas",
     group: "selection",
-    combos: [{ keys: ["enter"], mod: false, alt: false, label: "↵" }],
+    combos: [{ keys: ["enter"], mod: false, alt: false, shift: false, label: "↵" }],
   },
   {
     id: "selectParent",

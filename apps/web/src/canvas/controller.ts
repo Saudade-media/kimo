@@ -186,6 +186,11 @@ const DRAG_THRESHOLD = 3
 const CLICK_SIZE = 100
 /** Hit slop (screen px) for thin shapes and text. */
 const HIT_TOLERANCE = 2
+/** Drop "into" a container (board 27 §2): fit ratio, edge bands (px / fraction) and dwell. */
+const INTO_FIT = 0.8
+const INTO_BAND_PX = 12
+const INTO_EDGE = 0.25
+const INTO_DWELL_MS = 450
 /**
  * Pixel readout badge top-left relative to the pointer (P36BbY: pointer 176,200 → lxk8M at
  * 184,224).
@@ -376,6 +381,17 @@ interface Reloc {
   noTarget: Set<string>
   /** Left out of slot math (the nodes being moved). */
   moving: Set<string>
+  /** The original parent and its ancestors: leaving or staying in them never needs intent. */
+  ancestors: Set<string>
+  /** World size of the dragged selection (the fit rule of {@link ControllerImpl.relocTarget}). */
+  size: { w: number; h: number }
+  /** Hover dwell over a container that is otherwise "not clearly intended" (screen px point). */
+  dwell: { id: string; at: Point; since: number } | null
+  /** Latest pointer event, replayed by the dwell timer. */
+  pointer: { e: PointerEvent; p: Point } | null
+  dwellTimer: ReturnType<typeof setTimeout> | null
+  /** Containers entered by dwell: kept while the pointer stays inside them. */
+  entered: Set<string>
   /** The original parent's children in the order the ops apply to (copies after originals). */
   base: string[]
   last: {
@@ -1611,9 +1627,29 @@ export class CanvasController {
     return cur
   }
 
+  /**
+   * Hit-test with slop: ids under `p` exactly come first (top-most first); a node reached only
+   * through the tolerance band ranks ahead of them only when it is thin (a line, a hairline
+   * frame), otherwise a neighbour within a few pixels would win over the layer under the pointer
+   * (small nested layers, zoomed out) and drilling would jump into the wrong branch.
+   */
+  private slopHits(p: Point): string[] {
+    const near = this.renderer.hitTest(p, { tolerance: HIT_TOLERANCE })
+    if (near.length < 2) return near
+    const exact = new Set(this.renderer.hitTest(p, { tolerance: 0 }))
+    if (exact.size === 0 || near.every((id) => exact.has(id))) return near
+    const zoom = this.ui.getState().viewport.zoom
+    const thin = (id: string) => {
+      const w = this.layoutResult?.nodes.get(id)?.world
+      return !!w && Math.min(w.w, w.h) * zoom <= HIT_TOLERANCE * 2
+    }
+    const lead = near.filter((id) => !exact.has(id) && thin(id))
+    return [...lead, ...near.filter((id) => exact.has(id))]
+  }
+
   private hits(p: Point): string[] {
     const out: string[] = []
-    for (const id of this.renderer.hitTest(p, { tolerance: HIT_TOLERANCE })) {
+    for (const id of this.slopHits(p)) {
       const r = this.real(id)
       if (!out.includes(r)) out.push(r)
     }
@@ -1623,8 +1659,7 @@ export class CanvasController {
   /** View ids under `p` (composite ids inside instances), top-most first. */
   private viewHits(p: Point): string[] {
     const out: string[] = []
-    for (const id of this.renderer.hitTest(p, { tolerance: HIT_TOLERANCE }))
-      if (!out.includes(id)) out.push(id)
+    for (const id of this.slopHits(p)) if (!out.includes(id)) out.push(id)
     return out
   }
 
@@ -2164,8 +2199,10 @@ export class CanvasController {
           if (!lockX) dx = this.px(d.box.x + dx) - d.box.x
           if (!lockY) dy = this.px(d.box.y + dy) - d.box.y
         }
-        if (d.reloc) this.relocStep(d, d.reloc, { x: dx, y: dy }, p, e)
-        else d.gesture.set(moveOps(this.store, layout, d.items, { x: dx, y: dy }))
+        if (d.reloc) {
+          d.reloc.pointer = { e, p }
+          this.relocStep(d, d.reloc, { x: dx, y: dy }, p, e)
+        } else d.gesture.set(moveOps(this.store, layout, d.items, { x: dx, y: dy }))
         this.updateOverlay()
         return
       }
@@ -2654,7 +2691,9 @@ export class CanvasController {
       if (first) return run(() => ui.select([first]))
       return false
     }
-    if (matches("selectParent", e) && ui.selection.length) {
+    // ⇧↵ selects the parent too (Figma); not listed as a second key in the shortcuts table.
+    const shiftEnter = e.key === "Enter" && e.shiftKey && !mod && !e.altKey
+    if ((shiftEnter || matches("selectParent", e)) && ui.selection.length) {
       // Escape selects the parent (Figma); at the top level it clears the selection.
       const parents = [...new Set(ui.selection.map((id) => this.src.getNode(id)?.parent ?? null))]
       e.preventDefault()
@@ -2775,6 +2814,91 @@ export class CanvasController {
       ids = this.store.children(next)
     }
     return found
+  }
+
+  /**
+   * Where a moved selection drops (board 27 §2 Y4vVe, "between vs into"). The default is where it
+   * is: reordering among its siblings. The walk from the page down enters a container that is
+   * not an ancestor of the original parent only when that is clearly intended:
+   *  - the dragged selection fits it (at most {@link INTO_FIT} of its width and height), so a
+   *    full-width section never nests into another section, AND
+   *  - the pointer is well inside it: off an edge band (25 % of an auto-layout frame's main
+   *    axis, at least {@link INTO_BAND_PX} screen px on every side), so the gaps and margins
+   *    between sections stay "between";
+   *  - or, for what does not fit or sits near an edge, the pointer rests {@link INTO_DWELL_MS}
+   *    ms inside it (at least {@link INTO_BAND_PX} px from every edge).
+   * A container that is not entered ends the walk: the drop stays in its parent.
+   */
+  private relocTarget(w: Point, p: Point, r: Reloc): string | null {
+    const layout = this.layoutResult
+    if (!layout) return null
+    const zoom = this.ui.getState().viewport.zoom
+    const band = INTO_BAND_PX / zoom
+    let found: string | null = null
+    let ids: readonly string[] = this.paged.children(null)
+    let waiting = false
+    for (let depth = 0; depth < 256; depth++) {
+      let next: string | null = null
+      for (let i = ids.length - 1; i >= 0; i--) {
+        const id = ids[i] as string
+        if (r.noTarget.has(id)) continue
+        const n = this.store.getNode(id)
+        const l = layout.nodes.get(id)
+        if (!n || !l?.visible || n.type !== "frame" || n.locked === true) continue
+        if (!insideRect(l.world, w)) continue
+        next = id
+        break
+      }
+      if (next === null) break
+      if (!r.ancestors.has(next) && !r.entered.has(next)) {
+        const b = (layout.nodes.get(next) as { world: Rect }).world
+        const lay = this.store.getNode(next)?.layout as { dir?: unknown } | undefined
+        const flow = typeof lay === "object" && lay !== null
+        const col = flow && lay.dir === "column"
+        const mainBand = flow ? Math.max(band, (col ? b.h : b.w) * INTO_EDGE) : band
+        const bx = flow && !col ? mainBand : band
+        const by = flow && col ? mainBand : band
+        const inner = (bx2: number, by2: number) =>
+          w.x >= b.x + bx2 && w.x <= b.x + b.w - bx2 && w.y >= b.y + by2 && w.y <= b.y + b.h - by2
+        const fits = r.size.w <= b.w * INTO_FIT && r.size.h <= b.h * INTO_FIT
+        if (!(fits && inner(bx, by))) {
+          if (inner(band, band)) {
+            // Rests here: enters after the dwell.
+            const d = r.dwell
+            const now = Date.now()
+            if (!d || d.id !== next || Math.hypot(p.x - d.at.x, p.y - d.at.y) > 6)
+              r.dwell = { id: next, at: p, since: now }
+            else if (now - d.since >= INTO_DWELL_MS) {
+              r.entered.add(next)
+              found = next
+              ids = this.store.children(next)
+              continue
+            }
+            waiting = true
+          }
+          break
+        }
+      }
+      found = next
+      ids = this.store.children(next)
+    }
+    for (const id of [...r.entered])
+      if (!found || !pathOf(this.store, found).includes(id)) r.entered.delete(id)
+    if (!waiting) r.dwell = null
+    else this.armDwell(r)
+    return found
+  }
+
+  /** Re-runs the move step once the dwell time has passed with the pointer at rest. */
+  private armDwell(r: Reloc): void {
+    if (r.dwellTimer !== null) return
+    r.dwellTimer = setTimeout(() => {
+      r.dwellTimer = null
+      const d = this.drag
+      if (d?.kind !== "move" || d.reloc !== r || !r.pointer) return
+      this.pendingPointer = r.pointer
+      this.schedule()
+    }, INTO_DWELL_MS + 20)
   }
 
   /** True when `id` is a strict descendant of `ancestor` (null = the root: always). */
@@ -3012,6 +3136,7 @@ export class CanvasController {
         position: n.position,
       }
     })
+    const startBox = unionRects(starts.map((s) => s.world))
     d.reloc = {
       parent,
       parentBox: parent ? (layout.nodes.get(parent)?.world ?? null) : null,
@@ -3025,11 +3150,17 @@ export class CanvasController {
       starts,
       noTarget,
       moving: new Set(ids),
+      ancestors: new Set(parent ? pathOf(this.store, parent) : []),
+      size: { w: startBox?.w ?? 0, h: startBox?.h ?? 0 },
+      dwell: null,
+      pointer: null,
+      dwellTimer: null,
+      entered: new Set(),
       base,
       last: null,
     }
     d.allowed = true
-    d.box = unionRects(starts.map((s) => s.world))
+    d.box = startBox
   }
 
   /** Sizes an auto-layout parent gave (`fill`) frozen to px when a node leaves the flow. */
@@ -3058,7 +3189,7 @@ export class CanvasController {
     let target: string | null = r.parent
     if (r.parent !== null && meta) mode = r.flowStart ? "absolute" : "free"
     else if (r.parent !== null) {
-      const t = this.containerAt(w, r.noTarget)
+      const t = this.relocTarget(w, p, r)
       const inside = !r.parentBox || insideRect(r.parentBox, w)
       const deeper = t !== null && t !== r.parent && this.isWithin(t, r.parent)
       if (!inside || deeper) {

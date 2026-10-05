@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
     "./installer": "./src/installer.ts",
+    "./installer-core": "./src/installer-core.ts",
     "./host": "./src/handlers/sdk.ts"
   },
   "scripts": {

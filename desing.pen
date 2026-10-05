@@ -243165,7 +243165,7 @@
                                   "content": "Offline font pack"
                                 },
                                 "LMxOY": {
-                                  "content": "Downloading 23 of 62 faces… You can keep working; fonts appear as they arrive."
+                                  "content": "Downloading 23 of 62 faces… You can keep working; the fonts apply when it finishes."
                                 },
                                 "J4s83": {
                                   "type": "frame",
@@ -243410,6 +243410,89 @@
                               }
                             }
                           ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "I6oce",
+                          "name": "State",
+                          "fill": "$text-tertiary",
+                          "content": "STOPPED · NETWORK ERROR",
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ghO94",
+                          "name": "Pane excerpt",
+                          "width": "fill_container",
+                          "fill": "$bg-app",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            24
+                          ],
+                          "children": [
+                            {
+                              "id": "Tw21n",
+                              "type": "ref",
+                              "ref": "MuoTX",
+                              "name": "Setting · Offline font pack · stopped",
+                              "width": "fill_container",
+                              "stroke": "#00000000",
+                              "descendants": {
+                                "NcrOC": {
+                                  "content": "Offline font pack"
+                                },
+                                "LMxOY": {
+                                  "content": "The download stopped (HTTP 503). Download resumes it."
+                                },
+                                "J4s83": {
+                                  "type": "frame",
+                                  "id": "EsjH4",
+                                  "name": "Control",
+                                  "gap": 8,
+                                  "justifyContent": "end",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "TxYEx",
+                                      "name": "Value",
+                                      "fill": "$text-secondary",
+                                      "content": "8.3 MB",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": "$text-xs",
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "id": "Y04bP",
+                                      "type": "ref",
+                                      "ref": "kv3Fk",
+                                      "name": "Button",
+                                      "height": 28,
+                                      "padding": [
+                                        0,
+                                        12
+                                      ],
+                                      "descendants": {
+                                        "hfife": {
+                                          "enabled": false
+                                        },
+                                        "D5Dhjk": {
+                                          "content": "Download",
+                                          "fontSize": "$text-sm"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     },
@@ -243420,7 +243503,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Downloading: the Value + button pair becomes a 160 px Progress (track + 'x of y MB') and Cancel; the description counts faces. Downloaded: size + Remove (ghost, no confirm — it's a cache). Blocked: the whole row dims to 45 % like Google Fonts on board 19; a downloaded pack still renders.",
+                      "content": "Downloading: the Value + button pair becomes a 160 px Progress (track + 'x of y MB') and Cancel; the description counts faces, and the fonts apply when it finishes. Downloaded: size + Remove (ghost, no confirm — it's a cache). Blocked: the whole row dims to 45 % like Google Fonts on board 19; a downloaded pack still renders. Stopped (network error, or Cancel with nothing kept): back to Download, which resumes and skips faces already stored.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-sans",
                       "fontSize": "$text-sm",
@@ -244196,7 +244279,7 @@
                       "fill": "$text-secondary",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "A Google face fetched for the canvas is written once to the file's assets/<sha256-16>.<ext> (+ a manifest entry: font/woff2 or font/ttf, name '<Family>-<Style>.<ext>'). No undo step, no dirty prompt of its own. Files over 20 MB are skipped (still cached).",
+                      "content": "A Google face fetched for the canvas is written once to the file's assets/<sha256-16>.<ext>; the next save lists it in the manifest (font/woff2 or font/ttf, name '<Family>-<Style>.<ext>'). Never an edit of the open document: no undo step, opening never dirties the file. Files over 20 MB are skipped (still cached).",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-sans",
                       "fontSize": "$text-xs",

@@ -14,7 +14,7 @@ import {
   status as installerStatus,
   type Launcher,
   planEdit,
-} from "@kimo/mcp-server/installer"
+} from "@kimo/mcp-server/installer-core"
 import type {
   HostOS,
   McpActivityEntry,

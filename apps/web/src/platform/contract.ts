@@ -49,7 +49,7 @@ import {
   type ClientIdentity,
   type ClientPolicy,
 } from "@kimo/mcp-server"
-import type { HostStatus as InstallerHostStatus } from "@kimo/mcp-server/installer"
+import type { HostStatus as InstallerHostStatus } from "@kimo/mcp-server/installer-core"
 import type {
   CliProcessHostLike,
   FileRef,

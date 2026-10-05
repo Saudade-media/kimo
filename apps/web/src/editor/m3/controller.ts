@@ -23,6 +23,7 @@ import { M3_TOAST_COPY } from "../../canvas/contract"
 import { currentHeader } from "../../lib/header"
 import { type Bus, createBus } from "../../lib/hooks"
 import type { FileSession, Gesture } from "../session"
+import { deleteDependents, deletedRoots } from "./delete-deps"
 import { LibraryManager } from "./libraries"
 import { routeOps } from "./route"
 
@@ -379,7 +380,36 @@ export class M3Controller {
         text: M3_TOAST_COPY.HIDDEN_INSTEAD.replace("{name}", n.name),
         action: { label: "Undo", run: () => store.undo("user") },
       })
-    return r.ops
+    return this.detachDependents(r.ops)
+  }
+
+  /**
+   * A delete that takes a main component with it while instances elsewhere still use it: those
+   * instances are detached in the same group (one undo step), so the delete goes through instead
+   * of the store refusing it with a dangling `of`.
+   */
+  private detachDependents(ops: readonly Op[]): readonly Op[] | null {
+    const roots = deletedRoots(ops)
+    if (roots.length === 0) return ops
+    const doc = this.doc()
+    const dep = deleteDependents(doc.nodes as Parameters<typeof deleteDependents>[0], roots)
+    if (dep.instances.length === 0) return ops
+    const detach: Op[] = []
+    for (const id of dep.instances) {
+      const plan = planCommand(doc, { cmd: "detachInstance", id }, { libraries: this.libraries() })
+      if (!plan.ok) {
+        this.toast({ tone: "danger", text: plan.error.message })
+        return null
+      }
+      detach.push(...(plan.ops as unknown as Op[]))
+    }
+    const n = dep.instances.length
+    this.toast({
+      tone: "warning",
+      text: `${n} instance${n === 1 ? "" : "s"} of ${dep.components.join(", ")} detached`,
+      action: { label: "Undo", run: () => this.session.store.undo("user") },
+    })
+    return [...detach, ...ops]
   }
 
   /** Runs an M3 command as one undo step; refusals and notes become toasts. */

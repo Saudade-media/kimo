@@ -25,6 +25,8 @@ export interface McpClientPolicy {
   grants: McpGrant[]
   onExceed: "ask" | "deny"
   confirmDestructive: boolean
+  /** Board 34: approvals this policy would ask for are approved at once (outcome `auto`). */
+  autoApprove?: boolean
 }
 
 export interface McpClientIdentity {
@@ -69,7 +71,8 @@ export interface McpApprovalPreview {
 }
 
 export type McpApprovalChoice = "once" | "session" | "deny"
-export type McpApprovalOutcome = McpApprovalChoice | "timeout" | "disconnected"
+/** `auto`: approved by auto-approve (board 34), nobody was asked. */
+export type McpApprovalOutcome = McpApprovalChoice | "auto" | "timeout" | "disconnected"
 
 export type McpActivityKind =
   | "connected"
@@ -227,6 +230,8 @@ export interface McpHostApi {
   policies: {
     list(): Promise<Record<string, McpClientPolicy>>
     set(client: string, policy: McpClientPolicy | null): Promise<void>
+    /** A policy changed in any window (board 34: presence shows auto-approve at once). */
+    onChange?(listener: (client: string, policy: McpClientPolicy | null) => void): Unsubscribe
   }
   http: {
     setEnabled(enabled: boolean): Promise<McpServerStatus>
@@ -393,6 +398,8 @@ export interface TauriMcpEventMap {
   "kimo://mcp-approval-resolved": { id: string; outcome: McpApprovalOutcome }
   /** Window → document host. */
   "kimo://mcp-approval-answer": { id: string; choice: McpApprovalChoice }
+  /** Window → every window and the document host: a client's policy changed (null = defaults). */
+  "kimo://mcp-policy-changed": { client: string; policy: McpClientPolicy | null }
   "kimo://mcp-activity": { fileId: string; entry: McpActivityEntry }
 }
 

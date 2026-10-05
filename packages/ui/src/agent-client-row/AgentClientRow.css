@@ -92,6 +92,12 @@
   color: var(--kimo-agent);
 }
 
+/* Board 34 (I09xw): auto-approve on, warning on warning-soft. */
+.kimo-agent-client-row__scope--auto {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
 .kimo-agent-client-row__scope-label {
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-xs);

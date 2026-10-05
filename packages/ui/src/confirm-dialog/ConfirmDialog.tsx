@@ -21,8 +21,10 @@ export interface ConfirmDialogProps
    */
   inline?: boolean
   /** `component`: component-soft wrap + component icon, accent Confirm (Detach). `danger`:
-   * danger-soft wrap + danger icon, danger Confirm with a #FFFFFF label (slot off, unlink). */
-  tone: "component" | "danger"
+   * danger-soft wrap + danger icon, danger Confirm with a #FFFFFF label (slot off, unlink).
+   * `warning`: warning-soft wrap + warning icon, accent Confirm; impact lines wrap at line height
+   * 1.45 (board 34 auto-approve, k0K1nN). */
+  tone: "component" | "danger" | "warning"
   /** 16px head icon (`unlink`, `square-dashed`). */
   icon: ReactNode
   title: string

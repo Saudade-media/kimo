@@ -27,6 +27,7 @@ import {
   Toggle,
 } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useState } from "react"
+import { AutoApproveConfirm } from "./AutoApproveConfirm"
 import { ConfigDiffDialog } from "./ConfigDiffDialog"
 import { AgentIcon } from "./icons"
 import {
@@ -134,6 +135,8 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
   const { host, server = {}, scope = "user", project, home, machine = "this computer" } = props
   const { data, setData, loadHosts } = usePaneData(host, scope, project)
   const [expanded, setExpanded] = useState<string | null>(props.expandedClient ?? null)
+  // Board 34: turning a client's auto-approve on asks once (k0K1nN).
+  const [confirmAuto, setConfirmAuto] = useState<{ client: string; label: string } | null>(null)
   const [preview, setPreview] = useState<{
     host: McpHostId
     label: string
@@ -500,6 +503,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                 meta={clientMeta(c, status)}
                 scope={scopeLabel(policy, c.cwd)}
                 writable={policy.level !== "read"}
+                autoApprove={policy.autoApprove === true}
                 expanded={open}
                 onClick={() => setExpanded(open ? null : c.connectionId)}
               />
@@ -509,6 +513,10 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                   policy={policy}
                   token={server.token?.value}
                   onPolicy={(p) => void setPolicy(c.identity.client, p)}
+                  onAutoApprove={(on) => {
+                    if (on) setConfirmAuto({ client: c.identity.client, label: c.identity.label })
+                    else void setPolicy(c.identity.client, { ...policy, autoApprove: false })
+                  }}
                   onDisconnect={() => void host.disconnect(c.connectionId)}
                 />
               )}
@@ -535,6 +543,17 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         </div>
       </div>
       {dialog}
+      {confirmAuto && (
+        <AutoApproveConfirm
+          client={confirmAuto.label}
+          onConfirm={() => {
+            const policy = data.policies[confirmAuto.client] ?? DEFAULT_POLICY
+            void setPolicy(confirmAuto.client, { ...policy, autoApprove: true })
+            setConfirmAuto(null)
+          }}
+          onCancel={() => setConfirmAuto(null)}
+        />
+      )}
     </div>
   )
 }
@@ -760,14 +779,18 @@ function Permissions({
   policy,
   token,
   onPolicy,
+  onAutoApprove,
   onDisconnect,
 }: {
   connection: McpConnectionInfo
   policy: McpClientPolicy
   token?: string
   onPolicy: (p: McpClientPolicy) => void
+  /** Board 34: on asks first (the pane's confirm); off applies at once. */
+  onAutoApprove: (on: boolean) => void
   onDisconnect: () => void
 }) {
+  const auto = policy.autoApprove === true
   const scope = filesScopeOf(policy, connection.cwd)
   const pid = connection.identity.pid
   const note = [
@@ -798,6 +821,16 @@ function Permissions({
         {connection.cwd && (
           <span className="agents-perms__folder">{tildePath(connection.cwd)}/</span>
         )}
+      </div>
+      {/* Board 34 Perm · Auto-approve (YsgKV / P1NeQ): Label · Toggle · Note. */}
+      <div className="agents-perms__row" data-testid="agents-perms-auto">
+        <span className="agents-perms__label">Auto-approve</span>
+        <Toggle checked={auto} label="Auto-approve" onChange={(on) => onAutoApprove(on)} />
+        <span className={`agents-perms__auto-note${auto ? " agents-perms__auto-note--on" : ""}`}>
+          {auto
+            ? "On: every request is approved without asking"
+            : "Off: anything outside its permissions asks first"}
+        </span>
       </div>
       <div className="agents-perms__footer">
         <span className="agents-perms__note">{note}</span>

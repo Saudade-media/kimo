@@ -419,6 +419,19 @@ export async function startDocumentHostService(
       runtime.approvals.respond(id, choice)
     },
   )
+  // Settings › Agents & MCP: the new policy applies to the client's next call; with
+  // auto-approve on, its waiting prompts are approved now (board 34).
+  await listen<{ client: string; policy: ClientPolicy | null }>(
+    "kimo://mcp-policy-changed",
+    ({ client, policy }) => {
+      if (policy) policies = { ...policies, [client]: policy }
+      else {
+        const { [client]: _gone, ...rest } = policies
+        policies = rest
+      }
+      runtime.setClientPolicy(client, policy ?? DEFAULT_POLICY)
+    },
+  )
 
   const identityOf = (
     client: string | undefined,
@@ -760,7 +773,7 @@ export async function startDocumentHostService(
       if (!p || p.from !== from) return { ok: false }
       agentPrompts.delete(String(args.id))
       const o = String(args.outcome)
-      p.resolve(o === "once" || o === "session" ? (o as ApprovalOutcome) : "deny")
+      p.resolve(o === "once" || o === "session" || o === "auto" ? (o as ApprovalOutcome) : "deny")
       return { ok: true }
     },
     /** Ends the window's agent connections (all, or `origins`): presence drops them. */

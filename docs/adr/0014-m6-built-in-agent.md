@@ -397,3 +397,21 @@ The first call alone went from ~27.8k to ~14k tokens (system prompt + tools).
   `tokensOut` = output, label "21.1k new tokens" with the split (and the cached input left out)
   as the tooltip; the thread header, mode rows and the usage ledger count the same way. The
   per-turn cost warning estimate is unchanged.
+
+## Addendum 3 (2026-10-05, board 34 "Auto-approve")
+
+- **Per-session switch** (`AgentPanelControllerExt.setAutoApprove`, view state `autoApprove`).
+  Off for every new session, a reopened session and a Home hand-off; held in the controller only
+  and never written to the session file. The composer's shield (after the mode chip) asks once
+  with the confirm (board 34 k0K1nN) before turning it on; the chip **Auto-approve is on** above
+  the composer turns it off.
+- **Flow**: the controller's `requestApproval` resolves `auto` at once while it is on (in-window
+  tools, and CLI turns through the document host: `agentApproval` and the window's forwarder
+  accept `auto`). Turning it on resolves every pending card as `auto`, oldest first. The M5
+  dispatch logs the approval with `outcome: "auto"` (desktop Activity tab).
+- **Thread line**: `autoApprovalLine(request)` ("Approved automatically: saved landing.kimo",
+  past tense of the card's op rows) appended to the running agent message
+  (`AgentMessageView.autoApproved`), saved with the turn (`TurnRecord.autoApproved`, optional)
+  and restored by `messagesFromTurns`.
+- **Still enforced**: scopes are not approvals for spawned agents (`childPolicy` denies), the
+  40-new-layer batch limit and the document host's path and read-only checks stay as they are.

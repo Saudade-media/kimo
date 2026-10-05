@@ -13,6 +13,7 @@ import {
   type ApprovalOutcome,
   type ApprovalPreview,
   type ApprovalRequest,
+  autoApproves,
   type ClientIdentity,
   type ClientPolicy,
   DEFAULT_POLICY,
@@ -123,6 +124,12 @@ export interface McpHostRuntime {
    */
   pause(client: string): void
   resume(client: string): void
+  /**
+   * Settings › Agents & MCP changed a client's policy: its live MCP connections (not in-app
+   * agents) use it from the next call, and with auto-approve on their pending prompts are
+   * approved at once (board 34).
+   */
+  setClientPolicy(client: string, policy: ClientPolicy): void
   paused(): string[]
   onPausedChange(listener: (clients: string[]) => void): () => void
   dispose(): void
@@ -470,6 +477,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
       setPolicy(next) {
         policy = next
         presence.update(origin, { policy: next })
+        if (autoApproves(next)) approvals.approveWhere((r) => r.client.session === identity.session)
       },
       allowances,
       context,
@@ -514,6 +522,11 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
     presence,
     connect,
     connections: () => [...conns],
+    setClientPolicy(client, next) {
+      for (const c of conns)
+        if (!c.closed && c.identity.client === client && c.origin.startsWith("mcp:"))
+          c.setPolicy(next)
+    },
     pause: (client) => setPaused(client, true),
     resume: (client) => setPaused(client, false),
     paused: () => [...pausedClients],

@@ -16,6 +16,7 @@ import {
   useAnchoredPosition,
   useDismiss,
 } from "@kimo/ui"
+import { ShieldCheck } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { ApprovalPrompt } from "./ApprovalPrompt"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
@@ -119,6 +120,13 @@ export function AgentPresence({
   const chipState = queue > 0 ? "waiting" : lead.presence
   const label = queue > 0 && !many ? `${lead.label} is waiting` : lead.text
   const meta = many ? `+${chips.length - 1}` : lead.meta
+  const autoClients = sorted.filter(
+    (c, i, all) =>
+      c.origin.startsWith("mcp:") &&
+      c.policy.autoApprove === true &&
+      c.policy.onExceed === "ask" &&
+      all.findIndex((x) => x.client === c.client) === i,
+  )
   // The dry-run bar replaces the presence chip while active (board 24 g) — for an agent's dry-run
   // call. A dry run that previews an approval keeps the chip: the approval prompt hangs from it
   // (board 21 weJXw) and the bar's Apply / Discard answer the same request.
@@ -135,6 +143,20 @@ export function AgentPresence({
         open={open}
         onClick={() => setOpen((o) => !o)}
       />
+      {autoClients.length > 0 && (
+        // Board 34 Auto-approve Pill (XYAmZ): a connected client approves its own requests.
+        <button
+          type="button"
+          className="agents-auto-pill"
+          data-testid="agent-auto-approve-pill"
+          data-pen="XYAmZ"
+          title={`${autoClients.map((c) => c.label).join(", ")}: every request is approved without asking. Change it in Settings › Agents & MCP.`}
+          onClick={() => onOpenClientSettings?.((autoClients[0] as AgentChipView).client)}
+        >
+          <ShieldCheck className="agents-auto-pill__icon" aria-hidden="true" />
+          <span className="agents-auto-pill__label">Auto-approve</span>
+        </button>
+      )}
       {open && anchorEl && queue > 0 && (
         <QueuePopover controller={controller} anchor={anchorEl} onClose={() => setOpen(false)} />
       )}

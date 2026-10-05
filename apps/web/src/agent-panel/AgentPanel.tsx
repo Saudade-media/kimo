@@ -42,6 +42,7 @@ import {
   RotateCcw,
   Save,
   Settings2,
+  ShieldCheck,
   SquareDashed,
   SquarePen,
   Trash2,
@@ -57,6 +58,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { AutoApproveConfirm } from "../agents/AutoApproveConfirm"
 import type { AgentMessageView, AttachmentChipView } from "../platform/contract"
 import { inTauri } from "../platform/runtime"
 import { type ApprovalOpIcon, approvalOps } from "./approval"
@@ -160,6 +162,8 @@ export function AgentPanel({
   const textarea = useRef<HTMLTextAreaElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [agentModelTarget, setAgentModelTarget] = useState<number | null>(null)
+  // Board 34: turning auto-approve on asks once (k0K1nN); turning it off never asks.
+  const [confirmAuto, setConfirmAuto] = useState(false)
 
   // Keep the newest content in view while streaming.
   const last = state.messages[state.messages.length - 1]
@@ -414,6 +418,23 @@ export function AgentPanel({
               onSettings={() => controller.openCostSettings()}
             />
           )}
+          {state.autoApprove && !state.composerDisabled && (
+            // Board 34 Auto-approve Chip (PWfak): one click turns it off.
+            <button
+              type="button"
+              className="agent-panel__auto-chip"
+              data-testid="agent-auto-approve-chip"
+              data-pen="PWfak"
+              title="Turn off auto-approve"
+              onClick={() => controller.setAutoApprove(false)}
+            >
+              <ShieldCheck className="agent-panel__auto-chip-icon" aria-hidden="true" />
+              <span className="agent-panel__auto-chip-label">Auto-approve is on</span>
+              <span className="agent-panel__auto-chip-off" aria-hidden="true">
+                <X />
+              </span>
+            </button>
+          )}
           <ComposerAgent
             data-testid="agent-composer"
             className={state.composerDisabled ? "agent-panel__composer--off" : undefined}
@@ -479,6 +500,11 @@ export function AgentPanel({
                 onClick={() => controller.openMenu("mode")}
               />
             }
+            autoApprove={{
+              on: state.autoApprove,
+              onClick: () =>
+                state.autoApprove ? controller.setAutoApprove(false) : setConfirmAuto(true),
+            }}
             model={{
               label: state.modelLabel,
               open: state.menu === "model",
@@ -498,6 +524,15 @@ export function AgentPanel({
             onSend={() => void controller.send(state.composer.text)}
             onStop={() => controller.stop()}
           />
+          {confirmAuto && (
+            <AutoApproveConfirm
+              onConfirm={() => {
+                setConfirmAuto(false)
+                controller.setAutoApprove(true)
+              }}
+              onCancel={() => setConfirmAuto(false)}
+            />
+          )}
           <input
             ref={fileInput}
             type="file"
@@ -627,7 +662,9 @@ function ThreadItem({
             ? { onFollow: () => onFollow(progress.follow) }
             : {})}
         />
-      ) : (
+      ) : null}
+      {m.streaming && <AutoApprovedLines lines={m.autoApproved} />}
+      {m.streaming ? null : (
         <>
           {card?.kind !== "refusal" && (m.text || !card) && (
             <Message from="agent" markState={markOf(false, m.steps, card)}>
@@ -639,6 +676,7 @@ function ThreadItem({
               />
             </Message>
           )}
+          <AutoApprovedLines lines={m.autoApproved} />
           {m.steps.length > 0 && (
             <StepsToggle
               data-testid="agent-steps-toggle"
@@ -722,6 +760,26 @@ function ThreadItem({
       )}
     </div>
   )
+}
+
+/**
+ * Board 34 Auto-approved Line (ZbBuI): row, gap 6, padding-left 34, center › shield-check 12
+ * warning · Text sans 11 text-secondary, fill.
+ */
+function AutoApprovedLines({ lines }: { lines: readonly string[] | undefined }) {
+  if (!lines?.length) return null
+  return lines.map((line, i) => (
+    <div
+      // biome-ignore lint/suspicious/noArrayIndexKey: lines only append, in order.
+      key={i}
+      className="agent-panel__auto-line"
+      data-testid="agent-auto-approved"
+      data-pen="ZbBuI"
+    >
+      <ShieldCheck className="agent-panel__auto-line-icon" aria-hidden="true" />
+      <span className="agent-panel__auto-line-text">{line}</span>
+    </div>
+  ))
 }
 
 /** "Anthropic returned 500 · overloaded_error. Nothing was changed on the canvas." */

@@ -24,6 +24,8 @@ import {
   type ApprovalOutcome,
   type ApprovalReason,
   type ApprovalRequest,
+  approvedOutcome,
+  autoApproves,
   type ClientIdentity,
   type ClientPolicy,
   coveredBySession,
@@ -334,9 +336,12 @@ export async function dispatch(
   }
   if (auth.kind === "ask") {
     const now = ctx.now()
-    const preview = options.preview
-      ? await options.preview(def, input, ctx).catch(() => undefined)
-      : undefined
+    // Auto-approve (board 34): no prompt, no dry run; the approval is still logged.
+    const auto = autoApproves(ctx.policy)
+    const preview =
+      options.preview && !auto
+        ? await options.preview(def, input, ctx).catch(() => undefined)
+        : undefined
     const request: ApprovalRequest = {
       id: ctx.newId(),
       client: ctx.identity,
@@ -348,7 +353,7 @@ export async function dispatch(
       requestedAt: now,
       expiresAt: now + APPROVAL_TIMEOUT_MS,
     }
-    const outcome = await ctx.requestApproval(request)
+    const outcome: ApprovalOutcome = auto ? "auto" : await ctx.requestApproval(request)
     ctx.recordActivity({
       time: ctx.now(),
       origin: ctx.origin,
@@ -358,8 +363,7 @@ export async function dispatch(
       summary: request.summary,
       outcome,
     })
-    if (outcome !== "once" && outcome !== "session")
-      return { result: failure(outcomeError(outcome)) }
+    if (!approvedOutcome(outcome)) return { result: failure(outcomeError(outcome)) }
     if (outcome === "session") rememberAllowance(ctx.allowances, auth.reason)
   }
 

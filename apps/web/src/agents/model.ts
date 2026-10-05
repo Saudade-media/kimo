@@ -682,6 +682,48 @@ function countDescendants(store: DocStore, id: string): number {
   return n
 }
 
+/** Board 34 §4: up to this many target rows show as a flat list; more are grouped by kind. */
+export const APPROVAL_FLAT_MAX = 8
+/** Board 34 §4: rows shown per kind before "and N more". */
+export const APPROVAL_PER_KIND = 3
+
+export interface ApprovalTargetGroup {
+  kind: "delete" | "insert" | "update"
+  /** "Delete", "Insert", "Update" (Group Header Kind). */
+  label: string
+  /** Layers of this kind in the request (the dry run's count when larger than the rows sent). */
+  total: number
+  rows: OpRowView[]
+  /** Layers not listed ("and N more"). */
+  more: number
+}
+
+const GROUP_LABEL = { delete: "Delete", insert: "Insert", update: "Update" } as const
+
+/**
+ * Board 34 "Approval with many changes": null while the rows fit a flat list
+ * ({@link APPROVAL_FLAT_MAX}); else one group per kind with its first {@link APPROVAL_PER_KIND}
+ * rows (all rows with `all`) and the count left.
+ */
+export function groupApprovalTargets(
+  r: McpApprovalRequest,
+  rows: readonly OpRowView[],
+  all = false,
+): ApprovalTargetGroup[] | null {
+  if (rows.length <= APPROVAL_FLAT_MAX) return null
+  const p = r.preview
+  const counts = { delete: p?.deleted ?? 0, insert: p?.inserted ?? 0, update: p?.updated ?? 0 }
+  const out: ApprovalTargetGroup[] = []
+  for (const kind of ["delete", "insert", "update"] as const) {
+    const of = rows.filter((x) => x.op === kind)
+    const total = Math.max(of.length, counts[kind])
+    if (total === 0) continue
+    const shown = all ? of : of.slice(0, APPROVAL_PER_KIND)
+    out.push({ kind, label: GROUP_LABEL[kind], total, rows: shown, more: total - shown.length })
+  }
+  return out
+}
+
 /** "kimo_apply_ops · label “Replace hero”" (Meta xydSY). */
 export function approvalMeta(r: McpApprovalRequest): string {
   return r.summary ? `${r.tool} · label “${r.summary}”` : r.tool
@@ -789,7 +831,8 @@ export interface ActivityGroupView {
 }
 
 function toneOf(e: McpActivityEntry): ActivityRowView["tone"] {
-  if (e.code === "REVISION_CONFLICT") return "warning"
+  // Board 34: an auto-approved request reads in warning, like a conflict.
+  if (e.code === "REVISION_CONFLICT" || e.outcome === "auto") return "warning"
   if (e.kind === "denied" || e.code === "PERMISSION_DENIED" || e.code === "OUT_OF_SCOPE")
     return "danger"
   if (e.kind === "error") return "danger"
@@ -808,6 +851,8 @@ function outcomeText(e: McpActivityEntry): string {
       return "allowed once"
     case "session":
       return "allowed for this session"
+    case "auto":
+      return "approved automatically"
     default:
       return e.summary
   }

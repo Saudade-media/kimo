@@ -100,3 +100,55 @@ export function approvalOps(
     ]
   return [{ icon: "pencil", label: req.summary, meta: `needs ${r.need}` }]
 }
+
+const PAST: Record<string, string> = { Delete: "deleted", Edit: "edited", Add: "added" }
+
+/**
+ * Board 34 thread line for a request auto-approve let through: "Approved automatically: saved
+ * landing.kimo". Built from the same request as the card's op rows, in the past tense.
+ */
+export function autoApprovalLine(
+  req: McpApprovalRequest,
+  names: {
+    name?: (id: string) => string | undefined
+    parentName?: (id: string) => string | undefined
+  } = {},
+): string {
+  const r = req.reason
+  const what = ((): string => {
+    if (r.kind === "file") {
+      const name = base(r.path.replace(/[\\/]+$/, "")) + (/[\\/]$/.test(r.path) ? "/" : "")
+      return { open: "opened", create: "created", export: "exported to", save: "saved" }[
+        r.action
+      ].concat(` ${name}`)
+    }
+    if (r.kind === "grant") {
+      const file = req.path ? ` ${base(req.path)}` : ""
+      switch (r.grant) {
+        case "globals":
+          return "changed global variables"
+        case "components":
+          return "changed components"
+        case "save":
+          return file ? `saved${file}` : "saved the file"
+        case "export":
+          return `exported${file}`
+        case "files.create":
+          return "created a file"
+      }
+    }
+    if (r.kind === "level" && !req.preview) return req.summary
+    const rows = approvalOps(req, {
+      ...(names.name ? { nodeName: names.name } : {}),
+      ...(names.parentName ? { parentName: names.parentName } : {}),
+    })
+    const meta = rows[0]?.meta
+    const verbs = rows.map((row) => {
+      const [verb = "", ...rest] = row.label.split(" ")
+      const past = PAST[verb]
+      return past ? [past, ...rest].join(" ") : row.label
+    })
+    return `${verbs.join(", ")}${meta ? ` ${meta}` : ""}`
+  })()
+  return `Approved automatically: ${what}`
+}

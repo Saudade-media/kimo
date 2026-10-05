@@ -20,6 +20,21 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Added
 
+- Auto-approve (board 34). The built-in agent has a shield next to the mode chip that turns on
+  auto-approve for the current session, after one confirm. While it is on, every approval is
+  given at once (opening, creating, saving and exporting files, edits outside the agent's area,
+  document-wide changes), cards already waiting included. Each one leaves a line in the thread
+  ("Approved automatically: saved landing.kimo") and, on desktop, an Activity row; the chip
+  "Auto-approve is on" above the composer turns it off. Every new or reopened session starts
+  off. MCP clients get the same option per client in Settings › Agents & MCP › Permissions,
+  saved in the client's policy (`autoApprove`), which also covers the export, save and
+  files.create grants; the presence chip shows an Auto-approve pill. Limits that are not
+  approvals still apply: 40 new layers per edit, path and read-only checks, the frames of
+  agents started by side by side or split, and clients set to deny.
+- The approval prompt stays on screen with many changes: its height is capped at 70 % of the
+  window (less when the space below the agent chip is smaller), the change list scrolls inside
+  it, and more than 8 changes are grouped by kind with the first 3 of each, "and N more" and
+  Show all. The in-thread approval card is capped the same way.
 - The macOS Dock icon animates while an agent works (board 32 "Dock activity"): during a
   built-in agent turn in any window, or while an MCP client's tool call runs (and for 2 s
   after), the mark's outer shape turns clockwise and its opening counter-clockwise, one 60°

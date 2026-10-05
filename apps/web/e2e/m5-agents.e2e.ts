@@ -1093,7 +1093,8 @@ export const scenarios: Scenario[] = [
       c.box("Scope (H8RP2y)", m.scope, { pad: [2, 8, 2, 8], h: 17 })
       c.box("Scope label (teal)", m.scopeLabel, { color: agent, fs: 11, fw: "500" })
       c.box("Chevron (QknTo)", m.chevron, { w: 14, h: 14 })
-      c.box("Permissions (mCEsz)", m.perms, { gap: 10, pad: [12, 12, 12, 12], radius: 10, h: 130 })
+      // Board 34 kLL4S: the Auto-approve row (16) + gap 10 makes the panel 156 (was 130).
+      c.box("Permissions (mCEsz)", m.perms, { gap: 10, pad: [12, 12, 12, 12], radius: 10, h: 156 })
       c.box("Perm · Can (fw68E)", m.permRow, { h: 28, gap: 12 })
       c.box("Label (shcg2)", m.permLabel, { w: 88, fs: 12 })
       c.box("SegmentedText (KYSJu)", m.seg, { h: 28, gap: 2, pad: [2, 2, 2, 2] })

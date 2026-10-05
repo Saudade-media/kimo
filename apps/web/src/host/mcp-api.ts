@@ -69,6 +69,7 @@ export async function createDesktopMcpHost(
   const reqL = new Set<L<[McpApprovalRequest]>>()
   const resL = new Set<L<[string, McpApprovalOutcome]>>()
   const actL = new Set<L<[string, McpActivityEntry]>>()
+  const policyL = new Set<L<[string, McpClientPolicy | null]>>()
   let connections: McpConnectionInfo[] | null = null
   let pending: McpApprovalRequest[] = []
   let paused: string[] = []
@@ -116,6 +117,12 @@ export async function createDesktopMcpHost(
         if (!pending.some((p) => p.id === id)) return
         pending = pending.filter((p) => p.id !== id)
         for (const l of [...resL]) l(id, outcome)
+      },
+    ),
+    await bridge.listen<TauriMcpEventMap["kimo://mcp-policy-changed"]>(
+      "kimo://mcp-policy-changed",
+      ({ client, policy }) => {
+        for (const l of [...policyL]) l(client, policy)
       },
     ),
     await bridge.listen<TauriMcpEventMap["kimo://mcp-activity"]>(
@@ -217,7 +224,11 @@ export async function createDesktopMcpHost(
       list: () => invoke<Record<string, McpClientPolicy>>("kimo_mcp_policies_get"),
       async set(client, policy) {
         await invoke("kimo_mcp_policies_set", { client, policy })
+        // The document host applies it to the client's live connections (board 34: turning
+        // auto-approve on approves its waiting prompts).
+        await bridge.emit("kimo://mcp-policy-changed", { client, policy }).catch(() => {})
       },
+      onChange: (l) => set(policyL, l),
     },
     http: {
       setEnabled: (enabled) => invoke<McpServerStatus>("kimo_mcp_http_set_enabled", { enabled }),

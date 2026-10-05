@@ -1144,6 +1144,8 @@ export type AgentMessageView =
       meta?: MessageMetaView
       /** Inline error / interrupt card (never a modal). */
       card?: AgentErrorCard
+      /** Board 34: one "Approved automatically: …" line per request auto-approve let through. */
+      autoApproved?: string[]
       /**
        * Board 31: the live status line while the turn runs (absent once it ended). `status` is
        * the agent's last note, else the running tool's label, else "Thinking…".

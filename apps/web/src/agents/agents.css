@@ -99,6 +99,42 @@
   -webkit-app-region: no-drag;
 }
 
+/*
+ * Board 34 Auto-approve Pill (XYAmZ), after the presence chip (Topbar Presence gap 6): h 24,
+ * padding [0, 8, 0, 6], gap 4, center, warning-soft, radius-pill › shield-check 12 warning ·
+ * Label sans 11 / 500 warning.
+ */
+.agents-auto-pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  margin: 0 0 0 6px;
+  padding: 0 8px 0 6px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+  cursor: pointer;
+  appearance: none;
+}
+.agents-auto-pill__icon {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.agents-auto-pill__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  white-space: nowrap;
+}
+
 /* ---------------------------------------------------------------------------------------------
  * Session Popover (hIfmx): column, w 380, bg-overlay, stroke 1 border, radius-lg,
  * shadow 0 8 24 shadow-strong, clip.
@@ -278,7 +314,11 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  width: 400px;
+  /* Board 34 §4: never wider than the window; the inline max-height caps it at
+     min(70vh, the space below the anchor − 16). Head, Meta, Footer and Footnote keep their size;
+     Targets scrolls. */
+  width: min(400px, calc(100vw - 32px));
+  overflow-y: auto;
   padding: 20px;
   border-radius: var(--kimo-radius-xl);
   background: var(--kimo-bg-overlay);
@@ -314,6 +354,9 @@
   font-size: var(--kimo-text-sm);
   line-height: 17px; /* 12 × 1.45 = 17.4 */
 }
+.agents-approval > * {
+  flex: none;
+}
 /* Targets (dBQHl): column, padding [4, 0], bg-subtle, stroke 1 border, radius-md. */
 .agents-approval__targets {
   box-sizing: border-box;
@@ -324,6 +367,82 @@
   border-radius: var(--kimo-radius-md);
   background: var(--kimo-bg-subtle);
   box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+/* Board 34 §4: Targets is the only part that shrinks (min one row) and scrolls. */
+.agents-approval > .agents-approval__targets {
+  flex: 0 1 auto;
+  min-height: 36px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Board 34 §4 Group (pXG9M): column › Group Header (XqK8f) row, gap 6, padding [6, 12, 2, 12],
+   center: Kind sans 11 / 600 text-secondary · Count mono 11 text-tertiary. */
+.agents-approval__group {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 100%;
+}
+.agents-approval__group-head {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px 2px;
+}
+.agents-approval__group-kind {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: 13px;
+}
+.agents-approval__group-count {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 15px;
+}
+/* More (cy9to): padding [3, 12, 5, 12], sans 11 text-tertiary. */
+.agents-approval__more {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 3px 12px 5px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+/* Show All (GISmI): row, gap 4, padding [6, 12], center › chevron 12 + Label sans 11 / 500,
+   text-secondary. */
+.agents-approval__show-all {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 6px 12px;
+  border: 0;
+  background: none;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+.agents-approval__show-all > svg {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
 }
 /* Meta (zqzx0): row, gap 8, center. */
 .agents-approval__meta {
@@ -898,6 +1017,18 @@
   font-size: var(--kimo-text-xs);
   line-height: 15px;
   white-space: nowrap;
+}
+/* Board 34 Perm · Auto-approve Note (SZIRG / KiaGF): sans 11, fill; text-tertiary off, warning on. */
+.agents-perms__auto-note {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 13px;
+}
+.agents-perms__auto-note--on {
+  color: var(--kimo-warning);
 }
 /* Footer (Zu8bi): row, gap 8, padding [2, 0, 0, 0], center. */
 .agents-perms__footer {

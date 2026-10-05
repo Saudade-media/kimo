@@ -450,3 +450,36 @@ when a result has it.
 - **Copies**: after `{op:"copy", key:"v"}`, `@v/<original id>` addresses that node's copy in the
   same call (`NODE_REF_PATTERN`, scope checks follow the copy's key), and `created[]` lists the
   copies of the copied root's first two levels as `v/<original id>` (at most 60).
+
+## Addendum 5 (2026-10-05, board 34 "Auto-approve")
+
+- **Policy field** (`src/policy.ts`, `@kimo/platform` mirror, Rust `ClientPolicy`): additive
+  `autoApprove?: boolean` (absent = false; Rust `#[serde(default)]`, not written when false, so
+  older `policies.json` files read and write back unchanged). `autoApproves(policy)` is true only
+  with `onExceed: "ask"`: a policy that denies never turns its denials into approvals.
+- **Outcome `auto`** (`ApprovalOutcome`, `McpApprovalOutcome`): approved by auto-approve, nobody
+  was asked. `approvedOutcome()` = `once | session | auto`; `outcomeError` takes the rest.
+- **Dispatch** (`src/runtime.ts`): when `authorize` says `ask` and the policy auto-approves, the
+  request is built as before (summary, reason, path) but no dry-run preview runs and
+  `requestApproval` is not called; the `approval` activity entry records `outcome: "auto"`. It
+  covers every reason kind, including grant-gated tools (`kimo_export`, `kimo_save`,
+  `kimo_create` / `files.create`) and files outside the allow-list.
+- **Turning it on** (`McpHostRuntime.setClientPolicy`, `ApprovalBroker.approveWhere`): Settings
+  emits `kimo://mcp-policy-changed {client, policy}` to every window and the document host
+  (`McpHostApi.policies.onChange`); the host applies the policy to that client's live MCP
+  connections (not in-app agents) from their next call and resolves their pending prompts as
+  `auto`. Before this, policy edits reached a connection only when it reconnected.
+- **Not approvals, unchanged**: `onExceed: "deny"` policies and headless `kimo mcp` (no prompt to
+  replace), paused clients (wait before authorization), `BATCH_TOO_LARGE`, path checks
+  (`.kimo`, absolute, normalized, canonical), `FILE_EXISTS` without `overwrite`, read-only and
+  locked documents, revision conflicts, schema validation, spawned agents' node scopes
+  (`childPolicy`: `onExceed: "deny"`).
+- **UI**: Settings › Agents & MCP › Permissions row **Auto-approve** (Toggle; on asks with the
+  board 34 confirm k0K1nN, off applies at once), the client row's scope badge adds
+  "· auto-approve" in warning, an **Auto-approve** pill after the presence chip, Activity rows
+  with outcome `auto` read "<tool> · approved automatically" in warning.
+- **Many changes** (board 34 §4): the approval prompt is capped at
+  `min(70vh, space below the anchor − 16)` and `min(400px, 100vw − 32)` wide; Targets is the only
+  part that shrinks and scrolls. More than 8 target rows are grouped by kind (Delete / Insert /
+  Update), 3 rows each plus "and N more", with **Show all N** / **Show fewer**. The in-thread
+  approval card is capped at `min(70vh, the thread's height)` with its op rows scrolling.

@@ -61,6 +61,23 @@ Edits inside the scope apply directly, and each is undoable. Kimo asks first, in
 
 Answer with **Allow once**, **Always this session** or **Deny**. **Always this session** never covers file access or edits outside the area; those ask every time. The card waits as long as you need, the header shows **N waiting**, and **Stop** denies everything pending.
 
+### Auto-approve
+
+The shield next to the mode chip turns on auto-approve for the current session. Kimo asks once before it turns on. While it is on, every request above is approved at once: opening, creating, saving and exporting files, edits outside the agent's area and document-wide changes. Cards already waiting are approved too, and the turn carries on.
+
+Each approval is still written down: a line in the agent's turn (**Approved automatically: saved landing.kimo**) and, in the desktop app, a row in the Activity tab (**approved automatically**). The chip **Auto-approve is on** above the composer turns it off with one click.
+
+Canvas edits stay undoable, turn by turn. A file Kimo saved or exported can't be undone by Kimo.
+
+Auto-approve is off in every new session, and when you reopen an earlier one. It is never saved.
+
+Some limits are not approvals, so auto-approve doesn't lift them:
+
+- one edit adds at most 40 new layers,
+- file paths are checked (an absolute `.kimo` path for documents, `..` resolved, an existing file isn't overwritten unless the call says so),
+- read-only and locked documents stay read-only,
+- agents started by side by side and split stay inside their own frame.
+
 > [!NOTE]
 > CLIs are started so that their own permission prompts don't interrupt (Codex runs with its tool approvals set to approve, Claude Code in its don't-ask mode), because Kimo's approvals above apply to every edit they make.
 

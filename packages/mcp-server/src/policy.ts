@@ -91,6 +91,13 @@ export interface ClientPolicy {
   onExceed: EscalationMode
   /** Destructive ops ask even when `level` is `edit+delete`. */
   confirmDestructive: boolean
+  /**
+   * Auto-approve (board 34): every approval this policy would ask for (`onExceed: "ask"`) is
+   * approved at once with outcome `auto` and recorded in the activity log. Hard limits that are
+   * errors, not prompts (batch size, path checks, read-only, `onExceed: "deny"`), still apply.
+   * Additive; absent = false.
+   */
+  autoApprove?: boolean
 }
 
 /** Unknown clients: can edit open documents, destructive ops and other files ask. */
@@ -164,7 +171,18 @@ export interface ApprovalPreview {
 /** The three buttons. `session` is offered only when {@link sessionAllowable}. */
 export type ApprovalChoice = "once" | "session" | "deny"
 
-export type ApprovalOutcome = ApprovalChoice | "timeout" | "disconnected"
+/** `auto`: approved by auto-approve (the client's policy or the agent session), nobody asked. */
+export type ApprovalOutcome = ApprovalChoice | "auto" | "timeout" | "disconnected"
+
+/** True for the outcomes that let the call run. */
+export function approvedOutcome(o: ApprovalOutcome): o is "once" | "session" | "auto" {
+  return o === "once" || o === "session" || o === "auto"
+}
+
+/** True when a policy turns its approval prompts into automatic approvals. */
+export function autoApproves(policy: Pick<ClientPolicy, "autoApprove" | "onExceed">): boolean {
+  return policy.autoApprove === true && policy.onExceed === "ask"
+}
 
 /**
  * "Always for this session" covers op kinds (destructive / level) only, never file access or
@@ -209,7 +227,7 @@ export function coveredBySession(a: SessionAllowances, reason: ApprovalReason): 
 }
 
 /** Error the tool returns for each outcome other than once/session. */
-export function outcomeError(o: Exclude<ApprovalOutcome, "once" | "session">): {
+export function outcomeError(o: Exclude<ApprovalOutcome, "once" | "session" | "auto">): {
   code: "PERMISSION_DENIED"
   message: string
   retryable: boolean

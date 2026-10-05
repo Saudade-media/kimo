@@ -1,4 +1,12 @@
-import { ArrowUp, BookOpen, ChevronDown, Paperclip, Square } from "lucide-react"
+import {
+  ArrowUp,
+  BookOpen,
+  ChevronDown,
+  Paperclip,
+  Shield,
+  ShieldCheck,
+  Square,
+} from "lucide-react"
 import {
   type ClipboardEventHandler,
   type ComponentPropsWithRef,
@@ -31,6 +39,11 @@ export interface ComposerAgentProps
   onSkills?: () => void
   /** The ModeChip (SzC72). */
   modeChip?: ReactNode
+  /**
+   * Board 34 auto-approve switch, right after the mode chip: shield (off) or shield-check on
+   * warning-soft (on). Omitted: not rendered.
+   */
+  autoApprove?: { on: boolean; onClick?: () => void; disabled?: boolean }
   /** Model chip (KnAC9): label, its mark state, persona tint (split), open state. */
   model?: {
     label: string
@@ -60,7 +73,8 @@ export interface ComposerAgentProps
  * [12, 12, 10, 16], fill bg-app, stroke 1 border-strong, radius-xl › Attachments (FLTbw) row gap 6
  * center › Input (Jfb3E) sans 13 (placeholder text-tertiary) › Bar (IYc3u) row gap 4 center:
  * Attach (x4agy) 24 × 24 paperclip 14 text-secondary · Skills (X2Uuj) h 24 gap 4 padding [0, 6]
- * book-open 14 + Count mono 11 text-secondary · Mode (SzC72 ModeChip) · Spacer · Model (KnAC9)
+ * book-open 14 + Count mono 11 text-secondary · Mode (SzC72 ModeChip) · Auto-approve (board 34
+ * v0SYd, 24 × 24 shield) · Spacer · Model (KnAC9)
  * gap 4 padding [2, 6]: AgentMark/12 (board 24 P9Dzzb) + Label sans 11 text-tertiary + chevron 12
  * · Send (fh2Ry) 28 pill accent, arrow-up 16 on-accent (square 12 while streaming).
  */
@@ -74,6 +88,7 @@ export function ComposerAgent({
   skillsOpen = false,
   onSkills,
   modeChip,
+  autoApprove,
   model,
   action = "send",
   sendDisabled = false,
@@ -148,6 +163,23 @@ export function ComposerAgent({
           <span className="kimo-composer-agent__skills-count">{skillsCount}</span>
         </button>
         {modeChip}
+        {autoApprove && (
+          <button
+            type="button"
+            className={cx(
+              "kimo-composer-agent__auto",
+              autoApprove.on && "kimo-composer-agent__auto--on",
+            )}
+            aria-label="Auto-approve"
+            aria-pressed={autoApprove.on}
+            title="Auto-approve"
+            data-testid="agent-auto-approve"
+            onClick={autoApprove.onClick}
+            disabled={disabled || autoApprove.disabled}
+          >
+            {autoApprove.on ? <ShieldCheck aria-hidden="true" /> : <Shield aria-hidden="true" />}
+          </button>
+        )}
         <span className="kimo-composer-agent__spacer" aria-hidden="true" />
         {model && (
           <button

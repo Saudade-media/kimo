@@ -87,6 +87,7 @@ export function createMemoryMcpHost(
   const reqL = new Set<L<[McpApprovalRequest]>>()
   const resL = new Set<L<[string, McpApprovalOutcome]>>()
   const actL = new Set<L<[string, McpActivityEntry]>>()
+  const policyL = new Set<L<[string, McpClientPolicy | null]>>()
   const sub = <T extends unknown[]>(set: Set<L<T>>, l: L<T>) => {
     set.add(l)
     return () => {
@@ -108,6 +109,10 @@ export function createMemoryMcpHost(
     if (!pending.some((r) => r.id === id)) return
     pending = pending.filter((r) => r.id !== id)
     for (const l of resL) l(id, outcome)
+  }
+  const autoApproving = (client: string) => {
+    const p = policies[client]
+    return p?.autoApprove === true && p.onExceed === "ask"
   }
   const setHost = (host: McpHostId, patch: Partial<McpHostConfigStatus>) => {
     hosts = hosts.map((h) => (h.host === host ? { ...h, ...patch } : h))
@@ -168,7 +173,12 @@ export function createMemoryMcpHost(
         calls.push(`policy ${client} ${policy ? JSON.stringify(policy) : "null"}`)
         if (policy) policies[client] = policy
         else delete policies[client]
+        for (const l of [...policyL]) l(client, policy)
+        // Board 34: turning auto-approve on approves that client's waiting prompts.
+        if (autoApproving(client))
+          for (const r of pending.filter((x) => x.client.client === client)) resolve(r.id, "auto")
       },
+      onChange: (l) => sub(policyL, l),
     },
     http: {
       async setEnabled(enabled) {
@@ -304,6 +314,11 @@ export function createMemoryMcpHost(
         emitConnections()
       },
       request(r) {
+        // Board 34: a client with auto-approve never shows a prompt (the host's dispatch skips it).
+        if (autoApproving(r.client.client)) {
+          for (const l of resL) l(r.id, "auto")
+          return
+        }
         pending = [...pending, r]
         for (const l of reqL) l(r)
       },

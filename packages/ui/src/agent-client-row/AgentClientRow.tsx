@@ -15,6 +15,11 @@ export interface AgentClientRowProps extends Omit<ComponentPropsWithRef<"button"
   scope: string
   /** Scope badge teal when the client can write, grey when read only (rule "Clients"). */
   writable: boolean
+  /**
+   * Auto-approve on (board 34 I09xw): the badge reads warning on warning-soft and gains
+   * "· auto-approve".
+   */
+  autoApprove?: boolean
   /** Expanded to the permissions panel: chevron-down and no bottom stroke (EbQQD). */
   expanded?: boolean
   /** Mark state (board 24: AgentOrb → AgentMark; idle when connected and quiet). */
@@ -35,6 +40,7 @@ export function AgentClientRow({
   meta,
   scope,
   writable,
+  autoApprove = false,
   expanded = false,
   markState = "idle",
   persona = "teal",
@@ -66,9 +72,12 @@ export function AgentClientRow({
         className={cx(
           "kimo-agent-client-row__scope",
           writable && "kimo-agent-client-row__scope--writable",
+          autoApprove && "kimo-agent-client-row__scope--auto",
         )}
       >
-        <span className="kimo-agent-client-row__scope-label">{scope}</span>
+        <span className="kimo-agent-client-row__scope-label">
+          {autoApprove ? `${scope} · auto-approve` : scope}
+        </span>
       </span>
       <Chevron className="kimo-agent-client-row__chevron" aria-hidden="true" />
     </button>

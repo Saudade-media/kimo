@@ -60,6 +60,12 @@
   color: var(--kimo-danger);
 }
 
+/* Board 34 Auto-approve Confirm (k0K1nN): Icon Wrap warning-soft, shield-check warning. */
+.kimo-confirm-dialog--warning .kimo-confirm-dialog__icon-wrap {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
 .kimo-confirm-dialog__icon-wrap > svg {
   display: block;
   width: 16px;
@@ -146,6 +152,12 @@
 
 .kimo-confirm-dialog__item-text {
   min-width: 0;
+}
+
+/* Board 34 impact Text (IRLaU…): fixed-width fill, line height 1.45 (11 × 1.45 = 15.95 → 16). */
+.kimo-confirm-dialog--warning .kimo-confirm-dialog__item-text {
+  flex: 1 1 0;
+  line-height: 16px;
 }
 
 .kimo-confirm-dialog__footer {

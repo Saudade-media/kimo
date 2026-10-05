@@ -16,6 +16,14 @@
     inset 0 0 0 1px var(--kimo-agent),
     0 2px 8px var(--kimo-shadow);
   font-family: var(--kimo-font-sans);
+  /* Board 34 §4: capped at min(70vh, the thread's height); the head and the actions keep their
+     size and the op rows scroll. */
+  max-height: min(70vh, 100%);
+  flex: none;
+}
+
+.kimo-approval-card > * {
+  flex: none;
 }
 
 .kimo-approval-card__head {
@@ -68,6 +76,12 @@
   padding: 8px 10px;
   border-radius: var(--kimo-radius-md);
   background: var(--kimo-bg-subtle);
+}
+
+.kimo-approval-card > .kimo-approval-card__ops {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .kimo-approval-card__op {

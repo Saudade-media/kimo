@@ -405,6 +405,18 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       }),
     )
 
+  // Board 34: a policy changed in Settings (any window): presence shows auto-approve at once.
+  unsubs.push(
+    opts.host.policies.onChange?.((client, policy) => {
+      if (policy) policies = { ...policies, [client]: policy }
+      else {
+        const { [client]: _gone, ...rest } = policies
+        policies = rest
+      }
+      emit()
+    }) ?? (() => {}),
+  )
+
   void Promise.all([
     opts.host.status().then(
       (s) => {

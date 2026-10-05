@@ -79,6 +79,7 @@
 }
 
 .kimo-composer-agent__attach,
+.kimo-composer-agent__auto,
 .kimo-composer-agent__skills,
 .kimo-composer-agent__model,
 .kimo-composer-agent__send {
@@ -103,12 +104,29 @@
   color: var(--kimo-text-secondary);
 }
 
+/* Board 34 Auto-approve (v0SYd / XNEDr): 24 × 24, radius-sm. Off: shield 14 text-secondary. On:
+   shield-check 14 warning on warning-soft. */
+.kimo-composer-agent__auto {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--kimo-radius-sm);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-composer-agent__auto--on {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
 .kimo-composer-agent__attach:hover,
+.kimo-composer-agent__auto:not(.kimo-composer-agent__auto--on):hover,
 .kimo-composer-agent__skills:hover {
   background: var(--kimo-bg-hover);
 }
 
 .kimo-composer-agent__attach svg,
+.kimo-composer-agent__auto svg,
 .kimo-composer-agent__skills svg {
   display: block;
   flex: none;

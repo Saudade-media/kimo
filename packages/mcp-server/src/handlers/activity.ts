@@ -118,6 +118,18 @@ export class ApprovalBroker {
     return true
   }
 
+  /**
+   * Auto-approve turned on (board 34): resolves the matching pending prompts as `auto`, oldest
+   * first. Returns how many it approved.
+   */
+  approveWhere(match: (r: ApprovalRequest) => boolean): number {
+    const ids = this.pending()
+      .filter(match)
+      .map((r) => r.id)
+    for (const id of ids) this.finish(id, "auto")
+    return ids.length
+  }
+
   /** Resolves every prompt of a connection as `disconnected`. */
   cancelSession(session: string): void {
     for (const [id, p] of this.queue) if (p.session === session) this.finish(id, "disconnected")

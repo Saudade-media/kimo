@@ -72,6 +72,8 @@ export interface TurnRecord {
   billing?: "api" | "subscription" | "cli-api-key" | "local"
   /** Local CLI turns: the CLI's own session id (resume) and the cost it reported, if any. */
   cli?: { id: string; sessionId?: string; reportedCostUsd?: number; turns?: number }
+  /** Board 34: the thread lines of requests auto-approve let through ("Approved automatically: …"). */
+  autoApproved?: string[]
 }
 
 /** Events for the agent panel (board 22 A: streaming text, AgentStep rows, live meta). */

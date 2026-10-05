@@ -174,6 +174,21 @@ const script: Script = (req) => {
       }),
     }
   if (text.includes("auth")) return { error: "auth", status: 401, message: "invalid x-api-key" }
+  // Board 34: an edit outside the selected Hero (Single mode asks: out of its area).
+  if (text.includes("Tidy the navbar") && !afterTool(req))
+    return {
+      tools: [
+        {
+          name: "kimo_apply_ops",
+          input: {
+            docId: docId(),
+            ops: [{ op: "update", id: "Navbar0001", set: { name: "Navbar" } }],
+          },
+        },
+      ],
+    }
+  if (text.includes("Tidy the navbar"))
+    return { text: "Tidied the navbar.", usage: { inputTokens: 600, outputTokens: 40 } }
   // Board 33 §1: a reply with every block of the Markdown subset.
   if (text.includes("formatted reply"))
     return { text: FORMATTED_REPLY, usage: { inputTokens: 900, outputTokens: 120 }, delayMs: 10 }

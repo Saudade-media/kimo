@@ -240,6 +240,13 @@ pub struct ClientPolicy {
     pub grants: Vec<Grant>,
     pub on_exceed: OnExceed,
     pub confirm_destructive: bool,
+    /// Board 34 auto-approve (additive; absent = false, and false is not written back).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub auto_approve: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -510,6 +517,19 @@ mod tests {
         assert!(set_policy(&p, "x", Some(json!({"level":"admin"}))).is_err());
         set_policy(&p, "claude-code", None).unwrap();
         assert!(read_policies(&p).is_empty());
+    }
+
+    #[test]
+    fn policies_keep_auto_approve() {
+        let (_d, p) = paths();
+        let on = json!({"level":"edit","files":[],"nodes":[],"grants":["export"],"onExceed":"ask","confirmDestructive":true,"autoApprove":true});
+        set_policy(&p, "codex", Some(on.clone())).unwrap();
+        assert_eq!(read_policies(&p)["codex"], on);
+        // false is the default: it reads back without the field (older files stay identical).
+        let off = json!({"level":"edit","files":[],"nodes":[],"grants":[],"onExceed":"ask","confirmDestructive":true,"autoApprove":false});
+        set_policy(&p, "codex", Some(off)).unwrap();
+        assert!(read_policies(&p)["codex"].get("autoApprove").is_none());
+        assert!(set_policy(&p, "codex", Some(json!({"level":"edit","files":[],"nodes":[],"grants":[],"onExceed":"ask","confirmDestructive":true,"autoApprove":"yes"}))).is_err());
     }
 
     #[test]

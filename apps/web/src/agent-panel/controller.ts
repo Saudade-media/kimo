@@ -99,6 +99,7 @@ import {
   type ModeAgentRowView,
   type ModelPickerGroup,
 } from "../platform/contract"
+import { autoApprovalLine } from "./approval"
 import { type CostWarningView, estimateTurn, shouldWarn } from "./cost-warning"
 import { modelLabel, newTokens } from "./format"
 import { type AgentPanelRuntime, providerFor } from "./runtime"
@@ -208,6 +209,11 @@ export interface AgentPanelViewState extends AgentPanelState {
   /** Every pending in-app approval, oldest first (board 25 rule "Approval queue"). */
   approvals: ApprovalPromptView[]
   /**
+   * Board 34: this session approves every request at once (outcome `auto`). Off for every new
+   * session and never saved.
+   */
+  autoApprove: boolean
+  /**
    * Agent tab first run (board 25 §5): a detected, signed-in CLI to confirm (FrS9y), or the
    * inline Anthropic key card (D8covN). Null once a provider passed its Test / a CLI is chosen.
    */
@@ -271,6 +277,11 @@ export interface AgentPanelControllerExt extends AgentPanelController {
   connectKey(key: string): Promise<{ ok: boolean; detail: string }>
   /** Refusal "Edit request": the turn's prompt back in the composer. */
   editRequest(turnId: string): void
+  /**
+   * Board 34 auto-approve for this session. Turning it on approves the pending cards at once
+   * (the UI asks first); a new or reopened session starts off.
+   */
+  setAutoApprove(on: boolean): void
   /** Cost warning "Send anyway": sends the held message without asking again. */
   sendAnyway(): Promise<void>
   /** Cost warning "Edit message": drops the hold; the text stays in the composer. */
@@ -410,6 +421,7 @@ export function messagesFromTurns(
       streaming: false,
       steps,
       meta: meta(t, i === turns.length - 1),
+      ...(t.autoApproved?.length ? { autoApproved: [...t.autoApproved] } : {}),
       ...(t.error && t.status !== "done" ? { card: t.error } : {}),
     })
   })
@@ -548,6 +560,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let sessionQuery = ""
   let sessionList: SessionMeta[] = []
   let approvalQueue: (ApprovalPromptView & { resolve(o: ApprovalOutcome): void })[] = []
+  let autoApprove = false
   let connect: { connecting: boolean; error: string | null } = { connecting: false, error: null }
   let abort: AbortController | null = null
   let composerState: AgentComposerView["state"] = "idle"
@@ -747,6 +760,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
             remainingMs: approval.remainingMs,
           }
         : null,
+      autoApprove,
       approvals: approvalQueue.map((a, i) => ({
         request: a.request,
         queued: approvalQueue.length - i,
@@ -861,6 +875,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   // --- Approvals (in-app: wait indefinitely; Stop answers deny) ----------------------------------
 
   function requestApproval(req: ApprovalRequest): Promise<ApprovalOutcome> {
+    if (autoApprove) {
+      noteAutoApproved(req)
+      emit()
+      return Promise.resolve("auto")
+    }
     return new Promise((resolve) => {
       // More than one pending: cards stack in order (board 25 rule "Approval queue").
       approvalQueue = [
@@ -887,6 +906,22 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       composerState = "streaming"
     a.resolve(outcome)
     emit()
+  }
+
+  /**
+   * Board 34 thread line: "Approved automatically: …" on the running agent turn (the last
+   * streaming agent message, else the last agent message).
+   */
+  function noteAutoApproved(req: ApprovalRequest) {
+    const line = autoApprovalLine(req as never, stepNames)
+    const target =
+      messages.findLast((m) => m.kind === "agent" && m.streaming) ??
+      messages.findLast((m) => m.kind === "agent")
+    if (target)
+      updateAgentMessage(target.id, (m) => ({
+        ...m,
+        autoApproved: [...(m.autoApproved ?? []), line],
+      }))
   }
 
   /** Stop answers every pending approval Deny. */
@@ -1349,8 +1384,14 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     return sel.map((a) => `${a.label} (${a.nodeIds?.[0] ?? ""})`).join(", ")
   }
 
-  async function finishTurn(record: TurnRecord, msgId: string, extra?: { agents?: number }) {
+  async function finishTurn(raw: TurnRecord, msgId: string, extra?: { agents?: number }) {
     const s = ensureSession()
+    // Board 34: the turn's auto-approved lines are saved with it (reopening shows them).
+    const msg = messages.find((m) => m.kind === "agent" && m.id === msgId)
+    const record: TurnRecord =
+      msg?.kind === "agent" && msg.autoApproved?.length
+        ? { ...raw, autoApproved: msg.autoApproved }
+        : raw
     lastRecord = record
     session = appendTurn(s, record, now())
     if (extra?.agents) session = { ...session, agents: extra.agents }
@@ -2416,6 +2457,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     newSession() {
       if (composerState !== "idle") controller.stop()
       session = null
+      autoApprove = false
       messages = []
       modeRun = null
       costWarning = null
@@ -2429,6 +2471,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       const s = await rt.sessions.get(id)
       if (!s) return
       session = s
+      autoApprove = false
       model = s.model
       thinking = s.thinking
       mode = s.mode
@@ -2493,6 +2536,17 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     },
     async answerApproval(id, choice: McpApprovalChoice) {
       settleApproval(choice, id || undefined)
+    },
+    setAutoApprove(on) {
+      if (autoApprove === on) return
+      autoApprove = on
+      // Cards already waiting are approved now, oldest first.
+      if (on)
+        for (const a of [...approvalQueue]) {
+          noteAutoApproved(a.request as unknown as ApprovalRequest)
+          settleApproval("auto", a.request.id)
+        }
+      emit()
     },
     cardAction(id, action: ErrorCardAction) {
       switch (action) {
@@ -2647,6 +2701,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       pendingFromHome = true
       model = h.model
       session = null
+      autoApprove = false
       messages = []
       mode = { ...DEFAULT_MODE }
       ensureSession("home", h.sessionId)

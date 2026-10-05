@@ -44,7 +44,7 @@ export interface HostTools {
   dispose(): void
 }
 
-const OUTCOMES = new Set<ApprovalOutcome>(["deny", "once", "session", "timeout"])
+const OUTCOMES = new Set<ApprovalOutcome>(["deny", "once", "session", "auto", "timeout"])
 
 export function createHostTools(o: HostToolsOptions): HostTools {
   let docId = ""

@@ -205,7 +205,15 @@ export function FilesPane(props: PaneProps) {
   const total = repos.value?.length ?? 0
   const showNewFiles = native(platform)
   const showGit = platform.capabilities.git
-  const showDefaultApp = platform.capabilities.fileAssociation
+  // D15: desktop asks the OS (Launch Services); the installed web app's `file_handlers` make it
+  // the handler, so the browser has nothing to check. Hidden where the OS gives no answer.
+  const defaultApp = useAsync(
+    async () => (platform.defaultApp ? platform.defaultApp.status() : ("default" as const)),
+    [platform],
+  )
+  const showDefaultApp =
+    platform.capabilities.fileAssociation &&
+    (defaultApp.value === "default" || defaultApp.value === "other")
   const rows: ReactNode[] = [
     <SettingRow
       key="autosave"
@@ -315,7 +323,24 @@ export function FilesPane(props: PaneProps) {
         key="default-app"
         label="Default app for .kimo and .kimoz"
         description={`Kimo opens these files from ${platform.os === "windows" ? "Explorer" : platform.os === "linux" ? "your file manager" : "Finder"} and kimo:// links.`}
-        control={<ValueText>Kimo ✓</ValueText>}
+        control={
+          defaultApp.value === "default" ? (
+            <ValueText>Kimo ✓</ValueText>
+          ) : (
+            <RowButton
+              onClick={async function makeDefault() {
+                try {
+                  await platform.defaultApp?.makeDefault()
+                } catch (e) {
+                  fail("make Kimo the default app", e, () => void makeDefault())
+                }
+                defaultApp.reload()
+              }}
+            >
+              Make default
+            </RowButton>
+          )
+        }
       />,
     )
   return (

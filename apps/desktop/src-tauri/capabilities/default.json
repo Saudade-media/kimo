@@ -22,6 +22,7 @@
     "allow-kimo-fs-unwatch",
     "allow-kimo-fs-reveal",
     "allow-kimo-fs-open-default",
+    "allow-kimo-fs-open-as-text",
     "allow-kimo-open-url",
     "allow-kimo-dialog-open-file",
     "allow-kimo-dialog-save-file",
@@ -87,6 +88,8 @@
     "allow-kimo-help-show-logs",
     "allow-kimo-menu-set-context",
     "allow-kimo-clipboard-write-text",
-    "allow-kimo-dock-agent-activity"
+    "allow-kimo-dock-agent-activity",
+    "allow-kimo-default-app-status",
+    "allow-kimo-default-app-set"
   ]
 }

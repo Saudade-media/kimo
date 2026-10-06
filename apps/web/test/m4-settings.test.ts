@@ -169,8 +169,6 @@ describe("SettingsView renders every pane bound to platform.settings", () => {
       "Change…",
       "Git merge driver",
       "Set up…",
-      "Default app for .kimo and .kimoz",
-      "Kimo ✓",
     ])
       expect(html).toContain(s)
   })

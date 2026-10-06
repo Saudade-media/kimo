@@ -241,6 +241,38 @@ export const scenarios: Scenario[] = [
         open_.includes("untitled") && open_.some((r) => r.endsWith("home.kimo")),
         `restored sessions: ${open_}`,
       )
+
+      // C3: Restore all with three entries shows the first and lists the other two, each with
+      // Open; Open routes to that document and its toast leaves.
+      await boot("mixed3")
+      await page.getByRole("button", { name: "Restore all" }).click()
+      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      const restored = page.locator('[data-toast="restored"]')
+      await page.waitForFunction(
+        () => document.querySelectorAll('[data-toast="restored"]').length === 2,
+        undefined,
+        { timeout: 10_000 },
+      )
+      const shownFirst = await page.evaluate(() => location.hash)
+      const target = (await restored.first().getAttribute("data-ref")) ?? ""
+      expect(!shownFirst.endsWith(encodeURIComponent(target)), "a toast never lists the shown one")
+      await restored.first().getByRole("button", { name: "Open" }).click()
+      await page.waitForFunction((t) => decodeURIComponent(location.hash).endsWith(t), target, {
+        timeout: 10_000,
+      })
+      await page.waitForFunction(
+        () => document.querySelectorAll('[data-toast="restored"]').length === 1,
+      )
+      const reached = await page.evaluate(
+        (t) =>
+          (
+            window as unknown as {
+              __kimoApp: { manager: { get(r: string): { untitled: boolean } | undefined } }
+            }
+          ).__kimoApp.manager.get(t)?.untitled ?? null,
+        target,
+      )
+      expect(reached === true, `restored untitled reachable: ${reached}`)
     },
   },
   {

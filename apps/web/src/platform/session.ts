@@ -1051,7 +1051,8 @@ export class FileDocumentSession implements DocumentSession {
         await platform.files.reveal(this._ref)
         break
       case "open-as-text":
-        await platform.files.openWithDefaultApp(this._ref)
+        // The OS text editor, not the default app: for .kimo that is Kimo, which fails again.
+        await platform.files.openAsText(this._ref)
         break
       case "next-conflict":
       case "previous-conflict": {
@@ -1430,13 +1431,19 @@ export class FileSessionManager implements SessionManager {
     return this.open(target, { source: "recovery" })
   }
 
-  async resolveRecoveryDialog(choice: RecoveryDialogChoice): Promise<void> {
-    if (choice === "decide-later") return
+  /** Restore all returns the sessions it opened, in candidate order (C3: each one reachable). */
+  async resolveRecoveryDialog(choice: RecoveryDialogChoice): Promise<FileDocumentSession[]> {
+    if (choice === "decide-later") return []
     const candidates = await this.recoveryCandidates()
+    const opened: FileDocumentSession[] = []
     for (const c of candidates) {
       if (choice === "discard-all") await this.platform.recovery.discard(c.entry.id)
-      else await this.resolveRecovery(c.entry.id, "restore")
+      else {
+        const s = await this.resolveRecovery(c.entry.id, "restore")
+        if (s && !opened.includes(s)) opened.push(s)
+      }
     }
+    return opened
   }
 
   /** Board 24 (i): asks for every never-saved document with edits, in order; false on Cancel. */

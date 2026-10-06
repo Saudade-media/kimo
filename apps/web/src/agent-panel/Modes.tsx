@@ -335,6 +335,21 @@ export function ReviewCard({
   )
 }
 
+/**
+ * The Mode Summary label: "Side by side · 3 agents · 1 done" (jDKaM) for side by side / split,
+ * "Iterate · pass 2 of 3" for iterate (with " · review" while a pass waits, as on the Pass Chip
+ * e9gVXI). One agent reads "1 agent".
+ */
+export function modeSummaryLabel(run: ModeRunView): string {
+  const it = run.iterate
+  if (run.mode === "iterate" && it)
+    return `Iterate · pass ${it.pass} of ${it.of}${it.reviewing ? " · review" : ""}`
+  const name =
+    run.mode === "split" ? "Split" : run.mode === "side-by-side" ? "Side by side" : "Iterate"
+  const n = run.agents.length
+  return `${name} · ${n} ${n === 1 ? "agent" : "agents"} · ${run.done} done`
+}
+
 /** Mode Summary (jDKaM): h 28, gap 8, padding [0, 10, 0, 6], bg-app, 1 px border, pill. */
 export function ModeSummaryPill({
   run,
@@ -346,8 +361,6 @@ export function ModeSummaryPill({
   /** Settings "Show cost" (board 27 r9hTk); default on. */
   showCost?: boolean
 }) {
-  const name =
-    run.mode === "split" ? "Split" : run.mode === "side-by-side" ? "Side by side" : "Iterate"
   return (
     <div className="agent-mode-summary" data-testid="agent-mode-summary">
       <span className="agent-mode-summary__marks">
@@ -361,9 +374,7 @@ export function ModeSummaryPill({
           />
         ))}
       </span>
-      <span className="agent-mode-summary__label">
-        {name} · {run.agents.length} agents · {run.done} done
-      </span>
+      <span className="agent-mode-summary__label">{modeSummaryLabel(run)}</span>
       {showCost && <span className="agent-mode-summary__cost">{usd(run.costUsd)}</span>}
       {run.running && onStopAll && (
         <button type="button" className="agent-mode-summary__stop" onClick={onStopAll}>

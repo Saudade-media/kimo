@@ -98,7 +98,8 @@ const manager = createAppSessionManager(platform)
 manager.install()
 Object.assign(window, { __kimoApp: { platform, control: platform.control, manager, SITE, LOOM } })
 
-// `?recovery=untitled|mixed`: entries a crashed session left behind (launch recovery dialog).
+// `?recovery=untitled|mixed|mixed3`: entries a crashed session left behind (launch recovery
+// dialog). `mixed3` adds a second never-saved document (C3: Restore all with several).
 const recoverySeed = new URLSearchParams(location.search).get("recovery")
 async function seedRecovery(): Promise<void> {
   if (!recoverySeed) return
@@ -111,7 +112,18 @@ async function seedRecovery(): Promise<void> {
       reason: "untitled" as const,
       edits: 1,
     },
-    ...(recoverySeed === "mixed"
+    ...(recoverySeed === "mixed3"
+      ? [
+          {
+            id: "untitled-seed2",
+            sourceRef: null,
+            name: "Untitled",
+            reason: "untitled" as const,
+            edits: 1,
+          },
+        ]
+      : []),
+    ...(recoverySeed === "mixed" || recoverySeed === "mixed3"
       ? [
           {
             id: recoveryIdFor(`${SITE}/home.kimo`),

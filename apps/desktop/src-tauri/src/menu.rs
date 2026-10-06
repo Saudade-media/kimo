@@ -407,16 +407,119 @@ fn focused_window<Rt: Runtime>(app: &AppHandle<Rt>) -> Option<tauri::WebviewWind
         .find(|w| w.label() != crate::mcp::HOST_LABEL && w.is_focused().unwrap_or(false))
 }
 
-/// Sends `{ action }` as `event` to the focused editor window (else the primary one).
+/// Where a menu item for the editor goes.
+#[derive(Debug, PartialEq, Eq)]
+pub enum MenuTarget {
+    /// An editor window whose page listens: emit now.
+    Window(String),
+    /// No editor window (macOS keeps running after the last one closes), or `main` is still
+    /// loading: queue the item and (re)open `main`.
+    QueueForMain,
+}
+
+/// Picks the window for a menu item: the focused editor, else the primary one; queued when
+/// none is open or the reopened `main` hasn't reported its context yet.
+pub fn menu_target(focused: Option<&str>, primary: Option<&str>, queue: &MenuQueue) -> MenuTarget {
+    if !queue.is_empty() {
+        return MenuTarget::QueueForMain;
+    }
+    match focused.or(primary) {
+        Some(l) => MenuTarget::Window(l.to_string()),
+        None => MenuTarget::QueueForMain,
+    }
+}
+
+/// Menu items (`(event, action)`) waiting for the reopened `main` window.
+#[derive(Debug, Default)]
+pub struct MenuQueue {
+    items: Vec<(String, String)>,
+}
+
+impl MenuQueue {
+    pub fn push(&mut self, event: &str, action: &str) {
+        self.items.push((event.to_string(), action.to_string()));
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    /// The items for `label` once its page is ready: only `main` was opened for them.
+    pub fn take_for(&mut self, label: &str) -> Vec<(String, String)> {
+        if label != "main" {
+            return Vec::new();
+        }
+        std::mem::take(&mut self.items)
+    }
+
+    /// `label` closed before its page was ready: its items go with it.
+    pub fn forget(&mut self, label: &str) {
+        if label == "main" {
+            self.items.clear();
+        }
+    }
+}
+
+/// Sends `{ action }` as `event` to the focused editor window (else the primary one). With no
+/// editor window open, reopens `main` and runs the item once its page is ready
+/// ([`deliver_pending`]).
 fn emit_to_editor<Rt: Runtime>(app: &AppHandle<Rt>, event: &str, action: &str) {
     use tauri::{Emitter, Manager};
     let focused = app
         .webview_windows()
         .into_values()
         .find(|w| crate::window::is_editor_label(w.label()) && w.is_focused().unwrap_or(false));
-    if let Some(w) = focused.or_else(|| crate::window::primary_editor(app)) {
-        let _ = w.set_focus();
-        let _ = app.emit_to(w.label(), event, serde_json::json!({ "action": action }));
+    let primary = crate::window::primary_editor(app);
+    let st = crate::state::state(app);
+    let mut queue = st.pending_menu.lock().unwrap();
+    let target = menu_target(
+        focused.as_ref().map(|w| w.label()),
+        primary.as_ref().map(|w| w.label()),
+        &queue,
+    );
+    match target {
+        MenuTarget::Window(label) => {
+            drop(queue);
+            if let Some(w) = app.get_webview_window(&label) {
+                let _ = w.set_focus();
+            }
+            let _ = app.emit_to(
+                label.as_str(),
+                event,
+                serde_json::json!({ "action": action }),
+            );
+        }
+        MenuTarget::QueueForMain => {
+            queue.push(event, action);
+            drop(queue);
+            match crate::window::create_editor_window(app, "main") {
+                Ok(w) => {
+                    let _ = w.set_focus();
+                }
+                Err(e) => {
+                    st.pending_menu.lock().unwrap().forget("main");
+                    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                    app.dialog()
+                        .message(e.message)
+                        .title("Couldn't open a window")
+                        .kind(MessageDialogKind::Error)
+                        .show(|_| {});
+                }
+            }
+        }
+    }
+}
+
+/// `kimo_menu_set_context` from `label`: its page listens now, so the queued items run there.
+pub fn deliver_pending<Rt: Runtime>(app: &AppHandle<Rt>, label: &str) {
+    use tauri::Emitter;
+    let items = crate::state::state(app)
+        .pending_menu
+        .lock()
+        .unwrap()
+        .take_for(label);
+    for (event, action) in items {
+        let _ = app.emit_to(label, &event, serde_json::json!({ "action": action }));
     }
 }
 
@@ -529,6 +632,47 @@ mod tests {
         assert_eq!(MenuContext::parse("home"), Some(MenuContext::Home));
         assert_eq!(MenuContext::parse("editor"), Some(MenuContext::Editor));
         assert_eq!(MenuContext::parse("settings"), None);
+    }
+
+    #[test]
+    fn items_with_no_editor_window_wait_for_main() {
+        let mut q = MenuQueue::default();
+        // An editor window is open: the focused one wins, else the primary one.
+        assert_eq!(
+            menu_target(Some("editor-2"), Some("main"), &q),
+            MenuTarget::Window("editor-2".into())
+        );
+        assert_eq!(
+            menu_target(None, Some("main"), &q),
+            MenuTarget::Window("main".into())
+        );
+        // Every editor window closed (only Settings / the document host left): queue, open main.
+        assert_eq!(menu_target(None, None, &q), MenuTarget::QueueForMain);
+        q.push("kimo://editor-menu", "new-file");
+        // main exists but its page hasn't reported yet: later items queue behind the first.
+        assert_eq!(
+            menu_target(None, Some("main"), &q),
+            MenuTarget::QueueForMain
+        );
+        q.push("kimo://help-menu", "shortcuts");
+        // Another window reporting doesn't take main's items.
+        assert!(q.take_for("editor-2").is_empty());
+        assert_eq!(
+            q.take_for("main"),
+            vec![
+                ("kimo://editor-menu".to_string(), "new-file".to_string()),
+                ("kimo://help-menu".to_string(), "shortcuts".to_string()),
+            ]
+        );
+        assert!(q.is_empty());
+        assert_eq!(
+            menu_target(None, Some("main"), &q),
+            MenuTarget::Window("main".into())
+        );
+        // main closed before its page was ready: its items are dropped, not sent later.
+        q.push("kimo://editor-menu", "open-file");
+        q.forget("main");
+        assert!(q.is_empty());
     }
 
     #[test]

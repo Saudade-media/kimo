@@ -285,7 +285,7 @@ async function profiled<T>(cdp: CDPSession | null, label: string, fn: () => Prom
 
 async function openNewFile(page: Page, url: string) {
   await page.goto(url)
-  await page.getByRole("button", { name: "New file" }).click()
+  await page.locator("header").getByRole("button", { name: "New file" }).click()
   await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
   await page.locator('.canvas-host[data-ready="true"]').waitFor({ timeout: 60_000 })
 }

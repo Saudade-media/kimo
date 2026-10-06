@@ -71,8 +71,12 @@ const VIEWS = [
 /** Recents shows the most recently edited files (the library has no open history). */
 const RECENTS_LIMIT = 50
 
-/** Names of every library the browser holds a snapshot of, by importing file (Design systems). */
-async function librarySnapshotUses(): Promise<Map<string, Set<string>>> {
+/**
+ * Design systems (B4): for each browser-library file a snapshot was linked from (its recorded
+ * `sourceId`), the ids of the files that import it. Snapshots without a known origin (a file
+ * picked from disk) count for nobody: the name of a library is never used to guess.
+ */
+export async function librarySnapshotUses(): Promise<Map<string, Set<string>>> {
   const out = new Map<string, Set<string>>()
   const db = await new Promise<IDBDatabase | null>((resolve) => {
     const req = indexedDB.open("kimo-libraries", 1)
@@ -81,23 +85,17 @@ async function librarySnapshotUses(): Promise<Map<string, Set<string>>> {
     req.onerror = () => resolve(null)
   })
   if (!db) return out
-  const rows = await new Promise<{ key: string; text: string }[]>((resolve) => {
+  const rows = await new Promise<{ key: string; sourceId?: string }[]>((resolve) => {
     const req = db.transaction("snapshots", "readonly").objectStore("snapshots").getAll()
-    req.onsuccess = () => resolve(req.result as { key: string; text: string }[])
+    req.onsuccess = () => resolve(req.result as { key: string; sourceId?: string }[])
     req.onerror = () => resolve([])
   })
   db.close()
   for (const r of rows) {
     const fileId = r.key.split("\u0000")[0] ?? ""
-    let name: string | undefined
-    try {
-      name = (JSON.parse(r.text) as { meta?: { name?: string } }).meta?.name
-    } catch {
-      name = undefined
-    }
-    if (!name) continue
-    const set = out.get(name) ?? new Set<string>()
-    out.set(name, set)
+    if (!r.sourceId || !fileId || r.sourceId === fileId) continue
+    const set = out.get(r.sourceId) ?? new Set<string>()
+    out.set(r.sourceId, set)
     set.add(fileId)
   }
   return out
@@ -236,7 +234,15 @@ export function WebHomeView({
       const store = await loadFileStore(f.id)
       const assets = createAssetStore(f.id)
       try {
-        await saveFile(await exportFile(store, f.name, assets))
+        await saveFile(
+          await exportFile(
+            store,
+            f.name,
+            assets,
+            (d) => d,
+            platform.settings.get("fonts.embedInKimoz"),
+          ),
+        )
       } finally {
         assets.dispose()
         store.destroy()
@@ -294,9 +300,10 @@ export function WebHomeView({
       all
         .map((f) => ({
           f,
-          usedBy: [...(uses.get(f.name) ?? [])].filter((id) => id !== f.id).length,
+          // Counted by the recorded source id; null (component count only) when unknown.
+          usedBy: uses.get(f.id)?.size ?? null,
         }))
-        .filter(({ f, usedBy }) => f.library || (f.components ?? 0) > 0 || usedBy > 0),
+        .filter(({ f, usedBy }) => f.library || (f.components ?? 0) > 0 || (usedBy ?? 0) > 0),
     [all, uses],
   )
   const title =
@@ -458,7 +465,7 @@ export function WebHomeView({
           cards(libShown, (f) =>
             libraryInfo({
               components: f.components ?? 0,
-              usedBy: libraries.find((l) => l.f.id === f.id)?.usedBy ?? 0,
+              usedBy: libraries.find((l) => l.f.id === f.id)?.usedBy ?? null,
             }),
           )
         )}

@@ -326,6 +326,12 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
         await call("kimo_dock_agent_activity", { source, working })
       },
     },
+    defaultApp: {
+      status: () => call("kimo_default_app_status", none),
+      makeDefault: async () => {
+        await call("kimo_default_app_set", none)
+      },
+    },
     capabilities,
     // M6 user skills (ADR 0014 §10): own command list (TAURI_SKILLS_COMMANDS), not TAURI_COMMANDS.
     skills: createTauriSkills({
@@ -370,6 +376,9 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       },
       openWithDefaultApp: async (ref) => {
         await call("kimo_fs_open_default", { path: ref })
+      },
+      openAsText: async (ref) => {
+        await call("kimo_fs_open_as_text", { path: ref })
       },
       openExternalUrl: async (url) => {
         await call("kimo_open_url", { url })

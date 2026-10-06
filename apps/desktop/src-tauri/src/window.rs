@@ -390,6 +390,7 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
                 .retain(|_, (l, _)| *l != label);
             st.close_allowed.lock().unwrap().remove(&label);
             st.menu_context.lock().unwrap().remove(&label);
+            st.pending_menu.lock().unwrap().forget(&label);
             if label == crate::mcp::HOST_LABEL {
                 crate::mcp::on_host_destroyed(app);
             } else {

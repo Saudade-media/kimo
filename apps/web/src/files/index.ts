@@ -35,6 +35,6 @@ export {
 } from "./hooks"
 export { LockDetailsPopover, sinceLabel } from "./LockDetailsPopover"
 export { MigrationDialog, MigrationDialogView } from "./MigrationDialog"
-export { RecoveryDialog, RecoveryDialogView } from "./RecoveryDialog"
+export { RecoveryDialog, RecoveryDialogView, RestoredToasts } from "./RecoveryDialog"
 export { SaveStatusPill, statusTooltip } from "./SaveStatusPill"
 export { SessionToastView, ToastHost } from "./ToastHost"

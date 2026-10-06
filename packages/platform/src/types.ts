@@ -97,6 +97,11 @@ export interface KimoPlatform {
    * while any agent works; desktop only (Rust ignores it on Windows / Linux).
    */
   readonly dock?: DockActivityApi
+  /**
+   * Settings › Files › Default app for .kimo and .kimoz (board 37 D15): whether the OS opens
+   * these files with Kimo, and a way to make it so. Desktop only; absent where Kimo can't tell.
+   */
+  readonly defaultApp?: DefaultAppApi
   /** Stops watchers and listeners (window teardown). */
   dispose(): void
 }
@@ -148,6 +153,18 @@ export interface HelpHostApi {
   onMenu(listener: (action: HelpMenuAction) => void): () => void
   /** Reveals Kimo's log file (`~/.kimo/mcp/server.log`) in Finder / Explorer / the file manager. */
   showLogs(): Promise<void>
+}
+
+/**
+ * `default`: the OS opens .kimo and .kimoz files with this Kimo. `other`: another app (or none)
+ * opens at least one of them. `unknown`: this OS gives no answer (the row is hidden).
+ */
+export type DefaultAppStatus = "default" | "other" | "unknown"
+
+export interface DefaultAppApi {
+  status(): Promise<DefaultAppStatus>
+  /** Makes Kimo the default app for .kimo and .kimoz. Rejects when the OS refuses. */
+  makeDefault(): Promise<void>
 }
 
 /** Board 32: the Dock tile's agent-activity reports (`kimo_dock_agent_activity`). */
@@ -247,6 +264,11 @@ export interface FilesApi {
   reveal(ref: FileRef): Promise<void>
   /** Opens a file with the OS default app ("Open as text", "Open fonts folder"). */
   openWithDefaultApp(ref: FileRef): Promise<void>
+  /**
+   * Opens a file in the OS text editor (failed-load card "Open as text"). Not the default app:
+   * for .kimo that is Kimo itself, which would fail to load it again.
+   */
+  openAsText(ref: FileRef): Promise<void>
   /** Opens an https URL in the browser (release notes, repo). */
   openExternalUrl(url: string): Promise<void>
   /** Hands bytes to the user as a download (browser fallback when there is no save dialog). */

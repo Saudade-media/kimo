@@ -58,6 +58,7 @@ import {
   type SnapOverlay,
   type SpacingIndicator,
 } from "@kimo/renderer"
+import { modKeyHint } from "../editor/kbd"
 import { altDragCloneOps, type DuplicateMainPref } from "../editor/m3/component-actions"
 import { pageScopedSource, withActivePage } from "../editor/pages/model"
 import { manifestOps } from "../lib/asset-manifest"
@@ -3438,7 +3439,10 @@ export class CanvasController {
     const d = this.drag
     const f = this.flowInsert
     if (f && d && (d.kind === "draw" || d.kind === "line" || d.kind === "place")) {
-      hint = { icon: "square", text: `Release → inserts at ${f.slot + 1} · ⌘ draws on top` }
+      hint = {
+        icon: "square",
+        text: `Release → inserts at ${f.slot + 1} · ${modKeyHint()} draws on top`,
+      }
       if (!f.absolute) {
         bar = slotBar(f.flow, f.slot)
         const r = f.pending ? this.opWorldRect(f.pending) : null
@@ -3453,7 +3457,8 @@ export class CanvasController {
       }
     } else if (d?.kind === "move" && d.reloc) {
       const r = d.reloc
-      if (r.flowStart) hint = { icon: "move", text: "Outside → to Canvas · ⌘ keeps it absolute" }
+      if (r.flowStart)
+        hint = { icon: "move", text: `Outside → to Canvas · ${modKeyHint()} keeps it absolute` }
       const last = r.last
       if (last?.mode === "flow" && last.flow) {
         bar = slotBar(last.flow, last.slot)

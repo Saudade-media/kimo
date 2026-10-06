@@ -11,6 +11,7 @@ import type { KimoPlatform } from "@kimo/platform"
 import type { FontSource } from "@kimo/renderer"
 import { createFontSystem, type FontSystem } from "../fonts/font-system"
 import { DEFAULT_SVG_OPTIONS, importSvgAsVectors } from "../svg-import/convert"
+import { serveFlushRequests } from "../updater/restart-broadcast"
 import { type HostBridge, tauriBridge } from "./bridge"
 import { HostClient } from "./client"
 import { type DocumentHostService, startDocumentHostService } from "./document-host"
@@ -86,8 +87,16 @@ export async function startHostRoute(
     // is skipped: the host's renderer is offline).
     scene: { ...browserScene, fontSources: hostFontSources(platform) },
   })
+  // Settings › Updates › Restart to update: documents open only in the host (an agent opened
+  // them, no editor window shows them) are saved before the restart too.
+  if (!stopFlushServer) {
+    const manager = service.manager
+    stopFlushServer = serveFlushRequests("document-host", () => manager.flushAll())
+  }
   return service
 }
+
+let stopFlushServer: (() => void) | null = null
 
 /** The running host service in this webview (host route only). */
 export function getHostService(): DocumentHostService | null {

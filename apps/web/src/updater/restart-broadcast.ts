@@ -4,6 +4,8 @@
  * Settings window has no sessions of its own, so it asks the other windows over a
  * BroadcastChannel (one origin, every webview of the app):
  *
+ * The hidden document host (`#/host`) answers too, so files only an agent has open are saved.
+ *
  *   Settings → { type: "flush", id }      every editor window → { type: "ack", id, label }
  *   then, once its files are saved →      { type: "flushed", id, label, ok, failed }
  *

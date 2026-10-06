@@ -559,7 +559,7 @@ export const scenarios: Scenario[] = [
       }, FILE)
       await waitText(page, ".kimo-banner__title", "Saved, but the read-back didn't match", 6000)
       const mm = await page.locator(".kimo-banner__action").allInnerTexts()
-      expect(mm.join(",") === "Show diff,Save as…", `mismatch actions ${mm}`)
+      expect(mm.join(",") === "Reveal recovery copy,Save as…", `mismatch actions ${mm}`)
       await shot(ctx, "save-failed-mismatch")
     },
   },
@@ -604,7 +604,9 @@ export const scenarios: Scenario[] = [
       await page.getByRole("button", { name: "Open as text" }).click()
       const calls = await page.evaluate(() => window.__kimoFiles.control.calls.slice())
       expect(calls.includes(`reveal ${ROOT}/checkout.kimo`), "reveal")
-      expect(calls.includes(`openWithDefaultApp ${ROOT}/checkout.kimo`), "open as text")
+      expect(calls.includes(`openAsText ${ROOT}/checkout.kimo`), "open as text")
+      // E8: never the default app, which for .kimo is Kimo and would fail to load it again.
+      expect(!calls.some((c) => c.startsWith("openWithDefaultApp ")), "open as text skips Kimo")
     },
   },
   {

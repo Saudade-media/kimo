@@ -57,6 +57,11 @@ interface SnapshotRecord {
   path: string
   savedAt: number
   handle?: FileSystemFileHandleLike
+  /**
+   * B4: the browser-library file id the snapshot was linked from, when Kimo knows it. Home's
+   * Design systems counts "used by N files" from this id only (never from the library's name).
+   */
+  sourceId?: string
 }
 
 /** The parts of `FileSystemFileHandle` used here (structured-clonable into IndexedDB). */
@@ -235,6 +240,8 @@ export interface PickedLibrary {
   name: string
   text: string
   handle?: FileSystemFileHandleLike
+  /** The browser-library file id it came from (B4); unset for a file picked from disk. */
+  sourceId?: string
 }
 
 /** Lets the user pick a `.kimo` / `.kimoz` library. Resolves null on cancel. */
@@ -437,9 +444,26 @@ export class LibraryManager {
     this.emit()
   }
 
-  private async save(alias: string, path: string, text: string, handle?: FileSystemFileHandleLike) {
-    const rec: SnapshotRecord = { key: keyOf(this.fileId, alias), text, path, savedAt: Date.now() }
+  /** `sourceId` undefined keeps the stored one (a re-read); null clears it (a new pick). */
+  private async save(
+    alias: string,
+    path: string,
+    text: string,
+    handle?: FileSystemFileHandleLike,
+    sourceId?: string | null,
+  ) {
+    const key = keyOf(this.fileId, alias)
+    const rec: SnapshotRecord = { key, text, path, savedAt: Date.now() }
     if (handle) rec.handle = handle
+    const source =
+      sourceId === undefined
+        ? (
+            await tx<SnapshotRecord | undefined>("readonly", (s) => s.get(key)).catch(
+              () => undefined,
+            )
+          )?.sourceId
+        : sourceId
+    if (source) rec.sourceId = source
     try {
       await tx("readwrite", (s) => s.put(rec))
     } catch {
@@ -452,7 +476,7 @@ export class LibraryManager {
   /** Stores a picked library under `alias` (link / relink / locate) and marks it linked. */
   async put(alias: string, path: string, picked: PickedLibrary): Promise<KimoDocument> {
     const doc = parseLibrary(picked.text)
-    await this.save(alias, path, picked.text, picked.handle)
+    await this.save(alias, path, picked.text, picked.handle, picked.sourceId ?? null)
     this.pending.delete(alias)
     this.map.set(alias, {
       alias,

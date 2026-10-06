@@ -12,6 +12,7 @@ import { createSettingsStore } from "./settings-store"
 import { createMemorySkills, type MemorySkills } from "./skills"
 import {
   type AcquireResult,
+  type DefaultAppStatus,
   type EditorMenuAction,
   type FileRef,
   type FileStat,
@@ -81,6 +82,8 @@ export interface MemoryControl {
   helpMenu(action: HelpMenuAction): void
   /** Board 27 / 37: a native File / Edit / View item picked (desktop `kimo://editor-menu`). */
   editorMenu(action: EditorMenuAction): void
+  /** Settings › Default app: what `defaultApp.status` answers; a message makes `makeDefault` fail. */
+  setDefaultApp(status: DefaultAppStatus, failMessage?: string): void
   /** What `clipboard.writeText` last wrote (null before any write). */
   clipboardText(): string | null
   /** The next settings write is refused with this IO message (read-only settings.json). */
@@ -287,6 +290,10 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
   const helpEvents = new Emitter<[HelpMenuAction]>()
   const menuEvents = new Emitter<[EditorMenuAction]>()
   let clipboardText: string | null = null
+  const defaultApp: { status: DefaultAppStatus; fail: string | null } = {
+    status: "default",
+    fail: null,
+  }
 
   let persisted: Record<string, unknown> = { ...(options.settings ?? {}) }
   let settingsFailure: string | null = null
@@ -341,6 +348,16 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       async writeText(text) {
         calls.push(`clipboard ${text.length}`)
         clipboardText = text
+      },
+    },
+    defaultApp: {
+      async status() {
+        return defaultApp.status
+      },
+      async makeDefault() {
+        calls.push("makeDefaultApp")
+        if (defaultApp.fail) throw new PlatformError("IO", defaultApp.fail)
+        defaultApp.status = "default"
       },
     },
     capabilities,
@@ -413,6 +430,9 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       },
       async openWithDefaultApp(ref) {
         calls.push(`openWithDefaultApp ${ref}`)
+      },
+      async openAsText(ref) {
+        calls.push(`openAsText ${ref}`)
       },
       async openExternalUrl(url) {
         calls.push(`openExternalUrl ${url}`)
@@ -768,6 +788,10 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       helpMenu: (a) => helpEvents.emit(a),
       editorMenu: (a) => menuEvents.emit(a),
       clipboardText: () => clipboardText,
+      setDefaultApp(status, failMessage) {
+        defaultApp.status = status
+        defaultApp.fail = failMessage ?? null
+      },
       failNextSettingsWrite: (message) => {
         settingsFailure = message
       },

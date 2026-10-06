@@ -1197,8 +1197,6 @@ function build(b: TemplateBuilder) {
     if (tone === "page") b.use(scr, navBar, { args: { active, tone } })
     return scr
   }
-  const eyebrow = (parent: string, text: string, w: number = cols(3), fillC = ink) =>
-    b.text(parent, text, mono, fillC, { w, grow: "fixed-width" })
   /** Page title block: mono label, huge title and a short line on the right. */
   function pageHead(scr: string, label: string, title: string, sub: string, size = 220) {
     const head = b.col(scr, "Title", { w: FILL, gap: s(4), pad: [48, 48, 0, 48] })

@@ -18,7 +18,7 @@ import { HintPill } from "../canvas/hints"
 import { slotToolId, useCanvasToolState } from "../canvas/tool-state"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
-import { keyHint } from "./kbd"
+import { keyHint, toolHint } from "./kbd"
 import { ShapeSlot } from "./ShapeSlot"
 
 /** desing.pen light values for the M6 tool tints until the tokens ship. */
@@ -95,7 +95,7 @@ export function FloatingToolbar({
               key={t.id}
               side="top"
               label={enabled ? t.label : `${t.label} · coming soon`}
-              shortcut={enabled && t.shortcut ? t.shortcut : undefined}
+              shortcut={enabled && t.shortcut ? toolHint(t) : undefined}
             >
               <ToolButton
                 label={t.label}

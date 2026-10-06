@@ -49,6 +49,9 @@ pub struct AppState {
     pub trash: Trash,
     /// What each editor window shows (`kimo_menu_set_context`); the menu bar follows focus.
     pub menu_context: Mutex<HashMap<String, crate::menu::MenuContext>>,
+    /// Menu items chosen while no editor window was open (A6 / B9 / G3): `main` is reopened
+    /// and they run once its page reports its context.
+    pub pending_menu: Mutex<crate::menu::MenuQueue>,
 }
 
 impl AppState {
@@ -82,6 +85,7 @@ impl AppState {
             fullscreen: Mutex::new(HashMap::new()),
             trash: Trash::new(&kimo_home),
             menu_context: Mutex::new(HashMap::new()),
+            pending_menu: Mutex::new(crate::menu::MenuQueue::default()),
             host,
             kimo_home,
         };

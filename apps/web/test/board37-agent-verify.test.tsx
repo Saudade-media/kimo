@@ -194,6 +194,25 @@ describe("F12: Revert on an iterate Review card row", () => {
   })
 })
 
+describe("F12: Mode Summary pill copy", () => {
+  test("iterate review reads the pass, not an agent count; Stop all hides while nothing runs", async () => {
+    const { c } = await iterate()
+    const { ModeSummaryOverlay } = await import("../src/agent-panel/Modes")
+    const html = renderToString(h(ModeSummaryOverlay, { controller: c }))
+    expect(html).toContain("Iterate · pass 1 of 2 · review")
+    expect(html).not.toContain("agents")
+    expect(html).not.toContain("Stop all")
+  })
+  test("one agent reads singular; several read plural", async () => {
+    const { modeSummaryLabel } = await import("../src/agent-panel/Modes")
+    const row = { origin: "a", state: "done" } as never
+    const run = (mode: "split" | "side-by-side", n: number, done: number) =>
+      ({ mode, agents: Array.from({ length: n }, () => row), done }) as never
+    expect(modeSummaryLabel(run("split", 1, 0))).toBe("Split · 1 agent · 0 done")
+    expect(modeSummaryLabel(run("side-by-side", 3, 1))).toBe("Side by side · 3 agents · 1 done")
+  })
+})
+
 describe("F6: Regenerate after Undo turn", () => {
   test("resends the prompt without undoing again", async () => {
     const holder = { docId: "" }

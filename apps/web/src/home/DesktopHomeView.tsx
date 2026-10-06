@@ -15,7 +15,16 @@ import {
   type WatchedFolder,
 } from "@kimo/platform"
 import { Button, FileCard, Input } from "@kimo/ui"
-import { FilePlus, Folder, FolderOpen, FolderPlus, SearchX, SwatchBook, Trash2 } from "lucide-react"
+import {
+  FilePlus,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  History,
+  SearchX,
+  SwatchBook,
+  Trash2,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   addWatchedFolder,
@@ -613,6 +622,17 @@ export function DesktopHomeView({
                 variant: "secondary",
                 onClick: () => reveal(folder.ref, folder.label),
               },
+            ]}
+          />
+        ) : empty && section.kind === "recents" && lists && lists.all.length > 0 ? (
+          // Recents lists only files you opened; watched folders already hold files (B10).
+          <HomeEmpty
+            kind="no-recents"
+            icon={<History />}
+            title="Nothing opened yet"
+            description="Files you open show up here."
+            actions={[
+              { label: "Show all files", variant: "secondary", onClick: () => navigate("/all") },
             ]}
           />
         ) : empty ? (

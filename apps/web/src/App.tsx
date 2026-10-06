@@ -10,13 +10,14 @@
 import type { SettingsPane } from "@kimo/platform"
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { DiskEditor, Editor } from "./editor/Editor"
-import { RecoveryDialog } from "./files"
+import { RecoveryDialog, RestoredToasts } from "./files"
 import { Home } from "./home/Home"
 import { useHash } from "./lib/hooks"
 import { type ThemeMode, useTheme } from "./lib/theme"
 import { isUntitledRef } from "./platform/contract"
 import { noteWindowFile } from "./platform/last-files"
 import { SettingsOpenerContext, useRuntime } from "./platform/runtime"
+import type { FileDocumentSession } from "./platform/session"
 import { diskPath, navigate, parseRoute } from "./router"
 import {
   HelpHost,
@@ -47,6 +48,7 @@ export function App() {
     focus: string | null
   } | null>(null)
   const [recovery, setRecovery] = useState(route.name !== "settings")
+  const [restored, setRestored] = useState<FileDocumentSession[]>([])
   const showDialog = useCallback((pane: SettingsPane) => setSettingsPane({ pane, focus: null }), [])
   useSettingsShortcut(platform, showDialog)
   const opener = useCallback(
@@ -94,9 +96,21 @@ export function App() {
         <RecoveryDialog
           manager={manager}
           onOpened={(s) => navigate(diskPath(s.ref))}
+          onRestoredAll={([first, ...others]) => {
+            if (first) navigate(diskPath(first.ref))
+            setRestored(others)
+          }}
           onClose={() => setRecovery(false)}
         />
       )}
+      <RestoredToasts
+        manager={manager}
+        sessions={restored}
+        onOpen={(s) => {
+          setRestored((list) => list.filter((x) => x !== s))
+          navigate(diskPath(s.ref))
+        }}
+      />
       {settingsPane && (
         <SettingsDialog
           platform={platform}

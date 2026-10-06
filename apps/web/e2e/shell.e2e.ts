@@ -200,7 +200,8 @@ export const scenarios: Scenario[] = [
         (await page.locator('[data-tool="move"]').getAttribute("aria-pressed")) === "true",
         "V → move",
       )
-      // Board 20 File menu (cPHVm): the web items in node order (+ board 25 §7 (b) File › Help);
+      // Board 20 File menu (cPHVm): the web items in node order (board 37 Back to files first,
+      // + board 25 §7 (b) File › Help);
       // rename is a double-click.
       await page.locator(".topbar__file").click()
       const items = await page
@@ -209,7 +210,7 @@ export const scenarios: Scenario[] = [
         .allInnerTexts()
       expect(
         items.join("|") ===
-          "New file|Open…|Open recent|Save|Save as…|Export…|Copy selection as PNG|Clean up assets…|Settings…|Help",
+          "Back to files|New file|Open…|Open recent|Save|Save as…|Export…|Copy selection as PNG|Clean up assets…|Settings…|Help",
         `web File menu: ${items.join("|")}`,
       )
       await page.keyboard.press("Escape")

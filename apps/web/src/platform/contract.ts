@@ -974,7 +974,8 @@ export interface SessionManager {
   /** Board 17 launch dialog: entries whose owner process is gone, newest first. */
   recoveryCandidates(): Promise<RecoveryCandidate[]>
   resolveRecovery(id: string, choice: RecoveryChoice): Promise<DocumentSession | null>
-  resolveRecoveryDialog(choice: RecoveryDialogChoice): Promise<void>
+  /** Restore all resolves to the sessions it opened (empty for Discard all / Decide later). */
+  resolveRecoveryDialog(choice: RecoveryDialogChoice): Promise<DocumentSession[]>
   /**
    * Before an update restart or quit: flushes every session and waits for "Saved to disk".
    * `failed` lists files that could not be saved (→ `update-save-first` toast, no restart).

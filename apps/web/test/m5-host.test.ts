@@ -501,3 +501,28 @@ describe("Settings › Ask before destructive ops (D14)", () => {
     await service.dispose()
   })
 })
+
+describe("Settings › Updates › Restart to update (board 37 D10)", () => {
+  test("a file open only in the document host is saved before the restart", async () => {
+    const { startHostRoute } = await import("../src/host")
+    const { flushAllWindows } = await import("../src/updater/restart-broadcast")
+    const ref = "/Users/me/site/agent-only.kimo"
+    const platform = createMemoryPlatform({
+      pid: 7001,
+      files: { [ref]: fileText() },
+      settings: { "files.autosave": false },
+    })
+    const net = createMemoryBridgeNetwork()
+    net.commands.set("kimo_mcp_policies_get", () => ({}))
+    const service = await startHostRoute(platform, net.bridge(HOST_LABEL))
+    // An agent opened it: no editor window shows it.
+    const session = await service.manager.open(ref)
+    session.store.apply(
+      { op: "update", id: "Frame00001", set: { name: "Agent title" } },
+      { origin: "user" },
+    )
+    expect(platform.control.readFile(ref)).not.toContain("Agent title")
+    expect(await flushAllWindows()).toBe(0)
+    expect(platform.control.readFile(ref)).toContain("Agent title")
+  })
+})

@@ -425,6 +425,7 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
       },
       reveal: async () => no("Reveal in file manager"),
       openWithDefaultApp: async () => no("Opening with another app"),
+      openAsText: async () => no("Opening in a text editor"),
       async openExternalUrl(url) {
         if (!isOpenableUrl(url))
           throw new PlatformError("BLOCKED", `Kimo opens only web, mail and phone links: ${url}`)

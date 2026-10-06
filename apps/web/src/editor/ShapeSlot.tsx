@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { type CanvasToolId, SHAPE_SLOT_TOOLS } from "../canvas/contract"
 import { Icon } from "../lib/icons"
+import { toolHint } from "./kbd"
 import "./shape-slot.css"
 
 /** Long-press delay before the flyout opens (house value; the design names no duration). */
@@ -61,7 +62,7 @@ export function ShapeSlot({
 
   return (
     <div ref={slot} className="shape-slot" data-pen="jkzTd">
-      <Tooltip side="top" label={spec.label} shortcut={spec.shortcut}>
+      <Tooltip side="top" label={spec.label} shortcut={toolHint(spec) || undefined}>
         <ToolButton
           label={spec.label}
           icon={<Icon name={spec.icon} size={18} />}
@@ -133,7 +134,7 @@ export function ShapeSlot({
                   data-tool={t.id}
                   label={t.label}
                   icon={<Icon name={t.icon} size={14} />}
-                  meta={t.shortcut || undefined}
+                  meta={toolHint(t) || undefined}
                   highlighted={current}
                   // The current tool's row: focused first (autoFocus) instead of Rectangle.
                   {...(current ? { checked: true } : {})}

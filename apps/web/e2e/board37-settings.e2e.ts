@@ -24,6 +24,7 @@ type App = {
     }
     control: {
       failNextSettingsWrite(m: string): void
+      setDefaultApp(status: string, failMessage?: string): void
       publishUpdate(i: unknown): void
       writeExternal(ref: string, text: string): void
       calls: string[]
@@ -443,6 +444,49 @@ export const scenarios: Scenario[] = [
         ref,
         { timeout: 10_000 },
       )
+    },
+  },
+  {
+    name: "board37 settings: Default app shows Kimo ✓ or Make default from the OS answer (D15)",
+    async run(ctx: E2EContext) {
+      const { page } = ctx
+      await open(ctx, "#/settings/general")
+      await page.locator('.settings-content[data-pane="general"]').waitFor()
+      const control = (status: string, failMessage?: string) =>
+        page.evaluate(
+          ([s, f]) => (window as unknown as App).__kimoApp.control.setDefaultApp(s as string, f),
+          [status, failMessage] as const,
+        )
+      const row = page.locator(".kimo-setting-row", { hasText: "Default app for .kimo and .kimoz" })
+      const files = async () => {
+        await page.locator('.settings-nav-item[data-pane="general"]').click()
+        await page.locator('.settings-nav-item[data-pane="files"]').click()
+        await page.locator('.settings-content[data-pane="files"]').waitFor()
+      }
+      // Another app opens .kimo: Make default; the OS refuses → the banner names it; Retry works.
+      await control("other", "Launch Services refused the change")
+      await files()
+      const button = row.getByRole("button", { name: "Make default" })
+      await button.waitFor()
+      await button.click()
+      const banner = page.getByTestId("settings-write-error")
+      await banner.waitFor()
+      const title = await banner.locator(".kimo-banner__title").innerText()
+      expect(title === "Couldn't make Kimo the default app", `banner (${title})`)
+      expect(await button.isVisible(), "still Make default after the refusal")
+      await control("other")
+      await banner.getByRole("button", { name: "Retry" }).click()
+      await row.getByText("Kimo ✓").waitFor()
+      const calls = await page.evaluate(() =>
+        (window as unknown as App).__kimoApp.control.calls.filter((c) => c === "makeDefaultApp"),
+      )
+      expect(calls.length === 2, `makeDefault called twice (${calls.length})`)
+      // The OS has no answer (Windows / Linux): no row.
+      await control("unknown")
+      await files()
+      await page.locator('.settings-content[data-pane="files"] .kimo-setting-row').first().waitFor()
+      await page.waitForTimeout(100)
+      expect((await row.count()) === 0, "no Default app row when the OS can't tell")
     },
   },
 ]

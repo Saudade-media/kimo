@@ -16,6 +16,7 @@ pub const COMMANDS: &[&str] = &[
     "kimo_fs_unwatch",
     "kimo_fs_reveal",
     "kimo_fs_open_default",
+    "kimo_fs_open_as_text",
     "kimo_open_url",
     "kimo_dialog_open_file",
     "kimo_dialog_save_file",
@@ -82,4 +83,6 @@ pub const COMMANDS: &[&str] = &[
     "kimo_menu_set_context",
     "kimo_clipboard_write_text",
     "kimo_dock_agent_activity",
+    "kimo_default_app_status",
+    "kimo_default_app_set",
 ];

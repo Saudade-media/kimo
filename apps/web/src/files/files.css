@@ -517,6 +517,28 @@
   box-shadow: inset 0 0 0 1px var(--kimo-accent);
 }
 
+/*
+ * Board 37 de22N "Card · missing": the thumbnail's Mini Frame becomes `file-x` 24 text-tertiary,
+ * the name is text-tertiary, and Info (fuPPJ) is a row (gap 6, center): "folder · branch" +
+ * StatusPill/Missing.
+ */
+.kimo-files-grid__missing-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-files-grid__card--missing .kimo-file-card__name {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-files-grid__card--missing .kimo-file-card__info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
 /* --- Home: Files Header (Xp6lo: row, gap 8, center) -------------------------------------- */
 .kimo-files-recent-header {
   display: flex;
@@ -575,6 +597,13 @@
 .kimo-files-grid__card {
   flex: 1 1 0;
   min-width: 0;
+}
+
+/* C3: the documents Restore all opened that the window is not showing (fixed, any route). */
+.kimo-files-toasts--restored {
+  position: fixed;
+  z-index: 1000;
+  bottom: 32px;
 }
 
 /* A recovery choice that failed: fixed over the scrim, above the dialog. */

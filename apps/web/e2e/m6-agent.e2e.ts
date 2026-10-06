@@ -264,11 +264,24 @@ export const scenarios: Scenario[] = [
             getComputedStyle(document.querySelector("[data-testid=agent-message-meta]") as Element)
               .opacity,
         )
+      // The 120 ms opacity transition runs late on a loaded machine: wait for it to settle (up to
+      // 2 s) instead of a fixed delay, then check the settled value.
+      const metaSettles = (want: string) =>
+        page
+          .waitForFunction(
+            (v) =>
+              getComputedStyle(
+                document.querySelector("[data-testid=agent-message-meta]") as Element,
+              ).opacity === v,
+            want,
+            { timeout: 2000 },
+          )
+          .catch(() => undefined)
       await page.mouse.move(1200, 880)
-      await page.waitForTimeout(200)
+      await metaSettles("0")
       c.check("MessageMeta", "opacity (not hovered)", await metaOpacity(), "0")
       await page.locator("[data-testid=agent-message]").first().hover()
-      await page.waitForTimeout(200)
+      await metaSettles("1")
       c.check("MessageMeta", "opacity (turn hovered)", await metaOpacity(), "1")
       // Steps toggle: folded by default, opens on click (chevron-down, text-secondary).
       expect((await page.locator("[data-testid=agent-steps]").count()) === 0, "steps folded")

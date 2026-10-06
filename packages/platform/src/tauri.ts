@@ -20,6 +20,7 @@ import type { SettingKey, Settings, UpdateChannel } from "./settings"
 import type {
   AcquireResult,
   AtomicWriteResult,
+  DefaultAppStatus,
   EditorMenuAction,
   FileFilter,
   FileStat,
@@ -113,6 +114,8 @@ export interface TauriCommandMap {
   kimo_fs_unwatch: { args: { watchId: string }; result: null }
   kimo_fs_reveal: { args: { path: string }; result: null }
   kimo_fs_open_default: { args: { path: string }; result: null }
+  /** "Open as text": the OS text editor (never the default app, which for .kimo is Kimo). */
+  kimo_fs_open_as_text: { args: { path: string }; result: null }
   /** http, https (with a host), mailto and tel; anything else is `BLOCKED`. */
   kimo_open_url: { args: { url: string }; result: null }
   /** Board 25 §7 (b): reveals `~/.kimo/mcp/server.log` (or opens its folder). */
@@ -123,6 +126,10 @@ export interface TauriCommandMap {
   kimo_clipboard_write_text: { args: { text: string }; result: null }
   /** Board 32: a built-in agent turn started / is still running / ended (macOS Dock tile). */
   kimo_dock_agent_activity: { args: { source: string; working: boolean }; result: null }
+  /** Board 37 D15: whether the OS opens .kimo and .kimoz with this Kimo (macOS; `unknown` elsewhere). */
+  kimo_default_app_status: { args: Record<string, never>; result: DefaultAppStatus }
+  /** Board 37 D15: makes this Kimo the default app for .kimo and .kimoz (macOS). */
+  kimo_default_app_set: { args: Record<string, never>; result: null }
 
   // --- dialogs (each pick widens the fs scope) ---
   kimo_dialog_open_file: {
@@ -306,6 +313,7 @@ export const TAURI_COMMANDS = [
   "kimo_fs_unwatch",
   "kimo_fs_reveal",
   "kimo_fs_open_default",
+  "kimo_fs_open_as_text",
   "kimo_open_url",
   "kimo_dialog_open_file",
   "kimo_dialog_save_file",
@@ -372,6 +380,8 @@ export const TAURI_COMMANDS = [
   "kimo_menu_set_context",
   "kimo_clipboard_write_text",
   "kimo_dock_agent_activity",
+  "kimo_default_app_status",
+  "kimo_default_app_set",
 ] as const satisfies readonly TauriCommand[]
 
 /** All event names. */

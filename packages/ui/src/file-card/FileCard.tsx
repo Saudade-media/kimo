@@ -4,8 +4,8 @@ import { cx } from "../internal/util"
 /** Props for {@link FileCard}. Native `<button>` props pass through. */
 export interface FileCardProps extends Omit<ComponentPropsWithRef<"button">, "children"> {
   name: string
-  /** Secondary line (`Edited 2 hours ago · 6 frames`). */
-  info?: string
+  /** Secondary line (`Edited 2 hours ago · 6 frames`), or a row of parts (board 37 missing card). */
+  info?: ReactNode
   /** Thumbnail content (e.g. an `<img>`); default is the design's placeholder Mini Frame. */
   thumbnail?: ReactNode
 }

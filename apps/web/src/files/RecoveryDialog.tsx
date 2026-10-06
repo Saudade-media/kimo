@@ -75,6 +75,11 @@ export interface RecoveryDialogProps {
   manager: FileSessionManager
   /** A session was opened by Restore / Save as… (navigate to it). */
   onOpened?: (session: FileDocumentSession) => void
+  /**
+   * Restore all opened these sessions (C3). Default: {@link onOpened} with the first. The app
+   * shows the first and lists the others with {@link RestoredToasts}.
+   */
+  onRestoredAll?: (sessions: FileDocumentSession[]) => void
   /** The dialog closed (all resolved, or Decide later). */
   onClose?: () => void
 }
@@ -83,7 +88,7 @@ export interface RecoveryDialogProps {
  * Launch recovery, modal. Mount once at app start (Home or the first editor window); renders
  * nothing when there are no candidates.
  */
-export function RecoveryDialog({ manager, onOpened, onClose }: RecoveryDialogProps) {
+export function RecoveryDialog({ manager, onOpened, onRestoredAll, onClose }: RecoveryDialogProps) {
   const [candidates, setCandidates] = useState<RecoveryCandidate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const refresh = useCallback(async () => {
@@ -134,13 +139,48 @@ export function RecoveryDialog({ manager, onOpened, onClose }: RecoveryDialogPro
         }}
         onRestoreAll={() =>
           run(
-            manager.resolveRecoveryDialog("restore-all").then(() => {
-              const first = manager.sessions()[0]
-              if (first) onOpened?.(first)
+            manager.resolveRecoveryDialog("restore-all").then((opened) => {
+              if (opened.length === 0) return
+              if (onRestoredAll) onRestoredAll(opened)
+              else onOpened?.(opened[0] as FileDocumentSession)
             }),
           )
         }
       />
     </DialogScrim>
+  )
+}
+
+export interface RestoredToastsProps {
+  manager: FileSessionManager
+  /** Restored sessions the window is not showing yet. */
+  sessions: FileDocumentSession[]
+  onOpen: (session: FileDocumentSession) => void
+}
+
+/**
+ * C3: after Restore all, one toast per restored document the window does not show, each with
+ * Open. A toast leaves once its document is opened or closed.
+ */
+export function RestoredToasts({ manager, sessions, onOpen }: RestoredToastsProps) {
+  const [, setTick] = useState(0)
+  useEffect(() => manager.subscribe(() => setTick((n) => n + 1)), [manager])
+  const live = new Set(manager.sessions())
+  const shown = sessions.filter((s) => live.has(s))
+  if (shown.length === 0) return null
+  return (
+    <div className="kimo-files-toasts kimo-files-toasts--restored" aria-live="polite">
+      {shown.map((s) => (
+        <Toast
+          key={s.ref}
+          data-toast="restored"
+          data-ref={s.ref}
+          actionLabel="Open"
+          onAction={() => onOpen(s)}
+        >
+          {`Restored ${s.fileName}`}
+        </Toast>
+      ))}
+    </div>
   )
 }

@@ -359,7 +359,7 @@ function build(b: TemplateBuilder) {
     },
     (root) => b.ellipse(root, "Knob", { key: "TgKnob", w: 27, h: 27, fill: c("knob-on") }),
   )
-  const toggleOff = b.derive(toggle, "Toggle/Off", "ToggleOff", {
+  b.derive(toggle, "Toggle/Off", "ToggleOff", {
     section: "Actions",
     description: "Toggle preset in the off state.",
     args: { state: "off" },
@@ -1018,13 +1018,14 @@ function build(b: TemplateBuilder) {
     b.text(streak, "23", b.ty("mono", { size: 13, weight: 700 }), ink)
     // the last seven days, in the same dot language as Progress
     const strip = b.row(content, "Last seven days", { w: FILL, justify: "between" })
+    const dayAt = (w: number, d: number) => WEEKS[w]?.[1][d] ?? 0
     const days: [string, number | "today"][] = [
-      ["W", (WEEKS[4]![1] as number[])[2]!],
+      ["W", dayAt(4, 2)],
       ["T", 0],
-      ["F", (WEEKS[4]![1] as number[])[4]!],
-      ["S", (WEEKS[4]![1] as number[])[5]!],
+      ["F", dayAt(4, 4)],
+      ["S", dayAt(4, 5)],
       ["S", 0],
-      ["M", (WEEKS[5]![1] as number[])[0]!],
+      ["M", dayAt(5, 0)],
       ["T", "today"],
     ]
     for (const [l, m] of days) {
@@ -1153,9 +1154,9 @@ function build(b: TemplateBuilder) {
     b.text(el, "18:42", b.ty("metric", { size: 26 }), ink)
     b.use(top, button, { args: { label: "End", variant: "outline", size: "md" } })
     const segs = b.row(content, "Exercises", { w: FILL, gap: 4 })
-    ;[c("volt"), c("volt"), c("ink-2"), c("subtle"), c("subtle"), c("subtle")].forEach((f, i) =>
-      b.rect(segs, `Exercise ${i + 1}`, { w: fill(1), h: 4, radius: 2, fill: f }),
-    )
+    ;[c("volt"), c("volt"), c("ink-2"), c("subtle"), c("subtle"), c("subtle")].forEach((f, i) => {
+      b.rect(segs, `Exercise ${i + 1}`, { w: fill(1), h: 4, radius: 2, fill: f })
+    })
     const next = b.row(content, "Next", {
       w: FILL,
       gap: 12,
@@ -1190,12 +1191,12 @@ function build(b: TemplateBuilder) {
     b.rect(bar, "Left", { w: fill(50), h: 4, fill: c("subtle") })
     b.use(adj, chip, { args: { label: "+15 s" } })
     const sets = b.col(content, "Sets", { w: FILL, gap: 2, pad: [4, 0, 0, 0] })
-    ;(["done", "done", "done", "current"] as const).forEach((state, i) =>
+    ;(["done", "done", "done", "current"] as const).forEach((state, i) => {
       b.use(sets, setRow, {
         props: { w: FILL },
         args: { label: `SET ${i + 1}`, value: "8 × 40 kg", state },
-      }),
-    )
+      })
+    })
     bottom((into) => {
       const row = b.row(into, "Controls", { w: FILL, gap: 10, align: "center" })
       b.use(row, iconBtn, {
@@ -1250,7 +1251,9 @@ function build(b: TemplateBuilder) {
         muted,
       )
     const rows = b.col(matrix, "Weeks", { w: FILL, gap: 0 })
-    WEEKS.forEach((_, i) => week(rows, i, i === WEEKS.length - 1 ? 1 : undefined))
+    WEEKS.forEach((_, i) => {
+      week(rows, i, i === WEEKS.length - 1 ? 1 : undefined)
+    })
     const pb = b.col(content, "Personal bests", { w: FILL, gap: 2 })
     section(pb, "PERSONAL BESTS", "")
     for (const [name, meta, value] of [

@@ -2028,12 +2028,12 @@ function build(b: TemplateBuilder) {
       ["Driver app pilot, Dayton depot", "MG", "won", "$24,600", "PR", "Mar 3", "100%"],
       ["Fuel card integration", "MG", "won", "$14,000", "DW", "Jun 18", "100%"],
     ]
-    ;["3-year term, 640 trailers", "Pilot, Dayton depot", "Add-on"].forEach((sub, i) =>
+    ;["3-year term, 640 trailers", "Pilot, Dayton depot", "Add-on"].forEach((sub, i) => {
       dealRowUse(dl, mgDeals[i], {
         hide: ["DrCheck", "DrOwner", "DrProb"],
         args: { company: sub },
-      }),
-    )
+      })
+    })
     const act = panel(mid, "Recent activity", { h: FILL })
     panelHead(act, "Recent activity")
     const list = b.col(act, "Timeline", { w: FILL, pad: [4, 16, 0, 16] })

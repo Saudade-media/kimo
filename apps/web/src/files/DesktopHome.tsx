@@ -21,8 +21,9 @@ import {
   FileRowHeader,
   IconButton,
   Segmented,
+  StatusPill,
 } from "@kimo/ui"
-import { Ellipsis, Folder, FolderGit2, LayoutGrid, List, Plus } from "lucide-react"
+import { Ellipsis, FileX, Folder, FolderGit2, LayoutGrid, List, Plus } from "lucide-react"
 import type { MouseEvent, ReactNode } from "react"
 import { displayDir, modifiedLabel } from "../platform/format"
 
@@ -41,13 +42,18 @@ export function gitColumn(file: RecentFile): { label: string; tone: FileRowGitTo
 }
 
 /** Grid FileCard info line: "loom/design-system · feat/onboarding · 40 min ago". */
-export function gridInfo(file: RecentFile, folders: readonly WatchedFolder[], now: number): string {
+export function gridInfo(
+  file: RecentFile,
+  folders: readonly WatchedFolder[],
+  now: number | null,
+): string {
   const dir = file.folder
   const root = folders
     .filter((f) => dir === f.ref || dir.startsWith(`${f.ref}/`))
     .sort((a, b) => b.ref.length - a.ref.length)[0]
   const folder = root ? `${root.label}${dir.slice(root.ref.length)}` : basenameOf(dir)
-  return [folder, file.git?.branch, modifiedLabel(file.modifiedAt, now)].filter(Boolean).join(" · ")
+  const modified = now == null ? null : modifiedLabel(file.modifiedAt, now)
+  return [folder, file.git?.branch, modified].filter(Boolean).join(" · ")
 }
 
 export interface LocalFoldersProps {
@@ -286,7 +292,21 @@ export function RecentFilesGrid({
                 f.missing && "kimo-files-grid__card--missing",
               )}
               name={f.name}
-              info={info ? info(f) : gridInfo(f, folders, now)}
+              {...(f.missing
+                ? {
+                    // Board 37 de22N "Card · missing": file-x in the thumbnail, name dimmed,
+                    // info row "folder · branch" + StatusPill/Missing in place of the date.
+                    thumbnail: (
+                      <FileX className="kimo-files-grid__missing-icon" aria-hidden="true" />
+                    ),
+                    info: (
+                      <>
+                        <span className="kimo-files-grid__where">{gridInfo(f, folders, null)}</span>
+                        <StatusPill status="missing" />
+                      </>
+                    ),
+                  }
+                : { info: info ? info(f) : gridInfo(f, folders, now) })}
               onClick={() => onOpen(f)}
               {...(onMenu
                 ? {

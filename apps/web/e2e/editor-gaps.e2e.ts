@@ -386,14 +386,14 @@ export const scenarios: Scenario[] = [
       )
       await page.evaluate(() => {
         // biome-ignore lint/suspicious/noExplicitAny: platform files
-        ;(window.__kimoApp.platform.files as any).openWithDefaultApp = async () => {
-          throw new Error("No app opens .kimo files")
+        ;(window.__kimoApp.platform.files as any).openAsText = async () => {
+          throw new Error("No text editor found")
         }
       })
       await openText.click()
       await waitToast(
         page,
-        /Couldn't open broken\.kimo as text\. No app opens \.kimo files\./,
+        /Couldn't open broken\.kimo as text\. No text editor found\./,
         "open as text toast",
       )
     },
@@ -560,6 +560,23 @@ export const scenarios: Scenario[] = [
       expect(ask.includes("Ctrl+K") && !ask.includes("⌘"), `Ask Kimo hint: ${ask}`)
       const footer = await page.locator(".pages-footer").innerText()
       expect(footer.includes("Ctrl+P"), `pages footer: ${footer}`)
+      // Floating toolbar tooltips (Image ⇧⌘K, Component ⌥⌘K) and the shape flyout (Arrow ⇧L).
+      const tip = async (tool: string) => {
+        await page.mouse.move(0, 0)
+        await page.locator(`.floating-toolbar [data-tool="${tool}"]`).first().hover()
+        const t = page.locator(".kimo-tooltip--floating .kimo-tooltip__keys")
+        await t.waitFor({ state: "visible" })
+        return t.innerText()
+      }
+      const image = await tip("image")
+      expect(image === "Ctrl+Shift+K", `Image tooltip: ${image}`)
+      const component = await tip("component")
+      expect(component === "Ctrl+Alt+K", `Component tooltip: ${component}`)
+      await page.mouse.move(0, 0)
+      await page.locator('.shape-slot [data-pen="XELvA"]').click()
+      const flyout = (await page.locator(".shape-flyout").innerText()).replace(/\s+/g, " ")
+      expect(flyout.includes("Shift+L") && !/[⌘⇧⌥]/.test(flyout), `shape flyout: ${flyout}`)
+      await page.keyboard.press("Escape")
     },
   },
   {

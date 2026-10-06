@@ -449,7 +449,7 @@ describe("formats and failed loads", () => {
     await s.runAction("reveal")
     await s.runAction("open-as-text")
     expect(platform.control.calls).toEqual(
-      expect.arrayContaining([`reveal ${FILE}`, `openWithDefaultApp ${FILE}`]),
+      expect.arrayContaining([`reveal ${FILE}`, `openAsText ${FILE}`]),
     )
     await s.close()
   })
@@ -642,6 +642,48 @@ describe("launch recovery", () => {
     expect(s?.store.hasNode("Recovered1")).toBe(true)
     // The open session owns the entry now, so the dialog has nothing left to offer.
     expect(await manager.recoveryCandidates()).toEqual([])
+    await manager.dispose()
+  })
+
+  test("Restore all returns every session it opened, not sessions()[0] (C3)", async () => {
+    const other = `${ROOT}/other.kimo`
+    const { platform, manager } = await setup({ [FILE]: docText(), [other]: docText("O") })
+    // A session open before the restore must not be mistaken for a restored one.
+    const before = await manager.open(other)
+    await platform.recovery.write({
+      id: "aaaaaaaaaaaaaaaa",
+      sourceRef: FILE,
+      name: "marketing.kimo",
+      reason: "snapshot",
+      text: addNode(docText(), "Saved1"),
+      edits: 1,
+    })
+    for (const [id, node] of [
+      ["untitled-one", "Untitled1"],
+      ["untitled-two", "Untitled2"],
+    ] as const) {
+      platform.control.tick(1000)
+      await platform.recovery.write({
+        id,
+        sourceRef: null,
+        name: "Untitled",
+        reason: "untitled",
+        text: addNode(docText(), node),
+        edits: 1,
+      })
+    }
+    platform.control.killPid(1000)
+    expect((await manager.recoveryCandidates()).length).toBe(3)
+    const opened = await manager.resolveRecoveryDialog("restore-all")
+    expect(opened).toHaveLength(3)
+    expect(opened).not.toContain(before)
+    expect(opened.filter((s) => s.untitled)).toHaveLength(2)
+    expect(opened.some((s) => s.ref === FILE && s.store.hasNode("Saved1"))).toBe(true)
+    for (const node of ["Untitled1", "Untitled2"])
+      expect(opened.some((s) => s.untitled && s.store.hasNode(node))).toBe(true)
+    // Each one is a live session of the manager, so the window can route to it.
+    for (const s of opened) expect(manager.get(s.ref)).toBe(s)
+    expect(await manager.resolveRecoveryDialog("decide-later")).toEqual([])
     await manager.dispose()
   })
 })

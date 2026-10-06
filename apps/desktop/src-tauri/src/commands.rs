@@ -225,6 +225,66 @@ pub async fn kimo_fs_open_default(app: AppHandle, path: String, st: St<'_>) -> R
         .map_err(|e| io_msg(format!("Could not open {}: {e}", path_str(&p))))
 }
 
+/// The process that opens `path` in the OS text editor ("Open as text" on the failed-load card,
+/// audit E8). Never the default app: Kimo is the Editor for .kimo / .kimoz, so the default app
+/// would send the broken file straight back to Kimo. macOS: `open -t` (the default plain-text
+/// editor, TextEdit unless the user changed it). Windows: Notepad. Linux: the text/plain handler
+/// from `xdg-mime`, launched with `gtk-launch`.
+pub fn text_editor_command(path: &str) -> Option<(String, Vec<String>)> {
+    #[cfg(target_os = "macos")]
+    {
+        Some(("open".into(), vec!["-t".into(), path.into()]))
+    }
+    #[cfg(target_os = "windows")]
+    {
+        Some(("notepad.exe".into(), vec![path.into()]))
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let out = std::process::Command::new("xdg-mime")
+            .args(["query", "default", "text/plain"])
+            .output()
+            .ok()?;
+        let id = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if !out.status.success() || id.is_empty() {
+            return None;
+        }
+        Some(("gtk-launch".into(), vec![id, path.into()]))
+    }
+}
+
+#[tauri::command]
+pub async fn kimo_fs_open_as_text(path: String, st: St<'_>) -> R<()> {
+    let p = st.scope.check(&path)?;
+    let shown = path_str(&p).to_string();
+    blocking(move || {
+        let (program, args) = text_editor_command(&shown)
+            .ok_or_else(|| io_msg("No text editor is set up for plain text files"))?;
+        // Notepad stays open until the user closes it, so it is not waited on.
+        if cfg!(target_os = "windows") {
+            return std::process::Command::new(&program)
+                .args(&args)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| io_msg(format!("Could not open {shown} in {program}: {e}")));
+        }
+        let out = std::process::Command::new(&program)
+            .args(&args)
+            .output()
+            .map_err(|e| io_msg(format!("Could not open {shown} in a text editor: {e}")))?;
+        if out.status.success() {
+            return Ok(());
+        }
+        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        Err(io_msg(if err.is_empty() {
+            format!("Could not open {shown} in a text editor")
+        } else {
+            format!("Could not open {shown} in a text editor: {err}")
+        }))
+    })
+    .await
+}
+
 /// Whether `kimo_open_url` hands `u` to the OS: web links with a host, and mail / phone links
 /// (link popover › Open, audit G1). `file:`, `javascript:` and custom schemes never open.
 pub fn openable_url(u: &url::Url) -> bool {
@@ -886,6 +946,8 @@ pub async fn kimo_menu_set_context(
     }
     let focused = window.is_focused().unwrap_or(false);
     crate::menu::set_context(&app, window.label(), ctx, focused);
+    // Its listeners are up: run the menu items chosen while it was opening.
+    crate::menu::deliver_pending(&app, window.label());
     Ok(())
 }
 
@@ -937,6 +999,15 @@ pub async fn kimo_launch_take_initial(st: St<'_>) -> R<Vec<OpenRequest>> {
 #[cfg(test)]
 mod tests {
     use super::openable_url;
+
+    /// E8: "Open as text" must reach a text editor, never the default app (Kimo for .kimo).
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn open_as_text_uses_the_text_editor_not_the_default_app() {
+        let (program, args) = super::text_editor_command("/tmp/broken.kimo").unwrap();
+        assert_eq!(program, "open");
+        assert_eq!(args, vec!["-t".to_string(), "/tmp/broken.kimo".to_string()]);
+    }
 
     #[test]
     fn open_url_allows_web_mail_and_phone_links() {

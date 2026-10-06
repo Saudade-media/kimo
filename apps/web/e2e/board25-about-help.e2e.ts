@@ -12,7 +12,7 @@ import { type E2EContext, expect, type Scenario } from "./run"
 
 type App = {
   __kimoApp: {
-    control: { calls: string[]; helpMenu(a: string): void }
+    control: { calls: string[]; helpMenu(a: string): void; clipboardText(): string | null }
   }
   __kimo?: unknown
   __copied?: string[]
@@ -440,8 +440,9 @@ export const scenarios: Scenario[] = [
       await trigger.click()
       await menu.getByRole("menuitem", { name: "Help" }).hover()
       await help.getByRole("menuitem", { name: "Copy diagnostics" }).click()
-      const c = await copied(page)
-      expect(c.length === 1 && body.includes(c[0] as string), `diagnostics ${c[0]}`)
+      // The host writes through platform.clipboard (Rust on desktop), recorded by the memory platform.
+      const c = await page.evaluate(() => window.__kimoApp.control.clipboardText())
+      expect(c !== null && body.includes(c), `diagnostics ${c}`)
       // Show logs (desktop only).
       await trigger.click()
       await menu.getByRole("menuitem", { name: "Help" }).hover()

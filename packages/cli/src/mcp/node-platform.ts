@@ -178,6 +178,7 @@ export function createNodeFiles(): FilesApi {
     watch: () => () => {},
     reveal: headless("reveal"),
     openWithDefaultApp: headless("open"),
+    openAsText: headless("openAsText"),
     openExternalUrl: headless("openExternalUrl"),
     download: headless("download"),
   }

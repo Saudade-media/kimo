@@ -257,15 +257,15 @@ export async function importKimoFile(
   } finally {
     store.destroy()
   }
+  const manifest = (result.doc.assets ?? {}) as Record<string, ManifestEntry>
   const refs = assetRefs(result.doc.nodes)
-  const missingAssets = refs.size
-    ? await copyAssets(
-        id,
-        refs,
-        packaged,
-        (result.doc.assets ?? {}) as Record<string, ManifestEntry>,
-      )
-    : []
+  // The package's font files (board 28 manifest entries, not node references) are kept too, so
+  // downloading the file again can carry them (Settings › Embed fonts in .kimoz packages).
+  const fonts = Object.keys(manifest).filter(
+    (k) => /^font\//i.test(manifest[k]?.mime ?? "") && packaged.has(k) && !refs.has(k),
+  )
+  const missingAssets = refs.size ? await copyAssets(id, refs, packaged, manifest) : []
+  if (fonts.length) await copyAssets(id, new Set(fonts), packaged, manifest)
   if (missingAssets.length)
     console.warn(`Kimo: ${fileName}: images not found: ${missingAssets.join(", ")}`)
   return { id, missingAssets }
@@ -362,8 +362,9 @@ export async function exportFile(
   /**
    * Settings › Fonts & privacy › Embed fonts in .kimoz packages. Off: no font file goes in the
    * package. On: only fonts whose OS/2 fsType allows embedding ({@link fontEmbeddable}).
+   * Required, so every download (editor, Home's file menu) reads the setting.
    */
-  embedFonts = true,
+  embedFonts: boolean,
 ): Promise<ExportedFile> {
   let doc: KimoDocument = store.toDocument()
   const refs = assetRefs(doc.nodes)

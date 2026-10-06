@@ -20,6 +20,18 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Added
 
+- Composer bar and "…" menu for the built-in agent (board 40). The bar keeps Attach, the mode
+  chip, a "…" button, the model chip and Send. **Skills** (with its count), **Auto-approve** and
+  **Web access** moved into the "…" menu, which opens 232 px wide above the composer: Skills
+  opens the skills menu, Auto-approve still asks first before it turns on, and Web access
+  switches at once; a blocked Web access row is disabled with the reason under it. A 6 px dot on
+  "…" shows a switch away from its default (warning while auto-approve is on, grey while web
+  access is off), and the "Auto-approve is on" chip stays. The menu has menu roles: opening
+  focuses the first row, `↑`/`↓`/`Home`/`End` move, `Enter`/`Space` act, `Esc` closes and
+  returns focus to "…". At the 360 px Agent panel the model name is never cut: the mode chip
+  label shrinks first, and only a custom Local model id past 120 px gets an ellipsis (full name
+  in the tooltip).
+
 - Model chooser for the built-in agent (board 39), replacing the composer's model menu. It picks
   a provider, then a specific model, then the effort: **Recent** (the last two provider + model
   picks, saved in `ai.recentModels`, shown when 2+ providers are connected), provider chips (CLIs,
@@ -42,10 +54,10 @@ The first public release: release engineering, polish, the new mark and the form
   read pages when a task needs outside facts; the prompt tells it to use the web only then, never
   to paste page text into the design, and to end its reply with "Sources:" and plain links.
   **Settings › AI providers › Allow web access** (`ai.webAccess`, default on) sets it for new
-  sessions; a globe button after the auto-approve shield in the composer turns it off or on for
+  sessions; the Web access switch in the composer's "…" menu (board 40) turns it off or on for
   the current session only. **No third-party fetch** turns it off everywhere: the setting row is
-  dimmed with its toggle off and disabled, and the globe is disabled with the reason in its
-  tooltip ("Web access is off: No third-party fetch is on"); a model without web tools gets
+  dimmed with its toggle off and disabled, and the menu row is disabled with the reason under it
+  ("No third-party fetch is on"); a model without web tools gets
   "This model can't use the web". Each search and page read is a step and the status line
   ("Searching the web for “…”", "Reading example.com"), is saved in the session transcript
   (`TurnRecord.web`) and, on desktop, is an Activity row (kind `web`, tool `web_search` /
@@ -116,8 +128,8 @@ The first public release: release engineering, polish, the new mark and the form
   renderer draws the motion only: the document, exports, `kimo_render`, thumbnails and hit
   testing use the final state. Your own edits, undo / redo and collaborators stay instant, and
   with reduced motion nothing moves (the landing flash stays).
-- Auto-approve (board 34). The built-in agent has a shield next to the mode chip that turns on
-  auto-approve for the current session, after one confirm. While it is on, every approval is
+- Auto-approve (board 34). A switch in the built-in agent's composer "…" menu (board 40) turns
+  on auto-approve for the current session, after one confirm. While it is on, every approval is
   given at once (opening, creating, saving and exporting files, edits outside the agent's area,
   document-wide changes), cards already waiting included. Each one leaves a line in the thread
   ("Approved automatically: saved landing.kimo") and, on desktop, an Activity row; the chip

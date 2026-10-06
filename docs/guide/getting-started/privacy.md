@@ -26,7 +26,7 @@ Links you click (provider key pages, install guides, docs) open in your browser.
 
 Fonts already stored in a file, installed, in the [offline font pack](../editor/fonts.md#offline-font-pack) or in the cache keep working either way.
 
-The built-in agent makes no request until you add a provider or a CLI is used. To keep it off the web but still use it, turn off **Settings › AI providers › Allow web access**, or the globe in the composer for one session.
+The built-in agent makes no request until you add a provider or a CLI is used. To keep it off the web but still use it, turn off **Settings › AI providers › Allow web access**, or **Web access** in the composer's **…** menu for one session.
 
 ## Keys and conversations
 

@@ -284,12 +284,14 @@ describe("Board 22 components (zJmdL)", () => {
         value: "",
         model: { label: "Opus 5.5" },
         action: "stop",
-        skillsCount: 3,
+        more: { dot: "warning" },
       }),
     )
     expect(composer).toContain('aria-label="Stop"')
     expect(composer).toContain(">Opus 5.5<")
-    expect(composer).toContain(">3<")
+    // Board 40: Skills left the bar for the "…" menu; the dot marks auto-approve on.
+    expect(composer).toContain('data-testid="agent-more"')
+    expect(composer).toContain('data-dot="warning"')
   })
   test("styles.css imports every M6 stylesheet", () => {
     const styles = readFileSync(join(import.meta.dir, "../src/styles.css"), "utf8")

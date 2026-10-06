@@ -149,6 +149,12 @@ export interface MenuItemDenseProps
    * keeps its regular weight and no fill. Ignored when `checked` is set.
    */
   toggled?: boolean
+  /**
+   * A switch row (board 40 Item · Auto-approve / Item · Web access): a `menuitemcheckbox` that
+   * ends in a Toggle (y893S on, CSYQj off) in place of the Meta. Disabled: label and icon
+   * text-tertiary, toggle at 0.45. Ignored when `checked` or `toggled` is set.
+   */
+  switchOn?: boolean
   /** Keyboard/hover highlight forced on: bg-hover. */
   highlighted?: boolean
   /** Right-hand text (Meta T4CD1), e.g. `244 162 97`. */
@@ -180,6 +186,7 @@ export function MenuItemDense({
   label,
   checked,
   toggled,
+  switchOn,
   highlighted = false,
   meta,
   metaFont = "mono",
@@ -196,6 +203,7 @@ export function MenuItemDense({
   type = "button",
   ...rest
 }: MenuItemDenseProps) {
+  const isSwitch = checked === undefined && toggled === undefined && switchOn !== undefined
   return (
     <button
       {...rest}
@@ -204,12 +212,19 @@ export function MenuItemDense({
         ? { role: "menuitemradio", "aria-checked": checked }
         : toggled !== undefined
           ? { role: "menuitemcheckbox", "aria-checked": toggled }
-          : { role: "menuitem" })}
+          : switchOn !== undefined
+            ? { role: "menuitemcheckbox", "aria-checked": switchOn }
+            : { role: "menuitem" })}
       aria-haspopup={submenu ? "menu" : undefined}
       tabIndex={-1}
       aria-disabled={disabled || undefined}
       data-highlighted={highlighted || undefined}
-      className={cx("kimo-menu-item-dense", checked && "kimo-menu-item-dense--checked", className)}
+      className={cx(
+        "kimo-menu-item-dense",
+        checked && "kimo-menu-item-dense--checked",
+        isSwitch && "kimo-menu-item-dense--switch",
+        className,
+      )}
       onPointerMove={(e) => {
         onPointerMove?.(e)
         if (!disabled && document.activeElement !== e.currentTarget) e.currentTarget.focus()
@@ -240,7 +255,19 @@ export function MenuItemDense({
       </span>
       <span className="kimo-menu-item-dense__spacer" aria-hidden="true" />
       {submenu && <ChevronRight className="kimo-menu-item-dense__submenu" aria-hidden="true" />}
-      {!submenu && meta != null && (
+      {isSwitch && (
+        <span
+          className={cx(
+            "kimo-toggle",
+            switchOn ? "kimo-toggle--on" : "kimo-toggle--off",
+            "kimo-menu-item-dense__switch",
+          )}
+          aria-hidden="true"
+        >
+          <span className="kimo-toggle__knob" />
+        </span>
+      )}
+      {!submenu && !isSwitch && meta != null && (
         <span
           className={cx(
             "kimo-menu-item-dense__meta",

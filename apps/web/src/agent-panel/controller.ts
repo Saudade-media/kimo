@@ -197,7 +197,8 @@ export interface CanvasAgentState {
   landed: { key: string; origin: string; ids: string[] }[]
 }
 
-export type PanelMenu = "model" | "skills" | "mode" | null
+/** The composer menu that is open. `more` is board 40's "…" menu (Skills, Auto-approve, Web access). */
+export type PanelMenu = "model" | "skills" | "mode" | "more" | null
 
 export interface AgentPanelViewState extends AgentPanelState {
   menu: PanelMenu

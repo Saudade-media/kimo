@@ -154,3 +154,19 @@
   height: 1px;
   background: var(--kimo-border);
 }
+
+/*
+ * Board 40 switch rows (Item · Auto-approve / Item · Web access): MenuItem/Dense geometry with a
+ * Toggle (28 × 16) after the Spacer. Disabled: icon text-tertiary, Toggle opacity 0.45.
+ */
+.kimo-menu-item-dense .kimo-menu-item-dense__switch {
+  cursor: inherit;
+}
+
+.kimo-menu-item-dense--switch[aria-disabled="true"] .kimo-menu-item-dense__check--icon {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-menu-item-dense--switch[aria-disabled="true"] .kimo-menu-item-dense__switch {
+  opacity: 0.45;
+}

@@ -8,8 +8,13 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 - **Images.** Paste, drop or attach PNG, JPEG or WebP images up to 5 MB each.
 - **Follow-ups.** While a turn runs you can keep typing. Queued messages show greyed in the thread, and you can edit or remove them before they run. They are sent when the turn ends.
 
-- **Model.** The chip at the right of the composer shows the model's name. Click it to pick a provider, a model and an effort level. See [The model chooser](providers.md#the-model-chooser).
-- **Web access.** The globe next to the auto-approve shield lets the agent search the web and read pages in this session. It starts from **Settings › AI providers › Allow web access** (on by default). It is disabled, with the reason in its tooltip, while **No third-party fetch** is on or when the model has no web tools. See [Web access](providers.md#web-access).
+- **Model.** The chip at the right of the composer shows the model's full name. Click it to pick a provider, a model and an effort level. See [The model chooser](providers.md#the-model-chooser).
+- **More options.** The **…** button after the mode chip opens a menu with three items:
+  - **Skills** (with the number turned on) opens the [skills](skills.md) menu. Typing `/` opens it too.
+  - **Auto-approve** turns on [auto-approve](#auto-approve) for this session.
+  - **Web access** lets the agent search the web and read pages in this session. It starts from **Settings › AI providers › Allow web access** (on by default). While **No third-party fetch** is on, or when the model has no web tools, the row is disabled and the reason shows under it. See [Web access](providers.md#web-access).
+
+  A dot on **…** shows that a switch is away from its default: orange while auto-approve is on, grey while web access is off. In the menu, `↑` and `↓` move, `↵` or `Space` turns a switch, and `Esc` closes it.
 
 ## While the agent works
 
@@ -87,7 +92,7 @@ Answer with **Allow once**, **Always this session** or **Deny**. **Always this s
 
 ### Auto-approve
 
-The shield next to the mode chip turns on auto-approve for the current session. Kimo asks once before it turns on. While it is on, every request above is approved at once: opening, creating, saving and exporting files, edits outside the agent's area and document-wide changes. Cards already waiting are approved too, and the turn carries on.
+**Auto-approve** in the composer's **…** menu turns it on for the current session. Kimo asks once before it turns on. While it is on, every request above is approved at once: opening, creating, saving and exporting files, edits outside the agent's area and document-wide changes. Cards already waiting are approved too, and the turn carries on.
 
 Each approval is still written down: a line in the agent's turn (**Approved automatically: saved landing.kimo**) and, in the desktop app, a row in the Activity tab (**approved automatically**). The chip **Auto-approve is on** above the composer turns it off with one click.
 

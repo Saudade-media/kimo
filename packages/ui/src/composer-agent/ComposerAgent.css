@@ -5,12 +5,13 @@
  * radius-xl
  *   ├ Attachments (FLTbw) row fill, gap 6, center
  *   ├ Input       (Jfb3E) fill, sans 13 text-primary (placeholder text-tertiary)
- *   └ Bar         (IYc3u) row fill, gap 4, center
- *        Attach (x4agy) 24 × 24 radius-sm › paperclip 14 text-secondary
- *        Skills (X2Uuj) h 24, gap 4, padding [0, 6], radius-sm › book-open 14 + Count mono 11
- *        Mode   (SzC72) ModeChip
+ *   └ Bar         (board 40 zxfJw) row fill, gap 4, center
+ *        Attach (n2MGl) 24 × 24 radius-sm › paperclip 14 text-secondary
+ *        Mode   (k2blfg) ModeChip; its label shrinks first (ellipsis, down to icon + chevron)
+ *        More   (PPCXx) 24 × 24 › IconButton sm (univs) radius-sm, transparent, ellipsis 14
+ *               text-secondary; open: bg-muted, text-primary · Dot 6 × 6 at (16, 2)
  *        Spacer
- *        Model  (KnAC9) gap 4, padding [2, 6] › AgentMark 12 · Label sans 11 text-tertiary ·
+ *        Model  (bI3Qx) gap 4, padding [2, 6], never shrinks; label caps at 120 › AgentMark 12 · Label sans 11 text-tertiary ·
  *               chevron-down 12 text-tertiary; open (U4mrI): fill bg-muted, radius-pill, label
  *               text-primary; split (VVIpR): fill agent-<p>-soft, radius-sm, label + chevron
  *               agent-<p>
@@ -79,8 +80,6 @@
 }
 
 .kimo-composer-agent__attach,
-.kimo-composer-agent__auto,
-.kimo-composer-agent__skills,
 .kimo-composer-agent__model,
 .kimo-composer-agent__send {
   box-sizing: border-box;
@@ -104,106 +103,81 @@
   color: var(--kimo-text-secondary);
 }
 
-/* Board 34 Auto-approve (v0SYd / XNEDr): 24 × 24, radius-sm. Off: shield 14 text-secondary. On:
-   shield-check 14 warning on warning-soft. */
-.kimo-composer-agent__auto {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border-radius: var(--kimo-radius-sm);
-  color: var(--kimo-text-secondary);
+.kimo-composer-agent__attach:hover {
+  background: var(--kimo-bg-hover);
 }
 
-.kimo-composer-agent__auto--on {
-  background: var(--kimo-warning-soft);
-  color: var(--kimo-warning);
+.kimo-composer-agent__attach svg {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
 }
 
-/* Board 38 Web access (v41pS / vfhgZ / vcbyI / BzyJO): 24 × 24, radius-sm. On: globe 14
-   text-secondary. Off: globe-x 14 text-tertiary. Blocked: opacity 0.45, no hover. */
-.kimo-composer-agent__web {
-  box-sizing: border-box;
+/*
+ * Board 40 Mode (k2blfg): the one control that gives way on a short bar. The label ellipsizes
+ * down to nothing; icon and chevron stay (46 wide at the least). Overrides ModeChip's flex none.
+ */
+.kimo-composer-agent__bar > .kimo-mode-chip {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.kimo-composer-agent__bar > .kimo-mode-chip > .kimo-mode-chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Board 40 More (PPCXx): 24 × 24 holding IconButton sm (univs) and the Dot. */
+.kimo-composer-agent__more {
+  position: relative;
   display: inline-flex;
   flex: none;
-  align-items: center;
-  justify-content: center;
   width: 24px;
   height: 24px;
-  margin: 0;
-  padding: 0;
-  border: 0;
+}
+
+/* IconButton · More (univs): cornerRadius radius-sm, fill #00000000 (tone ghost). */
+.kimo-composer-agent__more-button.kimo-icon-button {
   border-radius: var(--kimo-radius-sm);
-  background: none;
-  color: var(--kimo-text-secondary);
-  cursor: pointer;
-  appearance: none;
 }
 
-.kimo-composer-agent__web--off {
-  color: var(--kimo-text-tertiary);
-}
-
-.kimo-composer-agent__web--blocked {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.kimo-composer-agent__web:not(.kimo-composer-agent__web--blocked):not(:disabled):hover {
-  background: var(--kimo-bg-hover);
-}
-
-.kimo-composer-agent__web svg {
-  display: block;
-  flex: none;
-  width: 14px;
-  height: 14px;
-}
-
-.kimo-composer-agent__attach:hover,
-.kimo-composer-agent__auto:not(.kimo-composer-agent__auto--on):hover,
-.kimo-composer-agent__skills:hover {
-  background: var(--kimo-bg-hover);
-}
-
-.kimo-composer-agent__attach svg,
-.kimo-composer-agent__auto svg,
-.kimo-composer-agent__skills svg {
-  display: block;
-  flex: none;
-  width: 14px;
-  height: 14px;
-}
-
-.kimo-composer-agent__skills {
-  gap: 4px;
-  height: 24px;
-  padding: 0 6px;
-  border-radius: var(--kimo-radius-sm);
-  color: var(--kimo-text-secondary);
-}
-
-.kimo-composer-agent__skills--open,
-.kimo-composer-agent__skills--open:hover {
+.kimo-composer-agent__more-button--open.kimo-icon-button,
+.kimo-composer-agent__more-button--open.kimo-icon-button:hover:not(:disabled) {
   background: var(--kimo-bg-muted);
   color: var(--kimo-text-primary);
 }
 
-.kimo-composer-agent__skills-count {
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-regular);
-  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
+/* Dot (YB49L / L2xww): ellipse 6 × 6 at x 16, y 2. */
+.kimo-composer-agent__more-dot {
+  position: absolute;
+  top: 2px;
+  left: 16px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.kimo-composer-agent__more-dot--warning {
+  background: var(--kimo-warning);
+}
+
+.kimo-composer-agent__more-dot--secondary {
+  background: var(--kimo-text-secondary);
 }
 
 .kimo-composer-agent__spacer {
   flex: 1 1 0;
+  min-width: 0;
   height: 1px;
 }
 
 .kimo-composer-agent__model {
-  /* Shrinks (label ellipsis) before the bar overflows the 336 composer. */
-  flex: 0 1 auto;
-  min-width: 0;
+  /* Board 40: never shrinks; the Mode label gives way first. */
+  flex: none;
   gap: 4px;
   padding: 2px 6px;
   border-radius: var(--kimo-radius-pill);
@@ -223,6 +197,8 @@
 }
 
 .kimo-composer-agent__model-label {
+  /* Board 40 rule "Model chip": only a custom Local id past 120 px gets an ellipsis. */
+  max-width: 120px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

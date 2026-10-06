@@ -161,7 +161,8 @@ export const scenarios: Scenario[] = [
         input: "[data-testid=agent-composer] textarea",
         bar: ".kimo-composer-agent__bar",
         attach: ".kimo-composer-agent__attach",
-        skills: ".kimo-composer-agent__skills",
+        // Board 40: Skills, Auto-approve and Web access moved into the "…" menu.
+        more: "[data-testid=agent-more]",
         mode: ".kimo-mode-chip",
         model: ".kimo-composer-agent__model",
         // Board 39 G (Q2sql agr1b): a 12 px provider mark replaces the chip's AgentMark/12.
@@ -321,8 +322,8 @@ export const scenarios: Scenario[] = [
       c.box("Input (Jfb3E)", m.input, { fs: 13, lh: 16 })
       c.box("Bar (IYc3u)", m.bar, { gap: 4, w: 308 })
       c.box("Attach (x4agy)", m.attach, { w: 24, h: 24, radius: 6 })
-      c.box("Skills (X2Uuj)", m.skills, { h: 24, gap: 4, pad: [0, 6, 0, 6] })
       c.box("Mode (SzC72)", m.mode, { h: 24, gap: 4, pad: [0, 8, 0, 6], bg: bgMuted })
+      c.box("More (board 40 PPCXx)", m.more, { w: 24, h: 24, radius: 6 })
       c.box("Model (KnAC9)", m.model, { gap: 4, pad: [2, 6, 2, 6] })
       c.box("Model › Provider Mark (board 39 agr1b)", m.modelMark, { w: 12, h: 12 })
       c.box("Model › Label (H5ZJ9)", m.modelLabel, { fs: 11, color: tertiary })
@@ -534,7 +535,8 @@ export const scenarios: Scenario[] = [
         toggle: "[data-testid=agent-skills-menu] .kimo-toggle",
         footer: ".agent-menu__footer",
         hint: ".agent-menu__hint",
-        skillsOpen: ".kimo-composer-agent__skills--open",
+        // Board 40: the skills menu keeps "…" in its open state (bg-muted).
+        skillsOpen: ".kimo-composer-agent__more-button--open",
         chips: ".kimo-composer-agent__attachments",
         chip: ".kimo-attach-chip",
         chipLabel: ".kimo-attach-chip__label",
@@ -554,7 +556,7 @@ export const scenarios: Scenario[] = [
       c.box("Toggle (E7PJk)", m.toggle, { w: 28, h: 16 })
       c.box("Footer (OIg0k)", m.footer, { gap: 4, pad: [2, 4, 2, 4] })
       c.box("Hint (bw2tP)", m.hint, { fs: 11, ff: "JetBrains Mono" })
-      c.box("Skills open (X2Uuj override)", m.skillsOpen, { bg: bgMuted })
+      c.box("“…” open (board 40)", m.skillsOpen, { bg: bgMuted })
       c.box("Attachments (FLTbw)", m.chips, { gap: 6 })
       c.box("AttachmentChip (DwwpT)", m.chip, {
         pad: [2, 6, 2, 8],

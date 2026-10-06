@@ -1,7 +1,7 @@
 /**
  * Board 38 "Web access" (desing.pen qPPXu): §1 the Allow web access row in Settings › AI
  * providers (on by default, dimmed and off while No third-party fetch is on), §2 the composer's
- * globe (on, off for the session, blocked with its reason), §3 the web steps and the reply's
+ * switch, now a row in the board 40 "…" menu (on, off for the session, blocked with its reason), §3 the web steps and the reply's
  * sources in the thread. One measured getComputedStyle / getBoundingClientRect pass per surface
  * against the node values.
  */
@@ -54,18 +54,14 @@ async function openPanel(ctx: E2EContext) {
   await ctx.page.evaluate(() => document.fonts.ready)
 }
 
-const W = "[data-testid=agent-web-access]"
+/** Board 40: Web access is a switch row in the composer's "…" menu. */
+const MORE = "[data-testid=agent-more]"
+const W = "[data-testid=agent-more-web]"
 const composer = (page: Page) => page.locator("[data-testid=agent-composer] textarea")
 
-/** Hovers the globe and reads the tooltip it shows. */
-async function tooltip(page: Page): Promise<string> {
-  await page.mouse.move(0, 0)
-  await page.locator(W).hover()
-  const tip = page.locator(
-    ".kimo-tooltip-anchor:has([data-testid=agent-web-access]) [role=tooltip]",
-  )
-  await tip.waitFor({ timeout: 3000 })
-  return tip.innerText()
+async function openMore(page: Page) {
+  if ((await page.locator(W).count()) === 0) await page.locator(MORE).click()
+  await page.locator(W).waitFor()
 }
 
 async function setWeb(page: Page, v: { enabled?: boolean; blocked?: boolean }) {
@@ -78,63 +74,71 @@ async function setWeb(page: Page, v: { enabled?: boolean; blocked?: boolean }) {
 
 export const scenarios: Scenario[] = [
   {
-    name: "board38: composer globe — on by default, off for the session, blocked with a reason + measured",
+    name: "board38: composer web access (board 40 “…” menu) — on by default, off for the session, blocked with a reason + measured",
     async run(ctx) {
       const { page } = ctx
       await openPanel(ctx)
       const secondary = await token(page, "--kimo-text-secondary")
       const tertiary = await token(page, "--kimo-text-tertiary")
-      expect((await page.locator(W).getAttribute("aria-pressed")) === "true", "on by default")
+      await openMore(page)
+      expect((await page.locator(W).getAttribute("aria-checked")) === "true", "on by default")
       expect((await page.locator(W).getAttribute("data-state")) === "on", "state on")
       let m = await measure(page, {
         web: W,
-        icon: `${W} svg`,
-        auto: "[data-testid=agent-auto-approve]",
+        icon: `${W} .kimo-menu-item-dense__check svg`,
+        toggle: `${W} .kimo-toggle`,
+        auto: "[data-testid=agent-more-auto]",
       })
-      let c = checker(ctx, "Board 38 §2 Composer · A on (v41pS)")
-      c.box("Web access (v41pS)", m.web, { w: 24, h: 24, radius: 6, color: secondary })
-      c.box("Icon globe (kQBm7)", m.icon, { w: 14, h: 14 })
+      let c = checker(ctx, "Board 38 §2 → board 40 “…” menu · A on")
+      c.box("Item · Web access", m.web, { h: 28, gap: 8, pad: [0, 8, 0, 8], radius: 6 })
+      c.box("Icon globe", m.icon, { w: 14, h: 14, color: secondary })
+      c.box("Toggle/On (y893S)", m.toggle, { w: 28, h: 16 })
       if (m.auto && m.web)
-        c.check("Bar", "Auto-approve → Web access gap", m.web.x - (m.auto.x + m.auto.w), 4)
+        c.check("Items", "Auto-approve → Web access gap", m.web.y - (m.auto.y + m.auto.h), 1)
       c.flush()
       expect(
-        (await tooltip(page)) === "Turn off web access for this session",
-        "on: tooltip names the action",
+        (await page.locator("[data-testid=agent-more-dot]").count()) === 0,
+        "on: no dot on “…”",
       )
 
-      // Off for this session: globe-x in text-tertiary.
+      // Off for this session: globe-x, the menu stays open, a text-secondary dot on "…".
       await page.locator(W).click()
       await page.waitForFunction(
         () => !(window as unknown as M6).__m6.controller.state.webAccess.on,
       )
-      m = await measure(page, { web: W })
-      c = checker(ctx, "Board 38 §2 Composer · B off (vfhgZ)")
-      c.box("Web access (vfhgZ)", m.web, { w: 24, h: 24, color: tertiary })
+      expect((await page.locator(W).getAttribute("aria-checked")) === "false", "off: unchecked")
+      expect((await page.locator(W).getAttribute("data-state")) === "off", "off: state off")
+      m = await measure(page, { dot: "[data-testid=agent-more-dot]" })
+      c = checker(ctx, "Board 38 §2 → board 40 · B off")
+      c.box("“…” Dot (L2xww)", m.dot, { w: 6, h: 6, bg: secondary })
       c.flush()
-      expect((await page.locator(W).getAttribute("aria-pressed")) === "false", "off: not pressed")
-      expect(
-        (await tooltip(page)) === "Turn on web access for this session",
-        "off: tooltip names the action",
-      )
 
-      // No third-party fetch: disabled at 0.45 with the reason; a click changes nothing.
+      // No third-party fetch: the row is disabled with its reason; a click changes nothing.
       await setWeb(page, { blocked: true })
       await page.locator(`${W}[data-state=privacy]`).waitFor()
       const op = await page.evaluate(
-        (s) => getComputedStyle(document.querySelector(s) as Element).opacity,
+        (s) => getComputedStyle(document.querySelector(`${s} .kimo-toggle`) as Element).opacity,
         W,
       )
-      c = checker(ctx, "Board 38 §2 Composer · C No third-party fetch (vcbyI)")
-      c.check("Web access (vcbyI)", "opacity", Number(op), 0.45, 0.01)
+      m = await measure(page, {
+        label: `${W} .kimo-menu-item-dense__label`,
+        reason: "[data-testid=agent-more-reason]",
+      })
+      c = checker(ctx, "Board 38 §2 → board 40 · F No third-party fetch")
+      c.check("Toggle", "opacity", Number(op), 0.45, 0.01)
+      c.box("Label", m.label, { color: tertiary })
+      c.box("Reason", m.reason, { fs: 11, pad: [0, 8, 6, 30], color: tertiary })
       c.flush()
       expect(
         (await page.locator(W).getAttribute("aria-disabled")) === "true",
         "blocked: aria-disabled",
       )
       expect(
-        (await tooltip(page)) === "Web access is off: No third-party fetch is on",
-        "blocked: tooltip says why",
+        (await page.locator("[data-testid=agent-more-reason]").innerText()) ===
+          "No third-party fetch is on",
+        "blocked: the reason is under the row",
       )
+      expect((await page.locator("[data-testid=agent-more-dot]").count()) === 0, "blocked: no dot")
       await page.locator(W).click({ force: true })
       const after = await page.evaluate(
         () => (window as unknown as M6).__m6.controller.state.webAccess,

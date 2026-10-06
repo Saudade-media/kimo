@@ -915,8 +915,53 @@ export function planDetachInstance(ctx: PlanContext, instanceId: string): Plan {
       op: "setHeader",
       set: { components: index.map((x) => (x === instanceId ? rootId : x)) },
     })
+  // A binding baked from the component can name a local variable that is gone (deleted
+  // concurrently on another replica): the detached copy drops it instead of failing the edit.
+  const vars = (ctx.doc as unknown as Rec).variables
+  const known = (name: string) => isObject(vars) && Object.hasOwn(vars, name)
+  for (const op of ops) {
+    if (op.op !== "insert" || !isObject(op.node)) continue
+    const dropped = dropMissingBindings(op.node as Rec, known)
+    for (const name of dropped)
+      notes.push({
+        code: "BINDING_DETACHED",
+        message: `Variable "${name}" no longer exists; its binding was dropped`,
+        nodeId: op.id,
+      })
+  }
   notes.push({ code: "INSTANCE_DETACHED", message: "Detached", nodeId: instanceId })
   return ok(ops, notes, [rootId])
+}
+
+/**
+ * Removes `{ $ref }` bindings to local variables `known` rejects, in place (object members are
+ * deleted, array entries filtered). Library refs (`alias:name`) are left alone. Returns the
+ * dropped variable names.
+ */
+function dropMissingBindings(data: Rec, known: (name: string) => boolean): string[] {
+  const dropped: string[] = []
+  const missing = (v: unknown) => {
+    if (!isRef(v)) return false
+    const q = splitQualified(v.$ref)
+    if (q.alias !== null || known(q.name)) return false
+    dropped.push(q.name)
+    return true
+  }
+  const visit = (v: unknown): void => {
+    if (Array.isArray(v)) {
+      for (let i = v.length - 1; i >= 0; i--) {
+        if (missing(v[i])) v.splice(i, 1)
+        else visit(v[i])
+      }
+    } else if (isObject(v)) {
+      for (const k of Object.keys(v)) {
+        if (missing(v[k])) delete v[k]
+        else visit(v[k])
+      }
+    }
+  }
+  visit(data)
+  return dropped
 }
 
 /** Node data without tree fields (the op gives parent/at; order is kept when present). */

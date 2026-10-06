@@ -588,6 +588,34 @@
   bottom: calc(100% + 4px);
 }
 
+/*
+ * Board 40 More Menu (c79jYX): Menu/Dense 232 wide, 4 above the composer, left edge on the
+ * composer's (panel x + 12). Rows are MenuItem/Dense; the switch rows end in a Toggle.
+ */
+.agent-menu--more {
+  left: 12px;
+  bottom: calc(100% + 4px);
+  width: 232px;
+}
+
+/* Item · Auto-approve on (u0Zdm5): shield-check 14 in warning. */
+.agent-more__auto--on .kimo-menu-item-dense__check--icon {
+  color: var(--kimo-warning);
+}
+
+/* Reason (board 40 F / G): padding [0, 8, 6, 30] › sans 11 text-tertiary, line-height 1.45. */
+.agent-more__reason {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0 8px 6px 30px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
 /* Mode Menu (d5X1eG): the Stack (gap 6) above the composer. */
 .agent-menu--mode {
   left: 12px;

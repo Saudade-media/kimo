@@ -487,6 +487,12 @@ export const scenarios: Scenario[] = [
       c.flush()
       const label = await page.locator(".kimo-composer-agent__model-label").innerText()
       expect(label === "Sonnet 5.5", `chip label: ${label}`)
+      // Board 40: the full name shows at the 360 panel (no ellipsis).
+      const cut = await page.evaluate(() => {
+        const el = document.querySelector(".kimo-composer-agent__model-label") as HTMLElement
+        return el.scrollWidth - el.clientWidth
+      })
+      expect(cut <= 0, `chip label is not truncated (overflow ${cut})`)
       const icon = await page.locator(".kimo-composer-agent__model-mark svg").getAttribute("class")
       expect(/terminal/.test(icon ?? ""), `terminal mark: ${icon}`)
       if (ctx.shots)

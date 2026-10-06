@@ -1,12 +1,4 @@
-import {
-  ArrowUp,
-  BookOpen,
-  ChevronDown,
-  Paperclip,
-  Shield,
-  ShieldCheck,
-  Square,
-} from "lucide-react"
+import { ArrowUp, ChevronDown, Ellipsis, Paperclip, Square } from "lucide-react"
 import {
   type ClipboardEventHandler,
   type ComponentPropsWithRef,
@@ -20,8 +12,33 @@ import {
 import { AgentMark } from "../agent-mark/AgentMark"
 import type { AgentMarkState } from "../agent-mark/faces"
 import { type Persona, personaVar } from "../agent-mark/persona"
+import { IconButton } from "../icon-button/IconButton"
 import { cx, mergeRefs } from "../internal/util"
-import { WebAccessButton, type WebAccessButtonProps } from "./WebAccessButton"
+
+/**
+ * Board 40 dot on the composer's "…" button: `warning` while auto-approve is on, otherwise
+ * `secondary` while web access is off and could be on. Skills and blocked switches add no dot.
+ */
+export type ComposerMoreDot = "warning" | "secondary" | null
+
+/** Board 40 rule "Dot": which dot the "…" button carries for the session's switches. */
+export function composerMoreDot(s: {
+  autoApprove: boolean
+  /** Web access for this session (false while blocked). */
+  webAccessOn: boolean
+  /** Web access can't be turned on (No third-party fetch, or the model has no web tools). */
+  webAccessBlocked: boolean
+}): ComposerMoreDot {
+  if (s.autoApprove) return "warning"
+  if (!s.webAccessOn && !s.webAccessBlocked) return "secondary"
+  return null
+}
+
+const MORE_LABEL: Record<"warning" | "secondary" | "none", string> = {
+  warning: "More options (auto-approve is on)",
+  secondary: "More options (web access is off)",
+  none: "More options",
+}
 
 /** Props for {@link ComposerAgent}. Remaining `<div>` props go to the frame. */
 export interface ComposerAgentProps
@@ -33,20 +50,14 @@ export interface ComposerAgentProps
   /** Attachment chips / thumbs (row FLTbw). Omitted or empty: the row is not rendered. */
   attachments?: ReactNode
   onAttach?: () => void
-  /** Enabled skills count (Skills X2Uuj). */
-  skillsCount?: number
-  /** The "/" menu is open: Skills fill bg-muted, icon + count text-primary (gVw5S oCUeL). */
-  skillsOpen?: boolean
-  onSkills?: () => void
-  /** The ModeChip (SzC72). */
+  /** The ModeChip (SzC72). Its label shrinks first when the bar is short (board 40). */
   modeChip?: ReactNode
   /**
-   * Board 34 auto-approve switch, right after the mode chip: shield (off) or shield-check on
-   * warning-soft (on). Omitted: not rendered.
+   * Board 40 "…" button after the mode chip: opens the menu that holds Skills, Auto-approve and
+   * Web access. `open` while that menu (or the skills menu it leads to) is up; `dot` from
+   * {@link composerMoreDot}. Omitted: not rendered.
    */
-  autoApprove?: { on: boolean; onClick?: () => void; disabled?: boolean }
-  /** Board 38 web access globe, right after the auto-approve shield. Omitted: not rendered. */
-  webAccess?: Omit<WebAccessButtonProps, "disabled">
+  more?: { open?: boolean; dot?: ComposerMoreDot; onClick?: () => void }
   /** Model chip (KnAC9): label, its mark state, persona tint (split), open state. */
   model?: {
     label: string
@@ -69,9 +80,9 @@ export interface ComposerAgentProps
   textareaRef?: Ref<HTMLTextAreaElement>
   onTextareaKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void
   onTextareaPaste?: ClipboardEventHandler<HTMLTextAreaElement>
-  /** Model / Mode / Skills / Attach buttons' anchor elements (menus position under them). */
+  /** Model and "…" buttons' elements (menus treat them as their anchors). */
   modelRef?: Ref<HTMLButtonElement>
-  skillsRef?: Ref<HTMLButtonElement>
+  moreRef?: Ref<HTMLButtonElement>
   disabled?: boolean
   onFocusChange?: (focused: boolean) => void
 }
@@ -79,12 +90,11 @@ export interface ComposerAgentProps
 /**
  * The agent composer. Mirrors `Composer/Agent` (Bry8p): column fill_container, gap 10, padding
  * [12, 12, 10, 16], fill bg-app, stroke 1 border-strong, radius-xl › Attachments (FLTbw) row gap 6
- * center › Input (Jfb3E) sans 13 (placeholder text-tertiary) › Bar (IYc3u) row gap 4 center:
- * Attach (x4agy) 24 × 24 paperclip 14 text-secondary · Skills (X2Uuj) h 24 gap 4 padding [0, 6]
- * book-open 14 + Count mono 11 text-secondary · Mode (SzC72 ModeChip) · Auto-approve (board 34
- * v0SYd, 24 × 24 shield) · Spacer · Model (KnAC9)
- * gap 4 padding [2, 6]: AgentMark/12 (board 24 P9Dzzb) + Label sans 11 text-tertiary + chevron 12
- * · Send (fh2Ry) 28 pill accent, arrow-up 16 on-accent (square 12 while streaming).
+ * center › Input (Jfb3E) sans 13 (placeholder text-tertiary) › Bar (board 40 zxfJw) row gap 4
+ * center: Attach (n2MGl) 24 × 24 paperclip 14 text-secondary · Mode (k2blfg ModeChip) · More
+ * (PPCXx) IconButton sm 24 ellipsis 14 + Dot 6 at (16, 2) · Spacer · Model (bI3Qx) gap 4 padding
+ * [2, 6]: provider mark 12 or AgentMark/12 + Label sans 11 text-tertiary + chevron 12 · Send
+ * (f4Gp1) 28 pill accent, arrow-up 16 on-accent (square 12 while streaming).
  */
 export function ComposerAgent({
   value,
@@ -92,12 +102,8 @@ export function ComposerAgent({
   placeholder = "Ask Kimo to design or edit…",
   attachments,
   onAttach,
-  skillsCount = 0,
-  skillsOpen = false,
-  onSkills,
   modeChip,
-  autoApprove,
-  webAccess,
+  more,
   model,
   action = "send",
   sendDisabled = false,
@@ -107,7 +113,7 @@ export function ComposerAgent({
   onTextareaKeyDown,
   onTextareaPaste,
   modelRef,
-  skillsRef,
+  moreRef,
   disabled = false,
   onFocusChange,
   className,
@@ -155,41 +161,36 @@ export function ComposerAgent({
         >
           <Paperclip aria-hidden="true" />
         </button>
-        <button
-          ref={skillsRef}
-          type="button"
-          className={cx(
-            "kimo-composer-agent__skills",
-            skillsOpen && "kimo-composer-agent__skills--open",
-          )}
-          aria-label={`Skills (${skillsCount} enabled)`}
-          aria-haspopup="menu"
-          aria-expanded={skillsOpen}
-          onClick={onSkills}
-          disabled={disabled}
-        >
-          <BookOpen aria-hidden="true" />
-          <span className="kimo-composer-agent__skills-count">{skillsCount}</span>
-        </button>
         {modeChip}
-        {autoApprove && (
-          <button
-            type="button"
-            className={cx(
-              "kimo-composer-agent__auto",
-              autoApprove.on && "kimo-composer-agent__auto--on",
+        {more && (
+          <span className="kimo-composer-agent__more">
+            <IconButton
+              ref={moreRef}
+              size="sm"
+              tone="ghost"
+              label={MORE_LABEL[more.dot ?? "none"]}
+              title="More options"
+              icon={<Ellipsis />}
+              className={cx(
+                "kimo-composer-agent__more-button",
+                more.open && "kimo-composer-agent__more-button--open",
+              )}
+              aria-haspopup="menu"
+              aria-expanded={!!more.open}
+              data-testid="agent-more"
+              onClick={more.onClick}
+              disabled={disabled}
+            />
+            {more.dot && (
+              <span
+                className={`kimo-composer-agent__more-dot kimo-composer-agent__more-dot--${more.dot}`}
+                data-testid="agent-more-dot"
+                data-dot={more.dot}
+                aria-hidden="true"
+              />
             )}
-            aria-label="Auto-approve"
-            aria-pressed={autoApprove.on}
-            title="Auto-approve"
-            data-testid="agent-auto-approve"
-            onClick={autoApprove.onClick}
-            disabled={disabled || autoApprove.disabled}
-          >
-            {autoApprove.on ? <ShieldCheck aria-hidden="true" /> : <Shield aria-hidden="true" />}
-          </button>
+          </span>
         )}
-        {webAccess && <WebAccessButton {...webAccess} disabled={disabled} />}
         <span className="kimo-composer-agent__spacer" aria-hidden="true" />
         {model && (
           <button
@@ -211,6 +212,7 @@ export function ComposerAgent({
             aria-haspopup="menu"
             aria-expanded={model.open}
             aria-label={`Model: ${model.label}`}
+            title={model.label}
             onClick={model.onClick}
             disabled={model.disabled}
           >

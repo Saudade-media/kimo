@@ -3,7 +3,8 @@
  * Skills Menu (board 22 D, e2cwq) and Mode Menu (ZFOQf, d5X1eG). Each sits just above the
  * composer: the model chooser right-aligned to it (304 wide, 4 px gap), the skills menu as wide
  * as the composer (4 px gap), the mode menu as wide as the composer (6 px gap, the "Stack" of
- * the vignette).
+ * the vignette). The "…" menu (board 40 d5ZDH) sits 4 above the composer on its left edge, 232
+ * wide.
  */
 import type { EffortLevel, ModelSelection } from "@kimo/ai-agent"
 import {
@@ -18,7 +19,20 @@ import {
   Select,
   SkillRow,
 } from "@kimo/ui"
-import { ChevronDown, FolderOpen, Minus, Plug, Plus, Search } from "lucide-react"
+import {
+  BookOpen,
+  ChevronDown,
+  FolderOpen,
+  Globe,
+  GlobeLock,
+  GlobeX,
+  Minus,
+  Plug,
+  Plus,
+  Search,
+  Shield,
+  ShieldCheck,
+} from "lucide-react"
 import {
   type CSSProperties,
   Fragment,
@@ -495,6 +509,111 @@ const MODES = [
       "Refines the selected frame in place, pass by pass, with a review step between passes.",
   },
 ]
+
+/** Board 38 reasons, one text-xs line under the blocked Web access row (board 40 F / G). */
+const WEB_BLOCK_REASON = {
+  privacy: "No third-party fetch is on",
+  model: "This model can't use the web",
+} as const
+
+const MORE_ITEMS =
+  '[role="menuitem"]:not([aria-disabled="true"]), [role="menuitemcheckbox"]:not([aria-disabled="true"])'
+
+/**
+ * Board 40 "…" menu (More Menu c79jYX): Menu/Dense 232 › Item · Skills (book-open, meta count) ·
+ * Divider · Item · Auto-approve (shield / shield-check warning, Toggle) · Item · Web access
+ * (globe / globe-x / globe-lock, Toggle) · Reason when blocked. Opening focuses the first row;
+ * ↑ ↓ Home End move, Enter and Space act, Escape closes and hands focus back to "…".
+ */
+export function MoreMenu({
+  state,
+  onSkills,
+  onAutoApprove,
+  onWebAccess,
+  onClose,
+  onEscape,
+}: {
+  state: AgentPanelViewState
+  onSkills(): void
+  onAutoApprove(): void
+  onWebAccess(on: boolean): void
+  /** Outside press: closes without moving focus. */
+  onClose(): void
+  /** Escape: closes and returns focus to the "…" button. */
+  onEscape(): void
+}) {
+  const root = useRef<HTMLDivElement>(null)
+  const web = state.webAccess
+  const blocked = web.disabled
+  useEffect(() => {
+    root.current?.querySelector<HTMLElement>(MORE_ITEMS)?.focus({ preventScroll: true })
+  }, [])
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const items = [...(root.current?.querySelectorAll<HTMLElement>(MORE_ITEMS) ?? [])]
+    const at = items.indexOf(document.activeElement as HTMLElement)
+    const go = (i: number) => {
+      e.preventDefault()
+      items[(i + items.length) % items.length]?.focus()
+    }
+    if (e.key === "ArrowDown") go(at + 1)
+    else if (e.key === "ArrowUp") go(at < 0 ? -1 : at - 1)
+    else if (e.key === "Home") go(0)
+    else if (e.key === "End") go(-1)
+    else if (e.key === "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      onEscape()
+    } else if (e.key === "Tab") onClose()
+  }
+  return (
+    <MenuFrame
+      className="agent-menu--more"
+      label="More options"
+      testId="agent-more-menu"
+      data-pen="c79jYX"
+      rootRef={root}
+      onClose={onClose}
+      onKeyDown={onKeyDown}
+    >
+      <MenuItemDense
+        label="Skills"
+        icon={<BookOpen />}
+        meta={String(state.skills.enabled.length)}
+        aria-haspopup="menu"
+        data-testid="agent-more-skills"
+        onSelect={onSkills}
+      />
+      <MenuDivider />
+      <MenuItemDense
+        label="Auto-approve"
+        icon={state.autoApprove ? <ShieldCheck /> : <Shield />}
+        switchOn={state.autoApprove}
+        className={state.autoApprove ? "agent-more__auto--on" : undefined}
+        data-testid="agent-more-auto"
+        onSelect={onAutoApprove}
+      />
+      <MenuItemDense
+        label="Web access"
+        icon={blocked === "privacy" ? <GlobeLock /> : web.on && !blocked ? <Globe /> : <GlobeX />}
+        switchOn={web.on && !blocked}
+        disabled={!!blocked}
+        data-testid="agent-more-web"
+        data-state={blocked ?? (web.on ? "on" : "off")}
+        aria-describedby={blocked ? "agent-more-web-reason" : undefined}
+        onSelect={() => onWebAccess(!web.on)}
+      />
+      {blocked && (
+        <p
+          id="agent-more-web-reason"
+          className="agent-more__reason"
+          data-testid="agent-more-reason"
+        >
+          {WEB_BLOCK_REASON[blocked]}
+        </p>
+      )}
+    </MenuFrame>
+  )
+}
 
 function Stepper({
   value,

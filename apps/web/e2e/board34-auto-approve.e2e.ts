@@ -61,6 +61,24 @@ const POLICY = {
   confirmDestructive: true,
 }
 
+/** Board 40: Auto-approve is a switch row in the composer's "…" menu. */
+const MORE = "[data-testid=agent-more]"
+const T = "[data-testid=agent-more-auto]"
+
+/** Opens the "…" menu (if closed) and returns the Auto-approve row's aria-checked. */
+async function autoChecked(page: Page): Promise<string | null> {
+  if ((await page.locator(T).count()) === 0) await page.locator(MORE).click()
+  const v = await page.locator(T).getAttribute("aria-checked")
+  await page.keyboard.press("Escape")
+  return v
+}
+
+/** Clicks the Auto-approve row through the "…" menu. */
+async function clickAuto(page: Page) {
+  if ((await page.locator(T).count()) === 0) await page.locator(MORE).click()
+  await page.locator(T).click()
+}
+
 async function openPanel(ctx: E2EContext) {
   await ctx.page.setViewportSize({ width: 1440, height: 900 })
   await ctx.page.goto(`${await harness(ctx, "m6-agent-harness")}?scene=panel`)
@@ -172,8 +190,7 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await openPanel(ctx)
-      const T = "[data-testid=agent-auto-approve]"
-      expect((await page.locator(T).getAttribute("aria-pressed")) === "false", "off by default")
+      expect((await autoChecked(page)) === "false", "off by default")
 
       // Off: an out-of-area edit asks with a card.
       await send(page, "Tidy the navbar")
@@ -182,16 +199,16 @@ export const scenarios: Scenario[] = [
       const warning = await token(page, "--kimo-warning")
       const warningSoft = await token(page, "--kimo-warning-soft")
       const tertiary = await token(page, "--kimo-text-tertiary")
+      await page.locator(MORE).click()
       let m = await measure(page, {
         toggle: T,
-        icon: `${T} svg`,
-        mode: "[data-testid=agent-composer] .kimo-mode-chip",
+        icon: `${T} .kimo-menu-item-dense__check svg`,
+        knob: `${T} .kimo-toggle`,
       })
-      const c = checker(ctx, "Board 34 §1 Composer · Auto-approve off (v0SYd)")
-      c.box("Auto-approve (v0SYd)", m.toggle, { w: 24, h: 24, radius: 6, color: secondary })
-      c.box("Icon shield (v7yN9p)", m.icon, { w: 14, h: 14 })
-      if (m.mode && m.toggle)
-        c.check("Bar", "Mode → Auto-approve gap", m.toggle.x - (m.mode.x + m.mode.w), 4)
+      const c = checker(ctx, "Board 34 §1 → board 40 “…” menu · Auto-approve off (u0Zdm5)")
+      c.box("Item · Auto-approve", m.toggle, { h: 28, gap: 8, pad: [0, 8, 0, 8], radius: 6 })
+      c.box("Icon shield", m.icon, { w: 14, h: 14, color: secondary })
+      c.box("Toggle/Off (CSYQj)", m.knob, { w: 28, h: 16 })
       c.flush()
 
       // On asks once; Cancel keeps it off.
@@ -226,10 +243,10 @@ export const scenarios: Scenario[] = [
       expect(items[3]?.includes("40 new layers per edit") ?? false, "hard limits listed")
       await page.locator(`${D} .kimo-confirm-dialog__cancel`).click()
       expect((await page.locator(D).count()) === 0, "Cancel closes the confirm")
-      expect((await page.locator(T).getAttribute("aria-pressed")) === "false", "still off")
+      expect((await autoChecked(page)) === "false", "still off")
 
       // Turn on: the waiting card is approved at once and the run continues.
-      await page.locator(T).click()
+      await clickAuto(page)
       await page.locator(`${D} .kimo-confirm-dialog__confirm`).click()
       await page.locator("[data-testid=agent-auto-approve-chip]").waitFor()
       await idle(page)
@@ -252,7 +269,7 @@ export const scenarios: Scenario[] = [
 
       const CH = "[data-testid=agent-auto-approve-chip]"
       m = await measure(page, {
-        toggle: T,
+        dot: "[data-testid=agent-more-dot]",
         chip: CH,
         chipIcon: `${CH} .agent-panel__auto-chip-icon`,
         chipLabel: `${CH} .agent-panel__auto-chip-label`,
@@ -264,13 +281,7 @@ export const scenarios: Scenario[] = [
         lineText: "[data-testid=agent-auto-approved] .agent-panel__auto-line-text",
       })
       const on = checker(ctx, "Board 34 §1–2 On: switch, chip, thread line")
-      on.box("Auto-approve on (XNEDr)", m.toggle, {
-        w: 24,
-        h: 24,
-        radius: 6,
-        bg: warningSoft,
-        color: warning,
-      })
+      on.box("“…” Dot (board 40 YB49L)", m.dot, { w: 6, h: 6, bg: warning })
       on.box("Auto-approve Chip (PWfak)", m.chip, {
         h: 24,
         pad: [0, 4, 0, 8],
@@ -295,14 +306,15 @@ export const scenarios: Scenario[] = [
       // One click on the chip turns it off; the next out-of-area edit asks again.
       await page.locator(CH).click()
       expect((await page.locator(CH).count()) === 0, "chip gone")
-      expect((await page.locator(T).getAttribute("aria-pressed")) === "false", "off again")
+      expect((await autoChecked(page)) === "false", "off again")
+      expect((await page.locator("[data-testid=agent-more-dot]").count()) === 0, "no dot")
       await send(page, "Tidy the navbar once more")
       await page.locator("[data-testid=agent-approval]").waitFor()
       await page.locator("[data-testid=agent-approval] [data-choice=deny]").click()
       await idle(page)
 
       // A new session starts off.
-      await page.locator(T).click()
+      await clickAuto(page)
       await page.locator(`${D} .kimo-confirm-dialog__confirm`).click()
       await page.locator(CH).waitFor()
       await page.getByRole("button", { name: "New session" }).click()

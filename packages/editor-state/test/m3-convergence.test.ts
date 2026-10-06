@@ -344,6 +344,24 @@ describe("M3 convergence (property)", () => {
   })
 })
 
+describe("detach after a concurrent variable delete", () => {
+  // Found by the property test (seed 622316994): a component fill bound to a variable another
+  // replica deleted; detaching an instance must drop the dangling binding, not fail validation.
+  test("replicas converge and the detach applies", () => {
+    const actions = [
+      { kind: "cmd", replica: 1, what: 1, a: 0, b: 13 },
+      { kind: "cmd", replica: 0, what: 23, a: 0, b: 0 },
+      { kind: "sync" },
+      { kind: "cmd", replica: 0, what: 21, a: 0, b: 0 },
+      { kind: "cmd", replica: 0, what: 0, a: 0, b: 0 },
+    ] as never
+    const r = run(actions, 0, anyCommand)
+    expect(r.da).toBe(r.db)
+    const unknown = validate(r.doc).errors.filter((e) => !CONFLICT_CODES.has(e.code))
+    expect(unknown).toEqual([])
+  })
+})
+
 describe("independent record keys survive a merge", () => {
   const pair = () => {
     const a = new YjsDocStore({ random: rng(1) })

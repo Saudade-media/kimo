@@ -19,6 +19,7 @@ import {
   AttachmentThumb,
   ComposerAgent,
   CostWarningCard,
+  composerMoreDot,
   IconButton,
   IconErrorCard,
   Message,
@@ -78,7 +79,7 @@ import {
   tokensTitle,
 } from "./format"
 import { useAgentPanelState } from "./hooks"
-import { ModelMenu, ModeMenu, SkillsMenu, visibleSkills } from "./Menus"
+import { ModelMenu, ModeMenu, MoreMenu, SkillsMenu, visibleSkills } from "./Menus"
 import { PlanCard, ReviewCard } from "./Modes"
 import { SessionList } from "./Sessions"
 
@@ -163,6 +164,8 @@ export function AgentPanel({
   const state = useAgentPanelState(controller)
   const thread = useRef<HTMLDivElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
+  /** Board 40 "…": Escape in its menu hands focus back here. */
+  const moreButton = useRef<HTMLButtonElement | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [agentModelTarget, setAgentModelTarget] = useState<number | null>(null)
   // Board 34: turning auto-approve on asks once (k0K1nN); turning it off never asks.
@@ -399,6 +402,29 @@ export function AgentPanel({
           {state.menu === "skills" && (
             <SkillsMenu controller={controller} state={state} onOpenFolder={onOpenSkillsFolder} />
           )}
+          {state.menu === "more" && (
+            <MoreMenu
+              state={state}
+              onSkills={() => {
+                controller.openMenu("skills")
+                moreButton.current?.focus()
+              }}
+              onAutoApprove={() => {
+                if (state.autoApprove) controller.setAutoApprove(false)
+                else {
+                  // Board 34: turning it on asks first; the menu gives way to the confirm.
+                  controller.openMenu(null)
+                  setConfirmAuto(true)
+                }
+              }}
+              onWebAccess={(on) => controller.setWebAccess(on)}
+              onClose={() => controller.openMenu(null)}
+              onEscape={() => {
+                controller.openMenu(null)
+                moreButton.current?.focus()
+              }}
+            />
+          )}
           {state.menu === "mode" && (
             <ModeMenu
               controller={controller}
@@ -495,10 +521,6 @@ export function AgentPanel({
               ),
             )}
             onAttach={() => fileInput.current?.click()}
-            skillsCount={state.skills.enabled.length}
-            skillsOpen={state.menu === "skills"}
-            onSkills={() => controller.openMenu("skills")}
-            skillsRef={(el) => el?.setAttribute("data-agent-menu-anchor", "")}
             modeChip={
               <ModeChip
                 mode={state.composer.mode.mode}
@@ -508,15 +530,18 @@ export function AgentPanel({
                 onClick={() => controller.openMenu("mode")}
               />
             }
-            autoApprove={{
-              on: state.autoApprove,
-              onClick: () =>
-                state.autoApprove ? controller.setAutoApprove(false) : setConfirmAuto(true),
+            more={{
+              open: state.menu === "more" || state.menu === "skills",
+              dot: composerMoreDot({
+                autoApprove: state.autoApprove,
+                webAccessOn: state.webAccess.on,
+                webAccessBlocked: state.webAccess.disabled !== null,
+              }),
+              onClick: () => controller.openMenu(state.menu === "skills" ? null : "more"),
             }}
-            webAccess={{
-              on: state.webAccess.on,
-              blocked: state.webAccess.disabled,
-              onToggle: (on) => controller.setWebAccess(on),
+            moreRef={(el) => {
+              moreButton.current = el
+              el?.setAttribute("data-agent-menu-anchor", "")
             }}
             model={{
               label: state.modelLabel,

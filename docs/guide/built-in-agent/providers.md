@@ -74,8 +74,8 @@ Sessions saved before 1.0 used Off, Auto and Max. They open as Low, High and Max
 The agent can search the web and read pages when a task needs facts from outside the file, such as a library's default font stack or a product's current copy. It is on by default.
 
 - **Settings › AI providers › Allow web access** sets it for new sessions.
-- The globe button in the composer turns it off (or back on) for the current session only. A new or reopened session starts from the setting again.
-- **Settings › Fonts & privacy › No third-party fetch** turns it off everywhere. The setting row and the globe show as disabled and say why.
+- **Web access** in the composer's **…** menu turns it off (or back on) for the current session only. A new or reopened session starts from the setting again.
+- **Settings › Fonts & privacy › No third-party fetch** turns it off everywhere. The setting row and the menu row show as disabled and say why.
 
 Each search and each page read is a step in the thread ("Searching the web for “…”", "Reading example.com") and is saved with the session. On desktop it is also a row in **Activity**. The reply ends with **Sources:** and the links it used. Web access needs no approval, and auto-approve doesn't change it.
 
@@ -90,7 +90,7 @@ What each model uses:
 | OpenAI-compatible (Responses API) | OpenAI's `web_search` tool |
 | Foundry | `web_search` and `web_fetch` (basic versions) |
 | Vertex | `web_search` only |
-| Google Gemini, OpenRouter, custom endpoints, Bedrock, OpenAI Chat Completions, other CLIs | None. The globe is disabled ("This model can't use the web") |
+| Google Gemini, OpenRouter, custom endpoints, Bedrock, OpenAI Chat Completions, other CLIs | None. The **Web access** row is disabled ("This model can't use the web") |
 
 With web access off, Claude Code runs with no built-in tools, Codex runs with `web_search="disabled"`, and Gemini CLI excludes both web tools.
 

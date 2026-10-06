@@ -1098,9 +1098,17 @@ export class YjsDocStore implements DocStore {
     const prev = this.tx
     this.tx = { origin, cause: kind }
     let item: unknown
+    // Yjs refuses to restore a map key when ANY item sits after the one it replaces, even a
+    // dead loser of a concurrent set of the same key; the undo then deletes our value and
+    // restores nothing (the key vanishes). When every key the group touched still holds this
+    // group's own value, nothing remote can be clobbered, so restore unconditionally.
+    const top = stack[stack.length - 1] as unknown as UndoItem | undefined
+    const ignore = m.ignoreRemoteMapChanges
+    m.ignoreRemoteMapChanges = top !== undefined && ownsItsMapKeys(this.ydoc, top)
     try {
       item = kind === "undo" ? m.undo() : m.redo()
     } finally {
+      m.ignoreRemoteMapChanges = ignore
       this.tx = prev
       stack.unshift(...rest)
     }
@@ -1217,4 +1225,24 @@ function sortKeys(rec: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const k of Object.keys(rec).sort()) setOwn(out, k, rec[k])
   return out
+}
+
+type UndoItem = Y.UndoManager["undoStack"][number]
+
+/**
+ * True when, for every map key the undo group replaced or removed, the key's live value is one
+ * the group itself inserted (so restoring the previous value overwrites nothing remote).
+ */
+function ownsItsMapKeys(ydoc: Y.Doc, item: UndoItem): boolean {
+  let owns = true
+  ydoc.transact((tr) => {
+    Y.iterateDeletedStructs(tr, item.deletions, (struct) => {
+      if (!owns || !(struct instanceof Y.Item) || struct.parentSub === null) return
+      const parent = struct.parent
+      if (!(parent instanceof Y.AbstractType)) return
+      const live = parent._map.get(struct.parentSub)
+      if (!live || live.deleted || !Y.isDeleted(item.insertions, live.id)) owns = false
+    })
+  }, "undo-probe")
+  return owns
 }

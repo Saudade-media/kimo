@@ -127,19 +127,51 @@ export function planRenameVariable(ctx: PlanContext, from: string, to: string): 
   const swap = (v: unknown) => (isRef(v) && v.$ref === from ? { $ref: to } : v)
   const ops: PlanOp[] = rewriteNodes(ctx.doc, swap)
   const set: Record<string, Variable> = {}
+  const dropNotes: PlanNote[] = []
   for (const [n, v] of Object.entries(all)) {
     const nv = mapJson(n === from ? v : v, swap) as Rec
-    if (n === from) set[to] = nv as unknown as Variable
-    else if (JSON.stringify(nv) !== JSON.stringify(v)) set[n] = nv as unknown as Variable
+    if (n === from) {
+      // The variable moves to a new key, so a binding it already had to a variable another
+      // replica deleted concurrently would count as a NEW error there: drop those entries.
+      const kept = dropMissingEntries(nv, all, to)
+      for (const m of kept.dropped)
+        dropNotes.push({
+          code: "BINDING_DETACHED",
+          message: `Variable "${m}" no longer exists; its entry in "${to}" was dropped`,
+        })
+      set[to] = kept.value as unknown as Variable
+    } else if (JSON.stringify(nv) !== JSON.stringify(v)) set[n] = nv as unknown as Variable
   }
   ops.push({ op: "setVariables", set, unset: [from] })
-  const notes: PlanNote[] = []
+  const notes: PlanNote[] = [...dropNotes]
   if (isObject(ctx.doc.meta) && ctx.doc.meta.library === true)
     notes.push({
       code: "BINDING_DETACHED",
       message: "Files that link this library and bind the old name will need updating",
     })
   return ok(ops, notes)
+}
+
+/**
+ * Themed entries (with a `when`) whose value aliases a local variable that does not exist are
+ * removed from `v`; the default entry and plain values are kept. `self` is the variable's own
+ * (new) name, which its own rewritten self-references point at.
+ */
+function dropMissingEntries(
+  v: Rec,
+  all: Record<string, Rec>,
+  self: string,
+): { value: Rec; dropped: string[] } {
+  if (!isThemedValue(v.value)) return { value: v, dropped: [] }
+  const dropped: string[] = []
+  const entries = (v.value as Entry[]).filter((e) => {
+    if (!e.when || !isRef(e.value)) return true
+    const q = splitQualified(e.value.$ref)
+    if (q.alias !== null || Object.hasOwn(all, q.name) || q.name === self) return true
+    dropped.push(q.name)
+    return false
+  })
+  return dropped.length ? { value: { ...v, value: entries }, dropped } : { value: v, dropped }
 }
 
 /** Duplicate (row menu): a copy under `to`. */

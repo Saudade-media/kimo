@@ -362,6 +362,42 @@ describe("detach after a concurrent variable delete", () => {
   })
 })
 
+describe("undo after a concurrent set of the same variable", () => {
+  // Found by the property test: both replicas rewrote a variable's value (setCell); the loser's
+  // undo deleted the winner's value instead of restoring the previous one, so the variable
+  // vanished and bindings to it dangled.
+  test("the variable survives and replicas converge", () => {
+    const actions = [
+      { kind: "cmd", replica: 1, what: 11, a: 0, b: 0 },
+      { kind: "cmd", replica: 0, what: 11, a: 0, b: 0 },
+      { kind: "cmd", replica: 0, what: 1, a: 15083110, b: 471514655 },
+      { kind: "sync" },
+      { kind: "undo", replica: 1 },
+    ] as never
+    const r = run(actions, 0, safeCommand)
+    expect(r.da).toBe(r.db)
+    expect(validate(r.doc).errors).toEqual([])
+  })
+})
+
+describe("rename of a variable with a concurrently orphaned alias", () => {
+  // Found by the property test: a cell aliasing a variable another replica deleted; renaming
+  // moved the dangling alias to a new key, which local validation counted as a new error.
+  test("the rename applies, dropping the dangling entry", () => {
+    const actions = [
+      { kind: "cmd", replica: 0, what: 11, a: 0, b: 1351932425 },
+      { kind: "cmd", replica: 1, what: 22, a: 0, b: 0 },
+      { kind: "sync" },
+      { kind: "cmd", replica: 0, what: 23, a: 0, b: 0 },
+      { kind: "cmd", replica: 0, what: 0, a: 0, b: 0 },
+    ] as never
+    const r = run(actions, 0, anyCommand)
+    expect(r.da).toBe(r.db)
+    const unknown = validate(r.doc).errors.filter((e) => !CONFLICT_CODES.has(e.code))
+    expect(unknown).toEqual([])
+  })
+})
+
 describe("independent record keys survive a merge", () => {
   const pair = () => {
     const a = new YjsDocStore({ random: rng(1) })

@@ -11,6 +11,7 @@ import {
   pagesOf,
   renamePageOps,
 } from "@kimo/editor-state"
+import { fitPage } from "../fit"
 import type { M3Controller } from "../m3/controller"
 import type { FileSession } from "../session"
 import { activePageId, activeRoots, pageLayerCount, rootsPerPage } from "./model"
@@ -31,7 +32,10 @@ export function activatePage({ session, m3 }: PageCommandContext, id: string | n
   if (remembered) return
   const roots = activeRoots(session.store, id)
   if (roots.length === 0) return
-  requestAnimationFrame(() => m3.canvas()?.zoomToFit())
+  requestAnimationFrame(() => {
+    const canvas = m3.canvas()
+    if (canvas) fitPage(canvas, session.ui, roots)
+  })
 }
 
 /** Appends a page ("Page N" or `name`) and switches to it. Returns the new page id. */

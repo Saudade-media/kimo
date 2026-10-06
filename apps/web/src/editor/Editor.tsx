@@ -79,6 +79,7 @@ import { createComponent, detachInstance, goToMain } from "./m3/actions"
 import { useCanvasDrop } from "./m3/CanvasDrop"
 import { M3Context, M3Controller, useBusValue, useLibraries } from "./m3/controller"
 import { ConfirmHost, ToastStack } from "./m3/feedback"
+import { activeRoots } from "./pages/model"
 import { useActivePageName } from "./pages/PagesStrip"
 import { useReleaseStalePlaceholders } from "./placeholder-release"
 import "./m3/m3.css"
@@ -447,7 +448,9 @@ function EditorShell({
     return () => conflicts.bindView(null)
   }, [conflicts, session])
   useNextConflictShortcut(conflicts)
-  useFocusNode(focusNode, session.ui, canvas)
+  useFocusNode(focusNode, session.ui, canvas, () =>
+    activeRoots(session.store, session.ui.getState().page),
+  )
 
   // Test/debug hook: e2e and perf scripts read the store through it. On in dev; in a
   // production build only when opted in with `?kimo-debug` in the URL (or VITE_KIMO_DEBUG=1 at build time).

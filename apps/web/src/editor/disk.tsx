@@ -4,13 +4,14 @@
  * breadcrumb's file name, and the deep-link node focus.
  */
 import { basenameOf, dirnameOf } from "@kimo/platform"
-import { type ReactNode, useCallback, useEffect, useSyncExternalStore } from "react"
+import { type ReactNode, useCallback, useEffect, useRef, useSyncExternalStore } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import type { EditorConflictSession } from "../conflicts"
 import { FileTopbar } from "../files"
 import { hasUnsavedChanges, isEdited, type SessionState, windowTitle } from "../platform/contract"
 import type { FileDocumentSession } from "../platform/session"
 import type { FileMenuActions } from "./FileMenu"
+import { fitPage } from "./fit"
 import { TopbarTrailing, useFileMenu } from "./Topbar"
 
 const NO_SUBSCRIBE = () => () => {}
@@ -89,21 +90,31 @@ export function DiskTopbar({
   )
 }
 
-/** Selects and reveals `node` once the canvas has laid out (kimo://open?…&node=…). */
+/**
+ * Once the canvas has laid out: selects and reveals `node` (kimo://open?…&node=…), or, when no
+ * node is asked for, frames the page ({@link fitPage}) so a file never opens on empty canvas.
+ */
 export function useFocusNode(
   node: string | null | undefined,
   ui: UiStore,
   canvas: { current: CanvasHandle | null },
+  roots: () => readonly string[] = () => [],
 ): void {
+  // Read once, when the layout is ready: not a reason to fit again.
+  const rootsRef = useRef(roots)
+  rootsRef.current = roots
   useEffect(() => {
-    if (!node) return
     let raf = 0
     let tries = 0
     const go = () => {
       const c = canvas.current
-      if (c?.layout()) {
-        ui.getState().select([node])
-        c.zoomToFit([node], 96)
+      const layout = c?.layout()
+      // An empty first layout may still be filling in: give it a few frames before giving up.
+      if (c && layout && (node || layout.nodes.size > 0 || tries > 30)) {
+        if (node) {
+          ui.getState().select([node])
+          c.zoomToFit([node], 96)
+        } else if (layout.nodes.size > 0) fitPage(c, ui, rootsRef.current())
         return
       }
       if (++tries < 600) raf = requestAnimationFrame(go)

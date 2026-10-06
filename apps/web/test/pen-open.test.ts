@@ -47,8 +47,22 @@ describe("opening .pen files", () => {
     expect(Object.values(doc.nodes).some((n) => n.content === "Hello")).toBe(true)
     // The .pen itself is untouched.
     expect((await platform.files.readText(PEN)).text).toBe(penText())
-    // Opening it again in the same window reuses the session.
+    // Opening it again in the same window reuses the session; lookups by the .pen path find it.
     expect(await manager.open(PEN)).toBe(session)
+    expect(manager.get(PEN)).toBe(session)
+  })
+
+  test("a launch request for a .pen (Finder, Open With, argv) opens and reports its session", async () => {
+    const { platform, manager } = await setup({ [PEN]: penText() })
+    const opened: string[] = []
+    manager.install((s) => opened.push(s.ref))
+    // Cold start: the runtime drains the initial requests, then looks the session up by ref.
+    await manager.handleOpenRequest({ source: "file-association", refs: [PEN] })
+    expect(manager.get(PEN)?.ref).toBe(`${DIR}/design.kimo`)
+    // Warm: an open request event while running.
+    platform.control.open({ source: "file-association", refs: [PEN] })
+    for (let i = 0; i < 50 && !opened.length; i++) await new Promise((r) => setTimeout(r, 10))
+    expect(opened).toEqual([`${DIR}/design.kimo`])
   })
 
   test("reopening an unchanged .pen finds the earlier conversion", async () => {

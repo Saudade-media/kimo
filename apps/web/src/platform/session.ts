@@ -1266,6 +1266,8 @@ export class FileSessionManager implements SessionManager {
   private readonly opening = new Map<FileRef, Promise<FileDocumentSession>>()
   /** `.pen` files opened in this window → the `.kimo` each was converted to. */
   private readonly penTargets = new Map<FileRef, Promise<FileRef>>()
+  /** The same, once each conversion has finished (for synchronous lookups). */
+  private readonly penConverted = new Map<FileRef, FileRef>()
   private readonly listeners = new Set<() => void>()
   private offClose: Unsubscribe | null = null
   private offOpen: Unsubscribe | null = null
@@ -1311,8 +1313,7 @@ export class FileSessionManager implements SessionManager {
     this.offOpen = this.platform.launch.onOpenRequest((req) => {
       void this.handleOpenRequest(req).then(async () => {
         const first = req.refs[0]
-        const ref = first && isPenPath(first) ? await this.penTarget(first) : first
-        const s = ref ? this.byRef.get(ref) : undefined
+        const s = first ? this.get(first) : undefined
         if (s) onOpened?.(s, req)
       })
     })
@@ -1357,8 +1358,9 @@ export class FileSessionManager implements SessionManager {
     return this.open(untitledRef(newUntitledId()))
   }
 
+  /** The session of `ref`; for a `.pen` already opened in this window, its `.kimo`'s session. */
   get(ref: FileRef): FileDocumentSession | undefined {
-    return this.byRef.get(ref)
+    return this.byRef.get(this.penConverted.get(ref) ?? ref)
   }
 
   /** The `.kimo` a `.pen` converts to (converting it on first use; see `convertPenFile`). */
@@ -1371,6 +1373,7 @@ export class FileSessionManager implements SessionManager {
             `kimo: converted ${penRef} → ${c.ref}`,
             c.warnings.map((w) => `${w.code} ×${w.count}: ${w.message}`),
           )
+        this.penConverted.set(penRef, c.ref)
         return c.ref
       })
       this.penTargets.set(penRef, p)

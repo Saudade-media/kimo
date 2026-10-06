@@ -2,63 +2,58 @@
  * Tidewell: the iPhone app of a fictional personal bank.
  * Screens (390×844): Sign in, Home, Transactions, Transaction detail, Send money, Cards (frozen
  * card), Insights.
+ *
+ * Built against Monzo (cents set small, day groups with totals, one colour slab for the balance),
+ * Wise and Revolut (pill month bars, hairline category bars), Mercury (card action chips and a
+ * daily limit), Lloyds (label/value detail rows) and World App / Wealthfront (borderless keypad).
+ * One accent (deep tide green), no red for spending, no gradients.
  */
-import { FILL, p, type Template, type TemplateBuilder } from "./lib"
+import { FILL, fill, p, type Template, type TemplateBuilder } from "./lib"
 
 export const template: Template = {
   slug: "mobile-banking",
   name: "Tidewell personal banking",
   category: "Mobile",
   description:
-    "Seven-screen iPhone app for a personal bank: passcode sign-in, balances and cards, transactions, a receipt, sending money, freezing a card and monthly insights.",
+    "Seven-screen iPhone app for a personal bank: passcode sign-in, a balance slab with activity, a receipt, sending money, a frozen card and monthly insights.",
   prefix: "qb",
   build,
 }
 
 const W = 390
 const H = 844
+const CW = 350 // content width: 20pt gutters
 
 function build(b: TemplateBuilder) {
   b.tokens({
     colors: {
-      bg: ["#F3F5F8", "#0A0D14"],
-      surface: ["#FFFFFF", "#141924"],
-      subtle: ["#EAEEF3", "#1D2330"],
-      ink: ["#0F1729", "#EEF1F7"],
-      "ink-2": ["#344054", "#C5CCD9"],
-      muted: ["#667085", "#8D97AA"],
-      border: ["#E2E7EE", "#252C3A"],
-      accent: ["#2E4FD6", "#8EA2FF"],
-      "accent-soft": ["#E6EBFD", "#1C2550"],
-      "on-accent": ["#FFFFFF", "#0A0D14"],
-      positive: ["#13795B", "#45C99A"],
-      "positive-soft": ["#E0F3EC", "#0F2E24"],
-      danger: ["#C2361F", "#FF8A73"],
-      "danger-soft": ["#FCE8E4", "#3A1711"],
-      ice: ["#CFE3F2", "#24384A"],
-      "card-1": ["#1B2B6B", "#1E2F78"],
-      "card-2": ["#3A57E0", "#4361EA"],
-      "card-frost-1": ["#46546E", "#3A4456"],
-      "card-frost-2": ["#687690", "#5A6578"],
-      chip: ["#E4C27A", "#C9A85E"],
-      "chip-2": ["#F5E2B0", "#E3CB8E"],
-      "chip-line": ["#A9883F", "#7E6430"],
-      knob: ["#FFFFFF", "#FFFFFF"],
-      "toggle-off": ["#DCE1E8", "#3A4456"],
-      "on-card": ["#FFFFFF", "#FFFFFF"],
-      "on-card-muted": ["#C9D3FF", "#C9D3FF"],
-      "cat-1": ["#2E4FD6", "#8EA2FF"],
-      "cat-2": ["#13795B", "#45C99A"],
-      "cat-3": ["#D9822B", "#F5B061"],
-      "cat-4": ["#B4479A", "#E78BD2"],
-      "cat-5": ["#2A8BA8", "#62C6E3"],
-      "cat-6": ["#98A2B3", "#5D6779"],
-      "cat-1-soft": ["#E6EBFD", "#1C2550"],
-      "cat-2-soft": ["#E0F3EC", "#0F2E24"],
-      "cat-3-soft": ["#FBEEDD", "#3A2810"],
-      "cat-4-soft": ["#F7E4F2", "#3A1733"],
-      "cat-5-soft": ["#DFF1F6", "#0F2E38"],
-      "cat-6-soft": ["#EEF0F3", "#1D2330"],
+      bg: ["#F1F4F1", "#080D0C"],
+      surface: ["#FFFFFF", "#121A18"],
+      subtle: ["#E6ECE8", "#1A2421"],
+      ink: ["#0B1814", "#EAF1EE"],
+      "ink-2": ["#33423C", "#C3D0CA"],
+      muted: ["#5F6E68", "#8B9A94"],
+      border: ["#DAE1DD", "#24302C"],
+      accent: ["#0A5C49", "#62D9AC"],
+      "on-accent": ["#FFFFFF", "#05231A"],
+      "accent-soft": ["#D7ECE3", "#16322A"],
+      credit: ["#16794D", "#58D19B"],
+      amber: ["#A8620C", "#E8A24A"],
+      slab: ["#0A5C49", "#0E2B24"],
+      "on-slab": ["#FFFFFF", "#E8F4EE"],
+      "slab-muted": ["#A8D4C5", "#7FB5A2"],
+      "slab-chip": ["#064535", "#1B4438"],
+      "card-fill": ["#0E1F1A", "#1D2C27"],
+      "on-card": ["#F2F7F5", "#F2F7F5"],
+      "card-muted": ["#9DB1AA", "#9DB1AA"],
+      "card-line": ["#1F3A31", "#2E4B40"],
+      frost: ["#BCC9C4", "#34413D"],
+      "on-frost": ["#0B1814", "#E8EFEC"],
+      "frost-line": ["#A6B5AF", "#45554F"],
+      "toggle-off": ["#CBD5D0", "#34413C"],
+      "knob-on": ["#FFFFFF", "#05231A"],
+      "knob-off": ["#FFFFFF", "#C9D6D0"],
+      "bar-dim": ["#CFD8D3", "#26322E"],
     },
     numbers: {
       "space/1": 4,
@@ -70,52 +65,33 @@ function build(b: TemplateBuilder) {
       "space/8": 32,
       "radius/sm": 8,
       "radius/md": 12,
-      "radius/lg": 18,
+      "radius/lg": 16,
       "radius/card": 20,
+      "radius/slab": 24,
       "radius/pill": 999,
       "size/status": 47,
     },
     type: {
-      display: { font: "Inter", size: 56, weight: 700, lineHeight: 1.05, letterSpacing: -1.8 },
-      balance: { font: "Inter", size: 40, weight: 700, lineHeight: 1.1, letterSpacing: -1.4 },
-      h1: { font: "Inter", size: 28, weight: 700, lineHeight: 1.15, letterSpacing: -0.6 },
-      title: { font: "Inter", size: 20, weight: 700, lineHeight: 1.25, letterSpacing: -0.3 },
+      display: { font: "Inter", size: 34, weight: 700, lineHeight: 1.15, letterSpacing: -0.8 },
+      amount: { font: "Inter", size: 56, weight: 650, lineHeight: 1, letterSpacing: -2.2 },
       heading: { font: "Inter", size: 17, weight: 600, lineHeight: 1.3, letterSpacing: -0.2 },
+      row: { font: "Inter", size: 17, weight: 600, lineHeight: 1.25, letterSpacing: -0.3 },
       body: { font: "Inter", size: 15, weight: 400, lineHeight: 1.45 },
-      label: { font: "Inter", size: 14, weight: 600, lineHeight: 1.3 },
+      label: { font: "Inter", size: 15, weight: 500, lineHeight: 1.3 },
       small: { font: "Inter", size: 13, weight: 400, lineHeight: 1.4 },
-      caption: { font: "Inter", size: 11, weight: 600, lineHeight: 1.3 },
-      mono: { font: "JetBrains Mono", size: 14, weight: 500, lineHeight: 1.3, letterSpacing: 1 },
+      micro: { font: "Inter", size: 11, weight: 600, lineHeight: 1.3, letterSpacing: 0.6 },
+      mono: { font: "JetBrains Mono", size: 13, weight: 500, lineHeight: 1.3, letterSpacing: 0.2 },
     },
     shadows: {
-      card: [
-        { kind: "shadow", x: 0, y: 1, blur: 2, color: "#0F17290D" },
-        { kind: "shadow", x: 0, y: 6, blur: 16, spread: -6, color: "#0F172914" },
-      ],
-      lifted: { kind: "shadow", x: 0, y: 14, blur: 28, spread: -10, color: "#1B2B6B59" },
-      phone: { kind: "shadow", x: 0, y: 24, blur: 48, spread: -12, color: "#0F172933" },
+      phone: { kind: "shadow", x: 0, y: 24, blur: 48, spread: -12, color: "#0B181433" },
     },
   })
 
   const c = (n: string) => b.c(n)
-  const s = (n: number) => b.n(`space/${n}`)
   const r = (n: string) => b.n(`radius/${n}`)
   const ink = c("ink")
   const muted = c("muted")
-  const grad = (from: string, to: string, rotation = 135) => ({
-    kind: "linear",
-    rotation,
-    stops: [
-      { color: c(from), at: 0 },
-      { color: c(to), at: 1 },
-    ],
-  })
-  const card = (extra: Record<string, unknown> = {}) => ({
-    radius: r("lg"),
-    fill: c("surface"),
-    effects: b.shadow("card"),
-    ...extra,
-  })
+  const overlay = { "kimo.template.overlay": true }
 
   // --- Components: system ------------------------------------------------------------------------
 
@@ -124,8 +100,19 @@ function build(b: TemplateBuilder) {
     {
       key: "Status",
       section: "System",
-      description: "iOS status bar. Sits on the screen background.",
-      props: { time: p.text("StTime", "9:41") },
+      description: "iOS status bar. The slab variant is for screens on the green slab.",
+      props: {
+        time: p.text("StTime", "9:41"),
+        tone: p.variants({
+          ink: { "StTime.fill": ink, "StSig.color": ink, "StWifi.color": ink, "StBat.color": ink },
+          slab: {
+            "StTime.fill": c("on-slab"),
+            "StSig.color": c("on-slab"),
+            "StWifi.color": c("on-slab"),
+            "StBat.color": c("on-slab"),
+          },
+        }),
+      },
       root: {
         dir: "row",
         w: W,
@@ -136,11 +123,14 @@ function build(b: TemplateBuilder) {
       },
     },
     (root) => {
-      b.text(root, "9:41", b.ty("label", { size: 16 }), ink, { key: "StTime", name: "Time" })
+      b.text(root, "9:41", b.ty("label", { size: 16, weight: 600 }), ink, {
+        key: "StTime",
+        name: "Time",
+      })
       const icons = b.row(root, "Icons", { gap: 6, align: "center" })
-      b.icon(icons, "signal", 17, ink)
-      b.icon(icons, "wifi", 17, ink)
-      b.icon(icons, "battery-full", 24, ink)
+      b.icon(icons, "signal", 17, ink, { key: "StSig" })
+      b.icon(icons, "wifi", 17, ink, { key: "StWifi" })
+      b.icon(icons, "battery-full", 24, ink, { key: "StBat" })
     },
   )
 
@@ -149,22 +139,30 @@ function build(b: TemplateBuilder) {
     {
       key: "HomeBar",
       section: "System",
+      props: {
+        tone: p.variants({
+          ink: { "HbBar.fill": ink },
+          slab: { "HbBar.fill": c("on-slab") },
+        }),
+      },
       root: { dir: "row", w: W, h: 34, justify: "center", align: "center", pad: [0, 0, 4, 0] },
     },
-    (root) => b.rect(root, "Bar", { w: 134, h: 5, radius: r("pill"), fill: ink }),
+    (root) => b.rect(root, "Bar", { key: "HbBar", w: 134, h: 5, radius: r("pill"), fill: ink }),
   )
 
   const tabsDef = [
     ["Home", "house"],
     ["Activity", "arrow-left-right"],
+    ["Send", "arrow-up-right"],
     ["Cards", "credit-card"],
-    ["Insights", "chart-pie"],
+    ["Insights", "chart-no-axes-column"],
   ] as const
   const tabActive = (i: number) =>
     Object.fromEntries(
       tabsDef.flatMap((_, j) => [
+        [`TbPill${j + 1}.fill`, j === i ? c("accent-soft") : c("surface")],
         [`TbIc${j + 1}.color`, j === i ? c("accent") : muted],
-        [`TbLb${j + 1}.fill`, j === i ? c("accent") : muted],
+        [`TbLb${j + 1}.fill`, j === i ? ink : muted],
       ]),
     )
   const tabBar = b.component(
@@ -172,13 +170,15 @@ function build(b: TemplateBuilder) {
     {
       key: "TabBar",
       section: "System",
-      description: "Four tabs with the home indicator. Set active per screen.",
+      description:
+        "Five equal tabs (72pt each) and the home indicator. The active tab sits in a soft pill.",
       props: {
         active: p.variants({
           home: tabActive(0),
           activity: tabActive(1),
-          cards: tabActive(2),
-          insights: tabActive(3),
+          send: tabActive(2),
+          cards: tabActive(3),
+          insights: tabActive(4),
         }),
       },
       root: {
@@ -190,11 +190,20 @@ function build(b: TemplateBuilder) {
       },
     },
     (root) => {
-      const items = b.row(root, "Items", { w: FILL, pad: [0, 12] })
+      const items = b.row(root, "Items", { w: FILL, pad: [0, 15] })
       tabsDef.forEach(([label, icon], i) => {
-        const it = b.col(items, label, { w: (W - 24) / 4, gap: 4, align: "center", pad: [4, 0] })
-        b.icon(it, icon, 24, i === 0 ? c("accent") : muted, { key: `TbIc${i + 1}` })
-        b.text(it, label, b.ty("caption"), i === 0 ? c("accent") : muted, {
+        const it = b.col(items, label, { w: 72, gap: 3, align: "center", pad: [0, 0, 2, 0] })
+        const pill = b.row(it, "Pill", {
+          key: `TbPill${i + 1}`,
+          w: 56,
+          h: 30,
+          align: "center",
+          justify: "center",
+          radius: r("pill"),
+          fill: i === 0 ? c("accent-soft") : c("surface"),
+        })
+        b.icon(pill, icon, 22, i === 0 ? c("accent") : muted, { key: `TbIc${i + 1}` })
+        b.text(it, label, b.ty("micro", { size: 10, letterSpacing: 0.1 }), i === 0 ? ink : muted, {
           key: `TbLb${i + 1}`,
         })
       })
@@ -209,7 +218,7 @@ function build(b: TemplateBuilder) {
     {
       key: "Btn",
       section: "Actions",
-      description: "Primary, secondary, soft or danger; md or lg.",
+      description: "Primary, ink, outline or text; large or medium.",
       props: {
         label: p.text("BtnLabel", "Button"),
         icon: p.bool("BtnIcon", false),
@@ -220,27 +229,27 @@ function build(b: TemplateBuilder) {
             "BtnLabel.fill": c("on-accent"),
             "BtnIcon.color": c("on-accent"),
           },
-          secondary: {
+          ink: {
+            "root.fill": ink,
+            "root.stroke": { paint: ink },
+            "BtnLabel.fill": c("bg"),
+            "BtnIcon.color": c("bg"),
+          },
+          outline: {
             "root.fill": c("surface"),
             "root.stroke": { paint: c("border") },
             "BtnLabel.fill": ink,
             "BtnIcon.color": ink,
           },
-          soft: {
-            "root.fill": c("accent-soft"),
-            "root.stroke": { paint: c("accent-soft") },
+          text: {
+            "root.fill": c("bg"),
+            "root.stroke": { paint: c("bg") },
             "BtnLabel.fill": c("accent"),
             "BtnIcon.color": c("accent"),
           },
-          danger: {
-            "root.fill": c("danger-soft"),
-            "root.stroke": { paint: c("danger-soft") },
-            "BtnLabel.fill": c("danger"),
-            "BtnIcon.color": c("danger"),
-          },
         }),
         size: p.variants({
-          lg: { "root.layout/pad": [16, 22], "BtnLabel.style/size": 16 },
+          lg: { "root.layout/pad": [17, 22], "BtnLabel.style/size": 16 },
           md: { "root.layout/pad": [10, 16], "BtnLabel.style/size": 14 },
         }),
       },
@@ -249,15 +258,15 @@ function build(b: TemplateBuilder) {
         gap: 8,
         align: "center",
         justify: "center",
-        pad: [16, 22],
-        radius: r("md"),
+        pad: [17, 22],
+        radius: r("lg"),
         fill: c("accent"),
         stroke: { paint: c("accent") },
       },
     },
     (root) => {
-      b.icon(root, "send", 18, c("on-accent"), { key: "BtnIcon", visible: false })
-      b.text(root, "Button", b.ty("label", { size: 16 }), c("on-accent"), {
+      b.icon(root, "arrow-up-right", 18, c("on-accent"), { key: "BtnIcon", visible: false })
+      b.text(root, "Button", b.ty("label", { size: 16, weight: 600 }), c("on-accent"), {
         key: "BtnLabel",
         name: "Label",
       })
@@ -274,12 +283,10 @@ function build(b: TemplateBuilder) {
           surface: {
             "root.fill": c("surface"),
             "root.stroke": { paint: c("border") },
-            "IbIcon.color": ink,
           },
-          soft: {
-            "root.fill": c("subtle"),
-            "root.stroke": { paint: c("subtle") },
-            "IbIcon.color": ink,
+          plain: {
+            "root.fill": c("bg"),
+            "root.stroke": { paint: c("bg") },
           },
         }),
       },
@@ -297,27 +304,66 @@ function build(b: TemplateBuilder) {
     (root) => b.icon(root, "chevron-left", 20, ink, { key: "IbIcon" }),
   )
 
-  const quickAction = b.component(
-    "Quick action",
+  const chip = b.component(
+    "Chip",
     {
-      key: "Quick",
+      key: "Chip",
       section: "Actions",
-      props: { label: p.text("QaLbl", "Send") },
-      root: { dir: "column", w: 80, gap: 8, align: "center" },
+      description: "Filter or action chip, optional leading icon. Ink when selected.",
+      props: {
+        label: p.text("ChLbl", "Chip"),
+        icon: p.bool("ChIcon", false),
+        state: p.variants({
+          default: {
+            "root.fill": c("surface"),
+            "root.stroke": { paint: c("border") },
+            "ChLbl.fill": ink,
+            "ChIcon.color": ink,
+          },
+          selected: {
+            "root.fill": ink,
+            "root.stroke": { paint: ink },
+            "ChLbl.fill": c("bg"),
+            "ChIcon.color": c("bg"),
+          },
+        }),
+      },
+      root: {
+        dir: "row",
+        gap: 6,
+        align: "center",
+        pad: [8, 14],
+        radius: r("pill"),
+        fill: c("surface"),
+        stroke: { paint: c("border") },
+      },
     },
     (root) => {
-      const circle = b.row(root, "Circle", {
-        w: 56,
-        h: 56,
-        radius: r("pill"),
+      b.icon(root, "snowflake", 15, ink, { key: "ChIcon", visible: false })
+      b.text(root, "Chip", b.ty("label", { size: 14 }), ink, { key: "ChLbl", name: "Label" })
+    },
+  )
+
+  const slabPill = b.component(
+    "Slab action",
+    {
+      key: "SlabPill",
+      section: "Actions",
+      description: "Pill that lives on the green slab.",
+      props: { label: p.text("SpLbl", "Add money") },
+      root: {
+        dir: "row",
+        gap: 7,
         align: "center",
-        justify: "center",
-        fill: c("surface"),
-        effects: b.shadow("card"),
-      })
-      b.icon(circle, "send", 22, c("accent"), { key: "QaIcon" })
-      b.text(root, "Send", b.ty("small", { weight: 500, align: "center" }), c("ink-2"), {
-        key: "QaLbl",
+        pad: [10, 14, 10, 12],
+        radius: r("pill"),
+        fill: c("slab-chip"),
+      },
+    },
+    (root) => {
+      b.icon(root, "plus", 16, c("on-slab"), { key: "SpIcon" })
+      b.text(root, "Add money", b.ty("label", { size: 14, weight: 600 }), c("on-slab"), {
+        key: "SpLbl",
       })
     },
   )
@@ -327,18 +373,24 @@ function build(b: TemplateBuilder) {
     {
       key: "Key",
       section: "Actions",
-      description: "Digit key, or an icon key (Face ID, delete).",
+      description: "Borderless digit key, or an icon key (Face ID, delete). 112pt wide.",
       props: {
         digit: p.text("KeyNum", "1"),
         kind: p.variants({
           digit: { "KeyNum.visible": true, "KeyIcon.visible": false },
           icon: { "KeyNum.visible": false, "KeyIcon.visible": true },
         }),
+        tone: p.variants({
+          ink: { "KeyNum.fill": ink, "KeyIcon.color": ink },
+          slab: { "KeyNum.fill": c("on-slab"), "KeyIcon.color": c("on-slab") },
+        }),
       },
-      root: { dir: "row", w: 100, h: 56, align: "center", justify: "center" },
+      root: { dir: "row", w: 112, h: 56, align: "center", justify: "center" },
     },
     (root) => {
-      b.text(root, "1", b.ty("h1", { weight: 500, align: "center" }), ink, { key: "KeyNum" })
+      b.text(root, "1", b.ty("display", { size: 30, weight: 500, align: "center" }), ink, {
+        key: "KeyNum",
+      })
       b.icon(root, "delete", 26, ink, { key: "KeyIcon", visible: false })
     },
   )
@@ -350,8 +402,16 @@ function build(b: TemplateBuilder) {
       section: "Actions",
       props: {
         state: p.variants({
-          on: { "root.fill": c("accent"), "root.layout/justify": "end" },
-          off: { "root.fill": c("toggle-off"), "root.layout/justify": "start" },
+          on: {
+            "root.fill": c("accent"),
+            "root.layout/justify": "end",
+            "TgKnob.fill": c("knob-on"),
+          },
+          off: {
+            "root.fill": c("toggle-off"),
+            "root.layout/justify": "start",
+            "TgKnob.fill": c("knob-off"),
+          },
         }),
       },
       root: {
@@ -364,85 +424,13 @@ function build(b: TemplateBuilder) {
         fill: c("accent"),
       },
     },
-    (root) => b.ellipse(root, "Knob", { w: 27, h: 27, fill: c("knob") }),
+    (root) => b.ellipse(root, "Knob", { key: "TgKnob", w: 27, h: 27, fill: c("knob-on") }),
   )
   const toggleOff = b.derive(toggle, "Toggle/Off", "ToggleOff", {
     section: "Actions",
-    description:
-      "Toggle preset in the off state. Setting row swaps between Toggle and this through its toggle prop.",
+    description: "Toggle preset in the off state. Setting row swaps to it through its toggle prop.",
     args: { state: "off" },
   })
-
-  const segLabels = ["One", "Two", "Three"]
-  const segActive = (i: number) =>
-    Object.fromEntries(
-      segLabels.flatMap((_, j) => [
-        [`SgI${j + 1}.fill`, j === i ? c("surface") : c("subtle")],
-        [`SgI${j + 1}.effects`, j === i ? b.shadow("card") : []],
-        [`SgL${j + 1}.fill`, j === i ? ink : muted],
-      ]),
-    )
-  const segmented = b.component(
-    "Segmented control",
-    {
-      key: "Seg",
-      section: "Actions",
-      props: {
-        first: p.text("SgL1", "One"),
-        second: p.text("SgL2", "Two"),
-        third: p.text("SgL3", "Three"),
-        active: p.variants({ first: segActive(0), second: segActive(1), third: segActive(2) }),
-      },
-      root: { dir: "row", w: 350, pad: 3, gap: 2, radius: r("md"), fill: c("subtle") },
-    },
-    (root) => {
-      segLabels.forEach((l, i) => {
-        const it = b.row(root, l, {
-          key: `SgI${i + 1}`,
-          w: (350 - 6 - 4) / 3,
-          pad: [7, 0],
-          justify: "center",
-          radius: 9,
-          fill: i === 0 ? c("surface") : c("subtle"),
-          ...(i === 0 ? { effects: b.shadow("card") } : {}),
-        })
-        b.text(it, l, b.ty("label", { size: 13 }), i === 0 ? ink : muted, { key: `SgL${i + 1}` })
-      })
-    },
-  )
-
-  const input = b.component(
-    "Input",
-    {
-      key: "Input",
-      section: "Actions",
-      props: {
-        label: p.text("InLbl", "Label"),
-        showLabel: p.bool("InLbl", true),
-        value: p.text("InVal", "Value"),
-        icon: p.bool("InIcon", false),
-        tone: p.variants({
-          value: { "InVal.fill": ink },
-          placeholder: { "InVal.fill": muted },
-        }),
-      },
-      root: { dir: "column", w: 350, gap: 6 },
-    },
-    (root) => {
-      b.text(root, "Label", b.ty("label", { size: 13 }), c("ink-2"), { key: "InLbl" })
-      const field = b.row(root, "Field", {
-        w: FILL,
-        gap: 10,
-        align: "center",
-        pad: [12, 14],
-        radius: r("md"),
-        fill: c("surface"),
-        stroke: { paint: c("border") },
-      })
-      b.icon(field, "search", 18, muted, { key: "InIcon", visible: false })
-      b.text(field, "Value", b.ty("body"), ink, { key: "InVal", w: FILL, grow: "fixed-width" })
-    },
-  )
 
   // --- Components: navigation --------------------------------------------------------------------
 
@@ -451,14 +439,15 @@ function build(b: TemplateBuilder) {
     {
       key: "NavHead",
       section: "Navigation",
+      description: "Pushed screen: back, centered title, optional trailing action.",
       props: {
         title: p.text("NhTitle", "Title"),
         showAction: p.bool("NhActW", true),
       },
-      root: { dir: "row", w: W, gap: 12, align: "center", pad: [8, 20] },
+      root: { dir: "row", w: W, gap: 12, align: "center", pad: [4, 20] },
     },
     (root) => {
-      b.use(root, iconBtn, { key: "NhBack" })
+      b.use(root, iconBtn, { key: "NhBack", args: { variant: "plain" } })
       b.text(root, "Title", b.ty("heading", { align: "center" }), ink, {
         key: "NhTitle",
         name: "Title",
@@ -467,7 +456,11 @@ function build(b: TemplateBuilder) {
       })
       const slot = b.row(root, "Action slot", { w: 40, h: 40 })
       const act = b.row(slot, "Action", { key: "NhActW" })
-      b.use(act, iconBtn, { key: "NhAct", set: { IbIcon: { icon: "ellipsis" } } })
+      b.use(act, iconBtn, {
+        key: "NhAct",
+        args: { variant: "plain" },
+        set: { IbIcon: { icon: "share" } },
+      })
     },
   )
 
@@ -481,97 +474,100 @@ function build(b: TemplateBuilder) {
         action: p.text("ShAct", "See all"),
         showAction: p.bool("ShAct", true),
       },
-      root: { dir: "row", w: 350, align: "center", justify: "between" },
+      root: { dir: "row", w: CW, align: "center", justify: "between" },
     },
     (root) => {
       b.text(root, "Section", b.ty("heading"), ink, { key: "ShTitle", name: "Title" })
-      b.text(root, "See all", b.ty("label"), c("accent"), { key: "ShAct", name: "Action" })
+      b.text(root, "See all", b.ty("label", { size: 14, weight: 600 }), c("accent"), {
+        key: "ShAct",
+        name: "Action",
+      })
+    },
+  )
+
+  const dayHead = b.component(
+    "Day header",
+    {
+      key: "DayHead",
+      section: "Navigation",
+      description: "Date group header with the day's net total, as in Monzo.",
+      props: { day: p.text("DhDay", "Today"), total: p.text("DhTot", "−$0.00") },
+      root: { dir: "row", w: CW, align: "center", justify: "between", pad: [0, 0, 4, 0] },
+    },
+    (root) => {
+      b.text(root, "Today", b.ty("small", { weight: 600 }), c("ink-2"), { key: "DhDay" })
+      b.text(root, "−$0.00", b.ty("small", { weight: 500 }), muted, { key: "DhTot" })
     },
   )
 
   // --- Components: content -----------------------------------------------------------------------
 
-  const avatar = b.component(
-    "Avatar",
+  const money = b.component(
+    "Money",
     {
-      key: "Avatar",
+      key: "Money",
       section: "Content",
+      description:
+        "Amount with the cents set smaller and aligned on the baseline. Size xl, lg or md; tone ink, slab or credit.",
       props: {
-        initials: p.text("AvInit", "DR"),
+        whole: p.text("MnInt", "$8,214"),
+        cents: p.text("MnCents", ".37"),
         size: p.variants({
-          sm: { "root.w": 40, "root.h": 40, "AvInit.style/size": 14 },
-          md: { "root.w": 52, "root.h": 52, "AvInit.style/size": 17 },
+          xl: { "MnInt.style/size": 56, "MnCents.style/size": 28 },
+          lg: { "MnInt.style/size": 40, "MnCents.style/size": 22 },
+          md: { "MnInt.style/size": 28, "MnCents.style/size": 17 },
         }),
         tone: p.variants({
-          blue: { "root.fill": c("cat-1-soft"), "AvInit.fill": c("cat-1") },
-          green: { "root.fill": c("cat-2-soft"), "AvInit.fill": c("cat-2") },
-          amber: { "root.fill": c("cat-3-soft"), "AvInit.fill": c("cat-3") },
-          pink: { "root.fill": c("cat-4-soft"), "AvInit.fill": c("cat-4") },
+          ink: { "MnInt.fill": ink, "MnCents.fill": muted },
+          slab: { "MnInt.fill": c("on-slab"), "MnCents.fill": c("slab-muted") },
+          credit: { "MnInt.fill": c("credit"), "MnCents.fill": c("credit") },
         }),
+      },
+      root: { dir: "row", align: "baseline", gap: 1 },
+    },
+    (root) => {
+      b.text(root, "$8,214", b.ty("amount"), ink, { key: "MnInt", name: "Whole" })
+      b.text(root, ".37", b.ty("amount", { size: 28, letterSpacing: -0.6 }), muted, {
+        key: "MnCents",
+        name: "Cents",
+      })
+    },
+  )
+
+  const monoTones = {
+    neutral: { "root.fill": c("subtle"), "MgText.fill": c("ink-2") },
+    accent: { "root.fill": c("accent-soft"), "MgText.fill": c("accent") },
+    ink: { "root.fill": ink, "MgText.fill": c("bg") },
+  }
+  const monogram = b.component(
+    "Monogram",
+    {
+      key: "Mono",
+      section: "Content",
+      description: "Merchant or person monogram. One tone per meaning, not per category.",
+      props: {
+        initials: p.text("MgText", "GG"),
+        size: p.variants({
+          sm: { "root.w": 40, "root.h": 40, "MgText.style/size": 13 },
+          md: { "root.w": 44, "root.h": 44, "MgText.style/size": 14 },
+          lg: { "root.w": 72, "root.h": 72, "MgText.style/size": 22 },
+        }),
+        tone: p.variants(monoTones),
       },
       root: {
         dir: "row",
-        w: 40,
-        h: 40,
+        w: 44,
+        h: 44,
         align: "center",
         justify: "center",
         radius: r("pill"),
-        fill: c("cat-1-soft"),
+        fill: c("subtle"),
       },
-    },
-    (root) => b.text(root, "DR", b.ty("label"), c("cat-1"), { key: "AvInit" }),
-  )
-
-  const badge = b.component(
-    "Badge",
-    {
-      key: "Badge",
-      section: "Content",
-      props: {
-        label: p.text("BdgLbl", "Badge"),
-        tone: p.variants({
-          positive: { "root.fill": c("positive-soft"), "BdgLbl.fill": c("positive") },
-          accent: { "root.fill": c("accent-soft"), "BdgLbl.fill": c("accent") },
-          neutral: { "root.fill": c("subtle"), "BdgLbl.fill": c("ink-2") },
-          ice: { "root.fill": c("ice"), "BdgLbl.fill": ink },
-        }),
-      },
-      root: { dir: "row", pad: [4, 10], radius: r("pill"), fill: c("positive-soft") },
     },
     (root) =>
-      b.text(root, "Badge", b.ty("caption", { size: 12 }), c("positive"), {
-        key: "BdgLbl",
-        name: "Label",
+      b.text(root, "GG", b.ty("label", { size: 14, weight: 650, letterSpacing: 0.2 }), c("ink-2"), {
+        key: "MgText",
       }),
-  )
-
-  const contact = b.component(
-    "Contact",
-    {
-      key: "Contact",
-      section: "Content",
-      props: {
-        name: p.text("CtName", "Name"),
-        initials: p.text("CtAv/AvInit", "PS"),
-        state: p.variants({
-          default: { "CtRing.stroke": { paint: c("bg"), width: 2 }, "CtName.fill": c("ink-2") },
-          selected: { "CtRing.stroke": { paint: c("accent"), width: 2 }, "CtName.fill": ink },
-        }),
-      },
-      root: { dir: "column", w: 72, gap: 6, align: "center" },
-    },
-    (root) => {
-      const ringF = b.row(root, "Ring", {
-        key: "CtRing",
-        pad: 3,
-        radius: r("pill"),
-        stroke: { paint: c("bg"), width: 2 },
-      })
-      b.use(ringF, avatar, { key: "CtAv", args: { size: "md" } })
-      b.text(root, "Name", b.ty("small", { weight: 500, align: "center" }), c("ink-2"), {
-        key: "CtName",
-      })
-    },
   )
 
   const bankCard = b.component(
@@ -579,7 +575,8 @@ function build(b: TemplateBuilder) {
     {
       key: "BCard",
       section: "Content",
-      description: "Debit card face; the frozen state greys it and shows the snowflake.",
+      description:
+        "Debit card: flat dark face with ripple lines. Frozen swaps to a frosted face with dark text.",
       props: {
         name: p.text("BcName", "Daniel Reyes"),
         last4: p.text("BcNum", "•••• 4821"),
@@ -587,127 +584,121 @@ function build(b: TemplateBuilder) {
         kind: p.text("BcKind", "Everyday debit"),
         state: p.variants({
           active: {
-            "root.fill": grad("card-1", "card-2", 120),
+            "root.fill": c("card-fill"),
             "BcFrozen.visible": false,
-            "BcKind.fill": c("on-card-muted"),
+            "BcRip1.stroke": { paint: c("card-line"), width: 1 },
+            "BcRip2.stroke": { paint: c("card-line"), width: 1 },
+            "BcRip3.stroke": { paint: c("card-line"), width: 1 },
+            "BcWord.fill": c("on-card"),
+            "BcNfc.color": c("on-card"),
+            "BcNum.fill": c("on-card"),
+            "BcName.fill": c("on-card"),
+            "BcKind.fill": c("card-muted"),
+            "BcExp.fill": c("on-card"),
           },
           frozen: {
-            "root.fill": grad("card-frost-1", "card-frost-2", 120),
+            "root.fill": c("frost"),
             "BcFrozen.visible": true,
-            "BcKind.fill": c("on-card"),
+            "BcRip1.stroke": { paint: c("frost-line"), width: 1 },
+            "BcRip2.stroke": { paint: c("frost-line"), width: 1 },
+            "BcRip3.stroke": { paint: c("frost-line"), width: 1 },
+            "BcWord.fill": c("on-frost"),
+            "BcNfc.color": c("on-frost"),
+            "BcNum.fill": c("on-frost"),
+            "BcName.fill": c("on-frost"),
+            "BcKind.fill": c("on-frost"),
+            "BcExp.fill": c("on-frost"),
           },
         }),
       },
       root: {
         dir: "column",
-        w: 350,
-        h: 206,
+        w: CW,
+        h: 220,
         justify: "between",
-        pad: [20, 22],
+        pad: 22,
         radius: r("card"),
-        fill: grad("card-1", "card-2", 120),
-        effects: b.shadow("lifted"),
+        clip: true,
+        fill: c("card-fill"),
       },
     },
     (root) => {
+      const ripple = (key: string, size: number) =>
+        b.ellipse(root, "Ripple", {
+          key,
+          x: 330 - size / 2,
+          y: 230 - size / 2,
+          w: size,
+          h: size,
+          position: "absolute",
+          meta: overlay,
+          stroke: { paint: c("card-line"), width: 1 },
+        })
+      ripple("BcRip1", 150)
+      ripple("BcRip2", 250)
+      ripple("BcRip3", 350)
       const top = b.row(root, "Top", { w: FILL, align: "center", justify: "between" })
-      const brand = b.row(top, "Brand", { gap: 8, align: "center" })
-      b.icon(brand, "waves", 20, c("on-card"))
-      b.text(brand, "Tidewell", b.ty("heading", { weight: 700 }), c("on-card"))
-      const fz = b.row(top, "Frozen", {
+      b.text(
+        top,
+        "tidewell",
+        b.ty("heading", { size: 20, weight: 700, letterSpacing: -0.6 }),
+        c("on-card"),
+        {
+          key: "BcWord",
+        },
+      )
+      b.icon(top, "nfc", 22, c("on-card"), { key: "BcNfc" })
+      const bottom = b.row(root, "Bottom", { w: FILL, align: "end", justify: "between" })
+      const left = b.col(bottom, "Holder", { gap: 6 })
+      b.text(left, "Everyday debit", b.ty("micro"), c("card-muted"), { key: "BcKind" })
+      b.text(left, "•••• 4821", b.ty("mono", { size: 18, letterSpacing: 1 }), c("on-card"), {
+        key: "BcNum",
+      })
+      b.text(left, "Daniel Reyes", b.ty("label", { size: 14 }), c("on-card"), { key: "BcName" })
+      const right = b.col(bottom, "Meta", { gap: 8, align: "end" })
+      const fz = b.row(right, "Frozen", {
         key: "BcFrozen",
-        gap: 6,
+        gap: 5,
         align: "center",
-        pad: [4, 10],
+        pad: [4, 9],
         radius: r("pill"),
-        fill: c("ice"),
+        fill: ink,
         visible: false,
       })
-      b.icon(fz, "snowflake", 14, ink)
-      b.text(fz, "Frozen", b.ty("caption", { size: 12 }), ink)
-      const mid = b.row(root, "Middle", { w: FILL, align: "center", justify: "between" })
-      const chip = b.row(mid, "Chip", {
-        w: 40,
-        h: 30,
-        radius: 6,
-        clip: true,
-        fill: grad("chip", "chip-2", 120),
-        stroke: { paint: c("chip-line"), width: 0.75 },
-      })
-      const pads = (name: string) => {
-        const col = b.col(chip, name, { w: FILL, h: FILL, gap: 9, justify: "center" })
-        b.rect(col, "Line", { w: FILL, h: 1, fill: c("chip-line") })
-        b.rect(col, "Line", { w: FILL, h: 1, fill: c("chip-line") })
-      }
-      pads("Left contacts")
-      const center = b.row(chip, "Center pad", { h: FILL, gap: 12 })
-      b.rect(center, "Edge", { w: 1, h: FILL, fill: c("chip-line") })
-      b.rect(center, "Edge", { w: 1, h: FILL, fill: c("chip-line") })
-      pads("Right contacts")
-      b.icon(mid, "nfc", 24, c("on-card"))
-      const bottom = b.row(root, "Bottom", { w: FILL, align: "end", justify: "between" })
-      const left = b.col(bottom, "Holder", { gap: 4 })
-      b.text(left, "•••• 4821", b.ty("mono", { size: 16 }), c("on-card"), { key: "BcNum" })
-      b.text(left, "Daniel Reyes", b.ty("label"), c("on-card"), { key: "BcName" })
-      const right = b.col(bottom, "Meta", { gap: 4, align: "end" })
-      b.text(right, "Everyday debit", b.ty("caption"), c("on-card-muted"), { key: "BcKind" })
+      b.icon(fz, "snowflake", 12, c("bg"))
+      b.text(fz, "Frozen", b.ty("micro", { size: 10 }), c("bg"))
       b.text(right, "09/29", b.ty("mono"), c("on-card"), { key: "BcExp" })
     },
   )
-
-  const cats = {
-    groceries: ["cat-2-soft", "cat-2", "shopping-basket"],
-    dining: ["cat-3-soft", "cat-3", "coffee"],
-    transport: ["cat-5-soft", "cat-5", "bus"],
-    bills: ["cat-6-soft", "ink-2", "zap"],
-    income: ["positive-soft", "positive", "briefcase"],
-    transfer: ["cat-1-soft", "cat-1", "arrow-left-right"],
-    shopping: ["cat-4-soft", "cat-4", "shopping-bag"],
-    rent: ["cat-1-soft", "cat-1", "house"],
-  } as const
-  type Cat = keyof typeof cats
-  const catVariants = (tile: string, icon: string) =>
-    p.variants(
-      Object.fromEntries(
-        Object.entries(cats).map(([k, [soft, strong, ic]]) => [
-          k,
-          { [`${tile}.fill`]: c(soft), [`${icon}.color`]: c(strong), [`${icon}.icon`]: ic },
-        ]),
-      ),
-    )
 
   const txRow = b.component(
     "Transaction row",
     {
       key: "Tx",
       section: "Content",
+      description:
+        "Monogram, merchant and meta, amount with small cents. Credits are green with +.",
       props: {
         name: p.text("TxName", "Merchant"),
-        meta: p.text("TxMeta", "Groceries · 12:14"),
-        amount: p.text("TxAmt", "−$0.00"),
-        category: catVariants("TxTile", "TxIcon"),
+        meta: p.text("TxMeta", "Groceries · 9:12"),
+        whole: p.text("TxInt", "−$0"),
+        cents: p.text("TxCents", ".00"),
+        initials: p.text("TxMono/MgText", "MM"),
         direction: p.variants({
-          out: { "TxAmt.fill": ink },
-          in: { "TxAmt.fill": c("positive") },
+          out: { "TxInt.fill": ink, "TxCents.fill": muted },
+          in: { "TxInt.fill": c("credit"), "TxCents.fill": c("credit") },
         }),
       },
-      root: { dir: "row", w: 350, gap: 12, align: "center", pad: [10, 0] },
+      root: { dir: "row", w: CW, gap: 14, align: "center", pad: [10, 0] },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        key: "TxTile",
-        w: 44,
-        h: 44,
-        radius: r("md"),
-        align: "center",
-        justify: "center",
-        fill: c("cat-2-soft"),
-      })
-      b.icon(tile, "shopping-basket", 20, c("cat-2"), { key: "TxIcon" })
+      b.use(root, monogram, { key: "TxMono" })
       const t = b.col(root, "Text", { w: FILL, gap: 2 })
-      b.text(t, "Merchant", b.ty("label", { size: 15, weight: 500 }), ink, { key: "TxName" })
-      b.text(t, "Groceries · 12:14", b.ty("small"), muted, { key: "TxMeta" })
-      b.text(root, "−$0.00", b.ty("label", { size: 15, align: "right" }), ink, { key: "TxAmt" })
+      b.text(t, "Merchant", b.ty("label", { size: 16 }), ink, { key: "TxName" })
+      b.text(t, "Groceries · 9:12", b.ty("small"), muted, { key: "TxMeta" })
+      const amt = b.row(root, "Amount", { align: "baseline", gap: 1 })
+      b.text(amt, "−$0", b.ty("row"), ink, { key: "TxInt" })
+      b.text(amt, ".00", b.ty("small", { size: 13, weight: 500 }), muted, { key: "TxCents" })
     },
   )
 
@@ -716,87 +707,97 @@ function build(b: TemplateBuilder) {
     {
       key: "Detail",
       section: "Content",
-      props: { label: p.text("DtLbl", "Label"), value: p.text("DtVal", "Value") },
+      description: "Label left, value right, as in Lloyds transaction details.",
+      props: {
+        label: p.text("DtLbl", "Label"),
+        value: p.text("DtVal", "Value"),
+        mono: p.variants({
+          text: { "DtVal.style": b.ty("label", { align: "right" }) },
+          code: { "DtVal.style": b.ty("mono", { size: 14, align: "right" }) },
+        }),
+      },
       root: {
         dir: "row",
-        w: 350,
+        w: CW,
         gap: 16,
         align: "center",
         justify: "between",
-        pad: [13, 16],
-        stroke: { paint: c("border"), width: { b: 1 } },
+        pad: [14, 16],
       },
     },
     (root) => {
       b.text(root, "Label", b.ty("body"), muted, { key: "DtLbl" })
-      b.text(root, "Value", b.ty("body", { weight: 500, align: "right" }), ink, { key: "DtVal" })
+      b.text(root, "Value", b.ty("label", { align: "right" }), ink, { key: "DtVal" })
     },
   )
 
-  const categoryRow = b.component(
+  const catRow = b.component(
     "Category row",
     {
       key: "CatRow",
       section: "Content",
-      description: "Spend per category. Set the bar's Done and Left weights to the share.",
+      description:
+        "Spend per category with a hairline share bar (Wise). Set the bar's Done and Left weights to the share.",
       props: {
         name: p.text("CrName", "Category"),
         amount: p.text("CrAmt", "$0.00"),
-        share: p.text("CrPct", "0%"),
-        category: catVariants("CrTile", "CrIcon"),
-        bar: p.variants(
-          Object.fromEntries(
-            (["cat-1", "cat-2", "cat-3", "cat-4", "cat-5", "cat-6"] as const).map((k) => [
-              k,
-              { "CrDone.fill": c(k) },
-            ]),
-          ),
-        ),
       },
-      root: { dir: "row", w: 350, gap: 12, align: "center", pad: [10, 0] },
+      root: { dir: "row", w: CW, gap: 14, align: "center", pad: [11, 0] },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        key: "CrTile",
+      const tile = b.row(root, "Icon", {
         w: 40,
         h: 40,
-        radius: r("md"),
+        radius: r("pill"),
         align: "center",
         justify: "center",
-        fill: c("cat-1-soft"),
+        fill: c("subtle"),
       })
-      b.icon(tile, "house", 18, c("cat-1"), { key: "CrIcon" })
-      const t = b.col(root, "Text", { w: FILL, gap: 8 })
-      const line = b.row(t, "Line", { w: FILL, justify: "between", align: "center" })
-      b.text(line, "Category", b.ty("label", { size: 15, weight: 500 }), ink, { key: "CrName" })
-      const right = b.row(line, "Amounts", { gap: 8, align: "center" })
-      b.text(right, "0%", b.ty("small"), muted, { key: "CrPct" })
-      b.text(right, "$0.00", b.ty("label", { size: 15 }), ink, { key: "CrAmt" })
+      b.icon(tile, "house", 18, c("ink-2"), { key: "CrIcon" })
+      const t = b.col(root, "Text", { w: FILL, gap: 7 })
+      const line = b.row(t, "Line", { w: FILL, justify: "between", align: "baseline" })
+      b.text(line, "Category", b.ty("label", { size: 16 }), ink, { key: "CrName" })
+      b.text(line, "$0.00", b.ty("row"), ink, { key: "CrAmt" })
       const bar = b.row(t, "Bar", {
         w: FILL,
-        h: 6,
+        h: 4,
         radius: r("pill"),
         fill: c("subtle"),
         clip: true,
       })
-      b.rect(bar, "Done", {
-        key: "CrDone",
-        w: { mode: "fill", weight: 50 },
-        h: 6,
-        fill: c("cat-1"),
-      })
-      b.rect(bar, "Left", {
-        key: "CrLeft",
-        w: { mode: "fill", weight: 50 },
-        h: 6,
-        fill: c("subtle"),
-      })
+      b.rect(bar, "Done", { key: "CrDone", w: fill(50), h: 4, fill: c("accent") })
+      b.rect(bar, "Left", { key: "CrLeft", w: fill(50), h: 4, fill: c("subtle") })
     },
   )
   const share = (n: number) => ({
     CrDone: { w: { mode: "fill", weight: n } },
     CrLeft: { w: { mode: "fill", weight: 100 - n } },
   })
+
+  const monthBar = b.component(
+    "Month bar",
+    {
+      key: "MBar",
+      section: "Content",
+      description:
+        "One month of the spending chart: a pill rising from the axis. Set MbPill height to value / max × 150.",
+      props: {
+        month: p.text("MbLbl", "Sep"),
+        state: p.variants({
+          default: { "MbPill.fill": c("bar-dim"), "MbLbl.fill": muted },
+          selected: { "MbPill.fill": c("accent"), "MbLbl.fill": ink },
+        }),
+      },
+      root: { dir: "column", w: 40, gap: 8, align: "center" },
+    },
+    (root) => {
+      const track = b.col(root, "Track", { w: FILL, h: 150, justify: "end", align: "center" })
+      b.rect(track, "Pill", { key: "MbPill", w: 32, h: 100, radius: 16, fill: c("bar-dim") })
+      b.text(root, "Sep", b.ty("small", { size: 12, weight: 500, align: "center" }), muted, {
+        key: "MbLbl",
+      })
+    },
+  )
 
   const settingRow = b.component(
     "Setting row",
@@ -806,29 +807,21 @@ function build(b: TemplateBuilder) {
       description: "List row with a value and chevron, or a toggle.",
       props: {
         label: p.text("SrLbl", "Setting"),
-        detail: p.text("SrDet", "Detail"),
-        showDetail: p.bool("SrDet", false),
         value: p.text("SrVal", "Value"),
         showValue: p.bool("SrVal", true),
         showChevron: p.bool("SrChev", true),
         showToggle: p.bool("SrTgWrap", false),
         toggle: p.swap("SrToggle", toggle),
       },
-      root: { dir: "row", w: 350, gap: 12, align: "center", pad: [12, 14] },
+      root: { dir: "row", w: CW, gap: 14, align: "center", pad: [14, 16] },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        w: 34,
-        h: 34,
-        radius: r("sm"),
-        align: "center",
-        justify: "center",
-        fill: c("subtle"),
+      b.icon(root, "lock", 20, c("ink-2"), { key: "SrIcon" })
+      b.text(root, "Setting", b.ty("label", { size: 16 }), ink, {
+        key: "SrLbl",
+        w: FILL,
+        grow: "fixed-width",
       })
-      b.icon(tile, "lock", 17, c("ink-2"), { key: "SrIcon" })
-      const t = b.col(root, "Text", { w: FILL, gap: 1 })
-      b.text(t, "Setting", b.ty("body", { weight: 500 }), ink, { key: "SrLbl" })
-      b.text(t, "Detail", b.ty("small"), muted, { key: "SrDet", visible: false })
       b.text(root, "Value", b.ty("body"), muted, { key: "SrVal" })
       b.icon(root, "chevron-right", 18, muted, { key: "SrChev" })
       const tw = b.row(root, "Toggle", { key: "SrTgWrap", visible: false })
@@ -839,24 +832,31 @@ function build(b: TemplateBuilder) {
   // --- Screen helpers ----------------------------------------------------------------------------
 
   const page = b.page("Screens")
-  type TabKey = "home" | "activity" | "cards" | "insights"
+  type TabKey = "home" | "activity" | "send" | "cards" | "insights"
   function screen(
     name: string,
     opts: {
       tab?: TabKey
+      slab?: boolean
       pad?: number[]
       gap?: number
       header?: (scr: string) => void
     } = {},
   ) {
-    const scr = b.screen(page, name, { dir: "column", w: W, h: H, clip: true, fill: c("bg") })
-    b.use(scr, statusBar, { props: { w: FILL } })
+    const scr = b.screen(page, name, {
+      dir: "column",
+      w: W,
+      h: H,
+      clip: true,
+      fill: opts.slab ? c("slab") : c("bg"),
+    })
+    b.use(scr, statusBar, { props: { w: FILL }, args: { tone: opts.slab ? "slab" : "ink" } })
     opts.header?.(scr)
     const content = b.col(scr, "Content", {
       w: FILL,
       h: FILL,
-      gap: opts.gap ?? s(6),
-      pad: opts.pad ?? [8, 20, 20, 20],
+      gap: opts.gap ?? 16,
+      pad: opts.pad ?? [8, 20, 16, 20],
       clip: true,
     })
     const bottom = (fn?: (into: string) => void) => {
@@ -864,10 +864,10 @@ function build(b: TemplateBuilder) {
       else {
         const bar = b.col(scr, "Bottom bar", { w: FILL, gap: 0 })
         if (fn) {
-          const inner = b.col(bar, "Actions", { w: FILL, gap: 10, pad: [12, 20, 4, 20] })
+          const inner = b.col(bar, "Actions", { w: FILL, gap: 4, pad: [8, 20, 4, 20] })
           fn(inner)
         }
-        b.use(bar, homeBar, { props: { w: FILL } })
+        b.use(bar, homeBar, { props: { w: FILL }, args: { tone: opts.slab ? "slab" : "ink" } })
       }
     }
     return { scr, content, bottom }
@@ -878,21 +878,27 @@ function build(b: TemplateBuilder) {
       args: { title, ...(action ? {} : { showAction: false }) },
       ...(action ? { set: { "NhAct/IbIcon": { icon: action } } } : {}),
     })
-  function keypad(parent: string, faceId: boolean, h = 56) {
-    const pad = b.col(parent, "Keypad", { w: FILL, gap: 4 })
+  const group = (parent: string, name: string) =>
+    b.col(parent, name, { w: FILL, radius: r("card"), fill: c("surface"), clip: true })
+  const divide = (parent: string) => b.divider(parent, c("border"))
+  function keypad(parent: string, left: "face" | "dot", slab: boolean, h = 56) {
+    const pad = b.col(parent, "Keypad", { w: FILL, gap: 2 })
     const rows = [
       ["1", "2", "3"],
       ["4", "5", "6"],
       ["7", "8", "9"],
-      [faceId ? "face" : ".", "0", "del"],
+      [left, "0", "del"],
     ]
     for (const [i, keys] of rows.entries()) {
-      const row = b.row(pad, `Row ${i + 1}`, { w: FILL, justify: "between" })
+      const row = b.row(pad, `Row ${i + 1}`, { w: FILL, justify: "between", pad: [0, 3] })
       for (const k of keys) {
         const icon = k === "face" ? "scan-face" : k === "del" ? "delete" : null
         b.use(row, keypadKey, {
-          props: { w: 116, h },
-          args: icon ? { kind: "icon" } : { digit: k },
+          props: { h },
+          args: {
+            ...(icon ? { kind: "icon" } : { digit: k === "dot" ? "." : k }),
+            tone: slab ? "slab" : "ink",
+          },
           ...(icon ? { set: { KeyIcon: { icon } } } : {}),
         })
       }
@@ -901,19 +907,85 @@ function build(b: TemplateBuilder) {
 
   // --- Data --------------------------------------------------------------------------------------
 
-  const txs: [string, string, string, Cat, "in" | "out"][] = [
-    ["Greenline Grocers", "Groceries · 12:14", "−$64.20", "groceries", "out"],
-    ["Northside Coffee", "Dining · 8:02", "−$4.75", "dining", "out"],
-    ["Fernhill Studio", "Salary · Yesterday", "+$3,120.00", "income", "in"],
-    ["Portland Transit", "Transport · Yesterday", "−$2.80", "transport", "out"],
-    ["Priya Shah", "Paid your request · Sun", "+$42.00", "transfer", "in"],
-    ["Lumen Electric", "Bills · Sun", "−$88.34", "bills", "out"],
-  ]
-  const tx = (parent: string, i: number, meta?: string) => {
-    const [name, m, amount, category, direction] = txs[i] as (typeof txs)[number]
+  type Tx = {
+    name: string
+    meta: string
+    whole: string
+    cents: string
+    mono: string
+    dir: "in" | "out"
+  }
+  const T: Record<string, Tx> = {
+    grocers: {
+      name: "Greenline Grocers",
+      meta: "Groceries · 9:12",
+      whole: "−$64",
+      cents: ".20",
+      mono: "GG",
+      dir: "out",
+    },
+    coffee: {
+      name: "Northside Coffee",
+      meta: "Dining · 8:02",
+      whole: "−$4",
+      cents: ".75",
+      mono: "NC",
+      dir: "out",
+    },
+    salary: {
+      name: "Fernhill Studio",
+      meta: "Salary · 9:00",
+      whole: "+$3,120",
+      cents: ".00",
+      mono: "FS",
+      dir: "in",
+    },
+    transit: {
+      name: "Portland Transit",
+      meta: "Transport · 17:41",
+      whole: "−$2",
+      cents: ".80",
+      mono: "PT",
+      dir: "out",
+    },
+    priya: {
+      name: "Priya Shah",
+      meta: "Paid your request · 19:20",
+      whole: "+$42",
+      cents: ".00",
+      mono: "PS",
+      dir: "in",
+    },
+    lumen: {
+      name: "Lumen Electric",
+      meta: "Bills · Autopay",
+      whole: "−$88",
+      cents: ".34",
+      mono: "LE",
+      dir: "out",
+    },
+    books: {
+      name: "Marlow Books",
+      meta: "Shopping · 14:05",
+      whole: "−$23",
+      cents: ".50",
+      mono: "MB",
+      dir: "out",
+    },
+  }
+  const tx = (parent: string, key: keyof typeof T, meta?: string) => {
+    const t = T[key] as Tx
     b.use(parent, txRow, {
       props: { w: FILL },
-      args: { name, meta: meta ?? m, amount, category, direction },
+      args: {
+        name: t.name,
+        meta: meta ?? t.meta,
+        whole: t.whole,
+        cents: t.cents,
+        initials: t.mono,
+        direction: t.dir,
+      },
+      set: { TxMono: { args: { initials: t.mono, tone: t.dir === "in" ? "accent" : "neutral" } } },
     })
   }
 
@@ -923,7 +995,7 @@ function build(b: TemplateBuilder) {
     eyebrow: "Mobile app template",
     title: "Tidewell personal banking",
     description:
-      "Passcode sign-in, balances and cards, transactions, a receipt, sending money, a frozen card and monthly insights for an iPhone banking app. Built from 21 components with light and dark tokens.",
+      "Passcode sign-in, a balance slab, grouped activity, a receipt, sending money, a frozen card and monthly insights for an iPhone bank. Light and dark tokens, one accent, no gradients.",
     preview: (area) => {
       const row = b.row(area, "Phones", {
         w: FILL,
@@ -936,8 +1008,8 @@ function build(b: TemplateBuilder) {
         b.col(row, name, {
           w: 300,
           h: 560,
-          gap: 16,
-          pad: [24, 16],
+          gap: 14,
+          pad: [20, 16],
           radius: 40,
           clip: true,
           fill: c("bg"),
@@ -946,173 +1018,183 @@ function build(b: TemplateBuilder) {
           ...(dark ? { theme: { mode: "dark" } } : {}),
         })
       const a = phone("Home", false)
-      const bal = b.col(a, "Balance", { w: FILL, gap: 2 })
-      b.text(bal, "Total balance", b.ty("small"), muted)
-      b.text(bal, "$8,214.37", b.ty("balance", { size: 32 }), ink)
-      b.use(a, bankCard, { props: { w: FILL, h: 168 } })
-      const qa = b.row(a, "Actions", { w: FILL, justify: "between" })
-      for (const [label, icon] of [
-        ["Send", "send"],
-        ["Request", "hand-coins"],
-        ["Top up", "plus"],
-      ] as const)
-        b.use(qa, quickAction, { args: { label }, set: { QaIcon: { icon } } })
-      const list = b.col(a, "Recent", { w: FILL, gap: 0 })
-      tx(list, 0)
-      tx(list, 2)
-      const d = phone("Insights", true)
-      const ih = b.col(d, "Heading", { w: FILL, gap: 2 })
-      b.text(ih, "Spent in September", b.ty("small"), muted)
-      b.text(ih, "$2,846.10", b.ty("balance", { size: 32 }), ink)
-      b.use(ih, badge, { args: { label: "12% less than August", tone: "positive" } })
-      const stack = b.row(d, "Split", { w: FILL, h: 8, gap: 3 })
-      for (const [k, v] of [
-        ["cat-1", 1450],
-        ["cat-2", 612],
-        ["cat-3", 319],
-        ["cat-4", 221],
-        ["cat-5", 164],
-        ["cat-6", 80],
-      ] as const)
-        b.rect(stack, k, { w: { mode: "fill", weight: v }, h: 8, radius: 4, fill: c(k) })
-      const cl = b.col(d, "Categories", { w: FILL, gap: 0 })
-      for (const [name, amount, pct, cat, bar, n] of [
-        ["Rent", "$1,450.00", "51%", "rent", "cat-1", 51],
-        ["Groceries", "$612.40", "22%", "groceries", "cat-2", 22],
-        ["Dining", "$318.75", "11%", "dining", "cat-3", 11],
-        ["Shopping", "$221.35", "8%", "shopping", "cat-4", 8],
-        ["Transport", "$164.20", "6%", "transport", "cat-5", 6],
-      ] as const)
-        b.use(cl, categoryRow, {
-          props: { w: FILL },
-          args: { name, amount, share: pct, category: cat, bar },
-          set: share(n),
-          hide: ["CrPct"],
-        })
-      const tip = b.row(d, "Tip", {
+      const slab = b.col(a, "Slab", {
         w: FILL,
-        gap: 10,
-        align: "start",
-        pad: 12,
-        radius: r("md"),
-        fill: c("accent-soft"),
+        gap: 14,
+        pad: 18,
+        radius: r("slab"),
+        fill: c("slab"),
       })
-      b.icon(tip, "coffee", 16, c("accent"))
-      b.para(tip, "Dining is down $86 from August.", b.ty("small"), ink)
+      b.text(slab, "Everyday account", b.ty("small"), c("slab-muted"))
+      b.use(slab, money, { args: { size: "xl", tone: "slab" } })
+      const pills = b.row(slab, "Actions", { gap: 8 })
+      b.use(pills, slabPill, { args: { label: "Add money" } })
+      b.use(pills, slabPill, { args: { label: "Card" }, set: { SpIcon: { icon: "credit-card" } } })
+      const list = b.col(a, "Recent", { w: FILL, gap: 0 })
+      b.use(list, dayHead, { props: { w: FILL }, args: { day: "Today", total: "−$68.95" } })
+      tx(list, "grocers")
+      tx(list, "coffee")
+      tx(list, "salary", "Salary · Monday")
+      const d = phone("Insights", true)
+      const ih = b.col(d, "Heading", { w: FILL, gap: 6 })
+      b.text(ih, "Spent in September", b.ty("small"), muted)
+      b.use(ih, money, { args: { whole: "$2,846", cents: ".10", size: "lg" } })
+      const bars = b.row(d, "Months", { w: FILL, justify: "between", pad: [8, 4, 0, 4] })
+      for (const [m, h, st] of [
+        ["May", 131, "default"],
+        ["Jun", 106, "default"],
+        ["Jul", 138, "default"],
+        ["Aug", 143, "default"],
+        ["Sep", 126, "selected"],
+        ["Oct", 77, "default"],
+      ] as const)
+        b.use(bars, monthBar, { args: { month: m, state: st }, set: { MbPill: { h } } })
+      const cl = b.col(d, "Categories", { w: FILL, gap: 0 })
+      for (const [name, amount, icon, n] of [
+        ["Rent", "$1,450.00", "house", 51],
+        ["Groceries", "$612.40", "shopping-basket", 22],
+      ] as const)
+        b.use(cl, catRow, {
+          props: { w: FILL },
+          args: { name, amount },
+          set: { CrIcon: { icon }, ...share(n) },
+        })
     },
   })
 
   // --- Sign in -----------------------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Sign in", { pad: [8, 20, 8, 20], gap: 0 })
+    const { content, bottom } = screen("Sign in", { slab: true, pad: [8, 20, 8, 20], gap: 0 })
     const top = b.col(content, "Welcome", {
       w: FILL,
       h: FILL,
-      gap: 20,
+      gap: 22,
       align: "center",
       justify: "center",
-      pad: [0, 0, 16, 0],
+      pad: [0, 0, 8, 0],
     })
-    const mark = b.row(top, "Logo", {
-      w: 64,
-      h: 64,
-      radius: r("lg"),
-      align: "center",
-      justify: "center",
-      fill: grad("card-1", "card-2", 120),
-      effects: b.shadow("lifted"),
-    })
-    b.icon(mark, "waves", 30, c("on-card"))
-    const t = b.col(top, "Text", { w: FILL, gap: 6, align: "center" })
-    b.text(t, "Welcome back, Daniel", b.ty("title", { size: 24, align: "center" }), ink)
-    b.text(t, "Enter your 6-digit passcode", b.ty("body", { align: "center" }), muted)
-    const dots = b.row(top, "Passcode", { gap: 16, pad: [12, 0] })
+    const mark = b.row(top, "Ripple mark", { w: 56, h: 56, justify: "center", align: "center" })
+    for (const [size, k] of [
+      [56, "Outer"],
+      [36, "Middle"],
+      [16, "Inner"],
+    ] as const)
+      b.ellipse(mark, k, {
+        w: size,
+        h: size,
+        position: "absolute",
+        x: (56 - size) / 2,
+        y: (56 - size) / 2,
+        meta: overlay,
+        stroke: { paint: c("on-slab"), width: 2 },
+      })
+    const t = b.col(top, "Text", { w: FILL, gap: 8, align: "center" })
+    b.text(t, "Welcome back, Daniel", b.ty("display", { size: 28, align: "center" }), c("on-slab"))
+    b.text(t, "Enter your 6-digit passcode", b.ty("body", { align: "center" }), c("slab-muted"))
+    const dots = b.row(top, "Passcode", { gap: 18, pad: [10, 0] })
     for (let i = 0; i < 6; i++)
       b.ellipse(dots, i < 4 ? "Filled" : "Empty", {
         w: 14,
         h: 14,
-        fill: i < 4 ? c("accent") : c("surface"),
-        stroke: { paint: i < 4 ? c("accent") : c("border"), width: 1.5 },
+        ...(i < 4 ? { fill: c("on-slab") } : {}),
+        stroke: { paint: i < 4 ? c("on-slab") : c("slab-muted"), width: 1.5 },
       })
-    keypad(content, true, 64)
-    const foot = b.row(content, "Links", { w: FILL, justify: "between", pad: [20, 24, 16, 24] })
-    b.text(foot, "Forgot passcode?", b.ty("label"), c("accent"))
-    b.text(foot, "Not Daniel?", b.ty("label"), muted)
+    keypad(content, "face", true, 62)
+    const foot = b.row(content, "Links", { w: FILL, justify: "between", pad: [16, 24, 12, 24] })
+    b.text(foot, "Forgot passcode?", b.ty("label", { size: 14, weight: 600 }), c("on-slab"))
+    b.text(foot, "Not Daniel?", b.ty("label", { size: 14 }), c("slab-muted"))
     bottom()
   }
 
   // --- Home --------------------------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Home", { tab: "home", gap: 22 })
-    const head = b.row(content, "Header", { w: FILL, gap: 12, align: "center" })
-    b.use(head, avatar, { args: { initials: "DR", size: "sm", tone: "blue" } })
-    const ht = b.col(head, "Greeting", { w: FILL, gap: 0 })
-    b.text(ht, "Good morning", b.ty("small"), muted)
-    b.text(ht, "Daniel Reyes", b.ty("heading"), ink)
+    const { content, bottom } = screen("Home", { tab: "home", gap: 16 })
+    const head = b.row(content, "Header", { w: FILL, gap: 10, align: "center" })
+    b.use(head, monogram, { args: { initials: "DR", size: "sm", tone: "accent" } })
+    b.text(head, "Good morning, Daniel", b.ty("label", { size: 15 }), ink, {
+      w: FILL,
+      grow: "fixed-width",
+    })
+    b.use(head, iconBtn, { args: { variant: "surface" }, set: { IbIcon: { icon: "search" } } })
     b.use(head, iconBtn, { args: { variant: "surface" }, set: { IbIcon: { icon: "bell" } } })
-    const bal = b.col(content, "Balance", { w: FILL, gap: 4 })
-    b.text(bal, "Total balance", b.ty("small", { weight: 500 }), muted)
-    b.text(bal, "$8,214.37", b.ty("balance"), ink)
-    const delta = b.row(bal, "Change", { gap: 8, align: "center" })
-    b.use(delta, badge, { args: { label: "+$1,240.00", tone: "positive" } })
-    b.text(delta, "since September 6", b.ty("small"), muted)
-    b.use(content, bankCard, { props: { w: FILL } })
-    const qa = b.row(content, "Quick actions", { w: FILL, justify: "between" })
-    for (const [label, icon] of [
-      ["Send", "send"],
-      ["Request", "hand-coins"],
-      ["Top up", "plus"],
-      ["Pay bills", "receipt"],
-    ] as const)
-      b.use(qa, quickAction, { args: { label }, set: { QaIcon: { icon } } })
-    const recent = b.col(content, "Recent", { w: FILL, gap: 4 })
-    b.use(recent, sectionHead, { props: { w: FILL }, args: { title: "Recent activity" } })
-    tx(recent, 0, "Groceries · Today, 12:14")
-    tx(recent, 2)
+    const slab = b.col(content, "Balance slab", {
+      w: FILL,
+      gap: 18,
+      pad: 20,
+      radius: r("slab"),
+      fill: c("slab"),
+    })
+    const st = b.row(slab, "Account", { w: FILL, align: "center", justify: "between" })
+    b.text(st, "Everyday account", b.ty("small", { weight: 500 }), c("slab-muted"))
+    b.text(st, "•• 4821", b.ty("mono"), c("slab-muted"))
+    b.use(slab, money, { args: { size: "xl", tone: "slab" } })
+    const pills = b.row(slab, "Actions", { gap: 8 })
+    b.use(pills, slabPill, { args: { label: "Add money" } })
+    b.use(pills, slabPill, { args: { label: "Send" }, set: { SpIcon: { icon: "arrow-up-right" } } })
+    b.use(pills, slabPill, { args: { label: "Card" }, set: { SpIcon: { icon: "credit-card" } } })
+    const budget = b.col(content, "October budget", {
+      w: FILL,
+      gap: 10,
+      pad: 16,
+      radius: r("card"),
+      fill: c("surface"),
+    })
+    const bl = b.row(budget, "Line", { w: FILL, justify: "between", align: "baseline" })
+    b.text(bl, "Spent in October", b.ty("small", { weight: 500 }), muted)
+    const left = b.row(bl, "Left", { align: "baseline", gap: 4 })
+    b.text(left, "$1,457.45", b.ty("row", { size: 15 }), ink)
+    b.text(left, "left of $3,200", b.ty("small"), muted)
+    const bar = b.row(budget, "Bar", {
+      w: FILL,
+      h: 6,
+      radius: r("pill"),
+      fill: c("subtle"),
+      clip: true,
+    })
+    b.rect(bar, "Spent", { w: fill(54), h: 6, fill: c("accent") })
+    b.rect(bar, "Left", { w: fill(46), h: 6, fill: c("subtle") })
+    const recent = b.col(content, "Activity", { w: FILL, gap: 0 })
+    b.use(recent, sectionHead, {
+      props: { w: FILL },
+      args: { title: "Activity", action: "See all" },
+    })
+    const g1 = b.col(recent, "Today", { w: FILL, gap: 0, pad: [8, 0, 0, 0] })
+    b.use(g1, dayHead, { props: { w: FILL }, args: { day: "Today", total: "−$68.95" } })
+    tx(g1, "grocers")
+    tx(g1, "coffee")
+    const g2 = b.col(recent, "Yesterday", { w: FILL, gap: 0, pad: [8, 0, 0, 0] })
+    b.use(g2, dayHead, { props: { w: FILL }, args: { day: "Yesterday", total: "+$3,117.20" } })
+    tx(g2, "salary")
+    tx(g2, "transit")
     bottom()
   }
 
   // --- Transactions ------------------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Transactions", { tab: "activity", gap: 16 })
+    const { content, bottom } = screen("Transactions", { tab: "activity", gap: 14 })
     const head = b.row(content, "Header", { w: FILL, align: "center", justify: "between" })
-    b.text(head, "Activity", b.ty("h1"), ink)
-    b.use(head, iconBtn, {
+    b.text(head, "Activity", b.ty("display"), ink)
+    const act = b.row(head, "Actions", { gap: 8 })
+    b.use(act, iconBtn, { args: { variant: "surface" }, set: { IbIcon: { icon: "search" } } })
+    b.use(act, iconBtn, {
       args: { variant: "surface" },
       set: { IbIcon: { icon: "sliders-horizontal" } },
     })
-    b.use(content, input, {
-      props: { w: FILL },
-      args: {
-        showLabel: false,
-        icon: true,
-        value: "Search merchants or amounts",
-        tone: "placeholder",
-      },
-    })
-    b.use(content, segmented, {
-      props: { w: FILL },
-      args: { first: "All", second: "Money in", third: "Money out", active: "first" },
-    })
-    const groups: [string, string, number[]][] = [
-      ["Today", "−$68.95", [0, 1]],
-      ["Yesterday", "+$3,117.20", [2, 3]],
-      ["Sunday, October 4", "−$46.34", [4, 5]],
+    const chips = b.row(content, "Filters", { w: FILL, gap: 8 })
+    b.use(chips, chip, { args: { label: "All", state: "selected" } })
+    b.use(chips, chip, { args: { label: "Money in" } })
+    b.use(chips, chip, { args: { label: "Money out" } })
+    b.use(chips, chip, { args: { label: "Cards" } })
+    const groups: [string, string, (keyof typeof T)[], (string | undefined)[]][] = [
+      ["Today", "−$68.95", ["grocers", "coffee"], [undefined, undefined]],
+      ["Yesterday", "+$3,117.20", ["salary", "transit"], [undefined, undefined]],
+      ["Sunday, October 4", "−$46.34", ["priya", "lumen"], [undefined, undefined]],
+      ["Saturday, October 3", "−$23.50", ["books"], [undefined]],
     ]
-    const metas = [
-      "Groceries · 12:14",
-      "Dining · 8:02",
-      "Salary · 9:00",
-      "Transport · 17:41",
-      "Paid your request · 19:20",
-      "Bills · Autopay",
-    ]
-    for (const [day, total, idx] of groups) {
+    for (const [day, total, keys] of groups) {
       const g = b.col(content, day, { w: FILL, gap: 0 })
-      const gh = b.row(g, "Day", { w: FILL, justify: "between", pad: [0, 0, 2, 0] })
-      b.text(gh, day, b.ty("label", { size: 13 }), muted)
-      b.text(gh, total, b.ty("label", { size: 13 }), muted)
-      for (const i of idx) tx(g, i, metas[i])
+      b.use(g, dayHead, { props: { w: FILL }, args: { day, total } })
+      for (const k of keys) tx(g, k)
     }
     bottom()
   }
@@ -1121,48 +1203,59 @@ function build(b: TemplateBuilder) {
   {
     const { content, bottom } = screen("Transaction detail", {
       header: header("Transaction", "share"),
-      pad: [8, 20, 12, 20],
+      pad: [8, 20, 8, 20],
       gap: 20,
     })
-    const hero = b.col(content, "Summary", { w: FILL, gap: 10, align: "center", pad: [8, 0, 4, 0] })
-    const tile = b.row(hero, "Icon tile", {
-      w: 64,
-      h: 64,
-      radius: r("lg"),
-      align: "center",
-      justify: "center",
-      fill: c("cat-2-soft"),
-    })
-    b.icon(tile, "shopping-basket", 30, c("cat-2"))
+    const hero = b.col(content, "Summary", { w: FILL, gap: 10, align: "center", pad: [4, 0, 0, 0] })
+    b.use(hero, monogram, { args: { initials: "GG", size: "lg", tone: "neutral" } })
     b.text(hero, "Greenline Grocers", b.ty("heading", { align: "center" }), ink)
-    b.text(hero, "−$64.20", b.ty("balance", { align: "center" }), ink)
-    b.use(hero, badge, { args: { label: "Completed", tone: "positive" } })
-    const rows = b.col(content, "Details", { w: FILL, ...card(), clip: true })
-    for (const [label, value] of [
-      ["Date", "Oct 6, 2026, 12:14"],
-      ["Card", "Everyday debit •••• 4821"],
+    b.use(hero, money, { args: { whole: "−$64", cents: ".20", size: "xl" } })
+    b.text(hero, "Today, 9:12 · Card payment", b.ty("small", { align: "center" }), muted)
+    const chips = b.row(hero, "Tags", { gap: 8, pad: [6, 0, 0, 0] })
+    b.use(chips, chip, {
+      args: { label: "Groceries", icon: true },
+      set: { ChIcon: { icon: "shopping-basket" } },
+    })
+    b.use(chips, chip, {
+      args: { label: "Everyday •• 4821", icon: true },
+      set: { ChIcon: { icon: "credit-card" } },
+    })
+    const rows = group(content, "Details")
+    const list: [string, string, string?][] = [
       ["Category", "Groceries"],
       ["Location", "SE Hawthorne Blvd, Portland"],
-      ["Reference", "TW-2610-58213"],
-    ] as const)
-      b.use(rows, detailRow, { props: { w: FILL }, args: { label, value } })
-    const note = b.row(content, "Note", { w: FILL, gap: 12, align: "center", pad: 14, ...card() })
-    b.icon(note, "pencil", 18, muted)
-    b.text(note, "Add a note or a receipt photo", b.ty("body"), muted, {
+      ["Reference", "TW-2610-58213", "code"],
+      ["Balance after", "$8,214.37"],
+    ]
+    list.forEach(([label, value, kind], i) => {
+      if (i) divide(rows)
+      b.use(rows, detailRow, {
+        props: { w: FILL },
+        args: { label, value, ...(kind ? { mono: kind } : {}) },
+      })
+    })
+    const more = b.row(content, "History", {
+      w: FILL,
+      gap: 12,
+      align: "center",
+      pad: [14, 16],
+      radius: r("card"),
+      fill: c("surface"),
+    })
+    b.icon(more, "history", 20, c("ink-2"))
+    b.text(more, "14 payments to Greenline in 2026", b.ty("label", { size: 15 }), ink, {
       w: FILL,
       grow: "fixed-width",
     })
+    b.icon(more, "chevron-right", 18, muted)
     bottom((into) => {
-      const row = b.row(into, "Actions", { w: FILL, gap: 10 })
-      b.use(row, button, {
-        props: { w: 170 },
-        args: { label: "Split bill", variant: "soft", icon: true },
-        set: { BtnIcon: { icon: "split" } },
+      b.use(into, button, {
+        props: { w: FILL },
+        args: { label: "Split this payment", variant: "outline" },
       })
-      b.use(row, button, {
-        props: { w: 170 },
-        args: { label: "Report", variant: "danger", icon: true },
-        set: { BtnIcon: { icon: "flag" } },
+      b.use(into, button, {
+        props: { w: FILL },
+        args: { label: "Report a problem", variant: "text" },
       })
     })
   }
@@ -1174,47 +1267,44 @@ function build(b: TemplateBuilder) {
       pad: [8, 20, 4, 20],
       gap: 18,
     })
-    const people = b.row(content, "Recent contacts", { w: FILL, justify: "between" })
-    for (const [name, ini, tone, sel] of [
-      ["Priya", "PS", "pink", true],
-      ["Marcus", "ML", "green", false],
-      ["Hana", "HK", "amber", false],
-      ["Leo", "LB", "blue", false],
-    ] as const)
-      b.use(people, contact, {
-        args: { name, initials: ini, state: sel ? "selected" : "default" },
-        set: { CtAv: { args: { size: "md", tone } } },
-      })
-    const amt = b.col(content, "Amount", { w: FILL, gap: 8, align: "center", pad: [6, 0] })
-    b.text(amt, "To Priya Shah · Tidewell •••• 3390", b.ty("small", { align: "center" }), muted)
-    b.text(amt, "$120.00", b.ty("display", { size: 52, align: "center" }), ink)
-    b.use(amt, badge, { args: { label: "Concert tickets", tone: "neutral" } })
-    const from = b.row(content, "From", {
+    const to = b.row(content, "Recipient", {
       w: FILL,
       gap: 12,
       align: "center",
       pad: [12, 14],
-      ...card(),
+      radius: r("card"),
+      fill: c("surface"),
     })
-    const ft = b.row(from, "Icon tile", {
-      w: 34,
-      h: 34,
-      radius: r("sm"),
+    b.use(to, monogram, { args: { initials: "PS", size: "sm", tone: "accent" } })
+    const tt = b.col(to, "Text", { w: FILL, gap: 1 })
+    b.text(tt, "Priya Shah", b.ty("label", { size: 16 }), ink)
+    b.text(tt, "Tidewell •• 3390", b.ty("small"), muted)
+    b.text(to, "Change", b.ty("label", { size: 14, weight: 600 }), c("accent"))
+    const amt = b.col(content, "Amount", { w: FILL, gap: 10, align: "center", pad: [14, 0, 6, 0] })
+    b.use(amt, money, { args: { whole: "$120", cents: ".00", size: "xl" } })
+    const from = b.row(amt, "From", { gap: 6, align: "center" })
+    b.text(from, "From Everyday · $8,214.37 available", b.ty("small"), muted)
+    const quick = b.row(content, "Quick amounts", { w: FILL, gap: 8, justify: "center" })
+    for (const [l, st] of [
+      ["$25", "default"],
+      ["$50", "default"],
+      ["$120", "selected"],
+      ["$250", "default"],
+    ] as const)
+      b.use(quick, chip, { args: { label: l, state: st } })
+    const note = b.row(content, "Note", {
+      w: FILL,
+      gap: 10,
       align: "center",
-      justify: "center",
-      fill: c("accent-soft"),
+      pad: [12, 14],
+      radius: r("lg"),
+      stroke: { paint: c("border") },
     })
-    b.icon(ft, "wallet", 17, c("accent"))
-    const fx = b.col(from, "Text", { w: FILL, gap: 1 })
-    b.text(fx, "From Everyday account", b.ty("label"), ink)
-    b.text(fx, "$3,482.19 available", b.ty("small"), muted)
-    b.icon(from, "chevron-down", 18, muted)
-    keypad(content, false, 50)
+    b.icon(note, "pencil", 16, muted)
+    b.text(note, "Concert tickets", b.ty("body"), ink)
+    keypad(content, "dot", false, 60)
     bottom((into) =>
-      b.use(into, button, {
-        props: { w: FILL },
-        args: { label: "Send $120.00", icon: true },
-      }),
+      b.use(into, button, { props: { w: FILL }, args: { label: "Review and send", icon: true } }),
     )
   }
 
@@ -1222,126 +1312,138 @@ function build(b: TemplateBuilder) {
   {
     const { content, bottom } = screen("Cards", { tab: "cards", gap: 16 })
     const head = b.row(content, "Header", { w: FILL, align: "center", justify: "between" })
-    b.text(head, "Cards", b.ty("h1"), ink)
-    b.use(head, button, {
-      args: { label: "New card", variant: "soft", size: "md", icon: true },
-      set: { BtnIcon: { icon: "plus" } },
-    })
-    const stackC = b.col(content, "Card", { w: FILL, gap: 12, align: "center" })
-    b.use(stackC, bankCard, {
+    b.text(head, "Cards", b.ty("display"), ink)
+    b.use(head, iconBtn, { args: { variant: "surface" }, set: { IbIcon: { icon: "plus" } } })
+    const tabs = b.row(content, "Card tabs", { w: FILL, gap: 20, align: "center" })
+    b.text(tabs, "Everyday", b.ty("label", { size: 15 }), muted)
+    const sel = b.col(tabs, "Travel", { gap: 4 })
+    b.text(sel, "Travel", b.ty("label", { size: 15, weight: 650 }), ink)
+    b.rect(sel, "Underline", { w: FILL, h: 2, radius: 1, fill: ink })
+    b.use(content, bankCard, {
       props: { w: FILL },
       args: { state: "frozen", kind: "Travel debit", last4: "•••• 7735", expiry: "03/28" },
     })
-    const dots = b.row(stackC, "Pager", { gap: 6, align: "center" })
-    b.ellipse(dots, "Everyday debit", { w: 6, h: 6, fill: c("cat-6") })
-    b.rect(dots, "Travel debit", { w: 18, h: 6, radius: r("pill"), fill: c("accent") })
-    const info = b.row(content, "Frozen notice", {
-      w: FILL,
-      gap: 12,
-      align: "start",
-      pad: 14,
-      radius: r("md"),
-      fill: c("ice"),
+    const chips = b.row(content, "Card actions", { w: FILL, gap: 8 })
+    b.use(chips, chip, {
+      args: { label: "Unfreeze", icon: true, state: "selected" },
+      set: { ChIcon: { icon: "snowflake" } },
     })
-    b.icon(info, "snowflake", 18, ink)
-    b.para(
-      info,
-      "Frozen since Oct 5, 21:40. Card payments and cash withdrawals are blocked.",
-      b.ty("small"),
-      ink,
-    )
-    const g1 = b.col(content, "Controls", { w: FILL, ...card(), clip: true })
-    for (const [label, icon, on] of [
-      ["Freeze card", "snowflake", true],
-      ["Online payments", "globe", false],
-      ["Contactless", "nfc", false],
-    ] as const)
-      b.use(g1, settingRow, {
+    b.use(chips, chip, {
+      args: { label: "Limits", icon: true },
+      set: { ChIcon: { icon: "gauge" } },
+    })
+    b.use(chips, chip, { args: { label: "Details", icon: true }, set: { ChIcon: { icon: "eye" } } })
+    const info = group(content, "Card details")
+    const dl = b.col(info, "Limit", { w: FILL, gap: 10, pad: 16 })
+    const dlt = b.row(dl, "Line", { w: FILL, justify: "between", align: "baseline" })
+    b.text(dlt, "Daily limit", b.ty("body"), muted)
+    b.text(dlt, "$2,000", b.ty("row", { size: 16 }), ink)
+    b.row(dl, "Bar", { w: FILL, h: 6, radius: r("pill"), fill: c("subtle") })
+    b.text(dl, "$0.00 spent today. Frozen since Oct 5, 21:40.", b.ty("small"), muted)
+    divide(info)
+    for (const [i, [label, on, icon]] of (
+      [
+        ["Freeze card", true, "snowflake"],
+        ["Online payments", false, "globe"],
+        ["Contactless", false, "nfc"],
+        ["Show PIN", false, "eye"],
+      ] as const
+    ).entries()) {
+      if (i) divide(info)
+      b.use(info, settingRow, {
         props: { w: FILL },
         args: {
           label,
           showValue: false,
-          showChevron: false,
-          showToggle: true,
+          showChevron: label === "Show PIN",
+          showToggle: label !== "Show PIN",
           ...(on ? {} : { toggle: toggleOff }),
         },
         set: { SrIcon: { icon } },
       })
-    const g2 = b.col(content, "Settings", { w: FILL, ...card(), clip: true })
-    for (const [label, value, icon] of [
-      ["Spending limit", "$2,000 / mo", "gauge"],
-      ["Show PIN", "", "eye"],
-    ] as const)
-      b.use(g2, settingRow, {
-        props: { w: FILL },
-        args: { label, ...(value ? { value } : { showValue: false }) },
-        set: { SrIcon: { icon } },
-      })
+    }
     bottom()
   }
 
   // --- Insights ----------------------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Insights", { tab: "insights", gap: 18 })
-    b.text(content, "Insights", b.ty("h1"), ink)
-    b.use(content, segmented, {
-      props: { w: FILL },
-      args: { first: "August", second: "September", third: "October", active: "second" },
+    const { content, bottom } = screen("Insights", { tab: "insights", gap: 16 })
+    const head = b.row(content, "Header", { w: FILL, align: "center", justify: "between" })
+    b.text(head, "Insights", b.ty("display"), ink)
+    const rng = b.row(head, "Range", { gap: 6 })
+    b.use(rng, chip, { args: { label: "3M" } })
+    b.use(rng, chip, { args: { label: "6M", state: "selected" } })
+    b.use(rng, chip, { args: { label: "1Y" } })
+    const sum = b.col(content, "Summary", { w: FILL, gap: 6 })
+    b.text(sum, "Spent in September", b.ty("small", { weight: 500 }), muted)
+    b.use(sum, money, { args: { whole: "$2,846", cents: ".10", size: "lg" } })
+    const dl = b.row(sum, "Change", { gap: 6, align: "center" })
+    b.icon(dl, "arrow-down-right", 15, c("credit"))
+    b.text(dl, "12% less than August", b.ty("small", { weight: 600 }), c("credit"))
+    const chart = b.row(content, "Chart", {
+      w: FILL,
+      h: 182,
+      justify: "between",
+      align: "start",
+      pad: [8, 36, 0, 0],
     })
-    const sum = b.col(content, "Summary", { w: FILL, gap: 14, pad: 16, ...card() })
-    const st = b.row(sum, "Header", { w: FILL, align: "end", justify: "between" })
-    const stx = b.col(st, "Total", { gap: 2 })
-    b.text(stx, "Spent in September", b.ty("small"), muted)
-    b.text(stx, "$2,846.10", b.ty("h1"), ink)
-    b.use(st, badge, { args: { label: "12% less than August", tone: "positive" } })
-    const split = [
-      ["cat-1", 1450],
-      ["cat-2", 612],
-      ["cat-3", 319],
-      ["cat-4", 221],
-      ["cat-5", 164],
-      ["cat-6", 80],
-    ] as const
-    const stack = b.row(sum, "Split", { w: FILL, h: 10, gap: 3 })
-    split.forEach(([k, v], i) => {
-      b.rect(stack, k, {
-        w: { mode: "fill", weight: v },
-        h: 10,
-        radius: i === 0 ? [5, 0, 0, 5] : i === split.length - 1 ? [0, 5, 5, 0] : 0,
-        fill: c(k),
+    for (const [y, label] of [
+      [17, "$3k"],
+      [84, "$1.5k"],
+    ] as const) {
+      b.rect(chart, "Gridline", {
+        x: 0,
+        y: 8 + y,
+        w: 350,
+        h: 1,
+        position: "absolute",
+        meta: overlay,
+        fill: c("border"),
       })
-    })
+      b.text(chart, label, b.ty("small", { size: 11, align: "right" }), muted, {
+        x: 310,
+        y: 8 + y - 16,
+        position: "absolute",
+        meta: overlay,
+      })
+    }
+    for (const [m, h, st] of [
+      ["May", 131, "default"],
+      ["Jun", 106, "default"],
+      ["Jul", 138, "default"],
+      ["Aug", 143, "default"],
+      ["Sep", 126, "selected"],
+      ["Oct", 77, "default"],
+    ] as const)
+      b.use(chart, monthBar, { args: { month: m, state: st }, set: { MbPill: { h } } })
     const list = b.col(content, "Categories", { w: FILL, gap: 0 })
     b.use(list, sectionHead, {
       props: { w: FILL },
       args: { title: "By category", action: "All 6" },
     })
-    for (const [name, amount, pct, cat, bar, n] of [
-      ["Rent", "$1,450.00", "51%", "rent", "cat-1", 51],
-      ["Groceries", "$612.40", "22%", "groceries", "cat-2", 22],
-      ["Dining", "$318.75", "11%", "dining", "cat-3", 11],
-      ["Shopping", "$221.35", "8%", "shopping", "cat-4", 8],
+    for (const [name, amount, icon, n] of [
+      ["Rent", "$1,450.00", "house", 51],
+      ["Groceries", "$612.40", "shopping-basket", 22],
+      ["Dining", "$318.75", "coffee", 11],
     ] as const)
-      b.use(list, categoryRow, {
+      b.use(list, catRow, {
         props: { w: FILL },
-        args: { name, amount, share: pct, category: cat, bar },
-        set: share(n),
+        args: { name, amount },
+        set: { CrIcon: { icon }, ...share(n) },
       })
-    const tip = b.row(content, "Tip", {
+    const rec = b.row(content, "Recurring", {
       w: FILL,
       gap: 12,
-      align: "start",
-      pad: 14,
-      radius: r("md"),
-      fill: c("accent-soft"),
+      align: "center",
+      pad: [14, 16],
+      radius: r("card"),
+      fill: c("surface"),
     })
-    b.icon(tip, "coffee", 18, c("accent"))
-    b.para(
-      tip,
-      "Dining is down $86 from August. Coffee shops were $127 of it, mostly weekday mornings.",
-      b.ty("small"),
-      ink,
-    )
+    b.icon(rec, "repeat", 20, c("ink-2"))
+    const rt = b.col(rec, "Text", { w: FILL, gap: 1 })
+    b.text(rt, "Recurring payments", b.ty("label", { size: 15 }), ink)
+    b.text(rt, "7 payments · $412.60 a month", b.ty("small"), muted)
+    b.icon(rec, "chevron-right", 18, muted)
     bottom()
   }
 }

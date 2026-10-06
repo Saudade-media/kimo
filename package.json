@@ -10,7 +10,7 @@
     "packages/*"
   ],
   "scripts": {
-    "typecheck": "bun run --filter '*' typecheck && tsc -p scripts/tsconfig.json",
+    "typecheck": "bun run --filter '*' typecheck && tsc -p scripts/tsconfig.json && tsc -p scripts/templates/tsconfig.json",
     "test": "bun test",
     "lint": "biome check .",
     "format": "biome format --write .",

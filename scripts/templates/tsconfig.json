@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Template content scripts index hard-coded data tables (rows, palettes) by position;
+    // the lib and the build script keep the full strict settings via scripts/tsconfig.json.
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["."]
+}

@@ -1,51 +1,72 @@
 /**
- * Brisk: the iPhone app of a fictional fitness and habit coach.
- * Screens (390×844): Onboarding, Today, Workout detail, Workout in progress (dark), Progress,
- * Profile.
+ * Brisk: the iPhone app of a fictional strength and habit coach.
+ * Screens (390×844): Onboarding, Today, Workout detail, Workout in progress (dark), Progress
+ * (dark), Profile.
+ *
+ * Built against Apple Fitness (small mono units beside big numerals), WHOOP (one ring, one plain
+ * coaching sentence), The Outsiders (dot-matrix training weeks), Ladder (rest timer, "next" card,
+ * volt accent), Peloton Strength+ and Bevel (workout blocks, option rows) and Strava (label/value
+ * triplets, best efforts). One accent (volt) used as a fill, never as text on paper; coral only for
+ * effort. No gradients, no rings except the one on Today.
  */
-import { FILL, p, type Template, type TemplateBuilder } from "./lib"
+import { FILL, fill, p, type Template, type TemplateBuilder } from "./lib"
 
 export const template: Template = {
   slug: "mobile-fitness",
   name: "Brisk fitness coach",
   category: "Mobile",
   description:
-    "Six-screen iPhone app for a fitness and habit coach: onboarding, today, workout detail, live workout, progress charts and profile.",
+    "Six-screen iPhone app for a strength and habit coach: onboarding, today with one ring, workout detail, a rest timer, a dot-matrix progress view and profile.",
   prefix: "qf",
   build,
 }
 
 const W = 390
 const H = 844
+const CW = 350
+
+// Training minutes per day, Monday first, for ISO weeks 36 to 41 of 2026. Today is Tuesday of W41.
+const WEEKS: [string, number[]][] = [
+  ["W36", [45, 0, 38, 0, 50, 62, 0]],
+  ["W37", [52, 0, 44, 0, 48, 70, 0]],
+  ["W38", [40, 0, 0, 36, 0, 55, 0]],
+  ["W39", [50, 0, 46, 0, 0, 65, 30]],
+  ["W40", [48, 0, 42, 0, 52, 75, 0]],
+  ["W41", [40, 0, 0, 0, 0, 0, 0]],
+]
+const sum = (a: number[]) => a.reduce((x, y) => x + y, 0)
+const hm = (m: number) => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`
+const dot = (m: number) => (m === 0 ? 6 : Math.round(10 + (m / 75) * 18))
 
 function build(b: TemplateBuilder) {
   b.tokens({
     colors: {
-      bg: ["#F4F4F0", "#0C0D0C"],
-      surface: ["#FFFFFF", "#171917"],
-      subtle: ["#ECECE6", "#222522"],
-      ink: ["#131512", "#F2F3EF"],
-      "ink-2": ["#3A3D38", "#C8CBC4"],
-      muted: ["#6D716A", "#8F948C"],
-      border: ["#E3E3DC", "#2A2D29"],
-      primary: ["#131512", "#F2F3EF"],
-      "on-primary": ["#FFFFFF", "#0C0D0C"],
-      accent: ["#D9481C", "#FF7A4D"],
-      "accent-soft": ["#FCE6DC", "#3A1D12"],
-      "on-accent": ["#FFFFFF", "#160904"],
-      green: ["#23824C", "#4CD18A"],
-      "green-soft": ["#DFF2E6", "#11301F"],
-      blue: ["#1F74C2", "#5AAEF5"],
-      "blue-soft": ["#DFEDFA", "#10263B"],
-      violet: ["#5A4FCF", "#9D94FF"],
-      "violet-soft": ["#E9E7FB", "#221F45"],
-      track: ["#E6E6DF", "#3A3E38"],
-      knob: ["#FFFFFF", "#FFFFFF"],
-      "art-1": ["#FFC9A8", "#6B2E14"],
-      "art-2": ["#FFE7C2", "#4A3417"],
-      "art-3": ["#BFE6CF", "#18452C"],
-      "art-4": ["#CFE2F7", "#1A3554"],
-      "on-art": ["#131512", "#F2F3EF"],
+      bg: ["#F2F0E9", "#0B0B0A"],
+      surface: ["#FFFFFF", "#161614"],
+      subtle: ["#E7E4DA", "#21211E"],
+      ink: ["#12110D", "#F3F1E8"],
+      "ink-2": ["#3B3A33", "#C9C7BD"],
+      muted: ["#6E6B60", "#8E8B80"],
+      border: ["#DDD9CC", "#2A2A26"],
+      volt: ["#D4F03A", "#D4F03A"],
+      "on-volt": ["#12110D", "#12110D"],
+      notch: ["#12110D", "#D4F03A"],
+      accent: ["#12110D", "#D4F03A"],
+      avatar: ["#12110D", "#D4F03A"],
+      "on-avatar": ["#D4F03A", "#12110D"],
+      coral: ["#D9442A", "#FF6B4A"],
+      hero: ["#12110D", "#1B1B18"],
+      "on-hero": ["#F3F1E8", "#F3F1E8"],
+      "hero-muted": ["#9A9788", "#9A9788"],
+      "hero-line": ["#2C2B25", "#2C2B25"],
+      "ring-track": ["#34332C", "#34332C"],
+      "on-ink-muted": ["#B9B6A8", "#5A584E"],
+      dot: ["#12110D", "#D4F03A"],
+      "dot-dim": ["#CFCABB", "#2F2F2A"],
+      "toggle-on": ["#D4F03A", "#D4F03A"],
+      "toggle-off": ["#CFCBBD", "#3A3A35"],
+      "knob-on": ["#12110D", "#12110D"],
+      "knob-off": ["#FFFFFF", "#C9C7BD"],
     },
     numbers: {
       "space/1": 4,
@@ -57,51 +78,32 @@ function build(b: TemplateBuilder) {
       "space/8": 32,
       "radius/sm": 8,
       "radius/md": 12,
-      "radius/lg": 18,
-      "radius/xl": 26,
+      "radius/lg": 16,
+      "radius/card": 24,
       "radius/pill": 999,
       "size/status": 47,
     },
     type: {
-      display: { font: "Inter", size: 34, weight: 700, lineHeight: 1.1, letterSpacing: -0.9 },
-      h1: { font: "Inter", size: 28, weight: 700, lineHeight: 1.15, letterSpacing: -0.7 },
-      title: { font: "Inter", size: 20, weight: 700, lineHeight: 1.25, letterSpacing: -0.3 },
+      display: { font: "Inter", size: 34, weight: 700, lineHeight: 1.1, letterSpacing: -1 },
+      numeral: { font: "Inter", size: 72, weight: 700, lineHeight: 1, letterSpacing: -3.2 },
+      timer: { font: "Inter", size: 124, weight: 700, lineHeight: 1, letterSpacing: -6 },
+      metric: { font: "Inter", size: 28, weight: 700, lineHeight: 1.1, letterSpacing: -0.9 },
       heading: { font: "Inter", size: 17, weight: 600, lineHeight: 1.3, letterSpacing: -0.2 },
-      metric: { font: "Inter", size: 24, weight: 700, lineHeight: 1.1, letterSpacing: -0.5 },
-      timer: { font: "Inter", size: 64, weight: 700, lineHeight: 1, letterSpacing: -2.4 },
       body: { font: "Inter", size: 15, weight: 400, lineHeight: 1.45 },
-      label: { font: "Inter", size: 14, weight: 600, lineHeight: 1.3 },
+      label: { font: "Inter", size: 15, weight: 600, lineHeight: 1.3, letterSpacing: -0.1 },
       small: { font: "Inter", size: 13, weight: 400, lineHeight: 1.4 },
-      caption: { font: "Inter", size: 11, weight: 600, lineHeight: 1.3 },
+      micro: { font: "Inter", size: 11, weight: 600, lineHeight: 1.3, letterSpacing: 1 },
+      mono: { font: "JetBrains Mono", size: 12, weight: 500, lineHeight: 1.3, letterSpacing: 0.4 },
     },
     shadows: {
-      card: [
-        { kind: "shadow", x: 0, y: 1, blur: 2, color: "#1315120D" },
-        { kind: "shadow", x: 0, y: 6, blur: 16, spread: -6, color: "#13151214" },
-      ],
-      phone: { kind: "shadow", x: 0, y: 24, blur: 48, spread: -12, color: "#13151233" },
+      phone: { kind: "shadow", x: 0, y: 24, blur: 48, spread: -12, color: "#12110D33" },
     },
   })
 
   const c = (n: string) => b.c(n)
-  const s = (n: number) => b.n(`space/${n}`)
   const r = (n: string) => b.n(`radius/${n}`)
   const ink = c("ink")
   const muted = c("muted")
-  const grad = (from: string, to: string, rotation = 135) => ({
-    kind: "linear",
-    rotation,
-    stops: [
-      { color: c(from), at: 0 },
-      { color: c(to), at: 1 },
-    ],
-  })
-  const card = (extra: Record<string, unknown> = {}) => ({
-    radius: r("lg"),
-    fill: c("surface"),
-    effects: b.shadow("card"),
-    ...extra,
-  })
   const overlay = { "kimo.template.overlay": true }
 
   // --- Components: system ------------------------------------------------------------------------
@@ -143,15 +145,16 @@ function build(b: TemplateBuilder) {
 
   const tabsDef = [
     ["Today", "sun"],
-    ["Plan", "calendar-days"],
-    ["Progress", "chart-column"],
-    ["Profile", "user"],
+    ["Train", "dumbbell"],
+    ["Progress", "chart-no-axes-column"],
+    ["Profile", "user-round"],
   ] as const
   const tabActive = (i: number) =>
     Object.fromEntries(
       tabsDef.flatMap((_, j) => [
-        [`TbIc${j + 1}.color`, j === i ? c("accent") : muted],
-        [`TbLb${j + 1}.fill`, j === i ? c("accent") : muted],
+        [`TbNotch${j + 1}.fill`, j === i ? c("notch") : c("surface")],
+        [`TbIc${j + 1}.color`, j === i ? ink : muted],
+        [`TbLb${j + 1}.fill`, j === i ? ink : muted],
       ]),
     )
   const tabBar = b.component(
@@ -159,11 +162,12 @@ function build(b: TemplateBuilder) {
     {
       key: "TabBar",
       section: "System",
-      description: "Four tabs with the home indicator. Set active per screen.",
+      description:
+        "Four equal tabs (90pt each) and the home indicator. The active tab gets a notch above its icon.",
       props: {
         active: p.variants({
           today: tabActive(0),
-          plan: tabActive(1),
+          train: tabActive(1),
           progress: tabActive(2),
           profile: tabActive(3),
         }),
@@ -171,17 +175,23 @@ function build(b: TemplateBuilder) {
       root: {
         dir: "column",
         w: W,
-        pad: [8, 0, 0, 0],
         fill: c("surface"),
         stroke: { paint: c("border"), width: { t: 1 } },
       },
     },
     (root) => {
-      const items = b.row(root, "Items", { w: FILL, pad: [0, 12] })
+      const items = b.row(root, "Items", { w: FILL, pad: [0, 15] })
       tabsDef.forEach(([label, icon], i) => {
-        const it = b.col(items, label, { w: (W - 24) / 4, gap: 4, align: "center", pad: [4, 0] })
-        b.icon(it, icon, 24, i === 0 ? c("accent") : muted, { key: `TbIc${i + 1}` })
-        b.text(it, label, b.ty("caption"), i === 0 ? c("accent") : muted, {
+        const it = b.col(items, label, { w: 90, gap: 5, align: "center", pad: [0, 0, 4, 0] })
+        b.rect(it, "Notch", {
+          key: `TbNotch${i + 1}`,
+          w: 24,
+          h: 3,
+          radius: 2,
+          fill: i === 0 ? c("notch") : c("surface"),
+        })
+        b.icon(it, icon, 23, i === 0 ? ink : muted, { key: `TbIc${i + 1}` })
+        b.text(it, label, b.ty("micro", { size: 10, letterSpacing: 0.2 }), i === 0 ? ink : muted, {
           key: `TbLb${i + 1}`,
         })
       })
@@ -196,39 +206,39 @@ function build(b: TemplateBuilder) {
     {
       key: "Btn",
       section: "Actions",
-      description: "Primary (ink), accent, secondary or soft; md or lg.",
+      description: "Volt, ink, outline or text; large or medium.",
       props: {
         label: p.text("BtnLabel", "Button"),
         icon: p.bool("BtnIcon", false),
         variant: p.variants({
-          primary: {
-            "root.fill": c("primary"),
-            "root.stroke": { paint: c("primary") },
-            "BtnLabel.fill": c("on-primary"),
-            "BtnIcon.color": c("on-primary"),
+          volt: {
+            "root.fill": c("volt"),
+            "root.stroke": { paint: c("volt") },
+            "BtnLabel.fill": c("on-volt"),
+            "BtnIcon.color": c("on-volt"),
           },
-          accent: {
-            "root.fill": c("accent"),
-            "root.stroke": { paint: c("accent") },
-            "BtnLabel.fill": c("on-accent"),
-            "BtnIcon.color": c("on-accent"),
+          ink: {
+            "root.fill": ink,
+            "root.stroke": { paint: ink },
+            "BtnLabel.fill": c("bg"),
+            "BtnIcon.color": c("bg"),
           },
-          secondary: {
-            "root.fill": c("surface"),
+          outline: {
+            "root.fill": c("bg"),
             "root.stroke": { paint: c("border") },
             "BtnLabel.fill": ink,
             "BtnIcon.color": ink,
           },
-          soft: {
-            "root.fill": c("subtle"),
-            "root.stroke": { paint: c("subtle") },
-            "BtnLabel.fill": ink,
-            "BtnIcon.color": ink,
+          text: {
+            "root.fill": c("bg"),
+            "root.stroke": { paint: c("bg") },
+            "BtnLabel.fill": c("ink-2"),
+            "BtnIcon.color": c("ink-2"),
           },
         }),
         size: p.variants({
-          lg: { "root.layout/pad": [16, 22], "BtnLabel.style/size": 16 },
-          md: { "root.layout/pad": [10, 16], "BtnLabel.style/size": 14 },
+          lg: { "root.layout/pad": [18, 24], "BtnLabel.style/size": 16 },
+          md: { "root.layout/pad": [10, 18], "BtnLabel.style/size": 14 },
         }),
       },
       root: {
@@ -236,15 +246,15 @@ function build(b: TemplateBuilder) {
         gap: 8,
         align: "center",
         justify: "center",
-        pad: [16, 22],
+        pad: [18, 24],
         radius: r("pill"),
-        fill: c("primary"),
-        stroke: { paint: c("primary") },
+        fill: c("volt"),
+        stroke: { paint: c("volt") },
       },
     },
     (root) => {
-      b.icon(root, "play", 18, c("on-primary"), { key: "BtnIcon", visible: false })
-      b.text(root, "Button", b.ty("label", { size: 16 }), c("on-primary"), {
+      b.icon(root, "play", 18, c("on-volt"), { key: "BtnIcon", visible: false })
+      b.text(root, "Button", b.ty("label", { size: 16, weight: 700 }), c("on-volt"), {
         key: "BtnLabel",
         name: "Label",
       })
@@ -261,22 +271,11 @@ function build(b: TemplateBuilder) {
           surface: {
             "root.fill": c("surface"),
             "root.stroke": { paint: c("border") },
-            "IbIcon.color": ink,
           },
-          soft: {
-            "root.fill": c("subtle"),
-            "root.stroke": { paint: c("subtle") },
-            "IbIcon.color": ink,
+          plain: {
+            "root.fill": c("bg"),
+            "root.stroke": { paint: c("bg") },
           },
-          accent: {
-            "root.fill": c("accent"),
-            "root.stroke": { paint: c("accent") },
-            "IbIcon.color": c("on-accent"),
-          },
-        }),
-        size: p.variants({
-          md: { "root.w": 40, "root.h": 40, "IbIcon.w": 20, "IbIcon.h": 20 },
-          lg: { "root.w": 64, "root.h": 64, "IbIcon.w": 26, "IbIcon.h": 26 },
         }),
       },
       root: {
@@ -298,32 +297,35 @@ function build(b: TemplateBuilder) {
     {
       key: "Chip",
       section: "Actions",
+      description: "Range or filter chip. Ink when selected; mono label.",
       props: {
-        label: p.text("ChipLbl", "Chip"),
+        label: p.text("ChLbl", "6W"),
         state: p.variants({
           default: {
-            "root.fill": c("surface"),
+            "root.fill": c("bg"),
             "root.stroke": { paint: c("border") },
-            "ChipLbl.fill": ink,
+            "ChLbl.fill": c("ink-2"),
           },
           selected: {
-            "root.fill": c("primary"),
-            "root.stroke": { paint: c("primary") },
-            "ChipLbl.fill": c("on-primary"),
+            "root.fill": c("volt"),
+            "root.stroke": { paint: c("volt") },
+            "ChLbl.fill": c("on-volt"),
           },
         }),
       },
       root: {
         dir: "row",
-        align: "center",
-        justify: "center",
-        pad: [10, 16],
+        pad: [6, 13],
         radius: r("pill"),
-        fill: c("surface"),
+        fill: c("bg"),
         stroke: { paint: c("border") },
       },
     },
-    (root) => b.text(root, "Chip", b.ty("label"), ink, { key: "ChipLbl", name: "Label" }),
+    (root) =>
+      b.text(root, "6W", b.ty("mono", { size: 13, weight: 600 }), c("ink-2"), {
+        key: "ChLbl",
+        name: "Label",
+      }),
   )
 
   const toggle = b.component(
@@ -333,8 +335,16 @@ function build(b: TemplateBuilder) {
       section: "Actions",
       props: {
         state: p.variants({
-          on: { "root.fill": c("green"), "root.layout/justify": "end" },
-          off: { "root.fill": c("track"), "root.layout/justify": "start" },
+          on: {
+            "root.fill": c("toggle-on"),
+            "root.layout/justify": "end",
+            "TgKnob.fill": c("knob-on"),
+          },
+          off: {
+            "root.fill": c("toggle-off"),
+            "root.layout/justify": "start",
+            "TgKnob.fill": c("knob-off"),
+          },
         }),
       },
       root: {
@@ -344,79 +354,38 @@ function build(b: TemplateBuilder) {
         pad: 2,
         justify: "end",
         radius: r("pill"),
-        fill: c("green"),
+        fill: c("toggle-on"),
       },
     },
-    (root) => b.ellipse(root, "Knob", { w: 27, h: 27, fill: c("knob") }),
+    (root) => b.ellipse(root, "Knob", { key: "TgKnob", w: 27, h: 27, fill: c("knob-on") }),
   )
   const toggleOff = b.derive(toggle, "Toggle/Off", "ToggleOff", {
     section: "Actions",
-    description:
-      "Toggle preset in the off state. Setting row swaps between Toggle and this through its toggle prop, so a row can be switched from the instance panel without opening the nested toggle.",
+    description: "Toggle preset in the off state.",
     args: { state: "off" },
   })
 
-  const segLabels = ["One", "Two", "Three"]
-  const segActive = (i: number) =>
-    Object.fromEntries(
-      segLabels.flatMap((_, j) => [
-        [`SgI${j + 1}.fill`, j === i ? c("surface") : c("subtle")],
-        [`SgI${j + 1}.effects`, j === i ? b.shadow("card") : []],
-        [`SgL${j + 1}.fill`, j === i ? ink : muted],
-      ]),
-    )
-  const segmented = b.component(
-    "Segmented control",
-    {
-      key: "Seg",
-      section: "Actions",
-      props: {
-        first: p.text("SgL1", "One"),
-        second: p.text("SgL2", "Two"),
-        third: p.text("SgL3", "Three"),
-        active: p.variants({ first: segActive(0), second: segActive(1), third: segActive(2) }),
-      },
-      root: { dir: "row", w: 350, pad: 3, gap: 2, radius: r("md"), fill: c("subtle") },
-    },
-    (root) => {
-      segLabels.forEach((l, i) => {
-        const it = b.row(root, l, {
-          key: `SgI${i + 1}`,
-          w: (350 - 6 - 4) / 3,
-          pad: [7, 0],
-          justify: "center",
-          radius: 9,
-          fill: i === 0 ? c("surface") : c("subtle"),
-          ...(i === 0 ? { effects: b.shadow("card") } : {}),
-        })
-        b.text(it, l, b.ty("label", { size: 13 }), i === 0 ? ink : muted, { key: `SgL${i + 1}` })
-      })
-    },
-  )
-
-  // --- Components: content -----------------------------------------------------------------------
+  // --- Components: navigation --------------------------------------------------------------------
 
   const navHeader = b.component(
     "Nav header",
     {
       key: "NavHead",
       section: "Navigation",
+      description: "Pushed screen: back button and up to two trailing icon buttons.",
       props: {
-        title: p.text("NhTitle", "Title"),
-        showAction: p.bool("NhActW", true),
+        showBookmark: p.bool("NhA1", true),
+        showMore: p.bool("NhA2", true),
       },
-      root: { dir: "row", w: W, gap: 12, align: "center", pad: [8, 20] },
+      root: { dir: "row", w: W, gap: 8, align: "center", pad: [4, 20] },
     },
     (root) => {
-      b.use(root, iconBtn, { key: "NhBack" })
-      b.text(root, "Title", b.ty("heading", { align: "center" }), ink, {
-        key: "NhTitle",
-        name: "Title",
-        w: FILL,
-        grow: "fixed-width",
-      })
-      const act = b.row(root, "Action", { key: "NhActW" })
-      b.use(act, iconBtn, { key: "NhAct", set: { IbIcon: { icon: "ellipsis" } } })
+      b.use(root, iconBtn, { key: "NhBack", args: { variant: "surface" } })
+      const acts = b.row(root, "Actions", { w: FILL, gap: 8, justify: "end" })
+      const w1 = b.row(acts, "Bookmark", { key: "NhA1" })
+      b.use(w1, iconBtn, { args: { variant: "surface" }, set: { IbIcon: { icon: "bookmark" } } })
+      const w2 = b.row(acts, "More", { key: "NhA2" })
+      b.use(w2, iconBtn, { args: { variant: "surface" }, set: { IbIcon: { icon: "ellipsis" } } })
     },
   )
 
@@ -425,428 +394,383 @@ function build(b: TemplateBuilder) {
     {
       key: "SecHead",
       section: "Navigation",
+      description: "Tracked caps label with an optional action.",
       props: {
-        title: p.text("ShTitle", "Section"),
-        action: p.text("ShAct", "See all"),
+        title: p.text("ShTitle", "TODAY'S PLAN"),
+        action: p.text("ShAct", "Edit"),
         showAction: p.bool("ShAct", true),
       },
-      root: { dir: "row", w: 350, align: "center", justify: "between" },
+      root: { dir: "row", w: CW, align: "center", justify: "between" },
     },
     (root) => {
-      b.text(root, "Section", b.ty("title", { size: 18 }), ink, { key: "ShTitle", name: "Title" })
-      b.text(root, "See all", b.ty("label"), c("accent"), { key: "ShAct", name: "Action" })
+      b.text(root, "TODAY'S PLAN", b.ty("micro"), muted, { key: "ShTitle", name: "Title" })
+      b.text(root, "Edit", b.ty("small", { weight: 600 }), c("ink-2"), {
+        key: "ShAct",
+        name: "Action",
+      })
     },
   )
 
-  const avatar = b.component(
-    "Avatar",
-    {
-      key: "Avatar",
-      section: "Content",
-      props: {
-        initials: p.text("AvInit", "MO"),
-        size: p.variants({
-          sm: { "root.w": 36, "root.h": 36, "AvInit.style/size": 13 },
-          lg: { "root.w": 80, "root.h": 80, "AvInit.style/size": 26 },
-        }),
-      },
-      root: {
-        dir: "row",
-        w: 36,
-        h: 36,
-        align: "center",
-        justify: "center",
-        radius: r("pill"),
-        fill: grad("art-1", "art-2"),
-      },
-    },
-    (root) => b.text(root, "MO", b.ty("label", { size: 13 }), c("on-art"), { key: "AvInit" }),
-  )
+  // --- Components: data --------------------------------------------------------------------------
 
-  const badge = b.component(
-    "Badge",
+  const stat = b.component(
+    "Stat",
     {
-      key: "Badge",
-      section: "Content",
+      key: "Stat",
+      section: "Data",
+      description:
+        "Caps label over a big numeral with a small mono unit (Apple Fitness). 116pt wide so triplets align.",
       props: {
-        label: p.text("BdgLbl", "Badge"),
+        label: p.text("SttLbl", "DURATION"),
+        value: p.text("SttVal", "45"),
+        unit: p.text("SttUnit", "MIN"),
         tone: p.variants({
-          accent: { "root.fill": c("accent-soft"), "BdgLbl.fill": c("accent") },
-          green: { "root.fill": c("green-soft"), "BdgLbl.fill": c("green") },
-          neutral: { "root.fill": c("subtle"), "BdgLbl.fill": c("ink-2") },
-          glass: { "root.fill": c("surface"), "BdgLbl.fill": ink },
+          default: { "SttLbl.fill": muted, "SttVal.fill": ink, "SttUnit.fill": muted },
+          hero: {
+            "SttLbl.fill": c("hero-muted"),
+            "SttVal.fill": c("on-hero"),
+            "SttUnit.fill": c("hero-muted"),
+          },
         }),
       },
-      root: { dir: "row", pad: [4, 10], radius: r("pill"), fill: c("accent-soft") },
+      root: { dir: "column", w: 116, gap: 6 },
     },
-    (root) =>
-      b.text(root, "Badge", b.ty("caption", { size: 12 }), c("accent"), {
-        key: "BdgLbl",
-        name: "Label",
-      }),
+    (root) => {
+      b.text(root, "DURATION", b.ty("micro"), muted, { key: "SttLbl" })
+      const line = b.row(root, "Value", { align: "baseline", gap: 4 })
+      b.text(line, "45", b.ty("metric"), ink, { key: "SttVal" })
+      b.text(line, "MIN", b.ty("mono"), muted, { key: "SttUnit" })
+    },
   )
-
-  const tones = {
-    accent: ["accent-soft", "accent"],
-    green: ["green-soft", "green"],
-    blue: ["blue-soft", "blue"],
-    violet: ["violet-soft", "violet"],
-    neutral: ["subtle", "ink-2"],
-  } as const
-  const toneVariants = (tile: string, icon: string) =>
-    p.variants(
-      Object.fromEntries(
-        Object.entries(tones).map(([k, [soft, strong]]) => [
-          k,
-          { [`${tile}.fill`]: c(soft), [`${icon}.color`]: c(strong) },
-        ]),
-      ),
-    )
 
   const ring = b.component(
     "Progress ring",
     {
       key: "Ring",
       section: "Data",
-      description: "Clockwise from 12 o’clock: set RgArc sweepAngle to −3.6 × the percentage.",
-      props: {
-        value: p.text("RgVal", "72%"),
-        label: p.text("RgLbl", "of move goal"),
-        tone: p.variants({
-          accent: { "RgArc.fill": c("accent") },
-          green: { "RgArc.fill": c("green") },
-          blue: { "RgArc.fill": c("blue") },
-          violet: { "RgArc.fill": c("violet") },
-        }),
-        size: p.variants({
-          md: {
-            "root.w": 112,
-            "root.h": 112,
-            "RgTrack.w": 112,
-            "RgTrack.h": 112,
-            "RgArc.w": 112,
-            "RgArc.h": 112,
-            "RgVal.style": b.ty("metric", { align: "center" }),
-            "RgLbl.style/size": 12,
-          },
-          sm: {
-            "root.w": 64,
-            "root.h": 64,
-            "RgTrack.w": 64,
-            "RgTrack.h": 64,
-            "RgArc.w": 64,
-            "RgArc.h": 64,
-            "RgVal.style": b.ty("metric", { size: 15, align: "center" }),
-            "RgLbl.style/size": 9,
-          },
-          lg: {
-            "root.w": 220,
-            "root.h": 220,
-            "RgTrack.w": 220,
-            "RgTrack.h": 220,
-            "RgArc.w": 220,
-            "RgArc.h": 220,
-            "RgVal.style": b.ty("timer", { align: "center" }),
-            "RgLbl.style/size": 15,
-          },
-        }),
-      },
-      root: { dir: "column", w: 112, h: 112, align: "center", justify: "center", gap: 0 },
+      description:
+        "One thin ring, clockwise from 12 o'clock. Set RgArc sweepAngle to −3.6 × the percentage.",
+      props: { value: p.text("RgVal", "72") },
+      root: { dir: "row", w: 120, h: 120, align: "center", justify: "center" },
     },
     (root) => {
       const arc = {
         x: 0,
         y: 0,
-        w: 112,
-        h: 112,
-        innerRadius: 0.84,
+        w: 120,
+        h: 120,
+        innerRadius: 0.88,
         position: "absolute",
         meta: overlay,
       }
-      b.ellipse(root, "Track", { key: "RgTrack", ...arc, fill: c("track") })
+      b.ellipse(root, "Track", { key: "RgTrack", ...arc, fill: c("ring-track") })
       b.ellipse(root, "Arc", {
         key: "RgArc",
         ...arc,
         startAngle: 90,
         sweepAngle: -259,
-        fill: c("accent"),
+        fill: c("volt"),
       })
-      b.text(root, "72%", b.ty("metric", { align: "center" }), ink, { key: "RgVal", name: "Value" })
-      b.text(root, "of move goal", b.ty("small", { size: 12, align: "center" }), muted, {
-        key: "RgLbl",
-        name: "Label",
-      })
+      const v = b.row(root, "Center", { align: "baseline", gap: 1 })
+      b.text(v, "72", b.ty("metric", { size: 30 }), c("on-hero"), { key: "RgVal", name: "Value" })
+      b.text(v, "%", b.ty("mono", { size: 13 }), c("hero-muted"))
     },
   )
   const sweep = (pct: number) => ({ RgArc: { sweepAngle: -Math.round(pct * 3.6) } })
 
-  const stat = b.component(
-    "Stat tile",
+  const weekRow = b.component(
+    "Week row",
     {
-      key: "Stat",
+      key: "Week",
       section: "Data",
+      description:
+        "One training week as seven dots (Outsiders): a dot's size is that day's minutes. Override WkD1 to WkD7 size and fill.",
       props: {
-        value: p.text("SttVal", "0"),
-        unit: p.text("SttUnit", "min"),
-        label: p.text("SttLbl", "Metric"),
-        tone: toneVariants("SttTile", "SttIcon"),
+        week: p.text("WkLbl", "W41"),
+        time: p.text("WkTime", "3 h 15"),
+        change: p.text("WkChg", "+12%"),
       },
-      root: { dir: "column", w: 110, gap: 10, pad: 14, ...card({ radius: r("md") }) },
+      root: { dir: "row", w: CW, h: 34, align: "center" },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        key: "SttTile",
-        w: 30,
-        h: 30,
-        radius: r("sm"),
-        align: "center",
-        justify: "center",
-        fill: c("accent-soft"),
-      })
-      b.icon(tile, "flame", 16, c("accent"), { key: "SttIcon" })
-      const v = b.col(root, "Text", { gap: 2 })
-      const line = b.row(v, "Value", { gap: 3, align: "baseline" })
-      b.text(line, "0", b.ty("metric", { size: 22 }), ink, { key: "SttVal" })
-      b.text(line, "min", b.ty("small", { weight: 600 }), muted, { key: "SttUnit" })
-      b.text(v, "Metric", b.ty("small", { size: 12 }), muted, { key: "SttLbl" })
+      b.text(b.row(root, "Label", { w: 40 }), "W41", b.ty("mono"), muted, { key: "WkLbl" })
+      const cells = b.row(root, "Days", { w: 210 })
+      for (let i = 1; i <= 7; i++) {
+        const cell = b.row(cells, `Day ${i}`, { w: 30, h: 30, align: "center", justify: "center" })
+        b.ellipse(cell, "Dot", { key: `WkD${i}`, w: 6, h: 6, fill: c("dot-dim") })
+      }
+      const right = b.row(root, "Totals", { w: FILL, gap: 10, justify: "end", align: "center" })
+      b.text(right, "3 h 15", b.ty("mono", { size: 13, weight: 600 }), ink, { key: "WkTime" })
+      b.text(right, "+12%", b.ty("mono", { align: "right" }), muted, { key: "WkChg", w: 44 })
     },
   )
 
-  const habitRow = b.component(
-    "Habit row",
+  // --- Components: content ----------------------------------------------------------------------
+
+  const monogram = b.component(
+    "Monogram",
     {
-      key: "Habit",
-      section: "Data",
-      description: "A daily habit with its count and a check.",
+      key: "Mono",
+      section: "Content",
       props: {
-        title: p.text("HbTitle", "Habit"),
-        detail: p.text("HbDetail", "0 of 8"),
-        tone: toneVariants("HbTile", "HbIcon"),
+        initials: p.text("MgText", "MO"),
+        size: p.variants({
+          sm: { "root.w": 40, "root.h": 40, "MgText.style/size": 13 },
+          lg: { "root.w": 72, "root.h": 72, "MgText.style/size": 24 },
+        }),
+        tone: p.variants({
+          ink: { "root.fill": c("avatar"), "MgText.fill": c("on-avatar") },
+          soft: { "root.fill": c("subtle"), "MgText.fill": c("ink-2") },
+        }),
+      },
+      root: {
+        dir: "row",
+        w: 40,
+        h: 40,
+        align: "center",
+        justify: "center",
+        radius: r("pill"),
+        fill: c("avatar"),
+      },
+    },
+    (root) =>
+      b.text(
+        root,
+        "MO",
+        b.ty("label", { size: 13, weight: 700, letterSpacing: 0.3 }),
+        c("on-avatar"),
+        {
+          key: "MgText",
+        },
+      ),
+  )
+
+  const planRow = b.component(
+    "Plan row",
+    {
+      key: "Plan",
+      section: "Content",
+      description:
+        "A line of the day's plan: time, title, meta and a state (todo, done, next with Start).",
+      props: {
+        time: p.text("PrTime", "07:30"),
+        title: p.text("PrTitle", "Mobility flow"),
+        meta: p.text("PrMeta", "10 min"),
         state: p.variants({
           todo: {
-            "HbCheck.fill": c("surface"),
-            "HbCheck.stroke": { paint: c("border"), width: 2 },
-            "HbTick.visible": false,
+            "PrCircle.visible": true,
+            "PrCircle.fill": c("bg"),
+            "PrCircle.stroke": { paint: c("ink-2"), width: 1.5 },
+            "PrCheck.visible": false,
+            "PrStart.visible": false,
+            "PrTitle.fill": ink,
           },
           done: {
-            "HbCheck.fill": c("green"),
-            "HbCheck.stroke": { paint: c("green"), width: 2 },
-            "HbTick.visible": true,
+            "PrCircle.visible": true,
+            "PrCircle.fill": ink,
+            "PrCircle.stroke": { paint: ink, width: 1.5 },
+            "PrCheck.visible": true,
+            "PrStart.visible": false,
+            "PrTitle.fill": muted,
+          },
+          next: {
+            "PrCircle.visible": false,
+            "PrCircle.fill": c("bg"),
+            "PrCircle.stroke": { paint: ink, width: 1.5 },
+            "PrCheck.visible": false,
+            "PrStart.visible": true,
+            "PrTitle.fill": ink,
           },
         }),
       },
       root: {
         dir: "row",
-        w: 350,
+        w: CW,
         gap: 14,
         align: "center",
-        pad: [12, 14],
-        ...card({ radius: r("md") }),
+        pad: [14, 0],
+        stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        key: "HbTile",
-        w: 40,
-        h: 40,
-        radius: r("sm"),
+      b.text(root, "07:30", b.ty("mono", { size: 13 }), muted, { key: "PrTime", w: 44 })
+      const t = b.col(root, "Text", { w: FILL, gap: 3 })
+      b.text(t, "Mobility flow", b.ty("label", { size: 16 }), ink, { key: "PrTitle" })
+      b.text(t, "10 min", b.ty("small"), muted, { key: "PrMeta" })
+      const circle = b.row(root, "Check", {
+        key: "PrCircle",
+        w: 26,
+        h: 26,
         align: "center",
         justify: "center",
-        fill: c("blue-soft"),
-      })
-      b.icon(tile, "glass-water", 20, c("blue"), { key: "HbIcon" })
-      const t = b.col(root, "Text", { w: FILL, gap: 2 })
-      b.text(t, "Habit", b.ty("label", { size: 15 }), ink, { key: "HbTitle" })
-      b.text(t, "0 of 8", b.ty("small"), muted, { key: "HbDetail" })
-      const chk = b.row(root, "Check", {
-        key: "HbCheck",
-        w: 28,
-        h: 28,
         radius: r("pill"),
+        fill: c("bg"),
+        stroke: { paint: c("ink-2"), width: 1.5 },
+      })
+      b.icon(circle, "check", 15, c("bg"), { key: "PrCheck", visible: false })
+      const start = b.row(root, "Start", {
+        key: "PrStart",
+        gap: 6,
         align: "center",
-        justify: "center",
-        fill: c("surface"),
-        stroke: { paint: c("border"), width: 2 },
+        pad: [8, 14, 8, 12],
+        radius: r("pill"),
+        fill: c("volt"),
+        visible: false,
       })
-      b.icon(chk, "check", 16, c("on-accent"), { key: "HbTick", visible: false, strokeWidth: 3 })
-    },
-  )
-
-  const workoutCard = b.component(
-    "Workout card",
-    {
-      key: "WCard",
-      section: "Data",
-      props: {
-        eyebrow: p.text("WcEye", "Today"),
-        title: p.text("WcTitle", "Workout"),
-        duration: p.text("WcDur", "45 min"),
-        kcal: p.text("WcKcal", "380 kcal"),
-        art: p.variants({
-          strength: { "WcArt.fill": grad("art-1", "art-2"), "WcIcon.icon": "dumbbell" },
-          run: { "WcArt.fill": grad("art-3", "art-2"), "WcIcon.icon": "footprints" },
-          mobility: { "WcArt.fill": grad("art-4", "art-3"), "WcIcon.icon": "person-standing" },
-        }),
-      },
-      root: { dir: "row", w: 350, gap: 14, align: "center", pad: 12, ...card() },
-    },
-    (root) => {
-      const art = b.row(root, "Art", {
-        key: "WcArt",
-        w: 76,
-        h: 76,
-        radius: r("md"),
-        align: "center",
-        justify: "center",
-        fill: grad("art-1", "art-2"),
-      })
-      b.icon(art, "dumbbell", 30, c("on-art"), { key: "WcIcon" })
-      const t = b.col(root, "Text", { w: FILL, gap: 6 })
-      b.text(t, "Today", b.ty("caption", { case: "upper", letterSpacing: 0.6 }), c("accent"), {
-        key: "WcEye",
-        name: "Eyebrow",
-      })
-      b.para(t, "Workout", b.ty("heading"), ink, { key: "WcTitle", name: "Title" })
-      const meta = b.row(t, "Meta", { gap: 12, align: "center" })
-      for (const [icon, key, val] of [
-        ["clock", "WcDur", "45 min"],
-        ["flame", "WcKcal", "380 kcal"],
-      ] as const) {
-        const m = b.row(meta, icon, { gap: 4, align: "center" })
-        b.icon(m, icon, 14, muted)
-        b.text(m, val, b.ty("small"), muted, { key })
-      }
-      b.use(root, iconBtn, {
-        key: "WcGo",
-        args: { variant: "accent" },
-        set: { IbIcon: { icon: "play" } },
-      })
+      b.icon(start, "play", 14, c("on-volt"))
+      b.text(start, "Start", b.ty("label", { size: 14, weight: 700 }), c("on-volt"))
     },
   )
 
   const exerciseRow = b.component(
     "Exercise row",
     {
-      key: "Exercise",
-      section: "Data",
+      key: "Ex",
+      section: "Content",
+      description: "Numbered exercise: index in mono, name, sets × reps · load.",
       props: {
-        index: p.text("ExNum", "1"),
-        name: p.text("ExName", "Exercise"),
-        detail: p.text("ExDetail", "4 sets · 8 reps"),
-        state: p.variants({
-          next: {
-            "ExDot.fill": c("subtle"),
-            "ExNum.fill": c("ink-2"),
-            "ExNum.visible": true,
-            "ExTick.visible": false,
-            "root.stroke": { paint: c("surface"), width: 1.5 },
-          },
-          current: {
-            "ExDot.fill": c("accent"),
-            "ExNum.fill": c("on-accent"),
-            "ExNum.visible": true,
-            "ExTick.visible": false,
-            "root.stroke": { paint: c("accent"), width: 1.5 },
-          },
-          done: {
-            "ExDot.fill": c("green-soft"),
-            "ExNum.fill": c("green"),
-            "ExNum.visible": false,
-            "ExTick.visible": true,
-            "root.stroke": { paint: c("surface"), width: 1.5 },
-          },
-        }),
+        index: p.text("ExIdx", "01"),
+        name: p.text("ExName", "Back squat"),
+        meta: p.text("ExMeta", "4 × 6 · 70 kg"),
       },
       root: {
         dir: "row",
-        w: 350,
+        w: CW,
         gap: 14,
         align: "center",
-        pad: [12, 14],
-        radius: r("md"),
-        fill: c("surface"),
-        stroke: { paint: c("surface"), width: 1.5 },
+        pad: [11, 0],
+        stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      const dot = b.row(root, "Index", {
-        key: "ExDot",
-        w: 32,
-        h: 32,
-        radius: r("pill"),
-        align: "center",
-        justify: "center",
-        fill: c("subtle"),
-      })
-      b.text(dot, "1", b.ty("label", { size: 13 }), c("ink-2"), { key: "ExNum" })
-      b.icon(dot, "check", 16, c("green"), { key: "ExTick", visible: false, strokeWidth: 3 })
+      b.text(root, "01", b.ty("mono", { size: 13 }), muted, { key: "ExIdx", w: 24 })
       const t = b.col(root, "Text", { w: FILL, gap: 2 })
-      b.text(t, "Exercise", b.ty("label", { size: 15 }), ink, { key: "ExName" })
-      b.text(t, "4 sets · 8 reps", b.ty("small"), muted, { key: "ExDetail" })
-      b.icon(root, "chevron-right", 18, muted, { key: "ExChev" })
+      b.text(t, "Back squat", b.ty("label", { size: 16 }), ink, { key: "ExName" })
+      b.text(t, "4 × 6 · 70 kg", b.ty("small"), muted, { key: "ExMeta" })
+      b.icon(root, "ellipsis", 20, muted)
     },
   )
 
-  const optionCard = b.component(
-    "Goal option",
+  const setRow = b.component(
+    "Set row",
     {
-      key: "Option",
-      section: "Data",
+      key: "SetRow",
+      section: "Content",
+      description: "One set in the live workout: done, current (volt ring) or upcoming.",
       props: {
-        title: p.text("OpTitle", "Goal"),
-        detail: p.text("OpDetail", "What it means."),
-        tone: toneVariants("OpTile", "OpIcon"),
+        label: p.text("SsLbl", "SET 1"),
+        value: p.text("SsVal", "8 × 40 kg"),
         state: p.variants({
-          default: {
-            "root.stroke": { paint: c("border"), width: 1.5 },
-            "OpRadio.stroke": { paint: c("border"), width: 2 },
-            "OpRadio.fill": c("surface"),
-            "OpDot.visible": false,
+          done: {
+            "root.fill": c("bg"),
+            "SsLbl.fill": muted,
+            "SsVal.fill": ink,
+            "SsCircle.fill": c("volt"),
+            "SsCircle.stroke": { paint: c("volt"), width: 2 },
+            "SsCheck.visible": true,
           },
-          selected: {
-            "root.stroke": { paint: c("primary"), width: 1.5 },
-            "OpRadio.stroke": { paint: c("primary"), width: 2 },
-            "OpRadio.fill": c("primary"),
-            "OpDot.visible": true,
+          current: {
+            "root.fill": c("subtle"),
+            "SsLbl.fill": ink,
+            "SsVal.fill": ink,
+            "SsCircle.fill": c("subtle"),
+            "SsCircle.stroke": { paint: c("volt"), width: 2 },
+            "SsCheck.visible": false,
+          },
+          upcoming: {
+            "root.fill": c("bg"),
+            "SsLbl.fill": muted,
+            "SsVal.fill": muted,
+            "SsCircle.fill": c("bg"),
+            "SsCircle.stroke": { paint: c("border"), width: 2 },
+            "SsCheck.visible": false,
           },
         }),
       },
       root: {
         dir: "row",
-        w: 350,
+        w: CW,
         gap: 14,
         align: "center",
-        pad: [14, 16],
-        radius: r("lg"),
-        fill: c("surface"),
-        stroke: { paint: c("border"), width: 1.5 },
+        pad: [11, 14],
+        radius: r("md"),
+        fill: c("bg"),
       },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        key: "OpTile",
-        w: 44,
-        h: 44,
-        radius: r("md"),
+      b.text(root, "SET 1", b.ty("mono", { size: 12 }), muted, { key: "SsLbl", w: 48 })
+      b.text(root, "8 × 40 kg", b.ty("label", { size: 16 }), ink, {
+        key: "SsVal",
+        w: FILL,
+        grow: "fixed-width",
+      })
+      const circle = b.row(root, "Status", {
+        key: "SsCircle",
+        w: 24,
+        h: 24,
         align: "center",
         justify: "center",
-        fill: c("accent-soft"),
-      })
-      b.icon(tile, "dumbbell", 22, c("accent"), { key: "OpIcon" })
-      const t = b.col(root, "Text", { w: FILL, gap: 2 })
-      b.text(t, "Goal", b.ty("label", { size: 15 }), ink, { key: "OpTitle" })
-      b.para(t, "What it means.", b.ty("small"), muted, { key: "OpDetail" })
-      const radio = b.row(root, "Radio", {
-        key: "OpRadio",
-        w: 22,
-        h: 22,
         radius: r("pill"),
+        fill: c("volt"),
+        stroke: { paint: c("volt"), width: 2 },
+      })
+      b.icon(circle, "check", 14, c("on-volt"), { key: "SsCheck" })
+    },
+  )
+
+  const optionRow = b.component(
+    "Option row",
+    {
+      key: "Option",
+      section: "Content",
+      description:
+        "Single-choice row for onboarding. Selected rows invert to ink with a volt check.",
+      props: {
+        title: p.text("OpTitle", "Build strength"),
+        sub: p.text("OpSub", "Lift three days a week"),
+        state: p.variants({
+          default: {
+            "root.fill": c("surface"),
+            "root.stroke": { paint: c("border") },
+            "OpTitle.fill": ink,
+            "OpSub.fill": muted,
+            "OpCheck.visible": false,
+          },
+          selected: {
+            "root.fill": ink,
+            "root.stroke": { paint: ink },
+            "OpTitle.fill": c("bg"),
+            "OpSub.fill": c("on-ink-muted"),
+            "OpCheck.visible": true,
+          },
+        }),
+      },
+      root: {
+        dir: "row",
+        w: CW,
+        gap: 14,
+        align: "center",
+        pad: [16, 18],
+        radius: r("lg"),
+        fill: c("surface"),
+        stroke: { paint: c("border") },
+      },
+    },
+    (root) => {
+      const t = b.col(root, "Text", { w: FILL, gap: 3 })
+      b.text(t, "Build strength", b.ty("heading"), ink, { key: "OpTitle" })
+      b.text(t, "Lift three days a week", b.ty("small"), muted, { key: "OpSub" })
+      const chk = b.row(root, "Check", {
+        key: "OpCheck",
+        w: 24,
+        h: 24,
         align: "center",
         justify: "center",
-        fill: c("surface"),
-        stroke: { paint: c("border"), width: 2 },
+        radius: r("pill"),
+        fill: c("volt"),
+        visible: false,
       })
-      b.ellipse(radio, "Dot", { key: "OpDot", w: 8, h: 8, fill: c("on-primary"), visible: false })
+      b.icon(chk, "check", 14, c("on-volt"))
     },
   )
 
@@ -854,8 +778,8 @@ function build(b: TemplateBuilder) {
     "Setting row",
     {
       key: "Setting",
-      section: "Data",
-      description: "List row with a value and chevron, or a toggle.",
+      section: "Content",
+      description: "Hairline list row with a value and chevron, or a toggle.",
       props: {
         label: p.text("SrLbl", "Setting"),
         value: p.text("SrVal", "Value"),
@@ -863,22 +787,19 @@ function build(b: TemplateBuilder) {
         showChevron: p.bool("SrChev", true),
         showToggle: p.bool("SrTgWrap", false),
         toggle: p.swap("SrToggle", toggle),
-        tone: toneVariants("SrTile", "SrIcon"),
       },
-      root: { dir: "row", w: 350, gap: 12, align: "center", pad: [11, 14] },
+      root: {
+        dir: "row",
+        w: CW,
+        gap: 14,
+        align: "center",
+        pad: [15, 0],
+        stroke: { paint: c("border"), width: { b: 1 } },
+      },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        key: "SrTile",
-        w: 32,
-        h: 32,
-        radius: r("sm"),
-        align: "center",
-        justify: "center",
-        fill: c("subtle"),
-      })
-      b.icon(tile, "bell", 17, c("ink-2"), { key: "SrIcon" })
-      b.text(root, "Setting", b.ty("body", { weight: 500 }), ink, {
+      b.icon(root, "bell", 20, c("ink-2"), { key: "SrIcon" })
+      b.text(root, "Setting", b.ty("label", { size: 16 }), ink, {
         key: "SrLbl",
         w: FILL,
         grow: "fixed-width",
@@ -890,18 +811,18 @@ function build(b: TemplateBuilder) {
     },
   )
 
-  // --- Screens helpers ---------------------------------------------------------------------------
+  // --- Screen helpers ----------------------------------------------------------------------------
 
   const page = b.page("Screens")
-  type TabKey = "today" | "plan" | "progress" | "profile"
+  type TabKey = "today" | "train" | "progress" | "profile"
   function screen(
     name: string,
     opts: {
       tab?: TabKey
       dark?: boolean
-      pad?: (number | ReturnType<typeof s>)[]
-      header?: (scr: string) => void
+      pad?: number[]
       gap?: number
+      header?: (scr: string) => void
     } = {},
   ) {
     const scr = b.screen(page, name, {
@@ -917,8 +838,8 @@ function build(b: TemplateBuilder) {
     const content = b.col(scr, "Content", {
       w: FILL,
       h: FILL,
-      gap: opts.gap ?? s(6),
-      pad: opts.pad ?? [8, 20, 20, 20],
+      gap: opts.gap ?? 18,
+      pad: opts.pad ?? [8, 20, 16, 20],
       clip: true,
     })
     const bottom = (fn?: (into: string) => void) => {
@@ -926,7 +847,7 @@ function build(b: TemplateBuilder) {
       else {
         const bar = b.col(scr, "Bottom bar", { w: FILL, gap: 0 })
         if (fn) {
-          const inner = b.col(bar, "Actions", { w: FILL, gap: 10, pad: [12, 20, 4, 20] })
+          const inner = b.col(bar, "Actions", { w: FILL, gap: 6, pad: [8, 20, 4, 20] })
           fn(inner)
         }
         b.use(bar, homeBar, { props: { w: FILL } })
@@ -934,11 +855,37 @@ function build(b: TemplateBuilder) {
     }
     return { scr, content, bottom }
   }
-  const twoLine = (parent: string, eyebrow: string, title: string) => {
-    const t = b.col(parent, "Heading", { w: FILL, gap: 4 })
-    b.text(t, eyebrow, b.ty("label", { size: 13 }), muted, { name: "Eyebrow" })
-    b.para(t, title, b.ty("h1"), ink, { name: "Title" })
-    return t
+  const section = (parent: string, title: string, action?: string) =>
+    b.use(parent, sectionHead, {
+      props: { w: FILL },
+      args: { title, ...(action ? { action } : { showAction: false }) },
+    })
+  const week = (parent: string, i: number, today?: number) => {
+    const [label, mins] = WEEKS[i] as [string, number[]]
+    const total = sum(mins)
+    const prev = i ? sum((WEEKS[i - 1] as [string, number[]])[1]) : 0
+    const chg =
+      i && i < WEEKS.length - 1
+        ? `${total >= prev ? "+" : "−"}${Math.round((Math.abs(total - prev) / prev) * 100)}%`
+        : i
+          ? "so far"
+          : ""
+    const set: Record<string, Record<string, unknown>> = {}
+    mins.forEach((m, d) => {
+      if (m) set[`WkD${d + 1}`] = { w: dot(m), h: dot(m), fill: c("dot") }
+      else if (today === d)
+        set[`WkD${d + 1}`] = {
+          w: 18,
+          h: 18,
+          stroke: { paint: c("dot"), width: 1.5 },
+          fill: c("bg"),
+        }
+    })
+    b.use(parent, weekRow, {
+      props: { w: FILL },
+      args: { week: label, time: hm(total), change: chg },
+      set,
+    })
   }
 
   // --- Cover -------------------------------------------------------------------------------------
@@ -947,7 +894,7 @@ function build(b: TemplateBuilder) {
     eyebrow: "Mobile app template",
     title: "Brisk fitness coach",
     description:
-      "Onboarding, a daily plan, workout detail, a live workout, progress charts and a profile for an iPhone fitness and habit app. Built from 20 components with light and dark tokens.",
+      "Onboarding, a Today with one ring, workout detail, a rest timer, dot-matrix progress and a profile for an iPhone strength and habit coach. Light and dark tokens, one volt accent, no gradients.",
     preview: (area) => {
       const row = b.row(area, "Phones", {
         w: FILL,
@@ -961,7 +908,7 @@ function build(b: TemplateBuilder) {
           w: 300,
           h: 560,
           gap: 14,
-          pad: [24, 16],
+          pad: [20, 16],
           radius: 40,
           clip: true,
           fill: c("bg"),
@@ -970,489 +917,427 @@ function build(b: TemplateBuilder) {
           ...(dark ? { theme: { mode: "dark" } } : {}),
         })
       const a = phone("Today", false)
-      twoLine(a, "Tuesday, October 6", "Morning, Maya")
-      const ringCard = b.row(a, "Rings", { w: FILL, gap: 14, align: "center", pad: 14, ...card() })
-      b.use(ringCard, ring, {
-        args: { value: "72%", label: "of move goal", size: "md", tone: "accent" },
-        set: sweep(72),
+      b.text(a, "TUESDAY, OCTOBER 6", b.ty("micro"), muted)
+      b.text(a, "Today", b.ty("display"), ink)
+      const hero = b.row(a, "Move", {
+        w: FILL,
+        gap: 10,
+        align: "center",
+        pad: 16,
+        radius: r("card"),
+        fill: c("hero"),
       })
-      const rc = b.col(ringCard, "Totals", { w: FILL, gap: 8 })
-      for (const [v, l] of [
-        ["432 kcal", "of 600 moved"],
-        ["24 min", "of 30 exercise"],
-      ] as const) {
-        const it = b.col(rc, l, { gap: 0 })
-        b.text(it, v, b.ty("label", { size: 15 }), ink)
-        b.text(it, l, b.ty("small", { size: 12 }), muted)
-      }
-      b.use(a, workoutCard, {
+      const hc = b.col(hero, "Numbers", { w: FILL, gap: 4 })
+      b.text(hc, "MOVE · KCAL", b.ty("micro"), c("hero-muted"))
+      const hv = b.row(hc, "Value", { align: "baseline", gap: 4 })
+      b.text(hv, "432", b.ty("numeral", { size: 52, letterSpacing: -2.2 }), c("on-hero"))
+      b.text(hv, "/ 600", b.ty("mono", { size: 11 }), c("hero-muted"))
+      b.use(hero, ring, {
+        props: { w: 84, h: 84 },
+        set: { RgTrack: { w: 84, h: 84 }, RgArc: { w: 84, h: 84, sweepAngle: -259 } },
+      })
+      const pl = b.col(a, "Plan", { w: FILL, gap: 0 })
+      b.use(pl, planRow, {
         props: { w: FILL },
-        args: {
-          eyebrow: "Today, 18:00",
-          title: "Lower body strength",
-          duration: "45 min",
-          kcal: "380 kcal",
-        },
+        args: { time: "07:30", title: "Mobility flow", meta: "10 min", state: "done" },
       })
-      b.use(a, habitRow, {
+      b.use(pl, planRow, {
         props: { w: FILL },
-        args: {
-          title: "Drink 2 L of water",
-          detail: "5 of 8 glasses",
-          tone: "blue",
-          state: "todo",
-        },
+        args: { time: "18:00", title: "Lower body", meta: "45 min · 6 lifts", state: "next" },
       })
-      b.use(a, habitRow, {
+      const d = phone("Rest", true)
+      b.text(d, "REST", b.ty("micro"), muted)
+      b.text(d, "0:45", b.ty("timer", { size: 92, letterSpacing: -4.5 }), ink)
+      const ss = b.col(d, "Sets", { w: FILL, gap: 4 })
+      b.use(ss, setRow, {
         props: { w: FILL },
-        args: { title: "Stretch 10 min", detail: "Done at 7:40", tone: "violet", state: "done" },
-        set: { HbIcon: { icon: "person-standing" } },
+        args: { label: "SET 3", value: "8 × 40 kg", state: "done" },
       })
-      const d = phone("Workout", true)
-      const segs = b.row(d, "Segments", { w: FILL, gap: 4 })
-      for (let i = 0; i < 6; i++)
-        b.rect(segs, `Exercise ${i + 1}`, {
-          w: FILL,
-          h: 4,
-          radius: r("pill"),
-          fill: i < 1 ? c("green") : i === 1 ? c("accent") : c("track"),
-        })
-      const dh = b.col(d, "Heading", { w: FILL, gap: 4, align: "center" })
-      b.text(dh, "Romanian deadlift", b.ty("title", { align: "center" }), ink)
-      b.text(dh, "Set 3 of 4 · 8 reps at 40 kg", b.ty("small", { align: "center" }), muted)
-      const ringWrap = b.row(d, "Timer", { w: FILL, justify: "center", pad: [12, 0] })
-      b.use(ringWrap, ring, {
-        args: { value: "0:45", label: "Rest left", size: "lg", tone: "accent" },
-        set: sweep(62),
-      })
-      const ctl = b.row(d, "Controls", { w: FILL, gap: 12, align: "center", justify: "center" })
-      b.use(ctl, iconBtn, { args: { variant: "soft" }, set: { IbIcon: { icon: "pause" } } })
-      b.use(ctl, button, { props: { w: FILL }, args: { label: "Log set", variant: "accent" } })
-      b.use(d, exerciseRow, {
+      b.use(ss, setRow, {
         props: { w: FILL },
-        args: { index: "3", name: "Walking lunge", detail: "3 sets · 12 per leg", state: "next" },
+        args: { label: "SET 4", value: "8 × 40 kg", state: "current" },
       })
+      b.use(d, button, { props: { w: FILL }, args: { label: "Skip rest" } })
     },
   })
 
   // --- Onboarding --------------------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Onboarding")
+    const { content, bottom } = screen("Onboarding", { pad: [4, 20, 8, 20], gap: 20 })
     const top = b.row(content, "Progress", { w: FILL, gap: 12, align: "center" })
-    b.use(top, iconBtn, { args: { variant: "surface" } })
-    const steps = b.row(top, "Steps", { w: FILL, gap: 6 })
-    for (const on of [true, true, false])
-      b.rect(steps, on ? "Step done" : "Step", {
-        w: FILL,
+    b.use(top, iconBtn, { args: { variant: "plain" } })
+    const segs = b.row(top, "Steps", { w: FILL, gap: 4 })
+    for (let i = 0; i < 5; i++)
+      b.rect(segs, `Step ${i + 1}`, {
+        w: fill(1),
         h: 4,
-        radius: r("pill"),
-        fill: on ? c("primary") : c("track"),
+        radius: 2,
+        fill: i < 2 ? ink : c("subtle"),
       })
-    b.text(top, "2 of 3", b.ty("label", { size: 13 }), muted)
-    const head = b.col(content, "Heading", { w: FILL, gap: 8 })
-    b.para(head, "What do you want\nto work on?", b.ty("h1"), ink)
+    const head = b.col(content, "Heading", { w: FILL, gap: 10, pad: [16, 0, 0, 0] })
+    b.text(head, "STEP 2 OF 5", b.ty("micro"), muted, { w: FILL, grow: "fixed-width" })
+    b.para(head, "What should Brisk help you with first?", b.ty("display"), ink)
     b.para(
       head,
-      "Pick up to two. Brisk builds your weekly plan around them and you can change them later.",
+      "Your coach builds the first month around it. You can change it any time in Profile.",
       b.ty("body"),
       muted,
     )
-    const opts = b.col(content, "Options", { w: FILL, gap: 10 })
-    for (const [title, detail, tone, icon, sel] of [
-      ["Build strength", "Three short lifting sessions a week", "accent", "dumbbell", true],
-      ["Run farther", "From 5 km to your first 10 km", "green", "footprints", false],
-      ["Sleep better", "A wind-down routine and a steady bedtime", "violet", "moon", true],
-      ["Move every day", "8,000 steps and a stretch break", "blue", "activity", false],
+    const opts = b.col(content, "Options", { w: FILL, gap: 10, pad: [8, 0, 0, 0] })
+    for (const [title, sub, state] of [
+      ["Build strength", "Three lifts a week, more load each time", "selected"],
+      ["Run further", "From a first 5K to a steady half marathon", "default"],
+      ["Move more every day", "Walks, mobility and small habits that stick", "default"],
+      ["Sleep and recover better", "Rest days that adapt to how you feel", "default"],
     ] as const)
-      b.use(opts, optionCard, {
-        props: { w: FILL },
-        args: { title, detail, tone, state: sel ? "selected" : "default" },
-        set: { OpIcon: { icon } },
-      })
-    const days = b.col(content, "Days", { w: FILL, gap: 12 })
-    b.text(days, "Days a week you can train", b.ty("label", { size: 15 }), ink)
-    const chips = b.row(days, "Chips", { w: FILL, gap: 8 })
-    for (const d of ["2", "3", "4", "5", "6"])
-      b.use(chips, chip, {
-        props: { w: FILL },
-        args: { label: d, state: d === "3" ? "selected" : "default" },
-      })
+      b.use(opts, optionRow, { props: { w: FILL }, args: { title, sub, state } })
     bottom((into) => {
       b.use(into, button, { props: { w: FILL }, args: { label: "Continue" } })
+      b.use(into, button, {
+        props: { w: FILL },
+        args: { label: "I'll decide later", variant: "text", size: "md" },
+      })
     })
   }
 
   // --- Today -------------------------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Today", { tab: "today" })
-    const head = b.row(content, "Header", { w: FILL, gap: 12, align: "center" })
-    const ht = b.col(head, "Greeting", { w: FILL, gap: 4 })
-    b.text(ht, "Tuesday, October 6", b.ty("label", { size: 13 }), muted)
-    b.text(ht, "Morning, Maya", b.ty("display"), ink)
-    b.use(head, avatar, { args: { initials: "MO", size: "sm" } })
-
-    const rings = b.row(content, "Rings", { w: FILL, gap: 18, align: "center", pad: 16, ...card() })
-    b.use(rings, ring, {
-      args: { value: "72%", label: "of move goal", size: "md", tone: "accent" },
-      set: sweep(72),
+    const { content, bottom } = screen("Today", { tab: "today", gap: 14 })
+    const head = b.row(content, "Header", { w: FILL, align: "end", justify: "between" })
+    const ht = b.col(head, "Title", { gap: 4 })
+    b.text(ht, "TUESDAY, OCTOBER 6", b.ty("micro"), muted)
+    b.text(ht, "Today", b.ty("display"), ink)
+    const streak = b.row(head, "Streak", {
+      gap: 6,
+      align: "center",
+      pad: [7, 12, 7, 10],
+      radius: r("pill"),
+      fill: c("subtle"),
     })
-    const totals = b.col(rings, "Totals", { w: FILL, gap: 10 })
-    for (const [v, l, tone] of [
-      ["432 kcal", "of 600 moved", "accent"],
-      ["24 min", "of 30 min exercise", "green"],
-      ["6,240", "of 8,000 steps", "blue"],
-    ] as const) {
-      const it = b.row(totals, l, { w: FILL, gap: 10, align: "center" })
-      b.rect(it, "Swatch", { w: 4, h: 30, radius: r("pill"), fill: c(tone) })
-      const tx = b.col(it, "Text", { gap: 0 })
-      b.text(tx, v, b.ty("label", { size: 15 }), ink)
-      b.text(tx, l, b.ty("small", { size: 12 }), muted)
+    b.icon(streak, "flame", 16, c("coral"))
+    b.text(streak, "23", b.ty("mono", { size: 13, weight: 700 }), ink)
+    // the last seven days, in the same dot language as Progress
+    const strip = b.row(content, "Last seven days", { w: FILL, justify: "between" })
+    const days: [string, number | "today"][] = [
+      ["W", (WEEKS[4]![1] as number[])[2]!],
+      ["T", 0],
+      ["F", (WEEKS[4]![1] as number[])[4]!],
+      ["S", (WEEKS[4]![1] as number[])[5]!],
+      ["S", 0],
+      ["M", (WEEKS[5]![1] as number[])[0]!],
+      ["T", "today"],
+    ]
+    for (const [l, m] of days) {
+      const col = b.col(strip, l, { w: 46, gap: 8, align: "center" })
+      b.text(
+        col,
+        l,
+        b.ty("mono", { size: 12, weight: m === "today" ? 700 : 500, align: "center" }),
+        m === "today" ? ink : muted,
+      )
+      const cell = b.row(col, "Cell", { w: 30, h: 30, align: "center", justify: "center" })
+      if (m === "today")
+        b.ellipse(cell, "Today", { w: 20, h: 20, stroke: { paint: c("dot"), width: 1.5 } })
+      else b.ellipse(cell, "Day", { w: dot(m), h: dot(m), fill: m ? c("dot") : c("dot-dim") })
     }
-
-    const plan = b.col(content, "Plan", { w: FILL, gap: 12 })
-    b.use(plan, sectionHead, {
-      props: { w: FILL },
-      args: { title: "Today’s workout", action: "Week plan" },
+    const hero = b.col(content, "Move", {
+      w: FILL,
+      gap: 14,
+      pad: 18,
+      radius: r("card"),
+      fill: c("hero"),
     })
-    b.use(plan, workoutCard, {
+    const hr = b.row(hero, "Move", { w: FILL, gap: 12, align: "center" })
+    const hc = b.col(hr, "Numbers", { w: FILL, gap: 6 })
+    b.text(hc, "MOVE · KCAL", b.ty("micro"), c("hero-muted"))
+    const hv = b.row(hc, "Value", { align: "baseline", gap: 6 })
+    b.text(hv, "432", b.ty("numeral", { size: 64, letterSpacing: -2.8 }), c("on-hero"))
+    b.text(hv, "/ 600", b.ty("mono", { size: 14 }), c("hero-muted"))
+    b.use(hr, ring, { set: sweep(72) })
+    b.divider(hero, c("hero-line"))
+    b.para(
+      hero,
+      "Legs are recovered. Tonight's lift can be a heavy one.",
+      b.ty("body", { size: 14 }),
+      c("on-hero"),
+    )
+    const tri = b.row(hero, "Recovery", { w: FILL, justify: "between" })
+    b.use(tri, stat, {
+      props: { w: 100 },
+      args: { label: "RECOVERY", value: "78", unit: "%", tone: "hero" },
+    })
+    b.use(tri, stat, {
+      props: { w: 100 },
+      args: { label: "HRV", value: "62", unit: "MS", tone: "hero" },
+    })
+    b.use(tri, stat, {
+      props: { w: 100 },
+      args: { label: "RESTING HR", value: "54", unit: "BPM", tone: "hero" },
+    })
+    const plan = b.col(content, "Plan", { w: FILL, gap: 4 })
+    section(plan, "TODAY'S PLAN", "Edit")
+    b.use(plan, planRow, {
+      props: { w: FILL },
+      args: { time: "07:30", title: "Mobility flow", meta: "10 min", state: "done" },
+    })
+    b.use(plan, planRow, {
+      props: { w: FILL },
+      args: { time: "13:00", title: "Water", meta: "5 of 8 glasses", state: "todo" },
+    })
+    b.use(plan, planRow, {
       props: { w: FILL },
       args: {
-        eyebrow: "Today, 18:00",
+        time: "18:00",
         title: "Lower body strength",
-        duration: "45 min",
-        kcal: "380 kcal",
+        meta: "45 min · 6 exercises",
+        state: "next",
       },
     })
-
-    const habits = b.col(content, "Habits", { w: FILL, gap: 10 })
-    b.use(habits, sectionHead, {
-      props: { w: FILL },
-      args: { title: "Habits", action: "1 of 3 done" },
-    })
-    for (const [title, detail, tone, icon, state] of [
-      ["Drink 2 L of water", "5 of 8 glasses", "blue", "glass-water", "todo"],
-      ["Stretch 10 min", "Done at 7:40", "violet", "person-standing", "done"],
-      ["Lights out by 23:00", "Last night 23:12", "neutral", "moon", "todo"],
-    ] as const)
-      b.use(habits, habitRow, {
-        props: { w: FILL },
-        args: { title, detail, tone, state },
-        set: { HbIcon: { icon } },
-      })
     bottom()
   }
 
   // --- Workout detail ----------------------------------------------------------------------------
   {
     const { content, bottom } = screen("Workout detail", {
-      pad: [4, 20, 12, 20],
-      gap: 20,
-      header: (scr) =>
-        b.use(scr, navHeader, {
-          props: { w: FILL },
-          args: { title: "Workout" },
-          set: { NhAct: { args: { variant: "surface" } }, "NhAct/IbIcon": { icon: "bookmark" } },
-        }),
+      header: (scr) => b.use(scr, navHeader, { props: { w: FILL } }),
+      pad: [8, 20, 8, 20],
+      gap: 18,
     })
-    const hero = b.col(content, "Hero", {
+    const head = b.col(content, "Title", { w: FILL, gap: 8 })
+    b.text(head, "STRENGTH · INTERMEDIATE", b.ty("micro"), muted)
+    b.para(head, "Lower body strength", b.ty("display", { size: 32 }), ink)
+    const st = b.row(content, "Facts", {
       w: FILL,
-      h: 112,
-      gap: 8,
-      pad: 16,
       justify: "between",
-      radius: r("xl"),
-      fill: grad("art-1", "art-2"),
+      pad: [14, 0],
+      stroke: { paint: c("border"), width: { t: 1, b: 1 } },
     })
-    const hb = b.row(hero, "Badges", { w: FILL, gap: 6 })
-    b.use(hb, badge, { args: { label: "Strength", tone: "glass" } })
-    b.use(hb, badge, { args: { label: "Intermediate", tone: "glass" } })
-    const hi = b.row(hero, "Mark", { w: FILL, justify: "end" })
-    b.icon(hi, "dumbbell", 44, c("on-art"))
-    const head = b.col(content, "Heading", { w: FILL, gap: 6 })
-    b.para(head, "Lower body strength", b.ty("h1"), ink)
-    b.para(
-      head,
-      "Hinges, squats and lunges. Week 3 adds 2.5 kg to the main lifts.",
-      b.ty("body"),
-      muted,
-    )
-    const stats = b.row(content, "Stats", { w: FILL, gap: 10 })
-    for (const [value, unit, label, tone, icon] of [
-      ["45", "min", "Duration", "accent", "clock"],
-      ["6", "moves", "Exercises", "green", "list-checks"],
-      ["380", "kcal", "Estimate", "blue", "flame"],
-    ] as const)
-      b.use(stats, stat, {
-        props: { w: 110 },
-        args: { value, unit, label, tone },
-        set: { SttIcon: { icon } },
-      })
-    const list = b.col(content, "Exercises", { w: FILL, gap: 8 })
-    b.use(list, sectionHead, {
-      props: { w: FILL },
-      args: { title: "Exercises", action: "Edit" },
-    })
-    for (const [i, name, detail] of [
-      ["1", "Goblet squat", "4 sets · 10 reps · 20 kg"],
-      ["2", "Romanian deadlift", "4 sets · 8 reps · 40 kg"],
-      ["3", "Walking lunge", "3 sets · 12 per leg"],
-    ] as const)
-      b.use(list, exerciseRow, {
-        props: { w: FILL },
-        args: { index: i, name, detail, state: "next" },
-      })
-    const more = b.row(list, "More", {
-      w: FILL,
-      gap: 6,
-      align: "center",
-      justify: "center",
-      pad: [4, 0],
-    })
-    b.text(
-      more,
-      "3 more: hip thrust, step-up, side plank",
-      b.ty("label", { size: 13 }),
-      c("accent"),
-    )
-    b.icon(more, "chevron-down", 16, c("accent"))
+    b.use(st, stat, { args: { label: "DURATION", value: "45", unit: "MIN" } })
+    b.use(st, stat, { args: { label: "EXERCISES", value: "6", unit: "" } })
+    b.use(st, stat, { args: { label: "EST. BURN", value: "380", unit: "KCAL" } })
+    const blocks: [string, [string, string, string][]][] = [
+      ["WARM-UP · 5 MIN", [["01", "Easy bike", "5 min · zone 2"]]],
+      [
+        "MAIN · 32 MIN",
+        [
+          ["02", "Back squat", "4 × 6 · 70 kg"],
+          ["03", "Romanian deadlift", "4 × 8 · 40 kg"],
+          ["04", "Walking lunge", "3 × 12 per leg"],
+          ["05", "Leg curl", "3 × 12 · 30 kg"],
+        ],
+      ],
+      ["FINISHER · 8 MIN", [["06", "Dead bug", "3 × 10 per side"]]],
+    ]
+    const list = b.col(content, "Blocks", { w: FILL, gap: 14 })
+    for (const [title, rows] of blocks) {
+      const g = b.col(list, title, { w: FILL, gap: 0 })
+      b.text(g, title, b.ty("micro"), muted, { w: FILL, grow: "fixed-width" })
+      for (const [index, name, meta] of rows)
+        b.use(g, exerciseRow, { props: { w: FILL }, args: { index, name, meta } })
+    }
     bottom((into) =>
-      b.use(into, button, {
-        props: { w: FILL },
-        args: { label: "Start workout", icon: true, variant: "accent" },
-      }),
+      b.use(into, button, { props: { w: FILL }, args: { label: "Start workout", icon: true } }),
     )
   }
 
-  // --- Workout in progress (dark) ----------------------------------------------------------------
+  // --- Workout in progress -----------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Workout in progress", { dark: true, pad: [8, 20, 12, 20] })
-    const top = b.row(content, "Top", { w: FILL, gap: 12, align: "center" })
-    b.use(top, iconBtn, { args: { variant: "soft" }, set: { IbIcon: { icon: "chevron-down" } } })
-    const tt = b.col(top, "Title", { w: FILL, gap: 2, align: "center" })
-    b.text(tt, "Lower body strength", b.ty("label", { size: 15, align: "center" }), ink)
-    b.text(tt, "18:42 elapsed", b.ty("small", { align: "center" }), muted)
-    b.use(top, iconBtn, { args: { variant: "soft" }, set: { IbIcon: { icon: "list-checks" } } })
-
-    const prog = b.col(content, "Workout progress", { w: FILL, gap: 8 })
-    const segs = b.row(prog, "Segments", { w: FILL, gap: 4 })
-    for (let i = 0; i < 6; i++)
-      b.rect(segs, `Exercise ${i + 1}`, {
-        w: FILL,
-        h: 4,
-        radius: r("pill"),
-        fill: i < 1 ? c("green") : i === 1 ? c("accent") : c("track"),
-      })
-    b.text(prog, "Exercise 2 of 6", b.ty("small"), muted)
-
-    const now = b.col(content, "Now", { w: FILL, gap: 6, align: "center" })
-    b.text(now, "Romanian deadlift", b.ty("h1", { align: "center" }), ink)
-    b.text(now, "Set 3 of 4", b.ty("body", { align: "center" }), muted)
-    const tw = b.row(content, "Timer", { w: FILL, justify: "center" })
-    b.use(tw, ring, {
-      args: { value: "0:45", label: "Rest left", size: "lg", tone: "accent" },
-      set: sweep(62),
+    const { content, bottom } = screen("Workout in progress", {
+      dark: true,
+      pad: [4, 20, 8, 20],
+      gap: 16,
     })
-    const st = b.row(content, "Targets", { w: FILL, gap: 10 })
-    for (const [value, unit, label, tone, icon] of [
-      ["8", "reps", "Target", "accent", "repeat"],
-      ["40", "kg", "Weight", "green", "dumbbell"],
-      ["7", "/10", "Last RPE", "violet", "activity"],
-    ] as const)
-      b.use(st, stat, {
-        props: { w: 110 },
-        args: { value, unit, label, tone },
-        set: { SttIcon: { icon } },
-      })
-    const next = b.col(content, "Up next", { w: FILL, gap: 8 })
-    b.text(next, "Up next", b.ty("label", { size: 13 }), muted)
-    b.use(next, exerciseRow, {
-      props: { w: FILL },
-      args: { index: "3", name: "Walking lunge", detail: "3 sets · 12 per leg", state: "next" },
+    const top = b.row(content, "Header", { w: FILL, align: "center", justify: "between" })
+    const el = b.col(top, "Elapsed", { gap: 2 })
+    b.text(el, "ELAPSED", b.ty("micro"), muted)
+    b.text(el, "18:42", b.ty("metric", { size: 26 }), ink)
+    b.use(top, button, { args: { label: "End", variant: "outline", size: "md" } })
+    const segs = b.row(content, "Exercises", { w: FILL, gap: 4 })
+    ;[c("volt"), c("volt"), c("ink-2"), c("subtle"), c("subtle"), c("subtle")].forEach((f, i) =>
+      b.rect(segs, `Exercise ${i + 1}`, { w: fill(1), h: 4, radius: 2, fill: f }),
+    )
+    const next = b.row(content, "Next", {
+      w: FILL,
+      gap: 12,
+      align: "center",
+      pad: [14, 16],
+      radius: r("lg"),
+      fill: c("surface"),
     })
+    const nt = b.col(next, "Text", { w: FILL, gap: 3 })
+    b.text(nt, "NEXT · SET 4 OF 4", b.ty("micro", { size: 10 }), c("volt"))
+    b.text(nt, "Romanian deadlift", b.ty("heading"), ink)
+    b.text(nt, "8 reps × 40 kg", b.ty("small"), muted)
+    b.icon(next, "chevron-right", 18, muted)
+    const mid = b.col(content, "Rest timer", {
+      w: FILL,
+      gap: 4,
+      align: "center",
+      pad: [16, 0, 0, 0],
+    })
+    b.text(mid, "REST", b.ty("micro", { align: "center" }), muted)
+    b.text(mid, "0:45", b.ty("timer", { align: "center" }), ink)
+    const adj = b.row(content, "Adjust", { w: FILL, gap: 14, align: "center" })
+    b.use(adj, chip, { args: { label: "−15 s" } })
+    const bar = b.row(adj, "Progress", {
+      w: FILL,
+      h: 4,
+      radius: r("pill"),
+      fill: c("subtle"),
+      clip: true,
+    })
+    b.rect(bar, "Elapsed", { w: fill(50), h: 4, fill: c("volt") })
+    b.rect(bar, "Left", { w: fill(50), h: 4, fill: c("subtle") })
+    b.use(adj, chip, { args: { label: "+15 s" } })
+    const sets = b.col(content, "Sets", { w: FILL, gap: 2, pad: [4, 0, 0, 0] })
+    ;(["done", "done", "done", "current"] as const).forEach((state, i) =>
+      b.use(sets, setRow, {
+        props: { w: FILL },
+        args: { label: `SET ${i + 1}`, value: "8 × 40 kg", state },
+      }),
+    )
     bottom((into) => {
-      const ctl = b.row(into, "Controls", { w: FILL, gap: 12, align: "center" })
-      b.use(ctl, iconBtn, {
-        args: { variant: "soft", size: "lg" },
+      const row = b.row(into, "Controls", { w: FILL, gap: 10, align: "center" })
+      b.use(row, iconBtn, {
+        args: { variant: "surface" },
+        props: { w: 56, h: 56 },
         set: { IbIcon: { icon: "pause" } },
       })
-      b.use(ctl, button, {
-        props: { w: FILL, h: 64 },
-        args: { label: "Log set", variant: "accent", icon: true },
-        set: { BtnIcon: { icon: "check" } },
-      })
-      b.use(ctl, iconBtn, {
-        args: { variant: "soft", size: "lg" },
-        set: { IbIcon: { icon: "skip-forward" } },
+      b.use(row, button, {
+        props: { w: FILL },
+        args: { label: "Skip rest", icon: true },
+        set: { BtnIcon: { icon: "skip-forward" } },
       })
     })
   }
 
   // --- Progress ----------------------------------------------------------------------------------
   {
-    const { content, bottom } = screen("Progress", { tab: "progress" })
-    b.text(content, "Progress", b.ty("display"), ink)
-    b.use(content, segmented, {
-      props: { w: FILL },
-      args: { first: "Week", second: "Month", third: "Year", active: "second" },
+    const { content, bottom } = screen("Progress", { tab: "progress", dark: true, gap: 18 })
+    const head = b.row(content, "Header", { w: FILL, align: "center", justify: "between" })
+    b.text(head, "Progress", b.ty("display"), ink)
+    const rng = b.row(head, "Range", { gap: 6 })
+    b.use(rng, chip, { args: { label: "6W", state: "selected" } })
+    b.use(rng, chip, { args: { label: "12W" } })
+    b.use(rng, chip, { args: { label: "1Y" } })
+    const sessions = WEEKS.reduce((n, [, m]) => n + m.filter(Boolean).length, 0)
+    const total = WEEKS.reduce((n, [, m]) => n + sum(m), 0)
+    const avg = Math.round(WEEKS.slice(0, 5).reduce((n, [, m]) => n + sum(m), 0) / 5)
+    const tri = b.row(content, "Totals", { w: FILL })
+    b.use(tri, stat, { args: { label: "SESSIONS", value: String(sessions), unit: "" } })
+    b.use(tri, stat, {
+      args: {
+        label: "TIME",
+        value: `${Math.floor(total / 60)}`,
+        unit: `H ${String(total % 60).padStart(2, "0")}`,
+      },
     })
-    const stats = b.row(content, "Stats", { w: FILL, gap: 10 })
-    for (const [value, unit, label, tone, icon] of [
-      ["14", "", "Workouts", "accent", "dumbbell"],
-      ["612", "min", "Active time", "green", "timer"],
-      ["9", "days", "Streak", "violet", "flame"],
-    ] as const)
-      b.use(stats, stat, {
-        props: { w: 110 },
-        args: { value, unit, label, tone },
-        set: { SttIcon: { icon } },
-        ...(unit ? {} : { hide: ["SttUnit"] }),
+    b.use(tri, stat, {
+      args: {
+        label: "AVG / WEEK",
+        value: `${Math.floor(avg / 60)}`,
+        unit: `H ${String(avg % 60).padStart(2, "0")}`,
+      },
+    })
+    const matrix = b.col(content, "Training weeks", { w: FILL, gap: 6 })
+    section(matrix, "TRAINING WEEKS", "Dot = minutes")
+    const days = b.row(matrix, "Days", { w: FILL, pad: [4, 0, 0, 40] })
+    for (const d of ["M", "T", "W", "T", "F", "S", "S"])
+      b.text(
+        b.row(days, "Day", { w: 30, justify: "center" }),
+        d,
+        b.ty("mono", { size: 11, align: "center" }),
+        muted,
+      )
+    const rows = b.col(matrix, "Weeks", { w: FILL, gap: 0 })
+    WEEKS.forEach((_, i) => week(rows, i, i === WEEKS.length - 1 ? 1 : undefined))
+    const pb = b.col(content, "Personal bests", { w: FILL, gap: 2 })
+    section(pb, "PERSONAL BESTS", "")
+    for (const [name, meta, value] of [
+      ["Back squat", "5 reps · Sep 29", "82.5 kg"],
+      ["Romanian deadlift", "8 reps · Sep 24", "52.5 kg"],
+      ["Plank", "Sep 19", "2:10"],
+    ] as const) {
+      const row = b.row(pb, name, {
+        w: FILL,
+        gap: 12,
+        align: "center",
+        pad: [12, 0],
+        stroke: { paint: c("border"), width: { b: 1 } },
       })
-
-    // Bar chart: active minutes per week.
-    const bars = b.col(content, "Active minutes", { w: FILL, gap: 14, pad: 16, ...card() })
-    const bh = b.row(bars, "Header", { w: FILL, align: "end", justify: "between" })
-    const bt = b.col(bh, "Title", { gap: 2 })
-    b.text(bt, "Active minutes", b.ty("label", { size: 15 }), ink)
-    b.text(bt, "Average 153 a week", b.ty("small"), muted)
-    b.use(bh, badge, { args: { label: "+12% vs last month", tone: "green" } })
-    const plot = b.row(bars, "Plot", { w: FILL, h: 124, gap: 14, align: "end" })
-    const weeks = [
-      ["Sep 14", 142],
-      ["Sep 21", 136],
-      ["Sep 28", 171],
-      ["Oct 5", 163],
-    ] as const
-    weeks.forEach(([wk, v], i) => {
-      const last = i === weeks.length - 1
-      const colm = b.col(plot, wk, { w: (318 - 3 * 14) / 4, gap: 6, align: "center" })
-      b.text(colm, String(v), b.ty("caption"), last ? c("accent") : muted)
-      b.rect(colm, "Bar", {
-        w: 44,
-        h: Math.round((v / 171) * 80),
-        radius: [6, 6, 3, 3],
-        fill: last ? c("accent") : c("accent-soft"),
-      })
-      b.text(colm, wk, b.ty("caption", { weight: 500 }), muted)
-    })
-
-    // Line chart: goblet squat working weight.
-    const line = b.col(content, "Squat weight", { w: FILL, gap: 12, pad: 16, ...card() })
-    const lh = b.row(line, "Header", { w: FILL, align: "end", justify: "between" })
-    const lt = b.col(lh, "Title", { gap: 2 })
-    b.text(lt, "Goblet squat", b.ty("label", { size: 15 }), ink)
-    b.text(lt, "Working weight, up from 15 kg", b.ty("small"), muted)
-    const lv = b.row(lh, "Value", { gap: 3, align: "baseline" })
-    b.text(lv, "20", b.ty("metric", { size: 22 }), ink)
-    b.text(lv, "kg", b.ty("small", { weight: 600 }), muted)
-    const CW = 318
-    const CH = 72
-    const chart = b.col(line, "Chart", { w: CW, h: CH })
-    const kg = [15, 16, 16, 17.5, 18, 20]
-    const pts = kg.map((v, i) => [
-      Math.round((i * CW) / (kg.length - 1)),
-      Math.round(CH - 6 - ((v - 14) / 6) * (CH - 10)),
-    ])
-    const path = pts.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ")
-    b.add(chart, {
-      type: "path",
-      name: "Area",
-      x: 0,
-      y: 0,
-      w: CW,
-      h: CH,
-      viewBox: [0, 0, CW, CH],
-      d: `${path} L${CW} ${CH} L0 ${CH} Z`,
-      fill: c("accent-soft"),
-      position: "absolute",
-      meta: overlay,
-    })
-    b.add(chart, {
-      type: "path",
-      name: "Line",
-      x: 0,
-      y: 0,
-      w: CW,
-      h: CH,
-      viewBox: [0, 0, CW, CH],
-      d: path,
-      fill: [],
-      stroke: { paint: c("accent"), width: 2.5, cap: "round", join: "round" },
-      position: "absolute",
-      meta: overlay,
-    })
-    const axis = b.row(line, "Axis", { w: FILL, justify: "between" })
-    for (const wk of ["Aug 31", "Sep 7", "Sep 14", "Sep 21", "Sep 28", "Oct 5"])
-      b.text(axis, wk, b.ty("caption", { weight: 500 }), muted)
+      const t = b.col(row, "Text", { w: FILL, gap: 2 })
+      b.text(t, name, b.ty("label", { size: 16 }), ink)
+      b.text(t, meta, b.ty("small"), muted)
+      b.text(row, value, b.ty("metric", { size: 20 }), ink)
+    }
     bottom()
   }
 
   // --- Profile -----------------------------------------------------------------------------------
   {
     const { content, bottom } = screen("Profile", { tab: "profile", gap: 18 })
-    const who = b.col(content, "Identity", { w: FILL, gap: 8, align: "center" })
-    b.use(who, avatar, { args: { initials: "MO", size: "lg" } })
-    const names = b.col(who, "Names", { gap: 2, align: "center" })
-    b.text(names, "Maya Okafor", b.ty("title", { align: "center" }), ink)
-    b.text(names, "Member since March 2025 · Lisbon", b.ty("small", { align: "center" }), muted)
-    const badges = b.row(who, "Badges", { gap: 6 })
-    b.use(badges, badge, { args: { label: "9-day streak", tone: "accent" } })
-    b.use(badges, badge, { args: { label: "Strength block, week 3", tone: "green" } })
-
-    const group = (title: string, rows: (into: string) => void) => {
-      const g = b.col(content, title, { w: FILL, gap: 8 })
-      b.text(g, title, b.ty("label", { size: 13 }), muted, { name: "Group title" })
-      const list = b.col(g, "Rows", { w: FILL, ...card(), clip: true })
-      rows(list)
+    const head = b.row(content, "Header", { w: FILL, gap: 16, align: "center" })
+    b.use(head, monogram, { args: { initials: "MO", size: "lg" } })
+    const ht = b.col(head, "Name", { w: FILL, gap: 4 })
+    b.text(ht, "Maya Okafor", b.ty("display", { size: 28 }), ink)
+    b.text(ht, "MEMBER SINCE 2025", b.ty("micro", { size: 10 }), muted)
+    b.use(head, iconBtn, { args: { variant: "surface" }, set: { IbIcon: { icon: "settings" } } })
+    const tri = b.row(content, "Totals", {
+      w: FILL,
+      pad: [14, 0],
+      stroke: { paint: c("border"), width: { t: 1, b: 1 } },
+    })
+    b.use(tri, stat, { args: { label: "WORKOUTS", value: "214", unit: "" } })
+    b.use(tri, stat, { args: { label: "HABIT STREAK", value: "23", unit: "DAYS" } })
+    b.use(tri, stat, { args: { label: "TRAINED", value: "168", unit: "H" } })
+    const goal = b.col(content, "Goal", {
+      w: FILL,
+      gap: 12,
+      pad: 18,
+      radius: r("lg"),
+      fill: c("surface"),
+    })
+    const gl = b.row(goal, "Line", { w: FILL, justify: "between", align: "baseline" })
+    b.text(gl, "GOAL", b.ty("micro"), muted)
+    b.text(gl, "1 of 3 this week", b.ty("mono", { size: 12 }), ink)
+    b.text(goal, "Build strength", b.ty("heading"), ink)
+    const gs = b.row(goal, "Sessions", { w: FILL, gap: 4 })
+    for (let i = 0; i < 3; i++)
+      b.rect(gs, `Session ${i + 1}`, {
+        w: fill(1),
+        h: 6,
+        radius: 3,
+        fill: i < 1 ? c("volt") : c("subtle"),
+      })
+    const coach = b.row(content, "Coach", { w: FILL, gap: 12, align: "center" })
+    b.use(coach, monogram, { args: { initials: "JW", size: "sm", tone: "soft" } })
+    const ct = b.col(coach, "Text", { w: FILL, gap: 1 })
+    b.text(ct, "Jonas Weber", b.ty("label", { size: 16 }), ink)
+    b.text(ct, "Coach · replies within a day", b.ty("small"), muted)
+    b.use(coach, button, { args: { label: "Message", variant: "outline", size: "md" } })
+    const sl = b.col(content, "Settings", { w: FILL, gap: 0 })
+    for (const [i, [label, value, icon]] of (
+      [
+        ["Reminders", "07:15", "bell"],
+        ["Connected apps", "Apple Health", "link"],
+        ["Units", "kg · km", "ruler"],
+        ["Subscription", "Renews Nov 3", "credit-card"],
+        ["Rest day check-ins", "", "moon"],
+      ] as const
+    ).entries()) {
+      void i
+      const toggleRow = label === "Rest day check-ins"
+      b.use(sl, settingRow, {
+        props: { w: FILL },
+        args: {
+          label,
+          ...(value ? { value } : { showValue: false }),
+          showChevron: !toggleRow,
+          showToggle: toggleRow,
+        },
+        set: { SrIcon: { icon } },
+      })
     }
-    group("Goals", (list) => {
-      for (const [label, value, icon, tone] of [
-        ["Weekly workouts", "3", "dumbbell", "accent"],
-        ["Daily steps", "8,000", "footprints", "blue"],
-        ["Bedtime", "23:00", "moon", "violet"],
-      ] as const)
-        b.use(list, settingRow, {
-          props: { w: FILL },
-          args: { label, value, tone },
-          set: { SrIcon: { icon } },
-        })
-    })
-    group("Reminders and data", (list) => {
-      b.use(list, settingRow, {
-        props: { w: FILL },
-        args: {
-          label: "Workout reminders",
-          showValue: false,
-          showChevron: false,
-          showToggle: true,
-          tone: "neutral",
-        },
-        set: { SrIcon: { icon: "bell" } },
-      })
-      b.use(list, settingRow, {
-        props: { w: FILL },
-        args: {
-          label: "Sync with Apple Health",
-          showValue: false,
-          showChevron: false,
-          showToggle: true,
-          toggle: toggleOff,
-          tone: "neutral",
-        },
-        set: { SrIcon: { icon: "heart-pulse" } },
-      })
-      b.use(list, settingRow, {
-        props: { w: FILL },
-        args: { label: "Units", value: "kg, km", tone: "neutral" },
-        set: { SrIcon: { icon: "ruler" } },
-      })
-    })
-    group("Account", (list) => {
-      b.use(list, settingRow, {
-        props: { w: FILL },
-        args: { label: "Brisk Plus", value: "Renews Nov 12", tone: "accent" },
-        set: { SrIcon: { icon: "medal" } },
-      })
-    })
     bottom()
   }
 }

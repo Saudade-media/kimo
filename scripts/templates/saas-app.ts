@@ -1,6 +1,11 @@
 /**
- * Fieldwork: the web app of a fictional project tracker for design and engineering studios.
- * Screens (1440×900 app frames): Overview, Projects, Project board, Team, Settings, Billing.
+ * Fieldwork: the web app of a fictional project tracker for a design studio (Northbeam Studio).
+ * Screens (1440x900 app frames): Overview, Projects, Project board, Team, Settings, Billing.
+ *
+ * Look: a studio wall, not a CRM. Warm paper ground with an inset white panel (Linear), 13px
+ * density, hairlines, one vermilion accent, discipline hues as the only other colour, JetBrains
+ * Mono for IDs, hours and dates. References: Linear (shell, projects), Buffer and Square (board),
+ * HoneyBook (overview strip), Supabase and Browserbase (team, settings), Bloom (billing).
  */
 import { FILL, p, type Template, type TemplateBuilder } from "./lib"
 
@@ -9,7 +14,7 @@ export const template: Template = {
   name: "Fieldwork project tracker",
   category: "Web app",
   description:
-    "Six-screen SaaS web app for a studio project tracker: dashboard, projects, kanban board, team, settings and billing.",
+    "Six-screen web app for a design studio's project tracker: overview, projects, kanban board, team, settings and billing.",
   prefix: "sa",
   build,
 }
@@ -17,27 +22,38 @@ export const template: Template = {
 function build(b: TemplateBuilder) {
   b.tokens({
     colors: {
-      bg: ["#F6F7F9", "#0D0F14"],
-      surface: ["#FFFFFF", "#151821"],
-      subtle: ["#F0F2F5", "#1B1F2A"],
-      sidebar: ["#FBFBFC", "#11141B"],
-      ink: ["#111827", "#F1F3F7"],
-      "ink-2": ["#374151", "#C9CFDA"],
-      muted: ["#6B7280", "#8E97A8"],
-      border: ["#E5E7EB", "#262B37"],
-      accent: ["#5B4BDB", "#9D90FF"],
-      "accent-soft": ["#EEEBFF", "#231F45"],
-      "on-accent": ["#FFFFFF", "#0D0F14"],
-      success: ["#15803D", "#4ADE80"],
-      "success-soft": ["#E7F6EC", "#12301E"],
-      warning: ["#B45309", "#FBBF24"],
-      "warning-soft": ["#FDF3E1", "#3A2A0B"],
-      danger: ["#C2410C", "#FB923C"],
-      "danger-soft": ["#FDEDE6", "#3A1A0D"],
-      "tone-1": ["#DCD6FF", "#3A3170"],
-      "tone-2": ["#CFEFE0", "#1D4A35"],
-      "tone-3": ["#FBE2BE", "#59401A"],
-      "tone-4": ["#F9D4D0", "#5A2620"],
+      bg: ["#EFEDE7", "#131211"],
+      ground: ["#EFEDE7", "#131211"],
+      surface: ["#FFFFFF", "#1B1A18"],
+      subtle: ["#F6F4EF", "#222120"],
+      sunken: ["#F1EFE9", "#171614"],
+      ink: ["#1B1A17", "#EFEDE6"],
+      "on-ink": ["#FFFFFF", "#1B1A17"],
+      muted: ["#6B6860", "#98948A"],
+      faint: ["#9B978D", "#6C6960"],
+      border: ["#E4E1D8", "#2E2C28"],
+      "border-strong": ["#CFCBBF", "#46433D"],
+      accent: ["#D8431F", "#FF7A55"],
+      "on-accent": ["#FFFFFF", "#1B1A17"],
+      "accent-soft": ["#FBE6DF", "#3A211A"],
+      success: ["#2E7D4F", "#5FCF98"],
+      "success-soft": ["#DFF0E4", "#17301F"],
+      warning: ["#A8620A", "#EDB24E"],
+      "warning-soft": ["#F7E8C8", "#33250D"],
+      danger: ["#B4372A", "#F08A78"],
+      "danger-soft": ["#F7DDD8", "#3A1C17"],
+      "d-brand": ["#C2553A", "#E0805F"],
+      "d-web": ["#2F6FB3", "#6FA3E0"],
+      "d-motion": ["#7B5BB5", "#A88BE0"],
+      "d-print": ["#3E8E5A", "#6FC08A"],
+      "d-strategy": ["#B58A1E", "#E0B84F"],
+      "tint-1": ["#F1DDD3", "#3A2A24"],
+      "tint-2": ["#D9E6DD", "#243229"],
+      "tint-3": ["#DDE3EE", "#242B3A"],
+      "tint-4": ["#EFE4C9", "#3A3320"],
+      "load-1": ["#F6E4DD", "#34231D"],
+      "load-2": ["#F0C5B5", "#5A3326"],
+      "load-3": ["#E39A80", "#8A4630"],
     },
     numbers: {
       "space/1": 4,
@@ -47,51 +63,54 @@ function build(b: TemplateBuilder) {
       "space/5": 20,
       "space/6": 24,
       "space/8": 32,
-      "radius/sm": 6,
-      "radius/md": 8,
-      "radius/lg": 12,
+      "space/10": 40,
+      "space/12": 48,
+      "radius/sm": 4,
+      "radius/md": 6,
+      "radius/lg": 8,
+      "radius/xl": 10,
       "radius/pill": 999,
-      "size/sidebar": 248,
-      "size/topbar": 64,
     },
     type: {
-      display: { font: "Inter", size: 56, weight: 700, lineHeight: 1.05, letterSpacing: -1.6 },
-      h1: { font: "Inter", size: 24, weight: 700, lineHeight: 1.25, letterSpacing: -0.4 },
-      heading: { font: "Inter", size: 18, weight: 600, lineHeight: 1.3, letterSpacing: -0.2 },
-      metric: { font: "Inter", size: 28, weight: 700, lineHeight: 1.15, letterSpacing: -0.6 },
-      body: { font: "Inter", size: 14, weight: 400, lineHeight: 1.5 },
-      label: { font: "Inter", size: 14, weight: 600, lineHeight: 1.3 },
-      small: { font: "Inter", size: 12, weight: 400, lineHeight: 1.45 },
+      display: { font: "Inter", size: 60, weight: 600, lineHeight: 1.02, letterSpacing: -2.2 },
+      title: { font: "Inter", size: 20, weight: 600, lineHeight: 1.2, letterSpacing: -0.5 },
+      heading: { font: "Inter", size: 14, weight: 600, lineHeight: 1.3, letterSpacing: -0.1 },
+      body: { font: "Inter", size: 13, weight: 400, lineHeight: 1.45 },
+      label: { font: "Inter", size: 13, weight: 500, lineHeight: 1.3 },
+      small: { font: "Inter", size: 12, weight: 400, lineHeight: 1.4 },
+      figure: { font: "Inter", size: 26, weight: 600, lineHeight: 1.1, letterSpacing: -0.8 },
       mono: { font: "JetBrains Mono", size: 12, weight: 500, lineHeight: 1.4 },
     },
     shadows: {
-      card: [
-        { kind: "shadow", x: 0, y: 1, blur: 2, color: "#1118270D" },
-        { kind: "shadow", x: 0, y: 4, blur: 12, spread: -4, color: "#11182714" },
+      pop: [
+        { kind: "shadow", x: 0, y: 1, blur: 2, color: "#1B1A1714" },
+        { kind: "shadow", x: 0, y: 12, blur: 24, spread: -8, color: "#1B1A1726" },
       ],
     },
   })
 
   const c = (n: string) => b.c(n)
-  const s = (n: number) => b.n(`space/${n}`)
   const r = (n: string) => b.n(`radius/${n}`)
   const ink = c("ink")
   const muted = c("muted")
-  const card = (extra: Record<string, unknown> = {}) => ({
-    radius: r("lg"),
-    fill: c("surface"),
-    stroke: { paint: c("border") },
-    ...extra,
-  })
+  const cap = (extra: Record<string, unknown> = {}) =>
+    b.ty("mono", { size: 11, case: "upper", letterSpacing: 0.6, ...extra })
+  const disc: Record<string, [string, string]> = {
+    brand: ["d-brand", "Brand"],
+    web: ["d-web", "Web"],
+    motion: ["d-motion", "Motion"],
+    print: ["d-print", "Print"],
+    strategy: ["d-strategy", "Strategy"],
+  }
 
-  // --- Components: basics ----------------------------------------------------------------------
+  // --- Components ------------------------------------------------------------------------------
 
   const button = b.component(
     "Button",
     {
       key: "Btn",
       section: "Actions",
-      description: "Primary, secondary, ghost or danger; sm or md.",
+      description: "Accent for the one primary action, dark, secondary or ghost; md or sm.",
       props: {
         label: p.text("BtnLabel", "Button"),
         icon: p.bool("BtnIcon", false),
@@ -102,28 +121,34 @@ function build(b: TemplateBuilder) {
             "BtnLabel.fill": c("on-accent"),
             "BtnIcon.color": c("on-accent"),
           },
+          dark: {
+            "root.fill": ink,
+            "root.stroke": { paint: ink },
+            "BtnLabel.fill": c("on-ink"),
+            "BtnIcon.color": c("on-ink"),
+          },
           secondary: {
             "root.fill": c("surface"),
-            "root.stroke": { paint: c("border") },
+            "root.stroke": { paint: c("border-strong") },
             "BtnLabel.fill": ink,
-            "BtnIcon.color": c("ink-2"),
+            "BtnIcon.color": ink,
           },
           ghost: {
-            "root.fill": c("bg"),
-            "root.stroke": { paint: c("bg") },
-            "BtnLabel.fill": c("ink-2"),
-            "BtnIcon.color": c("ink-2"),
+            "root.fill": c("surface"),
+            "root.stroke": { paint: c("surface") },
+            "BtnLabel.fill": muted,
+            "BtnIcon.color": muted,
           },
           danger: {
-            "root.fill": c("danger-soft"),
-            "root.stroke": { paint: c("danger-soft") },
+            "root.fill": c("surface"),
+            "root.stroke": { paint: c("danger") },
             "BtnLabel.fill": c("danger"),
             "BtnIcon.color": c("danger"),
           },
         }),
         size: p.variants({
-          sm: { "root.layout/pad": [6, 10], "BtnLabel.style/size": 13 },
-          md: { "root.layout/pad": [8, 14], "BtnLabel.style/size": 14 },
+          md: { "root.layout/pad": [7, 12], "BtnLabel.style/size": 13 },
+          sm: { "root.layout/pad": [4, 9], "BtnLabel.style/size": 12 },
         }),
       },
       root: {
@@ -131,15 +156,15 @@ function build(b: TemplateBuilder) {
         gap: 6,
         align: "center",
         justify: "center",
-        pad: [8, 14],
+        pad: [7, 12],
         radius: r("md"),
         fill: c("accent"),
         stroke: { paint: c("accent") },
       },
     },
     (root) => {
-      b.icon(root, "plus", 16, c("on-accent"), { key: "BtnIcon", visible: false })
       b.text(root, "Button", b.ty("label"), c("on-accent"), { key: "BtnLabel", name: "Label" })
+      b.icon(root, "plus", 14, c("on-accent"), { key: "BtnIcon", visible: false })
     },
   )
   const buttonSecondary = b.derive(button, "Button/Secondary", "BtnSec", {
@@ -147,398 +172,269 @@ function build(b: TemplateBuilder) {
     args: { variant: "secondary" },
   })
 
-  const badge = b.component(
-    "Badge",
+  const chip = b.component(
+    "Chip",
     {
-      key: "Badge",
-      section: "Status",
+      key: "Chip",
+      section: "Actions",
+      description: "Small state label with an optional dot.",
       props: {
-        label: p.text("BadgeLbl", "Badge"),
+        label: p.text("ChipLbl", "Chip"),
+        dot: p.bool("ChipDot", false),
         tone: p.variants({
-          neutral: {
-            "root.fill": c("subtle"),
-            "BadgeLbl.fill": c("ink-2"),
-            "BadgeDot.fill": muted,
-          },
-          accent: {
-            "root.fill": c("accent-soft"),
-            "BadgeLbl.fill": c("accent"),
-            "BadgeDot.fill": c("accent"),
-          },
+          neutral: { "root.fill": c("subtle"), "ChipLbl.fill": muted, "ChipDot.fill": muted },
           success: {
             "root.fill": c("success-soft"),
-            "BadgeLbl.fill": c("success"),
-            "BadgeDot.fill": c("success"),
+            "ChipLbl.fill": c("success"),
+            "ChipDot.fill": c("success"),
           },
           warning: {
             "root.fill": c("warning-soft"),
-            "BadgeLbl.fill": c("warning"),
-            "BadgeDot.fill": c("warning"),
+            "ChipLbl.fill": c("warning"),
+            "ChipDot.fill": c("warning"),
           },
           danger: {
             "root.fill": c("danger-soft"),
-            "BadgeLbl.fill": c("danger"),
-            "BadgeDot.fill": c("danger"),
+            "ChipLbl.fill": c("danger"),
+            "ChipDot.fill": c("danger"),
+          },
+          accent: {
+            "root.fill": c("accent-soft"),
+            "ChipLbl.fill": c("accent"),
+            "ChipDot.fill": c("accent"),
           },
         }),
       },
       root: {
         dir: "row",
-        gap: 6,
+        gap: 5,
         align: "center",
-        pad: [3, 8],
-        radius: r("pill"),
+        pad: [2, 7],
+        radius: r("sm"),
         fill: c("subtle"),
       },
     },
     (root) => {
-      b.ellipse(root, "Dot", { key: "BadgeDot", w: 6, h: 6, fill: muted })
-      b.text(root, "Badge", b.ty("small", { weight: 600 }), c("ink-2"), {
-        key: "BadgeLbl",
-        name: "Label",
-      })
+      b.ellipse(root, "Dot", { key: "ChipDot", w: 6, h: 6, fill: muted, visible: false })
+      b.text(root, "Chip", b.ty("small", { weight: 500 }), muted, { key: "ChipLbl", name: "Label" })
     },
   )
-  const badgeSuccess = b.derive(badge, "Badge/Success", "BdgOk", {
-    section: "Status",
-    args: { tone: "success", label: "On track" },
-  })
-  const badgeWarning = b.derive(badge, "Badge/Warning", "BdgWarn", {
-    section: "Status",
-    args: { tone: "warning", label: "At risk" },
-  })
-  const badgeDanger = b.derive(badge, "Badge/Danger", "BdgDanger", {
-    section: "Status",
-    args: { tone: "danger", label: "Blocked" },
-  })
-  const badgeAccent = b.derive(badge, "Badge/Accent", "BdgAccent", {
-    section: "Status",
-    args: { tone: "accent", label: "Planning" },
-  })
-  const tones = {
-    ok: badgeSuccess,
-    warn: badgeWarning,
-    bad: badgeDanger,
-    plan: badgeAccent,
-    neutral: badge,
-  } as const
 
   const avatar = b.component(
     "Avatar",
     {
       key: "Avatar",
-      section: "Status",
+      section: "Content",
       props: {
         initials: p.text("AvInit", "CD"),
         size: p.variants({
-          xs: { "root.w": 22, "root.h": 22, "AvInit.style/size": 9 },
-          sm: { "root.w": 28, "root.h": 28, "AvInit.style/size": 11 },
-          md: { "root.w": 36, "root.h": 36, "AvInit.style/size": 13 },
+          xs: { "root.w": 20, "root.h": 20, "AvInit.style/size": 9 },
+          sm: { "root.w": 24, "root.h": 24, "AvInit.style/size": 10 },
+          md: { "root.w": 32, "root.h": 32, "AvInit.style/size": 12 },
+          lg: { "root.w": 48, "root.h": 48, "AvInit.style/size": 16 },
         }),
         tone: p.variants({
-          violet: { "root.fill": c("tone-1") },
-          green: { "root.fill": c("tone-2") },
-          amber: { "root.fill": c("tone-3") },
-          rose: { "root.fill": c("tone-4") },
+          one: { "root.fill": c("tint-1") },
+          two: { "root.fill": c("tint-2") },
+          three: { "root.fill": c("tint-3") },
+          four: { "root.fill": c("tint-4") },
         }),
       },
       root: {
         dir: "row",
-        w: 36,
-        h: 36,
+        w: 24,
+        h: 24,
         align: "center",
         justify: "center",
         radius: r("pill"),
-        fill: c("tone-1"),
-        stroke: { paint: c("surface"), width: 2 },
+        fill: c("tint-1"),
       },
     },
     (root) =>
-      b.text(root, "CD", b.ty("label", { size: 13 }), ink, { key: "AvInit", name: "Initials" }),
+      b.text(root, "CD", b.ty("label", { size: 10, weight: 600 }), ink, {
+        key: "AvInit",
+        name: "Initials",
+      }),
   )
 
-  const progress = b.component(
-    "Progress bar",
+  const discipline = b.component(
+    "Discipline",
     {
-      key: "Progress",
-      section: "Status",
-      description: "Set the Done and Left weights to the percentage.",
+      key: "Disc",
+      section: "Content",
+      description: "Dot and label for a studio discipline.",
       props: {
-        tone: p.variants({
-          accent: { "PbDone.fill": c("accent") },
-          success: { "PbDone.fill": c("success") },
-          warning: { "PbDone.fill": c("warning") },
-          danger: { "PbDone.fill": c("danger") },
-        }),
+        kind: p.variants(
+          Object.fromEntries(
+            Object.entries(disc).map(([k, [tok, name]]) => [
+              k,
+              { "DiscDot.fill": c(tok), "DiscLbl.content": name },
+            ]),
+          ),
+        ),
       },
-      root: { dir: "row", w: 160, h: 6, radius: r("pill"), fill: c("subtle"), clip: true },
+      root: { dir: "row", gap: 6, align: "center" },
     },
     (root) => {
-      b.rect(root, "Done", {
-        key: "PbDone",
-        w: { mode: "fill", weight: 50 },
-        h: 6,
-        fill: c("accent"),
-      })
-      b.rect(root, "Left", {
-        key: "PbLeft",
-        w: { mode: "fill", weight: 50 },
-        h: 6,
-        fill: c("subtle"),
-      })
+      b.rect(root, "Dot", { key: "DiscDot", w: 8, h: 8, radius: 2, fill: c("d-brand") })
+      b.text(root, "Brand", b.ty("body", { size: 12 }), ink, { key: "DiscLbl", name: "Label" })
     },
   )
-  const pct = (n: number) => ({
-    PbDone: { visible: n > 0, w: { mode: "fill", weight: Math.max(n, 1) } },
-    PbLeft: { visible: n < 100, w: { mode: "fill", weight: Math.max(100 - n, 1) } },
-  })
 
-  const toggle = b.component(
-    "Toggle",
+  const health = b.component(
+    "Health",
     {
-      key: "Toggle",
-      section: "Forms",
+      key: "Health",
+      section: "Content",
+      description: "Project health glyph with label.",
       props: {
         state: p.variants({
-          on: { "root.fill": c("accent"), "root.layout/justify": "end" },
-          off: { "root.fill": c("border"), "root.layout/justify": "start" },
-        }),
-      },
-      root: {
-        dir: "row",
-        w: 36,
-        h: 20,
-        pad: 2,
-        justify: "end",
-        radius: r("pill"),
-        fill: c("accent"),
-      },
-    },
-    (root) => b.ellipse(root, "Knob", { w: 16, h: 16, fill: c("surface") }),
-  )
-  const toggleOff = b.derive(toggle, "Toggle/Off", "ToggleOff", {
-    section: "Forms",
-    args: { state: "off" },
-  })
-
-  const input = b.component(
-    "Input",
-    {
-      key: "Input",
-      section: "Forms",
-      props: {
-        label: p.text("InLbl", "Label"),
-        value: p.text("InVal", "Value"),
-        hint: p.text("InHint", "Hint"),
-        showHint: p.bool("InHint", false),
-      },
-      root: { dir: "column", w: 360, gap: 6 },
-    },
-    (root) => {
-      b.text(root, "Label", b.ty("label", { size: 13 }), c("ink-2"), { key: "InLbl" })
-      const field = b.row(root, "Field", {
-        w: FILL,
-        pad: [9, 12],
-        radius: r("md"),
-        fill: c("surface"),
-        stroke: { paint: c("border") },
-      })
-      b.text(field, "Value", b.ty("body"), ink, { key: "InVal" })
-      b.text(root, "Hint", b.ty("small"), muted, { key: "InHint", visible: false })
-    },
-  )
-
-  const tabsLabels = ["Tab one", "Tab two", "Tab three", "Tab four"]
-  const tabActive = (i: number) =>
-    Object.fromEntries(
-      tabsLabels.flatMap((_, j) => [
-        [`TabI${j + 1}.stroke`, { paint: c("accent"), width: { b: j === i ? 2 : 0 } }],
-        [`TabL${j + 1}.fill`, j === i ? ink : muted],
-      ]),
-    )
-  const tabs = b.component(
-    "Tabs",
-    {
-      key: "Tabs",
-      section: "Navigation",
-      props: {
-        tab1: p.text("TabL1", "Tab one"),
-        tab2: p.text("TabL2", "Tab two"),
-        tab3: p.text("TabL3", "Tab three"),
-        tab4: p.text("TabL4", "Tab four"),
-        active: p.variants({
-          first: tabActive(0),
-          second: tabActive(1),
-          third: tabActive(2),
-          fourth: tabActive(3),
-        }),
-      },
-      root: { dir: "row", w: 600, gap: 4, stroke: { paint: c("border"), width: { b: 1 } } },
-    },
-    (root) => {
-      tabsLabels.forEach((t, i) => {
-        const item = b.row(root, t, {
-          key: `TabI${i + 1}`,
-          pad: [10, 12],
-          stroke: { paint: c("accent"), width: { b: i === 0 ? 2 : 0 } },
-        })
-        b.text(item, t, b.ty("label"), i === 0 ? ink : muted, {
-          key: `TabL${i + 1}`,
-          name: "Label",
-        })
-      })
-    },
-  )
-
-  const navItem = b.component(
-    "Nav item",
-    {
-      key: "Nav",
-      section: "Navigation",
-      props: {
-        label: p.text("NavLbl", "Item"),
-        count: p.text("NavCnt", "0"),
-        showCount: p.bool("NavCnt", false),
-        state: p.variants({
-          default: { "root.fill": c("sidebar"), "NavLbl.fill": c("ink-2"), "NavIcon.color": muted },
-          active: {
-            "root.fill": c("accent-soft"),
-            "NavLbl.fill": c("accent"),
-            "NavIcon.color": c("accent"),
+          "on-track": {
+            "HlIcon.icon": "circle-check",
+            "HlIcon.color": c("success"),
+            "HlLbl.content": "On track",
+            "HlLbl.fill": ink,
+          },
+          "at-risk": {
+            "HlIcon.icon": "triangle-alert",
+            "HlIcon.color": c("warning"),
+            "HlLbl.content": "At risk",
+            "HlLbl.fill": ink,
+          },
+          "off-track": {
+            "HlIcon.icon": "circle-x",
+            "HlIcon.color": c("danger"),
+            "HlLbl.content": "Off track",
+            "HlLbl.fill": ink,
+          },
+          planning: {
+            "HlIcon.icon": "circle-dashed",
+            "HlIcon.color": muted,
+            "HlLbl.content": "Planning",
+            "HlLbl.fill": muted,
           },
         }),
       },
-      root: {
-        dir: "row",
-        w: 216,
-        gap: 10,
-        align: "center",
-        pad: [7, 10],
-        radius: r("md"),
-        fill: c("sidebar"),
-      },
+      root: { dir: "row", gap: 6, align: "center" },
     },
     (root) => {
-      b.icon(root, "layout-dashboard", 18, muted, { key: "NavIcon" })
-      b.text(root, "Item", b.ty("label", { weight: 500 }), c("ink-2"), {
-        key: "NavLbl",
-        w: FILL,
-        grow: "fixed-width",
-        name: "Label",
-      })
-      b.text(root, "0", b.ty("small", { weight: 600 }), muted, {
-        key: "NavCnt",
-        visible: false,
-        name: "Count",
-      })
+      b.icon(root, "circle-check", 14, c("success"), { key: "HlIcon" })
+      b.text(root, "On track", b.ty("body", { size: 12 }), ink, { key: "HlLbl", name: "Label" })
     },
   )
 
-  const navs = [
-    ["Overview", "layout-dashboard", ""],
-    ["Projects", "folder-kanban", ""],
-    ["My tasks", "circle-check", "8"],
-    ["Inbox", "inbox", "3"],
-    ["Team", "users", ""],
-    ["Reports", "chart-column", ""],
-  ] as const
-  const navArgs: Record<string, Record<string, string | boolean>> = {
-    SbSet: { label: "Settings" },
-    SbBill: { label: "Billing" },
-  }
-  navs.forEach(([label, , count], i) => {
-    navArgs[`SbNav${i + 1}`] = { label, ...(count ? { count, showCount: true } : {}) }
-  })
+  const meter = b.component(
+    "Meter",
+    {
+      key: "Meter",
+      section: "Content",
+      description: "Thin bar. Override the Fill width (0 to 96) and colour per use.",
+      root: { dir: "row", w: 96, h: 6, radius: r("sm"), fill: c("border"), clip: true },
+    },
+    (root) => b.rect(root, "Fill", { key: "MtFill", w: 48, h: 6, fill: ink }),
+  )
+
+  // Sidebar -----------------------------------------------------------------------------------
+  const navItems: [string, string][] = [
+    ["Overview", "layout-dashboard"],
+    ["My work", "circle-check"],
+    ["Projects", "folder-kanban"],
+    ["Team", "users"],
+    ["Settings", "settings"],
+  ]
+  const navActive = (i: number) =>
+    Object.fromEntries(
+      navItems.flatMap((_, j) => [
+        [`NavI${j + 1}.fill`, j === i ? c("surface") : c("ground")],
+        [`NavI${j + 1}.stroke`, { paint: j === i ? c("border") : c("ground") }],
+        [`NavL${j + 1}.fill`, j === i ? ink : muted],
+        [`NavIc${j + 1}.color`, j === i ? ink : muted],
+      ]),
+    )
   const sidebar = b.component(
     "Sidebar",
     {
-      key: "Sidebar",
+      key: "Side",
       section: "Navigation",
-      description: "Set the active Nav item's state on each screen.",
+      props: {
+        active: p.variants({
+          overview: navActive(0),
+          projects: navActive(2),
+          team: navActive(3),
+          settings: navActive(4),
+        }),
+      },
       root: {
         dir: "column",
-        w: b.n("size/sidebar"),
+        w: 232,
         h: 900,
+        pad: [12, 10],
+        gap: 16,
         justify: "between",
-        pad: [20, 16],
-        fill: c("sidebar"),
-        stroke: { paint: c("border"), width: { r: 1 } },
+        fill: c("ground"),
       },
     },
     (root) => {
-      const top = b.col(root, "Top", { w: FILL, gap: s(5) })
-      const brand = b.row(top, "Brand", { gap: 10, align: "center", pad: [0, 6] })
-      const mark = b.row(brand, "Mark", {
-        w: 26,
-        h: 26,
-        radius: 7,
-        fill: c("accent"),
-        align: "center",
-        justify: "center",
-      })
-      b.icon(mark, "kanban", 15, c("on-accent"))
-      b.text(brand, "Fieldwork", b.ty("heading", { size: 17, weight: 700 }), ink)
-      const ws = b.row(top, "Workspace", {
-        w: FILL,
-        gap: 10,
-        align: "center",
-        pad: [8, 10],
-        ...card({ radius: r("md") }),
-      })
-      const wsMark = b.row(ws, "Logo", {
+      const top = b.col(root, "Top", { w: FILL, gap: 14 })
+      const ws = b.row(top, "Workspace", { w: FILL, gap: 10, align: "center", pad: [2, 6] })
+      const mark = b.row(ws, "Mark", {
         w: 24,
         h: 24,
-        radius: 6,
-        fill: c("tone-2"),
+        radius: r("md"),
+        fill: ink,
         align: "center",
         justify: "center",
       })
-      b.text(wsMark, "NB", b.ty("small", { size: 10, weight: 700 }), ink)
-      b.text(ws, "Northbeam Studio", b.ty("label", { size: 13 }), ink, {
-        w: FILL,
-        grow: "fixed-width",
-      })
+      b.text(mark, "N", b.ty("label", { size: 12, weight: 700 }), c("on-ink"))
+      b.para(ws, "Northbeam Studio", b.ty("heading", { size: 13 }), ink)
       b.icon(ws, "chevrons-up-down", 14, muted)
-      const nav = b.col(top, "Navigation", { w: FILL, gap: 2 })
-      for (const [i, [label, icon, count]] of navs.entries())
-        b.use(nav, navItem, {
-          key: `SbNav${i + 1}`,
-          props: { w: FILL },
-          args: { label, ...(count ? { count, showCount: true } : {}) },
-          set: { NavIcon: { icon } },
-        })
-      const fav = b.col(top, "Favorites", { w: FILL, gap: 2 })
-      b.text(fav, "Pinned projects", b.ty("small", { weight: 600 }), muted, { name: "Section" })
-      for (const label of ["Fernway checkout", "Halden onboarding"])
-        b.use(fav, navItem, {
-          props: { w: FILL },
-          args: { label },
-          set: { NavIcon: { icon: "folder" } },
-        })
-      const bottom = b.col(root, "Bottom", { w: FILL, gap: 2 })
-      b.use(bottom, navItem, {
-        key: "SbSet",
-        props: { w: FILL },
-        args: { label: "Settings" },
-        set: { NavIcon: { icon: "settings" } },
-      })
-      b.use(bottom, navItem, {
-        key: "SbBill",
-        props: { w: FILL },
-        args: { label: "Billing" },
-        set: { NavIcon: { icon: "credit-card" } },
-      })
-      const me = b.row(bottom, "Account", {
+      const search = b.row(top, "Search", {
         w: FILL,
-        gap: 10,
+        gap: 8,
         align: "center",
-        pad: [12, 6, 0, 6],
-        stroke: { paint: c("border"), width: { t: 1 } },
+        pad: [6, 8],
+        radius: r("md"),
+        stroke: { paint: c("border-strong") },
       })
-      b.use(me, avatar, { args: { initials: "CD", size: "sm", tone: "rose" } })
-      const who = b.col(me, "Names", { w: FILL, gap: 0 })
-      b.text(who, "Clara Dumont", b.ty("label", { size: 13 }), ink)
-      b.text(who, "clara@northbeam.studio", b.ty("small"), muted)
+      b.icon(search, "search", 14, muted)
+      b.para(search, "Search", b.ty("body", { size: 12 }), muted)
+      b.text(search, "Ctrl K", b.ty("mono", { size: 10 }), c("faint"))
+      const nav = b.col(top, "Nav", { w: FILL, gap: 2 })
+      const item = (parent: string, i: number, label: string, icon: string) => {
+        const row = b.row(parent, label, {
+          key: `NavI${i + 1}`,
+          w: FILL,
+          gap: 10,
+          align: "center",
+          pad: [6, 8],
+          radius: r("md"),
+          fill: c("ground"),
+          stroke: { paint: c("ground") },
+        })
+        b.icon(row, icon, 16, muted, { key: `NavIc${i + 1}` })
+        b.text(row, label, b.ty("label"), muted, { key: `NavL${i + 1}` })
+      }
+      for (const [i, [label, icon]] of navItems.slice(0, 4).entries()) item(nav, i, label, icon)
+      const pinned = b.col(top, "Pinned", { w: FILL, gap: 2 })
+      b.text(pinned, "Pinned", cap({ size: 10 }), c("faint"), { name: "Heading" })
+      b.rect(pinned, "Gap", { w: FILL, h: 4, fill: c("ground") })
+      for (const [name, d] of [
+        ["Fernway checkout", "d-web"],
+        ["Halden brand refresh", "d-brand"],
+        ["Orbit film titles", "d-motion"],
+      ] as const) {
+        const row = b.row(pinned, name, { w: FILL, gap: 10, align: "center", pad: [5, 8] })
+        b.rect(row, "Dot", { w: 8, h: 8, radius: 2, fill: c(d) })
+        b.text(row, name, b.ty("body", { size: 13 }), muted)
+      }
+      const bottom = b.col(root, "Bottom", { w: FILL, gap: 10 })
+      item(bottom, 4, navItems[4][0], navItems[4][1])
+      b.divider(bottom, c("border-strong"))
+      const me = b.row(bottom, "Account", { w: FILL, gap: 10, align: "center", pad: [4, 6] })
+      b.use(me, avatar, { args: { initials: "CD", size: "md", tone: "one" } })
+      const who = b.col(me, "Who", { w: FILL, gap: 1 })
+      b.text(who, "Clara Dumont", b.ty("label"), ink)
+      b.text(who, "Studio lead", b.ty("small"), muted)
     },
   )
 
@@ -547,957 +443,1477 @@ function build(b: TemplateBuilder) {
     {
       key: "TopBar",
       section: "Navigation",
-      props: { title: p.text("TbTitle", "Page"), actions: p.slot("TbActs") },
+      description: "Breadcrumb on the left, actions slot on the right.",
+      props: {
+        parent: p.text("TbParent", "Studio"),
+        current: p.text("TbCurrent", "Overview"),
+        actions: p.slot("TbActions"),
+      },
       root: {
         dir: "row",
         w: 1192,
-        h: b.n("size/topbar"),
-        gap: 16,
+        h: 44,
+        pad: [0, 16, 0, 20],
         align: "center",
-        pad: [0, 32],
-        fill: c("surface"),
+        justify: "between",
         stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      b.text(root, "Page", b.ty("h1", { size: 20 }), ink, {
-        key: "TbTitle",
-        name: "Title",
-        w: FILL,
-        grow: "fixed-width",
-      })
-      const search = b.row(root, "Search", {
-        w: 300,
-        gap: 8,
-        align: "center",
-        pad: [8, 12],
-        radius: r("md"),
-        fill: c("subtle"),
-      })
-      b.icon(search, "search", 16, muted)
-      b.text(search, "Search projects and tasks", b.ty("body"), muted, {
-        w: FILL,
-        grow: "fixed-width",
-      })
-      b.text(search, "Ctrl K", b.ty("mono", { size: 11 }), muted)
-      b.row(root, "Actions", {
-        key: "TbActs",
-        gap: 8,
-        align: "center",
-        slot: { suggested: [button, buttonSecondary] },
-      })
-      const bell = b.row(root, "Notifications", {
-        w: 36,
-        h: 36,
-        radius: r("md"),
-        align: "center",
-        justify: "center",
-        stroke: { paint: c("border") },
-      })
-      b.icon(bell, "bell", 18, c("ink-2"))
-      b.use(root, avatar, { args: { initials: "CD", tone: "rose" } })
+      const crumbs = b.row(root, "Breadcrumb", { gap: 8, align: "center" })
+      b.text(crumbs, "Studio", b.ty("label"), muted, { key: "TbParent" })
+      b.text(crumbs, "/", b.ty("label"), c("faint"))
+      b.text(crumbs, "Overview", b.ty("label"), ink, { key: "TbCurrent" })
+      b.row(root, "Actions", { key: "TbActions", gap: 8, align: "center", slot: {} })
     },
   )
 
-  // --- Components: data ------------------------------------------------------------------------
-
-  const statCard = b.component(
-    "Stat card",
+  // Overview pieces -----------------------------------------------------------------------------
+  const countCell = b.component(
+    "Count",
     {
-      key: "StatCard",
-      section: "Data",
+      key: "Count",
+      section: "Overview",
+      description: "One cell of the count strip.",
       props: {
-        label: p.text("StLbl", "Metric"),
-        value: p.text("StVal", "0"),
-        delta: p.text("StDelta/BadgeLbl", "+0%"),
-        trend: p.swap("StDelta", badgeSuccess),
-        caption: p.text("StCap", "vs last month"),
+        label: p.text("CtLbl", "Active projects"),
+        value: p.text("CtVal", "12"),
+        note: p.text("CtNote", "3 at risk"),
+        tone: p.variants({
+          neutral: { "CtNote.fill": muted },
+          warning: { "CtNote.fill": c("warning") },
+          danger: { "CtNote.fill": c("danger") },
+          success: { "CtNote.fill": c("success") },
+        }),
       },
-      root: { dir: "column", w: 264, gap: 8, pad: 20, ...card(), effects: b.shadow("card") },
+      root: { dir: "column", w: 286, gap: 6, pad: [14, 18] },
     },
     (root) => {
-      const top = b.row(root, "Header", { w: FILL, gap: 8, align: "center" })
-      b.text(top, "Metric", b.ty("body", { weight: 500 }), muted, {
-        key: "StLbl",
-        w: FILL,
-        grow: "fixed-width",
-      })
-      b.icon(top, "folder-kanban", 18, muted, { key: "StIcon" })
-      b.text(root, "0", b.ty("metric"), ink, { key: "StVal", name: "Value" })
-      const foot = b.row(root, "Footer", { gap: 8, align: "center" })
-      b.use(foot, badgeSuccess, { key: "StDelta", args: { label: "+0%" } })
-      b.text(foot, "vs last month", b.ty("small"), muted, { key: "StCap" })
+      b.text(root, "Active projects", cap(), muted, { key: "CtLbl" })
+      const row = b.row(root, "Value", { w: FILL, gap: 10, align: "baseline" })
+      b.text(row, "12", b.ty("figure"), ink, { key: "CtVal" })
+      b.text(row, "3 at risk", b.ty("mono", { size: 11 }), muted, { key: "CtNote" })
     },
   )
 
-  const projectRow = b.component(
-    "Project row",
+  const deliverable = b.component(
+    "Deliverable",
     {
-      key: "ProjRow",
-      section: "Data",
-      description: "Table row. Set the progress weights with the Progress bar's Done and Left.",
+      key: "Deliv",
+      section: "Overview",
+      description: "A due item on the week grid. The left bar takes the discipline colour.",
       props: {
-        name: p.text("PrName", "Project"),
-        client: p.text("PrClient", "Client"),
-        status: p.swap("PrStatus", badgeSuccess),
-        statusLabel: p.text("PrStatus/BadgeLbl", "On track"),
-        percent: p.text("PrPct", "50%"),
-        owner: p.text("PrOwnName", "Owner"),
-        initials: p.text("PrOwner/AvInit", "IK"),
-        due: p.text("PrDue", "Nov 14"),
+        title: p.text("DvTitle", "Checkout flow, v4"),
+        project: p.text("DvProj", "FW-018"),
+        time: p.text("DvTime", "Tue"),
+        kind: p.variants(
+          Object.fromEntries(
+            Object.entries(disc).map(([k, [tok]]) => [
+              k,
+              { "root.stroke": { paint: c(tok), width: { l: 3 } } },
+            ]),
+          ),
+        ),
+      },
+      root: {
+        dir: "column",
+        w: 204,
+        gap: 4,
+        pad: [8, 10],
+        radius: r("sm"),
+        fill: c("subtle"),
+        stroke: { paint: c("d-brand"), width: { l: 3 } },
+      },
+    },
+    (root) => {
+      b.para(root, "Checkout flow, v4", b.ty("label", { size: 12 }), ink, { key: "DvTitle" })
+      const m = b.row(root, "Meta", { w: FILL, justify: "between" })
+      b.text(m, "FW-018", b.ty("mono", { size: 10 }), muted, { key: "DvProj" })
+      b.text(m, "Tue", b.ty("mono", { size: 10 }), muted, { key: "DvTime" })
+    },
+  )
+
+  const inboxRow = b.component(
+    "Inbox row",
+    {
+      key: "Inbox",
+      section: "Overview",
+      props: {
+        who: p.text("InAv/AvInit", "MB"),
+        title: p.text("InTitle", "Mateo asked for review"),
+        detail: p.text("InDetail", "Checkout flow, v4"),
+        time: p.text("InTime", "9:12"),
+        unread: p.bool("InDot", true),
       },
       root: {
         dir: "row",
-        w: 1000,
-        gap: 20,
-        align: "center",
-        pad: [14, 20],
-        stroke: { paint: c("border"), width: { t: 1 } },
+        w: 380,
+        gap: 12,
+        pad: [12, 16],
+        align: "start",
+        stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      const names = b.col(root, "Names", { w: FILL, gap: 2 })
-      b.text(names, "Project", b.ty("label"), ink, { key: "PrName" })
-      b.text(names, "Client", b.ty("small"), muted, { key: "PrClient" })
-      const st = b.row(root, "Status", { w: 110 })
-      b.use(st, badgeSuccess, { key: "PrStatus" })
-      const prog = b.row(root, "Progress", { w: 210, gap: 10, align: "center" })
-      b.use(prog, progress, { key: "PrBar" })
-      b.text(prog, "50%", b.ty("small", { weight: 600 }), c("ink-2"), {
-        key: "PrPct",
-        w: 40,
-        grow: "fixed-width",
+      b.use(root, avatar, { key: "InAv", args: { size: "md", tone: "two" } })
+      const col = b.col(root, "Text", { w: FILL, gap: 2 })
+      b.para(col, "Mateo asked for review", b.ty("label"), ink, { key: "InTitle" })
+      b.para(col, "Checkout flow, v4", b.ty("body", { size: 12 }), muted, { key: "InDetail" })
+      const side = b.row(root, "Side", { gap: 8, align: "center" })
+      b.ellipse(side, "Unread", { key: "InDot", w: 6, h: 6, fill: c("accent") })
+      b.text(side, "9:12", b.ty("mono", { size: 11 }), muted, { key: "InTime" })
+    },
+  )
+
+  // Lists and tables ----------------------------------------------------------------------------
+  const projectRow = b.component(
+    "Project row",
+    {
+      key: "PRow",
+      section: "Tables",
+      description: "One project in the grouped list.",
+      props: {
+        id: p.text("PrId", "FW-018"),
+        name: p.text("PrName", "Project name"),
+        client: p.text("PrClient", "Client"),
+        lead: p.text("PrLead/AvInit", "CD"),
+        leadName: p.text("PrLeadName", "Clara Dumont"),
+        percent: p.text("PrPct", "62%"),
+        budget: p.text("PrBudget", "212 / 340 h"),
+        target: p.text("PrTarget", "Oct 30"),
+      },
+      root: {
+        dir: "row",
+        w: 1192,
+        h: 48,
+        gap: 12,
+        pad: [0, 20],
+        align: "center",
+        stroke: { paint: c("border"), width: { b: 1 } },
+      },
+    },
+    (root) => {
+      b.para(root, "FW-018", b.ty("mono", { size: 11 }), muted, { key: "PrId", w: 56 })
+      const nm = b.col(root, "Name", { w: FILL, gap: 1 })
+      b.para(nm, "Project name", b.ty("label"), ink, { key: "PrName" })
+      b.para(nm, "Client", b.ty("small"), muted, { key: "PrClient" })
+      b.use(root, health, { key: "PrHealth", props: { w: 112 } })
+      const lead = b.row(root, "Lead", { w: 132, gap: 8, align: "center" })
+      b.use(lead, avatar, { key: "PrLead", args: { size: "xs" } })
+      b.para(lead, "Clara Dumont", b.ty("body", { size: 12 }), ink, { key: "PrLeadName" })
+      b.use(root, discipline, { key: "PrDisc", props: { w: 96 } })
+      const prog = b.row(root, "Progress", { w: 140, gap: 10, align: "center" })
+      b.use(prog, meter, { key: "PrMeter" })
+      b.para(prog, "62%", b.ty("mono", { size: 11, align: "right" }), ink, { key: "PrPct" })
+      b.para(root, "212 / 340 h", b.ty("mono", { size: 11, align: "right" }), muted, {
+        key: "PrBudget",
+        w: 88,
       })
-      const own = b.row(root, "Owner", { w: 170, gap: 8, align: "center" })
-      b.use(own, avatar, { key: "PrOwner", args: { size: "sm" } })
-      b.text(own, "Owner", b.ty("body"), c("ink-2"), { key: "PrOwnName" })
-      b.text(root, "Nov 14", b.ty("body", { align: "right" }), muted, {
-        key: "PrDue",
-        w: 80,
-        grow: "fixed-width",
+      b.para(root, "Oct 30", b.ty("mono", { size: 11, align: "right" }), ink, {
+        key: "PrTarget",
+        w: 64,
       })
     },
   )
 
+  const groupHeader = b.component(
+    "Group header",
+    {
+      key: "Group",
+      section: "Tables",
+      props: {
+        name: p.text("GrName", "In progress"),
+        count: p.text("GrCount", "7"),
+        open: p.variants({
+          open: { "GrIcon.icon": "chevron-down" },
+          closed: { "GrIcon.icon": "chevron-right" },
+        }),
+      },
+      root: {
+        dir: "row",
+        w: 1192,
+        h: 32,
+        gap: 8,
+        pad: [0, 20],
+        align: "center",
+        fill: c("subtle"),
+        stroke: { paint: c("border"), width: { b: 1 } },
+      },
+    },
+    (root) => {
+      b.icon(root, "chevron-down", 14, muted, { key: "GrIcon" })
+      b.text(root, "In progress", b.ty("heading", { size: 12 }), ink, { key: "GrName" })
+      b.text(root, "7", b.ty("mono", { size: 11 }), muted, { key: "GrCount" })
+    },
+  )
+
+  const personRow = b.component(
+    "Person row",
+    {
+      key: "Person",
+      section: "Tables",
+      props: {
+        initials: p.text("PeAv/AvInit", "MB"),
+        name: p.text("PeName", "Mateo Bianchi"),
+        email: p.text("PeEmail", "mateo@northbeam.studio"),
+        role: p.text("PeRole", "Design lead"),
+        percent: p.text("PePct", "90%"),
+        hours: p.text("PeHours", "36 / 40 h"),
+        status: p.text("PeStatus/ChipLbl", "Active"),
+      },
+      root: {
+        dir: "row",
+        w: 1192,
+        h: 52,
+        gap: 12,
+        pad: [0, 20],
+        align: "center",
+        stroke: { paint: c("border"), width: { b: 1 } },
+      },
+    },
+    (root) => {
+      const who = b.row(root, "Person", { w: FILL, gap: 12, align: "center" })
+      b.use(who, avatar, { key: "PeAv", args: { size: "md", tone: "one" } })
+      const nm = b.col(who, "Name", { gap: 1 })
+      b.text(nm, "Mateo Bianchi", b.ty("label"), ink, { key: "PeName" })
+      b.text(nm, "mateo@northbeam.studio", b.ty("small"), muted, { key: "PeEmail" })
+      b.para(root, "Design lead", b.ty("body", { size: 12 }), ink, { key: "PeRole", w: 150 })
+      b.use(root, discipline, { key: "PeDisc", props: { w: 110 } })
+      const alloc = b.row(root, "Allocation", { w: 170, gap: 10, align: "center" })
+      b.use(alloc, meter, { key: "PeMeter" })
+      b.para(alloc, "90%", b.ty("mono", { size: 11, align: "right" }), ink, { key: "PePct" })
+      b.para(root, "36 / 40 h", b.ty("mono", { size: 11, align: "right" }), muted, {
+        key: "PeHours",
+        w: 80,
+      })
+      const st = b.row(root, "Status", { w: 84 })
+      b.use(st, chip, { key: "PeStatus", args: { label: "Active", tone: "success", dot: true } })
+      b.icon(root, "ellipsis", 16, muted)
+    },
+  )
+
+  // Board ---------------------------------------------------------------------------------------
   const taskCard = b.component(
     "Task card",
     {
-      key: "Task",
+      key: "Card",
       section: "Board",
+      description:
+        "A task on the board: ID, discipline, title, assignee, due date, comments and hours left.",
       props: {
-        title: p.text("TkTitle", "Task"),
-        tag: p.text("TkTag/BadgeLbl", "Design"),
-        tagStyle: p.swap("TkTag", badge),
-        due: p.text("TkDue", "Oct 9"),
-        comments: p.text("TkCmt", "0"),
-        files: p.text("TkFiles", "0"),
-        initials: p.text("TkAv/AvInit", "TN"),
-        priority: p.variants({
-          high: { "TkFlag.color": c("danger") },
-          medium: { "TkFlag.color": c("warning") },
-          low: { "TkFlag.color": muted },
+        id: p.text("CdId", "FW-142"),
+        title: p.text("CdTitle", "Task title"),
+        initials: p.text("CdAv/AvInit", "AS"),
+        due: p.text("CdDue", "Oct 8"),
+        comments: p.text("CdCom", "3"),
+        hours: p.text("CdHours", "6 h left"),
+        kind: p.variants(
+          Object.fromEntries(
+            Object.entries(disc).map(([k, [tok, name]]) => [
+              k,
+              { "CdDot.fill": c(tok), "CdKind.content": name },
+            ]),
+          ),
+        ),
+      },
+      root: {
+        dir: "column",
+        w: 260,
+        gap: 10,
+        pad: 12,
+        radius: r("lg"),
+        fill: c("surface"),
+        stroke: { paint: c("border") },
+      },
+    },
+    (root) => {
+      const top = b.row(root, "Top", { w: FILL, justify: "between", align: "center" })
+      b.text(top, "FW-142", b.ty("mono", { size: 11 }), muted, { key: "CdId" })
+      const k = b.row(top, "Kind", { gap: 6, align: "center" })
+      b.rect(k, "Dot", { key: "CdDot", w: 8, h: 8, radius: 2, fill: c("d-web") })
+      b.text(k, "Web", b.ty("small"), muted, { key: "CdKind" })
+      b.para(root, "Task title", b.ty("label"), ink, { key: "CdTitle" })
+      const foot = b.row(root, "Footer", { w: FILL, gap: 10, align: "center" })
+      b.use(foot, avatar, { key: "CdAv", args: { size: "sm", tone: "three" } })
+      const due = b.row(foot, "Due", { gap: 4, align: "center" })
+      b.icon(due, "calendar", 12, muted)
+      b.text(due, "Oct 8", b.ty("mono", { size: 11 }), muted, { key: "CdDue" })
+      const com = b.row(foot, "Comments", { gap: 4, align: "center" })
+      b.icon(com, "message-square", 12, muted)
+      b.text(com, "3", b.ty("mono", { size: 11 }), muted, { key: "CdCom" })
+      b.rect(foot, "Space", { w: FILL, h: 1, fill: c("surface") })
+      b.text(foot, "6 h left", b.ty("mono", { size: 11 }), ink, { key: "CdHours" })
+    },
+  )
+
+  const boardColumn = b.component(
+    "Board column",
+    {
+      key: "Col",
+      section: "Board",
+      description: "A status trough. Fill the Cards slot with Task cards.",
+      props: {
+        name: p.text("ColName", "In design"),
+        count: p.text("ColCount", "4"),
+        cards: p.slot("ColCards"),
+        icon: p.variants({
+          brief: { "ColIcon.icon": "circle-dashed", "ColIcon.color": muted },
+          design: { "ColIcon.icon": "circle-dot", "ColIcon.color": c("d-web") },
+          review: { "ColIcon.icon": "eye", "ColIcon.color": c("warning") },
+          handoff: { "ColIcon.icon": "package-check", "ColIcon.color": c("success") },
         }),
       },
       root: {
         dir: "column",
-        w: 280,
-        gap: 10,
-        pad: 14,
-        ...card({ radius: r("md") }),
-        effects: b.shadow("card"),
+        w: 284,
+        gap: 8,
+        pad: 8,
+        radius: r("xl"),
+        fill: c("sunken"),
       },
     },
     (root) => {
-      const top = b.row(root, "Tags", { w: FILL, justify: "between", align: "center" })
-      b.use(top, badge, { key: "TkTag", args: { label: "Design" } })
-      b.icon(top, "flag", 14, c("warning"), { key: "TkFlag" })
-      b.para(root, "Task", b.ty("label", { lineHeight: 1.4 }), ink, {
-        key: "TkTitle",
-        name: "Title",
-      })
-      const foot = b.row(root, "Footer", { w: FILL, gap: 12, align: "center" })
-      b.use(foot, avatar, { key: "TkAv", args: { size: "xs", initials: "TN" } })
-      const meta = b.row(foot, "Meta", { w: FILL, gap: 10, align: "center" })
-      for (const [icon, key] of [
-        ["message-square", "TkCmt"],
-        ["paperclip", "TkFiles"],
-      ] as const) {
-        const m = b.row(meta, icon, { gap: 4, align: "center" })
-        b.icon(m, icon, 13, muted)
-        b.text(m, "0", b.ty("small"), muted, { key })
-      }
-      const due = b.row(foot, "Due", { gap: 4, align: "center" })
-      b.icon(due, "calendar", 13, muted)
-      b.text(due, "Oct 9", b.ty("small"), muted, { key: "TkDue" })
+      const head = b.row(root, "Header", { w: FILL, gap: 8, pad: [4, 6], align: "center" })
+      b.icon(head, "circle-dashed", 14, muted, { key: "ColIcon" })
+      b.text(head, "In design", b.ty("heading", { size: 13 }), ink, { key: "ColName" })
+      b.text(head, "4", b.ty("mono", { size: 11 }), muted, { key: "ColCount" })
+      b.rect(head, "Space", { w: FILL, h: 1, fill: c("sunken") })
+      b.icon(head, "plus", 14, muted)
+      b.col(root, "Cards", { key: "ColCards", w: FILL, gap: 8, slot: { suggested: [taskCard] } })
     },
   )
 
-  const column = b.component(
-    "Board column",
+  // Settings -------------------------------------------------------------------------------------
+  const settingsItems = ["General", "Members", "Notifications", "Integrations", "Billing"] as const
+  const settingsActive = (i: number) =>
+    Object.fromEntries(
+      settingsItems.flatMap((_, j) => [
+        [`SnI${j + 1}.fill`, j === i ? c("subtle") : c("surface")],
+        [`SnL${j + 1}.fill`, j === i ? ink : muted],
+      ]),
+    )
+  const settingsNav = b.component(
+    "Settings nav",
     {
-      key: "Column",
-      section: "Board",
-      description: "Fill the Cards slot with Task cards.",
+      key: "SNav",
+      section: "Navigation",
       props: {
-        title: p.text("ColTitle", "To do"),
-        count: p.text("ColCount", "0"),
-        cards: p.slot("ColCards"),
-        tone: p.variants({
-          todo: { "ColDot.fill": muted },
-          doing: { "ColDot.fill": c("accent") },
-          review: { "ColDot.fill": c("warning") },
-          done: { "ColDot.fill": c("success") },
+        active: p.variants({
+          general: settingsActive(0),
+          members: settingsActive(1),
+          notifications: settingsActive(2),
+          integrations: settingsActive(3),
+          billing: settingsActive(4),
         }),
       },
-      root: { dir: "column", w: 304, gap: 12, pad: 12, radius: r("lg"), fill: c("subtle") },
+      root: {
+        dir: "column",
+        w: 216,
+        gap: 2,
+        pad: [20, 12],
+        stroke: { paint: c("border"), width: { r: 1 } },
+      },
     },
     (root) => {
-      const head = b.row(root, "Header", { w: FILL, gap: 8, align: "center", pad: [2, 4] })
-      b.ellipse(head, "Dot", { key: "ColDot", w: 8, h: 8, fill: muted })
-      b.text(head, "To do", b.ty("label"), ink, { key: "ColTitle" })
-      b.text(head, "0", b.ty("small", { weight: 600 }), muted, {
-        key: "ColCount",
-        w: FILL,
-        grow: "fixed-width",
-      })
-      b.icon(head, "plus", 16, muted)
-      b.col(root, "Cards", { key: "ColCards", w: FILL, gap: 10, slot: { suggested: [taskCard] } })
+      b.text(root, "Studio settings", cap({ size: 10 }), c("faint"), { name: "Heading" })
+      b.rect(root, "Gap", { w: FILL, h: 6, fill: c("surface") })
+      for (const [i, n] of settingsItems.entries()) {
+        const row = b.row(root, n, {
+          key: `SnI${i + 1}`,
+          w: FILL,
+          pad: [6, 10],
+          radius: r("md"),
+          fill: c("surface"),
+        })
+        b.text(row, n, b.ty("label"), muted, { key: `SnL${i + 1}` })
+      }
     },
   )
 
-  const memberRow = b.component(
-    "Member row",
+  const formRow = b.component(
+    "Form row",
     {
-      key: "Member",
-      section: "Data",
+      key: "FRow",
+      section: "Forms",
+      description: "Label and hint on the left, a control on the right. Fill the Control slot.",
       props: {
-        name: p.text("MrName", "Name"),
-        email: p.text("MrEmail", "name@northbeam.studio"),
-        initials: p.text("MrAv/AvInit", "IK"),
-        title: p.text("MrTitle", "Role"),
-        access: p.text("MrAccess/BadgeLbl", "Member"),
-        accessStyle: p.swap("MrAccess", badge),
-        seen: p.text("MrSeen", "Today"),
+        label: p.text("FrLabel", "Label"),
+        hint: p.text("FrHint", "What this setting does."),
+        control: p.slot("FrControl"),
       },
       root: {
         dir: "row",
-        w: 1000,
-        gap: 20,
-        align: "center",
-        pad: [12, 20],
-        stroke: { paint: c("border"), width: { t: 1 } },
+        w: 760,
+        gap: 40,
+        pad: [16, 0],
+        align: "start",
+        stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      b.use(root, avatar, { key: "MrAv" })
-      const names = b.col(root, "Names", { w: FILL, gap: 2 })
-      b.text(names, "Name", b.ty("label"), ink, { key: "MrName" })
-      b.text(names, "name@northbeam.studio", b.ty("small"), muted, { key: "MrEmail" })
-      b.text(root, "Role", b.ty("body"), c("ink-2"), {
-        key: "MrTitle",
-        w: 220,
-        grow: "fixed-width",
-      })
-      const acc = b.row(root, "Access", { w: 100 })
-      b.use(acc, badge, { key: "MrAccess", args: { label: "Member" } })
-      b.text(root, "Today", b.ty("body"), muted, { key: "MrSeen", w: 120, grow: "fixed-width" })
-      b.icon(root, "ellipsis", 18, muted)
+      const text = b.col(root, "Text", { w: 260, gap: 4 })
+      b.text(text, "Label", b.ty("heading"), ink, { key: "FrLabel" })
+      b.para(text, "What this setting does.", b.ty("body", { size: 12 }), muted, { key: "FrHint" })
+      b.col(root, "Control", { key: "FrControl", w: FILL, gap: 8, slot: {} })
     },
   )
 
-  const activity = b.component(
-    "Activity item",
+  const field = b.component(
+    "Field",
     {
-      key: "Activity",
-      section: "Data",
-      props: {
-        text: p.text("AcText", "Something happened."),
-        time: p.text("AcTime", "2 min ago"),
-        initials: p.text("AcAv/AvInit", "TN"),
-      },
-      root: { dir: "row", w: 320, gap: 12, align: "start" },
-    },
-    (root) => {
-      b.use(root, avatar, { key: "AcAv", args: { size: "sm" } })
-      const t = b.col(root, "Text", { w: FILL, gap: 2 })
-      b.para(t, "Something happened.", b.ty("body", { size: 13 }), c("ink-2"), { key: "AcText" })
-      b.text(t, "2 min ago", b.ty("small"), muted, { key: "AcTime" })
-    },
-  )
-
-  const settingRow = b.component(
-    "Setting row",
-    {
-      key: "Setting",
+      key: "Field",
       section: "Forms",
       props: {
-        title: p.text("SrTitle", "Setting"),
-        description: p.text("SrDesc", "What it changes."),
-        toggle: p.swap("SrToggle", toggle),
+        value: p.text("FdValue", "Value"),
+        prefix: p.text("FdPrefix", "prefix"),
+        showPrefix: p.bool("FdPrefixWrap", false),
+        icon: p.bool("FdIcon", false),
       },
       root: {
         dir: "row",
-        w: 560,
-        gap: 24,
+        w: 360,
+        gap: 0,
         align: "center",
-        pad: [14, 0],
-        stroke: { paint: c("border"), width: { t: 1 } },
+        radius: r("md"),
+        fill: c("surface"),
+        stroke: { paint: c("border-strong") },
+        clip: true,
       },
     },
     (root) => {
-      const t = b.col(root, "Text", { w: FILL, gap: 2 })
-      b.text(t, "Setting", b.ty("label"), ink, { key: "SrTitle" })
-      b.para(t, "What it changes.", b.ty("body", { size: 13 }), muted, { key: "SrDesc" })
-      b.use(root, toggle, { key: "SrToggle" })
+      const pre = b.row(root, "Prefix", {
+        key: "FdPrefixWrap",
+        pad: [8, 10],
+        fill: c("subtle"),
+        stroke: { paint: c("border-strong"), width: { r: 1 } },
+        visible: false,
+      })
+      b.text(pre, "prefix", b.ty("body", { size: 12 }), muted, { key: "FdPrefix" })
+      const val = b.row(root, "Value", { w: FILL, pad: [8, 10], gap: 8, align: "center" })
+      b.para(val, "Value", b.ty("body"), ink, { key: "FdValue" })
+      b.icon(val, "chevrons-up-down", 14, muted, { key: "FdIcon", visible: false })
     },
   )
 
-  const planCard = b.component(
-    "Plan card",
+  const toggle = b.component(
+    "Switch",
     {
-      key: "Plan",
-      section: "Billing",
+      key: "Switch",
+      section: "Forms",
       props: {
-        plan: p.text("PlName", "Plan"),
-        price: p.text("PlPrice", "$0"),
-        period: p.text("PlPer", "per seat / month"),
-        description: p.text("PlDesc", "What the plan includes."),
-        current: p.bool("PlCur", true),
-        cta: p.text("PlCta/BtnLabel", "Change plan"),
+        state: p.variants({
+          on: { "SwTrack.fill": c("accent"), "SwTrack.layout/justify": "end" },
+          off: { "SwTrack.fill": c("border-strong"), "SwTrack.layout/justify": "start" },
+        }),
+        label: p.text("SwLabel", "Enabled"),
       },
-      root: { dir: "column", w: 360, gap: 14, pad: 24, ...card(), effects: b.shadow("card") },
+      root: {
+        dir: "row",
+        w: 360,
+        gap: 12,
+        align: "center",
+      },
     },
     (root) => {
-      const top = b.row(root, "Header", { w: FILL, justify: "between", align: "center" })
-      b.text(top, "Plan", b.ty("heading"), ink, { key: "PlName" })
-      const cur = b.row(top, "Current", { key: "PlCur" })
-      b.use(cur, badgeAccent, { args: { label: "Current plan" } })
-      const price = b.row(root, "Price", { w: FILL, gap: 6, align: "end" })
-      b.text(price, "$0", b.ty("metric"), ink, { key: "PlPrice" })
-      b.para(price, "per seat / month", b.ty("small"), muted, { key: "PlPer" })
-      b.para(root, "What the plan includes.", b.ty("body"), muted, { key: "PlDesc" })
-      b.use(root, buttonSecondary, {
-        key: "PlCta",
-        props: { w: FILL },
-        args: { label: "Change plan" },
+      const track = b.row(root, "Track", {
+        w: 32,
+        h: 18,
+        pad: 2,
+        radius: r("pill"),
+        fill: c("accent"),
+        justify: "end",
+        key: "SwTrack",
       })
+      b.ellipse(track, "Knob", { w: 14, h: 14, fill: c("surface") })
+      b.para(root, "Enabled", b.ty("body"), ink, { key: "SwLabel" })
     },
   )
 
   const invoiceRow = b.component(
     "Invoice row",
     {
-      key: "Invoice",
-      section: "Billing",
+      key: "Inv",
+      section: "Tables",
       props: {
-        number: p.text("IvNo", "INV-0000"),
         date: p.text("IvDate", "Oct 1, 2026"),
-        amount: p.text("IvAmt", "$0.00"),
-        status: p.text("IvStatus/BadgeLbl", "Paid"),
+        number: p.text("IvNum", "FW-2026-10"),
+        amount: p.text("IvAmt", "$216.00"),
+        status: p.text("IvStatus/ChipLbl", "Paid"),
       },
       root: {
         dir: "row",
-        w: 1000,
-        gap: 20,
+        w: 760,
+        h: 44,
+        gap: 12,
+        pad: [0, 16],
         align: "center",
-        pad: [13, 20],
-        stroke: { paint: c("border"), width: { t: 1 } },
+        stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      b.icon(root, "file-text", 18, muted)
-      b.text(root, "INV-0000", b.ty("mono"), ink, { key: "IvNo", w: 160, grow: "fixed-width" })
-      b.text(root, "Oct 1, 2026", b.ty("body"), c("ink-2"), {
-        key: "IvDate",
-        w: FILL,
-        grow: "fixed-width",
-      })
-      b.text(root, "$0.00", b.ty("label", { align: "right" }), ink, {
+      b.para(root, "Oct 1, 2026", b.ty("mono", { size: 12 }), ink, { key: "IvDate", w: 120 })
+      b.para(root, "FW-2026-10", b.ty("mono", { size: 12 }), muted, { key: "IvNum" })
+      b.para(root, "$216.00", b.ty("mono", { size: 12, align: "right" }), ink, {
         key: "IvAmt",
-        w: 110,
-        grow: "fixed-width",
+        w: 90,
       })
-      const st = b.row(root, "Status", { w: 90, justify: "end" })
-      b.use(st, badgeSuccess, { key: "IvStatus", args: { label: "Paid" } })
-      b.icon(root, "download", 18, muted)
+      const st = b.row(root, "Status", { w: 72, justify: "end" })
+      b.use(st, chip, { key: "IvStatus", args: { label: "Paid", tone: "success" } })
+      b.icon(root, "download", 16, muted)
     },
   )
 
-  // --- Data --------------------------------------------------------------------------------------
+  // --- Shared helpers --------------------------------------------------------------------------
 
-  const people = {
-    IK: ["Ines Kowalski", "violet"],
-    TN: ["Theo Nakamura", "green"],
-    AS: ["Ama Serwaa", "amber"],
-    JR: ["Jonas Reiter", "violet"],
-    MB: ["Mateo Bianchi", "green"],
-    CD: ["Clara Dumont", "rose"],
-    SO: ["Sam Ortega", "amber"],
-  } as const
-  type Who = keyof typeof people
-  const projects: [string, string, keyof typeof tones, string, number, Who, string][] = [
-    ["Halden Bank mobile onboarding", "Halden Bank", "ok", "On track", 72, "IK", "Nov 14"],
-    ["Fernway checkout redesign", "Fernway", "warn", "At risk", 45, "TN", "Oct 30"],
-    ["Lumo Health patient portal", "Lumo Health", "ok", "On track", 88, "AS", "Oct 21"],
-    ["Orbit Fitness app v2", "Orbit Fitness", "bad", "Blocked", 30, "MB", "Nov 2"],
-    ["Atlas Freight dispatch dashboard", "Atlas Freight", "plan", "Planning", 12, "JR", "Dec 5"],
-    ["Kettle & Co. brand site", "Kettle & Co.", "neutral", "Done", 100, "IK", "Sep 26"],
-  ]
-  const barTone = {
-    ok: "success",
-    warn: "warning",
-    bad: "danger",
-    plan: "accent",
-    neutral: "success",
-  } as const
-  function projRow(parent: string, row: (typeof projects)[number]) {
-    const [name, client, tone, label, n, who, due] = row
-    b.use(parent, projectRow, {
-      props: { w: FILL },
-      args: {
-        name,
-        client,
-        status: tones[tone],
-        statusLabel: label,
-        percent: `${n}%`,
-        owner: people[who][0],
-        initials: who,
-        due,
-      },
-      set: {
-        PrOwner: { args: { size: "sm", tone: people[who][1] } },
-        PrBar: { args: { tone: barTone[tone] } },
-        "PrBar/PbDone": pct(n).PbDone,
-        "PrBar/PbLeft": pct(n).PbLeft,
-      },
-    })
-  }
+  const people = [
+    ["CD", "Clara Dumont", "one"],
+    ["MB", "Mateo Bianchi", "two"],
+    ["AS", "Ana Sorrell", "three"],
+    ["TN", "Theo Nakamura", "four"],
+    ["IO", "Ines Okoro", "one"],
+    ["JW", "Jonas Weber", "two"],
+    ["PM", "Priya Mehta", "three"],
+    ["LF", "Lucas Ferreira", "four"],
+    ["NH", "Noor Haddad", "one"],
+  ] as const
+  const tone = (ini: string) => people.find((x) => x[0] === ini)?.[2] ?? "one"
+  const name = (ini: string) => people.find((x) => x[0] === ini)?.[1] ?? ini
 
-  // --- App shell -----------------------------------------------------------------------------------
-
-  const screens = b.page("Screens")
+  /** A 1440x900 app frame: sidebar and the inset panel. Returns the panel. */
   function shell(
-    name: string,
-    active: string,
+    title: string,
+    active: "overview" | "projects" | "team" | "settings",
+    crumb: [string, string],
     actions?: (into: { inst: string; at: string }) => void,
   ) {
-    const scr = b.screen(screens, name, { dir: "row", w: 1440, h: 900, fill: c("bg") })
-    b.use(scr, sidebar, {
-      props: { h: FILL },
-      // `set.args` replaces the nested instance's args, so restate them.
-      set: { [active]: { args: { ...navArgs[active], state: "active" } } },
+    const scr = b.screen(screens, title, { dir: "row", w: 1440, h: 900, fill: c("ground") })
+    b.use(scr, sidebar, { args: { active } })
+    const wrap = b.col(scr, "Main", { w: FILL, h: 900, pad: [8, 8, 8, 0] })
+    const panel = b.col(wrap, "Panel", {
+      w: FILL,
+      h: FILL,
+      radius: r("xl"),
+      fill: c("surface"),
+      stroke: { paint: c("border") },
+      clip: true,
     })
-    const main = b.col(scr, "Main", { w: FILL, h: FILL })
-    b.use(main, topBar, {
+    b.use(panel, topBar, {
       props: { w: FILL },
-      args: { title: name },
-      ...(actions ? { slots: { TbActs: actions } } : {}),
+      args: { parent: crumb[0], current: crumb[1] },
+      slots: { TbActions: (into) => actions?.(into) },
     })
-    const content = b.col(main, "Content", { w: FILL, h: FILL, gap: s(6), pad: 32, clip: true })
-    return content
+    return panel
   }
-  function panel(parent: string, name: string, props: Record<string, unknown> = {}) {
-    return b.col(parent, name, { w: FILL, ...card(), clip: true, ...props })
-  }
-  function panelHead(parent: string, title: string, right?: (row: string) => void) {
-    const head = b.row(parent, "Header", { w: FILL, gap: 12, align: "center", pad: [16, 20] })
-    b.text(head, title, b.ty("heading", { size: 16 }), ink, { w: FILL, grow: "fixed-width" })
-    right?.(head)
-    return head
-  }
-  const newProject = (into: { inst: string; at: string }) =>
-    b.use(into, button, { args: { label: "New project", icon: true } })
 
-  // --- Cover ---------------------------------------------------------------------------------------
+  function tabs(parent: string, items: [string, string][], active: number) {
+    const row = b.row(parent, "Tabs", {
+      w: FILL,
+      gap: 20,
+      stroke: { paint: c("border"), width: { b: 1 } },
+    })
+    for (const [i, [t, n]] of items.entries()) {
+      const tab = b.row(row, t, {
+        gap: 6,
+        pad: [0, 0, 10, 0],
+        stroke: { paint: ink, width: { b: i === active ? 2 : 0 } },
+      })
+      b.text(tab, t, b.ty("label"), i === active ? ink : muted)
+      if (n) b.text(tab, n, b.ty("mono", { size: 11 }), muted)
+    }
+    return row
+  }
+
+  // --- Cover -----------------------------------------------------------------------------------
 
   b.cover({
     eyebrow: "Web app template",
     title: "Fieldwork project tracker",
     description:
-      "Dashboard, projects, kanban board, team, settings and billing screens for a studio project tracker. Built from 24 components with light and dark tokens.",
+      "Overview, projects, kanban board, team, settings and billing for a design studio. 20 components, light and dark tokens, Inter and JetBrains Mono.",
     preview: (area) => {
-      const stats = b.row(area, "Stats", { w: FILL, gap: 16 })
-      b.use(stats, statCard, {
-        props: { w: FILL },
-        args: { label: "Active projects", value: "12", delta: "+2" },
+      const strip = b.row(area, "Counts", {
+        w: FILL,
+        radius: r("lg"),
+        stroke: { paint: c("border") },
       })
-      b.use(stats, statCard, {
+      for (const [i, [label, value, note]] of (
+        [
+          ["Active projects", "7", "3 need attention"],
+          ["Hours this week", "318", "of 360"],
+        ] as const
+      ).entries()) {
+        const cell = b.col(strip, "Cell", {
+          w: FILL,
+          ...(i === 0 ? {} : { stroke: { paint: c("border"), width: { l: 1 } } }),
+        })
+        b.use(cell, countCell, { props: { w: FILL }, args: { label, value, note } })
+      }
+      const cols = b.row(area, "Columns", { w: FILL, gap: 12, align: "start" })
+      b.use(cols, boardColumn, {
         props: { w: FILL },
-        args: { label: "Hours this week", value: "318", delta: "+6%" },
-        set: { StIcon: { icon: "clock" } },
-      })
-      const board = b.row(area, "Board", { w: FILL, gap: 16, align: "start" })
-      b.use(board, column, {
-        props: { w: FILL },
-        args: { title: "In progress", count: "3", tone: "doing" },
+        args: { name: "In design", count: "2", icon: "design" },
         slots: {
           ColCards: (into) => {
             b.use(into, taskCard, {
               props: { w: FILL },
               args: {
-                title: "Shipping step: address autocomplete",
-                tag: "Design",
-                due: "Oct 9",
-                comments: "4",
-                files: "2",
-                initials: "TN",
-                priority: "high",
-              },
-            })
-            b.use(into, taskCard, {
-              props: { w: FILL },
-              args: {
-                title: "Apple Pay button states",
-                tag: "Engineering",
-                due: "Oct 12",
-                comments: "1",
-                files: "0",
-                initials: "JR",
-                priority: "medium",
-              },
-              set: { TkAv: { args: { size: "xs", tone: "violet" } } },
-            })
-          },
-        },
-      })
-      b.use(board, column, {
-        props: { w: FILL },
-        args: { title: "In review", count: "2", tone: "review" },
-        slots: {
-          ColCards: (into) => {
-            b.use(into, taskCard, {
-              props: { w: FILL },
-              args: {
-                title: "Order summary on mobile",
-                tag: "Design",
+                id: "FW-142",
+                title: "Checkout: payment step, mobile",
+                initials: "AS",
                 due: "Oct 8",
-                comments: "7",
-                files: "3",
-                initials: "IK",
-                priority: "medium",
+                comments: "3",
+                hours: "6 h left",
+                kind: "web",
               },
-              set: { TkAv: { args: { size: "xs", tone: "violet" } } },
+            })
+            b.use(into, taskCard, {
+              props: { w: FILL },
+              args: {
+                id: "HB-031",
+                title: "Logo lockups for Halden",
+                initials: "MB",
+                due: "Oct 9",
+                comments: "5",
+                hours: "12 h left",
+                kind: "brand",
+              },
+              set: { CdAv: { args: { initials: "MB", size: "sm", tone: "two" } } },
             })
           },
         },
       })
+      b.use(cols, boardColumn, {
+        props: { w: FILL },
+        args: { name: "In review", count: "1", icon: "review" },
+        slots: {
+          ColCards: (into) =>
+            b.use(into, taskCard, {
+              props: { w: FILL },
+              args: {
+                id: "OR-019",
+                title: "Title sequence, cut 3",
+                initials: "TN",
+                due: "Oct 7",
+                comments: "8",
+                hours: "2 h left",
+                kind: "motion",
+              },
+              set: { CdAv: { args: { initials: "TN", size: "sm", tone: "four" } } },
+            }),
+        },
+      })
+      const inbox = b.col(area, "Waiting on you", {
+        w: FILL,
+        radius: r("lg"),
+        stroke: { paint: c("border") },
+        clip: true,
+      })
+      for (const [who, title, detail, time] of [
+        ["MB", "Mateo asked for review", "Checkout flow, v4 (FW-018)", "9:12"],
+        ["IO", "Ines needs a decision", "Kestrel shortlist: 6 or 3 names?", "Mon"],
+      ] as const)
+        b.use(inbox, inboxRow, {
+          props: { w: FILL },
+          args: { who, title, detail, time },
+          set: { InAv: { args: { initials: who, size: "md", tone: tone(who) } } },
+        })
     },
   })
 
-  // --- Overview ------------------------------------------------------------------------------------
+  // --- Screens ---------------------------------------------------------------------------------
+
+  const screens = b.page("Screens")
+
+  // Overview
   {
-    const content = shell("Overview", "SbNav1", newProject)
-    const greet = b.row(content, "Greeting", { w: FILL, justify: "between", align: "end" })
-    const gt = b.col(greet, "Text", { gap: 4 })
-    b.text(gt, "Good morning, Clara", b.ty("h1"), ink)
+    const panel = shell("Overview", "overview", ["Northbeam Studio", "Overview"], (into) => {
+      b.use(into, buttonSecondary, { args: { label: "Log time", size: "sm" } })
+      b.use(into, button, { args: { label: "New project", size: "sm", icon: true } })
+    })
+    const body = b.col(panel, "Body", { w: FILL, h: FILL, pad: [24, 28], gap: 22 })
+    const head = b.col(body, "Heading", { w: FILL, gap: 8 })
+    b.text(head, "Tuesday 6 October", cap(), muted)
     b.text(
-      gt,
-      "Tuesday, October 6. 27 tasks are due this week across 8 projects.",
-      b.ty("body"),
-      muted,
+      head,
+      "Good morning, Clara",
+      b.ty("display", { size: 28, letterSpacing: -0.9, lineHeight: 1.1 }),
+      ink,
     )
-    b.use(greet, buttonSecondary, {
-      args: { label: "Last 30 days", icon: true },
-      set: { BtnIcon: { icon: "calendar" } },
-    })
 
-    const stats = b.row(content, "Stats", { w: FILL, gap: s(4) })
-    for (const [label, value, delta, trend, icon] of [
-      ["Active projects", "12", "+2", badgeSuccess, "folder-kanban"],
-      ["Hours logged this week", "318", "+6%", badgeSuccess, "clock"],
-      ["Tasks due this week", "27", "+4", badgeWarning, "circle-check"],
-      ["Budget used", "64%", "+3%", badgeWarning, "credit-card"],
-    ] as const)
-      b.use(stats, statCard, {
-        props: { w: FILL },
-        args: { label, value, delta, trend, caption: "vs last month" },
-        set: { StIcon: { icon } },
-      })
-
-    const mid = b.row(content, "Middle", { w: FILL, h: 264, gap: s(4) })
-    const chart = panel(mid, "Hours by week", { h: FILL, gap: 0 })
-    panelHead(chart, "Hours logged by week", (row) =>
-      b.text(row, "2,412 h in 8 weeks", b.ty("label"), c("accent")),
-    )
-    const bars = b.row(chart, "Bars", {
+    const strip = b.row(body, "Counts", {
       w: FILL,
-      h: FILL,
-      gap: 16,
-      align: "end",
-      pad: [8, 20, 16, 20],
+      radius: r("lg"),
+      stroke: { paint: c("border") },
     })
-    const hours = [252, 276, 240, 298, 310, 284, 334, 318]
-    hours.forEach((h, i) => {
-      const col = b.col(bars, `Week ${34 + i}`, { w: FILL, gap: 8, align: "center" })
-      b.text(
-        col,
-        String(h),
-        b.ty("small", { weight: 600 }),
-        i === hours.length - 1 ? c("accent") : muted,
-      )
-      b.rect(col, "Bar", {
+    for (const [i, [label, value, note, t]] of (
+      [
+        ["Active projects", "7", "3 need attention", "warning"],
+        ["Hours this week", "318", "of 360, 88%", "neutral"],
+        ["Due this week", "10", "3 today", "danger"],
+        ["Budget burn, studio", "64%", "1 project over", "danger"],
+      ] as const
+    ).entries()) {
+      const cell = b.col(strip, "Cell", {
         w: FILL,
-        h: Math.round((h / 334) * 120),
-        radius: [6, 6, 2, 2],
-        fill: i === hours.length - 1 ? c("accent") : c("accent-soft"),
+        ...(i === 0 ? {} : { stroke: { paint: c("border"), width: { l: 1 } } }),
       })
-      b.text(col, `W${34 + i}`, b.ty("small"), muted)
-    })
-    const act = panel(mid, "Activity", { w: 380, h: FILL })
-    panelHead(act, "Recent activity")
-    const list = b.col(act, "Items", { w: FILL, gap: 16, pad: [0, 20, 16, 20] })
-    for (const [text, time, who] of [
-      ["Theo moved “Shipping step” to In review", "12 min ago", "TN"],
-      ["Ama logged 6 h on Lumo Health patient portal", "1 h ago", "AS"],
-      ["Mateo flagged Orbit Fitness app v2 as blocked", "3 h ago", "MB"],
-      ["Ines uploaded 14 files to Halden Bank", "Yesterday", "IK"],
-    ] as const)
-      b.use(list, activity, {
-        props: { w: FILL },
-        args: { text, time, initials: who },
-        set: { AcAv: { args: { size: "sm", tone: people[who][1] } } },
-      })
+      b.use(cell, countCell, { props: { w: FILL }, args: { label, value, note, tone: t } })
+    }
 
-    const table = panel(content, "Projects", { h: FILL })
-    panelHead(table, "Projects due soon", (row) =>
-      b.use(row, button, { args: { label: "View all", variant: "ghost", size: "sm" } }),
-    )
-    for (const row of [projects[2], projects[1], projects[3]]) if (row) projRow(table, row)
-  }
-
-  // --- Projects ------------------------------------------------------------------------------------
-  {
-    const content = shell("Projects", "SbNav2", newProject)
-    const bar = b.row(content, "Toolbar", { w: FILL, gap: 12, align: "end" })
-    b.use(bar, tabs, {
-      props: { w: FILL },
-      args: {
-        tab1: "All  12",
-        tab2: "Active  8",
-        tab3: "Planning  2",
-        tab4: "Done  2",
-        active: "first",
-      },
-    })
-    b.use(bar, buttonSecondary, {
-      args: { label: "Filter", icon: true },
-      set: { BtnIcon: { icon: "list-filter" } },
-    })
-    b.use(bar, buttonSecondary, {
-      args: { label: "Sort: due date", icon: true },
-      set: { BtnIcon: { icon: "arrow-up-down" } },
-    })
-    const table = panel(content, "Table")
-    const th = b.row(table, "Head", { w: FILL, gap: 20, pad: [10, 20], fill: c("subtle") })
-    for (const [t, w] of [
-      ["Project", null],
-      ["Status", 110],
-      ["Progress", 210],
-      ["Owner", 170],
-      ["Due", 80],
-    ] as const)
-      b.text(
-        th,
-        t,
-        b.ty("small", { weight: 600, ...(t === "Due" ? { align: "right" } : {}) }),
-        muted,
-        {
-          ...(w ? { w, grow: "fixed-width" } : { w: FILL, grow: "fixed-width" }),
-        },
-      )
-    for (const row of projects) projRow(table, row)
-    const foot = b.row(table, "Footer", {
+    const mid = b.row(body, "Week and inbox", { w: FILL, gap: 20, align: "stretch" })
+    const week = b.col(mid, "This week", {
       w: FILL,
+      radius: r("lg"),
+      stroke: { paint: c("border") },
+      clip: true,
+    })
+    const wh = b.row(week, "Header", {
+      w: FILL,
+      pad: [12, 16],
       justify: "between",
       align: "center",
-      pad: [12, 20],
-      stroke: { paint: c("border"), width: { t: 1 } },
+      stroke: { paint: c("border"), width: { b: 1 } },
     })
-    b.text(foot, "Showing 6 of 12 projects", b.ty("small"), muted)
-    const pager = b.row(foot, "Pager", { gap: 8 })
-    b.use(pager, buttonSecondary, { args: { label: "Previous", size: "sm" } })
-    b.use(pager, buttonSecondary, { args: { label: "Next", size: "sm" } })
+    b.text(wh, "This week", b.ty("heading"), ink)
+    const nav = b.row(wh, "Range", { gap: 10, align: "center" })
+    b.icon(nav, "chevron-left", 14, muted)
+    b.text(nav, "Oct 5 to Oct 9", b.ty("mono", { size: 11 }), muted)
+    b.icon(nav, "chevron-right", 14, muted)
+    const days = b.row(week, "Days", { w: FILL, h: FILL, align: "stretch" })
+    const dayItems: [string, string, boolean, [string, string, string, string][]][] = [
+      [
+        "Mon",
+        "5",
+        false,
+        [
+          ["Halden logo lockups, round 1", "HB-021", "10:00", "brand"],
+          ["Lumo portal: IA sign-off", "LU-014", "15:00", "web"],
+        ],
+      ],
+      [
+        "Tue",
+        "6",
+        true,
+        [
+          ["Checkout flow, v4", "FW-018", "12:00", "web"],
+          ["Orbit title sequence, cut 3", "OR-007", "17:00", "motion"],
+          ["Marlow report: cover proof", "MA-011", "17:30", "print"],
+        ],
+      ],
+      [
+        "Wed",
+        "7",
+        false,
+        [
+          ["Kestrel naming shortlist", "KE-003", "11:00", "strategy"],
+          ["Pine & Co dielines", "PC-009", "16:00", "print"],
+        ],
+      ],
+      ["Thu", "8", false, [["Juno onboarding prototype", "JU-016", "14:00", "web"]]],
+      [
+        "Fri",
+        "9",
+        false,
+        [
+          ["Halden brand guide draft", "HB-021", "12:00", "brand"],
+          ["Fernway QA handoff", "FW-018", "16:00", "web"],
+        ],
+      ],
+    ]
+    for (const [i, [d, n, today, items]] of dayItems.entries()) {
+      const col = b.col(days, d, {
+        w: FILL,
+        gap: 8,
+        pad: 10,
+        fill: today ? c("subtle") : c("surface"),
+        ...(i === 0 ? {} : { stroke: { paint: c("border"), width: { l: 1 } } }),
+      })
+      const dh = b.row(col, "Day", { gap: 6, align: "center", pad: [0, 0, 4, 0] })
+      b.text(dh, d, cap({ size: 10 }), today ? c("accent") : muted)
+      b.text(dh, n, b.ty("heading", { size: 13 }), today ? c("accent") : ink)
+      for (const [t, proj, time, kind] of items)
+        b.use(col, deliverable, {
+          props: { w: FILL },
+          args: { title: t, project: proj, time, kind },
+        })
+    }
+
+    const inbox = b.col(mid, "Waiting on you", {
+      w: 380,
+      radius: r("lg"),
+      stroke: { paint: c("border") },
+      clip: true,
+    })
+    const ih = b.row(inbox, "Header", {
+      w: FILL,
+      pad: [12, 16],
+      justify: "between",
+      align: "center",
+      stroke: { paint: c("border"), width: { b: 1 } },
+    })
+    b.text(ih, "Waiting on you", b.ty("heading"), ink)
+    b.use(ih, chip, { args: { label: "4 new", tone: "accent" } })
+    for (const [who, title, detail, time, unread] of [
+      ["MB", "Mateo asked for review", "Checkout flow, v4 (FW-018)", "9:12", true],
+      ["TN", "Theo uploaded cut 3", "Orbit title sequence (OR-007)", "8:40", true],
+      ["IO", "Ines needs a decision", "Kestrel shortlist: 6 or 3 names?", "Mon", true],
+      ["JW", "Jonas moved a deadline", "Marlow report to Oct 14", "Mon", true],
+      ["AS", "Ana commented", "Lumo portal, empty states", "Fri", false],
+    ] as const)
+      b.use(inbox, inboxRow, {
+        props: { w: FILL },
+        args: { who, title, detail, time, unread },
+        set: { InAv: { args: { initials: who, size: "md", tone: tone(who) } } },
+      })
+
+    // Capacity
+    const cap_ = b.col(body, "Capacity", { w: FILL, gap: 10 })
+    const ch = b.row(cap_, "Header", { w: FILL, justify: "between", align: "center" })
+    b.text(ch, "Capacity, next four weeks", b.ty("heading"), ink)
+    const legend = b.row(ch, "Legend", { gap: 6, align: "center" })
+    b.text(legend, "Free", b.ty("mono", { size: 10 }), muted)
+    for (const l of ["subtle", "load-1", "load-2", "load-3", "accent"])
+      b.rect(legend, "Level", {
+        w: 14,
+        h: 10,
+        radius: 2,
+        fill: c(l),
+        stroke: { paint: c("border") },
+      })
+    b.text(legend, "Over", b.ty("mono", { size: 10 }), muted)
+    const grid = b.col(cap_, "Grid", {
+      w: FILL,
+      radius: r("lg"),
+      stroke: { paint: c("border") },
+      clip: true,
+    })
+    const levels = ["subtle", "load-1", "load-2", "load-3", "accent"]
+    const load: [string, string, number[]][] = [
+      ["CD", "Studio lead", [2, 2, 3, 2, 3, 3, 3, 2, 2, 3, 3, 2, 2, 2, 1, 1, 2, 2, 2, 1]],
+      ["MB", "Design lead", [3, 3, 4, 3, 3, 3, 3, 3, 4, 3, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2]],
+      ["AS", "Senior designer", [2, 3, 3, 3, 2, 3, 2, 2, 2, 1, 2, 3, 3, 3, 3, 2, 2, 2, 2, 2]],
+      ["TN", "Motion lead", [4, 4, 3, 4, 4, 3, 3, 3, 3, 2, 1, 1, 0, 1, 1, 2, 2, 3, 3, 3]],
+      ["IO", "Strategist", [3, 3, 3, 3, 3, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1, 2, 2]],
+      ["PM", "Designer", [2, 2, 3, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1]],
+    ]
+    for (const [i, [ini, role, cells]] of load.entries()) {
+      const row = b.row(grid, name(ini), {
+        w: FILL,
+        pad: [8, 16],
+        gap: 12,
+        align: "center",
+        ...(i === 0 ? {} : { stroke: { paint: c("border"), width: { t: 1 } } }),
+      })
+      const who = b.row(row, "Person", { w: 220, gap: 8, align: "center" })
+      b.use(who, avatar, { args: { initials: ini, size: "xs", tone: tone(ini) } })
+      b.text(who, name(ini), b.ty("label", { size: 12 }), ink)
+      b.text(who, role, b.ty("small", { size: 11 }), muted)
+      for (let wk = 0; wk < 4; wk++) {
+        const weekCells = b.row(row, `Week ${wk + 1}`, { w: FILL, gap: 3 })
+        for (let d = 0; d < 5; d++)
+          b.rect(weekCells, "Day", {
+            w: FILL,
+            h: 14,
+            radius: 2,
+            fill: c(levels[cells[wk * 5 + d]]),
+            stroke: { paint: c("border") },
+          })
+      }
+    }
   }
 
-  // --- Project board ------------------------------------------------------------------------------
+  // Projects
   {
-    const content = shell("Fernway checkout redesign", "SbNav2", (into) => {
+    const panel = shell("Projects", "projects", ["Northbeam Studio", "Projects"], (into) => {
       b.use(into, buttonSecondary, {
-        args: { label: "Share", icon: true },
-        set: { BtnIcon: { icon: "user-plus" } },
+        args: { label: "Filter", size: "sm", icon: true },
+        set: { BtnIcon: { icon: "list-filter" } },
       })
-      b.use(into, button, { args: { label: "Add task", icon: true } })
+      b.use(into, button, { args: { label: "New project", size: "sm", icon: true } })
     })
-    const head = b.row(content, "Project header", { w: FILL, gap: 16, align: "center" })
-    const crumbs = b.row(head, "Breadcrumb", { w: FILL, gap: 6, align: "center" })
-    b.text(crumbs, "Projects", b.ty("body"), muted)
-    b.icon(crumbs, "chevron-right", 14, muted)
-    b.text(crumbs, "Fernway", b.ty("body"), muted)
-    b.icon(crumbs, "chevron-right", 14, muted)
-    b.text(crumbs, "Checkout redesign", b.ty("label"), ink)
-    b.use(head, badgeWarning, { args: { label: "At risk" } })
-    const team = b.row(head, "Team", { gap: -6 })
-    for (const who of ["TN", "IK", "JR", "AS"] as const)
-      b.use(team, avatar, { args: { initials: who, size: "sm", tone: people[who][1] } })
-    const due = b.row(head, "Due", { gap: 6, align: "center" })
-    b.icon(due, "calendar", 14, muted)
-    b.text(due, "Due Oct 30", b.ty("body"), c("ink-2"))
-    b.use(content, tabs, {
-      props: { w: FILL },
-      args: { tab1: "Board", tab2: "List", tab3: "Timeline", tab4: "Files  18", active: "first" },
+    const head = b.col(panel, "Heading", { w: FILL, pad: [20, 20, 0, 20], gap: 14 })
+    const t = b.row(head, "Title", { w: FILL, gap: 12, align: "baseline" })
+    b.text(t, "Projects", b.ty("title"), ink)
+    b.text(t, "15 in total, 7 active", b.ty("mono", { size: 12 }), muted)
+    tabs(
+      head,
+      [
+        ["All", "15"],
+        ["Active", "7"],
+        ["Planning", "3"],
+        ["Done", "5"],
+      ],
+      1,
+    )
+
+    const table = b.col(panel, "Table", { w: FILL })
+    const th = b.row(table, "Columns", {
+      w: FILL,
+      h: 32,
+      gap: 12,
+      pad: [0, 20],
+      align: "center",
+      stroke: { paint: c("border"), width: { b: 1 } },
     })
-    const board = b.row(content, "Board", { w: FILL, h: FILL, gap: s(4), align: "start" })
-    const tasks: Record<string, [string, string, string, string, string, string, Who, string][]> = {
-      todo: [
-        ["Gift card field validation", "Engineering", "neutral", "Oct 14", "0", "0", "JR", "low"],
-        ["Saved addresses list", "Design", "accent", "Oct 15", "2", "1", "TN", "medium"],
-        ["Copy review: error messages", "Content", "neutral", "Oct 16", "1", "0", "IK", "low"],
-      ],
-      doing: [
-        [
-          "Shipping step: address autocomplete",
-          "Design",
-          "accent",
-          "Oct 9",
-          "4",
-          "2",
-          "TN",
-          "high",
-        ],
-        ["Apple Pay button states", "Engineering", "neutral", "Oct 12", "1", "0", "JR", "medium"],
-        ["Promo code drawer", "Design", "accent", "Oct 13", "3", "1", "IK", "medium"],
-      ],
-      review: [
-        ["Order summary on mobile", "Design", "accent", "Oct 8", "7", "3", "IK", "high"],
-        [
-          "Tax line items from the API",
-          "Engineering",
-          "neutral",
-          "Oct 8",
-          "2",
-          "0",
-          "AS",
-          "medium",
-        ],
-      ],
-      done: [
-        ["Checkout funnel audit", "Research", "neutral", "Sep 29", "9", "4", "TN", "low"],
-        ["Payment step wireframes", "Design", "accent", "Oct 2", "5", "6", "IK", "low"],
-      ],
-    }
-    for (const [tone, title, count] of [
-      ["todo", "To do", "3"],
-      ["doing", "In progress", "3"],
-      ["review", "In review", "2"],
-      ["done", "Done", "2"],
-    ] as const)
-      b.use(board, column, {
+    b.para(th, "ID", cap({ size: 10 }), muted, { w: 56 })
+    b.para(th, "Project", cap({ size: 10 }), muted)
+    b.para(th, "Health", cap({ size: 10 }), muted, { w: 112 })
+    b.para(th, "Lead", cap({ size: 10 }), muted, { w: 132 })
+    b.para(th, "Discipline", cap({ size: 10 }), muted, { w: 96 })
+    b.para(th, "Progress", cap({ size: 10 }), muted, { w: 140 })
+    b.para(th, "Hours", cap({ size: 10, align: "right" }), muted, { w: 88 })
+    b.para(th, "Target", cap({ size: 10, align: "right" }), muted, { w: 64 })
+    const row = (
+      parent: string,
+      id: string,
+      nm: string,
+      client: string,
+      state: string,
+      lead: string,
+      kind: string,
+      pct: number,
+      spent: string,
+      target: string,
+    ) =>
+      b.use(parent, projectRow, {
         props: { w: FILL },
-        args: { title, count, tone },
+        args: {
+          id,
+          name: nm,
+          client,
+          lead,
+          leadName: name(lead),
+          percent: `${pct}%`,
+          budget: spent,
+          target,
+        },
+        set: {
+          PrHealth: { args: { state } },
+          PrLead: { args: { initials: lead, size: "xs", tone: tone(lead) } },
+          PrDisc: { args: { kind } },
+          "PrMeter/MtFill": {
+            w: Math.round(pct * 0.96),
+            fill: state === "at-risk" ? c("warning") : state === "off-track" ? c("danger") : ink,
+          },
+        },
+      })
+    b.use(table, groupHeader, { props: { w: FILL }, args: { name: "In progress", count: "7" } })
+    row(
+      table,
+      "FW-018",
+      "Fernway checkout redesign",
+      "Fernway Foods",
+      "on-track",
+      "CD",
+      "web",
+      62,
+      "212 / 340 h",
+      "Oct 30",
+    )
+    row(
+      table,
+      "HB-021",
+      "Halden brand refresh",
+      "Halden & Co",
+      "at-risk",
+      "MB",
+      "brand",
+      48,
+      "190 / 400 h",
+      "Nov 13",
+    )
+    row(
+      table,
+      "OR-007",
+      "Orbit film titles",
+      "Orbit Fitness",
+      "on-track",
+      "TN",
+      "motion",
+      81,
+      "162 / 200 h",
+      "Oct 16",
+    )
+    row(
+      table,
+      "LU-014",
+      "Lumo patient portal",
+      "Lumo Health",
+      "off-track",
+      "AS",
+      "web",
+      70,
+      "640 / 600 h",
+      "Oct 9",
+    )
+    row(
+      table,
+      "MA-011",
+      "Marlow annual report 2026",
+      "Marlow Capital",
+      "on-track",
+      "NH",
+      "print",
+      55,
+      "98 / 180 h",
+      "Nov 6",
+    )
+    row(
+      table,
+      "KE-003",
+      "Kestrel naming and strategy",
+      "Kestrel Energy",
+      "at-risk",
+      "IO",
+      "strategy",
+      34,
+      "70 / 220 h",
+      "Nov 20",
+    )
+    row(
+      table,
+      "JU-016",
+      "Juno app onboarding",
+      "Juno Mobility",
+      "on-track",
+      "PM",
+      "web",
+      44,
+      "120 / 280 h",
+      "Dec 4",
+    )
+    b.use(table, groupHeader, { props: { w: FILL }, args: { name: "Planning", count: "3" } })
+    row(
+      table,
+      "AT-024",
+      "Atlas rebrand pitch",
+      "Atlas Logistics",
+      "planning",
+      "CD",
+      "brand",
+      5,
+      "8 / 60 h",
+      "Nov 27",
+    )
+    row(
+      table,
+      "PC-009",
+      "Pine & Co packaging",
+      "Pine & Co",
+      "planning",
+      "NH",
+      "print",
+      0,
+      "0 / 140 h",
+      "Jan 15",
+    )
+    row(
+      table,
+      "TW-026",
+      "Tidewater website",
+      "Tidewater Hotels",
+      "planning",
+      "JW",
+      "web",
+      0,
+      "0 / 320 h",
+      "Feb 12",
+    )
+    b.use(table, groupHeader, {
+      props: { w: FILL },
+      args: { name: "Done", count: "5", open: "closed" },
+    })
+  }
+
+  // Project board
+  {
+    const panel = shell(
+      "Fernway checkout redesign",
+      "projects",
+      ["Projects", "Fernway checkout redesign"],
+      (into) => {
+        b.use(into, buttonSecondary, { args: { label: "Share", size: "sm" } })
+        b.use(into, button, { args: { label: "New task", size: "sm", icon: true } })
+      },
+    )
+    const head = b.col(panel, "Heading", { w: FILL, pad: [20, 20, 0, 20], gap: 14 })
+    const t = b.row(head, "Title", { w: FILL, gap: 12, align: "center" })
+    b.text(t, "Fernway checkout redesign", b.ty("title"), ink)
+    b.text(t, "FW-018", b.ty("mono", { size: 12 }), muted)
+    b.use(t, health, { args: { state: "on-track" } })
+    const props = b.row(head, "Properties", { w: FILL, gap: 32, align: "end" })
+    const prop = (label: string) => {
+      const col = b.col(props, label, { gap: 4 })
+      b.text(col, label, cap({ size: 10 }), muted)
+      return col
+    }
+    {
+      const col = prop("Client")
+      b.text(col, "Fernway Foods", b.ty("label"), ink)
+    }
+    {
+      const col = prop("Lead")
+      const r_ = b.row(col, "Lead", { gap: 8, align: "center" })
+      b.use(r_, avatar, { args: { initials: "CD", size: "xs", tone: "one" } })
+      b.text(r_, "Clara Dumont", b.ty("label"), ink)
+    }
+    {
+      const col = prop("Hours")
+      const r_ = b.row(col, "Hours", { gap: 10, align: "center" })
+      b.use(r_, meter, { set: { MtFill: { w: 60, fill: ink } } })
+      b.text(r_, "212 of 340 h", b.ty("mono", { size: 12 }), ink)
+    }
+    {
+      const col = prop("Deadline")
+      b.text(col, "Oct 30, 2026", b.ty("mono", { size: 12 }), ink)
+    }
+    {
+      const col = prop("Team")
+      const r_ = b.row(col, "Team", { gap: 4 })
+      for (const ini of ["CD", "MB", "AS", "PM"])
+        b.use(r_, avatar, { args: { initials: ini, size: "sm", tone: tone(ini) } })
+    }
+    tabs(
+      head,
+      [
+        ["Board", ""],
+        ["List", ""],
+        ["Timeline", ""],
+        ["Files", "14"],
+      ],
+      0,
+    )
+
+    const board = b.row(panel, "Board", { w: FILL, h: FILL, gap: 12, pad: 16, align: "start" })
+    type Card = [string, string, string, string, string, string, string]
+    const col = (nm: string, count: string, icon: string, cards: Card[]) =>
+      b.use(board, boardColumn, {
+        props: { w: 260 },
+        args: { name: nm, count, icon },
+        ...(nm === "In review" ? { set: { ColCount: { fill: c("warning") } } } : {}),
         slots: {
           ColCards: (into) => {
-            for (const [t, tag, tagTone, d, cm, fl, who, pr] of tasks[tone] ?? [])
+            for (const [id, title, ini, due, com, hours, kind] of cards)
               b.use(into, taskCard, {
                 props: { w: FILL },
-                args: {
-                  title: t,
-                  tag,
-                  tagStyle: tagTone === "accent" ? badgeAccent : badge,
-                  due: d,
-                  comments: cm,
-                  files: fl,
-                  initials: who,
-                  priority: pr,
-                },
-                set: { TkAv: { args: { size: "xs", tone: people[who][1] } } },
+                args: { id, title, due, comments: com, hours, kind },
+                set: { CdAv: { args: { initials: ini, size: "sm", tone: tone(ini) } } },
               })
           },
         },
       })
-  }
-
-  // --- Team ----------------------------------------------------------------------------------------
-  {
-    const content = shell("Team", "SbNav5", (into) =>
-      b.use(into, button, {
-        args: { label: "Invite member", icon: true },
-        set: { BtnIcon: { icon: "user-plus" } },
-      }),
-    )
-    const stats = b.row(content, "Stats", { w: FILL, gap: s(4) })
-    for (const [label, value, delta, trend, caption, icon] of [
-      ["Members", "7", "+1", badgeSuccess, "joined in September", "users"],
-      ["Pending invites", "1", "Sent", badgeAccent, "to sam@ortega.design", "mail"],
-      ["Seats available", "3 of 10", "70%", badgeWarning, "of seats in use", "credit-card"],
-    ] as const)
-      b.use(stats, statCard, {
-        props: { w: FILL },
-        args: { label, value, delta, trend, caption },
-        set: { StIcon: { icon } },
-      })
-    const table = panel(content, "Members")
-    panelHead(table, "Members", (row) => {
-      const sb = b.row(row, "Search", {
-        w: 240,
-        gap: 8,
-        align: "center",
-        pad: [7, 10],
-        radius: r("md"),
-        stroke: { paint: c("border") },
-      })
-      b.icon(sb, "search", 14, muted)
-      b.text(sb, "Find a member", b.ty("body", { size: 13 }), muted)
-    })
-    for (const [who, email, title, access, seen] of [
-      ["CD", "clara@northbeam.studio", "Studio director", "Owner", "Online"],
-      ["IK", "ines@northbeam.studio", "Design lead", "Admin", "Online"],
-      ["AS", "ama@northbeam.studio", "Engineering lead", "Admin", "1 h ago"],
-      ["TN", "theo@northbeam.studio", "Senior product designer", "Member", "12 min ago"],
-      ["JR", "jonas@northbeam.studio", "Frontend engineer", "Member", "Yesterday"],
-      ["MB", "mateo@northbeam.studio", "iOS engineer", "Member", "3 h ago"],
-      ["SO", "sam@ortega.design", "Contract illustrator", "Invited", "Not joined"],
-    ] as const)
-      b.use(table, memberRow, {
-        props: { w: FILL },
-        args: {
-          name: people[who][0],
-          email,
-          initials: who,
-          title,
-          access,
-          seen,
-          ...(access === "Owner" || access === "Admin" ? { accessStyle: badgeAccent } : {}),
-          ...(access === "Invited" ? { accessStyle: badgeWarning } : {}),
-        },
-        set: { MrAv: { args: { size: "md", tone: people[who][1] } } },
-      })
-  }
-
-  // --- Settings ------------------------------------------------------------------------------------
-  {
-    const content = shell("Settings", "SbSet")
-    b.use(content, tabs, {
-      props: { w: FILL },
-      args: {
-        tab1: "General",
-        tab2: "Notifications",
-        tab3: "Integrations",
-        tab4: "Security",
-        active: "first",
-      },
-    })
-    const cols = b.row(content, "Columns", { w: FILL, gap: s(6), align: "start" })
-    const ws = panel(cols, "Workspace", { gap: 0 })
-    panelHead(ws, "Workspace")
-    const form = b.col(ws, "Form", { w: FILL, gap: 16, pad: [0, 20, 20, 20] })
-    for (const [label, value, hint] of [
-      ["Workspace name", "Northbeam Studio", ""],
-      [
-        "Workspace URL",
-        "northbeam.fieldwork.app",
-        "Changing it breaks links people have bookmarked.",
-      ],
-      ["Time zone", "Europe/Lisbon (UTC+1)", ""],
-      ["Week starts on", "Monday", ""],
-    ] as const)
-      b.use(form, input, {
-        props: { w: FILL },
-        args: { label, value, ...(hint ? { hint, showHint: true } : {}) },
-      })
-    const actions = b.row(form, "Actions", { w: FILL, gap: 8, justify: "end", pad: [8, 0, 0, 0] })
-    b.use(actions, buttonSecondary, { args: { label: "Cancel" } })
-    b.use(actions, button, { args: { label: "Save changes" } })
-
-    const right = b.col(cols, "Right", { w: FILL, gap: s(6) })
-    const notes = panel(right, "Notifications", { gap: 0 })
-    panelHead(notes, "Email notifications")
-    const rows = b.col(notes, "Rows", { w: FILL, pad: [0, 20, 6, 20] })
-    for (const [title, description, on] of [
-      ["Daily digest", "A summary of due tasks at 9:00 in your time zone.", true],
-      ["Mentions and replies", "When someone mentions you in a task or comment.", true],
-      ["Weekly client report", "Hours and progress per client, every Friday.", false],
-      ["Budget warnings", "When a project passes 80% of its budget.", true],
-    ] as const)
-      b.use(rows, settingRow, {
-        props: { w: FILL },
-        args: { title, description, ...(on ? {} : { toggle: toggleOff }) },
-      })
-    const danger = panel(right, "Danger zone", { gap: 0 })
-    panelHead(danger, "Delete workspace", (row) =>
-      b.use(row, button, { args: { label: "Delete", variant: "danger", size: "sm" } }),
-    )
-    const dz = b.col(danger, "Body", { w: FILL, pad: [0, 20, 20, 20] })
-    b.para(
-      dz,
-      "Deletes all 12 projects, 1,840 tasks and their files after 30 days. Export first if you need a copy.",
-      b.ty("body", { size: 13 }),
-      muted,
-      { name: "Description" },
-    )
-  }
-
-  // --- Billing -------------------------------------------------------------------------------------
-  {
-    const content = shell("Billing", "SbBill")
-    const top = b.row(content, "Summary", { w: FILL, gap: s(4), align: "stretch" })
-    b.use(top, planCard, {
-      props: { w: FILL },
-      args: {
-        plan: "Studio",
-        price: "$24",
-        period: "per seat / month, billed monthly",
-        description: "10 seats, unlimited projects and client portals. Renews on Nov 1, 2026.",
-      },
-    })
-    const usage = panel(top, "Usage", { gap: 18, pad: 24 })
-    b.text(usage, "Usage this month", b.ty("heading"), ink)
-    for (const [label, value, n, tone] of [
-      ["Seats", "7 of 10", 70, "accent"],
-      ["File storage", "38 of 100 GB", 38, "accent"],
-      ["Client portals", "9 of 15", 60, "warning"],
-    ] as const) {
-      const row = b.col(usage, label, { w: FILL, gap: 8 })
-      const line = b.row(row, "Line", { w: FILL, justify: "between" })
-      b.text(line, label, b.ty("body"), c("ink-2"))
-      b.text(line, value, b.ty("label"), ink)
-      b.use(row, progress, { props: { w: FILL }, args: { tone }, set: pct(n) })
-    }
-    const pay = panel(top, "Payment method", { gap: 14, pad: 24 })
-    b.text(pay, "Payment method", b.ty("heading"), ink)
-    const cardRow = b.row(pay, "Card", {
-      w: FILL,
+    col("Brief", "2", "brief", [
+      ["FW-151", "Gift card and promo code states", "PM", "Oct 12", "2", "8 h left", "web"],
+      ["FW-152", "Order confirmation email, plain text", "AS", "Oct 14", "0", "4 h left", "web"],
+    ])
+    col("In design", "4", "design", [
+      ["FW-142", "Payment step, mobile and tablet", "AS", "Oct 8", "3", "6 h left", "web"],
+      ["FW-144", "Address form errors and autofill", "PM", "Oct 9", "1", "9 h left", "web"],
+      ["FW-146", "Cart drawer motion spec", "TN", "Oct 9", "4", "5 h left", "motion"],
+      ["FW-148", "Checkout illustrations, set of 4", "NH", "Oct 13", "2", "14 h left", "brand"],
+    ])
+    col("In review", "3 of 3", "review", [
+      ["FW-137", "Checkout flow, v4 prototype", "MB", "Oct 6", "9", "2 h left", "web"],
+      ["FW-139", "Copy deck for payment errors", "IO", "Oct 7", "5", "1 h left", "strategy"],
+      ["FW-140", "Receipt page, print stylesheet", "NH", "Oct 7", "2", "3 h left", "print"],
+    ])
+    col("Handoff", "2", "handoff", [
+      ["FW-129", "Tokens and component specs, v2", "MB", "Oct 5", "6", "0 h left", "web"],
+      ["FW-131", "Loading and empty states", "PM", "Oct 5", "1", "0 h left", "web"],
+    ])
+    const done = b.col(board, "Done", {
+      w: 56,
+      h: FILL,
+      pad: [12, 0],
       gap: 12,
       align: "center",
-      pad: 14,
-      radius: r("md"),
-      stroke: { paint: c("border") },
+      radius: r("xl"),
+      fill: c("sunken"),
     })
-    const brandTile = b.row(cardRow, "Brand", {
-      w: 44,
-      h: 30,
-      radius: 6,
-      fill: c("subtle"),
-      align: "center",
-      justify: "center",
-    })
-    b.icon(brandTile, "credit-card", 18, c("ink-2"))
-    const ct = b.col(cardRow, "Text", { w: FILL, gap: 2 })
-    b.text(ct, "Visa ending in 4242", b.ty("label"), ink)
-    b.text(ct, "Expires 08/28", b.ty("small"), muted)
-    b.text(pay, "Invoices go to billing@northbeam.studio", b.ty("body", { size: 13 }), muted)
-    b.use(pay, buttonSecondary, { props: { w: FILL }, args: { label: "Update payment method" } })
+    b.icon(done, "circle-check", 16, c("success"))
+    b.text(done, "14", b.ty("mono", { size: 11 }), muted)
+  }
 
-    const inv = panel(content, "Invoices")
-    panelHead(inv, "Invoices", (row) =>
-      b.use(row, button, { args: { label: "Download all", variant: "ghost", size: "sm" } }),
+  // Team
+  {
+    const panel = shell("Team", "team", ["Northbeam Studio", "Team"], (into) => {
+      b.use(into, buttonSecondary, { args: { label: "Export", size: "sm" } })
+      b.use(into, button, { args: { label: "Invite person", size: "sm", icon: true } })
+    })
+    const head = b.col(panel, "Heading", { w: FILL, pad: [20, 20, 0, 20], gap: 14 })
+    const t = b.row(head, "Title", { w: FILL, gap: 12, align: "baseline" })
+    b.text(t, "Team", b.ty("title"), ink)
+    b.text(t, "9 people, 1 out today", b.ty("mono", { size: 12 }), muted)
+    tabs(
+      head,
+      [
+        ["Everyone", "9"],
+        ["Design", "5"],
+        ["Motion", "2"],
+        ["Strategy", "2"],
+      ],
+      0,
     )
-    for (const [number, date, amount] of [
-      ["INV-2026-010", "Oct 1, 2026", "$168.00"],
-      ["INV-2026-009", "Sep 1, 2026", "$168.00"],
-      ["INV-2026-008", "Aug 1, 2026", "$144.00"],
-      ["INV-2026-007", "Jul 1, 2026", "$144.00"],
-      ["INV-2026-006", "Jun 1, 2026", "$120.00"],
+
+    const out = b.row(panel, "Out this week", {
+      w: FILL,
+      pad: [10, 20],
+      gap: 12,
+      align: "center",
+      fill: c("subtle"),
+      stroke: { paint: c("border"), width: { b: 1 } },
+    })
+    b.icon(out, "plane", 14, muted)
+    b.text(out, "Out this week", b.ty("label", { size: 12 }), ink)
+    b.text(out, "Lucas Ferreira, Oct 5 to 7", b.ty("mono", { size: 11 }), muted)
+    b.rect(out, "Rule", { w: 1, h: 12, fill: c("border-strong") })
+    b.text(out, "Noor Haddad, Oct 8 to 9", b.ty("mono", { size: 11 }), muted)
+
+    const table = b.col(panel, "Table", { w: FILL })
+    const th = b.row(table, "Columns", {
+      w: FILL,
+      h: 32,
+      gap: 12,
+      pad: [0, 20],
+      align: "center",
+      stroke: { paint: c("border"), width: { b: 1 } },
+    })
+    b.para(th, "Person", cap({ size: 10 }), muted)
+    b.para(th, "Role", cap({ size: 10 }), muted, { w: 150 })
+    b.para(th, "Discipline", cap({ size: 10 }), muted, { w: 110 })
+    b.para(th, "Allocation, next 4 weeks", cap({ size: 10 }), muted, { w: 170 })
+    b.para(th, "This week", cap({ size: 10, align: "right" }), muted, { w: 80 })
+    b.para(th, "Status", cap({ size: 10 }), muted, { w: 84 })
+    b.rect(th, "Actions", { w: 16, h: 1, fill: c("surface") })
+    const person = (
+      ini: string,
+      role: string,
+      kind: string,
+      pct: number,
+      hrs: string,
+      status: string,
+      tn: string,
+      color?: string,
+    ) =>
+      b.use(table, personRow, {
+        props: { w: FILL },
+        args: {
+          initials: ini,
+          name: name(ini),
+          email: `${name(ini).split(" ")[0].toLowerCase()}@northbeam.studio`,
+          role,
+          percent: `${pct}%`,
+          hours: hrs,
+        },
+        set: {
+          PeAv: { args: { initials: ini, size: "md", tone: tone(ini) } },
+          PeDisc: { args: { kind } },
+          PeStatus: { args: { label: status, tone: tn, dot: true } },
+          "PeMeter/MtFill": {
+            w: Math.min(96, Math.round(pct * 0.96)),
+            fill: color ? c(color) : ink,
+          },
+        },
+      })
+    b.use(table, groupHeader, { props: { w: FILL }, args: { name: "Design", count: "5" } })
+    person("CD", "Studio lead", "brand", 70, "28 / 40 h", "Active", "success")
+    person("MB", "Design lead", "brand", 95, "38 / 40 h", "Active", "success")
+    person("AS", "Senior designer", "web", 100, "40 / 40 h", "Active", "success", "warning")
+    person("PM", "Designer", "web", 80, "32 / 40 h", "Active", "success")
+    person("NH", "Print designer", "print", 85, "34 / 40 h", "Active", "success")
+    b.use(table, groupHeader, {
+      props: { w: FILL },
+      args: { name: "Motion and strategy", count: "3" },
+    })
+    person("TN", "Motion lead", "motion", 110, "44 / 40 h", "Active", "success", "danger")
+    person("LF", "Motion designer", "motion", 70, "0 / 40 h", "Out", "warning")
+    person("IO", "Strategist", "strategy", 90, "36 / 40 h", "Active", "success")
+    b.use(table, groupHeader, { props: { w: FILL }, args: { name: "Invited", count: "1" } })
+    person("JW", "Producer", "strategy", 0, "0 / 40 h", "Invited", "neutral")
+  }
+
+  // Settings
+  {
+    const panel = shell("Settings", "settings", ["Settings", "General"])
+    const row = b.row(panel, "Body", { w: FILL, h: FILL })
+    b.use(row, settingsNav, { props: { h: FILL }, args: { active: "general" } })
+    const body = b.col(row, "Content", { w: FILL, h: FILL, pad: [28, 40, 0, 40], gap: 4 })
+    b.text(body, "General", b.ty("title"), ink)
+    b.para(
+      body,
+      "Studio-wide defaults. Changes apply to everyone on the next page load.",
+      b.ty("body"),
+      muted,
+    )
+    b.rect(body, "Gap", { w: FILL, h: 12, fill: c("surface") })
+    const frow = (
+      label: string,
+      hint: string,
+      fill: (into: { inst: string; at: string }) => void,
+    ) =>
+      b.use(body, formRow, { props: { w: 760 }, args: { label, hint }, slots: { FrControl: fill } })
+    frow("Logo", "Square, at least 256 px. Shown in the sidebar and on invoices.", (into) => {
+      const lr = b.row(into, "Logo", { gap: 12, align: "center" })
+      const mark = b.row(lr, "Mark", {
+        w: 48,
+        h: 48,
+        radius: r("lg"),
+        fill: ink,
+        align: "center",
+        justify: "center",
+      })
+      b.text(mark, "N", b.ty("title"), c("on-ink"))
+      b.use(lr, buttonSecondary, { args: { label: "Upload", size: "sm" } })
+      b.use(lr, button, { args: { label: "Remove", size: "sm", variant: "ghost" } })
+    })
+    frow("Studio name", "Shown in the sidebar, invoices and shared links.", (into) =>
+      b.use(into, field, { props: { w: FILL }, args: { value: "Northbeam Studio" } }),
+    )
+    frow("Workspace URL", "Letters, numbers and hyphens. Changing it breaks old links.", (into) =>
+      b.use(into, field, {
+        props: { w: FILL },
+        args: { value: "northbeam", showPrefix: true, prefix: "fieldwork.app/" },
+      }),
+    )
+    frow("Week starts on", "Used by the week grid, capacity and timesheets.", (into) =>
+      b.use(into, field, { props: { w: 200 }, args: { value: "Monday", icon: true } }),
+    )
+    frow(
+      "Hours per person per day",
+      "Capacity is calculated from this. Part-time people can override it.",
+      (into) => b.use(into, field, { props: { w: 120 }, args: { value: "8" } }),
+    )
+    frow("Time entries", "Control what people have to fill in when they log time.", (into) => {
+      b.use(into, toggle, {
+        props: { w: FILL },
+        args: { label: "Require a project on every entry", state: "on" },
+      })
+      b.use(into, toggle, {
+        props: { w: FILL },
+        args: { label: "Show budget burn to everyone", state: "off" },
+      })
+    })
+    frow(
+      "Delete workspace",
+      "Removes every project, file and time entry. This cannot be undone.",
+      (into) =>
+        b.use(into, button, { args: { label: "Delete workspace", size: "sm", variant: "danger" } }),
+    )
+    const save = b.row(body, "Save", { w: FILL, gap: 12, pad: [20, 0, 0, 0], align: "center" })
+    b.use(save, button, { args: { label: "Save changes", variant: "dark" } })
+    b.use(save, buttonSecondary, { args: { label: "Cancel" } })
+    b.text(save, "You have unsaved changes", b.ty("small"), muted)
+  }
+
+  // Billing
+  {
+    const panel = shell("Billing", "settings", ["Settings", "Billing"])
+    const row = b.row(panel, "Body", { w: FILL, h: FILL })
+    b.use(row, settingsNav, { props: { h: FILL }, args: { active: "billing" } })
+    const body = b.col(row, "Content", { w: FILL, h: FILL, pad: [24, 40, 0, 40], gap: 16 })
+    const ttl = b.col(body, "Title", { gap: 4 })
+    b.text(ttl, "Billing", b.ty("title"), ink)
+    b.text(
+      ttl,
+      "Seats are billed monthly. Invoices go to billing@northbeam.studio.",
+      b.ty("body"),
+      muted,
+    )
+
+    const plan = b.col(body, "Plan", {
+      w: 760,
+      radius: r("lg"),
+      stroke: { paint: c("border") },
+      clip: true,
+    })
+    const ph = b.row(plan, "Header", {
+      w: FILL,
+      pad: [12, 16],
+      justify: "between",
+      align: "center",
+      fill: c("subtle"),
+      stroke: { paint: c("border"), width: { b: 1 } },
+    })
+    b.text(ph, "Current plan", b.ty("heading"), ink)
+    const btns = b.row(ph, "Actions", { gap: 8 })
+    b.use(btns, buttonSecondary, { args: { label: "Add seats", size: "sm" } })
+    b.use(btns, button, { args: { label: "Change plan", size: "sm", variant: "dark" } })
+    const pb = b.row(plan, "Details", { w: FILL, gap: 24, pad: 20, align: "start" })
+    const price = b.col(pb, "Price", { w: 200, gap: 6 })
+    b.text(price, "Studio", cap({ size: 10 }), muted)
+    b.text(price, "$24", b.ty("figure", { size: 34 }), ink)
+    b.text(price, "per seat, per month", b.ty("small"), muted)
+    const seats = b.col(pb, "Seats", { w: FILL, gap: 8 })
+    b.text(seats, "Seats", cap({ size: 10 }), muted)
+    b.text(seats, "9 of 10 in use", b.ty("heading", { size: 16 }), ink)
+    b.use(seats, meter, { props: { w: FILL }, set: { MtFill: { w: 240, fill: ink } } })
+    const renew = b.col(pb, "Renewal", { w: 200, gap: 6 })
+    b.text(renew, "Renews", cap({ size: 10 }), muted)
+    b.text(renew, "Nov 1, 2026", b.ty("heading", { size: 16 }), ink)
+    b.text(renew, "$216.00 for 9 seats", b.ty("small"), muted)
+
+    const two = b.row(body, "Payment", { w: 760, gap: 20, align: "stretch" })
+    for (const [titleText, lines, icon] of [
+      ["Payment method", ["Visa ending 4242", "Expires 08/2028"], "credit-card"],
+      ["Billing contact", ["Clara Dumont", "billing@northbeam.studio"], "mail"],
+    ] as const) {
+      const box = b.row(two, titleText, {
+        w: FILL,
+        gap: 14,
+        pad: 16,
+        align: "center",
+        radius: r("lg"),
+        stroke: { paint: c("border") },
+      })
+      const tile = b.row(box, "Icon", {
+        w: 36,
+        h: 36,
+        radius: r("md"),
+        fill: c("subtle"),
+        align: "center",
+        justify: "center",
+      })
+      b.icon(tile, icon, 18, ink)
+      const tx = b.col(box, "Text", { w: FILL, gap: 2 })
+      b.text(tx, titleText, cap({ size: 10 }), muted)
+      b.text(tx, lines[0], b.ty("label"), ink)
+      b.text(tx, lines[1], b.ty("small"), muted)
+      b.use(box, buttonSecondary, { args: { label: "Update", size: "sm" } })
+    }
+
+    const use = b.col(body, "Usage", { w: 760, gap: 10 })
+    b.text(use, "Usage this cycle", b.ty("heading"), ink)
+    const ur = b.row(use, "Meters", { w: FILL, gap: 20 })
+    for (const [labelText, valueText, w] of [
+      ["Storage", "38 of 100 GB", 36],
+      ["Guest reviewers", "4 of 10", 38],
+    ] as const) {
+      const box = b.col(ur, labelText, {
+        w: FILL,
+        gap: 8,
+        pad: 16,
+        radius: r("lg"),
+        stroke: { paint: c("border") },
+      })
+      const hd = b.row(box, "Head", { w: FILL, justify: "between" })
+      b.text(hd, labelText, cap({ size: 10 }), muted)
+      b.text(hd, valueText, b.ty("mono", { size: 12 }), ink)
+      b.use(box, meter, { props: { w: FILL }, set: { MtFill: { w, fill: ink } } })
+    }
+    const inv = b.col(body, "Invoices", { w: 760, gap: 10 })
+    b.text(inv, "Invoices", b.ty("heading"), ink)
+    const it = b.col(inv, "Table", {
+      w: FILL,
+      radius: r("lg"),
+      stroke: { paint: c("border") },
+      clip: true,
+    })
+    for (const [date, num, amt] of [
+      ["Oct 1, 2026", "FW-2026-10", "$216.00"],
+      ["Sep 1, 2026", "FW-2026-09", "$216.00"],
+      ["Aug 1, 2026", "FW-2026-08", "$192.00"],
+      ["Jul 1, 2026", "FW-2026-07", "$192.00"],
     ] as const)
-      b.use(inv, invoiceRow, { props: { w: FILL }, args: { number, date, amount } })
+      b.use(it, invoiceRow, { props: { w: FILL }, args: { date, number: num, amount: amt } })
   }
 }

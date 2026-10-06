@@ -1,6 +1,11 @@
 /**
  * Ledgerline: the marketing site of a fictional month-end close tool for finance teams.
  * Screens: Home, Pricing, Customers, Blog, Blog post, Sign up (desktop, 1440 wide).
+ *
+ * Look: a ledger page. Paper ground, ink type, hairline rules, JetBrains Mono for every figure and
+ * index label, one highlighter-yellow action per view. See the references in the brief:
+ * Ramp (hero), Assembly and Speakeasy (pricing), Amplemarket and Grammarly (customers),
+ * Supabase and Klaviyo (sign up).
  */
 import { FILL, p, type Template, type TemplateBuilder } from "./lib"
 
@@ -17,26 +22,33 @@ export const template: Template = {
 function build(b: TemplateBuilder) {
   b.tokens({
     colors: {
-      bg: ["#FBFAF8", "#0E1116"],
-      surface: ["#FFFFFF", "#161B22"],
-      subtle: ["#F3F1EC", "#1C222B"],
-      ink: ["#14171C", "#EEF1F5"],
-      muted: ["#5B6270", "#9AA3B2"],
-      border: ["#E6E2DA", "#2A313C"],
-      accent: ["#2F5BEA", "#7C9BFF"],
-      "accent-soft": ["#E8EEFF", "#1C2747"],
-      "on-accent": ["#FFFFFF", "#0E1116"],
-      success: ["#127A4B", "#4ACB8B"],
-      "success-soft": ["#E3F5EC", "#13301F"],
-      warning: ["#A35C00", "#F2B54B"],
-      "warning-soft": ["#FDF1DC", "#33240C"],
-      inverse: ["#14213D", "#1B2A4A"],
-      "on-inverse": ["#FFFFFF", "#EEF1F5"],
-      "inverse-muted": ["#AEB9CF", "#9FB0CF"],
-      "art-1": ["#C9D6FF", "#2A3A6E"],
-      "art-2": ["#CDEBDD", "#1F4A36"],
-      "art-3": ["#F7DDB7", "#5A3F17"],
-      "art-4": ["#F5CFD6", "#5A2431"],
+      bg: ["#F4F1E9", "#0E110F"],
+      surface: ["#FBF9F4", "#151916"],
+      subtle: ["#EBE7DB", "#1C211D"],
+      ink: ["#11140F", "#ECEEE6"],
+      "on-ink": ["#F4F1E9", "#0E110F"],
+      muted: ["#5C6058", "#979C92"],
+      border: ["#D8D3C4", "#2A302B"],
+      "border-strong": ["#B9B3A1", "#434A44"],
+      accent: ["#0F4A36", "#74D8A6"],
+      "on-accent": ["#F4F1E9", "#0E110F"],
+      mark: ["#E4F06B", "#D5E25A"],
+      "on-mark": ["#11140F", "#11140F"],
+      success: ["#1B7F4F", "#5FCF98"],
+      "success-soft": ["#DCEBDD", "#16301F"],
+      warning: ["#9A5A07", "#EDB24E"],
+      "warning-soft": ["#F4E3C0", "#33250D"],
+      danger: ["#B03A2A", "#F08A78"],
+      "danger-soft": ["#F3D9D2", "#3A1C17"],
+      inverse: ["#0C2A20", "#08150F"],
+      "on-inverse": ["#F2EFE6", "#ECEEE6"],
+      "inverse-muted": ["#9DB5A8", "#8CA699"],
+      "inverse-line": ["#24473A", "#1D3A2D"],
+      "tile-mint": ["#CFE6D3", "#1B3828"],
+      "tile-butter": ["#F1E4AA", "#463C12"],
+      "tile-lilac": ["#DAD4EE", "#2B2749"],
+      "tile-blush": ["#F3D4CA", "#4A2820"],
+      "tile-sky": ["#CDE0EA", "#193241"],
     },
     numbers: {
       "space/1": 4,
@@ -52,29 +64,29 @@ function build(b: TemplateBuilder) {
       "space/20": 80,
       "space/24": 96,
       "space/30": 120,
-      "radius/sm": 6,
-      "radius/md": 10,
-      "radius/lg": 16,
-      "radius/xl": 24,
+      "radius/sm": 4,
+      "radius/md": 6,
+      "radius/lg": 10,
+      "radius/xl": 16,
       "radius/pill": 999,
     },
     type: {
-      display: { font: "Inter", size: 64, weight: 700, lineHeight: 1.05, letterSpacing: -2 },
-      h1: { font: "Inter", size: 48, weight: 700, lineHeight: 1.1, letterSpacing: -1.2 },
-      heading: { font: "Inter", size: 32, weight: 700, lineHeight: 1.2, letterSpacing: -0.6 },
-      title: { font: "Inter", size: 20, weight: 600, lineHeight: 1.35, letterSpacing: -0.2 },
-      "body-lg": { font: "Inter", size: 18, weight: 400, lineHeight: 1.6 },
+      display: { font: "Inter", size: 76, weight: 600, lineHeight: 0.98, letterSpacing: -3.2 },
+      h1: { font: "Inter", size: 52, weight: 600, lineHeight: 1.04, letterSpacing: -2 },
+      heading: { font: "Inter", size: 32, weight: 600, lineHeight: 1.15, letterSpacing: -1 },
+      title: { font: "Inter", size: 20, weight: 600, lineHeight: 1.3, letterSpacing: -0.3 },
+      "body-lg": { font: "Inter", size: 19, weight: 400, lineHeight: 1.55, letterSpacing: -0.1 },
       body: { font: "Inter", size: 16, weight: 400, lineHeight: 1.55 },
       label: { font: "Inter", size: 14, weight: 600, lineHeight: 1.3 },
       small: { font: "Inter", size: 13, weight: 400, lineHeight: 1.45 },
+      figure: { font: "Inter", size: 64, weight: 600, lineHeight: 1, letterSpacing: -3 },
       mono: { font: "JetBrains Mono", size: 13, weight: 500, lineHeight: 1.4 },
     },
     shadows: {
-      card: [
-        { kind: "shadow", x: 0, y: 1, blur: 2, color: "#1418200F" },
-        { kind: "shadow", x: 0, y: 8, blur: 24, spread: -8, color: "#1418201F" },
+      stage: [
+        { kind: "shadow", x: 0, y: 1, blur: 1, color: "#11140F14" },
+        { kind: "shadow", x: 0, y: 24, blur: 48, spread: -24, color: "#11140F33" },
       ],
-      pop: { kind: "shadow", x: 0, y: 24, blur: 64, spread: -16, color: "#14182040" },
     },
   })
 
@@ -83,14 +95,9 @@ function build(b: TemplateBuilder) {
   const r = (n: string) => b.n(`radius/${n}`)
   const ink = c("ink")
   const muted = c("muted")
-  const grad = (from: string, to: string) => ({
-    kind: "linear",
-    rotation: 135,
-    stops: [
-      { color: c(from), at: 0 },
-      { color: c(to), at: 1 },
-    ],
-  })
+  /** Mono caps label (indices, plan names, column heads). */
+  const cap = (extra: Record<string, unknown> = {}) =>
+    b.ty("mono", { size: 12, case: "upper", letterSpacing: 0.8, ...extra })
 
   // --- Components ------------------------------------------------------------------------------
 
@@ -99,33 +106,40 @@ function build(b: TemplateBuilder) {
     {
       key: "Btn",
       section: "Actions",
-      description: "Primary, secondary or subtle; md or lg. One primary per view.",
+      description:
+        "Ink, highlighter or outline; md or lg. The highlighter is the one action per view.",
       props: {
         label: p.text("BtnLabel", "Button"),
         icon: p.bool("BtnIcon", false),
         variant: p.variants({
           primary: {
-            "root.fill": c("accent"),
-            "root.stroke": { paint: c("accent") },
-            "BtnLabel.fill": c("on-accent"),
-            "BtnIcon.color": c("on-accent"),
+            "root.fill": ink,
+            "root.stroke": { paint: ink },
+            "BtnLabel.fill": c("on-ink"),
+            "BtnIcon.color": c("on-ink"),
           },
-          secondary: {
+          mark: {
+            "root.fill": c("mark"),
+            "root.stroke": { paint: c("mark") },
+            "BtnLabel.fill": c("on-mark"),
+            "BtnIcon.color": c("on-mark"),
+          },
+          outline: {
             "root.fill": c("surface"),
-            "root.stroke": { paint: c("border") },
+            "root.stroke": { paint: c("border-strong") },
             "BtnLabel.fill": ink,
             "BtnIcon.color": ink,
           },
-          subtle: {
-            "root.fill": c("subtle"),
-            "root.stroke": { paint: c("subtle") },
-            "BtnLabel.fill": ink,
-            "BtnIcon.color": ink,
+          inverse: {
+            "root.fill": c("inverse"),
+            "root.stroke": { paint: c("inverse-line") },
+            "BtnLabel.fill": c("on-inverse"),
+            "BtnIcon.color": c("on-inverse"),
           },
         }),
         size: p.variants({
           md: { "root.layout/pad": [10, 16], "BtnLabel.style/size": 14 },
-          lg: { "root.layout/pad": [14, 22], "BtnLabel.style/size": 16 },
+          lg: { "root.layout/pad": [15, 24], "BtnLabel.style/size": 16 },
         }),
       },
       root: {
@@ -135,40 +149,40 @@ function build(b: TemplateBuilder) {
         justify: "center",
         pad: [10, 16],
         radius: r("md"),
-        fill: c("accent"),
-        stroke: { paint: c("accent") },
+        fill: ink,
+        stroke: { paint: ink },
       },
     },
     (root) => {
-      b.text(root, "Button", b.ty("label"), c("on-accent"), { key: "BtnLabel", name: "Label" })
-      b.icon(root, "arrow-right", 16, c("on-accent"), { key: "BtnIcon", visible: false })
+      b.text(root, "Button", b.ty("label"), c("on-ink"), { key: "BtnLabel", name: "Label" })
+      b.icon(root, "arrow-right", 16, c("on-ink"), { key: "BtnIcon", visible: false })
     },
   )
-  const buttonSecondary = b.derive(button, "Button/Secondary", "BtnSec", {
+  const buttonOutline = b.derive(button, "Button/Outline", "BtnOut", {
     section: "Actions",
-    args: { variant: "secondary" },
+    args: { variant: "outline" },
   })
-  const badge = b.component(
-    "Badge",
+
+  const tag = b.component(
+    "Tag",
     {
-      key: "Badge",
+      key: "Tag",
       section: "Actions",
+      description: "Mono caps chip for categories and states.",
       props: {
-        label: p.text("BadgeLbl", "Badge"),
+        label: p.text("TagLbl", "Tag"),
         tone: p.variants({
-          accent: { "root.fill": c("accent-soft"), "BadgeLbl.fill": c("accent") },
-          neutral: { "root.fill": c("subtle"), "BadgeLbl.fill": muted },
-          success: { "root.fill": c("success-soft"), "BadgeLbl.fill": c("success") },
-          warning: { "root.fill": c("warning-soft"), "BadgeLbl.fill": c("warning") },
+          neutral: { "root.fill": c("subtle"), "TagLbl.fill": muted },
+          mark: { "root.fill": c("mark"), "TagLbl.fill": c("on-mark") },
+          success: { "root.fill": c("success-soft"), "TagLbl.fill": c("success") },
+          warning: { "root.fill": c("warning-soft"), "TagLbl.fill": c("warning") },
+          danger: { "root.fill": c("danger-soft"), "TagLbl.fill": c("danger") },
+          outline: { "root.fill": c("surface"), "TagLbl.fill": ink },
         }),
       },
-      root: { dir: "row", pad: [4, 10], radius: r("pill"), fill: c("accent-soft") },
+      root: { dir: "row", pad: [3, 7], radius: r("sm"), fill: c("subtle") },
     },
-    (root) =>
-      b.text(root, "Badge", b.ty("small", { weight: 600 }), c("accent"), {
-        key: "BadgeLbl",
-        name: "Label",
-      }),
+    (root) => b.text(root, "Tag", cap({ size: 11 }), muted, { key: "TagLbl", name: "Label" }),
   )
 
   const avatar = b.component(
@@ -179,29 +193,47 @@ function build(b: TemplateBuilder) {
       props: {
         initials: p.text("AvInit", "MO"),
         size: p.variants({
-          sm: { "root.w": 28, "root.h": 28, "AvInit.style/size": 11 },
-          md: { "root.w": 40, "root.h": 40, "AvInit.style/size": 14 },
+          sm: { "root.w": 24, "root.h": 24, "AvInit.style/size": 10 },
+          md: { "root.w": 36, "root.h": 36, "AvInit.style/size": 13 },
           lg: { "root.w": 56, "root.h": 56, "AvInit.style/size": 18 },
         }),
         tone: p.variants({
-          blue: { "root.fill": c("art-1") },
-          green: { "root.fill": c("art-2") },
-          amber: { "root.fill": c("art-3") },
-          rose: { "root.fill": c("art-4") },
+          mint: { "root.fill": c("tile-mint") },
+          butter: { "root.fill": c("tile-butter") },
+          lilac: { "root.fill": c("tile-lilac") },
+          blush: { "root.fill": c("tile-blush") },
+          sky: { "root.fill": c("tile-sky") },
         }),
       },
       root: {
         dir: "row",
-        w: 40,
-        h: 40,
+        w: 36,
+        h: 36,
         align: "center",
         justify: "center",
         radius: r("pill"),
-        fill: c("art-1"),
+        fill: c("tile-mint"),
       },
     },
-    (root) => b.text(root, "MO", b.ty("label"), ink, { key: "AvInit", name: "Initials" }),
+    (root) =>
+      b.text(root, "MO", b.ty("label", { size: 13, weight: 600 }), ink, {
+        key: "AvInit",
+        name: "Initials",
+      }),
   )
+
+  function brand(parent: string, onInverse = false) {
+    const row = b.row(parent, "Brand", { gap: 10, align: "center" })
+    const mark = b.col(row, "Mark", { gap: 3, w: 22 })
+    const col = onInverse ? c("on-inverse") : ink
+    b.rect(mark, "Rule", { w: 22, h: 5, radius: 1, fill: col })
+    b.rect(mark, "Rule", { w: 22, h: 5, radius: 1, fill: col })
+    b.rect(mark, "Rule", { w: 12, h: 5, radius: 1, fill: c("mark") })
+    b.text(row, "Ledgerline", b.ty("title", { size: 21, letterSpacing: -0.8 }), col, {
+      name: "Wordmark",
+    })
+    return row
+  }
 
   const navLinks = ["Product", "Pricing", "Customers", "Blog"] as const
   const navActive = (i: number) =>
@@ -224,39 +256,24 @@ function build(b: TemplateBuilder) {
         w: 1440,
         justify: "between",
         align: "center",
-        pad: [20, 120],
+        pad: [18, 120],
         fill: c("bg"),
         stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      brand(root)
-      const links = b.row(root, "Links", { gap: 36, align: "center" })
+      const left = b.row(root, "Left", { gap: 48, align: "center" })
+      brand(left)
+      const links = b.row(left, "Links", { gap: 28, align: "center" })
       for (const [i, l] of navLinks.entries())
-        b.text(links, l, b.ty("body", { weight: 500 }), i === 0 ? ink : muted, {
+        b.text(links, l, b.ty("body", { size: 15, weight: 500 }), i === 0 ? ink : muted, {
           key: `NavL${i + 1}`,
         })
-      const right = b.row(root, "Actions", { gap: 20, align: "center" })
-      b.text(right, "Sign in", b.ty("body", { weight: 500 }), ink)
+      const right = b.row(root, "Actions", { gap: 24, align: "center" })
+      b.text(right, "Sign in", b.ty("body", { size: 15, weight: 500 }), ink)
       b.use(right, button, { key: "NavCta", args: { label: "Start free trial" } })
     },
   )
-  function brand(parent: string, onInverse = false) {
-    const row = b.row(parent, "Brand", { gap: 10, align: "center" })
-    const mark = b.row(row, "Mark", {
-      w: 28,
-      h: 28,
-      radius: 8,
-      fill: c("accent"),
-      align: "center",
-      justify: "center",
-    })
-    b.icon(mark, "book-check", 16, c("on-accent"))
-    b.text(row, "Ledgerline", b.ty("title", { weight: 700 }), onInverse ? c("on-inverse") : ink, {
-      name: "Wordmark",
-    })
-    return row
-  }
 
   const footer = b.component(
     "Footer",
@@ -266,101 +283,59 @@ function build(b: TemplateBuilder) {
       root: {
         dir: "column",
         w: 1440,
-        gap: 48,
-        pad: [64, 120, 40, 120],
-        fill: c("subtle"),
+        gap: 56,
+        pad: [72, 120, 40, 120],
+        fill: c("bg"),
+        stroke: { paint: c("border"), width: { t: 1 } },
       },
     },
     (root) => {
       const top = b.row(root, "Top", { w: FILL, gap: 64 })
-      const about = b.col(top, "About", { w: 360, gap: 16 })
+      const about = b.col(top, "About", { w: 400, gap: 20 })
       brand(about)
       b.para(
         about,
-        "Close software for finance teams on NetSuite, Sage Intacct, QuickBooks and Xero.",
+        "Month-end close for finance teams on NetSuite, Sage Intacct, QuickBooks and Xero.",
         b.ty("body"),
         muted,
       )
+      const status = b.row(about, "Status", { gap: 8, align: "center" })
+      b.ellipse(status, "Dot", { w: 8, h: 8, fill: c("success") })
+      b.text(status, "All systems normal", cap({ size: 11 }), muted)
       for (const [title, items] of [
-        ["Product", ["Close checklist", "Reconciliations", "Flux analysis", "Integrations"]],
+        ["Product", ["Close checklist", "Reconciliations", "Flux review", "Integrations"]],
         ["Company", ["About", "Customers", "Careers", "Press"]],
-        ["Resources", ["Blog", "Close guide", "Help center", "Status"]],
+        ["Resources", ["Blog", "Close guide", "Help center", "Security"]],
       ] as const) {
         const col = b.col(top, title, { w: FILL, gap: 14 })
-        b.text(col, title, b.ty("label"), ink)
-        for (const it of items) b.text(col, it, b.ty("body"), muted)
+        b.text(col, title, cap({ size: 11 }), muted)
+        for (const it of items) b.text(col, it, b.ty("body", { size: 15 }), ink)
       }
       b.divider(root, c("border"))
       const bottom = b.row(root, "Bottom", { w: FILL, justify: "between", align: "center" })
-      b.text(bottom, "Copyright 2026 Ledgerline, Inc.", b.ty("small"), muted)
-      b.text(bottom, "Privacy  ·  Terms  ·  Security", b.ty("small"), muted)
+      b.text(bottom, "Copyright 2026 Ledgerline, Inc.", cap({ size: 11 }), muted)
+      b.text(bottom, "Privacy  /  Terms  /  Security", cap({ size: 11 }), muted)
     },
   )
 
-  const sectionHeader = b.component(
-    "Section header",
+  const indexLabel = b.component(
+    "Index label",
     {
-      key: "SecHead",
+      key: "Idx",
       section: "Content",
-      props: {
-        eyebrow: p.text("SecEye", "Eyebrow"),
-        title: p.text("SecTitle", "Section title"),
-        subtitle: p.text("SecSub", "Supporting sentence."),
-        showSubtitle: p.bool("SecSub", true),
-        align: p.variants({
-          center: {
-            "root.layout/align": "center",
-            "SecTitle.style/align": "center",
-            "SecSub.style/align": "center",
-          },
-          left: {
-            "root.layout/align": "start",
-            "SecTitle.style/align": "left",
-            "SecSub.style/align": "left",
-          },
-        }),
-      },
-      root: { dir: "column", w: 760, gap: 16, align: "center" },
-    },
-    (root) => {
-      b.text(root, "Eyebrow", b.ty("label", { case: "upper", letterSpacing: 1 }), c("accent"), {
-        key: "SecEye",
-      })
-      b.para(root, "Section title", b.ty("h1", { align: "center" }), ink, { key: "SecTitle" })
-      b.para(root, "Supporting sentence.", b.ty("body-lg", { align: "center" }), muted, {
-        key: "SecSub",
-      })
-    },
-  )
-
-  const featureCard = b.component(
-    "Feature card",
-    {
-      key: "FeatCard",
-      section: "Content",
-      props: { title: p.text("FeatTitle", "Feature"), body: p.text("FeatBody", "What it does.") },
+      description: "Section opener: hairline, mono index and mono caps title.",
+      props: { index: p.text("IdxNum", "01"), title: p.text("IdxTitle", "Section") },
       root: {
-        dir: "column",
-        w: 384,
-        gap: 16,
-        pad: s(8),
-        radius: r("lg"),
-        fill: c("surface"),
-        stroke: { paint: c("border") },
+        dir: "row",
+        w: 1200,
+        gap: 24,
+        pad: [14, 0, 0, 0],
+        stroke: { paint: ink, width: { t: 1 } },
       },
     },
     (root) => {
-      const tile = b.row(root, "Icon tile", {
-        w: 44,
-        h: 44,
-        radius: r("md"),
-        fill: c("accent-soft"),
-        align: "center",
-        justify: "center",
-      })
-      b.icon(tile, "list-checks", 22, c("accent"), { key: "FeatIcon" })
-      b.text(root, "Feature", b.ty("title"), ink, { key: "FeatTitle", name: "Title" })
-      b.para(root, "What it does.", b.ty("body"), muted, { key: "FeatBody", name: "Body" })
+      b.text(root, "01", cap(), ink, { key: "IdxNum", name: "Index" })
+      b.text(root, "Section", cap(), muted, { key: "IdxTitle", name: "Title" })
     },
   )
 
@@ -377,92 +352,271 @@ function build(b: TemplateBuilder) {
           inverse: { "StatVal.fill": c("on-inverse"), "StatLbl.fill": c("inverse-muted") },
         }),
       },
-      root: { dir: "column", w: 260, gap: 8 },
+      root: { dir: "column", w: 300, gap: 14 },
     },
     (root) => {
-      b.text(root, "0", b.ty("h1"), ink, { key: "StatVal", name: "Value" })
-      b.para(root, "Metric", b.ty("body"), muted, { key: "StatLbl", name: "Label" })
+      b.text(root, "0", b.ty("figure"), ink, { key: "StatVal", name: "Value" })
+      b.para(root, "Metric", b.ty("body", { size: 15 }), muted, { key: "StatLbl", name: "Label" })
     },
   )
 
-  const quote = b.component(
-    "Quote card",
+  const ledgerRow = b.component(
+    "Ledger row",
     {
-      key: "Quote",
-      section: "Content",
+      key: "LRow",
+      section: "Ledger",
+      description: "One account line: code, name, balance, variance and state.",
       props: {
-        quote: p.text("QText", "Quote"),
-        name: p.text("QName", "Name"),
-        role: p.text("QRole", "Role"),
-        initials: p.text("QAv/AvInit", "MO"),
+        code: p.text("LrCode", "1010"),
+        name: p.text("LrName", "Operating account"),
+        balance: p.text("LrBal", "412,908.14"),
+        variance: p.text("LrVar", "+0.0%"),
+        state: p.variants({
+          tied: {
+            "LrIcon.icon": "check",
+            "LrIcon.color": c("success"),
+            "LrState.content": "Tied",
+            "LrState.fill": c("success"),
+            "LrVar.fill": muted,
+          },
+          review: {
+            "LrIcon.icon": "circle-alert",
+            "LrIcon.color": c("warning"),
+            "LrState.content": "In review",
+            "LrState.fill": c("warning"),
+            "LrVar.fill": c("danger"),
+          },
+          open: {
+            "LrIcon.icon": "circle",
+            "LrIcon.color": c("border-strong"),
+            "LrState.content": "Open",
+            "LrState.fill": muted,
+            "LrVar.fill": muted,
+          },
+        }),
       },
       root: {
-        dir: "column",
-        w: 384,
-        gap: 24,
-        pad: s(8),
-        radius: r("lg"),
-        fill: c("surface"),
-        stroke: { paint: c("border") },
-        effects: b.shadow("card"),
-      },
-    },
-    (root) => {
-      b.icon(root, "quote", 24, c("accent"))
-      b.para(root, "Quote", b.ty("body-lg"), ink, { key: "QText", name: "Quote" })
-      const who = b.row(root, "Person", { gap: 12, align: "center" })
-      b.use(who, avatar, { key: "QAv" })
-      const names = b.col(who, "Names", { gap: 2 })
-      b.text(names, "Name", b.ty("label"), ink, { key: "QName" })
-      b.text(names, "Role", b.ty("small"), muted, { key: "QRole" })
-    },
-  )
-
-  const logo = b.component(
-    "Customer logo",
-    {
-      key: "Logo",
-      section: "Content",
-      props: { name: p.text("LogoName", "Company") },
-      root: { dir: "row", gap: 8, align: "center" },
-    },
-    (root) => {
-      b.icon(root, "building-2", 22, muted, { key: "LogoIcon" })
-      b.text(root, "Company", b.ty("title", { weight: 700, letterSpacing: -0.4 }), muted, {
-        key: "LogoName",
-        name: "Name",
-      })
-    },
-  )
-
-  const faq = b.component(
-    "FAQ item",
-    {
-      key: "Faq",
-      section: "Content",
-      props: {
-        question: p.text("FaqQ", "Question"),
-        answer: p.text("FaqA", "Answer."),
-        open: p.bool("FaqA", true),
-      },
-      root: {
-        dir: "column",
-        w: 800,
-        gap: 12,
-        pad: [24, 0],
+        dir: "row",
+        w: 760,
+        gap: 16,
+        pad: [0, 20],
+        h: 48,
+        align: "center",
         stroke: { paint: c("border"), width: { b: 1 } },
       },
     },
     (root) => {
-      const head = b.row(root, "Question row", { w: FILL, gap: 16, align: "center" })
-      b.para(head, "Question", b.ty("title"), ink, { key: "FaqQ", name: "Question" })
-      b.icon(head, "chevron-down", 20, muted)
-      b.para(root, "Answer.", b.ty("body"), muted, { key: "FaqA", name: "Answer" })
+      b.para(root, "1010", b.ty("mono"), muted, { key: "LrCode", name: "Code", w: 48 })
+      b.para(root, "Operating account", b.ty("label", { weight: 500 }), ink, {
+        key: "LrName",
+        name: "Name",
+      })
+      b.para(root, "412,908.14", b.ty("mono", { align: "right" }), ink, {
+        key: "LrBal",
+        name: "Balance",
+        w: 120,
+      })
+      b.para(root, "+0.0%", b.ty("mono", { align: "right" }), muted, {
+        key: "LrVar",
+        name: "Variance",
+        w: 72,
+      })
+      const st = b.row(root, "State", { w: 104, gap: 6, align: "center" })
+      b.icon(st, "check", 14, c("success"), { key: "LrIcon" })
+      b.text(st, "Tied", b.ty("small", { weight: 500 }), c("success"), { key: "LrState" })
     },
   )
 
-  const checkItem = b.component(
-    "Check item",
+  const ledgerTable = b.component(
+    "Ledger table",
+    {
+      key: "LTab",
+      section: "Ledger",
+      description: "The product object shown on the site. Fill the Rows slot with Ledger rows.",
+      props: {
+        title: p.text("LtTitle", "September 2026 close"),
+        meta: p.text("LtMeta", "Day 3 of 5"),
+        total: p.text("LtTotal", "58 accounts"),
+        rows: p.slot("LtRows"),
+      },
+      root: {
+        dir: "column",
+        w: 760,
+        radius: r("lg"),
+        fill: c("surface"),
+        stroke: { paint: c("border") },
+        effects: b.shadow("stage"),
+        clip: true,
+      },
+    },
+    (root) => {
+      const head = b.row(root, "Head", {
+        w: FILL,
+        pad: [16, 20],
+        justify: "between",
+        align: "center",
+        stroke: { paint: c("border"), width: { b: 1 } },
+      })
+      b.text(head, "September 2026 close", b.ty("label", { size: 15 }), ink, { key: "LtTitle" })
+      b.text(head, "Day 3 of 5", cap({ size: 11 }), muted, { key: "LtMeta" })
+      const cols = b.row(root, "Columns", {
+        w: FILL,
+        gap: 16,
+        pad: [9, 20],
+        fill: c("subtle"),
+        stroke: { paint: c("border"), width: { b: 1 } },
+      })
+      b.para(cols, "Acct", cap({ size: 10 }), muted, { w: 48 })
+      b.para(cols, "Account", cap({ size: 10 }), muted)
+      b.para(cols, "Balance, USD", cap({ size: 10, align: "right" }), muted, { w: 120 })
+      b.para(cols, "vs Aug", cap({ size: 10, align: "right" }), muted, { w: 72 })
+      b.para(cols, "State", cap({ size: 10 }), muted, { w: 104 })
+      b.col(root, "Rows", { key: "LtRows", w: FILL, slot: { suggested: [ledgerRow] } })
+      const foot = b.row(root, "Foot", { w: FILL, pad: [14, 20], justify: "between" })
+      b.text(foot, "58 accounts", cap({ size: 11 }), muted, { key: "LtTotal" })
+      b.text(foot, "Last read from NetSuite 14:02", cap({ size: 11 }), muted)
+    },
+  )
+
+  const wordmark = b.component(
+    "Wordmark",
+    {
+      key: "Wm",
+      section: "Content",
+      description: "Typographic customer mark. Each style is set in Inter or Mono only.",
+      props: {
+        name: p.text("WmText", "Company"),
+        style: p.variants({
+          tight: {
+            "WmText.style/weight": 700,
+            "WmText.style/letterSpacing": -1,
+          },
+          caps: {
+            "WmText.style/weight": 500,
+            "WmText.style/letterSpacing": 2.4,
+          },
+          light: {
+            "WmText.style/weight": 300,
+            "WmText.style/letterSpacing": -0.6,
+          },
+          black: {
+            "WmText.style/weight": 800,
+            "WmText.style/letterSpacing": -1.6,
+          },
+        }),
+        tone: p.variants({
+          muted: { "WmText.fill": muted },
+          ink: { "WmText.fill": ink },
+        }),
+      },
+      root: { dir: "row", align: "center" },
+    },
+    (root) =>
+      b.text(root, "Company", b.ty("title", { size: 20, weight: 700, letterSpacing: -1 }), muted, {
+        key: "WmText",
+        name: "Name",
+      }),
+  )
+
+  const storyTile = b.component(
+    "Story tile",
+    {
+      key: "Story",
+      section: "Customers",
+      description: "Metric first. Flat tile, company bottom left.",
+      props: {
+        metric: p.text("StMetric", "40%"),
+        caption: p.text("StCap", "What changed."),
+        company: p.text("StCo/WmText", "Company"),
+        tone: p.variants({
+          mint: { "root.fill": c("tile-mint") },
+          butter: { "root.fill": c("tile-butter") },
+          lilac: { "root.fill": c("tile-lilac") },
+          blush: { "root.fill": c("tile-blush") },
+          sky: { "root.fill": c("tile-sky") },
+        }),
+      },
+      root: {
+        dir: "column",
+        w: 288,
+        h: 240,
+        pad: 24,
+        justify: "between",
+        radius: r("lg"),
+        fill: c("tile-mint"),
+      },
+    },
+    (root) => {
+      const top = b.col(root, "Top", { w: FILL, gap: 8 })
+      b.text(top, "40%", b.ty("figure", { size: 56 }), ink, { key: "StMetric", name: "Metric" })
+      b.para(top, "What changed.", b.ty("body", { size: 15 }), ink, {
+        key: "StCap",
+        name: "Caption",
+      })
+      const foot = b.row(root, "Footer", { w: FILL, justify: "between", align: "center" })
+      b.use(foot, wordmark, { key: "StCo", args: { tone: "ink" } })
+      b.icon(foot, "arrow-up-right", 18, ink)
+    },
+  )
+
+  const storyFeature = b.component(
+    "Story feature",
+    {
+      key: "StoryF",
+      section: "Customers",
+      description: "Large story tile: one headline sentence and two figures.",
+      props: {
+        headline: p.text("SfHead", "How a team changed its close."),
+        m1: p.text("SfM1V", "4 days"),
+        m1Label: p.text("SfM1L", "Median close"),
+        m2: p.text("SfM2V", "140"),
+        m2Label: p.text("SfM2L", "Reconciliations"),
+        company: p.text("SfCo/WmText", "Company"),
+        tone: p.variants({
+          mint: { "root.fill": c("tile-mint") },
+          butter: { "root.fill": c("tile-butter") },
+          lilac: { "root.fill": c("tile-lilac") },
+        }),
+      },
+      root: {
+        dir: "column",
+        w: 588,
+        h: 392,
+        pad: 32,
+        justify: "between",
+        radius: r("lg"),
+        fill: c("tile-mint"),
+      },
+    },
+    (root) => {
+      const hd = b.col(root, "Head", { w: FILL, gap: 24 })
+      const top = b.row(hd, "Top", { w: FILL, justify: "between", align: "center" })
+      b.use(top, wordmark, { key: "SfCo", args: { tone: "ink" } })
+      b.text(top, "Case study", cap({ size: 11 }), ink)
+      b.para(hd, "How a team changed its close.", b.ty("heading", { size: 30 }), ink, {
+        key: "SfHead",
+        name: "Headline",
+      })
+      const nums = b.row(root, "Figures", { w: FILL, gap: 12 })
+      for (const [vk, lk, v, l] of [
+        ["SfM1V", "SfM1L", "4 days", "Median close"],
+        ["SfM2V", "SfM2L", "140", "Reconciliations"],
+      ] as const) {
+        const box = b.col(nums, "Figure", {
+          w: FILL,
+          gap: 4,
+          pad: [16, 18],
+          radius: r("md"),
+          stroke: { paint: ink },
+        })
+        b.text(box, v, b.ty("figure", { size: 40 }), ink, { key: vk, name: "Value" })
+        b.text(box, l, b.ty("small"), ink, { key: lk, name: "Label" })
+      }
+    },
+  )
+
+  const checkRow = b.component(
+    "Check row",
     {
       key: "Check",
       section: "Pricing",
@@ -471,12 +625,17 @@ function build(b: TemplateBuilder) {
         state: p.variants({
           included: { "CkIcon.icon": "check", "CkIcon.color": c("success"), "CkLbl.fill": ink },
           excluded: { "CkIcon.icon": "minus", "CkIcon.color": muted, "CkLbl.fill": muted },
+          onDark: {
+            "CkIcon.icon": "check",
+            "CkIcon.color": c("mark"),
+            "CkLbl.fill": c("on-inverse"),
+          },
         }),
       },
-      root: { dir: "row", w: 320, gap: 10, align: "start" },
+      root: { dir: "row", w: 320, gap: 10, align: "center" },
     },
     (root) => {
-      b.icon(root, "check", 18, c("success"), { key: "CkIcon" })
+      b.icon(root, "check", 16, c("success"), { key: "CkIcon" })
       b.para(root, "Included feature", b.ty("body", { size: 15 }), ink, {
         key: "CkLbl",
         name: "Label",
@@ -484,105 +643,162 @@ function build(b: TemplateBuilder) {
     },
   )
 
-  const pricing = b.component(
-    "Pricing card",
+  const planColumn = b.component(
+    "Plan column",
     {
-      key: "Price",
+      key: "Plan",
       section: "Pricing",
-      description: "Plan card. Fill the Features slot with Check items.",
+      description:
+        "Plan column. Fill the Features slot with Check rows; set tone to featured for the inverted plan.",
       props: {
-        plan: p.text("PrcName", "Plan"),
-        price: p.text("PrcPrice", "$0"),
-        period: p.text("PrcPer", "per seat / month"),
-        description: p.text("PrcDesc", "Who the plan is for."),
-        popular: p.bool("PrcBdgWrap", false),
-        cta: p.swap("PrcCta", button),
-        ctaLabel: p.text("PrcCta/BtnLabel", "Start free trial"),
-        features: p.slot("PrcFeat"),
+        plan: p.text("PlName", "Starter"),
+        price: p.text("PlPrice", "$149"),
+        period: p.text("PlPer", "per month, billed annually"),
+        description: p.text("PlDesc", "Who the plan is for."),
+        ctaLabel: p.text("PlCta/BtnLabel", "Start free trial"),
+        features: p.slot("PlFeat"),
         tone: p.variants({
-          standard: { "root.stroke": { paint: c("border") }, "root.effects": b.shadow("card") },
+          standard: {
+            "root.fill": c("surface"),
+            "PlName.fill": muted,
+            "PlPrice.fill": ink,
+            "PlPer.fill": muted,
+            "PlDesc.fill": ink,
+            "PlIncl.fill": muted,
+            "PlRule.fill": c("border"),
+          },
           featured: {
-            "root.stroke": { paint: c("accent"), width: 2 },
-            "root.effects": b.shadow("pop"),
+            "root.fill": c("inverse"),
+            "PlName.fill": c("mark"),
+            "PlPrice.fill": c("on-inverse"),
+            "PlPer.fill": c("inverse-muted"),
+            "PlDesc.fill": c("on-inverse"),
+            "PlIncl.fill": c("inverse-muted"),
+            "PlRule.fill": c("inverse-line"),
           },
         }),
       },
-      root: {
-        dir: "column",
-        w: 384,
-        gap: 24,
-        pad: s(8),
-        radius: r("xl"),
-        fill: c("surface"),
-        stroke: { paint: c("border") },
-        effects: b.shadow("card"),
-      },
+      root: { dir: "column", w: 400, gap: 24, pad: 32, fill: c("surface") },
     },
     (root) => {
-      const head = b.col(root, "Header", { w: FILL, gap: 8 })
-      const top = b.row(head, "Plan row", { w: FILL, justify: "between", align: "center" })
-      b.text(top, "Plan", b.ty("title"), ink, { key: "PrcName" })
-      const wrap = b.row(top, "Popular", { key: "PrcBdgWrap", visible: false })
-      b.use(wrap, badge, { args: { label: "Most popular" } })
-      b.para(head, "Who the plan is for.", b.ty("body", { size: 15 }), muted, { key: "PrcDesc" })
-      const price = b.row(root, "Price", { w: FILL, gap: 8, align: "end" })
-      b.text(price, "$0", b.ty("h1"), ink, { key: "PrcPrice" })
-      b.para(price, "per seat / month", b.ty("small"), muted, { key: "PrcPer", name: "Period" })
+      b.text(root, "Starter", cap(), muted, { key: "PlName", name: "Plan" })
+      const price = b.col(root, "Price", { w: FILL, gap: 6 })
+      b.text(price, "$149", b.ty("figure", { size: 72 }), ink, { key: "PlPrice" })
+      b.text(price, "per month, billed annually", cap({ size: 11 }), muted, { key: "PlPer" })
+      b.para(root, "Who the plan is for.", b.ty("body", { size: 16 }), ink, { key: "PlDesc" })
       b.use(root, button, {
-        key: "PrcCta",
+        key: "PlCta",
         props: { w: FILL },
         args: { label: "Start free trial", size: "lg" },
       })
-      b.divider(root, c("border"))
-      b.col(root, "Features", {
-        key: "PrcFeat",
-        w: FILL,
-        gap: 12,
-        slot: { suggested: [checkItem] },
-      })
+      b.rect(root, "Rule", { key: "PlRule", w: FILL, h: 1, fill: c("border") })
+      b.text(root, "Includes", cap({ size: 11 }), muted, { key: "PlIncl" })
+      b.col(root, "Features", { key: "PlFeat", w: FILL, gap: 12, slot: { suggested: [checkRow] } })
     },
   )
 
-  const blogCard = b.component(
-    "Blog card",
+  const compareRow = b.component(
+    "Compare row",
     {
-      key: "BlogCard",
-      section: "Blog",
+      key: "Cmp",
+      section: "Pricing",
+      description: "Feature row. Each cell is a check, a dash or a value.",
       props: {
-        tag: p.text("BcTag/BadgeLbl", "Close process"),
-        date: p.text("BcDate", "Oct 1, 2026"),
-        title: p.text("BcTitle", "Post title"),
-        excerpt: p.text("BcExc", "One or two sentences about the post."),
-        author: p.text("BcAuth", "Author"),
-        initials: p.text("BcAv/AvInit", "MO"),
-        art: p.variants({
-          blue: { "BcArt.fill": grad("art-1", "accent-soft") },
-          green: { "BcArt.fill": grad("art-2", "success-soft") },
-          amber: { "BcArt.fill": grad("art-3", "warning-soft") },
-          rose: { "BcArt.fill": grad("art-4", "subtle") },
-        }),
+        label: p.text("CmpLbl", "Feature"),
+        a: p.text("CmpAT", "Value"),
+        b: p.text("CmpBT", "Value"),
+        c: p.text("CmpCT", "Value"),
+        aMode: p.variants(cellModes("CmpA")),
+        bMode: p.variants(cellModes("CmpB")),
+        cMode: p.variants(cellModes("CmpC")),
       },
-      root: { dir: "column", w: 384, gap: 16 },
+      root: {
+        dir: "row",
+        w: 1200,
+        pad: [14, 0],
+        align: "center",
+        stroke: { paint: c("border"), width: { b: 1 } },
+      },
     },
     (root) => {
-      b.rect(root, "Cover", {
-        key: "BcArt",
-        w: FILL,
-        h: 216,
-        radius: r("lg"),
-        fill: grad("art-1", "accent-soft"),
+      b.para(root, "Feature", b.ty("body", { size: 15 }), ink, {
+        key: "CmpLbl",
+        name: "Label",
       })
-      const meta = b.row(root, "Meta", { gap: 12, align: "center" })
-      b.use(meta, badge, { key: "BcTag", args: { label: "Close process" } })
-      b.text(meta, "Oct 1, 2026", b.ty("small"), muted, { key: "BcDate", name: "Date" })
-      b.para(root, "Post title", b.ty("title"), ink, { key: "BcTitle", name: "Title" })
-      b.para(root, "One or two sentences about the post.", b.ty("body"), muted, {
-        key: "BcExc",
+      for (const k of ["A", "B", "C"]) {
+        const cell = b.row(root, `Cell ${k}`, { w: 220, justify: "center", align: "center" })
+        b.icon(cell, "check", 18, ink, { key: `Cmp${k}I` })
+        b.text(cell, "Value", b.ty("mono", { size: 13 }), ink, { key: `Cmp${k}T`, visible: false })
+      }
+    },
+  )
+  function cellModes(k: string) {
+    return {
+      check: {
+        [`${k}I.visible`]: true,
+        [`${k}I.icon`]: "check",
+        [`${k}I.color`]: ink,
+        [`${k}T.visible`]: false,
+      },
+      dash: {
+        [`${k}I.visible`]: true,
+        [`${k}I.icon`]: "minus",
+        [`${k}I.color`]: c("border-strong"),
+        [`${k}T.visible`]: false,
+      },
+      text: { [`${k}I.visible`]: false, [`${k}T.visible`]: true },
+    }
+  }
+
+  const postRow = b.component(
+    "Post row",
+    {
+      key: "Post",
+      section: "Blog",
+      description: "Editorial list row used for posts and customer stories.",
+      props: {
+        meta: p.text("PoMeta", "Sep 24, 2026"),
+        tag: p.text("PoTag/TagLbl", "Audit"),
+        title: p.text("PoTitle", "Post title"),
+        excerpt: p.text("PoExc", "One or two sentences about the post."),
+        author: p.text("PoAuth", "Author"),
+        initials: p.text("PoAv/AvInit", "MO"),
+        readTime: p.text("PoRead", "6 min"),
+      },
+      root: {
+        dir: "row",
+        w: 1200,
+        gap: 24,
+        pad: [28, 0],
+        align: "start",
+        stroke: { paint: c("border"), width: { b: 1 } },
+      },
+    },
+    (root) => {
+      const metaCell = b.row(root, "Meta cell", { w: 120, pad: [5, 0, 0, 0] })
+      b.text(metaCell, "Sep 24, 2026", b.ty("mono", { size: 12 }), muted, {
+        key: "PoMeta",
+        name: "Meta",
+      })
+      const tagCell = b.row(root, "Tag cell", { w: 128 })
+      b.use(tagCell, tag, { key: "PoTag", args: { label: "Audit" } })
+      const body = b.col(root, "Body", { w: FILL, gap: 8 })
+      b.para(body, "Post title", b.ty("title", { size: 24, letterSpacing: -0.6 }), ink, {
+        key: "PoTitle",
+        name: "Title",
+      })
+      b.para(body, "One or two sentences about the post.", b.ty("body", { size: 15 }), muted, {
+        key: "PoExc",
         name: "Excerpt",
       })
-      const by = b.row(root, "Author", { gap: 10, align: "center" })
-      b.use(by, avatar, { key: "BcAv", args: { size: "sm" } })
-      b.text(by, "Author", b.ty("label", { weight: 500 }), ink, { key: "BcAuth", name: "Name" })
+      const by = b.row(root, "Author", { w: 168, gap: 10, align: "center" })
+      b.use(by, avatar, { key: "PoAv", args: { size: "sm" } })
+      b.text(by, "Author", b.ty("small", { weight: 500 }), ink, { key: "PoAuth", name: "Name" })
+      const readCell = b.row(root, "Read cell", { w: 56, pad: [5, 0, 0, 0], justify: "end" })
+      b.text(readCell, "6 min", b.ty("mono", { size: 12 }), muted, {
+        key: "PoRead",
+        name: "Read time",
+      })
     },
   )
 
@@ -600,235 +816,275 @@ function build(b: TemplateBuilder) {
       root: { dir: "column", w: 400, gap: 8 },
     },
     (root) => {
-      b.text(root, "Label", b.ty("label"), ink, { key: "InLbl" })
+      b.text(root, "Label", b.ty("label", { size: 13 }), ink, { key: "InLbl" })
       const field = b.row(root, "Field", {
         w: FILL,
-        pad: [12, 14],
+        pad: [13, 14],
         radius: r("md"),
         fill: c("surface"),
-        stroke: { paint: c("border") },
+        stroke: { paint: c("border-strong") },
       })
-      b.text(field, "Placeholder", b.ty("body"), muted, { key: "InPh" })
+      b.text(field, "Placeholder", b.ty("body", { size: 15 }), muted, { key: "InPh" })
       b.text(root, "Hint", b.ty("small"), muted, { key: "InHint", visible: false })
     },
   )
 
-  // --- Shared sections -------------------------------------------------------------------------
+  const faq = b.component(
+    "FAQ item",
+    {
+      key: "Faq",
+      section: "Content",
+      props: {
+        question: p.text("FaqQ", "Question"),
+        answer: p.text("FaqA", "Answer."),
+        open: p.bool("FaqA", true),
+      },
+      root: {
+        dir: "column",
+        w: 700,
+        gap: 12,
+        pad: [22, 0],
+        stroke: { paint: c("border"), width: { b: 1 } },
+      },
+    },
+    (root) => {
+      const head = b.row(root, "Question row", { w: FILL, gap: 16, align: "center" })
+      b.para(head, "Question", b.ty("title", { size: 18 }), ink, { key: "FaqQ", name: "Question" })
+      b.icon(head, "plus", 18, muted)
+      b.para(root, "Answer.", b.ty("body", { size: 15 }), muted, { key: "FaqA", name: "Answer" })
+    },
+  )
 
-  const people = {
-    MO: ["Maya Okafor", "blue"],
-    DP: ["Daniel Park", "green"],
-    LS: ["Lena Strauss", "amber"],
-    RA: ["Rafael Alves", "rose"],
-  } as const
+  const quote = b.component(
+    "Pull quote",
+    {
+      key: "Quote",
+      section: "Content",
+      props: {
+        quote: p.text("QText", "Quote"),
+        name: p.text("QName", "Name"),
+        role: p.text("QRole", "Role"),
+        initials: p.text("QAv/AvInit", "MO"),
+        tone: p.variants({
+          paper: { "QText.fill": ink, "QName.fill": ink, "QRole.fill": muted },
+          inverse: {
+            "QText.fill": c("on-inverse"),
+            "QName.fill": c("on-inverse"),
+            "QRole.fill": c("inverse-muted"),
+          },
+        }),
+      },
+      root: { dir: "column", w: 640, gap: 32 },
+    },
+    (root) => {
+      b.para(
+        root,
+        "Quote",
+        b.ty("heading", { size: 34, letterSpacing: -1.2, lineHeight: 1.2 }),
+        ink,
+        {
+          key: "QText",
+          name: "Quote",
+        },
+      )
+      const who = b.row(root, "Person", { gap: 12, align: "center" })
+      b.use(who, avatar, { key: "QAv", args: { size: "md" } })
+      const names = b.col(who, "Names", { gap: 2 })
+      b.text(names, "Name", b.ty("label"), ink, { key: "QName" })
+      b.text(names, "Role", b.ty("small"), muted, { key: "QRole" })
+    },
+  )
+
+  // --- Shared helpers --------------------------------------------------------------------------
 
   function page(name: string, active: "product" | "pricing" | "customers" | "blog") {
     const scr = b.screen(screens, name, { w: 1440, fill: c("bg") })
     b.use(scr, navBar, { args: { active } })
     return scr
   }
-  function section(parent: string, name: string, props: Record<string, unknown> = {}) {
-    return b.col(parent, name, { w: FILL, gap: s(12), align: "center", pad: [96, 120], ...props })
+  /** A content-width block (1200) with the 120 side padding of the grid. */
+  function block(parent: string, name: string, props: Record<string, unknown> = {}) {
+    return b.col(parent, name, { w: FILL, pad: [0, 120], gap: s(8), ...props })
   }
-  function header(parent: string, eyebrow: string, title: string, subtitle: string) {
-    b.use(parent, sectionHeader, { args: { eyebrow, title, subtitle } })
+  function label(parent: string, index: string, title: string) {
+    return b.use(parent, indexLabel, { props: { w: FILL }, args: { index, title } })
   }
-  function buttons(parent: string, primary: string, secondary: string, size = "lg") {
-    const row = b.row(parent, "Actions", { gap: 12, align: "center" })
-    b.use(row, button, {
-      args: { label: primary, icon: true, size },
+  function emailForm(
+    parent: string,
+    w: number | typeof FILL,
+    onDark = false,
+    cta = "Start free trial",
+  ) {
+    const form = b.row(parent, "Email form", {
+      w,
+      gap: 8,
+      pad: [6, 6, 6, 18],
+      align: "center",
+      radius: r("lg"),
+      fill: onDark ? c("inverse") : c("surface"),
+      stroke: { paint: onDark ? c("inverse-line") : c("border-strong") },
     })
-    b.use(row, buttonSecondary, { args: { label: secondary, size } })
-    return row
+    b.para(form, "Work email", b.ty("body", { size: 15 }), onDark ? c("inverse-muted") : muted)
+    b.use(form, button, { args: { label: cta, variant: "mark", size: "md" } })
+    return form
   }
   function ctaBand(scr: string) {
-    const wrap = b.col(scr, "Call to action", { w: FILL, pad: [0, 120, 96, 120] })
-    const band = b.col(wrap, "Band", {
+    const wrap = block(scr, "Call to action", { pad: [96, 120, 96, 120] })
+    const band = b.row(wrap, "Band", {
       w: FILL,
-      gap: s(6),
-      align: "center",
+      gap: 64,
       pad: 64,
+      align: "center",
       radius: r("xl"),
       fill: c("inverse"),
     })
-    b.text(
-      band,
-      "Run your next close in Ledgerline",
-      b.ty("h1", { align: "center" }),
-      c("on-inverse"),
-    )
+    const left = b.col(band, "Copy", { w: FILL, gap: 16 })
+    b.para(left, "Run September in Ledgerline", b.ty("h1"), c("on-inverse"))
     b.para(
-      band,
-      "Import last month's checklist from a spreadsheet and invite your team. Setup takes about an hour.",
-      b.ty("body-lg", { align: "center" }),
+      left,
+      "Import last month's checklist from a spreadsheet and invite your team. Most teams are set up in an afternoon.",
+      b.ty("body-lg"),
       c("inverse-muted"),
-      { w: 620 },
     )
-    buttons(band, "Start free trial", "Book a demo")
+    const right = b.col(band, "Form", { w: 440, gap: 12 })
+    emailForm(right, FILL, true)
+    b.text(right, "14 days free. No card needed.", cap({ size: 11 }), c("inverse-muted"))
   }
-  const logos: [string, string][] = [
-    ["Northwind Freight", "truck"],
-    ["Halcyon Health", "heart-pulse"],
-    ["Brightline Retail", "store"],
-    ["Corvid Labs", "flask-conical"],
-    ["Juniper Capital", "landmark"],
-    ["Oakridge Foods", "wheat"],
+
+  const people = {
+    PR: ["Priya Raman", "mint"],
+    TH: ["Tomás Herrera", "butter"],
+    GL: ["Grace Liu", "lilac"],
+    OB: ["Owen Becker", "sky"],
+    AB: ["Aisha Bello", "blush"],
+    MN: ["Marta Nowak", "mint"],
+    DP: ["Daniel Park", "sky"],
+    LS: ["Lena Strauss", "butter"],
+    RA: ["Rafael Alves", "blush"],
+  } as const
+
+  const logos: [string, string, string][] = [
+    ["Northwind Freight", "caps", "ink"],
+    ["Halcyon Health", "tight", "ink"],
+    ["Brightline", "black", "ink"],
+    ["Corvid Labs", "light", "ink"],
+    ["Juniper Capital", "caps", "ink"],
+    ["Oakridge", "tight", "ink"],
   ]
-  function logoRow(parent: string) {
-    const row = b.row(parent, "Logos", { w: FILL, justify: "between", align: "center" })
-    for (const [name, icon] of logos)
-      b.use(row, logo, { args: { name }, set: { LogoIcon: { icon } } })
-  }
-  const quotes = [
-    [
-      "We closed August in five days with two fewer people on the team than last year. The checklist did most of the chasing.",
-      "Priya Raman",
-      "Controller, Halcyon Health",
-      "PR",
-    ],
-    [
-      "Our auditors pulled support for 140 reconciliations without emailing anyone. That alone saved a week in March.",
-      "Tomás Herrera",
-      "VP Finance, Brightline Retail",
-      "TH",
-    ],
-    [
-      "Flux notes used to live in a spreadsheet nobody opened. Now the owner writes them before review starts.",
-      "Grace Liu",
-      "Assistant Controller, Corvid Labs",
-      "GL",
-    ],
-    [
-      "Intercompany used to take two full days. With templates and auto-matching it is done by lunch on day two.",
-      "Owen Becker",
-      "Controller, Juniper Capital",
-      "OB",
-    ],
-    [
-      "We gave our auditors read-only access in January and stopped building PBC folders by hand.",
-      "Aisha Bello",
-      "CFO, Oakridge Foods",
-      "AB",
-    ],
-    [
-      "The reminders are what people notice. Nobody is surprised by a task on day four anymore.",
-      "Marta Nowak",
-      "Senior Accountant, Northwind Freight",
-      "MN",
-    ],
-  ] as const
-  function quoteGrid(parent: string, from: number, count: number) {
-    const rows = Math.ceil(count / 3)
-    const grid = b.col(parent, "Quotes", { w: FILL, gap: s(6) })
-    for (let i = 0; i < rows; i++) {
-      const row = b.row(grid, `Row ${i + 1}`, { w: FILL, gap: s(6), align: "stretch" })
-      for (const [q, name, role, initials] of quotes.slice(from + i * 3, from + i * 3 + 3))
-        b.use(row, quote, { args: { quote: q, name, role, initials } })
-    }
-  }
-  const posts = [
-    [
-      "Audit",
-      "What auditors ask for first, and how to have it ready",
-      "The six requests that open almost every year-end audit, and where each one lives in Ledgerline.",
-      "DP",
-      "Sep 24, 2026",
-      "green",
-    ],
-    [
-      "Close process",
-      "Accruals for recurring vendors, without the guesswork",
-      "A template that drafts the entry from the last three invoices and flags any vendor whose bill is late.",
-      "LS",
-      "Sep 17, 2026",
-      "amber",
-    ],
-    [
-      "Product updates",
-      "Flux review now asks owners for notes",
-      "Set a threshold per account. When a balance moves past it, the owner gets a task with the variance attached.",
-      "RA",
-      "Sep 10, 2026",
-      "blue",
-    ],
-    [
-      "Close process",
-      "Reconciling Stripe payouts to your bank feed",
-      "Payouts bundle fees, refunds and disputes. Here is how to split them so the bank line ties on the first try.",
-      "MO",
-      "Sep 3, 2026",
-      "rose",
-    ],
-    [
-      "Audit",
-      "SOC 1 or SOC 2: what a controller needs from finance software",
-      "Which report your auditor will ask for, what each covers, and the bridge letter question.",
-      "DP",
-      "Aug 27, 2026",
-      "green",
-    ],
-    [
-      "Product updates",
-      "NetSuite multi-book support is live",
-      "Close secondary books on their own calendar, with separate checklists and the same audit trail.",
-      "LS",
-      "Aug 20, 2026",
-      "amber",
-    ],
-  ] as const
-  function postRow(parent: string, list: readonly (typeof posts)[number][]) {
-    const row = b.row(parent, "Posts row", { w: FILL, gap: s(6), align: "start" })
-    for (const [tag, title, excerpt, who, date, art] of list) {
-      const [author] = people[who]
-      b.use(row, blogCard, {
-        args: { tag, title, excerpt, author, initials: who, date, art },
-        set: { BcAv: { args: { size: "sm", tone: people[who][1] } } },
+
+  /** Ledger artwork: a flat tile with a sheet of mono figures, rules of different length and a marker. */
+  function art(
+    parent: string,
+    name: string,
+    tone: string,
+    w: number | typeof FILL,
+    h: number,
+    seed: number,
+  ) {
+    const tile = b.col(parent, name, {
+      w,
+      h,
+      pad: 32,
+      gap: 24,
+      justify: "between",
+      radius: r("lg"),
+      fill: c(`tile-${tone}`),
+      clip: true,
+    })
+    const sheet = b.col(tile, "Sheet", {
+      w: h >= 400 ? 480 : 420,
+      radius: r("md"),
+      fill: c("surface"),
+      stroke: { paint: ink },
+      clip: true,
+    })
+    const all = [
+      ["1010", "412,908.14"],
+      ["1200", "188,420.00"],
+      ["2100", "64,310.55"],
+      ["1450", "41,860.33"],
+      ["2300", "230,004.00"],
+      ["4000", "1,204,550.10"],
+      ["6140", "51,904.00"],
+      ["6200", "72,400.00"],
+      ["6310", "9,822.40"],
+    ]
+    const count = h >= 400 ? 7 : 3
+    const rows = [...all, ...all].slice(seed * 2, seed * 2 + count)
+    for (const [i, [code, amt]] of rows.entries()) {
+      const row = b.row(sheet, "Line", {
+        w: FILL,
+        pad: [10, 16],
+        gap: 16,
+        stroke: { paint: ink, width: { b: i === rows.length - 1 ? 0 : 1 } },
       })
+      b.para(row, code, b.ty("mono", { size: 12 }), muted, { w: 48 })
+      b.para(row, amt, b.ty("mono", { size: 12, align: "right" }), ink)
     }
+    const lines = b.col(tile, "Lines", { gap: 12 })
+    const widths = [
+      [0.9, 0.55, 0.7],
+      [0.5, 0.85, 0.62],
+      [0.74, 0.46, 0.9],
+    ][seed % 3]
+    const total = typeof w === "number" ? w - 64 : 600
+    for (const [i, f] of widths.entries()) {
+      const line = b.row(lines, "Line", { gap: 12, align: "center" })
+      b.rect(line, "Rule", { w: Math.round(total * f), h: i === 1 ? 8 : 3, fill: ink, radius: 1 })
+      if (i === 1)
+        b.ellipse(line, "Marker", { w: 24, h: 24, fill: c("mark"), stroke: { paint: ink } })
+    }
+    return tile
   }
 
   // --- Cover -----------------------------------------------------------------------------------
+
+  const ledgerRows = (into: { inst: string; at: string }, rows: readonly (readonly string[])[]) => {
+    for (const [code, name, bal, v, state] of rows)
+      b.use(into, ledgerRow, {
+        props: { w: FILL },
+        args: { code, name, balance: bal, variance: v, state },
+      })
+  }
 
   b.cover({
     eyebrow: "Website template",
     title: "Ledgerline marketing site",
     description:
-      "Home, pricing, customers, blog, article and sign-up screens for a B2B finance tool. Built from 16 components with light and dark tokens.",
+      "Home, pricing, customers, blog, article and sign-up screens for a B2B finance tool. 19 components, light and dark tokens, Inter and JetBrains Mono.",
     preview: (area) => {
-      const top = b.col(area, "Hero", { w: FILL, gap: 16 })
-      b.use(top, badge, { args: { label: "New: flux review with variance notes" } })
-      b.para(top, "Close the month in four days", b.ty("h1"), ink)
-      b.para(
-        top,
-        "Reconciliations, accruals and sign-offs in one checklist that reads from your ERP.",
-        b.ty("body-lg"),
-        muted,
-      )
-      buttons(top, "Start free trial", "Book a demo", "md")
-      const cards = b.row(area, "Cards", { w: FILL, gap: 24, align: "stretch" })
-      for (const [icon, title, body] of [
-        [
-          "list-checks",
-          "Close checklist",
-          "Recurring tasks roll forward each month with owners and due days.",
-        ],
-        [
-          "scale",
-          "Reconciliations",
-          "Bank and subledger lines match overnight. Exceptions wait for review.",
-        ],
-      ] as const)
-        b.use(cards, featureCard, {
-          props: { w: FILL },
-          args: { title, body },
-          set: { FeatIcon: { icon } },
-        })
-      const nums = b.row(area, "Numbers", { w: FILL, gap: 24, pad: [8, 0, 0, 0] })
-      for (const [value, label] of [
-        ["4.2 days", "Median close after 90 days"],
-        ["1,400+", "Finance teams closing in Ledgerline"],
-      ] as const)
-        b.use(nums, stat, { props: { w: FILL }, args: { value, label } })
+      b.para(area, "Close the books in four days, not ten.", b.ty("h1", { size: 40 }), ink)
+      emailForm(area, FILL, false, "Start free trial")
+      b.use(area, ledgerTable, {
+        props: { w: FILL },
+        slots: {
+          LtRows: (into) =>
+            ledgerRows(into, [
+              ["1010", "Operating account", "412,908.14", "+3.1%", "tied"],
+              ["1200", "Accounts receivable", "188,420.00", "+12.4%", "review"],
+              ["2100", "Accrued expenses", "64,310.55", "-1.8%", "tied"],
+            ]),
+        },
+      })
+      const tiles = b.row(area, "Tiles", { w: FILL, gap: 12 })
+      b.use(tiles, storyTile, {
+        props: { w: FILL, h: 176 },
+        args: {
+          metric: "11 to 4",
+          caption: "Days to close",
+          company: "Halcyon Health",
+          tone: "mint",
+        },
+      })
+      b.use(tiles, storyTile, {
+        props: { w: FILL, h: 176 },
+        args: {
+          metric: "140",
+          caption: "Reconciliations with support",
+          company: "Brightline",
+          tone: "butter",
+        },
+      })
     },
   })
 
@@ -839,349 +1095,546 @@ function build(b: TemplateBuilder) {
   // Home
   {
     const scr = page("Home", "product")
-    const hero = b.col(scr, "Hero", { w: FILL, gap: s(6), align: "center", pad: [80, 120, 0, 120] })
-    b.use(hero, badge, { args: { label: "New: flux review with variance notes" } })
-    b.para(hero, "Close the month in four days", b.ty("display", { align: "center" }), ink, {
-      w: 880,
-    })
+
+    const hero = block(scr, "Hero", { pad: [88, 120, 0, 120], gap: 56 })
+    const top = b.row(hero, "Headline row", { w: FILL, gap: 48, align: "end" })
+    const head = b.col(top, "Headline", { w: 740, gap: 28 })
+    const eyebrow = b.row(head, "Eyebrow", { gap: 10, align: "center" })
+    b.rect(eyebrow, "Square", { w: 10, h: 10, fill: c("mark"), stroke: { paint: ink } })
+    b.text(eyebrow, "Month-end close software", cap(), ink)
+    const lines = b.col(head, "Lines", { gap: 0 })
+    b.text(lines, "Close the books", b.ty("display"), ink)
+    const hl = b.row(lines, "Highlight", { pad: [0, 12], radius: r("sm"), fill: c("mark") })
+    b.text(hl, "in four days,", b.ty("display"), c("on-mark"))
+    b.text(lines, "not ten.", b.ty("display"), ink)
+    const aside = b.col(top, "Aside", { w: FILL, gap: 24 })
     b.para(
-      hero,
-      "Ledgerline puts reconciliations, accruals and review sign-offs in one checklist that reads from your ERP and bank feeds. Controllers see what is left before anyone has to ask.",
-      b.ty("body-lg", { align: "center" }),
-      muted,
-      { w: 680 },
+      aside,
+      "Ledgerline puts reconciliations, accruals and sign-offs on one checklist. It reads balances from your ERP every hour, so the controller sees what is left without asking.",
+      b.ty("body-lg"),
+      ink,
     )
-    buttons(hero, "Start free trial", "Book a demo")
-    b.text(hero, "14-day trial. No credit card required.", b.ty("small"), muted)
-    productShot(hero)
+    emailForm(aside, FILL)
+    b.text(aside, "14 days free. SOC 2 Type II.", cap({ size: 11 }), muted)
 
-    const proof = b.col(scr, "Logos", { w: FILL, gap: s(8), align: "center", pad: [72, 120] })
-    b.text(
-      proof,
-      "Finance teams at 1,400 companies run their close in Ledgerline",
-      b.ty("label", { weight: 500 }),
-      muted,
-    )
-    logoRow(proof)
-
-    const feats = section(scr, "Features", { fill: c("surface") })
-    header(
-      feats,
-      "What it does",
-      "Every close task in one place, tied to the numbers",
-      "Ledgerline reads balances from NetSuite, Intacct or QuickBooks every hour, so each task shows the account it covers and whether it still ties out.",
-    )
-    const featList = [
-      [
-        "list-checks",
-        "Close checklist",
-        "Recurring tasks roll forward each month with owners, due days and dependencies. Late items show up on day 2.",
-      ],
-      [
-        "scale",
-        "Reconciliations",
-        "Bank and subledger lines match automatically. Anything over your threshold waits for a preparer and a reviewer.",
-      ],
-      [
-        "chart-column",
-        "Flux analysis",
-        "Each account is compared to last month and last year. Owners are asked for a note when a variance passes 10%.",
-      ],
-      [
-        "file-text",
-        "Journal entries",
-        "Draft accruals and reclasses from templates, attach support and post to the ERP after approval.",
-      ],
-      [
-        "shield-check",
-        "Audit trail",
-        "Every sign-off, edit and attachment is logged with a timestamp. Auditors get read-only access to the period.",
-      ],
-      [
-        "plug",
-        "Integrations",
-        "NetSuite, Sage Intacct, QuickBooks Online, Xero, Plaid bank feeds and Slack reminders.",
-      ],
-    ] as const
-    const grid = b.col(feats, "Grid", { w: FILL, gap: s(6) })
-    for (let i = 0; i < 2; i++) {
-      const row = b.row(grid, `Row ${i + 1}`, { w: FILL, gap: s(6), align: "stretch" })
-      for (const [icon, title, body] of featList.slice(i * 3, i * 3 + 3))
-        b.use(row, featureCard, { args: { title, body }, set: { FeatIcon: { icon } } })
-    }
-
-    const band = b.row(scr, "Stats", {
+    // Stage
+    const stage = b.row(hero, "Stage", {
       w: FILL,
-      justify: "between",
-      pad: [72, 120],
-      fill: c("inverse"),
-    })
-    for (const [value, label] of [
-      ["4.2 days", "Median close after 90 days, down from 9.5"],
-      ["38%", "Fewer manual journal entries in the first quarter"],
-      ["1,400+", "Finance teams closing in Ledgerline"],
-      ["SOC 2", "Type II report, audited every year"],
-    ] as const)
-      b.use(band, stat, { args: { value, label, tone: "inverse" } })
-
-    const voices = section(scr, "Testimonials")
-    header(
-      voices,
-      "Customers",
-      "Controllers who stopped chasing spreadsheets",
-      "Teams switch to Ledgerline in the quiet week after a close and run the next one in it.",
-    )
-    quoteGrid(voices, 0, 3)
-    ctaBand(scr)
-    b.use(scr, footer)
-  }
-
-  function productShot(parent: string) {
-    const win = b.col(parent, "Product shot", {
-      w: FILL,
+      gap: 40,
+      pad: 48,
       radius: r("xl"),
-      fill: c("surface"),
-      stroke: { paint: c("border") },
-      effects: b.shadow("pop"),
-      clip: true,
-    })
-    const bar = b.row(win, "Window bar", {
-      w: FILL,
-      gap: 8,
-      align: "center",
-      pad: [12, 16],
-      stroke: { paint: c("border"), width: { b: 1 } },
-    })
-    for (let i = 0; i < 3; i++) b.ellipse(bar, "Dot", { w: 10, h: 10, fill: c("border") })
-    b.text(bar, "app.ledgerline.com/close/2026-09", b.ty("mono", { size: 12 }), muted, {
-      name: "Address",
-    })
-    const body = b.row(win, "Body", { w: FILL })
-    const side = b.col(body, "Sidebar", {
-      w: 232,
-      gap: 4,
-      pad: 16,
       fill: c("subtle"),
-      stroke: { paint: c("border"), width: { r: 1 } },
+      align: "start",
     })
-    for (const [i, [icon, label]] of (
-      [
-        ["list-checks", "Close checklist"],
-        ["scale", "Reconciliations"],
-        ["file-text", "Journal entries"],
-        ["chart-column", "Flux review"],
-        ["layers", "Entities"],
-        ["receipt", "Reports"],
-      ] as const
-    ).entries()) {
-      const item = b.row(side, label, {
-        w: FILL,
-        gap: 10,
-        align: "center",
-        pad: [8, 10],
-        radius: r("sm"),
-        ...(i === 0 ? { fill: c("accent-soft") } : {}),
-      })
-      b.icon(item, icon, 16, i === 0 ? c("accent") : muted)
-      b.text(
-        item,
-        label,
-        b.ty("label", { weight: i === 0 ? 600 : 500 }),
-        i === 0 ? c("accent") : muted,
-      )
-    }
-    const main = b.col(body, "Main", { w: FILL, gap: 20, pad: 28 })
-    const head = b.row(main, "Header", { w: FILL, justify: "between", align: "center" })
-    const titles = b.col(head, "Titles", { gap: 4 })
-    b.text(titles, "September 2026 close", b.ty("title", { size: 22 }), ink)
-    b.text(titles, "Day 3 of 5  ·  41 of 58 tasks done", b.ty("small"), muted)
-    const right = b.row(head, "Status", { gap: 12, align: "center" })
-    b.use(right, badge, { args: { label: "On track", tone: "success" } })
-    b.use(right, buttonSecondary, { args: { label: "Assign tasks" } })
-    const progress = b.row(main, "Progress", {
-      w: FILL,
-      h: 8,
-      radius: r("pill"),
-      fill: c("subtle"),
-      clip: true,
+    b.use(stage, ledgerTable, {
+      slots: {
+        LtRows: (into) =>
+          ledgerRows(into, [
+            ["1010", "Operating account", "412,908.14", "+3.1%", "tied"],
+            ["1020", "Payroll account", "96,115.72", "-0.4%", "tied"],
+            ["1200", "Accounts receivable", "188,420.00", "+12.4%", "review"],
+            ["1450", "Prepaid expenses", "41,860.33", "-8.9%", "review"],
+            ["2100", "Accrued expenses", "64,310.55", "-1.8%", "tied"],
+            ["2300", "Deferred revenue", "230,004.00", "+5.7%", "open"],
+            ["4000", "Subscription revenue", "1,204,550.10", "+4.2%", "open"],
+          ]),
+      },
     })
-    b.rect(progress, "Done", { w: { mode: "fill", weight: 41 }, h: 8, fill: c("accent") })
-    b.rect(progress, "Left", { w: { mode: "fill", weight: 17 }, h: 8, fill: c("subtle") })
-    const table = b.col(main, "Tasks", { w: FILL })
-    const cols = (row: string, cells: [string, number | null][], header = false) => {
-      for (const [t, w] of cells)
-        b.text(
-          row,
-          t,
-          header ? b.ty("small", { weight: 600 }) : b.ty("body", { size: 14 }),
-          header ? muted : ink,
-          {
-            ...(w ? { w, grow: "fixed-width" } : { w: FILL, grow: "fixed-width" }),
-          },
-        )
-    }
-    const th = b.row(table, "Head", {
-      w: FILL,
-      gap: 16,
-      pad: [8, 0],
-      stroke: { paint: c("border"), width: { b: 1 } },
-    })
-    cols(
-      th,
-      [
-        ["Task", null],
-        ["Owner", 170],
-        ["Due", 70],
-        ["Status", 100],
-      ],
-      true,
-    )
-    for (const [task, who, due, status, tone] of [
-      ["Bank reconciliation: operating account", "MO", "Oct 2", "Done", "success"],
-      ["Accrue September payroll", "DP", "Oct 2", "Done", "success"],
-      ["Prepaid expenses roll-forward", "LS", "Oct 3", "In review", "warning"],
-      ["Revenue cutoff review", "MO", "Oct 3", "In review", "warning"],
-      ["Intercompany eliminations", "RA", "Oct 4", "Open", "neutral"],
+    const side = b.col(stage, "Progress", { w: FILL, gap: 28 })
+    b.text(side, "Tasks done", cap({ size: 11 }), muted)
+    const tally = b.row(side, "Tally", { gap: 12, align: "baseline" })
+    b.text(tally, "41", b.ty("figure", { size: 88 }), ink)
+    b.text(tally, "of 58", b.ty("mono", { size: 16 }), muted)
+    const ticks = b.row(side, "Ticks", { w: FILL, gap: 3, h: 28 })
+    for (let i = 0; i < 29; i++)
+      b.rect(ticks, "Tick", { w: FILL, h: 28, radius: 1, fill: i < 20 ? ink : c("border-strong") })
+    b.divider(side, c("border-strong"))
+    b.text(side, "Waiting on you", cap({ size: 11 }), muted)
+    for (const [who, what, when] of [
+      ["Review", "Accounts receivable, 3 lines over threshold", "Today"],
+      ["Approve", "Accrual for AWS, September", "Today"],
+      ["Note", "Prepaid expenses moved 8.9%", "Oct 8"],
     ] as const) {
-      const tr = b.row(table, task, {
+      const row = b.row(side, what, { w: FILL, gap: 12, align: "start" })
+      const tcell = b.row(row, "Tag cell", { w: 72 })
+      b.use(tcell, tag, { args: { label: who, tone: who === "Review" ? "warning" : "neutral" } })
+      b.para(row, what, b.ty("body", { size: 14 }), ink)
+      b.text(row, when, b.ty("mono", { size: 12 }), muted)
+    }
+
+    // Logos
+    const proof = block(scr, "Logos", { pad: [72, 120, 0, 120], gap: 28 })
+    b.text(proof, "Closing in Ledgerline: 1,400 finance teams", cap({ size: 11 }), muted)
+    const logoRow = b.row(proof, "Logos", { w: FILL, justify: "between", align: "center" })
+    for (const [name, style, tone] of logos)
+      b.use(logoRow, wordmark, { args: { name, style, tone } })
+
+    // Close calendar
+    const cal = block(scr, "Close calendar", { pad: [120, 120, 0, 120], gap: 48 })
+    label(cal, "01", "The close calendar")
+    const calHead = b.row(cal, "Heading", { w: FILL, gap: 64, align: "end" })
+    b.para(
+      calHead,
+      "Every task has an owner and a day, so nothing waits on a reply.",
+      b.ty("h1"),
+      ink,
+      { w: 720 },
+    )
+    b.para(
+      calHead,
+      "Tasks roll forward each month with their owners, due days and dependencies. Anything late turns up on day 2, not on day 6.",
+      b.ty("body-lg"),
+      muted,
+    )
+    const gantt = b.col(cal, "Calendar", { w: FILL })
+    const days = b.row(gantt, "Days", {
+      w: FILL,
+      stroke: { paint: ink, width: { b: 1 } },
+      pad: [0, 0, 12, 0],
+    })
+    b.rect(days, "Label column", { w: 280, h: 1, fill: c("bg") })
+    for (const [i, d] of ["Oct 1", "Oct 2", "Oct 5", "Oct 6", "Oct 7"].entries()) {
+      const cell = b.row(days, `D${i + 1}`, { w: 184, gap: 8 })
+      b.text(cell, `D${i + 1}`, cap({ size: 11 }), ink)
+      b.text(cell, d, cap({ size: 11 }), muted)
+    }
+    const tasks: [string, string, number, number, string, string][] = [
+      ["Bank reconciliations", "Priya Raman", 0, 2, "tile-mint", "6 accounts"],
+      ["Payroll and benefits accrual", "Tomás Herrera", 1, 2, "tile-butter", "2 entries"],
+      ["Prepaid and fixed assets", "Grace Liu", 1, 3, "tile-lilac", "Roll-forward"],
+      ["Intercompany eliminations", "Owen Becker", 2, 2, "tile-sky", "4 entities"],
+      ["Revenue cutoff review", "Aisha Bello", 3, 1, "tile-blush", "Review"],
+      ["Flux review and notes", "Priya Raman", 3, 2, "tile-mint", "Variance over 10%"],
+    ]
+    for (const [name, owner, start, len, tone, note] of tasks) {
+      const row = b.row(gantt, name, {
         w: FILL,
-        gap: 16,
         align: "center",
-        pad: [12, 0],
+        pad: [10, 0],
         stroke: { paint: c("border"), width: { b: 1 } },
       })
-      cols(tr, [[task, null]])
-      const owner = b.row(tr, "Owner", { w: 170, gap: 8, align: "center" })
-      b.use(owner, avatar, { args: { initials: who, size: "sm", tone: people[who][1] } })
-      b.text(owner, people[who][0], b.ty("small"), ink)
-      cols(tr, [[due, 70]])
-      const st = b.row(tr, "Status", { w: 100 })
-      b.use(st, badge, { args: { label: status, tone } })
+      const lab = b.col(row, "Label", { w: 280, gap: 2 })
+      b.text(lab, name, b.ty("label", { weight: 500 }), ink)
+      b.text(lab, owner, b.ty("small"), muted)
+      const track = b.row(row, "Track", { w: 920, pad: [0, 0, 0, start * 184] })
+      const bar = b.row(track, "Bar", {
+        w: len * 184 - 8,
+        h: 36,
+        pad: [0, 12],
+        align: "center",
+        radius: r("sm"),
+        fill: c(tone),
+      })
+      b.text(bar, note, b.ty("mono", { size: 12 }), ink)
     }
+
+    // Features: three rows with different visuals
+    const feats = block(scr, "Features", { pad: [120, 120, 0, 120], gap: 96 })
+    function featRow(index: string, title: string, body: string, link: string) {
+      const row = b.row(feats, title, { w: FILL, gap: 64, align: "start" })
+      const copy = b.col(row, "Copy", { w: 340, gap: 20 })
+      b.text(copy, index, cap(), ink)
+      b.para(copy, title, b.ty("heading"), ink)
+      b.para(copy, body, b.ty("body"), muted)
+      const l = b.row(copy, "Link", { gap: 6, align: "center" })
+      b.text(l, link, cap({ size: 12 }), ink)
+      b.icon(l, "arrow-right", 14, ink)
+      return b.col(row, "Visual", {
+        w: FILL,
+        pad: 32,
+        gap: 0,
+        radius: r("lg"),
+        fill: c("subtle"),
+      })
+    }
+    // 02 Reconciliation
+    {
+      const v = featRow(
+        "02 / Reconciliations",
+        "Bank lines match the ledger overnight",
+        "Ledgerline pairs each bank line with the ledger entry by amount, date and reference. What it cannot pair waits for a preparer, with the likely match suggested.",
+        "How matching works",
+      )
+      const head = b.row(v, "Head", { w: FILL, pad: [0, 0, 12, 0] })
+      b.para(head, "Bank feed, Mercury ...4471", cap({ size: 11 }), muted, { w: 320 })
+      b.text(head, "General ledger, 1010", cap({ size: 11 }), muted)
+      const pairs: [string, string, string, boolean][] = [
+        ["Sep 29  Stripe payout", "-", "Sep 29  Stripe clearing", true],
+        ["Sep 30  Gusto payroll", "-", "Sep 30  Payroll run 18", true],
+        ["Sep 30  AWS", "-", "Sep 30  Cloud hosting, Sep", true],
+        ["Oct 1  Wire in 4,200.00", "-", "No matching entry", false],
+      ]
+      const amt = ["28,410.62", "96,115.72", "9,822.40", "4,200.00"]
+      for (const [i, [bank, , gl, ok]] of pairs.entries()) {
+        const row = b.row(v, bank, {
+          w: FILL,
+          pad: [14, 0],
+          align: "center",
+          stroke: { paint: c("border-strong"), width: { t: 1 } },
+        })
+        const left = b.col(row, "Bank", { w: 320, gap: 2 })
+        b.text(left, bank.split("  ")[1] ?? bank, b.ty("label", { weight: 500 }), ink)
+        b.text(left, `${bank.split("  ")[0]}  ${amt[i]}`, b.ty("mono", { size: 12 }), muted)
+        const mid = b.row(row, "Link", { w: 56, justify: "center" })
+        b.icon(mid, ok ? "check" : "circle-alert", 16, ok ? c("success") : c("warning"))
+        const right = b.col(row, "Ledger", { w: FILL, gap: 2 })
+        b.text(
+          right,
+          gl.split("  ")[1] ?? gl,
+          b.ty("label", { weight: 500 }),
+          ok ? ink : c("warning"),
+        )
+        b.text(
+          right,
+          ok ? `${gl.split("  ")[0]}  ${amt[i]}` : "Suggested: invoice 2041, Halcyon",
+          b.ty("mono", { size: 12 }),
+          muted,
+        )
+      }
+    }
+    // 03 Flux
+    {
+      const v = featRow(
+        "03 / Flux review",
+        "Owners explain a variance before review starts",
+        "Set a threshold per account. When a balance moves past it, the owner gets a task with last month and last year beside it, and the note lands in the review pack.",
+        "See a flux pack",
+      )
+      const head = b.row(v, "Head", { w: FILL, gap: 16, pad: [0, 0, 12, 0] })
+      b.para(head, "Account", cap({ size: 11 }), muted, { w: 200 })
+      b.para(head, "Aug", cap({ size: 11, align: "right" }), muted, { w: 88 })
+      b.para(head, "Sep", cap({ size: 11, align: "right" }), muted, { w: 88 })
+      b.text(head, "Change against 10% threshold", cap({ size: 11 }), muted)
+      for (const [name, aug, sep, pct, over] of [
+        ["Cloud hosting", "38,210", "51,904", 36, true],
+        ["Contractors", "72,400", "69,150", -4, false],
+        ["Software", "24,880", "26,310", 6, false],
+        ["Recruiting fees", "9,000", "21,500", 139, true],
+        ["Travel", "18,730", "15,220", -19, true],
+      ] as const) {
+        const row = b.row(v, name, {
+          w: FILL,
+          gap: 16,
+          pad: [14, 0],
+          align: "center",
+          stroke: { paint: c("border-strong"), width: { t: 1 } },
+        })
+        b.para(row, name, b.ty("label", { weight: 500 }), ink, { w: 200 })
+        b.para(row, aug, b.ty("mono", { size: 12, align: "right" }), muted, { w: 88 })
+        b.para(row, sep, b.ty("mono", { size: 12, align: "right" }), ink, { w: 88 })
+        const bar = b.row(row, "Bar", { w: FILL, gap: 10, align: "center" })
+        const len = Math.min(190, Math.round((Math.abs(pct) / 139) * 190) + 6)
+        b.rect(bar, "Change", {
+          w: len,
+          h: 10,
+          radius: 1,
+          fill: over ? (pct > 0 ? c("danger") : c("warning")) : c("border-strong"),
+        })
+        b.text(bar, `${pct > 0 ? "+" : ""}${pct}%`, b.ty("mono", { size: 12 }), over ? ink : muted)
+      }
+    }
+    // 04 Sign-off trail
+    {
+      const v = featRow(
+        "04 / Audit trail",
+        "Auditors get the period, read-only",
+        "Every sign-off, edit and attachment is stamped with who and when. Share the period with your auditors and they pull support themselves.",
+        "Read the security overview",
+      )
+      for (const [i, [time, who, what]] of (
+        [
+          ["Oct 6, 09:12", "Priya Raman", "signed off Accounts receivable, 1200"],
+          ["Oct 6, 08:47", "Tomás Herrera", "attached bank statement to 1010 (PDF, 3 pages)"],
+          [
+            "Oct 5, 17:30",
+            "Grace Liu",
+            "added a note on Prepaid expenses: annual renewal moved to Q4",
+          ],
+          ["Oct 5, 16:02", "Ledgerline", "matched 212 of 219 bank lines on 1010"],
+          ["Oct 5, 11:20", "Aisha Bello", "posted journal entry JE-2209 to NetSuite"],
+        ] as const
+      ).entries()) {
+        const row = b.row(v, who, {
+          w: FILL,
+          gap: 20,
+          pad: [14, 0],
+          align: "start",
+          stroke: { paint: c("border-strong"), width: { t: i === 0 ? 0 : 1 } },
+        })
+        b.para(row, time, b.ty("mono", { size: 12 }), muted, { w: 112 })
+        const t = b.row(row, "Entry", { w: FILL, gap: 6, wrap: true })
+        b.text(t, who, b.ty("label", { size: 14 }), ink)
+        b.para(t, what, b.ty("body", { size: 14 }), muted, { w: FILL })
+      }
+    }
+
+    // Stats
+    const stats = block(scr, "Numbers", { pad: [120, 120, 0, 120], gap: 32 })
+    label(stats, "05", "After 90 days")
+    const srow = b.row(stats, "Stats", { w: FILL, align: "stretch" })
+    for (const [i, [value, lab]] of (
+      [
+        ["4.2 days", "Median close, down from 9.5 days before Ledgerline"],
+        ["38%", "Fewer manual journal entries in the first quarter"],
+        ["212 / 219", "Bank lines matched without a touch on a typical month"],
+        ["SOC 2", "Type II report, audited every year since 2024"],
+      ] as const
+    ).entries()) {
+      const cellw = b.col(srow, "Cell", {
+        w: FILL,
+        pad: [4, 0, 4, i === 0 ? 0 : 32],
+        ...(i === 0 ? {} : { stroke: { paint: c("border"), width: { l: 1 } } }),
+      })
+      b.use(cellw, stat, { props: { w: FILL }, args: { value, label: lab } })
+    }
+
+    // Customer
+    const voice = block(scr, "Customer", { pad: [120, 120, 0, 120], gap: 32 })
+    label(voice, "06", "Customers")
+    const vrow = b.row(voice, "Quote and tile", { w: FILL, gap: 64, align: "stretch" })
+    b.use(vrow, quote, {
+      props: { w: FILL },
+      args: {
+        quote:
+          "We closed August in five days with two fewer people than last year. The checklist does most of the chasing.",
+        name: "Priya Raman",
+        role: "Controller, Halcyon Health",
+        initials: "PR",
+      },
+      set: { QAv: { args: { size: "md", tone: "mint" } } },
+    })
+    b.use(vrow, storyTile, {
+      props: { w: 360, h: 300 },
+      args: {
+        metric: "11 to 4",
+        caption: "Days to close, from the first of the month",
+        company: "Halcyon Health",
+        tone: "mint",
+      },
+    })
+
+    ctaBand(scr)
+    b.use(scr, footer)
   }
 
   // Pricing
   {
     const scr = page("Pricing", "pricing")
-    const top = section(scr, "Header", { pad: [80, 120, 48, 120], gap: s(8) })
-    header(
-      top,
-      "Pricing",
-      "Priced per finance seat",
-      "Reviewers and auditors join free. Pay monthly, or save 15% with annual billing.",
+    const head = block(scr, "Header", { pad: [88, 120, 0, 120], gap: 32 })
+    const row = b.row(head, "Heading", { w: FILL, gap: 48, align: "end" })
+    const left = b.col(row, "Copy", { w: 780, gap: 24 })
+    b.text(left, "Pricing", cap(), ink)
+    b.para(left, "One price per month, whatever you close.", b.ty("display", { size: 68 }), ink)
+    const right = b.col(row, "Right", { w: FILL, gap: 20, align: "end" })
+    b.para(
+      right,
+      "Plans are priced by users and entities, not by tasks or reconciliations. Pay annually and get two months free.",
+      b.ty("body-lg"),
+      muted,
     )
-    const toggle = b.row(top, "Billing toggle", {
-      gap: 4,
+    const toggle = b.row(right, "Billing", {
       pad: 4,
-      radius: r("pill"),
+      gap: 4,
+      radius: r("md"),
       fill: c("subtle"),
     })
-    const on = b.row(toggle, "Monthly", {
-      pad: [8, 18],
-      radius: r("pill"),
-      fill: c("surface"),
-      effects: b.shadow("card"),
-    })
-    b.text(on, "Monthly", b.ty("label"), ink)
-    const off = b.row(toggle, "Annual", { pad: [8, 18], gap: 8, align: "center" })
-    b.text(off, "Annual", b.ty("label"), muted)
-    b.text(off, "Save 15%", b.ty("small", { weight: 600 }), c("success"))
+    for (const [t, on] of [
+      ["Monthly", false],
+      ["Annual", true],
+    ] as const) {
+      const seg = b.row(toggle, t, {
+        pad: [8, 18],
+        radius: r("sm"),
+        fill: on ? ink : c("subtle"),
+      })
+      b.text(seg, t, cap({ size: 12 }), on ? c("on-ink") : muted)
+    }
 
-    const plans = b.row(scr, "Plans", { w: FILL, gap: s(6), pad: [0, 120], align: "stretch" })
-    const plan = (args: Record<string, unknown>, features: [string, boolean][]) =>
-      b.use(plans, pricing, {
-        props: { w: FILL },
+    const plans = block(scr, "Plans", { pad: [56, 120, 0, 120] })
+    const grid = b.row(plans, "Plans", {
+      w: FILL,
+      radius: r("lg"),
+      stroke: { paint: ink },
+      clip: true,
+      align: "stretch",
+    })
+    const plan = (
+      args: Record<string, unknown>,
+      feats: [string, string][],
+      extra: Record<string, unknown> = {},
+    ) =>
+      b.use(grid, planColumn, {
+        props: { w: 400, ...extra },
         args,
+        ...(args.tone === "featured"
+          ? { set: { PlCta: { args: { label: "Start free trial", size: "lg", variant: "mark" } } } }
+          : {}),
         slots: {
-          PrcFeat: (into) => {
-            for (const [label, yes] of features)
-              b.use(into, checkItem, {
-                props: { w: FILL },
-                args: { label, state: yes ? "included" : "excluded" },
-              })
+          PlFeat: (into) => {
+            for (const [labelText, state] of feats)
+              b.use(into, checkRow, { props: { w: FILL }, args: { label: labelText, state } })
           },
         },
       })
     plan(
       {
         plan: "Starter",
-        price: "$39",
-        period: "per finance seat / month",
-        description: "For teams of up to 5 closing on QuickBooks Online or Xero.",
-        cta: buttonSecondary,
+        price: "$149",
+        period: "per month, up to 5 users",
+        description: "One entity on QuickBooks Online or Xero, closing once a month.",
         ctaLabel: "Start free trial",
       },
       [
-        ["Close checklist with 50 recurring tasks", true],
-        ["Bank reconciliations for 5 accounts", true],
-        ["QuickBooks Online and Xero sync", true],
-        ["Slack and email reminders", true],
-        ["Flux analysis", false],
-        ["Journal entry approvals", false],
+        ["Close checklist with recurring tasks", "included"],
+        ["Bank reconciliation, 3 accounts", "included"],
+        ["Journal entry drafts and approvals", "included"],
+        ["Flux review", "excluded"],
+        ["Read-only auditor access", "excluded"],
       ],
     )
     plan(
       {
-        plan: "Growth",
-        price: "$79",
-        period: "per finance seat / month",
-        description: "For multi-entity teams that need flux review and approvals.",
-        popular: true,
+        plan: "Team",
+        price: "$449",
+        period: "per month, up to 25 users",
+        description: "Up to 5 entities on NetSuite or Sage Intacct, with review steps.",
         tone: "featured",
-        ctaLabel: "Start free trial",
       },
       [
-        ["Unlimited checklist tasks", true],
-        ["Unlimited reconciliations", true],
-        ["Flux analysis with variance notes", true],
-        ["Journal entry approvals", true],
-        ["NetSuite and Sage Intacct sync", true],
-        ["Up to 10 entities", true],
+        ["Everything in Starter", "onDark"],
+        ["Unlimited bank accounts", "onDark"],
+        ["Flux review with owner notes", "onDark"],
+        ["Intercompany eliminations", "onDark"],
+        ["Read-only auditor access", "onDark"],
+        ["Slack reminders", "onDark"],
       ],
     )
     plan(
       {
         plan: "Enterprise",
         price: "Custom",
-        period: "billed annually",
-        description: "For groups with more than 10 entities, SSO and audit requirements.",
-        cta: buttonSecondary,
+        period: "from 10 entities",
+        description: "Multi-book close, SSO and a named contact for your audit season.",
         ctaLabel: "Talk to sales",
       },
       [
-        ["Everything in Growth", true],
-        ["Unlimited entities", true],
-        ["SAML SSO and SCIM provisioning", true],
-        ["Read-only auditor portal", true],
-        ["Named close specialist", true],
-        ["99.9% uptime SLA", true],
+        ["Everything in Team", "included"],
+        ["SAML SSO and SCIM", "included"],
+        ["Multi-book and multi-currency", "included"],
+        ["Audit log export to your SIEM", "included"],
+        ["99.9% uptime commitment", "included"],
       ],
     )
 
-    const faqs = section(scr, "FAQ", { gap: s(8) })
-    b.text(faqs, "Questions finance teams ask", b.ty("heading"), ink)
-    const list = b.col(faqs, "Items", { w: 800 })
-    for (const [i, [question, answer]] of (
+    // Compare
+    const cmp = block(scr, "Compare", { pad: [120, 120, 0, 120], gap: 24 })
+    label(cmp, "01", "Compare plans")
+    const table = b.col(cmp, "Table", { w: FILL })
+    const th = b.row(table, "Head", {
+      w: FILL,
+      pad: [24, 0, 16, 0],
+      align: "end",
+      stroke: { paint: ink, width: { b: 1 } },
+    })
+    b.para(th, "Everything in every plan, then what changes.", b.ty("heading", { size: 26 }), ink, {
+      w: FILL,
+    })
+    for (const n of ["Starter", "Team", "Enterprise"]) {
+      const cell = b.row(th, n, { w: 220, justify: "center" })
+      b.text(cell, n, cap({ size: 12 }), ink)
+    }
+    const groups: [string, [string, [string, string], [string, string], [string, string]][]][] = [
       [
+        "Close",
         [
-          "Who counts as a finance seat?",
-          "Anyone who prepares or posts work: accountants, controllers and FP&A. Approvers outside finance, reviewers and auditors join free.",
+          ["Recurring checklist and due days", ["check", ""], ["check", ""], ["check", ""]],
+          ["Task dependencies", ["dash", ""], ["check", ""], ["check", ""]],
+          ["Entities", ["text", "1"], ["text", "Up to 5"], ["text", "10 or more"]],
+          ["Users", ["text", "5"], ["text", "25"], ["text", "Unlimited"]],
         ],
+      ],
+      [
+        "Reconciliation and review",
         [
-          "Can we import our current checklist?",
-          "Yes. Upload the spreadsheet you use today and map its columns to task, owner, due day and account. Most teams finish in under an hour.",
+          [
+            "Bank feeds and auto-matching",
+            ["text", "3 accounts"],
+            ["text", "Unlimited"],
+            ["text", "Unlimited"],
+          ],
+          ["Flux review with owner notes", ["dash", ""], ["check", ""], ["check", ""]],
+          ["Intercompany eliminations", ["dash", ""], ["check", ""], ["check", ""]],
+          ["Multi-book close", ["dash", ""], ["dash", ""], ["check", ""]],
         ],
+      ],
+      [
+        "Security and support",
         [
-          "Which ERPs do you support?",
-          "NetSuite, Sage Intacct, QuickBooks Online, Xero and Microsoft Dynamics 365 Business Central. Others can import trial balances as CSV.",
+          ["Read-only auditor access", ["dash", ""], ["check", ""], ["check", ""]],
+          ["SAML SSO and SCIM", ["dash", ""], ["dash", ""], ["check", ""]],
+          ["Support", ["text", "Email"], ["text", "Chat, 4 hours"], ["text", "Named contact"]],
         ],
-        [
-          "Is there a minimum contract?",
-          "Starter and Growth are month to month. Enterprise plans are billed annually.",
-        ],
-      ] as const
-    ).entries())
-      b.use(list, faq, { props: { w: FILL }, args: { question, answer, open: i === 0 } })
+      ],
+    ]
+    for (const [g, rows] of groups) {
+      const gh = b.row(table, g, {
+        w: FILL,
+        pad: [32, 0, 10, 0],
+        stroke: { paint: c("border"), width: { b: 1 } },
+      })
+      b.text(gh, g, cap({ size: 11 }), muted)
+      for (const [name, a, bb, cc] of rows)
+        b.use(table, compareRow, {
+          props: { w: FILL },
+          args: {
+            label: name,
+            a: a[1],
+            b: bb[1],
+            c: cc[1],
+            aMode: a[0],
+            bMode: bb[0],
+            cMode: cc[0],
+          },
+        })
+    }
+
+    // FAQ
+    const q = block(scr, "Questions", { pad: [120, 120, 0, 120], gap: 32 })
+    label(q, "02", "Questions")
+    const qrow = b.row(q, "Questions row", { w: FILL, gap: 64, align: "start" })
+    const qcopy = b.col(qrow, "Copy", { w: 380, gap: 20 })
+    b.para(qcopy, "What finance leads ask before they sign.", b.ty("heading", { size: 36 }), ink)
+    b.para(
+      qcopy,
+      "Anything else goes to finance-support@ledgerline.com. A person answers within one business day.",
+      b.ty("body"),
+      muted,
+    )
+    const qlist = b.col(qrow, "List", { w: FILL })
+    for (const [qq, a, open] of [
+      [
+        "Do you write to our ERP?",
+        "Only journal entries you have approved. Balances and bank lines are read-only. Every post carries the approver and a link back to the task.",
+        true,
+      ],
+      [
+        "How long does setup take?",
+        "Most teams import last month's checklist from a spreadsheet and connect their ERP in an afternoon. Bank feeds take a day to backfill 13 months.",
+        false,
+      ],
+      [
+        "Can we change plans mid-year?",
+        "Yes. Upgrades apply the same day and are prorated. Downgrades apply at renewal.",
+        false,
+      ],
+      [
+        "Where is our data stored?",
+        "In US or EU regions, your choice at signup. Data is encrypted at rest and in transit, and our SOC 2 Type II report is available under NDA.",
+        false,
+      ],
+    ] as const)
+      b.use(qlist, faq, { props: { w: FILL }, args: { question: qq, answer: a, open } })
+
     ctaBand(scr)
     b.use(scr, footer)
   }
@@ -1189,250 +1642,532 @@ function build(b: TemplateBuilder) {
   // Customers
   {
     const scr = page("Customers", "customers")
-    const top = section(scr, "Header", { pad: [80, 120, 56, 120], gap: s(12) })
-    header(
-      top,
-      "Customers",
-      "1,400 finance teams close in Ledgerline",
-      "From two-person teams on QuickBooks to groups consolidating 40 entities in NetSuite.",
-    )
-    logoRow(top)
-    const study = b.col(scr, "Case study", { w: FILL, pad: [0, 120] })
-    const card = b.row(study, "Card", {
-      w: FILL,
-      radius: r("xl"),
-      fill: c("surface"),
-      stroke: { paint: c("border") },
-      clip: true,
-    })
-    const text = b.col(card, "Story", { w: FILL, gap: s(6), pad: 56 })
-    b.use(text, badge, { args: { label: "Case study" } })
-    b.para(text, "How Halcyon Health cut its close from 11 days to 5", b.ty("heading"), ink)
+    const head = block(scr, "Header", { pad: [88, 120, 0, 120], gap: 56 })
+    const row = b.row(head, "Heading", { w: FILL, gap: 48, align: "end" })
+    const left = b.col(row, "Copy", { w: 780, gap: 24 })
+    b.text(left, "Customers", cap(), ink)
+    b.para(left, "Closing by day four.", b.ty("display", { size: 68 }), ink)
     b.para(
-      text,
-      "Halcyon runs 6 clinics as separate entities on NetSuite. Before Ledgerline, the close lived in a 400-row spreadsheet that one senior accountant kept current. Tasks now roll forward on their own, reconciliations match overnight, and the controller reviews from a single queue.",
+      row,
+      "Six finance teams on what changed in their close after 90 days, in their own numbers.",
       b.ty("body-lg"),
       muted,
     )
-    const stats = b.row(text, "Results", { w: FILL, gap: s(8), pad: [8, 0, 0, 0] })
-    for (const [value, label] of [
-      ["5 days", "Close length, down from 11"],
-      ["6", "Entities consolidated"],
-      ["320", "Reconciliations each month"],
-    ] as const)
-      b.use(stats, stat, { props: { w: FILL }, args: { value, label } })
-    const art = b.col(card, "Pull quote", {
-      w: 460,
-      h: FILL,
-      justify: "end",
-      gap: s(4),
-      pad: 48,
-      fill: grad("art-2", "success-soft"),
-    })
-    b.icon(art, "quote", 28, c("success"))
-    b.para(
-      art,
-      "We used to spend the first two days finding out what was late. Now the checklist tells us on the first morning.",
-      b.ty("title"),
-      ink,
-    )
-    b.text(art, "Priya Raman, Controller", b.ty("label"), ink)
 
-    const voices = section(scr, "More customers", { gap: s(10) })
-    b.text(voices, "What finance teams say", b.ty("heading"), ink)
-    quoteGrid(voices, 0, 6)
+    const bento = block(scr, "Bento", { pad: [56, 120, 0, 120], gap: 12 })
+    const r1 = b.row(bento, "Row 1", { w: FILL, gap: 12 })
+    b.use(r1, storyFeature, {
+      props: { w: FILL },
+      args: {
+        headline: "How Halcyon Health cut its close from 11 days to 4 across three entities",
+        m1: "4 days",
+        m1Label: "Median close, was 11",
+        m2: "140",
+        m2Label: "Reconciliations with support",
+        company: "Halcyon Health",
+        tone: "mint",
+      },
+    })
+    b.use(r1, storyFeature, {
+      props: { w: FILL },
+      args: {
+        headline: "Why Brightline Retail gave its auditors read-only access in January",
+        m1: "-6 days",
+        m1Label: "Year-end audit fieldwork",
+        m2: "0",
+        m2Label: "PBC folders built by hand",
+        company: "Brightline",
+        tone: "butter",
+      },
+    })
+    const r2 = b.row(bento, "Row 2", { w: FILL, gap: 12 })
+    for (const [metric, caption, company, tone] of [
+      ["2 days", "Intercompany, down from 5", "Juniper Capital", "lilac"],
+      ["38%", "Fewer manual journal entries", "Oakridge", "blush"],
+      ["9 of 10", "Flux variances explained by day 3", "Corvid Labs", "sky"],
+      ["212", "Bank lines matched in one night", "Northwind Freight", "mint"],
+    ] as const)
+      b.use(r2, storyTile, {
+        props: { w: 291 },
+        args: { metric, caption, company, tone },
+        set: { StCo: { args: { name: company, tone: "ink", style: "tight" } } },
+      })
+
+    // All stories
+    const all = block(scr, "All stories", { pad: [120, 120, 0, 120], gap: 8 })
+    label(all, "01", "All stories")
+    const list = b.col(all, "List", { w: FILL })
+    for (const [industry, metric, title, excerpt, who, read] of [
+      [
+        "Healthcare",
+        "11 to 4 days",
+        "Halcyon Health runs three entities on one close calendar",
+        "A controller and two accountants moved from spreadsheets to a shared checklist in one quiet week.",
+        "PR",
+        "6 min",
+      ],
+      [
+        "Retail",
+        "-6 days audit",
+        "Brightline Retail stops building PBC folders",
+        "Read-only auditor access replaced 140 emailed requests a year.",
+        "TH",
+        "5 min",
+      ],
+      [
+        "Biotech",
+        "9 of 10",
+        "Corvid Labs gets variance notes before review",
+        "Owners write the note when the balance moves, not when the controller asks.",
+        "GL",
+        "4 min",
+      ],
+      [
+        "Investments",
+        "2 days",
+        "Juniper Capital eliminates intercompany by lunch on day two",
+        "Templates and auto-matching cut a two-day job to a morning.",
+        "OB",
+        "7 min",
+      ],
+      [
+        "Food",
+        "38% fewer",
+        "Oakridge Foods posts fewer manual entries every quarter",
+        "Recurring accruals draft themselves from the last three invoices.",
+        "AB",
+        "5 min",
+      ],
+    ] as const) {
+      b.use(list, postRow, {
+        props: { w: FILL },
+        args: {
+          meta: industry,
+          tag: metric,
+          title,
+          excerpt,
+          author: people[who][0],
+          initials: who,
+          readTime: read,
+        },
+        set: { PoAv: { args: { size: "sm", tone: people[who][1] } } },
+      })
+    }
+
+    const big = block(scr, "Quote", { pad: [120, 120, 0, 120], gap: 32 })
+    label(big, "02", "In their words")
+    b.use(big, quote, {
+      props: { w: 960 },
+      args: {
+        quote:
+          "Our auditors pulled support for 140 reconciliations without emailing anyone. That alone saved a week in March.",
+        name: "Tomás Herrera",
+        role: "VP Finance, Brightline Retail",
+        initials: "TH",
+      },
+      set: { QAv: { args: { size: "md", tone: "butter" } } },
+    })
+
     ctaBand(scr)
     b.use(scr, footer)
   }
 
   // Blog
+  const blogPosts = [
+    [
+      "Sep 24, 2026",
+      "Audit",
+      "What auditors ask for first, and how to have it ready",
+      "The six requests that open almost every year-end audit, and where each one lives in Ledgerline.",
+      "DP",
+      "8 min",
+    ],
+    [
+      "Sep 17, 2026",
+      "Close process",
+      "Accruals for recurring vendors, without the guesswork",
+      "A template drafts the entry from the last three invoices and flags any vendor whose bill is late.",
+      "LS",
+      "6 min",
+    ],
+    [
+      "Sep 10, 2026",
+      "Product",
+      "Flux review now asks owners for notes",
+      "Set a threshold per account. When a balance moves past it, the owner gets a task with the variance attached.",
+      "RA",
+      "3 min",
+    ],
+    [
+      "Sep 3, 2026",
+      "Close process",
+      "Reconciling Stripe payouts to your bank feed",
+      "Payouts bundle fees, refunds and disputes. Here is how to split them so the bank line ties on the first try.",
+      "PR",
+      "9 min",
+    ],
+    [
+      "Aug 27, 2026",
+      "Audit",
+      "SOC 1 or SOC 2: what a controller needs from finance software",
+      "Which report your auditor will ask for, what each covers, and the bridge letter question.",
+      "DP",
+      "7 min",
+    ],
+    [
+      "Aug 20, 2026",
+      "Product",
+      "NetSuite multi-book support is live",
+      "Close secondary books on their own calendar, with separate checklists and the same audit trail.",
+      "LS",
+      "3 min",
+    ],
+  ] as const
   {
     const scr = page("Blog", "blog")
-    const top = b.row(scr, "Header", {
+    const head = block(scr, "Header", { pad: [88, 120, 0, 120], gap: 40 })
+    const row = b.row(head, "Heading", { w: FILL, gap: 48, align: "end" })
+    const left = b.col(row, "Copy", { w: 780, gap: 24 })
+    b.text(left, "Blog", cap(), ink)
+    b.para(left, "Notes from the close.", b.ty("display", { size: 68 }), ink)
+    b.para(
+      row,
+      "Practical writing from controllers and our own finance team on closing faster and keeping audits quiet.",
+      b.ty("body-lg"),
+      muted,
+    )
+    const tabs = b.row(head, "Filters", {
       w: FILL,
-      justify: "between",
-      align: "end",
-      pad: [80, 120, 40, 120],
+      gap: 28,
+      pad: [0, 0, 0, 0],
+      stroke: { paint: c("border"), width: { b: 1 } },
     })
-    const titles = b.col(top, "Titles", { w: 640, gap: 12 })
-    b.text(titles, "The Close", b.ty("label", { case: "upper", letterSpacing: 1 }), c("accent"))
-    b.para(titles, "Notes on running a faster month-end", b.ty("h1"), ink)
+    for (const [i, t] of ["All posts", "Close process", "Audit", "Product"].entries()) {
+      const tab = b.row(tabs, t, {
+        pad: [0, 0, 14, 0],
+        stroke: { paint: ink, width: { b: i === 0 ? 2 : 0 } },
+      })
+      b.text(tab, t, cap({ size: 12 }), i === 0 ? ink : muted)
+    }
+
+    const feat = block(scr, "Featured", { pad: [40, 120, 0, 120] })
+    const frow = b.row(feat, "Featured post", { w: FILL, gap: 48, align: "stretch" })
+    art(frow, "Artwork", "mint", 700, 460, 0)
+    const fcopy = b.col(frow, "Copy", { w: FILL, gap: 20, justify: "end" })
+    const meta = b.row(fcopy, "Meta", { gap: 12, align: "center" })
+    b.use(meta, tag, { args: { label: "Close process", tone: "mark" } })
+    b.text(meta, "Oct 1, 2026", b.ty("mono", { size: 12 }), muted)
+    b.para(fcopy, "How a five-day close actually runs, hour by hour", b.ty("h1", { size: 44 }), ink)
     b.para(
-      titles,
-      "Checklists, audit prep and product updates from the Ledgerline team.",
-      b.ty("body-lg"),
+      fcopy,
+      "We timed the close at Halcyon Health, Brightline and ourselves. Here is the calendar the fastest team uses, and the three days nobody should skip.",
+      b.ty("body-lg", { size: 17 }),
       muted,
     )
-    const chips = b.row(top, "Filters", { gap: 8 })
-    b.use(chips, badge, { args: { label: "All posts" } })
-    for (const label of ["Close process", "Audit", "Product updates"])
-      b.use(chips, badge, { args: { label, tone: "neutral" } })
+    const by = b.row(fcopy, "Author", { gap: 10, align: "center" })
+    b.use(by, avatar, { args: { size: "sm", initials: "PR", tone: "mint" } })
+    b.text(by, "Priya Raman", b.ty("label", { weight: 500 }), ink)
+    b.text(by, "12 min read", b.ty("mono", { size: 12 }), muted)
 
-    const featured = b.row(scr, "Featured", { w: FILL, gap: 48, align: "center", pad: [0, 120] })
-    b.rect(featured, "Cover", { w: 680, h: 380, radius: r("xl"), fill: grad("art-1", "accent") })
-    const ft = b.col(featured, "Text", { w: FILL, gap: 16 })
-    const meta = b.row(ft, "Meta", { gap: 12, align: "center" })
-    b.use(meta, badge, { args: { label: "Close process" } })
-    b.text(meta, "Oct 1, 2026  ·  9 min read", b.ty("small"), muted)
-    b.para(ft, "A five-day close checklist you can copy", b.ty("heading"), ink)
+    const list = block(scr, "Posts", { pad: [96, 120, 0, 120], gap: 8 })
+    label(list, "01", "Latest")
+    const col = b.col(list, "List", { w: FILL })
+    for (const [date, tg, title, excerpt, who, read] of blogPosts)
+      b.use(col, postRow, {
+        props: { w: FILL },
+        args: {
+          meta: date,
+          tag: tg,
+          title,
+          excerpt,
+          author: people[who][0],
+          initials: who,
+          readTime: read,
+        },
+        set: { PoAv: { args: { size: "sm", tone: people[who][1] } } },
+      })
+
+    const news = block(scr, "Newsletter", { pad: [96, 120, 96, 120] })
+    const nrow = b.row(news, "Newsletter row", {
+      w: FILL,
+      gap: 64,
+      align: "center",
+      pad: [40, 0, 0, 0],
+      stroke: { paint: ink, width: { t: 1 } },
+    })
     b.para(
-      ft,
-      "The 58 tasks our customers run most often, grouped by day, with owners and the accounts each one ties to.",
-      b.ty("body-lg"),
-      muted,
+      nrow,
+      "One email a month. Close tips from people who run one.",
+      b.ty("heading", { size: 30 }),
+      ink,
+      { w: 620 },
     )
-    const by = b.row(ft, "Author", { gap: 12, align: "center" })
-    b.use(by, avatar, { args: { initials: "MO" } })
-    const names = b.col(by, "Names", { gap: 2 })
-    b.text(names, "Maya Okafor", b.ty("label"), ink)
-    b.text(names, "Controller in residence", b.ty("small"), muted)
-
-    const grid = b.col(scr, "Posts", { w: FILL, gap: 56, pad: [72, 120, 96, 120] })
-    postRow(grid, posts.slice(0, 3))
-    postRow(grid, posts.slice(3, 6))
+    const nf = b.col(nrow, "Form", { w: FILL, gap: 10 })
+    emailForm(nf, FILL, false, "Subscribe")
+    b.text(nf, "No product news. Unsubscribe in one click.", cap({ size: 11 }), muted)
     b.use(scr, footer)
   }
 
   // Blog post
   {
     const scr = page("Blog post", "blog")
-    const art = b.col(scr, "Article", { w: FILL, gap: s(6), pad: [64, 360, 80, 360] })
-    const back = b.row(art, "Back", { gap: 6, align: "center" })
-    b.icon(back, "arrow-left", 16, muted)
-    b.text(back, "All posts", b.ty("label", { weight: 500 }), muted)
-    b.use(art, badge, { args: { label: "Close process" } })
-    b.para(art, "A five-day close checklist you can copy", b.ty("h1"), ink)
-    const by = b.row(art, "Author", { gap: 12, align: "center" })
-    b.use(by, avatar, { args: { initials: "MO" } })
-    const names = b.col(by, "Names", { gap: 2 })
-    b.text(names, "Maya Okafor", b.ty("label"), ink)
-    b.text(names, "Oct 1, 2026  ·  9 min read", b.ty("small"), muted)
-    b.rect(art, "Cover", { w: FILL, h: 400, radius: r("xl"), fill: grad("art-1", "accent") })
-    const body = (t: string) => b.para(art, t, b.ty("body-lg"), ink)
-    const h2 = (t: string) =>
-      b.para(art, t, b.ty("heading", { size: 26 }), ink, { name: "Heading" })
-    body(
-      "Teams that close in five days rarely work longer hours in the first week. They start earlier, every account has one owner, and they drop the work that nobody reviews.",
-    )
-    body(
-      "Below is the checklist our customers run most often, grouped by day. Copy it into Ledgerline from the template gallery, or into a spreadsheet if you are not ready to switch.",
-    )
-    h2("Day 1: cash and cutoff")
-    body(
-      "Reconcile every bank and card account before anything else. Cash is the one balance you can tie to an outside source on the first morning, and it surfaces missing entries early.",
-    )
-    const list = b.col(art, "Checklist", { w: FILL, gap: 12 })
-    for (const label of [
-      "Bank reconciliations for all operating accounts",
-      "Card statements matched to receipts",
-      "Revenue cutoff reviewed for the last three business days",
-    ])
-      b.use(list, checkItem, { props: { w: FILL }, args: { label } })
-    h2("Days 2 and 3: accruals and reclasses")
-    body(
-      "Draft recurring accruals from last month's entries and adjust only what changed. Ask budget owners about open purchase orders on day 1, so answers arrive before you need them.",
-    )
-    const pull = b.col(art, "Pull quote", {
-      w: FILL,
-      pad: [4, 0, 4, 24],
-      stroke: { paint: c("accent"), width: { l: 3 } },
-    })
+    const head = block(scr, "Header", { pad: [56, 120, 0, 120], gap: 32 })
+    const crumbs = b.row(head, "Breadcrumb", { gap: 10, align: "center" })
+    b.text(crumbs, "Blog", cap({ size: 11 }), muted)
+    b.text(crumbs, "/", cap({ size: 11 }), muted)
+    b.text(crumbs, "Audit", cap({ size: 11 }), ink)
     b.para(
-      pull,
-      "The fastest closes we see share one habit: the reviewer signs off each day, not in one long session on day five.",
-      b.ty("title", { italic: true }),
+      head,
+      "What auditors ask for first, and how to have it ready",
+      b.ty("display", { size: 64 }),
       ink,
+      { w: 980 },
     )
-    h2("Days 4 and 5: flux review and reporting")
-    body(
-      "Compare each account to last month and last year. Anything over your threshold gets a note from its owner before the controller reviews, so review is reading, not chasing.",
+    const meta = b.row(head, "Byline", { gap: 16, align: "center" })
+    b.use(meta, avatar, { args: { size: "md", initials: "DP", tone: "sky" } })
+    const who = b.col(meta, "Who", { gap: 2 })
+    b.text(who, "Daniel Park", b.ty("label"), ink)
+    b.text(who, "Audit lead, Ledgerline", b.ty("small"), muted)
+    b.rect(meta, "Gap", { w: 24, h: 1, fill: c("bg") })
+    b.text(meta, "Sep 24, 2026", b.ty("mono", { size: 12 }), muted)
+    b.text(meta, "8 min read", b.ty("mono", { size: 12 }), muted)
+    art(head, "Artwork", "butter", FILL, 380, 1)
+
+    const body = block(scr, "Article", { pad: [72, 120, 0, 120] })
+    const brow = b.row(body, "Article row", { w: FILL, gap: 80, align: "start" })
+    const rail = b.col(brow, "Contents", { w: 240, gap: 14 })
+    b.text(rail, "On this page", cap({ size: 11 }), muted)
+    for (const [i, t] of [
+      "The request list",
+      "Trial balance and tie-outs",
+      "Journal entries over threshold",
+      "Support for estimates",
+      "Who can see what",
+    ].entries()) {
+      const item = b.row(rail, t, { w: FILL, gap: 12, align: "start", pad: [0, 0, 0, 0] })
+      b.text(item, `0${i + 1}`, b.ty("mono", { size: 12 }), i === 0 ? ink : muted)
+      b.para(
+        item,
+        t,
+        b.ty("body", { size: 14, weight: i === 0 ? 600 : 400 }),
+        i === 0 ? ink : muted,
+      )
+    }
+    const h2 = (parent: string, text: string) => {
+      const w = b.col(parent, "Subhead", { w: FILL, pad: [24, 0, 0, 0] })
+      b.para(w, text, b.ty("heading", { size: 30 }), ink)
+    }
+    const art_ = b.col(brow, "Text", { w: 680, gap: 24 })
+    const p1 = (t: string) => b.para(art_, t, b.ty("body-lg", { size: 18, lineHeight: 1.65 }), ink)
+    p1(
+      "Auditors are not trying to be difficult. They sample, and what they sample first is whatever is quickest to test. If the first request takes a week to answer, the next ones get bigger.",
     )
-    b.divider(art, c("border"))
-    const bio = b.row(art, "Author bio", {
+    p1(
+      "We read the opening request lists from 31 year-end audits our customers shared. Six requests showed up in almost every one, in nearly the same order.",
+    )
+    h2(art_, "The request list")
+    p1(
+      "Start with the trial balance as of year-end, the prior year comparative and a tie-out of each balance sheet account to a bank statement, subledger or schedule. Teams that keep these attached to the month-end task have them on day one.",
+    )
+    // Journal entry figure
+    const fig = b.col(art_, "Figure", { w: FILL, gap: 12 })
+    const tab = b.col(fig, "Journal entry", {
       w: FILL,
-      gap: 16,
-      align: "center",
-      pad: 24,
-      radius: r("lg"),
-      fill: c("subtle"),
+      radius: r("md"),
+      fill: c("surface"),
+      stroke: { paint: c("border-strong") },
+      clip: true,
     })
-    b.use(bio, avatar, { args: { initials: "MO", size: "lg" } })
-    const bt = b.col(bio, "Text", { w: FILL, gap: 4 })
-    b.text(bt, "Maya Okafor", b.ty("label"), ink)
-    b.para(
-      bt,
-      "Maya ran the close at two venture-backed companies before joining Ledgerline. She writes about checklists and audit prep.",
-      b.ty("body", { size: 15 }),
+    const th = b.row(tab, "Head", {
+      w: FILL,
+      pad: [10, 18],
+      gap: 16,
+      fill: c("subtle"),
+      stroke: { paint: c("border-strong"), width: { b: 1 } },
+    })
+    b.para(th, "JE-2209  Accrue September hosting", cap({ size: 11 }), ink)
+    b.para(th, "Debit", cap({ size: 11, align: "right" }), muted, { w: 96 })
+    b.para(th, "Credit", cap({ size: 11, align: "right" }), muted, { w: 96 })
+    for (const [acct, dr, cr] of [
+      ["6140  Cloud hosting", "51,904.00", ""],
+      ["2100  Accrued expenses", "", "51,904.00"],
+    ] as const) {
+      const tr = b.row(tab, acct, {
+        w: FILL,
+        pad: [12, 18],
+        gap: 16,
+        stroke: { paint: c("border"), width: { b: 1 } },
+      })
+      b.para(tr, acct, b.ty("mono", { size: 13 }), ink, { w: FILL })
+      b.para(tr, dr || "0.00", b.ty("mono", { size: 13, align: "right" }), dr ? ink : muted, {
+        w: 96,
+      })
+      b.para(tr, cr || "0.00", b.ty("mono", { size: 13, align: "right" }), cr ? ink : muted, {
+        w: 96,
+      })
+    }
+    b.text(
+      fig,
+      "An accrual with its support attached: invoice 2041, usage export, approver.",
+      cap({ size: 11 }),
       muted,
     )
-
-    const more = b.col(scr, "Keep reading", {
+    h2(art_, "Journal entries over threshold")
+    p1(
+      "Auditors set a testing threshold and ask for every manual entry above it. Pull the list yourself before they do, and write one line of purpose next to each entry.",
+    )
+    const pq = b.row(art_, "Pull quote", {
       w: FILL,
-      gap: s(8),
-      pad: [64, 120, 96, 120],
-      fill: c("subtle"),
+      pad: [8, 0, 8, 24],
+      stroke: { paint: c("mark"), width: { l: 5 } },
     })
-    b.text(more, "Keep reading", b.ty("heading"), ink)
-    postRow(more, posts.slice(0, 3))
+    b.para(
+      pq,
+      "If the first request takes a week to answer, the next ones get bigger.",
+      b.ty("heading", { size: 30, lineHeight: 1.25 }),
+      ink,
+    )
+    p1(
+      "Estimates are the other place time goes. For each accrual or reserve, keep the calculation, the source documents and the name of the person who approved it. A link from the entry to the task is enough.",
+    )
+    const call = b.row(art_, "Callout", {
+      w: FILL,
+      gap: 16,
+      pad: 24,
+      radius: r("md"),
+      fill: c("tile-butter"),
+    })
+    b.icon(call, "shield-check", 20, ink)
+    const ct = b.col(call, "Text", { w: FILL, gap: 6 })
+    b.text(ct, "Give auditors read-only access", b.ty("label", { size: 15 }), ink)
+    b.para(
+      ct,
+      "Share the period, not your drive. They see tasks, attachments and sign-offs, and nothing else.",
+      b.ty("body", { size: 15 }),
+      ink,
+    )
+
+    const more = block(scr, "Keep reading", { pad: [120, 120, 0, 120], gap: 8 })
+    label(more, "01", "Keep reading")
+    const col = b.col(more, "List", { w: FILL })
+    for (const [date, tg, title, excerpt, who2, read] of blogPosts.slice(1, 3))
+      b.use(col, postRow, {
+        props: { w: FILL },
+        args: {
+          meta: date,
+          tag: tg,
+          title,
+          excerpt,
+          author: people[who2][0],
+          initials: who2,
+          readTime: read,
+        },
+        set: { PoAv: { args: { size: "sm", tone: people[who2][1] } } },
+      })
+    b.rect(scr, "Space", { w: FILL, h: 96, fill: c("bg") })
     b.use(scr, footer)
   }
 
   // Sign up
   {
-    const scr = b.screen(screens, "Sign up", { dir: "row", w: 1440, h: 900, fill: c("bg") })
-    const left = b.col(scr, "Form side", { w: FILL, h: FILL, justify: "between", pad: [48, 120] })
-    brand(left)
-    const form = b.col(left, "Form", { w: 400, gap: s(5) })
-    const heads = b.col(form, "Heading", { w: FILL, gap: 8 })
-    b.para(heads, "Start your 14-day trial", b.ty("heading"), ink)
+    const scr = b.screen(screens, "Sign up", {
+      dir: "row",
+      w: 1440,
+      h: 900,
+      fill: c("bg"),
+      gap: 0,
+      align: "stretch",
+    })
+    const left = b.col(scr, "Form side", { w: 720, pad: [40, 120, 40, 120], justify: "between" })
+    const topbar = b.row(left, "Top", { w: FILL, justify: "between", align: "center" })
+    brand(topbar)
+    const si = b.row(topbar, "Sign in", { gap: 6, align: "baseline" })
+    b.text(si, "Have an account?", b.ty("body", { size: 14 }), muted)
+    b.text(si, "Sign in", b.ty("label", { size: 14 }), ink)
+    const form = b.col(left, "Form", { w: FILL, gap: 20 })
+    b.text(form, "14-day trial", cap(), muted)
+    b.para(form, "Create your workspace", b.ty("h1", { size: 44 }), ink)
     b.para(
-      heads,
-      "No credit card. Your workspace comes with a sample close to explore.",
+      form,
+      "No card needed. Invite your team once the first checklist is in.",
       b.ty("body"),
       muted,
     )
-    b.use(form, buttonSecondary, {
+    b.use(form, buttonOutline, {
       props: { w: FILL },
-      args: { label: "Continue with Google", size: "lg" },
+      args: { label: "Continue with SSO", size: "lg", icon: true },
+      set: { BtnIcon: { icon: "key-round" } },
     })
     const or = b.row(form, "Or", { w: FILL, gap: 12, align: "center" })
     b.divider(or, c("border"))
-    b.text(or, "or", b.ty("small"), muted)
+    b.text(or, "or", cap({ size: 11 }), muted)
     b.divider(or, c("border"))
-    for (const [label, placeholder, hint] of [
-      ["Work email", "maya@halcyonhealth.com", ""],
-      ["Full name", "Maya Okafor", ""],
+    for (const [lab, ph, hint] of [
+      ["Work email", "priya@halcyonhealth.com", ""],
+      ["Full name", "Priya Raman", ""],
       ["Password", "At least 12 characters", "Use 12 or more characters with a number."],
     ] as const)
       b.use(form, input, {
         props: { w: FILL },
-        args: { label, placeholder, ...(hint ? { hint, showHint: true } : {}) },
+        args: { label: lab, placeholder: ph, ...(hint ? { hint, showHint: true } : {}) },
       })
-    b.use(form, button, { props: { w: FILL }, args: { label: "Create workspace", size: "lg" } })
-    b.para(
-      form,
+    b.use(form, button, {
+      props: { w: FILL },
+      args: { label: "Create workspace", variant: "mark", size: "lg", icon: true },
+    })
+    b.text(
+      left,
       "By continuing you agree to the Terms and the Privacy Policy.",
       b.ty("small"),
       muted,
     )
-    const signin = b.row(left, "Sign in", { gap: 6 })
-    b.text(signin, "Already have an account?", b.ty("body", { size: 15 }), muted)
-    b.text(signin, "Sign in", b.ty("label", { size: 15 }), c("accent"))
 
-    const right = b.col(scr, "Proof side", {
-      w: 640,
+    const wrap = b.col(scr, "Panel wrap", { w: FILL, h: 900, pad: 16 })
+    const panel = b.col(wrap, "Panel", {
+      w: FILL,
       h: FILL,
+      pad: 56,
       justify: "between",
-      pad: 64,
+      radius: r("xl"),
       fill: c("inverse"),
     })
-    const [q, name, role, initials] = quotes[1]
-    b.use(right, quote, { props: { w: FILL }, args: { quote: q, name, role, initials } })
-    const nums = b.row(right, "Numbers", { w: FILL, gap: s(8) })
-    for (const [value, label] of [
-      ["4.2 days", "Median close after 90 days"],
-      ["1,400+", "Finance teams"],
-    ] as const)
-      b.use(nums, stat, { props: { w: FILL }, args: { value, label, tone: "inverse" } })
+    const incl = b.col(panel, "Included", { w: FILL, gap: 16 })
+    b.text(incl, "In the trial", cap({ size: 11 }), c("inverse-muted"))
+    for (const t of [
+      "Import last month's checklist from a spreadsheet",
+      "Connect NetSuite, Intacct, QuickBooks or Xero",
+      "Bank feeds backfill 13 months overnight",
+      "Invite auditors with read-only access",
+    ])
+      b.use(incl, checkRow, { props: { w: FILL }, args: { label: t, state: "onDark" } })
+    const ghost = b.col(panel, "Ledger lines", { w: FILL })
+    for (const [code, name, amt] of [
+      ["1010", "Operating account", "412,908.14"],
+      ["1200", "Accounts receivable", "188,420.00"],
+      ["2100", "Accrued expenses", "64,310.55"],
+      ["4000", "Subscription revenue", "1,204,550.10"],
+    ]) {
+      const gr = b.row(ghost, "Line", {
+        w: FILL,
+        gap: 16,
+        pad: [12, 0],
+        stroke: { paint: c("inverse-line"), width: { b: 1 } },
+      })
+      b.para(gr, code, b.ty("mono", { size: 12 }), c("inverse-muted"), { w: 48 })
+      b.para(gr, name, b.ty("body", { size: 14 }), c("inverse-muted"))
+      b.para(gr, amt, b.ty("mono", { size: 12, align: "right" }), c("inverse-muted"), { w: 120 })
+    }
+    b.use(panel, quote, {
+      props: { w: FILL },
+      args: {
+        tone: "inverse",
+        quote:
+          "Flux notes used to live in a spreadsheet nobody opened. Now the owner writes them before review starts.",
+        name: "Grace Liu",
+        role: "Assistant Controller, Corvid Labs",
+        initials: "GL",
+      },
+      set: { QAv: { args: { size: "md", tone: "lilac" } } },
+    })
   }
 }

@@ -56,7 +56,7 @@
     "slug": "agency-portfolio",
     "name": "Oriel studio portfolio",
     "category": "Portfolio",
-    "description": "Portfolio site for a small design studio: home, work, case study, about and contact on desktop, with mobile home and case study.",
+    "description": "Editorial portfolio site for a small design studio: home, work index, case study, about and contact on desktop, with mobile home and case study.",
     "pages": ["Cover", "Desktop", "Mobile", "Components", "Foundations"],
     "file": "files/agency-portfolio/agency-portfolio.kimo",
     "cover": "files/agency-portfolio/cover.png",
@@ -66,35 +66,35 @@
         "page": "Desktop",
         "preview": "files/agency-portfolio/screens/01-home.png",
         "width": 1440,
-        "height": 4855
+        "height": 5690
       },
       {
         "name": "Work",
         "page": "Desktop",
         "preview": "files/agency-portfolio/screens/02-work.png",
         "width": 1440,
-        "height": 3178
+        "height": 2272
       },
       {
         "name": "Case study",
         "page": "Desktop",
         "preview": "files/agency-portfolio/screens/03-case-study.png",
         "width": 1440,
-        "height": 5000
+        "height": 5248
       },
       {
         "name": "About",
         "page": "Desktop",
         "preview": "files/agency-portfolio/screens/04-about.png",
         "width": 1440,
-        "height": 4092
+        "height": 3835
       },
       {
         "name": "Contact",
         "page": "Desktop",
         "preview": "files/agency-portfolio/screens/05-contact.png",
         "width": 1440,
-        "height": 1809
+        "height": 1801
       },
       {
         "name": "Mobile home",
@@ -169,7 +169,7 @@
     "slug": "design-system",
     "name": "Basalt UI kit",
     "category": "Design system",
-    "description": "A published UI kit with 38 components and their variants, light and dark tokens, and five page patterns built from them.",
+    "description": "A published UI kit with 39 components and their variants, light and dark tokens, and six page patterns built from them.",
     "pages": ["Cover", "Patterns", "Components", "Foundations"],
     "file": "files/design-system/design-system.kimo",
     "cover": "files/design-system/cover.png",
@@ -208,6 +208,13 @@
         "preview": "files/design-system/screens/05-dialog-and-toast.png",
         "width": 1440,
         "height": 900
+      },
+      {
+        "name": "Command menu",
+        "page": "Patterns",
+        "preview": "files/design-system/screens/06-command-menu.png",
+        "width": 1440,
+        "height": 900
       }
     ]
   },
@@ -215,7 +222,7 @@
     "slug": "ecommerce-store",
     "name": "Fernhill home goods store",
     "category": "eCommerce",
-    "description": "Nine-screen online store for an independent home goods shop: home, category, product, cart, checkout and confirmation on desktop, plus home, product and cart on mobile.",
+    "description": "Nine-screen editorial online store for an independent home goods shop: home, category, product, cart, checkout and confirmation on desktop, plus home, product and cart on mobile.",
     "pages": ["Cover", "Desktop", "Mobile", "Components", "Foundations"],
     "file": "files/ecommerce-store/ecommerce-store.kimo",
     "cover": "files/ecommerce-store/cover.png",
@@ -225,42 +232,42 @@
         "page": "Desktop",
         "preview": "files/ecommerce-store/screens/01-home.png",
         "width": 1440,
-        "height": 3643
+        "height": 4539
       },
       {
         "name": "Category",
         "page": "Desktop",
         "preview": "files/ecommerce-store/screens/02-category.png",
         "width": 1440,
-        "height": 2191
+        "height": 2878
       },
       {
         "name": "Product detail",
         "page": "Desktop",
         "preview": "files/ecommerce-store/screens/03-product-detail.png",
         "width": 1440,
-        "height": 2559
+        "height": 3106
       },
       {
         "name": "Cart",
         "page": "Desktop",
         "preview": "files/ecommerce-store/screens/04-cart.png",
         "width": 1440,
-        "height": 2012
+        "height": 2392
       },
       {
         "name": "Checkout",
         "page": "Desktop",
         "preview": "files/ecommerce-store/screens/05-checkout.png",
         "width": 1440,
-        "height": 1421
+        "height": 1503
       },
       {
         "name": "Order confirmation",
         "page": "Desktop",
         "preview": "files/ecommerce-store/screens/06-order-confirmation.png",
         "width": 1440,
-        "height": 1586
+        "height": 1698
       },
       {
         "name": "Home",
@@ -289,7 +296,7 @@
     "slug": "event-conference",
     "name": "Offset conference site",
     "category": "Website",
-    "description": "Six-screen site for a two-day product design conference: home, speakers, two-track schedule, speaker page, tickets and venue.",
+    "description": "Six-screen poster-style site for a two-day product design conference: home, speakers, two-track schedule, speaker page, tickets and venue.",
     "pages": ["Cover", "Screens", "Components", "Foundations"],
     "file": "files/event-conference/event-conference.kimo",
     "cover": "files/event-conference/cover.png",
@@ -299,42 +306,42 @@
         "page": "Screens",
         "preview": "files/event-conference/screens/01-home.png",
         "width": 1440,
-        "height": 3987
+        "height": 4262
       },
       {
         "name": "Speakers",
         "page": "Screens",
         "preview": "files/event-conference/screens/02-speakers.png",
         "width": 1440,
-        "height": 2616
+        "height": 2876
       },
       {
         "name": "Schedule",
         "page": "Screens",
         "preview": "files/event-conference/screens/03-schedule.png",
         "width": 1440,
-        "height": 2280
+        "height": 2452
       },
       {
         "name": "Speaker detail",
         "page": "Screens",
         "preview": "files/event-conference/screens/04-speaker-detail.png",
         "width": 1440,
-        "height": 2158
+        "height": 2959
       },
       {
         "name": "Tickets",
         "page": "Screens",
         "preview": "files/event-conference/screens/05-tickets.png",
         "width": 1440,
-        "height": 2040
+        "height": 2538
       },
       {
         "name": "Venue and travel",
         "page": "Screens",
         "preview": "files/event-conference/screens/06-venue-and-travel.png",
         "width": 1440,
-        "height": 1918
+        "height": 2848
       }
     ]
   },
@@ -342,7 +349,7 @@
     "slug": "mobile-banking",
     "name": "Tidewell personal banking",
     "category": "Mobile",
-    "description": "Seven-screen iPhone app for a personal bank: passcode sign-in, balances and cards, transactions, a receipt, sending money, freezing a card and monthly insights.",
+    "description": "Seven-screen iPhone app for a personal bank: passcode sign-in, a balance slab with activity, a receipt, sending money, a frozen card and monthly insights.",
     "pages": ["Cover", "Screens", "Components", "Foundations"],
     "file": "files/mobile-banking/mobile-banking.kimo",
     "cover": "files/mobile-banking/cover.png",
@@ -402,7 +409,7 @@
     "slug": "mobile-fitness",
     "name": "Brisk fitness coach",
     "category": "Mobile",
-    "description": "Six-screen iPhone app for a fitness and habit coach: onboarding, today, workout detail, live workout, progress charts and profile.",
+    "description": "Six-screen iPhone app for a strength and habit coach: onboarding, today with one ring, workout detail, a rest timer, a dot-matrix progress view and profile.",
     "pages": ["Cover", "Screens", "Components", "Foundations"],
     "file": "files/mobile-fitness/mobile-fitness.kimo",
     "cover": "files/mobile-fitness/cover.png",
@@ -455,7 +462,7 @@
     "slug": "saas-app",
     "name": "Fieldwork project tracker",
     "category": "Web app",
-    "description": "Six-screen SaaS web app for a studio project tracker: dashboard, projects, kanban board, team, settings and billing.",
+    "description": "Six-screen web app for a design studio's project tracker: overview, projects, kanban board, team, settings and billing.",
     "pages": ["Cover", "Screens", "Components", "Foundations"],
     "file": "files/saas-app/saas-app.kimo",
     "cover": "files/saas-app/cover.png",
@@ -518,35 +525,35 @@
         "page": "Screens",
         "preview": "files/saas-marketing/screens/01-home.png",
         "width": 1440,
-        "height": 4026
+        "height": 4988
       },
       {
         "name": "Pricing",
         "page": "Screens",
         "preview": "files/saas-marketing/screens/02-pricing.png",
         "width": 1440,
-        "height": 2405
+        "height": 3417
       },
       {
         "name": "Customers",
         "page": "Screens",
         "preview": "files/saas-marketing/screens/03-customers.png",
         "width": 1440,
-        "height": 2729
+        "height": 3045
       },
       {
         "name": "Blog",
         "page": "Screens",
         "preview": "files/saas-marketing/screens/04-blog.png",
         "width": 1440,
-        "height": 2276
+        "height": 2540
       },
       {
         "name": "Blog post",
         "page": "Screens",
         "preview": "files/saas-marketing/screens/05-blog-post.png",
         "width": 1440,
-        "height": 3031
+        "height": 2880
       },
       {
         "name": "Sign up",

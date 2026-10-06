@@ -156,8 +156,9 @@ export interface LibraryEntry {
 }
 
 /**
- * Libraries among the known files: `meta.library`, a published component, or imported by
- * another known file. Sorted by name.
+ * Libraries among the known files: `meta.library` (a UI kit made to be imported) or imported by
+ * another known file. A file with its own local components isn't a library (every template has
+ * some). Sorted by name.
  */
 export function libraryIndex(probes: readonly LibraryProbe[]): LibraryEntry[] {
   const usedBy = new Map<string, Set<string>>()
@@ -170,7 +171,7 @@ export function libraryIndex(probes: readonly LibraryProbe[]): LibraryEntry[] {
       set.add(p.ref)
     }
   return probes
-    .filter((p) => p.library || p.components > 0 || (usedBy.get(p.ref)?.size ?? 0) > 0)
+    .filter((p) => p.library || (usedBy.get(p.ref)?.size ?? 0) > 0)
     .map((p) => ({
       ref: p.ref,
       name: p.name,
@@ -180,9 +181,13 @@ export function libraryIndex(probes: readonly LibraryProbe[]): LibraryEntry[] {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** Card info: "12 components · used by 2 files". */
-export function libraryInfo(e: { components: number; usedBy: number }): string {
-  return `${plural(e.components, "component")} · used by ${plural(e.usedBy, "file")}`
+/**
+ * Card info: "12 components · used by 2 files". `usedBy` null means Kimo can't tell which files
+ * import it (B4, web): the card shows the component count only.
+ */
+export function libraryInfo(e: { components: number; usedBy: number | null }): string {
+  const components = plural(e.components, "component")
+  return e.usedBy == null ? components : `${components} · used by ${plural(e.usedBy, "file")}`
 }
 
 const DAY = 24 * 60 * 60 * 1000

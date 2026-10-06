@@ -95,7 +95,7 @@ describe("names", () => {
 
 describe("design systems", () => {
   const doc = (o: object) => JSON.stringify({ format: "1.0.0", nodes: {}, ...o })
-  test("library = meta.library, a published component, or imported by a known file", () => {
+  test("library = meta.library or imported by a known file; local components alone don't count", () => {
     const probes = [
       probeDocument("/w/ds/kimo-ds.lib.kimo", doc({ meta: { library: true } })),
       probeDocument(
@@ -111,11 +111,13 @@ describe("design systems", () => {
       probeDocument("/w/broken.kimo", "not json"),
     ].filter((p) => p !== null)
     const libs = libraryIndex(probes)
-    expect(libs.map((l) => l.name)).toEqual(["buttons.kimo", "kimo-ds.lib.kimo", "ui.kimo"])
+    // buttons.kimo has a component but nothing imports it and it isn't marked as a library.
+    expect(libs.map((l) => l.name)).toEqual(["kimo-ds.lib.kimo", "ui.kimo"])
     expect(libs.find((l) => l.name === "kimo-ds.lib.kimo")?.usedBy).toBe(1)
-    expect(libs.find((l) => l.name === "buttons.kimo")?.components).toBe(1)
     expect(libraryInfo({ components: 12, usedBy: 2 })).toBe("12 components · used by 2 files")
     expect(libraryInfo({ components: 1, usedBy: 1 })).toBe("1 component · used by 1 file")
+    // B4 (web): no recorded origin → the component count only, never a name-match guess.
+    expect(libraryInfo({ components: 12, usedBy: null })).toBe("12 components")
   })
   test("import paths resolve against the importing file", () => {
     expect(resolveImport("/w/app/a.kimo", "../ds/x.kimo")).toBe("/w/ds/x.kimo")

@@ -14,6 +14,7 @@ export const template: Template = {
   description:
     "A published UI kit with 39 components and their variants, light and dark tokens, and six page patterns built from them.",
   prefix: "bx",
+  library: true,
   build,
 }
 

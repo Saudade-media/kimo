@@ -37,6 +37,8 @@ export interface Template {
   description: string
   /** 2-letter id prefix, unique across templates (ids are `<prefix><key>`). */
   prefix: string
+  /** A UI kit meant to be imported: written as `meta.library` (Home › Design systems). */
+  library?: boolean
   build(b: TemplateBuilder): void
 }
 
@@ -793,6 +795,7 @@ export class TemplateBuilder {
         set: {
           meta: {
             name: this.tpl.name,
+            ...(this.tpl.library ? { library: true } : {}),
             "kimo.template": {
               slug: this.tpl.slug,
               category: this.tpl.category,

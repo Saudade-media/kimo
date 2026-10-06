@@ -1,0 +1,1624 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
+"meta": {"name":"Brisk fitness coach","kimo.template":{"category":"Mobile","description":"Six-screen iPhone app for a fitness and habit coach: onboarding, today, workout detail, live workout, progress charts and profile.","slug":"mobile-fitness"}},
+"themes": {"mode":["light","dark"]},
+"variables": {
+"color/accent": {"type":"color","value":[{"value":"#D9481C","when":{"mode":"light"}},{"value":"#FF7A4D","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/accent-soft": {"type":"color","value":[{"value":"#FCE6DC","when":{"mode":"light"}},{"value":"#3A1D12","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-1": {"type":"color","value":[{"value":"#FFC9A8","when":{"mode":"light"}},{"value":"#6B2E14","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-2": {"type":"color","value":[{"value":"#FFE7C2","when":{"mode":"light"}},{"value":"#4A3417","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-3": {"type":"color","value":[{"value":"#BFE6CF","when":{"mode":"light"}},{"value":"#18452C","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-4": {"type":"color","value":[{"value":"#CFE2F7","when":{"mode":"light"}},{"value":"#1A3554","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/bg": {"type":"color","value":[{"value":"#F4F4F0","when":{"mode":"light"}},{"value":"#0C0D0C","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/blue": {"type":"color","value":[{"value":"#1F74C2","when":{"mode":"light"}},{"value":"#5AAEF5","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/blue-soft": {"type":"color","value":[{"value":"#DFEDFA","when":{"mode":"light"}},{"value":"#10263B","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/border": {"type":"color","value":[{"value":"#E3E3DC","when":{"mode":"light"}},{"value":"#2A2D29","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/green": {"type":"color","value":[{"value":"#23824C","when":{"mode":"light"}},{"value":"#4CD18A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/green-soft": {"type":"color","value":[{"value":"#DFF2E6","when":{"mode":"light"}},{"value":"#11301F","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/ink": {"type":"color","value":[{"value":"#131512","when":{"mode":"light"}},{"value":"#F2F3EF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/ink-2": {"type":"color","value":[{"value":"#3A3D38","when":{"mode":"light"}},{"value":"#C8CBC4","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/knob": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#FFFFFF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/muted": {"type":"color","value":[{"value":"#6D716A","when":{"mode":"light"}},{"value":"#8F948C","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-accent": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#160904","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-art": {"type":"color","value":[{"value":"#131512","when":{"mode":"light"}},{"value":"#F2F3EF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-primary": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#0C0D0C","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/primary": {"type":"color","value":[{"value":"#131512","when":{"mode":"light"}},{"value":"#F2F3EF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/subtle": {"type":"color","value":[{"value":"#ECECE6","when":{"mode":"light"}},{"value":"#222522","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/surface": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#171917","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/track": {"type":"color","value":[{"value":"#E6E6DF","when":{"mode":"light"}},{"value":"#3A3E38","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/violet": {"type":"color","value":[{"value":"#5A4FCF","when":{"mode":"light"}},{"value":"#9D94FF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/violet-soft": {"type":"color","value":[{"value":"#E9E7FB","when":{"mode":"light"}},{"value":"#221F45","when":{"mode":"dark"}}],"group":"color"}
+
+, "radius/lg": {"type":"number","value":18,"group":"radius"}
+
+, "radius/md": {"type":"number","value":12,"group":"radius"}
+
+, "radius/pill": {"type":"number","value":999,"group":"radius"}
+
+, "radius/sm": {"type":"number","value":8,"group":"radius"}
+
+, "radius/xl": {"type":"number","value":26,"group":"radius"}
+
+, "shadow/card": {"type":"shadow","value":[{"kind":"shadow","x":0,"y":1,"blur":2,"color":"#1315120D"},{"kind":"shadow","x":0,"y":6,"blur":16,"spread":-6,"color":"#13151214"}],"group":"shadow"}
+
+, "shadow/phone": {"type":"shadow","value":{"kind":"shadow","x":0,"y":24,"blur":48,"spread":-12,"color":"#13151233"},"group":"shadow"}
+
+, "size/status": {"type":"number","value":47,"group":"size"}
+
+, "space/1": {"type":"number","value":4,"group":"space"}
+
+, "space/2": {"type":"number","value":8,"group":"space"}
+
+, "space/3": {"type":"number","value":12,"group":"space"}
+
+, "space/4": {"type":"number","value":16,"group":"space"}
+
+, "space/5": {"type":"number","value":20,"group":"space"}
+
+, "space/6": {"type":"number","value":24,"group":"space"}
+
+, "space/8": {"type":"number","value":32,"group":"space"}
+
+, "type/body": {"type":"typography","value":{"font":"Inter","size":15,"weight":400,"lineHeight":1.45},"group":"typography"}
+
+, "type/caption": {"type":"typography","value":{"font":"Inter","size":11,"weight":600,"lineHeight":1.3},"group":"typography"}
+
+, "type/display": {"type":"typography","value":{"font":"Inter","size":34,"weight":700,"lineHeight":1.1,"letterSpacing":-0.9},"group":"typography"}
+
+, "type/h1": {"type":"typography","value":{"font":"Inter","size":28,"weight":700,"lineHeight":1.15,"letterSpacing":-0.7},"group":"typography"}
+
+, "type/heading": {"type":"typography","value":{"font":"Inter","size":17,"weight":600,"lineHeight":1.3,"letterSpacing":-0.2},"group":"typography"}
+
+, "type/label": {"type":"typography","value":{"font":"Inter","size":14,"weight":600,"lineHeight":1.3},"group":"typography"}
+
+, "type/metric": {"type":"typography","value":{"font":"Inter","size":24,"weight":700,"lineHeight":1.1,"letterSpacing":-0.5},"group":"typography"}
+
+, "type/small": {"type":"typography","value":{"font":"Inter","size":13,"weight":400,"lineHeight":1.4},"group":"typography"}
+
+, "type/timer": {"type":"typography","value":{"font":"Inter","size":64,"weight":700,"lineHeight":1,"letterSpacing":-2.4},"group":"typography"}
+
+, "type/title": {"type":"typography","value":{"font":"Inter","size":20,"weight":700,"lineHeight":1.25,"letterSpacing":-0.3},"group":"typography"}
+},
+"pages": {"qfPage1":{"order":"p02","name":"Components"},"qfPage2":{"order":"p01","name":"Screens"},"qfPage3":{"order":"p00","name":"Cover"},"qfPage4":{"order":"p03","name":"Foundations"}},
+"nodes": {
+"qf000001": {"type":"frame","parent":"qfLibBoard","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf000002": {"type":"text","parent":"qf000001","order":"a0","name":"Title","content":"Brisk fitness coach: components","style":{"size":40,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "qf000003": {"type":"text","parent":"qf000001","order":"a1","name":"Subtitle","content":"Every main used on the screens. Edit a main and its instances follow.","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000004": {"type":"frame","parent":"qfLibBoard","order":"a1","name":"System","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf000005": {"type":"frame","parent":"qf000004","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf000006": {"type":"text","parent":"qf000005","order":"a0","name":"Section title","content":"System","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000007": {"type":"rect","parent":"qf000005","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf000008": {"type":"frame","parent":"qf000004","order":"a1","name":"System items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "qf000009": {"type":"frame","parent":"qf000008","order":"a0","name":"Status bar","layout":{"dir":"column","gap":12}}
+
+, "qf00000a": {"type":"text","parent":"qf000009","order":"a0","name":"Label","content":"Status bar","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00000b": {"type":"frame","parent":"qfStatus","order":"a1","name":"Icons","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "qf00000c": {"type":"icon","parent":"qf00000b","order":"a0","name":"Icon/signal","w":17,"h":17,"set":"lucide","icon":"signal","color":{"$ref":"color/ink"}}
+
+, "qf00000d": {"type":"icon","parent":"qf00000b","order":"a1","name":"Icon/wifi","w":17,"h":17,"set":"lucide","icon":"wifi","color":{"$ref":"color/ink"}}
+
+, "qf00000e": {"type":"icon","parent":"qf00000b","order":"a2","name":"Icon/battery-full","w":24,"h":24,"set":"lucide","icon":"battery-full","color":{"$ref":"color/ink"}}
+
+, "qf00000f": {"type":"frame","parent":"qf000008","order":"a1","name":"Home indicator","layout":{"dir":"column","gap":12}}
+
+, "qf00000g": {"type":"text","parent":"qf00000f","order":"a0","name":"Label","content":"Home indicator","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00000h": {"type":"rect","parent":"qfHomeBar","order":"a0","name":"Bar","w":134,"h":5,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/ink"}}
+
+, "qf00000i": {"type":"frame","parent":"qf000008","order":"a2","name":"Tab bar","layout":{"dir":"column","gap":12}}
+
+, "qf00000j": {"type":"text","parent":"qf00000i","order":"a0","name":"Label","content":"Tab bar","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00000k": {"type":"frame","parent":"qfTabBar","order":"a0","name":"Items","w":{"mode":"fill"},"layout":{"dir":"row","pad":[0,12]}}
+
+, "qf00000l": {"type":"frame","parent":"qf00000k","order":"a0","name":"Today","w":91.5,"layout":{"dir":"column","gap":4,"pad":[4,0],"align":"center"}}
+
+, "qf00000m": {"type":"frame","parent":"qf00000k","order":"a1","name":"Plan","w":91.5,"layout":{"dir":"column","gap":4,"pad":[4,0],"align":"center"}}
+
+, "qf00000n": {"type":"frame","parent":"qf00000k","order":"a2","name":"Progress","w":91.5,"layout":{"dir":"column","gap":4,"pad":[4,0],"align":"center"}}
+
+, "qf00000o": {"type":"frame","parent":"qf00000k","order":"a3","name":"Profile","w":91.5,"layout":{"dir":"column","gap":4,"pad":[4,0],"align":"center"}}
+
+, "qf00000p": {"type":"instance","parent":"qfTabBar","order":"a1","of":"qfHomeBar","props":{"w":{"mode":"fill"}}}
+
+, "qf00000q": {"type":"frame","parent":"qfLibBoard","order":"a2","name":"Actions","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf00000r": {"type":"frame","parent":"qf00000q","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf00000s": {"type":"text","parent":"qf00000r","order":"a0","name":"Section title","content":"Actions","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00000t": {"type":"rect","parent":"qf00000r","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf00000u": {"type":"frame","parent":"qf00000q","order":"a1","name":"Actions items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "qf00000v": {"type":"frame","parent":"qf00000u","order":"a0","name":"Button","layout":{"dir":"column","gap":12}}
+
+, "qf00000w": {"type":"text","parent":"qf00000v","order":"a0","name":"Label","content":"Button","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00000x": {"type":"frame","parent":"qf00000u","order":"a1","name":"Icon button","layout":{"dir":"column","gap":12}}
+
+, "qf00000y": {"type":"text","parent":"qf00000x","order":"a0","name":"Label","content":"Icon button","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00000z": {"type":"frame","parent":"qf00000u","order":"a2","name":"Chip","layout":{"dir":"column","gap":12}}
+
+, "qf000010": {"type":"text","parent":"qf00000z","order":"a0","name":"Label","content":"Chip","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000011": {"type":"frame","parent":"qf00000u","order":"a3","name":"Toggle","layout":{"dir":"column","gap":12}}
+
+, "qf000012": {"type":"text","parent":"qf000011","order":"a0","name":"Label","content":"Toggle","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000013": {"type":"ellipse","parent":"qfToggle","order":"a0","name":"Knob","w":27,"h":27,"fill":{"$ref":"color/knob"}}
+
+, "qf000014": {"type":"frame","parent":"qf00000u","order":"a4","name":"Toggle/Off","layout":{"dir":"column","gap":12}}
+
+, "qf000015": {"type":"text","parent":"qf000014","order":"a0","name":"Label","content":"Toggle/Off","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000016": {"type":"frame","parent":"qf00000u","order":"a5","name":"Segmented control","layout":{"dir":"column","gap":12}}
+
+, "qf000017": {"type":"text","parent":"qf000016","order":"a0","name":"Label","content":"Segmented control","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000018": {"type":"frame","parent":"qfLibBoard","order":"a3","name":"Navigation","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf000019": {"type":"frame","parent":"qf000018","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf00001a": {"type":"text","parent":"qf000019","order":"a0","name":"Section title","content":"Navigation","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001b": {"type":"rect","parent":"qf000019","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf00001c": {"type":"frame","parent":"qf000018","order":"a1","name":"Navigation items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "qf00001d": {"type":"frame","parent":"qf00001c","order":"a0","name":"Nav header","layout":{"dir":"column","gap":12}}
+
+, "qf00001e": {"type":"text","parent":"qf00001d","order":"a0","name":"Label","content":"Nav header","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001f": {"type":"frame","parent":"qf00001c","order":"a1","name":"Section header","layout":{"dir":"column","gap":12}}
+
+, "qf00001g": {"type":"text","parent":"qf00001f","order":"a0","name":"Label","content":"Section header","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001h": {"type":"frame","parent":"qfLibBoard","order":"a4","name":"Content","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf00001i": {"type":"frame","parent":"qf00001h","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf00001j": {"type":"text","parent":"qf00001i","order":"a0","name":"Section title","content":"Content","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001k": {"type":"rect","parent":"qf00001i","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf00001l": {"type":"frame","parent":"qf00001h","order":"a1","name":"Content items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "qf00001m": {"type":"frame","parent":"qf00001l","order":"a0","name":"Avatar","layout":{"dir":"column","gap":12}}
+
+, "qf00001n": {"type":"text","parent":"qf00001m","order":"a0","name":"Label","content":"Avatar","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001o": {"type":"frame","parent":"qf00001l","order":"a1","name":"Badge","layout":{"dir":"column","gap":12}}
+
+, "qf00001p": {"type":"text","parent":"qf00001o","order":"a0","name":"Label","content":"Badge","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001q": {"type":"frame","parent":"qfLibBoard","order":"a5","name":"Data","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf00001r": {"type":"frame","parent":"qf00001q","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf00001s": {"type":"text","parent":"qf00001r","order":"a0","name":"Section title","content":"Data","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001t": {"type":"rect","parent":"qf00001r","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf00001u": {"type":"frame","parent":"qf00001q","order":"a1","name":"Data items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "qf00001v": {"type":"frame","parent":"qf00001u","order":"a0","name":"Progress ring","layout":{"dir":"column","gap":12}}
+
+, "qf00001w": {"type":"text","parent":"qf00001v","order":"a0","name":"Label","content":"Progress ring","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001x": {"type":"frame","parent":"qf00001u","order":"a1","name":"Stat tile","layout":{"dir":"column","gap":12}}
+
+, "qf00001y": {"type":"text","parent":"qf00001x","order":"a0","name":"Label","content":"Stat tile","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00001z": {"type":"frame","parent":"qfStat","order":"a1","name":"Text","layout":{"dir":"column","gap":2}}
+
+, "qf000020": {"type":"frame","parent":"qf00001z","order":"a0","name":"Value","layout":{"dir":"row","gap":3,"align":"baseline"}}
+
+, "qf000021": {"type":"frame","parent":"qf00001u","order":"a2","name":"Habit row","layout":{"dir":"column","gap":12}}
+
+, "qf000022": {"type":"text","parent":"qf000021","order":"a0","name":"Label","content":"Habit row","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000023": {"type":"frame","parent":"qfHabit","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
+
+, "qf000024": {"type":"frame","parent":"qf00001u","order":"a3","name":"Workout card","layout":{"dir":"column","gap":12}}
+
+, "qf000025": {"type":"text","parent":"qf000024","order":"a0","name":"Label","content":"Workout card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000026": {"type":"frame","parent":"qfWCard","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":6}}
+
+, "qf000027": {"type":"frame","parent":"qf000026","order":"a2","name":"Meta","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "qf000028": {"type":"frame","parent":"qf000027","order":"a0","name":"clock","layout":{"dir":"row","gap":4,"align":"center"}}
+
+, "qf000029": {"type":"icon","parent":"qf000028","order":"a0","name":"Icon/clock","w":14,"h":14,"set":"lucide","icon":"clock","color":{"$ref":"color/muted"}}
+
+, "qf00002a": {"type":"frame","parent":"qf000027","order":"a1","name":"flame","layout":{"dir":"row","gap":4,"align":"center"}}
+
+, "qf00002b": {"type":"icon","parent":"qf00002a","order":"a0","name":"Icon/flame","w":14,"h":14,"set":"lucide","icon":"flame","color":{"$ref":"color/muted"}}
+
+, "qf00002c": {"type":"frame","parent":"qf00001u","order":"a4","name":"Exercise row","layout":{"dir":"column","gap":12}}
+
+, "qf00002d": {"type":"text","parent":"qf00002c","order":"a0","name":"Label","content":"Exercise row","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00002e": {"type":"frame","parent":"qfExercise","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
+
+, "qf00002f": {"type":"frame","parent":"qf00001u","order":"a5","name":"Goal option","layout":{"dir":"column","gap":12}}
+
+, "qf00002g": {"type":"text","parent":"qf00002f","order":"a0","name":"Label","content":"Goal option","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00002h": {"type":"frame","parent":"qfOption","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
+
+, "qf00002i": {"type":"frame","parent":"qf00001u","order":"a6","name":"Setting row","layout":{"dir":"column","gap":12}}
+
+, "qf00002j": {"type":"text","parent":"qf00002i","order":"a0","name":"Label","content":"Setting row","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00002k": {"type":"frame","parent":"qfCover","order":"a0","name":"Intro","w":520,"layout":{"dir":"column","gap":24}}
+
+, "qf00002l": {"type":"text","parent":"qf00002k","order":"a0","name":"Eyebrow","content":"Mobile app template","style":{"letterSpacing":1.2,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "qf00002m": {"type":"text","parent":"qf00002k","order":"a1","name":"Title","w":{"mode":"fill"},"content":"Brisk fitness coach","grow":"fixed-width","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00002n": {"type":"text","parent":"qf00002k","order":"a2","name":"Description","w":{"mode":"fill"},"content":"Onboarding, a daily plan, workout detail, a live workout, progress charts and a profile for an iPhone fitness and habit app. Built from 20 components with light and dark tokens.","grow":"fixed-width","style":{"size":20,"lineHeight":1.5,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00002o": {"type":"frame","parent":"qfCover","order":"a1","name":"Preview","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":[24,0,0,24],"clip":true,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"},"width":{"t":1,"b":1,"l":1}},"layout":{"dir":"column","gap":24,"pad":40}}
+
+, "qf00002p": {"type":"frame","parent":"qf00002o","order":"a0","name":"Phones","w":{"mode":"fill"},"h":{"mode":"fill"},"layout":{"dir":"row","gap":24,"justify":"center","align":"center"}}
+
+, "qf00002q": {"type":"frame","parent":"qf00002p","order":"a0","name":"Today","w":300,"h":560,"radius":40,"clip":true,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"effects":{"$ref":"shadow/phone"},"layout":{"dir":"column","gap":14,"pad":[24,16]}}
+
+, "qf00002r": {"type":"frame","parent":"qf00002q","order":"a0","name":"Heading","w":{"mode":"fill"},"layout":{"dir":"column","gap":4}}
+
+, "qf00002s": {"type":"text","parent":"qf00002r","order":"a0","name":"Eyebrow","content":"Tuesday, October 6","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00002t": {"type":"text","parent":"qf00002r","order":"a1","name":"Title","w":{"mode":"fill"},"content":"Morning, Maya","grow":"fixed-width","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00002u": {"type":"frame","parent":"qf00002q","order":"a1","name":"Rings","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"row","gap":14,"pad":14,"align":"center"}}
+
+, "qf00002v": {"type":"instance","parent":"qf00002u","order":"a0","of":"qfRing","args":{"label":"of move goal","size":"md","tone":"accent","value":"72%"},"overrides":{"qfRgArc":{"set":{"sweepAngle":-259}}}}
+
+, "qf00002w": {"type":"frame","parent":"qf00002u","order":"a1","name":"Totals","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf00002x": {"type":"frame","parent":"qf00002w","order":"a0","name":"of 600 moved","layout":{"dir":"column"}}
+
+, "qf00002y": {"type":"text","parent":"qf00002x","order":"a0","name":"432 kcal","content":"432 kcal","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00002z": {"type":"text","parent":"qf00002x","order":"a1","name":"of 600 moved","content":"of 600 moved","style":{"size":12,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000030": {"type":"frame","parent":"qf00002w","order":"a1","name":"of 30 exercise","layout":{"dir":"column"}}
+
+, "qf000031": {"type":"text","parent":"qf000030","order":"a0","name":"24 min","content":"24 min","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf000032": {"type":"text","parent":"qf000030","order":"a1","name":"of 30 exercise","content":"of 30 exercise","style":{"size":12,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000033": {"type":"instance","parent":"qf00002q","order":"a2","of":"qfWCard","props":{"w":{"mode":"fill"}},"args":{"duration":"45 min","eyebrow":"Today, 18:00","kcal":"380 kcal","title":"Lower body strength"}}
+
+, "qf000034": {"type":"instance","parent":"qf00002q","order":"a3","of":"qfHabit","props":{"w":{"mode":"fill"}},"args":{"detail":"5 of 8 glasses","state":"todo","title":"Drink 2 L of water","tone":"blue"}}
+
+, "qf000035": {"type":"instance","parent":"qf00002q","order":"a4","of":"qfHabit","props":{"w":{"mode":"fill"}},"args":{"detail":"Done at 7:40","state":"done","title":"Stretch 10 min","tone":"violet"},"overrides":{"qfHbIcon":{"set":{"icon":"person-standing"}}}}
+
+, "qf000036": {"type":"frame","parent":"qf00002p","order":"a1","name":"Workout","w":300,"h":560,"theme":{"mode":"dark"},"radius":40,"clip":true,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"effects":{"$ref":"shadow/phone"},"layout":{"dir":"column","gap":14,"pad":[24,16]}}
+
+, "qf000037": {"type":"frame","parent":"qf000036","order":"a0","name":"Segments","w":{"mode":"fill"},"layout":{"dir":"row","gap":4}}
+
+, "qf000038": {"type":"rect","parent":"qf000037","order":"a0","name":"Exercise 1","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/green"}}
+
+, "qf000039": {"type":"rect","parent":"qf000037","order":"a1","name":"Exercise 2","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent"}}
+
+, "qf00003a": {"type":"rect","parent":"qf000037","order":"a2","name":"Exercise 3","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00003b": {"type":"rect","parent":"qf000037","order":"a3","name":"Exercise 4","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00003c": {"type":"rect","parent":"qf000037","order":"a4","name":"Exercise 5","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00003d": {"type":"rect","parent":"qf000037","order":"a5","name":"Exercise 6","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00003e": {"type":"frame","parent":"qf000036","order":"a1","name":"Heading","w":{"mode":"fill"},"layout":{"dir":"column","gap":4,"align":"center"}}
+
+, "qf00003f": {"type":"text","parent":"qf00003e","order":"a0","name":"Romanian deadlift","content":"Romanian deadlift","style":{"align":"center","typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00003g": {"type":"text","parent":"qf00003e","order":"a1","name":"Set 3 of 4 · 8 reps at 40 kg","content":"Set 3 of 4 · 8 reps at 40 kg","style":{"align":"center","typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00003h": {"type":"frame","parent":"qf000036","order":"a2","name":"Timer","w":{"mode":"fill"},"layout":{"dir":"row","pad":[12,0],"justify":"center"}}
+
+, "qf00003i": {"type":"instance","parent":"qf00003h","order":"a0","of":"qfRing","args":{"label":"Rest left","size":"lg","tone":"accent","value":"0:45"},"overrides":{"qfRgArc":{"set":{"sweepAngle":-223}}}}
+
+, "qf00003j": {"type":"frame","parent":"qf000036","order":"a3","name":"Controls","w":{"mode":"fill"},"layout":{"dir":"row","gap":12,"justify":"center","align":"center"}}
+
+, "qf00003k": {"type":"instance","parent":"qf00003j","order":"a0","of":"qfIconBtn","args":{"variant":"soft"},"overrides":{"qfIbIcon":{"set":{"icon":"pause"}}}}
+
+, "qf00003l": {"type":"instance","parent":"qf00003j","order":"a1","of":"qfBtn0","props":{"w":{"mode":"fill"}},"args":{"label":"Log set","variant":"accent"}}
+
+, "qf00003m": {"type":"instance","parent":"qf000036","order":"a4","of":"qfExercise","props":{"w":{"mode":"fill"}},"args":{"detail":"3 sets · 12 per leg","index":"3","name":"Walking lunge","state":"next"}}
+
+, "qf00003n": {"type":"frame","parent":null,"order":"a2","name":"Onboarding","x":0,"y":0,"w":390,"h":844,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"qfPage2"}
+
+, "qf00003o": {"type":"instance","parent":"qf00003n","order":"a0","of":"qfStatus","props":{"w":{"mode":"fill"}}}
+
+, "qf00003p": {"type":"frame","parent":"qf00003n","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"clip":true,"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":[8,20,20,20]}}
+
+, "qf00003q": {"type":"frame","parent":"qf00003p","order":"a0","name":"Progress","w":{"mode":"fill"},"layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "qf00003r": {"type":"instance","parent":"qf00003q","order":"a0","of":"qfIconBtn","args":{"variant":"surface"}}
+
+, "qf00003s": {"type":"frame","parent":"qf00003q","order":"a1","name":"Steps","w":{"mode":"fill"},"layout":{"dir":"row","gap":6}}
+
+, "qf00003t": {"type":"rect","parent":"qf00003s","order":"a0","name":"Step done","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/primary"}}
+
+, "qf00003u": {"type":"rect","parent":"qf00003s","order":"a1","name":"Step done","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/primary"}}
+
+, "qf00003v": {"type":"rect","parent":"qf00003s","order":"a2","name":"Step","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00003w": {"type":"text","parent":"qf00003q","order":"a2","name":"2 of 3","content":"2 of 3","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00003x": {"type":"frame","parent":"qf00003p","order":"a1","name":"Heading","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf00003y": {"type":"text","parent":"qf00003x","order":"a0","name":"What do you want\nto work on?","w":{"mode":"fill"},"content":"What do you want\nto work on?","grow":"fixed-width","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00003z": {"type":"text","parent":"qf00003x","order":"a1","name":"Pick up to two. Brisk builds your weekl…","w":{"mode":"fill"},"content":"Pick up to two. Brisk builds your weekly plan around them and you can change them later.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000040": {"type":"frame","parent":"qf00003p","order":"a2","name":"Options","w":{"mode":"fill"},"layout":{"dir":"column","gap":10}}
+
+, "qf000041": {"type":"instance","parent":"qf000040","order":"a0","of":"qfOption","props":{"w":{"mode":"fill"}},"args":{"detail":"Three short lifting sessions a week","state":"selected","title":"Build strength","tone":"accent"},"overrides":{"qfOpIcon":{"set":{"icon":"dumbbell"}}}}
+
+, "qf000042": {"type":"instance","parent":"qf000040","order":"a1","of":"qfOption","props":{"w":{"mode":"fill"}},"args":{"detail":"From 5 km to your first 10 km","state":"default","title":"Run farther","tone":"green"},"overrides":{"qfOpIcon":{"set":{"icon":"footprints"}}}}
+
+, "qf000043": {"type":"instance","parent":"qf000040","order":"a2","of":"qfOption","props":{"w":{"mode":"fill"}},"args":{"detail":"A wind-down routine and a steady bedtime","state":"selected","title":"Sleep better","tone":"violet"},"overrides":{"qfOpIcon":{"set":{"icon":"moon"}}}}
+
+, "qf000044": {"type":"instance","parent":"qf000040","order":"a3","of":"qfOption","props":{"w":{"mode":"fill"}},"args":{"detail":"8,000 steps and a stretch break","state":"default","title":"Move every day","tone":"blue"},"overrides":{"qfOpIcon":{"set":{"icon":"activity"}}}}
+
+, "qf000045": {"type":"frame","parent":"qf00003p","order":"a3","name":"Days","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf000046": {"type":"text","parent":"qf000045","order":"a0","name":"Days a week you can train","content":"Days a week you can train","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf000047": {"type":"frame","parent":"qf000045","order":"a1","name":"Chips","w":{"mode":"fill"},"layout":{"dir":"row","gap":8}}
+
+, "qf000048": {"type":"instance","parent":"qf000047","order":"a0","of":"qfChip","props":{"w":{"mode":"fill"}},"args":{"label":"2","state":"default"}}
+
+, "qf000049": {"type":"instance","parent":"qf000047","order":"a1","of":"qfChip","props":{"w":{"mode":"fill"}},"args":{"label":"3","state":"selected"}}
+
+, "qf00004a": {"type":"instance","parent":"qf000047","order":"a2","of":"qfChip","props":{"w":{"mode":"fill"}},"args":{"label":"4","state":"default"}}
+
+, "qf00004b": {"type":"instance","parent":"qf000047","order":"a3","of":"qfChip","props":{"w":{"mode":"fill"}},"args":{"label":"5","state":"default"}}
+
+, "qf00004c": {"type":"instance","parent":"qf000047","order":"a4","of":"qfChip","props":{"w":{"mode":"fill"}},"args":{"label":"6","state":"default"}}
+
+, "qf00004d": {"type":"frame","parent":"qf00003n","order":"a2","name":"Bottom bar","w":{"mode":"fill"},"layout":{"dir":"column"}}
+
+, "qf00004e": {"type":"frame","parent":"qf00004d","order":"a0","name":"Actions","w":{"mode":"fill"},"layout":{"dir":"column","gap":10,"pad":[12,20,4,20]}}
+
+, "qf00004f": {"type":"instance","parent":"qf00004e","order":"a0","of":"qfBtn0","props":{"w":{"mode":"fill"}},"args":{"label":"Continue"}}
+
+, "qf00004g": {"type":"instance","parent":"qf00004d","order":"a1","of":"qfHomeBar","props":{"w":{"mode":"fill"}}}
+
+, "qf00004h": {"type":"frame","parent":null,"order":"a3","name":"Today","x":550,"y":0,"w":390,"h":844,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"qfPage2"}
+
+, "qf00004i": {"type":"instance","parent":"qf00004h","order":"a0","of":"qfStatus","props":{"w":{"mode":"fill"}}}
+
+, "qf00004j": {"type":"frame","parent":"qf00004h","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"clip":true,"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":[8,20,20,20]}}
+
+, "qf00004k": {"type":"frame","parent":"qf00004j","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "qf00004l": {"type":"frame","parent":"qf00004k","order":"a0","name":"Greeting","w":{"mode":"fill"},"layout":{"dir":"column","gap":4}}
+
+, "qf00004m": {"type":"text","parent":"qf00004l","order":"a0","name":"Tuesday, October 6","content":"Tuesday, October 6","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00004n": {"type":"text","parent":"qf00004l","order":"a1","name":"Morning, Maya","content":"Morning, Maya","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00004o": {"type":"instance","parent":"qf00004k","order":"a1","of":"qfAvatar","args":{"initials":"MO","size":"sm"}}
+
+, "qf00004p": {"type":"frame","parent":"qf00004j","order":"a1","name":"Rings","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"row","gap":18,"pad":16,"align":"center"}}
+
+, "qf00004q": {"type":"instance","parent":"qf00004p","order":"a0","of":"qfRing","args":{"label":"of move goal","size":"md","tone":"accent","value":"72%"},"overrides":{"qfRgArc":{"set":{"sweepAngle":-259}}}}
+
+, "qf00004r": {"type":"frame","parent":"qf00004p","order":"a1","name":"Totals","w":{"mode":"fill"},"layout":{"dir":"column","gap":10}}
+
+, "qf00004s": {"type":"frame","parent":"qf00004r","order":"a0","name":"of 600 moved","w":{"mode":"fill"},"layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "qf00004t": {"type":"rect","parent":"qf00004s","order":"a0","name":"Swatch","w":4,"h":30,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent"}}
+
+, "qf00004u": {"type":"frame","parent":"qf00004s","order":"a1","name":"Text","layout":{"dir":"column"}}
+
+, "qf00004v": {"type":"text","parent":"qf00004u","order":"a0","name":"432 kcal","content":"432 kcal","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00004w": {"type":"text","parent":"qf00004u","order":"a1","name":"of 600 moved","content":"of 600 moved","style":{"size":12,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00004x": {"type":"frame","parent":"qf00004r","order":"a1","name":"of 30 min exercise","w":{"mode":"fill"},"layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "qf00004y": {"type":"rect","parent":"qf00004x","order":"a0","name":"Swatch","w":4,"h":30,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/green"}}
+
+, "qf00004z": {"type":"frame","parent":"qf00004x","order":"a1","name":"Text","layout":{"dir":"column"}}
+
+, "qf000050": {"type":"text","parent":"qf00004z","order":"a0","name":"24 min","content":"24 min","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf000051": {"type":"text","parent":"qf00004z","order":"a1","name":"of 30 min exercise","content":"of 30 min exercise","style":{"size":12,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000052": {"type":"frame","parent":"qf00004r","order":"a2","name":"of 8,000 steps","w":{"mode":"fill"},"layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "qf000053": {"type":"rect","parent":"qf000052","order":"a0","name":"Swatch","w":4,"h":30,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/blue"}}
+
+, "qf000054": {"type":"frame","parent":"qf000052","order":"a1","name":"Text","layout":{"dir":"column"}}
+
+, "qf000055": {"type":"text","parent":"qf000054","order":"a0","name":"6,240","content":"6,240","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf000056": {"type":"text","parent":"qf000054","order":"a1","name":"of 8,000 steps","content":"of 8,000 steps","style":{"size":12,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000057": {"type":"frame","parent":"qf00004j","order":"a2","name":"Plan","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf000058": {"type":"instance","parent":"qf000057","order":"a0","of":"qfSecHead","props":{"w":{"mode":"fill"}},"args":{"action":"Week plan","title":"Today’s workout"}}
+
+, "qf000059": {"type":"instance","parent":"qf000057","order":"a1","of":"qfWCard","props":{"w":{"mode":"fill"}},"args":{"duration":"45 min","eyebrow":"Today, 18:00","kcal":"380 kcal","title":"Lower body strength"}}
+
+, "qf00005a": {"type":"frame","parent":"qf00004j","order":"a3","name":"Habits","w":{"mode":"fill"},"layout":{"dir":"column","gap":10}}
+
+, "qf00005b": {"type":"instance","parent":"qf00005a","order":"a0","of":"qfSecHead","props":{"w":{"mode":"fill"}},"args":{"action":"1 of 3 done","title":"Habits"}}
+
+, "qf00005c": {"type":"instance","parent":"qf00005a","order":"a1","of":"qfHabit","props":{"w":{"mode":"fill"}},"args":{"detail":"5 of 8 glasses","state":"todo","title":"Drink 2 L of water","tone":"blue"},"overrides":{"qfHbIcon":{"set":{"icon":"glass-water"}}}}
+
+, "qf00005d": {"type":"instance","parent":"qf00005a","order":"a2","of":"qfHabit","props":{"w":{"mode":"fill"}},"args":{"detail":"Done at 7:40","state":"done","title":"Stretch 10 min","tone":"violet"},"overrides":{"qfHbIcon":{"set":{"icon":"person-standing"}}}}
+
+, "qf00005e": {"type":"instance","parent":"qf00005a","order":"a3","of":"qfHabit","props":{"w":{"mode":"fill"}},"args":{"detail":"Last night 23:12","state":"todo","title":"Lights out by 23:00","tone":"neutral"},"overrides":{"qfHbIcon":{"set":{"icon":"moon"}}}}
+
+, "qf00005f": {"type":"instance","parent":"qf00004h","order":"a2","of":"qfTabBar","props":{"w":{"mode":"fill"}},"args":{"active":"today"}}
+
+, "qf00005g": {"type":"frame","parent":null,"order":"a4","name":"Workout detail","x":1100,"y":0,"w":390,"h":844,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"qfPage2"}
+
+, "qf00005h": {"type":"instance","parent":"qf00005g","order":"a0","of":"qfStatus","props":{"w":{"mode":"fill"}}}
+
+, "qf00005i": {"type":"instance","parent":"qf00005g","order":"a1","of":"qfNavHead","props":{"w":{"mode":"fill"}},"args":{"title":"Workout"},"overrides":{"qfNhAct":{"set":{"args":{"variant":"surface"}}},"qfNhAct/qfIbIcon":{"set":{"icon":"bookmark"}}}}
+
+, "qf00005j": {"type":"frame","parent":"qf00005g","order":"a2","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"clip":true,"layout":{"dir":"column","gap":20,"pad":[4,20,12,20]}}
+
+, "qf00005k": {"type":"frame","parent":"qf00005j","order":"a0","name":"Hero","w":{"mode":"fill"},"h":112,"radius":{"$ref":"radius/xl"},"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/art-2"}}],"rotation":135},"layout":{"dir":"column","gap":8,"pad":16,"justify":"between"}}
+
+, "qf00005l": {"type":"frame","parent":"qf00005k","order":"a0","name":"Badges","w":{"mode":"fill"},"layout":{"dir":"row","gap":6}}
+
+, "qf00005m": {"type":"instance","parent":"qf00005l","order":"a0","of":"qfBadge","args":{"label":"Strength","tone":"glass"}}
+
+, "qf00005n": {"type":"instance","parent":"qf00005l","order":"a1","of":"qfBadge","args":{"label":"Intermediate","tone":"glass"}}
+
+, "qf00005o": {"type":"frame","parent":"qf00005k","order":"a1","name":"Mark","w":{"mode":"fill"},"layout":{"dir":"row","justify":"end"}}
+
+, "qf00005p": {"type":"icon","parent":"qf00005o","order":"a0","name":"Icon/dumbbell","w":44,"h":44,"set":"lucide","icon":"dumbbell","color":{"$ref":"color/on-art"}}
+
+, "qf00005q": {"type":"frame","parent":"qf00005j","order":"a1","name":"Heading","w":{"mode":"fill"},"layout":{"dir":"column","gap":6}}
+
+, "qf00005r": {"type":"text","parent":"qf00005q","order":"a0","name":"Lower body strength","w":{"mode":"fill"},"content":"Lower body strength","grow":"fixed-width","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00005s": {"type":"text","parent":"qf00005q","order":"a1","name":"Hinges, squats and lunges. Week 3 adds …","w":{"mode":"fill"},"content":"Hinges, squats and lunges. Week 3 adds 2.5 kg to the main lifts.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00005t": {"type":"frame","parent":"qf00005j","order":"a2","name":"Stats","w":{"mode":"fill"},"layout":{"dir":"row","gap":10}}
+
+, "qf00005u": {"type":"instance","parent":"qf00005t","order":"a0","of":"qfStat","props":{"w":110},"args":{"label":"Duration","tone":"accent","unit":"min","value":"45"},"overrides":{"qfSttIcon":{"set":{"icon":"clock"}}}}
+
+, "qf00005v": {"type":"instance","parent":"qf00005t","order":"a1","of":"qfStat","props":{"w":110},"args":{"label":"Exercises","tone":"green","unit":"moves","value":"6"},"overrides":{"qfSttIcon":{"set":{"icon":"list-checks"}}}}
+
+, "qf00005w": {"type":"instance","parent":"qf00005t","order":"a2","of":"qfStat","props":{"w":110},"args":{"label":"Estimate","tone":"blue","unit":"kcal","value":"380"},"overrides":{"qfSttIcon":{"set":{"icon":"flame"}}}}
+
+, "qf00005x": {"type":"frame","parent":"qf00005j","order":"a3","name":"Exercises","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf00005y": {"type":"instance","parent":"qf00005x","order":"a0","of":"qfSecHead","props":{"w":{"mode":"fill"}},"args":{"action":"Edit","title":"Exercises"}}
+
+, "qf00005z": {"type":"instance","parent":"qf00005x","order":"a1","of":"qfExercise","props":{"w":{"mode":"fill"}},"args":{"detail":"4 sets · 10 reps · 20 kg","index":"1","name":"Goblet squat","state":"next"}}
+
+, "qf000060": {"type":"instance","parent":"qf00005x","order":"a2","of":"qfExercise","props":{"w":{"mode":"fill"}},"args":{"detail":"4 sets · 8 reps · 40 kg","index":"2","name":"Romanian deadlift","state":"next"}}
+
+, "qf000061": {"type":"instance","parent":"qf00005x","order":"a3","of":"qfExercise","props":{"w":{"mode":"fill"}},"args":{"detail":"3 sets · 12 per leg","index":"3","name":"Walking lunge","state":"next"}}
+
+, "qf000062": {"type":"frame","parent":"qf00005x","order":"a4","name":"More","w":{"mode":"fill"},"layout":{"dir":"row","gap":6,"pad":[4,0],"justify":"center","align":"center"}}
+
+, "qf000063": {"type":"text","parent":"qf000062","order":"a0","name":"3 more: hip thrust, step-up, side plank","content":"3 more: hip thrust, step-up, side plank","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "qf000064": {"type":"icon","parent":"qf000062","order":"a1","name":"Icon/chevron-down","w":16,"h":16,"set":"lucide","icon":"chevron-down","color":{"$ref":"color/accent"}}
+
+, "qf000065": {"type":"frame","parent":"qf00005g","order":"a3","name":"Bottom bar","w":{"mode":"fill"},"layout":{"dir":"column"}}
+
+, "qf000066": {"type":"frame","parent":"qf000065","order":"a0","name":"Actions","w":{"mode":"fill"},"layout":{"dir":"column","gap":10,"pad":[12,20,4,20]}}
+
+, "qf000067": {"type":"instance","parent":"qf000066","order":"a0","of":"qfBtn0","props":{"w":{"mode":"fill"}},"args":{"icon":true,"label":"Start workout","variant":"accent"}}
+
+, "qf000068": {"type":"instance","parent":"qf000065","order":"a1","of":"qfHomeBar","props":{"w":{"mode":"fill"}}}
+
+, "qf000069": {"type":"frame","parent":null,"order":"a5","name":"Workout in progress","x":1650,"y":0,"w":390,"h":844,"theme":{"mode":"dark"},"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"qfPage2"}
+
+, "qf00006a": {"type":"instance","parent":"qf000069","order":"a0","of":"qfStatus","props":{"w":{"mode":"fill"}}}
+
+, "qf00006b": {"type":"frame","parent":"qf000069","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"clip":true,"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":[8,20,12,20]}}
+
+, "qf00006c": {"type":"frame","parent":"qf00006b","order":"a0","name":"Top","w":{"mode":"fill"},"layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "qf00006d": {"type":"instance","parent":"qf00006c","order":"a0","of":"qfIconBtn","args":{"variant":"soft"},"overrides":{"qfIbIcon":{"set":{"icon":"chevron-down"}}}}
+
+, "qf00006e": {"type":"frame","parent":"qf00006c","order":"a1","name":"Title","w":{"mode":"fill"},"layout":{"dir":"column","gap":2,"align":"center"}}
+
+, "qf00006f": {"type":"text","parent":"qf00006e","order":"a0","name":"Lower body strength","content":"Lower body strength","style":{"size":15,"align":"center","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00006g": {"type":"text","parent":"qf00006e","order":"a1","name":"18:42 elapsed","content":"18:42 elapsed","style":{"align":"center","typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00006h": {"type":"instance","parent":"qf00006c","order":"a2","of":"qfIconBtn","args":{"variant":"soft"},"overrides":{"qfIbIcon":{"set":{"icon":"list-checks"}}}}
+
+, "qf00006i": {"type":"frame","parent":"qf00006b","order":"a1","name":"Workout progress","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf00006j": {"type":"frame","parent":"qf00006i","order":"a0","name":"Segments","w":{"mode":"fill"},"layout":{"dir":"row","gap":4}}
+
+, "qf00006k": {"type":"rect","parent":"qf00006j","order":"a0","name":"Exercise 1","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/green"}}
+
+, "qf00006l": {"type":"rect","parent":"qf00006j","order":"a1","name":"Exercise 2","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent"}}
+
+, "qf00006m": {"type":"rect","parent":"qf00006j","order":"a2","name":"Exercise 3","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00006n": {"type":"rect","parent":"qf00006j","order":"a3","name":"Exercise 4","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00006o": {"type":"rect","parent":"qf00006j","order":"a4","name":"Exercise 5","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00006p": {"type":"rect","parent":"qf00006j","order":"a5","name":"Exercise 6","w":{"mode":"fill"},"h":4,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/track"}}
+
+, "qf00006q": {"type":"text","parent":"qf00006i","order":"a1","name":"Exercise 2 of 6","content":"Exercise 2 of 6","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00006r": {"type":"frame","parent":"qf00006b","order":"a2","name":"Now","w":{"mode":"fill"},"layout":{"dir":"column","gap":6,"align":"center"}}
+
+, "qf00006s": {"type":"text","parent":"qf00006r","order":"a0","name":"Romanian deadlift","content":"Romanian deadlift","style":{"align":"center","typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00006t": {"type":"text","parent":"qf00006r","order":"a1","name":"Set 3 of 4","content":"Set 3 of 4","style":{"align":"center","typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00006u": {"type":"frame","parent":"qf00006b","order":"a3","name":"Timer","w":{"mode":"fill"},"layout":{"dir":"row","justify":"center"}}
+
+, "qf00006v": {"type":"instance","parent":"qf00006u","order":"a0","of":"qfRing","args":{"label":"Rest left","size":"lg","tone":"accent","value":"0:45"},"overrides":{"qfRgArc":{"set":{"sweepAngle":-223}}}}
+
+, "qf00006w": {"type":"frame","parent":"qf00006b","order":"a4","name":"Targets","w":{"mode":"fill"},"layout":{"dir":"row","gap":10}}
+
+, "qf00006x": {"type":"instance","parent":"qf00006w","order":"a0","of":"qfStat","props":{"w":110},"args":{"label":"Target","tone":"accent","unit":"reps","value":"8"},"overrides":{"qfSttIcon":{"set":{"icon":"repeat"}}}}
+
+, "qf00006y": {"type":"instance","parent":"qf00006w","order":"a1","of":"qfStat","props":{"w":110},"args":{"label":"Weight","tone":"green","unit":"kg","value":"40"},"overrides":{"qfSttIcon":{"set":{"icon":"dumbbell"}}}}
+
+, "qf00006z": {"type":"instance","parent":"qf00006w","order":"a2","of":"qfStat","props":{"w":110},"args":{"label":"Last RPE","tone":"violet","unit":"/10","value":"7"},"overrides":{"qfSttIcon":{"set":{"icon":"activity"}}}}
+
+, "qf000070": {"type":"frame","parent":"qf00006b","order":"a5","name":"Up next","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf000071": {"type":"text","parent":"qf000070","order":"a0","name":"Up next","content":"Up next","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000072": {"type":"instance","parent":"qf000070","order":"a1","of":"qfExercise","props":{"w":{"mode":"fill"}},"args":{"detail":"3 sets · 12 per leg","index":"3","name":"Walking lunge","state":"next"}}
+
+, "qf000073": {"type":"frame","parent":"qf000069","order":"a2","name":"Bottom bar","w":{"mode":"fill"},"layout":{"dir":"column"}}
+
+, "qf000074": {"type":"frame","parent":"qf000073","order":"a0","name":"Actions","w":{"mode":"fill"},"layout":{"dir":"column","gap":10,"pad":[12,20,4,20]}}
+
+, "qf000075": {"type":"frame","parent":"qf000074","order":"a0","name":"Controls","w":{"mode":"fill"},"layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "qf000076": {"type":"instance","parent":"qf000075","order":"a0","of":"qfIconBtn","args":{"size":"lg","variant":"soft"},"overrides":{"qfIbIcon":{"set":{"icon":"pause"}}}}
+
+, "qf000077": {"type":"instance","parent":"qf000075","order":"a1","of":"qfBtn0","props":{"w":{"mode":"fill"},"h":64},"args":{"icon":true,"label":"Log set","variant":"accent"},"overrides":{"qfBtnIcon":{"set":{"icon":"check"}}}}
+
+, "qf000078": {"type":"instance","parent":"qf000075","order":"a2","of":"qfIconBtn","args":{"size":"lg","variant":"soft"},"overrides":{"qfIbIcon":{"set":{"icon":"skip-forward"}}}}
+
+, "qf000079": {"type":"instance","parent":"qf000073","order":"a1","of":"qfHomeBar","props":{"w":{"mode":"fill"}}}
+
+, "qf00007a": {"type":"frame","parent":null,"order":"a6","name":"Progress","x":2200,"y":0,"w":390,"h":844,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"qfPage2"}
+
+, "qf00007b": {"type":"instance","parent":"qf00007a","order":"a0","of":"qfStatus","props":{"w":{"mode":"fill"}}}
+
+, "qf00007c": {"type":"frame","parent":"qf00007a","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"clip":true,"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":[8,20,20,20]}}
+
+, "qf00007d": {"type":"text","parent":"qf00007c","order":"a0","name":"Progress","content":"Progress","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00007e": {"type":"instance","parent":"qf00007c","order":"a1","of":"qfSeg0","props":{"w":{"mode":"fill"}},"args":{"active":"second","first":"Week","second":"Month","third":"Year"}}
+
+, "qf00007f": {"type":"frame","parent":"qf00007c","order":"a2","name":"Stats","w":{"mode":"fill"},"layout":{"dir":"row","gap":10}}
+
+, "qf00007g": {"type":"instance","parent":"qf00007f","order":"a0","of":"qfStat","props":{"w":110},"args":{"label":"Workouts","tone":"accent","unit":"","value":"14"},"overrides":{"qfSttIcon":{"set":{"icon":"dumbbell"}},"qfSttUnit":{"set":{"visible":false}}}}
+
+, "qf00007h": {"type":"instance","parent":"qf00007f","order":"a1","of":"qfStat","props":{"w":110},"args":{"label":"Active time","tone":"green","unit":"min","value":"612"},"overrides":{"qfSttIcon":{"set":{"icon":"timer"}}}}
+
+, "qf00007i": {"type":"instance","parent":"qf00007f","order":"a2","of":"qfStat","props":{"w":110},"args":{"label":"Streak","tone":"violet","unit":"days","value":"9"},"overrides":{"qfSttIcon":{"set":{"icon":"flame"}}}}
+
+, "qf00007j": {"type":"frame","parent":"qf00007c","order":"a3","name":"Active minutes","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column","gap":14,"pad":16}}
+
+, "qf00007k": {"type":"frame","parent":"qf00007j","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"end"}}
+
+, "qf00007l": {"type":"frame","parent":"qf00007k","order":"a0","name":"Title","layout":{"dir":"column","gap":2}}
+
+, "qf00007m": {"type":"text","parent":"qf00007l","order":"a0","name":"Active minutes","content":"Active minutes","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00007n": {"type":"text","parent":"qf00007l","order":"a1","name":"Average 153 a week","content":"Average 153 a week","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00007o": {"type":"instance","parent":"qf00007k","order":"a1","of":"qfBadge","args":{"label":"+12% vs last month","tone":"green"}}
+
+, "qf00007p": {"type":"frame","parent":"qf00007j","order":"a1","name":"Plot","w":{"mode":"fill"},"h":124,"layout":{"dir":"row","gap":14,"align":"end"}}
+
+, "qf00007q": {"type":"frame","parent":"qf00007p","order":"a0","name":"Sep 14","w":69,"layout":{"dir":"column","gap":6,"align":"center"}}
+
+, "qf00007r": {"type":"text","parent":"qf00007q","order":"a0","name":"142","content":"142","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00007s": {"type":"rect","parent":"qf00007q","order":"a1","name":"Bar","w":44,"h":66,"radius":[6,6,3,3],"fill":{"$ref":"color/accent-soft"}}
+
+, "qf00007t": {"type":"text","parent":"qf00007q","order":"a2","name":"Sep 14","content":"Sep 14","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00007u": {"type":"frame","parent":"qf00007p","order":"a1","name":"Sep 21","w":69,"layout":{"dir":"column","gap":6,"align":"center"}}
+
+, "qf00007v": {"type":"text","parent":"qf00007u","order":"a0","name":"136","content":"136","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00007w": {"type":"rect","parent":"qf00007u","order":"a1","name":"Bar","w":44,"h":64,"radius":[6,6,3,3],"fill":{"$ref":"color/accent-soft"}}
+
+, "qf00007x": {"type":"text","parent":"qf00007u","order":"a2","name":"Sep 21","content":"Sep 21","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00007y": {"type":"frame","parent":"qf00007p","order":"a2","name":"Sep 28","w":69,"layout":{"dir":"column","gap":6,"align":"center"}}
+
+, "qf00007z": {"type":"text","parent":"qf00007y","order":"a0","name":"171","content":"171","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000080": {"type":"rect","parent":"qf00007y","order":"a1","name":"Bar","w":44,"h":80,"radius":[6,6,3,3],"fill":{"$ref":"color/accent-soft"}}
+
+, "qf000081": {"type":"text","parent":"qf00007y","order":"a2","name":"Sep 28","content":"Sep 28","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000082": {"type":"frame","parent":"qf00007p","order":"a3","name":"Oct 5","w":69,"layout":{"dir":"column","gap":6,"align":"center"}}
+
+, "qf000083": {"type":"text","parent":"qf000082","order":"a0","name":"163","content":"163","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/accent"}}
+
+, "qf000084": {"type":"rect","parent":"qf000082","order":"a1","name":"Bar","w":44,"h":76,"radius":[6,6,3,3],"fill":{"$ref":"color/accent"}}
+
+, "qf000085": {"type":"text","parent":"qf000082","order":"a2","name":"Oct 5","content":"Oct 5","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000086": {"type":"frame","parent":"qf00007c","order":"a4","name":"Squat weight","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column","gap":12,"pad":16}}
+
+, "qf000087": {"type":"frame","parent":"qf000086","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"end"}}
+
+, "qf000088": {"type":"frame","parent":"qf000087","order":"a0","name":"Title","layout":{"dir":"column","gap":2}}
+
+, "qf000089": {"type":"text","parent":"qf000088","order":"a0","name":"Goblet squat","content":"Goblet squat","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00008a": {"type":"text","parent":"qf000088","order":"a1","name":"Working weight, up from 15 kg","content":"Working weight, up from 15 kg","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008b": {"type":"frame","parent":"qf000087","order":"a1","name":"Value","layout":{"dir":"row","gap":3,"align":"baseline"}}
+
+, "qf00008c": {"type":"text","parent":"qf00008b","order":"a0","name":"20","content":"20","style":{"size":22,"typography":{"$ref":"type/metric"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00008d": {"type":"text","parent":"qf00008b","order":"a1","name":"kg","content":"kg","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008e": {"type":"frame","parent":"qf000086","order":"a1","name":"Chart","w":318,"h":72,"layout":{"dir":"column"}}
+
+, "qf00008f": {"type":"path","parent":"qf00008e","order":"a0","name":"Area","x":0,"y":0,"position":"absolute","w":318,"h":72,"d":"M0 56 L64 45 L127 45 L191 30 L254 25 L318 4 L318 72 L0 72 Z","viewBox":[0,0,318,72],"fill":{"$ref":"color/accent-soft"},"meta":{"kimo.template.overlay":true}}
+
+, "qf00008g": {"type":"path","parent":"qf00008e","order":"a1","name":"Line","x":0,"y":0,"position":"absolute","w":318,"h":72,"d":"M0 56 L64 45 L127 45 L191 30 L254 25 L318 4","viewBox":[0,0,318,72],"fill":[],"stroke":{"paint":{"$ref":"color/accent"},"width":2.5,"cap":"round","join":"round"},"meta":{"kimo.template.overlay":true}}
+
+, "qf00008h": {"type":"frame","parent":"qf000086","order":"a2","name":"Axis","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between"}}
+
+, "qf00008i": {"type":"text","parent":"qf00008h","order":"a0","name":"Aug 31","content":"Aug 31","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008j": {"type":"text","parent":"qf00008h","order":"a1","name":"Sep 7","content":"Sep 7","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008k": {"type":"text","parent":"qf00008h","order":"a2","name":"Sep 14","content":"Sep 14","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008l": {"type":"text","parent":"qf00008h","order":"a3","name":"Sep 21","content":"Sep 21","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008m": {"type":"text","parent":"qf00008h","order":"a4","name":"Sep 28","content":"Sep 28","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008n": {"type":"text","parent":"qf00008h","order":"a5","name":"Oct 5","content":"Oct 5","style":{"weight":500,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008o": {"type":"instance","parent":"qf00007a","order":"a2","of":"qfTabBar","props":{"w":{"mode":"fill"}},"args":{"active":"progress"}}
+
+, "qf00008p": {"type":"frame","parent":null,"order":"a7","name":"Profile","x":2750,"y":0,"w":390,"h":844,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"qfPage2"}
+
+, "qf00008q": {"type":"instance","parent":"qf00008p","order":"a0","of":"qfStatus","props":{"w":{"mode":"fill"}}}
+
+, "qf00008r": {"type":"frame","parent":"qf00008p","order":"a1","name":"Content","w":{"mode":"fill"},"h":{"mode":"fill"},"clip":true,"layout":{"dir":"column","gap":18,"pad":[8,20,20,20]}}
+
+, "qf00008s": {"type":"frame","parent":"qf00008r","order":"a0","name":"Identity","w":{"mode":"fill"},"layout":{"dir":"column","gap":8,"align":"center"}}
+
+, "qf00008t": {"type":"instance","parent":"qf00008s","order":"a0","of":"qfAvatar","args":{"initials":"MO","size":"lg"}}
+
+, "qf00008u": {"type":"frame","parent":"qf00008s","order":"a1","name":"Names","layout":{"dir":"column","gap":2,"align":"center"}}
+
+, "qf00008v": {"type":"text","parent":"qf00008u","order":"a0","name":"Maya Okafor","content":"Maya Okafor","style":{"align":"center","typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00008w": {"type":"text","parent":"qf00008u","order":"a1","name":"Member since March 2025 · Lisbon","content":"Member since March 2025 · Lisbon","style":{"align":"center","typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00008x": {"type":"frame","parent":"qf00008s","order":"a2","name":"Badges","layout":{"dir":"row","gap":6}}
+
+, "qf00008y": {"type":"instance","parent":"qf00008x","order":"a0","of":"qfBadge","args":{"label":"9-day streak","tone":"accent"}}
+
+, "qf00008z": {"type":"instance","parent":"qf00008x","order":"a1","of":"qfBadge","args":{"label":"Strength block, week 3","tone":"green"}}
+
+, "qf000090": {"type":"frame","parent":"qf00008r","order":"a1","name":"Goals","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf000091": {"type":"text","parent":"qf000090","order":"a0","name":"Group title","content":"Goals","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000092": {"type":"frame","parent":"qf000090","order":"a1","name":"Rows","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"clip":true,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column"}}
+
+, "qf000093": {"type":"instance","parent":"qf000092","order":"a0","of":"qfSetting","props":{"w":{"mode":"fill"}},"args":{"label":"Weekly workouts","tone":"accent","value":"3"},"overrides":{"qfSrIcon":{"set":{"icon":"dumbbell"}}}}
+
+, "qf000094": {"type":"instance","parent":"qf000092","order":"a1","of":"qfSetting","props":{"w":{"mode":"fill"}},"args":{"label":"Daily steps","tone":"blue","value":"8,000"},"overrides":{"qfSrIcon":{"set":{"icon":"footprints"}}}}
+
+, "qf000095": {"type":"instance","parent":"qf000092","order":"a2","of":"qfSetting","props":{"w":{"mode":"fill"}},"args":{"label":"Bedtime","tone":"violet","value":"23:00"},"overrides":{"qfSrIcon":{"set":{"icon":"moon"}}}}
+
+, "qf000096": {"type":"frame","parent":"qf00008r","order":"a2","name":"Reminders and data","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf000097": {"type":"text","parent":"qf000096","order":"a0","name":"Group title","content":"Reminders and data","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf000098": {"type":"frame","parent":"qf000096","order":"a1","name":"Rows","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"clip":true,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column"}}
+
+, "qf000099": {"type":"instance","parent":"qf000098","order":"a0","of":"qfSetting","props":{"w":{"mode":"fill"}},"args":{"label":"Workout reminders","showChevron":false,"showToggle":true,"showValue":false,"tone":"neutral"},"overrides":{"qfSrIcon":{"set":{"icon":"bell"}}}}
+
+, "qf00009a": {"type":"instance","parent":"qf000098","order":"a1","of":"qfSetting","props":{"w":{"mode":"fill"}},"args":{"label":"Sync with Apple Health","showChevron":false,"showToggle":true,"showValue":false,"toggle":"qfToggleOff","tone":"neutral"},"overrides":{"qfSrIcon":{"set":{"icon":"heart-pulse"}}}}
+
+, "qf00009b": {"type":"instance","parent":"qf000098","order":"a2","of":"qfSetting","props":{"w":{"mode":"fill"}},"args":{"label":"Units","tone":"neutral","value":"kg, km"},"overrides":{"qfSrIcon":{"set":{"icon":"ruler"}}}}
+
+, "qf00009c": {"type":"frame","parent":"qf00008r","order":"a3","name":"Account","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf00009d": {"type":"text","parent":"qf00009c","order":"a0","name":"Group title","content":"Account","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00009e": {"type":"frame","parent":"qf00009c","order":"a1","name":"Rows","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"clip":true,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column"}}
+
+, "qf00009f": {"type":"instance","parent":"qf00009e","order":"a0","of":"qfSetting","props":{"w":{"mode":"fill"}},"args":{"label":"Brisk Plus","tone":"accent","value":"Renews Nov 12"},"overrides":{"qfSrIcon":{"set":{"icon":"medal"}}}}
+
+, "qf00009g": {"type":"instance","parent":"qf00008p","order":"a2","of":"qfTabBar","props":{"w":{"mode":"fill"}},"args":{"active":"profile"}}
+
+, "qf00009h": {"type":"frame","parent":"qfFoundations","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "qf00009i": {"type":"text","parent":"qf00009h","order":"a0","name":"Title","content":"Brisk fitness coach: foundations","style":{"size":40,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00009j": {"type":"text","parent":"qf00009h","order":"a1","name":"Subtitle","content":"The tokens every layer binds to. Switch the mode axis to see dark values.","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00009k": {"type":"frame","parent":"qfFoundations","order":"a1","name":"Color","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf00009l": {"type":"frame","parent":"qf00009k","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf00009m": {"type":"text","parent":"qf00009l","order":"a0","name":"Section title","content":"Color","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00009n": {"type":"rect","parent":"qf00009l","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf00009o": {"type":"frame","parent":"qf00009k","order":"a1","name":"Color items","w":{"mode":"fill"},"layout":{"dir":"row","gap":24,"crossGap":40}}
+
+, "qf00009p": {"type":"frame","parent":"qf00009o","order":"a0","name":"Light","w":{"mode":"fill"},"theme":{"mode":"light"},"radius":16,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":20,"pad":28}}
+
+, "qf00009q": {"type":"text","parent":"qf00009p","order":"a0","name":"Mode","content":"Light","style":{"size":18,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00009r": {"type":"frame","parent":"qf00009p","order":"a1","name":"Swatches","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"crossGap":20,"wrap":true}}
+
+, "qf00009s": {"type":"frame","parent":"qf00009r","order":"a0","name":"color/bg","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf00009t": {"type":"rect","parent":"qf00009s","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf00009u": {"type":"text","parent":"qf00009s","order":"a1","name":"Name","content":"bg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00009v": {"type":"text","parent":"qf00009s","order":"a2","name":"Value","content":"#F4F4F0","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf00009w": {"type":"frame","parent":"qf00009r","order":"a1","name":"color/surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf00009x": {"type":"rect","parent":"qf00009w","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf00009y": {"type":"text","parent":"qf00009w","order":"a1","name":"Name","content":"surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf00009z": {"type":"text","parent":"qf00009w","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000a0": {"type":"frame","parent":"qf00009r","order":"a2","name":"color/subtle","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000a1": {"type":"rect","parent":"qf0000a0","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/subtle"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000a2": {"type":"text","parent":"qf0000a0","order":"a1","name":"Name","content":"subtle","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000a3": {"type":"text","parent":"qf0000a0","order":"a2","name":"Value","content":"#ECECE6","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000a4": {"type":"frame","parent":"qf00009r","order":"a3","name":"color/ink","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000a5": {"type":"rect","parent":"qf0000a4","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000a6": {"type":"text","parent":"qf0000a4","order":"a1","name":"Name","content":"ink","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000a7": {"type":"text","parent":"qf0000a4","order":"a2","name":"Value","content":"#131512","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000a8": {"type":"frame","parent":"qf00009r","order":"a4","name":"color/ink-2","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000a9": {"type":"rect","parent":"qf0000a8","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink-2"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000aa": {"type":"text","parent":"qf0000a8","order":"a1","name":"Name","content":"ink-2","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000ab": {"type":"text","parent":"qf0000a8","order":"a2","name":"Value","content":"#3A3D38","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ac": {"type":"frame","parent":"qf00009r","order":"a5","name":"color/muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ad": {"type":"rect","parent":"qf0000ac","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ae": {"type":"text","parent":"qf0000ac","order":"a1","name":"Name","content":"muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000af": {"type":"text","parent":"qf0000ac","order":"a2","name":"Value","content":"#6D716A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ag": {"type":"frame","parent":"qf00009r","order":"a6","name":"color/border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ah": {"type":"rect","parent":"qf0000ag","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ai": {"type":"text","parent":"qf0000ag","order":"a1","name":"Name","content":"border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000aj": {"type":"text","parent":"qf0000ag","order":"a2","name":"Value","content":"#E3E3DC","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ak": {"type":"frame","parent":"qf00009r","order":"a7","name":"color/primary","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000al": {"type":"rect","parent":"qf0000ak","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/primary"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000am": {"type":"text","parent":"qf0000ak","order":"a1","name":"Name","content":"primary","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000an": {"type":"text","parent":"qf0000ak","order":"a2","name":"Value","content":"#131512","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ao": {"type":"frame","parent":"qf00009r","order":"a8","name":"color/on-primary","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ap": {"type":"rect","parent":"qf0000ao","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-primary"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000aq": {"type":"text","parent":"qf0000ao","order":"a1","name":"Name","content":"on-primary","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000ar": {"type":"text","parent":"qf0000ao","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000as": {"type":"frame","parent":"qf00009r","order":"a9","name":"color/accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000at": {"type":"rect","parent":"qf0000as","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000au": {"type":"text","parent":"qf0000as","order":"a1","name":"Name","content":"accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000av": {"type":"text","parent":"qf0000as","order":"a2","name":"Value","content":"#D9481C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000aw": {"type":"frame","parent":"qf00009r","order":"aA","name":"color/accent-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ax": {"type":"rect","parent":"qf0000aw","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ay": {"type":"text","parent":"qf0000aw","order":"a1","name":"Name","content":"accent-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000az": {"type":"text","parent":"qf0000aw","order":"a2","name":"Value","content":"#FCE6DC","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000b0": {"type":"frame","parent":"qf00009r","order":"aB","name":"color/on-accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000b1": {"type":"rect","parent":"qf0000b0","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000b2": {"type":"text","parent":"qf0000b0","order":"a1","name":"Name","content":"on-accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000b3": {"type":"text","parent":"qf0000b0","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000b4": {"type":"frame","parent":"qf00009r","order":"aC","name":"color/green","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000b5": {"type":"rect","parent":"qf0000b4","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/green"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000b6": {"type":"text","parent":"qf0000b4","order":"a1","name":"Name","content":"green","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000b7": {"type":"text","parent":"qf0000b4","order":"a2","name":"Value","content":"#23824C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000b8": {"type":"frame","parent":"qf00009r","order":"aD","name":"color/green-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000b9": {"type":"rect","parent":"qf0000b8","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/green-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ba": {"type":"text","parent":"qf0000b8","order":"a1","name":"Name","content":"green-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000bb": {"type":"text","parent":"qf0000b8","order":"a2","name":"Value","content":"#DFF2E6","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000bc": {"type":"frame","parent":"qf00009r","order":"aE","name":"color/blue","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000bd": {"type":"rect","parent":"qf0000bc","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/blue"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000be": {"type":"text","parent":"qf0000bc","order":"a1","name":"Name","content":"blue","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000bf": {"type":"text","parent":"qf0000bc","order":"a2","name":"Value","content":"#1F74C2","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000bg": {"type":"frame","parent":"qf00009r","order":"aF","name":"color/blue-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000bh": {"type":"rect","parent":"qf0000bg","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/blue-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000bi": {"type":"text","parent":"qf0000bg","order":"a1","name":"Name","content":"blue-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000bj": {"type":"text","parent":"qf0000bg","order":"a2","name":"Value","content":"#DFEDFA","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000bk": {"type":"frame","parent":"qf00009r","order":"aG","name":"color/violet","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000bl": {"type":"rect","parent":"qf0000bk","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/violet"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000bm": {"type":"text","parent":"qf0000bk","order":"a1","name":"Name","content":"violet","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000bn": {"type":"text","parent":"qf0000bk","order":"a2","name":"Value","content":"#5A4FCF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000bo": {"type":"frame","parent":"qf00009r","order":"aH","name":"color/violet-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000bp": {"type":"rect","parent":"qf0000bo","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/violet-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000bq": {"type":"text","parent":"qf0000bo","order":"a1","name":"Name","content":"violet-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000br": {"type":"text","parent":"qf0000bo","order":"a2","name":"Value","content":"#E9E7FB","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000bs": {"type":"frame","parent":"qf00009r","order":"aI","name":"color/track","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000bt": {"type":"rect","parent":"qf0000bs","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/track"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000bu": {"type":"text","parent":"qf0000bs","order":"a1","name":"Name","content":"track","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000bv": {"type":"text","parent":"qf0000bs","order":"a2","name":"Value","content":"#E6E6DF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000bw": {"type":"frame","parent":"qf00009r","order":"aJ","name":"color/knob","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000bx": {"type":"rect","parent":"qf0000bw","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/knob"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000by": {"type":"text","parent":"qf0000bw","order":"a1","name":"Name","content":"knob","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000bz": {"type":"text","parent":"qf0000bw","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000c0": {"type":"frame","parent":"qf00009r","order":"aK","name":"color/art-1","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000c1": {"type":"rect","parent":"qf0000c0","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-1"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000c2": {"type":"text","parent":"qf0000c0","order":"a1","name":"Name","content":"art-1","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000c3": {"type":"text","parent":"qf0000c0","order":"a2","name":"Value","content":"#FFC9A8","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000c4": {"type":"frame","parent":"qf00009r","order":"aL","name":"color/art-2","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000c5": {"type":"rect","parent":"qf0000c4","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-2"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000c6": {"type":"text","parent":"qf0000c4","order":"a1","name":"Name","content":"art-2","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000c7": {"type":"text","parent":"qf0000c4","order":"a2","name":"Value","content":"#FFE7C2","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000c8": {"type":"frame","parent":"qf00009r","order":"aM","name":"color/art-3","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000c9": {"type":"rect","parent":"qf0000c8","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-3"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ca": {"type":"text","parent":"qf0000c8","order":"a1","name":"Name","content":"art-3","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000cb": {"type":"text","parent":"qf0000c8","order":"a2","name":"Value","content":"#BFE6CF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000cc": {"type":"frame","parent":"qf00009r","order":"aN","name":"color/art-4","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000cd": {"type":"rect","parent":"qf0000cc","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-4"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ce": {"type":"text","parent":"qf0000cc","order":"a1","name":"Name","content":"art-4","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000cf": {"type":"text","parent":"qf0000cc","order":"a2","name":"Value","content":"#CFE2F7","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000cg": {"type":"frame","parent":"qf00009r","order":"aO","name":"color/on-art","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ch": {"type":"rect","parent":"qf0000cg","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-art"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ci": {"type":"text","parent":"qf0000cg","order":"a1","name":"Name","content":"on-art","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000cj": {"type":"text","parent":"qf0000cg","order":"a2","name":"Value","content":"#131512","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ck": {"type":"frame","parent":"qf00009o","order":"a1","name":"Dark","w":{"mode":"fill"},"theme":{"mode":"dark"},"radius":16,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":20,"pad":28}}
+
+, "qf0000cl": {"type":"text","parent":"qf0000ck","order":"a0","name":"Mode","content":"Dark","style":{"size":18,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000cm": {"type":"frame","parent":"qf0000ck","order":"a1","name":"Swatches","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"crossGap":20,"wrap":true}}
+
+, "qf0000cn": {"type":"frame","parent":"qf0000cm","order":"a0","name":"color/bg","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000co": {"type":"rect","parent":"qf0000cn","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000cp": {"type":"text","parent":"qf0000cn","order":"a1","name":"Name","content":"bg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000cq": {"type":"text","parent":"qf0000cn","order":"a2","name":"Value","content":"#0C0D0C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000cr": {"type":"frame","parent":"qf0000cm","order":"a1","name":"color/surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000cs": {"type":"rect","parent":"qf0000cr","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ct": {"type":"text","parent":"qf0000cr","order":"a1","name":"Name","content":"surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000cu": {"type":"text","parent":"qf0000cr","order":"a2","name":"Value","content":"#171917","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000cv": {"type":"frame","parent":"qf0000cm","order":"a2","name":"color/subtle","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000cw": {"type":"rect","parent":"qf0000cv","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/subtle"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000cx": {"type":"text","parent":"qf0000cv","order":"a1","name":"Name","content":"subtle","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000cy": {"type":"text","parent":"qf0000cv","order":"a2","name":"Value","content":"#222522","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000cz": {"type":"frame","parent":"qf0000cm","order":"a3","name":"color/ink","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000d0": {"type":"rect","parent":"qf0000cz","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000d1": {"type":"text","parent":"qf0000cz","order":"a1","name":"Name","content":"ink","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000d2": {"type":"text","parent":"qf0000cz","order":"a2","name":"Value","content":"#F2F3EF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000d3": {"type":"frame","parent":"qf0000cm","order":"a4","name":"color/ink-2","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000d4": {"type":"rect","parent":"qf0000d3","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink-2"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000d5": {"type":"text","parent":"qf0000d3","order":"a1","name":"Name","content":"ink-2","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000d6": {"type":"text","parent":"qf0000d3","order":"a2","name":"Value","content":"#C8CBC4","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000d7": {"type":"frame","parent":"qf0000cm","order":"a5","name":"color/muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000d8": {"type":"rect","parent":"qf0000d7","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000d9": {"type":"text","parent":"qf0000d7","order":"a1","name":"Name","content":"muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000da": {"type":"text","parent":"qf0000d7","order":"a2","name":"Value","content":"#8F948C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000db": {"type":"frame","parent":"qf0000cm","order":"a6","name":"color/border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000dc": {"type":"rect","parent":"qf0000db","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000dd": {"type":"text","parent":"qf0000db","order":"a1","name":"Name","content":"border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000de": {"type":"text","parent":"qf0000db","order":"a2","name":"Value","content":"#2A2D29","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000df": {"type":"frame","parent":"qf0000cm","order":"a7","name":"color/primary","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000dg": {"type":"rect","parent":"qf0000df","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/primary"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000dh": {"type":"text","parent":"qf0000df","order":"a1","name":"Name","content":"primary","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000di": {"type":"text","parent":"qf0000df","order":"a2","name":"Value","content":"#F2F3EF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000dj": {"type":"frame","parent":"qf0000cm","order":"a8","name":"color/on-primary","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000dk": {"type":"rect","parent":"qf0000dj","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-primary"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000dl": {"type":"text","parent":"qf0000dj","order":"a1","name":"Name","content":"on-primary","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000dm": {"type":"text","parent":"qf0000dj","order":"a2","name":"Value","content":"#0C0D0C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000dn": {"type":"frame","parent":"qf0000cm","order":"a9","name":"color/accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000do": {"type":"rect","parent":"qf0000dn","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000dp": {"type":"text","parent":"qf0000dn","order":"a1","name":"Name","content":"accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000dq": {"type":"text","parent":"qf0000dn","order":"a2","name":"Value","content":"#FF7A4D","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000dr": {"type":"frame","parent":"qf0000cm","order":"aA","name":"color/accent-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ds": {"type":"rect","parent":"qf0000dr","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000dt": {"type":"text","parent":"qf0000dr","order":"a1","name":"Name","content":"accent-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000du": {"type":"text","parent":"qf0000dr","order":"a2","name":"Value","content":"#3A1D12","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000dv": {"type":"frame","parent":"qf0000cm","order":"aB","name":"color/on-accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000dw": {"type":"rect","parent":"qf0000dv","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000dx": {"type":"text","parent":"qf0000dv","order":"a1","name":"Name","content":"on-accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000dy": {"type":"text","parent":"qf0000dv","order":"a2","name":"Value","content":"#160904","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000dz": {"type":"frame","parent":"qf0000cm","order":"aC","name":"color/green","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000e0": {"type":"rect","parent":"qf0000dz","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/green"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000e1": {"type":"text","parent":"qf0000dz","order":"a1","name":"Name","content":"green","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000e2": {"type":"text","parent":"qf0000dz","order":"a2","name":"Value","content":"#4CD18A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000e3": {"type":"frame","parent":"qf0000cm","order":"aD","name":"color/green-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000e4": {"type":"rect","parent":"qf0000e3","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/green-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000e5": {"type":"text","parent":"qf0000e3","order":"a1","name":"Name","content":"green-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000e6": {"type":"text","parent":"qf0000e3","order":"a2","name":"Value","content":"#11301F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000e7": {"type":"frame","parent":"qf0000cm","order":"aE","name":"color/blue","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000e8": {"type":"rect","parent":"qf0000e7","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/blue"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000e9": {"type":"text","parent":"qf0000e7","order":"a1","name":"Name","content":"blue","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000ea": {"type":"text","parent":"qf0000e7","order":"a2","name":"Value","content":"#5AAEF5","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000eb": {"type":"frame","parent":"qf0000cm","order":"aF","name":"color/blue-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ec": {"type":"rect","parent":"qf0000eb","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/blue-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ed": {"type":"text","parent":"qf0000eb","order":"a1","name":"Name","content":"blue-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000ee": {"type":"text","parent":"qf0000eb","order":"a2","name":"Value","content":"#10263B","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ef": {"type":"frame","parent":"qf0000cm","order":"aG","name":"color/violet","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000eg": {"type":"rect","parent":"qf0000ef","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/violet"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000eh": {"type":"text","parent":"qf0000ef","order":"a1","name":"Name","content":"violet","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000ei": {"type":"text","parent":"qf0000ef","order":"a2","name":"Value","content":"#9D94FF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ej": {"type":"frame","parent":"qf0000cm","order":"aH","name":"color/violet-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ek": {"type":"rect","parent":"qf0000ej","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/violet-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000el": {"type":"text","parent":"qf0000ej","order":"a1","name":"Name","content":"violet-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000em": {"type":"text","parent":"qf0000ej","order":"a2","name":"Value","content":"#221F45","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000en": {"type":"frame","parent":"qf0000cm","order":"aI","name":"color/track","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000eo": {"type":"rect","parent":"qf0000en","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/track"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ep": {"type":"text","parent":"qf0000en","order":"a1","name":"Name","content":"track","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000eq": {"type":"text","parent":"qf0000en","order":"a2","name":"Value","content":"#3A3E38","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000er": {"type":"frame","parent":"qf0000cm","order":"aJ","name":"color/knob","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000es": {"type":"rect","parent":"qf0000er","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/knob"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000et": {"type":"text","parent":"qf0000er","order":"a1","name":"Name","content":"knob","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000eu": {"type":"text","parent":"qf0000er","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ev": {"type":"frame","parent":"qf0000cm","order":"aK","name":"color/art-1","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000ew": {"type":"rect","parent":"qf0000ev","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-1"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000ex": {"type":"text","parent":"qf0000ev","order":"a1","name":"Name","content":"art-1","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000ey": {"type":"text","parent":"qf0000ev","order":"a2","name":"Value","content":"#6B2E14","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ez": {"type":"frame","parent":"qf0000cm","order":"aL","name":"color/art-2","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000f0": {"type":"rect","parent":"qf0000ez","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-2"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000f1": {"type":"text","parent":"qf0000ez","order":"a1","name":"Name","content":"art-2","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000f2": {"type":"text","parent":"qf0000ez","order":"a2","name":"Value","content":"#4A3417","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000f3": {"type":"frame","parent":"qf0000cm","order":"aM","name":"color/art-3","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000f4": {"type":"rect","parent":"qf0000f3","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-3"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000f5": {"type":"text","parent":"qf0000f3","order":"a1","name":"Name","content":"art-3","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000f6": {"type":"text","parent":"qf0000f3","order":"a2","name":"Value","content":"#18452C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000f7": {"type":"frame","parent":"qf0000cm","order":"aN","name":"color/art-4","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000f8": {"type":"rect","parent":"qf0000f7","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-4"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000f9": {"type":"text","parent":"qf0000f7","order":"a1","name":"Name","content":"art-4","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fa": {"type":"text","parent":"qf0000f7","order":"a2","name":"Value","content":"#1A3554","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000fb": {"type":"frame","parent":"qf0000cm","order":"aO","name":"color/on-art","w":104,"layout":{"dir":"column","gap":8}}
+
+, "qf0000fc": {"type":"rect","parent":"qf0000fb","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-art"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000fd": {"type":"text","parent":"qf0000fb","order":"a1","name":"Name","content":"on-art","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fe": {"type":"text","parent":"qf0000fb","order":"a2","name":"Value","content":"#F2F3EF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ff": {"type":"frame","parent":"qfFoundations","order":"a2","name":"Type","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf0000fg": {"type":"frame","parent":"qf0000ff","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf0000fh": {"type":"text","parent":"qf0000fg","order":"a0","name":"Section title","content":"Type","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000fi": {"type":"rect","parent":"qf0000fg","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf0000fj": {"type":"frame","parent":"qf0000ff","order":"a1","name":"Type items","w":{"mode":"fill"},"layout":{"dir":"column","gap":20}}
+
+, "qf0000fk": {"type":"frame","parent":"qf0000fj","order":"a0","name":"type/display","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000fl": {"type":"frame","parent":"qf0000fk","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000fm": {"type":"text","parent":"qf0000fl","order":"a0","name":"Name","content":"display","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fn": {"type":"text","parent":"qf0000fl","order":"a1","name":"Values","content":"Inter 34 / 1.1 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000fo": {"type":"text","parent":"qf0000fk","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fp": {"type":"frame","parent":"qf0000fj","order":"a1","name":"type/h1","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000fq": {"type":"frame","parent":"qf0000fp","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000fr": {"type":"text","parent":"qf0000fq","order":"a0","name":"Name","content":"h1","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fs": {"type":"text","parent":"qf0000fq","order":"a1","name":"Values","content":"Inter 28 / 1.15 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ft": {"type":"text","parent":"qf0000fp","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fu": {"type":"frame","parent":"qf0000fj","order":"a2","name":"type/title","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000fv": {"type":"frame","parent":"qf0000fu","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000fw": {"type":"text","parent":"qf0000fv","order":"a0","name":"Name","content":"title","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fx": {"type":"text","parent":"qf0000fv","order":"a1","name":"Values","content":"Inter 20 / 1.25 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000fy": {"type":"text","parent":"qf0000fu","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000fz": {"type":"frame","parent":"qf0000fj","order":"a3","name":"type/heading","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000g0": {"type":"frame","parent":"qf0000fz","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000g1": {"type":"text","parent":"qf0000g0","order":"a0","name":"Name","content":"heading","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000g2": {"type":"text","parent":"qf0000g0","order":"a1","name":"Values","content":"Inter 17 / 1.3 · 600","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000g3": {"type":"text","parent":"qf0000fz","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000g4": {"type":"frame","parent":"qf0000fj","order":"a4","name":"type/metric","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000g5": {"type":"frame","parent":"qf0000g4","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000g6": {"type":"text","parent":"qf0000g5","order":"a0","name":"Name","content":"metric","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000g7": {"type":"text","parent":"qf0000g5","order":"a1","name":"Values","content":"Inter 24 / 1.1 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000g8": {"type":"text","parent":"qf0000g4","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/metric"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000g9": {"type":"frame","parent":"qf0000fj","order":"a5","name":"type/timer","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000ga": {"type":"frame","parent":"qf0000g9","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000gb": {"type":"text","parent":"qf0000ga","order":"a0","name":"Name","content":"timer","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gc": {"type":"text","parent":"qf0000ga","order":"a1","name":"Values","content":"Inter 64 / 1 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000gd": {"type":"text","parent":"qf0000g9","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/timer"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000ge": {"type":"frame","parent":"qf0000fj","order":"a6","name":"type/body","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000gf": {"type":"frame","parent":"qf0000ge","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000gg": {"type":"text","parent":"qf0000gf","order":"a0","name":"Name","content":"body","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gh": {"type":"text","parent":"qf0000gf","order":"a1","name":"Values","content":"Inter 15 / 1.45 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000gi": {"type":"text","parent":"qf0000ge","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gj": {"type":"frame","parent":"qf0000fj","order":"a7","name":"type/label","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000gk": {"type":"frame","parent":"qf0000gj","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000gl": {"type":"text","parent":"qf0000gk","order":"a0","name":"Name","content":"label","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gm": {"type":"text","parent":"qf0000gk","order":"a1","name":"Values","content":"Inter 14 / 1.3 · 600","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000gn": {"type":"text","parent":"qf0000gj","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000go": {"type":"frame","parent":"qf0000fj","order":"a8","name":"type/small","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000gp": {"type":"frame","parent":"qf0000go","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000gq": {"type":"text","parent":"qf0000gp","order":"a0","name":"Name","content":"small","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gr": {"type":"text","parent":"qf0000gp","order":"a1","name":"Values","content":"Inter 13 / 1.4 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000gs": {"type":"text","parent":"qf0000go","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gt": {"type":"frame","parent":"qf0000fj","order":"a9","name":"type/caption","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "qf0000gu": {"type":"frame","parent":"qf0000gt","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "qf0000gv": {"type":"text","parent":"qf0000gu","order":"a0","name":"Name","content":"caption","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gw": {"type":"text","parent":"qf0000gu","order":"a1","name":"Values","content":"Inter 11 / 1.3 · 600","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000gx": {"type":"text","parent":"qf0000gt","order":"a1","name":"Sample","content":"Brisk fitness coach","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/ink"}}
+
+, "qf0000gy": {"type":"frame","parent":"qfFoundations","order":"a3","name":"Spacing","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf0000gz": {"type":"frame","parent":"qf0000gy","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf0000h0": {"type":"text","parent":"qf0000gz","order":"a0","name":"Section title","content":"Spacing","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000h1": {"type":"rect","parent":"qf0000gz","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf0000h2": {"type":"frame","parent":"qf0000gy","order":"a1","name":"Spacing items","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf0000h3": {"type":"frame","parent":"qf0000h2","order":"a0","name":"space/1","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "qf0000h4": {"type":"text","parent":"qf0000h3","order":"a0","name":"Name","w":120,"content":"space/1","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000h5": {"type":"rect","parent":"qf0000h3","order":"a1","name":"Bar","w":{"$ref":"space/1"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "qf0000h6": {"type":"frame","parent":"qf0000h2","order":"a1","name":"space/2","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "qf0000h7": {"type":"text","parent":"qf0000h6","order":"a0","name":"Name","w":120,"content":"space/2","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000h8": {"type":"rect","parent":"qf0000h6","order":"a1","name":"Bar","w":{"$ref":"space/2"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "qf0000h9": {"type":"frame","parent":"qf0000h2","order":"a2","name":"space/3","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "qf0000ha": {"type":"text","parent":"qf0000h9","order":"a0","name":"Name","w":120,"content":"space/3","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000hb": {"type":"rect","parent":"qf0000h9","order":"a1","name":"Bar","w":{"$ref":"space/3"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "qf0000hc": {"type":"frame","parent":"qf0000h2","order":"a3","name":"space/4","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "qf0000hd": {"type":"text","parent":"qf0000hc","order":"a0","name":"Name","w":120,"content":"space/4","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000he": {"type":"rect","parent":"qf0000hc","order":"a1","name":"Bar","w":{"$ref":"space/4"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "qf0000hf": {"type":"frame","parent":"qf0000h2","order":"a4","name":"space/5","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "qf0000hg": {"type":"text","parent":"qf0000hf","order":"a0","name":"Name","w":120,"content":"space/5","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000hh": {"type":"rect","parent":"qf0000hf","order":"a1","name":"Bar","w":{"$ref":"space/5"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "qf0000hi": {"type":"frame","parent":"qf0000h2","order":"a5","name":"space/6","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "qf0000hj": {"type":"text","parent":"qf0000hi","order":"a0","name":"Name","w":120,"content":"space/6","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000hk": {"type":"rect","parent":"qf0000hi","order":"a1","name":"Bar","w":{"$ref":"space/6"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "qf0000hl": {"type":"frame","parent":"qf0000h2","order":"a6","name":"space/8","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "qf0000hm": {"type":"text","parent":"qf0000hl","order":"a0","name":"Name","w":120,"content":"space/8","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000hn": {"type":"rect","parent":"qf0000hl","order":"a1","name":"Bar","w":{"$ref":"space/8"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "qf0000ho": {"type":"frame","parent":"qfFoundations","order":"a4","name":"Radius","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf0000hp": {"type":"frame","parent":"qf0000ho","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf0000hq": {"type":"text","parent":"qf0000hp","order":"a0","name":"Section title","content":"Radius","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000hr": {"type":"rect","parent":"qf0000hp","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf0000hs": {"type":"frame","parent":"qf0000ho","order":"a1","name":"Radius items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "qf0000ht": {"type":"frame","parent":"qf0000hs","order":"a0","name":"radius/sm","layout":{"dir":"column","gap":10}}
+
+, "qf0000hu": {"type":"rect","parent":"qf0000ht","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000hv": {"type":"text","parent":"qf0000ht","order":"a1","name":"Name","content":"radius/sm","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000hw": {"type":"frame","parent":"qf0000hs","order":"a1","name":"radius/md","layout":{"dir":"column","gap":10}}
+
+, "qf0000hx": {"type":"rect","parent":"qf0000hw","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000hy": {"type":"text","parent":"qf0000hw","order":"a1","name":"Name","content":"radius/md","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000hz": {"type":"frame","parent":"qf0000hs","order":"a2","name":"radius/lg","layout":{"dir":"column","gap":10}}
+
+, "qf0000i0": {"type":"rect","parent":"qf0000hz","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000i1": {"type":"text","parent":"qf0000hz","order":"a1","name":"Name","content":"radius/lg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000i2": {"type":"frame","parent":"qf0000hs","order":"a3","name":"radius/xl","layout":{"dir":"column","gap":10}}
+
+, "qf0000i3": {"type":"rect","parent":"qf0000i2","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000i4": {"type":"text","parent":"qf0000i2","order":"a1","name":"Name","content":"radius/xl","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000i5": {"type":"frame","parent":"qf0000hs","order":"a4","name":"radius/pill","layout":{"dir":"column","gap":10}}
+
+, "qf0000i6": {"type":"rect","parent":"qf0000i5","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "qf0000i7": {"type":"text","parent":"qf0000i5","order":"a1","name":"Name","content":"radius/pill","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000i8": {"type":"frame","parent":"qfFoundations","order":"a5","name":"Shadow","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "qf0000i9": {"type":"frame","parent":"qf0000i8","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "qf0000ia": {"type":"text","parent":"qf0000i9","order":"a0","name":"Section title","content":"Shadow","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ib": {"type":"rect","parent":"qf0000i9","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "qf0000ic": {"type":"frame","parent":"qf0000i8","order":"a1","name":"Shadow items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"pad":[8,8,24,8],"wrap":true}}
+
+, "qf0000id": {"type":"frame","parent":"qf0000ic","order":"a0","name":"shadow/card","layout":{"dir":"column","gap":14}}
+
+, "qf0000ie": {"type":"rect","parent":"qf0000id","order":"a0","name":"Tile","w":160,"h":96,"radius":12,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"}}
+
+, "qf0000if": {"type":"text","parent":"qf0000id","order":"a1","name":"Name","content":"shadow/card","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qf0000ig": {"type":"frame","parent":"qf0000ic","order":"a1","name":"shadow/phone","layout":{"dir":"column","gap":14}}
+
+, "qf0000ih": {"type":"rect","parent":"qf0000ig","order":"a0","name":"Tile","w":160,"h":96,"radius":12,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/phone"}}
+
+, "qf0000ii": {"type":"text","parent":"qf0000ig","order":"a1","name":"Name","content":"shadow/phone","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qfAvInit": {"type":"text","parent":"qfAvatar","order":"a0","name":"MO","content":"MO","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/on-art"}}
+
+, "qfAvatar": {"type":"frame","parent":"qf00001m","order":"a1","name":"Avatar","component":{"props":{"initials":{"type":"text","order":"a0","target":"qfAvInit","field":"content","default":"MO"},"size":{"type":"enum","order":"a1","options":{"lg":null,"sm":null},"targets":{"lg":[{"field":"w","target":"qfAvatar","value":80},{"field":"h","target":"qfAvatar","value":80},{"field":"style/size","target":"qfAvInit","value":26}],"sm":[{"field":"w","target":"qfAvatar","value":36},{"field":"h","target":"qfAvatar","value":36},{"field":"style/size","target":"qfAvInit","value":13}]}}}},"w":36,"h":36,"radius":{"$ref":"radius/pill"},"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/art-2"}}],"rotation":135},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfBadge": {"type":"frame","parent":"qf00001o","order":"a1","name":"Badge","component":{"props":{"label":{"type":"text","order":"a0","target":"qfBdgLbl","field":"content","default":"Badge"},"tone":{"type":"enum","order":"a1","options":{"accent":null,"glass":null,"green":null,"neutral":null},"targets":{"accent":[{"field":"fill","target":"qfBadge","value":{"$ref":"color/accent-soft"}},{"field":"fill","target":"qfBdgLbl","value":{"$ref":"color/accent"}}],"glass":[{"field":"fill","target":"qfBadge","value":{"$ref":"color/surface"}},{"field":"fill","target":"qfBdgLbl","value":{"$ref":"color/ink"}}],"green":[{"field":"fill","target":"qfBadge","value":{"$ref":"color/green-soft"}},{"field":"fill","target":"qfBdgLbl","value":{"$ref":"color/green"}}],"neutral":[{"field":"fill","target":"qfBadge","value":{"$ref":"color/subtle"}},{"field":"fill","target":"qfBdgLbl","value":{"$ref":"color/ink-2"}}]}}}},"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","pad":[4,10]}}
+
+, "qfBdgLbl": {"type":"text","parent":"qfBadge","order":"a0","name":"Label","content":"Badge","style":{"size":12,"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/accent"}}
+
+, "qfBtn0": {"type":"frame","parent":"qf00000v","order":"a1","name":"Button","component":{"props":{"icon":{"type":"boolean","order":"a1","target":"qfBtnIcon","field":"visible","default":false},"label":{"type":"text","order":"a0","target":"qfBtnLabel","field":"content","default":"Button"},"size":{"type":"enum","order":"a3","options":{"lg":null,"md":null},"targets":{"lg":[{"field":"layout/pad","target":"qfBtn0","value":[16,22]},{"field":"style/size","target":"qfBtnLabel","value":16}],"md":[{"field":"layout/pad","target":"qfBtn0","value":[10,16]},{"field":"style/size","target":"qfBtnLabel","value":14}]}},"variant":{"type":"enum","order":"a2","options":{"accent":null,"primary":null,"secondary":null,"soft":null},"targets":{"accent":[{"field":"fill","target":"qfBtn0","value":{"$ref":"color/accent"}},{"field":"stroke","target":"qfBtn0","value":{"paint":{"$ref":"color/accent"}}},{"field":"fill","target":"qfBtnLabel","value":{"$ref":"color/on-accent"}},{"field":"color","target":"qfBtnIcon","value":{"$ref":"color/on-accent"}}],"primary":[{"field":"fill","target":"qfBtn0","value":{"$ref":"color/primary"}},{"field":"stroke","target":"qfBtn0","value":{"paint":{"$ref":"color/primary"}}},{"field":"fill","target":"qfBtnLabel","value":{"$ref":"color/on-primary"}},{"field":"color","target":"qfBtnIcon","value":{"$ref":"color/on-primary"}}],"secondary":[{"field":"fill","target":"qfBtn0","value":{"$ref":"color/surface"}},{"field":"stroke","target":"qfBtn0","value":{"paint":{"$ref":"color/border"}}},{"field":"fill","target":"qfBtnLabel","value":{"$ref":"color/ink"}},{"field":"color","target":"qfBtnIcon","value":{"$ref":"color/ink"}}],"soft":[{"field":"fill","target":"qfBtn0","value":{"$ref":"color/subtle"}},{"field":"stroke","target":"qfBtn0","value":{"paint":{"$ref":"color/subtle"}}},{"field":"fill","target":"qfBtnLabel","value":{"$ref":"color/ink"}},{"field":"color","target":"qfBtnIcon","value":{"$ref":"color/ink"}}]}}}},"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/primary"},"stroke":{"paint":{"$ref":"color/primary"}},"layout":{"dir":"row","gap":8,"pad":[16,22],"justify":"center","align":"center"},"meta":{"kimo.component.description":"Primary (ink), accent, secondary or soft; md or lg."}}
+
+, "qfBtnIcon": {"type":"icon","parent":"qfBtn0","order":"a0","name":"Icon/play","w":18,"h":18,"set":"lucide","icon":"play","color":{"$ref":"color/on-primary"},"visible":false}
+
+, "qfBtnLabel": {"type":"text","parent":"qfBtn0","order":"a1","name":"Label","content":"Button","style":{"size":16,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/on-primary"}}
+
+, "qfChip": {"type":"frame","parent":"qf00000z","order":"a1","name":"Chip","component":{"props":{"label":{"type":"text","order":"a0","target":"qfChipLbl","field":"content","default":"Chip"},"state":{"type":"enum","order":"a1","options":{"default":null,"selected":null},"targets":{"default":[{"field":"fill","target":"qfChip","value":{"$ref":"color/surface"}},{"field":"stroke","target":"qfChip","value":{"paint":{"$ref":"color/border"}}},{"field":"fill","target":"qfChipLbl","value":{"$ref":"color/ink"}}],"selected":[{"field":"fill","target":"qfChip","value":{"$ref":"color/primary"}},{"field":"stroke","target":"qfChip","value":{"paint":{"$ref":"color/primary"}}},{"field":"fill","target":"qfChipLbl","value":{"$ref":"color/on-primary"}}]}}}},"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","pad":[10,16],"justify":"center","align":"center"}}
+
+, "qfChipLbl": {"type":"text","parent":"qfChip","order":"a0","name":"Label","content":"Chip","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qfCover": {"type":"frame","parent":null,"order":"a1","name":"Cover","x":0,"y":0,"w":1440,"h":900,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"row","gap":72,"pad":[96,0,96,96],"align":"center"},"page":"qfPage3"}
+
+, "qfExChev": {"type":"icon","parent":"qfExercise","order":"a2","name":"Icon/chevron-right","w":18,"h":18,"set":"lucide","icon":"chevron-right","color":{"$ref":"color/muted"}}
+
+, "qfExDetail": {"type":"text","parent":"qf00002e","order":"a1","name":"4 sets · 8 reps","content":"4 sets · 8 reps","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfExDot": {"type":"frame","parent":"qfExercise","order":"a0","name":"Index","w":32,"h":32,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfExName": {"type":"text","parent":"qf00002e","order":"a0","name":"Exercise","content":"Exercise","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qfExNum": {"type":"text","parent":"qfExDot","order":"a0","name":"1","content":"1","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink-2"}}
+
+, "qfExTick": {"type":"icon","parent":"qfExDot","order":"a1","name":"Icon/check","w":16,"h":16,"strokeWidth":3,"set":"lucide","icon":"check","color":{"$ref":"color/green"},"visible":false}
+
+, "qfExercise": {"type":"frame","parent":"qf00002c","order":"a1","name":"Exercise row","component":{"props":{"detail":{"type":"text","order":"a2","target":"qfExDetail","field":"content","default":"4 sets · 8 reps"},"index":{"type":"text","order":"a0","target":"qfExNum","field":"content","default":"1"},"name":{"type":"text","order":"a1","target":"qfExName","field":"content","default":"Exercise"},"state":{"type":"enum","order":"a3","options":{"current":null,"done":null,"next":null},"targets":{"current":[{"field":"fill","target":"qfExDot","value":{"$ref":"color/accent"}},{"field":"fill","target":"qfExNum","value":{"$ref":"color/on-accent"}},{"field":"visible","target":"qfExNum","value":true},{"field":"visible","target":"qfExTick","value":false},{"field":"stroke","target":"qfExercise","value":{"paint":{"$ref":"color/accent"},"width":1.5}}],"done":[{"field":"fill","target":"qfExDot","value":{"$ref":"color/green-soft"}},{"field":"fill","target":"qfExNum","value":{"$ref":"color/green"}},{"field":"visible","target":"qfExNum","value":false},{"field":"visible","target":"qfExTick","value":true},{"field":"stroke","target":"qfExercise","value":{"paint":{"$ref":"color/surface"},"width":1.5}}],"next":[{"field":"fill","target":"qfExDot","value":{"$ref":"color/subtle"}},{"field":"fill","target":"qfExNum","value":{"$ref":"color/ink-2"}},{"field":"visible","target":"qfExNum","value":true},{"field":"visible","target":"qfExTick","value":false},{"field":"stroke","target":"qfExercise","value":{"paint":{"$ref":"color/surface"},"width":1.5}}]}}}},"w":350,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/surface"},"width":1.5},"layout":{"dir":"row","gap":14,"pad":[12,14],"align":"center"}}
+
+, "qfFoundations": {"type":"frame","parent":null,"order":"a8","name":"Foundations","x":0,"y":0,"w":1600,"fill":{"$ref":"color/bg"},"layout":{"dir":"column","gap":56,"pad":64},"page":"qfPage4"}
+
+, "qfHabit": {"type":"frame","parent":"qf000021","order":"a1","name":"Habit row","component":{"props":{"detail":{"type":"text","order":"a1","target":"qfHbDetail","field":"content","default":"0 of 8"},"state":{"type":"enum","order":"a3","options":{"done":null,"todo":null},"targets":{"done":[{"field":"fill","target":"qfHbCheck","value":{"$ref":"color/green"}},{"field":"stroke","target":"qfHbCheck","value":{"paint":{"$ref":"color/green"},"width":2}},{"field":"visible","target":"qfHbTick","value":true}],"todo":[{"field":"fill","target":"qfHbCheck","value":{"$ref":"color/surface"}},{"field":"stroke","target":"qfHbCheck","value":{"paint":{"$ref":"color/border"},"width":2}},{"field":"visible","target":"qfHbTick","value":false}]}},"title":{"type":"text","order":"a0","target":"qfHbTitle","field":"content","default":"Habit"},"tone":{"type":"enum","order":"a2","options":{"accent":null,"blue":null,"green":null,"neutral":null,"violet":null},"targets":{"accent":[{"field":"fill","target":"qfHbTile","value":{"$ref":"color/accent-soft"}},{"field":"color","target":"qfHbIcon","value":{"$ref":"color/accent"}}],"blue":[{"field":"fill","target":"qfHbTile","value":{"$ref":"color/blue-soft"}},{"field":"color","target":"qfHbIcon","value":{"$ref":"color/blue"}}],"green":[{"field":"fill","target":"qfHbTile","value":{"$ref":"color/green-soft"}},{"field":"color","target":"qfHbIcon","value":{"$ref":"color/green"}}],"neutral":[{"field":"fill","target":"qfHbTile","value":{"$ref":"color/subtle"}},{"field":"color","target":"qfHbIcon","value":{"$ref":"color/ink-2"}}],"violet":[{"field":"fill","target":"qfHbTile","value":{"$ref":"color/violet-soft"}},{"field":"color","target":"qfHbIcon","value":{"$ref":"color/violet"}}]}}}},"w":350,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"row","gap":14,"pad":[12,14],"align":"center"},"meta":{"kimo.component.description":"A daily habit with its count and a check."}}
+
+, "qfHbCheck": {"type":"frame","parent":"qfHabit","order":"a2","name":"Check","w":28,"h":28,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"},"width":2},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfHbDetail": {"type":"text","parent":"qf000023","order":"a1","name":"0 of 8","content":"0 of 8","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfHbIcon": {"type":"icon","parent":"qfHbTile","order":"a0","name":"Icon/glass-water","w":20,"h":20,"set":"lucide","icon":"glass-water","color":{"$ref":"color/blue"}}
+
+, "qfHbTick": {"type":"icon","parent":"qfHbCheck","order":"a0","name":"Icon/check","w":16,"h":16,"strokeWidth":3,"set":"lucide","icon":"check","color":{"$ref":"color/on-accent"},"visible":false}
+
+, "qfHbTile": {"type":"frame","parent":"qfHabit","order":"a0","name":"Icon tile","w":40,"h":40,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/blue-soft"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfHbTitle": {"type":"text","parent":"qf000023","order":"a0","name":"Habit","content":"Habit","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qfHomeBar": {"type":"frame","parent":"qf00000f","order":"a1","name":"Home indicator","component":true,"w":390,"h":34,"layout":{"dir":"row","pad":[0,0,4,0],"justify":"center","align":"center"}}
+
+, "qfIbIcon": {"type":"icon","parent":"qfIconBtn","order":"a0","name":"Icon/chevron-left","w":20,"h":20,"set":"lucide","icon":"chevron-left","color":{"$ref":"color/ink"}}
+
+, "qfIconBtn": {"type":"frame","parent":"qf00000x","order":"a1","name":"Icon button","component":{"props":{"size":{"type":"enum","order":"a1","options":{"lg":null,"md":null},"targets":{"lg":[{"field":"w","target":"qfIconBtn","value":64},{"field":"h","target":"qfIconBtn","value":64},{"field":"w","target":"qfIbIcon","value":26},{"field":"h","target":"qfIbIcon","value":26}],"md":[{"field":"w","target":"qfIconBtn","value":40},{"field":"h","target":"qfIconBtn","value":40},{"field":"w","target":"qfIbIcon","value":20},{"field":"h","target":"qfIbIcon","value":20}]}},"variant":{"type":"enum","order":"a0","options":{"accent":null,"soft":null,"surface":null},"targets":{"accent":[{"field":"fill","target":"qfIconBtn","value":{"$ref":"color/accent"}},{"field":"stroke","target":"qfIconBtn","value":{"paint":{"$ref":"color/accent"}}},{"field":"color","target":"qfIbIcon","value":{"$ref":"color/on-accent"}}],"soft":[{"field":"fill","target":"qfIconBtn","value":{"$ref":"color/subtle"}},{"field":"stroke","target":"qfIconBtn","value":{"paint":{"$ref":"color/subtle"}}},{"field":"color","target":"qfIbIcon","value":{"$ref":"color/ink"}}],"surface":[{"field":"fill","target":"qfIconBtn","value":{"$ref":"color/surface"}},{"field":"stroke","target":"qfIconBtn","value":{"paint":{"$ref":"color/border"}}},{"field":"color","target":"qfIbIcon","value":{"$ref":"color/ink"}}]}}}},"w":40,"h":40,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfLibBoard": {"type":"frame","parent":null,"order":"a0","name":"Components","x":0,"y":0,"w":1600,"fill":{"$ref":"color/bg"},"layout":{"dir":"column","gap":56,"pad":64},"page":"qfPage1"}
+
+, "qfNavHead": {"type":"frame","parent":"qf00001d","order":"a1","name":"Nav header","component":{"props":{"showAction":{"type":"boolean","order":"a1","target":"qfNhActW","field":"visible","default":true},"title":{"type":"text","order":"a0","target":"qfNhTitle","field":"content","default":"Title"}}},"w":390,"layout":{"dir":"row","gap":12,"pad":[8,20],"align":"center"}}
+
+, "qfNhAct": {"type":"instance","parent":"qfNhActW","order":"a0","of":"qfIconBtn","overrides":{"qfIbIcon":{"set":{"icon":"ellipsis"}}}}
+
+, "qfNhActW": {"type":"frame","parent":"qfNavHead","order":"a2","name":"Action","layout":{"dir":"row"}}
+
+, "qfNhBack": {"type":"instance","parent":"qfNavHead","order":"a0","of":"qfIconBtn"}
+
+, "qfNhTitle": {"type":"text","parent":"qfNavHead","order":"a1","name":"Title","w":{"mode":"fill"},"content":"Title","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "qfOpDetail": {"type":"text","parent":"qf00002h","order":"a1","name":"What it means.","w":{"mode":"fill"},"content":"What it means.","grow":"fixed-width","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfOpDot": {"type":"ellipse","parent":"qfOpRadio","order":"a0","name":"Dot","w":8,"h":8,"visible":false,"fill":{"$ref":"color/on-primary"}}
+
+, "qfOpIcon": {"type":"icon","parent":"qfOpTile","order":"a0","name":"Icon/dumbbell","w":22,"h":22,"set":"lucide","icon":"dumbbell","color":{"$ref":"color/accent"}}
+
+, "qfOpRadio": {"type":"frame","parent":"qfOption","order":"a2","name":"Radio","w":22,"h":22,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"},"width":2},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfOpTile": {"type":"frame","parent":"qfOption","order":"a0","name":"Icon tile","w":44,"h":44,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfOpTitle": {"type":"text","parent":"qf00002h","order":"a0","name":"Goal","content":"Goal","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qfOption": {"type":"frame","parent":"qf00002f","order":"a1","name":"Goal option","component":{"props":{"detail":{"type":"text","order":"a1","target":"qfOpDetail","field":"content","default":"What it means."},"state":{"type":"enum","order":"a3","options":{"default":null,"selected":null},"targets":{"default":[{"field":"stroke","target":"qfOption","value":{"paint":{"$ref":"color/border"},"width":1.5}},{"field":"stroke","target":"qfOpRadio","value":{"paint":{"$ref":"color/border"},"width":2}},{"field":"fill","target":"qfOpRadio","value":{"$ref":"color/surface"}},{"field":"visible","target":"qfOpDot","value":false}],"selected":[{"field":"stroke","target":"qfOption","value":{"paint":{"$ref":"color/primary"},"width":1.5}},{"field":"stroke","target":"qfOpRadio","value":{"paint":{"$ref":"color/primary"},"width":2}},{"field":"fill","target":"qfOpRadio","value":{"$ref":"color/primary"}},{"field":"visible","target":"qfOpDot","value":true}]}},"title":{"type":"text","order":"a0","target":"qfOpTitle","field":"content","default":"Goal"},"tone":{"type":"enum","order":"a2","options":{"accent":null,"blue":null,"green":null,"neutral":null,"violet":null},"targets":{"accent":[{"field":"fill","target":"qfOpTile","value":{"$ref":"color/accent-soft"}},{"field":"color","target":"qfOpIcon","value":{"$ref":"color/accent"}}],"blue":[{"field":"fill","target":"qfOpTile","value":{"$ref":"color/blue-soft"}},{"field":"color","target":"qfOpIcon","value":{"$ref":"color/blue"}}],"green":[{"field":"fill","target":"qfOpTile","value":{"$ref":"color/green-soft"}},{"field":"color","target":"qfOpIcon","value":{"$ref":"color/green"}}],"neutral":[{"field":"fill","target":"qfOpTile","value":{"$ref":"color/subtle"}},{"field":"color","target":"qfOpIcon","value":{"$ref":"color/ink-2"}}],"violet":[{"field":"fill","target":"qfOpTile","value":{"$ref":"color/violet-soft"}},{"field":"color","target":"qfOpIcon","value":{"$ref":"color/violet"}}]}}}},"w":350,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"},"width":1.5},"layout":{"dir":"row","gap":14,"pad":[14,16],"align":"center"}}
+
+, "qfRgArc": {"type":"ellipse","parent":"qfRing","order":"a1","name":"Arc","x":0,"y":0,"position":"absolute","w":112,"h":112,"innerRadius":0.84,"startAngle":90,"sweepAngle":-259,"fill":{"$ref":"color/accent"},"meta":{"kimo.template.overlay":true}}
+
+, "qfRgLbl": {"type":"text","parent":"qfRing","order":"a3","name":"Label","content":"of move goal","style":{"size":12,"align":"center","typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfRgTrack": {"type":"ellipse","parent":"qfRing","order":"a0","name":"Track","x":0,"y":0,"position":"absolute","w":112,"h":112,"innerRadius":0.84,"fill":{"$ref":"color/track"},"meta":{"kimo.template.overlay":true}}
+
+, "qfRgVal": {"type":"text","parent":"qfRing","order":"a2","name":"Value","content":"72%","style":{"align":"center","typography":{"$ref":"type/metric"}},"fill":{"$ref":"color/ink"}}
+
+, "qfRing": {"type":"frame","parent":"qf00001v","order":"a1","name":"Progress ring","component":{"props":{"label":{"type":"text","order":"a1","target":"qfRgLbl","field":"content","default":"of move goal"},"size":{"type":"enum","order":"a3","options":{"lg":null,"md":null,"sm":null},"targets":{"lg":[{"field":"w","target":"qfRing","value":220},{"field":"h","target":"qfRing","value":220},{"field":"w","target":"qfRgTrack","value":220},{"field":"h","target":"qfRgTrack","value":220},{"field":"w","target":"qfRgArc","value":220},{"field":"h","target":"qfRgArc","value":220},{"field":"style","target":"qfRgVal","value":{"align":"center","typography":{"$ref":"type/timer"}}},{"field":"style/size","target":"qfRgLbl","value":15}],"md":[{"field":"w","target":"qfRing","value":112},{"field":"h","target":"qfRing","value":112},{"field":"w","target":"qfRgTrack","value":112},{"field":"h","target":"qfRgTrack","value":112},{"field":"w","target":"qfRgArc","value":112},{"field":"h","target":"qfRgArc","value":112},{"field":"style","target":"qfRgVal","value":{"align":"center","typography":{"$ref":"type/metric"}}},{"field":"style/size","target":"qfRgLbl","value":12}],"sm":[{"field":"w","target":"qfRing","value":64},{"field":"h","target":"qfRing","value":64},{"field":"w","target":"qfRgTrack","value":64},{"field":"h","target":"qfRgTrack","value":64},{"field":"w","target":"qfRgArc","value":64},{"field":"h","target":"qfRgArc","value":64},{"field":"style","target":"qfRgVal","value":{"align":"center","size":15,"typography":{"$ref":"type/metric"}}},{"field":"style/size","target":"qfRgLbl","value":9}]}},"tone":{"type":"enum","order":"a2","options":{"accent":null,"blue":null,"green":null,"violet":null},"targets":{"accent":[{"field":"fill","target":"qfRgArc","value":{"$ref":"color/accent"}}],"blue":[{"field":"fill","target":"qfRgArc","value":{"$ref":"color/blue"}}],"green":[{"field":"fill","target":"qfRgArc","value":{"$ref":"color/green"}}],"violet":[{"field":"fill","target":"qfRgArc","value":{"$ref":"color/violet"}}]}},"value":{"type":"text","order":"a0","target":"qfRgVal","field":"content","default":"72%"}}},"w":112,"h":112,"layout":{"dir":"column","justify":"center","align":"center"},"meta":{"kimo.component.description":"Clockwise from 12 o’clock: set RgArc sweepAngle to −3.6 × the percentage."}}
+
+, "qfSecHead": {"type":"frame","parent":"qf00001f","order":"a1","name":"Section header","component":{"props":{"action":{"type":"text","order":"a1","target":"qfShAct","field":"content","default":"See all"},"showAction":{"type":"boolean","order":"a2","target":"qfShAct","field":"visible","default":true},"title":{"type":"text","order":"a0","target":"qfShTitle","field":"content","default":"Section"}}},"w":350,"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "qfSeg0": {"type":"frame","parent":"qf000016","order":"a1","name":"Segmented control","component":{"props":{"active":{"type":"enum","order":"a3","options":{"first":null,"second":null,"third":null},"targets":{"first":[{"field":"fill","target":"qfSgI1","value":{"$ref":"color/surface"}},{"field":"effects","target":"qfSgI1","value":{"$ref":"shadow/card"}},{"field":"fill","target":"qfSgL1","value":{"$ref":"color/ink"}},{"field":"fill","target":"qfSgI2","value":{"$ref":"color/subtle"}},{"field":"effects","target":"qfSgI2","value":[]},{"field":"fill","target":"qfSgL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfSgI3","value":{"$ref":"color/subtle"}},{"field":"effects","target":"qfSgI3","value":[]},{"field":"fill","target":"qfSgL3","value":{"$ref":"color/muted"}}],"second":[{"field":"fill","target":"qfSgI1","value":{"$ref":"color/subtle"}},{"field":"effects","target":"qfSgI1","value":[]},{"field":"fill","target":"qfSgL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfSgI2","value":{"$ref":"color/surface"}},{"field":"effects","target":"qfSgI2","value":{"$ref":"shadow/card"}},{"field":"fill","target":"qfSgL2","value":{"$ref":"color/ink"}},{"field":"fill","target":"qfSgI3","value":{"$ref":"color/subtle"}},{"field":"effects","target":"qfSgI3","value":[]},{"field":"fill","target":"qfSgL3","value":{"$ref":"color/muted"}}],"third":[{"field":"fill","target":"qfSgI1","value":{"$ref":"color/subtle"}},{"field":"effects","target":"qfSgI1","value":[]},{"field":"fill","target":"qfSgL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfSgI2","value":{"$ref":"color/subtle"}},{"field":"effects","target":"qfSgI2","value":[]},{"field":"fill","target":"qfSgL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfSgI3","value":{"$ref":"color/surface"}},{"field":"effects","target":"qfSgI3","value":{"$ref":"shadow/card"}},{"field":"fill","target":"qfSgL3","value":{"$ref":"color/ink"}}]}},"first":{"type":"text","order":"a0","target":"qfSgL1","field":"content","default":"One"},"second":{"type":"text","order":"a1","target":"qfSgL2","field":"content","default":"Two"},"third":{"type":"text","order":"a2","target":"qfSgL3","field":"content","default":"Three"}}},"w":350,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","gap":2,"pad":3}}
+
+, "qfSetting": {"type":"frame","parent":"qf00002i","order":"a1","name":"Setting row","component":{"props":{"label":{"type":"text","order":"a0","target":"qfSrLbl","field":"content","default":"Setting"},"showChevron":{"type":"boolean","order":"a3","target":"qfSrChev","field":"visible","default":true},"showToggle":{"type":"boolean","order":"a4","target":"qfSrTgWrap","field":"visible","default":false},"showValue":{"type":"boolean","order":"a2","target":"qfSrVal","field":"visible","default":true},"toggle":{"type":"instance","order":"a5","target":"qfSrToggle","default":"qfToggle"},"tone":{"type":"enum","order":"a6","options":{"accent":null,"blue":null,"green":null,"neutral":null,"violet":null},"targets":{"accent":[{"field":"fill","target":"qfSrTile","value":{"$ref":"color/accent-soft"}},{"field":"color","target":"qfSrIcon","value":{"$ref":"color/accent"}}],"blue":[{"field":"fill","target":"qfSrTile","value":{"$ref":"color/blue-soft"}},{"field":"color","target":"qfSrIcon","value":{"$ref":"color/blue"}}],"green":[{"field":"fill","target":"qfSrTile","value":{"$ref":"color/green-soft"}},{"field":"color","target":"qfSrIcon","value":{"$ref":"color/green"}}],"neutral":[{"field":"fill","target":"qfSrTile","value":{"$ref":"color/subtle"}},{"field":"color","target":"qfSrIcon","value":{"$ref":"color/ink-2"}}],"violet":[{"field":"fill","target":"qfSrTile","value":{"$ref":"color/violet-soft"}},{"field":"color","target":"qfSrIcon","value":{"$ref":"color/violet"}}]}},"value":{"type":"text","order":"a1","target":"qfSrVal","field":"content","default":"Value"}}},"w":350,"layout":{"dir":"row","gap":12,"pad":[11,14],"align":"center"},"meta":{"kimo.component.description":"List row with a value and chevron, or a toggle."}}
+
+, "qfSgI1": {"type":"frame","parent":"qfSeg0","order":"a0","name":"One","w":113.33333333333333,"radius":9,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"row","pad":[7,0],"justify":"center"}}
+
+, "qfSgI2": {"type":"frame","parent":"qfSeg0","order":"a1","name":"Two","w":113.33333333333333,"radius":9,"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","pad":[7,0],"justify":"center"}}
+
+, "qfSgI3": {"type":"frame","parent":"qfSeg0","order":"a2","name":"Three","w":113.33333333333333,"radius":9,"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","pad":[7,0],"justify":"center"}}
+
+, "qfSgL1": {"type":"text","parent":"qfSgI1","order":"a0","name":"One","content":"One","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qfSgL2": {"type":"text","parent":"qfSgI2","order":"a0","name":"Two","content":"Two","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qfSgL3": {"type":"text","parent":"qfSgI3","order":"a0","name":"Three","content":"Three","style":{"size":13,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "qfShAct": {"type":"text","parent":"qfSecHead","order":"a1","name":"Action","content":"See all","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "qfShTitle": {"type":"text","parent":"qfSecHead","order":"a0","name":"Title","content":"Section","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "qfSrChev": {"type":"icon","parent":"qfSetting","order":"a3","name":"Icon/chevron-right","w":18,"h":18,"set":"lucide","icon":"chevron-right","color":{"$ref":"color/muted"}}
+
+, "qfSrIcon": {"type":"icon","parent":"qfSrTile","order":"a0","name":"Icon/bell","w":17,"h":17,"set":"lucide","icon":"bell","color":{"$ref":"color/ink-2"}}
+
+, "qfSrLbl": {"type":"text","parent":"qfSetting","order":"a1","name":"Setting","w":{"mode":"fill"},"content":"Setting","grow":"fixed-width","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "qfSrTgWrap": {"type":"frame","parent":"qfSetting","order":"a4","name":"Toggle","visible":false,"layout":{"dir":"row"}}
+
+, "qfSrTile": {"type":"frame","parent":"qfSetting","order":"a0","name":"Icon tile","w":32,"h":32,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfSrToggle": {"type":"instance","parent":"qfSrTgWrap","order":"a0","of":"qfToggle"}
+
+, "qfSrVal": {"type":"text","parent":"qfSetting","order":"a2","name":"Value","content":"Value","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "qfStTime": {"type":"text","parent":"qfStatus","order":"a0","name":"Time","content":"9:41","style":{"size":16,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "qfStat": {"type":"frame","parent":"qf00001x","order":"a1","name":"Stat tile","component":{"props":{"label":{"type":"text","order":"a2","target":"qfSttLbl","field":"content","default":"Metric"},"tone":{"type":"enum","order":"a3","options":{"accent":null,"blue":null,"green":null,"neutral":null,"violet":null},"targets":{"accent":[{"field":"fill","target":"qfSttTile","value":{"$ref":"color/accent-soft"}},{"field":"color","target":"qfSttIcon","value":{"$ref":"color/accent"}}],"blue":[{"field":"fill","target":"qfSttTile","value":{"$ref":"color/blue-soft"}},{"field":"color","target":"qfSttIcon","value":{"$ref":"color/blue"}}],"green":[{"field":"fill","target":"qfSttTile","value":{"$ref":"color/green-soft"}},{"field":"color","target":"qfSttIcon","value":{"$ref":"color/green"}}],"neutral":[{"field":"fill","target":"qfSttTile","value":{"$ref":"color/subtle"}},{"field":"color","target":"qfSttIcon","value":{"$ref":"color/ink-2"}}],"violet":[{"field":"fill","target":"qfSttTile","value":{"$ref":"color/violet-soft"}},{"field":"color","target":"qfSttIcon","value":{"$ref":"color/violet"}}]}},"unit":{"type":"text","order":"a1","target":"qfSttUnit","field":"content","default":"min"},"value":{"type":"text","order":"a0","target":"qfSttVal","field":"content","default":"0"}}},"w":110,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column","gap":10,"pad":14}}
+
+, "qfStatus": {"type":"frame","parent":"qf000009","order":"a1","name":"Status bar","component":{"props":{"time":{"type":"text","order":"a0","target":"qfStTime","field":"content","default":"9:41"}}},"w":390,"h":{"$ref":"size/status"},"layout":{"dir":"row","pad":[0,28,0,32],"justify":"between","align":"center"},"meta":{"kimo.component.description":"iOS status bar. Sits on the screen background."}}
+
+, "qfSttIcon": {"type":"icon","parent":"qfSttTile","order":"a0","name":"Icon/flame","w":16,"h":16,"set":"lucide","icon":"flame","color":{"$ref":"color/accent"}}
+
+, "qfSttLbl": {"type":"text","parent":"qf00001z","order":"a1","name":"Metric","content":"Metric","style":{"size":12,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfSttTile": {"type":"frame","parent":"qfStat","order":"a0","name":"Icon tile","w":30,"h":30,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfSttUnit": {"type":"text","parent":"qf000020","order":"a1","name":"min","content":"min","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfSttVal": {"type":"text","parent":"qf000020","order":"a0","name":"0","content":"0","style":{"size":22,"typography":{"$ref":"type/metric"}},"fill":{"$ref":"color/ink"}}
+
+, "qfTabBar": {"type":"frame","parent":"qf00000i","order":"a1","name":"Tab bar","component":{"props":{"active":{"type":"enum","order":"a0","options":{"plan":null,"profile":null,"progress":null,"today":null},"targets":{"plan":[{"field":"color","target":"qfTbIc1","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb1","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc2","value":{"$ref":"color/accent"}},{"field":"fill","target":"qfTbLb2","value":{"$ref":"color/accent"}},{"field":"color","target":"qfTbIc3","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb3","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc4","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb4","value":{"$ref":"color/muted"}}],"profile":[{"field":"color","target":"qfTbIc1","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb1","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc2","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb2","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc3","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb3","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc4","value":{"$ref":"color/accent"}},{"field":"fill","target":"qfTbLb4","value":{"$ref":"color/accent"}}],"progress":[{"field":"color","target":"qfTbIc1","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb1","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc2","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb2","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc3","value":{"$ref":"color/accent"}},{"field":"fill","target":"qfTbLb3","value":{"$ref":"color/accent"}},{"field":"color","target":"qfTbIc4","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb4","value":{"$ref":"color/muted"}}],"today":[{"field":"color","target":"qfTbIc1","value":{"$ref":"color/accent"}},{"field":"fill","target":"qfTbLb1","value":{"$ref":"color/accent"}},{"field":"color","target":"qfTbIc2","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb2","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc3","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb3","value":{"$ref":"color/muted"}},{"field":"color","target":"qfTbIc4","value":{"$ref":"color/muted"}},{"field":"fill","target":"qfTbLb4","value":{"$ref":"color/muted"}}]}}}},"w":390,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"},"width":{"t":1}},"layout":{"dir":"column","pad":[8,0,0,0]},"meta":{"kimo.component.description":"Four tabs with the home indicator. Set active per screen."}}
+
+, "qfTbIc1": {"type":"icon","parent":"qf00000l","order":"a0","name":"Icon/sun","w":24,"h":24,"set":"lucide","icon":"sun","color":{"$ref":"color/accent"}}
+
+, "qfTbIc2": {"type":"icon","parent":"qf00000m","order":"a0","name":"Icon/calendar-days","w":24,"h":24,"set":"lucide","icon":"calendar-days","color":{"$ref":"color/muted"}}
+
+, "qfTbIc3": {"type":"icon","parent":"qf00000n","order":"a0","name":"Icon/chart-column","w":24,"h":24,"set":"lucide","icon":"chart-column","color":{"$ref":"color/muted"}}
+
+, "qfTbIc4": {"type":"icon","parent":"qf00000o","order":"a0","name":"Icon/user","w":24,"h":24,"set":"lucide","icon":"user","color":{"$ref":"color/muted"}}
+
+, "qfTbLb1": {"type":"text","parent":"qf00000l","order":"a1","name":"Today","content":"Today","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/accent"}}
+
+, "qfTbLb2": {"type":"text","parent":"qf00000m","order":"a1","name":"Plan","content":"Plan","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qfTbLb3": {"type":"text","parent":"qf00000n","order":"a1","name":"Progress","content":"Progress","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qfTbLb4": {"type":"text","parent":"qf00000o","order":"a1","name":"Profile","content":"Profile","style":{"typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/muted"}}
+
+, "qfToggle": {"type":"frame","parent":"qf000011","order":"a1","name":"Toggle","component":{"props":{"state":{"type":"enum","order":"a0","options":{"off":null,"on":null},"targets":{"off":[{"field":"fill","target":"qfToggle","value":{"$ref":"color/track"}},{"field":"layout/justify","target":"qfToggle","value":"start"}],"on":[{"field":"fill","target":"qfToggle","value":{"$ref":"color/green"}},{"field":"layout/justify","target":"qfToggle","value":"end"}]}}}},"w":51,"h":31,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/green"},"layout":{"dir":"row","pad":2,"justify":"end"}}
+
+, "qfToggleOff": {"type":"instance","parent":"qf000014","order":"a1","name":"Toggle/Off","of":"qfToggle","component":true,"args":{"state":"off"},"meta":{"kimo.component.description":"Toggle preset in the off state. Setting row swaps between Toggle and this through its toggle prop, so a row can be switched from the instance panel without opening the nested toggle."}}
+
+, "qfWCard": {"type":"frame","parent":"qf000024","order":"a1","name":"Workout card","component":{"props":{"art":{"type":"enum","order":"a4","options":{"mobility":null,"run":null,"strength":null},"targets":{"mobility":[{"field":"fill","target":"qfWcArt","value":{"kind":"linear","rotation":135,"stops":[{"at":0,"color":{"$ref":"color/art-4"}},{"at":1,"color":{"$ref":"color/art-3"}}]}},{"field":"icon","target":"qfWcIcon","value":"person-standing"}],"run":[{"field":"fill","target":"qfWcArt","value":{"kind":"linear","rotation":135,"stops":[{"at":0,"color":{"$ref":"color/art-3"}},{"at":1,"color":{"$ref":"color/art-2"}}]}},{"field":"icon","target":"qfWcIcon","value":"footprints"}],"strength":[{"field":"fill","target":"qfWcArt","value":{"kind":"linear","rotation":135,"stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/art-2"}}]}},{"field":"icon","target":"qfWcIcon","value":"dumbbell"}]}},"duration":{"type":"text","order":"a2","target":"qfWcDur","field":"content","default":"45 min"},"eyebrow":{"type":"text","order":"a0","target":"qfWcEye","field":"content","default":"Today"},"kcal":{"type":"text","order":"a3","target":"qfWcKcal","field":"content","default":"380 kcal"},"title":{"type":"text","order":"a1","target":"qfWcTitle","field":"content","default":"Workout"}}},"w":350,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"row","gap":14,"pad":12,"align":"center"}}
+
+, "qfWcArt": {"type":"frame","parent":"qfWCard","order":"a0","name":"Art","w":76,"h":76,"radius":{"$ref":"radius/md"},"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/art-2"}}],"rotation":135},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "qfWcDur": {"type":"text","parent":"qf000028","order":"a1","name":"45 min","content":"45 min","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfWcEye": {"type":"text","parent":"qf000026","order":"a0","name":"Eyebrow","content":"Today","style":{"letterSpacing":0.6,"case":"upper","typography":{"$ref":"type/caption"}},"fill":{"$ref":"color/accent"}}
+
+, "qfWcGo": {"type":"instance","parent":"qfWCard","order":"a2","of":"qfIconBtn","args":{"variant":"accent"},"overrides":{"qfIbIcon":{"set":{"icon":"play"}}}}
+
+, "qfWcIcon": {"type":"icon","parent":"qfWcArt","order":"a0","name":"Icon/dumbbell","w":30,"h":30,"set":"lucide","icon":"dumbbell","color":{"$ref":"color/on-art"}}
+
+, "qfWcKcal": {"type":"text","parent":"qf00002a","order":"a1","name":"380 kcal","content":"380 kcal","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "qfWcTitle": {"type":"text","parent":"qf000026","order":"a1","name":"Title","w":{"mode":"fill"},"content":"Workout","grow":"fixed-width","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+}
+}

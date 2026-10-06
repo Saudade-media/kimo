@@ -439,3 +439,65 @@ describe("Rust relay contract (fake event bus)", () => {
     await service.dispose()
   })
 })
+
+describe("Settings › Ask before destructive ops (D14)", () => {
+  test("turning it off drops confirmDestructive for live and new connections; on restores it", async () => {
+    const { net, service } = await startHost({}, true)
+    const open = (id: string) =>
+      net.rustEmit(
+        "kimo://mcp-connection",
+        {
+          connectionId: id,
+          state: "open",
+          transport: "socket",
+          hello: { client: "codex", pid: 1 },
+        },
+        HOST_LABEL,
+      )
+    open("c_one")
+    await until(() => service.runtime.connections().length === 1)
+    const policyOf = (i: number) => service.runtime.connections()[i]?.policy
+    expect(policyOf(0)?.confirmDestructive).toBe(true)
+    net.rustEmit("kimo://mcp-status", { askBeforeDestructive: false })
+    await until(() => policyOf(0)?.confirmDestructive === false)
+    open("c_two")
+    await until(() => service.runtime.connections().length === 2)
+    expect(policyOf(1)?.confirmDestructive).toBe(false)
+    net.rustEmit("kimo://mcp-status", { askBeforeDestructive: true })
+    await until(() => service.runtime.connections().every((c) => c.policy.confirmDestructive))
+    await service.dispose()
+  })
+
+  test("the host reads the saved setting on start", async () => {
+    const platform = createMemoryPlatform({ pid: 7001, files: {} })
+    const net = createMemoryBridgeNetwork()
+    net.commands.set("kimo_mcp_send", () => {})
+    net.commands.set("kimo_mcp_host_ready", () => {})
+    net.commands.set("kimo_mcp_policies_get", () => ({}))
+    net.commands.set("kimo_mcp_server_settings_get", () => ({
+      startOnLaunch: true,
+      askBeforeDestructive: false,
+      httpPort: 7341,
+    }))
+    const service = await startDocumentHostService({
+      platform,
+      bridge: net.bridge(HOST_LABEL),
+      version: "0.5.0-test",
+      relay: true,
+      validate: validateInput as never,
+    })
+    net.rustEmit(
+      "kimo://mcp-connection",
+      {
+        connectionId: "c_x",
+        state: "open",
+        transport: "socket",
+        hello: { client: "codex", pid: 1 },
+      },
+      HOST_LABEL,
+    )
+    await until(() => service.runtime.connections().length === 1)
+    expect(service.runtime.connections()[0]?.policy.confirmDestructive).toBe(false)
+    await service.dispose()
+  })
+})

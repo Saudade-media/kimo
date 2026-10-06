@@ -135,7 +135,7 @@ describe("createTauriPlatform", () => {
     await p.updater.check()
     expect(t.last("kimo_updater_check")).toEqual({ channel: "beta" })
     expect(await p.window.openSettings("fonts")).toBe("window")
-    expect(t.last("kimo_window_open_settings")).toEqual({ pane: "fonts" })
+    expect(t.last("kimo_window_open_settings")).toEqual({ pane: "fonts", focus: null })
     p.dispose()
   })
 
@@ -311,6 +311,64 @@ describe("createTauriPlatform", () => {
       .catch((x) => x)
     expect(isPlatformError(e, "CANCELLED")).toBe(true)
     p.dispose()
+  })
+
+  test("board 37: trash, rename / copy, menu context, new window and clipboard", async () => {
+    const entry = { id: "t1", originalRef: "/a/home.kimo", name: "home.kimo", trashedAt: 5 }
+    const t = fakeTauri({
+      kimo_trash_move: () => entry,
+      kimo_trash_list: () => [entry],
+      kimo_trash_restore: ({ path }) => path ?? entry.originalRef,
+      kimo_trash_empty: () => 3,
+      kimo_fs_rename: () => {
+        throw { code: "EXISTS", message: "/a/b.kimo already exists", errno: "EEXIST" }
+      },
+      kimo_clipboard_write_text: () => {
+        throw { code: "BLOCKED", message: "No native clipboard" }
+      },
+    })
+    const p = await createTauriPlatform(t.bridge)
+    expect(await p.trash?.move("/a/home.kimo")).toEqual(entry)
+    expect(t.last("kimo_trash_move")).toEqual({ path: "/a/home.kimo" })
+    expect(await p.trash?.list()).toEqual([entry])
+    expect(await p.trash?.restore("t1")).toBe("/a/home.kimo")
+    expect(t.last("kimo_trash_restore")).toEqual({ id: "t1", path: null })
+    expect(await p.trash?.restore("t1", "/a/home 2.kimo")).toBe("/a/home 2.kimo")
+    await p.trash?.remove("t1")
+    expect(t.last("kimo_trash_remove")).toEqual({ id: "t1" })
+    expect(await p.trash?.empty()).toBe(3)
+    // EEXIST arrives as code EXISTS (never IO).
+    const e = await p.files.rename("/a/a.kimo", "/a/b.kimo").catch((x: unknown) => x)
+    expect(isPlatformError(e) && e.code).toBe("EXISTS")
+    await p.files.copy("/a/a.kimo", "/a/a 2.kimo")
+    expect(t.last("kimo_fs_copy")).toEqual({ from: "/a/a.kimo", to: "/a/a 2.kimo" })
+
+    await p.menu?.setContext("editor")
+    expect(t.last("kimo_menu_set_context")).toEqual({ context: "editor" })
+    await p.window.openNewWindow?.()
+    expect(t.calls.some((c) => c.command === "kimo_window_new")).toBe(true)
+    const actions: string[] = []
+    const off = p.menu?.onAction((a) => actions.push(a))
+    t.emit("kimo://editor-menu", { action: "go-home" })
+    t.emit("kimo://editor-menu", { action: "select-all" })
+    off?.()
+    expect(actions).toEqual(["go-home", "select-all"])
+
+    // Windows / Linux: Rust says BLOCKED, the page API writes the clipboard.
+    const written: string[] = []
+    const nav = globalThis as unknown as { navigator?: unknown }
+    const prev = nav.navigator
+    Object.defineProperty(globalThis, "navigator", {
+      value: { clipboard: { writeText: async (s: string) => void written.push(s) } },
+      configurable: true,
+    })
+    try {
+      await p.clipboard?.writeText("Kimo 1.0.0")
+      expect(t.last("kimo_clipboard_write_text")).toEqual({ text: "Kimo 1.0.0" })
+      expect(written).toEqual(["Kimo 1.0.0"])
+    } finally {
+      Object.defineProperty(globalThis, "navigator", { value: prev, configurable: true })
+    }
   })
 
   test("base64 handles large buffers", () => {

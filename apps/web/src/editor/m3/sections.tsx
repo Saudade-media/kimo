@@ -31,7 +31,13 @@ import {
 } from "@kimo/ui"
 import { Fragment, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
-import { detachInstance, goToMain, entriesOf as overrideList, setSlotOff } from "./actions"
+import {
+  addSlotProp,
+  detachInstance,
+  goToMain,
+  entriesOf as overrideList,
+  setSlotOff,
+} from "./actions"
 import { BrokenStrip, ComponentMenu } from "./ComponentDialogs"
 import { type M3Controller, useBusValue } from "./controller"
 import {
@@ -450,6 +456,8 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
   const n = store.getNode(id)
   const [menu, setMenu] = useState<HTMLElement | null>(null)
   const [targetFor, setTargetFor] = useState<{ prop: string; anchor: HTMLElement } | null>(null)
+  /** Add prop › Slot (mark a frame): the frame picker's anchor (the Add prop button). */
+  const [slotPick, setSlotPick] = useState<HTMLElement | null>(null)
   /** Board 27 §8: the Component menu (dgOzz) anchor. */
   const [compMenu, setCompMenu] = useState<HTMLElement | null>(null)
   /** Board 27 §8 (a): the Option tab shown per enum prop. */
@@ -487,7 +495,20 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
     inherited: props.filter((p) => p.inherited).length,
     redeclared: props.filter((p) => p.redeclared && !p.inherited).length,
   }
-  const addProp = (type: "text" | "boolean" | "enum" | "instance") => {
+  const addProp = (type: "text" | "boolean" | "enum" | "instance" | "slot") => {
+    if (type === "slot") {
+      const hasFrame = (pid: string): boolean =>
+        store
+          .children(pid)
+          .some(
+            (c) =>
+              store.getNode(c)?.type === "frame" ||
+              (store.getNode(c)?.type !== "instance" && hasFrame(c)),
+          )
+      if (!hasFrame(id))
+        return m3.toast({ tone: "warning", text: "Add a frame to the component first" })
+      return setSlotPick(menu)
+    }
     const descendants: string[] = []
     const walk = (pid: string) => {
       for (const c of store.children(pid)) {
@@ -722,6 +743,28 @@ export function ComponentSection({ m3, id }: { m3: M3Controller; id: string }) {
       {menu && <AddPropMenu anchor={menu} onPick={addProp} onClose={() => setMenu(null)} />}
       {compMenu && (
         <ComponentMenu m3={m3} id={id} anchor={compMenu} onClose={() => setCompMenu(null)} />
+      )}
+      {slotPick && (
+        <TargetMenu
+          m3={m3}
+          component={id}
+          anchor={slotPick}
+          frames
+          onPick={(frame) =>
+            addSlotProp(
+              m3,
+              id,
+              frame,
+              freePropName(
+                nameOf(store.getNode(frame))
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "") || "content",
+                props.map((p) => p.name),
+              ),
+            )
+          }
+          onClose={() => setSlotPick(null)}
+        />
       )}
       {targetFor && (
         <TargetMenu

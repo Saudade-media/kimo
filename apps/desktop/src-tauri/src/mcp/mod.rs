@@ -35,6 +35,9 @@ pub const HOST_LABEL: &str = "document-host";
 pub const HOST_ROUTE: &str = "index.html#/host";
 /// argv flag: start without an editor window (`kimo-mcp --launch`).
 pub const BACKGROUND_FLAG: &str = kimo_mcp::launch::BACKGROUND_FLAG;
+/// The generic HTTP bearer Settings › Agents & MCP shows (`HTTP_TOKEN_CLIENT` in
+/// apps/web/src/settings/AgentsPane.tsx).
+pub const HTTP_TOKEN_CLIENT: &str = "http";
 
 struct TauriSink<Rt: Runtime> {
     app: AppHandle<Rt>,
@@ -117,6 +120,9 @@ impl McpService {
         let paths = KimoPaths::new(home);
         let endpoint = paths.endpoint_name();
         let _ = files::ensure_private_dir(&paths.mcp_dir());
+        // Settings › Agents › "Open log" reveals this folder: it must exist before the first
+        // agent edit appends to it (D7).
+        let _ = files::ensure_private_dir(&paths.activity());
         let sink = Arc::new(TauriSink { app: app.clone() });
         let hub = Hub::new(
             HubConfig::new(files::mint_token(), app_version.clone()),
@@ -125,22 +131,13 @@ impl McpService {
             sink,
         );
         let settings = files::read_server_settings(&paths);
-        let svc = Arc::new(Self {
-            hub: hub.clone(),
-            http_tokens: Arc::new(RwLock::new(files::read_http_tokens(&paths))),
+        let svc = Arc::new(Self::with_hub(
+            hub.clone(),
             paths,
             endpoint,
-            owns_endpoint: AtomicBool::new(false),
-            socket_stop: std::sync::Mutex::new(None),
-            lifecycle: tokio::sync::Mutex::new(()),
-            http: tokio::sync::Mutex::new(None),
-            last_error: std::sync::Mutex::new(None),
-            started_at_iso: crate::util::iso_from_ms(crate::util::now_ms()),
             app_version,
             background,
-            quitting: AtomicBool::new(false),
-            exiting: AtomicBool::new(false),
-        });
+        ));
         svc.publish_settings();
         let h = hub.clone();
         tauri::async_runtime::spawn(async move {
@@ -158,6 +155,46 @@ impl McpService {
             svc.log("server not started (start on launch is off)");
         }
         svc
+    }
+
+    /// The service state around an existing hub; starts nothing.
+    fn with_hub(
+        hub: Arc<Hub>,
+        paths: KimoPaths,
+        endpoint: String,
+        app_version: String,
+        background: bool,
+    ) -> Self {
+        Self {
+            hub,
+            http_tokens: Arc::new(RwLock::new(files::read_http_tokens(&paths))),
+            paths,
+            endpoint,
+            owns_endpoint: AtomicBool::new(false),
+            socket_stop: std::sync::Mutex::new(None),
+            lifecycle: tokio::sync::Mutex::new(()),
+            http: tokio::sync::Mutex::new(None),
+            last_error: std::sync::Mutex::new(None),
+            started_at_iso: crate::util::iso_from_ms(crate::util::now_ms()),
+            app_version,
+            background,
+            quitting: AtomicBool::new(false),
+            exiting: AtomicBool::new(false),
+        }
+    }
+
+    /// Test seam: a service that owns its (unbound) endpoint, so HTTP can start.
+    #[cfg(test)]
+    pub(crate) fn for_test(hub: Arc<Hub>, paths: KimoPaths) -> Self {
+        let s = Self::with_hub(
+            hub,
+            paths,
+            "/tmp/kimo-test.sock".into(),
+            "9.9.9".into(),
+            false,
+        );
+        s.owns_endpoint.store(true, Ordering::SeqCst);
+        s
     }
 
     fn owns(&self) -> bool {
@@ -208,6 +245,8 @@ impl McpService {
         let h = files::read_http_config(&self.paths);
         self.hub
             .set_status_field("startOnLaunch", s.start_on_launch.into());
+        self.hub
+            .set_status_field("askBeforeDestructive", s.ask_before_destructive.into());
         self.hub.set_status_field("httpPort", h.port.into());
         if let Some(h) = kimo_mcp::paths::home_dir() {
             self.hub
@@ -226,23 +265,34 @@ impl McpService {
         );
     }
 
-    /// `{startOnLaunch, httpPort}`.
+    /// `{startOnLaunch, askBeforeDestructive, httpPort}`.
     pub fn settings(&self) -> Value {
         let s = files::read_server_settings(&self.paths);
         let h = files::read_http_config(&self.paths);
-        serde_json::json!({ "startOnLaunch": s.start_on_launch, "httpPort": h.port })
+        serde_json::json!({
+            "startOnLaunch": s.start_on_launch,
+            "askBeforeDestructive": s.ask_before_destructive,
+            "httpPort": h.port,
+        })
     }
 
-    /// `kimo_mcp_server_settings_set`: persists, and moves a running HTTP listener to the new
-    /// port.
+    /// `kimo_mcp_server_settings_set`: persists, and moves a running HTTP listener (or starts
+    /// one that failed) to the new port.
     pub async fn set_settings(
         &self,
         start_on_launch: Option<bool>,
+        ask_before_destructive: Option<bool>,
         http_port: Option<u16>,
     ) -> R<Value> {
-        if let Some(v) = start_on_launch {
+        if start_on_launch.is_some() || ask_before_destructive.is_some() {
             let mut s = files::read_server_settings(&self.paths);
-            s.start_on_launch = v;
+            if let Some(v) = start_on_launch {
+                s.start_on_launch = v;
+            }
+            if let Some(v) = ask_before_destructive {
+                s.ask_before_destructive = v;
+                self.log(&format!("ask before destructive ops: {v}"));
+            }
             files::write_server_settings(&self.paths, &s)?;
         }
         if let Some(port) = http_port {
@@ -255,12 +305,22 @@ impl McpService {
             if c.port != port {
                 c.port = port;
                 files::write_http_config(&self.paths, &c)?;
-                let running = self.http.lock().await.is_some();
-                if running {
-                    self.set_http_enabled(false).await?;
-                    self.set_http_enabled(true).await?;
-                }
                 self.log(&format!("HTTP port set to {port}"));
+            }
+            // "Use <port> and restart" (board 21 bxqQH): move a running listener, or start the
+            // one that failed, on the new port. A clean bind clears the error state.
+            let bound = self.http.lock().await.as_ref().map(|h| h.port);
+            let running = bound.is_some();
+            if running && bound != Some(port) {
+                self.set_http_enabled(false).await?;
+                self.set_http_enabled(true).await?;
+            } else if running {
+                // Already listening on the requested port (the usual case: the fallback port
+                // the EADDRINUSE error suggested). Nothing to rebind; the error no longer applies.
+                self.log(&format!("HTTP listening on 127.0.0.1:{port}"));
+                self.set_error(None);
+            } else if c.enabled {
+                self.set_http_enabled(true).await?;
             }
         }
         self.publish_settings();
@@ -416,6 +476,11 @@ impl McpService {
     /// status carries an `EADDRINUSE` error with that port as the suggestion.
     pub async fn set_http_enabled(&self, enabled: bool) -> R<Value> {
         let mut cfg = files::read_http_config(&self.paths);
+        // Every HTTP request needs a bearer: mint the generic one before the status says HTTP
+        // is on, so Settings (which fetches the token on that edge) never reads it as missing.
+        if enabled && self.token_of(HTTP_TOKEN_CLIENT)?.is_none() {
+            self.rotate_token(HTTP_TOKEN_CLIENT)?;
+        }
         {
             let mut guard = self.http.lock().await;
             if enabled && guard.is_none() {
@@ -450,6 +515,8 @@ impl McpService {
                     )));
                 } else {
                     self.log(&format!("HTTP listening on 127.0.0.1:{}", h.port));
+                    // On its configured port: an earlier HTTP failure no longer applies.
+                    self.set_error(None);
                 }
                 self.hub.set_http(HttpStatus {
                     enabled: true,

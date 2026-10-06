@@ -152,6 +152,25 @@ export function AgentCanvasLayer({
   return (
     <div ref={layer} className="agents-canvas-layer" data-testid="agent-canvas-layer">
       <AgentSectionLayer cursors={cursors} flashes={flashes} />
+      {/* Activity row hover: every target of the entry in $agent. */}
+      {state.highlight.map((id) => {
+        const box = project(id)
+        return box ? (
+          <div
+            key={`hl-${id}`}
+            className="agents-highlight"
+            data-testid="agent-highlight"
+            data-node={id}
+            style={{
+              left: box.x,
+              top: box.y,
+              width: box.w,
+              height: box.h,
+              borderRadius: box.radius ?? 0,
+            }}
+          />
+        ) : null
+      })}
       {dry?.ghosts.map((g) => {
         const box = project(g.id)
         return box ? (

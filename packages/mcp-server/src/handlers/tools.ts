@@ -187,6 +187,11 @@ interface UndoRecord {
   origin: LocalOrigin
   top: object | null
   revision: RevisionToken
+  /**
+   * The group is undone: `top` is then its entry on the redo stack. A redo moves it back onto
+   * the undo stack and keeps the token valid, so the same token undoes it again.
+   */
+  undone?: boolean
 }
 
 const asLocal = (o: ToolContext["origin"]) => o as LocalOrigin
@@ -648,7 +653,7 @@ export function createToolHandlerMap(
       const limit = numberOr(input.limit, 20)
       const mine = new Map<string, string>()
       for (const [t, rec] of tokens)
-        if (rec.store === store && rec.origin === origin)
+        if (rec.store === store && rec.origin === origin && !rec.undone)
           mine.set(`${rec.revision.epoch}:${rec.revision.seq}`, t)
       const entries = [...store.log()]
         .reverse()
@@ -675,7 +680,8 @@ export function createToolHandlerMap(
       )
     }
     if (store.readOnly) return fail(readOnlyError(d))
-    if (action === "undo" && typeof input.token === "string") {
+    const undoing = action === "undo"
+    if ((undoing || action === "redo") && typeof input.token === "string") {
       const rec = tokens.get(input.token)
       if (!rec || rec.store !== store || rec.origin !== origin)
         return fail(
@@ -686,20 +692,38 @@ export function createToolHandlerMap(
           },
           { revision: sameRev(before) },
         )
-      if (store.topUndo(origin) !== rec.top)
+      if (!!rec.undone === undoing)
+        return fail(
+          {
+            code: "INVALID_INPUT",
+            message: undoing
+              ? "That edit is already undone; nothing was undone."
+              : "That edit is not undone; nothing was redone.",
+            path: "token",
+          },
+          { revision: sameRev(before) },
+        )
+      if ((undoing ? store.topUndo(origin) : store.topRedo(origin)) !== rec.top)
         return fail(
           {
             code: "REVISION_CONFLICT",
-            message: "That edit is no longer on top of your undo stack; nothing was undone.",
+            message: undoing
+              ? "That edit is no longer on top of your undo stack; nothing was undone."
+              : "That edit is no longer on top of your redo stack; nothing was redone.",
             path: "token",
-            detail: { kind: "undo", current: toToken(before) },
+            detail: { kind: action, current: toToken(before) },
             suggestion: "Call kimo_history action=list to see your recent edits.",
           },
           { revision: sameRev(before) },
         )
     }
     streams.interrupt(store, origin)
-    const res = action === "undo" ? store.undo(origin) : store.redo(origin)
+    const topBefore = undoing ? store.topUndo(origin) : store.topRedo(origin)
+    const moved = [...tokens].filter(
+      ([, r]) =>
+        r.store === store && r.origin === origin && r.top === topBefore && !!r.undone !== undoing,
+    )
+    const res = undoing ? store.undo(origin) : store.redo(origin)
     if (!res.ok && !res.stale)
       return fail(
         {
@@ -708,10 +732,26 @@ export function createToolHandlerMap(
         },
         { revision: sameRev(before) },
       )
-    if (action === "undo" && typeof input.token === "string") tokens.delete(input.token)
+    // Keep the group's token valid across undo/redo: it follows the group between the stacks.
+    // A stale group is dropped from the stack, and its token with it.
+    let undoToken: string | undefined
+    for (const [t, r] of moved) {
+      if (res.stale || !topBefore) {
+        tokens.delete(t)
+        continue
+      }
+      r.top = undoing ? store.topRedo(origin) : store.topUndo(origin)
+      r.undone = undoing
+      if (!undoing) undoToken = t
+    }
     return done(
       success(
-        { stale: res.stale, canUndo: store.canUndo(origin), canRedo: store.canRedo(origin) },
+        {
+          stale: res.stale,
+          canUndo: store.canUndo(origin),
+          canRedo: store.canRedo(origin),
+          ...(undoToken ? { undoToken } : {}),
+        },
         res.stale
           ? `Your last edit no longer had any effect (later edits by others changed the same nodes); it was dropped from your ${action} stack.`
           : `${action === "undo" ? "Undid" : "Redid"} your last edit.`,

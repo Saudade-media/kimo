@@ -4,7 +4,7 @@
  * Also the `.kimo` open/save helpers (File System Access API with an upload/download fallback).
  */
 
-import type { KimoDocument } from "@kimo/core-schema"
+import { type KimoDocument, localComponents } from "@kimo/core-schema"
 import {
   createDocStore,
   type DocStore,
@@ -12,6 +12,7 @@ import {
   openDocument,
   serialize,
 } from "@kimo/editor-state"
+import { readFontInfo } from "@kimo/renderer"
 import { IndexedDbProvider } from "@kimo/sync/indexeddb"
 import { assetRefs } from "./asset-manifest"
 import { type AssetStore, createAssetStore, deleteAssetDb, type ManifestEntry } from "./assets"
@@ -26,7 +27,18 @@ export interface FileMeta {
   updatedAt: number
   /** Number of root frames (shown as "· 6 frames"). */
   frames: number
+  /**
+   * Board 37 §3 (web Trash): when the file was moved to the Trash. Trashed files leave Recents,
+   * All files and search; Home deletes them for good {@link TRASH_RETENTION_MS} later.
+   */
+  trashedAt?: number
+  /** Board 37 §4: component count, and `meta.library` (Design systems). Kept on every save. */
+  components?: number
+  library?: boolean
 }
+
+/** Board 37 rules "Trash · web": files stay in the Trash for 30 days. */
+export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 
 const INDEX_DB = "kimo-files"
 const STORE = "files"
@@ -60,10 +72,90 @@ function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<
   )
 }
 
-/** All files, most recently edited first. */
+async function allFiles(): Promise<FileMeta[]> {
+  return tx<FileMeta[]>("readonly", (s) => s.getAll() as IDBRequest<FileMeta[]>)
+}
+
+/** All files not in the Trash, most recently edited first. */
 export async function listFiles(): Promise<FileMeta[]> {
-  const all = await tx<FileMeta[]>("readonly", (s) => s.getAll() as IDBRequest<FileMeta[]>)
-  return all.sort((a, b) => b.updatedAt - a.updatedAt)
+  return (await allFiles()).filter((f) => !f.trashedAt).sort((a, b) => b.updatedAt - a.updatedAt)
+}
+
+/** Files in the Trash, most recently trashed first. */
+export async function listTrashedFiles(): Promise<FileMeta[]> {
+  return (await allFiles())
+    .filter((f) => !!f.trashedAt)
+    .sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0))
+}
+
+/** Moves a file to the Trash (soft delete). */
+export async function trashFile(id: string, now = Date.now()): Promise<void> {
+  const cur = await getFile(id)
+  if (!cur) throw new Error("That file is no longer in this browser")
+  await putFile({ ...cur, trashedAt: now })
+}
+
+/** Takes a file out of the Trash. */
+export async function restoreFile(id: string): Promise<void> {
+  const cur = await getFile(id)
+  if (!cur) throw new Error("That file is no longer in the Trash")
+  const { trashedAt: _, ...rest } = cur
+  await putFile(rest)
+}
+
+/** Deletes files trashed more than 30 days before `now` for good; resolves to how many. */
+export async function purgeTrash(now = Date.now()): Promise<number> {
+  const old = (await listTrashedFiles()).filter(
+    (f) => now - (f.trashedAt ?? now) > TRASH_RETENTION_MS,
+  )
+  for (const f of old) await deleteFile(f.id)
+  return old.length
+}
+
+/** A file's document, read from its database (Duplicate, Download .kimo, Design systems). */
+export async function loadFileStore(id: string): Promise<DocStore> {
+  const store = createDocStore()
+  const provider = new IndexedDbProvider(docDbName(id))
+  try {
+    await provider.attach(store)
+    await provider.detach()
+  } catch (e) {
+    store.destroy()
+    throw e
+  }
+  return store
+}
+
+/** Duplicates a file (document and images) under `name`; resolves to the new id. */
+export async function duplicateFile(id: string, name: string): Promise<string> {
+  const store = await loadFileStore(id)
+  let next: string
+  try {
+    next = await persistNew(store, name)
+  } finally {
+    store.destroy()
+  }
+  const from = createAssetStore(id)
+  const to = createAssetStore(next)
+  try {
+    for (const key of await from.keys()) {
+      const bytes = await from.bytes(key)
+      if (bytes) await to.putKey(key, bytes)
+    }
+  } finally {
+    from.dispose()
+    to.dispose()
+  }
+  return next
+}
+
+/** Component count and `meta.library` of a store (Design systems, board 37 §4). */
+export function libraryStats(store: DocStore): { components: number; library: boolean } {
+  const doc = store.toDocument()
+  return {
+    components: localComponents(doc).length,
+    library: (doc.meta as { library?: unknown } | undefined)?.library === true,
+  }
 }
 
 export const getFile = (id: string) =>
@@ -99,7 +191,14 @@ async function persistNew(store: DocStore, name: string): Promise<string> {
   await provider.attach(store)
   await provider.detach()
   const now = Date.now()
-  await putFile({ id, name, createdAt: now, updatedAt: now, frames: countFrames(store) })
+  await putFile({
+    id,
+    name,
+    createdAt: now,
+    updatedAt: now,
+    frames: countFrames(store),
+    ...libraryStats(store),
+  })
   return id
 }
 
@@ -260,6 +359,11 @@ export async function exportFile(
   assets: AssetStore,
   /** Board 28: the document as written (font assets the text uses join the manifest). */
   prepare: (doc: KimoDocument) => KimoDocument = (d) => d,
+  /**
+   * Settings › Fonts & privacy › Embed fonts in .kimoz packages. Off: no font file goes in the
+   * package. On: only fonts whose OS/2 fsType allows embedding ({@link fontEmbeddable}).
+   */
+  embedFonts = true,
 ): Promise<ExportedFile> {
   let doc: KimoDocument = store.toDocument()
   const refs = assetRefs(doc.nodes)
@@ -267,8 +371,18 @@ export async function exportFile(
   // manifest (board 28). A plain `.kimo` stays plain: fonts alone don't turn it into a package.
   if (refs.size) {
     doc = prepare(doc)
-    for (const [key, e] of Object.entries((doc.assets ?? {}) as Record<string, { mime?: string }>))
-      if (/^font\//i.test(e?.mime ?? "")) refs.add(key)
+    const manifest = { ...((doc.assets ?? {}) as Record<string, { mime?: string }>) }
+    let dropped = false
+    for (const [key, e] of Object.entries(manifest)) {
+      if (!/^font\//i.test(e?.mime ?? "") || refs.has(key)) continue
+      if (embedFonts && (await fontEmbeddable(assets, key))) refs.add(key)
+      else {
+        // Not in the package, so not in its manifest either (no ASSET_MISSING on open).
+        delete manifest[key]
+        dropped = true
+      }
+    }
+    if (dropped) doc = { ...doc, assets: manifest } as KimoDocument
   }
   doc.meta = { ...doc.meta, name }
   if (!refs.size)
@@ -302,6 +416,18 @@ export async function exportFile(
     data: new Blob([zip as Uint8Array<ArrayBuffer>], { type: "application/zip" }),
     missingAssets,
   }
+}
+
+/**
+ * Whether a stored font may go in a package: its OS/2 fsType allows embedding. A face that
+ * can't be inspected (WOFF2 from Google Fonts, all under open licenses) is embedded; a missing
+ * file is left to the missing-asset path.
+ */
+async function fontEmbeddable(assets: AssetStore, key: string): Promise<boolean> {
+  const bytes = await assets.bytes(key).catch(() => null)
+  if (!bytes) return true
+  const info = await readFontInfo(bytes)
+  return info ? info.embeddable : true
 }
 
 // --- File pickers -------------------------------------------------------------------------

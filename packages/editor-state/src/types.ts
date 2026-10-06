@@ -195,6 +195,8 @@ export interface DocStore {
    * entry it pushed is still the top one before collapsing it with `undo`.
    */
   topUndo(origin: LocalOrigin): object | null
+  /** The same handle for the top of `origin`'s redo stack (null when empty). */
+  topRedo(origin: LocalOrigin): object | null
   /**
    * Merges every op group `origin` applies from now on into ONE undo step, until the returned
    * function runs (idempotent). A streamed agent edit lands as many transactions while the model

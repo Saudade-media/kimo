@@ -25,6 +25,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { commandsFor } from "../clipboard/useEditorCommands"
+import { failureText } from "../errors"
+import { keyHint } from "../kbd"
 import { goToMain } from "./actions"
 import { type M3Controller, useBusValue } from "./controller"
 import { nameOf } from "./model"
@@ -66,7 +68,12 @@ export function ComponentDialogs({ m3 }: { m3: M3Controller }) {
     if (!settings) return
     m3.prefs = {
       duplicateMain: () => settings.get("general.duplicateMain"),
-      setDuplicateMain: (v) => void settings.set("general.duplicateMain", v).catch(() => {}),
+      setDuplicateMain: (v) =>
+        void settings
+          .set("general.duplicateMain", v)
+          .catch((e: unknown) =>
+            m3.toast({ tone: "danger", text: failureText("save your choice", e) }),
+          ),
     }
     return () => {
       m3.prefs = null
@@ -104,7 +111,13 @@ export function ComponentDialogs({ m3 }: { m3: M3Controller }) {
   if (state.kind === "replaceMain")
     return <ReplaceMainDialog m3={m3} main={state.main} source={state.source} onClose={close} />
   if (state.kind === "fixOverrides")
-    return <FixOverridesDialog m3={m3} component={state.component} onClose={close} />
+    return (
+      <FixOverridesDialog
+        m3={m3}
+        scope={"library" in state ? { library: state.library } : { component: state.component }}
+        onClose={close}
+      />
+    )
   return (
     <DuplicateMainDialog
       m3={m3}
@@ -221,17 +234,44 @@ function rowKey(b: BrokenOverride) {
   return `${b.instance}\u0000${b.key}\u0000${b.kind}\u0000${b.field ?? ""}`
 }
 
+/** Broken overrides on instances of library `alias`'s components (Library Changes). */
+export function brokenOfLibrary(m3: M3Controller, alias: string): BrokenOverride[] {
+  const ctx = ctxOf(m3)
+  const nodes = (ctx.doc as { nodes?: Record<string, { type?: string; of?: unknown }> }).nodes ?? {}
+  // The instance's chain of `of` (instances of instances) ends at `alias:<id>`.
+  const fromLibrary = (id: string) => {
+    const seen = new Set<string>()
+    let of = nodes[id]?.of
+    while (typeof of === "string" && !seen.has(of)) {
+      if (of.startsWith(`${alias}:`)) return true
+      seen.add(of)
+      const next = nodes[of]
+      of = next?.type === "instance" ? next.of : undefined
+    }
+    return false
+  }
+  return brokenOverrides(ctx).filter((b) => fromLibrary(b.instance))
+}
+
 function FixOverridesDialog({
   m3,
-  component,
+  scope,
   onClose,
 }: {
   m3: M3Controller
-  component: string
+  scope: { component: string } | { library: string }
   onClose(): void
 }) {
   const ctx = useMemo(() => ctxOf(m3), [m3])
-  const rows = useMemo(() => brokenOverrides(ctx, component), [ctx, component])
+  const library = "library" in scope ? scope.library : null
+  const component = "component" in scope ? scope.component : null
+  const rows = useMemo(
+    () =>
+      library !== null
+        ? brokenOfLibrary(m3, library)
+        : brokenOverrides(ctx, component ?? undefined),
+    [m3, ctx, library, component],
+  )
   const cands = useMemo(() => rows.map((b) => remapCandidates(ctx, b).slice(0, 12)), [ctx, rows])
   const [choice, setChoice] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -239,7 +279,10 @@ function FixOverridesDialog({
     ),
   )
   const store = m3.session.store
-  const compName = nameOf(store.getNode(component), "Component")
+  const compName =
+    library !== null
+      ? (m3.libs.get(library)?.name ?? library)
+      : nameOf(store.getNode(component ?? ""), "Component")
   const instances = new Set(rows.map((b) => b.instance)).size
   const fixes = rows.filter((b) => choice[rowKey(b)] !== "keep").length
   const where = (b: BrokenOverride) => {
@@ -524,7 +567,7 @@ export function ComponentMenu({
       <MenuDivider />
       <MenuRow
         label="Duplicate"
-        meta="⌘D"
+        meta={keyHint("duplicate", "⌘D")}
         onSelect={run(() => {
           m3.session.ui.getState().select([id])
           commandsFor(m3.session)?.duplicate()

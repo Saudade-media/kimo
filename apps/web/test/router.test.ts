@@ -1,10 +1,24 @@
 import { describe, expect, test } from "bun:test"
-import { diskPath, parseRoute } from "../src/router"
+import { diskPath, homeFolderPath, homeSectionPath, parseRoute } from "../src/router"
 
 describe("parseRoute", () => {
   test("home", () => {
-    expect(parseRoute("")).toEqual({ name: "home" })
-    expect(parseRoute("#/")).toEqual({ name: "home" })
+    expect(parseRoute("")).toEqual({ name: "home", section: { kind: "recents" } })
+    expect(parseRoute("#/")).toEqual({ name: "home", section: { kind: "recents" } })
+  })
+  test("board 37 Home sections", () => {
+    for (const kind of ["all", "templates", "libraries", "trash"] as const) {
+      expect(parseRoute(`#/${kind}`)).toEqual({ name: "home", section: { kind } })
+      expect(homeSectionPath({ kind })).toBe(`/${kind}`)
+    }
+    const ref = "/Users/me/Work/kimo site"
+    expect(parseRoute(`#${homeFolderPath(ref)}`)).toEqual({
+      name: "home",
+      section: { kind: "folder", ref },
+    })
+    expect(homeSectionPath({ kind: "folder", ref })).toBe(homeFolderPath(ref))
+    expect(homeSectionPath({ kind: "recents" })).toBe("/")
+    expect(parseRoute("#/folder/%E0%A4%A").name).toBe("not-found")
   })
   test("file", () => {
     expect(parseRoute("#/file/abc123XYZ")).toEqual({ name: "file", id: "abc123XYZ" })

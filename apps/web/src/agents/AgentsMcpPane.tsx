@@ -27,6 +27,7 @@ import {
   Toggle,
 } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useState } from "react"
+import { causeOf } from "../editor/errors"
 import { AutoApproveConfirm } from "./AutoApproveConfirm"
 import { ConfigDiffDialog } from "./ConfigDiffDialog"
 import { AgentIcon } from "./icons"
@@ -84,7 +85,19 @@ export interface AgentsMcpPaneProps {
   onOpenActivity?: () => void
   /** Clipboard writer (default navigator.clipboard). */
   onCopy?: (text: string) => void
+  /**
+   * The Settings pane banner (board 37 CT1wv), shown right under the Title Bar. Null when
+   * nothing failed.
+   */
+  banner?: ReactNode
+  /**
+   * A failed action (audit A5): `what` completes "Couldn't …", `retry` adds Retry. Default: the
+   * console.
+   */
+  onError?: (what: string, error: unknown, retry?: () => void) => void
 }
+
+const logError = (what: string, error: unknown) => console.warn(`Kimo: couldn't ${what}`, error)
 
 interface PaneData {
   status: McpServerStatus | null
@@ -100,10 +113,9 @@ function usePaneData(host: McpHostApi, scope: "user" | "project", project?: stri
     policies: {},
     hosts: [],
   })
+  /** Rescan: rejects when the host configs can't be read (the pane reports it). */
   const loadHosts = useCallback(async () => {
-    const hosts = await host.installer
-      .status(scope, project)
-      .catch(() => [] as McpHostConfigStatus[])
+    const hosts = await host.installer.status(scope, project)
     setData((d) => ({ ...d, hosts }))
   }, [host, scope, project])
   useEffect(() => {
@@ -127,8 +139,9 @@ function usePaneData(host: McpHostApi, scope: "user" | "project", project?: stri
   return { data, setData, loadHosts }
 }
 
-const copyText = (text: string) => {
-  void navigator.clipboard?.writeText(text).catch(() => {})
+const copyText = async (text: string): Promise<void> => {
+  if (!navigator.clipboard) throw new Error("The clipboard isn't available here")
+  await navigator.clipboard.writeText(text)
 }
 
 export function AgentsMcpPane(props: AgentsMcpPaneProps) {
@@ -146,7 +159,10 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
     after: string | null
     error?: string
   } | null>(null)
-  const copy = props.onCopy ?? copyText
+  const fail = props.onError ?? logError
+  const copy =
+    props.onCopy ??
+    ((text: string) => copyText(text).catch((e: unknown) => fail("copy to the clipboard", e)))
   const pill = serverPill(data.status, data.connections.length, server.error)
   const hosts = HOST_ORDER.map((h) => data.hosts.find((x) => x.host === h)).filter(
     (h): h is McpHostConfigStatus => !!h,
@@ -155,12 +171,50 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
   const shim = data.status?.shimPath ?? "kimo-mcp"
 
   const setPolicy = async (client: string, policy: McpClientPolicy) => {
-    await host.policies.set(client, policy)
-    setData((d) => ({ ...d, policies: { ...d.policies, [client]: policy } }))
+    try {
+      await host.policies.set(client, policy)
+      setData((d) => ({ ...d, policies: { ...d.policies, [client]: policy } }))
+    } catch (e) {
+      fail("change the permissions", e, () => void setPolicy(client, policy))
+    }
   }
   const openPreview = async (h: HostRowView, action: "install" | "remove") => {
-    const p = await host.installer.preview(h.host, action, scope, project)
-    setPreview({ host: h.host, label: h.name, action, ...p })
+    try {
+      const p = await host.installer.preview(h.host, action, scope, project)
+      setPreview({ host: h.host, label: h.name, action, ...p })
+    } catch (e) {
+      fail(`read the ${h.name} config`, e, () => void openPreview(h, action))
+    }
+  }
+  // Board 37 F7 (T0J64): the dialog stays open until the write settles; a failure shows the
+  // DwSsz banner above the footer and the primary button becomes "Try again".
+  const [writing, setWriting] = useState(false)
+  const [writeError, setWriteError] = useState<{ title: string; body: string } | null>(null)
+  const closePreview = () => {
+    if (writing) return
+    setPreview(null)
+    setWriteError(null)
+  }
+  const writeConfig = async () => {
+    const p = preview
+    if (!p || p.error || writing) return
+    setWriting(true)
+    setWriteError(null)
+    try {
+      const row = await (p.action === "remove"
+        ? host.installer.remove(p.host, scope, project)
+        : host.installer.install(p.host, scope, project))
+      setData((d) => ({ ...d, hosts: d.hosts.map((x) => (x.host === row.host ? row : x)) }))
+      setPreview(null)
+    } catch (e) {
+      const cause = causeOf(e)
+      setWriteError({
+        title: `Couldn't write ${tildePath(p.path, home)}`,
+        body: `${cause ? `${cause} ` : ""}Nothing was changed.`,
+      })
+    } finally {
+      setWriting(false)
+    }
   }
   const hostActions = (h: HostRowView): ReactNode => {
     const copyBtn = (
@@ -249,6 +303,13 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
       <AgentTonePill tone={pill.tone} label={pill.label} data-testid="agents-server-status" />
     </div>
   )
+  // Board 37 CT1wv: the pane banner sits at index 1, right under the Title Bar.
+  const titled = (
+    <>
+      {titleBar}
+      {props.banner}
+    </>
+  )
   // Board 24 (c) KdEak: the config diff preview before any host config write.
   const dialog = preview && (
     <ConfigDiffDialog
@@ -264,20 +325,11 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
       before={preview.before}
       after={preview.after}
       {...(preview.error ? { error: preview.error } : {})}
+      writing={writing}
+      writeError={writeError}
       onCopy={copy}
-      onCancel={() => setPreview(null)}
-      onConfirm={() => {
-        const p = preview
-        setPreview(null)
-        if (p.error) return
-        void (
-          p.action === "remove"
-            ? host.installer.remove(p.host, scope, project)
-            : host.installer.install(p.host, scope, project)
-        ).then((row) =>
-          setData((d) => ({ ...d, hosts: d.hosts.map((x) => (x.host === row.host ? row : x)) })),
-        )
-      }}
+      onCancel={closePreview}
+      onConfirm={() => void writeConfig()}
     />
   )
 
@@ -301,7 +353,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
           }}
         />
         <div className="agents-pane__content">
-          {titleBar}
+          {titled}
           <ErrorServerCard status={data.status} server={server} />
           {server.startOnLaunch && (
             <SettingRow
@@ -347,7 +399,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
     return (
       <div className="agents-pane" data-testid="agents-pane" data-state="empty">
         <div className="agents-pane__content">
-          {titleBar}
+          {titled}
           <EmptyState
             className="agents-pane__empty"
             icon={<AgentIcon name="bot" />}
@@ -401,7 +453,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
   return (
     <div className="agents-pane" data-testid="agents-pane" data-state="running">
       <div className="agents-pane__content">
-        {titleBar}
+        {titled}
         <ServerCard status={status} server={server} copy={copy} />
         {server.startOnLaunch && (
           <SettingRow
@@ -438,7 +490,16 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                 checked={status?.http.enabled ?? false}
                 label="Streamable HTTP on localhost"
                 onChange={(on) =>
-                  void host.http.setEnabled(on).then((s) => setData((d) => ({ ...d, status: s })))
+                  void host.http.setEnabled(on).then(
+                    (s) => setData((d) => ({ ...d, status: s })),
+                    (e: unknown) => {
+                      fail(on ? "turn on Streamable HTTP" : "turn off Streamable HTTP", e)
+                      void host.status().then(
+                        (s) => setData((d) => ({ ...d, status: s })),
+                        () => {},
+                      )
+                    },
+                  )
                 }
               />
             </span>
@@ -466,7 +527,11 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
               variant="ghost"
               className="agents-button agents-button--ghost-primary"
               icon={<AgentIcon name="refresh-cw" size={14} />}
-              onClick={() => void loadHosts()}
+              onClick={() =>
+                void loadHosts().catch((e: unknown) =>
+                  fail("scan the agent configs", e, () => void loadHosts()),
+                )
+              }
             >
               Rescan
             </Button>
@@ -517,7 +582,11 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                     if (on) setConfirmAuto({ client: c.identity.client, label: c.identity.label })
                     else void setPolicy(c.identity.client, { ...policy, autoApprove: false })
                   }}
-                  onDisconnect={() => void host.disconnect(c.connectionId)}
+                  onDisconnect={() =>
+                    void host
+                      .disconnect(c.connectionId)
+                      .catch((e: unknown) => fail(`disconnect ${c.identity.label}`, e))
+                  }
                 />
               )}
             </div>
@@ -627,8 +696,8 @@ function ServerCard({
         {server.token && (
           <Endpoint
             label="Token"
-            value={maskToken(server.token.value)}
-            onCopy={() => copy(server.token?.value ?? "")}
+            value={server.token.value ? maskToken(server.token.value) : "No token"}
+            onCopy={server.token.value ? () => copy(server.token?.value ?? "") : undefined}
           >
             <Button
               size="sm"
@@ -637,7 +706,7 @@ function ServerCard({
               icon={<AgentIcon name="refresh-cw" size={14} />}
               onClick={() => void server.token?.regenerate()}
             >
-              Regenerate
+              {server.token.value ? "Regenerate" : "Generate"}
             </Button>
           </Endpoint>
         )}

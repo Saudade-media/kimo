@@ -159,7 +159,8 @@ export const scenarios: Scenario[] = [
         .allInnerTexts()
       expect(
         labels.join("|") ===
-          "New file|Open…|Open recent|Save|Save as…|Export…|Copy selection as PNG|Reveal in Finder|Clean up assets…|Settings…",
+          // Board 37 Xq4V0: Back to files leads the menu.
+          "Back to files|New file|Open…|Open recent|Save|Save as…|Export…|Copy selection as PNG|Reveal in Finder|Clean up assets…|Settings…",
         `desktop items: ${labels.join("|")}`,
       )
       const metas = await menu
@@ -555,6 +556,31 @@ export const scenarios: Scenario[] = [
         "Shift+Ctrl+S",
       )
       if (ctx.shots) await page.screenshot({ path: `${ctx.shots}/board20-windows.png` })
+      // Audit G4 (board 20 r3ukd): New window sits right under New file (app-window icon, no
+      // shortcut); choosing it opens another window and closes the menu.
+      const labels = await menu.locator(".kimo-menu-item-dense__label").allInnerTexts()
+      const at = labels.indexOf("New file")
+      expect(
+        labels.slice(at, at + 3).join("|") === "New file|New window|Open…",
+        `order: ${labels.join("|")}`,
+      )
+      const nw = menu.getByRole("menuitem", { name: "New window" })
+      const nwBox = await measure(page, {
+        item: '[data-testid="file-menu"] .file-menu__new-window',
+        icon: '[data-testid="file-menu"] .file-menu__new-window .kimo-menu-item-dense__check--icon svg',
+      })
+      const nwc = checker(ctx)
+      nwc.check("Item · New window", "height", (nwBox.item as Box).h, 28)
+      nwc.check("Item · New window", "icon 14", (nwBox.icon as Box).w, 14)
+      nwc.flush()
+      expect(
+        (await nw.locator(".kimo-menu-item-dense__meta").count()) === 0,
+        "New window has no shortcut",
+      )
+      expect((await nw.locator("svg.lucide-app-window").count()) === 1, "app-window icon")
+      await nw.click()
+      await page.waitForFunction(() => window.__kimoApp.control.calls.includes("openNewWindow"))
+      await menu.waitFor({ state: "detached" })
     },
   },
   {

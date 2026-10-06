@@ -580,3 +580,106 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Board 37 CT1wv / eEmwX: Banner/Danger at index 1, right under the Title Bar. Instance
+   overrides: radius-md and a 1 px danger-soft stroke on every side (the master's bottom stroke
+   border is replaced). */
+.settings-banner.kimo-banner {
+  flex: none;
+  border-radius: var(--kimo-radius-md);
+  box-shadow: inset 0 0 0 1px var(--kimo-danger-soft);
+}
+
+/* Board 37 D16 Folder List (YXF40): column, gap 2, padding [0, 0, 12, 0], border bottom 1. */
+.settings-folder-list {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 12px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+/* Folder row (vgjk9): 28 high, radius-sm, gap 8, padding [0, 4, 0, 8], centered. Hover (ST5mr):
+   fill bg-hover, Remove icon text-primary. */
+.settings-folder {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--kimo-radius-sm);
+}
+
+.settings-folder:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.settings-folder__icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.settings-folder__path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  color: var(--kimo-text-secondary);
+}
+
+.settings-folder__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* Remove (r6qpor): IconButton 24, fill #00000000, x 14 text-tertiary; the row carries hover. */
+.settings-folder .settings-folder__remove.kimo-icon-button,
+.settings-folder .settings-folder__remove.kimo-icon-button:hover {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+}
+
+.settings-folder:hover .settings-folder__remove.kimo-icon-button {
+  color: var(--kimo-text-primary);
+}
+
+.settings-folder__remove svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Board 37 D10 je8J6: Progress 120 × 4, bg-muted, pill; Bar accent; "42%" mono xs secondary. */
+.settings-update-progress {
+  position: relative;
+  flex: none;
+  width: 120px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.settings-update-progress__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+}
+
+.settings-update-percent {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  color: var(--kimo-text-secondary);
+}

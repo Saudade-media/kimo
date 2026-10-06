@@ -9,6 +9,9 @@
  *   assets… (brush-cleaning) · ─ · Settings… ⌘, (settings)
  *   · ─ · Help ▸ (Windows / Linux / web; board 25 §7 (b) A0qRF: macOS has the native Help menu)
  *
+ * Board 37 (Xq4V0): "Back to files" (house) leads the menu, then a divider (E3: the way back to
+ * Home when macOS hides the logo behind the traffic lights).
+ *
  * Desktop (A1jsC) opens from the breadcrumb's file name, web (cPHVm) from the topbar file name:
  * the menu's top-left is the trigger's left edge, 12px below it. "Open recent" opens the
  * submenu (Aw9t8, width 232) on hover after 120 ms, overlapping the menu by 4px: recent files
@@ -26,10 +29,18 @@ import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react
 import { Icon } from "../lib/icons"
 import { revealLabel } from "../platform/contract"
 import { type HelpAction, helpItems } from "../settings/help"
+import { currentPlatform } from "../shortcuts/shortcuts"
 
 /** What the File menu runs. Absent actions hide their item. */
 export interface FileMenuActions {
+  /** Board 37 Xq4V0: "Back to files" (house), first, then a divider. */
+  onHome?: () => void
   onNewFile(): void
+  /**
+   * Board 20 r3ukd: New window (app-window, no shortcut) under New file. Windows and Linux only:
+   * they have no native menu bar, and macOS keeps it in the native File menu (audit G4).
+   */
+  onNewWindow?: () => void
   onOpenFile(): void
   onOpenRecent(ref: FileRef): void
   onSave(): void
@@ -55,9 +66,31 @@ export interface FileMenuHelp {
 /** Help submenu width (A0qRF). */
 export const HELP_MENU_WIDTH = 256
 
+/**
+ * True when menus show the design's macOS glyphs: the macOS desktop app, or the web build in a
+ * browser running on macOS (E12: a browser reports os "web" on every OS).
+ */
+export function usesMacGlyphs(os: HostOS): boolean {
+  return os === "macos" || (os === "web" && currentPlatform() === "mac")
+}
+
+/**
+ * File › New window off macOS (audit G4): desktop Windows and Linux open another window on Home;
+ * macOS has it in the native File menu and the web build in the browser's own menu, so both get
+ * none. A refused open reports through `fail`.
+ */
+export function newWindowAction(
+  os: HostOS,
+  openNewWindow: (() => Promise<void>) | undefined,
+  fail: (action: string, e: unknown) => void,
+): (() => void) | undefined {
+  if ((os !== "windows" && os !== "linux") || !openNewWindow) return undefined
+  return () => void openNewWindow().catch((e: unknown) => fail("open a new window", e))
+}
+
 /** Menu shortcut text per OS (board 20 note VJFSo: "Ctrl/Shift+Ctrl off macOS"). */
 export function menuShortcut(os: HostOS, key: string, shift = false): string {
-  if (os === "macos" || os === "web") return `${shift ? "⇧" : ""}⌘${key}`
+  if (usesMacGlyphs(os)) return `${shift ? "⇧" : ""}⌘${key}`
   return `${shift ? "Shift+" : ""}Ctrl+${key}`
 }
 
@@ -145,6 +178,18 @@ export function FileMenu(props: FileMenuProps) {
       className="file-menu"
       data-testid="file-menu"
     >
+      {props.onHome && (
+        <>
+          <MenuItemDense
+            className="file-menu__home"
+            icon={<Icon name="house" size={14} />}
+            label="Back to files"
+            onPointerEnter={hoverOther}
+            onSelect={run(props.onHome)}
+          />
+          <MenuDivider />
+        </>
+      )}
       <MenuItemDense
         icon={<Icon name="file-plus" size={14} />}
         label="New file"
@@ -152,6 +197,15 @@ export function FileMenu(props: FileMenuProps) {
         onPointerEnter={hoverOther}
         onSelect={run(props.onNewFile)}
       />
+      {props.onNewWindow && (
+        <MenuItemDense
+          className="file-menu__new-window"
+          icon={<Icon name="app-window" size={14} />}
+          label="New window"
+          onPointerEnter={hoverOther}
+          onSelect={run(props.onNewWindow)}
+        />
+      )}
       <MenuItemDense
         icon={<Icon name="folder-open" size={14} />}
         label="Open…"

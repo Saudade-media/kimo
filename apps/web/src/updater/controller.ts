@@ -65,7 +65,17 @@ export function createUpdaterController(opts: UpdaterControllerOptions): Updater
     },
     start() {
       if (!platform.capabilities.updater || off) return
-      off = platform.updater.onStatus(onStatus)
+      const offStatus = platform.updater.onStatus(onStatus)
+      // Settings › Updates › Download updates turned on while an update waits: download it now.
+      const offSetting = platform.settings.onChange((key, value) => {
+        if (key !== "updates.download" || value !== true) return
+        if (platform.updater.status().state === "available")
+          void platform.updater.download().catch(() => {})
+      })
+      off = () => {
+        offStatus()
+        offSetting()
+      }
       onStatus(platform.updater.status())
       if (opts.checkOnStart ?? true) void platform.updater.check().catch(() => {})
     },

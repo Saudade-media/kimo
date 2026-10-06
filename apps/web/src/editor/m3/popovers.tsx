@@ -17,6 +17,7 @@ import {
 import { Fragment, useMemo, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { entriesOf, unlinkLibrary } from "./actions"
+import { brokenOfLibrary } from "./ComponentDialogs"
 import { type M3Controller, useLibraries } from "./controller"
 import {
   aliasFor,
@@ -400,10 +401,8 @@ export function LibraryChanges({
     Object.values(doc.nodes as Record<string, { type?: string; of?: string }>).filter(
       (n) => n.type === "instance" && n.of === `${alias}:${id}`,
     ).length
-  const broken = m3
-    .view()
-    .issues()
-    .filter((i) => i.code === "OVERRIDE_PATH_UNRESOLVED").length
+  // The same rows the Fix broken overrides dialog lists (this library's instances).
+  const broken = brokenOfLibrary(m3, alias).length
   return (
     <div
       className="m3-scrim m3-scrim--clear"
@@ -459,7 +458,15 @@ export function LibraryChanges({
           </div>
         )}
         <div className="m3-changes__footer">
-          <M3Button variant="ghost" icon="wrench" disabled={broken === 0}>
+          <M3Button
+            variant="ghost"
+            icon="wrench"
+            disabled={broken === 0}
+            onClick={() => {
+              m3.componentDialog.set({ kind: "fixOverrides", library: alias })
+              onClose()
+            }}
+          >
             Fix broken overrides
           </M3Button>
           <span className="m3-popover-footer__spacer" />

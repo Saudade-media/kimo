@@ -85,6 +85,7 @@ import { type ApprovalOutcome, type ApprovalRequest, callTargets } from "@kimo/m
 import type { McpApprovalChoice } from "@kimo/platform"
 import { type AgentMarkState, type Persona, PersonaAllocator } from "@kimo/ui"
 import { workAreaIds } from "../canvas/agent-area"
+import { failureText } from "../editor/errors"
 import {
   type AgentComposerView,
   type AgentMessageView,
@@ -123,6 +124,8 @@ export interface PlanLogRow {
   /** Undo this op group (Revert icon). */
   undoToken?: string
   origin: string
+  /** Reverted with the row's Revert icon (the row stays, struck through, without the icon). */
+  reverted?: boolean
 }
 
 export interface ModeAgentRow extends ModeAgentRowView {
@@ -140,6 +143,8 @@ export interface ModeAgentRow extends ModeAgentRowView {
 export interface ModeRunView {
   id: string
   mode: "side-by-side" | "split" | "iterate"
+  /** A row's Revert could not run (stale or refused): shown on the plan card. */
+  issue?: string
   agents: ModeAgentRow[]
   done: number
   total: number
@@ -158,8 +163,13 @@ export interface ModeRunView {
     costUsd: number | null
     rows: PlanLogRow[]
     passes: IteratePass[]
-    /** Pass being previewed: "Before" (0) or "After". */
+    /**
+     * Before / After of the current pass: "before" undoes the pass's op groups on the canvas
+     * (guarded), "after" redoes them. Next pass, Accept and Revert first return to "after".
+     */
     view: "before" | "after"
+    /** The toggle could not switch (stale or refused): shown on the review card. */
+    issue?: string
   }
 }
 
@@ -204,6 +214,11 @@ export interface AgentPanelViewState extends AgentPanelState {
   busy: boolean
   /** Turn ids already undone with "Undo turn". */
   undoneTurns: string[]
+  /**
+   * Turn id → why its Undo turn / Regenerate could not run ("Couldn't undo this turn. The layers
+   * changed after it."), shown under that message until the next turn.
+   */
+  turnIssues: Readonly<Record<string, string>>
   /** Live tokens / cost of the streaming turn (board 22 A streaming meta). */
   live: LiveMeta | null
   /** Prompt-node run state by node id (app data, ADR 0014 §9; footer + layer row). */
@@ -266,8 +281,16 @@ export interface AgentPanelControllerExt extends AgentPanelController {
   /** Side by side: Keep / Discard one variant. */
   keepVariant(origin: string): void
   discardVariant(origin: string): Promise<void>
-  /** Iterate: Before / After toggle of the review card. */
-  setIterateView(view: "before" | "after"): void
+  /**
+   * Revert one Log row's op group (the plan card's Revert icon), guarded: a later edit on top of
+   * it makes it stale and the run's `issue` says so.
+   */
+  revertOp(key: string): Promise<void>
+  /**
+   * Iterate: Before / After toggle of the review card. Before undoes the current pass on the
+   * canvas, After redoes it; a refusal leaves the view as it was and sets `iterate.issue`.
+   */
+  setIterateView(view: "before" | "after"): Promise<void>
   /** Re-reads providers, CLIs and skills. */
   refresh(): Promise<void>
   /** First run (board 25 FrS9y): "Use Claude Code" — makes the detected CLI the default. */
@@ -298,12 +321,18 @@ export interface AgentPanelControllerExt extends AgentPanelController {
   editQueued(index: number): void
   /** Copies a message's text (MessageMeta copy). */
   copyText(messageId: string): string
+  /** Reports a failed panel action (Toast/Danger through `onError`), e.g. a refused copy. */
+  reportError(text: string): void
   /**
    * Runs a prompt node: one Single turn scoped to its `target`, or to a new placeholder frame
-   * next to it (`planPromptRun`). Run state lands in `state.promptRuns[nodeId]`.
+   * next to it (`planPromptRun`). Run state lands in `state.promptRuns[nodeId]`. While another
+   * prompt node runs, the call queues (shown as running) and runs after it ("Run N prompts").
    */
   runPrompt(input: PromptRunInput): Promise<void>
-  /** Stops a running prompt node (its in-flight op batch commits or rolls back). */
+  /**
+   * Stops a running prompt node (its in-flight op batch commits or rolls back), or takes a
+   * queued one out of the queue.
+   */
   stopPrompt(nodeId: string): void
   dispose(): void
 }
@@ -339,6 +368,11 @@ export interface AgentPanelOptions {
    */
   cliDocId?(): string | null
   now?(): number
+  /**
+   * A user action failed outside a turn (save, open or delete a session, open a link): the
+   * editor shows it as Toast/Danger. Default: the console.
+   */
+  onError?(text: string): void
 }
 
 const ROTATE_LABEL: Record<Exclude<ModeConfig["mode"], "single">, string> = {
@@ -576,6 +610,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     landed: [],
   }
   let undoneTurns: string[] = []
+  let turnIssues: Record<string, string> = {}
   let liveUsage: Usage = { ...ZERO_USAGE }
   let liveCost: number | null = 0
   let pendingFromHome = false
@@ -583,6 +618,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let promptRuns: Record<string, PromptRunState> = loadPromptRuns()
   /** The prompt node the running turn belongs to, with its lead origin. */
   let runningPrompt: { nodeId: string; origin: string } | null = null
+  /** Prompt runs waiting for the running one, in order, with the state they had before. */
+  const queuedPrompts = new Map<
+    string,
+    { input: PromptRunInput; prev: PromptRunState | undefined }
+  >()
   let lastRecord: TurnRecord | null = null
   let costWarning: CostWarningView | null = null
 
@@ -795,6 +835,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       modeLabel: modeChipLabel(mode),
       busy,
       undoneTurns,
+      turnIssues,
       live: busy ? liveMeta() : null,
       promptRuns: livePromptRuns(),
     }
@@ -871,11 +912,18 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     return session
   }
 
+  function report(text: string) {
+    if (o.onError) o.onError(text)
+    else console.error(`Kimo: ${text}`)
+  }
+
   async function persist() {
     if (!session) return
     try {
       await rt.sessions.put(session)
-    } catch {}
+    } catch (e) {
+      report(failureText("save this session to the history", e))
+    }
     void reloadSessions()
   }
 
@@ -2234,6 +2282,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
               persona: "teal",
               origin,
             })
+        // The call's op group: each of its rows can revert it (Review card Revert icon).
+        if (e.type === "step_end" && e.ok && e.undoToken)
+          for (const r of rows) if (r.key.startsWith(`${e.callId}:`)) r.undoToken = e.undoToken
         events(e)
       },
     })
@@ -2375,6 +2426,67 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     return { ok, stale }
   }
 
+  /**
+   * Before / After of the iterate review card: undo (Before) or redo (After) the current pass's
+   * op groups as the lead origin. False when the history refused (the view stays as it was).
+   */
+  async function switchIterateView(view: "before" | "after"): Promise<boolean> {
+    const it = modeRun?.iterate
+    if (!modeRun || !it || !session) return false
+    if (it.view === view) return true
+    const cur = it.passes.find((p) => p.pass === it.pass)
+    const origin = agentOrigin(session.id, 0)
+    let r: { ok: boolean; stale: boolean } = { ok: true, stale: false }
+    if (cur && cur.undoTokens.length > 0)
+      r =
+        view === "before"
+          ? await undoGroups([...cur.undoTokens].reverse(), origin)
+          : await redoGroups(cur.undoTokens, origin)
+    const latest = modeRun?.iterate
+    if (!modeRun || !latest) return false
+    if (!r.ok || r.stale) {
+      const what = view === "before" ? "show the frame before this pass" : "show this pass again"
+      modeRun = { ...modeRun, iterate: { ...latest, issue: undoIssue(what, r.stale) } }
+      emit()
+      return false
+    }
+    const { issue: _issue, ...rest } = latest
+    modeRun = { ...modeRun, iterate: { ...rest, view } }
+    emit()
+    return true
+  }
+
+  /** Redo groups (in their original order) as `origin`: the After side of the iterate toggle. */
+  async function redoGroups(groups: { docId: string; token: string }[], origin: `agent:${string}`) {
+    const host = toolsFor({ origin, label: "Kimo", policy: leadPolicy([]) })
+    let ok = true
+    let stale = false
+    for (const g of groups) {
+      const r = await host.call(
+        {
+          id: `redo-${g.token}`,
+          name: "kimo_history",
+          input: { docId: g.docId, action: "redo", token: g.token },
+        },
+        new AbortController().signal,
+      )
+      if (!r.result.ok) {
+        ok = false
+        if (r.result.errors[0]?.code === "REVISION_CONFLICT") stale = true
+        break
+      }
+      if ((r.result.data as { stale?: boolean } | undefined)?.stale) stale = true
+    }
+    return { ok, stale }
+  }
+
+  /** Why Undo turn / Regenerate stopped: stale (later edits on top) or refused by the history. */
+  function undoIssue(what: string, stale: boolean): string {
+    return stale
+      ? `Couldn't ${what}. The layers changed after it, so Kimo left them as they are.`
+      : `Couldn't ${what}. These edits are no longer in the undo history, so Kimo left the layers as they are.`
+  }
+
   /** Undo groups as their own origin (children's groups live on their own stacks). */
   async function undoByOrigin(groups: OpGroup[]) {
     let ok = true
@@ -2387,6 +2499,45 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       stale ||= r.stale
     }
     return { ok, stale }
+  }
+
+  /**
+   * Revert icon of an iterate Review card row: undoes the call's op group (every row of that
+   * call), from the pass's result. The group leaves the pass, so Before / After skip it.
+   */
+  async function revertIterateOp(key: string) {
+    if (modeRun?.iterate?.view === "before" && !(await switchIterateView("after"))) return
+    const it = modeRun?.iterate
+    const row = it?.rows.find((r) => r.key === key)
+    if (!modeRun || !it || !row?.undoToken || row.reverted) return
+    const token = row.undoToken
+    const r = await undoGroups(
+      [{ docId: o.docId(), token }],
+      (row.origin || agentOrigin(session?.id ?? "kimo", 0)) as `agent:${string}`,
+    )
+    const latest = modeRun?.iterate
+    if (!modeRun || !latest) return
+    if (!r.ok || r.stale) {
+      modeRun = {
+        ...modeRun,
+        iterate: { ...latest, issue: undoIssue(`revert “${row.target}”`, r.stale) },
+      }
+    } else {
+      const { issue: _issue, ...rest } = latest
+      modeRun = {
+        ...modeRun,
+        iterate: {
+          ...rest,
+          rows: rest.rows.map((x) => (x.undoToken === token ? { ...x, reverted: true } : x)),
+          passes: rest.passes.map((p) =>
+            p.pass === rest.pass
+              ? { ...p, undoTokens: p.undoTokens.filter((g) => g.token !== token) }
+              : p,
+          ),
+        },
+      }
+    }
+    emit()
   }
 
   const groupOrigins = new Map<string, string>()
@@ -2439,8 +2590,12 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       rt.openSettings?.("ai-providers")
     },
     openLink(url) {
-      if (rt.openLink) rt.openLink(url)
-      else window.open(url, "_blank", "noopener,noreferrer")
+      if (rt.openLink) {
+        Promise.resolve()
+          .then(() => rt.openLink?.(url))
+          .catch((e: unknown) => report(failureText(`open ${url}`, e)))
+      } else if (!window.open(url, "_blank", "noopener,noreferrer"))
+        report(`Couldn't open ${url}. The browser blocked the new tab.`)
     },
     removeQueued(index) {
       if (index < 0 || index >= queued.length) return
@@ -2464,11 +2619,30 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       controller.stop()
     },
     async regenerate(id) {
-      if (!session || composerState !== "idle") return
+      if (!session) return
+      // One turn at a time: say so instead of ignoring the click.
+      if (composerState !== "idle") {
+        turnIssues = {
+          ...turnIssues,
+          [id]: "Couldn't regenerate this turn. Wait for the running turn to finish.",
+        }
+        emit()
+        return
+      }
       const plan = planRegenerate(session, id)
       if (!plan) return
-      const r = await undoGroups(plan.undo, agentOrigin(session.id, 0))
-      if (!r.ok) return
+      // Undo turn already took this turn's edits off the canvas: resend without undoing again.
+      const r = undoneTurns.includes(id)
+        ? { ok: true, stale: false }
+        : await undoGroups(plan.undo, agentOrigin(session.id, 0))
+      if (!r.ok || r.stale) {
+        turnIssues = { ...turnIssues, [id]: undoIssue("regenerate this turn", r.stale) }
+        emit()
+        return
+      }
+      const { [id]: _cleared, ...restIssues } = turnIssues
+      turnIssues = restIssues
+      undoneTurns = undoneTurns.filter((t) => t !== id)
       const gone = session.turns[session.turns.length - 1] as TurnRecord
       session = {
         ...plan.rest,
@@ -2498,7 +2672,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       const t = session?.turns.find((x) => x.id === id)
       if (!t || !session) return { ok: false, stale: false }
       const r = await undoByOrigin(t.opGroups)
-      if (r.ok) undoneTurns = [...undoneTurns, id]
+      if (r.ok && !r.stale) {
+        undoneTurns = [...undoneTurns, id]
+        const { [id]: _cleared, ...restIssues } = turnIssues
+        turnIssues = restIssues
+      } else turnIssues = { ...turnIssues, [id]: undoIssue("undo this turn", r.stale) }
       emit()
       return r
     },
@@ -2515,12 +2693,23 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       personas = new PersonaAllocator(now)
       sessionsOpen = false
       undoneTurns = []
+      turnIssues = {}
       model = rt.defaultSelection() ?? model
       emit()
     },
     async openSession(id) {
-      const s = await rt.sessions.get(id)
-      if (!s) return
+      let s: Session | null | undefined
+      try {
+        s = await rt.sessions.get(id)
+      } catch (e) {
+        report(failureText("open this session", e))
+        return
+      }
+      if (!s) {
+        report("Couldn't open this session. It is no longer in the history.")
+        await reloadSessions()
+        return
+      }
       session = s
       autoApprove = false
       model = s.model
@@ -2530,10 +2719,16 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       messages = messagesFromTurns(s.turns, (t, last) => turnMeta(t, last))
       sessionsOpen = false
       modeRun = null
+      turnIssues = {}
       emit()
     },
     async deleteSession(id) {
-      await rt.sessions.delete(id)
+      try {
+        await rt.sessions.delete(id)
+      } catch (e) {
+        report(failureText("delete this session", e))
+        return
+      }
       if (session?.id === id) controller.newSession()
       await reloadSessions()
     },
@@ -2632,14 +2827,16 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           void controller.continueTurn()
           break
         case "get_desktop":
-          rt.openLink?.("https://kimo.design/docs/getting-started/")
+          controller.openLink("https://kimo.design/docs/getting-started/")
           break
         case "provider_matrix":
-          rt.openLink?.("https://kimo.design/docs/built-in-agent/#api-providers")
+          controller.openLink("https://kimo.design/docs/built-in-agent/#api-providers")
           break
       }
     },
     async review(d: ReviewDecision) {
+      // Every decision starts from the pass's result on the canvas.
+      if (modeRun?.iterate?.view === "before" && !(await switchIterateView("after"))) return
       const it = modeRun?.iterate
       if (!modeRun || !it || !session) return
       if (d.action === "stop") {
@@ -2649,7 +2846,14 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       }
       if (d.action === "revert") {
         const calls = revertCalls(it.passes, d.toPass)
-        await undoGroups(calls, agentOrigin(session.id, 0))
+        const r = await undoGroups(calls, agentOrigin(session.id, 0))
+        if (!modeRun?.iterate) return
+        if (!r.ok || r.stale) {
+          const what = d.toPass === 0 ? "revert to the original" : `revert to pass ${d.toPass}`
+          modeRun = { ...modeRun, iterate: { ...modeRun.iterate, issue: undoIssue(what, r.stale) } }
+          emit()
+          return
+        }
         modeRun = {
           ...modeRun,
           iterate: {
@@ -2767,15 +2971,25 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     async discardVariant(origin) {
       const row = modeRun?.agents.find((a) => a.origin === origin)
       if (!row) return
-      for (const g of [...row.groups].reverse())
-        await undoGroups([{ docId: g.docId, token: g.undoToken }], origin as `agent:${string}`)
+      const what = `discard ${row.scopeName ?? row.label}`
+      const refuse = (text: string) => {
+        if (modeRun) modeRun = { ...modeRun, issue: text }
+        emit()
+      }
+      for (const g of [...row.groups].reverse()) {
+        const r = await undoGroups(
+          [{ docId: g.docId, token: g.undoToken }],
+          origin as `agent:${string}`,
+        )
+        if (!r.ok || r.stale) return refuse(undoIssue(what, r.stale))
+      }
       if (row.scopeId) {
         const lead = toolsFor({
           origin: agentOrigin(session?.id ?? "kimo", 0),
           label: "Kimo",
           policy: leadPolicy([]),
         })
-        await lead.call(
+        const del = await lead.call(
           {
             id: `discard-${row.scopeId}`,
             name: "kimo_apply_ops",
@@ -2787,13 +3001,40 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           },
           new AbortController().signal,
         )
+        if (!del.result.ok)
+          return refuse(
+            `Couldn't ${what}. ${del.result.errors[0]?.message ?? "The document refused the delete."}`,
+          )
+      }
+      if (modeRun?.issue) {
+        const { issue: _issue, ...rest } = modeRun
+        modeRun = rest
       }
       patchRow(origin, { discarded: true })
       personas.release(origin)
       emit()
     },
-    setIterateView(view) {
-      if (modeRun?.iterate) modeRun = { ...modeRun, iterate: { ...modeRun.iterate, view } }
+    async setIterateView(view) {
+      await switchIterateView(view)
+    },
+    async revertOp(key) {
+      if (modeRun?.iterate?.rows.some((r) => r.key === key)) return revertIterateOp(key)
+      const row = modeRun?.log.find((r) => r.key === key)
+      if (!modeRun || !row?.undoToken || row.reverted) return
+      const r = await undoGroups(
+        [{ docId: o.docId(), token: row.undoToken }],
+        row.origin as `agent:${string}`,
+      )
+      if (!modeRun) return
+      if (!r.ok || r.stale) {
+        modeRun = { ...modeRun, issue: undoIssue(`revert “${row.target}”`, r.stale) }
+      } else {
+        const { issue: _issue, ...rest } = modeRun
+        modeRun = {
+          ...rest,
+          log: rest.log.map((x) => (x.key === key ? { ...x, reverted: true } : x)),
+        }
+      }
       emit()
     },
     async refresh() {
@@ -2810,7 +3051,12 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     },
     async chooseCli(id) {
       const sel = { provider: `cli:${id}`, model: "default" }
-      await rt.chooseCli?.(id)
+      try {
+        await rt.chooseCli?.(id)
+      } catch (e) {
+        report(failureText(`use ${rt.clis().find((c) => c.id === id)?.label ?? id}`, e))
+        return
+      }
       model = sel
       emit()
     },
@@ -2841,141 +3087,172 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       const last = before[before.length - 1]
       if (last) controller.setText(last.text)
     },
+    reportError: (text) => report(text),
     copyText(id) {
       const m = messages.find((x) => x.id === id)
       return m ? m.text : ""
     },
     async runPrompt(input) {
-      const nodeId = input.prompt.id
-      const fail = (kind: string, message: string) => {
-        promptRuns = {
-          ...promptRuns,
-          [nodeId]: { ...promptRuns[nodeId], status: "failed", error: { kind, message } },
-        }
-        savePromptRun(nodeId)
+      const id = input.prompt.id
+      if (runningPrompt?.nodeId === id || queuedPrompts.has(id)) return
+      // Another prompt node runs: wait in line (one agent turn at a time).
+      if (runningPrompt || queuedPrompts.size > 0) {
+        queuedPrompts.set(id, { input, prev: promptRuns[id] })
+        promptRuns = { ...promptRuns, [id]: { status: "running", live: { ops: 0, costUsd: 0 } } }
         emit()
+        return
       }
-      if (abort || runningPrompt) return fail("busy", "the agent is busy with another turn")
-      const fallback = model ?? rt.defaultSelection()
-      if (!fallback) return fail("unknown_model", "add an API key or sign in to a local agent CLI")
-      const s = ensureSession()
-      const origin = agentOrigin(s.id, 0)
-      // CLI selections are not API providers: let the plan resolve them as listed models.
-      const configured = [
-        ...providers,
-        ...(isCliProvider(fallback.provider) && !providers.some((p) => p.id === fallback.provider)
-          ? [
-              {
-                id: fallback.provider,
-                kind: "anthropic" as const,
-                label: rt.labelOf(fallback.provider),
-                models: { agent: fallback.model, fast: fallback.model },
-              },
-            ]
-          : []),
-      ]
-      let plan: ReturnType<typeof planPromptRun>
-      try {
-        plan = planPromptRun(
-          input.prompt,
-          { frame: input.frame, notes: input.notes, origin, now: new Date(now()) },
-          configured,
-          fallback,
-        )
-      } catch (e) {
-        return fail(
-          e instanceof ProviderError ? e.kind : "unknown",
-          e instanceof Error ? e.message : String(e),
-        )
+      await runPromptNow(input)
+      while (!disposed && queuedPrompts.size > 0) {
+        const [next, q] = queuedPrompts.entries().next().value as [
+          string,
+          { input: PromptRunInput },
+        ]
+        queuedPrompts.delete(next)
+        await runPromptNow(q.input)
       }
-      runningPrompt = { nodeId, origin }
-      promptRuns = { ...promptRuns, [nodeId]: { status: "running", live: { ops: 0, costUsd: 0 } } }
-      emit()
-      const lead = toolsFor({ origin, label: "Kimo", policy: leadPolicy([]) })
-      let roots = plan.scopeRoots
-      let created: string | null = null
-      if (plan.setup.length) {
-        const setup = await lead.call(
-          {
-            id: `prompt-setup-${nodeId}`,
-            name: "kimo_apply_ops",
-            input: { docId: o.docId(), ops: plan.setup, label: "Prompt result frame" },
-          },
-          new AbortController().signal,
-        )
-        created = setup.result.ok
-          ? ((setup.result.created ?? []).find((c) => c.key === plan.createdKey)?.id ?? null)
-          : null
-        if (!created) {
-          runningPrompt = null
-          return fail("invalid_request", setup.result.ok ? "no result frame" : setup.result.summary)
-        }
-        roots = [created]
-      }
-      const notes = plan.notes.length
-        ? `\n\nNotes on the target:\n${plan.notes.map((n) => `- ${n.author ? `${n.author}: ` : ""}${n.content}`).join("\n")}`
-        : ""
-      const before = model
-      model = plan.model.selection
-      lastRecord = null
-      try {
-        await sendNow(`${plan.userText}${notes}`, {
-          scope: roots.map((id) => ({
-            id,
-            name: o.nodeName?.(id) ?? input.frame(id)?.name ?? id,
-          })),
-        })
-      } finally {
-        model = before
-        runningPrompt = null
-      }
-      // The result frame's placeholder was set by the setup, not by the turn: clear it.
-      if (created && o.nodeName?.(created) !== undefined)
-        await lead
-          .call(
-            {
-              id: `prompt-clear-${nodeId}`,
-              name: "kimo_apply_ops",
-              input: {
-                docId: o.docId(),
-                ops: [{ op: "update", id: created, unset: ["placeholder"] }],
-                label: "Clear flag",
-              },
-            },
-            new AbortController().signal,
-          )
-          .catch(() => {})
-      const r = lastRecord as TurnRecord | null
-      if (!r || r.status === "error")
-        return fail(
-          r?.error?.providerError ?? r?.error?.kind ?? "unknown",
-          r?.error?.body || r?.error?.title || "the run did not finish",
-        )
-      promptRuns = {
-        ...promptRuns,
-        [nodeId]: {
-          status: "idle",
-          lastRun: {
-            at: now(),
-            ops: r.opsApplied,
-            costUsd: r.billing === "subscription" ? null : r.cost.usd,
-            billing: r.billing === "cli-api-key" ? "api" : (r.billing ?? "api"),
-          },
-        },
-      }
-      savePromptRun(nodeId)
-      emit()
     },
     stopPrompt(nodeId) {
+      const q = queuedPrompts.get(nodeId)
+      if (q) {
+        queuedPrompts.delete(nodeId)
+        const { [nodeId]: _, ...rest } = promptRuns
+        promptRuns = q.prev ? { ...rest, [nodeId]: q.prev } : rest
+        emit()
+        return
+      }
       if (runningPrompt?.nodeId === nodeId) abort?.abort()
     },
     dispose() {
       disposed = true
+      queuedPrompts.clear()
       abort?.abort()
       unsub?.()
       unwatch?.()
       listeners.clear()
     },
+  }
+
+  async function runPromptNow(input: PromptRunInput): Promise<void> {
+    const nodeId = input.prompt.id
+    const fail = (kind: string, message: string) => {
+      promptRuns = {
+        ...promptRuns,
+        [nodeId]: { ...promptRuns[nodeId], status: "failed", error: { kind, message } },
+      }
+      savePromptRun(nodeId)
+      emit()
+    }
+    if (abort || runningPrompt) return fail("busy", "the agent is busy with another turn")
+    const fallback = model ?? rt.defaultSelection()
+    if (!fallback) return fail("unknown_model", "add an API key or sign in to a local agent CLI")
+    const s = ensureSession()
+    const origin = agentOrigin(s.id, 0)
+    // CLI selections are not API providers: let the plan resolve them as listed models.
+    const configured = [
+      ...providers,
+      ...(isCliProvider(fallback.provider) && !providers.some((p) => p.id === fallback.provider)
+        ? [
+            {
+              id: fallback.provider,
+              kind: "anthropic" as const,
+              label: rt.labelOf(fallback.provider),
+              models: { agent: fallback.model, fast: fallback.model },
+            },
+          ]
+        : []),
+    ]
+    let plan: ReturnType<typeof planPromptRun>
+    try {
+      plan = planPromptRun(
+        input.prompt,
+        { frame: input.frame, notes: input.notes, origin, now: new Date(now()) },
+        configured,
+        fallback,
+      )
+    } catch (e) {
+      return fail(
+        e instanceof ProviderError ? e.kind : "unknown",
+        e instanceof Error ? e.message : String(e),
+      )
+    }
+    runningPrompt = { nodeId, origin }
+    promptRuns = { ...promptRuns, [nodeId]: { status: "running", live: { ops: 0, costUsd: 0 } } }
+    emit()
+    const lead = toolsFor({ origin, label: "Kimo", policy: leadPolicy([]) })
+    let roots = plan.scopeRoots
+    let created: string | null = null
+    if (plan.setup.length) {
+      const setup = await lead.call(
+        {
+          id: `prompt-setup-${nodeId}`,
+          name: "kimo_apply_ops",
+          input: { docId: o.docId(), ops: plan.setup, label: "Prompt result frame" },
+        },
+        new AbortController().signal,
+      )
+      created = setup.result.ok
+        ? ((setup.result.created ?? []).find((c) => c.key === plan.createdKey)?.id ?? null)
+        : null
+      if (!created) {
+        runningPrompt = null
+        return fail("invalid_request", setup.result.ok ? "no result frame" : setup.result.summary)
+      }
+      roots = [created]
+    }
+    const notes = plan.notes.length
+      ? `\n\nNotes on the target:\n${plan.notes.map((n) => `- ${n.author ? `${n.author}: ` : ""}${n.content}`).join("\n")}`
+      : ""
+    const before = model
+    model = plan.model.selection
+    lastRecord = null
+    try {
+      await sendNow(`${plan.userText}${notes}`, {
+        scope: roots.map((id) => ({
+          id,
+          name: o.nodeName?.(id) ?? input.frame(id)?.name ?? id,
+        })),
+      })
+    } finally {
+      model = before
+      runningPrompt = null
+    }
+    // The result frame's placeholder was set by the setup, not by the turn: clear it.
+    if (created && o.nodeName?.(created) !== undefined)
+      await lead
+        .call(
+          {
+            id: `prompt-clear-${nodeId}`,
+            name: "kimo_apply_ops",
+            input: {
+              docId: o.docId(),
+              ops: [{ op: "update", id: created, unset: ["placeholder"] }],
+              label: "Clear flag",
+            },
+          },
+          new AbortController().signal,
+        )
+        .catch(() => {})
+    const r = lastRecord as TurnRecord | null
+    if (!r || r.status === "error")
+      return fail(
+        r?.error?.providerError ?? r?.error?.kind ?? "unknown",
+        r?.error?.body || r?.error?.title || "the run did not finish",
+      )
+    promptRuns = {
+      ...promptRuns,
+      [nodeId]: {
+        status: "idle",
+        lastRun: {
+          at: now(),
+          ops: r.opsApplied,
+          costUsd: r.billing === "subscription" ? null : r.cost.usd,
+          billing: r.billing === "cli-api-key" ? "api" : (r.billing ?? "api"),
+        },
+      },
+    }
+    savePromptRun(nodeId)
+    emit()
   }
 
   void pendingFromHome

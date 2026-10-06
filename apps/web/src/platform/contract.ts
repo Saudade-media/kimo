@@ -357,6 +357,11 @@ export type Banner =
     }
   /** Board 17 "Save failed" (danger): disk full / permission / read-back mismatch. */
   | { kind: "save-failed"; severity: "danger"; fileName: string; failure: SaveFailure }
+  /**
+   * Settings › When a file changes on disk = "Ask first": the file changed while there are
+   * unsaved edits (warning). Nothing is merged or written until Merge or Keep mine.
+   */
+  | { kind: "external-change"; severity: "warning"; fileName: string }
   /** Board 17 "Failed load · terminal" (danger). */
   | {
       kind: "failed-load"
@@ -405,6 +410,7 @@ export const BANNER_PRIORITY: readonly BannerKind[] = [
   "locked",
   "newer-format",
   "save-failed",
+  "external-change",
   "merge-conflicts",
   "git-operation",
   "merge-ready",
@@ -429,7 +435,7 @@ export type BannerActionId =
   | "git-keep"
   | "save-as"
   | "retry-save"
-  | "show-diff"
+  | "reveal-recovery"
   | "reveal"
   | "open-as-text"
   | "previous-conflict"
@@ -439,6 +445,10 @@ export type BannerActionId =
   | "mark-resolved-save"
   /** Board 25 §6 (e) tzFIU Secondary Action: selects + reveals the merge's resolved nodes. */
   | "review-changes"
+  /** "Ask first" external change: three-way merge the file on disk into the edits. */
+  | "external-merge"
+  /** "Ask first" external change: keep the edits; the next save overwrites the file. */
+  | "external-keep"
 
 export interface BannerAction {
   id: BannerActionId
@@ -493,6 +503,8 @@ export function bannerCopy(
     formatBytes(n: number): string
     formatTime(ms: number): string
     displayDir(ref: FileRef): string
+    /** The host can reveal files (`capabilities.reveal`); false hides reveal actions. Default true. */
+    reveal?: boolean
   },
 ): BannerCopy {
   switch (b.kind) {
@@ -510,6 +522,15 @@ export function bannerCopy(
         ],
       }
     }
+    case "external-change":
+      return {
+        title: `${b.fileName} changed on disk`,
+        body: "You have unsaved edits. Merge the change into them, or keep your version and save it over the file.",
+        actions: [
+          { id: "external-keep", label: "Keep mine", variant: "secondary" },
+          { id: "external-merge", label: "Merge", variant: "primary" },
+        ],
+      }
     case "locked": {
       const app = b.holder.appLabel.replace(/\s*\(.*\)$/, "")
       return {
@@ -543,8 +564,17 @@ export function bannerCopy(
         return {
           title: "Saved, but the read-back didn't match",
           body: "The file on disk differs from what Kimo wrote (antivirus or sync client?). Your version is in a recovery file.",
+          // E8: no diff view yet; the recovery copy is revealed instead (hidden on the web).
           actions: [
-            { id: "show-diff", label: "Show diff", variant: "secondary" },
+            ...(fmt.reveal === false
+              ? []
+              : [
+                  {
+                    id: "reveal-recovery" as const,
+                    label: "Reveal recovery copy",
+                    variant: "secondary" as const,
+                  },
+                ]),
             { id: "save-as", label: "Save as…", variant: "primary" },
           ],
         }
@@ -569,10 +599,13 @@ export function bannerCopy(
       return {
         title: `Couldn't open ${b.fileName}`,
         body: "The file is untouched. Kimo won't write to it from this window.",
-        actions: [
-          { id: "reveal", label: revealLabel(fmt.os), variant: "secondary" },
-          { id: "open-as-text", label: "Open as text", variant: "secondary" },
-        ],
+        actions:
+          fmt.reveal === false
+            ? []
+            : [
+                { id: "reveal", label: revealLabel(fmt.os), variant: "secondary" },
+                { id: "open-as-text", label: "Open as text", variant: "secondary" },
+              ],
       }
     case "merge-conflicts": {
       // Board 24 (n) step 2: all resolved but not saved yet → the git banner stays, its CTA

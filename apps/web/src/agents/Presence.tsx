@@ -533,7 +533,10 @@ function SessionSection({
   const s = chip.session
   const now = nowCopy(c)
   const userPaused = chip.paused?.code === "USER"
-  const topGroup = s.groups.length - 1
+  // Hosted windows list the agent's logged edits (one row per edit): the last one is the top.
+  const hosted = s.groups.length === 0 && s.entries.length > 0
+  const topGroup = hosted ? s.entries.length - 1 : s.groups.length - 1
+  const undoable = s.groups.length > 0 || s.entries.length > 0
   const version = [c.identity.version, transportLabel(c, controller.state.server)]
     .filter(Boolean)
     .join(" · ")
@@ -619,7 +622,7 @@ function SessionSection({
           variant="secondary"
           className="agents-button"
           icon={<AgentIcon name="undo-2" size={14} />}
-          disabled={s.groups.length === 0}
+          disabled={!undoable}
           onClick={() => void controller.undoAll(chip.origin)}
         >
           Undo all
@@ -629,7 +632,7 @@ function SessionSection({
           variant="primary"
           className="agents-button"
           icon={<AgentIcon name="check" size={14} />}
-          disabled={s.groups.length === 0}
+          disabled={!undoable}
           onClick={() => controller.keep(chip.origin)}
         >
           Keep

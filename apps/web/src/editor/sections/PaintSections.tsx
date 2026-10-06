@@ -24,6 +24,7 @@ import { Fragment, type MouseEvent, useRef, useState } from "react"
 import { cropStore } from "../../canvas/crop"
 import { Icon } from "../../lib/icons"
 import { Bindable } from "../bind"
+import { useImageError } from "../failure-toast"
 import { NumberField, ToggleRow } from "../fields"
 import { SectionTitle } from "../m3/overrides"
 import {
@@ -352,9 +353,13 @@ function useAddMenu(add: (kind: "solid" | "linear" | "image") => void) {
 
 /**
  * Opens the file dialog and stores the picked image as an asset. Resolves null when the
- * dialog is cancelled or the file is rejected (unsupported format, too large).
+ * dialog is cancelled or the file is rejected (unsupported format, too large); a rejection
+ * goes to `onError` (a danger toast, `useImageError`).
  */
-function pickImage(put: (f: File) => Promise<{ src: string }>): Promise<string | null> {
+function pickImage(
+  put: (f: File) => Promise<{ src: string }>,
+  onError: (e: unknown) => void,
+): Promise<string | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input")
     input.type = "file"
@@ -366,7 +371,7 @@ function pickImage(put: (f: File) => Promise<{ src: string }>): Promise<string |
       put(f).then(
         (i) => resolve(i.src),
         (e) => {
-          console.warn("Kimo: image import failed", e)
+          onError(e)
           resolve(null)
         },
       )
@@ -393,6 +398,7 @@ function current(store: FileSession["store"], ids: readonly string[]): Sel[] {
 
 export function FillSection({ sel }: { sel: readonly Sel[] }) {
   const { editor, assets, session } = usePanel()
+  const imageError = useImageError()
   const nodes = sel.map((s) => s.node)
   const ids = sel.map((s) => s.id)
   const icon = nodes.every((n) => n.type === "icon")
@@ -407,7 +413,7 @@ export function FillSection({ sel }: { sel: readonly Sel[] }) {
     if (kind === "linear") paint = gradientFrom(base[base.length - 1] ?? "#0A0A0A")
     if (kind === "image") {
       if (!assets) return
-      const src = await pickImage((f) => assets.put(f))
+      const src = await pickImage((f) => assets.put(f), imageError)
       if (!src) return
       paint = { kind: "image", src }
       // Re-read after the await: append to each node's current fill.
@@ -499,6 +505,7 @@ const JOINS = [
 
 export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
   const { editor, assets, session } = usePanel()
+  const imageError = useImageError()
   const nodes = sel.map((s) => s.node)
   const has = nodes.every((n) => strokeObj(n.stroke) !== null)
   const strokeOps = (next: (n: NodeData) => unknown): Op[] => mapOps(sel, "stroke", next)
@@ -511,7 +518,7 @@ export function StrokeSection({ sel }: { sel: readonly Sel[] }) {
     let targets: readonly Sel[] = sel
     if (kind === "image") {
       if (!assets) return
-      const src = await pickImage((f) => assets.put(f))
+      const src = await pickImage((f) => assets.put(f), imageError)
       if (!src) return
       paint = { kind: "image", src }
       // Re-read after the await: append to each node's current stroke.

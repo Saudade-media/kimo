@@ -9,7 +9,7 @@ Run a prompt with **Run** in its footer, the play button on its layer row, or **
 - With a **target** (right-click a frame › **Set as target**), the run is scoped to that frame.
 - Without one, Kimo creates a frame named `<prompt> · result` to the right of the prompt and the agent builds into it.
 
-A prompt can name its own model; otherwise the run uses the composer's model. Notes attached to the target are included, with their authors. A prompt can't run while another turn is running. Its run status (running, failed, last run with edits and cost) is kept on this device, not in the file, so the last run and a failure are still shown after a reload.
+A prompt can name its own model; otherwise the run uses the composer's model. Notes attached to the target are included, with their authors. Select several prompts and choose **Run N prompts** to run them one after another: the waiting ones show as running, and **Stop** on a waiting prompt takes it out of the line. A prompt can't start while a chat turn is running; its row then shows the failure. Its run status (running, failed, last run with edits and cost) is kept on this device, not in the file, so the last run and a failure are still shown after a reload.
 
 Prompts and notes are not design: the [Code tab](../export/code-tab.md) and exports skip them.
 

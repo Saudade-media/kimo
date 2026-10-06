@@ -1,7 +1,8 @@
-import { Ellipsis, File, Package } from "lucide-react"
-import { type ComponentPropsWithRef, type MouseEvent, useRef } from "react"
+import { Ellipsis, File, FileX, Package } from "lucide-react"
+import { type ComponentPropsWithRef, type MouseEvent, type ReactNode, useRef } from "react"
 import { IconButton } from "../icon-button/IconButton"
 import { cx } from "../internal/util"
+import { StatusPill } from "../status-pill/StatusPill"
 import { useMiddleTruncate } from "./middle-truncate"
 
 /** Git dot tone: `clean` border-strong, `modified` warning, `untracked` success, `conflict`
@@ -24,8 +25,17 @@ export interface FileRowProps extends Omit<ComponentPropsWithRef<"div">, "childr
   selected?: boolean
   /** Opens the file (click, Enter). */
   onOpen?: () => void
-  /** The ⋯ menu button. */
+  /** The ⋯ menu button; without a handler the cell stays empty (no dead button). */
   onMenu?: (e: MouseEvent<HTMLButtonElement>) => void
+  /** Board 37 oRMVN: the row's menu is open (⋯ fill bg-muted). */
+  menuOpen?: boolean
+  /**
+   * Board 37 axZMZ "Row · missing": `file-x` and name text-tertiary, path struck through,
+   * StatusPill/Missing (jwQVJ) in the Modified cell, git dot border with label "—".
+   */
+  missing?: boolean
+  /** Replaces the name text (board 37 zucQA inline rename field). */
+  nameSlot?: ReactNode
 }
 
 /**
@@ -46,6 +56,9 @@ export function FileRow({
   selected = false,
   onOpen,
   onMenu,
+  menuOpen = false,
+  missing = false,
+  nameSlot,
   className,
   onClick,
   onKeyDown,
@@ -53,7 +66,7 @@ export function FileRow({
 }: FileRowProps) {
   const pathRef = useRef<HTMLSpanElement>(null)
   const shownPath = useMiddleTruncate(pathRef, path)
-  const Icon = kind === "package" ? Package : File
+  const Icon = missing ? FileX : kind === "package" ? Package : File
   return (
     // biome-ignore lint/a11y/useSemanticElements: a grid row with an interactive menu cell
     <div
@@ -61,8 +74,13 @@ export function FileRow({
       tabIndex={0}
       aria-selected={selected}
       {...rest}
-      className={cx("kimo-file-row", selected && "kimo-file-row--selected", className)}
-      data-git={gitTone}
+      className={cx(
+        "kimo-file-row",
+        selected && "kimo-file-row--selected",
+        missing && "kimo-file-row--missing",
+        className,
+      )}
+      data-git={missing ? "none" : gitTone}
       onClick={(e) => {
         onClick?.(e)
         if (!e.defaultPrevented) onOpen?.()
@@ -76,7 +94,7 @@ export function FileRow({
         <Icon />
       </span>
       <span className="kimo-file-row__name-cell">
-        <span className="kimo-file-row__name">{name}</span>
+        {nameSlot ?? <span className="kimo-file-row__name">{name}</span>}
       </span>
       <span className="kimo-file-row__path-cell" title={path}>
         <span ref={pathRef} className="kimo-file-row__path">
@@ -84,23 +102,34 @@ export function FileRow({
         </span>
       </span>
       <span className="kimo-file-row__modified-cell">
-        <span className="kimo-file-row__modified">{modified}</span>
+        {missing ? (
+          <StatusPill status="missing" />
+        ) : (
+          <span className="kimo-file-row__modified">{modified}</span>
+        )}
       </span>
       <span className="kimo-file-row__git-cell">
         <span className="kimo-file-row__dot" aria-hidden="true" />
-        <span className="kimo-file-row__git">{gitLabel}</span>
+        <span className="kimo-file-row__git">{missing ? "—" : gitLabel}</span>
       </span>
-      <IconButton
-        className="kimo-file-row__menu"
-        label={`More actions for ${name}`}
-        icon={<Ellipsis />}
-        tone="quiet"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onMenu?.(e)
-        }}
-      />
+      {onMenu ? (
+        <IconButton
+          className={cx("kimo-file-row__menu", menuOpen && "kimo-file-row__menu--open")}
+          label={`More actions for ${name}`}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          icon={<Ellipsis />}
+          tone="quiet"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onMenu(e)
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span className="kimo-file-row-header__menu-cell" aria-hidden="true" />
+      )}
     </div>
   )
 }

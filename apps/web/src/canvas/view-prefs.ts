@@ -14,6 +14,8 @@ export interface CanvasViewPrefs {
   rulers: boolean
   layerNames: boolean
   nudge: { step: number; big: number }
+  /** Settings › General › Canvas zoom. */
+  wheelZoom: "trackpad" | "mouse"
 }
 
 /** The view prefs of a settings snapshot. */
@@ -25,6 +27,7 @@ export function viewPrefsOf(s: Settings): CanvasViewPrefs {
     rulers: s["canvas.rulers"],
     layerNames: s["canvas.layerNames"],
     nudge: nudgeSteps(s["canvas.nudge"] as NudgePreset),
+    wheelZoom: s["general.canvasZoom"],
   }
 }
 
@@ -36,9 +39,16 @@ export type ViewToggleKey =
   | "canvas.rulers"
   | "canvas.layerNames"
 
-/** Flips a boolean view pref (rejected writes are ignored: the control keeps the stored value). */
-export function toggleViewPref(settings: SettingsApi, key: ViewToggleKey): void {
-  void settings.set(key, !settings.get(key)).catch(() => undefined)
+/**
+ * Flips a boolean view pref. A rejected write keeps the stored value and reaches `onError`
+ * (A5: the editor shows "Couldn't change the view setting. <cause>").
+ */
+export function toggleViewPref(
+  settings: SettingsApi,
+  key: ViewToggleKey,
+  onError: (e: unknown) => void,
+): void {
+  void settings.set(key, !settings.get(key)).catch(onError)
 }
 
 /** Live view prefs (re-render on any settings change, including other windows). */

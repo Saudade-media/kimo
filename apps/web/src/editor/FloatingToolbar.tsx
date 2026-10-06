@@ -18,6 +18,7 @@ import { HintPill } from "../canvas/hints"
 import { slotToolId, useCanvasToolState } from "../canvas/tool-state"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
+import { keyHint } from "./kbd"
 import { ShapeSlot } from "./ShapeSlot"
 
 /** desing.pen light values for the M6 tool tints until the tokens ship. */
@@ -130,16 +131,17 @@ export function FloatingToolbar({
               <Icon name="sparkles" size={16} />
             </span>
             <span className="floating-toolbar__ask-label">Ask Kimo</span>
-            <Kbd>⌘K</Kbd>
+            <Kbd>{keyHint("askKimo", "⌘K")}</Kbd>
           </button>
         ) : (
-          <Tooltip side="top" label="Agent arrives in M6">
+          // The agent panel mounts once the file's id resolves: Ask Kimo waits for it.
+          <Tooltip side="top" label="Loading the agent…">
             <button type="button" className="floating-toolbar__ask" aria-disabled="true">
               <span className="floating-toolbar__ask-icon">
                 <Icon name="sparkles" size={16} />
               </span>
               <span className="floating-toolbar__ask-label">Ask Kimo</span>
-              <Kbd>⌘K</Kbd>
+              <Kbd>{keyHint("askKimo", "⌘K")}</Kbd>
             </button>
           </Tooltip>
         )}

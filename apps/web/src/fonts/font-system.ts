@@ -35,6 +35,23 @@ export const FONT_SETTING_KEYS: readonly SettingKey[] = [
   "fonts.extraFolders",
 ]
 
+/** Every window's font systems hear "the font cache was cleared" on this channel. */
+const FONT_CHANNEL = "kimo-fonts"
+
+/**
+ * Settings › Fonts & privacy › Clear: tells every open editor (this window and the others,
+ * including from the desktop Settings window) to re-resolve its fonts.
+ */
+export function announceFontCacheCleared(): void {
+  try {
+    const ch = new BroadcastChannel(FONT_CHANNEL)
+    ch.postMessage("cache-cleared")
+    ch.close()
+  } catch {
+    // No BroadcastChannel: open editors pick the change up on their next font lookup.
+  }
+}
+
 export interface FontSystemOptions {
   platform: KimoPlatform
   /** Document font assets (read on every lookup). */
@@ -126,6 +143,19 @@ export function createFontSystem(options: FontSystemOptions): FontSystem {
     inner.invalidate()
     emit()
   })
+  // The font cache was cleared (Settings, any window): faces resolve again.
+  let channel: BroadcastChannel | null = null
+  try {
+    channel = typeof BroadcastChannel === "function" ? new BroadcastChannel(FONT_CHANNEL) : null
+    if (channel)
+      channel.onmessage = (e: MessageEvent) => {
+        if (e.data !== "cache-cleared") return
+        inner.invalidate()
+        emit()
+      }
+  } catch {
+    channel = null
+  }
   // Network changes do not emit: "Not cached + offline renders the fallback … no layout
   // reflow on reconnect until the user reloads" (02d Font rules). Fetch / settings do.
   const google = inner.sources.find((s) => s.network) as NetworkFontSource
@@ -193,6 +223,7 @@ export function createFontSystem(options: FontSystemOptions): FontSystem {
     dispose() {
       offSettings()
       offPack()
+      channel?.close()
       listeners.clear()
     },
   }

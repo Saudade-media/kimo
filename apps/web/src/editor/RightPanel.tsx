@@ -192,11 +192,12 @@ export function RightPanel({
       )}
       {tab === "agent" && agent}
       {tab === "agent" && !agent && (
-        <div className="right-panel__empty">
+        // The agent panel mounts once the file's id resolves (a hash of its path): a short wait.
+        <div className="right-panel__empty" data-testid="agent-panel-loading" aria-busy="true">
           <EmptyState
             icon={<Icon name="sparkles" size={18} />}
-            title="Agent arrives in M6"
-            description="Describe a change and Kimo drafts it on the canvas as a reviewable diff."
+            title="Loading the agent…"
+            description="Describe a change and Kimo makes it on the canvas, with undo per turn."
           />
         </div>
       )}

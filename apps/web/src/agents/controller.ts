@@ -10,12 +10,14 @@ import type {
   McpApprovalRequest,
   McpClientPolicy,
   McpConnectionInfo,
+  McpHistoryResult,
   McpHostApi,
   McpHostConfigStatus,
   McpHostId,
   McpServerStatus,
 } from "@kimo/platform"
 import { workAreaIds } from "../canvas/agent-area"
+import { failureText } from "../editor/errors"
 import {
   AGENT_ACTIVITY_LIMIT,
   type AgentChip,
@@ -29,6 +31,7 @@ import {
   DEFAULT_POLICY,
   type DryRunView,
   dryRunFromApproval,
+  hostedSessionOps,
   presenceLabel,
   type SessionOps,
   sessionOps,
@@ -69,17 +72,27 @@ export interface AgentsViewState extends AgentsState {
   undone: ReadonlySet<number>
   /** seq → time it was undone here (board 24 h). */
   undoneAt: ReadonlyMap<number, number>
+  /**
+   * Undone entries that Redo can bring back now: the last one undone of each agent (the top of
+   * its redo stack). An agent's new edit clears its redo stack.
+   */
+  redoable: ReadonlySet<number>
   /** Dry-run ghosts: the oldest pending approval of this file, or the last dryRun call. */
   dryRun: (DryRunView & { source: "approval" | "call"; origin: string }) | null
   dryRunHidden: boolean
+  /** Activity row hover: every target of the entry, outlined in $agent on the canvas layer. */
+  highlight: readonly string[]
   now: number
 }
 
 /** Per-origin undo for agent groups (the document host's `kimo_history`; default: the store). */
 export interface AgentHistory {
-  undo(origin: string, undoToken?: string): Promise<{ ok: boolean; stale: boolean }>
-  /** Redo the origin's last undone group (board 24 h "Redo"); absent: no Redo action. */
-  redo?(origin: string): Promise<{ ok: boolean; stale: boolean }>
+  undo(origin: string, undoToken?: string): Promise<McpHistoryResult>
+  /**
+   * Redo the origin's last undone group (board 24 h "Redo"); absent: no Redo action. With
+   * `undoToken`, only that group (`conflict` when it is not the last one undone).
+   */
+  redo?(origin: string, undoToken?: string): Promise<McpHistoryResult>
 }
 
 export interface AgentsOptions {
@@ -102,6 +115,17 @@ export interface AgentsOptions {
   now?: () => number
   /** Hidden when no client has written in this file for this long (rule: 60 s). */
   presenceTtlMs?: number
+  /**
+   * A user action failed (pause, resume, undo, approval answer, disconnect): the editor shows it
+   * as Toast/Danger ("Couldn't …" + the cause). The state is re-read before this is called.
+   */
+  onError?: (notice: AgentsNotice) => void
+}
+
+/** A failed agent action, for Toast/Danger (board 37 A5 `ra5wy`). */
+export interface AgentsNotice {
+  text: string
+  action?: { label: string; run: () => void }
 }
 
 const PAUSE_CODES = new Set(["READ_ONLY", "DOCUMENT_LOCKED"])
@@ -116,17 +140,19 @@ export interface AgentsControllerExt extends AgentsController {
   /** Undo all: this origin's groups since the last Keep (guarded replay). */
   undoAll(origin: string): Promise<{ undone: number; stale: number }>
   /** Revert: undo only the top group of `origin` (guarded). */
-  undoTop(origin: string): Promise<{ ok: boolean; stale: boolean }>
+  undoTop(origin: string): Promise<McpHistoryResult>
   /** Undo session: every undoable entry of a session in the activity log. */
   undoSession(origin: string): Promise<{ undone: number; stale: number }>
   /** Redo an undone entry (board 24 h); null when the history cannot redo. */
-  redoEntry: ((entry: McpActivityEntry) => Promise<{ ok: boolean; stale: boolean }>) | null
+  redoEntry: ((entry: McpActivityEntry) => Promise<McpHistoryResult>) | null
   /** Pause: the client becomes read-only until Resume (policy level `read`). */
   pause(client: string): Promise<void>
   resume(client: string): Promise<void>
   /** Clears a READ_ONLY / DOCUMENT_LOCKED pause (Resume when the lock clears). */
   clearPause(origin: string): void
   setDryRunHidden(hidden: boolean): void
+  /** Outline these nodes on the canvas layer (activity row hover); null clears. */
+  setHighlight(nodeIds: readonly string[] | null): void
   loadHosts(scope?: "user" | "project"): Promise<McpHostConfigStatus[]>
   refresh(): void
   dispose(): void
@@ -142,7 +168,20 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
   const history: AgentHistory =
     opts.history ??
     (filePath && opts.hostHistory !== false
-      ? { undo: (origin, token) => opts.host.history.undo(filePath, origin, token) }
+      ? {
+          undo: (origin, token) => opts.host.history.undo(filePath, origin, token),
+          // Desktop: the host's agentRedo (kimo_history redo as that origin), when it has one.
+          ...(opts.host.history.redo
+            ? {
+                redo: (origin: string, token?: string) =>
+                  (opts.host.history.redo as NonNullable<McpHostApi["history"]["redo"]>)(
+                    filePath,
+                    origin,
+                    token,
+                  ),
+              }
+            : {}),
+        }
       : {
           async undo(origin) {
             if (!store) return { ok: false, stale: false }
@@ -163,13 +202,19 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
   let activity: McpActivityEntry[] = []
   let hosts: McpHostConfigStatus[] = []
   const keepSeq = new Map<string, number>()
+  /** Hosted windows: the activity seq of the last Keep per origin (rows after it are listed). */
+  const keepActivitySeq = new Map<string, number>()
   const paused: Record<string, PausedInfo> = {}
   const userPaused = new Set<string>()
   const stale = new Set<number>()
   const undone = new Set<number>()
   const undoneAt = new Map<number, number>()
+  /** Per origin: the seqs undone here, in undo order (its redo stack; last = next Redo). */
+  const redoStacks = new Map<string, number[]>()
+  const redoableNow = () => new Set([...redoStacks.values()].flatMap((st) => st.slice(-1)))
   let dryRunCall: { origin: string; view: DryRunView; seq: number } | null = null
   let dryRunHidden = false
+  let highlight: readonly string[] = []
   let disposed = false
   let timer: ReturnType<typeof setTimeout> | undefined
   const listeners = new Set<(s: AgentsViewState) => void>()
@@ -181,6 +226,42 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
   const remote = new Map<string, { nodes: Set<string>; last: string[]; at: number }>()
 
   const policyOf = (client: string): McpClientPolicy => policies[client] ?? DEFAULT_POLICY
+  const labelOf = (originOrClient: string): string => {
+    const c = connections.find(
+      (x) => x.origin === originOrClient || x.identity.client === originOrClient,
+    )
+    return c?.identity.label ?? "The agent"
+  }
+  function report(text: string, action?: AgentsNotice["action"]) {
+    if (opts.onError) opts.onError(action ? { text, action } : { text })
+    else console.error(text)
+  }
+  /** Undo all / Undo session: the edits that could not be undone (stale or refused). */
+  function reportUndo(origin: string, ok: number, failed: number) {
+    if (failed === 0) return
+    const total = ok + failed
+    report(
+      `Couldn't undo ${failed === total ? (total === 1 ? "the change" : `${total} changes`) : `${failed} of ${total} changes`}. The layers changed after the agent's edit, or ${labelOf(origin)} disconnected.`,
+    )
+  }
+  // Undo through the document host: the agent's groups are not in this window's op log.
+  const hostedHistory = !opts.history && !!filePath && opts.hostHistory !== false
+
+  /**
+   * The origin's session since the last Keep: its groups in this window's op log, or (a hosted
+   * window, whose replica only sees `remote:mcp:…` changes) its undoable activity entries.
+   */
+  function sessionOf(origin: string): SessionOps {
+    const local = sessionOps(store?.log() ?? [], origin, keepSeq.get(origin) ?? -1, store)
+    if (local.groups.length > 0 || !(hostedHistory || remote.has(origin))) return local
+    return hostedSessionOps(
+      activity,
+      origin,
+      keepActivitySeq.get(origin) ?? -1,
+      (seq) => undone.has(seq) || stale.has(seq),
+      store,
+    )
+  }
   const forThisFile = (r: McpApprovalRequest) =>
     !r.path || !opts.filePath || r.path === opts.filePath
 
@@ -213,7 +294,6 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
 
   function compute(): AgentsViewState {
     const t = now()
-    const log = store?.log() ?? []
     const chips: AgentChipView[] = []
     const touched = new Set<string>()
     let nextExpiry = Infinity
@@ -229,7 +309,7 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         (d) => d === opts.docId || (!!opts.fileId && d.startsWith(`d_${opts.fileId}_`)),
       )
       const busy = inDoc && (c.state === "editing" || c.state === "waiting-approval")
-      const session = sessionOps(log, c.origin, keepSeq.get(c.origin) ?? -1, store)
+      const session = sessionOf(c.origin)
       const pause =
         paused[c.origin] ??
         (userPaused.has(client) || c.paused
@@ -238,7 +318,12 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       const fresh = t - wrote < ttl
       if (fresh) nextExpiry = Math.min(nextExpiry, wrote + ttl)
       const active =
-        pending.length > 0 || fresh || busy || session.groups.length > 0 || pause !== null
+        pending.length > 0 ||
+        fresh ||
+        busy ||
+        session.groups.length > 0 ||
+        session.entries.length > 0 ||
+        pause !== null
       if (!active) continue
       for (const id of session.touched) touched.add(id)
       if (seen) for (const id of seen.nodes) if (!store || store.hasNode(id)) touched.add(id)
@@ -322,8 +407,10 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       stale: new Set(stale),
       undone: new Set(undone),
       undoneAt: new Map(undoneAt),
+      redoable: redoableNow(),
       dryRun,
       dryRunHidden,
+      highlight,
       now: t,
     }
   }
@@ -345,6 +432,8 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         time: e.time,
       }
     else if (e.kind === "edit" && paused[e.origin]) delete paused[e.origin]
+    // A new edit clears the agent's redo stack (the history drops it too).
+    if (e.kind === "edit") redoStacks.delete(e.origin)
     if (e.kind === "dry-run")
       dryRunCall = {
         origin: e.origin,
@@ -451,15 +540,42 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
     ),
   ]).then(() => emit())
 
-  async function undoEntryImpl(entry: McpActivityEntry) {
+  /** Guarded undo of one logged edit; `quiet` leaves the report to a batch caller. */
+  async function undoEntryImpl(entry: McpActivityEntry, quiet = false) {
     if (!entry.undoToken) return { ok: false, stale: false }
-    const r = await history.undo(entry.origin, entry.undoToken)
+    const what = entry.label ? `“${entry.label}”` : "the change"
+    let r: McpHistoryResult
+    try {
+      r = await history.undo(entry.origin, entry.undoToken)
+    } catch (e) {
+      emit()
+      if (!quiet) report(failureText(`undo ${what}`, e))
+      return { ok: false, stale: false }
+    }
+    // Not on top: newer edits of the same agent come first. The entry stays undoable.
+    if (r.conflict) {
+      emit()
+      if (!quiet)
+        report(`Couldn't undo ${what}. Undo the newer edits from ${labelOf(entry.origin)} first.`)
+      return r
+    }
+    // Refused or stale: the entry has nothing left to undo here (its row's Undo is disabled).
     if (r.stale || !r.ok) stale.add(entry.seq)
     else {
       undone.add(entry.seq)
       undoneAt.set(entry.seq, now())
+      redoStacks.set(entry.origin, [...(redoStacks.get(entry.origin) ?? []), entry.seq])
     }
     emit()
+    if (quiet || (r.ok && !r.stale)) return r
+    // A hosted window's refusal without an answer means the host had no live connection for it.
+    report(
+      r.stale
+        ? `Couldn't undo ${what}. The layers changed after this edit.`
+        : hostedHistory && r.message === undefined
+          ? `Couldn't undo ${what}. ${labelOf(entry.origin)} is no longer connected to this file.`
+          : `Couldn't undo ${what}. The undo history no longer has this edit.`,
+    )
     return r
   }
 
@@ -475,21 +591,65 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       }
     },
     async answer(id: string, choice: McpApprovalChoice) {
-      await opts.host.approvals.respond(id, choice)
+      try {
+        await opts.host.approvals.respond(id, choice)
+      } catch (e) {
+        // The request may have expired or been answered elsewhere: the host's queue is the truth.
+        queue = opts.host.approvals.pending()
+        emit()
+        report(failureText("send your answer", e))
+        return
+      }
       queue = queue.filter((q) => q.id !== id)
       emit()
     },
     async disconnect(connectionId) {
-      await opts.host.disconnect(connectionId)
+      try {
+        await opts.host.disconnect(connectionId)
+      } catch (e) {
+        const c = connections.find((x) => x.connectionId === connectionId)
+        report(failureText(`disconnect ${c?.identity.label ?? "the agent"}`, e))
+      }
     },
-    undoEntry: undoEntryImpl,
+    undoEntry: (entry) => undoEntryImpl(entry),
     redoEntry: history.redo
       ? async (entry) => {
-          const r = await (history.redo as NonNullable<AgentHistory["redo"]>)(entry.origin)
-          if (r.ok) {
+          const what = entry.label ? `“${entry.label}”` : "the change"
+          // Redo replays the agent's last undone group: only that entry can redo.
+          const st = redoStacks.get(entry.origin) ?? []
+          if (st[st.length - 1] !== entry.seq) {
+            report(
+              st.length
+                ? `Couldn't redo ${what}. Redo the edit you undid last from ${labelOf(entry.origin)} first.`
+                : `Couldn't redo ${what}. ${labelOf(entry.origin)} edited the file after the undo.`,
+            )
+            return { ok: false, stale: false, conflict: true }
+          }
+          let r: McpHistoryResult
+          try {
+            r = await (history.redo as NonNullable<AgentHistory["redo"]>)(
+              entry.origin,
+              entry.undoToken,
+            )
+          } catch (e) {
+            emit()
+            report(failureText(`redo ${what}`, e))
+            return { ok: false, stale: false }
+          }
+          if (r.ok || r.stale) redoStacks.set(entry.origin, st.slice(0, -1))
+          if (r.ok && !r.stale) {
             undone.delete(entry.seq)
             undoneAt.delete(entry.seq)
-          }
+          } else
+            report(
+              r.stale
+                ? `Couldn't redo ${what}. The layers changed after the undo.`
+                : r.conflict
+                  ? `Couldn't redo ${what}. Redo the edit you undid last from ${labelOf(entry.origin)} first.`
+                  : hostedHistory && r.message === undefined
+                    ? `Couldn't redo ${what}. ${labelOf(entry.origin)} is no longer connected to this file.`
+                    : `Couldn't redo ${what}. The undo history no longer has this edit.`,
+            )
           emit()
           return r
         }
@@ -522,32 +682,59 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       remote.delete(origin)
       const s = sessionOps(store?.log() ?? [], origin, keepSeq.get(origin) ?? -1, store)
       keepSeq.set(origin, s.after?.seq ?? store?.revision.seq ?? -1)
+      const seqs = activity.filter((e) => e.origin === origin).map((e) => e.seq)
+      if (seqs.length > 0) keepActivitySeq.set(origin, Math.max(...seqs))
       emit()
     },
     async undoAll(origin) {
-      const s = sessionOps(store?.log() ?? [], origin, keepSeq.get(origin) ?? -1, store)
-      // A hosted window's replica has no local groups for the agent: undo its logged calls.
-      if (s.groups.length === 0 && remote.has(origin)) {
-        const r = await controller.undoSession(origin)
-        remote.delete(origin)
+      const s = sessionOf(origin)
+      // A hosted window: undo the session's logged calls, newest first (guarded replay).
+      if (s.groups.length === 0) {
+        let ok = 0
+        let staleCount = 0
+        for (const e of [...s.entries].reverse()) {
+          const r = await undoEntryImpl(e, true)
+          if (r.ok && !r.stale) ok++
+          else staleCount++
+        }
+        if (ok > 0) remote.delete(origin)
         emit()
-        return r
+        reportUndo(origin, ok, staleCount)
+        return { undone: ok, stale: staleCount }
       }
       let ok = 0
       let staleCount = 0
-      for (let i = 0; i < s.groups.length; i++) {
-        const r = await history.undo(origin)
-        if (r.ok) ok++
-        else if (r.stale) staleCount++
-        else break
+      try {
+        for (let i = 0; i < s.groups.length; i++) {
+          const r = await history.undo(origin)
+          if (r.ok) ok++
+          else if (r.stale) staleCount++
+          else break
+        }
+      } catch (e) {
+        emit()
+        report(failureText("undo the agent's changes", e))
+        return { undone: ok, stale: staleCount }
       }
       if (ok > 0) remote.delete(origin)
       emit()
+      reportUndo(origin, ok, s.groups.length - ok)
       return { undone: ok, stale: staleCount }
     },
     async undoTop(origin) {
-      const r = await history.undo(origin)
+      const s = sessionOf(origin)
+      const top = s.groups.length === 0 ? s.entries[s.entries.length - 1] : undefined
+      if (top) return undoEntryImpl(top)
+      let r: { ok: boolean; stale: boolean }
+      try {
+        r = await history.undo(origin)
+      } catch (e) {
+        emit()
+        report(failureText("revert the change", e))
+        return { ok: false, stale: false }
+      }
       emit()
+      if (!r.ok) report("Couldn't revert the change. The layers changed after the agent's edit.")
       return r
     },
     async undoSession(origin) {
@@ -560,24 +747,51 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
         .filter((e) => e.kind === "edit" || e.kind === "redo" || e.kind === "undo")
         .sort((a, b) => b.seq - a.seq)
       for (const e of entries) {
-        const r = await undoEntryImpl(e)
+        const r = await undoEntryImpl(e, true)
         if (r.ok && !r.stale) ok++
         else staleCount++
       }
+      reportUndo(origin, ok, staleCount)
       return { undone: ok, stale: staleCount }
     },
-    // A real pause in the host runtime: the client's calls wait until resumed.
+    // A real pause in the host runtime: the client's calls wait until resumed. Optimistic:
+    // rolled back (and reported) when the host refuses or is down.
     async pause(client) {
       if (userPaused.has(client)) return
       userPaused.add(client)
       emit()
-      await opts.host.clients.pause(client)
+      try {
+        await opts.host.clients.pause(client)
+      } catch (e) {
+        userPaused.delete(client)
+        emit()
+        report(failureText(`pause ${labelOf(client)}`, e), {
+          label: "Retry",
+          run: () => void controller.pause(client),
+        })
+      }
     },
     async resume(client) {
+      const wasUser = userPaused.has(client)
+      const cleared: Record<string, PausedInfo> = {}
       userPaused.delete(client)
-      for (const o of Object.keys(paused)) if (clientOf(o) === client) delete paused[o]
+      for (const o of Object.keys(paused))
+        if (clientOf(o) === client) {
+          cleared[o] = paused[o] as PausedInfo
+          delete paused[o]
+        }
       emit()
-      await opts.host.clients.resume(client)
+      try {
+        await opts.host.clients.resume(client)
+      } catch (e) {
+        if (wasUser) userPaused.add(client)
+        Object.assign(paused, cleared)
+        emit()
+        report(failureText(`resume ${labelOf(client)}`, e), {
+          label: "Retry",
+          run: () => void controller.resume(client),
+        })
+      }
     },
     clearPause(origin) {
       delete paused[origin]
@@ -585,6 +799,12 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
     },
     setDryRunHidden(hidden) {
       dryRunHidden = hidden
+      emit()
+    },
+    setHighlight(nodeIds) {
+      const next = nodeIds ?? []
+      if (next.length === 0 && highlight.length === 0) return
+      highlight = next
       emit()
     },
     async loadHosts(scope = "user") {

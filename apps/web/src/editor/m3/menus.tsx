@@ -6,7 +6,9 @@
 import { MenuDense, MenuDivider, type PlacementOptions, type PopoverAnchor } from "@kimo/ui"
 import { useState } from "react"
 import { Icon } from "../../lib/icons"
+import { keyHint } from "../kbd"
 import {
+  componentOfSelection,
   createComponent,
   detachInstance,
   goToMain,
@@ -105,7 +107,7 @@ export function InstanceMenu({
       <M3MenuItem
         icon="arrow-up-right"
         label="Go to main component"
-        meta="⌥⏎"
+        meta={keyHint("goToMain", "⌥⏎")}
         onSelect={run(() => goToMain(m3, id))}
       />
       <M3MenuItem
@@ -118,7 +120,7 @@ export function InstanceMenu({
       <M3MenuItem
         icon="component"
         label="Create derived component"
-        meta="⌥⌘K"
+        meta={keyHint("createComponent", "⌥⌘K")}
         disabled={!real || !!n?.component}
         onSelect={run(() => createComponent(m3, [id], null))}
       />
@@ -140,7 +142,7 @@ export function InstanceMenu({
       <M3MenuItem
         icon="unlink"
         label="Detach instance"
-        meta="⌥⌘B"
+        meta={keyHint("detachInstance", "⌥⌘B")}
         disabled={!real}
         onSelect={run(() => void detachInstance(m3, id))}
       />
@@ -156,11 +158,14 @@ export function ChildMenu({
   m3,
   id,
   at,
+  selection = [],
   onClose,
 }: {
   m3: M3Controller
   id: string
   at: { x: number; y: number }
+  /** The selection before the right-click: "Replace with selection" uses its component. */
+  selection?: readonly string[]
   onClose(): void
 }) {
   const [replace, setReplace] = useState(false)
@@ -175,6 +180,7 @@ export function ChildMenu({
   const instance = loc?.instance ?? owned?.instance ?? null
   const path = loc?.path ?? owned?.at ?? null
   const top = instance ? view.getNode(instance) : undefined
+  const selected = componentOfSelection(m3, selection, id)
   if (replace && instance && path !== null)
     return (
       <SwapPopover
@@ -210,7 +216,15 @@ export function ChildMenu({
         disabled={!instance || path === null || !!owned}
         onSelect={() => setReplace(true)}
       />
-      <M3MenuItem icon="copy-plus" label="Replace with selection" disabled />
+      <M3MenuItem
+        icon="copy-plus"
+        label="Replace with selection"
+        disabled={!instance || path === null || !!owned || selected === null}
+        onSelect={run(() => {
+          if (instance && path !== null && selected)
+            replaceWithComponent(m3, loc?.instance ? id : `${instance}/${path}`, selected)
+        })}
+      />
       <M3MenuItem
         icon="eye-off"
         label="Hide layer"
@@ -243,10 +257,10 @@ export function AddPropMenu({
   onClose,
 }: {
   anchor: PopoverAnchor
-  onPick(type: "text" | "boolean" | "enum" | "instance"): void
+  onPick(type: "text" | "boolean" | "enum" | "instance" | "slot"): void
   onClose(): void
 }) {
-  const pick = (t: "text" | "boolean" | "enum" | "instance") => () => {
+  const pick = (t: "text" | "boolean" | "enum" | "instance" | "slot") => () => {
     onClose()
     onPick(t)
   }
@@ -266,7 +280,7 @@ export function AddPropMenu({
       <M3MenuItem icon="list" label="Enum" meta="E" onSelect={pick("enum")} />
       <M3MenuItem icon="diamond" label="Instance swap" meta="I" onSelect={pick("instance")} />
       <MenuDivider />
-      <M3MenuItem icon="square-dashed" label="Slot (mark a frame)" disabled />
+      <M3MenuItem icon="square-dashed" label="Slot (mark a frame)" onSelect={pick("slot")} />
     </MenuDense>
   )
 }
@@ -276,12 +290,15 @@ export function TargetMenu({
   m3,
   component,
   anchor,
+  frames = false,
   onPick,
   onClose,
 }: {
   m3: M3Controller
   component: string
   anchor: PopoverAnchor
+  /** Slot (mark a frame): list the component's frames only (no Root). */
+  frames?: boolean
   onPick(target: string): void
   onClose(): void
 }) {
@@ -289,22 +306,31 @@ export function TargetMenu({
   const items: { id: string; name: string; depth: number }[] = []
   const walk = (id: string, depth: number) => {
     for (const c of store.children(id)) {
-      items.push({ id: c, name: nameOf(store.getNode(c)), depth })
+      if (!frames || store.getNode(c)?.type === "frame")
+        items.push({ id: c, name: nameOf(store.getNode(c)), depth })
       if (store.getNode(c)?.type !== "instance") walk(c, depth + 1)
     }
   }
   walk(component, 1)
   return (
-    <MenuDense width={240} label="Prop target" anchor={anchor} onClose={onClose} autoFocus>
-      <MenuLabel>Target layer</MenuLabel>
-      <M3MenuItem
-        icon="component"
-        label="Root"
-        onSelect={() => {
-          onClose()
-          onPick(component)
-        }}
-      />
+    <MenuDense
+      width={240}
+      label={frames ? "Slot frame" : "Prop target"}
+      anchor={anchor}
+      onClose={onClose}
+      autoFocus
+    >
+      <MenuLabel>{frames ? "Frame to make a slot" : "Target layer"}</MenuLabel>
+      {!frames && (
+        <M3MenuItem
+          icon="component"
+          label="Root"
+          onSelect={() => {
+            onClose()
+            onPick(component)
+          }}
+        />
+      )}
       {items.map((it) => (
         <M3MenuItem
           key={it.id}

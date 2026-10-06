@@ -320,6 +320,12 @@ export interface SessionOps {
   after: Revision | null
   /** Distinct nodes the rows name. */
   nodes: number
+  /**
+   * A hosted window (desktop): the agent's groups live in the document host, not in this
+   * window's op log, so the rows come from these activity entries (newest last) and Undo all /
+   * Revert replay their undo tokens. Empty when the rows come from local groups.
+   */
+  entries: McpActivityEntry[]
 }
 
 const WIRE: Record<string, string> = {
@@ -555,6 +561,84 @@ export function sessionOps(
     before: first ? { epoch: first.revision.epoch, seq: first.revision.seq - 1 } : null,
     after: last ? last.revision : null,
     nodes: new Set(rows.map((r) => r.nodeId).filter((id): id is string => id !== null)).size,
+    entries: [],
+  }
+}
+
+const OP_VERBS = new Set(["insert", "update", "move", "delete", "replace"])
+
+/**
+ * Session ops of a hosted window (rule "Session popover", desktop): the replica's op log has no
+ * group of the agent (its edits arrive as `remote:mcp:…`), so each undoable edit entry of
+ * `origin` in the activity log after `afterSeq` is one row. `skip` drops entries that were
+ * undone or went stale here.
+ */
+export function hostedSessionOps(
+  activity: readonly McpActivityEntry[],
+  origin: string,
+  afterSeq: number,
+  skip: (seq: number) => boolean,
+  store?: DocStore | null,
+): SessionOps {
+  // Replay the agent's own undo / redo calls so a group it undid is not listed.
+  const stack: McpActivityEntry[] = []
+  const undoneByAgent: McpActivityEntry[] = []
+  for (const e of [...activity].sort((a, b) => a.seq - b.seq)) {
+    if (e.origin !== origin || e.seq <= afterSeq) continue
+    if (e.kind === "edit" && e.undoToken) {
+      stack.push(e)
+      undoneByAgent.length = 0
+    } else if (e.kind === "undo") {
+      const g = stack.pop()
+      if (g) undoneByAgent.push(g)
+    } else if (e.kind === "redo") {
+      const g = undoneByAgent.pop()
+      if (g) stack.push(e.undoToken ? e : g)
+    }
+  }
+  const entries = stack.filter((e) => !skip(e.seq))
+  const nameOf = storeNames(store)
+  const rows: OpRowView[] = entries.map((e, group) => {
+    const ids = e.nodeIds ?? []
+    const label = (e.label ?? "").trim()
+    const [verb = "", ...rest] = label.split(/\s+/)
+    const op = OP_VERBS.has(verb.toLowerCase()) ? verb.toLowerCase() : "edit"
+    const target =
+      op !== "edit" && rest.length > 0
+        ? rest.join(" ")
+        : ids.length > 0
+          ? namesSummary(ids.map(nameOf))
+          : label || e.summary
+    const count = e.opCount ?? 0
+    const detail =
+      op === "edit" && label && target !== label
+        ? label
+        : count > 0
+          ? `${count} ${count === 1 ? "op" : "ops"}`
+          : e.summary
+    return {
+      op,
+      target,
+      detail,
+      tone: op === "delete" ? "danger" : "agent",
+      nodeId: ids[0] ?? null,
+      group,
+    }
+  })
+  const touched = new Set<string>()
+  for (const e of entries)
+    for (const id of e.nodeIds ?? []) if (!store || store.hasNode(id)) touched.add(id)
+  const first = entries[0]
+  const last = entries[entries.length - 1]
+  const nodes = new Set(entries.flatMap((e) => e.nodeIds ?? [])).size
+  return {
+    groups: [],
+    rows,
+    touched,
+    before: first?.revisionBefore ?? null,
+    after: last?.revision ?? null,
+    nodes,
+    entries,
   }
 }
 

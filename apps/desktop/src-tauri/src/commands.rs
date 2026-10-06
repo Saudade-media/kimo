@@ -10,6 +10,7 @@ use crate::links::OpenRequest;
 use crate::recents::{RecentFile, WatchedFolder};
 use crate::recovery::{RecoveryEntry, RecoveryRead, RecoveryWriteInput};
 use crate::state::AppState;
+use crate::trash::TrashedFile;
 use crate::updater::{UpdateInfo, UpdaterStatus};
 use crate::util::{clean_abs, path_str};
 use crate::window::{self, WindowState};
@@ -138,6 +139,28 @@ pub async fn kimo_fs_remove(path: String, st: St<'_>) -> R<()> {
     blocking(move || fs_ops::remove(&p)).await
 }
 
+/// Board 37 §5 Rename: never overwrites (`EXISTS`); the new name is granted.
+#[tauri::command]
+pub async fn kimo_fs_rename(from: String, to: String, st: St<'_>) -> R<()> {
+    let from = st.scope.check(&from)?;
+    let to = st.scope.check(&to)?;
+    let target = to.clone();
+    blocking(move || fs_ops::rename_no_clobber(&from, &target, false)).await?;
+    st.scope.allow_file(&to);
+    Ok(())
+}
+
+/// Board 37 §5 Duplicate: never overwrites (`EXISTS`); the copy is granted.
+#[tauri::command]
+pub async fn kimo_fs_copy(from: String, to: String, st: St<'_>) -> R<()> {
+    let from = st.scope.check(&from)?;
+    let to = st.scope.check(&to)?;
+    let target = to.clone();
+    blocking(move || fs_ops::copy_no_clobber(&from, &target)).await?;
+    st.scope.allow_file(&to);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn kimo_fs_stat(path: String, st: St<'_>) -> R<Option<FileStat>> {
     let p = st.scope.check(&path)?;
@@ -202,11 +225,23 @@ pub async fn kimo_fs_open_default(app: AppHandle, path: String, st: St<'_>) -> R
         .map_err(|e| io_msg(format!("Could not open {}: {e}", path_str(&p))))
 }
 
+/// Whether `kimo_open_url` hands `u` to the OS: web links with a host, and mail / phone links
+/// (link popover › Open, audit G1). `file:`, `javascript:` and custom schemes never open.
+pub fn openable_url(u: &url::Url) -> bool {
+    match u.scheme() {
+        "https" | "http" => u.host_str().is_some_and(|h| !h.is_empty()),
+        "mailto" | "tel" => !u.path().trim().is_empty(),
+        _ => false,
+    }
+}
+
 #[tauri::command]
 pub async fn kimo_open_url(app: AppHandle, url: String) -> R<()> {
     let u = url::Url::parse(&url).map_err(|_| invalid(format!("Not a URL: {url}")))?;
-    if u.scheme() != "https" || u.host_str().is_none() {
-        return Err(blocked(format!("Only https URLs can be opened: {url}")));
+    if !openable_url(&u) {
+        return Err(blocked(format!(
+            "Kimo opens only web, mail and phone links: {url}"
+        )));
     }
     app.opener()
         .open_url(u.as_str(), None::<&str>)
@@ -379,6 +414,72 @@ pub async fn kimo_recents_scan_folder(path: String, st: St<'_>) -> R<Vec<RecentF
     blocking(move || Ok(st.recents.scan_folder(&p))).await
 }
 
+// --- trash (board 37 §3) ------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn kimo_trash_move(app: AppHandle, path: String, st: St<'_>) -> R<TrashedFile> {
+    let p = st.scope.check(&path)?;
+    let st = st.inner().clone();
+    let entry = blocking(move || {
+        let entry = st.trash.move_to_trash(&p)?;
+        st.recents.remove_file(&entry.original_ref)?;
+        Ok(entry)
+    })
+    .await?;
+    recents_changed(&app);
+    Ok(entry)
+}
+
+#[tauri::command]
+pub async fn kimo_trash_list(st: St<'_>) -> R<Vec<TrashedFile>> {
+    let st = st.inner().clone();
+    blocking(move || {
+        let entries = st.trash.list()?;
+        // Kimo moved each of these out of a folder it had access to. Trashing drops the file
+        // from Recents, so after a relaunch nothing else grants that folder: grant it again so
+        // "Restore as copy" can list it and write the copy there.
+        for e in &entries {
+            st.scope.allow_file(std::path::Path::new(&e.original_ref));
+        }
+        Ok(entries)
+    })
+    .await
+}
+
+/// `path` null puts the file back where it was (a path Kimo checked when it moved the file);
+/// another target ("Restore as copy") must be in scope.
+#[tauri::command]
+pub async fn kimo_trash_restore(
+    app: AppHandle,
+    id: String,
+    path: Option<String>,
+    st: St<'_>,
+) -> R<String> {
+    let to = path.map(|p| st.scope.check(&p)).transpose()?;
+    let st = st.inner().clone();
+    let restored = blocking(move || {
+        let p = st.trash.restore(&id, to.as_deref())?;
+        st.scope.allow_file(&p);
+        st.recents.note_opened(&p)?;
+        Ok(p)
+    })
+    .await?;
+    recents_changed(&app);
+    Ok(path_str(&restored))
+}
+
+#[tauri::command]
+pub async fn kimo_trash_remove(id: String, st: St<'_>) -> R<()> {
+    let st = st.inner().clone();
+    blocking(move || st.trash.remove(&id)).await
+}
+
+#[tauri::command]
+pub async fn kimo_trash_empty(st: St<'_>) -> R<u64> {
+    let st = st.inner().clone();
+    blocking(move || st.trash.empty()).await
+}
+
 // --- leases -------------------------------------------------------------------------------------
 
 #[tauri::command]
@@ -442,10 +543,21 @@ pub async fn kimo_recovery_write(input: RecoveryWriteInput, st: St<'_>) -> R<Rec
     blocking(move || st.recovery.write(input)).await
 }
 
+/// Restoring a recovery copy writes its source file, which may have left recents (and the
+/// scope) since: the source Kimo recorded is granted (audit A4 / C1).
 #[tauri::command]
 pub async fn kimo_recovery_read(id: String, st: St<'_>) -> R<RecoveryRead> {
     let st = st.inner().clone();
-    blocking(move || st.recovery.read(&id)).await
+    blocking(move || {
+        let read = st.recovery.read(&id)?;
+        if let Some(src) = read.entry.source_ref.as_deref() {
+            if let Ok(p) = clean_abs(src) {
+                st.scope.allow_file(&p);
+            }
+        }
+        Ok(read)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -734,8 +846,12 @@ pub async fn kimo_window_set_document_edited(window: WebviewWindow, edited: bool
 }
 
 #[tauri::command]
-pub async fn kimo_window_open_settings(app: AppHandle, pane: Option<String>) -> R<()> {
-    window::open_settings(&app, pane.as_deref())
+pub async fn kimo_window_open_settings(
+    app: AppHandle,
+    pane: Option<String>,
+    focus: Option<String>,
+) -> R<()> {
+    window::open_settings(&app, pane.as_deref(), focus.as_deref())
 }
 
 #[tauri::command]
@@ -746,6 +862,38 @@ pub async fn kimo_window_confirm_close(app: AppHandle, request_id: String, allow
 #[tauri::command]
 pub async fn kimo_window_close(window: WebviewWindow) -> R<()> {
     window::close_confirmed(&window)
+}
+
+/// File › New window (audit G4).
+#[tauri::command]
+pub async fn kimo_window_new(app: AppHandle) -> R<()> {
+    crate::menu::open_new_window(&app)
+}
+
+/// Board 37 (A6 / G2): this editor window shows Home or a document.
+#[tauri::command]
+pub async fn kimo_menu_set_context(
+    app: AppHandle,
+    window: WebviewWindow,
+    context: String,
+) -> R<()> {
+    let ctx = crate::menu::MenuContext::parse(&context)
+        .ok_or_else(|| invalid(format!("Unknown menu context: {context}")))?;
+    if !window::is_editor_label(window.label()) {
+        return Err(invalid("Only editor windows set the menu context"));
+    }
+    let focused = window.is_focused().unwrap_or(false);
+    crate::menu::set_context(&app, window.label(), ctx, focused);
+    Ok(())
+}
+
+/// Help › Copy diagnostics (audit G3): WKWebView refuses page clipboard writes outside a gesture.
+#[tauri::command]
+pub async fn kimo_clipboard_write_text(app: AppHandle, text: String) -> R<()> {
+    if text.len() > 1 << 20 {
+        return Err(invalid("Clipboard text is over 1 MB"));
+    }
+    blocking(move || crate::clipboard::write_text(&app, text)).await
 }
 
 // --- settings -----------------------------------------------------------------------------------
@@ -761,6 +909,15 @@ pub async fn kimo_settings_set(app: AppHandle, key: String, value: Value, st: St
     if key == "fonts.extraFolders" {
         st.fonts.invalidate();
     }
+    // The new-files folder is Kimo's to write (audit A4); granted for this session and, through
+    // `AppState::new`, the next ones.
+    if key == "files.newFilesDir" {
+        if let Some(dir) =
+            crate::state::new_files_dir(&st.settings, crate::state::home_dir().as_deref())
+        {
+            st.scope.allow_dir(&dir);
+        }
+    }
     let _ = app.emit(
         "kimo://settings-changed",
         serde_json::json!({ "key": key, "value": value }),
@@ -773,4 +930,23 @@ pub async fn kimo_settings_set(app: AppHandle, key: String, value: Value, st: St
 #[tauri::command]
 pub async fn kimo_launch_take_initial(st: St<'_>) -> R<Vec<OpenRequest>> {
     Ok(st.take_initial())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::openable_url;
+
+    #[test]
+    fn open_url_allows_web_mail_and_phone_links() {
+        let ok = |s: &str| openable_url(&url::Url::parse(s).unwrap());
+        assert!(ok("https://kimo.dev/docs"));
+        assert!(ok("http://localhost:3000/"));
+        assert!(ok("mailto:hi@kimo.dev"));
+        assert!(ok("tel:+15551234567"));
+        assert!(!ok("mailto:"));
+        assert!(!ok("file:///etc/passwd"));
+        assert!(!ok("javascript:alert(1)"));
+        assert!(!ok("kimo://open?path=/a.kimo"));
+        assert!(!ok("ftp://example.com/x"));
+    }
 }

@@ -6,7 +6,7 @@
  * harnesses); untitled documents have no path, so no agent can target them.
  */
 import type { LayoutResult } from "@kimo/layout"
-import { type KimoPlatform, sha256Hex } from "@kimo/platform"
+import { isPlatformError, type KimoPlatform, sha256Hex } from "@kimo/platform"
 import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import {
   AgentActivityPanel,
@@ -14,12 +14,14 @@ import {
   AgentPausedBanner,
   AgentPresence,
   type AgentsControllerExt,
+  type AgentsNotice,
   createAgentsController,
 } from "../agents"
 import type { CanvasHandle } from "../canvas/contract"
 import type { HostClient } from "../host/client"
 import { type Bus, createBus } from "../lib/hooks"
 import type { FileDocumentSession } from "../platform/session"
+import { failureText } from "./errors"
 import type { FileSession } from "./session"
 
 /** `sha256(path)[:16]`: the activity / lease / recovery key of a file (ADR 0013 §6). */
@@ -63,6 +65,7 @@ export function useEditorAgents({
   layout,
   openSettings,
   onSaveCopy,
+  onError,
 }: {
   platform: KimoPlatform
   hostClient: HostClient | null
@@ -72,11 +75,16 @@ export function useEditorAgents({
   layout: Bus<LayoutResult | null>
   openSettings: (client?: string) => void
   onSaveCopy?: () => void
+  /** A failed agent action or export: Toast/Danger ("Couldn't …" + the cause). */
+  onError: (notice: AgentsNotice) => void
 }): EditorAgents {
   const path = doc && !doc.untitled ? doc.ref : null
   const fileId = useFileId(path)
   const mcp = platform.mcp ?? null
   const openActivity = useMemo(() => createBus(0), [])
+  // Stable across renders so the controller is not rebuilt when the caller's closure changes.
+  const errorRef = useRef(onError)
+  errorRef.current = onError
   const focus = useMemo(
     () => (ids: readonly string[]) => {
       if (ids.length === 0) return
@@ -94,6 +102,7 @@ export function useEditorAgents({
             filePath: path,
             store: session.store,
             onFocus: (ids) => focus(ids),
+            onError: (n) => errorRef.current(n),
           })
         : null,
     [mcp, path, fileId, session.store, focus],
@@ -145,6 +154,8 @@ export function useEditorAgents({
         controller={controller}
         onShowOnCanvas={focus}
         onOpenClientSettings={(client) => openSettings(client)}
+        onOpenAgentsSettings={() => openSettings()}
+        {...(doc ? { fileName: doc.fileName } : {})}
       />
     ),
     banner: (
@@ -159,7 +170,18 @@ export function useEditorAgents({
       <AgentActivityPanel
         controller={controller}
         fileId={fileId}
-        onHighlight={(ids) => session.ui.getState().setHovered(ids?.[0] ?? null)}
+        onHighlight={(ids) => controller.setHighlight(ids)}
+        onConnectAgent={() => openSettings()}
+        onExport={(json, name) => {
+          // WKWebView ignores anchor downloads: the platform saves the file (or downloads it).
+          platform.files
+            .download(name, new TextEncoder().encode(json), "application/json")
+            .catch((e: unknown) => {
+              // Cancel in the save dialog is the user's choice, not a failure.
+              if (isPlatformError(e, "CANCELLED")) return
+              errorRef.current({ text: failureText("export the activity log", e) })
+            })
+        }}
       />
     ),
     openActivity,

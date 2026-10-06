@@ -6,6 +6,7 @@
 import { ImageFillPopover as ImageFillPopoverUi } from "@kimo/ui"
 import { useRef } from "react"
 import { IMAGE_ACCEPT } from "../../lib/assets"
+import { useImageError } from "../failure-toast"
 import { panelPlacement, useAssetSize, useAssetUrls, usePanel } from "../panel-context"
 
 type Fit = "cover" | "contain" | "stretch" | "tile" | "crop"
@@ -41,6 +42,7 @@ export function ImageFillPopover({
   onCrop?(): void
 }) {
   const { assets } = usePanel()
+  const imageError = useImageError()
   // Replace awaits hashing: apply to the paint and write path as they are when it finishes,
   // not as captured when the file was picked (a change made meanwhile would be overwritten).
   const latest = useRef({ paint, onChange })
@@ -81,7 +83,7 @@ export function ImageFillPopover({
         if (!assets) return
         assets.put(file).then(
           (info) => latest.current.onChange({ ...latest.current.paint, src: info.src }),
-          (e) => console.warn("Kimo: image import failed", e),
+          (e) => imageError(e),
         )
       }}
       onRemove={onRemove}

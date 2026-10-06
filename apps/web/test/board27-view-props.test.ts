@@ -10,6 +10,7 @@ import { createMemoryPlatform } from "@kimo/platform/memory"
 import { flipOps } from "../src/canvas/commands"
 import { gapMeasurements } from "../src/canvas/gap-preview"
 import { toggleViewPref, viewPrefsOf } from "../src/canvas/view-prefs"
+import { menuShortcut } from "../src/editor/FileMenu"
 import { paintBlend, paintBlendable, withPaintBlend } from "../src/editor/style"
 import { viewMeta } from "../src/editor/ViewMenu"
 import { CHOICES, parseChoice, SETTINGS_PANES } from "../src/settings/model"
@@ -36,6 +37,7 @@ describe("§4 canvas preferences (rules i6rbIi … Dos9n)", () => {
       rulers: false,
       layerNames: true,
       nudge: { step: 1, big: 10 },
+      wheelZoom: "trackpad",
     })
     expect(SETTINGS_DEFAULTS["canvas.nudge"]).toBe("1/10")
   })
@@ -54,11 +56,27 @@ describe("§4 canvas preferences (rules i6rbIi … Dos9n)", () => {
     await p.settings.ready
     const seen: string[] = []
     p.settings.onChange((k) => seen.push(k))
-    toggleViewPref(p.settings, "canvas.rulers")
+    toggleViewPref(p.settings, "canvas.rulers", (e) => {
+      throw e
+    })
     await Promise.resolve()
     await new Promise((r) => setTimeout(r, 0))
     expect(p.settings.get("canvas.rulers")).toBe(true)
     expect(seen).toContain("canvas.rulers")
+  })
+
+  test("a rejected toggle reaches onError (A5: the View menu toasts it)", async () => {
+    const p = createMemoryPlatform()
+    await p.settings.ready
+    const settings = {
+      ...p.settings,
+      get: p.settings.get.bind(p.settings),
+      set: () => Promise.reject(new Error("Settings are read-only")),
+    } as typeof p.settings
+    const errors: unknown[] = []
+    toggleViewPref(settings, "canvas.rulers", (e) => errors.push(e))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(errors.map((e) => (e as Error).message)).toEqual(["Settings are read-only"])
   })
 
   test("Settings › Canvas: pane right after General; Nudge select labels", () => {
@@ -82,6 +100,28 @@ describe("§4 canvas preferences (rules i6rbIi … Dos9n)", () => {
     expect(viewMeta("macos", "⇧R")).toBe("⇧R")
     expect(viewMeta("windows", "⌘+")).toBe("Ctrl++")
     expect(viewMeta("linux", "⇧'")).toBe("Shift+'")
+  })
+
+  test("E12: the web build follows the browser's OS (glyphs only in a macOS browser)", () => {
+    const nav = Object.getOwnPropertyDescriptor(globalThis, "navigator")
+    const as = (platform: string, userAgent: string) =>
+      Object.defineProperty(globalThis, "navigator", {
+        value: { platform, userAgent },
+        configurable: true,
+      })
+    try {
+      as("Win32", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+      expect(viewMeta("web", "⌘+")).toBe("Ctrl++")
+      expect(viewMeta("web", "⇧R")).toBe("Shift+R")
+      expect(menuShortcut("web", "S", true)).toBe("Shift+Ctrl+S")
+      as("Linux x86_64", "Mozilla/5.0 (X11; Linux x86_64)")
+      expect(menuShortcut("web", ",")).toBe("Ctrl+,")
+      as("MacIntel", "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)")
+      expect(viewMeta("web", "⌘+")).toBe("⌘+")
+      expect(menuShortcut("web", "S", true)).toBe("⇧⌘S")
+    } finally {
+      if (nav) Object.defineProperty(globalThis, "navigator", nav)
+    }
   })
 })
 

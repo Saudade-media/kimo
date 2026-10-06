@@ -28,6 +28,7 @@ import {
   createInWindowTools,
   createPlatformAgentRuntime,
   hasHomeHandoff,
+  ModeSummaryOverlay,
   modelLabel,
   peekHomeHandoff,
   rpcToolStream,
@@ -59,6 +60,8 @@ export interface EditorAgentPanel {
   panel: React.ReactNode
   /** `CanvasHost agentCanvas`. */
   canvas: AgentCanvasProps | undefined
+  /** Mode Summary pill (jDKaM) over the canvas while a mode run is live (null: none). */
+  modeSummary: React.ReactNode
   /** `CanvasHost noteAuthor`. */
   noteAuthor: string | undefined
   /** LeftPanel LayerRow/Prompt trailing state + play. */
@@ -83,6 +86,7 @@ export function useEditorAgentPanel({
   layout,
   openSettings,
   openAgentTab,
+  onError,
 }: {
   platform: KimoPlatform
   hostClient: HostClient | null
@@ -90,9 +94,12 @@ export function useEditorAgentPanel({
   doc: FileDocumentSession | null
   canvas: { current: CanvasHandle | null }
   layout: Bus<LayoutResult | null>
-  openSettings: (pane: "ai-providers") => void
+  /** `usage`: AI providers scrolled to Usage & limits (the agent's Usage card). */
+  openSettings: (pane: "ai-providers" | "usage") => void
   /** Switches the right panel to the Agent tab. */
   openAgentTab: () => void
+  /** A failed panel action (session history, links): Toast/Danger. */
+  onError: (text: string) => void
 }): EditorAgentPanel {
   const ai = useAiProviders(platform)
   const path = doc && !doc.untitled ? doc.ref : null
@@ -168,10 +175,11 @@ export function useEditorAgentPanel({
   worldBoxRef.current = worldBoxOf
 
   // Read at call time: the controller lives for the file, not for these values.
-  const latest = useRef({ shim: mcp.shim, openSettings, fileName: "" })
+  const latest = useRef({ shim: mcp.shim, openSettings, fileName: "", onError })
   latest.current = {
     shim: mcp.shim,
     openSettings,
+    onError,
     fileName: doc ? doc.fileName : session.meta.name,
   }
   const store = session.store
@@ -205,14 +213,15 @@ export function useEditorAgentPanel({
                     : undefined,
               }
             : {}),
-          openSettings: () => latest.current.openSettings("ai-providers"),
-          openLink: (url) => void platform.files.openExternalUrl(url).catch(() => {}),
+          openSettings: (pane) => latest.current.openSettings(pane ?? "ai-providers"),
+          openLink: (url) => platform.files.openExternalUrl(url),
           // Desktop: ~/.kimo/skills (listed, read and watched by Rust); absent on the web.
           ...(platform.skills ? { skills: platform.skills } : {}),
         },
       ),
       fileId,
       fileName: latest.current.fileName,
+      onError: (text) => latest.current.onError(text),
       docId: () => tools.docId(),
       activePage: () => {
         const id = pageForAgent()
@@ -325,6 +334,7 @@ export function useEditorAgentPanel({
     controller,
     panel,
     canvas: canvasProps,
+    modeSummary: controller ? <ModeSummaryOverlay controller={controller} /> : null,
     noteAuthor: mcp.user,
     promptRun: (id) => agent?.promptRuns[id]?.status,
     runPrompt,

@@ -206,3 +206,19 @@
   line-height: 13px;
   white-space: nowrap;
 }
+
+/* Board 37 oRMVN: the ⋯ button while its menu is open: fill bg-muted. */
+.kimo-icon-button.kimo-file-row__menu--open {
+  background: var(--kimo-bg-muted);
+}
+
+/* Board 37 axZMZ "Row · missing": icon and name text-tertiary, path struck through. */
+.kimo-file-row--missing .kimo-file-row__icon-tile,
+.kimo-file-row--missing .kimo-file-row__name,
+.kimo-file-row--missing .kimo-file-row__git {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-file-row--missing .kimo-file-row__path {
+  text-decoration: line-through;
+}

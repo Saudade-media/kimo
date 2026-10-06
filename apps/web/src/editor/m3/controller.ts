@@ -60,6 +60,8 @@ interface ConfirmState {
 export type ComponentDialogState =
   | { kind: "replaceMain"; main: string; source: string }
   | { kind: "fixOverrides"; component: string }
+  /** Library Changes › Fix broken overrides: every instance of the library's components. */
+  | { kind: "fixOverrides"; library: string }
   | {
       kind: "duplicateMain"
       ids: readonly string[]

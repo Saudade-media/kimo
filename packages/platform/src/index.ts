@@ -23,6 +23,7 @@ export {
   formatDeepLink,
   isAbsolutePath,
   isKimoPath,
+  isOpenableUrl,
   KIMO_EXTENSIONS,
   parseDeepLink,
   rebaseRelativeRefs,

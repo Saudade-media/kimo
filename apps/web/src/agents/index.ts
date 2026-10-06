@@ -32,6 +32,7 @@ export {
   type AgentChipView,
   type AgentHistory,
   type AgentsControllerExt,
+  type AgentsNotice,
   type AgentsOptions,
   type AgentsViewState,
   createAgentsController,

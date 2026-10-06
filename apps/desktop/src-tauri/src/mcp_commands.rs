@@ -198,9 +198,12 @@ pub async fn kimo_mcp_server_settings_get(app: AppHandle) -> R<Value> {
 pub async fn kimo_mcp_server_settings_set(
     app: AppHandle,
     start_on_launch: Option<bool>,
+    ask_before_destructive: Option<bool>,
     http_port: Option<u16>,
 ) -> R<Value> {
-    svc(&app)?.set_settings(start_on_launch, http_port).await
+    svc(&app)?
+        .set_settings(start_on_launch, ask_before_destructive, http_port)
+        .await
 }
 
 #[tauri::command]

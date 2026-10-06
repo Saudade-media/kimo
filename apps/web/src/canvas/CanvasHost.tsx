@@ -418,6 +418,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         snapToPixelGrid: () => cb.current.snapToPixelGrid ?? true,
         rulers: () => cb.current.rulers ?? false,
         nudge: () => cb.current.nudge ?? DEFAULT_NUDGE,
+        wheelZoom: () => cb.current.wheelZoom ?? "trackpad",
         onHint: (h) => {
           if (cb.current.onHint) cb.current.onHint(h)
           else setHint(h)

@@ -45,6 +45,6 @@ When a file then uses fonts Kimo can't find, the **Missing fonts** dialog opens 
 | **No third-party fetch** | Blocks Google Fonts and the offline font pack download. Kimo never loads remote image URLs: images are always files in `assets/`. Off by default. |
 | **Google Fonts** | Fetch Google fonts on first use (then store them in the file and the cache). Off while No third-party fetch is on. |
 | **Offline font pack** | Download, cancel, or remove the curated families above. |
-| **Font cache** | Fonts fetched so far and their size; **Clear** empties it. |
-| **Extra font folders** (desktop) | More folders to scan for installed fonts. |
-| **Embed fonts in .kimoz packages** | Put the fonts a file uses into `.kimoz` packages, when their license allows embedding. |
+| **Font cache** | Fonts fetched so far and their size; **Clear** empties it, and open files look their fonts up again. |
+| **Extra font folders** (desktop) | More folders to scan for installed fonts. Each folder is listed under the row; its **×** removes it and Kimo scans again. |
+| **Embed fonts in .kimoz packages** | Put the fonts a file uses into the `.kimoz` packages Kimo writes, only when their license allows embedding (OS/2 `fsType`). Off: packages carry no font files. |

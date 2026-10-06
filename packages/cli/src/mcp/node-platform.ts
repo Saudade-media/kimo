@@ -7,7 +7,9 @@
 import { createHash, randomBytes } from "node:crypto"
 import {
   closeSync,
+  copyFileSync,
   existsSync,
+  constants as fsConstants,
   mkdirSync,
   openSync,
   readdirSync,
@@ -137,6 +139,24 @@ export function createNodeFiles(): FilesApi {
     },
     async remove(ref) {
       rmSync(ref, { force: true })
+    },
+    // Never overwrite: EXISTS when the target is taken (same contract as kimo_fs_rename/copy).
+    async rename(from, to) {
+      if (existsSync(to)) throw new PlatformError("EXISTS", `${basename(to)} already exists`)
+      try {
+        renameSync(from, to)
+      } catch (e) {
+        throw ioError(e, `rename ${from}`)
+      }
+    },
+    async copy(from, to) {
+      try {
+        copyFileSync(from, to, fsConstants.COPYFILE_EXCL)
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === "EEXIST")
+          throw new PlatformError("EXISTS", `${basename(to)} already exists`)
+        throw ioError(e, `copy ${from}`)
+      }
     },
     async stat(ref) {
       return stat(ref)

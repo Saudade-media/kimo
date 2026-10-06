@@ -18,6 +18,8 @@ const INTERACTIVE_ROLES = new Set([
   "option",
 ])
 
+const OVERLAY_ROLES = new Set(["dialog", "alertdialog", "menu", "listbox", "tooltip"])
+
 function isClickable(el: HTMLElement): boolean {
   const editable = el.getAttribute("contenteditable")
   const tabindex = el.getAttribute("tabindex")
@@ -37,6 +39,13 @@ function isClickable(el: HTMLElement): boolean {
 export function isDragRegionPath(path: readonly EventTarget[]): boolean {
   for (const el of path) {
     if (!(el instanceof HTMLElement)) continue
+    // Dialogs, menus and popovers are never window chrome, even when they render inside a
+    // region (a portal-less dialog under a `deep` title bar).
+    if (
+      OVERLAY_ROLES.has(el.getAttribute("role") ?? "") ||
+      el.getAttribute("data-kimo-overlay") !== null
+    )
+      return false
     const attr = el.getAttribute(ATTR)
     if (isClickable(el) && attr === null) return false
     if (attr === null) continue

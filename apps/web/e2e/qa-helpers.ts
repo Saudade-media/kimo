@@ -63,7 +63,8 @@ export function nextFileChooser(page: Page, timeout = 10_000): Promise<FileChoos
 
 export async function openEditor(page: Page, url: string) {
   await page.goto(url)
-  await page.getByRole("button", { name: "New file" }).click()
+  // The empty state can show a second "New file"; the header one is always there.
+  await page.getByRole("button", { name: "New file" }).first().click()
   await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
   await waitCanvas(page)
 }

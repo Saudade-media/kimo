@@ -14,7 +14,8 @@
 import { MODEL_CATALOG } from "@kimo/ai-agent"
 import { AgentTonePill, Select } from "@kimo/ui"
 import { Cloud, Info } from "lucide-react"
-import { type ReactNode, useRef, useState } from "react"
+import { type ReactNode, useContext, useRef, useState } from "react"
+import { SettingsFailContext } from "../settings/panes"
 import type { AiSettingsController, CloudFields } from "./controller"
 import type { StoredProvider } from "./model"
 import "./polish.css"
@@ -61,12 +62,21 @@ export interface CloudCardsProps {
   readOnly?: boolean
 }
 
+const CLOUD_LABEL: Record<CloudKind, string> = {
+  bedrock: "Amazon Bedrock",
+  vertex: "Vertex AI",
+  foundry: "Microsoft Foundry",
+}
+
 export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
   const stored = (k: CloudKind): Partial<StoredProvider> => {
     const s = ctl.storedOf(k)
     return s && s.kind === k ? s : ({} as Partial<StoredProvider>)
   }
-  const set = (k: CloudKind, f: CloudFields) => void ctl.setCloud(k, f)
+  // Audit A5: failures show "Couldn't …" in the pane banner (board 37 CT1wv).
+  const fail = useContext(SettingsFailContext)
+  const set = (k: CloudKind, f: CloudFields) =>
+    void ctl.setCloud(k, f).catch((e: unknown) => fail(`save the ${CLOUD_LABEL[k]} settings`, e))
   const b = stored("bedrock")
   const v = stored("vertex")
   const f = stored("foundry")
@@ -184,7 +194,9 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
               if (c === "service-account") jsonInput.current?.click()
               else {
                 set("vertex", { credentials: c })
-                void ctl.deleteKey("vertex").catch(() => {})
+                void ctl
+                  .deleteKey("vertex")
+                  .catch((e: unknown) => fail("delete the Vertex AI service account", e))
               }
             }}
           />
@@ -198,10 +210,13 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
               e.currentTarget.value = ""
               if (!file) return
               // The file is copied into the keychain, then the path is forgotten.
-              void file.text().then(async (json) => {
-                await ctl.setCloud("vertex", { credentials: "service-account" })
-                await ctl.setKey("vertex", json)
-              })
+              void file
+                .text()
+                .then(async (json) => {
+                  await ctl.setCloud("vertex", { credentials: "service-account" })
+                  await ctl.setKey("vertex", json)
+                })
+                .catch((e: unknown) => fail("add the service account JSON", e))
             }}
           />
         </Row>
@@ -262,7 +277,10 @@ export function CloudCards({ ctl, readOnly = false }: CloudCardsProps) {
                 onChange={(e) => setFoundryKey(e.currentTarget.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && foundryKey.trim())
-                    void ctl.setKey("foundry", foundryKey).then(() => setFoundryKey(""))
+                    void ctl
+                      .setKey("foundry", foundryKey)
+                      .then(() => setFoundryKey(""))
+                      .catch((e: unknown) => fail("save the Foundry key", e))
                 }}
               />
             </span>

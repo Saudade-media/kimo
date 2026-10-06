@@ -191,6 +191,8 @@ export function GalleryM4FilesSections() {
                 gitLabel={git}
                 gitTone={tone}
                 selected={selected}
+                // Specimen: the ⋯ cell (the app opens the board 37 file menu here).
+                onMenu={() => {}}
               />
             ))}
           </div>

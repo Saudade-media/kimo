@@ -58,15 +58,28 @@ export interface FileBreadcrumbProps {
   onFileClick?: (e: MouseEvent<HTMLButtonElement>) => void
   /** The File menu is open (pressed file name, chevron-up). */
   fileOpen?: boolean
+  /** Board 37 (E3): the folder crumb opens Home on the file's folder (`dir` = its ref). */
+  onFolderClick?: (dir: string) => void
 }
 
 /** `folder / file.kimo / page` for the session's file (`Untitled / page` before a first save). */
-export function FileBreadcrumb({ session, page, onFileClick, fileOpen }: FileBreadcrumbProps) {
+export function FileBreadcrumb({
+  session,
+  page,
+  onFileClick,
+  fileOpen,
+  onFolderClick,
+}: FileBreadcrumbProps) {
   const state = useSessionState(session)
   const chrome = useWindowChrome(session.manager.platform)
+  const dir = dirnameOf(state.ref)
+  const folder = session.untitled ? null : basenameOf(dir)
   return (
     <DesktopBreadcrumb
-      folder={session.untitled ? null : basenameOf(dirnameOf(state.ref))}
+      folder={folder}
+      {...(onFolderClick && folder !== null
+        ? { onFolderClick: () => onFolderClick(dir), folderTooltip: `Show ${folder} in Home` }
+        : {})}
       folderIsRepo={state.git !== null}
       file={state.fileName}
       page={page ?? null}
@@ -95,6 +108,8 @@ export interface FileTopbarProps {
   onHome?: () => void
   /** Board 21 Agent Presence chip (drag region, before Save Status). */
   presence?: ReactNode
+  /** Board 37 (E3): the folder crumb opens Home on that folder. */
+  onFolderClick?: (dir: string) => void
 }
 
 /** The 28px topbar logo: KimoLogo 28 (bm1JR), replacing the old "k" pill (board 26 §4 KlpS9). */
@@ -115,6 +130,7 @@ export function FileTopbar({
   trailing,
   presence,
   onHome,
+  onFolderClick,
 }: FileTopbarProps) {
   const chrome = useWindowChrome(session.manager.platform)
   // macOS draws the lights (inset 68, 4 in fullscreen); everywhere else the OS (or the browser)
@@ -132,6 +148,7 @@ export function FileTopbar({
           page={page ?? null}
           fileOpen={fileOpen ?? false}
           {...(onFileClick ? { onFileClick } : {})}
+          {...(onFolderClick ? { onFolderClick } : {})}
         />
       }
       branch={session.untitled ? null : <FileBranchChip session={session} />}

@@ -8,6 +8,7 @@
 | [adr/](adr/README.md) | Architecture decision records, with the ADR process and template |
 | [scope-checklist.md](scope-checklist.md) | Every feature from teardown section 3 as a checkbox, tagged with its milestone |
 | [agents/](agents/index.md) | The MIT agent guides for coding agents (the same text `kimo_read_docs` serves): the `.kimo` model, `kimo_apply_ops` cookbook, layout, text, components, tokens, results and verification, error codes, web/mobile/tables/export workflows |
+| [Templates](../packages/templates/README.md) | The starter templates bundled with the app (`@kimo/templates`): what each contains, how the app loads them offline, how to rebuild. Writing a new one: [scripts/templates/README.md](../scripts/templates/README.md) |
 | [kimo CLI](../packages/cli/README.md) | `kimo merge` (semantic git merge driver), `kimo gc`, `kimo validate`, `kimo mcp` (MCP server, attach or headless) and `kimo mcp install/remove/status`: usage and exit codes |
 
 Repository-level documents:

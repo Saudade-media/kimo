@@ -12,16 +12,16 @@ The **File** menu has New file, Open…, Open recent, Save, Save as…, Reveal, 
 
 ## Recovery
 
-Independently of autosave, Kimo keeps a recovery snapshot of each file with unsaved changes every 30 seconds (15 s to 5 min in Settings). In the desktop app they are kept in `~/.kimo/recovery` for 30 days; in the browser, in its storage.
+Independently of autosave, Kimo keeps a recovery snapshot of each file with unsaved changes every 30 seconds (15 s to 5 min in Settings; a new interval applies to open files at once). In the desktop app they are kept in `~/.kimo/recovery` for 30 days; in the browser, in its storage.
 
-If Kimo quit without saving, it asks **Recover unsaved changes?** on the next start: **Restore all**, **Discard all** or **Decide later**.
+If Kimo quit without saving, it asks **Recover unsaved changes?** on the next start: **Restore all**, **Discard all** or **Decide later**. When a file's original can't take the restored copy (it was moved or deleted, or the folder is read-only), **Restore** asks where to save it instead. Snapshots older than 30 days are deleted before the dialog opens.
 
 ## When the file changes on disk
 
 Kimo watches open files. If one changes on disk (a `git pull`, another editor, an agent writing the file):
 
 - With no unsaved edits, Kimo reloads it: `<file> changed on disk and was reloaded`, with **Undo**.
-- With unsaved edits, **Merge & tell me** (the default) merges both sides: `Merged N changes from disk with your M edits`. Choose **Ask first** in Settings to decide each time.
+- With unsaved edits, **Merge & tell me** (the default) merges both sides: `Merged N changes from disk with your M edits`. With **Ask first** (Settings › Files & autosave › When a file changes on disk), a banner says `<file> changed on disk` and nothing is merged or written until you choose: **Merge** merges both sides, **Keep mine** keeps your edits and saves them over the file. `⌘S` also keeps yours.
 - When both sides changed the same thing, the **Conflicts** panel opens and autosave pauses until you resolve each conflict. `⌘'` and `⇧⌘'` move between conflicts.
 
 ## Git

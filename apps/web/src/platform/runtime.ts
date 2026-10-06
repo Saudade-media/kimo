@@ -14,6 +14,7 @@ import { createContext, useContext } from "react"
 import webPackage from "../../package.json"
 import { conflictSessionFactory } from "../conflicts"
 import type { HostClient } from "../host/client"
+import { takeLastFiles } from "./last-files"
 import {
   createSessionManager,
   type FileDocumentSession,
@@ -141,6 +142,18 @@ function finishRuntime(
   manager.install(onOpened)
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
+    // General › On launch: with nothing else to open, the main window reopens the file that was
+    // open when Kimo quit (desktop; the web keeps the open file in the URL).
+    const last =
+      platform.kind !== "browser" && platform.window.label === "main" ? takeLastFiles() : []
+    if (
+      !requests.length &&
+      platform.window.label === "main" &&
+      platform.settings.get("general.onLaunch") === "last-files" &&
+      last[0] &&
+      /^#?\/?$/.test(location.hash)
+    )
+      requests.push({ source: "argv", refs: [last[0]] })
     for (const request of requests) {
       await manager.handleOpenRequest(request).catch((e: unknown) => {
         console.warn("Kimo: could not open", request.refs, e)
@@ -168,8 +181,11 @@ export function useOptionalRuntime(): AppRuntime | null {
 }
 
 /** Opens Settings (desktop: its window; web: the in-app dialog the App root hosts). */
-export const SettingsOpenerContext = createContext<(pane?: SettingsPane) => void>(() => {})
+/** Opens Settings at `pane`; `focus` is an MCP client to expand or `usage` (AI providers). */
+export type SettingsOpener = (pane?: SettingsPane, focus?: string | null) => void
 
-export function useOpenSettings(): (pane?: SettingsPane) => void {
+export const SettingsOpenerContext = createContext<SettingsOpener>(() => {})
+
+export function useOpenSettings(): SettingsOpener {
   return useContext(SettingsOpenerContext)
 }

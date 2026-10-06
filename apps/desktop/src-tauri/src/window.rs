@@ -26,6 +26,20 @@ pub const SETTINGS_PANES: &[&str] = &[
     "updates",
     "about",
 ];
+/// `settings/<pane>[/<focus>]`: `focus` (an MCP client to expand, `usage`) is kept only when it
+/// is 1–64 chars of `[a-z0-9._-]`, so the route can be inlined into a script.
+pub fn settings_route(pane: &str, focus: Option<&str>) -> String {
+    match focus.filter(|f| {
+        !f.is_empty()
+            && f.len() <= 64
+            && f.chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || "._-".contains(c))
+    }) {
+        Some(f) => format!("settings/{pane}/{f}"),
+        None => format!("settings/{pane}"),
+    }
+}
+
 /// Board 19 "Settings Window" (XmeDB): a fixed 840×536 window.
 pub const SETTINGS_SIZE: (f64, f64) = (840.0, 536.0);
 /// Native traffic lights (02d WindowChrome/TrafficLights L2zCG: close dot at {16, 18}); the
@@ -179,13 +193,18 @@ pub fn primary_editor<Rt: Runtime>(app: &AppHandle<Rt>) -> Option<WebviewWindow<
     editors.into_iter().next().map(|(_, w)| w)
 }
 
-pub fn open_settings<Rt: Runtime>(app: &AppHandle<Rt>, pane: Option<&str>) -> R<()> {
+pub fn open_settings<Rt: Runtime>(
+    app: &AppHandle<Rt>,
+    pane: Option<&str>,
+    focus: Option<&str>,
+) -> R<()> {
     let pane = pane
         .filter(|p| SETTINGS_PANES.contains(p))
         .unwrap_or("general");
+    let route = settings_route(pane, focus);
     if let Some(w) = app.get_webview_window(SETTINGS_LABEL) {
-        // `pane` is from the fixed list above, so it is safe to inline.
-        let _ = w.eval(format!("window.location.hash = '#/settings/{pane}'"));
+        // `route` is a fixed pane plus a focus of [a-z0-9._-] only, so it is safe to inline.
+        let _ = w.eval(format!("window.location.hash = '#/{route}'"));
         let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
@@ -196,7 +215,7 @@ pub fn open_settings<Rt: Runtime>(app: &AppHandle<Rt>, pane: Option<&str>) -> R<
     let b = WebviewWindowBuilder::new(
         app,
         SETTINGS_LABEL,
-        WebviewUrl::App(format!("index.html#/settings/{pane}").into()),
+        WebviewUrl::App(format!("index.html#/{route}").into()),
     )
     .title("Settings")
     .inner_size(w, h)
@@ -264,8 +283,22 @@ pub fn confirm_close<Rt: Runtime>(app: &AppHandle<Rt>, request_id: &str, allow: 
         if let Some(w) = app.get_webview_window(&label) {
             close_confirmed(&w)?;
         }
+    } else if let Some(m) = crate::mcp::service(app) {
+        // The user cancelled (unsaved-files dialog): a pending Quit is cancelled with it, so a
+        // later close of this window forgets it instead of reopening it on launch (D1).
+        if is_editor_label(&label) {
+            m.quitting.store(
+                cancel_quit(m.quitting.load(std::sync::atomic::Ordering::SeqCst)),
+                std::sync::atomic::Ordering::SeqCst,
+            );
+        }
     }
     Ok(())
+}
+
+/// A refused close during Quit ends the quit (pure, for tests).
+pub fn cancel_quit(_quitting: bool) -> bool {
+    false
 }
 
 /// Window event hook (registered on the builder).
@@ -287,6 +320,9 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
     }
     match event {
         WindowEvent::Focused(focused) => {
+            if *focused {
+                crate::menu::on_focus(app, &label);
+            }
             let fullscreen = window.is_fullscreen().unwrap_or(false);
             let s = WindowState {
                 focused: *focused,
@@ -335,10 +371,14 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
             let id = uuid::Uuid::new_v4().simple().to_string();
             reqs.insert(id.clone(), (label.clone(), Instant::now()));
             drop(reqs);
+            // `quitting`: the window closes because the app quits (General › On launch reopens
+            // the files of windows closed this way), not because the user closed it.
+            let quitting = crate::mcp::service(app)
+                .is_some_and(|m| m.quitting.load(std::sync::atomic::Ordering::SeqCst));
             let _ = app.emit_to(
                 label.as_str(),
                 "kimo://close-requested",
-                serde_json::json!({ "requestId": id }),
+                serde_json::json!({ "requestId": id, "quitting": quitting }),
             );
         }
         WindowEvent::Destroyed => {
@@ -349,6 +389,7 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
                 .unwrap()
                 .retain(|_, (l, _)| *l != label);
             st.close_allowed.lock().unwrap().remove(&label);
+            st.menu_context.lock().unwrap().remove(&label);
             if label == crate::mcp::HOST_LABEL {
                 crate::mcp::on_host_destroyed(app);
             } else {
@@ -405,6 +446,27 @@ mod tests {
     fn settings_window_matches_board_19() {
         assert_eq!(SETTINGS_SIZE, (840.0, 536.0));
         assert_eq!(TRAFFIC_LIGHTS, Point { x: 16, y: 18 });
+    }
+
+    #[test]
+    fn settings_route_keeps_only_safe_focus() {
+        assert_eq!(settings_route("general", None), "settings/general");
+        assert_eq!(
+            settings_route("agents-mcp", Some("claude-code")),
+            "settings/agents-mcp/claude-code"
+        );
+        assert_eq!(
+            settings_route("ai-providers", Some("usage")),
+            "settings/ai-providers/usage"
+        );
+        assert_eq!(
+            settings_route("agents-mcp", Some("x'; alert(1)")),
+            "settings/agents-mcp"
+        );
+        assert_eq!(
+            settings_route("agents-mcp", Some("")),
+            "settings/agents-mcp"
+        );
     }
 
     #[test]

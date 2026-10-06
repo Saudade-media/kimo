@@ -137,18 +137,17 @@ export function AgentActivityPanel({
                 pending={r.pending}
                 stale={r.stale}
                 undone={r.undone}
-                {...(r.undone && r.entry && controller.redoEntry
+                // Redo only on each agent's last undone entry (the top of its redo stack).
+                {...(r.undone && r.entry && controller.redoEntry && state.redoable.has(r.entry.seq)
                   ? { onRedo: () => void controller.redoEntry?.(r.entry as never) }
                   : {})}
                 data-key={r.key}
-                onUndo={
-                  r.entry && r.undoable
-                    ? () => void controller.undoEntry(r.entry as never)
-                    : r.stale
-                      ? () => {}
-                      : undefined
-                }
+                // Stale rows keep a disabled Undo (ActivityRow renders it from `stale`).
+                {...(r.entry && r.undoable && !r.stale
+                  ? { onUndo: () => void controller.undoEntry(r.entry as never) }
+                  : {})}
                 onActivate={() => r.entry && controller.focusEntry(r.entry)}
+                // Every target of the entry, not only the first.
                 onPointerEnter={() => r.nodeIds.length > 0 && onHighlight?.(r.nodeIds)}
                 onPointerLeave={() => onHighlight?.(null)}
               />

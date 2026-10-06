@@ -32,4 +32,10 @@ describe("isDragRegionPath", () => {
     expect(isDragRegionPath(path(region("false")))).toBe(false)
     expect(isDragRegionPath(path(new El("DIV")))).toBe(false)
   })
+  test("dialogs, menus and popovers inside a region are never chrome", () => {
+    const r = region("deep")
+    expect(isDragRegionPath(path(new El("H2"), new El("DIV", { role: "dialog" }), r))).toBe(false)
+    expect(isDragRegionPath(path(new El("DIV", { role: "menu" }), r))).toBe(false)
+    expect(isDragRegionPath(path(new El("DIV", { "data-kimo-overlay": "" }), r))).toBe(false)
+  })
 })

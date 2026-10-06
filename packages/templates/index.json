@@ -1,0 +1,560 @@
+[
+  {
+    "slug": "admin-crm",
+    "name": "Keel sales CRM",
+    "category": "Web app",
+    "description": "Six-screen B2B sales CRM: pipeline board, deals table, deal timeline, contacts, company profile and reports.",
+    "pages": ["Cover", "Screens", "Components", "Foundations"],
+    "file": "files/admin-crm/admin-crm.kimo",
+    "cover": "files/admin-crm/cover.png",
+    "screens": [
+      {
+        "name": "Pipeline",
+        "page": "Screens",
+        "preview": "files/admin-crm/screens/01-pipeline.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Deals",
+        "page": "Screens",
+        "preview": "files/admin-crm/screens/02-deals.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Deal detail",
+        "page": "Screens",
+        "preview": "files/admin-crm/screens/03-deal-detail.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Contacts",
+        "page": "Screens",
+        "preview": "files/admin-crm/screens/04-contacts.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Company profile",
+        "page": "Screens",
+        "preview": "files/admin-crm/screens/05-company-profile.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Reports",
+        "page": "Screens",
+        "preview": "files/admin-crm/screens/06-reports.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "slug": "agency-portfolio",
+    "name": "Oriel studio portfolio",
+    "category": "Portfolio",
+    "description": "Portfolio site for a small design studio: home, work, case study, about and contact on desktop, with mobile home and case study.",
+    "pages": ["Cover", "Desktop", "Mobile", "Components", "Foundations"],
+    "file": "files/agency-portfolio/agency-portfolio.kimo",
+    "cover": "files/agency-portfolio/cover.png",
+    "screens": [
+      {
+        "name": "Home",
+        "page": "Desktop",
+        "preview": "files/agency-portfolio/screens/01-home.png",
+        "width": 1440,
+        "height": 4855
+      },
+      {
+        "name": "Work",
+        "page": "Desktop",
+        "preview": "files/agency-portfolio/screens/02-work.png",
+        "width": 1440,
+        "height": 3178
+      },
+      {
+        "name": "Case study",
+        "page": "Desktop",
+        "preview": "files/agency-portfolio/screens/03-case-study.png",
+        "width": 1440,
+        "height": 5000
+      },
+      {
+        "name": "About",
+        "page": "Desktop",
+        "preview": "files/agency-portfolio/screens/04-about.png",
+        "width": 1440,
+        "height": 4092
+      },
+      {
+        "name": "Contact",
+        "page": "Desktop",
+        "preview": "files/agency-portfolio/screens/05-contact.png",
+        "width": 1440,
+        "height": 1809
+      },
+      {
+        "name": "Mobile home",
+        "page": "Mobile",
+        "preview": "files/agency-portfolio/screens/06-mobile-home.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Mobile case study",
+        "page": "Mobile",
+        "preview": "files/agency-portfolio/screens/07-mobile-case-study.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "slug": "analytics-dashboard",
+    "name": "Tidemark subscription analytics",
+    "category": "Dashboard",
+    "description": "Six-screen analytics dashboard for a subscription business: overview, funnels, cohort retention, revenue, customers and a report builder.",
+    "pages": ["Cover", "Screens", "Components", "Foundations"],
+    "file": "files/analytics-dashboard/analytics-dashboard.kimo",
+    "cover": "files/analytics-dashboard/cover.png",
+    "screens": [
+      {
+        "name": "Overview",
+        "page": "Screens",
+        "preview": "files/analytics-dashboard/screens/01-overview.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Funnels",
+        "page": "Screens",
+        "preview": "files/analytics-dashboard/screens/02-funnels.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Retention",
+        "page": "Screens",
+        "preview": "files/analytics-dashboard/screens/03-retention.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Revenue",
+        "page": "Screens",
+        "preview": "files/analytics-dashboard/screens/04-revenue.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Customers",
+        "page": "Screens",
+        "preview": "files/analytics-dashboard/screens/05-customers.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Report builder",
+        "page": "Screens",
+        "preview": "files/analytics-dashboard/screens/06-report-builder.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "slug": "design-system",
+    "name": "Basalt UI kit",
+    "category": "Design system",
+    "description": "A published UI kit with 38 components and their variants, light and dark tokens, and five page patterns built from them.",
+    "pages": ["Cover", "Patterns", "Components", "Foundations"],
+    "file": "files/design-system/design-system.kimo",
+    "cover": "files/design-system/cover.png",
+    "screens": [
+      {
+        "name": "Form",
+        "page": "Patterns",
+        "preview": "files/design-system/screens/01-form.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Empty states",
+        "page": "Patterns",
+        "preview": "files/design-system/screens/02-empty-states.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Settings",
+        "page": "Patterns",
+        "preview": "files/design-system/screens/03-settings.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Data table",
+        "page": "Patterns",
+        "preview": "files/design-system/screens/04-data-table.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Dialog and toast",
+        "page": "Patterns",
+        "preview": "files/design-system/screens/05-dialog-and-toast.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "slug": "ecommerce-store",
+    "name": "Fernhill home goods store",
+    "category": "eCommerce",
+    "description": "Nine-screen online store for an independent home goods shop: home, category, product, cart, checkout and confirmation on desktop, plus home, product and cart on mobile.",
+    "pages": ["Cover", "Desktop", "Mobile", "Components", "Foundations"],
+    "file": "files/ecommerce-store/ecommerce-store.kimo",
+    "cover": "files/ecommerce-store/cover.png",
+    "screens": [
+      {
+        "name": "Home",
+        "page": "Desktop",
+        "preview": "files/ecommerce-store/screens/01-home.png",
+        "width": 1440,
+        "height": 3643
+      },
+      {
+        "name": "Category",
+        "page": "Desktop",
+        "preview": "files/ecommerce-store/screens/02-category.png",
+        "width": 1440,
+        "height": 2191
+      },
+      {
+        "name": "Product detail",
+        "page": "Desktop",
+        "preview": "files/ecommerce-store/screens/03-product-detail.png",
+        "width": 1440,
+        "height": 2559
+      },
+      {
+        "name": "Cart",
+        "page": "Desktop",
+        "preview": "files/ecommerce-store/screens/04-cart.png",
+        "width": 1440,
+        "height": 2012
+      },
+      {
+        "name": "Checkout",
+        "page": "Desktop",
+        "preview": "files/ecommerce-store/screens/05-checkout.png",
+        "width": 1440,
+        "height": 1421
+      },
+      {
+        "name": "Order confirmation",
+        "page": "Desktop",
+        "preview": "files/ecommerce-store/screens/06-order-confirmation.png",
+        "width": 1440,
+        "height": 1586
+      },
+      {
+        "name": "Home",
+        "page": "Mobile",
+        "preview": "files/ecommerce-store/screens/07-home.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Product detail",
+        "page": "Mobile",
+        "preview": "files/ecommerce-store/screens/08-product-detail.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Cart",
+        "page": "Mobile",
+        "preview": "files/ecommerce-store/screens/09-cart.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "slug": "event-conference",
+    "name": "Offset conference site",
+    "category": "Website",
+    "description": "Six-screen site for a two-day product design conference: home, speakers, two-track schedule, speaker page, tickets and venue.",
+    "pages": ["Cover", "Screens", "Components", "Foundations"],
+    "file": "files/event-conference/event-conference.kimo",
+    "cover": "files/event-conference/cover.png",
+    "screens": [
+      {
+        "name": "Home",
+        "page": "Screens",
+        "preview": "files/event-conference/screens/01-home.png",
+        "width": 1440,
+        "height": 3987
+      },
+      {
+        "name": "Speakers",
+        "page": "Screens",
+        "preview": "files/event-conference/screens/02-speakers.png",
+        "width": 1440,
+        "height": 2616
+      },
+      {
+        "name": "Schedule",
+        "page": "Screens",
+        "preview": "files/event-conference/screens/03-schedule.png",
+        "width": 1440,
+        "height": 2280
+      },
+      {
+        "name": "Speaker detail",
+        "page": "Screens",
+        "preview": "files/event-conference/screens/04-speaker-detail.png",
+        "width": 1440,
+        "height": 2158
+      },
+      {
+        "name": "Tickets",
+        "page": "Screens",
+        "preview": "files/event-conference/screens/05-tickets.png",
+        "width": 1440,
+        "height": 2040
+      },
+      {
+        "name": "Venue and travel",
+        "page": "Screens",
+        "preview": "files/event-conference/screens/06-venue-and-travel.png",
+        "width": 1440,
+        "height": 1918
+      }
+    ]
+  },
+  {
+    "slug": "mobile-banking",
+    "name": "Tidewell personal banking",
+    "category": "Mobile",
+    "description": "Seven-screen iPhone app for a personal bank: passcode sign-in, balances and cards, transactions, a receipt, sending money, freezing a card and monthly insights.",
+    "pages": ["Cover", "Screens", "Components", "Foundations"],
+    "file": "files/mobile-banking/mobile-banking.kimo",
+    "cover": "files/mobile-banking/cover.png",
+    "screens": [
+      {
+        "name": "Sign in",
+        "page": "Screens",
+        "preview": "files/mobile-banking/screens/01-sign-in.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Home",
+        "page": "Screens",
+        "preview": "files/mobile-banking/screens/02-home.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Transactions",
+        "page": "Screens",
+        "preview": "files/mobile-banking/screens/03-transactions.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Transaction detail",
+        "page": "Screens",
+        "preview": "files/mobile-banking/screens/04-transaction-detail.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Send money",
+        "page": "Screens",
+        "preview": "files/mobile-banking/screens/05-send-money.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Cards",
+        "page": "Screens",
+        "preview": "files/mobile-banking/screens/06-cards.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Insights",
+        "page": "Screens",
+        "preview": "files/mobile-banking/screens/07-insights.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "slug": "mobile-fitness",
+    "name": "Brisk fitness coach",
+    "category": "Mobile",
+    "description": "Six-screen iPhone app for a fitness and habit coach: onboarding, today, workout detail, live workout, progress charts and profile.",
+    "pages": ["Cover", "Screens", "Components", "Foundations"],
+    "file": "files/mobile-fitness/mobile-fitness.kimo",
+    "cover": "files/mobile-fitness/cover.png",
+    "screens": [
+      {
+        "name": "Onboarding",
+        "page": "Screens",
+        "preview": "files/mobile-fitness/screens/01-onboarding.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Today",
+        "page": "Screens",
+        "preview": "files/mobile-fitness/screens/02-today.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Workout detail",
+        "page": "Screens",
+        "preview": "files/mobile-fitness/screens/03-workout-detail.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Workout in progress",
+        "page": "Screens",
+        "preview": "files/mobile-fitness/screens/04-workout-in-progress.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Progress",
+        "page": "Screens",
+        "preview": "files/mobile-fitness/screens/05-progress.png",
+        "width": 390,
+        "height": 844
+      },
+      {
+        "name": "Profile",
+        "page": "Screens",
+        "preview": "files/mobile-fitness/screens/06-profile.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "slug": "saas-app",
+    "name": "Fieldwork project tracker",
+    "category": "Web app",
+    "description": "Six-screen SaaS web app for a studio project tracker: dashboard, projects, kanban board, team, settings and billing.",
+    "pages": ["Cover", "Screens", "Components", "Foundations"],
+    "file": "files/saas-app/saas-app.kimo",
+    "cover": "files/saas-app/cover.png",
+    "screens": [
+      {
+        "name": "Overview",
+        "page": "Screens",
+        "preview": "files/saas-app/screens/01-overview.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Projects",
+        "page": "Screens",
+        "preview": "files/saas-app/screens/02-projects.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Fernway checkout redesign",
+        "page": "Screens",
+        "preview": "files/saas-app/screens/03-fernway-checkout-redesign.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Team",
+        "page": "Screens",
+        "preview": "files/saas-app/screens/04-team.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Settings",
+        "page": "Screens",
+        "preview": "files/saas-app/screens/05-settings.png",
+        "width": 1440,
+        "height": 900
+      },
+      {
+        "name": "Billing",
+        "page": "Screens",
+        "preview": "files/saas-app/screens/06-billing.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "slug": "saas-marketing",
+    "name": "Ledgerline marketing site",
+    "category": "Website",
+    "description": "Six-screen marketing site for a B2B finance tool: home, pricing, customers, blog, article and sign-up.",
+    "pages": ["Cover", "Screens", "Components", "Foundations"],
+    "file": "files/saas-marketing/saas-marketing.kimo",
+    "cover": "files/saas-marketing/cover.png",
+    "screens": [
+      {
+        "name": "Home",
+        "page": "Screens",
+        "preview": "files/saas-marketing/screens/01-home.png",
+        "width": 1440,
+        "height": 4026
+      },
+      {
+        "name": "Pricing",
+        "page": "Screens",
+        "preview": "files/saas-marketing/screens/02-pricing.png",
+        "width": 1440,
+        "height": 2405
+      },
+      {
+        "name": "Customers",
+        "page": "Screens",
+        "preview": "files/saas-marketing/screens/03-customers.png",
+        "width": 1440,
+        "height": 2729
+      },
+      {
+        "name": "Blog",
+        "page": "Screens",
+        "preview": "files/saas-marketing/screens/04-blog.png",
+        "width": 1440,
+        "height": 2276
+      },
+      {
+        "name": "Blog post",
+        "page": "Screens",
+        "preview": "files/saas-marketing/screens/05-blog-post.png",
+        "width": 1440,
+        "height": 3031
+      },
+      {
+        "name": "Sign up",
+        "page": "Screens",
+        "preview": "files/saas-marketing/screens/06-sign-up.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  }
+]

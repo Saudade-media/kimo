@@ -83,7 +83,7 @@ export const scenarios: Scenario[] = [
         expect(hs.d === KIMO_LOGO_PATH, "Home mark uses the KimoLogo (bm1JR) geometry")
         flush()
 
-        await page.getByRole("button", { name: "New file" }).click()
+        await page.getByRole("button", { name: "New file" }).first().click()
         await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
         await page.locator(".topbar__logo .kimo-logo").first().waitFor()
         await applyTheme()

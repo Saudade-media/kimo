@@ -17,6 +17,7 @@ import {
   type FileDocumentSession,
 } from "../../platform/session"
 import {
+  addWatchedFolder,
   BannerHost,
   FailedLoadView,
   FileTopbar,
@@ -231,7 +232,10 @@ function Home({ view }: { view: RecentView }) {
     <div className="harness-home">
       <nav className="harness-sidebar">
         <TrafficLightInset platform={h.platform} leading={4} />
-        <LocalFolders folders={folders ?? []} />
+        <LocalFolders
+          folders={folders ?? []}
+          onAdd={() => void addWatchedFolder(h.platform).catch(() => null)}
+        />
       </nav>
       <main className="harness-main">
         <RecentFilesHeader
@@ -240,7 +244,13 @@ function Home({ view }: { view: RecentView }) {
           onViewChange={(v) => setUi({ homeView: v })}
         />
         {view === "list" ? (
-          <RecentFilesList files={files ?? []} now={now} onOpen={(f) => void api.open(f.ref)} />
+          <RecentFilesList
+            files={files ?? []}
+            now={now}
+            onOpen={(f) => void api.open(f.ref)}
+            // The ⋯ cell is measured here; the app's Home opens the board 37 file menu.
+            onMenu={() => {}}
+          />
         ) : (
           <RecentFilesGrid
             files={files ?? []}

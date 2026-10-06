@@ -20,7 +20,7 @@ export interface ActivityRowProps extends Omit<ComponentPropsWithRef<"div">, "ch
   pending?: boolean
   /** Undo this entry (omitted: no Undo button, e.g. reads, exports, denials). */
   onUndo?: () => void
-  /** Guarded replay found nothing to undo: Undo dims to 40%. */
+  /** Guarded replay found nothing to undo: Undo dims to 40% and is disabled (with a tooltip). */
   stale?: boolean
   /** Click / Enter: select and scroll to the targets. */
   onActivate?: () => void
@@ -101,12 +101,15 @@ export function ActivityRow({
           <Redo2 aria-hidden="true" />
         </button>
       )}
-      {!undone && onUndo && (
+      {!undone && (onUndo || stale) && (
+        // Stale: nothing left to undo, so the button stays visible (dimmed) but disabled.
         <button
           type="button"
           className="kimo-activity-row__undo"
           aria-label={stale ? "Undo (stale)" : "Undo"}
-          onClick={onUndo}
+          title={stale ? "Nothing to undo. The layers changed after this edit." : undefined}
+          disabled={stale}
+          onClick={stale ? undefined : onUndo}
         >
           <Undo2 aria-hidden="true" />
         </button>

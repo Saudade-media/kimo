@@ -563,6 +563,8 @@ export interface CanvasHostProps {
   layerNames?: boolean
   /** Board 27 rule bFozp: arrow-key nudge step / ⇧ big step in px. Default 1 / 10. */
   nudge?: { step: number; big: number }
+  /** Settings › General › Canvas zoom: "mouse" zooms on a plain scroll. Default "trackpad". */
+  wheelZoom?: "trackpad" | "mouse"
   /** Icon glyph source passed to the renderer (default: the renderer's lazy provider). */
   icons?: IconProvider
   /** An armed placement changed (toolbar shows Image active while armed). */

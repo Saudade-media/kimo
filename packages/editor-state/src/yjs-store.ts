@@ -684,6 +684,11 @@ export class YjsDocStore implements DocStore {
     return stack?.[stack.length - 1] ?? null
   }
 
+  topRedo(origin: LocalOrigin): object | null {
+    const stack = this.managers.get(origin)?.redoStack
+    return stack?.[stack.length - 1] ?? null
+  }
+
   groupUndo(origin: LocalOrigin): () => void {
     this.assertAlive()
     const m = this.managerFor(origin)

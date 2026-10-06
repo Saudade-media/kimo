@@ -75,7 +75,7 @@ import {
   tokensTitle,
 } from "./format"
 import { useAgentPanelState } from "./hooks"
-import { ModelMenu, ModeMenu, SkillsMenu } from "./Menus"
+import { ModelMenu, ModeMenu, SkillsMenu, visibleSkills } from "./Menus"
 import { PlanCard, ReviewCard } from "./Modes"
 import { SessionList } from "./Sessions"
 
@@ -209,11 +209,11 @@ export function AgentPanel({
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       if (state.menu === "skills") {
         e.preventDefault()
-        const f = state.composer.slash?.filter ?? ""
-        const first = [...state.skills.builtin, ...state.skills.user].find((s) =>
-          s.name.startsWith(f),
-        )
-        if (first) controller.insertSkill(first.name)
+        // The menu's top row (same filter as the menu): ↵ inserts it, ⌥↵ toggles it.
+        const first = visibleSkills(state)[0]
+        if (!first) return
+        if (e.altKey) controller.toggleSkill(first.name, !state.skills.enabled.includes(first.name))
+        else controller.insertSkill(first.name)
         return
       }
       e.preventDefault()
@@ -223,7 +223,12 @@ export function AgentPanel({
 
   const copy = (text: string) => {
     if (onCopy) onCopy(text)
-    else void navigator.clipboard?.writeText(text).catch(() => {})
+    else if (!navigator.clipboard)
+      controller.reportError("Couldn't copy the reply. The clipboard isn't available here.")
+    else
+      void navigator.clipboard
+        .writeText(text)
+        .catch(() => controller.reportError("Couldn't copy the reply. The clipboard refused it."))
   }
 
   const header = state.header
@@ -711,6 +716,11 @@ function ThreadItem({
                 ? { onRegenerate: () => void controller.regenerate(m.turnId) }
                 : {})}
             />
+          )}
+          {state.turnIssues[m.turnId] && (
+            <p className="agent-panel__turn-issue" role="alert" data-testid="agent-turn-issue">
+              {state.turnIssues[m.turnId]}
+            </p>
           )}
         </>
       )}

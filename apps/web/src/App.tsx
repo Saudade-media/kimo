@@ -14,6 +14,8 @@ import { RecoveryDialog } from "./files"
 import { Home } from "./home/Home"
 import { useHash } from "./lib/hooks"
 import { type ThemeMode, useTheme } from "./lib/theme"
+import { isUntitledRef } from "./platform/contract"
+import { noteWindowFile } from "./platform/last-files"
 import { SettingsOpenerContext, useRuntime } from "./platform/runtime"
 import { diskPath, navigate, parseRoute } from "./router"
 import {
@@ -25,22 +27,32 @@ import {
 } from "./settings"
 import { ShortcutsSheetHost } from "./shortcuts"
 import { createUpdaterController, UpdateToastHost } from "./updater"
+import { serveFlushRequests } from "./updater/restart-broadcast"
 
-const Gallery = lazy(() => import("@kimo/ui/gallery").then((m) => ({ default: m.Gallery })))
+/** Dev builds and the e2e bundle (`VITE_KIMO_DEBUG=1`) only; never in a release. */
+const GALLERY_ENABLED = import.meta.env.DEV || import.meta.env.VITE_KIMO_DEBUG === "1"
+
+// A release build drops the chunk entirely (the condition is static).
+const Gallery = GALLERY_ENABLED
+  ? lazy(() => import("@kimo/ui/gallery").then((m) => ({ default: m.Gallery })))
+  : null
 
 export function App() {
   const hash = useHash()
   const route = parseRoute(hash)
   const theme = useTheme()
   const { platform, manager } = useRuntime()
-  const [settingsPane, setSettingsPane] = useState<SettingsPane | null>(null)
+  const [settingsPane, setSettingsPane] = useState<{
+    pane: SettingsPane
+    focus: string | null
+  } | null>(null)
   const [recovery, setRecovery] = useState(route.name !== "settings")
-  const showDialog = useCallback((pane: SettingsPane) => setSettingsPane(pane), [])
+  const showDialog = useCallback((pane: SettingsPane) => setSettingsPane({ pane, focus: null }), [])
   useSettingsShortcut(platform, showDialog)
   const opener = useCallback(
-    (pane: SettingsPane = "general") =>
-      void openSettings(platform, pane).then((how) => {
-        if (how === "dialog") setSettingsPane(pane)
+    (pane: SettingsPane = "general", focus: string | null = null) =>
+      void openSettings(platform, pane, focus).then((how) => {
+        if (how === "dialog") setSettingsPane({ pane, focus })
       }),
     [platform],
   )
@@ -60,6 +72,19 @@ export function App() {
     return () => updater.dispose()
   }, [updater])
 
+  // Settings › Updates › Restart to update (board 37 D10): this window saves its files first.
+  useEffect(() => {
+    if (platform.kind === "browser" || settingsWindow) return
+    return serveFlushRequests(platform.window.label, () => manager.flushAll())
+  }, [platform, manager, settingsWindow])
+
+  // General › On launch: remember the file this desktop window shows (reopened after a quit).
+  const shownRef = route.name === "disk" && !isUntitledRef(route.ref) ? route.ref : null
+  useEffect(() => {
+    if (platform.kind === "browser" || settingsWindow) return
+    noteWindowFile(platform.window.label, shownRef)
+  }, [platform, shownRef, settingsWindow])
+
   if (route.name === "settings") return <SettingsRoute platform={platform} hash={hash} />
 
   return (
@@ -75,7 +100,8 @@ export function App() {
       {settingsPane && (
         <SettingsDialog
           platform={platform}
-          initialPane={settingsPane}
+          initialPane={settingsPane.pane}
+          initialFocus={settingsPane.focus}
           onClose={() => setSettingsPane(null)}
         />
       )}
@@ -89,12 +115,14 @@ export function App() {
 function Routed({ route, theme }: { route: ReturnType<typeof parseRoute>; theme: ThemeMode }) {
   switch (route.name) {
     case "home":
-      return <Home />
+      return <Home section={route.section} />
     case "file":
       return <Editor key={route.id} fileId={route.id} />
     case "disk":
       return <DiskEditor key={route.ref} fileRef={route.ref} node={route.node} />
     case "gallery":
+      // Board 37 §4: the component gallery is for development only (no sidebar row).
+      if (!Gallery) return <NotFound path="/gallery" />
       return (
         <div className="gallery-route">
           <Suspense fallback={null}>
@@ -103,15 +131,17 @@ function Routed({ route, theme }: { route: ReturnType<typeof parseRoute>; theme:
         </div>
       )
     default:
-      return (
-        <main className="not-found">
-          <p className="not-found__label">
-            Nothing at {route.name === "not-found" ? route.path : ""}
-          </p>
-          <a className="not-found__link" href="#/">
-            Back to files
-          </a>
-        </main>
-      )
+      return <NotFound path={route.name === "not-found" ? route.path : ""} />
   }
+}
+
+function NotFound({ path }: { path: string }) {
+  return (
+    <main className="not-found">
+      <p className="not-found__label">Nothing at {path}</p>
+      <a className="not-found__link" href="#/">
+        Back to files
+      </a>
+    </main>
+  )
 }

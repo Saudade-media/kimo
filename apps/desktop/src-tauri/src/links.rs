@@ -7,6 +7,8 @@ use serde::Serialize;
 pub struct DeepLink {
     pub path: String,
     pub node: Option<String>,
+    /// Board 27 §1 "Copy link to page": the page to open on.
+    pub page: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -17,6 +19,8 @@ pub struct OpenRequest {
     pub refs: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub node: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page: Option<String>,
 }
 
 /// `isAbsolutePath`: POSIX absolute, Windows drive or UNC.
@@ -40,7 +44,7 @@ fn valid_node_id(id: &str) -> bool {
     (6..=24).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric())
 }
 
-/// `kimo://open?path=<url-encoded absolute path>[&node=<id>]`, strictly.
+/// `kimo://open?path=<url-encoded absolute path>[&node=<id>][&page=<id>]`, strictly.
 pub fn parse_deep_link(raw: &str) -> Option<DeepLink> {
     let u = url::Url::parse(raw).ok()?;
     if u.scheme() != "kimo" {
@@ -72,7 +76,12 @@ pub fn parse_deep_link(raw: &str) -> Option<DeepLink> {
         Some(_) => return None,
         None => None,
     };
-    Some(DeepLink { path, node })
+    let page = match get("page") {
+        Some(p) if valid_node_id(&p) => Some(p),
+        Some(_) => return None,
+        None => None,
+    };
+    Some(DeepLink { path, node, page })
 }
 
 /// Turns command-line arguments (argv minus the program, or a second instance's argv) into
@@ -95,6 +104,7 @@ pub fn requests_from_args(
                     source: "deep-link",
                     refs: vec![l.path],
                     node: l.node,
+                    page: l.page,
                 });
             }
             continue;
@@ -119,6 +129,7 @@ pub fn requests_from_args(
                 source,
                 refs: files,
                 node: None,
+                page: None,
             },
         );
     }
@@ -138,8 +149,15 @@ mod tests {
             ),
             Some(DeepLink {
                 path: "/Users/me/loom/marketing.kimo".into(),
-                node: Some("Hero000001".into())
+                node: Some("Hero000001".into()),
+                page: None
             })
+        );
+        assert_eq!(
+            parse_deep_link("kimo://open?path=%2Fa.kimo&page=Page000002")
+                .unwrap()
+                .page,
+            Some("Page000002".into())
         );
         assert_eq!(
             parse_deep_link("kimo://open?path=C%3A%5Cdesign%5Ca.kimoz")
@@ -180,6 +198,7 @@ mod tests {
             "kimo://open?path=/a.kimo&node=bad/id",
             "kimo://open?path=/a.kimo&node=short",
             "kimo://open?path=/a.kimo&node=",
+            "kimo://open?path=/a.kimo&page=bad/id",
             "kimo://open?path=%2Fa%00.kimo",
             "kimo://open?path=C%3A%5Ca%5C..%5Cb.kimo",
             "kimo://open",
@@ -209,7 +228,8 @@ mod tests {
             OpenRequest {
                 source: "argv",
                 refs: vec!["/work/a.kimo".into(), "/abs/b.kimoz".into()],
-                node: None
+                node: None,
+                page: None
             }
         );
         assert_eq!(
@@ -217,7 +237,8 @@ mod tests {
             OpenRequest {
                 source: "deep-link",
                 refs: vec!["/c.kimo".into()],
-                node: Some("Abc123xyz9".into())
+                node: Some("Abc123xyz9".into()),
+                page: None
             }
         );
         assert_eq!(

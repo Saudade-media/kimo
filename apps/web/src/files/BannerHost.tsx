@@ -22,6 +22,7 @@ import {
   LockKeyhole,
   type LucideIcon,
 } from "lucide-react"
+import { useFailureToast } from "../editor/failure-toast"
 import { bannerCopy, type Banner as SessionBanner } from "../platform/contract"
 import { bannerFormatters } from "../platform/format"
 import type { FileDocumentSession } from "../platform/session"
@@ -33,6 +34,8 @@ const ICON: Record<SessionBanner["kind"], LucideIcon> = {
   locked: LockKeyhole,
   "git-operation": GitBranch,
   "save-failed": CircleX,
+  // Board 17 "Changes on disk" uses git-merge for every external change.
+  "external-change": GitMerge,
   "failed-load": CircleX,
   "merge-conflicts": GitMerge,
   "merge-ready": GitCommitHorizontal,
@@ -41,6 +44,8 @@ const ICON: Record<SessionBanner["kind"], LucideIcon> = {
 export interface SessionBannerViewProps {
   banner: SessionBanner
   os: HostOS
+  /** `capabilities.reveal`: false hides the reveal actions (web). */
+  canReveal?: boolean
   onAction?: (id: string) => void
   onDismiss?: () => void
 }
@@ -48,8 +53,14 @@ export interface SessionBannerViewProps {
 const ACTION_ICON = { check: <Check /> } as const
 
 /** A session banner as designed (stateless; used by {@link BannerHost} and the gallery). */
-export function SessionBannerView({ banner, os, onAction, onDismiss }: SessionBannerViewProps) {
-  const copy = bannerCopy(banner, bannerFormatters(os))
+export function SessionBannerView({
+  banner,
+  os,
+  canReveal = true,
+  onAction,
+  onDismiss,
+}: SessionBannerViewProps) {
+  const copy = bannerCopy(banner, { ...bannerFormatters(os), reveal: canReveal })
   const Icon = ICON[banner.kind]
   const tone: BannerTone = banner.kind === "merge-ready" ? "success" : banner.severity
   return (
@@ -71,6 +82,29 @@ export function SessionBannerView({ banner, os, onAction, onDismiss }: SessionBa
   )
 }
 
+/** What a failed banner action couldn't do ("Couldn't <this>. <cause>"). */
+export function actionFailure(id: string, fileName: string): string {
+  switch (id) {
+    case "reveal-recovery":
+      return "reveal the recovery copy"
+    case "reveal":
+      return `reveal ${fileName}`
+    case "open-as-text":
+      return `open ${fileName} as text`
+    case "mark-resolved-save":
+    case "retry-save":
+      return `save ${fileName}`
+    case "save-as":
+      return `save a copy of ${fileName}`
+    case "external-merge":
+      return `merge the change to ${fileName}`
+    case "external-keep":
+      return `keep your version of ${fileName}`
+    default:
+      return "finish that action"
+  }
+}
+
 /**
  * Mount directly under the topbar, full width. Also hosts the board 24 (i) close prompt of a
  * never-saved document (a modal, so its place in the tree does not matter).
@@ -84,16 +118,22 @@ export function BannerHost({
   onReview?: (nodes: readonly string[]) => void
 }) {
   const state = useSessionState(session)
+  const fail = useFailureToast()
   return (
     <>
       {state.banner && (
         <SessionBannerView
           banner={state.banner}
           os={session.manager.platform.os}
+          canReveal={session.manager.platform.capabilities.reveal}
           onAction={(id) => {
             const b = state.banner
             if (id === "review-changes" && b?.kind === "merge-ready") onReview?.(b.nodes ?? [])
-            else void session.runAction(id as never)
+            // Audit A5: a failed action says so ("Couldn't save pricing.kimo. …").
+            else
+              session
+                .runAction(id as never)
+                .catch((e: unknown) => fail(actionFailure(id, session.fileName), e))
           }}
           onDismiss={() => session.dismissMergeReady()}
         />

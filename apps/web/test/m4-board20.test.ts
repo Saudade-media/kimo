@@ -176,6 +176,7 @@ describe("Banner priority (vgNUe)", () => {
       "locked",
       "newer-format",
       "save-failed",
+      "external-change",
       "merge-conflicts",
       "git-operation",
       "merge-ready",

@@ -59,7 +59,9 @@ import { useOptionalRuntime } from "../../platform/runtime"
 import { matches } from "../../shortcuts/shortcuts"
 import { Bindable, StaticField, useBindRequest } from "../bind"
 import { sharedRef } from "../bindings"
+import { useFailureToast } from "../failure-toast"
 import { NumberField } from "../fields"
+import { keyHint } from "../kbd"
 import { SectionTitle } from "../m3/overrides"
 import { panelPlacement, type Sel, useKeepPopoverFocus, usePanel } from "../panel-context"
 import { formatNumber, MIXED, MIXED_LABEL, type Mixed } from "../props"
@@ -171,9 +173,14 @@ export function TextSection({
   const [linkOpen, setLinkOpen] = useState(false)
   const [weightTip, setWeightTip] = useState({ hover: false, focus: false })
   const runtime = useOptionalRuntime()
-  // Link "Open": a new tab on the web, the default browser on desktop.
+  const fail = useFailureToast()
+  // Link "Open": a new tab on the web, the default app on desktop (web, mail and phone links;
+  // G1). A refused link says why.
   const openExternal = async (url: string) => {
-    if (runtime) await runtime.platform.files.openExternalUrl(url).catch(() => {})
+    if (runtime)
+      await runtime.platform.files
+        .openExternalUrl(url)
+        .catch((e: unknown) => fail("open the link", e))
     else window.open(url, "_blank", "noopener,noreferrer")
   }
   const family = font === MIXED ? null : font
@@ -1077,7 +1084,7 @@ function TextMoreMenu({
         <MenuItemDense
           label="Italic"
           checked={italic}
-          meta="⌘I"
+          meta={keyHint("italic", "⌘I")}
           className={
             italicMissing ? "rp-text-menu__item rp-text-menu__item--missing" : "rp-text-menu__item"
           }
@@ -1087,7 +1094,7 @@ function TextMoreMenu({
         <MenuItemDense
           label="Link…"
           checked={linked}
-          meta="⌘K"
+          meta={keyHint("link", "⌘K")}
           className="rp-text-menu__item"
           onSelect={onLink}
         />

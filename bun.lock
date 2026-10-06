@@ -201,6 +201,10 @@
         "@kimo/core-schema": "workspace:*",
       },
     },
+    "packages/templates": {
+      "name": "@kimo/templates",
+      "version": "1.0.0",
+    },
     "packages/ui": {
       "name": "@kimo/ui",
       "version": "1.0.0",
@@ -327,6 +331,8 @@
     "@kimo/site": ["@kimo/site@workspace:apps/site"],
 
     "@kimo/sync": ["@kimo/sync@workspace:packages/sync"],
+
+    "@kimo/templates": ["@kimo/templates@workspace:packages/templates"],
 
     "@kimo/ui": ["@kimo/ui@workspace:packages/ui"],
 

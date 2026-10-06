@@ -22,7 +22,8 @@ import {
   TriangleAlert,
   WifiOff,
 } from "lucide-react"
-import { useState } from "react"
+import { useContext, useState } from "react"
+import { SettingsFailContext } from "../settings/panes"
 import { type StoredTest, type TestStrip, testStrip } from "./model"
 import "./polish.css"
 
@@ -52,6 +53,7 @@ export interface TestResultProps {
 }
 
 export function TestResult({ test, hint, onRetry, onCopy, retrying = false }: TestResultProps) {
+  const fail = useContext(SettingsFailContext)
   const [open, setOpen] = useState(false)
   const s = testStrip(test)
   const Icon = ICONS[s.icon]
@@ -132,7 +134,12 @@ export function TestResult({ test, hint, onRetry, onCopy, retrying = false }: Te
           onClick={() => {
             const text = lines.join("\n")
             if (onCopy) onCopy(text)
-            else void navigator.clipboard?.writeText(text).catch(() => {})
+            else if (!navigator.clipboard)
+              fail("copy the details", new Error("The clipboard isn't available here"))
+            else
+              void navigator.clipboard
+                .writeText(text)
+                .catch((e: unknown) => fail("copy the details", e))
           }}
         >
           Copy details

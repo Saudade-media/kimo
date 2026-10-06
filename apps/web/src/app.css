@@ -131,6 +131,11 @@ button {
 }
 
 /* File (wb5ft): gap 6, padding [0, 6], center; name 13 / 600 primary; chevron-down 14 tertiary */
+/* Board 37 Xq4V0: File menu "Back to files" (house) reads weight 500. */
+.file-menu__home .kimo-menu-item-dense__label {
+  font-weight: var(--kimo-font-weight-medium);
+}
+
 .topbar__file {
   display: flex;
   flex: none;
@@ -363,6 +368,14 @@ button {
   height: 100%;
   overflow: hidden;
   background: var(--kimo-bg-canvas);
+}
+
+/* Board 17 failed load (z6LzR) replaces the canvas: it covers the (empty) canvas host, which
+   is absolutely positioned and would otherwise take the card's clicks (Reveal, Open as text). */
+.editor__canvas > .kimo-files-failed {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
 }
 
 .canvas-host {
@@ -842,11 +855,13 @@ a.home-nav:hover,
   font-size: var(--kimo-text-xs);
 }
 
-/* Recents (FUnYG): bg-muted, radius-pill (stroke without width: none); icon accent-text;
+/* Recents (FUnYG) and every active row (board 37 fiCwk): bg-muted, radius-pill; icon accent-text;
    label 600 primary */
 .home-nav--active {
   border-radius: var(--kimo-radius-pill);
   background: var(--kimo-bg-muted);
+  /* Board 37 rules "Active row": 1 px border (fiCwk). */
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
 }
 
 a.home-nav--active:hover {
@@ -1141,6 +1156,12 @@ a.home-nav--active:hover {
   background: var(--kimo-bg-hover);
 }
 
+/* A row being renamed: the field takes the name's place, the info stays on the right. */
+.home-list__item--renaming {
+  gap: 12px;
+  cursor: default;
+}
+
 .home-list__name {
   color: var(--kimo-text-primary);
   font-size: var(--kimo-text-base);
@@ -1152,6 +1173,10 @@ a.home-nav--active:hover {
   margin: 0;
   color: var(--kimo-text-tertiary);
   font-size: var(--kimo-text-sm);
+}
+
+.home-list__item--renaming .home-list__info {
+  flex: none;
 }
 
 .home-error {

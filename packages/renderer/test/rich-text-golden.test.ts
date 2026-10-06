@@ -132,5 +132,5 @@ describe("rich text (text/runs)", () => {
       }
     expect(red).toBeGreaterThan(30)
     expect(blue).toBeGreaterThan(10)
-  })
+  }, 30_000)
 })

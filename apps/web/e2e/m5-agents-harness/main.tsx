@@ -13,7 +13,7 @@ import { createEmptyDocument, importDocument, type Op } from "@kimo/editor-state
 import type { McpActivityEntry, McpApprovalRequest } from "@kimo/platform"
 import { AGENT_LAYER_ROW_CLASS, LayerRow, SaveStatus } from "@kimo/ui"
 import { Frame, Square } from "lucide-react"
-import { StrictMode, useState } from "react"
+import { StrictMode, useEffect, useState } from "react"
 import { createRoot } from "react-dom/client"
 import {
   AgentActivityPanel,
@@ -70,6 +70,13 @@ const SECTIONS: Record<string, ProjectedBox> = {
   Cards00001: { x: 44, y: 132, w: 480, h: 260 },
 }
 
+const scene = new URLSearchParams(location.search).get("scene") ?? "editor"
+/** `?scene=hosted`: a desktop window whose agents' undo goes through the document host. */
+const hosted = scene === "hosted"
+/** Failed agent actions (`onError`), shown as Toast/Danger text in the editor scene. */
+const notices: { text: string; action?: string }[] = []
+const noticeListeners = new Set<() => void>()
+
 const store = importDocument(pricingDoc())
 const host = createScriptedMcpHost({
   connections: [],
@@ -90,18 +97,20 @@ const controller = createAgentsController({
   fileId: FILE,
   filePath: PATH,
   docId: "doc-1",
-  // The harness store owns the agent's undo stack (in-process host).
-  hostHistory: false,
+  // The harness store owns the agent's undo stack (in-process host); `hosted` uses the host's.
+  hostHistory: hosted,
   store,
   onFocus: (ids) => focused.push(ids),
+  onError: (n) => {
+    notices.push(n.action ? { text: n.text, action: n.action.label } : { text: n.text })
+    for (const l of noticeListeners) l()
+  },
 })
 const focused: string[][] = []
 const exported: string[] = []
 const highlights: (string[] | null)[] = []
 let seq = 100
 const conns: ReturnType<typeof sampleConnection>[] = []
-
-const scene = new URLSearchParams(location.search).get("scene") ?? "editor"
 
 const api = {
   host,
@@ -113,6 +122,7 @@ const api = {
   focused,
   exported,
   highlights,
+  notices,
   connect(over: Parameters<typeof sampleConnection>[0] = {}) {
     const c = sampleConnection({ docs: ["doc-1", "doc-2"], lastActivityAt: Date.now(), ...over })
     conns.push(c)
@@ -168,6 +178,14 @@ Object.assign(window, { __agents: api })
 function EditorScene() {
   const state = useAgentsState(controller)
   const [hl, setHl] = useState<string[] | null>(null)
+  const [, setNoticeTick] = useState(0)
+  useEffect(() => {
+    const l = () => setNoticeTick((n) => n + 1)
+    noticeListeners.add(l)
+    return () => {
+      noticeListeners.delete(l)
+    }
+  }, [])
   const rows = [
     "Pricing0001",
     "Cards00001",
@@ -232,6 +250,11 @@ function EditorScene() {
               />
             ) : null,
           )}
+          {notices.length > 0 && (
+            <output className="h-notice" data-testid="agent-notice">
+              {notices[notices.length - 1]?.text}
+            </output>
+          )}
           <AgentCanvasLayer
             controller={controller}
             project={(id) => (store.hasNode(id) ? (BOXES[id] ?? SECTIONS[id] ?? null) : null)}
@@ -248,6 +271,7 @@ function EditorScene() {
             onHighlight={(ids) => {
               highlights.push(ids)
               setHl(ids)
+              controller.setHighlight(ids)
             }}
             onExport={(json) => exported.push(json)}
             onConnectAgent={() => void host.calls.push("connect-agent")}
@@ -350,6 +374,7 @@ css.textContent = `
   .h-left { box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; width: 256px; padding: 8px 6px; box-shadow: inset -1px 0 0 var(--kimo-border); flex: none; }
   .h-canvas { position: relative; flex: 1 1 0; background: var(--kimo-bg-canvas); overflow: hidden; }
   .h-node { position: absolute; }
+  .h-notice { position: absolute; z-index: 10; left: 16px; bottom: 16px; font-size: 12px; color: var(--kimo-danger); }
   .h-right { box-sizing: border-box; display: flex; flex-direction: column; width: 340px; box-shadow: inset 1px 0 0 var(--kimo-border); flex: none; }
   .h-settings.settings-window--dialog { width: 624px; height: auto; max-height: none; min-height: 100vh; }
   .h-settings .settings-content { height: auto; overflow: visible; }
@@ -360,7 +385,7 @@ const root = document.getElementById("root")
 if (root)
   createRoot(root).render(
     <StrictMode>
-      {scene === "editor" ? (
+      {scene === "editor" || hosted ? (
         <EditorScene />
       ) : (
         <SettingsScene

@@ -201,7 +201,7 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
   private readonly opts: FileDocumentProviderOptions
   private readonly now: () => number
   private autosaveMs: number
-  private readonly snapshotMs: number | null
+  private snapshotMs: number | null
   private readonly retryMs: number
   private consented = true
   private loaded = false
@@ -395,6 +395,21 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
     if (this.autosaveTimer !== null) this.scheduleAutosave()
   }
 
+  /**
+   * Recovery snapshot interval while dirty (Settings › Recovery snapshots); null turns them off.
+   * Applies live: a pending snapshot is rescheduled on the new interval.
+   */
+  setRecoverySnapshotMs(ms: number | null): void {
+    const next = ms ? Math.max(1, ms) : null
+    if (next === this.snapshotMs) return
+    this.snapshotMs = next
+    if (this.snapshotTimer !== null) {
+      clearTimeout(this.snapshotTimer)
+      this.snapshotTimer = null
+      if (this._dirty && this._store) this.ensureSnapshotTimer()
+    }
+  }
+
   pauseAutosave(reason: AutosavePauseReason): void {
     if (this._pauses.has(reason)) return
     this._pauses.add(reason)
@@ -461,8 +476,35 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
   // --- External changes -------------------------------------------------------------------------
 
   /** Re-reads the working file after a watcher event and reconciles (reload or 3-way merge). */
-  reconcileExternalChange(): Promise<ExternalChangeOutcome> {
-    return this.enqueue(() => this.doReconcile())
+  /**
+   * Reconciles the working file after an external change. With `ask` and local edits, nothing
+   * is merged: the outcome is `pending` and autosave pauses ("external") until
+   * {@link keepLocalVersion} or a reconcile without `ask` (the merge) settles it.
+   */
+  reconcileExternalChange(options: { ask?: boolean } = {}): Promise<ExternalChangeOutcome> {
+    return this.enqueue(async () => {
+      const outcome = await this.doReconcile(options.ask ?? false)
+      if (outcome.kind !== "pending" && outcome.kind !== "unreadable")
+        this.resumeAutosave("external")
+      return outcome
+    })
+  }
+
+  /**
+   * "Keep mine" after a `pending` external change: the file on disk becomes the base, so the
+   * next save writes the local version over it. Autosave resumes.
+   */
+  keepLocalVersion(): Promise<void> {
+    return this.enqueue(async () => {
+      try {
+        this.base = (await this.files.readText(this.path)).text
+      } catch (e) {
+        if (!isMissing(e)) throw e
+        this.base = null
+      }
+      this.mismatchText = null
+      this.resumeAutosave("external")
+    })
   }
 
   /**
@@ -600,7 +642,7 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
     return token
   }
 
-  private async doReconcile(): Promise<ExternalChangeOutcome> {
+  private async doReconcile(ask = false): Promise<ExternalChangeOutcome> {
     this.assertReconcilable()
     const store = this._store as DocStore
     let text: string
@@ -633,6 +675,10 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
       this.applyOpened(text, result)
       this._lastUndoToken = token
       return { kind: "reloaded", changedNodes: countChangedNodes(before, result.doc) }
+    }
+    if (ask) {
+      this.pauseAutosave("external")
+      return { kind: "pending" }
     }
     if (result.readOnly)
       return {

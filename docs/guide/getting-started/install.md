@@ -16,7 +16,7 @@ The desktop app opens `.kimo` and `.kimoz` files from Finder, Explorer or your f
 
 ### Updates
 
-Kimo checks for an update when it starts and, with **Download updates** on (the default), downloads it in the background. A toast then says **Kimo X is ready · Restart**. Restarting saves every open file first; Kimo never restarts on its own. **Settings › Updates** has the switch, the release channel and **Check now**.
+Kimo checks for an update when it starts and, with **Download updates** on (the default), downloads it in the background. A toast then says **Kimo X is ready · Restart**. Restarting saves every open file first; Kimo never restarts on its own. **Settings › Updates** has the switch, the release channel and **Check now**. With **Download updates** off, an available update shows **Download** there (turning the switch on downloads it); once downloaded, **Restart to update** saves every open file in every window first. A failed check or download shows a banner with **Retry**.
 
 ## In a browser
 

@@ -12,7 +12,8 @@
  * reserved 68 × 48 frame. Web: the same frame as an in-app dialog; with no native lights the
  * frame draws them, and the red one closes the dialog.
  */
-import type { KimoPlatform, SettingsPane } from "@kimo/platform"
+import type { KimoPlatform, SettingKey, SettingsPane } from "@kimo/platform"
+import { Banner } from "@kimo/ui"
 import {
   Bot,
   HardDrive,
@@ -23,13 +24,25 @@ import {
   Settings as SettingsIcon,
   Shield,
 } from "lucide-react"
-import { type KeyboardEvent, useCallback, useRef } from "react"
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AiProvidersPane } from "../ai-settings/AiProvidersPane"
+import { causeOf } from "../editor/errors"
 import { AboutPane } from "./AboutPane"
 import { AgentsPane } from "./AgentsPane"
 import { useSetSetting, useSettings } from "./hooks"
-import { SETTINGS_PANES } from "./model"
-import { CanvasPane, FilesPane, FontsPane, GeneralPane, type PaneProps, UpdatesPane } from "./panes"
+import { SETTINGS_PANES, settingsWriteErrorCopy } from "./model"
+import {
+  CanvasPane,
+  FilesPane,
+  FontsPane,
+  GeneralPane,
+  type PaneProps,
+  SettingsBannerContext,
+  type SettingsFail,
+  SettingsFailContext,
+  type SettingsFailure,
+  UpdatesPane,
+} from "./panes"
 import "./settings.css"
 
 const ICONS = {
@@ -52,8 +65,13 @@ export interface SettingsViewProps {
   /** Dialog only: the red light / Escape. */
   onClose?: () => void
   onFontCacheCleared?: PaneProps["onFontCacheCleared"]
-  /** A write was refused (INVALID / IO). */
-  onError?: (e: unknown) => void
+  /** What the pane opens on: an MCP client to expand (Agents & MCP), `usage` (AI providers). */
+  focus?: string | null
+  /**
+   * A write was refused (INVALID / IO). Default (board 37 D13 CT1wv): a Banner/Danger under the
+   * pane's Title Bar, "Couldn't save <setting>" with Retry; the control shows the stored value.
+   */
+  onError?: (e: unknown, key: SettingKey, value: unknown) => void
 }
 
 export function SettingsView({
@@ -64,9 +82,51 @@ export function SettingsView({
   onClose,
   onFontCacheCleared,
   onError,
+  focus = null,
 }: SettingsViewProps) {
   const settings = useSettings(platform.settings)
-  const set = useSetSetting(platform.settings, onError)
+  // Board 37 (CT1wv / eEmwX): a refused write or a failed one-shot action in a pane shows one
+  // Banner/Danger under the pane's Title Bar ("Couldn't …" + the cause), with Retry when the
+  // action can run again. Switching panes clears it.
+  const [failure, setFailure] = useState<SettingsFailure | null>(null)
+  const set = useSetSetting(
+    platform.settings,
+    useCallback(
+      (error: unknown, key: SettingKey, value: unknown) => {
+        if (onError) return onError(error, key, value)
+        const copy = settingsWriteErrorCopy(key, error)
+        setFailure({ ...copy, retry: () => void setRef.current(key, value as never) })
+      },
+      [onError],
+    ),
+  )
+  const setRef = useRef(set)
+  setRef.current = set
+  const fail = useCallback<SettingsFail>((what, error, retry) => {
+    const body = causeOf(error)
+    setFailure({ title: `Couldn't ${what}`, body, ...(retry ? { retry } : {}) })
+  }, [])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new pane drops the old failure.
+  useEffect(() => setFailure(null), [pane])
+  const banner = useMemo(() => {
+    if (!failure) return null
+    return (
+      <Banner
+        tone="danger"
+        className="settings-banner"
+        data-pen="CT1wv"
+        data-testid="settings-write-error"
+        title={failure.title}
+        {...(failure.body ? { body: failure.body } : {})}
+        actions={failure.retry ? [{ id: "retry", label: "Retry", variant: "primary" }] : []}
+        onAction={() => {
+          setFailure(null)
+          failure.retry?.()
+        }}
+        onDismiss={() => setFailure(null)}
+      />
+    )
+  }, [failure])
   const nav = useRef<(HTMLButtonElement | null)[]>([])
   const props: PaneProps = {
     platform,
@@ -142,14 +202,26 @@ export function SettingsView({
         </div>
       </nav>
       <section id="settings-pane" role="tabpanel" className="settings-content" data-pane={pane}>
-        {pane === "general" && <GeneralPane {...props} />}
-        {pane === "canvas" && <CanvasPane {...props} />}
-        {pane === "files" && <FilesPane {...props} />}
-        {pane === "fonts" && <FontsPane {...props} />}
-        {pane === "agents-mcp" && <AgentsPane platform={platform} />}
-        {pane === "ai-providers" && <AiProvidersPane platform={platform} />}
-        {pane === "updates" && <UpdatesPane {...props} />}
-        {pane === "about" && <AboutPane platform={platform} />}
+        <SettingsFailContext.Provider value={fail}>
+          <SettingsBannerContext.Provider value={banner}>
+            {pane === "general" && <GeneralPane {...props} />}
+            {pane === "canvas" && <CanvasPane {...props} />}
+            {pane === "files" && <FilesPane {...props} />}
+            {pane === "fonts" && <FontsPane {...props} />}
+            {pane === "agents-mcp" && (
+              <AgentsPane key={focus ?? ""} platform={platform} expandedClient={focus} />
+            )}
+            {pane === "ai-providers" && (
+              <AiProvidersPane
+                key={focus ?? ""}
+                platform={platform}
+                {...(focus === "usage" ? { section: "usage" as const } : {})}
+              />
+            )}
+            {pane === "updates" && <UpdatesPane {...props} />}
+            {pane === "about" && <AboutPane platform={platform} />}
+          </SettingsBannerContext.Provider>
+        </SettingsFailContext.Provider>
       </section>
     </div>
   )

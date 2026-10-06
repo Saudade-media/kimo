@@ -10,6 +10,7 @@ import type {
   McpApprovalRequest,
   McpClientPolicy,
   McpConnectionInfo,
+  McpHistoryResult,
   McpHostApi,
   McpHostConfigStatus,
   McpHostId,
@@ -31,9 +32,9 @@ export interface MemoryMcpHost extends McpHostApi {
     setHosts(h: McpHostConfigStatus[]): void
     readonly policies: Record<string, McpClientPolicy>
     /** Answers `history.undo` (default ok). */
-    setUndo(
-      fn: (path: string, origin: string, token?: string) => { ok: boolean; stale: boolean },
-    ): void
+    setUndo(fn: (path: string, origin: string, token?: string) => McpHistoryResult): void
+    /** Answers `history.redo` (default ok). */
+    setRedo(fn: (path: string, origin: string, token?: string) => McpHistoryResult): void
     /** Ports `server.isPortFree` reports as taken. */
     readonly busyPorts: Set<number>
   }
@@ -49,6 +50,7 @@ export const SAMPLE_MCP_STATUS: McpServerStatus = {
   running: true,
   version: "0.5.0",
   startOnLaunch: true,
+  askBeforeDestructive: true,
   httpPort: 7341,
   logPath: "/Users/me/.kimo/mcp/server.log",
   home: "/Users/me",
@@ -77,9 +79,11 @@ export function createMemoryMcpHost(
   const paused = new Set<string>()
   const tokens = new Map<string, string>()
   const busyPorts = new Set<number>()
-  let undo = (_p: string, _o: string, _t?: string) => ({ ok: true, stale: false })
+  let undo = (_p: string, _o: string, _t?: string): McpHistoryResult => ({ ok: true, stale: false })
+  let redo = (_p: string, _o: string, _t?: string): McpHistoryResult => ({ ok: true, stale: false })
   const settings = (): McpServerSettings => ({
     startOnLaunch: status.startOnLaunch ?? true,
+    askBeforeDestructive: status.askBeforeDestructive ?? true,
     httpPort: status.httpPort ?? status.http.port ?? 7341,
   })
   const statusL = new Set<L<[McpServerStatus]>>()
@@ -226,6 +230,12 @@ export function createMemoryMcpHost(
         emitStatus()
         return settings()
       },
+      async setAskBeforeDestructive(v) {
+        calls.push(`server.askBeforeDestructive ${v}`)
+        status = { ...status, askBeforeDestructive: v }
+        emitStatus()
+        return settings()
+      },
       async setPort(port) {
         calls.push(`server.port ${port}`)
         status = {
@@ -274,6 +284,10 @@ export function createMemoryMcpHost(
       async undo(path, origin, token) {
         calls.push(`undo ${origin}${token ? ` ${token}` : ""}`)
         return undo(path, origin, token)
+      },
+      async redo(path, origin, token) {
+        calls.push(`redo ${origin}${token ? ` ${token}` : ""}`)
+        return redo(path, origin, token)
       },
     },
     installer: {
@@ -338,6 +352,9 @@ export function createMemoryMcpHost(
       policies,
       setUndo(fn) {
         undo = fn
+      },
+      setRedo(fn) {
+        redo = fn
       },
       busyPorts,
     },

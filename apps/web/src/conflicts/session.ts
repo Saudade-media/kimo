@@ -131,20 +131,24 @@ export function createConflictSession(host: ConflictHost): EditorConflictSession
     return rowsCache
   }
 
+  /** Why the last `commit` was rejected (A5: Mark resolved & save surfaces it). */
+  let lastReject = ""
   const commit = (next: (doc: KimoDocument) => KimoDocument, label: string): boolean => {
     const doc = store.toDocument()
     let target: KimoDocument
     try {
       target = next(doc)
     } catch (e) {
-      host.onReject?.(e instanceof Error ? e.message : String(e))
+      lastReject = e instanceof Error ? e.message : String(e)
+      host.onReject?.(lastReject)
       return false
     }
     const ops = diffOps(doc, target)
     if (ops.length === 0) return true
     const r = store.apply({ op: "batch", ops }, { origin, label })
     if (!r.ok) {
-      host.onReject?.(r.errors.map((e) => e.message).join("; "))
+      lastReject = r.errors.map((e) => e.message).join("; ")
+      host.onReject?.(lastReject)
       return false
     }
     return true
@@ -198,7 +202,10 @@ export function createConflictSession(host: ConflictHost): EditorConflictSession
     async markResolvedAndSave() {
       const { open, total } = session.counts()
       if (open > 0) throw new ConflictError("OPEN_CONFLICTS", `${open} conflict(s) are still open`)
-      if (!commit((d) => finishMerge(d), "Mark resolved")) return
+      // A5: a rejected finishMerge throws, so the panel shows "Couldn't save …" instead of a
+      // dead click (onReject alone only reaches the console).
+      if (!commit((d) => finishMerge(d), "Mark resolved"))
+        throw new ConflictError("CANNOT_APPLY", lastReject || "The merge could not be finished")
       await host.save()
       host.addToast?.({ kind: "merge-saved", resolved: total, fileName: session.fileName() })
       if (host.gitMerging && (await host.gitMerging().catch(() => false)))
@@ -256,6 +263,9 @@ export interface DocumentSessionLike {
   readonly fileName?: string
   readonly ref?: string
   save(): Promise<void>
+  /** True while the last write failed and edits are unsaved (the save-failed banner). */
+  readonly saveFailed?: boolean
+  readonly failure?: { message: string } | null
   addToast?(toast: Toast): void
   showMergeReady?(show?: boolean): void
   readonly manager?: {
@@ -277,7 +287,11 @@ export function conflictSessionFactory(
   return (s) => {
     const host: ConflictHost = {
       store: s.store,
-      save: () => s.save(),
+      // E13: a failed write rejects (no "saved" toast; the panel says "Couldn't save …").
+      save: async () => {
+        await s.save()
+        if (s.saveFailed) throw new Error(s.failure?.message ?? "The file wasn't written")
+      },
       gitMerging: async () => {
         const git = s.manager?.platform?.git
         if (!git || !s.ref) return false

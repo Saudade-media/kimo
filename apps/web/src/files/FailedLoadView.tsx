@@ -11,9 +11,11 @@
 import type { HostOS } from "@kimo/platform"
 import { Button } from "@kimo/ui"
 import { FileX } from "lucide-react"
+import { useFailureToast } from "../editor/failure-toast"
 import { type FailedLoadDetail, revealLabel } from "../platform/contract"
 import { displayPath } from "../platform/format"
 import type { FileDocumentSession } from "../platform/session"
+import { actionFailure } from "./BannerHost"
 import { useSessionState } from "./hooks"
 
 export interface FailedLoadCardProps {
@@ -25,7 +27,7 @@ export interface FailedLoadCardProps {
   errorLine?: number | null
   onReveal?: () => void
   onOpenAsText?: () => void
-  /** Hide Reveal where the host cannot reveal (web). */
+  /** Hide Reveal and Open as text where the host cannot reveal or open files (web, E8). */
   canReveal?: boolean
 }
 
@@ -76,9 +78,15 @@ export function FailedLoadCard({
             {revealLabel(os)}
           </Button>
         )}
-        <Button variant="secondary" className="kimo-files-failed__open-text" onClick={onOpenAsText}>
-          Open as text
-        </Button>
+        {canReveal && (
+          <Button
+            variant="secondary"
+            className="kimo-files-failed__open-text"
+            onClick={onOpenAsText}
+          >
+            Open as text
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -87,6 +95,7 @@ export function FailedLoadCard({
 /** The failed-load body for a session; renders nothing unless the phase is `failed-load`. */
 export function FailedLoadView({ session }: { session: FileDocumentSession }) {
   const state = useSessionState(session)
+  const fail = useFailureToast()
   const banner = state.banner
   if (state.phase !== "failed-load" || banner?.kind !== "failed-load") return null
   const platform = session.manager.platform
@@ -97,8 +106,16 @@ export function FailedLoadView({ session }: { session: FileDocumentSession }) {
         path={displayPath(state.ref)}
         os={platform.os}
         canReveal={platform.capabilities.reveal}
-        onReveal={() => void session.runAction("reveal")}
-        onOpenAsText={() => void session.runAction("open-as-text")}
+        onReveal={() =>
+          session
+            .runAction("reveal")
+            .catch((e: unknown) => fail(actionFailure("reveal", session.fileName), e))
+        }
+        onOpenAsText={() =>
+          session
+            .runAction("open-as-text")
+            .catch((e: unknown) => fail(actionFailure("open-as-text", session.fileName), e))
+        }
       />
     </div>
   )

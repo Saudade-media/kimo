@@ -5,10 +5,41 @@
  * Every control writes
  * `platform.settings` immediately (no Save button).
  */
-import type { FileRef, KimoPlatform, SettingKey, Settings, SettingsSchema } from "@kimo/platform"
-import { Button, ProgressTrack, Select, SettingRow, Toggle } from "@kimo/ui"
-import { cloneElement, isValidElement, type ReactNode, useSyncExternalStore } from "react"
+import type {
+  FileRef,
+  KimoPlatform,
+  SettingKey,
+  Settings,
+  SettingsSchema,
+  UpdateInfo,
+  UpdaterStatus,
+} from "@kimo/platform"
+import { isPlatformError } from "@kimo/platform"
+import {
+  Banner,
+  Button,
+  IconButton,
+  ProgressTrack,
+  Select,
+  SettingRow,
+  Toggle,
+  Tooltip,
+} from "@kimo/ui"
+import { Folder, X } from "lucide-react"
+import {
+  cloneElement,
+  createContext,
+  isValidElement,
+  type ReactNode,
+  useContext,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react"
+import { causeOf } from "../editor/errors"
 import { fontPackController } from "../fonts/font-pack"
+import { announceFontCacheCleared } from "../fonts/font-system"
+import { flushAllWindows } from "../updater/restart-broadcast"
 import { useAsync, useUpdaterStatus } from "./hooks"
 import {
   autosaveDescription,
@@ -24,23 +55,51 @@ import {
   parseChoice,
   SELECT_WIDTH,
   selectOptions,
-  shortTime,
-  updaterDescription,
+  type UpdateAction,
+  updateRowView,
 } from "./model"
 
 export interface PaneProps {
   platform: KimoPlatform
   settings: Settings
-  set: <K extends SettingKey>(key: K, value: SettingsSchema[K]) => void
+  /** Writes a setting; resolves false when the host refused it (the banner says why). */
+  set: <K extends SettingKey>(key: K, value: SettingsSchema[K]) => Promise<boolean> | undefined
   /** The font cache was cleared (the font system re-reads it). */
   onFontCacheCleared?: () => void
 }
 
-export function PaneTitle({ children }: { children: string }) {
+/**
+ * The pane's error banner (board 37 CT1wv / eEmwX): Banner/Danger right under the Title Bar
+ * (index 1), radius-md with a 1 px danger-soft stroke. Null when nothing failed.
+ */
+export const SettingsBannerContext = createContext<ReactNode>(null)
+
+/** What the pane banner shows: "Couldn't save Canvas zoom" / the cause, Retry when possible. */
+export interface SettingsFailure {
+  title: string
+  body: string
+  retry?: () => void
+}
+
+/**
+ * Reports a failed action in a pane (audit A5): `what` completes "Couldn't …" ("start the MCP
+ * server"), `error` gives the cause, `retry` adds Retry. Outside SettingsView it logs.
+ */
+export type SettingsFail = (what: string, error: unknown, retry?: () => void) => void
+
+export const SettingsFailContext = createContext<SettingsFail>((what, error) =>
+  console.warn(`Kimo: couldn't ${what}`, error),
+)
+
+export function PaneTitle({ children, banner }: { children: string; banner?: ReactNode }) {
+  const shared = useContext(SettingsBannerContext)
   return (
-    <div className="settings-title-bar" data-tauri-drag-region="deep">
-      <h2 className="settings-title">{children}</h2>
-    </div>
+    <>
+      <div className="settings-title-bar" data-tauri-drag-region="deep">
+        <h2 className="settings-title">{children}</h2>
+      </div>
+      {banner ?? shared}
+    </>
   )
 }
 
@@ -99,7 +158,7 @@ function RowButton({
   disabled,
   children,
 }: {
-  variant?: "secondary" | "ghost"
+  variant?: "secondary" | "ghost" | "primary"
   onClick: () => void
   disabled?: boolean
   children: string
@@ -124,6 +183,7 @@ const native = (p: KimoPlatform) =>
 
 export function FilesPane(props: PaneProps) {
   const { platform, settings, set } = props
+  const fail = useContext(SettingsFailContext)
   const home = homeOf(platform.recovery.dir)
   const repos = useAsync(async () => {
     if (!platform.capabilities.git) return null
@@ -211,10 +271,12 @@ export function FilesPane(props: PaneProps) {
             </ValueText>
             <RowButton
               onClick={async () => {
-                const dir = await platform.dialogs
-                  .pickFolder({ title: "New files go to" })
-                  .catch(() => null)
-                if (dir) set("files.newFilesDir", dir)
+                try {
+                  const dir = await platform.dialogs.pickFolder({ title: "New files go to" })
+                  if (dir) await set("files.newFilesDir", dir)
+                } catch (e) {
+                  if (!isPlatformError(e, "CANCELLED")) fail("choose a folder", e)
+                }
               }}
             >
               Change…
@@ -232,9 +294,13 @@ export function FilesPane(props: PaneProps) {
         control={
           <RowButton
             disabled={!repos.value || configured === total}
-            onClick={async () => {
-              for (const r of repos.value ?? [])
-                if (!r.ok) await platform.git.installMergeDriver(r.root).catch(() => {})
+            onClick={async function setUp() {
+              try {
+                for (const r of repos.value ?? [])
+                  if (!r.ok) await platform.git.installMergeDriver(r.root)
+              } catch (e) {
+                fail("set up the git merge driver", e, () => void setUp())
+              }
               repos.reload()
             }}
           >
@@ -264,6 +330,7 @@ export function FilesPane(props: PaneProps) {
 
 export function FontsPane(props: PaneProps) {
   const { platform, settings, set } = props
+  const fail = useContext(SettingsFailContext)
   const home = homeOf(platform.recovery.dir)
   const cache = useAsync(() => platform.fonts.cache.stats(), [platform])
   const blocked = settings["privacy.noThirdPartyFetch"]
@@ -308,10 +375,15 @@ export function FontsPane(props: PaneProps) {
           <RowButton
             variant="ghost"
             disabled={!cache.value?.count}
-            onClick={async () => {
-              await platform.fonts.cache.clear().catch(() => {})
+            onClick={async function clear() {
+              try {
+                await platform.fonts.cache.clear()
+                announceFontCacheCleared()
+                props.onFontCacheCleared?.()
+              } catch (e) {
+                fail("clear the font cache", e, () => void clear())
+              }
               cache.reload()
-              props.onFontCacheCleared?.()
             }}
           >
             Clear
@@ -320,20 +392,25 @@ export function FontsPane(props: PaneProps) {
       }
     />,
   ]
-  if (native(platform) && platform.capabilities.localFonts)
+  if (native(platform) && platform.capabilities.localFonts) {
+    const folders = settings["fonts.extraFolders"]
+    // Board 37 D16 (GQGHQ): the row drops its stroke and the Folder List (YXF40) follows it.
     rows.push(
       <SettingRow
         key="folders"
         label="Extra font folders"
-        description={extraFoldersDescription(platform.os, settings["fonts.extraFolders"], home)}
+        description={extraFoldersDescription(platform.os, [], home)}
+        last={folders.length > 0}
         control={
           <RowButton
             onClick={async () => {
-              const dir = await platform.dialogs
-                .pickFolder({ title: "Add font folder" })
-                .catch(() => null)
-              if (dir && !settings["fonts.extraFolders"].includes(dir))
-                set("fonts.extraFolders", [...settings["fonts.extraFolders"], dir])
+              try {
+                const dir = await platform.dialogs.pickFolder({ title: "Add font folder" })
+                if (dir && !folders.includes(dir))
+                  await set("fonts.extraFolders", [...folders, dir])
+              } catch (e) {
+                if (!isPlatformError(e, "CANCELLED")) fail("add the font folder", e)
+              }
             }}
           >
             Add folder…
@@ -341,6 +418,35 @@ export function FontsPane(props: PaneProps) {
         }
       />,
     )
+    if (folders.length)
+      rows.push(
+        <div key="folder-list" className="settings-folder-list" data-pen="YXF40">
+          {folders.map((dir) => (
+            <div key={dir} className="settings-folder" data-folder={dir}>
+              <Folder className="settings-folder__icon" aria-hidden="true" />
+              <span className="settings-folder__path">{displayPath(dir, home)}</span>
+              <span className="settings-folder__spacer" />
+              <Tooltip label="Remove folder" side="top">
+                <IconButton
+                  size="sm"
+                  tone="quiet"
+                  className="settings-folder__remove"
+                  label={`Remove ${displayPath(dir, home)}`}
+                  icon={<X />}
+                  // The font system rescans when `fonts.extraFolders` changes.
+                  onClick={() =>
+                    void set(
+                      "fonts.extraFolders",
+                      folders.filter((f) => f !== dir),
+                    )
+                  }
+                />
+              </Tooltip>
+            </div>
+          ))}
+        </div>,
+      )
+  }
   rows.push(
     <SettingRow
       key="embed"
@@ -453,18 +559,25 @@ export function GeneralPane(props: PaneProps) {
             />
           }
         />,
-        <SettingRow
-          key="launch"
-          label="On launch"
-          description="Reopen the files that were open when you quit."
-          control={
-            <ChoiceSelect k="general.onLaunch" props={props} label={LABEL["general.onLaunch"]} />
-          }
-        />,
+        // The web app has no quit: the open file stays in the tab's URL.
+        native(props.platform) && (
+          <SettingRow
+            key="launch"
+            label="On launch"
+            description="Reopen the files that were open when you quit."
+            control={
+              <ChoiceSelect k="general.onLaunch" props={props} label={LABEL["general.onLaunch"]} />
+            }
+          />
+        ),
         <SettingRow
           key="zoom"
           label="Canvas zoom"
-          description="Pinch and ⌘ + scroll."
+          description={
+            props.settings["general.canvasZoom"] === "mouse"
+              ? "Scroll to zoom; ⇧ + scroll pans."
+              : "Pinch and ⌘ + scroll."
+          }
           control={
             <ChoiceSelect
               k="general.canvasZoom"
@@ -543,7 +656,53 @@ export function CanvasPane(props: PaneProps) {
 export function UpdatesPane(props: PaneProps) {
   const { platform } = props
   const status = useUpdaterStatus(platform)
+  const fail = useContext(SettingsFailContext)
   const can = platform.capabilities.updater
+  // The last update seen (an error keeps showing it, board 37 C60dt0), its size once known, and
+  // whether the last thing that ran was a download (the banner says which failed).
+  const seen = useRef<{ info: UpdateInfo | null; total: number | null; action: UpdateAction }>({
+    info: null,
+    total: null,
+    action: "check",
+  })
+  if ("info" in status) seen.current.info = status.info
+  if (status.state === "downloading" && status.total) seen.current.total = status.total
+  const [dismissed, setDismissed] = useState<UpdaterStatus | null>(null)
+  const run = (action: UpdateAction) => {
+    seen.current.action = action
+    setDismissed(null)
+    const p =
+      action === "download"
+        ? platform.updater.download()
+        : platform.updater.check().then(() => undefined)
+    p.catch((e: unknown) => {
+      // The host reports most failures as the `error` status (the banner); anything else here.
+      if (platform.updater.status().state !== "error")
+        fail(action === "download" ? "download the update" : "check for updates", e, () =>
+          run(action),
+        )
+    })
+  }
+  const restart = async () => {
+    try {
+      const unsaved = await flushAllWindows()
+      if (unsaved > 0)
+        return fail(
+          "restart Kimo",
+          `${unsaved} ${unsaved === 1 ? "file couldn't" : "files couldn't"} be saved. Save ${unsaved === 1 ? "it" : "them"}, then try again`,
+          () => void restart(),
+        )
+      await platform.updater.restart()
+    } catch (e) {
+      fail("restart Kimo", e, () => void restart())
+    }
+  }
+  const view = updateRowView(status, platform.appVersion, seen.current)
+  const notes = view.info?.notesUrl ?? null
+  const openNotes = () =>
+    void platform.files
+      .openExternalUrl(notes as string)
+      .catch((e: unknown) => fail("open the release notes", e))
   const rows: ReactNode[] = []
   if (can)
     rows.push(
@@ -562,28 +721,73 @@ export function UpdatesPane(props: PaneProps) {
         }
       />,
     )
+  let control: ReactNode
+  if (!can) control = undefined
+  else if (view.kind === "downloading")
+    control = (
+      <>
+        <span className="settings-update-progress" data-pen="yTcLk">
+          <span
+            className="settings-update-progress__bar"
+            style={{ width: `${view.percent ?? 0}%` }}
+          />
+        </span>
+        <span className="settings-update-percent">
+          {view.percent === null ? "…" : `${view.percent}%`}
+        </span>
+      </>
+    )
+  else if (view.kind === "available" || view.kind === "ready")
+    control = (
+      <>
+        {notes && (
+          <RowButton variant="ghost" onClick={openNotes}>
+            Release notes
+          </RowButton>
+        )}
+        <RowButton
+          variant="primary"
+          onClick={() => (view.kind === "ready" ? void restart() : run("download"))}
+        >
+          {view.kind === "ready" ? "Restart to update" : "Download"}
+        </RowButton>
+      </>
+    )
+  else
+    control = (
+      <RowButton disabled={status.state === "checking"} onClick={() => run("check")}>
+        Check now
+      </RowButton>
+    )
   rows.push(
     <SettingRow
       key="version"
-      label={`Kimo ${platform.appVersion}`}
-      description={
-        can ? updaterDescription(status, shortTime) : "The web app updates when you reload."
-      }
-      control={
-        can ? (
-          <RowButton
-            disabled={status.state === "checking" || status.state === "downloading"}
-            onClick={() => void platform.updater.check().catch(() => {})}
-          >
-            Check now
-          </RowButton>
-        ) : undefined
-      }
+      label={can ? view.label : `Kimo ${platform.appVersion}`}
+      description={can ? view.description : "The web app updates when you reload."}
+      control={control}
+      data-update-state={view.kind}
     />,
   )
+  // Board 37 eEmwX: Banner/Danger under the Title Bar, "Couldn't download the update" · Retry.
+  const banner =
+    can && status.state === "error" && dismissed !== status ? (
+      <Banner
+        tone="danger"
+        className="settings-banner"
+        data-pen="eEmwX"
+        data-testid="settings-update-error"
+        title={
+          view.action === "download" ? "Couldn't download the update" : "Couldn't check for updates"
+        }
+        {...(causeOf(status.message) ? { body: causeOf(status.message) } : {})}
+        actions={[{ id: "retry", label: "Retry", variant: "primary" }]}
+        onAction={() => run(view.action)}
+        onDismiss={() => setDismissed(status)}
+      />
+    ) : null
   return (
     <>
-      <PaneTitle>Updates</PaneTitle>
+      <PaneTitle banner={banner}>Updates</PaneTitle>
       {markLast(rows)}
     </>
   )

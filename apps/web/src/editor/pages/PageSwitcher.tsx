@@ -15,6 +15,7 @@ import { Kbd, PaletteRow } from "@kimo/ui"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createBus, useBus } from "../../lib/hooks"
 import { Icon } from "../../lib/icons"
+import { comboHint } from "../kbd"
 import type { M3Controller } from "../m3/controller"
 import type { FileSession } from "../session"
 import { activatePage, addPage } from "./actions"
@@ -23,6 +24,9 @@ import { usePageList } from "./PagesStrip"
 
 /** Open state of each file's switcher (the footer and ⌘P open it). */
 const buses = new WeakMap<FileSession, ReturnType<typeof createBus<boolean>>>()
+
+/** ⌘↵ / Ctrl+↵: create a page named after the query (E12: per OS). */
+const NEW_PAGE_KEY = comboHint({ mod: true, label: "↵" })
 export function pageSwitcherBus(session: FileSession) {
   let b = buses.get(session)
   if (!b) {
@@ -130,7 +134,13 @@ function SwitcherPanel({
         meta: count(p.id),
         current: p.id === active,
       })
-    list.push({ kind: "new", id: null, name: `New page “${q}”`, meta: "⌘↵", current: false })
+    list.push({
+      kind: "new",
+      id: null,
+      name: `New page “${q}”`,
+      meta: NEW_PAGE_KEY,
+      current: false,
+    })
     return list
   }, [pages, active, query, session.store])
 
@@ -217,7 +227,7 @@ function SwitcherPanel({
         <div className="page-switcher__hints">
           <Hint keys="↑↓" label="Move" />
           <Hint keys="↵" label="Go to page" />
-          <Hint keys="⌘↵" label="New page" />
+          <Hint keys={NEW_PAGE_KEY} label="New page" />
           <Hint keys="esc" label="Close" />
         </div>
       </div>

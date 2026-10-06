@@ -58,6 +58,7 @@ import {
   type ReloadUndoToken,
   type SaveFailure,
 } from "@kimo/sync"
+import { defaultNewFilesDir } from "../settings/model"
 import {
   type Banner,
   type BannerActionId,
@@ -90,6 +91,7 @@ import {
   untitledRef,
 } from "./contract"
 import { displayPath, fileNameOf, formatTime, majorMinor } from "./format"
+import { forgetWindowFile } from "./last-files"
 
 /** The nodes stored conflicts are about (prop / node / move conflicts), deduplicated. */
 function conflictNodeIds(doc: KimoDocument): string[] {
@@ -316,6 +318,7 @@ export class FileDocumentSession implements DocumentSession {
         const p = this.provider
         if (!p) return
         if (key === "files.autosaveIntervalMs") p.setAutosaveMs(value as number)
+        if (key === "files.recoverySnapshotMs") p.setRecoverySnapshotMs(value as number)
         if (key === "files.autosave") {
           if (value) p.resumeAutosave("setting")
           else p.pauseAutosave("setting")
@@ -585,7 +588,10 @@ export class FileDocumentSession implements DocumentSession {
       const p = this.provider
       if (!p) return
       try {
-        const outcome = await p.reconcileExternalChange()
+        // Settings › When a file changes on disk: "Ask first" never merges into local edits
+        // on its own; the external-change banner asks (Merge / Keep mine).
+        const ask = this.platform.settings.get("files.onExternalChange") === "ask"
+        const outcome = await p.reconcileExternalChange({ ask })
         const toast = toastForExternalChange(outcome, this.fileName, p.lastUndoToken)
         if (toast) this.pushToast(toast)
         if (p.loadError && this.phase !== "failed-load") this.setNewer(p)
@@ -769,6 +775,8 @@ export class FileDocumentSession implements DocumentSession {
         info: mergeInfo(this.store.toHeader() as unknown as KimoDocument),
         ...this.conflictCounts,
       })
+    if (p?.pauses.has("external"))
+      out.push({ kind: "external-change", severity: "warning", fileName: this.fileName })
     if (this.newer) out.push(this.newer)
     if (showReady)
       out.push({
@@ -858,6 +866,8 @@ export class FileDocumentSession implements DocumentSession {
       this.emit()
       return
     }
+    // ⌘S while an "Ask first" external change waits is Keep mine: save over the file.
+    if (p.pauses.has("external")) await p.keepLocalVersion().catch(() => {})
     await p.save().catch(() => {})
     if (!p.dirty) this.resolutionUnsaved = false
     this.emit()
@@ -871,13 +881,17 @@ export class FileDocumentSession implements DocumentSession {
     try {
       target = await platform.dialogs.saveFile({
         title: "Save as",
-        // Untitled: "Untitled.kimo" in the last-used folder (board 20 note h6JPi).
+        // Untitled: "Untitled.kimo" in the last-used folder (board 20 note h6JPi), else in
+        // Settings › Files & autosave › New files go to.
         suggestedName: untitled ? `${UNTITLED_NAME}.kimo` : this.fileName,
         filters: [KIMO_FILE_FILTER],
         ...(untitled
           ? this.manager.lastFolder
             ? { defaultDir: this.manager.lastFolder }
-            : {}
+            : platform.capabilities.fileAccess === "native" ||
+                platform.capabilities.fileAccess === "memory"
+              ? { defaultDir: defaultNewFilesDir(platform) }
+              : {}
           : { defaultDir: dirnameOf(this._ref) }),
       })
     } catch (e) {
@@ -951,7 +965,8 @@ export class FileDocumentSession implements DocumentSession {
     const p = this.provider
     if (!p?.canSave || !p.dirty) return
     if (p.needsUpgradeConsent) await p.flush()
-    else if (p.pauses.has("git")) await p.writeRecovery("snapshot")
+    // Undecided external change ("Ask first"): never overwrite the file on disk on close.
+    else if (p.pauses.has("git") || p.pauses.has("external")) await p.writeRecovery("snapshot")
     else await p.flush({ ignorePauses: true })
     this.emit()
   }
@@ -1027,15 +1042,16 @@ export class FileDocumentSession implements DocumentSession {
       case "retry-save":
         if (p) await p.flush({ ignorePauses: true }).catch(() => {})
         break
-      case "show-diff":
-        // Not designed: shows the recovery copy (Kimo's version) next to the file.
-        if (p) await platform.files.reveal(p.recoveryPath).catch(() => {})
+      // E8: no diff view yet; this reveals the recovery copy (Kimo's version) next to the file.
+      // These three reject on failure: the caller shows "Couldn't …" (audit A5).
+      case "reveal-recovery":
+        if (p) await platform.files.reveal(p.recoveryPath)
         break
       case "reveal":
-        await platform.files.reveal(this._ref).catch(() => {})
+        await platform.files.reveal(this._ref)
         break
       case "open-as-text":
-        await platform.files.openWithDefaultApp(this._ref).catch(() => {})
+        await platform.files.openWithDefaultApp(this._ref)
         break
       case "next-conflict":
       case "previous-conflict": {
@@ -1045,7 +1061,8 @@ export class FileDocumentSession implements DocumentSession {
         break
       }
       case "mark-resolved-save":
-        await this.conflicts?.markResolvedAndSave().catch(() => {})
+        // E13: rejects on failure (the banner's caller shows "Couldn't save …").
+        await this.conflicts?.markResolvedAndSave()
         break
       case "copy-commit-command": {
         // Board 25 §6 (e): copy, confirm "Copied"; the banner stays until git is clean.
@@ -1057,6 +1074,18 @@ export class FileDocumentSession implements DocumentSession {
       }
       case "review-changes":
         // Handled by the editor (BannerHost `onReview`: select + reveal `nodes`).
+        break
+      case "external-merge":
+        if (p) {
+          const outcome = await p.reconcileExternalChange()
+          const toast = toastForExternalChange(outcome, this.fileName, p.lastUndoToken)
+          if (toast) this.pushToast(toast)
+          this.refreshConflicts()
+        }
+        break
+      case "external-keep":
+        // Rejects when the file can't be read: the caller shows "Couldn't …" (audit A5).
+        if (p) await p.keepLocalVersion()
         break
     }
     this.emit()
@@ -1265,12 +1294,15 @@ export class FileSessionManager implements SessionManager {
 
   /** Flush-before-close and launch requests (call once per window). */
   install(onOpened?: (session: FileDocumentSession, request: OpenRequest) => void): Unsubscribe {
-    this.offClose = this.platform.window.onCloseRequested(async () => {
+    this.offClose = this.platform.window.onCloseRequested(async (info) => {
       // Board 24 (i): never-saved documents ask first; Cancel keeps the window open.
       if (!(await this.confirmCloseAll())) return false
       // Quit mid-turn: agents stop and release what they flagged before the clean save.
       await this.runCloseHooks()
-      return (await this.flushAll()).ok
+      const ok = (await this.flushAll()).ok
+      // General › On launch: a window the user closes is not reopened; one closed by Quit is.
+      if (ok && !info?.quitting) forgetWindowFile(this.platform.window.label)
+      return ok
     })
     this.offOpen = this.platform.launch.onOpenRequest((req) => {
       void this.handleOpenRequest(req).then(() => {
@@ -1350,7 +1382,12 @@ export class FileSessionManager implements SessionManager {
     this.changed()
   }
 
+  private pruned: Promise<unknown> | null = null
+
   async recoveryCandidates(): Promise<RecoveryCandidate[]> {
+    // C2: the 30-day retention runs once per launch, before the dialog lists anything.
+    this.pruned ??= this.platform.recovery.prune().catch(() => 0)
+    await this.pruned
     const entries = await this.platform.recovery.list().catch(() => [] as RecoveryEntry[])
     const open = new Set(
       this.sessions().map((s) => s.provider?.recoveryId ?? s.untitledRecoveryId ?? undefined),
@@ -1367,11 +1404,20 @@ export class FileSessionManager implements SessionManager {
       await platform.recovery.discard(id)
       return null
     }
+    if (choice === "restore" && id.startsWith("untitled-")) {
+      // A never-saved document reopens as an untitled session; it reads its own recovery entry.
+      return this.open(untitledRef(id.slice("untitled-".length)), { source: "recovery" })
+    }
     const { entry, text } = await platform.recovery.restore(id)
     if (choice === "restore" && entry.sourceRef) {
-      const session = await this.open(entry.sourceRef, { source: "recovery" })
-      if (session.provider?.canSave) await session.provider.restoreFrom(text, entry.edits)
-      return session
+      const session = await this.open(entry.sourceRef, { source: "recovery" }).catch(() => null)
+      if (session?.provider?.canSave) {
+        await session.provider.restoreFrom(text, entry.edits)
+        return session
+      }
+      // C1: the source can't take the copy back (moved, deleted, no permission, read-only).
+      // Nothing is lost: ask where to save the recovered document instead.
+      if (session && session.state().phase === "failed-load") await session.close().catch(() => {})
     }
     const target = await platform.dialogs.saveFile({
       title: "Save as",
@@ -1389,7 +1435,7 @@ export class FileSessionManager implements SessionManager {
     const candidates = await this.recoveryCandidates()
     for (const c of candidates) {
       if (choice === "discard-all") await this.platform.recovery.discard(c.entry.id)
-      else if (c.entry.sourceRef) await this.resolveRecovery(c.entry.id, "restore")
+      else await this.resolveRecovery(c.entry.id, "restore")
     }
   }
 

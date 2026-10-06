@@ -622,6 +622,74 @@ describe("launch recovery", () => {
     await manager.resolveRecoveryDialog("discard-all")
     expect(await platform.recovery.list()).toEqual([])
   })
+
+  test("Restore all reopens a never-saved document as an untitled session", async () => {
+    const { platform, manager } = await setup()
+    await platform.recovery.write({
+      id: "untitled-abc",
+      sourceRef: null,
+      name: "Untitled",
+      reason: "untitled",
+      text: addNode(docText(), "Recovered1"),
+      edits: 2,
+      layers: 2,
+    })
+    platform.control.killPid(1000)
+    expect((await manager.recoveryCandidates()).length).toBe(1)
+    await manager.resolveRecoveryDialog("restore-all")
+    const [s] = manager.sessions()
+    expect(s?.untitled).toBe(true)
+    expect(s?.store.hasNode("Recovered1")).toBe(true)
+    // The open session owns the entry now, so the dialog has nothing left to offer.
+    expect(await manager.recoveryCandidates()).toEqual([])
+    await manager.dispose()
+  })
+})
+
+describe("launch recovery: board 37 C1 / C2", () => {
+  test("Restore of a file that is gone asks where to save the copy (C1)", async () => {
+    const { platform, manager } = await setup()
+    const gone = `${ROOT}/gone.kimo`
+    await platform.recovery.write({
+      id: "gone0000000000aa",
+      sourceRef: gone,
+      name: "gone.kimo",
+      reason: "snapshot",
+      text: addNode(docText(), "Recovered1"),
+      edits: 2,
+    })
+    platform.control.killPid(1000)
+    let asked = 0
+    platform.dialogs.saveFile = async () => {
+      asked++
+      return `${ROOT}/gone (recovered).kimo`
+    }
+    const s = await manager.resolveRecovery("gone0000000000aa", "restore")
+    expect(asked).toBe(1)
+    expect(s?.ref).toBe(`${ROOT}/gone (recovered).kimo`)
+    expect(nodeNames(platform.control.readFile(`${ROOT}/gone (recovered).kimo`))).toContain(
+      "Recovered1",
+    )
+    expect(await platform.recovery.list()).toEqual([])
+    await manager.dispose()
+  })
+
+  test("entries older than 30 days are pruned before the dialog lists them (C2)", async () => {
+    const { platform, manager } = await setup()
+    await platform.recovery.write({
+      id: "old0000000000000",
+      sourceRef: FILE,
+      name: "marketing.kimo",
+      reason: "snapshot",
+      text: docText(),
+      edits: 1,
+    })
+    platform.control.killPid(1000)
+    platform.control.tick(31 * 24 * 60 * 60 * 1000)
+    expect(await manager.recoveryCandidates()).toEqual([])
+    expect(await platform.recovery.list()).toEqual([])
+    await manager.dispose()
+  })
 })
 
 describe("FileDocumentProvider contract", () => {

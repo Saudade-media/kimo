@@ -4,6 +4,7 @@
  * first (board 15 `i8PfIC` Detach, `ysXyK` slot off, `fmB2B` Unlink).
  */
 import { instancesOf, type KimoDocument, libraryUsage, splitQualified } from "@kimo/core-schema"
+import { type Op, planCommand } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { M3Controller } from "./controller"
 import { componentName, nameOf, overrideEntries } from "./model"
@@ -224,6 +225,66 @@ export function replaceWithComponent(m3: M3Controller, viewId: string, of: strin
     },
     "Replace layer",
   ).ok
+}
+
+/**
+ * Child Menu "Replace with selection": the component the selection names (one component main,
+ * or one instance's component), or null. `target` (the layer being replaced) never counts.
+ */
+export function componentOfSelection(
+  m3: M3Controller,
+  selection: readonly string[],
+  target: string,
+): string | null {
+  if (selection.length !== 1) return null
+  const id = selection[0] as string
+  if (id === target || id.includes("/")) return null
+  const n = m3.session.store.getNode(id)
+  if (!n) return null
+  if (n.component) return id
+  return n.type === "instance" && typeof n.of === "string" ? n.of : null
+}
+
+/**
+ * Add prop › Slot (mark a frame): makes `frame` a slot (when it isn't one) and declares a slot
+ * prop on `component` targeting it, as ONE undo step. Refusals become toasts.
+ */
+export function addSlotProp(
+  m3: M3Controller,
+  component: string,
+  frame: string,
+  name: string,
+): boolean {
+  const doc = m3.doc()
+  const node = doc.nodes[frame] as Record<string, unknown> | undefined
+  if (!node) return false
+  const ops: Op[] = []
+  let next = doc
+  const isSlot = typeof node.slot === "object" && node.slot !== null
+  if (!isSlot) {
+    const slot = m3.plan({ cmd: "setSlot", frame, slot: {} })
+    if (!slot.ok) {
+      m3.toastRefusal(slot.error)
+      return false
+    }
+    ops.push(...(slot.ops as unknown as Op[]))
+    next = { ...doc, nodes: { ...doc.nodes, [frame]: { ...node, slot: {} } } } as KimoDocument
+  }
+  const declare = planCommand(
+    next,
+    { cmd: "declareProp", component, name, def: { type: "slot", target: frame } as never },
+    { libraries: m3.libraries() },
+  )
+  if (!declare.ok) {
+    m3.toastRefusal(declare.error)
+    return false
+  }
+  const r = m3.session.store.apply([...ops, ...(declare.ops as unknown as Op[])], {
+    origin: "user",
+    label: "Add slot prop",
+  })
+  if (!r.ok) m3.toastRejected("Add slot prop", r.errors)
+  return r.ok
 }
 
 /** Insert an instance of `of` into an instance slot (composite slot frame id). */

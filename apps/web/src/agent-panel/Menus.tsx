@@ -191,7 +191,6 @@ export function ModelMenu({
       <MenuItemDense
         label="Manage providers…"
         icon={<Settings2 />}
-        meta="⌘,"
         className="agent-menu__manage"
         onSelect={() => {
           controller.openMenu(null)
@@ -200,6 +199,16 @@ export function ModelMenu({
       />
     </MenuFrame>
   )
+}
+
+/**
+ * The skills the menu lists for the composer's `/` filter, in menu order (Built-in, then Yours).
+ * The composer's Enter / ⌥↵ act on the first of these, so the top row is always the one picked.
+ */
+export function visibleSkills(state: AgentPanelViewState): { name: string }[] {
+  const filter = state.composer.slash?.filter ?? ""
+  const match = (n: string) => !filter || n.includes(filter)
+  return [...state.skills.builtin, ...state.skills.user].filter((s) => match(s.name))
 }
 
 /** Board 22 D Skills Menu (e2cwq): Built-in (MIT) + Yours (~/.kimo/skills), Footer. */
@@ -212,11 +221,10 @@ export function SkillsMenu({
   state: AgentPanelViewState
   onOpenFolder?: () => void
 }) {
-  const filter = state.composer.slash?.filter ?? ""
-  const match = (n: string) => !filter || n.includes(filter)
   const enabled = new Set(state.skills.enabled)
-  const builtin = state.skills.builtin.filter((s) => match(s.name))
-  const user = state.skills.user.filter((s) => match(s.name))
+  const shown = new Set(visibleSkills(state).map((s) => s.name))
+  const builtin = state.skills.builtin.filter((s) => shown.has(s.name))
+  const user = state.skills.user.filter((s) => shown.has(s.name))
   return (
     <MenuFrame
       className="agent-menu--skills"

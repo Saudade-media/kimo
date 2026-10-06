@@ -165,6 +165,73 @@ pub fn remove(path: &Path) -> R<()> {
     }
 }
 
+/// `EXISTS` when something is at `to` (rename, copy and restore never overwrite).
+fn ensure_free(to: &Path) -> R<()> {
+    if fs::symlink_metadata(to).is_ok() {
+        return Err(crate::error::exists(format!(
+            "{} already exists",
+            path_str(to)
+        )));
+    }
+    Ok(())
+}
+
+/// Moves `from` to `to` without overwriting (`EXISTS`), creating `to`'s folder when `mkdirs`.
+/// Falls back to copy + remove across volumes.
+pub fn rename_no_clobber(from: &Path, to: &Path, mkdirs: bool) -> R<()> {
+    let what = path_str(from);
+    fs::symlink_metadata(from).map_err(ctx(&what))?;
+    ensure_free(to)?;
+    if mkdirs {
+        if let Some(dir) = to.parent() {
+            fs::create_dir_all(dir).map_err(ctx(&path_str(dir)))?;
+        }
+    }
+    match fs::rename(from, to) {
+        Ok(()) => Ok(()),
+        Err(e) if is_cross_device(&e) => {
+            copy_no_clobber(from, to)?;
+            fs::remove_file(from).map_err(ctx(&what))
+        }
+        Err(e) => Err(io_err(e, &format!("{what} → {}", path_str(to)))),
+    }
+}
+
+fn is_cross_device(e: &io::Error) -> bool {
+    // EXDEV; Windows ERROR_NOT_SAME_DEVICE (17).
+    crate::error::errno_name(e).as_deref() == Some("EXDEV")
+        || (cfg!(windows) && e.raw_os_error() == Some(17))
+}
+
+/// Copies `from` to a new file at `to` (`EXISTS` when taken; the new file is created
+/// exclusively, so a racing writer is never overwritten). A failed copy leaves nothing behind.
+pub fn copy_no_clobber(from: &Path, to: &Path) -> R<()> {
+    let what = path_str(from);
+    let target = path_str(to);
+    let mut src = File::open(from).map_err(ctx(&what))?;
+    let perms = src.metadata().map_err(ctx(&what))?.permissions();
+    let mut dst = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(to)
+        .map_err(|e| {
+            if e.kind() == io::ErrorKind::AlreadyExists {
+                crate::error::exists(format!("{target} already exists"))
+            } else {
+                io_err(e, &target)
+            }
+        })?;
+    let copied = io::copy(&mut src, &mut dst)
+        .and_then(|_| dst.sync_all())
+        .and_then(|_| fs::set_permissions(to, perms));
+    if let Err(e) = copied {
+        drop(dst);
+        let _ = fs::remove_file(to);
+        return Err(io_err(e, &target));
+    }
+    Ok(())
+}
+
 pub fn stat(path: &Path) -> R<Option<FileStat>> {
     match fs::metadata(path) {
         Ok(m) => Ok(Some(stat_of(path, &m))),
@@ -263,6 +330,30 @@ mod tests {
         assert_eq!(e.code, "PERMISSION");
         assert_eq!(fs::read(&p).unwrap(), b"orig");
         assert!(stat(&p).unwrap().unwrap().read_only);
+    }
+
+    #[test]
+    fn rename_and_copy_never_overwrite() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = dir.path().join("a.kimo");
+        let b = dir.path().join("b.kimo");
+        fs::write(&a, b"A").unwrap();
+        fs::write(&b, b"B").unwrap();
+        assert_eq!(rename_no_clobber(&a, &b, false).unwrap_err().code, "EXISTS");
+        assert_eq!(copy_no_clobber(&a, &b).unwrap_err().code, "EXISTS");
+        assert_eq!(fs::read(&b).unwrap(), b"B");
+        let c = dir.path().join("sub/c.kimo");
+        copy_no_clobber(&a, &dir.path().join("copy.kimo")).unwrap();
+        assert_eq!(fs::read(dir.path().join("copy.kimo")).unwrap(), b"A");
+        rename_no_clobber(&a, &c, true).unwrap();
+        assert!(!a.exists());
+        assert_eq!(fs::read(&c).unwrap(), b"A");
+        let gone = dir.path().join("gone.kimo");
+        assert_eq!(
+            rename_no_clobber(&gone, &a, false).unwrap_err().code,
+            "NOT_FOUND"
+        );
+        assert_eq!(copy_no_clobber(&gone, &a).unwrap_err().code, "NOT_FOUND");
     }
 
     #[test]

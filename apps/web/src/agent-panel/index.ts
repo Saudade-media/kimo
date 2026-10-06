@@ -37,6 +37,7 @@ export {
 export { ModelMenu, ModeMenu, SkillsMenu } from "./Menus"
 export {
   AgentCursorPill,
+  ModeSummaryOverlay,
   ModeSummaryPill,
   OpLogRow,
   PassChip,

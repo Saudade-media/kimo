@@ -41,7 +41,7 @@ declare const window: Window & { __kimo: Hook }
 async function openEditor(page: Page, url: string) {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto(url)
-  await page.getByRole("button", { name: "New file" }).click()
+  await page.getByRole("button", { name: "New file" }).first().click()
   await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
   await page.locator('.canvas-host[data-ready="true"]').waitFor({ timeout: 30_000 })
   await settle(page)

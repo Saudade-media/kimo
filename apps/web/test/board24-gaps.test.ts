@@ -150,7 +150,7 @@ describe("(i) Untitled close prompt (a3Y0Fb)", () => {
 
   test("window close-requested asks; Cancel answers false (window stays)", async () => {
     const { platform, manager } = await setup({})
-    const handlers: (() => Promise<boolean> | boolean)[] = []
+    const handlers: ((info: { quitting: boolean }) => Promise<boolean> | boolean)[] = []
     platform.window.onCloseRequested = (h) => {
       handlers.push(h)
       return () => {}
@@ -158,11 +158,11 @@ describe("(i) Untitled close prompt (a3Y0Fb)", () => {
     manager.install()
     const s = await manager.newUntitled()
     s.store.apply(frame("Frame00001"), { origin: "user" })
-    const r = handlers[0]?.() as Promise<boolean>
+    const r = handlers[0]?.({ quitting: false }) as Promise<boolean>
     await waitFor(() => !!s.state().closePrompt, 1000, "prompt")
     s.respondToClose("cancel")
     expect(await r).toBe(false)
-    const r2 = handlers[0]?.() as Promise<boolean>
+    const r2 = handlers[0]?.({ quitting: false }) as Promise<boolean>
     await waitFor(() => !!s.state().closePrompt, 1000, "prompt")
     s.respondToClose("discard")
     expect(await r2).toBe(true)
@@ -325,6 +325,7 @@ describe("(n) Banner priority vs 'Ready to commit' (a9ykr0)", () => {
       "locked",
       "newer-format",
       "save-failed",
+      "external-change",
       "merge-conflicts",
       "git-operation",
       "merge-ready",

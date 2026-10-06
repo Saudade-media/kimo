@@ -40,6 +40,8 @@ export interface DiskTopbarProps extends FileMenuActions {
   /** Board 27 §9 (b): see `TopbarProps.previewTarget`. */
   previewTarget?: string | null
   onHome(): void
+  /** Board 37 (E3): the folder crumb opens Home on that folder's section. */
+  onHomeFolder?: (dir: string) => void
   /** Board 21 Agent Presence (drag region, before Save Status). */
   presence?: ReactNode
 }
@@ -57,10 +59,11 @@ export function DiskTopbar({
   onPreview,
   previewTarget,
   onHome,
+  onHomeFolder,
   presence,
   ...menu
 }: DiskTopbarProps) {
-  const fileMenu = useFileMenu(menu)
+  const fileMenu = useFileMenu({ ...menu, onHome })
   return (
     <>
       <FileTopbar
@@ -68,6 +71,7 @@ export function DiskTopbar({
         page={pageName}
         fileOpen={fileMenu.open}
         onHome={onHome}
+        {...(onHomeFolder ? { onFolderClick: onHomeFolder } : {})}
         onFileClick={(e) => fileMenu.toggle(e.currentTarget)}
         presence={presence}
         trailing={

@@ -1,0 +1,23 @@
+{
+  "name": "@kimo/templates",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bundled starter templates: .kimo documents, cover and screen previews, and a loader",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./index.json": "./index.json"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build:templates": "bun ../../scripts/build-templates.ts",
+    "check:generated": "bun ../../scripts/build-templates.ts --check",
+    "test": "bun test test"
+  },
+  "files": [
+    "src",
+    "files",
+    "index.json"
+  ]
+}

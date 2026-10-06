@@ -131,6 +131,14 @@
   opacity: 0.4;
 }
 
+.kimo-activity-row__undo:disabled {
+  cursor: default;
+}
+
+.kimo-activity-row__undo:disabled:hover {
+  background: transparent;
+}
+
 /* Undone (board 24 › 5 · (h) uKH9b d8Vjj1): fill bg-subtle; Label (lQxhQ) and Target (aegZN)
    text-tertiary, the label struck through (decision QrUGA); the action icon is redo-2. */
 .kimo-activity-row--undone,

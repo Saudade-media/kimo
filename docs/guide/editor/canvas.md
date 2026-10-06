@@ -2,14 +2,20 @@
 
 The editor is a canvas in the middle, the **Layers**, **Assets** and **Variables** tabs on the left, and the **Design**, **Code** and **Agent** tabs on the right. The toolbar floats at the bottom of the canvas.
 
-Top-level frames on the canvas act as your screens or artboards; there is one canvas per file (no separate pages).
+Top-level frames on the canvas act as your screens or artboards. A file can have several pages, each with its own canvas, listed at the top of the Layers tab.
+
+To get back to your files, pick **Back to files** at the top of the File menu (the file name in the title bar), or **File › Back to files** in the macOS menu bar. Clicking the folder name in the title bar opens Home on that folder.
+
+## Pages
+
+**+** in the Pages header adds a page. Click a page to switch to it; the title bar shows its name. Right-click a page (or use its **…** button) to rename, duplicate, move or delete it. With a page row focused, `⌫` asks to delete it. **Copy link to page** copies a link that opens the file on that page: a `kimo://open?path=…&page=…` link in the desktop app (save a new file first), the page's address in a browser. `⌘P` (`Ctrl+P`) jumps to a page by name.
 
 ## Move around
 
 | To | Do |
 |---|---|
 | Pan | Scroll with a mouse wheel or two fingers; `⇧`+scroll pans sideways. Or hold `Space` and drag, drag with the middle mouse button, or use the Hand tool (`H`) |
-| Zoom | `⌘`+scroll, or pinch on a trackpad. Zoom follows the pointer |
+| Zoom | `⌘`+scroll, or pinch on a trackpad. Zoom follows the pointer. With **Settings › General › Canvas zoom** set to **Mouse**, a plain scroll zooms and `⇧`+scroll pans |
 | Zoom in / out | `=` and `-` (with or without `⌘`), twice or half the current zoom |
 | Zoom to 100 % | `⌘0` or `⇧0` |
 | Zoom to fit | `⇧1` fits everything, up to 100 % |

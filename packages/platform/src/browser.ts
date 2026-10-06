@@ -13,7 +13,7 @@
  */
 import type { AppliedCapabilities } from "./capabilities"
 import { PlatformError, unsupported } from "./errors"
-import { basenameOf, dirnameOf, isKimoPath } from "./links"
+import { basenameOf, dirnameOf, isKimoPath, isOpenableUrl } from "./links"
 import { googleFontsAllowed, type SettingKey } from "./settings"
 import { createSettingsStore } from "./settings-store"
 import {
@@ -167,7 +167,12 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
     trafficLights: false,
     settingsWindow: false,
     deepLinks: false,
-    fileAssociation: !!w.launchQueue,
+    // `launchQueue` exists in every Chromium tab; files only arrive in the installed app
+    // (standalone display mode, with the manifest's `file_handlers`).
+    fileAssociation:
+      !!w.launchQueue &&
+      typeof matchMedia === "function" &&
+      matchMedia("(display-mode: standalone)").matches,
     watchedFolders: typeof w.showDirectoryPicker === "function",
   }
   const no = (what: string): never => {
@@ -338,6 +343,8 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
         for (const seg of rel.slice(0, -1)) dir = await dir.getDirectoryHandle(seg)
         await dir.removeEntry(rel[rel.length - 1] as string).catch(() => {})
       },
+      rename: async () => no("Renaming a file on disk"),
+      copy: async () => no("Copying a file on disk"),
       async stat(ref): Promise<FileStat | null> {
         try {
           const f = await readFile(ref)
@@ -419,8 +426,11 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
       reveal: async () => no("Reveal in file manager"),
       openWithDefaultApp: async () => no("Opening with another app"),
       async openExternalUrl(url) {
-        if (!/^https:\/\//.test(url)) throw new PlatformError("INVALID", `Not an https URL: ${url}`)
-        window.open(url, "_blank", "noopener,noreferrer")
+        if (!isOpenableUrl(url))
+          throw new PlatformError("BLOCKED", `Kimo opens only web, mail and phone links: ${url}`)
+        // Mail and phone links go to the system handler without leaving the page.
+        if (/^(mailto|tel):/i.test(url)) window.location.assign(url)
+        else window.open(url, "_blank", "noopener,noreferrer")
       },
       async download(name, bytes, mime) {
         const url = URL.createObjectURL(
@@ -781,7 +791,7 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
       onCloseRequested(handler) {
         // Browsers only allow a generic "leave site?" prompt; a false result triggers it.
         const h = (e: BeforeUnloadEvent) => {
-          const r = handler()
+          const r = handler({ quitting: false })
           if (r === false) e.preventDefault()
         }
         addEventListener("beforeunload", h)

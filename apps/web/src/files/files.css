@@ -393,7 +393,7 @@
 }
 
 .kimo-files-folder:hover,
-.kimo-files-folder--active {
+.kimo-files-folder--menu {
   background: var(--kimo-bg-hover);
 }
 
@@ -465,6 +465,58 @@
   white-space: nowrap;
 }
 
+/* Board 37 fiCwk (b2Xab) and rules "Active row": bg-muted, radius-pill, 1 px border, icon
+   accent-text, label text-primary 600. */
+.kimo-files-folder--active,
+.kimo-files-folder--active:hover {
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+.kimo-files-folder--active .kimo-files-folder__icon {
+  color: var(--kimo-accent-text);
+}
+
+.kimo-files-folder--active .kimo-files-folder__label {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+/* Board 37 Vgu6J: on hover the ⋯ (IconButton 20, fill bg-muted, ellipsis 14 text-secondary)
+   replaces the branch; it stays while its menu (InPFe) is open. */
+.kimo-icon-button.kimo-files-folder__menu {
+  display: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.kimo-icon-button.kimo-files-folder__menu .kimo-icon-button__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.kimo-files-folder:hover .kimo-icon-button.kimo-files-folder__menu,
+.kimo-files-folder:focus-within .kimo-icon-button.kimo-files-folder__menu,
+.kimo-files-folder.kimo-files-folder--menu .kimo-icon-button.kimo-files-folder__menu {
+  display: inline-flex;
+}
+
+.kimo-files-folder:hover .kimo-files-folder__branch,
+.kimo-files-folder:focus-within .kimo-files-folder__branch,
+.kimo-files-folder.kimo-files-folder--menu .kimo-files-folder__branch {
+  display: none;
+}
+
+/* Board 37 pWAiZ: the grid card whose menu is open: thumbnail stroke accent. */
+.kimo-files-grid__card--menu .kimo-file-card__thumbnail,
+.home-grid__card.kimo-files-grid__card--menu .kimo-file-card__thumbnail {
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
 /* --- Home: Files Header (Xp6lo: row, gap 8, center) -------------------------------------- */
 .kimo-files-recent-header {
   display: flex;
@@ -523,4 +575,11 @@
 .kimo-files-grid__card {
   flex: 1 1 0;
   min-width: 0;
+}
+
+/* A recovery choice that failed: fixed over the scrim, above the dialog. */
+.kimo-files-toasts--dialog {
+  position: fixed;
+  z-index: 2147483001;
+  bottom: 32px;
 }

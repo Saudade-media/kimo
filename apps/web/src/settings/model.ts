@@ -8,8 +8,10 @@ import {
   type HostOS,
   isValidSetting,
   type SettingKey,
+  type SettingsApi,
   type SettingsPane,
   type SettingsSchema,
+  type UpdateInfo,
   type UpdaterStatus,
 } from "@kimo/platform"
 import { formatBytes } from "../assets-gc/logic"
@@ -47,15 +49,21 @@ export function isSettingsPane(v: string): v is SettingsPane {
  * An unknown pane falls back to {@link DEFAULT_PANE}.
  */
 export function parseSettingsHash(hash: string): SettingsPane | null {
-  const path = hash.replace(/^#/, "")
-  const m = /^\/settings(?:\/([a-z-]*))?\/?$/.exec(path)
+  const m = SETTINGS_ROUTE.exec(hash.replace(/^#/, ""))
   if (!m) return null
   const pane = m[1] ?? ""
   return isSettingsPane(pane) ? pane : DEFAULT_PANE
 }
 
-export function settingsHash(pane: SettingsPane): string {
-  return `#/settings/${pane}`
+/** `#/settings/<pane>/<focus>`: an MCP client to expand, or `usage`; null when absent. */
+export function parseSettingsFocus(hash: string): string | null {
+  return SETTINGS_ROUTE.exec(hash.replace(/^#/, ""))?.[2] ?? null
+}
+
+const SETTINGS_ROUTE = /^\/settings(?:\/([a-z-]*))?(?:\/([a-z0-9._-]{1,64}))?\/?$/
+
+export function settingsHash(pane: SettingsPane, focus?: string | null): string {
+  return focus ? `#/settings/${pane}/${focus}` : `#/settings/${pane}`
 }
 
 // --- Select choices (labels as designed) ------------------------------------------------------
@@ -164,6 +172,53 @@ export function parseChoice<K extends ChoiceKey>(key: K, raw: string): SettingsS
 
 // --- Copy -------------------------------------------------------------------------------------
 
+/** Each setting's row label, as the panes show it ("Couldn't save Canvas zoom"). */
+export const SETTING_LABELS: Record<SettingKey, string> = {
+  "files.autosave": "Autosave",
+  "files.autosaveIntervalMs": "Autosave interval",
+  "files.recoverySnapshotMs": "Recovery snapshots",
+  "files.onExternalChange": "When a file changes on disk",
+  "files.pauseAutosaveDuringGit": "Pause autosave during git operations",
+  "files.newFilesDir": "New files go to",
+  "privacy.noThirdPartyFetch": "No third-party fetch",
+  "fonts.google": "Google Fonts",
+  "fonts.extraFolders": "Extra font folders",
+  "fonts.embedInKimoz": "Embed fonts in .kimoz packages",
+  "general.appearance": "Appearance",
+  "general.onLaunch": "On launch",
+  "general.canvasZoom": "Canvas zoom",
+  "general.duplicateMain": "Duplicating a main component",
+  "canvas.snapToObjects": "Snap to objects",
+  "canvas.snapToPixelGrid": "Snap to pixel grid",
+  "canvas.pixelGrid": "Pixel grid",
+  "canvas.rulers": "Rulers",
+  "canvas.nudge": "Nudge",
+  "canvas.layerNames": "Layer names",
+  "updates.download": "Download updates",
+  "updates.channel": "Channel",
+}
+
+/**
+ * Board 37 D13 (CT1wv): the banner a refused settings write shows, "Couldn't save Canvas zoom" /
+ * "~/.kimo/settings.json is read-only.". The body is the host's reason as one sentence.
+ */
+export function settingsWriteErrorCopy(
+  key: SettingKey,
+  error: unknown,
+): { title: string; body: string } {
+  const raw = error instanceof Error ? error.message : typeof error === "string" ? error : ""
+  const text = raw.trim().replace(/^[A-Z_]+:\s*/, "")
+  const body = text
+    ? /[.!?]$/.test(text)
+      ? text
+      : `${text}.`
+    : "The settings file couldn't be written."
+  return {
+    title: `Couldn't save ${SETTING_LABELS[key]}`,
+    body: body.charAt(0).toUpperCase() + body.slice(1),
+  }
+}
+
 /** Files & autosave › Autosave description ("Writes 2 s after you stop editing. …"). */
 export function autosaveDescription(intervalMs: number): string {
   const s = intervalMs / 1000
@@ -181,6 +236,21 @@ export function displayPath(path: string, home: string | null): string {
 export function homeOf(path: string | null | undefined): string | null {
   const m = path ? /^(\/Users\/[^/]+|\/home\/[^/]+|[A-Za-z]:\\Users\\[^\\]+)/.exec(path) : null
   return m ? (m[1] as string) : null
+}
+
+/**
+ * Files & autosave › New files go to: `files.newFilesDir`, else `~/Documents/Kimo` (board 19).
+ * Used by Home's New file and by the first Save as of an untitled file.
+ */
+export function defaultNewFilesDir(platform: {
+  settings: Pick<SettingsApi, "get">
+  recovery: { dir: string | null }
+}): string {
+  const set = platform.settings.get("files.newFilesDir")
+  if (set) return set
+  const home = homeOf(platform.recovery.dir)
+  const sep = home?.includes("\\") ? "\\" : "/"
+  return home ? `${home}${sep}Documents${sep}Kimo` : "/Kimo"
 }
 
 /** "38 fonts · 21 MB". */
@@ -233,6 +303,81 @@ export function updaterDescription(s: UpdaterStatus, formatTime: (ms: number) =>
       return `Kimo ${s.info.version} is ready · restart to update`
     case "error":
       return `Couldn't check: ${s.message}`
+  }
+}
+
+/** What the Updates pane last ran: the error banner names it. */
+export type UpdateAction = "check" | "download"
+
+/** The Updates pane's version row (board 37 D10: Y5w77Y / je8J6 / fSIIa / C60dt0). */
+export interface UpdateRowView {
+  kind: "check" | "available" | "downloading" | "ready"
+  label: string
+  description: string
+  /** Downloading: 0–100, null while the size is unknown. */
+  percent: number | null
+  /** The update the row is about (available, downloading, ready, or the one an error kept). */
+  info: UpdateInfo | null
+  /** What failed when the status is `error`. */
+  action: UpdateAction
+}
+
+/** "18 MB" style sizes for the update download (the same SI units as Finder). */
+const mb = (bytes: number) => formatBytes(bytes)
+
+export function updateRowView(
+  s: UpdaterStatus,
+  appVersion: string,
+  seen: { info: UpdateInfo | null; total: number | null; action: UpdateAction },
+): UpdateRowView {
+  const base = { percent: null, info: null, action: seen.action }
+  const available = (info: UpdateInfo): UpdateRowView => ({
+    ...base,
+    kind: "available",
+    label: `Kimo ${info.version} is available`,
+    description: `You have ${info.currentVersion}${seen.total ? ` · ${mb(seen.total)}` : ""}`,
+    info,
+  })
+  switch (s.state) {
+    case "available":
+      return available(s.info)
+    case "downloading": {
+      const percent = s.total ? Math.min(100, Math.round((s.received / s.total) * 100)) : null
+      return {
+        ...base,
+        kind: "downloading",
+        label: `Downloading Kimo ${s.info.version}`,
+        description: s.total
+          ? fontPackProgressLabel(s.received, s.total)
+          : `${mb(s.received)} so far`,
+        percent,
+        info: s.info,
+      }
+    }
+    case "ready":
+      return {
+        ...base,
+        kind: "ready",
+        label: `Kimo ${s.info.version} is ready`,
+        description: "Restart Kimo to finish. Open files are saved first.",
+        info: s.info,
+      }
+    case "error":
+      // Board 37 C60dt0: a failed download keeps the Available row under the banner.
+      if (seen.action === "download" && seen.info) return available(seen.info)
+      return {
+        ...base,
+        kind: "check",
+        label: `Kimo ${appVersion}`,
+        description: "Not checked yet",
+      }
+    default:
+      return {
+        ...base,
+        kind: "check",
+        label: `Kimo ${appVersion}`,
+        description: updaterDescription(s, shortTime),
+      }
   }
 }
 

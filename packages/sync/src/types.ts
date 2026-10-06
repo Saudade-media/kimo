@@ -91,6 +91,11 @@ export type AutosavePauseReason =
   | "conflicts"
   /** The user turned autosave off (Settings › Files & autosave). */
   | "setting"
+  /**
+   * The file changed on disk while there were local edits and Settings › When a file changes on
+   * disk is "Ask first": nothing is written until the user merges or keeps their version.
+   */
+  | "external"
 
 // --- External changes --------------------------------------------------------------------------
 
@@ -111,6 +116,11 @@ export type ExternalChangeOutcome =
   | { kind: "unreadable"; message: string }
   /** The file was deleted or moved away; the session keeps the document and marks it unsaved. */
   | { kind: "removed" }
+  /**
+   * `ask`: the file changed and there are local edits. Nothing was merged and autosave is
+   * paused ("external") until {@link FileSessionProvider} merges or keeps the local version.
+   */
+  | { kind: "pending" }
 
 /** Snapshot that "Undo" of a reload/merge restores (in memory only; never rewrites the file). */
 export interface ReloadUndoToken {
@@ -183,7 +193,9 @@ export interface FileSessionProvider extends SyncProvider {
   /** Accepts the one-time format upgrade and writes the working file. */
   acceptUpgrade(): Promise<void>
   /** Re-reads the working file after a watcher event and reconciles (reload or 3-way merge). */
-  reconcileExternalChange(): Promise<ExternalChangeOutcome>
+  reconcileExternalChange(options?: { ask?: boolean }): Promise<ExternalChangeOutcome>
+  /** "Keep mine" after a `pending` external change: the next save overwrites the file. */
+  keepLocalVersion(): Promise<void>
   /** Writes the current document to its recovery file. */
   writeRecovery(reason: RecoveryReason): Promise<RecoveryWrite>
   /** Drops local edits and reloads from disk (git "Discard"). Undoable until the next edit. */

@@ -30,11 +30,13 @@ import type {
   HostOS,
   LeaseHolder,
   LocalFontFamily,
+  MenuContext,
   OpenRequest,
   RecentFile,
   RecoveryEntry,
   RecoveryWriteInput,
   SettingsPane,
+  TrashedFile,
   UpdateInfo,
   UpdaterStatus,
   WatchEvent,
@@ -98,6 +100,9 @@ export interface TauriCommandMap {
     result: AtomicWriteResult
   }
   kimo_fs_remove: { args: { path: string }; result: null }
+  /** Never overwrites: `EXISTS` when `to` exists. */
+  kimo_fs_rename: { args: { from: string; to: string }; result: null }
+  kimo_fs_copy: { args: { from: string; to: string }; result: null }
   kimo_fs_stat: { args: { path: string }; result: FileStat | null }
   kimo_fs_list: { args: { dir: string; extensions: string[] | null }; result: FileStat[] }
   /** Starts a `notify` watcher; events arrive as {@link TauriEventMap} `kimo://fs-watch`. */
@@ -108,10 +113,14 @@ export interface TauriCommandMap {
   kimo_fs_unwatch: { args: { watchId: string }; result: null }
   kimo_fs_reveal: { args: { path: string }; result: null }
   kimo_fs_open_default: { args: { path: string }; result: null }
-  /** https only. */
+  /** http, https (with a host), mailto and tel; anything else is `BLOCKED`. */
   kimo_open_url: { args: { url: string }; result: null }
   /** Board 25 §7 (b): reveals `~/.kimo/mcp/server.log` (or opens its folder). */
   kimo_help_show_logs: { args: Record<string, never>; result: null }
+  /** Board 37 (A6): this editor window shows Home or a document; the native menu follows focus. */
+  kimo_menu_set_context: { args: { context: MenuContext }; result: null }
+  /** Plain text on the system clipboard (macOS; `BLOCKED` elsewhere, where the page writes it). */
+  kimo_clipboard_write_text: { args: { text: string }; result: null }
   /** Board 32: a built-in agent turn started / is still running / ended (macOS Dock tile). */
   kimo_dock_agent_activity: { args: { source: string; working: boolean }; result: null }
 
@@ -148,6 +157,14 @@ export interface TauriCommandMap {
   kimo_recents_add_folder: { args: { path: string }; result: null }
   kimo_recents_remove_folder: { args: { path: string }; result: null }
   kimo_recents_scan_folder: { args: { path: string }; result: RecentFile[] }
+
+  // --- trash (board 37 §3: OS trash + `~/.kimo/trash.json` index; emits recents-changed) ---
+  kimo_trash_move: { args: { path: string }; result: TrashedFile }
+  kimo_trash_list: { args: Record<string, never>; result: TrashedFile[] }
+  /** `path` null = the entry's original path. `EXISTS` when the target is taken. */
+  kimo_trash_restore: { args: { id: string; path: string | null }; result: string }
+  kimo_trash_remove: { args: { id: string }; result: null }
+  kimo_trash_empty: { args: Record<string, never>; result: number }
 
   // --- leases (`~/.kimo/locks/<sha256(path)[:16]>.lock`, O_EXCL, JSON body in types.ts) ---
   kimo_lease_acquire: { args: { path: string; reclaimStale: boolean }; result: AcquireResult }
@@ -219,10 +236,15 @@ export interface TauriCommandMap {
   kimo_window_set_title: { args: { title: string }; result: null }
   kimo_window_set_document_edited: { args: { edited: boolean }; result: null }
   /** Opens (or focuses) the `settings` window. */
-  kimo_window_open_settings: { args: { pane: SettingsPane | null }; result: null }
+  kimo_window_open_settings: {
+    args: { pane: SettingsPane | null; focus: string | null }
+    result: null
+  }
   /** Answer to `kimo://close-requested`: true closes the window. */
   kimo_window_confirm_close: { args: { requestId: string; allow: boolean }; result: null }
   kimo_window_close: { args: Record<string, never>; result: null }
+  /** File › New window (G4): another editor window (`editor-<n>`) on Home. */
+  kimo_window_new: { args: Record<string, never>; result: null }
 
   // --- settings (app config dir `settings.json`; Rust validates keys, broadcasts changes) ---
   kimo_settings_get_all: { args: Record<string, never>; result: Partial<Settings> }
@@ -244,7 +266,7 @@ export interface TauriEventMap {
   "kimo://updater-status": UpdaterStatus
   "kimo://window-state": WindowState
   /** Sent to the window before it closes; answer with `kimo_window_confirm_close`. */
-  "kimo://close-requested": { requestId: string }
+  "kimo://close-requested": { requestId: string; quitting?: boolean }
   /** Broadcast to every window. */
   "kimo://settings-changed": { key: SettingKey; value: unknown }
   "kimo://open-request": OpenRequest
@@ -276,6 +298,8 @@ export const TAURI_COMMANDS = [
   "kimo_fs_write_text_atomic",
   "kimo_fs_write_bytes_atomic",
   "kimo_fs_remove",
+  "kimo_fs_rename",
+  "kimo_fs_copy",
   "kimo_fs_stat",
   "kimo_fs_list",
   "kimo_fs_watch",
@@ -294,6 +318,11 @@ export const TAURI_COMMANDS = [
   "kimo_recents_add_folder",
   "kimo_recents_remove_folder",
   "kimo_recents_scan_folder",
+  "kimo_trash_move",
+  "kimo_trash_list",
+  "kimo_trash_restore",
+  "kimo_trash_remove",
+  "kimo_trash_empty",
   "kimo_lease_acquire",
   "kimo_lease_release",
   "kimo_lease_inspect",
@@ -335,10 +364,13 @@ export const TAURI_COMMANDS = [
   "kimo_window_open_settings",
   "kimo_window_confirm_close",
   "kimo_window_close",
+  "kimo_window_new",
   "kimo_settings_get_all",
   "kimo_settings_set",
   "kimo_launch_take_initial",
   "kimo_help_show_logs",
+  "kimo_menu_set_context",
+  "kimo_clipboard_write_text",
   "kimo_dock_agent_activity",
 ] as const satisfies readonly TauriCommand[]
 

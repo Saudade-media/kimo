@@ -57,7 +57,8 @@ useEffect(() => session.ui.subscribe((s) => agentPanel?.setSelection(
 
 ## 2. RightPanel.tsx: the Agent tab
 
-Replace the "Agent arrives in M6" placeholder (the panel already widens to 360 for this tab):
+Mount the panel in the Agent tab (until the file id resolves, the tab shows "Loading the agent…";
+the panel already widens to 360 for this tab):
 
 ```tsx
 import { AgentPanel, hasHomeHandoff, useHomeHandoff } from "../agent-panel"
@@ -101,7 +102,9 @@ const agentState = useAgentPanelState(agentPanel)
 Live origins, persona + label per origin, enforced scopes (side by side / split / iterate),
 cursors, landed edits and rejected-op flashes come from the panel; the canvas draws them per
 board 36 (one cursor + a section outline per agent, a ring per landed edit on its section).
-For other canvas-side pieces the panel exports `ModeSummaryPill` (jDKaM), `VariantActions`
+`ModeSummaryOverlay` mounts the Mode Summary (jDKaM, with Stop all) over the canvas, bottom left,
+while a mode run is live (`useEditorAgentPanel().modeSummary`). For other canvas-side pieces the
+panel exports `ModeSummaryPill` (jDKaM), `VariantActions`
 (avr2x), `PassChip` (NCElh), `AgentCursorPill` (GmEAl) and `RejectedOpPill` (O2Whh).
 
 ## 5. AgentMark (`@kimo/ui`)

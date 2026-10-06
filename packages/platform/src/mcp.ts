@@ -146,6 +146,11 @@ export interface McpServerStatus {
   version?: string
   /** Settings › "Start server when Kimo opens". */
   startOnLaunch?: boolean
+  /**
+   * Settings › "Ask before destructive or out-of-scope ops" (default on). Off: destructive edits
+   * never wait for approval, whatever a client's own `confirmDestructive` says.
+   */
+  askBeforeDestructive?: boolean
   /** Configured HTTP port (the listener may have fallen back, see `error`). */
   httpPort?: number
   /** `~/.kimo/mcp/server.log`. */
@@ -172,6 +177,7 @@ export interface McpServerError {
 /** Persisted server settings (`~/.kimo/mcp/server.json`, `http.json`). */
 export interface McpServerSettings {
   startOnLaunch: boolean
+  askBeforeDestructive: boolean
   httpPort: number
 }
 
@@ -210,6 +216,20 @@ export interface McpConnectionInfo {
  * Rust + events from the document host; web: `UNSUPPORTED` except activity (IndexedDB);
  * memory: scripted for tests.
  */
+/** Result of an agent undo / redo from the activity log. */
+export interface McpHistoryResult {
+  ok: boolean
+  /** The group no longer had any effect (later edits changed the same layers). */
+  stale: boolean
+  /**
+   * Refused because the group is not on top of the origin's undo (or redo) stack: newer edits
+   * of the same agent come first. The group is still there; nothing changed.
+   */
+  conflict?: boolean
+  /** The history's refusal, when it answered (absent: no live connection of that origin). */
+  message?: string
+}
+
 export interface McpHostApi {
   status(): Promise<McpServerStatus>
   onStatus(listener: (s: McpServerStatus) => void): Unsubscribe
@@ -247,6 +267,8 @@ export interface McpHostApi {
     restart(): Promise<McpServerStatus>
     settings(): Promise<McpServerSettings>
     setStartOnLaunch(enabled: boolean): Promise<McpServerSettings>
+    /** "Ask before destructive or out-of-scope ops" (the document host's approval gate). */
+    setAskBeforeDestructive(enabled: boolean): Promise<McpServerSettings>
     /** Persists the HTTP port and moves a running listener there. */
     setPort(port: number): Promise<McpServerSettings>
     /** True when nothing listens on 127.0.0.1:`port` (or it is ours). */
@@ -267,7 +289,12 @@ export interface McpHostApi {
    * `undoToken`, refuses (stale) when that group is no longer on top.
    */
   history: {
-    undo(path: string, origin: string, undoToken?: string): Promise<{ ok: boolean; stale: boolean }>
+    undo(path: string, origin: string, undoToken?: string): Promise<McpHistoryResult>
+    /**
+     * Redo the origin's last undone group (`kimo_history` redo as that origin); absent: no Redo.
+     * With `undoToken`, refuses (`conflict`) when that group is not the last one undone.
+     */
+    redo?(path: string, origin: string, undoToken?: string): Promise<McpHistoryResult>
   }
   installer: {
     status(scope: "user" | "project", project?: string): Promise<McpHostConfigStatus[]>
@@ -336,7 +363,7 @@ export interface TauriMcpCommandMap {
   kimo_mcp_server_restart: { args: Record<string, never>; result: McpServerStatus }
   kimo_mcp_server_settings_get: { args: Record<string, never>; result: McpServerSettings }
   kimo_mcp_server_settings_set: {
-    args: { startOnLaunch?: boolean; httpPort?: number }
+    args: { startOnLaunch?: boolean; askBeforeDestructive?: boolean; httpPort?: number }
     result: McpServerSettings
   }
   kimo_mcp_port_check: { args: { port: number }; result: boolean }

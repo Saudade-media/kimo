@@ -28,6 +28,8 @@ import {
   RECOVERY_RETENTION_MS,
   type RecentFile,
   type RecoveryEntry,
+  type TrashApi,
+  type TrashedFile,
   type UpdateInfo,
   type UpdaterStatus,
   type WatchEvent,
@@ -70,19 +72,24 @@ export interface MemoryControl {
   /** Makes an update available on the next check. */
   publishUpdate(info: Omit<UpdateInfo, "currentVersion">): void
   /** Simulates the OS asking to close the window; resolves to whether it closed. */
-  requestClose(): Promise<boolean>
+  requestClose(options?: { quitting?: boolean }): Promise<boolean>
   /** Calls made to window/updater methods, for assertions. */
   readonly calls: string[]
   /** Local fonts the host reports. */
   setLocalFonts(families: LocalFontFamily[], bytes?: Record<string, Uint8Array>): void
   /** Board 25 §7 (b): a native Help menu item picked (desktop `kimo://help-menu`). */
   helpMenu(action: HelpMenuAction): void
-  /** Board 27: a native File / View item picked (desktop `kimo://editor-menu`). */
+  /** Board 27 / 37: a native File / Edit / View item picked (desktop `kimo://editor-menu`). */
   editorMenu(action: EditorMenuAction): void
+  /** What `clipboard.writeText` last wrote (null before any write). */
+  clipboardText(): string | null
+  /** The next settings write is refused with this IO message (read-only settings.json). */
+  failNextSettingsWrite(message: string): void
 }
 
 export type MemoryPlatform = KimoPlatform & {
   control: MemoryControl
+  trash: TrashApi
   mcp: MemoryMcpHost
   skills: MemorySkills
 }
@@ -228,6 +235,10 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
     return best
   }
 
+  // --- trash ---
+  const trashed = new Map<string, { entry: TrashedFile; file: MemFile }>()
+  let trashSeq = 0
+
   // --- recents ---
   const opened = new Map<FileRef, number>()
   const folders = new Set<FileRef>()
@@ -268,18 +279,25 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
   let fullscreen = false
   const focusEvents = new Emitter<[boolean]>()
   const fullscreenEvents = new Emitter<[boolean]>()
-  let closeHandler: (() => Promise<boolean> | boolean) | null = null
+  let closeHandler: ((info: { quitting: boolean }) => Promise<boolean> | boolean) | null = null
 
   // --- launch ---
   const initial: OpenRequest[] = []
   const openEvents = new Emitter<[OpenRequest]>()
   const helpEvents = new Emitter<[HelpMenuAction]>()
   const menuEvents = new Emitter<[EditorMenuAction]>()
+  let clipboardText: string | null = null
 
   let persisted: Record<string, unknown> = { ...(options.settings ?? {}) }
+  let settingsFailure: string | null = null
   const settings = createSettingsStore({
     load: async () => persisted,
     persist: async (_k, _v, all) => {
+      if (settingsFailure !== null) {
+        const message = settingsFailure
+        settingsFailure = null
+        throw new PlatformError("IO", message)
+      }
       persisted = { ...all }
     },
   })
@@ -313,7 +331,18 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
         calls.push("showLogs")
       },
     },
-    menu: { onAction: (l) => menuEvents.on(l) },
+    menu: {
+      onAction: (l) => menuEvents.on(l),
+      async setContext(context) {
+        calls.push(`menuContext ${context}`)
+      },
+    },
+    clipboard: {
+      async writeText(text) {
+        calls.push(`clipboard ${text.length}`)
+        clipboardText = text
+      },
+    },
     capabilities,
     mcp: createMemoryMcpHost({ status: { version: appVersion } }),
     skills: createMemorySkills(options.skills),
@@ -329,6 +358,26 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       writeBytesAtomic: (ref, bytes, o) => writeAtomic(ref, bytes.slice(), o?.mkdirs),
       async remove(ref) {
         if (files.delete(ref)) notify({ kind: "removed", ref, at: clock })
+      },
+      async rename(from, to) {
+        const f = must(from)
+        if (files.has(to) || dirs.has(to))
+          throw new PlatformError("EXISTS", `${basenameOf(to)} already exists`, { errno: "EEXIST" })
+        const fail = takeFailure(to)
+        if (fail) throw new PlatformError(fail.code, `Injected ${fail.code} renaming ${from}`)
+        files.delete(from)
+        files.set(to, { ...f, mtimeMs: clock })
+        addDirs(to)
+        if (opened.delete(from)) opened.set(to, clock)
+        notify({ kind: "removed", ref: from, at: clock })
+        notify({ kind: "created", ref: to, at: clock })
+        recentsEvents.emit()
+      },
+      async copy(from, to) {
+        const f = must(from)
+        if (files.has(to) || dirs.has(to))
+          throw new PlatformError("EXISTS", `${basenameOf(to)} already exists`, { errno: "EEXIST" })
+        await writeAtomic(to, f.bytes.slice(), true)
       },
       stat: async (ref) => stat(ref),
       async list(dir, o) {
@@ -434,6 +483,52 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
           .map(recentOf)
       },
       onChange: (l) => recentsEvents.on(l),
+    },
+    trash: {
+      async move(ref) {
+        const f = must(ref)
+        const fail = takeFailure(ref)
+        if (fail) throw new PlatformError(fail.code, `Injected ${fail.code} trashing ${ref}`)
+        const entry: TrashedFile = {
+          id: `t${++trashSeq}`,
+          originalRef: ref,
+          name: basenameOf(ref),
+          trashedAt: clock,
+        }
+        files.delete(ref)
+        opened.delete(ref)
+        trashed.set(entry.id, { entry, file: f })
+        notify({ kind: "removed", ref, at: clock })
+        recentsEvents.emit()
+        return entry
+      },
+      async list() {
+        return [...trashed.values()].map((t) => t.entry).sort((a, b) => b.trashedAt - a.trashedAt)
+      },
+      async restore(id, to) {
+        const t = trashed.get(id)
+        if (!t) throw new PlatformError("NOT_FOUND", "That file is no longer in the Trash")
+        const target = to ?? t.entry.originalRef
+        if (files.has(target))
+          throw new PlatformError("EXISTS", `${basenameOf(target)} already exists`, {
+            errno: "EEXIST",
+          })
+        files.set(target, t.file)
+        addDirs(target)
+        trashed.delete(id)
+        opened.set(target, clock)
+        notify({ kind: "created", ref: target, at: clock })
+        recentsEvents.emit()
+        return target
+      },
+      async remove(id) {
+        trashed.delete(id)
+      },
+      async empty() {
+        const n = trashed.size
+        trashed.clear()
+        return n
+      },
     },
     leases: {
       async acquire(ref, o): Promise<AcquireResult> {
@@ -640,9 +735,12 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       async setDocumentEdited(e) {
         calls.push(`setDocumentEdited ${e}`)
       },
-      async openSettings(pane) {
-        calls.push(`openSettings ${pane ?? "general"}`)
+      async openSettings(pane, focus) {
+        calls.push(`openSettings ${pane ?? "general"}${focus ? ` ${focus}` : ""}`)
         return "window"
+      },
+      async openNewWindow() {
+        calls.push("openNewWindow")
       },
       onCloseRequested(handler) {
         closeHandler = handler
@@ -669,6 +767,10 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       now,
       helpMenu: (a) => helpEvents.emit(a),
       editorMenu: (a) => menuEvents.emit(a),
+      clipboardText: () => clipboardText,
+      failNextSettingsWrite: (message) => {
+        settingsFailure = message
+      },
       tick(ms) {
         clock += ms
       },
@@ -741,8 +843,8 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       publishUpdate(info) {
         published = { ...info, currentVersion: appVersion }
       },
-      async requestClose() {
-        const ok = closeHandler ? await closeHandler() : true
+      async requestClose(options = {}) {
+        const ok = closeHandler ? await closeHandler({ quitting: options.quitting === true }) : true
         if (ok) calls.push("close")
         return ok
       },

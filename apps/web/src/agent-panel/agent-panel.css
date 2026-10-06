@@ -114,6 +114,23 @@
 }
 
 /* Skill Used (f7ZEFP): row, gap 6, padding [6, 0, 0, 34], center › book-open 12 · sans 11 / 500 agent. */
+/* Undo turn / Regenerate could not run (stale or refused): one line under the message, aligned
+   with the reply text (34 = mark 24 + gap 10). */
+.agent-review__issue,
+.agent-panel__turn-issue {
+  margin: 0;
+  padding: 4px 0 0 34px;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 1.4;
+  color: var(--kimo-danger);
+}
+
+/* Inside the review card the line spans the card (its own padding insets it). */
+.agent-review__issue {
+  padding: 0;
+}
+
 .agent-panel__skill-used {
   box-sizing: border-box;
   display: flex;
@@ -981,6 +998,13 @@
   white-space: nowrap;
 }
 
+/* Reverted with its Revert icon: same treatment as an undone ActivityRow (tertiary, struck). */
+.agent-op-log--reverted .agent-op-log__target,
+.agent-op-log--reverted .agent-op-log__detail {
+  color: var(--kimo-text-tertiary);
+  text-decoration: line-through;
+}
+
 .agent-op-log__revert {
   display: inline-flex;
   flex: none;
@@ -1164,6 +1188,15 @@
 }
 
 /* --- Canvas pieces ------------------------------------------------------------------------ */
+
+/* Mode Summary on the canvas (ZFOQf › agblr: jDKaM at x 24, 16 above the canvas's bottom). */
+.agent-mode-summary-host {
+  position: absolute;
+  z-index: 6;
+  left: 24px;
+  bottom: 16px;
+  pointer-events: auto;
+}
 
 /* Mode Summary (jDKaM): h 28, gap 8, padding [0, 10, 0, 6], center, bg-app, border, pill. */
 .agent-mode-summary {

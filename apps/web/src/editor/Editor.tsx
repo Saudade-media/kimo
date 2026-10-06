@@ -58,10 +58,11 @@ import { createFile, exportFile, importFile, patchFile, pickKimoFile, saveFile }
 import { useDocHeader } from "../lib/header"
 import { createBus, isTyping } from "../lib/hooks"
 import { Icon } from "../lib/icons"
+import { runTextEdit } from "../lib/native-menu"
 import { cssToken, useTheme } from "../lib/theme"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { exitSelection, PreviewOverlay, pickPreviewFrame, usePreviewTarget } from "../preview"
-import { diskPath, navigate } from "../router"
+import { diskPath, homeFolderPath, lastHomePath, navigate } from "../router"
 import { useEditorAgentPanel } from "./agent-panel"
 import { useAgentTouched, useConnectedOrigins, useEditorAgents } from "./agents"
 import { refName } from "./bindings"
@@ -69,6 +70,7 @@ import { useCanvasMenu } from "./CanvasMenu"
 import { useRasterDrop } from "./clipboard/RasterDrop"
 import { useEditorCommands } from "./clipboard/useEditorCommands"
 import { DiskTopbar, useConflicts, useFocusNode, useWindowTitle } from "./disk"
+import { failureText } from "./errors"
 import type { FileMenuActions } from "./FileMenu"
 import { FloatingToolbar } from "./FloatingToolbar"
 import { useEditor } from "./fields"
@@ -77,6 +79,7 @@ import { createComponent, detachInstance, goToMain } from "./m3/actions"
 import { useCanvasDrop } from "./m3/CanvasDrop"
 import { M3Context, M3Controller, useBusValue, useLibraries } from "./m3/controller"
 import { ConfirmHost, ToastStack } from "./m3/feedback"
+import { useActivePageName } from "./pages/PagesStrip"
 import { useReleaseStalePlaceholders } from "./placeholder-release"
 import "./m3/m3.css"
 import "./m3/m3-panels.css"
@@ -164,7 +167,7 @@ export function Editor({ fileId }: { fileId: string }) {
         />
       )}
       {state.status !== "loading" && (
-        <a className="editor-status__link" href="#/">
+        <a className="editor-status__link" href={`#${lastHomePath()}`}>
           Back to files
         </a>
       )}
@@ -190,7 +193,7 @@ export function DiskEditor({ fileRef, node }: { fileRef: string; node?: string |
         />
       )}
       {state.status !== "loading" && (
-        <a className="editor-status__link" href="#/">
+        <a className="editor-status__link" href={`#${lastHomePath()}`}>
           Back to files
         </a>
       )}
@@ -360,8 +363,13 @@ function EditorShell({
     const ui = session.ui.getState()
     const frame = pickPreviewFrame(session.store, ui.selection)
     if (frame) setPreview({ frame, selection: ui.selection })
-  }, [session])
+    // E10: ⇧Space and the desktop menu bar's View › Preview stay live with no frames; say why
+    // nothing opened instead of a dead click.
+    else m3.toast({ tone: "warning", text: "Nothing to preview. Add a frame to this page." })
+  }, [session, m3])
   const previewTarget = usePreviewTarget(session.store, session.ui)
+  // The topbar breadcrumb's page crumb (board 16 GGcf5): the active page's name.
+  const pageName = useActivePageName(session)
   // Desktop menu bar View › Preview (`kimo://editor-menu` {action: "preview"}).
   useEffect(
     () => platform.menu?.onAction((a) => (a === "preview" ? openPreview() : undefined)),
@@ -468,22 +476,33 @@ function EditorShell({
   )
   const download = useCallback(
     () =>
-      void exportFile(session.store, name, assets, prepareWrite).then((file) => {
+      void exportFile(
+        session.store,
+        name,
+        assets,
+        prepareWrite,
+        platform.settings.get("fonts.embedInKimoz"),
+      ).then((file) => {
         if (file.missingAssets.length)
           console.warn(`Kimo: images not in this browser: ${file.missingAssets.join(", ")}`)
         return saveFile(file)
       }),
-    [session.store, name, assets, prepareWrite],
+    [session.store, name, assets, prepareWrite, platform.settings],
   )
   const saveAs = useCallback(async () => {
     // Browser library: Save as… writes through the File System Access picker when granted,
     // otherwise downloads the .kimo / .kimoz (board 20 note p0SuJa).
     if (!doc) return download()
     const wasUntitled = doc.untitled
-    const ref = await doc.saveAs().catch(() => null)
+    // A5: a failed write or a locked target shows "Couldn't save …" (a cancelled dialog
+    // resolves null inside saveAs and stays silent).
+    const ref = await doc.saveAs().catch((e: unknown) => {
+      m3.toast({ tone: "danger", text: failureText(`save ${doc.fileName}`, e) })
+      return null
+    })
     if (ref) navigate(diskPath(ref))
     else if (wasUntitled && !doc.untitled) navigate(diskPath(doc.ref))
-  }, [doc, download])
+  }, [doc, download, m3])
   const save = useCallback(() => {
     // An untitled document's first ⌘S is Save as… (board 20 V7ey1Q).
     if (doc?.untitled) void saveAs()
@@ -533,6 +552,19 @@ function EditorShell({
     [session.ui, m3],
   )
 
+  // ⌘Z / ⇧⌘Z and Edit › Undo / Redo (E5): a canvas gesture owns the stack until it ends (its
+  // steps collapse into one entry); the pen's points are not in the document yet (⌘Z removes the
+  // last one, Figma).
+  const undoRedo = useCallback(
+    (redo: boolean) => {
+      if (canvas.current?.isGesturing()) return
+      if (canvas.current?.penUndo(redo)) return
+      if (redo) session.store.redo("user")
+      else session.store.undo("user")
+    },
+    [session],
+  )
+
   useEffect(() => {
     // Every binding below is a row of the SHORTCUTS table (board 25 §7 GJYcL), matched in order.
     const onKey = (e: KeyboardEvent) => {
@@ -552,8 +584,7 @@ function EditorShell({
       }
       if (undo || redo) {
         e.preventDefault()
-        if (redo) session.store.redo("user")
-        else session.store.undo("user")
+        undoRedo(redo)
         return
       }
       if (matches("save", e) || matches("saveAs", e)) {
@@ -640,12 +671,16 @@ function EditorShell({
       // Board 27 §4 View menu: ⇧' pixel grid, ⇧R rulers (the same keys as Settings › Canvas).
       if (matches("view.pixelGrid", e)) {
         e.preventDefault()
-        toggleViewPref(platform.settings, "canvas.pixelGrid")
+        toggleViewPref(platform.settings, "canvas.pixelGrid", (err) =>
+          m3.toast({ tone: "danger", text: failureText("change the view setting", err) }),
+        )
         return
       }
       if (matches("view.rulers", e)) {
         e.preventDefault()
-        toggleViewPref(platform.settings, "canvas.rulers")
+        toggleViewPref(platform.settings, "canvas.rulers", (err) =>
+          m3.toast({ tone: "danger", text: failureText("change the view setting", err) }),
+        )
         return
       }
       // Escape, Delete, arrows, ⌘D/⌘G and zoom keys are canvas commands (CanvasController).
@@ -676,6 +711,7 @@ function EditorShell({
     openPreview,
     openExport,
     copyPng,
+    undoRedo,
   ])
 
   // Board 21: agents (presence chip, approvals, canvas attribution, layer dots, Activity tab).
@@ -686,8 +722,11 @@ function EditorShell({
     doc,
     canvas,
     layout,
-    openSettings: () => openSettings("agents-mcp"),
+    // D17: the session popover's client settings open Agents & MCP on that client.
+    openSettings: (client) => openSettings("agents-mcp", client ?? null),
     onSaveCopy: () => void saveAs(),
+    onError: (n) =>
+      m3.toast({ tone: "danger", text: n.text, ...(n.action ? { action: n.action } : {}) }),
   })
   const agentNodes = useAgentTouched(agents.controller)
   const mcpOrigins = useConnectedOrigins(agents.controller)
@@ -703,8 +742,11 @@ function EditorShell({
     doc,
     canvas,
     layout,
-    openSettings: (pane) => openSettings(pane),
+    // D18: the Usage card opens AI providers scrolled to Usage & limits.
+    openSettings: (pane) =>
+      pane === "usage" ? openSettings("ai-providers", "usage") : openSettings(pane),
     openAgentTab,
+    onError: (text) => m3.toast({ tone: "danger", text }),
   })
   // Connected MCP clients count as live agents on the canvas (their placeholders read "building").
   const agentCanvas = useMemo(
@@ -752,15 +794,46 @@ function EditorShell({
       ? null
       : { fileName: name, unsaved: syncStatus === "error", agent: agentPanel.editingAgent },
   )
-  // Home: a never-saved document asks first (board 24 (i) close prompt).
-  const goHome = useCallback(() => {
-    if (!doc?.untitled) return navigate("/")
-    void doc.requestClose().then((ok) => {
-      if (ok) navigate("/")
+  // Home: a never-saved document asks first (board 24 (i) close prompt). `to` is a Home route
+  // (board 37 rules: `/` Recents, `/folder/<ref>` a folder's section).
+  const goHome = useCallback(
+    (to = lastHomePath()) => {
+      if (!doc?.untitled) return navigate(to)
+      void doc.requestClose().then((ok) => {
+        if (ok) navigate(to)
+      })
+    },
+    [doc],
+  )
+
+  // Native menu bar (board 37, audit A6 / E3 / E5): Back to files, New file, Open… and Edit ›
+  // Undo / Redo / Select All. With a text field focused the Edit items act on the field.
+  const menuRun = useRef({ goHome, newFile, openFile, undoRedo, editorCommands })
+  menuRun.current = { goHome, newFile, openFile, undoRedo, editorCommands }
+  useEffect(() => {
+    const menu = platform.menu
+    if (!menu) return
+    // The menu's state only: a failed call leaves the items as they were.
+    void menu.setContext("editor").catch(() => {})
+    const off = menu.onAction((a) => {
+      const run = menuRun.current
+      if (a === "go-home") run.goHome()
+      else if (a === "new-file") void run.newFile()
+      else if (a === "open-file") void run.openFile()
+      else if (a === "undo" || a === "redo" || a === "select-all") {
+        if (runTextEdit(a)) return
+        if (a === "select-all") run.editorCommands.commands.selectAll()
+        else run.undoRedo(a === "redo")
+      }
     })
-  }, [doc])
+    // No "home" on cleanup: Home reports its own context when it mounts, and a cleanup call
+    // could reach Rust after the next mount's "editor" (commands run concurrently).
+    return off
+  }, [platform])
 
   const fileMenu: FileMenuActions = {
+    // Board 37 Xq4V0 (E3): "Back to files" leads the File menu.
+    onHome: () => goHome(),
     onNewFile: () => void newFile(),
     onOpenFile: () => void openFile(),
     onOpenRecent: (ref) => navigate(diskPath(ref)),
@@ -768,7 +841,14 @@ function EditorShell({
     onSaveAs: () => void saveAs(),
     // Desktop only (web cPHVm omits it); an untitled document has nothing on disk to reveal.
     ...(doc && !doc.untitled && platform.capabilities.reveal
-      ? { onReveal: () => void platform.files.reveal(doc.ref).catch(() => {}) }
+      ? {
+          onReveal: () =>
+            void platform.files
+              .reveal(doc.ref)
+              .catch((e: unknown) =>
+                m3.toast({ tone: "danger", text: failureText(`reveal ${doc.fileName}`, e) }),
+              ),
+        }
       : {}),
     onExportDialog: openExport,
     onCopyPng: copyPng,
@@ -782,11 +862,12 @@ function EditorShell({
         {doc ? (
           <DiskTopbar
             doc={doc}
-            pageName="Page 1"
+            pageName={pageName}
             ui={session.ui}
             canvas={() => canvas.current}
             {...fileMenu}
-            onHome={goHome}
+            onHome={() => goHome()}
+            onHomeFolder={(dir) => goHome(homeFolderPath(dir))}
             onExport={() => {
               setExportPreset(null)
               setExportOpen(true)
@@ -798,13 +879,13 @@ function EditorShell({
         ) : (
           <Topbar
             fileName={name}
-            pageName="Page 1"
+            pageName={pageName}
             syncStatus={syncStatus}
             ui={session.ui}
             canvas={() => canvas.current}
             onRename={rename}
             {...fileMenu}
-            onHome={goHome}
+            onHome={() => goHome()}
             onExport={() => {
               setExportPreset(null)
               setExportOpen(true)
@@ -896,6 +977,7 @@ function EditorShell({
               rulers={viewPrefs.rulers}
               layerNames={viewPrefs.layerNames}
               nudge={viewPrefs.nudge}
+              wheelZoom={viewPrefs.wheelZoom}
               onLayout={layout.set}
               agentCanvas={agentCanvas}
               noteAuthor={agentPanel.noteAuthor}
@@ -922,6 +1004,7 @@ function EditorShell({
               }}
             />
             {agents.canvasLayer}
+            {agentPanel.modeSummary}
             {conflicts && (
               <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />
             )}
@@ -942,8 +1025,8 @@ function EditorShell({
                 session={session}
                 request={iconRequest}
                 icons={icons}
-                onPick={(set, name) => {
-                  canvas.current?.insertIcon({ set, name })
+                onPick={(set, name, weight) => {
+                  canvas.current?.insertIcon({ set, name, ...(weight ? { weight } : {}) })
                   setIconRequest(null)
                 }}
                 onClose={() => setIconRequest(null)}
@@ -1092,10 +1175,12 @@ function CanvasIconPicker({
   session: FileSession
   request: IconPickerRequest
   icons: ReturnType<typeof browserIconProvider>
-  onPick(set: string, name: string): void
+  /** `weight`: the Material weight slider's value (E11); undefined for sets without weights. */
+  onPick(set: string, name: string, weight?: number): void
   onClose(): void
 }) {
   const host = useRef<HTMLSpanElement>(null)
+  const [weight, setWeight] = useState(400)
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const editor = useEditor(session, "canvas-icon-picker")
   const header = useDocHeader(session.store)
@@ -1123,9 +1208,11 @@ function CanvasIconPicker({
             provider={icons}
             set="lucide"
             name=""
-            weight={400}
-            onPick={onPick}
-            onWeight={() => {}}
+            weight={weight}
+            onPick={(set, name) =>
+              onPick(set, name, set.startsWith("material") ? weight : undefined)
+            }
+            onWeight={setWeight}
             onClose={onClose}
             focusSearch
           />

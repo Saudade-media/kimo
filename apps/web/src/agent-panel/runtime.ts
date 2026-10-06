@@ -87,7 +87,8 @@ export interface AgentPanelRuntime {
   /** Opens Settings › AI providers (error card actions, "Manage providers…"). */
   openSettings?(pane?: "ai-providers" | "usage"): void
   /** Opens the download page (CORS card "Get desktop") / provider matrix. */
-  openLink?(url: string): void
+  /** Opens a link from a reply; a rejection is reported as "Couldn't open <url>. <cause>". */
+  openLink?(url: string): void | Promise<void>
   /**
    * First run (board 25 rule "First run · CLI"): the user already chose a CLI (Settings default
    * or "Use Claude Code"). Omitted: confirmed (tests, harnesses with CLIs).

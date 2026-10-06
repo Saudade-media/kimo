@@ -23,7 +23,8 @@ import { getTheme } from "../lib/theme"
 import { useRuntime } from "../platform/runtime"
 import { runHelpAction } from "../settings/help"
 import { shortcutLabel } from "../shortcuts/shortcuts"
-import { FileMenu, type FileMenuActions, RECENT_LIMIT } from "./FileMenu"
+import { FileMenu, type FileMenuActions, newWindowAction, RECENT_LIMIT } from "./FileMenu"
+import { useFailureToast } from "./failure-toast"
 import { ViewMenu } from "./ViewMenu"
 
 export type { FileMenuActions } from "./FileMenu"
@@ -56,10 +57,11 @@ const SAVED_LABEL: Partial<Record<SyncStatus, [icon: string, label: string]>> = 
 /** Theme toggle → General › Appearance (`bindAppearance` applies it to `[data-theme]`). */
 function useToggleAppearance(): () => void {
   const { platform } = useRuntime()
+  const fail = useFailureToast()
   return () =>
     void platform.settings
       .set("general.appearance", getTheme() === "light" ? "dark" : "light")
-      .catch(() => undefined)
+      .catch((e: unknown) => fail("change the theme", e))
 }
 
 /** Recent files for the File menu's "Open recent", loaded while `active`. */
@@ -90,6 +92,7 @@ export function useRecentFiles(active: boolean): readonly RecentFile[] | null {
  */
 export function useFileMenu(actions: FileMenuActions) {
   const { platform } = useRuntime()
+  const fail = useFailureToast()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const recents = useRecentFiles(anchor !== null)
   const close = () => setAnchor(null)
@@ -100,6 +103,11 @@ export function useFileMenu(actions: FileMenuActions) {
     menu: anchor ? (
       <FileMenu
         {...actions}
+        onNewWindow={newWindowAction(
+          platform.os,
+          platform.window.openNewWindow?.bind(platform.window),
+          fail,
+        )}
         anchor={anchor}
         os={platform.os}
         recents={recents}
@@ -108,7 +116,9 @@ export function useFileMenu(actions: FileMenuActions) {
           logs: platform.help !== undefined,
           run: runHelpAction,
         }}
-        onClearRecent={() => void platform.recents.clearFiles().catch(() => undefined)}
+        onClearRecent={() =>
+          void platform.recents.clearFiles().catch((e: unknown) => fail("clear recent files", e))
+        }
         onClose={() => {
           close()
           anchor.focus({ preventScroll: true })
@@ -170,6 +180,7 @@ export function TopbarTrailing({
           zoomToFit={() => canvas()?.zoomToFit()}
           zoomToSelection={() => canvas()?.zoomToFit(ui.getState().selection)}
           onPreview={onPreview}
+          previewTarget={previewTarget}
           onClose={() => {
             viewAnchor.focus({ preventScroll: true })
             setViewAnchor(null)

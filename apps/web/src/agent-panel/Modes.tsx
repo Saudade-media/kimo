@@ -21,6 +21,7 @@ import { Ban, Check, LayoutGrid, Lock, MousePointer2, Repeat, Square, Undo2 } fr
 import { type CSSProperties, useState } from "react"
 import type { AgentPanelControllerExt, ModeAgentRow, ModeRunView, PlanLogRow } from "./controller"
 import { costLabel } from "./format"
+import { useAgentPanelState } from "./hooks"
 
 const tint = (p: Persona): CSSProperties =>
   ({
@@ -61,7 +62,7 @@ function StatusDot({ label, tone }: { label: string; tone: "done" | "neutral" | 
 export function OpLogRow({ row, onRevert }: { row: PlanLogRow; onRevert?: () => void }) {
   return (
     <div
-      className={`agent-op-log${row.op === "reject" ? " agent-op-log--reject" : ""}`}
+      className={`agent-op-log${row.op === "reject" ? " agent-op-log--reject" : ""}${row.reverted ? " agent-op-log--reverted" : ""}`}
       style={tint(row.persona)}
       data-op={row.op}
     >
@@ -70,7 +71,7 @@ export function OpLogRow({ row, onRevert }: { row: PlanLogRow; onRevert?: () => 
       </span>
       <span className="agent-op-log__target">{row.target}</span>
       <span className="agent-op-log__detail">{row.detail}</span>
-      {onRevert && row.op !== "reject" && (
+      {onRevert && row.op !== "reject" && !row.reverted && (
         <button
           type="button"
           className="agent-op-log__revert"
@@ -156,9 +157,20 @@ export function PlanCard({
       {run.log.length > 0 && (
         <div className="agent-plan__log">
           {run.log.slice(-8).map((r) => (
-            <OpLogRow key={r.key} row={r} />
+            <OpLogRow
+              key={r.key}
+              row={r}
+              {...(r.undoToken && !run.running
+                ? { onRevert: () => void controller.revertOp(r.key) }
+                : {})}
+            />
           ))}
         </div>
+      )}
+      {run.issue && (
+        <p className="agent-review__issue" role="alert" data-testid="agent-plan-issue">
+          {run.issue}
+        </p>
       )}
     </section>
   )
@@ -224,14 +236,20 @@ export function ReviewCard({
         <SegmentedText
           className="agent-seg-sm"
           label="Before / After"
+          // Pass 0 (the original) has nothing to compare; a running pass can't be toggled.
           options={[
-            { value: "before", label: "Before" },
-            { value: "after", label: "After" },
+            { value: "before", label: "Before", disabled: run.running || it.pass === 0 },
+            { value: "after", label: "After", disabled: run.running || it.pass === 0 },
           ]}
           value={it.view}
-          onChange={(v) => controller.setIterateView(v)}
+          onChange={(v) => void controller.setIterateView(v)}
         />
       </div>
+      {it.issue && (
+        <p className="agent-review__issue" role="alert" data-testid="agent-review-issue">
+          {it.issue}
+        </p>
+      )}
       <div className="agent-review__passes">
         {passes.map((p) => {
           const cls =
@@ -256,7 +274,13 @@ export function ReviewCard({
       {it.rows.length > 0 && (
         <div className="agent-review__changes">
           {it.rows.slice(0, 8).map((r) => (
-            <OpLogRow key={r.key} row={r} />
+            <OpLogRow
+              key={r.key}
+              row={r}
+              {...(r.undoToken && it.reviewing && !run.running
+                ? { onRevert: () => void controller.revertOp(r.key) }
+                : {})}
+            />
           ))}
         </div>
       )}
@@ -346,6 +370,28 @@ export function ModeSummaryPill({
           Stop all
         </button>
       )}
+    </div>
+  )
+}
+
+/**
+ * The canvas mount of the Mode Summary (board 22 ZFOQf › agblr › jDKaM): pinned 24 px from the
+ * canvas's left and 16 px from its bottom while a side by side / split / iterate run is live or
+ * waits for a decision (variants to keep, a pass to review). Stop all stops the run.
+ */
+export function ModeSummaryOverlay({ controller }: { controller: AgentPanelControllerExt }) {
+  const state = useAgentPanelState(controller)
+  const run = state.modeRun
+  if (!run) return null
+  const waiting =
+    run.running ||
+    !!run.iterate?.reviewing ||
+    (run.mode === "side-by-side" &&
+      run.agents.some((a) => a.state === "done" && !a.kept && !a.discarded))
+  if (!waiting) return null
+  return (
+    <div className="agent-mode-summary-host" data-testid="agent-mode-summary-host">
+      <ModeSummaryPill run={run} showCost={state.showCost} onStopAll={() => controller.stopAll()} />
     </div>
   )
 }

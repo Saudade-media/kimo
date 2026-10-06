@@ -226,6 +226,22 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Fixed
 
+- Settings: every saved setting takes effect. **On launch › Last files** reopens the file that
+  was open when you quit (desktop). **When a file changes on disk › Ask first** asks with a banner
+  (**Merge** / **Keep mine**) and writes nothing until you choose. **Canvas zoom › Mouse** zooms
+  on a plain scroll and pans on `⇧`+scroll. **Embed fonts in .kimoz packages** is honoured (off:
+  no fonts; on: only fonts whose OS/2 fsType allows embedding). The first save of an untitled
+  file starts in **New files go to**. A new **Recovery snapshots** interval applies to open
+  files. Extra font folders are listed and can be removed; **Font cache › Clear** refreshes open
+  editors. Updates shows **Download**, the download progress and **Restart to update** (which
+  saves every window first), and turning **Download updates** on downloads a waiting update. A
+  refused settings write or a failed action in any pane (MCP server start, stop, port, token,
+  log, config install, merge driver, AI provider changes) shows "Couldn't …" with the cause and
+  Retry, and the control shows the stored value; the MCP config dialog stays open while it
+  writes and offers **Try again**. **Use <port> and restart** starts HTTP on the new port and
+  clears the error, HTTP gets a token when it is turned on, **Open log** reveals the activity
+  logs, the session popover's client settings open that client, the agent's Usage card opens
+  Usage & limits, and **Default app** shows on the web only in the installed app.
 - Editing a text box keeps its width and wrapping (the editor used to reflow it to one line).
 - Desktop launch no longer waits 10 s for the document host (a ping sent before the host
   listened was lost); files opened at launch are host-backed again.
@@ -236,6 +252,57 @@ The first public release: release engineering, polish, the new mark and the form
 - The web build reports its real version in Settings › About and the release-notes link.
 - Agent cursors, tags and component labels on the canvas no longer trail the layers while
   panning or zooming (they eased between positions and re-rendered a frame late).
+- Agents: on desktop the session popover lists an MCP agent's edits and **Undo all** / **Keep**
+  work (the window only saw them as remote changes). Pause, resume, undo, redo, approval answers
+  and disconnect show "Couldn't …" with the cause when they fail, and Pause rolls back. Undone
+  activity entries have **Redo** on desktop; a stale entry's Undo is disabled; hovering an entry
+  outlines all its layers. **Agents & MCP…**, **Connect an agent…** and **Export JSON** work in
+  the editor. **Run N prompts** runs them one after another instead of failing all but the
+  first. Iterate **Before / After** shows the frame before the pass. Undo turn and Regenerate say
+  why when they can't run. The mode summary pill with **Stop all** shows on the canvas, plan-card
+  log rows can be reverted, and `⌥↵` in the skills menu toggles the top row. The Agent tab no
+  longer shows "Agent arrives in M6" while it loads.
+- Editor: the title bar shows the current page's name instead of "Page 1". **Back to files** leads
+  the File menu (and the macOS menu bar's File menu), and the folder name in the title bar opens
+  Home on that folder. Edit › Undo, Redo and Select All in the menu bar act on the document.
+  Library Changes › **Fix broken overrides** opens the fix dialog for that library's instances.
+  **Replace with selection** and Add prop › **Slot (mark a frame)** work. Right-click on a note,
+  prompt, placeholder or conflict layer row opens the layer menu. View › Preview is disabled when
+  there is nothing to preview. **Copy link to page** copies a `kimo://` link on desktop (deep
+  links take `page=`) and confirms with a toast; `⌫` on a page row deletes it. The I-key icon
+  picker's weight slider applies to the inserted icon. Shortcut hints read `Ctrl` on Windows and
+  Linux. **Show diff** is now **Reveal recovery copy** and, like **Open as text**, is hidden in
+  the browser. A failed image import, reveal, open as text or **Mark resolved & save** says
+  "Couldn't …" with the cause instead of failing silently.
+- Desktop menu bar: **File › New file** (`⌘N`), **Open…** (`⌘O`) and **New window** (`⇧⌘N`)
+  work on Home and in the editor, and `⌘N` / `⌘O` work on Home. Edit › Undo, Redo and Select all
+  act on the focused text field first (in Settings too). Back to files, Export…, Copy selection
+  as PNG and Preview are disabled while the window shows Home. A link's **Open** opens `http`,
+  `mailto` and `tel` links as well as `https`, and says why when a link can't open. **Help ›
+  Copy diagnostics** writes the system clipboard and confirms with a toast.
+- Home: every sidebar row works. **Recents**, **All files**, each local folder, **Templates**,
+  **Design systems** and **Trash** each show their own list (`#/`, `#/all`, `#/folder/<path>`,
+  `#/templates`, `#/libraries`, `#/trash`), with the active row marked, the row's name as the
+  title, real counts and a search scoped to the list; Home comes back to the same section after
+  a file. **Templates** lists the bundled examples and creates a new file from one (a template's
+  imported library is copied along). **Trash** lists files moved there with **Restore** (or
+  **Restore as copy**), **Delete forever** and **Empty trash…**; the browser keeps trashed files
+  30 days. **Design systems** lists files that are imported or publish components, instead of
+  opening the developer component gallery, which now ships in dev builds only. A file's **⋯** and
+  right-click menu has Open, Reveal, Rename (inline), Duplicate, Remove from Recents and **Move to
+  Trash** (`⌘⌫`, with Undo); folders have Reveal and **Remove from Kimo**. Missing files show as
+  Missing instead of opening a failed editor. Home shows empty states (no files, no match, empty
+  folder), lists local folders in Chromium, re-lists files when the window comes to the front,
+  and every failed action says "Couldn't …" with the cause.
+- Launch recovery: **Restore** asks where to save the copy when the original file can't take it
+  (moved, deleted, read-only) instead of leaving it unrestored, and snapshots older than 30 days
+  are pruned before the dialog lists them.
+- Desktop: the Home composer no longer fails on a fresh install. The new-files folder
+  (`~/Documents/Kimo`, or Settings › Files › New files go to) is granted at launch and when the
+  setting changes, a refused folder is reported instead of read as free, and Recovery › Restore
+  can write a file that has left Recents. **Move to Trash** moves files to the macOS Trash (the
+  freedesktop Trash on Linux, `~/.kimo/trash` on Windows) and records them in `~/.kimo/trash.json`
+  so the Trash view can restore them. Kimo never empties the Trash on its own.
 
 ### Format
 

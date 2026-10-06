@@ -19,7 +19,14 @@ import type { UiStore } from "../canvas/contract"
 import { startGesture } from "../canvas/gesture"
 import { manifestOps } from "../lib/asset-manifest"
 import type { ManifestEntry } from "../lib/assets"
-import { countFrames, docDbName, type FileMeta, getFile, patchFile } from "../lib/files"
+import {
+  countFrames,
+  docDbName,
+  type FileMeta,
+  getFile,
+  libraryStats,
+  patchFile,
+} from "../lib/files"
 import { currentHeader } from "../lib/header"
 import type { FileDocumentSession, FileSessionManager } from "../platform/session"
 import { withActivePage } from "./pages/model"
@@ -159,7 +166,11 @@ export function useFileSession(id: string): SessionState {
             if (change.origin === provider.origin) return
             if (timer) clearTimeout(timer)
             timer = setTimeout(() => {
-              void patchFile(id, { updatedAt: Date.now(), frames: countFrames(store) })
+              void patchFile(id, {
+                updatedAt: Date.now(),
+                frames: countFrames(store),
+                ...libraryStats(store),
+              })
             }, 400)
           }),
         )

@@ -301,6 +301,11 @@ export interface ControllerOptions {
   rulers?: () => boolean
   /** Board 27: arrow-key nudge step / ⇧ big step (default 1 / 10). */
   nudge?: () => { step: number; big: number }
+  /**
+   * Settings › General › Canvas zoom: "trackpad" (default) scrolls to pan and zooms on pinch or
+   * ⌘ + scroll; "mouse" zooms on a plain scroll and pans on ⇧ + scroll.
+   */
+  wheelZoom?: () => "trackpad" | "mouse"
   onHint?: (hint: CanvasHint | null) => void
   /** Pixel grid visibility/zoom changed (host shows the zoom badge). */
   onPixelGrid?: (visible: boolean) => void
@@ -2648,7 +2653,12 @@ export class CanvasController {
     e.preventDefault()
     const ui = this.ui.getState()
     const p = this.local(e)
-    if (e.ctrlKey || e.metaKey) {
+    // Pinch arrives as ctrl + wheel, so it zooms in both modes. A mouse wheel has no pan axis
+    // of its own: in "mouse" mode a plain scroll zooms and ⇧ + scroll pans (a tilt wheel's
+    // horizontal delta still pans).
+    const mouse = this.opts.wheelZoom?.() === "mouse"
+    const zoom = e.ctrlKey || e.metaKey || (mouse && !e.shiftKey && !e.deltaX && e.deltaY !== 0)
+    if (zoom) {
       ui.zoomAt(p.x, p.y, ui.viewport.zoom * wheelZoomFactor(e.deltaY, e.deltaMode))
       return
     }

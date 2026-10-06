@@ -75,6 +75,27 @@
   appearance: none;
 }
 
+/* Board 37 QsDq7: the Folder crumb (MPFjV) as a button; hover fill bg-hover, radius-sm. */
+.kimo-desktop-breadcrumb__folder--button {
+  height: auto;
+  margin: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-desktop-breadcrumb__folder--button:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-desktop-breadcrumb__folder--button:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 1px;
+}
+
 .kimo-desktop-breadcrumb__file:hover {
   background: var(--kimo-bg-hover);
 }

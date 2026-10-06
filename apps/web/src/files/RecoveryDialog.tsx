@@ -4,7 +4,7 @@
  * days" · Discard all · Decide later · Restore all. Esc / outside press = Decide later.
  */
 
-import { Dialog, DialogScrim, RecoveryItem } from "@kimo/ui"
+import { Dialog, DialogScrim, RecoveryItem, Toast } from "@kimo/ui"
 import { LifeBuoy } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import type { RecoveryCandidate, RecoveryChoice } from "../platform/contract"
@@ -85,6 +85,7 @@ export interface RecoveryDialogProps {
  */
 export function RecoveryDialog({ manager, onOpened, onClose }: RecoveryDialogProps) {
   const [candidates, setCandidates] = useState<RecoveryCandidate[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const refresh = useCallback(async () => {
     const list = await manager.recoveryCandidates()
     setCandidates(list)
@@ -95,9 +96,27 @@ export function RecoveryDialog({ manager, onOpened, onClose }: RecoveryDialogPro
   }, [refresh])
   if (!candidates || candidates.length === 0) return null
   const dir = displayPath(manager.platform.recovery.dir ?? "~/.kimo/recovery")
-  const run = (p: Promise<unknown>) => void p.then(refresh, refresh)
+  // A failing choice keeps the dialog (the entry is still there) and says why.
+  const run = (p: Promise<unknown>) =>
+    void p.then(
+      () => {
+        setError(null)
+        return refresh()
+      },
+      (e: unknown) => {
+        setError(e instanceof Error ? e.message : String(e))
+        return refresh()
+      },
+    )
   return (
     <DialogScrim>
+      {error && (
+        <div className="kimo-files-toasts kimo-files-toasts--dialog" aria-live="polite">
+          <Toast tone="danger" data-toast="recovery-error">
+            {error}
+          </Toast>
+        </div>
+      )}
       <RecoveryDialogView
         candidates={candidates}
         dir={dir}

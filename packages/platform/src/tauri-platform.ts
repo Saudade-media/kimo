@@ -53,6 +53,7 @@ const CODES: readonly PlatformErrorCode[] = [
   "UNSUPPORTED",
   "CANCELLED",
   "NOT_FOUND",
+  "EXISTS",
   "PERMISSION",
   "DISK_FULL",
   "READ_BACK_MISMATCH",
@@ -138,7 +139,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
   const openEvents = new Emitter<[OpenRequest]>()
   const helpEvents = new Emitter<[HelpMenuAction]>()
   const menuEvents = new Emitter<[EditorMenuAction]>()
-  let closeHandler: (() => Promise<boolean> | boolean) | null = null
+  let closeHandler: ((info: { quitting: boolean }) => Promise<boolean> | boolean) | null = null
   let windowState: WindowState = { focused: true, fullscreen: false, trafficLightPosition: null }
   let updaterStatus: UpdaterStatus = { state: "idle" }
 
@@ -150,11 +151,17 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     const inset = trafficLightInsetOf(s)
     if (trafficLightInsetOf(prev) !== inset) insetEvents.emit(inset)
   }
-  const onCloseRequested = async ({ requestId }: { requestId: string }) => {
+  const onCloseRequested = async ({
+    requestId,
+    quitting,
+  }: {
+    requestId: string
+    quitting?: boolean
+  }) => {
     let allow = true
     if (closeHandler) {
       try {
-        allow = await closeHandler()
+        allow = await closeHandler({ quitting: quitting === true })
       } catch {
         allow = false
       }
@@ -297,7 +304,23 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
         await call("kimo_help_show_logs", none)
       },
     },
-    menu: { onAction: (l) => menuEvents.on(l) },
+    menu: {
+      onAction: (l) => menuEvents.on(l),
+      setContext: async (context) => {
+        await call("kimo_menu_set_context", { context })
+      },
+    },
+    clipboard: {
+      async writeText(text) {
+        try {
+          await call("kimo_clipboard_write_text", { text })
+        } catch (e) {
+          // Windows / Linux: no native clipboard command; their webviews allow the page API.
+          if (!(e instanceof PlatformError) || e.code !== "BLOCKED") throw e
+          await navigator.clipboard.writeText(text)
+        }
+      },
+    },
     dock: {
       setAgentWorking: async (source, working) => {
         await call("kimo_dock_agent_activity", { source, working })
@@ -320,6 +343,12 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       writeBytesAtomic,
       remove: async (ref) => {
         await call("kimo_fs_remove", { path: ref })
+      },
+      rename: async (from, to) => {
+        await call("kimo_fs_rename", { from, to })
+      },
+      copy: async (from, to) => {
+        await call("kimo_fs_copy", { from, to })
       },
       stat: (ref) => call("kimo_fs_stat", { path: ref }),
       list: (dir, o) => call("kimo_fs_list", { dir, extensions: o?.extensions ?? null }),
@@ -378,6 +407,15 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       },
       scanFolder: (ref) => call("kimo_recents_scan_folder", { path: ref }),
       onChange: (l) => recentsEvents.on(l),
+    },
+    trash: {
+      move: (ref) => call("kimo_trash_move", { path: ref }),
+      list: () => call("kimo_trash_list", none),
+      restore: (id, to) => call("kimo_trash_restore", { id, path: to ?? null }),
+      remove: async (id) => {
+        await call("kimo_trash_remove", { id })
+      },
+      empty: () => call("kimo_trash_empty", none),
     },
     leases: {
       acquire: (ref, o) =>
@@ -500,9 +538,12 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       setDocumentEdited: async (edited) => {
         await call("kimo_window_set_document_edited", { edited })
       },
-      openSettings: async (pane) => {
-        await call("kimo_window_open_settings", { pane: pane ?? null })
+      openSettings: async (pane, focus) => {
+        await call("kimo_window_open_settings", { pane: pane ?? null, focus: focus ?? null })
         return "window"
+      },
+      openNewWindow: async () => {
+        await call("kimo_window_new", none)
       },
       onCloseRequested(handler) {
         closeHandler = handler

@@ -205,7 +205,9 @@ Events: `kimo://fs-watch`, `kimo://lease-changed`, `kimo://git-changed`,
 
 Shell configuration: macOS editor windows use `titleBarStyle: "Overlay"`, `hiddenTitle: true`
 and `trafficLightPosition {16, 18}`. Windows and Linux use `decorations: true` with no inset.
-Windows are labelled `main`, `editor-<n>` and `settings`. Plugins: dialog, deep-link (`kimo`),
+Windows are labelled `main`, `editor-<n>` and `settings`. File › New window opens an
+`editor-<n>` window on Home: from the native File menu on macOS, and from the in-app File menu
+on Windows and Linux, which have no native menu bar (board 20 r3ukd). Plugins: dialog, deep-link (`kimo`),
 single-instance, updater (signed; endpoint placeholder) and opener (reveal / open default);
 file watching uses `notify` with debounce. The capability file allows only the `kimo_*`
 commands (`TAURI_COMMANDS`) and no whole default permission sets. The fs scope is deny by

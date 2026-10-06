@@ -2,8 +2,10 @@
 
 A skill is a set of instructions added to the agent's system prompt: how to use Kimo's tools, a house style, a checklist. Type `/` in the composer to open the **Skills** menu.
 
-- `↵` inserts `/name` into your message: that skill applies to this one turn.
-- `⌥↵` turns a skill on or off for every following turn.
+- `↵` inserts the top row's `/name` into your message: that skill applies to this one turn.
+- `⌥↵` turns the top row's skill on or off for every following turn.
+
+Typing after `/` filters the menu, and both keys act on the first row it shows.
 
 ## Built-in skills
 

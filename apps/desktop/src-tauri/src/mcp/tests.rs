@@ -721,6 +721,7 @@ fn server_settings_log_and_port_check() {
         &paths,
         &super::files::ServerSettings {
             start_on_launch: false,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -764,4 +765,64 @@ fn status_carries_service_fields() {
     assert_eq!(s["error"]["code"], "EADDRINUSE 127.0.0.1:1");
     hub.set_status_field("error", Value::Null);
     assert!(hub.status().get("error").is_none());
+}
+
+/// D8: the configured port is taken, HTTP falls back to an ephemeral port and suggests it;
+/// "Use <port> and restart" with that port must clear the error (the listener is already there).
+#[tokio::test]
+async fn using_the_suggested_port_clears_the_port_in_use_error() {
+    let home = tempfile::tempdir().unwrap();
+    let paths = kimo_mcp::paths::KimoPaths::new(home.path());
+    std::fs::create_dir_all(paths.mcp_dir()).unwrap();
+    let taken = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let taken_port = taken.local_addr().unwrap().port();
+    super::files::write_http_config(
+        &paths,
+        &super::files::HttpConfig {
+            enabled: true,
+            port: taken_port,
+        },
+    )
+    .unwrap();
+    let (hub, _rx) = hub_with(cfg());
+    let svc = super::McpService::for_test(hub.clone(), paths.clone());
+    svc.set_http_enabled(true).await.unwrap();
+    let st = hub.status();
+    assert!(st["error"]["code"]
+        .as_str()
+        .unwrap()
+        .starts_with("EADDRINUSE"));
+    let suggested = st["error"]["suggestedPort"].as_u64().unwrap() as u16;
+    assert_ne!(suggested, taken_port);
+    assert_eq!(st["http"]["port"].as_u64(), Some(suggested as u64));
+    // D9: the bearer exists by the time the status says HTTP is on.
+    assert!(svc.token_of(super::HTTP_TOKEN_CLIENT).unwrap().is_some());
+    assert!(svc.port_free(suggested).await);
+
+    let out = svc.set_settings(None, None, Some(suggested)).await.unwrap();
+    assert_eq!(out["httpPort"].as_u64(), Some(suggested as u64));
+    let st = hub.status();
+    assert!(st.get("error").is_none(), "error kept: {st}");
+    assert_eq!(st["http"]["port"].as_u64(), Some(suggested as u64));
+    assert_eq!(super::files::read_http_config(&paths).port, suggested);
+    drop(taken);
+    svc.set_http_enabled(false).await.unwrap();
+}
+
+/// D14: "Ask before destructive or out-of-scope ops" persists in server.json and rides the status
+/// (the document host gates destructive approvals on it).
+#[tokio::test]
+async fn ask_before_destructive_persists_and_reaches_the_status() {
+    let home = tempfile::tempdir().unwrap();
+    let paths = kimo_mcp::paths::KimoPaths::new(home.path());
+    let (hub, _rx) = hub_with(cfg());
+    let svc = super::McpService::for_test(hub.clone(), paths.clone());
+    assert!(super::files::read_server_settings(&paths).ask_before_destructive);
+    let out = svc.set_settings(None, Some(false), None).await.unwrap();
+    assert_eq!(out["askBeforeDestructive"], false);
+    assert_eq!(out["startOnLaunch"], true);
+    assert_eq!(hub.status()["askBeforeDestructive"], false);
+    assert!(!super::files::read_server_settings(&paths).ask_before_destructive);
+    svc.set_settings(None, Some(true), None).await.unwrap();
+    assert_eq!(hub.status()["askBeforeDestructive"], true);
 }

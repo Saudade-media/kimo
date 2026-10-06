@@ -7,6 +7,7 @@ use crate::recents::Recents;
 use crate::recovery::RecoveryStore;
 use crate::scope::Scope;
 use crate::settings::SettingsStore;
+use crate::trash::Trash;
 use crate::updater::UpdaterState;
 use crate::watch::Watch;
 use std::collections::{HashMap, HashSet};
@@ -44,6 +45,10 @@ pub struct AppState {
     pub close_allowed: Mutex<HashSet<String>>,
     /// Last fullscreen state per window (Resized events carry no fullscreen flag).
     pub fullscreen: Mutex<HashMap<String, bool>>,
+    /// Board 37 §3: files Kimo moved to the OS trash (`~/.kimo/trash.json`).
+    pub trash: Trash,
+    /// What each editor window shows (`kimo_menu_set_context`); the menu bar follows focus.
+    pub menu_context: Mutex<HashMap<String, crate::menu::MenuContext>>,
 }
 
 impl AppState {
@@ -75,6 +80,8 @@ impl AppState {
             close_requests: Mutex::new(HashMap::new()),
             close_allowed: Mutex::new(HashSet::new()),
             fullscreen: Mutex::new(HashMap::new()),
+            trash: Trash::new(&kimo_home),
+            menu_context: Mutex::new(HashMap::new()),
             host,
             kimo_home,
         };
@@ -83,6 +90,11 @@ impl AppState {
         state.scope.allow_dir(&state.kimo_home);
         state.scope.allow_dir(config_dir);
         state.scope.allow_dir(data_dir);
+        // Kimo creates files in the new-files folder (Home composer, Templates, first save of
+        // an untitled file), so it is granted like Kimo's own dirs (audit A4).
+        if let Some(dir) = new_files_dir(&state.settings, home_dir().as_deref()) {
+            state.scope.allow_dir(&dir);
+        }
         let recents = state.recents.load();
         for f in &recents.folders {
             state.scope.allow_dir(Path::new(f));
@@ -143,6 +155,56 @@ impl AppState {
     }
 }
 
+/// The user's home folder (`HOME`, `USERPROFILE` on Windows).
+pub fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .filter(|h| !h.is_empty())
+        .map(PathBuf::from)
+}
+
+/// Settings › Files › "New files go to" (`files.newFilesDir`), else `~/Documents/Kimo` (the
+/// default `defaultNewFilesDir` in apps/web/src/home/submit.ts uses).
+pub fn new_files_dir(settings: &SettingsStore, home: Option<&Path>) -> Option<PathBuf> {
+    if let Some(set) = settings.get("files.newFilesDir").as_str() {
+        if let Ok(p) = crate::util::clean_abs(set) {
+            return Some(p);
+        }
+    }
+    home.map(|h| h.join("Documents").join("Kimo"))
+}
+
 pub fn state<Rt: Runtime>(app: &AppHandle<Rt>) -> std::sync::Arc<AppState> {
     app.state::<std::sync::Arc<AppState>>().inner().clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn new_files_dir_is_granted_at_startup() {
+        let d = tempfile::tempdir().unwrap();
+        let settings = SettingsStore::new(d.path().join("settings.json"));
+        let home = d.path().join("me");
+        assert_eq!(
+            new_files_dir(&settings, Some(&home)),
+            Some(home.join("Documents/Kimo"))
+        );
+        settings
+            .set(
+                "files.newFilesDir",
+                serde_json::json!("/Volumes/Work/designs"),
+            )
+            .unwrap();
+        assert_eq!(
+            new_files_dir(&settings, Some(&home)),
+            Some(PathBuf::from("/Volumes/Work/designs"))
+        );
+        assert_eq!(
+            new_files_dir(&SettingsStore::new(d.path().join("none.json")), None),
+            None
+        );
+    }
 }

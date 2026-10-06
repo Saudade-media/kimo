@@ -5,6 +5,7 @@
 
 pub mod ai;
 mod ai_commands;
+mod clipboard;
 pub mod command_list;
 pub mod command_list_ai;
 pub mod command_list_mcp;
@@ -28,6 +29,7 @@ pub mod scope;
 pub mod settings;
 pub mod skills;
 mod state;
+pub mod trash;
 pub mod updater;
 pub mod util;
 mod watch;
@@ -143,6 +145,7 @@ pub fn run() {
                                 source: "deep-link",
                                 refs: vec![l.path],
                                 node: l.node,
+                                page: l.page,
                             },
                         );
                     }
@@ -162,6 +165,8 @@ pub fn run() {
             commands::kimo_fs_write_text_atomic,
             commands::kimo_fs_write_bytes_atomic,
             commands::kimo_fs_remove,
+            commands::kimo_fs_rename,
+            commands::kimo_fs_copy,
             commands::kimo_fs_stat,
             commands::kimo_fs_list,
             commands::kimo_fs_watch,
@@ -180,6 +185,11 @@ pub fn run() {
             commands::kimo_recents_add_folder,
             commands::kimo_recents_remove_folder,
             commands::kimo_recents_scan_folder,
+            commands::kimo_trash_move,
+            commands::kimo_trash_list,
+            commands::kimo_trash_restore,
+            commands::kimo_trash_remove,
+            commands::kimo_trash_empty,
             commands::kimo_lease_acquire,
             commands::kimo_lease_release,
             commands::kimo_lease_inspect,
@@ -211,6 +221,8 @@ pub fn run() {
             commands::kimo_fonts_fetch_remote,
             commands::kimo_fonts_open_cache_folder,
             commands::kimo_help_show_logs,
+            commands::kimo_menu_set_context,
+            commands::kimo_clipboard_write_text,
             commands::kimo_updater_status,
             commands::kimo_updater_check,
             commands::kimo_updater_download,
@@ -222,6 +234,7 @@ pub fn run() {
             commands::kimo_window_open_settings,
             commands::kimo_window_confirm_close,
             commands::kimo_window_close,
+            commands::kimo_window_new,
             commands::kimo_settings_get_all,
             commands::kimo_settings_set,
             commands::kimo_launch_take_initial,
@@ -295,6 +308,7 @@ pub fn run() {
                         source: "file-association",
                         refs,
                         node: None,
+                        page: None,
                     },
                 );
             }
@@ -367,7 +381,7 @@ mod tests {
     #[test]
     fn command_surface_matches_tauri_ts() {
         let ts = ts_commands();
-        assert_eq!(ts.len(), 70);
+        assert_eq!(ts.len(), 80);
         let rust: Vec<String> = super::command_list::COMMANDS
             .iter()
             .map(|s| s.to_string())

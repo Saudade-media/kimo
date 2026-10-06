@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Folder, FolderGit2, GitBranch } from "lucide-react"
-import type { ComponentPropsWithRef, MouseEvent, ReactNode } from "react"
+import type { ComponentPropsWithRef, MouseEvent, ReactElement, ReactNode } from "react"
 import { cx } from "../internal/util"
+import { Tooltip } from "../tooltip/Tooltip"
 
 /** Props for {@link TrafficLights}. */
 export interface TrafficLightsProps extends Omit<ComponentPropsWithRef<"div">, "children"> {
@@ -77,6 +78,13 @@ export interface DesktopBreadcrumbProps extends Omit<ComponentPropsWithRef<"nav"
    * chevron flips to `chevron-up`.
    */
   fileOpen?: boolean
+  /**
+   * Board 37 (E3, QsDq7): the Folder crumb (MPFjV) is a button that opens Home on that folder.
+   * Hover: fill bg-hover, radius-sm. Absent: a plain label.
+   */
+  onFolderClick?: (e: MouseEvent<HTMLButtonElement>) => void
+  /** The folder button's tooltip (BFa42 "Show loom in Home"). */
+  folderTooltip?: string
 }
 
 /**
@@ -94,6 +102,8 @@ export function DesktopBreadcrumb({
   focused = true,
   onFileClick,
   fileOpen = false,
+  onFolderClick,
+  folderTooltip,
   className,
   ...rest
 }: DesktopBreadcrumbProps) {
@@ -111,10 +121,24 @@ export function DesktopBreadcrumb({
     >
       {folder !== null && (
         <>
-          <span className="kimo-desktop-breadcrumb__folder">
-            <FolderIcon className="kimo-desktop-breadcrumb__folder-icon" aria-hidden="true" />
-            <span className="kimo-desktop-breadcrumb__folder-name">{folder}</span>
-          </span>
+          {onFolderClick ? (
+            <FolderButton tooltip={folderTooltip}>
+              <button
+                type="button"
+                className="kimo-desktop-breadcrumb__folder kimo-desktop-breadcrumb__folder--button"
+                aria-label={folderTooltip ?? folder}
+                onClick={onFolderClick}
+              >
+                <FolderIcon className="kimo-desktop-breadcrumb__folder-icon" aria-hidden="true" />
+                <span className="kimo-desktop-breadcrumb__folder-name">{folder}</span>
+              </button>
+            </FolderButton>
+          ) : (
+            <span className="kimo-desktop-breadcrumb__folder">
+              <FolderIcon className="kimo-desktop-breadcrumb__folder-icon" aria-hidden="true" />
+              <span className="kimo-desktop-breadcrumb__folder-name">{folder}</span>
+            </span>
+          )}
           <span className="kimo-desktop-breadcrumb__sep" aria-hidden="true">
             /
           </span>
@@ -143,6 +167,17 @@ export function DesktopBreadcrumb({
       )}
     </nav>
   )
+}
+
+/** The folder button, under its tooltip when one is given. */
+function FolderButton({
+  tooltip,
+  children,
+}: {
+  tooltip?: string | undefined
+  children: ReactElement<{ "aria-describedby"?: string; [prop: string]: unknown }>
+}) {
+  return tooltip ? <Tooltip label={tooltip}>{children}</Tooltip> : children
 }
 
 /** Props for {@link BranchChip}. */

@@ -16,6 +16,16 @@
 //! are sent to the focused editor window as `kimo://editor-menu` (`platform.menu.onAction`).
 //! No accelerators: a native accelerator would take ⇧⌘E / ⇧⌘C / ⇧Space before the webview (text
 //! fields included); the editor's own shortcut handler binds those keys.
+//!
+//! Board 37 (audit A6, E3, E5, G2, G4, B9): File starts with Back to files (the editor's way
+//! Home) and has New file ⌘N, Open… ⌘O and New window ⇧⌘N; Edit › Undo / Redo / Select all are
+//! Kimo items (Tauri's predefined ones send AppKit selectors the canvas never sees). They go to
+//! the focused editor window as `kimo://editor-menu` too; the page runs them on the document, or
+//! with `execCommand` when a text field has focus. In a window that is not an editor (Settings)
+//! the Edit items run `execCommand` there. Cut / Copy / Paste stay predefined: they fire the DOM
+//! clipboard events the editor already handles. Each editor window reports whether it shows Home
+//! or a document (`kimo_menu_set_context`); the document items (Back to files, Export…, Copy
+//! selection as PNG, Preview) are disabled while the focused window shows Home or Settings.
 
 use tauri::{AppHandle, Runtime};
 
@@ -32,15 +42,146 @@ pub const HELP_LOGS: &str = "kimo-help-show-logs";
 pub const FILE_EXPORT: &str = "kimo-file-export";
 pub const FILE_COPY_PNG: &str = "kimo-file-copy-png";
 pub const VIEW_PREVIEW: &str = "kimo-view-preview";
+pub const FILE_HOME: &str = "kimo-file-home";
+pub const FILE_NEW: &str = "kimo-file-new";
+pub const FILE_OPEN: &str = "kimo-file-open";
+pub const FILE_NEW_WINDOW: &str = "kimo-file-new-window";
+pub const EDIT_UNDO: &str = "kimo-edit-undo";
+pub const EDIT_REDO: &str = "kimo-edit-redo";
+pub const EDIT_SELECT_ALL: &str = "kimo-edit-select-all";
 
-/// The `kimo://editor-menu` event's `action` for each File / View item (`None` = not one).
+/// The `kimo://editor-menu` event's `action` for each File / Edit / View item (`None` = not
+/// one). New window runs in Rust.
 pub fn editor_action_for(id: &str) -> Option<&'static str> {
     match id {
         FILE_EXPORT => Some("export"),
         FILE_COPY_PNG => Some("copy-png"),
         VIEW_PREVIEW => Some("preview"),
+        FILE_HOME => Some("go-home"),
+        FILE_NEW => Some("new-file"),
+        FILE_OPEN => Some("open-file"),
+        EDIT_UNDO => Some("undo"),
+        EDIT_REDO => Some("redo"),
+        EDIT_SELECT_ALL => Some("select-all"),
         _ => None,
     }
+}
+
+/// The `document.execCommand` an Edit item runs in a window that is not an editor (Settings).
+pub fn text_command_for(action: &str) -> Option<&'static str> {
+    match action {
+        "undo" => Some("undo"),
+        "redo" => Some("redo"),
+        "select-all" => Some("selectAll"),
+        _ => None,
+    }
+}
+
+/// What the focused window shows (`kimo_menu_set_context`; a non-editor window is `Other`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuContext {
+    Home,
+    Editor,
+    Other,
+}
+
+impl MenuContext {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "home" => Some(Self::Home),
+            "editor" => Some(Self::Editor),
+            _ => None,
+        }
+    }
+}
+
+/// The items that act on an open document.
+pub const DOCUMENT_ITEMS: &[&str] = &[FILE_HOME, FILE_EXPORT, FILE_COPY_PNG, VIEW_PREVIEW];
+
+/// Whether `id` is enabled while the focused window shows `ctx`.
+pub fn enabled_in(ctx: MenuContext, id: &str) -> bool {
+    ctx == MenuContext::Editor || !DOCUMENT_ITEMS.contains(&id)
+}
+
+/// The context of window `label`: what its page last reported (an editor window that has not
+/// reported yet shows Home, the launch route), `Other` for Settings.
+pub fn context_of<Rt: Runtime>(app: &AppHandle<Rt>, label: &str) -> MenuContext {
+    if !crate::window::is_editor_label(label) {
+        return MenuContext::Other;
+    }
+    crate::state::state(app)
+        .menu_context
+        .lock()
+        .unwrap()
+        .get(label)
+        .copied()
+        .unwrap_or(MenuContext::Home)
+}
+
+/// Enables / disables the document items for the focused window's context (macOS menu bar).
+pub fn apply_context<Rt: Runtime>(app: &AppHandle<Rt>, ctx: MenuContext) {
+    #[cfg(target_os = "macos")]
+    {
+        let Some(menu) = app.menu() else { return };
+        let Ok(items) = menu.items() else { return };
+        for top in items {
+            let Some(sub) = top.as_submenu() else {
+                continue;
+            };
+            for id in DOCUMENT_ITEMS {
+                if let Some(item) = sub.get(*id) {
+                    if let Some(i) = item.as_menuitem() {
+                        let _ = i.set_enabled(enabled_in(ctx, id));
+                    }
+                }
+            }
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, ctx);
+}
+
+/// A window gained focus: the menu follows its context.
+pub fn on_focus<Rt: Runtime>(app: &AppHandle<Rt>, label: &str) {
+    if label == crate::mcp::HOST_LABEL {
+        return;
+    }
+    apply_context(app, context_of(app, label));
+}
+
+/// `kimo_menu_set_context`: window `label` now shows `ctx`.
+pub fn set_context<Rt: Runtime>(app: &AppHandle<Rt>, label: &str, ctx: MenuContext, focused: bool) {
+    crate::state::state(app)
+        .menu_context
+        .lock()
+        .unwrap()
+        .insert(label.to_string(), ctx);
+    if focused {
+        apply_context(app, ctx);
+    }
+}
+
+/// `editor-<n>` for the smallest free n ≥ 2 (`main` is the first editor window).
+pub fn next_editor_label(taken: &[String]) -> String {
+    (2..)
+        .map(|n| format!("editor-{n}"))
+        .find(|l| !taken.contains(l))
+        .unwrap_or_else(|| "editor-x".into())
+}
+
+/// File › New window (G4): another editor window on Home.
+pub fn open_new_window<Rt: Runtime>(app: &AppHandle<Rt>) -> crate::error::R<()> {
+    use tauri::Manager;
+    let taken: Vec<String> = app.webview_windows().into_keys().collect();
+    // No editor window left (macOS keeps running): reopen `main`.
+    let label = if taken.iter().any(|l| crate::window::is_editor_label(l)) {
+        next_editor_label(&taken)
+    } else {
+        "main".to_string()
+    };
+    let w = crate::window::create_editor_window(app, &label)?;
+    let _ = w.set_focus();
+    Ok(())
 }
 
 /// The `kimo://help-menu` event's `action` for each Help item the web handles (`None` = not
@@ -95,12 +236,26 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
         "File",
         true,
         &[
-            &MenuItem::with_id(app, FILE_EXPORT, "Export…", true, None::<&str>)?,
+            // Board 37 Xq4V0: Back to files leads, then a divider. Disabled until an editor
+            // window reports a document (`apply_context`).
+            &MenuItem::with_id(app, FILE_HOME, "Back to files", false, None::<&str>)?,
+            &sep()?,
+            &MenuItem::with_id(app, FILE_NEW, "New file", true, Some("CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, FILE_OPEN, "Open…", true, Some("CmdOrCtrl+O"))?,
+            &MenuItem::with_id(
+                app,
+                FILE_NEW_WINDOW,
+                "New window",
+                true,
+                Some("CmdOrCtrl+Shift+N"),
+            )?,
+            &sep()?,
+            &MenuItem::with_id(app, FILE_EXPORT, "Export…", false, None::<&str>)?,
             &MenuItem::with_id(
                 app,
                 FILE_COPY_PNG,
                 "Copy selection as PNG",
-                true,
+                false,
                 None::<&str>,
             )?,
             &sep()?,
@@ -112,13 +267,19 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
         "Edit",
         true,
         &[
-            &PredefinedMenuItem::undo(app, None)?,
-            &PredefinedMenuItem::redo(app, None)?,
+            &MenuItem::with_id(app, EDIT_UNDO, "Undo", true, Some("CmdOrCtrl+Z"))?,
+            &MenuItem::with_id(app, EDIT_REDO, "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
             &sep()?,
             &PredefinedMenuItem::cut(app, None)?,
             &PredefinedMenuItem::copy(app, None)?,
             &PredefinedMenuItem::paste(app, None)?,
-            &PredefinedMenuItem::select_all(app, None)?,
+            &MenuItem::with_id(
+                app,
+                EDIT_SELECT_ALL,
+                "Select all",
+                true,
+                Some("CmdOrCtrl+A"),
+            )?,
         ],
     )?;
     let view = Submenu::with_items(
@@ -126,7 +287,7 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
         "View",
         true,
         &[
-            &MenuItem::with_id(app, VIEW_PREVIEW, "Preview", true, None::<&str>)?,
+            &MenuItem::with_id(app, VIEW_PREVIEW, "Preview", false, None::<&str>)?,
             &sep()?,
             &PredefinedMenuItem::fullscreen(app, None)?,
         ],
@@ -194,14 +355,29 @@ pub fn on_menu_event<Rt: Runtime>(app: &AppHandle<Rt>, id: &str) {
         emit_help(app, action);
         return;
     }
+    if id == FILE_NEW_WINDOW {
+        if let Err(e) = open_new_window(app) {
+            eprintln!("kimo: {}", e.message);
+        }
+        return;
+    }
     if let Some(action) = editor_action_for(id) {
+        // Edit items in Settings (no editor page there) run on its focused text field.
+        if let Some(cmd) = text_command_for(action) {
+            if let Some(w) =
+                focused_window(app).filter(|w| !crate::window::is_editor_label(w.label()))
+            {
+                let _ = w.eval(format!("document.execCommand('{cmd}')"));
+                return;
+            }
+        }
         emit_to_editor(app, "kimo://editor-menu", action);
         return;
     }
     let Some(pane) = settings_pane_for(id) else {
         return;
     };
-    let _ = crate::window::open_settings(app, Some(pane));
+    let _ = crate::window::open_settings(app, Some(pane), None);
     if id == CHECK_UPDATES {
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
@@ -221,6 +397,14 @@ pub fn on_menu_event<Rt: Runtime>(app: &AppHandle<Rt>, id: &str) {
 /// and the document host have no shortcuts sheet / issue confirm.
 fn emit_help<Rt: Runtime>(app: &AppHandle<Rt>, action: &str) {
     emit_to_editor(app, "kimo://help-menu", action);
+}
+
+/// The focused window (editor or Settings), if Kimo has one.
+fn focused_window<Rt: Runtime>(app: &AppHandle<Rt>) -> Option<tauri::WebviewWindow<Rt>> {
+    use tauri::Manager;
+    app.webview_windows()
+        .into_values()
+        .find(|w| w.label() != crate::mcp::HOST_LABEL && w.is_focused().unwrap_or(false))
 }
 
 /// Sends `{ action }` as `event` to the focused editor window (else the primary one).
@@ -272,6 +456,91 @@ mod tests {
         assert_eq!(editor_action_for(HELP_DOCS), None);
         assert_eq!(help_action_for(FILE_EXPORT), None);
         assert_eq!(settings_pane_for(VIEW_PREVIEW), None);
+    }
+
+    #[test]
+    fn file_and_edit_items_map_to_page_actions() {
+        assert_eq!(editor_action_for(FILE_HOME), Some("go-home"));
+        assert_eq!(editor_action_for(FILE_NEW), Some("new-file"));
+        assert_eq!(editor_action_for(FILE_OPEN), Some("open-file"));
+        assert_eq!(editor_action_for(EDIT_UNDO), Some("undo"));
+        assert_eq!(editor_action_for(EDIT_REDO), Some("redo"));
+        assert_eq!(editor_action_for(EDIT_SELECT_ALL), Some("select-all"));
+        // New window runs in Rust.
+        assert_eq!(editor_action_for(FILE_NEW_WINDOW), None);
+        assert_eq!(text_command_for("select-all"), Some("selectAll"));
+        assert_eq!(text_command_for("undo"), Some("undo"));
+        assert_eq!(text_command_for("export"), None);
+    }
+
+    /// Every action Rust emits is a member of `EditorMenuAction` in platform types.ts.
+    #[test]
+    fn editor_actions_match_platform_ts() {
+        let ts = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../packages/platform/src/types.ts"
+        ))
+        .unwrap();
+        let union = ts
+            .split("export type EditorMenuAction =")
+            .nth(1)
+            .unwrap()
+            .split("\n\n")
+            .next()
+            .unwrap();
+        let ts_actions: Vec<&str> = union.split('"').skip(1).step_by(2).collect();
+        let ids = [
+            FILE_EXPORT,
+            FILE_COPY_PNG,
+            VIEW_PREVIEW,
+            FILE_HOME,
+            FILE_NEW,
+            FILE_OPEN,
+            EDIT_UNDO,
+            EDIT_REDO,
+            EDIT_SELECT_ALL,
+        ];
+        let rust: Vec<&str> = ids.iter().filter_map(|i| editor_action_for(i)).collect();
+        assert_eq!(rust.len(), ids.len());
+        let mut a = rust.clone();
+        let mut b = ts_actions.clone();
+        a.sort_unstable();
+        b.sort_unstable();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn document_items_follow_the_context() {
+        for id in DOCUMENT_ITEMS {
+            assert!(enabled_in(MenuContext::Editor, id));
+            assert!(!enabled_in(MenuContext::Home, id));
+            assert!(!enabled_in(MenuContext::Other, id));
+        }
+        for id in [
+            FILE_NEW,
+            FILE_OPEN,
+            FILE_NEW_WINDOW,
+            EDIT_UNDO,
+            EDIT_SELECT_ALL,
+        ] {
+            assert!(enabled_in(MenuContext::Home, id));
+            assert!(enabled_in(MenuContext::Other, id));
+        }
+        assert_eq!(MenuContext::parse("home"), Some(MenuContext::Home));
+        assert_eq!(MenuContext::parse("editor"), Some(MenuContext::Editor));
+        assert_eq!(MenuContext::parse("settings"), None);
+    }
+
+    #[test]
+    fn new_windows_get_the_next_free_label() {
+        let s = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        assert_eq!(next_editor_label(&s(&["main"])), "editor-2");
+        assert_eq!(
+            next_editor_label(&s(&["main", "editor-2", "settings"])),
+            "editor-3"
+        );
+        assert_eq!(next_editor_label(&s(&["main", "editor-3"])), "editor-2");
+        assert!(crate::window::is_editor_label(&next_editor_label(&[])));
     }
 
     #[test]

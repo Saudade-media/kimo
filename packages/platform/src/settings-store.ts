@@ -50,12 +50,20 @@ export function createSettingsStore(backend: SettingsBackend): SettingsApi & { d
       early.clear()
     })
   const write = async (key: SettingKey, value: unknown) => {
+    const previous = values[key]
     apply(key, value)
     if (!loaded) {
       early.add(key)
       await ready
     }
-    await backend.persist(key, value, values)
+    try {
+      await backend.persist(key, value, values)
+    } catch (e) {
+      // The write was refused (read-only settings.json, IO): every control re-reads the stored
+      // value instead of showing one that was never saved. A newer write of the same key wins.
+      if (values[key] === value) apply(key, previous)
+      throw e
+    }
   }
   const off = backend.subscribe?.((key, value) => {
     if (!isSettingKey(key) || !isValidSetting(key, value)) return

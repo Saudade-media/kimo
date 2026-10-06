@@ -14,7 +14,7 @@ import {
 import type { KimoDocument } from "@kimo/core-schema"
 import { createEmptyDocument, serialize } from "@kimo/editor-state"
 import type { FileRef, KimoPlatform } from "@kimo/platform"
-import { homeOf } from "../settings/model"
+import { defaultNewFilesDir, homeOf } from "../settings/model"
 import type { HomeHandoffRecord } from "./handoff"
 
 /** Chip presets (board 06 Chips y5Si79) → prompt prefill and the first frame's size. */
@@ -62,13 +62,7 @@ export function homeDocument(opts: {
 }
 
 /** `files.newFilesDir`, else `~/Documents/Kimo` (board 19 "New files go to"). */
-export function defaultNewFilesDir(platform: KimoPlatform): string {
-  const set = platform.settings.get("files.newFilesDir")
-  if (set) return set
-  const home = homeOf(platform.recovery.dir)
-  const sep = home?.includes("\\") ? "\\" : "/"
-  return home ? `${home}${sep}Documents${sep}Kimo` : "/Kimo"
-}
+export { defaultNewFilesDir }
 
 const join = (dir: string, name: string) =>
   `${dir.replace(/[\\/]+$/, "")}${dir.includes("\\") && !dir.includes("/") ? "\\" : "/"}${name}`
@@ -92,14 +86,15 @@ export async function createDiskFile(
   build: (name: string) => KimoDocument,
   dir = defaultNewFilesDir(platform),
 ): Promise<{ ref: FileRef; name: string }> {
+  // `stat` resolves null for a free name; any rejection (PERMISSION outside the granted folders,
+  // IO) is the real failure and propagates (audit A4), never read as "free".
   const name = await uniqueName(
     title,
-    async (n) => (await platform.files.stat(join(dir, `${n}.kimo`)).catch(() => null)) !== null,
+    async (n) => (await platform.files.stat(join(dir, `${n}.kimo`))) !== null,
   )
   const ref = join(dir, `${name}.kimo`)
   // Last check right before the write: a file that appeared meanwhile is never overwritten.
-  if (await platform.files.stat(ref).catch(() => null))
-    return createDiskFile(platform, `${name} 2`, build, dir)
+  if (await platform.files.stat(ref)) return createDiskFile(platform, `${name} 2`, build, dir)
   await platform.files.writeTextAtomic(ref, serialize(build(name)), { mkdirs: true })
   return { ref, name }
 }

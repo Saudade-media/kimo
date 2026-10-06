@@ -44,6 +44,9 @@ pub fn permission(message: impl Into<String>) -> PlatformErrorPayload {
 pub fn not_found(message: impl Into<String>) -> PlatformErrorPayload {
     PlatformErrorPayload::new("NOT_FOUND", message).with_errno(Some("ENOENT".into()))
 }
+pub fn exists(message: impl Into<String>) -> PlatformErrorPayload {
+    PlatformErrorPayload::new("EXISTS", message).with_errno(Some("EEXIST".into()))
+}
 pub fn blocked(message: impl Into<String>) -> PlatformErrorPayload {
     PlatformErrorPayload::new("BLOCKED", message)
 }
@@ -103,6 +106,7 @@ pub fn code_for_errno(errno: Option<&str>) -> &'static str {
         Some("ENOENT") => "NOT_FOUND",
         Some("EACCES") | Some("EPERM") | Some("EROFS") => "PERMISSION",
         Some("ENOSPC") | Some("EDQUOT") => "DISK_FULL",
+        Some("EEXIST") => "EXISTS",
         _ => "IO",
     }
 }
@@ -133,6 +137,14 @@ mod tests {
         let e = io_err(io::Error::from(io::ErrorKind::NotFound), "/x");
         assert_eq!(e.code, "NOT_FOUND");
         assert_eq!(e.errno.as_deref(), Some("ENOENT"));
+    }
+
+    #[test]
+    fn maps_already_exists() {
+        let e = io_err(io::Error::from(io::ErrorKind::AlreadyExists), "/x");
+        assert_eq!(e.code, "EXISTS");
+        assert_eq!(e.errno.as_deref(), Some("EEXIST"));
+        assert_eq!(exists("taken").code, "EXISTS");
     }
 
     #[cfg(unix)]

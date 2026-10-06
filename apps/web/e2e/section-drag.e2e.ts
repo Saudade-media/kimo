@@ -35,7 +35,7 @@ const [NAV, HERO, FEATURES, FOOTER] = ["lp0001", "lp0012", "lp0049", "lp0067"]
 async function open(page: Page, url: string, doc: unknown, root: string, zoomMax = 1) {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto(url)
-  await page.getByRole("button", { name: "New file" }).click()
+  await page.getByRole("button", { name: "New file" }).first().click()
   await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
   await page.locator('.canvas-host[data-ready="true"]').waitFor({ timeout: 30_000 })
   await settle(page)

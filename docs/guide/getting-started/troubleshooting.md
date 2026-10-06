@@ -6,7 +6,7 @@
 
 **"Couldn't save: permission denied."** The folder isn't writable. Use **Save as…** to save somewhere else.
 
-**"Saved, but the read-back didn't match."** Something changed the file right after Kimo wrote it, often an antivirus or a sync client. **Show diff** compares the two; **Save as…** keeps a safe copy.
+**"Saved, but the read-back didn't match."** Something changed the file right after Kimo wrote it, often an antivirus or a sync client. **Reveal recovery copy** shows Kimo's version of the file in Finder (or Explorer) so you can compare the two; **Save as…** keeps a safe copy. The browser version has no reveal.
 
 **Disk full or an I/O error.** Your edits are kept in a recovery file and Kimo retries every 30 seconds.
 

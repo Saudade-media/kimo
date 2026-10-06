@@ -241,6 +241,8 @@ export async function createDesktopMcpHost(
       settings: () => invoke<McpServerSettings>("kimo_mcp_server_settings_get"),
       setStartOnLaunch: (startOnLaunch) =>
         invoke<McpServerSettings>("kimo_mcp_server_settings_set", { startOnLaunch }),
+      setAskBeforeDestructive: (askBeforeDestructive) =>
+        invoke<McpServerSettings>("kimo_mcp_server_settings_set", { askBeforeDestructive }),
       setPort: (httpPort) =>
         invoke<McpServerSettings>("kimo_mcp_server_settings_set", { httpPort }),
       isPortFree: (port) => invoke<boolean>("kimo_mcp_port_check", { port }),
@@ -274,6 +276,10 @@ export async function createDesktopMcpHost(
       async undo(path, origin, undoToken) {
         if (!client) return { ok: false, stale: false }
         return client.agentUndo(path, origin, undoToken)
+      },
+      async redo(path, origin, undoToken) {
+        if (!client) return { ok: false, stale: false }
+        return client.agentRedo(path, origin, undoToken)
       },
     },
     installer: {

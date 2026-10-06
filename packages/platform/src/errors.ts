@@ -10,6 +10,8 @@ export type PlatformErrorCode =
   /** The user dismissed a dialog or permission prompt. */
   | "CANCELLED"
   | "NOT_FOUND"
+  /** EEXIST: the target of a rename, copy or restore is taken. */
+  | "EXISTS"
   /** EACCES / EPERM / EROFS, or a denied browser permission. */
   | "PERMISSION"
   /** ENOSPC / EDQUOT. */
@@ -54,6 +56,8 @@ export function codeForErrno(errno: string | undefined): PlatformErrorCode {
   switch (errno) {
     case "ENOENT":
       return "NOT_FOUND"
+    case "EEXIST":
+      return "EXISTS"
     case "EACCES":
     case "EPERM":
     case "EROFS":

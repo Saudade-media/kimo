@@ -6,7 +6,7 @@
  * can target them).
  */
 import type { DocStore } from "@kimo/editor-state"
-import type { FileRef } from "@kimo/platform"
+import type { FileRef, McpHistoryResult } from "@kimo/platform"
 import { type HostSyncMessage, type HostSyncTransport, WindowSyncProvider } from "@kimo/sync"
 import type { OpenOptions, SessionState } from "../platform/contract"
 import { FileDocumentSession, type FileSessionManager } from "../platform/session"
@@ -220,12 +220,13 @@ export class HostClient {
   }
 
   /** Undo an agent's op group (AgentsController.undoEntry). */
-  agentUndo(
-    ref: string,
-    origin: string,
-    undoToken?: string,
-  ): Promise<{ ok: boolean; stale: boolean }> {
+  agentUndo(ref: string, origin: string, undoToken?: string): Promise<McpHistoryResult> {
     return this.call("agentUndo", { ref, origin, ...(undoToken ? { undoToken } : {}) })
+  }
+
+  /** Redo an agent's undone op group (AgentsController.redoEntry); `undoToken`: that group. */
+  agentRedo(ref: string, origin: string, undoToken?: string): Promise<McpHistoryResult> {
+    return this.call("agentRedo", { ref, origin, ...(undoToken ? { undoToken } : {}) })
   }
 
   dispose(): void {

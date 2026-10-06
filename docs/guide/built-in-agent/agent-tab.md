@@ -45,7 +45,7 @@ With **Reduce motion** on (System Settings › Accessibility › Display) nothin
 
 ## Replies
 
-Under each reply, **N steps** opens the list of tool steps the agent took. It is always folded by default; if a step failed, the toggle shows how many in red. Hover a reply to see its tokens, cost and time (`4.5k new tokens · $0.034 · 11.2s`), **Copy** and **Regenerate**. Tokens count only what the turn really spent: input not served from the prompt cache plus output. Cached re-reads of the conversation are left out; the tooltip shows the split. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed.
+Under each reply, **N steps** opens the list of tool steps the agent took. It is always folded by default; if a step failed, the toggle shows how many in red. Hover a reply to see its tokens, cost and time (`4.5k new tokens · $0.034 · 11.2s`), **Copy** and **Regenerate**. Tokens count only what the turn really spent: input not served from the prompt cache plus output. Cached re-reads of the conversation are left out; the tooltip shows the split. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed. Regenerate can't start while another turn is running. If a later edit sits on top of the turn's changes, they leave the layers as they are, and the reply says why.
 
 ## Edit size
 
@@ -64,9 +64,9 @@ The mode menu in the composer picks how many agents work and how:
 | **Single** | One agent, scoped to the selection (or the page when nothing is selected). |
 | **Side by side** | Select a frame. Kimo places 1 to 6 empty copies of its size (`<name> · v1`, `v2` …) to its right, and one agent drafts a variant in each, in parallel. Choose one model for all or one per agent, and whether they explore **Layout**, **Style** or **Both**. Each finished variant has **Keep** and **Discard** (which undoes it and deletes the frame). |
 | **Split** | The lead agent divides the work into placeholder frames, then one agent builds each frame in parallel. Only the lead may change variables and components. |
-| **Iterate** | Select a frame. The agent refines it in place one pass per turn (3 passes by default), and shows a review card after each: run the next pass with an optional steer, stop, compare **Before / After**, or go back to the original or an earlier pass. |
+| **Iterate** | Select a frame. The agent refines it in place one pass per turn (3 passes by default), and shows a review card after each: run the next pass with an optional steer, stop, compare **Before / After** (Before undoes the pass on the canvas, After puts it back), or go back to the original or an earlier pass. |
 
-Agents that work on one frame (side by side, split) can only edit inside their own frame and never ask for more; **Stop all** stops them. Side by side and split need an API model, because Kimo runs their agents itself; Single and Iterate also work with a CLI.
+Agents that work on one frame (side by side, split) can only edit inside their own frame and never ask for more. While they run, a summary pill at the bottom left of the canvas shows the mode, how many agents are done and the cost; its **Stop all** (and the one on the plan card) stops them. Each edit in the plan card's log has a **Revert** icon that undoes that edit alone. Side by side and split need an API model, because Kimo runs their agents itself; Single and Iterate also work with a CLI.
 
 ## Scope
 

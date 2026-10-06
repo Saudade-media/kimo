@@ -20,6 +20,7 @@ import {
 } from "@kimo/ui"
 import { Fragment, useEffect, useMemo, useState } from "react"
 import { Icon } from "../../lib/icons"
+import { keyHint } from "../kbd"
 import type { FileSession } from "../session"
 import { createComponent, unlinkLibrary } from "./actions"
 import { type M3Controller, useComponentRev, useLibraries } from "./controller"
@@ -156,7 +157,7 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
           <EmptyState
             icon={<Icon name="component" size={18} />}
             title="No components yet"
-            description="Select layers and press ⌥⌘K to make a component, or link a library to use its components."
+            description={`Select layers and press ${keyHint("createComponent", "⌥⌘K")} to make a component, or link a library to use its components.`}
           />
           <div className="m3-assets__empty-actions">
             <M3Button
@@ -166,7 +167,11 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
               onClick={() => {
                 const sel = session.ui.getState().selection
                 if (sel.length) createComponent(m3, sel, m3.canvas()?.layout() ?? null)
-                else m3.toast({ tone: "warning", text: "Select layers first, then press ⌥⌘K" })
+                else
+                  m3.toast({
+                    tone: "warning",
+                    text: `Select layers first, then press ${keyHint("createComponent", "⌥⌘K")}`,
+                  })
               }}
             >
               Create component

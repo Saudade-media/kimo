@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   createSettingsStore,
   formatDeepLink,
+  isOpenableUrl,
   isPlatformError,
   normalizeSettings,
   parseDeepLink,
@@ -13,6 +14,27 @@ import { createMemoryPlatform } from "../src/memory"
 import { TAURI_COMMANDS, type TauriCommand } from "../src/tauri"
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+describe("openable links (G1)", () => {
+  test("web, mail and phone links open; other schemes never do", () => {
+    for (const ok of [
+      "https://kimo.dev/docs",
+      "http://localhost:3000/",
+      "mailto:hi@kimo.dev",
+      "tel:+15551234567",
+    ])
+      expect(isOpenableUrl(ok)).toBe(true)
+    for (const bad of [
+      "mailto:",
+      "file:///etc/passwd",
+      "javascript:alert(1)",
+      "kimo://open?path=/a.kimo",
+      "ftp://example.com/x",
+      "not a url",
+    ])
+      expect(isOpenableUrl(bad)).toBe(false)
+  })
+})
 
 describe("deep links", () => {
   test("parses kimo://open with path and node", () => {
@@ -35,6 +57,7 @@ describe("deep links", () => {
       "kimo://open?path=/etc/passwd",
       "kimo://open?path=/a/../b.kimo",
       "kimo://open?path=/a.kimo&node=bad/id",
+      "kimo://open?path=/a.kimo&page=bad/id",
       "kimo://open",
       "not a url",
     ])
@@ -43,6 +66,8 @@ describe("deep links", () => {
   test("round-trips", () => {
     const link = { action: "open" as const, path: "/Users/me/my file.kimo", node: "Abc123xyz9" }
     expect(parseDeepLink(formatDeepLink(link))).toEqual(link)
+    const onPage = { action: "open" as const, path: "/a.kimo", page: "Page000002" }
+    expect(parseDeepLink(formatDeepLink(onPage))).toEqual(onPage)
   })
 })
 
@@ -246,6 +271,37 @@ describe("memory platform", () => {
       { source: "file-association", refs: ["/w/a.kimo"] },
     ])
     expect(await p.launch.takeInitialRequests()).toEqual([])
+  })
+})
+
+describe("memory platform: board 37 trash, rename, copy", () => {
+  test("Move to Trash, restore (EXISTS when taken, as a copy), remove, empty", async () => {
+    const p = createMemoryPlatform({ files: { "/w/home.kimo": "{}", "/w/b.kimo": "{}" } })
+    await p.recents.noteOpened("/w/home.kimo")
+    const t = await p.trash.move("/w/home.kimo")
+    expect(t).toMatchObject({ originalRef: "/w/home.kimo", name: "home.kimo" })
+    expect(await p.files.stat("/w/home.kimo")).toBeNull()
+    expect((await p.recents.listFiles()).some((f) => f.ref === "/w/home.kimo")).toBe(false)
+    p.control.writeExternal("/w/home.kimo", "{}")
+    await expect(p.trash.restore(t.id)).rejects.toMatchObject({ code: "EXISTS" })
+    expect(await p.trash.restore(t.id, "/w/home copy.kimo")).toBe("/w/home copy.kimo")
+    expect(await p.trash.list()).toEqual([])
+    await expect(p.trash.restore(t.id)).rejects.toMatchObject({ code: "NOT_FOUND" })
+    await p.trash.move("/w/b.kimo")
+    expect(await p.trash.empty()).toBe(1)
+    expect(await p.trash.list()).toEqual([])
+  })
+  test("rename and copy never overwrite", async () => {
+    const p = createMemoryPlatform({ files: { "/w/a.kimo": "A", "/w/b.kimo": "B" } })
+    await expect(p.files.rename("/w/a.kimo", "/w/b.kimo")).rejects.toMatchObject({
+      code: "EXISTS",
+    })
+    await expect(p.files.copy("/w/a.kimo", "/w/b.kimo")).rejects.toMatchObject({ code: "EXISTS" })
+    await p.files.copy("/w/a.kimo", "/w/a copy.kimo")
+    await p.files.rename("/w/a.kimo", "/w/c.kimo")
+    expect(p.control.readFile("/w/c.kimo")).toBe("A")
+    expect(p.control.readFile("/w/a copy.kimo")).toBe("A")
+    expect(p.control.readFile("/w/a.kimo")).toBeNull()
   })
 })
 

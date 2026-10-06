@@ -47,8 +47,9 @@ import {
   Terminal,
   Trash2,
 } from "lucide-react"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { ProviderRowView } from "../platform/contract"
+import { SettingsBannerContext, SettingsFailContext } from "../settings/panes"
 import { AddProviderDialog } from "./AddProviderDialog"
 import { CloudCards } from "./CloudCards"
 import {
@@ -104,6 +105,20 @@ const CLI_ICONS: Record<string, ReactNode> = {
 }
 
 /** Board 23 copy (L56aX), with the machine / store names of this host. */
+/**
+ * Audit A5: a failed action shows "Couldn't <what>." with the cause in the pane banner (board 37
+ * CT1wv) instead of a silent rejection.
+ */
+function useReport(): (what: string, p: Promise<unknown>) => void {
+  const fail = useContext(SettingsFailContext)
+  return useCallback((what, p) => void p.catch((e: unknown) => fail(what, e)), [fail])
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  if (!navigator.clipboard) throw new Error("The clipboard isn't available here")
+  await navigator.clipboard.writeText(text)
+}
+
 function introCopy(s: AiSettingsState): string {
   if (s.platform === "web")
     return "Bring your own API key. The provider bills the usage, not Kimo. Keys stay in this browser (localStorage, this origin only) and are never written to .kimo files, settings JSON or logs. Local agent CLIs run in the desktop app."
@@ -123,9 +138,13 @@ export interface AiProvidersPaneProps {
   controller?: AiSettingsController
   /** Opens external links (install guides, key pages). Default: `platform.files.openExternalUrl`. */
   openUrl?: (url: string) => void
+  /** Scrolls to this group on open (the agent's Usage card opens Settings on `usage`). */
+  section?: "usage"
 }
 
-export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPaneProps) {
+export function AiProvidersPane({ platform, controller, openUrl, section }: AiProvidersPaneProps) {
+  const report = useReport()
+  const banner = useContext(SettingsBannerContext)
   const fromWindow = useAiProviders(controller ? null : platform)
   const ctl = controller ?? fromWindow
   const s = useAiSettingsState(ctl)
@@ -134,6 +153,11 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
   useEffect(() => {
     void ctl?.refresh()
   }, [ctl])
+  const usage = useRef<HTMLDivElement>(null)
+  const ready = !!ctl && !!s
+  useEffect(() => {
+    if (ready && section === "usage") usage.current?.scrollIntoView({ block: "start" })
+  }, [ready, section])
   if (!ctl || !s) return null
   const open = (url: string) => {
     if (openUrl) openUrl(url)
@@ -158,6 +182,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
           label={s.agentStatus.label}
         />
       </div>
+      {banner}
       <DefaultRows s={s} ctl={ctl} />
       <p className="ai-intro" data-pen="L56aX">
         {introCopy(s)}
@@ -173,7 +198,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
               <GhostButton
                 icon={<RefreshCw />}
                 busy={s.checking}
-                onClick={() => void ctl.redetectClis()}
+                onClick={() => report("check the agent CLIs", ctl.redetectClis())}
                 data-pen="euQQn"
               >
                 Re-check all
@@ -213,7 +238,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
               isDefault={c.isDefault}
               checking={s.checking}
               home={s.home}
-              onRecheck={() => void ctl.redetectClis()}
+              onRecheck={() => report("check the agent CLIs", ctl.redetectClis())}
               onInstallGuide={() => open(CLI_INSTALL_GUIDE[c.detection.id] ?? "")}
             />
           ))}
@@ -257,7 +282,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
         />
       ))}
 
-      <div className="ai-group ai-group--usage" data-pen="tAaTK">
+      <div ref={usage} className="ai-group ai-group--usage" data-pen="tAaTK" id="settings-usage">
         <div className="ai-group__title-row ai-group__title-row--usage" data-pen="T7x0M">
           <h3 className="ai-group__title">Usage &amp; limits</h3>
           <span className="ai-spacer" />
@@ -277,7 +302,9 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
           <AmountField
             value={s.settings.monthlyLimitUsd}
             labelledBy={ids.labelId}
-            onCommit={(v) => void ctl.setUsageSettings({ monthlyLimitUsd: v })}
+            onCommit={(v) =>
+              report("save the usage settings", ctl.setUsageSettings({ monthlyLimitUsd: v }))
+            }
           />
         )}
       />
@@ -289,7 +316,9 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
           <AmountField
             value={s.settings.warnPerTurnUsd}
             labelledBy={ids.labelId}
-            onCommit={(v) => void ctl.setUsageSettings({ warnPerTurnUsd: v })}
+            onCommit={(v) =>
+              report("save the usage settings", ctl.setUsageSettings({ warnPerTurnUsd: v }))
+            }
           />
         )}
       />
@@ -302,7 +331,9 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
             checked={s.settings.showCost}
             aria-labelledby={ids.labelId}
             aria-describedby={ids.descriptionId}
-            onChange={(v) => void ctl.setUsageSettings({ showCost: v })}
+            onChange={(v) =>
+              report("save the usage settings", ctl.setUsageSettings({ showCost: v }))
+            }
           />
         )}
       />
@@ -318,6 +349,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
  * listed; none → disabled "Connect a provider first". The model list is that provider's.
  */
 function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController }) {
+  const report = useReport()
   const choices = defaultProviderChoices({
     platform: s.platform,
     providers: s.providers,
@@ -343,7 +375,9 @@ function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController
             placeholder={none ? "Connect a provider first" : "Choose…"}
             options={choices.map((c) => ({ value: c.provider, label: c.label }))}
             value={current?.provider ?? null}
-            onChange={(v) => void ctl.setDefault(selectionForProvider(choices, v))}
+            onChange={(v) =>
+              report("change the default model", ctl.setDefault(selectionForProvider(choices, v)))
+            }
           />
         }
       />
@@ -362,7 +396,11 @@ function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController
             options={current?.models ?? []}
             value={current ? (sel?.model ?? current.model) : null}
             onChange={(v) => {
-              if (current) void ctl.setDefault({ provider: current.provider, model: v })
+              if (current)
+                report(
+                  "change the default model",
+                  ctl.setDefault({ provider: current.provider, model: v }),
+                )
             }}
           />
         }
@@ -502,6 +540,7 @@ function CliRow({
   onRecheck: () => void
   onInstallGuide: () => void
 }) {
+  const report = useReport()
   const [copied, setCopied] = useState(false)
   const state = cliState(d)
   const pill = cliPill(d)
@@ -541,7 +580,7 @@ function CliRow({
           <GhostButton
             icon={<Copy />}
             onClick={() => {
-              void navigator.clipboard?.writeText(command).catch(() => {})
+              report("copy the command", copyToClipboard(command))
               setCopied(true)
               setTimeout(() => setCopied(false), 1500)
             }}
@@ -578,6 +617,7 @@ function ProviderBlock({
   expanded: boolean
   onToggle: () => void
 }) {
+  const report = useReport()
   const cloud = isCloud(row.kind)
   const webCloud = cloud && s.platform === "web"
   const failed = row.lastTest && !row.lastTest.ok && row.status === "key-saved"
@@ -626,10 +666,19 @@ function ProviderBlock({
         {isConnectedRow(row.status) && (
           <DefaultAction
             isDefault={row.isDefault}
-            onMake={() => void ctl.setDefault({ provider: row.id, model: row.models.agent })}
+            onMake={() =>
+              report(
+                "change the default model",
+                ctl.setDefault({ provider: row.id, model: row.models.agent }),
+              )
+            }
           />
         )}
-        <GhostButton icon={<Activity />} busy={testing} onClick={() => void ctl.test(row.id)}>
+        <GhostButton
+          icon={<Activity />}
+          busy={testing}
+          onClick={() => report("test the provider", ctl.test(row.id))}
+        >
           Test
         </GhostButton>
         <SecondaryButton onClick={onToggle}>Edit</SecondaryButton>
@@ -663,6 +712,7 @@ function ProviderDetail({
   ctl: AiSettingsController
   onRemoved: () => void
 }) {
+  const report = useReport()
   const web = s.platform === "web"
   const cloud = isCloud(row.kind)
   const keyless =
@@ -680,7 +730,7 @@ function ProviderDetail({
     <TestResult
       test={t}
       retrying={s.testing[row.id] === true}
-      onRetry={() => void ctl.test(row.id)}
+      onRetry={() => report("test the provider", ctl.test(row.id))}
     />
   )
   // Board 25 gpmey: the cloud row expands one detail card per cloud (no key field).
@@ -699,7 +749,7 @@ function ProviderDetail({
           <Toggle
             checked={row.allowBrowser === true}
             aria-labelledby={`optin-${row.id}`}
-            onChange={(v) => void ctl.setAllowBrowser(row.id, v)}
+            onChange={(v) => report("change browser access", ctl.setAllowBrowser(row.id, v))}
           />
           <span className="ai-optin__text">
             <span className="ai-optin__label" id={`optin-${row.id}`}>
@@ -728,7 +778,7 @@ function ProviderDetail({
                 onBlur={(e) => {
                   const v = e.currentTarget.value.trim()
                   if (v !== row.models[role])
-                    void ctl.setModels(row.id, { ...row.models, [role]: v })
+                    report("change the models", ctl.setModels(row.id, { ...row.models, [role]: v }))
                 }}
               />
             ) : (
@@ -737,7 +787,9 @@ function ProviderDetail({
                 label={`${role === "agent" ? "Agent" : "Fast"} model`}
                 options={modelChoices(row.kind, [row.models.agent, row.models.fast])}
                 value={row.models[role]}
-                onChange={(v) => void ctl.setModels(row.id, { ...row.models, [role]: v })}
+                onChange={(v) =>
+                  report("change the models", ctl.setModels(row.id, { ...row.models, [role]: v }))
+                }
               />
             )}
           </span>
@@ -761,7 +813,7 @@ function ProviderDetail({
           <GhostButton
             icon={<Trash2 />}
             onClick={() => {
-              void ctl.removeProvider(row.id)
+              report("remove the provider", ctl.removeProvider(row.id))
               onRemoved()
             }}
           >
@@ -808,6 +860,7 @@ function KeyField({
   danger?: boolean
   withheld?: boolean
 }) {
+  const report = useReport()
   const [editing, setEditing] = useState(row.keyHint === null)
   const [draft, setDraft] = useState("")
   const [revealed, setRevealed] = useState<string | null>(null)
@@ -902,7 +955,7 @@ function KeyField({
               icon={<Eye />}
               disabled={desktop}
               title={desktop ? "Keys never leave the keychain" : "Reveal for 5 s"}
-              onClick={() => void ctl.revealKey(row.id).then(setRevealed)}
+              onClick={() => report("show the key", ctl.revealKey(row.id).then(setRevealed))}
             />
             <FieldIcon
               label="Replace key"
@@ -915,7 +968,7 @@ function KeyField({
             <FieldIcon
               label="Remove key"
               icon={<Trash2 />}
-              onClick={() => void ctl.deleteKey(row.id)}
+              onClick={() => report("delete the key", ctl.deleteKey(row.id))}
             />
           </>
         )}
@@ -934,6 +987,7 @@ function BaseUrlField({
   ctl: AiSettingsController
   danger?: boolean
 }) {
+  const report = useReport()
   const def = defaultBaseURL(row)
   // Built-in providers only call their own API (the relay never sends their key elsewhere):
   // the field shows the default, read-only (board 23 tAma7 "https://api.anthropic.com (default)").
@@ -971,7 +1025,7 @@ function BaseUrlField({
             onBlur={(e) => {
               const v = e.currentTarget.value.trim()
               if (v !== (row.baseURL && row.baseURL !== def ? row.baseURL : ""))
-                void ctl.setBaseURL(row.id, v || null)
+                report("save the base URL", ctl.setBaseURL(row.id, v || null))
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") e.currentTarget.blur()

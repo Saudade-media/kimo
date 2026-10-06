@@ -61,7 +61,7 @@ Shown when only text layers are selected:
 - **Align** left, center, right or justify, and vertical align top, middle or bottom (for fixed-size text).
 - **Resizing**: **Auto width** (one line grows sideways), **Auto height** (wraps at its width and grows down) or **Fixed size**.
 - **Decoration** (underline, strikethrough), **case** (upper, lower, title) and **italic** (`⌘I`).
-- **More text options**: a link (`⌘K`), OpenType features, stylistic sets `ss01`–`ss20`, a custom feature tag, and **Reset text style**.
+- **More text options**: a link (`⌘K`; its **Open** opens web, `mailto:` and `tel:` links), OpenType features, stylistic sets `ss01`–`ss20`, a custom feature tag, and **Reset text style**.
 
 While you edit a text, the Text and Fill sections show the selected characters' values and change only those characters ([styling part of a text](canvas.md#text)). **Mixed** means the selected characters differ. A text with mixed styles that is selected but not being edited also shows **Mixed**, and a change there applies to all of it. Alignment, vertical alignment and resizing always apply to the whole text.
 

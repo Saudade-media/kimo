@@ -16,6 +16,8 @@ export interface DeepLink {
   path: string
   /** Optional node id to select after opening. */
   node?: string
+  /** Optional page id to open on (board 27 §1 "Copy link to page"). */
+  page?: string
 }
 
 const ID_RE = /^[A-Za-z0-9]{6,24}$/
@@ -32,7 +34,7 @@ export function isKimoPath(p: string): boolean {
 }
 
 /**
- * Parses `kimo://open?path=<url-encoded absolute path>[&node=<id>]`. Returns null for any
+ * Parses `kimo://open?path=<url-encoded absolute path>[&node=<id>][&page=<id>]`. Returns null for any
  * other URL, a relative path, a non-Kimo file, a path with `..` segments or NUL, or a bad id.
  * Deep links come from untrusted pages, so this is strict.
  */
@@ -56,6 +58,11 @@ export function parseDeepLink(url: string): DeepLink | null {
     if (!ID_RE.test(node)) return null
     link.node = node
   }
+  const page = u.searchParams.get("page")
+  if (page !== null) {
+    if (!ID_RE.test(page)) return null
+    link.page = page
+  }
   return link
 }
 
@@ -63,6 +70,7 @@ export function parseDeepLink(url: string): DeepLink | null {
 export function formatDeepLink(link: DeepLink): string {
   const q = new URLSearchParams({ path: link.path })
   if (link.node) q.set("node", link.node)
+  if (link.page) q.set("page", link.page)
   return `${DEEP_LINK_SCHEME}://open?${q.toString()}`
 }
 
@@ -157,4 +165,28 @@ export function rebaseRelativeRefs(
     out[k] = next
   }
   return changed ? out : null
+}
+
+/**
+ * Whether `openExternalUrl` opens `url` (audit G1, link popover › Open): web links with a host,
+ * and mail / phone links. `file:`, `javascript:` and other schemes never open. Mirrors
+ * `openable_url` in `src-tauri/src/commands.rs`.
+ */
+export function isOpenableUrl(url: string): boolean {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  switch (u.protocol) {
+    case "https:":
+    case "http:":
+      return u.hostname !== ""
+    case "mailto:":
+    case "tel:":
+      return u.pathname.trim() !== ""
+    default:
+      return false
+  }
 }

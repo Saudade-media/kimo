@@ -297,7 +297,7 @@ export const kimoHistory = defineTool({
   input: Obj({
     docId,
     action: Enum(["list", "undo", "redo"], { description: "Action." }),
-    token: Opt(Str({ description: "undo: undoToken." })),
+    token: Opt(Str({ description: "undo / redo: undoToken." })),
     limit: Opt(Int({ description: "list: entries (default 20).", minimum: 1, maximum: 200 })),
   }),
   data: Obj({
@@ -305,6 +305,7 @@ export const kimoHistory = defineTool({
     stale: Opt(Bool({ description: "undo/redo: the group no longer had any effect." })),
     canUndo: Bool({ description: "Your undo stack is not empty." }),
     canRedo: Bool({ description: "Your redo stack is not empty." }),
+    undoToken: Opt(Str({ description: "redo: the group's token, valid again." })),
   }),
   annotations: WRITE,
   scope: "read",

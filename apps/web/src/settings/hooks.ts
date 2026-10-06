@@ -27,12 +27,24 @@ export function useSettings(settings: SettingsApi): Settings {
   return useSyncExternalStore(subscribe, get, get)
 }
 
-/** Writes a setting; reports a rejected write (INVALID / IO) through `onError`. */
-export function useSetSetting(settings: SettingsApi, onError?: (e: unknown) => void) {
+/**
+ * Writes a setting; reports a rejected write (INVALID / IO) through `onError` with the key and
+ * value that were refused. The store has already rolled the value back, so every control shows
+ * what is really stored. Resolves to whether the write was saved.
+ */
+export function useSetSetting(
+  settings: SettingsApi,
+  onError?: (e: unknown, key: SettingKey, value: unknown) => void,
+) {
   return useCallback(
-    <K extends SettingKey>(key: K, value: SettingsSchema[K]) => {
-      settings.set(key, value).catch((e: unknown) => onError?.(e))
-    },
+    <K extends SettingKey>(key: K, value: SettingsSchema[K]): Promise<boolean> =>
+      settings.set(key, value).then(
+        () => true,
+        (e: unknown) => {
+          onError?.(e, key, value)
+          return false
+        },
+      ),
     [settings, onError],
   )
 }

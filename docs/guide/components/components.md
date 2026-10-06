@@ -42,7 +42,7 @@ Edit an instance the way you edit anything else: select a layer inside it and ch
 
 - An overridden layer has a dot in the Layers panel, and an overridden section (Fill, Stroke …) has a dot on its title. Click that dot to **Reset to main**.
 - The **Overrides** popover lists every override with its own reset, and **Reset all**.
-- Right-click a layer inside an instance for **Replace with component…** (swap just that layer) and **Reset overrides on** that layer.
+- Right-click a layer inside an instance for **Replace with component…** (swap just that layer) and **Reset overrides on** that layer. **Replace with selection** swaps it for the component you had selected before the right-click (a main component, or an instance of one).
 - You can't delete a layer inside an instance: deleting hides it instead. You can't add layers to an instance either, except into a [slot](#slots).
 
 ## Props
@@ -55,7 +55,7 @@ Props are the knobs an instance exposes, so you don't need to dig into its layer
 | **Boolean** | A layer's visibility | Shown |
 | **Enum** | A property of the root, with named options | — |
 | **Instance swap** | A nested instance | — |
-| **Slot** | A slot frame (made with the Slot section's **Expose as prop**) | — |
+| **Slot** | A frame you pick with **Slot (mark a frame)**, which also makes it a slot, or a slot exposed with the Slot section's **Expose as prop** | — |
 
 Each prop row lets you rename it, change its type, point it at another layer (or **Root**), edit its default, reorder it by dragging, and remove it. Enum props list their options; add, edit or delete options in the row.
 

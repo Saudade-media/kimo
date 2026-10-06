@@ -1,0 +1,1980 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
+"meta": {"name":"Offset conference site","kimo.template":{"category":"Website","description":"Six-screen site for a two-day product design conference: home, speakers, two-track schedule, speaker page, tickets and venue.","slug":"event-conference"}},
+"themes": {"mode":["light","dark"]},
+"variables": {
+"color/accent": {"type":"color","value":[{"value":"#3B36F5","when":{"mode":"light"}},{"value":"#8C88FF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/accent-soft": {"type":"color","value":[{"value":"#E6E5FF","when":{"mode":"light"}},{"value":"#22204A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/bg": {"type":"color","value":[{"value":"#F4F4F1","when":{"mode":"light"}},{"value":"#0C0C0F","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/block": {"type":"color","value":[{"value":"#D3D3CB","when":{"mode":"light"}},{"value":"#2C2C34","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/border": {"type":"color","value":[{"value":"#DCDCD5","when":{"mode":"light"}},{"value":"#2C2C35","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/coral": {"type":"color","value":[{"value":"#F2603F","when":{"mode":"light"}},{"value":"#FF8466","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/coral-soft": {"type":"color","value":[{"value":"#FDE5DE","when":{"mode":"light"}},{"value":"#3E1C14","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/figure": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#E9E9E4","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/ink": {"type":"color","value":[{"value":"#0E0E11","when":{"mode":"light"}},{"value":"#F3F3EF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/inverse": {"type":"color","value":[{"value":"#0E0E11","when":{"mode":"light"}},{"value":"#18181F","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/inverse-border": {"type":"color","value":[{"value":"#2A2A31","when":{"mode":"light"}},{"value":"#2E2E37","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/inverse-muted": {"type":"color","value":[{"value":"#9A9AA3","when":{"mode":"light"}},{"value":"#8D8D97","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/inverse-surface": {"type":"color","value":[{"value":"#1A1A20","when":{"mode":"light"}},{"value":"#22222A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/land": {"type":"color","value":[{"value":"#E4E4DE","when":{"mode":"light"}},{"value":"#202027","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/lime": {"type":"color","value":[{"value":"#CDF24A","when":{"mode":"light"}},{"value":"#CDF24A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/muted": {"type":"color","value":[{"value":"#5E5E66","when":{"mode":"light"}},{"value":"#9C9CA6","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-accent": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#0C0C0F","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-inverse": {"type":"color","value":[{"value":"#F4F4F1","when":{"mode":"light"}},{"value":"#F3F3EF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-lime": {"type":"color","value":[{"value":"#0E0E11","when":{"mode":"light"}},{"value":"#0E0E11","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/park": {"type":"color","value":[{"value":"#CFE6C2","when":{"mode":"light"}},{"value":"#1E3321","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/subtle": {"type":"color","value":[{"value":"#EBEBE6","when":{"mode":"light"}},{"value":"#1D1D24","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/success": {"type":"color","value":[{"value":"#1F7A4A","when":{"mode":"light"}},{"value":"#5BD08F","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/surface": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#15151A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-blue": {"type":"color","value":[{"value":"#A9B4FF","when":{"mode":"light"}},{"value":"#3A3F8F","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-blue-deep": {"type":"color","value":[{"value":"#4A4FD9","when":{"mode":"light"}},{"value":"#24275E","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-coral": {"type":"color","value":[{"value":"#FFB8A3","when":{"mode":"light"}},{"value":"#8A3A28","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-coral-deep": {"type":"color","value":[{"value":"#E0573A","when":{"mode":"light"}},{"value":"#55231A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-lime": {"type":"color","value":[{"value":"#E3F79E","when":{"mode":"light"}},{"value":"#5C6E1C","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-lime-deep": {"type":"color","value":[{"value":"#9DBE24","when":{"mode":"light"}},{"value":"#384412","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-teal": {"type":"color","value":[{"value":"#A6E3D8","when":{"mode":"light"}},{"value":"#22605A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-teal-deep": {"type":"color","value":[{"value":"#2E9A8A","when":{"mode":"light"}},{"value":"#143B37","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-violet": {"type":"color","value":[{"value":"#D7B8F2","when":{"mode":"light"}},{"value":"#5B3A7A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/tone-violet-deep": {"type":"color","value":[{"value":"#8A4FC4","when":{"mode":"light"}},{"value":"#35214A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/water": {"type":"color","value":[{"value":"#C9D8F2","when":{"mode":"light"}},{"value":"#1B2740","when":{"mode":"dark"}}],"group":"color"}
+
+, "radius/lg": {"type":"number","value":16,"group":"radius"}
+
+, "radius/md": {"type":"number","value":10,"group":"radius"}
+
+, "radius/pill": {"type":"number","value":999,"group":"radius"}
+
+, "radius/sm": {"type":"number","value":6,"group":"radius"}
+
+, "radius/xl": {"type":"number","value":24,"group":"radius"}
+
+, "shadow/card": {"type":"shadow","value":[{"kind":"shadow","x":0,"y":1,"blur":2,"color":"#0E0E1110"},{"kind":"shadow","x":0,"y":10,"blur":28,"spread":-10,"color":"#0E0E1122"}],"group":"shadow"}
+
+, "shadow/pop": {"type":"shadow","value":{"kind":"shadow","x":0,"y":24,"blur":56,"spread":-16,"color":"#0E0E1144"},"group":"shadow"}
+
+, "space/1": {"type":"number","value":4,"group":"space"}
+
+, "space/10": {"type":"number","value":40,"group":"space"}
+
+, "space/12": {"type":"number","value":48,"group":"space"}
+
+, "space/16": {"type":"number","value":64,"group":"space"}
+
+, "space/2": {"type":"number","value":8,"group":"space"}
+
+, "space/20": {"type":"number","value":80,"group":"space"}
+
+, "space/24": {"type":"number","value":96,"group":"space"}
+
+, "space/3": {"type":"number","value":12,"group":"space"}
+
+, "space/4": {"type":"number","value":16,"group":"space"}
+
+, "space/5": {"type":"number","value":20,"group":"space"}
+
+, "space/6": {"type":"number","value":24,"group":"space"}
+
+, "space/8": {"type":"number","value":32,"group":"space"}
+
+, "type/body": {"type":"typography","value":{"font":"Inter","size":16,"weight":400,"lineHeight":1.5},"group":"typography"}
+
+, "type/body-lg": {"type":"typography","value":{"font":"Inter","size":18,"weight":400,"lineHeight":1.55},"group":"typography"}
+
+, "type/display": {"type":"typography","value":{"font":"Inter","size":72,"weight":800,"lineHeight":1,"letterSpacing":-3},"group":"typography"}
+
+, "type/h1": {"type":"typography","value":{"font":"Inter","size":52,"weight":800,"lineHeight":1.05,"letterSpacing":-2},"group":"typography"}
+
+, "type/heading": {"type":"typography","value":{"font":"Inter","size":32,"weight":700,"lineHeight":1.15,"letterSpacing":-1},"group":"typography"}
+
+, "type/hero": {"type":"typography","value":{"font":"Inter","size":120,"weight":800,"lineHeight":0.9,"letterSpacing":-5.5},"group":"typography"}
+
+, "type/label": {"type":"typography","value":{"font":"Inter","size":14,"weight":600,"lineHeight":1.3},"group":"typography"}
+
+, "type/mono": {"type":"typography","value":{"font":"JetBrains Mono","size":13,"weight":500,"lineHeight":1.4},"group":"typography"}
+
+, "type/small": {"type":"typography","value":{"font":"Inter","size":13,"weight":400,"lineHeight":1.45},"group":"typography"}
+
+, "type/title": {"type":"typography","value":{"font":"Inter","size":20,"weight":700,"lineHeight":1.3,"letterSpacing":-0.4},"group":"typography"}
+},
+"pages": {"ecPage1":{"order":"p02","name":"Components"},"ecPage2":{"order":"p00","name":"Cover"},"ecPage3":{"order":"p01","name":"Screens"},"ecPage4":{"order":"p03","name":"Foundations"}},
+"nodes": {
+"ec000001": {"type":"frame","parent":"ecLibBoard","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "ec000002": {"type":"text","parent":"ec000001","order":"a0","name":"Title","content":"Offset conference site: components","style":{"size":40,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "ec000003": {"type":"text","parent":"ec000001","order":"a1","name":"Subtitle","content":"Every main used on the screens. Edit a main and its instances follow.","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000004": {"type":"frame","parent":"ecLibBoard","order":"a1","name":"Actions","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec000005": {"type":"frame","parent":"ec000004","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec000006": {"type":"text","parent":"ec000005","order":"a0","name":"Section title","content":"Actions","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000007": {"type":"rect","parent":"ec000005","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec000008": {"type":"frame","parent":"ec000004","order":"a1","name":"Actions items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "ec000009": {"type":"frame","parent":"ec000008","order":"a0","name":"Button","layout":{"dir":"column","gap":12}}
+
+, "ec00000a": {"type":"text","parent":"ec000009","order":"a0","name":"Label","content":"Button","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00000b": {"type":"frame","parent":"ec000008","order":"a1","name":"Button/Secondary","layout":{"dir":"column","gap":12}}
+
+, "ec00000c": {"type":"text","parent":"ec00000b","order":"a0","name":"Label","content":"Button/Secondary","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00000d": {"type":"frame","parent":"ec000008","order":"a2","name":"Badge","layout":{"dir":"column","gap":12}}
+
+, "ec00000e": {"type":"text","parent":"ec00000d","order":"a0","name":"Label","content":"Badge","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00000f": {"type":"frame","parent":"ecLibBoard","order":"a2","name":"Navigation","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec00000g": {"type":"frame","parent":"ec00000f","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec00000h": {"type":"text","parent":"ec00000g","order":"a0","name":"Section title","content":"Navigation","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00000i": {"type":"rect","parent":"ec00000g","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec00000j": {"type":"frame","parent":"ec00000f","order":"a1","name":"Navigation items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "ec00000k": {"type":"frame","parent":"ec00000j","order":"a0","name":"Nav bar","layout":{"dir":"column","gap":12}}
+
+, "ec00000l": {"type":"text","parent":"ec00000k","order":"a0","name":"Label","content":"Nav bar","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00000m": {"type":"frame","parent":"ecNavBar","order":"a0","name":"Left","w":360,"layout":{"dir":"row","align":"center"}}
+
+, "ec00000n": {"type":"frame","parent":"ec00000m","order":"a0","name":"Brand","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "ec00000o": {"type":"frame","parent":"ec00000n","order":"a0","name":"Mark","w":30,"h":30,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/lime"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "ec00000p": {"type":"icon","parent":"ec00000o","order":"a0","name":"Icon/square-dashed","w":18,"h":18,"set":"lucide","icon":"square-dashed","color":{"$ref":"color/on-lime"}}
+
+, "ec00000q": {"type":"text","parent":"ec00000n","order":"a1","name":"Wordmark","content":"Offset 2027","style":{"weight":800,"letterSpacing":-0.6,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00000r": {"type":"frame","parent":"ecNavBar","order":"a1","name":"Links","layout":{"dir":"row","gap":36,"align":"center"}}
+
+, "ec00000s": {"type":"frame","parent":"ecNavBar","order":"a2","name":"Right","w":360,"layout":{"dir":"row","gap":16,"justify":"end","align":"center"}}
+
+, "ec00000t": {"type":"text","parent":"ec00000s","order":"a0","name":"15 and 16 April, Copenhagen","content":"15 and 16 April, Copenhagen","style":{"weight":500,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00000u": {"type":"frame","parent":"ec00000j","order":"a1","name":"Footer","layout":{"dir":"column","gap":12}}
+
+, "ec00000v": {"type":"text","parent":"ec00000u","order":"a0","name":"Label","content":"Footer","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00000w": {"type":"frame","parent":"ecFooter","order":"a0","name":"Top","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/16"}}}
+
+, "ec00000x": {"type":"frame","parent":"ec00000w","order":"a0","name":"About","w":400,"layout":{"dir":"column","gap":{"$ref":"space/4"}}}
+
+, "ec00000y": {"type":"frame","parent":"ec00000x","order":"a0","name":"Brand","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "ec00000z": {"type":"frame","parent":"ec00000y","order":"a0","name":"Mark","w":30,"h":30,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/lime"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "ec000010": {"type":"icon","parent":"ec00000z","order":"a0","name":"Icon/square-dashed","w":18,"h":18,"set":"lucide","icon":"square-dashed","color":{"$ref":"color/on-lime"}}
+
+, "ec000011": {"type":"text","parent":"ec00000y","order":"a1","name":"Wordmark","content":"Offset 2027","style":{"weight":800,"letterSpacing":-0.6,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec000012": {"type":"text","parent":"ec00000x","order":"a1","name":"Two days of talks and workshops on prod…","w":{"mode":"fill"},"content":"Two days of talks and workshops on product design, run by designers since 2019. Dok 4, Refshaleøen, Copenhagen.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec000013": {"type":"frame","parent":"ec00000w","order":"a1","name":"Conference","w":200,"layout":{"dir":"column","gap":12}}
+
+, "ec000014": {"type":"text","parent":"ec000013","order":"a0","name":"Conference","content":"Conference","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec000015": {"type":"text","parent":"ec000013","order":"a1","name":"Speakers","content":"Speakers","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec000016": {"type":"text","parent":"ec000013","order":"a2","name":"Schedule","content":"Schedule","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec000017": {"type":"text","parent":"ec000013","order":"a3","name":"Tickets","content":"Tickets","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec000018": {"type":"text","parent":"ec000013","order":"a4","name":"Venue and travel","content":"Venue and travel","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec000019": {"type":"frame","parent":"ec00000w","order":"a2","name":"Attend","w":200,"layout":{"dir":"column","gap":12}}
+
+, "ec00001a": {"type":"text","parent":"ec000019","order":"a0","name":"Attend","content":"Attend","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec00001b": {"type":"text","parent":"ec000019","order":"a1","name":"Code of conduct","content":"Code of conduct","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001c": {"type":"text","parent":"ec000019","order":"a2","name":"Accessibility","content":"Accessibility","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001d": {"type":"text","parent":"ec000019","order":"a3","name":"Scholarships","content":"Scholarships","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001e": {"type":"text","parent":"ec000019","order":"a4","name":"Volunteer","content":"Volunteer","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001f": {"type":"frame","parent":"ec00000w","order":"a3","name":"Contact","w":200,"layout":{"dir":"column","gap":12}}
+
+, "ec00001g": {"type":"text","parent":"ec00001f","order":"a0","name":"Contact","content":"Contact","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec00001h": {"type":"text","parent":"ec00001f","order":"a1","name":"hello@offset.events","content":"hello@offset.events","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001i": {"type":"text","parent":"ec00001f","order":"a2","name":"Sponsorship","content":"Sponsorship","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001j": {"type":"text","parent":"ec00001f","order":"a3","name":"Press","content":"Press","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001k": {"type":"text","parent":"ec00001f","order":"a4","name":"Newsletter","content":"Newsletter","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec00001l": {"type":"rect","parent":"ecFooter","order":"a1","name":"Rule","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/inverse-border"}}
+
+, "ec00001m": {"type":"frame","parent":"ecFooter","order":"a2","name":"Bottom","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "ec00001n": {"type":"text","parent":"ec00001m","order":"a0","name":"Offset Events ApS  ·  CVR 41 22 87 90","content":"Offset Events ApS  ·  CVR 41 22 87 90","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec00001o": {"type":"text","parent":"ec00001m","order":"a1","name":"Privacy  ·  Terms  ·  Refund policy","content":"Privacy  ·  Terms  ·  Refund policy","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec00001p": {"type":"frame","parent":"ec00000j","order":"a2","name":"Section header","layout":{"dir":"column","gap":12}}
+
+, "ec00001q": {"type":"text","parent":"ec00001p","order":"a0","name":"Label","content":"Section header","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00001r": {"type":"frame","parent":"ecSecHead","order":"a0","name":"Text","w":760,"layout":{"dir":"column","gap":{"$ref":"space/3"}}}
+
+, "ec00001s": {"type":"frame","parent":"ec00000j","order":"a3","name":"Day tabs","layout":{"dir":"column","gap":12}}
+
+, "ec00001t": {"type":"text","parent":"ec00001s","order":"a0","name":"Label","content":"Day tabs","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00001u": {"type":"frame","parent":"ecLibBoard","order":"a3","name":"People","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec00001v": {"type":"frame","parent":"ec00001u","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec00001w": {"type":"text","parent":"ec00001v","order":"a0","name":"Section title","content":"People","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00001x": {"type":"rect","parent":"ec00001v","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec00001y": {"type":"frame","parent":"ec00001u","order":"a1","name":"People items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "ec00001z": {"type":"frame","parent":"ec00001y","order":"a0","name":"Portrait","layout":{"dir":"column","gap":12}}
+
+, "ec000020": {"type":"text","parent":"ec00001z","order":"a0","name":"Label","content":"Portrait","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000021": {"type":"frame","parent":"ec00001y","order":"a1","name":"Speaker card","layout":{"dir":"column","gap":12}}
+
+, "ec000022": {"type":"text","parent":"ec000021","order":"a0","name":"Label","content":"Speaker card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000023": {"type":"frame","parent":"ecSpeaker","order":"a1","name":"Names","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
+
+, "ec000024": {"type":"frame","parent":"ecLibBoard","order":"a4","name":"Schedule","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec000025": {"type":"frame","parent":"ec000024","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec000026": {"type":"text","parent":"ec000025","order":"a0","name":"Section title","content":"Schedule","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000027": {"type":"rect","parent":"ec000025","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec000028": {"type":"frame","parent":"ec000024","order":"a1","name":"Schedule items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "ec000029": {"type":"frame","parent":"ec000028","order":"a0","name":"Session","layout":{"dir":"column","gap":12}}
+
+, "ec00002a": {"type":"text","parent":"ec000029","order":"a0","name":"Label","content":"Session","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00002b": {"type":"frame","parent":"ecSession","order":"a0","name":"Meta","w":{"mode":"fill"},"layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "ec00002c": {"type":"text","parent":"ec00002b","order":"a1","name":"·","content":"·","style":{"typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00002d": {"type":"frame","parent":"ecSession","order":"a2","name":"Speaker","w":{"mode":"fill"},"layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "ec00002e": {"type":"frame","parent":"ec00002d","order":"a1","name":"Names","w":{"mode":"fill"},"layout":{"dir":"column"}}
+
+, "ec00002f": {"type":"frame","parent":"ec000028","order":"a1","name":"Break row","layout":{"dir":"column","gap":12}}
+
+, "ec00002g": {"type":"text","parent":"ec00002f","order":"a0","name":"Label","content":"Break row","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00002h": {"type":"frame","parent":"ecLibBoard","order":"a5","name":"Tickets","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec00002i": {"type":"frame","parent":"ec00002h","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec00002j": {"type":"text","parent":"ec00002i","order":"a0","name":"Section title","content":"Tickets","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00002k": {"type":"rect","parent":"ec00002i","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec00002l": {"type":"frame","parent":"ec00002h","order":"a1","name":"Tickets items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "ec00002m": {"type":"frame","parent":"ec00002l","order":"a0","name":"Check item","layout":{"dir":"column","gap":12}}
+
+, "ec00002n": {"type":"text","parent":"ec00002m","order":"a0","name":"Label","content":"Check item","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00002o": {"type":"frame","parent":"ec00002l","order":"a1","name":"Ticket card","layout":{"dir":"column","gap":12}}
+
+, "ec00002p": {"type":"text","parent":"ec00002o","order":"a0","name":"Label","content":"Ticket card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00002q": {"type":"frame","parent":"ecTicket","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "ec00002r": {"type":"frame","parent":"ec00002q","order":"a0","name":"Name row","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "ec00002s": {"type":"frame","parent":"ecTicket","order":"a1","name":"Price","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
+
+, "ec00002t": {"type":"rect","parent":"ecTicket","order":"a3","name":"Rule","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec00002u": {"type":"frame","parent":"ec00002l","order":"a2","name":"FAQ item","layout":{"dir":"column","gap":12}}
+
+, "ec00002v": {"type":"text","parent":"ec00002u","order":"a0","name":"Label","content":"FAQ item","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00002w": {"type":"frame","parent":"ecFaq0","order":"a0","name":"Question row","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"align":"center"}}
+
+, "ec00002x": {"type":"icon","parent":"ec00002w","order":"a1","name":"Icon/plus","w":20,"h":20,"set":"lucide","icon":"plus","color":{"$ref":"color/muted"}}
+
+, "ec00002y": {"type":"frame","parent":"ecLibBoard","order":"a6","name":"Content","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec00002z": {"type":"frame","parent":"ec00002y","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec000030": {"type":"text","parent":"ec00002z","order":"a0","name":"Section title","content":"Content","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000031": {"type":"rect","parent":"ec00002z","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec000032": {"type":"frame","parent":"ec00002y","order":"a1","name":"Content items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "ec000033": {"type":"frame","parent":"ec000032","order":"a0","name":"Stat","layout":{"dir":"column","gap":12}}
+
+, "ec000034": {"type":"text","parent":"ec000033","order":"a0","name":"Label","content":"Stat","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000035": {"type":"frame","parent":"ec000032","order":"a1","name":"Sponsor logo","layout":{"dir":"column","gap":12}}
+
+, "ec000036": {"type":"text","parent":"ec000035","order":"a0","name":"Label","content":"Sponsor logo","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000037": {"type":"frame","parent":"ec000032","order":"a2","name":"Info item","layout":{"dir":"column","gap":12}}
+
+, "ec000038": {"type":"text","parent":"ec000037","order":"a0","name":"Label","content":"Info item","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000039": {"type":"frame","parent":"ecInfo","order":"a0","name":"Icon tile","w":44,"h":44,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "ec00003a": {"type":"frame","parent":"ecInfo","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
+
+, "ec00003b": {"type":"frame","parent":"ec000032","order":"a3","name":"Hotel card","layout":{"dir":"column","gap":12}}
+
+, "ec00003c": {"type":"text","parent":"ec00003b","order":"a0","name":"Label","content":"Hotel card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00003d": {"type":"rect","parent":"ecHtArt","order":"a0","name":"Building","w":56,"h":72,"radius":[6,6,0,0],"opacity":0.85,"fill":{"$ref":"color/figure"}}
+
+, "ec00003e": {"type":"rect","parent":"ecHtArt","order":"a1","name":"Building","w":80,"h":120,"radius":[6,6,0,0],"opacity":0.85,"fill":{"$ref":"color/figure"}}
+
+, "ec00003f": {"type":"rect","parent":"ecHtArt","order":"a2","name":"Building","w":48,"h":92,"radius":[6,6,0,0],"opacity":0.85,"fill":{"$ref":"color/figure"}}
+
+, "ec00003g": {"type":"frame","parent":"ecHotel","order":"a1","name":"Body","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/3"},"pad":20}}
+
+, "ec00003h": {"type":"frame","parent":"ec00003g","order":"a0","name":"Head","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between"}}
+
+, "ec00003i": {"type":"frame","parent":"ec00003h","order":"a0","name":"Names","layout":{"dir":"column","gap":2}}
+
+, "ec00003j": {"type":"frame","parent":"ec00003h","order":"a1","name":"Price","layout":{"dir":"column","align":"end"}}
+
+, "ec00003k": {"type":"text","parent":"ec00003j","order":"a1","name":"per night","content":"per night","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00003l": {"type":"frame","parent":"ec00003g","order":"a1","name":"Meta","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "ec00003m": {"type":"frame","parent":"ec00003l","order":"a0","name":"Distance","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec00003n": {"type":"icon","parent":"ec00003m","order":"a0","name":"Icon/footprints","w":15,"h":15,"set":"lucide","icon":"footprints","color":{"$ref":"color/muted"}}
+
+, "ec00003o": {"type":"frame","parent":"ec00003l","order":"a1","name":"Code","radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","gap":6,"pad":[4,8],"align":"center"}}
+
+, "ec00003p": {"type":"text","parent":"ec00003o","order":"a0","name":"Code","content":"Code","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00003q": {"type":"frame","parent":"ec000032","order":"a4","name":"Venue map","layout":{"dir":"column","gap":12}}
+
+, "ec00003r": {"type":"text","parent":"ec00003q","order":"a0","name":"Label","content":"Venue map","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00003s": {"type":"frame","parent":"ecMap0","order":"a0","name":"Blocks","w":{"mode":"fill"},"h":110,"layout":{"dir":"row","gap":10,"pad":[0,0,0,260]}}
+
+, "ec00003t": {"type":"rect","parent":"ec00003s","order":"a0","name":"Block","w":160,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/land"}}
+
+, "ec00003u": {"type":"rect","parent":"ec00003s","order":"a1","name":"Block","w":120,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec00003v": {"type":"rect","parent":"ec00003s","order":"a2","name":"Block","w":220,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/park"}}
+
+, "ec00003w": {"type":"rect","parent":"ec00003s","order":"a3","name":"Block","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec00003x": {"type":"frame","parent":"ecMap0","order":"a1","name":"Blocks","w":{"mode":"fill"},"h":90,"layout":{"dir":"row","gap":10,"pad":[0,0,0,200]}}
+
+, "ec00003y": {"type":"rect","parent":"ec00003x","order":"a0","name":"Block","w":140,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec00003z": {"type":"rect","parent":"ec00003x","order":"a1","name":"Block","w":200,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/land"}}
+
+, "ec000040": {"type":"rect","parent":"ec00003x","order":"a2","name":"Block","w":90,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec000041": {"type":"rect","parent":"ec00003x","order":"a3","name":"Block","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/land"}}
+
+, "ec000042": {"type":"frame","parent":"ecMap0","order":"a2","name":"Blocks","w":{"mode":"fill"},"h":110,"layout":{"dir":"row","gap":10,"pad":[0,0,0,120]}}
+
+, "ec000043": {"type":"rect","parent":"ec000042","order":"a0","name":"Block","w":240,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/park"}}
+
+, "ec000044": {"type":"rect","parent":"ec000042","order":"a1","name":"Block","w":130,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec000045": {"type":"rect","parent":"ec000042","order":"a2","name":"Block","w":150,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec000046": {"type":"rect","parent":"ec000042","order":"a3","name":"Block","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/land"}}
+
+, "ec000047": {"type":"frame","parent":"ecMap0","order":"a3","name":"Blocks","w":{"mode":"fill"},"h":140,"layout":{"dir":"row","gap":10,"pad":[0,0,0,0]}}
+
+, "ec000048": {"type":"rect","parent":"ec000047","order":"a0","name":"Block","w":180,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/land"}}
+
+, "ec000049": {"type":"rect","parent":"ec000047","order":"a1","name":"Block","w":110,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec00004a": {"type":"rect","parent":"ec000047","order":"a2","name":"Block","w":160,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/land"}}
+
+, "ec00004b": {"type":"rect","parent":"ec000047","order":"a3","name":"Block","w":120,"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/block"}}
+
+, "ec00004c": {"type":"rect","parent":"ec000047","order":"a4","name":"Block","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/park"}}
+
+, "ec00004d": {"type":"frame","parent":"ecMap0","order":"a4","name":"Pin","x":452,"y":168,"position":"absolute","layout":{"dir":"column","gap":6,"align":"center"},"meta":{"kimo.template.overlay":true}}
+
+, "ec00004e": {"type":"frame","parent":"ec00004d","order":"a0","name":"Label","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/ink"},"effects":{"$ref":"shadow/pop"},"layout":{"dir":"row","gap":8,"pad":[8,12],"align":"center"}}
+
+, "ec00004f": {"type":"icon","parent":"ec00004e","order":"a0","name":"Icon/map-pin","w":16,"h":16,"set":"lucide","icon":"map-pin","color":{"$ref":"color/lime"}}
+
+, "ec00004g": {"type":"ellipse","parent":"ec00004d","order":"a1","name":"Point","w":18,"h":18,"fill":{"$ref":"color/lime"},"stroke":{"paint":{"$ref":"color/ink"},"width":3}}
+
+, "ec00004h": {"type":"frame","parent":"ecMap0","order":"a5","name":"Metro","x":40,"y":400,"position":"absolute","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"layout":{"dir":"row","gap":8,"pad":[6,10],"align":"center"},"meta":{"kimo.template.overlay":true}}
+
+, "ec00004i": {"type":"icon","parent":"ec00004h","order":"a0","name":"Icon/ship","w":15,"h":15,"set":"lucide","icon":"ship","color":{"$ref":"color/accent"}}
+
+, "ec00004j": {"type":"text","parent":"ec00004h","order":"a1","name":"Harbour bus 991 to Refshaleøen","content":"Harbour bus 991 to Refshaleøen","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00004k": {"type":"frame","parent":"ecCover","order":"a0","name":"Intro","w":520,"layout":{"dir":"column","gap":24}}
+
+, "ec00004l": {"type":"text","parent":"ec00004k","order":"a0","name":"Eyebrow","content":"Event template","style":{"letterSpacing":1.2,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "ec00004m": {"type":"text","parent":"ec00004k","order":"a1","name":"Title","w":{"mode":"fill"},"content":"Offset conference site","grow":"fixed-width","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00004n": {"type":"text","parent":"ec00004k","order":"a2","name":"Description","w":{"mode":"fill"},"content":"Home, speakers, two-track schedule, speaker page, tickets and venue screens for a two-day design conference. Built from 19 components with light and dark tokens.","grow":"fixed-width","style":{"size":20,"lineHeight":1.5,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00004o": {"type":"frame","parent":"ecCover","order":"a1","name":"Preview","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":[24,0,0,24],"clip":true,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"},"width":{"t":1,"b":1,"l":1}},"layout":{"dir":"column","gap":24,"pad":40}}
+
+, "ec00004p": {"type":"frame","parent":"ec00004o","order":"a0","name":"Top","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "ec00004q": {"type":"instance","parent":"ec00004p","order":"a0","of":"ecBadge","args":{"label":"15 and 16 April 2027, Copenhagen","tone":"lime"}}
+
+, "ec00004r": {"type":"instance","parent":"ec00004p","order":"a1","of":"ecDays"}
+
+, "ec00004s": {"type":"frame","parent":"ec00004o","order":"a1","name":"Sessions","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/4"}}}
+
+, "ec00004t": {"type":"instance","parent":"ec00004s","order":"a0","of":"ecSession","props":{"w":316},"args":{"format":"Talk","role":"Principal designer, Northwind Maps","speaker":"Hana Sato","time":"09:30 to 10:15","title":"Maps for people who are lost and in a hurry","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"blue"}}}}}
+
+, "ec00004u": {"type":"instance","parent":"ec00004s","order":"a1","of":"ecSession","props":{"w":316},"args":{"format":"Talk","role":"Staff researcher, Quill Health","speaker":"Elena Petrova","time":"09:30 to 10:15","title":"Research operations on a team of two","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"teal"}}}}}
+
+, "ec00004v": {"type":"frame","parent":"ec00004o","order":"a2","name":"Speakers","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/4"}}}
+
+, "ec00004w": {"type":"instance","parent":"ec00004v","order":"a0","of":"ecSpeaker","props":{"w":205},"args":{"name":"Malik Johnson","role":"Head of design, Parcelly","showTalk":false,"talk":"One design system, 40 teams and no mandate","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"coral"}}}}}
+
+, "ec00004x": {"type":"instance","parent":"ec00004v","order":"a1","of":"ecSpeaker","props":{"w":205},"args":{"name":"Priya Nair","role":"VP product design, Tandem","showTalk":false,"talk":"Pricing pages are product design","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"violet"}}}}}
+
+, "ec00004y": {"type":"instance","parent":"ec00004v","order":"a2","of":"ecSpeaker","props":{"w":205},"args":{"name":"Jonas Lindqvist","role":"Design engineer, Fable Bank","showTalk":false,"talk":"Prototyping in production code","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"lime"}}}}}
+
+, "ec00004z": {"type":"frame","parent":null,"order":"a2","name":"Home","x":0,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"ecPage3"}
+
+, "ec000050": {"type":"instance","parent":"ec00004z","order":"a0","of":"ecNavBar","args":{"active":"home"}}
+
+, "ec000051": {"type":"frame","parent":"ec00004z","order":"a1","name":"Hero","w":{"mode":"fill"},"fill":{"$ref":"color/inverse"},"layout":{"dir":"column","gap":{"$ref":"space/10"},"pad":[72,120,80,120]}}
+
+, "ec000052": {"type":"frame","parent":"ec000051","order":"a0","name":"Tags","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "ec000053": {"type":"instance","parent":"ec000052","order":"a0","of":"ecBadge","args":{"label":"15 and 16 April 2027","tone":"lime"}}
+
+, "ec000054": {"type":"text","parent":"ec000052","order":"a1","name":"Dok 4, Refshaleøen, Copenhagen","content":"Dok 4, Refshaleøen, Copenhagen","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec000055": {"type":"frame","parent":"ec000051","order":"a1","name":"Title","layout":{"dir":"column"}}
+
+, "ec000056": {"type":"text","parent":"ec000055","order":"a0","name":"Offset","content":"Offset","style":{"size":176,"letterSpacing":-8,"typography":{"$ref":"type/hero"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "ec000057": {"type":"text","parent":"ec000055","order":"a1","name":"2027","content":"2027","style":{"size":176,"letterSpacing":-8,"typography":{"$ref":"type/hero"}},"fill":{"$ref":"color/lime"}}
+
+, "ec000058": {"type":"frame","parent":"ec000051","order":"a2","name":"Intro","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"end"}}
+
+, "ec000059": {"type":"text","parent":"ec000058","order":"a0","name":"Two days, two tracks and 24 sessions on…","w":620,"content":"Two days, two tracks and 24 sessions on the craft of product design. 900 designers, researchers and design engineers in a former shipyard hall on the Copenhagen harbour.","grow":"fixed-width","style":{"size":20,"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "ec00005a": {"type":"frame","parent":"ec000058","order":"a1","name":"Actions","layout":{"dir":"row","gap":{"$ref":"space/3"},"align":"center"}}
+
+, "ec00005b": {"type":"instance","parent":"ec00005a","order":"a0","of":"ecBtn0","args":{"icon":true,"label":"Get tickets","size":"lg","variant":"lime"}}
+
+, "ec00005c": {"type":"instance","parent":"ec00005a","order":"a1","of":"ecBtn0","args":{"label":"See the schedule","size":"lg","variant":"inverse"}}
+
+, "ec00005d": {"type":"frame","parent":"ec000051","order":"a3","name":"Numbers","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/inverse-border"},"width":{"t":1}},"layout":{"dir":"row","gap":{"$ref":"space/6"},"pad":[40,0,0,0]}}
+
+, "ec00005e": {"type":"instance","parent":"ec00005d","order":"a0","of":"ecStat","args":{"label":"Days, Thursday and Friday","tone":"inverse","value":"2"}}
+
+, "ec00005f": {"type":"instance","parent":"ec00005d","order":"a1","of":"ecStat","args":{"label":"Talks and workshops on two tracks","tone":"inverse","value":"24"}}
+
+, "ec00005g": {"type":"instance","parent":"ec00005d","order":"a2","of":"ecStat","args":{"label":"Attendees from 31 countries in 2026","tone":"inverse","value":"900"}}
+
+, "ec00005h": {"type":"instance","parent":"ec00005d","order":"a3","of":"ecStat","args":{"label":"Standard ticket until 1 March","tone":"inverse","value":"€590"}}
+
+, "ec00005i": {"type":"frame","parent":"ec00004z","order":"a2","name":"Speakers","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[96,120]}}
+
+, "ec00005j": {"type":"instance","parent":"ec00005i","order":"a0","of":"ecSecHead","props":{"w":{"mode":"fill"}},"args":{"eyebrow":"Speakers","subtitle":"No sponsor slots on stage. Every talk was picked from 410 proposals by last year's speakers.","title":"Designers who ship, talking about how"},"overrides":{"ecShAct":{"slot":true}}}
+
+, "ec00005k": {"type":"instance","parent":"ec00005j","at":"ecShAct","order":"a0","of":"ecBtnSec","args":{"icon":true,"label":"All 12 speakers"}}
+
+, "ec00005l": {"type":"frame","parent":"ec00005i","order":"a1","name":"Grid","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec00005m": {"type":"instance","parent":"ec00005l","order":"a0","of":"ecSpeaker","props":{"w":282},"args":{"name":"Hana Sato","role":"Principal designer, Northwind Maps","talk":"Maps for people who are lost and in a hurry","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"blue"}}}}}
+
+, "ec00005n": {"type":"instance","parent":"ec00005l","order":"a1","of":"ecSpeaker","props":{"w":282},"args":{"name":"Malik Johnson","role":"Head of design, Parcelly","talk":"One design system, 40 teams and no mandate","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"coral"}}}}}
+
+, "ec00005o": {"type":"instance","parent":"ec00005l","order":"a2","of":"ecSpeaker","props":{"w":282},"args":{"name":"Priya Nair","role":"VP product design, Tandem","talk":"Pricing pages are product design","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"violet"}}}}}
+
+, "ec00005p": {"type":"instance","parent":"ec00005l","order":"a3","of":"ecSpeaker","props":{"w":282},"args":{"name":"Jonas Lindqvist","role":"Design engineer, Fable Bank","talk":"Prototyping in production code","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"lime"}}}}}
+
+, "ec00005q": {"type":"frame","parent":"ec00004z","order":"a3","name":"Schedule","w":{"mode":"fill"},"fill":{"$ref":"color/surface"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[96,120]}}
+
+, "ec00005r": {"type":"instance","parent":"ec00005q","order":"a0","of":"ecSecHead","props":{"w":{"mode":"fill"}},"args":{"eyebrow":"Schedule","subtitle":"Main stage talks run 45 minutes. The Studio holds shorter talks and hands-on workshops of up to 40 people.","title":"Two tracks, one building"},"overrides":{"ecShAct":{"slot":true}}}
+
+, "ec00005s": {"type":"instance","parent":"ec00005r","at":"ecShAct","order":"a0","of":"ecBtn0","args":{"icon":true,"label":"Full schedule"}}
+
+, "ec00005t": {"type":"frame","parent":"ec00005q","order":"a1","name":"Days","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec00005u": {"type":"frame","parent":"ec00005t","order":"a0","name":"Thursday 15 April","w":588,"layout":{"dir":"column","gap":{"$ref":"space/3"}}}
+
+, "ec00005v": {"type":"text","parent":"ec00005u","order":"a0","name":"Thursday 15 April","content":"Thursday 15 April","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00005w": {"type":"instance","parent":"ec00005u","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Principal designer, Northwind Maps","speaker":"Hana Sato","time":"09:30","title":"Maps for people who are lost and in a hurry","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"blue"}}}}}
+
+, "ec00005x": {"type":"instance","parent":"ec00005u","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Staff researcher, Quill Health","speaker":"Elena Petrova","time":"10:30","title":"Research operations on a team of two","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"teal"}}}}}
+
+, "ec00005y": {"type":"instance","parent":"ec00005u","order":"a3","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"VP product design, Tandem","speaker":"Priya Nair","time":"11:45","title":"Pricing pages are product design","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"violet"}}}}}
+
+, "ec00005z": {"type":"frame","parent":"ec00005t","order":"a1","name":"Friday 16 April","w":588,"layout":{"dir":"column","gap":{"$ref":"space/3"}}}
+
+, "ec000060": {"type":"text","parent":"ec00005z","order":"a0","name":"Friday 16 April","content":"Friday 16 April","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec000061": {"type":"instance","parent":"ec00005z","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Creative director, Studio Nord","speaker":"Freya Holm","time":"09:30","title":"Motion specs developers can build","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"blue"}}}}}
+
+, "ec000062": {"type":"instance","parent":"ec00005z","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Design manager, Orbit","speaker":"Aiko Tanaka","time":"10:30","title":"Design critique people look forward to","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"teal"}}}}}
+
+, "ec000063": {"type":"instance","parent":"ec00005z","order":"a3","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Director of design, Bolt Freight","speaker":"Kwame Mensah","time":"11:45","title":"Dashboards for the 6 a.m. shift","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"lime"}}}}}
+
+, "ec000064": {"type":"frame","parent":"ec00004z","order":"a4","name":"Sponsors","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[96,120]}}
+
+, "ec000065": {"type":"instance","parent":"ec000064","order":"a0","of":"ecSecHead","props":{"w":{"mode":"fill"}},"args":{"eyebrow":"Sponsors","showSubtitle":false,"title":"Offset is paid for by tickets and these teams"}}
+
+, "ec000066": {"type":"frame","parent":"ec000064","order":"a1","name":"Sponsors","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"}}}
+
+, "ec000067": {"type":"frame","parent":"ec000066","order":"a0","name":"Row 1","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec000068": {"type":"instance","parent":"ec000067","order":"a0","of":"ecSponsor","args":{"name":"Northwind","tier":"gold"},"overrides":{"ecSpoIcon":{"set":{"icon":"compass"}}}}
+
+, "ec000069": {"type":"instance","parent":"ec000067","order":"a1","of":"ecSponsor","args":{"name":"Fable Bank","tier":"gold"},"overrides":{"ecSpoIcon":{"set":{"icon":"landmark"}}}}
+
+, "ec00006a": {"type":"instance","parent":"ec000067","order":"a2","of":"ecSponsor","args":{"name":"Parcelly","tier":"gold"},"overrides":{"ecSpoIcon":{"set":{"icon":"package"}}}}
+
+, "ec00006b": {"type":"instance","parent":"ec000067","order":"a3","of":"ecSponsor","args":{"name":"Quill","tier":"gold"},"overrides":{"ecSpoIcon":{"set":{"icon":"feather"}}}}
+
+, "ec00006c": {"type":"frame","parent":"ec000066","order":"a1","name":"Row 2","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec00006d": {"type":"instance","parent":"ec00006c","order":"a0","of":"ecSponsor","args":{"name":"Tandem","tier":"partner"},"overrides":{"ecSpoIcon":{"set":{"icon":"bike"}}}}
+
+, "ec00006e": {"type":"instance","parent":"ec00006c","order":"a1","of":"ecSponsor","args":{"name":"Orbit","tier":"partner"},"overrides":{"ecSpoIcon":{"set":{"icon":"orbit"}}}}
+
+, "ec00006f": {"type":"instance","parent":"ec00006c","order":"a2","of":"ecSponsor","args":{"name":"Field Type","tier":"partner"},"overrides":{"ecSpoIcon":{"set":{"icon":"type"}}}}
+
+, "ec00006g": {"type":"instance","parent":"ec00006c","order":"a3","of":"ecSponsor","args":{"name":"Harbor","tier":"partner"},"overrides":{"ecSpoIcon":{"set":{"icon":"anchor"}}}}
+
+, "ec00006h": {"type":"frame","parent":"ec00004z","order":"a5","name":"Call to action","w":{"mode":"fill"},"layout":{"dir":"column","pad":[0,120,96,120]}}
+
+, "ec00006i": {"type":"frame","parent":"ec00006h","order":"a0","name":"Band","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/lime"},"layout":{"dir":"row","gap":{"$ref":"space/12"},"pad":[56,64],"justify":"between","align":"center"}}
+
+, "ec00006j": {"type":"frame","parent":"ec00006i","order":"a0","name":"Text","w":840,"layout":{"dir":"column","gap":{"$ref":"space/3"}}}
+
+, "ec00006k": {"type":"text","parent":"ec00006j","order":"a0","name":"Standard tickets are €590 until 1 March","w":{"mode":"fill"},"content":"Standard tickets are €590 until 1 March","grow":"fixed-width","style":{"size":40,"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/on-lime"}}
+
+, "ec00006l": {"type":"text","parent":"ec00006j","order":"a1","name":"After that the price goes to €690. Team…","w":{"mode":"fill"},"content":"After that the price goes to €690. Teams of five or more save 17%.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/on-lime"}}
+
+, "ec00006m": {"type":"frame","parent":"ec00006i","order":"a1","name":"Actions","layout":{"dir":"row","gap":{"$ref":"space/3"},"align":"center"}}
+
+, "ec00006n": {"type":"instance","parent":"ec00006m","order":"a0","of":"ecBtn0","args":{"icon":true,"label":"Get tickets","size":"lg","variant":"inverse"}}
+
+, "ec00006o": {"type":"instance","parent":"ec00004z","order":"a6","of":"ecFooter"}
+
+, "ec00006p": {"type":"frame","parent":null,"order":"a3","name":"Speakers","x":1600,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"ecPage3"}
+
+, "ec00006q": {"type":"instance","parent":"ec00006p","order":"a0","of":"ecNavBar","args":{"active":"speakers"}}
+
+, "ec00006r": {"type":"frame","parent":"ec00006p","order":"a1","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/4"},"pad":[80,120,56,120]}}
+
+, "ec00006s": {"type":"text","parent":"ec00006r","order":"a0","name":"Speakers","content":"Speakers","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/accent"}}
+
+, "ec00006t": {"type":"text","parent":"ec00006r","order":"a1","name":"12 speakers, 24 sessions","content":"12 speakers, 24 sessions","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00006u": {"type":"text","parent":"ec00006r","order":"a2","name":"Six on the main stage, six in the Studi…","w":680,"content":"Six on the main stage, six in the Studio. Every speaker gives one talk and joins the Friday Q&A.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00006v": {"type":"frame","parent":"ec00006r","order":"a3","name":"Filters","layout":{"dir":"row","gap":8,"pad":[16,0,0,0]}}
+
+, "ec00006w": {"type":"instance","parent":"ec00006v","order":"a0","of":"ecBadge","args":{"label":"All speakers","tone":"lime"}}
+
+, "ec00006x": {"type":"instance","parent":"ec00006v","order":"a1","of":"ecBadge","args":{"label":"Main stage","tone":"main"}}
+
+, "ec00006y": {"type":"instance","parent":"ec00006v","order":"a2","of":"ecBadge","args":{"label":"Studio","tone":"studio"}}
+
+, "ec00006z": {"type":"frame","parent":"ec00006p","order":"a2","name":"Grid","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[0,120,96,120]}}
+
+, "ec000070": {"type":"frame","parent":"ec00006z","order":"a0","name":"Row 1","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec000071": {"type":"instance","parent":"ec000070","order":"a0","of":"ecSpeaker","props":{"w":282},"args":{"name":"Hana Sato","role":"Principal designer, Northwind Maps","talk":"Maps for people who are lost and in a hurry","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"blue"}}}}}
+
+, "ec000072": {"type":"instance","parent":"ec000070","order":"a1","of":"ecSpeaker","props":{"w":282},"args":{"name":"Malik Johnson","role":"Head of design, Parcelly","talk":"One design system, 40 teams and no mandate","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"coral"}}}}}
+
+, "ec000073": {"type":"instance","parent":"ec000070","order":"a2","of":"ecSpeaker","props":{"w":282},"args":{"name":"Priya Nair","role":"VP product design, Tandem","talk":"Pricing pages are product design","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"violet"}}}}}
+
+, "ec000074": {"type":"instance","parent":"ec000070","order":"a3","of":"ecSpeaker","props":{"w":282},"args":{"name":"Camille Dubois","role":"Accessibility lead, Ledger & Co.","talk":"Screen reader testing in every sprint","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"blue"}}}}}
+
+, "ec000075": {"type":"frame","parent":"ec00006z","order":"a1","name":"Row 2","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec000076": {"type":"instance","parent":"ec000075","order":"a0","of":"ecSpeaker","props":{"w":282},"args":{"name":"Kwame Mensah","role":"Director of design, Bolt Freight","talk":"Dashboards for the 6 a.m. shift","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"lime"}}}}}
+
+, "ec000077": {"type":"instance","parent":"ec000075","order":"a1","of":"ecSpeaker","props":{"w":282},"args":{"name":"Freya Holm","role":"Creative director, Studio Nord","talk":"Motion specs developers can build","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"blue"}}}}}
+
+, "ec000078": {"type":"instance","parent":"ec000075","order":"a2","of":"ecSpeaker","props":{"w":282},"args":{"name":"Elena Petrova","role":"Staff researcher, Quill Health","talk":"Research operations on a team of two","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"teal"}}}}}
+
+, "ec000079": {"type":"instance","parent":"ec000075","order":"a3","of":"ecSpeaker","props":{"w":282},"args":{"name":"Jonas Lindqvist","role":"Design engineer, Fable Bank","talk":"Prototyping in production code","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"lime"}}}}}
+
+, "ec00007a": {"type":"frame","parent":"ec00006z","order":"a2","name":"Row 3","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec00007b": {"type":"instance","parent":"ec00007a","order":"a0","of":"ecSpeaker","props":{"w":282},"args":{"name":"Diego Romero","role":"Founder, Field Type","talk":"Variable fonts in product interfaces","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"coral"}}}}}
+
+, "ec00007c": {"type":"instance","parent":"ec00007a","order":"a1","of":"ecSpeaker","props":{"w":282},"args":{"name":"Aiko Tanaka","role":"Design manager, Orbit","talk":"Design critique people look forward to","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"teal"}}}}}
+
+, "ec00007d": {"type":"instance","parent":"ec00007a","order":"a2","of":"ecSpeaker","props":{"w":282},"args":{"name":"Sam O'Connell","role":"Product designer, Harbor","talk":"Designing for slow networks in 2027","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"violet"}}}}}
+
+, "ec00007e": {"type":"instance","parent":"ec00007a","order":"a3","of":"ecSpeaker","props":{"w":282},"args":{"name":"Lea Fischer","role":"Content designer, Kino","talk":"Workshop: writing interface copy as a team","track":"studio"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"coral"}}}}}
+
+, "ec00007f": {"type":"frame","parent":"ec00006p","order":"a3","name":"Call to action","w":{"mode":"fill"},"layout":{"dir":"column","pad":[0,120,96,120]}}
+
+, "ec00007g": {"type":"frame","parent":"ec00007f","order":"a0","name":"Band","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/lime"},"layout":{"dir":"row","gap":{"$ref":"space/12"},"pad":[56,64],"justify":"between","align":"center"}}
+
+, "ec00007h": {"type":"frame","parent":"ec00007g","order":"a0","name":"Text","w":840,"layout":{"dir":"column","gap":{"$ref":"space/3"}}}
+
+, "ec00007i": {"type":"text","parent":"ec00007h","order":"a0","name":"Standard tickets are €590 until 1 March","w":{"mode":"fill"},"content":"Standard tickets are €590 until 1 March","grow":"fixed-width","style":{"size":40,"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/on-lime"}}
+
+, "ec00007j": {"type":"text","parent":"ec00007h","order":"a1","name":"After that the price goes to €690. Team…","w":{"mode":"fill"},"content":"After that the price goes to €690. Teams of five or more save 17%.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/on-lime"}}
+
+, "ec00007k": {"type":"frame","parent":"ec00007g","order":"a1","name":"Actions","layout":{"dir":"row","gap":{"$ref":"space/3"},"align":"center"}}
+
+, "ec00007l": {"type":"instance","parent":"ec00007k","order":"a0","of":"ecBtn0","args":{"icon":true,"label":"Get tickets","size":"lg","variant":"inverse"}}
+
+, "ec00007m": {"type":"instance","parent":"ec00006p","order":"a4","of":"ecFooter"}
+
+, "ec00007n": {"type":"frame","parent":null,"order":"a4","name":"Schedule","x":3200,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"ecPage3"}
+
+, "ec00007o": {"type":"instance","parent":"ec00007n","order":"a0","of":"ecNavBar","args":{"active":"schedule"}}
+
+, "ec00007p": {"type":"frame","parent":"ec00007n","order":"a1","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/4"},"pad":[80,120,56,120]}}
+
+, "ec00007q": {"type":"text","parent":"ec00007p","order":"a0","name":"Schedule","content":"Schedule","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/accent"}}
+
+, "ec00007r": {"type":"text","parent":"ec00007p","order":"a1","name":"Thursday 15 April","content":"Thursday 15 April","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00007s": {"type":"text","parent":"ec00007p","order":"a2","name":"Doors open at 08:30. All times are Cope…","w":680,"content":"Doors open at 08:30. All times are Copenhagen time (CEST). Workshops need a seat, booked from your ticket page in March.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00007t": {"type":"frame","parent":"ec00007p","order":"a3","name":"Controls","w":{"mode":"fill"},"layout":{"dir":"row","pad":[16,0,0,0],"justify":"between","align":"center"}}
+
+, "ec00007u": {"type":"instance","parent":"ec00007t","order":"a0","of":"ecDays"}
+
+, "ec00007v": {"type":"frame","parent":"ec00007t","order":"a1","name":"Legend","layout":{"dir":"row","gap":8}}
+
+, "ec00007w": {"type":"instance","parent":"ec00007v","order":"a0","of":"ecBadge","args":{"label":"Main stage, hall A","tone":"main"}}
+
+, "ec00007x": {"type":"instance","parent":"ec00007v","order":"a1","of":"ecBadge","args":{"label":"Studio, hall C","tone":"studio"}}
+
+, "ec00007y": {"type":"frame","parent":"ec00007n","order":"a2","name":"Program","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/4"},"pad":[0,120,96,120]}}
+
+, "ec00007z": {"type":"frame","parent":"ec00007y","order":"a0","name":"Track heads","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"pad":[0,0,4,0]}}
+
+, "ec000080": {"type":"text","parent":"ec00007z","order":"a0","name":"Time","w":120,"content":"Time","grow":"fixed-width","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000081": {"type":"text","parent":"ec00007z","order":"a1","name":"Main stage","w":516,"content":"Main stage","grow":"fixed-width","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/accent"}}
+
+, "ec000082": {"type":"text","parent":"ec00007z","order":"a2","name":"Studio","w":516,"content":"Studio","grow":"fixed-width","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/coral"}}
+
+, "ec000083": {"type":"instance","parent":"ec00007y","order":"a1","of":"ecBreak","props":{"w":{"mode":"fill"}},"args":{"label":"Registration, coffee and pastries","note":"Main hall","time":"08:30"},"overrides":{"ecBrIcon":{"set":{"icon":"coffee"}}}}
+
+, "ec000084": {"type":"frame","parent":"ec00007y","order":"a2","name":"09:30","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "ec000085": {"type":"text","parent":"ec000084","order":"a0","name":"Time","w":120,"content":"09:30","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec000086": {"type":"instance","parent":"ec000084","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Keynote","role":"Principal designer, Northwind Maps","speaker":"Hana Sato","time":"09:30 to 10:15","title":"Maps for people who are lost and in a hurry","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"blue"}}}}}
+
+, "ec000087": {"type":"instance","parent":"ec000084","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Workshop","role":"Content designer, Kino","speaker":"Lea Fischer","time":"09:30 to 11:00","title":"Workshop: writing interface copy as a team","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"coral"}}}}}
+
+, "ec000088": {"type":"frame","parent":"ec00007y","order":"a3","name":"10:30","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "ec000089": {"type":"text","parent":"ec000088","order":"a0","name":"Time","w":120,"content":"10:30","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00008a": {"type":"instance","parent":"ec000088","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Head of design, Parcelly","speaker":"Malik Johnson","time":"10:30 to 11:15","title":"One design system, 40 teams and no mandate","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"coral"}}}}}
+
+, "ec00008b": {"type":"instance","parent":"ec000088","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Staff researcher, Quill Health","speaker":"Elena Petrova","time":"11:00 to 11:30","title":"Research operations on a team of two","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"teal"}}}}}
+
+, "ec00008c": {"type":"instance","parent":"ec00007y","order":"a4","of":"ecBreak","props":{"w":{"mode":"fill"}},"args":{"label":"Coffee break","note":"Main hall and pier","time":"11:15"},"overrides":{"ecBrIcon":{"set":{"icon":"coffee"}}}}
+
+, "ec00008d": {"type":"frame","parent":"ec00007y","order":"a5","name":"11:45","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "ec00008e": {"type":"text","parent":"ec00008d","order":"a0","name":"Time","w":120,"content":"11:45","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00008f": {"type":"instance","parent":"ec00008d","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"VP product design, Tandem","speaker":"Priya Nair","time":"11:45 to 12:30","title":"Pricing pages are product design","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"violet"}}}}}
+
+, "ec00008g": {"type":"instance","parent":"ec00008d","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Design engineer, Fable Bank","speaker":"Jonas Lindqvist","time":"11:45 to 12:15","title":"Prototyping in production code","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"lime"}}}}}
+
+, "ec00008h": {"type":"instance","parent":"ec00007y","order":"a6","of":"ecBreak","props":{"w":{"mode":"fill"}},"args":{"label":"Lunch","note":"Food hall, vegetarian and vegan","time":"12:30"},"overrides":{"ecBrIcon":{"set":{"icon":"utensils"}}}}
+
+, "ec00008i": {"type":"frame","parent":"ec00007y","order":"a7","name":"13:45","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "ec00008j": {"type":"text","parent":"ec00008i","order":"a0","name":"Time","w":120,"content":"13:45","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00008k": {"type":"instance","parent":"ec00008i","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Accessibility lead, Ledger & Co.","speaker":"Camille Dubois","time":"13:45 to 14:30","title":"Screen reader testing in every sprint","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"blue"}}}}}
+
+, "ec00008l": {"type":"instance","parent":"ec00008i","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Founder, Field Type","speaker":"Diego Romero","time":"13:45 to 14:15","title":"Variable fonts in product interfaces","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"coral"}}}}}
+
+, "ec00008m": {"type":"frame","parent":"ec00007y","order":"a8","name":"14:30","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "ec00008n": {"type":"text","parent":"ec00008m","order":"a0","name":"Time","w":120,"content":"14:30","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00008o": {"type":"instance","parent":"ec00008m","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Director of design, Bolt Freight","speaker":"Kwame Mensah","time":"14:30 to 15:15","title":"Dashboards for the 6 a.m. shift","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"lime"}}}}}
+
+, "ec00008p": {"type":"instance","parent":"ec00008m","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Workshop","role":"Design manager, Orbit","speaker":"Aiko Tanaka","time":"14:30 to 15:30","title":"Design critique people look forward to","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"teal"}}}}}
+
+, "ec00008q": {"type":"instance","parent":"ec00007y","order":"a9","of":"ecBreak","props":{"w":{"mode":"fill"}},"args":{"label":"Break","note":"Main hall","time":"15:15"},"overrides":{"ecBrIcon":{"set":{"icon":"coffee"}}}}
+
+, "ec00008r": {"type":"frame","parent":"ec00007y","order":"aA","name":"15:45","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "ec00008s": {"type":"text","parent":"ec00008r","order":"a0","name":"Time","w":120,"content":"15:45","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00008t": {"type":"instance","parent":"ec00008r","order":"a1","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Creative director, Studio Nord","speaker":"Freya Holm","time":"15:45 to 16:30","title":"Motion specs developers can build","track":"main"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"blue"}}}}}
+
+, "ec00008u": {"type":"instance","parent":"ec00008r","order":"a2","of":"ecSession","props":{"w":516},"args":{"format":"Talk","role":"Product designer, Harbor","speaker":"Sam O'Connell","time":"15:45 to 16:15","title":"Designing for slow networks in 2027","track":"studio"},"overrides":{"ecSsPt":{"set":{"args":{"size":"sm","tone":"violet"}}}}}
+
+, "ec00008v": {"type":"instance","parent":"ec00007y","order":"aB","of":"ecBreak","props":{"w":{"mode":"fill"}},"args":{"label":"Drinks on the pier","note":"Until 20:00, bring a jacket","time":"17:00"},"overrides":{"ecBrIcon":{"set":{"icon":"wine"}}}}
+
+, "ec00008w": {"type":"instance","parent":"ec00007n","order":"a3","of":"ecFooter"}
+
+, "ec00008x": {"type":"frame","parent":null,"order":"a5","name":"Speaker detail","x":4800,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"ecPage3"}
+
+, "ec00008y": {"type":"instance","parent":"ec00008x","order":"a0","of":"ecNavBar","args":{"active":"speakers"}}
+
+, "ec00008z": {"type":"frame","parent":"ec00008x","order":"a1","name":"Profile","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/16"},"pad":[64,120,96,120]}}
+
+, "ec000090": {"type":"instance","parent":"ec00008z","order":"a0","of":"ecPortrait","args":{"size":"xl","tone":"blue"}}
+
+, "ec000091": {"type":"frame","parent":"ec00008z","order":"a1","name":"Info","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"}}}
+
+, "ec000092": {"type":"frame","parent":"ec000091","order":"a0","name":"Back","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec000093": {"type":"icon","parent":"ec000092","order":"a0","name":"Icon/arrow-left","w":16,"h":16,"set":"lucide","icon":"arrow-left","color":{"$ref":"color/muted"}}
+
+, "ec000094": {"type":"text","parent":"ec000092","order":"a1","name":"All speakers","content":"All speakers","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000095": {"type":"instance","parent":"ec000091","order":"a1","of":"ecBadge","args":{"label":"Keynote, main stage","tone":"main"}}
+
+, "ec000096": {"type":"text","parent":"ec000091","order":"a2","name":"Hana Sato","content":"Hana Sato","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ec000097": {"type":"text","parent":"ec000091","order":"a3","name":"Principal designer, Northwind Maps","content":"Principal designer, Northwind Maps","style":{"weight":500,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/muted"}}
+
+, "ec000098": {"type":"text","parent":"ec000091","order":"a4","name":"Hana leads design for navigation at Nor…","w":{"mode":"fill"},"content":"Hana leads design for navigation at Northwind Maps, where her team of 14 works on routing, search and offline maps used by 60 million people a month. Before that she designed ticket machines for the Tokyo Metro, which she still calls the hardest interface she has worked on.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "ec000099": {"type":"text","parent":"ec000091","order":"a5","name":"She lives in Malmö and commutes to Cope…","w":{"mode":"fill"},"content":"She lives in Malmö and commutes to Copenhagen, usually with the app open to see if it gets the train right.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00009a": {"type":"frame","parent":"ec000091","order":"a6","name":"Links","layout":{"dir":"row","gap":{"$ref":"space/5"},"align":"center"}}
+
+, "ec00009b": {"type":"frame","parent":"ec00009a","order":"a0","name":"hanasato.design","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec00009c": {"type":"icon","parent":"ec00009b","order":"a0","name":"Icon/globe","w":16,"h":16,"set":"lucide","icon":"globe","color":{"$ref":"color/accent"}}
+
+, "ec00009d": {"type":"text","parent":"ec00009b","order":"a1","name":"hanasato.design","content":"hanasato.design","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "ec00009e": {"type":"frame","parent":"ec00009a","order":"a1","name":"LinkedIn","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec00009f": {"type":"icon","parent":"ec00009e","order":"a0","name":"Icon/link","w":16,"h":16,"set":"lucide","icon":"link","color":{"$ref":"color/accent"}}
+
+, "ec00009g": {"type":"text","parent":"ec00009e","order":"a1","name":"LinkedIn","content":"LinkedIn","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "ec00009h": {"type":"frame","parent":"ec00009a","order":"a2","name":"2025 talk recording","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec00009i": {"type":"icon","parent":"ec00009h","order":"a0","name":"Icon/mic","w":16,"h":16,"set":"lucide","icon":"mic","color":{"$ref":"color/accent"}}
+
+, "ec00009j": {"type":"text","parent":"ec00009h","order":"a1","name":"2025 talk recording","content":"2025 talk recording","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "ec00009k": {"type":"frame","parent":"ec000091","order":"a7","name":"Talk","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":{"$ref":"space/4"},"pad":{"$ref":"space/8"}}}
+
+, "ec00009l": {"type":"frame","parent":"ec00009k","order":"a0","name":"Meta","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/4"},"align":"center"}}
+
+, "ec00009m": {"type":"frame","parent":"ec00009l","order":"a0","name":"Thursday 15 April","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec00009n": {"type":"icon","parent":"ec00009m","order":"a0","name":"Icon/calendar","w":15,"h":15,"set":"lucide","icon":"calendar","color":{"$ref":"color/muted"}}
+
+, "ec00009o": {"type":"text","parent":"ec00009m","order":"a1","name":"Thursday 15 April","content":"Thursday 15 April","style":{"weight":500,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00009p": {"type":"frame","parent":"ec00009l","order":"a1","name":"09:30 to 10:15","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec00009q": {"type":"icon","parent":"ec00009p","order":"a0","name":"Icon/clock","w":15,"h":15,"set":"lucide","icon":"clock","color":{"$ref":"color/muted"}}
+
+, "ec00009r": {"type":"text","parent":"ec00009p","order":"a1","name":"09:30 to 10:15","content":"09:30 to 10:15","style":{"weight":500,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00009s": {"type":"frame","parent":"ec00009l","order":"a2","name":"Main stage, hall A","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "ec00009t": {"type":"icon","parent":"ec00009s","order":"a0","name":"Icon/map-pin","w":15,"h":15,"set":"lucide","icon":"map-pin","color":{"$ref":"color/muted"}}
+
+, "ec00009u": {"type":"text","parent":"ec00009s","order":"a1","name":"Main stage, hall A","content":"Main stage, hall A","style":{"weight":500,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00009v": {"type":"text","parent":"ec00009k","order":"a1","name":"Maps for people who are lost and in a h…","w":{"mode":"fill"},"content":"Maps for people who are lost and in a hurry","grow":"fixed-width","style":{"size":28,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "ec00009w": {"type":"text","parent":"ec00009k","order":"a2","name":"Most map users are not exploring. They …","w":{"mode":"fill"},"content":"Most map users are not exploring. They are late, on a phone with 9% battery, and need the next turn. Hana walks through three years of research on stressed navigation, the features her team removed, and the one they had to put back.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec00009x": {"type":"frame","parent":"ec00009k","order":"a3","name":"Actions","layout":{"dir":"row","gap":{"$ref":"space/3"}}}
+
+, "ec00009y": {"type":"instance","parent":"ec00009x","order":"a0","of":"ecBtn0","args":{"icon":true,"label":"Add to my schedule"}}
+
+, "ec00009z": {"type":"instance","parent":"ec00009x","order":"a1","of":"ecBtnSec","args":{"label":"Share talk"}}
+
+, "ec0000a0": {"type":"frame","parent":"ec00008x","order":"a2","name":"Also speaking","w":{"mode":"fill"},"fill":{"$ref":"color/surface"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[80,120]}}
+
+, "ec0000a1": {"type":"instance","parent":"ec0000a0","order":"a0","of":"ecSecHead","props":{"w":{"mode":"fill"}},"args":{"eyebrow":"Also on the main stage","showSubtitle":false,"title":"More Thursday talks"}}
+
+, "ec0000a2": {"type":"frame","parent":"ec0000a0","order":"a1","name":"Grid","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec0000a3": {"type":"instance","parent":"ec0000a2","order":"a0","of":"ecSpeaker","props":{"w":282},"args":{"name":"Malik Johnson","role":"Head of design, Parcelly","talk":"One design system, 40 teams and no mandate","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"coral"}}}}}
+
+, "ec0000a4": {"type":"instance","parent":"ec0000a2","order":"a1","of":"ecSpeaker","props":{"w":282},"args":{"name":"Priya Nair","role":"VP product design, Tandem","talk":"Pricing pages are product design","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"violet"}}}}}
+
+, "ec0000a5": {"type":"instance","parent":"ec0000a2","order":"a2","of":"ecSpeaker","props":{"w":282},"args":{"name":"Camille Dubois","role":"Accessibility lead, Ledger & Co.","talk":"Screen reader testing in every sprint","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"blue"}}}}}
+
+, "ec0000a6": {"type":"instance","parent":"ec0000a2","order":"a3","of":"ecSpeaker","props":{"w":282},"args":{"name":"Kwame Mensah","role":"Director of design, Bolt Freight","talk":"Dashboards for the 6 a.m. shift","track":"main"},"overrides":{"ecSpPt":{"set":{"props":{"w":{"mode":"fill"}},"args":{"tone":"lime"}}}}}
+
+, "ec0000a7": {"type":"instance","parent":"ec00008x","order":"a3","of":"ecFooter"}
+
+, "ec0000a8": {"type":"frame","parent":null,"order":"a6","name":"Tickets","x":6400,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"ecPage3"}
+
+, "ec0000a9": {"type":"instance","parent":"ec0000a8","order":"a0","of":"ecNavBar","args":{"active":"tickets"}}
+
+, "ec0000aa": {"type":"frame","parent":"ec0000a8","order":"a1","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/4"},"pad":[80,120,56,120]}}
+
+, "ec0000ab": {"type":"text","parent":"ec0000aa","order":"a0","name":"Tickets","content":"Tickets","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/accent"}}
+
+, "ec0000ac": {"type":"text","parent":"ec0000aa","order":"a1","name":"One ticket, both days","content":"One ticket, both days","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ad": {"type":"text","parent":"ec0000aa","order":"a2","name":"Every ticket covers both days, both tra…","w":680,"content":"Every ticket covers both days, both tracks, food and the Thursday pier party. Prices go up on 1 March.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ae": {"type":"frame","parent":"ec0000a8","order":"a2","name":"Plans","w":{"mode":"fill"},"layout":{"dir":"column","pad":[0,120]}}
+
+, "ec0000af": {"type":"frame","parent":"ec0000ae","order":"a0","name":"Tickets","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "ec0000ag": {"type":"instance","parent":"ec0000af","order":"a0","of":"ecTicket","args":{"cta":"ecBtnSec","ctaLabel":"Sold out","description":"The first 200 tickets, released with the speaker list.","name":"Early bird","note":"Sold out on 12 December","price":"€390","tone":"soldout"},"overrides":{"ecTkList":{"slot":true}}}
+
+, "ec0000ah": {"type":"instance","parent":"ec0000ag","at":"ecTkList","order":"a0","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Both days, both tracks","state":"included"}}
+
+, "ec0000ai": {"type":"instance","parent":"ec0000ag","at":"ecTkList","order":"a1","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Lunch, coffee and the pier party","state":"included"}}
+
+, "ec0000aj": {"type":"instance","parent":"ec0000ag","at":"ecTkList","order":"a2","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Talk recordings after the event","state":"included"}}
+
+, "ec0000ak": {"type":"instance","parent":"ec0000ag","at":"ecTkList","order":"a3","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"One workshop seat","state":"excluded"}}
+
+, "ec0000al": {"type":"instance","parent":"ec0000af","order":"a1","of":"ecTicket","args":{"ctaLabel":"Buy ticket","description":"For designers, researchers and design engineers.","flag":"Most bought","name":"Standard","note":"€690 from 1 March. Excl. 25% VAT","price":"€590","showFlag":true,"tone":"featured"},"overrides":{"ecTkList":{"slot":true}}}
+
+, "ec0000am": {"type":"instance","parent":"ec0000al","at":"ecTkList","order":"a0","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Both days, both tracks","state":"included"}}
+
+, "ec0000an": {"type":"instance","parent":"ec0000al","at":"ecTkList","order":"a1","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Lunch, coffee and the pier party","state":"included"}}
+
+, "ec0000ao": {"type":"instance","parent":"ec0000al","at":"ecTkList","order":"a2","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Talk recordings after the event","state":"included"}}
+
+, "ec0000ap": {"type":"instance","parent":"ec0000al","at":"ecTkList","order":"a3","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"One workshop seat, booked in March","state":"included"}}
+
+, "ec0000aq": {"type":"instance","parent":"ec0000af","order":"a2","of":"ecTicket","args":{"cta":"ecBtnSec","ctaLabel":"Buy team tickets","description":"Five named tickets on one invoice. Names can change until 1 April.","name":"Team of five","note":"€490 per person. Excl. 25% VAT","price":"€2,450","tone":"standard"},"overrides":{"ecTkList":{"slot":true}}}
+
+, "ec0000ar": {"type":"instance","parent":"ec0000aq","at":"ecTkList","order":"a0","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Everything in Standard","state":"included"}}
+
+, "ec0000as": {"type":"instance","parent":"ec0000aq","at":"ecTkList","order":"a1","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Reserved table at lunch","state":"included"}}
+
+, "ec0000at": {"type":"instance","parent":"ec0000aq","at":"ecTkList","order":"a2","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"One invoice with your PO number","state":"included"}}
+
+, "ec0000au": {"type":"instance","parent":"ec0000aq","at":"ecTkList","order":"a3","of":"ecCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Swap names until 1 April","state":"included"}}
+
+, "ec0000av": {"type":"frame","parent":"ec0000a8","order":"a3","name":"Notes","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"pad":[48,120,0,120]}}
+
+, "ec0000aw": {"type":"instance","parent":"ec0000av","order":"a0","of":"ecInfo","args":{"detail":"For students and people between jobs. Apply by 15 February.","label":"Scholarships","value":"40 free tickets"},"overrides":{"ecIfIcon":{"set":{"icon":"graduation-cap"}}}}
+
+, "ec0000ax": {"type":"instance","parent":"ec0000av","order":"a1","of":"ecInfo","args":{"detail":"Invoices are due in 30 days and list the VAT for your company.","label":"Invoices","value":"Pay by card or invoice"},"overrides":{"ecIfIcon":{"set":{"icon":"receipt"}}}}
+
+, "ec0000ay": {"type":"instance","parent":"ec0000av","order":"a2","of":"ecInfo","args":{"detail":"After that, transfer your ticket to a colleague for free.","label":"Refunds","value":"Full refund until 1 March"},"overrides":{"ecIfIcon":{"set":{"icon":"rotate-ccw"}}}}
+
+, "ec0000az": {"type":"frame","parent":"ec0000a8","order":"a4","name":"FAQ","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/8"},"pad":[96,120],"align":"center"}}
+
+, "ec0000b0": {"type":"text","parent":"ec0000az","order":"a0","name":"Questions about tickets","content":"Questions about tickets","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000b1": {"type":"frame","parent":"ec0000az","order":"a1","name":"Items","w":792,"layout":{"dir":"column"}}
+
+, "ec0000b2": {"type":"instance","parent":"ec0000b1","order":"a0","of":"ecFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"Day passes go on sale on 1 March for €340 if seats are left. Most years they are gone within a week.","open":true,"question":"Can I come for one day only?"}}
+
+, "ec0000b3": {"type":"instance","parent":"ec0000b1","order":"a1","of":"ecFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"Standard and team tickets include one workshop seat. Booking opens in March on your ticket page, first come, first served.","open":true,"question":"How do workshop seats work?"}}
+
+, "ec0000b4": {"type":"instance","parent":"ec0000b1","order":"a2","of":"ecFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"Every main stage and Studio talk is recorded and sent to ticket holders within three weeks. Workshops are not recorded.","open":false,"question":"Will talks be recorded?"}}
+
+, "ec0000b5": {"type":"instance","parent":"ec0000b1","order":"a3","of":"ecFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"Dok 4 is step-free, with a hearing loop in hall A and live captions on both stages. Write to us about anything else you need.","open":false,"question":"Is the venue accessible?"}}
+
+, "ec0000b6": {"type":"instance","parent":"ec0000a8","order":"a5","of":"ecFooter"}
+
+, "ec0000b7": {"type":"frame","parent":null,"order":"a7","name":"Venue and travel","x":8000,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"ecPage3"}
+
+, "ec0000b8": {"type":"instance","parent":"ec0000b7","order":"a0","of":"ecNavBar","args":{"active":"venue"}}
+
+, "ec0000b9": {"type":"frame","parent":"ec0000b7","order":"a1","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/4"},"pad":[80,120,56,120]}}
+
+, "ec0000ba": {"type":"text","parent":"ec0000b9","order":"a0","name":"Venue and travel","content":"Venue and travel","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/accent"}}
+
+, "ec0000bb": {"type":"text","parent":"ec0000b9","order":"a1","name":"Dok 4, Refshaleøen","content":"Dok 4, Refshaleøen","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000bc": {"type":"text","parent":"ec0000b9","order":"a2","name":"A former shipyard hall at the north end…","w":680,"content":"A former shipyard hall at the north end of the harbour, 15 minutes from the city centre by harbour bus.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000bd": {"type":"frame","parent":"ec0000b7","order":"a2","name":"Venue","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"pad":[0,120]}}
+
+, "ec0000be": {"type":"instance","parent":"ec0000bd","order":"a0","of":"ecMap0"}
+
+, "ec0000bf": {"type":"frame","parent":"ec0000bd","order":"a1","name":"Details","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"}}}
+
+, "ec0000bg": {"type":"instance","parent":"ec0000bf","order":"a0","of":"ecInfo","props":{"w":{"mode":"fill"}},"args":{"detail":"Enter through the north gate.","label":"Address","value":"Refshalevej 163, 1432 Copenhagen K"},"overrides":{"ecIfIcon":{"set":{"icon":"map-pin"}}}}
+
+, "ec0000bh": {"type":"instance","parent":"ec0000bf","order":"a1","of":"ecInfo","props":{"w":{"mode":"fill"}},"args":{"detail":"Every 20 minutes from Nyhavn. Included with any city pass.","label":"Harbour bus","value":"Line 991 or 992 to Refshaleøen"},"overrides":{"ecIfIcon":{"set":{"icon":"ship"}}}}
+
+, "ec0000bi": {"type":"instance","parent":"ec0000bf","order":"a2","of":"ecInfo","props":{"w":{"mode":"fill"}},"args":{"detail":"Metro M2 to Kongens Nytorv, then walk 6 minutes to Nyhavn.","label":"From the airport","value":"25 minutes by metro and harbour bus"},"overrides":{"ecIfIcon":{"set":{"icon":"plane"}}}}
+
+, "ec0000bj": {"type":"instance","parent":"ec0000bf","order":"a3","of":"ecInfo","props":{"w":{"mode":"fill"}},"args":{"detail":"City bikes dock at Refshaleøen stop.","label":"By bike","value":"Free bike parking at the door"},"overrides":{"ecIfIcon":{"set":{"icon":"bike"}}}}
+
+, "ec0000bk": {"type":"frame","parent":"ec0000b7","order":"a3","name":"Hotels","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[96,120]}}
+
+, "ec0000bl": {"type":"instance","parent":"ec0000bk","order":"a0","of":"ecSecHead","props":{"w":{"mode":"fill"}},"args":{"eyebrow":"Where to stay","subtitle":"Book with the code OFFSET27 before 1 March. Rooms are held until then.","title":"Hotels with a conference rate"}}
+
+, "ec0000bm": {"type":"frame","parent":"ec0000bk","order":"a1","name":"Hotels","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "ec0000bn": {"type":"instance","parent":"ec0000bm","order":"a0","of":"ecHotel","args":{"area":"Nyhavn","distance":"12 min by harbour bus","name":"Hotel Nyhavn 17","price":"€189","tone":"blue"}}
+
+, "ec0000bo": {"type":"instance","parent":"ec0000bm","order":"a1","of":"ecHotel","args":{"area":"Christianshavn","distance":"18 min by bike","name":"Kanal Rooms","price":"€154","tone":"coral"}}
+
+, "ec0000bp": {"type":"instance","parent":"ec0000bm","order":"a2","of":"ecHotel","args":{"area":"Refshaleøen","distance":"4 min walk","name":"Værft Hostel","price":"€72","tone":"teal"}}
+
+, "ec0000bq": {"type":"instance","parent":"ec0000b7","order":"a4","of":"ecFooter"}
+
+, "ec0000br": {"type":"frame","parent":"ecFoundations","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "ec0000bs": {"type":"text","parent":"ec0000br","order":"a0","name":"Title","content":"Offset conference site: foundations","style":{"size":40,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000bt": {"type":"text","parent":"ec0000br","order":"a1","name":"Subtitle","content":"The tokens every layer binds to. Switch the mode axis to see dark values.","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000bu": {"type":"frame","parent":"ecFoundations","order":"a1","name":"Color","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec0000bv": {"type":"frame","parent":"ec0000bu","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec0000bw": {"type":"text","parent":"ec0000bv","order":"a0","name":"Section title","content":"Color","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000bx": {"type":"rect","parent":"ec0000bv","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec0000by": {"type":"frame","parent":"ec0000bu","order":"a1","name":"Color items","w":{"mode":"fill"},"layout":{"dir":"row","gap":24,"crossGap":40}}
+
+, "ec0000bz": {"type":"frame","parent":"ec0000by","order":"a0","name":"Light","w":{"mode":"fill"},"theme":{"mode":"light"},"radius":16,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":20,"pad":28}}
+
+, "ec0000c0": {"type":"text","parent":"ec0000bz","order":"a0","name":"Mode","content":"Light","style":{"size":18,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000c1": {"type":"frame","parent":"ec0000bz","order":"a1","name":"Swatches","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"crossGap":20,"wrap":true}}
+
+, "ec0000c2": {"type":"frame","parent":"ec0000c1","order":"a0","name":"color/bg","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000c3": {"type":"rect","parent":"ec0000c2","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000c4": {"type":"text","parent":"ec0000c2","order":"a1","name":"Name","content":"bg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000c5": {"type":"text","parent":"ec0000c2","order":"a2","name":"Value","content":"#F4F4F1","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000c6": {"type":"frame","parent":"ec0000c1","order":"a1","name":"color/surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000c7": {"type":"rect","parent":"ec0000c6","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000c8": {"type":"text","parent":"ec0000c6","order":"a1","name":"Name","content":"surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000c9": {"type":"text","parent":"ec0000c6","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ca": {"type":"frame","parent":"ec0000c1","order":"a2","name":"color/subtle","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000cb": {"type":"rect","parent":"ec0000ca","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/subtle"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000cc": {"type":"text","parent":"ec0000ca","order":"a1","name":"Name","content":"subtle","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000cd": {"type":"text","parent":"ec0000ca","order":"a2","name":"Value","content":"#EBEBE6","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ce": {"type":"frame","parent":"ec0000c1","order":"a3","name":"color/ink","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000cf": {"type":"rect","parent":"ec0000ce","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000cg": {"type":"text","parent":"ec0000ce","order":"a1","name":"Name","content":"ink","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ch": {"type":"text","parent":"ec0000ce","order":"a2","name":"Value","content":"#0E0E11","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ci": {"type":"frame","parent":"ec0000c1","order":"a4","name":"color/muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000cj": {"type":"rect","parent":"ec0000ci","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ck": {"type":"text","parent":"ec0000ci","order":"a1","name":"Name","content":"muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000cl": {"type":"text","parent":"ec0000ci","order":"a2","name":"Value","content":"#5E5E66","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000cm": {"type":"frame","parent":"ec0000c1","order":"a5","name":"color/border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000cn": {"type":"rect","parent":"ec0000cm","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000co": {"type":"text","parent":"ec0000cm","order":"a1","name":"Name","content":"border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000cp": {"type":"text","parent":"ec0000cm","order":"a2","name":"Value","content":"#DCDCD5","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000cq": {"type":"frame","parent":"ec0000c1","order":"a6","name":"color/accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000cr": {"type":"rect","parent":"ec0000cq","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000cs": {"type":"text","parent":"ec0000cq","order":"a1","name":"Name","content":"accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ct": {"type":"text","parent":"ec0000cq","order":"a2","name":"Value","content":"#3B36F5","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000cu": {"type":"frame","parent":"ec0000c1","order":"a7","name":"color/accent-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000cv": {"type":"rect","parent":"ec0000cu","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000cw": {"type":"text","parent":"ec0000cu","order":"a1","name":"Name","content":"accent-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000cx": {"type":"text","parent":"ec0000cu","order":"a2","name":"Value","content":"#E6E5FF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000cy": {"type":"frame","parent":"ec0000c1","order":"a8","name":"color/on-accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000cz": {"type":"rect","parent":"ec0000cy","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000d0": {"type":"text","parent":"ec0000cy","order":"a1","name":"Name","content":"on-accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000d1": {"type":"text","parent":"ec0000cy","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000d2": {"type":"frame","parent":"ec0000c1","order":"a9","name":"color/lime","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000d3": {"type":"rect","parent":"ec0000d2","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/lime"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000d4": {"type":"text","parent":"ec0000d2","order":"a1","name":"Name","content":"lime","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000d5": {"type":"text","parent":"ec0000d2","order":"a2","name":"Value","content":"#CDF24A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000d6": {"type":"frame","parent":"ec0000c1","order":"aA","name":"color/on-lime","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000d7": {"type":"rect","parent":"ec0000d6","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-lime"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000d8": {"type":"text","parent":"ec0000d6","order":"a1","name":"Name","content":"on-lime","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000d9": {"type":"text","parent":"ec0000d6","order":"a2","name":"Value","content":"#0E0E11","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000da": {"type":"frame","parent":"ec0000c1","order":"aB","name":"color/coral","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000db": {"type":"rect","parent":"ec0000da","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/coral"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000dc": {"type":"text","parent":"ec0000da","order":"a1","name":"Name","content":"coral","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000dd": {"type":"text","parent":"ec0000da","order":"a2","name":"Value","content":"#F2603F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000de": {"type":"frame","parent":"ec0000c1","order":"aC","name":"color/coral-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000df": {"type":"rect","parent":"ec0000de","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/coral-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000dg": {"type":"text","parent":"ec0000de","order":"a1","name":"Name","content":"coral-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000dh": {"type":"text","parent":"ec0000de","order":"a2","name":"Value","content":"#FDE5DE","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000di": {"type":"frame","parent":"ec0000c1","order":"aD","name":"color/success","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000dj": {"type":"rect","parent":"ec0000di","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/success"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000dk": {"type":"text","parent":"ec0000di","order":"a1","name":"Name","content":"success","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000dl": {"type":"text","parent":"ec0000di","order":"a2","name":"Value","content":"#1F7A4A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000dm": {"type":"frame","parent":"ec0000c1","order":"aE","name":"color/inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000dn": {"type":"rect","parent":"ec0000dm","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000do": {"type":"text","parent":"ec0000dm","order":"a1","name":"Name","content":"inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000dp": {"type":"text","parent":"ec0000dm","order":"a2","name":"Value","content":"#0E0E11","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000dq": {"type":"frame","parent":"ec0000c1","order":"aF","name":"color/on-inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000dr": {"type":"rect","parent":"ec0000dq","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ds": {"type":"text","parent":"ec0000dq","order":"a1","name":"Name","content":"on-inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000dt": {"type":"text","parent":"ec0000dq","order":"a2","name":"Value","content":"#F4F4F1","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000du": {"type":"frame","parent":"ec0000c1","order":"aG","name":"color/inverse-muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000dv": {"type":"rect","parent":"ec0000du","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000dw": {"type":"text","parent":"ec0000du","order":"a1","name":"Name","content":"inverse-muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000dx": {"type":"text","parent":"ec0000du","order":"a2","name":"Value","content":"#9A9AA3","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000dy": {"type":"frame","parent":"ec0000c1","order":"aH","name":"color/inverse-border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000dz": {"type":"rect","parent":"ec0000dy","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000e0": {"type":"text","parent":"ec0000dy","order":"a1","name":"Name","content":"inverse-border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000e1": {"type":"text","parent":"ec0000dy","order":"a2","name":"Value","content":"#2A2A31","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000e2": {"type":"frame","parent":"ec0000c1","order":"aI","name":"color/inverse-surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000e3": {"type":"rect","parent":"ec0000e2","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000e4": {"type":"text","parent":"ec0000e2","order":"a1","name":"Name","content":"inverse-surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000e5": {"type":"text","parent":"ec0000e2","order":"a2","name":"Value","content":"#1A1A20","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000e6": {"type":"frame","parent":"ec0000c1","order":"aJ","name":"color/tone-blue","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000e7": {"type":"rect","parent":"ec0000e6","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-blue"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000e8": {"type":"text","parent":"ec0000e6","order":"a1","name":"Name","content":"tone-blue","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000e9": {"type":"text","parent":"ec0000e6","order":"a2","name":"Value","content":"#A9B4FF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ea": {"type":"frame","parent":"ec0000c1","order":"aK","name":"color/tone-blue-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000eb": {"type":"rect","parent":"ec0000ea","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-blue-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ec": {"type":"text","parent":"ec0000ea","order":"a1","name":"Name","content":"tone-blue-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ed": {"type":"text","parent":"ec0000ea","order":"a2","name":"Value","content":"#4A4FD9","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ee": {"type":"frame","parent":"ec0000c1","order":"aL","name":"color/tone-coral","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ef": {"type":"rect","parent":"ec0000ee","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-coral"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000eg": {"type":"text","parent":"ec0000ee","order":"a1","name":"Name","content":"tone-coral","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000eh": {"type":"text","parent":"ec0000ee","order":"a2","name":"Value","content":"#FFB8A3","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ei": {"type":"frame","parent":"ec0000c1","order":"aM","name":"color/tone-coral-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ej": {"type":"rect","parent":"ec0000ei","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-coral-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ek": {"type":"text","parent":"ec0000ei","order":"a1","name":"Name","content":"tone-coral-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000el": {"type":"text","parent":"ec0000ei","order":"a2","name":"Value","content":"#E0573A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000em": {"type":"frame","parent":"ec0000c1","order":"aN","name":"color/tone-lime","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000en": {"type":"rect","parent":"ec0000em","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-lime"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000eo": {"type":"text","parent":"ec0000em","order":"a1","name":"Name","content":"tone-lime","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ep": {"type":"text","parent":"ec0000em","order":"a2","name":"Value","content":"#E3F79E","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000eq": {"type":"frame","parent":"ec0000c1","order":"aO","name":"color/tone-lime-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000er": {"type":"rect","parent":"ec0000eq","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-lime-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000es": {"type":"text","parent":"ec0000eq","order":"a1","name":"Name","content":"tone-lime-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000et": {"type":"text","parent":"ec0000eq","order":"a2","name":"Value","content":"#9DBE24","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000eu": {"type":"frame","parent":"ec0000c1","order":"aP","name":"color/tone-violet","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ev": {"type":"rect","parent":"ec0000eu","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-violet"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ew": {"type":"text","parent":"ec0000eu","order":"a1","name":"Name","content":"tone-violet","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ex": {"type":"text","parent":"ec0000eu","order":"a2","name":"Value","content":"#D7B8F2","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ey": {"type":"frame","parent":"ec0000c1","order":"aQ","name":"color/tone-violet-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ez": {"type":"rect","parent":"ec0000ey","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-violet-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000f0": {"type":"text","parent":"ec0000ey","order":"a1","name":"Name","content":"tone-violet-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000f1": {"type":"text","parent":"ec0000ey","order":"a2","name":"Value","content":"#8A4FC4","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000f2": {"type":"frame","parent":"ec0000c1","order":"aR","name":"color/tone-teal","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000f3": {"type":"rect","parent":"ec0000f2","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-teal"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000f4": {"type":"text","parent":"ec0000f2","order":"a1","name":"Name","content":"tone-teal","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000f5": {"type":"text","parent":"ec0000f2","order":"a2","name":"Value","content":"#A6E3D8","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000f6": {"type":"frame","parent":"ec0000c1","order":"aS","name":"color/tone-teal-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000f7": {"type":"rect","parent":"ec0000f6","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-teal-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000f8": {"type":"text","parent":"ec0000f6","order":"a1","name":"Name","content":"tone-teal-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000f9": {"type":"text","parent":"ec0000f6","order":"a2","name":"Value","content":"#2E9A8A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000fa": {"type":"frame","parent":"ec0000c1","order":"aT","name":"color/figure","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000fb": {"type":"rect","parent":"ec0000fa","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/figure"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000fc": {"type":"text","parent":"ec0000fa","order":"a1","name":"Name","content":"figure","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000fd": {"type":"text","parent":"ec0000fa","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000fe": {"type":"frame","parent":"ec0000c1","order":"aU","name":"color/water","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ff": {"type":"rect","parent":"ec0000fe","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/water"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000fg": {"type":"text","parent":"ec0000fe","order":"a1","name":"Name","content":"water","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000fh": {"type":"text","parent":"ec0000fe","order":"a2","name":"Value","content":"#C9D8F2","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000fi": {"type":"frame","parent":"ec0000c1","order":"aV","name":"color/land","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000fj": {"type":"rect","parent":"ec0000fi","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/land"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000fk": {"type":"text","parent":"ec0000fi","order":"a1","name":"Name","content":"land","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000fl": {"type":"text","parent":"ec0000fi","order":"a2","name":"Value","content":"#E4E4DE","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000fm": {"type":"frame","parent":"ec0000c1","order":"aW","name":"color/block","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000fn": {"type":"rect","parent":"ec0000fm","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/block"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000fo": {"type":"text","parent":"ec0000fm","order":"a1","name":"Name","content":"block","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000fp": {"type":"text","parent":"ec0000fm","order":"a2","name":"Value","content":"#D3D3CB","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000fq": {"type":"frame","parent":"ec0000c1","order":"aX","name":"color/park","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000fr": {"type":"rect","parent":"ec0000fq","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/park"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000fs": {"type":"text","parent":"ec0000fq","order":"a1","name":"Name","content":"park","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ft": {"type":"text","parent":"ec0000fq","order":"a2","name":"Value","content":"#CFE6C2","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000fu": {"type":"frame","parent":"ec0000by","order":"a1","name":"Dark","w":{"mode":"fill"},"theme":{"mode":"dark"},"radius":16,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":20,"pad":28}}
+
+, "ec0000fv": {"type":"text","parent":"ec0000fu","order":"a0","name":"Mode","content":"Dark","style":{"size":18,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000fw": {"type":"frame","parent":"ec0000fu","order":"a1","name":"Swatches","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"crossGap":20,"wrap":true}}
+
+, "ec0000fx": {"type":"frame","parent":"ec0000fw","order":"a0","name":"color/bg","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000fy": {"type":"rect","parent":"ec0000fx","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000fz": {"type":"text","parent":"ec0000fx","order":"a1","name":"Name","content":"bg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000g0": {"type":"text","parent":"ec0000fx","order":"a2","name":"Value","content":"#0C0C0F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000g1": {"type":"frame","parent":"ec0000fw","order":"a1","name":"color/surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000g2": {"type":"rect","parent":"ec0000g1","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000g3": {"type":"text","parent":"ec0000g1","order":"a1","name":"Name","content":"surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000g4": {"type":"text","parent":"ec0000g1","order":"a2","name":"Value","content":"#15151A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000g5": {"type":"frame","parent":"ec0000fw","order":"a2","name":"color/subtle","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000g6": {"type":"rect","parent":"ec0000g5","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/subtle"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000g7": {"type":"text","parent":"ec0000g5","order":"a1","name":"Name","content":"subtle","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000g8": {"type":"text","parent":"ec0000g5","order":"a2","name":"Value","content":"#1D1D24","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000g9": {"type":"frame","parent":"ec0000fw","order":"a3","name":"color/ink","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ga": {"type":"rect","parent":"ec0000g9","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000gb": {"type":"text","parent":"ec0000g9","order":"a1","name":"Name","content":"ink","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000gc": {"type":"text","parent":"ec0000g9","order":"a2","name":"Value","content":"#F3F3EF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000gd": {"type":"frame","parent":"ec0000fw","order":"a4","name":"color/muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ge": {"type":"rect","parent":"ec0000gd","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000gf": {"type":"text","parent":"ec0000gd","order":"a1","name":"Name","content":"muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000gg": {"type":"text","parent":"ec0000gd","order":"a2","name":"Value","content":"#9C9CA6","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000gh": {"type":"frame","parent":"ec0000fw","order":"a5","name":"color/border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000gi": {"type":"rect","parent":"ec0000gh","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000gj": {"type":"text","parent":"ec0000gh","order":"a1","name":"Name","content":"border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000gk": {"type":"text","parent":"ec0000gh","order":"a2","name":"Value","content":"#2C2C35","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000gl": {"type":"frame","parent":"ec0000fw","order":"a6","name":"color/accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000gm": {"type":"rect","parent":"ec0000gl","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000gn": {"type":"text","parent":"ec0000gl","order":"a1","name":"Name","content":"accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000go": {"type":"text","parent":"ec0000gl","order":"a2","name":"Value","content":"#8C88FF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000gp": {"type":"frame","parent":"ec0000fw","order":"a7","name":"color/accent-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000gq": {"type":"rect","parent":"ec0000gp","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000gr": {"type":"text","parent":"ec0000gp","order":"a1","name":"Name","content":"accent-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000gs": {"type":"text","parent":"ec0000gp","order":"a2","name":"Value","content":"#22204A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000gt": {"type":"frame","parent":"ec0000fw","order":"a8","name":"color/on-accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000gu": {"type":"rect","parent":"ec0000gt","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000gv": {"type":"text","parent":"ec0000gt","order":"a1","name":"Name","content":"on-accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000gw": {"type":"text","parent":"ec0000gt","order":"a2","name":"Value","content":"#0C0C0F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000gx": {"type":"frame","parent":"ec0000fw","order":"a9","name":"color/lime","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000gy": {"type":"rect","parent":"ec0000gx","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/lime"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000gz": {"type":"text","parent":"ec0000gx","order":"a1","name":"Name","content":"lime","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000h0": {"type":"text","parent":"ec0000gx","order":"a2","name":"Value","content":"#CDF24A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000h1": {"type":"frame","parent":"ec0000fw","order":"aA","name":"color/on-lime","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000h2": {"type":"rect","parent":"ec0000h1","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-lime"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000h3": {"type":"text","parent":"ec0000h1","order":"a1","name":"Name","content":"on-lime","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000h4": {"type":"text","parent":"ec0000h1","order":"a2","name":"Value","content":"#0E0E11","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000h5": {"type":"frame","parent":"ec0000fw","order":"aB","name":"color/coral","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000h6": {"type":"rect","parent":"ec0000h5","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/coral"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000h7": {"type":"text","parent":"ec0000h5","order":"a1","name":"Name","content":"coral","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000h8": {"type":"text","parent":"ec0000h5","order":"a2","name":"Value","content":"#FF8466","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000h9": {"type":"frame","parent":"ec0000fw","order":"aC","name":"color/coral-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ha": {"type":"rect","parent":"ec0000h9","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/coral-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000hb": {"type":"text","parent":"ec0000h9","order":"a1","name":"Name","content":"coral-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000hc": {"type":"text","parent":"ec0000h9","order":"a2","name":"Value","content":"#3E1C14","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000hd": {"type":"frame","parent":"ec0000fw","order":"aD","name":"color/success","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000he": {"type":"rect","parent":"ec0000hd","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/success"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000hf": {"type":"text","parent":"ec0000hd","order":"a1","name":"Name","content":"success","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000hg": {"type":"text","parent":"ec0000hd","order":"a2","name":"Value","content":"#5BD08F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000hh": {"type":"frame","parent":"ec0000fw","order":"aE","name":"color/inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000hi": {"type":"rect","parent":"ec0000hh","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000hj": {"type":"text","parent":"ec0000hh","order":"a1","name":"Name","content":"inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000hk": {"type":"text","parent":"ec0000hh","order":"a2","name":"Value","content":"#18181F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000hl": {"type":"frame","parent":"ec0000fw","order":"aF","name":"color/on-inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000hm": {"type":"rect","parent":"ec0000hl","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000hn": {"type":"text","parent":"ec0000hl","order":"a1","name":"Name","content":"on-inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ho": {"type":"text","parent":"ec0000hl","order":"a2","name":"Value","content":"#F3F3EF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000hp": {"type":"frame","parent":"ec0000fw","order":"aG","name":"color/inverse-muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000hq": {"type":"rect","parent":"ec0000hp","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000hr": {"type":"text","parent":"ec0000hp","order":"a1","name":"Name","content":"inverse-muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000hs": {"type":"text","parent":"ec0000hp","order":"a2","name":"Value","content":"#8D8D97","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ht": {"type":"frame","parent":"ec0000fw","order":"aH","name":"color/inverse-border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000hu": {"type":"rect","parent":"ec0000ht","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000hv": {"type":"text","parent":"ec0000ht","order":"a1","name":"Name","content":"inverse-border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000hw": {"type":"text","parent":"ec0000ht","order":"a2","name":"Value","content":"#2E2E37","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000hx": {"type":"frame","parent":"ec0000fw","order":"aI","name":"color/inverse-surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000hy": {"type":"rect","parent":"ec0000hx","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000hz": {"type":"text","parent":"ec0000hx","order":"a1","name":"Name","content":"inverse-surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000i0": {"type":"text","parent":"ec0000hx","order":"a2","name":"Value","content":"#22222A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000i1": {"type":"frame","parent":"ec0000fw","order":"aJ","name":"color/tone-blue","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000i2": {"type":"rect","parent":"ec0000i1","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-blue"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000i3": {"type":"text","parent":"ec0000i1","order":"a1","name":"Name","content":"tone-blue","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000i4": {"type":"text","parent":"ec0000i1","order":"a2","name":"Value","content":"#3A3F8F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000i5": {"type":"frame","parent":"ec0000fw","order":"aK","name":"color/tone-blue-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000i6": {"type":"rect","parent":"ec0000i5","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-blue-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000i7": {"type":"text","parent":"ec0000i5","order":"a1","name":"Name","content":"tone-blue-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000i8": {"type":"text","parent":"ec0000i5","order":"a2","name":"Value","content":"#24275E","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000i9": {"type":"frame","parent":"ec0000fw","order":"aL","name":"color/tone-coral","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ia": {"type":"rect","parent":"ec0000i9","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-coral"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ib": {"type":"text","parent":"ec0000i9","order":"a1","name":"Name","content":"tone-coral","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ic": {"type":"text","parent":"ec0000i9","order":"a2","name":"Value","content":"#8A3A28","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000id": {"type":"frame","parent":"ec0000fw","order":"aM","name":"color/tone-coral-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ie": {"type":"rect","parent":"ec0000id","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-coral-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000if": {"type":"text","parent":"ec0000id","order":"a1","name":"Name","content":"tone-coral-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ig": {"type":"text","parent":"ec0000id","order":"a2","name":"Value","content":"#55231A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ih": {"type":"frame","parent":"ec0000fw","order":"aN","name":"color/tone-lime","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ii": {"type":"rect","parent":"ec0000ih","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-lime"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ij": {"type":"text","parent":"ec0000ih","order":"a1","name":"Name","content":"tone-lime","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ik": {"type":"text","parent":"ec0000ih","order":"a2","name":"Value","content":"#5C6E1C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000il": {"type":"frame","parent":"ec0000fw","order":"aO","name":"color/tone-lime-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000im": {"type":"rect","parent":"ec0000il","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-lime-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000in": {"type":"text","parent":"ec0000il","order":"a1","name":"Name","content":"tone-lime-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000io": {"type":"text","parent":"ec0000il","order":"a2","name":"Value","content":"#384412","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ip": {"type":"frame","parent":"ec0000fw","order":"aP","name":"color/tone-violet","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000iq": {"type":"rect","parent":"ec0000ip","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-violet"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000ir": {"type":"text","parent":"ec0000ip","order":"a1","name":"Name","content":"tone-violet","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000is": {"type":"text","parent":"ec0000ip","order":"a2","name":"Value","content":"#5B3A7A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000it": {"type":"frame","parent":"ec0000fw","order":"aQ","name":"color/tone-violet-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000iu": {"type":"rect","parent":"ec0000it","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-violet-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000iv": {"type":"text","parent":"ec0000it","order":"a1","name":"Name","content":"tone-violet-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000iw": {"type":"text","parent":"ec0000it","order":"a2","name":"Value","content":"#35214A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ix": {"type":"frame","parent":"ec0000fw","order":"aR","name":"color/tone-teal","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000iy": {"type":"rect","parent":"ec0000ix","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-teal"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000iz": {"type":"text","parent":"ec0000ix","order":"a1","name":"Name","content":"tone-teal","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000j0": {"type":"text","parent":"ec0000ix","order":"a2","name":"Value","content":"#22605A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000j1": {"type":"frame","parent":"ec0000fw","order":"aS","name":"color/tone-teal-deep","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000j2": {"type":"rect","parent":"ec0000j1","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/tone-teal-deep"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000j3": {"type":"text","parent":"ec0000j1","order":"a1","name":"Name","content":"tone-teal-deep","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000j4": {"type":"text","parent":"ec0000j1","order":"a2","name":"Value","content":"#143B37","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000j5": {"type":"frame","parent":"ec0000fw","order":"aT","name":"color/figure","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000j6": {"type":"rect","parent":"ec0000j5","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/figure"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000j7": {"type":"text","parent":"ec0000j5","order":"a1","name":"Name","content":"figure","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000j8": {"type":"text","parent":"ec0000j5","order":"a2","name":"Value","content":"#E9E9E4","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000j9": {"type":"frame","parent":"ec0000fw","order":"aU","name":"color/water","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ja": {"type":"rect","parent":"ec0000j9","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/water"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000jb": {"type":"text","parent":"ec0000j9","order":"a1","name":"Name","content":"water","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000jc": {"type":"text","parent":"ec0000j9","order":"a2","name":"Value","content":"#1B2740","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000jd": {"type":"frame","parent":"ec0000fw","order":"aV","name":"color/land","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000je": {"type":"rect","parent":"ec0000jd","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/land"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000jf": {"type":"text","parent":"ec0000jd","order":"a1","name":"Name","content":"land","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000jg": {"type":"text","parent":"ec0000jd","order":"a2","name":"Value","content":"#202027","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000jh": {"type":"frame","parent":"ec0000fw","order":"aW","name":"color/block","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000ji": {"type":"rect","parent":"ec0000jh","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/block"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000jj": {"type":"text","parent":"ec0000jh","order":"a1","name":"Name","content":"block","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000jk": {"type":"text","parent":"ec0000jh","order":"a2","name":"Value","content":"#2C2C34","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000jl": {"type":"frame","parent":"ec0000fw","order":"aX","name":"color/park","w":104,"layout":{"dir":"column","gap":8}}
+
+, "ec0000jm": {"type":"rect","parent":"ec0000jl","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/park"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000jn": {"type":"text","parent":"ec0000jl","order":"a1","name":"Name","content":"park","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000jo": {"type":"text","parent":"ec0000jl","order":"a2","name":"Value","content":"#1E3321","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000jp": {"type":"frame","parent":"ecFoundations","order":"a2","name":"Type","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec0000jq": {"type":"frame","parent":"ec0000jp","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec0000jr": {"type":"text","parent":"ec0000jq","order":"a0","name":"Section title","content":"Type","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000js": {"type":"rect","parent":"ec0000jq","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec0000jt": {"type":"frame","parent":"ec0000jp","order":"a1","name":"Type items","w":{"mode":"fill"},"layout":{"dir":"column","gap":20}}
+
+, "ec0000ju": {"type":"frame","parent":"ec0000jt","order":"a0","name":"type/hero","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000jv": {"type":"frame","parent":"ec0000ju","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000jw": {"type":"text","parent":"ec0000jv","order":"a0","name":"Name","content":"hero","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000jx": {"type":"text","parent":"ec0000jv","order":"a1","name":"Values","content":"Inter 120 / 0.9 · 800","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000jy": {"type":"text","parent":"ec0000ju","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/hero"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000jz": {"type":"frame","parent":"ec0000jt","order":"a1","name":"type/display","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000k0": {"type":"frame","parent":"ec0000jz","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000k1": {"type":"text","parent":"ec0000k0","order":"a0","name":"Name","content":"display","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000k2": {"type":"text","parent":"ec0000k0","order":"a1","name":"Values","content":"Inter 72 / 1 · 800","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000k3": {"type":"text","parent":"ec0000jz","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000k4": {"type":"frame","parent":"ec0000jt","order":"a2","name":"type/h1","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000k5": {"type":"frame","parent":"ec0000k4","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000k6": {"type":"text","parent":"ec0000k5","order":"a0","name":"Name","content":"h1","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000k7": {"type":"text","parent":"ec0000k5","order":"a1","name":"Values","content":"Inter 52 / 1.05 · 800","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000k8": {"type":"text","parent":"ec0000k4","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000k9": {"type":"frame","parent":"ec0000jt","order":"a3","name":"type/heading","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000ka": {"type":"frame","parent":"ec0000k9","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000kb": {"type":"text","parent":"ec0000ka","order":"a0","name":"Name","content":"heading","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000kc": {"type":"text","parent":"ec0000ka","order":"a1","name":"Values","content":"Inter 32 / 1.15 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000kd": {"type":"text","parent":"ec0000k9","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ke": {"type":"frame","parent":"ec0000jt","order":"a4","name":"type/title","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000kf": {"type":"frame","parent":"ec0000ke","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000kg": {"type":"text","parent":"ec0000kf","order":"a0","name":"Name","content":"title","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000kh": {"type":"text","parent":"ec0000kf","order":"a1","name":"Values","content":"Inter 20 / 1.3 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ki": {"type":"text","parent":"ec0000ke","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000kj": {"type":"frame","parent":"ec0000jt","order":"a5","name":"type/body-lg","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000kk": {"type":"frame","parent":"ec0000kj","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000kl": {"type":"text","parent":"ec0000kk","order":"a0","name":"Name","content":"body-lg","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000km": {"type":"text","parent":"ec0000kk","order":"a1","name":"Values","content":"Inter 18 / 1.55 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000kn": {"type":"text","parent":"ec0000kj","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ko": {"type":"frame","parent":"ec0000jt","order":"a6","name":"type/body","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000kp": {"type":"frame","parent":"ec0000ko","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000kq": {"type":"text","parent":"ec0000kp","order":"a0","name":"Name","content":"body","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000kr": {"type":"text","parent":"ec0000kp","order":"a1","name":"Values","content":"Inter 16 / 1.5 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ks": {"type":"text","parent":"ec0000ko","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000kt": {"type":"frame","parent":"ec0000jt","order":"a7","name":"type/label","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000ku": {"type":"frame","parent":"ec0000kt","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000kv": {"type":"text","parent":"ec0000ku","order":"a0","name":"Name","content":"label","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000kw": {"type":"text","parent":"ec0000ku","order":"a1","name":"Values","content":"Inter 14 / 1.3 · 600","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000kx": {"type":"text","parent":"ec0000kt","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000ky": {"type":"frame","parent":"ec0000jt","order":"a8","name":"type/small","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000kz": {"type":"frame","parent":"ec0000ky","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000l0": {"type":"text","parent":"ec0000kz","order":"a0","name":"Name","content":"small","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000l1": {"type":"text","parent":"ec0000kz","order":"a1","name":"Values","content":"Inter 13 / 1.45 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000l2": {"type":"text","parent":"ec0000ky","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000l3": {"type":"frame","parent":"ec0000jt","order":"a9","name":"type/mono","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "ec0000l4": {"type":"frame","parent":"ec0000l3","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "ec0000l5": {"type":"text","parent":"ec0000l4","order":"a0","name":"Name","content":"mono","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000l6": {"type":"text","parent":"ec0000l4","order":"a1","name":"Values","content":"JetBrains Mono 13 / 1.4 · 500","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000l7": {"type":"text","parent":"ec0000l3","order":"a1","name":"Sample","content":"Offset conference site","style":{"typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/ink"}}
+
+, "ec0000l8": {"type":"frame","parent":"ecFoundations","order":"a3","name":"Spacing","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec0000l9": {"type":"frame","parent":"ec0000l8","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec0000la": {"type":"text","parent":"ec0000l9","order":"a0","name":"Section title","content":"Spacing","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000lb": {"type":"rect","parent":"ec0000l9","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec0000lc": {"type":"frame","parent":"ec0000l8","order":"a1","name":"Spacing items","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec0000ld": {"type":"frame","parent":"ec0000lc","order":"a0","name":"space/1","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000le": {"type":"text","parent":"ec0000ld","order":"a0","name":"Name","w":120,"content":"space/1","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000lf": {"type":"rect","parent":"ec0000ld","order":"a1","name":"Bar","w":{"$ref":"space/1"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000lg": {"type":"frame","parent":"ec0000lc","order":"a1","name":"space/2","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000lh": {"type":"text","parent":"ec0000lg","order":"a0","name":"Name","w":120,"content":"space/2","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000li": {"type":"rect","parent":"ec0000lg","order":"a1","name":"Bar","w":{"$ref":"space/2"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000lj": {"type":"frame","parent":"ec0000lc","order":"a2","name":"space/3","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000lk": {"type":"text","parent":"ec0000lj","order":"a0","name":"Name","w":120,"content":"space/3","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ll": {"type":"rect","parent":"ec0000lj","order":"a1","name":"Bar","w":{"$ref":"space/3"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000lm": {"type":"frame","parent":"ec0000lc","order":"a3","name":"space/4","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000ln": {"type":"text","parent":"ec0000lm","order":"a0","name":"Name","w":120,"content":"space/4","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000lo": {"type":"rect","parent":"ec0000lm","order":"a1","name":"Bar","w":{"$ref":"space/4"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000lp": {"type":"frame","parent":"ec0000lc","order":"a4","name":"space/5","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000lq": {"type":"text","parent":"ec0000lp","order":"a0","name":"Name","w":120,"content":"space/5","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000lr": {"type":"rect","parent":"ec0000lp","order":"a1","name":"Bar","w":{"$ref":"space/5"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000ls": {"type":"frame","parent":"ec0000lc","order":"a5","name":"space/6","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000lt": {"type":"text","parent":"ec0000ls","order":"a0","name":"Name","w":120,"content":"space/6","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000lu": {"type":"rect","parent":"ec0000ls","order":"a1","name":"Bar","w":{"$ref":"space/6"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000lv": {"type":"frame","parent":"ec0000lc","order":"a6","name":"space/8","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000lw": {"type":"text","parent":"ec0000lv","order":"a0","name":"Name","w":120,"content":"space/8","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000lx": {"type":"rect","parent":"ec0000lv","order":"a1","name":"Bar","w":{"$ref":"space/8"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000ly": {"type":"frame","parent":"ec0000lc","order":"a7","name":"space/10","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000lz": {"type":"text","parent":"ec0000ly","order":"a0","name":"Name","w":120,"content":"space/10","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000m0": {"type":"rect","parent":"ec0000ly","order":"a1","name":"Bar","w":{"$ref":"space/10"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000m1": {"type":"frame","parent":"ec0000lc","order":"a8","name":"space/12","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000m2": {"type":"text","parent":"ec0000m1","order":"a0","name":"Name","w":120,"content":"space/12","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000m3": {"type":"rect","parent":"ec0000m1","order":"a1","name":"Bar","w":{"$ref":"space/12"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000m4": {"type":"frame","parent":"ec0000lc","order":"a9","name":"space/16","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000m5": {"type":"text","parent":"ec0000m4","order":"a0","name":"Name","w":120,"content":"space/16","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000m6": {"type":"rect","parent":"ec0000m4","order":"a1","name":"Bar","w":{"$ref":"space/16"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000m7": {"type":"frame","parent":"ec0000lc","order":"aA","name":"space/20","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000m8": {"type":"text","parent":"ec0000m7","order":"a0","name":"Name","w":120,"content":"space/20","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000m9": {"type":"rect","parent":"ec0000m7","order":"a1","name":"Bar","w":{"$ref":"space/20"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000ma": {"type":"frame","parent":"ec0000lc","order":"aB","name":"space/24","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "ec0000mb": {"type":"text","parent":"ec0000ma","order":"a0","name":"Name","w":120,"content":"space/24","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000mc": {"type":"rect","parent":"ec0000ma","order":"a1","name":"Bar","w":{"$ref":"space/24"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "ec0000md": {"type":"frame","parent":"ecFoundations","order":"a4","name":"Radius","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec0000me": {"type":"frame","parent":"ec0000md","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec0000mf": {"type":"text","parent":"ec0000me","order":"a0","name":"Section title","content":"Radius","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000mg": {"type":"rect","parent":"ec0000me","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec0000mh": {"type":"frame","parent":"ec0000md","order":"a1","name":"Radius items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "ec0000mi": {"type":"frame","parent":"ec0000mh","order":"a0","name":"radius/sm","layout":{"dir":"column","gap":10}}
+
+, "ec0000mj": {"type":"rect","parent":"ec0000mi","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000mk": {"type":"text","parent":"ec0000mi","order":"a1","name":"Name","content":"radius/sm","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000ml": {"type":"frame","parent":"ec0000mh","order":"a1","name":"radius/md","layout":{"dir":"column","gap":10}}
+
+, "ec0000mm": {"type":"rect","parent":"ec0000ml","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000mn": {"type":"text","parent":"ec0000ml","order":"a1","name":"Name","content":"radius/md","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000mo": {"type":"frame","parent":"ec0000mh","order":"a2","name":"radius/lg","layout":{"dir":"column","gap":10}}
+
+, "ec0000mp": {"type":"rect","parent":"ec0000mo","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000mq": {"type":"text","parent":"ec0000mo","order":"a1","name":"Name","content":"radius/lg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000mr": {"type":"frame","parent":"ec0000mh","order":"a3","name":"radius/xl","layout":{"dir":"column","gap":10}}
+
+, "ec0000ms": {"type":"rect","parent":"ec0000mr","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000mt": {"type":"text","parent":"ec0000mr","order":"a1","name":"Name","content":"radius/xl","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000mu": {"type":"frame","parent":"ec0000mh","order":"a4","name":"radius/pill","layout":{"dir":"column","gap":10}}
+
+, "ec0000mv": {"type":"rect","parent":"ec0000mu","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "ec0000mw": {"type":"text","parent":"ec0000mu","order":"a1","name":"Name","content":"radius/pill","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000mx": {"type":"frame","parent":"ecFoundations","order":"a5","name":"Shadow","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "ec0000my": {"type":"frame","parent":"ec0000mx","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "ec0000mz": {"type":"text","parent":"ec0000my","order":"a0","name":"Section title","content":"Shadow","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000n0": {"type":"rect","parent":"ec0000my","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "ec0000n1": {"type":"frame","parent":"ec0000mx","order":"a1","name":"Shadow items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"pad":[8,8,24,8],"wrap":true}}
+
+, "ec0000n2": {"type":"frame","parent":"ec0000n1","order":"a0","name":"shadow/card","layout":{"dir":"column","gap":14}}
+
+, "ec0000n3": {"type":"rect","parent":"ec0000n2","order":"a0","name":"Tile","w":160,"h":96,"radius":12,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"}}
+
+, "ec0000n4": {"type":"text","parent":"ec0000n2","order":"a1","name":"Name","content":"shadow/card","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ec0000n5": {"type":"frame","parent":"ec0000n1","order":"a1","name":"shadow/pop","layout":{"dir":"column","gap":14}}
+
+, "ec0000n6": {"type":"rect","parent":"ec0000n5","order":"a0","name":"Tile","w":160,"h":96,"radius":12,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/pop"}}
+
+, "ec0000n7": {"type":"text","parent":"ec0000n5","order":"a1","name":"Name","content":"shadow/pop","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "ecBadge": {"type":"frame","parent":"ec00000d","order":"a1","name":"Badge","component":{"props":{"label":{"type":"text","order":"a0","target":"ecBadgeLbl","field":"content","default":"Main stage"},"tone":{"type":"enum","order":"a1","options":{"lime":null,"main":null,"neutral":null,"studio":null},"targets":{"lime":[{"field":"fill","target":"ecBadge","value":{"$ref":"color/lime"}},{"field":"fill","target":"ecBadgeLbl","value":{"$ref":"color/on-lime"}},{"field":"fill","target":"ecBadgeDot","value":{"$ref":"color/ink"}}],"main":[{"field":"fill","target":"ecBadge","value":{"$ref":"color/accent-soft"}},{"field":"fill","target":"ecBadgeLbl","value":{"$ref":"color/accent"}},{"field":"fill","target":"ecBadgeDot","value":{"$ref":"color/accent"}}],"neutral":[{"field":"fill","target":"ecBadge","value":{"$ref":"color/subtle"}},{"field":"fill","target":"ecBadgeLbl","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecBadgeDot","value":{"$ref":"color/muted"}}],"studio":[{"field":"fill","target":"ecBadge","value":{"$ref":"color/coral-soft"}},{"field":"fill","target":"ecBadgeLbl","value":{"$ref":"color/coral"}},{"field":"fill","target":"ecBadgeDot","value":{"$ref":"color/coral"}}]}}}},"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","gap":6,"pad":[4,10],"align":"center"},"meta":{"kimo.component.description":"Track and status label. Main stage is blue, Studio is coral."}}
+
+, "ecBadgeDot": {"type":"ellipse","parent":"ecBadge","order":"a0","name":"Dot","w":6,"h":6,"fill":{"$ref":"color/accent"}}
+
+, "ecBadgeLbl": {"type":"text","parent":"ecBadge","order":"a1","name":"Label","content":"Main stage","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/accent"}}
+
+, "ecBrIcon": {"type":"icon","parent":"ecBreak","order":"a1","name":"Icon/coffee","w":18,"h":18,"set":"lucide","icon":"coffee","color":{"$ref":"color/muted"}}
+
+, "ecBrLbl": {"type":"text","parent":"ecBreak","order":"a2","name":"Coffee break","w":{"mode":"fill"},"content":"Coffee break","grow":"fixed-width","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ecBrNote": {"type":"text","parent":"ecBreak","order":"a3","name":"Main hall","content":"Main hall","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ecBrTime": {"type":"text","parent":"ecBreak","order":"a0","name":"11:15","w":96,"content":"11:15","grow":"fixed-width","style":{"typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/muted"}}
+
+, "ecBreak": {"type":"frame","parent":"ec00002f","order":"a1","name":"Break row","component":{"props":{"label":{"type":"text","order":"a1","target":"ecBrLbl","field":"content","default":"Coffee break"},"note":{"type":"text","order":"a2","target":"ecBrNote","field":"content","default":"Main hall"},"time":{"type":"text","order":"a0","target":"ecBrTime","field":"content","default":"11:15"}}},"w":1200,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"pad":[14,20],"align":"center"}}
+
+, "ecBtn0": {"type":"frame","parent":"ec000009","order":"a1","name":"Button","component":{"props":{"icon":{"type":"boolean","order":"a1","target":"ecBtnIcon","field":"visible","default":false},"label":{"type":"text","order":"a0","target":"ecBtnLabel","field":"content","default":"Button"},"size":{"type":"enum","order":"a3","options":{"lg":null,"md":null},"targets":{"lg":[{"field":"layout/pad","target":"ecBtn0","value":[15,26]},{"field":"style/size","target":"ecBtnLabel","value":16}],"md":[{"field":"layout/pad","target":"ecBtn0","value":[10,18]},{"field":"style/size","target":"ecBtnLabel","value":14}]}},"variant":{"type":"enum","order":"a2","options":{"inverse":null,"lime":null,"primary":null,"secondary":null},"targets":{"inverse":[{"field":"fill","target":"ecBtn0","value":{"$ref":"color/inverse"}},{"field":"stroke","target":"ecBtn0","value":{"paint":{"$ref":"color/inverse-border"}}},{"field":"fill","target":"ecBtnLabel","value":{"$ref":"color/on-inverse"}},{"field":"color","target":"ecBtnIcon","value":{"$ref":"color/on-inverse"}}],"lime":[{"field":"fill","target":"ecBtn0","value":{"$ref":"color/lime"}},{"field":"stroke","target":"ecBtn0","value":{"paint":{"$ref":"color/lime"}}},{"field":"fill","target":"ecBtnLabel","value":{"$ref":"color/on-lime"}},{"field":"color","target":"ecBtnIcon","value":{"$ref":"color/on-lime"}}],"primary":[{"field":"fill","target":"ecBtn0","value":{"$ref":"color/accent"}},{"field":"stroke","target":"ecBtn0","value":{"paint":{"$ref":"color/accent"}}},{"field":"fill","target":"ecBtnLabel","value":{"$ref":"color/on-accent"}},{"field":"color","target":"ecBtnIcon","value":{"$ref":"color/on-accent"}}],"secondary":[{"field":"fill","target":"ecBtn0","value":{"$ref":"color/surface"}},{"field":"stroke","target":"ecBtn0","value":{"paint":{"$ref":"color/border"}}},{"field":"fill","target":"ecBtnLabel","value":{"$ref":"color/ink"}},{"field":"color","target":"ecBtnIcon","value":{"$ref":"color/ink"}}]}}}},"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/accent"}},"layout":{"dir":"row","gap":8,"pad":[10,18],"justify":"center","align":"center"},"meta":{"kimo.component.description":"Primary, secondary, lime or inverse; md or lg."}}
+
+, "ecBtnIcon": {"type":"icon","parent":"ecBtn0","order":"a1","name":"Icon/arrow-right","w":16,"h":16,"set":"lucide","icon":"arrow-right","color":{"$ref":"color/on-accent"},"visible":false}
+
+, "ecBtnLabel": {"type":"text","parent":"ecBtn0","order":"a0","name":"Label","content":"Button","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/on-accent"}}
+
+, "ecBtnSec": {"type":"instance","parent":"ec00000b","order":"a1","name":"Button/Secondary","of":"ecBtn0","component":true,"args":{"variant":"secondary"}}
+
+, "ecCheck": {"type":"frame","parent":"ec00002m","order":"a1","name":"Check item","component":{"props":{"label":{"type":"text","order":"a0","target":"ecCkLbl","field":"content","default":"Included"},"state":{"type":"enum","order":"a1","options":{"excluded":null,"included":null},"targets":{"excluded":[{"field":"icon","target":"ecCkIcon","value":"minus"},{"field":"color","target":"ecCkIcon","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecCkLbl","value":{"$ref":"color/muted"}}],"included":[{"field":"icon","target":"ecCkIcon","value":"check"},{"field":"color","target":"ecCkIcon","value":{"$ref":"color/success"}},{"field":"fill","target":"ecCkLbl","value":{"$ref":"color/ink"}}]}}}},"w":320,"layout":{"dir":"row","gap":10}}
+
+, "ecCkIcon": {"type":"icon","parent":"ecCheck","order":"a0","name":"Icon/check","w":18,"h":18,"set":"lucide","icon":"check","color":{"$ref":"color/success"}}
+
+, "ecCkLbl": {"type":"text","parent":"ecCheck","order":"a1","name":"Label","w":{"mode":"fill"},"content":"Included","grow":"fixed-width","style":{"size":15,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "ecCover": {"type":"frame","parent":null,"order":"a1","name":"Cover","x":0,"y":0,"w":1440,"h":900,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"row","gap":72,"pad":[96,0,96,96],"align":"center"},"page":"ecPage2"}
+
+, "ecDayL1": {"type":"text","parent":"ecDayT1","order":"a0","name":"Day 1","content":"Day 1","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/bg"}}
+
+, "ecDayL2": {"type":"text","parent":"ecDayT2","order":"a0","name":"Day 2","content":"Day 2","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ecDayS1": {"type":"text","parent":"ecDayT1","order":"a1","name":"Thursday 15 April","content":"Thursday 15 April","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/bg"}}
+
+, "ecDayS2": {"type":"text","parent":"ecDayT2","order":"a1","name":"Friday 16 April","content":"Friday 16 April","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ecDayT1": {"type":"frame","parent":"ecDays","order":"a0","name":"Day 1","w":200,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/ink"},"layout":{"dir":"column","gap":2,"pad":[10,16]}}
+
+, "ecDayT2": {"type":"frame","parent":"ecDays","order":"a1","name":"Day 2","w":200,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"layout":{"dir":"column","gap":2,"pad":[10,16]}}
+
+, "ecDays": {"type":"frame","parent":"ec00001s","order":"a1","name":"Day tabs","component":{"props":{"active":{"type":"enum","order":"a0","options":{"day1":null,"day2":null},"targets":{"day1":[{"field":"fill","target":"ecDayT1","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecDayL1","value":{"$ref":"color/bg"}},{"field":"fill","target":"ecDayS1","value":{"$ref":"color/bg"}},{"field":"fill","target":"ecDayT2","value":{"$ref":"color/surface"}},{"field":"fill","target":"ecDayL2","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecDayS2","value":{"$ref":"color/muted"}}],"day2":[{"field":"fill","target":"ecDayT1","value":{"$ref":"color/surface"}},{"field":"fill","target":"ecDayL1","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecDayS1","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecDayT2","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecDayL2","value":{"$ref":"color/bg"}},{"field":"fill","target":"ecDayS2","value":{"$ref":"color/bg"}}]}}}},"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","gap":6,"pad":6}}
+
+, "ecFaq0": {"type":"frame","parent":"ec00002u","order":"a1","name":"FAQ item","component":{"props":{"answer":{"type":"text","order":"a1","target":"ecFaqA","field":"content","default":"Answer."},"open":{"type":"boolean","order":"a2","target":"ecFaqA","field":"visible","default":true},"question":{"type":"text","order":"a0","target":"ecFaqQ","field":"content","default":"Question"}}},"w":792,"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"column","gap":10,"pad":[22,0]}}
+
+, "ecFaqA": {"type":"text","parent":"ecFaq0","order":"a1","name":"Answer.","w":{"mode":"fill"},"content":"Answer.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecFaqQ": {"type":"text","parent":"ec00002w","order":"a0","name":"Question","w":{"mode":"fill"},"content":"Question","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecFooter": {"type":"frame","parent":"ec00000u","order":"a1","name":"Footer","component":true,"w":1440,"fill":{"$ref":"color/inverse"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[80,120,40,120]}}
+
+, "ecFoundations": {"type":"frame","parent":null,"order":"a8","name":"Foundations","x":0,"y":0,"w":1600,"fill":{"$ref":"color/bg"},"layout":{"dir":"column","gap":56,"pad":64},"page":"ecPage4"}
+
+, "ecHotel": {"type":"frame","parent":"ec00003b","order":"a1","name":"Hotel card","component":{"props":{"area":{"type":"text","order":"a1","target":"ecHtArea","field":"content","default":"Area"},"code":{"type":"text","order":"a4","target":"ecHtCode","field":"content","default":"OFFSET27"},"distance":{"type":"text","order":"a2","target":"ecHtDist","field":"content","default":"10 min"},"name":{"type":"text","order":"a0","target":"ecHtName","field":"content","default":"Hotel"},"price":{"type":"text","order":"a3","target":"ecHtPrice","field":"content","default":"€0"},"tone":{"type":"enum","order":"a5","options":{"blue":null,"coral":null,"teal":null},"targets":{"blue":[{"field":"fill","target":"ecHtArt","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-blue"}},{"at":1,"color":{"$ref":"color/tone-blue-deep"}}]}}],"coral":[{"field":"fill","target":"ecHtArt","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-coral"}},{"at":1,"color":{"$ref":"color/tone-coral-deep"}}]}}],"teal":[{"field":"fill","target":"ecHtArt","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-teal"}},{"at":1,"color":{"$ref":"color/tone-teal-deep"}}]}}]}}}},"w":384,"radius":{"$ref":"radius/lg"},"clip":true,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column"}}
+
+, "ecHtArea": {"type":"text","parent":"ec00003i","order":"a1","name":"Area","content":"Area","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ecHtArt": {"type":"frame","parent":"ecHotel","order":"a0","name":"Image","w":{"mode":"fill"},"h":160,"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/tone-blue"}},{"at":1,"color":{"$ref":"color/tone-blue-deep"}}],"rotation":160},"layout":{"dir":"row","gap":10,"justify":"center","align":"end"}}
+
+, "ecHtCode": {"type":"text","parent":"ec00003o","order":"a1","name":"OFFSET27","content":"OFFSET27","style":{"size":12,"typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/ink"}}
+
+, "ecHtDist": {"type":"text","parent":"ec00003m","order":"a1","name":"10 min","content":"10 min","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ecHtName": {"type":"text","parent":"ec00003i","order":"a0","name":"Hotel","content":"Hotel","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecHtPrice": {"type":"text","parent":"ec00003j","order":"a0","name":"€0","content":"€0","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecIfDet": {"type":"text","parent":"ec00003a","order":"a2","name":"Detail","w":{"mode":"fill"},"content":"Detail","grow":"fixed-width","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ecIfIcon": {"type":"icon","parent":"ec000039","order":"a0","name":"Icon/calendar","w":20,"h":20,"set":"lucide","icon":"calendar","color":{"$ref":"color/accent"}}
+
+, "ecIfLbl": {"type":"text","parent":"ec00003a","order":"a0","name":"Label","content":"Label","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/muted"}}
+
+, "ecIfVal": {"type":"text","parent":"ec00003a","order":"a1","name":"Value","w":{"mode":"fill"},"content":"Value","grow":"fixed-width","style":{"size":18,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecInfo": {"type":"frame","parent":"ec000037","order":"a1","name":"Info item","component":{"props":{"detail":{"type":"text","order":"a2","target":"ecIfDet","field":"content","default":"Detail"},"label":{"type":"text","order":"a0","target":"ecIfLbl","field":"content","default":"Label"},"showDetail":{"type":"boolean","order":"a3","target":"ecIfDet","field":"visible","default":true},"value":{"type":"text","order":"a1","target":"ecIfVal","field":"content","default":"Value"}}},"w":384,"layout":{"dir":"row","gap":{"$ref":"space/4"}}}
+
+, "ecLibBoard": {"type":"frame","parent":null,"order":"a0","name":"Components","x":0,"y":0,"w":1600,"fill":{"$ref":"color/bg"},"layout":{"dir":"column","gap":56,"pad":64},"page":"ecPage1"}
+
+, "ecMap0": {"type":"frame","parent":"ec00003q","order":"a1","name":"Venue map","component":{"props":{"label":{"type":"text","order":"a0","target":"ecMapLbl","field":"content","default":"Dok 4"}}},"w":792,"h":480,"radius":{"$ref":"radius/xl"},"clip":true,"fill":{"$ref":"color/water"},"layout":{"dir":"column","gap":10},"meta":{"kimo.component.description":"Schematic map of Refshaleøen. The pin and label are an overlay."}}
+
+, "ecMapLbl": {"type":"text","parent":"ec00004e","order":"a1","name":"Dok 4","content":"Dok 4","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/bg"}}
+
+, "ecNavBar": {"type":"frame","parent":"ec00000k","order":"a1","name":"Nav bar","component":{"props":{"active":{"type":"enum","order":"a0","options":{"home":null,"schedule":null,"speakers":null,"tickets":null,"venue":null},"targets":{"home":[{"field":"fill","target":"ecNavL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL3","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL4","value":{"$ref":"color/muted"}}],"schedule":[{"field":"fill","target":"ecNavL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL2","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecNavL3","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL4","value":{"$ref":"color/muted"}}],"speakers":[{"field":"fill","target":"ecNavL1","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecNavL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL3","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL4","value":{"$ref":"color/muted"}}],"tickets":[{"field":"fill","target":"ecNavL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL3","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecNavL4","value":{"$ref":"color/muted"}}],"venue":[{"field":"fill","target":"ecNavL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL3","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecNavL4","value":{"$ref":"color/ink"}}]}}}},"w":1440,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","pad":[20,120],"justify":"between","align":"center"}}
+
+, "ecNavCta": {"type":"instance","parent":"ec00000s","order":"a1","of":"ecBtn0","args":{"label":"Get tickets"}}
+
+, "ecNavL1": {"type":"text","parent":"ec00000r","order":"a0","name":"Speakers","content":"Speakers","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecNavL2": {"type":"text","parent":"ec00000r","order":"a1","name":"Schedule","content":"Schedule","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecNavL3": {"type":"text","parent":"ec00000r","order":"a2","name":"Tickets","content":"Tickets","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecNavL4": {"type":"text","parent":"ec00000r","order":"a3","name":"Venue","content":"Venue","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecPortrait": {"type":"frame","parent":"ec00001z","order":"a1","name":"Portrait","component":{"props":{"size":{"type":"enum","order":"a1","options":{"lg":null,"md":null,"sm":null,"xl":null},"targets":{"lg":[{"field":"w","target":"ecPortrait","value":282},{"field":"h","target":"ecPortrait","value":300},{"field":"radius","target":"ecPortrait","value":16},{"field":"w","target":"ecPtHead","value":104},{"field":"h","target":"ecPtHead","value":104},{"field":"w","target":"ecPtBody","value":196},{"field":"h","target":"ecPtBody","value":96},{"field":"radius","target":"ecPtBody","value":[98,98,0,0]},{"field":"layout/gap","target":"ecPortrait","value":12}],"md":[{"field":"w","target":"ecPortrait","value":64},{"field":"h","target":"ecPortrait","value":64},{"field":"radius","target":"ecPortrait","value":32},{"field":"w","target":"ecPtHead","value":26},{"field":"h","target":"ecPtHead","value":26},{"field":"w","target":"ecPtBody","value":48},{"field":"h","target":"ecPtBody","value":20},{"field":"radius","target":"ecPtBody","value":[24,24,0,0]},{"field":"layout/gap","target":"ecPortrait","value":3}],"sm":[{"field":"w","target":"ecPortrait","value":40},{"field":"h","target":"ecPortrait","value":40},{"field":"radius","target":"ecPortrait","value":20},{"field":"w","target":"ecPtHead","value":16},{"field":"h","target":"ecPtHead","value":16},{"field":"w","target":"ecPtBody","value":30},{"field":"h","target":"ecPtBody","value":12},{"field":"radius","target":"ecPtBody","value":[15,15,0,0]},{"field":"layout/gap","target":"ecPortrait","value":2}],"xl":[{"field":"w","target":"ecPortrait","value":480},{"field":"h","target":"ecPortrait","value":560},{"field":"radius","target":"ecPortrait","value":24},{"field":"w","target":"ecPtHead","value":180},{"field":"h","target":"ecPtHead","value":180},{"field":"w","target":"ecPtBody","value":340},{"field":"h","target":"ecPtBody","value":190},{"field":"radius","target":"ecPtBody","value":[170,170,0,0]},{"field":"layout/gap","target":"ecPortrait","value":20}]}},"tone":{"type":"enum","order":"a0","options":{"blue":null,"coral":null,"lime":null,"teal":null,"violet":null},"targets":{"blue":[{"field":"fill","target":"ecPortrait","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-blue"}},{"at":1,"color":{"$ref":"color/tone-blue-deep"}}]}}],"coral":[{"field":"fill","target":"ecPortrait","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-coral"}},{"at":1,"color":{"$ref":"color/tone-coral-deep"}}]}}],"lime":[{"field":"fill","target":"ecPortrait","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-lime"}},{"at":1,"color":{"$ref":"color/tone-lime-deep"}}]}}],"teal":[{"field":"fill","target":"ecPortrait","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-teal"}},{"at":1,"color":{"$ref":"color/tone-teal-deep"}}]}}],"violet":[{"field":"fill","target":"ecPortrait","value":{"kind":"linear","rotation":160,"stops":[{"at":0,"color":{"$ref":"color/tone-violet"}},{"at":1,"color":{"$ref":"color/tone-violet-deep"}}]}}]}}}},"w":282,"h":300,"radius":16,"clip":true,"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/tone-blue"}},{"at":1,"color":{"$ref":"color/tone-blue-deep"}}],"rotation":160},"layout":{"dir":"column","gap":12,"justify":"end","align":"center"},"meta":{"kimo.component.description":"Stand-in for a speaker photo: a tone and a size from sm (40) to xl (440)."}}
+
+, "ecPtBody": {"type":"rect","parent":"ecPortrait","order":"a1","name":"Shoulders","w":196,"h":96,"radius":[98,98,0,0],"opacity":0.9,"fill":{"$ref":"color/figure"}}
+
+, "ecPtHead": {"type":"ellipse","parent":"ecPortrait","order":"a0","name":"Head","w":104,"h":104,"opacity":0.9,"fill":{"$ref":"color/figure"}}
+
+, "ecSecHead": {"type":"frame","parent":"ec00001p","order":"a1","name":"Section header","component":{"props":{"action":{"type":"slot","order":"a4","target":"ecShAct"},"eyebrow":{"type":"text","order":"a0","target":"ecShEye","field":"content","default":"Eyebrow"},"showSubtitle":{"type":"boolean","order":"a3","target":"ecShSub","field":"visible","default":true},"subtitle":{"type":"text","order":"a2","target":"ecShSub","field":"content","default":"Supporting sentence."},"title":{"type":"text","order":"a1","target":"ecShTitle","field":"content","default":"Section title"}}},"w":1200,"layout":{"dir":"row","gap":{"$ref":"space/8"},"justify":"between","align":"end"}}
+
+, "ecSession": {"type":"frame","parent":"ec000029","order":"a1","name":"Session","component":{"props":{"format":{"type":"text","order":"a4","target":"ecSsFmt","field":"content","default":"Talk"},"role":{"type":"text","order":"a3","target":"ecSsRole","field":"content","default":"Role, Company"},"speaker":{"type":"text","order":"a2","target":"ecSsName","field":"content","default":"Speaker"},"time":{"type":"text","order":"a0","target":"ecSsTime","field":"content","default":"09:30 to 10:15"},"title":{"type":"text","order":"a1","target":"ecSsTitle","field":"content","default":"Talk title"},"track":{"type":"enum","order":"a5","options":{"main":null,"studio":null},"targets":{"main":[{"field":"stroke","target":"ecSession","value":{"paint":{"$ref":"color/accent"},"width":{"l":4}}},{"field":"fill","target":"ecSsTrack","value":{"$ref":"color/accent"}},{"field":"content","target":"ecSsTrack","value":"Main stage"}],"studio":[{"field":"stroke","target":"ecSession","value":{"paint":{"$ref":"color/coral"},"width":{"l":4}}},{"field":"fill","target":"ecSsTrack","value":{"$ref":"color/coral"}},{"field":"content","target":"ecSsTrack","value":"Studio"}]}}}},"w":516,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/accent"},"width":{"l":4}},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column","gap":{"$ref":"space/3"},"pad":[18,20]},"meta":{"kimo.component.description":"One talk or workshop. Track sets the edge colour and label."}}
+
+, "ecShAct": {"type":"frame","parent":"ecSecHead","order":"a1","name":"Action","layout":{"dir":"row","gap":8,"align":"center"},"slot":{"suggested":["ecBtn0","ecBtnSec"]}}
+
+, "ecShEye": {"type":"text","parent":"ec00001r","order":"a0","name":"Eyebrow","content":"Eyebrow","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/accent"}}
+
+, "ecShSub": {"type":"text","parent":"ec00001r","order":"a2","name":"Subtitle","w":{"mode":"fill"},"content":"Supporting sentence.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "ecShTitle": {"type":"text","parent":"ec00001r","order":"a1","name":"Title","w":{"mode":"fill"},"content":"Section title","grow":"fixed-width","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "ecSpDot": {"type":"ellipse","parent":"ecSpTalkRow","order":"a0","name":"Track","w":8,"h":8,"fill":{"$ref":"color/accent"}}
+
+, "ecSpName": {"type":"text","parent":"ec000023","order":"a0","name":"Name","content":"Name","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecSpPt": {"type":"instance","parent":"ecSpeaker","order":"a0","of":"ecPortrait","props":{"w":{"mode":"fill"}}}
+
+, "ecSpRole": {"type":"text","parent":"ec000023","order":"a1","name":"Role, Company","w":{"mode":"fill"},"content":"Role, Company","grow":"fixed-width","style":{"size":15,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecSpTalk": {"type":"text","parent":"ecSpTalkRow","order":"a1","name":"Talk title","w":{"mode":"fill"},"content":"Talk title","grow":"fixed-width","style":{"weight":500,"lineHeight":1.4,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ecSpTalkRow": {"type":"frame","parent":"ecSpeaker","order":"a2","name":"Talk","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"t":1}},"layout":{"dir":"row","gap":10,"pad":[12,0,0,0]}}
+
+, "ecSpeaker": {"type":"frame","parent":"ec000021","order":"a1","name":"Speaker card","component":{"props":{"name":{"type":"text","order":"a0","target":"ecSpName","field":"content","default":"Name"},"role":{"type":"text","order":"a1","target":"ecSpRole","field":"content","default":"Role, Company"},"showTalk":{"type":"boolean","order":"a3","target":"ecSpTalkRow","field":"visible","default":true},"talk":{"type":"text","order":"a2","target":"ecSpTalk","field":"content","default":"Talk title"},"track":{"type":"enum","order":"a4","options":{"main":null,"studio":null},"targets":{"main":[{"field":"fill","target":"ecSpDot","value":{"$ref":"color/accent"}}],"studio":[{"field":"fill","target":"ecSpDot","value":{"$ref":"color/coral"}}]}}}},"w":282,"layout":{"dir":"column","gap":{"$ref":"space/4"}},"meta":{"kimo.component.description":"Portrait, name, role and talk. Set the portrait tone through SpPt."}}
+
+, "ecSpoIcon": {"type":"icon","parent":"ecSponsor","order":"a0","name":"Icon/hexagon","w":26,"h":26,"set":"lucide","icon":"hexagon","color":{"$ref":"color/ink"}}
+
+, "ecSpoName": {"type":"text","parent":"ecSponsor","order":"a1","name":"Sponsor","content":"Sponsor","style":{"size":24,"weight":800,"letterSpacing":-0.8,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecSponsor": {"type":"frame","parent":"ec000035","order":"a1","name":"Sponsor logo","component":{"props":{"name":{"type":"text","order":"a0","target":"ecSpoName","field":"content","default":"Sponsor"},"tier":{"type":"enum","order":"a1","options":{"gold":null,"partner":null},"targets":{"gold":[{"field":"h","target":"ecSponsor","value":120},{"field":"style/size","target":"ecSpoName","value":24},{"field":"w","target":"ecSpoIcon","value":26},{"field":"h","target":"ecSpoIcon","value":26}],"partner":[{"field":"h","target":"ecSponsor","value":88},{"field":"style/size","target":"ecSpoName","value":18},{"field":"w","target":"ecSpoIcon","value":20},{"field":"h","target":"ecSpoIcon","value":20}]}}}},"w":282,"h":120,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","gap":10,"justify":"center","align":"center"}}
+
+, "ecSsFmt": {"type":"text","parent":"ec00002b","order":"a2","name":"Talk","w":{"mode":"fill"},"content":"Talk","grow":"fixed-width","style":{"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/muted"}}
+
+, "ecSsName": {"type":"text","parent":"ec00002e","order":"a0","name":"Speaker","content":"Speaker","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "ecSsPt": {"type":"instance","parent":"ec00002d","order":"a0","of":"ecPortrait","args":{"size":"sm"}}
+
+, "ecSsRole": {"type":"text","parent":"ec00002e","order":"a1","name":"Role, Company","content":"Role, Company","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ecSsTime": {"type":"text","parent":"ec00002b","order":"a3","name":"09:30 to 10:15","content":"09:30 to 10:15","style":{"typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/muted"}}
+
+, "ecSsTitle": {"type":"text","parent":"ecSession","order":"a1","name":"Talk title","w":{"mode":"fill"},"content":"Talk title","grow":"fixed-width","style":{"size":19,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecSsTrack": {"type":"text","parent":"ec00002b","order":"a0","name":"Main stage","content":"Main stage","style":{"case":"upper","typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/accent"}}
+
+, "ecStat": {"type":"frame","parent":"ec000033","order":"a1","name":"Stat","component":{"props":{"label":{"type":"text","order":"a1","target":"ecStatLbl","field":"content","default":"Metric"},"tone":{"type":"enum","order":"a2","options":{"default":null,"inverse":null},"targets":{"default":[{"field":"fill","target":"ecStatVal","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecStatLbl","value":{"$ref":"color/muted"}}],"inverse":[{"field":"fill","target":"ecStatVal","value":{"$ref":"color/lime"}},{"field":"fill","target":"ecStatLbl","value":{"$ref":"color/inverse-muted"}}]}},"value":{"type":"text","order":"a0","target":"ecStatVal","field":"content","default":"0"}}},"w":282,"layout":{"dir":"column","gap":6}}
+
+, "ecStatLbl": {"type":"text","parent":"ecStat","order":"a1","name":"Label","w":{"mode":"fill"},"content":"Metric","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecStatVal": {"type":"text","parent":"ecStat","order":"a0","name":"Value","content":"0","style":{"size":64,"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "ecTicket": {"type":"frame","parent":"ec00002o","order":"a1","name":"Ticket card","component":{"props":{"cta":{"type":"instance","order":"a6","target":"ecTkCta","default":"ecBtn0"},"ctaLabel":{"type":"text","order":"a7","target":"ecTkCta/ecBtnLabel","field":"content","default":"Buy ticket"},"description":{"type":"text","order":"a3","target":"ecTkDesc","field":"content","default":"Who it is for."},"flag":{"type":"text","order":"a4","target":"ecTkFlag/ecBadgeLbl","field":"content","default":"Best value"},"includes":{"type":"slot","order":"a8","target":"ecTkList"},"name":{"type":"text","order":"a0","target":"ecTkName","field":"content","default":"Standard"},"note":{"type":"text","order":"a2","target":"ecTkNote","field":"content","default":"Excl. 25% Danish VAT"},"price":{"type":"text","order":"a1","target":"ecTkPrice","field":"content","default":"€590"},"showFlag":{"type":"boolean","order":"a5","target":"ecTkFlagWrap","field":"visible","default":false},"tone":{"type":"enum","order":"a9","options":{"featured":null,"soldout":null,"standard":null},"targets":{"featured":[{"field":"fill","target":"ecTicket","value":{"$ref":"color/surface"}},{"field":"stroke","target":"ecTicket","value":{"paint":{"$ref":"color/accent"},"width":2}},{"field":"fill","target":"ecTkName","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecTkPrice","value":{"$ref":"color/accent"}},{"field":"fill","target":"ecTkDesc","value":{"$ref":"color/muted"}}],"soldout":[{"field":"fill","target":"ecTicket","value":{"$ref":"color/subtle"}},{"field":"stroke","target":"ecTicket","value":{"paint":{"$ref":"color/border"}}},{"field":"fill","target":"ecTkName","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecTkPrice","value":{"$ref":"color/muted"}},{"field":"fill","target":"ecTkDesc","value":{"$ref":"color/muted"}}],"standard":[{"field":"fill","target":"ecTicket","value":{"$ref":"color/surface"}},{"field":"stroke","target":"ecTicket","value":{"paint":{"$ref":"color/border"}}},{"field":"fill","target":"ecTkName","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecTkPrice","value":{"$ref":"color/ink"}},{"field":"fill","target":"ecTkDesc","value":{"$ref":"color/muted"}}]}}}},"w":384,"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":{"$ref":"space/8"}},"meta":{"kimo.component.description":"Fill the Includes slot with Check items. Sold out dims the price."}}
+
+, "ecTkCta": {"type":"instance","parent":"ecTicket","order":"a2","of":"ecBtn0","props":{"w":{"mode":"fill"}},"args":{"label":"Buy ticket","size":"lg"}}
+
+, "ecTkDesc": {"type":"text","parent":"ec00002q","order":"a1","name":"Who it is for.","w":{"mode":"fill"},"content":"Who it is for.","grow":"fixed-width","style":{"size":15,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "ecTkFlag": {"type":"instance","parent":"ecTkFlagWrap","order":"a0","of":"ecBadge","args":{"label":"Best value","tone":"lime"}}
+
+, "ecTkFlagWrap": {"type":"frame","parent":"ec00002r","order":"a1","name":"Flag","visible":false,"layout":{"dir":"row"}}
+
+, "ecTkList": {"type":"frame","parent":"ecTicket","order":"a4","name":"Includes","w":{"mode":"fill"},"layout":{"dir":"column","gap":12},"slot":{"suggested":["ecCheck"]}}
+
+, "ecTkName": {"type":"text","parent":"ec00002r","order":"a0","name":"Standard","content":"Standard","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "ecTkNote": {"type":"text","parent":"ec00002s","order":"a1","name":"Excl. 25% Danish VAT","content":"Excl. 25% Danish VAT","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "ecTkPrice": {"type":"text","parent":"ec00002s","order":"a0","name":"€590","content":"€590","style":{"size":56,"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+}
+}

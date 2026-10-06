@@ -215,6 +215,19 @@ describe("ConflictSession over a DocStore", () => {
     expect(conflicts(t.store)).toBeDefined()
   })
 
+  test("Mark resolved & save: a rejected finish throws its cause (A5, no dead click)", async () => {
+    const t = setup()
+    t.session.chooseAll("ours")
+    const apply = t.store.apply.bind(t.store)
+    t.store.apply = ((...args: Parameters<typeof apply>) =>
+      args[1]?.label === "Mark resolved"
+        ? { ok: false, errors: [{ message: "The document is read-only" }] }
+        : apply(...args)) as typeof t.store.apply
+    await expect(t.session.markResolvedAndSave()).rejects.toThrow("The document is read-only")
+    expect(t.saves).toHaveLength(0)
+    expect(t.toasts).toHaveLength(0)
+  })
+
   test("⌘' key matcher", () => {
     const k = (o: Partial<KeyboardEvent>) =>
       isNextConflictKey({ metaKey: false, ctrlKey: false, altKey: false, key: "", code: "", ...o })

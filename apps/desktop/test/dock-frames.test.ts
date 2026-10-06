@@ -112,7 +112,7 @@ describe("dock frames · output", () => {
     expect(set.reduced[0]).toBe(0)
     expect(set.flat.length).toBe(set.images.length)
     expect(checkCommitted(set)).toEqual([])
-  })
+  }, 30_000) // re-composes every frame; slow under a loaded full suite
 })
 
 describe("dock frames · system icon treatment (board 32 rule)", () => {

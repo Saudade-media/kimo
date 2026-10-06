@@ -4,6 +4,7 @@
  * desktop editor (board 16 topbar, board 17 banners/toasts, board 18 conflicts) runs in a plain
  * browser. Built by `e2e/m4-app.e2e.ts`; driven through `window.__kimoApp`.
  */
+import { recoveryIdFor } from "@kimo/sync"
 import "@kimo/design-tokens/editor.css"
 import "@kimo/ui/styles.css"
 import "../../src/fonts.css"
@@ -97,9 +98,38 @@ const manager = createAppSessionManager(platform)
 manager.install()
 Object.assign(window, { __kimoApp: { platform, control: platform.control, manager, SITE, LOOM } })
 
+// `?recovery=untitled|mixed`: entries a crashed session left behind (launch recovery dialog).
+const recoverySeed = new URLSearchParams(location.search).get("recovery")
+async function seedRecovery(): Promise<void> {
+  if (!recoverySeed) return
+  const text = doc("Recovered")
+  const entries = [
+    {
+      id: "untitled-seed1",
+      sourceRef: null,
+      name: "Untitled",
+      reason: "untitled" as const,
+      edits: 1,
+    },
+    ...(recoverySeed === "mixed"
+      ? [
+          {
+            id: recoveryIdFor(`${SITE}/home.kimo`),
+            sourceRef: `${SITE}/home.kimo`,
+            name: "home.kimo",
+            reason: "snapshot" as const,
+            edits: 3,
+          },
+        ]
+      : []),
+  ]
+  for (const e of entries) await platform.recovery.write({ ...e, text, layers: 2 })
+  platform.control.killPid(1000)
+}
+
 initTheme()
 const container = document.getElementById("root")
-void platform.settings.ready.then(() => {
+void Promise.all([platform.settings.ready, seedRecovery()]).then(() => {
   bindAppearance(platform.settings, setTheme)
   if (container)
     createRoot(container).render(

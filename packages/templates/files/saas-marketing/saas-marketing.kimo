@@ -1,0 +1,1754 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
+"meta": {"name":"Ledgerline marketing site","kimo.template":{"category":"Website","description":"Six-screen marketing site for a B2B finance tool: home, pricing, customers, blog, article and sign-up.","slug":"saas-marketing"}},
+"themes": {"mode":["light","dark"]},
+"variables": {
+"color/accent": {"type":"color","value":[{"value":"#2F5BEA","when":{"mode":"light"}},{"value":"#7C9BFF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/accent-soft": {"type":"color","value":[{"value":"#E8EEFF","when":{"mode":"light"}},{"value":"#1C2747","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-1": {"type":"color","value":[{"value":"#C9D6FF","when":{"mode":"light"}},{"value":"#2A3A6E","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-2": {"type":"color","value":[{"value":"#CDEBDD","when":{"mode":"light"}},{"value":"#1F4A36","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-3": {"type":"color","value":[{"value":"#F7DDB7","when":{"mode":"light"}},{"value":"#5A3F17","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/art-4": {"type":"color","value":[{"value":"#F5CFD6","when":{"mode":"light"}},{"value":"#5A2431","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/bg": {"type":"color","value":[{"value":"#FBFAF8","when":{"mode":"light"}},{"value":"#0E1116","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/border": {"type":"color","value":[{"value":"#E6E2DA","when":{"mode":"light"}},{"value":"#2A313C","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/ink": {"type":"color","value":[{"value":"#14171C","when":{"mode":"light"}},{"value":"#EEF1F5","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/inverse": {"type":"color","value":[{"value":"#14213D","when":{"mode":"light"}},{"value":"#1B2A4A","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/inverse-muted": {"type":"color","value":[{"value":"#AEB9CF","when":{"mode":"light"}},{"value":"#9FB0CF","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/muted": {"type":"color","value":[{"value":"#5B6270","when":{"mode":"light"}},{"value":"#9AA3B2","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-accent": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#0E1116","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/on-inverse": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#EEF1F5","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/subtle": {"type":"color","value":[{"value":"#F3F1EC","when":{"mode":"light"}},{"value":"#1C222B","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/success": {"type":"color","value":[{"value":"#127A4B","when":{"mode":"light"}},{"value":"#4ACB8B","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/success-soft": {"type":"color","value":[{"value":"#E3F5EC","when":{"mode":"light"}},{"value":"#13301F","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/surface": {"type":"color","value":[{"value":"#FFFFFF","when":{"mode":"light"}},{"value":"#161B22","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/warning": {"type":"color","value":[{"value":"#A35C00","when":{"mode":"light"}},{"value":"#F2B54B","when":{"mode":"dark"}}],"group":"color"}
+
+, "color/warning-soft": {"type":"color","value":[{"value":"#FDF1DC","when":{"mode":"light"}},{"value":"#33240C","when":{"mode":"dark"}}],"group":"color"}
+
+, "radius/lg": {"type":"number","value":16,"group":"radius"}
+
+, "radius/md": {"type":"number","value":10,"group":"radius"}
+
+, "radius/pill": {"type":"number","value":999,"group":"radius"}
+
+, "radius/sm": {"type":"number","value":6,"group":"radius"}
+
+, "radius/xl": {"type":"number","value":24,"group":"radius"}
+
+, "shadow/card": {"type":"shadow","value":[{"kind":"shadow","x":0,"y":1,"blur":2,"color":"#1418200F"},{"kind":"shadow","x":0,"y":8,"blur":24,"spread":-8,"color":"#1418201F"}],"group":"shadow"}
+
+, "shadow/pop": {"type":"shadow","value":{"kind":"shadow","x":0,"y":24,"blur":64,"spread":-16,"color":"#14182040"},"group":"shadow"}
+
+, "space/1": {"type":"number","value":4,"group":"space"}
+
+, "space/10": {"type":"number","value":40,"group":"space"}
+
+, "space/12": {"type":"number","value":48,"group":"space"}
+
+, "space/16": {"type":"number","value":64,"group":"space"}
+
+, "space/2": {"type":"number","value":8,"group":"space"}
+
+, "space/20": {"type":"number","value":80,"group":"space"}
+
+, "space/24": {"type":"number","value":96,"group":"space"}
+
+, "space/3": {"type":"number","value":12,"group":"space"}
+
+, "space/30": {"type":"number","value":120,"group":"space"}
+
+, "space/4": {"type":"number","value":16,"group":"space"}
+
+, "space/5": {"type":"number","value":20,"group":"space"}
+
+, "space/6": {"type":"number","value":24,"group":"space"}
+
+, "space/8": {"type":"number","value":32,"group":"space"}
+
+, "type/body": {"type":"typography","value":{"font":"Inter","size":16,"weight":400,"lineHeight":1.55},"group":"typography"}
+
+, "type/body-lg": {"type":"typography","value":{"font":"Inter","size":18,"weight":400,"lineHeight":1.6},"group":"typography"}
+
+, "type/display": {"type":"typography","value":{"font":"Inter","size":64,"weight":700,"lineHeight":1.05,"letterSpacing":-2},"group":"typography"}
+
+, "type/h1": {"type":"typography","value":{"font":"Inter","size":48,"weight":700,"lineHeight":1.1,"letterSpacing":-1.2},"group":"typography"}
+
+, "type/heading": {"type":"typography","value":{"font":"Inter","size":32,"weight":700,"lineHeight":1.2,"letterSpacing":-0.6},"group":"typography"}
+
+, "type/label": {"type":"typography","value":{"font":"Inter","size":14,"weight":600,"lineHeight":1.3},"group":"typography"}
+
+, "type/mono": {"type":"typography","value":{"font":"JetBrains Mono","size":13,"weight":500,"lineHeight":1.4},"group":"typography"}
+
+, "type/small": {"type":"typography","value":{"font":"Inter","size":13,"weight":400,"lineHeight":1.45},"group":"typography"}
+
+, "type/title": {"type":"typography","value":{"font":"Inter","size":20,"weight":600,"lineHeight":1.35,"letterSpacing":-0.2},"group":"typography"}
+},
+"pages": {"lmPage1":{"order":"p02","name":"Components"},"lmPage2":{"order":"p00","name":"Cover"},"lmPage3":{"order":"p01","name":"Screens"},"lmPage4":{"order":"p03","name":"Foundations"}},
+"nodes": {
+"lm000001": {"type":"frame","parent":"lmLibBoard","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "lm000002": {"type":"text","parent":"lm000001","order":"a0","name":"Title","content":"Ledgerline marketing site: components","style":{"size":40,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000003": {"type":"text","parent":"lm000001","order":"a1","name":"Subtitle","content":"Every main used on the screens. Edit a main and its instances follow.","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000004": {"type":"frame","parent":"lmLibBoard","order":"a1","name":"Actions","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm000005": {"type":"frame","parent":"lm000004","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm000006": {"type":"text","parent":"lm000005","order":"a0","name":"Section title","content":"Actions","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000007": {"type":"rect","parent":"lm000005","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm000008": {"type":"frame","parent":"lm000004","order":"a1","name":"Actions items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "lm000009": {"type":"frame","parent":"lm000008","order":"a0","name":"Button","layout":{"dir":"column","gap":12}}
+
+, "lm00000a": {"type":"text","parent":"lm000009","order":"a0","name":"Label","content":"Button","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00000b": {"type":"frame","parent":"lm000008","order":"a1","name":"Button/Secondary","layout":{"dir":"column","gap":12}}
+
+, "lm00000c": {"type":"text","parent":"lm00000b","order":"a0","name":"Label","content":"Button/Secondary","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00000d": {"type":"frame","parent":"lm000008","order":"a2","name":"Badge","layout":{"dir":"column","gap":12}}
+
+, "lm00000e": {"type":"text","parent":"lm00000d","order":"a0","name":"Label","content":"Badge","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00000f": {"type":"frame","parent":"lmLibBoard","order":"a2","name":"Content","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm00000g": {"type":"frame","parent":"lm00000f","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm00000h": {"type":"text","parent":"lm00000g","order":"a0","name":"Section title","content":"Content","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00000i": {"type":"rect","parent":"lm00000g","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm00000j": {"type":"frame","parent":"lm00000f","order":"a1","name":"Content items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "lm00000k": {"type":"frame","parent":"lm00000j","order":"a0","name":"Avatar","layout":{"dir":"column","gap":12}}
+
+, "lm00000l": {"type":"text","parent":"lm00000k","order":"a0","name":"Label","content":"Avatar","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00000m": {"type":"frame","parent":"lmLibBoard","order":"a3","name":"Navigation","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm00000n": {"type":"frame","parent":"lm00000m","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm00000o": {"type":"text","parent":"lm00000n","order":"a0","name":"Section title","content":"Navigation","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00000p": {"type":"rect","parent":"lm00000n","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm00000q": {"type":"frame","parent":"lm00000m","order":"a1","name":"Navigation items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "lm00000r": {"type":"frame","parent":"lm00000q","order":"a0","name":"Nav bar","layout":{"dir":"column","gap":12}}
+
+, "lm00000s": {"type":"text","parent":"lm00000r","order":"a0","name":"Label","content":"Nav bar","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00000t": {"type":"frame","parent":"lmNavBar","order":"a0","name":"Brand","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "lm00000u": {"type":"frame","parent":"lm00000t","order":"a0","name":"Mark","w":28,"h":28,"radius":8,"fill":{"$ref":"color/accent"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lm00000v": {"type":"icon","parent":"lm00000u","order":"a0","name":"Icon/book-check","w":16,"h":16,"set":"lucide","icon":"book-check","color":{"$ref":"color/on-accent"}}
+
+, "lm00000w": {"type":"text","parent":"lm00000t","order":"a1","name":"Wordmark","content":"Ledgerline","style":{"weight":700,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00000x": {"type":"frame","parent":"lmNavBar","order":"a1","name":"Links","layout":{"dir":"row","gap":36,"align":"center"}}
+
+, "lm00000y": {"type":"frame","parent":"lmNavBar","order":"a2","name":"Actions","layout":{"dir":"row","gap":20,"align":"center"}}
+
+, "lm00000z": {"type":"text","parent":"lm00000y","order":"a0","name":"Sign in","content":"Sign in","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000010": {"type":"frame","parent":"lm00000q","order":"a1","name":"Footer","layout":{"dir":"column","gap":12}}
+
+, "lm000011": {"type":"text","parent":"lm000010","order":"a0","name":"Label","content":"Footer","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000012": {"type":"frame","parent":"lmFooter","order":"a0","name":"Top","w":{"mode":"fill"},"layout":{"dir":"row","gap":64}}
+
+, "lm000013": {"type":"frame","parent":"lm000012","order":"a0","name":"About","w":360,"layout":{"dir":"column","gap":16}}
+
+, "lm000014": {"type":"frame","parent":"lm000013","order":"a0","name":"Brand","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "lm000015": {"type":"frame","parent":"lm000014","order":"a0","name":"Mark","w":28,"h":28,"radius":8,"fill":{"$ref":"color/accent"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lm000016": {"type":"icon","parent":"lm000015","order":"a0","name":"Icon/book-check","w":16,"h":16,"set":"lucide","icon":"book-check","color":{"$ref":"color/on-accent"}}
+
+, "lm000017": {"type":"text","parent":"lm000014","order":"a1","name":"Wordmark","content":"Ledgerline","style":{"weight":700,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000018": {"type":"text","parent":"lm000013","order":"a1","name":"Close software for finance teams on Net…","w":{"mode":"fill"},"content":"Close software for finance teams on NetSuite, Sage Intacct, QuickBooks and Xero.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000019": {"type":"frame","parent":"lm000012","order":"a1","name":"Product","w":{"mode":"fill"},"layout":{"dir":"column","gap":14}}
+
+, "lm00001a": {"type":"text","parent":"lm000019","order":"a0","name":"Product","content":"Product","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00001b": {"type":"text","parent":"lm000019","order":"a1","name":"Close checklist","content":"Close checklist","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001c": {"type":"text","parent":"lm000019","order":"a2","name":"Reconciliations","content":"Reconciliations","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001d": {"type":"text","parent":"lm000019","order":"a3","name":"Flux analysis","content":"Flux analysis","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001e": {"type":"text","parent":"lm000019","order":"a4","name":"Integrations","content":"Integrations","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001f": {"type":"frame","parent":"lm000012","order":"a2","name":"Company","w":{"mode":"fill"},"layout":{"dir":"column","gap":14}}
+
+, "lm00001g": {"type":"text","parent":"lm00001f","order":"a0","name":"Company","content":"Company","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00001h": {"type":"text","parent":"lm00001f","order":"a1","name":"About","content":"About","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001i": {"type":"text","parent":"lm00001f","order":"a2","name":"Customers","content":"Customers","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001j": {"type":"text","parent":"lm00001f","order":"a3","name":"Careers","content":"Careers","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001k": {"type":"text","parent":"lm00001f","order":"a4","name":"Press","content":"Press","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001l": {"type":"frame","parent":"lm000012","order":"a3","name":"Resources","w":{"mode":"fill"},"layout":{"dir":"column","gap":14}}
+
+, "lm00001m": {"type":"text","parent":"lm00001l","order":"a0","name":"Resources","content":"Resources","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00001n": {"type":"text","parent":"lm00001l","order":"a1","name":"Blog","content":"Blog","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001o": {"type":"text","parent":"lm00001l","order":"a2","name":"Close guide","content":"Close guide","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001p": {"type":"text","parent":"lm00001l","order":"a3","name":"Help center","content":"Help center","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001q": {"type":"text","parent":"lm00001l","order":"a4","name":"Status","content":"Status","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001r": {"type":"rect","parent":"lmFooter","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm00001s": {"type":"frame","parent":"lmFooter","order":"a2","name":"Bottom","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "lm00001t": {"type":"text","parent":"lm00001s","order":"a0","name":"Copyright 2026 Ledgerline, Inc.","content":"Copyright 2026 Ledgerline, Inc.","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001u": {"type":"text","parent":"lm00001s","order":"a1","name":"Privacy  ·  Terms  ·  Security","content":"Privacy  ·  Terms  ·  Security","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001v": {"type":"frame","parent":"lm00000j","order":"a1","name":"Section header","layout":{"dir":"column","gap":12}}
+
+, "lm00001w": {"type":"text","parent":"lm00001v","order":"a0","name":"Label","content":"Section header","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001x": {"type":"frame","parent":"lm00000j","order":"a2","name":"Feature card","layout":{"dir":"column","gap":12}}
+
+, "lm00001y": {"type":"text","parent":"lm00001x","order":"a0","name":"Label","content":"Feature card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00001z": {"type":"frame","parent":"lmFeatCard","order":"a0","name":"Icon tile","w":44,"h":44,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lm000020": {"type":"frame","parent":"lm00000j","order":"a3","name":"Stat","layout":{"dir":"column","gap":12}}
+
+, "lm000021": {"type":"text","parent":"lm000020","order":"a0","name":"Label","content":"Stat","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000022": {"type":"frame","parent":"lm00000j","order":"a4","name":"Quote card","layout":{"dir":"column","gap":12}}
+
+, "lm000023": {"type":"text","parent":"lm000022","order":"a0","name":"Label","content":"Quote card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000024": {"type":"icon","parent":"lmQuote","order":"a0","name":"Icon/quote","w":24,"h":24,"set":"lucide","icon":"quote","color":{"$ref":"color/accent"}}
+
+, "lm000025": {"type":"frame","parent":"lmQuote","order":"a2","name":"Person","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm000026": {"type":"frame","parent":"lm000025","order":"a1","name":"Names","layout":{"dir":"column","gap":2}}
+
+, "lm000027": {"type":"frame","parent":"lm00000j","order":"a5","name":"Customer logo","layout":{"dir":"column","gap":12}}
+
+, "lm000028": {"type":"text","parent":"lm000027","order":"a0","name":"Label","content":"Customer logo","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000029": {"type":"frame","parent":"lm00000j","order":"a6","name":"FAQ item","layout":{"dir":"column","gap":12}}
+
+, "lm00002a": {"type":"text","parent":"lm000029","order":"a0","name":"Label","content":"FAQ item","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00002b": {"type":"frame","parent":"lmFaq0","order":"a0","name":"Question row","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"align":"center"}}
+
+, "lm00002c": {"type":"icon","parent":"lm00002b","order":"a1","name":"Icon/chevron-down","w":20,"h":20,"set":"lucide","icon":"chevron-down","color":{"$ref":"color/muted"}}
+
+, "lm00002d": {"type":"frame","parent":"lmLibBoard","order":"a4","name":"Pricing","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm00002e": {"type":"frame","parent":"lm00002d","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm00002f": {"type":"text","parent":"lm00002e","order":"a0","name":"Section title","content":"Pricing","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00002g": {"type":"rect","parent":"lm00002e","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm00002h": {"type":"frame","parent":"lm00002d","order":"a1","name":"Pricing items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "lm00002i": {"type":"frame","parent":"lm00002h","order":"a0","name":"Check item","layout":{"dir":"column","gap":12}}
+
+, "lm00002j": {"type":"text","parent":"lm00002i","order":"a0","name":"Label","content":"Check item","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00002k": {"type":"frame","parent":"lm00002h","order":"a1","name":"Pricing card","layout":{"dir":"column","gap":12}}
+
+, "lm00002l": {"type":"text","parent":"lm00002k","order":"a0","name":"Label","content":"Pricing card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00002m": {"type":"frame","parent":"lmPrice","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "lm00002n": {"type":"frame","parent":"lm00002m","order":"a0","name":"Plan row","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "lm00002o": {"type":"instance","parent":"lmPrcBdgWrap","order":"a0","of":"lmBadge","args":{"label":"Most popular"}}
+
+, "lm00002p": {"type":"frame","parent":"lmPrice","order":"a1","name":"Price","w":{"mode":"fill"},"layout":{"dir":"row","gap":8,"align":"end"}}
+
+, "lm00002q": {"type":"rect","parent":"lmPrice","order":"a3","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm00002r": {"type":"frame","parent":"lmLibBoard","order":"a5","name":"Blog","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm00002s": {"type":"frame","parent":"lm00002r","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm00002t": {"type":"text","parent":"lm00002s","order":"a0","name":"Section title","content":"Blog","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00002u": {"type":"rect","parent":"lm00002s","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm00002v": {"type":"frame","parent":"lm00002r","order":"a1","name":"Blog items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "lm00002w": {"type":"frame","parent":"lm00002v","order":"a0","name":"Blog card","layout":{"dir":"column","gap":12}}
+
+, "lm00002x": {"type":"text","parent":"lm00002w","order":"a0","name":"Label","content":"Blog card","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00002y": {"type":"frame","parent":"lmBlogCard","order":"a1","name":"Meta","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm00002z": {"type":"frame","parent":"lmBlogCard","order":"a4","name":"Author","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "lm000030": {"type":"frame","parent":"lmLibBoard","order":"a6","name":"Forms","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm000031": {"type":"frame","parent":"lm000030","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm000032": {"type":"text","parent":"lm000031","order":"a0","name":"Section title","content":"Forms","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000033": {"type":"rect","parent":"lm000031","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm000034": {"type":"frame","parent":"lm000030","order":"a1","name":"Forms items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "lm000035": {"type":"frame","parent":"lm000034","order":"a0","name":"Input","layout":{"dir":"column","gap":12}}
+
+, "lm000036": {"type":"text","parent":"lm000035","order":"a0","name":"Label","content":"Input","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000037": {"type":"frame","parent":"lmInput","order":"a1","name":"Field","w":{"mode":"fill"},"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row","pad":[12,14]}}
+
+, "lm000038": {"type":"frame","parent":"lmCover","order":"a0","name":"Intro","w":520,"layout":{"dir":"column","gap":24}}
+
+, "lm000039": {"type":"text","parent":"lm000038","order":"a0","name":"Eyebrow","content":"Website template","style":{"letterSpacing":1.2,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "lm00003a": {"type":"text","parent":"lm000038","order":"a1","name":"Title","w":{"mode":"fill"},"content":"Ledgerline marketing site","grow":"fixed-width","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00003b": {"type":"text","parent":"lm000038","order":"a2","name":"Description","w":{"mode":"fill"},"content":"Home, pricing, customers, blog, article and sign-up screens for a B2B finance tool. Built from 16 components with light and dark tokens.","grow":"fixed-width","style":{"size":20,"lineHeight":1.5,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00003c": {"type":"frame","parent":"lmCover","order":"a1","name":"Preview","w":{"mode":"fill"},"h":{"mode":"fill"},"radius":[24,0,0,24],"clip":true,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"},"width":{"t":1,"b":1,"l":1}},"layout":{"dir":"column","gap":24,"pad":40}}
+
+, "lm00003d": {"type":"frame","parent":"lm00003c","order":"a0","name":"Hero","w":{"mode":"fill"},"layout":{"dir":"column","gap":16}}
+
+, "lm00003e": {"type":"instance","parent":"lm00003d","order":"a0","of":"lmBadge","args":{"label":"New: flux review with variance notes"}}
+
+, "lm00003f": {"type":"text","parent":"lm00003d","order":"a1","name":"Close the month in four days","w":{"mode":"fill"},"content":"Close the month in four days","grow":"fixed-width","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00003g": {"type":"text","parent":"lm00003d","order":"a2","name":"Reconciliations, accruals and sign-offs…","w":{"mode":"fill"},"content":"Reconciliations, accruals and sign-offs in one checklist that reads from your ERP.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00003h": {"type":"frame","parent":"lm00003d","order":"a3","name":"Actions","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm00003i": {"type":"instance","parent":"lm00003h","order":"a0","of":"lmBtn0","args":{"icon":true,"label":"Start free trial","size":"md"}}
+
+, "lm00003j": {"type":"instance","parent":"lm00003h","order":"a1","of":"lmBtnSec","args":{"label":"Book a demo","size":"md"}}
+
+, "lm00003k": {"type":"frame","parent":"lm00003c","order":"a1","name":"Cards","w":{"mode":"fill"},"layout":{"dir":"row","gap":24,"align":"stretch"}}
+
+, "lm00003l": {"type":"instance","parent":"lm00003k","order":"a0","of":"lmFeatCard","props":{"w":{"mode":"fill"}},"args":{"body":"Recurring tasks roll forward each month with owners and due days.","title":"Close checklist"},"overrides":{"lmFeatIcon":{"set":{"icon":"list-checks"}}}}
+
+, "lm00003m": {"type":"instance","parent":"lm00003k","order":"a1","of":"lmFeatCard","props":{"w":{"mode":"fill"}},"args":{"body":"Bank and subledger lines match overnight. Exceptions wait for review.","title":"Reconciliations"},"overrides":{"lmFeatIcon":{"set":{"icon":"scale"}}}}
+
+, "lm00003n": {"type":"frame","parent":"lm00003c","order":"a2","name":"Numbers","w":{"mode":"fill"},"layout":{"dir":"row","gap":24,"pad":[8,0,0,0]}}
+
+, "lm00003o": {"type":"instance","parent":"lm00003n","order":"a0","of":"lmStat","props":{"w":{"mode":"fill"}},"args":{"label":"Median close after 90 days","value":"4.2 days"}}
+
+, "lm00003p": {"type":"instance","parent":"lm00003n","order":"a1","of":"lmStat","props":{"w":{"mode":"fill"}},"args":{"label":"Finance teams closing in Ledgerline","value":"1,400+"}}
+
+, "lm00003q": {"type":"frame","parent":null,"order":"a2","name":"Home","x":0,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"lmPage3"}
+
+, "lm00003r": {"type":"instance","parent":"lm00003q","order":"a0","of":"lmNavBar","args":{"active":"product"}}
+
+, "lm00003s": {"type":"frame","parent":"lm00003q","order":"a1","name":"Hero","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":[80,120,0,120],"align":"center"}}
+
+, "lm00003t": {"type":"instance","parent":"lm00003s","order":"a0","of":"lmBadge","args":{"label":"New: flux review with variance notes"}}
+
+, "lm00003u": {"type":"text","parent":"lm00003s","order":"a1","name":"Close the month in four days","w":880,"content":"Close the month in four days","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00003v": {"type":"text","parent":"lm00003s","order":"a2","name":"Ledgerline puts reconciliations, accrua…","w":680,"content":"Ledgerline puts reconciliations, accruals and review sign-offs in one checklist that reads from your ERP and bank feeds. Controllers see what is left before anyone has to ask.","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00003w": {"type":"frame","parent":"lm00003s","order":"a3","name":"Actions","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm00003x": {"type":"instance","parent":"lm00003w","order":"a0","of":"lmBtn0","args":{"icon":true,"label":"Start free trial","size":"lg"}}
+
+, "lm00003y": {"type":"instance","parent":"lm00003w","order":"a1","of":"lmBtnSec","args":{"label":"Book a demo","size":"lg"}}
+
+, "lm00003z": {"type":"text","parent":"lm00003s","order":"a4","name":"14-day trial. No credit card required.","content":"14-day trial. No credit card required.","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000040": {"type":"frame","parent":"lm00003s","order":"a5","name":"Product shot","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"clip":true,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"effects":{"$ref":"shadow/pop"},"layout":{"dir":"column"}}
+
+, "lm000041": {"type":"frame","parent":"lm000040","order":"a0","name":"Window bar","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":8,"pad":[12,16],"align":"center"}}
+
+, "lm000042": {"type":"ellipse","parent":"lm000041","order":"a0","name":"Dot","w":10,"h":10,"fill":{"$ref":"color/border"}}
+
+, "lm000043": {"type":"ellipse","parent":"lm000041","order":"a1","name":"Dot","w":10,"h":10,"fill":{"$ref":"color/border"}}
+
+, "lm000044": {"type":"ellipse","parent":"lm000041","order":"a2","name":"Dot","w":10,"h":10,"fill":{"$ref":"color/border"}}
+
+, "lm000045": {"type":"text","parent":"lm000041","order":"a3","name":"Address","content":"app.ledgerline.com/close/2026-09","style":{"size":12,"typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000046": {"type":"frame","parent":"lm000040","order":"a1","name":"Body","w":{"mode":"fill"},"layout":{"dir":"row"}}
+
+, "lm000047": {"type":"frame","parent":"lm000046","order":"a0","name":"Sidebar","w":232,"fill":{"$ref":"color/subtle"},"stroke":{"paint":{"$ref":"color/border"},"width":{"r":1}},"layout":{"dir":"column","gap":4,"pad":16}}
+
+, "lm000048": {"type":"frame","parent":"lm000047","order":"a0","name":"Close checklist","w":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","gap":10,"pad":[8,10],"align":"center"}}
+
+, "lm000049": {"type":"icon","parent":"lm000048","order":"a0","name":"Icon/list-checks","w":16,"h":16,"set":"lucide","icon":"list-checks","color":{"$ref":"color/accent"}}
+
+, "lm00004a": {"type":"text","parent":"lm000048","order":"a1","name":"Close checklist","content":"Close checklist","style":{"weight":600,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "lm00004b": {"type":"frame","parent":"lm000047","order":"a1","name":"Reconciliations","w":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"layout":{"dir":"row","gap":10,"pad":[8,10],"align":"center"}}
+
+, "lm00004c": {"type":"icon","parent":"lm00004b","order":"a0","name":"Icon/scale","w":16,"h":16,"set":"lucide","icon":"scale","color":{"$ref":"color/muted"}}
+
+, "lm00004d": {"type":"text","parent":"lm00004b","order":"a1","name":"Reconciliations","content":"Reconciliations","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00004e": {"type":"frame","parent":"lm000047","order":"a2","name":"Journal entries","w":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"layout":{"dir":"row","gap":10,"pad":[8,10],"align":"center"}}
+
+, "lm00004f": {"type":"icon","parent":"lm00004e","order":"a0","name":"Icon/file-text","w":16,"h":16,"set":"lucide","icon":"file-text","color":{"$ref":"color/muted"}}
+
+, "lm00004g": {"type":"text","parent":"lm00004e","order":"a1","name":"Journal entries","content":"Journal entries","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00004h": {"type":"frame","parent":"lm000047","order":"a3","name":"Flux review","w":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"layout":{"dir":"row","gap":10,"pad":[8,10],"align":"center"}}
+
+, "lm00004i": {"type":"icon","parent":"lm00004h","order":"a0","name":"Icon/chart-column","w":16,"h":16,"set":"lucide","icon":"chart-column","color":{"$ref":"color/muted"}}
+
+, "lm00004j": {"type":"text","parent":"lm00004h","order":"a1","name":"Flux review","content":"Flux review","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00004k": {"type":"frame","parent":"lm000047","order":"a4","name":"Entities","w":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"layout":{"dir":"row","gap":10,"pad":[8,10],"align":"center"}}
+
+, "lm00004l": {"type":"icon","parent":"lm00004k","order":"a0","name":"Icon/layers","w":16,"h":16,"set":"lucide","icon":"layers","color":{"$ref":"color/muted"}}
+
+, "lm00004m": {"type":"text","parent":"lm00004k","order":"a1","name":"Entities","content":"Entities","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00004n": {"type":"frame","parent":"lm000047","order":"a5","name":"Reports","w":{"mode":"fill"},"radius":{"$ref":"radius/sm"},"layout":{"dir":"row","gap":10,"pad":[8,10],"align":"center"}}
+
+, "lm00004o": {"type":"icon","parent":"lm00004n","order":"a0","name":"Icon/receipt","w":16,"h":16,"set":"lucide","icon":"receipt","color":{"$ref":"color/muted"}}
+
+, "lm00004p": {"type":"text","parent":"lm00004n","order":"a1","name":"Reports","content":"Reports","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00004q": {"type":"frame","parent":"lm000046","order":"a1","name":"Main","w":{"mode":"fill"},"layout":{"dir":"column","gap":20,"pad":28}}
+
+, "lm00004r": {"type":"frame","parent":"lm00004q","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "lm00004s": {"type":"frame","parent":"lm00004r","order":"a0","name":"Titles","layout":{"dir":"column","gap":4}}
+
+, "lm00004t": {"type":"text","parent":"lm00004s","order":"a0","name":"September 2026 close","content":"September 2026 close","style":{"size":22,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00004u": {"type":"text","parent":"lm00004s","order":"a1","name":"Day 3 of 5  ·  41 of 58 tasks done","content":"Day 3 of 5  ·  41 of 58 tasks done","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00004v": {"type":"frame","parent":"lm00004r","order":"a1","name":"Status","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm00004w": {"type":"instance","parent":"lm00004v","order":"a0","of":"lmBadge","args":{"label":"On track","tone":"success"}}
+
+, "lm00004x": {"type":"instance","parent":"lm00004v","order":"a1","of":"lmBtnSec","args":{"label":"Assign tasks"}}
+
+, "lm00004y": {"type":"frame","parent":"lm00004q","order":"a1","name":"Progress","w":{"mode":"fill"},"h":8,"radius":{"$ref":"radius/pill"},"clip":true,"fill":{"$ref":"color/subtle"},"layout":{"dir":"row"}}
+
+, "lm00004z": {"type":"rect","parent":"lm00004y","order":"a0","name":"Done","w":{"mode":"fill","weight":41},"h":8,"fill":{"$ref":"color/accent"}}
+
+, "lm000050": {"type":"rect","parent":"lm00004y","order":"a1","name":"Left","w":{"mode":"fill","weight":17},"h":8,"fill":{"$ref":"color/subtle"}}
+
+, "lm000051": {"type":"frame","parent":"lm00004q","order":"a2","name":"Tasks","w":{"mode":"fill"},"layout":{"dir":"column"}}
+
+, "lm000052": {"type":"frame","parent":"lm000051","order":"a0","name":"Head","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":16,"pad":[8,0]}}
+
+, "lm000053": {"type":"text","parent":"lm000052","order":"a0","name":"Task","w":{"mode":"fill"},"content":"Task","grow":"fixed-width","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000054": {"type":"text","parent":"lm000052","order":"a1","name":"Owner","w":170,"content":"Owner","grow":"fixed-width","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000055": {"type":"text","parent":"lm000052","order":"a2","name":"Due","w":70,"content":"Due","grow":"fixed-width","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000056": {"type":"text","parent":"lm000052","order":"a3","name":"Status","w":100,"content":"Status","grow":"fixed-width","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000057": {"type":"frame","parent":"lm000051","order":"a1","name":"Bank reconciliation: operating account","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":16,"pad":[12,0],"align":"center"}}
+
+, "lm000058": {"type":"text","parent":"lm000057","order":"a0","name":"Bank reconciliation: operating account","w":{"mode":"fill"},"content":"Bank reconciliation: operating account","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000059": {"type":"frame","parent":"lm000057","order":"a1","name":"Owner","w":170,"layout":{"dir":"row","gap":8,"align":"center"}}
+
+, "lm00005a": {"type":"instance","parent":"lm000059","order":"a0","of":"lmAvatar","args":{"initials":"MO","size":"sm","tone":"blue"}}
+
+, "lm00005b": {"type":"text","parent":"lm000059","order":"a1","name":"Maya Okafor","content":"Maya Okafor","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005c": {"type":"text","parent":"lm000057","order":"a2","name":"Oct 2","w":70,"content":"Oct 2","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005d": {"type":"frame","parent":"lm000057","order":"a3","name":"Status","w":100,"layout":{"dir":"row"}}
+
+, "lm00005e": {"type":"instance","parent":"lm00005d","order":"a0","of":"lmBadge","args":{"label":"Done","tone":"success"}}
+
+, "lm00005f": {"type":"frame","parent":"lm000051","order":"a2","name":"Accrue September payroll","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":16,"pad":[12,0],"align":"center"}}
+
+, "lm00005g": {"type":"text","parent":"lm00005f","order":"a0","name":"Accrue September payroll","w":{"mode":"fill"},"content":"Accrue September payroll","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005h": {"type":"frame","parent":"lm00005f","order":"a1","name":"Owner","w":170,"layout":{"dir":"row","gap":8,"align":"center"}}
+
+, "lm00005i": {"type":"instance","parent":"lm00005h","order":"a0","of":"lmAvatar","args":{"initials":"DP","size":"sm","tone":"green"}}
+
+, "lm00005j": {"type":"text","parent":"lm00005h","order":"a1","name":"Daniel Park","content":"Daniel Park","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005k": {"type":"text","parent":"lm00005f","order":"a2","name":"Oct 2","w":70,"content":"Oct 2","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005l": {"type":"frame","parent":"lm00005f","order":"a3","name":"Status","w":100,"layout":{"dir":"row"}}
+
+, "lm00005m": {"type":"instance","parent":"lm00005l","order":"a0","of":"lmBadge","args":{"label":"Done","tone":"success"}}
+
+, "lm00005n": {"type":"frame","parent":"lm000051","order":"a3","name":"Prepaid expenses roll-forward","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":16,"pad":[12,0],"align":"center"}}
+
+, "lm00005o": {"type":"text","parent":"lm00005n","order":"a0","name":"Prepaid expenses roll-forward","w":{"mode":"fill"},"content":"Prepaid expenses roll-forward","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005p": {"type":"frame","parent":"lm00005n","order":"a1","name":"Owner","w":170,"layout":{"dir":"row","gap":8,"align":"center"}}
+
+, "lm00005q": {"type":"instance","parent":"lm00005p","order":"a0","of":"lmAvatar","args":{"initials":"LS","size":"sm","tone":"amber"}}
+
+, "lm00005r": {"type":"text","parent":"lm00005p","order":"a1","name":"Lena Strauss","content":"Lena Strauss","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005s": {"type":"text","parent":"lm00005n","order":"a2","name":"Oct 3","w":70,"content":"Oct 3","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005t": {"type":"frame","parent":"lm00005n","order":"a3","name":"Status","w":100,"layout":{"dir":"row"}}
+
+, "lm00005u": {"type":"instance","parent":"lm00005t","order":"a0","of":"lmBadge","args":{"label":"In review","tone":"warning"}}
+
+, "lm00005v": {"type":"frame","parent":"lm000051","order":"a4","name":"Revenue cutoff review","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":16,"pad":[12,0],"align":"center"}}
+
+, "lm00005w": {"type":"text","parent":"lm00005v","order":"a0","name":"Revenue cutoff review","w":{"mode":"fill"},"content":"Revenue cutoff review","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00005x": {"type":"frame","parent":"lm00005v","order":"a1","name":"Owner","w":170,"layout":{"dir":"row","gap":8,"align":"center"}}
+
+, "lm00005y": {"type":"instance","parent":"lm00005x","order":"a0","of":"lmAvatar","args":{"initials":"MO","size":"sm","tone":"blue"}}
+
+, "lm00005z": {"type":"text","parent":"lm00005x","order":"a1","name":"Maya Okafor","content":"Maya Okafor","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000060": {"type":"text","parent":"lm00005v","order":"a2","name":"Oct 3","w":70,"content":"Oct 3","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000061": {"type":"frame","parent":"lm00005v","order":"a3","name":"Status","w":100,"layout":{"dir":"row"}}
+
+, "lm000062": {"type":"instance","parent":"lm000061","order":"a0","of":"lmBadge","args":{"label":"In review","tone":"warning"}}
+
+, "lm000063": {"type":"frame","parent":"lm000051","order":"a5","name":"Intercompany eliminations","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","gap":16,"pad":[12,0],"align":"center"}}
+
+, "lm000064": {"type":"text","parent":"lm000063","order":"a0","name":"Intercompany eliminations","w":{"mode":"fill"},"content":"Intercompany eliminations","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000065": {"type":"frame","parent":"lm000063","order":"a1","name":"Owner","w":170,"layout":{"dir":"row","gap":8,"align":"center"}}
+
+, "lm000066": {"type":"instance","parent":"lm000065","order":"a0","of":"lmAvatar","args":{"initials":"RA","size":"sm","tone":"rose"}}
+
+, "lm000067": {"type":"text","parent":"lm000065","order":"a1","name":"Rafael Alves","content":"Rafael Alves","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000068": {"type":"text","parent":"lm000063","order":"a2","name":"Oct 4","w":70,"content":"Oct 4","grow":"fixed-width","style":{"size":14,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000069": {"type":"frame","parent":"lm000063","order":"a3","name":"Status","w":100,"layout":{"dir":"row"}}
+
+, "lm00006a": {"type":"instance","parent":"lm000069","order":"a0","of":"lmBadge","args":{"label":"Open","tone":"neutral"}}
+
+, "lm00006b": {"type":"frame","parent":"lm00003q","order":"a2","name":"Logos","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/8"},"pad":[72,120],"align":"center"}}
+
+, "lm00006c": {"type":"text","parent":"lm00006b","order":"a0","name":"Finance teams at 1,400 companies run th…","content":"Finance teams at 1,400 companies run their close in Ledgerline","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00006d": {"type":"frame","parent":"lm00006b","order":"a1","name":"Logos","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "lm00006e": {"type":"instance","parent":"lm00006d","order":"a0","of":"lmLogo","args":{"name":"Northwind Freight"},"overrides":{"lmLogoIcon":{"set":{"icon":"truck"}}}}
+
+, "lm00006f": {"type":"instance","parent":"lm00006d","order":"a1","of":"lmLogo","args":{"name":"Halcyon Health"},"overrides":{"lmLogoIcon":{"set":{"icon":"heart-pulse"}}}}
+
+, "lm00006g": {"type":"instance","parent":"lm00006d","order":"a2","of":"lmLogo","args":{"name":"Brightline Retail"},"overrides":{"lmLogoIcon":{"set":{"icon":"store"}}}}
+
+, "lm00006h": {"type":"instance","parent":"lm00006d","order":"a3","of":"lmLogo","args":{"name":"Corvid Labs"},"overrides":{"lmLogoIcon":{"set":{"icon":"flask-conical"}}}}
+
+, "lm00006i": {"type":"instance","parent":"lm00006d","order":"a4","of":"lmLogo","args":{"name":"Juniper Capital"},"overrides":{"lmLogoIcon":{"set":{"icon":"landmark"}}}}
+
+, "lm00006j": {"type":"instance","parent":"lm00006d","order":"a5","of":"lmLogo","args":{"name":"Oakridge Foods"},"overrides":{"lmLogoIcon":{"set":{"icon":"wheat"}}}}
+
+, "lm00006k": {"type":"frame","parent":"lm00003q","order":"a3","name":"Features","w":{"mode":"fill"},"fill":{"$ref":"color/surface"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[96,120],"align":"center"}}
+
+, "lm00006l": {"type":"instance","parent":"lm00006k","order":"a0","of":"lmSecHead","args":{"eyebrow":"What it does","subtitle":"Ledgerline reads balances from NetSuite, Intacct or QuickBooks every hour, so each task shows the account it covers and whether it still ties out.","title":"Every close task in one place, tied to the numbers"}}
+
+, "lm00006m": {"type":"frame","parent":"lm00006k","order":"a1","name":"Grid","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"}}}
+
+, "lm00006n": {"type":"frame","parent":"lm00006m","order":"a0","name":"Row 1","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "lm00006o": {"type":"instance","parent":"lm00006n","order":"a0","of":"lmFeatCard","args":{"body":"Recurring tasks roll forward each month with owners, due days and dependencies. Late items show up on day 2.","title":"Close checklist"},"overrides":{"lmFeatIcon":{"set":{"icon":"list-checks"}}}}
+
+, "lm00006p": {"type":"instance","parent":"lm00006n","order":"a1","of":"lmFeatCard","args":{"body":"Bank and subledger lines match automatically. Anything over your threshold waits for a preparer and a reviewer.","title":"Reconciliations"},"overrides":{"lmFeatIcon":{"set":{"icon":"scale"}}}}
+
+, "lm00006q": {"type":"instance","parent":"lm00006n","order":"a2","of":"lmFeatCard","args":{"body":"Each account is compared to last month and last year. Owners are asked for a note when a variance passes 10%.","title":"Flux analysis"},"overrides":{"lmFeatIcon":{"set":{"icon":"chart-column"}}}}
+
+, "lm00006r": {"type":"frame","parent":"lm00006m","order":"a1","name":"Row 2","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "lm00006s": {"type":"instance","parent":"lm00006r","order":"a0","of":"lmFeatCard","args":{"body":"Draft accruals and reclasses from templates, attach support and post to the ERP after approval.","title":"Journal entries"},"overrides":{"lmFeatIcon":{"set":{"icon":"file-text"}}}}
+
+, "lm00006t": {"type":"instance","parent":"lm00006r","order":"a1","of":"lmFeatCard","args":{"body":"Every sign-off, edit and attachment is logged with a timestamp. Auditors get read-only access to the period.","title":"Audit trail"},"overrides":{"lmFeatIcon":{"set":{"icon":"shield-check"}}}}
+
+, "lm00006u": {"type":"instance","parent":"lm00006r","order":"a2","of":"lmFeatCard","args":{"body":"NetSuite, Sage Intacct, QuickBooks Online, Xero, Plaid bank feeds and Slack reminders.","title":"Integrations"},"overrides":{"lmFeatIcon":{"set":{"icon":"plug"}}}}
+
+, "lm00006v": {"type":"frame","parent":"lm00003q","order":"a4","name":"Stats","w":{"mode":"fill"},"fill":{"$ref":"color/inverse"},"layout":{"dir":"row","pad":[72,120],"justify":"between"}}
+
+, "lm00006w": {"type":"instance","parent":"lm00006v","order":"a0","of":"lmStat","args":{"label":"Median close after 90 days, down from 9.5","tone":"inverse","value":"4.2 days"}}
+
+, "lm00006x": {"type":"instance","parent":"lm00006v","order":"a1","of":"lmStat","args":{"label":"Fewer manual journal entries in the first quarter","tone":"inverse","value":"38%"}}
+
+, "lm00006y": {"type":"instance","parent":"lm00006v","order":"a2","of":"lmStat","args":{"label":"Finance teams closing in Ledgerline","tone":"inverse","value":"1,400+"}}
+
+, "lm00006z": {"type":"instance","parent":"lm00006v","order":"a3","of":"lmStat","args":{"label":"Type II report, audited every year","tone":"inverse","value":"SOC 2"}}
+
+, "lm000070": {"type":"frame","parent":"lm00003q","order":"a5","name":"Testimonials","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[96,120],"align":"center"}}
+
+, "lm000071": {"type":"instance","parent":"lm000070","order":"a0","of":"lmSecHead","args":{"eyebrow":"Customers","subtitle":"Teams switch to Ledgerline in the quiet week after a close and run the next one in it.","title":"Controllers who stopped chasing spreadsheets"}}
+
+, "lm000072": {"type":"frame","parent":"lm000070","order":"a1","name":"Quotes","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"}}}
+
+, "lm000073": {"type":"frame","parent":"lm000072","order":"a0","name":"Row 1","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "lm000074": {"type":"instance","parent":"lm000073","order":"a0","of":"lmQuote","args":{"initials":"PR","name":"Priya Raman","quote":"We closed August in five days with two fewer people on the team than last year. The checklist did most of the chasing.","role":"Controller, Halcyon Health"}}
+
+, "lm000075": {"type":"instance","parent":"lm000073","order":"a1","of":"lmQuote","args":{"initials":"TH","name":"Tomás Herrera","quote":"Our auditors pulled support for 140 reconciliations without emailing anyone. That alone saved a week in March.","role":"VP Finance, Brightline Retail"}}
+
+, "lm000076": {"type":"instance","parent":"lm000073","order":"a2","of":"lmQuote","args":{"initials":"GL","name":"Grace Liu","quote":"Flux notes used to live in a spreadsheet nobody opened. Now the owner writes them before review starts.","role":"Assistant Controller, Corvid Labs"}}
+
+, "lm000077": {"type":"frame","parent":"lm00003q","order":"a6","name":"Call to action","w":{"mode":"fill"},"layout":{"dir":"column","pad":[0,120,96,120]}}
+
+, "lm000078": {"type":"frame","parent":"lm000077","order":"a0","name":"Band","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/inverse"},"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":64,"align":"center"}}
+
+, "lm000079": {"type":"text","parent":"lm000078","order":"a0","name":"Run your next close in Ledgerline","content":"Run your next close in Ledgerline","style":{"align":"center","typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "lm00007a": {"type":"text","parent":"lm000078","order":"a1","name":"Import last month's checklist from a sp…","w":620,"content":"Import last month's checklist from a spreadsheet and invite your team. Setup takes about an hour.","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "lm00007b": {"type":"frame","parent":"lm000078","order":"a2","name":"Actions","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm00007c": {"type":"instance","parent":"lm00007b","order":"a0","of":"lmBtn0","args":{"icon":true,"label":"Start free trial","size":"lg"}}
+
+, "lm00007d": {"type":"instance","parent":"lm00007b","order":"a1","of":"lmBtnSec","args":{"label":"Book a demo","size":"lg"}}
+
+, "lm00007e": {"type":"instance","parent":"lm00003q","order":"a7","of":"lmFooter"}
+
+, "lm00007f": {"type":"frame","parent":null,"order":"a3","name":"Pricing","x":1600,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"lmPage3"}
+
+, "lm00007g": {"type":"instance","parent":"lm00007f","order":"a0","of":"lmNavBar","args":{"active":"pricing"}}
+
+, "lm00007h": {"type":"frame","parent":"lm00007f","order":"a1","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/8"},"pad":[80,120,48,120],"align":"center"}}
+
+, "lm00007i": {"type":"instance","parent":"lm00007h","order":"a0","of":"lmSecHead","args":{"eyebrow":"Pricing","subtitle":"Reviewers and auditors join free. Pay monthly, or save 15% with annual billing.","title":"Priced per finance seat"}}
+
+, "lm00007j": {"type":"frame","parent":"lm00007h","order":"a1","name":"Billing toggle","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","gap":4,"pad":4}}
+
+, "lm00007k": {"type":"frame","parent":"lm00007j","order":"a0","name":"Monthly","radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"},"layout":{"dir":"row","pad":[8,18]}}
+
+, "lm00007l": {"type":"text","parent":"lm00007k","order":"a0","name":"Monthly","content":"Monthly","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00007m": {"type":"frame","parent":"lm00007j","order":"a1","name":"Annual","layout":{"dir":"row","gap":8,"pad":[8,18],"align":"center"}}
+
+, "lm00007n": {"type":"text","parent":"lm00007m","order":"a0","name":"Annual","content":"Annual","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm00007o": {"type":"text","parent":"lm00007m","order":"a1","name":"Save 15%","content":"Save 15%","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/success"}}
+
+, "lm00007p": {"type":"frame","parent":"lm00007f","order":"a2","name":"Plans","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"pad":[0,120],"align":"stretch"}}
+
+, "lm00007q": {"type":"instance","parent":"lm00007p","order":"a0","of":"lmPrice","props":{"w":{"mode":"fill"}},"args":{"cta":"lmBtnSec","ctaLabel":"Start free trial","description":"For teams of up to 5 closing on QuickBooks Online or Xero.","period":"per finance seat / month","plan":"Starter","price":"$39"},"overrides":{"lmPrcFeat":{"slot":true}}}
+
+, "lm00007r": {"type":"instance","parent":"lm00007q","at":"lmPrcFeat","order":"a0","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Close checklist with 50 recurring tasks","state":"included"}}
+
+, "lm00007s": {"type":"instance","parent":"lm00007q","at":"lmPrcFeat","order":"a1","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Bank reconciliations for 5 accounts","state":"included"}}
+
+, "lm00007t": {"type":"instance","parent":"lm00007q","at":"lmPrcFeat","order":"a2","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"QuickBooks Online and Xero sync","state":"included"}}
+
+, "lm00007u": {"type":"instance","parent":"lm00007q","at":"lmPrcFeat","order":"a3","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Slack and email reminders","state":"included"}}
+
+, "lm00007v": {"type":"instance","parent":"lm00007q","at":"lmPrcFeat","order":"a4","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Flux analysis","state":"excluded"}}
+
+, "lm00007w": {"type":"instance","parent":"lm00007q","at":"lmPrcFeat","order":"a5","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Journal entry approvals","state":"excluded"}}
+
+, "lm00007x": {"type":"instance","parent":"lm00007p","order":"a1","of":"lmPrice","props":{"w":{"mode":"fill"}},"args":{"ctaLabel":"Start free trial","description":"For multi-entity teams that need flux review and approvals.","period":"per finance seat / month","plan":"Growth","popular":true,"price":"$79","tone":"featured"},"overrides":{"lmPrcFeat":{"slot":true}}}
+
+, "lm00007y": {"type":"instance","parent":"lm00007x","at":"lmPrcFeat","order":"a0","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Unlimited checklist tasks","state":"included"}}
+
+, "lm00007z": {"type":"instance","parent":"lm00007x","at":"lmPrcFeat","order":"a1","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Unlimited reconciliations","state":"included"}}
+
+, "lm000080": {"type":"instance","parent":"lm00007x","at":"lmPrcFeat","order":"a2","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Flux analysis with variance notes","state":"included"}}
+
+, "lm000081": {"type":"instance","parent":"lm00007x","at":"lmPrcFeat","order":"a3","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Journal entry approvals","state":"included"}}
+
+, "lm000082": {"type":"instance","parent":"lm00007x","at":"lmPrcFeat","order":"a4","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"NetSuite and Sage Intacct sync","state":"included"}}
+
+, "lm000083": {"type":"instance","parent":"lm00007x","at":"lmPrcFeat","order":"a5","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Up to 10 entities","state":"included"}}
+
+, "lm000084": {"type":"instance","parent":"lm00007p","order":"a2","of":"lmPrice","props":{"w":{"mode":"fill"}},"args":{"cta":"lmBtnSec","ctaLabel":"Talk to sales","description":"For groups with more than 10 entities, SSO and audit requirements.","period":"billed annually","plan":"Enterprise","price":"Custom"},"overrides":{"lmPrcFeat":{"slot":true}}}
+
+, "lm000085": {"type":"instance","parent":"lm000084","at":"lmPrcFeat","order":"a0","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Everything in Growth","state":"included"}}
+
+, "lm000086": {"type":"instance","parent":"lm000084","at":"lmPrcFeat","order":"a1","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Unlimited entities","state":"included"}}
+
+, "lm000087": {"type":"instance","parent":"lm000084","at":"lmPrcFeat","order":"a2","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"SAML SSO and SCIM provisioning","state":"included"}}
+
+, "lm000088": {"type":"instance","parent":"lm000084","at":"lmPrcFeat","order":"a3","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Read-only auditor portal","state":"included"}}
+
+, "lm000089": {"type":"instance","parent":"lm000084","at":"lmPrcFeat","order":"a4","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Named close specialist","state":"included"}}
+
+, "lm00008a": {"type":"instance","parent":"lm000084","at":"lmPrcFeat","order":"a5","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"99.9% uptime SLA","state":"included"}}
+
+, "lm00008b": {"type":"frame","parent":"lm00007f","order":"a3","name":"FAQ","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/8"},"pad":[96,120],"align":"center"}}
+
+, "lm00008c": {"type":"text","parent":"lm00008b","order":"a0","name":"Questions finance teams ask","content":"Questions finance teams ask","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00008d": {"type":"frame","parent":"lm00008b","order":"a1","name":"Items","w":800,"layout":{"dir":"column"}}
+
+, "lm00008e": {"type":"instance","parent":"lm00008d","order":"a0","of":"lmFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"Anyone who prepares or posts work: accountants, controllers and FP&A. Approvers outside finance, reviewers and auditors join free.","open":true,"question":"Who counts as a finance seat?"}}
+
+, "lm00008f": {"type":"instance","parent":"lm00008d","order":"a1","of":"lmFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"Yes. Upload the spreadsheet you use today and map its columns to task, owner, due day and account. Most teams finish in under an hour.","open":false,"question":"Can we import our current checklist?"}}
+
+, "lm00008g": {"type":"instance","parent":"lm00008d","order":"a2","of":"lmFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"NetSuite, Sage Intacct, QuickBooks Online, Xero and Microsoft Dynamics 365 Business Central. Others can import trial balances as CSV.","open":false,"question":"Which ERPs do you support?"}}
+
+, "lm00008h": {"type":"instance","parent":"lm00008d","order":"a3","of":"lmFaq0","props":{"w":{"mode":"fill"}},"args":{"answer":"Starter and Growth are month to month. Enterprise plans are billed annually.","open":false,"question":"Is there a minimum contract?"}}
+
+, "lm00008i": {"type":"frame","parent":"lm00007f","order":"a4","name":"Call to action","w":{"mode":"fill"},"layout":{"dir":"column","pad":[0,120,96,120]}}
+
+, "lm00008j": {"type":"frame","parent":"lm00008i","order":"a0","name":"Band","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/inverse"},"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":64,"align":"center"}}
+
+, "lm00008k": {"type":"text","parent":"lm00008j","order":"a0","name":"Run your next close in Ledgerline","content":"Run your next close in Ledgerline","style":{"align":"center","typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "lm00008l": {"type":"text","parent":"lm00008j","order":"a1","name":"Import last month's checklist from a sp…","w":620,"content":"Import last month's checklist from a spreadsheet and invite your team. Setup takes about an hour.","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "lm00008m": {"type":"frame","parent":"lm00008j","order":"a2","name":"Actions","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm00008n": {"type":"instance","parent":"lm00008m","order":"a0","of":"lmBtn0","args":{"icon":true,"label":"Start free trial","size":"lg"}}
+
+, "lm00008o": {"type":"instance","parent":"lm00008m","order":"a1","of":"lmBtnSec","args":{"label":"Book a demo","size":"lg"}}
+
+, "lm00008p": {"type":"instance","parent":"lm00007f","order":"a5","of":"lmFooter"}
+
+, "lm00008q": {"type":"frame","parent":null,"order":"a4","name":"Customers","x":3200,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"lmPage3"}
+
+, "lm00008r": {"type":"instance","parent":"lm00008q","order":"a0","of":"lmNavBar","args":{"active":"customers"}}
+
+, "lm00008s": {"type":"frame","parent":"lm00008q","order":"a1","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/12"},"pad":[80,120,56,120],"align":"center"}}
+
+, "lm00008t": {"type":"instance","parent":"lm00008s","order":"a0","of":"lmSecHead","args":{"eyebrow":"Customers","subtitle":"From two-person teams on QuickBooks to groups consolidating 40 entities in NetSuite.","title":"1,400 finance teams close in Ledgerline"}}
+
+, "lm00008u": {"type":"frame","parent":"lm00008s","order":"a1","name":"Logos","w":{"mode":"fill"},"layout":{"dir":"row","justify":"between","align":"center"}}
+
+, "lm00008v": {"type":"instance","parent":"lm00008u","order":"a0","of":"lmLogo","args":{"name":"Northwind Freight"},"overrides":{"lmLogoIcon":{"set":{"icon":"truck"}}}}
+
+, "lm00008w": {"type":"instance","parent":"lm00008u","order":"a1","of":"lmLogo","args":{"name":"Halcyon Health"},"overrides":{"lmLogoIcon":{"set":{"icon":"heart-pulse"}}}}
+
+, "lm00008x": {"type":"instance","parent":"lm00008u","order":"a2","of":"lmLogo","args":{"name":"Brightline Retail"},"overrides":{"lmLogoIcon":{"set":{"icon":"store"}}}}
+
+, "lm00008y": {"type":"instance","parent":"lm00008u","order":"a3","of":"lmLogo","args":{"name":"Corvid Labs"},"overrides":{"lmLogoIcon":{"set":{"icon":"flask-conical"}}}}
+
+, "lm00008z": {"type":"instance","parent":"lm00008u","order":"a4","of":"lmLogo","args":{"name":"Juniper Capital"},"overrides":{"lmLogoIcon":{"set":{"icon":"landmark"}}}}
+
+, "lm000090": {"type":"instance","parent":"lm00008u","order":"a5","of":"lmLogo","args":{"name":"Oakridge Foods"},"overrides":{"lmLogoIcon":{"set":{"icon":"wheat"}}}}
+
+, "lm000091": {"type":"frame","parent":"lm00008q","order":"a2","name":"Case study","w":{"mode":"fill"},"layout":{"dir":"column","pad":[0,120]}}
+
+, "lm000092": {"type":"frame","parent":"lm000091","order":"a0","name":"Card","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"clip":true,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"row"}}
+
+, "lm000093": {"type":"frame","parent":"lm000092","order":"a0","name":"Story","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":56}}
+
+, "lm000094": {"type":"instance","parent":"lm000093","order":"a0","of":"lmBadge","args":{"label":"Case study"}}
+
+, "lm000095": {"type":"text","parent":"lm000093","order":"a1","name":"How Halcyon Health cut its close from 1…","w":{"mode":"fill"},"content":"How Halcyon Health cut its close from 11 days to 5","grow":"fixed-width","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm000096": {"type":"text","parent":"lm000093","order":"a2","name":"Halcyon runs 6 clinics as separate enti…","w":{"mode":"fill"},"content":"Halcyon runs 6 clinics as separate entities on NetSuite. Before Ledgerline, the close lived in a 400-row spreadsheet that one senior accountant kept current. Tasks now roll forward on their own, reconciliations match overnight, and the controller reviews from a single queue.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "lm000097": {"type":"frame","parent":"lm000093","order":"a3","name":"Results","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/8"},"pad":[8,0,0,0]}}
+
+, "lm000098": {"type":"instance","parent":"lm000097","order":"a0","of":"lmStat","props":{"w":{"mode":"fill"}},"args":{"label":"Close length, down from 11","value":"5 days"}}
+
+, "lm000099": {"type":"instance","parent":"lm000097","order":"a1","of":"lmStat","props":{"w":{"mode":"fill"}},"args":{"label":"Entities consolidated","value":"6"}}
+
+, "lm00009a": {"type":"instance","parent":"lm000097","order":"a2","of":"lmStat","props":{"w":{"mode":"fill"}},"args":{"label":"Reconciliations each month","value":"320"}}
+
+, "lm00009b": {"type":"frame","parent":"lm000092","order":"a1","name":"Pull quote","w":460,"h":{"mode":"fill"},"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/art-2"}},{"at":1,"color":{"$ref":"color/success-soft"}}],"rotation":135},"layout":{"dir":"column","gap":{"$ref":"space/4"},"pad":48,"justify":"end"}}
+
+, "lm00009c": {"type":"icon","parent":"lm00009b","order":"a0","name":"Icon/quote","w":28,"h":28,"set":"lucide","icon":"quote","color":{"$ref":"color/success"}}
+
+, "lm00009d": {"type":"text","parent":"lm00009b","order":"a1","name":"We used to spend the first two days fin…","w":{"mode":"fill"},"content":"We used to spend the first two days finding out what was late. Now the checklist tells us on the first morning.","grow":"fixed-width","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00009e": {"type":"text","parent":"lm00009b","order":"a2","name":"Priya Raman, Controller","content":"Priya Raman, Controller","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00009f": {"type":"frame","parent":"lm00008q","order":"a3","name":"More customers","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/10"},"pad":[96,120],"align":"center"}}
+
+, "lm00009g": {"type":"text","parent":"lm00009f","order":"a0","name":"What finance teams say","content":"What finance teams say","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm00009h": {"type":"frame","parent":"lm00009f","order":"a1","name":"Quotes","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"}}}
+
+, "lm00009i": {"type":"frame","parent":"lm00009h","order":"a0","name":"Row 1","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "lm00009j": {"type":"instance","parent":"lm00009i","order":"a0","of":"lmQuote","args":{"initials":"PR","name":"Priya Raman","quote":"We closed August in five days with two fewer people on the team than last year. The checklist did most of the chasing.","role":"Controller, Halcyon Health"}}
+
+, "lm00009k": {"type":"instance","parent":"lm00009i","order":"a1","of":"lmQuote","args":{"initials":"TH","name":"Tomás Herrera","quote":"Our auditors pulled support for 140 reconciliations without emailing anyone. That alone saved a week in March.","role":"VP Finance, Brightline Retail"}}
+
+, "lm00009l": {"type":"instance","parent":"lm00009i","order":"a2","of":"lmQuote","args":{"initials":"GL","name":"Grace Liu","quote":"Flux notes used to live in a spreadsheet nobody opened. Now the owner writes them before review starts.","role":"Assistant Controller, Corvid Labs"}}
+
+, "lm00009m": {"type":"frame","parent":"lm00009h","order":"a1","name":"Row 2","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"},"align":"stretch"}}
+
+, "lm00009n": {"type":"instance","parent":"lm00009m","order":"a0","of":"lmQuote","args":{"initials":"OB","name":"Owen Becker","quote":"Intercompany used to take two full days. With templates and auto-matching it is done by lunch on day two.","role":"Controller, Juniper Capital"}}
+
+, "lm00009o": {"type":"instance","parent":"lm00009m","order":"a1","of":"lmQuote","args":{"initials":"AB","name":"Aisha Bello","quote":"We gave our auditors read-only access in January and stopped building PBC folders by hand.","role":"CFO, Oakridge Foods"}}
+
+, "lm00009p": {"type":"instance","parent":"lm00009m","order":"a2","of":"lmQuote","args":{"initials":"MN","name":"Marta Nowak","quote":"The reminders are what people notice. Nobody is surprised by a task on day four anymore.","role":"Senior Accountant, Northwind Freight"}}
+
+, "lm00009q": {"type":"frame","parent":"lm00008q","order":"a4","name":"Call to action","w":{"mode":"fill"},"layout":{"dir":"column","pad":[0,120,96,120]}}
+
+, "lm00009r": {"type":"frame","parent":"lm00009q","order":"a0","name":"Band","w":{"mode":"fill"},"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/inverse"},"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":64,"align":"center"}}
+
+, "lm00009s": {"type":"text","parent":"lm00009r","order":"a0","name":"Run your next close in Ledgerline","content":"Run your next close in Ledgerline","style":{"align":"center","typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/on-inverse"}}
+
+, "lm00009t": {"type":"text","parent":"lm00009r","order":"a1","name":"Import last month's checklist from a sp…","w":620,"content":"Import last month's checklist from a spreadsheet and invite your team. Setup takes about an hour.","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/inverse-muted"}}
+
+, "lm00009u": {"type":"frame","parent":"lm00009r","order":"a2","name":"Actions","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm00009v": {"type":"instance","parent":"lm00009u","order":"a0","of":"lmBtn0","args":{"icon":true,"label":"Start free trial","size":"lg"}}
+
+, "lm00009w": {"type":"instance","parent":"lm00009u","order":"a1","of":"lmBtnSec","args":{"label":"Book a demo","size":"lg"}}
+
+, "lm00009x": {"type":"instance","parent":"lm00008q","order":"a5","of":"lmFooter"}
+
+, "lm00009y": {"type":"frame","parent":null,"order":"a5","name":"Blog","x":4800,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"lmPage3"}
+
+, "lm00009z": {"type":"instance","parent":"lm00009y","order":"a0","of":"lmNavBar","args":{"active":"blog"}}
+
+, "lm0000a0": {"type":"frame","parent":"lm00009y","order":"a1","name":"Header","w":{"mode":"fill"},"layout":{"dir":"row","pad":[80,120,40,120],"justify":"between","align":"end"}}
+
+, "lm0000a1": {"type":"frame","parent":"lm0000a0","order":"a0","name":"Titles","w":640,"layout":{"dir":"column","gap":12}}
+
+, "lm0000a2": {"type":"text","parent":"lm0000a1","order":"a0","name":"The Close","content":"The Close","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "lm0000a3": {"type":"text","parent":"lm0000a1","order":"a1","name":"Notes on running a faster month-end","w":{"mode":"fill"},"content":"Notes on running a faster month-end","grow":"fixed-width","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000a4": {"type":"text","parent":"lm0000a1","order":"a2","name":"Checklists, audit prep and product upda…","w":{"mode":"fill"},"content":"Checklists, audit prep and product updates from the Ledgerline team.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000a5": {"type":"frame","parent":"lm0000a0","order":"a1","name":"Filters","layout":{"dir":"row","gap":8}}
+
+, "lm0000a6": {"type":"instance","parent":"lm0000a5","order":"a0","of":"lmBadge","args":{"label":"All posts"}}
+
+, "lm0000a7": {"type":"instance","parent":"lm0000a5","order":"a1","of":"lmBadge","args":{"label":"Close process","tone":"neutral"}}
+
+, "lm0000a8": {"type":"instance","parent":"lm0000a5","order":"a2","of":"lmBadge","args":{"label":"Audit","tone":"neutral"}}
+
+, "lm0000a9": {"type":"instance","parent":"lm0000a5","order":"a3","of":"lmBadge","args":{"label":"Product updates","tone":"neutral"}}
+
+, "lm0000aa": {"type":"frame","parent":"lm00009y","order":"a2","name":"Featured","w":{"mode":"fill"},"layout":{"dir":"row","gap":48,"pad":[0,120],"align":"center"}}
+
+, "lm0000ab": {"type":"rect","parent":"lm0000aa","order":"a0","name":"Cover","w":680,"h":380,"radius":{"$ref":"radius/xl"},"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/accent"}}],"rotation":135}}
+
+, "lm0000ac": {"type":"frame","parent":"lm0000aa","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":16}}
+
+, "lm0000ad": {"type":"frame","parent":"lm0000ac","order":"a0","name":"Meta","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm0000ae": {"type":"instance","parent":"lm0000ad","order":"a0","of":"lmBadge","args":{"label":"Close process"}}
+
+, "lm0000af": {"type":"text","parent":"lm0000ad","order":"a1","name":"Oct 1, 2026  ·  9 min read","content":"Oct 1, 2026  ·  9 min read","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ag": {"type":"text","parent":"lm0000ac","order":"a1","name":"A five-day close checklist you can copy","w":{"mode":"fill"},"content":"A five-day close checklist you can copy","grow":"fixed-width","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ah": {"type":"text","parent":"lm0000ac","order":"a2","name":"The 58 tasks our customers run most oft…","w":{"mode":"fill"},"content":"The 58 tasks our customers run most often, grouped by day, with owners and the accounts each one ties to.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ai": {"type":"frame","parent":"lm0000ac","order":"a3","name":"Author","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm0000aj": {"type":"instance","parent":"lm0000ai","order":"a0","of":"lmAvatar","args":{"initials":"MO"}}
+
+, "lm0000ak": {"type":"frame","parent":"lm0000ai","order":"a1","name":"Names","layout":{"dir":"column","gap":2}}
+
+, "lm0000al": {"type":"text","parent":"lm0000ak","order":"a0","name":"Maya Okafor","content":"Maya Okafor","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000am": {"type":"text","parent":"lm0000ak","order":"a1","name":"Controller in residence","content":"Controller in residence","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000an": {"type":"frame","parent":"lm00009y","order":"a3","name":"Posts","w":{"mode":"fill"},"layout":{"dir":"column","gap":56,"pad":[72,120,96,120]}}
+
+, "lm0000ao": {"type":"frame","parent":"lm0000an","order":"a0","name":"Posts row","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "lm0000ap": {"type":"instance","parent":"lm0000ao","order":"a0","of":"lmBlogCard","args":{"art":"green","author":"Daniel Park","date":"Sep 24, 2026","excerpt":"The six requests that open almost every year-end audit, and where each one lives in Ledgerline.","initials":"DP","tag":"Audit","title":"What auditors ask for first, and how to have it ready"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"green"}}}}}
+
+, "lm0000aq": {"type":"instance","parent":"lm0000ao","order":"a1","of":"lmBlogCard","args":{"art":"amber","author":"Lena Strauss","date":"Sep 17, 2026","excerpt":"A template that drafts the entry from the last three invoices and flags any vendor whose bill is late.","initials":"LS","tag":"Close process","title":"Accruals for recurring vendors, without the guesswork"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"amber"}}}}}
+
+, "lm0000ar": {"type":"instance","parent":"lm0000ao","order":"a2","of":"lmBlogCard","args":{"art":"blue","author":"Rafael Alves","date":"Sep 10, 2026","excerpt":"Set a threshold per account. When a balance moves past it, the owner gets a task with the variance attached.","initials":"RA","tag":"Product updates","title":"Flux review now asks owners for notes"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"rose"}}}}}
+
+, "lm0000as": {"type":"frame","parent":"lm0000an","order":"a1","name":"Posts row","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "lm0000at": {"type":"instance","parent":"lm0000as","order":"a0","of":"lmBlogCard","args":{"art":"rose","author":"Maya Okafor","date":"Sep 3, 2026","excerpt":"Payouts bundle fees, refunds and disputes. Here is how to split them so the bank line ties on the first try.","initials":"MO","tag":"Close process","title":"Reconciling Stripe payouts to your bank feed"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"blue"}}}}}
+
+, "lm0000au": {"type":"instance","parent":"lm0000as","order":"a1","of":"lmBlogCard","args":{"art":"green","author":"Daniel Park","date":"Aug 27, 2026","excerpt":"Which report your auditor will ask for, what each covers, and the bridge letter question.","initials":"DP","tag":"Audit","title":"SOC 1 or SOC 2: what a controller needs from finance software"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"green"}}}}}
+
+, "lm0000av": {"type":"instance","parent":"lm0000as","order":"a2","of":"lmBlogCard","args":{"art":"amber","author":"Lena Strauss","date":"Aug 20, 2026","excerpt":"Close secondary books on their own calendar, with separate checklists and the same audit trail.","initials":"LS","tag":"Product updates","title":"NetSuite multi-book support is live"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"amber"}}}}}
+
+, "lm0000aw": {"type":"instance","parent":"lm00009y","order":"a4","of":"lmFooter"}
+
+, "lm0000ax": {"type":"frame","parent":null,"order":"a6","name":"Blog post","x":6400,"y":0,"w":1440,"fill":{"$ref":"color/bg"},"layout":{"dir":"column"},"page":"lmPage3"}
+
+, "lm0000ay": {"type":"instance","parent":"lm0000ax","order":"a0","of":"lmNavBar","args":{"active":"blog"}}
+
+, "lm0000az": {"type":"frame","parent":"lm0000ax","order":"a1","name":"Article","w":{"mode":"fill"},"layout":{"dir":"column","gap":{"$ref":"space/6"},"pad":[64,360,80,360]}}
+
+, "lm0000b0": {"type":"frame","parent":"lm0000az","order":"a0","name":"Back","layout":{"dir":"row","gap":6,"align":"center"}}
+
+, "lm0000b1": {"type":"icon","parent":"lm0000b0","order":"a0","name":"Icon/arrow-left","w":16,"h":16,"set":"lucide","icon":"arrow-left","color":{"$ref":"color/muted"}}
+
+, "lm0000b2": {"type":"text","parent":"lm0000b0","order":"a1","name":"All posts","content":"All posts","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000b3": {"type":"instance","parent":"lm0000az","order":"a1","of":"lmBadge","args":{"label":"Close process"}}
+
+, "lm0000b4": {"type":"text","parent":"lm0000az","order":"a2","name":"A five-day close checklist you can copy","w":{"mode":"fill"},"content":"A five-day close checklist you can copy","grow":"fixed-width","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000b5": {"type":"frame","parent":"lm0000az","order":"a3","name":"Author","layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm0000b6": {"type":"instance","parent":"lm0000b5","order":"a0","of":"lmAvatar","args":{"initials":"MO"}}
+
+, "lm0000b7": {"type":"frame","parent":"lm0000b5","order":"a1","name":"Names","layout":{"dir":"column","gap":2}}
+
+, "lm0000b8": {"type":"text","parent":"lm0000b7","order":"a0","name":"Maya Okafor","content":"Maya Okafor","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000b9": {"type":"text","parent":"lm0000b7","order":"a1","name":"Oct 1, 2026  ·  9 min read","content":"Oct 1, 2026  ·  9 min read","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ba": {"type":"rect","parent":"lm0000az","order":"a4","name":"Cover","w":{"mode":"fill"},"h":400,"radius":{"$ref":"radius/xl"},"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/accent"}}],"rotation":135}}
+
+, "lm0000bb": {"type":"text","parent":"lm0000az","order":"a5","name":"Teams that close in five days rarely wo…","w":{"mode":"fill"},"content":"Teams that close in five days rarely work longer hours in the first week. They start earlier, every account has one owner, and they drop the work that nobody reviews.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bc": {"type":"text","parent":"lm0000az","order":"a6","name":"Below is the checklist our customers ru…","w":{"mode":"fill"},"content":"Below is the checklist our customers run most often, grouped by day. Copy it into Ledgerline from the template gallery, or into a spreadsheet if you are not ready to switch.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bd": {"type":"text","parent":"lm0000az","order":"a7","name":"Heading","w":{"mode":"fill"},"content":"Day 1: cash and cutoff","grow":"fixed-width","style":{"size":26,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000be": {"type":"text","parent":"lm0000az","order":"a8","name":"Reconcile every bank and card account b…","w":{"mode":"fill"},"content":"Reconcile every bank and card account before anything else. Cash is the one balance you can tie to an outside source on the first morning, and it surfaces missing entries early.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bf": {"type":"frame","parent":"lm0000az","order":"a9","name":"Checklist","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm0000bg": {"type":"instance","parent":"lm0000bf","order":"a0","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Bank reconciliations for all operating accounts"}}
+
+, "lm0000bh": {"type":"instance","parent":"lm0000bf","order":"a1","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Card statements matched to receipts"}}
+
+, "lm0000bi": {"type":"instance","parent":"lm0000bf","order":"a2","of":"lmCheck","props":{"w":{"mode":"fill"}},"args":{"label":"Revenue cutoff reviewed for the last three business days"}}
+
+, "lm0000bj": {"type":"text","parent":"lm0000az","order":"aA","name":"Heading","w":{"mode":"fill"},"content":"Days 2 and 3: accruals and reclasses","grow":"fixed-width","style":{"size":26,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bk": {"type":"text","parent":"lm0000az","order":"aB","name":"Draft recurring accruals from last mont…","w":{"mode":"fill"},"content":"Draft recurring accruals from last month's entries and adjust only what changed. Ask budget owners about open purchase orders on day 1, so answers arrive before you need them.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bl": {"type":"frame","parent":"lm0000az","order":"aC","name":"Pull quote","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"color/accent"},"width":{"l":3}},"layout":{"dir":"column","pad":[4,0,4,24]}}
+
+, "lm0000bm": {"type":"text","parent":"lm0000bl","order":"a0","name":"The fastest closes we see share one hab…","w":{"mode":"fill"},"content":"The fastest closes we see share one habit: the reviewer signs off each day, not in one long session on day five.","grow":"fixed-width","style":{"italic":true,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bn": {"type":"text","parent":"lm0000az","order":"aD","name":"Heading","w":{"mode":"fill"},"content":"Days 4 and 5: flux review and reporting","grow":"fixed-width","style":{"size":26,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bo": {"type":"text","parent":"lm0000az","order":"aE","name":"Compare each account to last month and …","w":{"mode":"fill"},"content":"Compare each account to last month and last year. Anything over your threshold gets a note from its owner before the controller reviews, so review is reading, not chasing.","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bp": {"type":"rect","parent":"lm0000az","order":"aF","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000bq": {"type":"frame","parent":"lm0000az","order":"aG","name":"Author bio","w":{"mode":"fill"},"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"row","gap":16,"pad":24,"align":"center"}}
+
+, "lm0000br": {"type":"instance","parent":"lm0000bq","order":"a0","of":"lmAvatar","args":{"initials":"MO","size":"lg"}}
+
+, "lm0000bs": {"type":"frame","parent":"lm0000bq","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":4}}
+
+, "lm0000bt": {"type":"text","parent":"lm0000bs","order":"a0","name":"Maya Okafor","content":"Maya Okafor","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bu": {"type":"text","parent":"lm0000bs","order":"a1","name":"Maya ran the close at two venture-backe…","w":{"mode":"fill"},"content":"Maya ran the close at two venture-backed companies before joining Ledgerline. She writes about checklists and audit prep.","grow":"fixed-width","style":{"size":15,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000bv": {"type":"frame","parent":"lm0000ax","order":"a2","name":"Keep reading","w":{"mode":"fill"},"fill":{"$ref":"color/subtle"},"layout":{"dir":"column","gap":{"$ref":"space/8"},"pad":[64,120,96,120]}}
+
+, "lm0000bw": {"type":"text","parent":"lm0000bv","order":"a0","name":"Keep reading","content":"Keep reading","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000bx": {"type":"frame","parent":"lm0000bv","order":"a1","name":"Posts row","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/6"}}}
+
+, "lm0000by": {"type":"instance","parent":"lm0000bx","order":"a0","of":"lmBlogCard","args":{"art":"green","author":"Daniel Park","date":"Sep 24, 2026","excerpt":"The six requests that open almost every year-end audit, and where each one lives in Ledgerline.","initials":"DP","tag":"Audit","title":"What auditors ask for first, and how to have it ready"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"green"}}}}}
+
+, "lm0000bz": {"type":"instance","parent":"lm0000bx","order":"a1","of":"lmBlogCard","args":{"art":"amber","author":"Lena Strauss","date":"Sep 17, 2026","excerpt":"A template that drafts the entry from the last three invoices and flags any vendor whose bill is late.","initials":"LS","tag":"Close process","title":"Accruals for recurring vendors, without the guesswork"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"amber"}}}}}
+
+, "lm0000c0": {"type":"instance","parent":"lm0000bx","order":"a2","of":"lmBlogCard","args":{"art":"blue","author":"Rafael Alves","date":"Sep 10, 2026","excerpt":"Set a threshold per account. When a balance moves past it, the owner gets a task with the variance attached.","initials":"RA","tag":"Product updates","title":"Flux review now asks owners for notes"},"overrides":{"lmBcAv":{"set":{"args":{"size":"sm","tone":"rose"}}}}}
+
+, "lm0000c1": {"type":"instance","parent":"lm0000ax","order":"a3","of":"lmFooter"}
+
+, "lm0000c2": {"type":"frame","parent":null,"order":"a7","name":"Sign up","x":8000,"y":0,"w":1440,"h":900,"fill":{"$ref":"color/bg"},"layout":{"dir":"row"},"page":"lmPage3"}
+
+, "lm0000c3": {"type":"frame","parent":"lm0000c2","order":"a0","name":"Form side","w":{"mode":"fill"},"h":{"mode":"fill"},"layout":{"dir":"column","pad":[48,120],"justify":"between"}}
+
+, "lm0000c4": {"type":"frame","parent":"lm0000c3","order":"a0","name":"Brand","layout":{"dir":"row","gap":10,"align":"center"}}
+
+, "lm0000c5": {"type":"frame","parent":"lm0000c4","order":"a0","name":"Mark","w":28,"h":28,"radius":8,"fill":{"$ref":"color/accent"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lm0000c6": {"type":"icon","parent":"lm0000c5","order":"a0","name":"Icon/book-check","w":16,"h":16,"set":"lucide","icon":"book-check","color":{"$ref":"color/on-accent"}}
+
+, "lm0000c7": {"type":"text","parent":"lm0000c4","order":"a1","name":"Wordmark","content":"Ledgerline","style":{"weight":700,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000c8": {"type":"frame","parent":"lm0000c3","order":"a1","name":"Form","w":400,"layout":{"dir":"column","gap":{"$ref":"space/5"}}}
+
+, "lm0000c9": {"type":"frame","parent":"lm0000c8","order":"a0","name":"Heading","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "lm0000ca": {"type":"text","parent":"lm0000c9","order":"a0","name":"Start your 14-day trial","w":{"mode":"fill"},"content":"Start your 14-day trial","grow":"fixed-width","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000cb": {"type":"text","parent":"lm0000c9","order":"a1","name":"No credit card. Your workspace comes wi…","w":{"mode":"fill"},"content":"No credit card. Your workspace comes with a sample close to explore.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000cc": {"type":"instance","parent":"lm0000c8","order":"a1","of":"lmBtnSec","props":{"w":{"mode":"fill"}},"args":{"label":"Continue with Google","size":"lg"}}
+
+, "lm0000cd": {"type":"frame","parent":"lm0000c8","order":"a2","name":"Or","w":{"mode":"fill"},"layout":{"dir":"row","gap":12,"align":"center"}}
+
+, "lm0000ce": {"type":"rect","parent":"lm0000cd","order":"a0","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000cf": {"type":"text","parent":"lm0000cd","order":"a1","name":"or","content":"or","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000cg": {"type":"rect","parent":"lm0000cd","order":"a2","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000ch": {"type":"instance","parent":"lm0000c8","order":"a3","of":"lmInput","props":{"w":{"mode":"fill"}},"args":{"label":"Work email","placeholder":"maya@halcyonhealth.com"}}
+
+, "lm0000ci": {"type":"instance","parent":"lm0000c8","order":"a4","of":"lmInput","props":{"w":{"mode":"fill"}},"args":{"label":"Full name","placeholder":"Maya Okafor"}}
+
+, "lm0000cj": {"type":"instance","parent":"lm0000c8","order":"a5","of":"lmInput","props":{"w":{"mode":"fill"}},"args":{"hint":"Use 12 or more characters with a number.","label":"Password","placeholder":"At least 12 characters","showHint":true}}
+
+, "lm0000ck": {"type":"instance","parent":"lm0000c8","order":"a6","of":"lmBtn0","props":{"w":{"mode":"fill"}},"args":{"label":"Create workspace","size":"lg"}}
+
+, "lm0000cl": {"type":"text","parent":"lm0000c8","order":"a7","name":"By continuing you agree to the Terms an…","w":{"mode":"fill"},"content":"By continuing you agree to the Terms and the Privacy Policy.","grow":"fixed-width","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000cm": {"type":"frame","parent":"lm0000c3","order":"a2","name":"Sign in","layout":{"dir":"row","gap":6}}
+
+, "lm0000cn": {"type":"text","parent":"lm0000cm","order":"a0","name":"Already have an account?","content":"Already have an account?","style":{"size":15,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000co": {"type":"text","parent":"lm0000cm","order":"a1","name":"Sign in","content":"Sign in","style":{"size":15,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "lm0000cp": {"type":"frame","parent":"lm0000c2","order":"a1","name":"Proof side","w":640,"h":{"mode":"fill"},"fill":{"$ref":"color/inverse"},"layout":{"dir":"column","pad":64,"justify":"between"}}
+
+, "lm0000cq": {"type":"instance","parent":"lm0000cp","order":"a0","of":"lmQuote","props":{"w":{"mode":"fill"}},"args":{"initials":"TH","name":"Tomás Herrera","quote":"Our auditors pulled support for 140 reconciliations without emailing anyone. That alone saved a week in March.","role":"VP Finance, Brightline Retail"}}
+
+, "lm0000cr": {"type":"frame","parent":"lm0000cp","order":"a1","name":"Numbers","w":{"mode":"fill"},"layout":{"dir":"row","gap":{"$ref":"space/8"}}}
+
+, "lm0000cs": {"type":"instance","parent":"lm0000cr","order":"a0","of":"lmStat","props":{"w":{"mode":"fill"}},"args":{"label":"Median close after 90 days","tone":"inverse","value":"4.2 days"}}
+
+, "lm0000ct": {"type":"instance","parent":"lm0000cr","order":"a1","of":"lmStat","props":{"w":{"mode":"fill"}},"args":{"label":"Finance teams","tone":"inverse","value":"1,400+"}}
+
+, "lm0000cu": {"type":"frame","parent":"lmFoundations","order":"a0","name":"Header","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
+
+, "lm0000cv": {"type":"text","parent":"lm0000cu","order":"a0","name":"Title","content":"Ledgerline marketing site: foundations","style":{"size":40,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000cw": {"type":"text","parent":"lm0000cu","order":"a1","name":"Subtitle","content":"The tokens every layer binds to. Switch the mode axis to see dark values.","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000cx": {"type":"frame","parent":"lmFoundations","order":"a1","name":"Color","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm0000cy": {"type":"frame","parent":"lm0000cx","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm0000cz": {"type":"text","parent":"lm0000cy","order":"a0","name":"Section title","content":"Color","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000d0": {"type":"rect","parent":"lm0000cy","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000d1": {"type":"frame","parent":"lm0000cx","order":"a1","name":"Color items","w":{"mode":"fill"},"layout":{"dir":"row","gap":24,"crossGap":40}}
+
+, "lm0000d2": {"type":"frame","parent":"lm0000d1","order":"a0","name":"Light","w":{"mode":"fill"},"theme":{"mode":"light"},"radius":16,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":20,"pad":28}}
+
+, "lm0000d3": {"type":"text","parent":"lm0000d2","order":"a0","name":"Mode","content":"Light","style":{"size":18,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000d4": {"type":"frame","parent":"lm0000d2","order":"a1","name":"Swatches","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"crossGap":20,"wrap":true}}
+
+, "lm0000d5": {"type":"frame","parent":"lm0000d4","order":"a0","name":"color/bg","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000d6": {"type":"rect","parent":"lm0000d5","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000d7": {"type":"text","parent":"lm0000d5","order":"a1","name":"Name","content":"bg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000d8": {"type":"text","parent":"lm0000d5","order":"a2","name":"Value","content":"#FBFAF8","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000d9": {"type":"frame","parent":"lm0000d4","order":"a1","name":"color/surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000da": {"type":"rect","parent":"lm0000d9","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000db": {"type":"text","parent":"lm0000d9","order":"a1","name":"Name","content":"surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000dc": {"type":"text","parent":"lm0000d9","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000dd": {"type":"frame","parent":"lm0000d4","order":"a2","name":"color/subtle","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000de": {"type":"rect","parent":"lm0000dd","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/subtle"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000df": {"type":"text","parent":"lm0000dd","order":"a1","name":"Name","content":"subtle","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000dg": {"type":"text","parent":"lm0000dd","order":"a2","name":"Value","content":"#F3F1EC","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000dh": {"type":"frame","parent":"lm0000d4","order":"a3","name":"color/ink","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000di": {"type":"rect","parent":"lm0000dh","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000dj": {"type":"text","parent":"lm0000dh","order":"a1","name":"Name","content":"ink","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000dk": {"type":"text","parent":"lm0000dh","order":"a2","name":"Value","content":"#14171C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000dl": {"type":"frame","parent":"lm0000d4","order":"a4","name":"color/muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000dm": {"type":"rect","parent":"lm0000dl","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000dn": {"type":"text","parent":"lm0000dl","order":"a1","name":"Name","content":"muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000do": {"type":"text","parent":"lm0000dl","order":"a2","name":"Value","content":"#5B6270","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000dp": {"type":"frame","parent":"lm0000d4","order":"a5","name":"color/border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000dq": {"type":"rect","parent":"lm0000dp","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000dr": {"type":"text","parent":"lm0000dp","order":"a1","name":"Name","content":"border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ds": {"type":"text","parent":"lm0000dp","order":"a2","name":"Value","content":"#E6E2DA","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000dt": {"type":"frame","parent":"lm0000d4","order":"a6","name":"color/accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000du": {"type":"rect","parent":"lm0000dt","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000dv": {"type":"text","parent":"lm0000dt","order":"a1","name":"Name","content":"accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000dw": {"type":"text","parent":"lm0000dt","order":"a2","name":"Value","content":"#2F5BEA","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000dx": {"type":"frame","parent":"lm0000d4","order":"a7","name":"color/accent-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000dy": {"type":"rect","parent":"lm0000dx","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000dz": {"type":"text","parent":"lm0000dx","order":"a1","name":"Name","content":"accent-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000e0": {"type":"text","parent":"lm0000dx","order":"a2","name":"Value","content":"#E8EEFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000e1": {"type":"frame","parent":"lm0000d4","order":"a8","name":"color/on-accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000e2": {"type":"rect","parent":"lm0000e1","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000e3": {"type":"text","parent":"lm0000e1","order":"a1","name":"Name","content":"on-accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000e4": {"type":"text","parent":"lm0000e1","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000e5": {"type":"frame","parent":"lm0000d4","order":"a9","name":"color/success","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000e6": {"type":"rect","parent":"lm0000e5","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/success"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000e7": {"type":"text","parent":"lm0000e5","order":"a1","name":"Name","content":"success","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000e8": {"type":"text","parent":"lm0000e5","order":"a2","name":"Value","content":"#127A4B","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000e9": {"type":"frame","parent":"lm0000d4","order":"aA","name":"color/success-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000ea": {"type":"rect","parent":"lm0000e9","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/success-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000eb": {"type":"text","parent":"lm0000e9","order":"a1","name":"Name","content":"success-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ec": {"type":"text","parent":"lm0000e9","order":"a2","name":"Value","content":"#E3F5EC","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ed": {"type":"frame","parent":"lm0000d4","order":"aB","name":"color/warning","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000ee": {"type":"rect","parent":"lm0000ed","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/warning"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000ef": {"type":"text","parent":"lm0000ed","order":"a1","name":"Name","content":"warning","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000eg": {"type":"text","parent":"lm0000ed","order":"a2","name":"Value","content":"#A35C00","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000eh": {"type":"frame","parent":"lm0000d4","order":"aC","name":"color/warning-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000ei": {"type":"rect","parent":"lm0000eh","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/warning-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000ej": {"type":"text","parent":"lm0000eh","order":"a1","name":"Name","content":"warning-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ek": {"type":"text","parent":"lm0000eh","order":"a2","name":"Value","content":"#FDF1DC","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000el": {"type":"frame","parent":"lm0000d4","order":"aD","name":"color/inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000em": {"type":"rect","parent":"lm0000el","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000en": {"type":"text","parent":"lm0000el","order":"a1","name":"Name","content":"inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000eo": {"type":"text","parent":"lm0000el","order":"a2","name":"Value","content":"#14213D","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ep": {"type":"frame","parent":"lm0000d4","order":"aE","name":"color/on-inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000eq": {"type":"rect","parent":"lm0000ep","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000er": {"type":"text","parent":"lm0000ep","order":"a1","name":"Name","content":"on-inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000es": {"type":"text","parent":"lm0000ep","order":"a2","name":"Value","content":"#FFFFFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000et": {"type":"frame","parent":"lm0000d4","order":"aF","name":"color/inverse-muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000eu": {"type":"rect","parent":"lm0000et","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000ev": {"type":"text","parent":"lm0000et","order":"a1","name":"Name","content":"inverse-muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ew": {"type":"text","parent":"lm0000et","order":"a2","name":"Value","content":"#AEB9CF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ex": {"type":"frame","parent":"lm0000d4","order":"aG","name":"color/art-1","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000ey": {"type":"rect","parent":"lm0000ex","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-1"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000ez": {"type":"text","parent":"lm0000ex","order":"a1","name":"Name","content":"art-1","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000f0": {"type":"text","parent":"lm0000ex","order":"a2","name":"Value","content":"#C9D6FF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000f1": {"type":"frame","parent":"lm0000d4","order":"aH","name":"color/art-2","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000f2": {"type":"rect","parent":"lm0000f1","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-2"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000f3": {"type":"text","parent":"lm0000f1","order":"a1","name":"Name","content":"art-2","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000f4": {"type":"text","parent":"lm0000f1","order":"a2","name":"Value","content":"#CDEBDD","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000f5": {"type":"frame","parent":"lm0000d4","order":"aI","name":"color/art-3","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000f6": {"type":"rect","parent":"lm0000f5","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-3"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000f7": {"type":"text","parent":"lm0000f5","order":"a1","name":"Name","content":"art-3","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000f8": {"type":"text","parent":"lm0000f5","order":"a2","name":"Value","content":"#F7DDB7","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000f9": {"type":"frame","parent":"lm0000d4","order":"aJ","name":"color/art-4","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000fa": {"type":"rect","parent":"lm0000f9","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-4"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000fb": {"type":"text","parent":"lm0000f9","order":"a1","name":"Name","content":"art-4","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000fc": {"type":"text","parent":"lm0000f9","order":"a2","name":"Value","content":"#F5CFD6","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000fd": {"type":"frame","parent":"lm0000d1","order":"a1","name":"Dark","w":{"mode":"fill"},"theme":{"mode":"dark"},"radius":16,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":20,"pad":28}}
+
+, "lm0000fe": {"type":"text","parent":"lm0000fd","order":"a0","name":"Mode","content":"Dark","style":{"size":18,"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ff": {"type":"frame","parent":"lm0000fd","order":"a1","name":"Swatches","w":{"mode":"fill"},"layout":{"dir":"row","gap":16,"crossGap":20,"wrap":true}}
+
+, "lm0000fg": {"type":"frame","parent":"lm0000ff","order":"a0","name":"color/bg","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000fh": {"type":"rect","parent":"lm0000fg","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000fi": {"type":"text","parent":"lm0000fg","order":"a1","name":"Name","content":"bg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000fj": {"type":"text","parent":"lm0000fg","order":"a2","name":"Value","content":"#0E1116","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000fk": {"type":"frame","parent":"lm0000ff","order":"a1","name":"color/surface","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000fl": {"type":"rect","parent":"lm0000fk","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000fm": {"type":"text","parent":"lm0000fk","order":"a1","name":"Name","content":"surface","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000fn": {"type":"text","parent":"lm0000fk","order":"a2","name":"Value","content":"#161B22","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000fo": {"type":"frame","parent":"lm0000ff","order":"a2","name":"color/subtle","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000fp": {"type":"rect","parent":"lm0000fo","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/subtle"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000fq": {"type":"text","parent":"lm0000fo","order":"a1","name":"Name","content":"subtle","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000fr": {"type":"text","parent":"lm0000fo","order":"a2","name":"Value","content":"#1C222B","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000fs": {"type":"frame","parent":"lm0000ff","order":"a3","name":"color/ink","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000ft": {"type":"rect","parent":"lm0000fs","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/ink"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000fu": {"type":"text","parent":"lm0000fs","order":"a1","name":"Name","content":"ink","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000fv": {"type":"text","parent":"lm0000fs","order":"a2","name":"Value","content":"#EEF1F5","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000fw": {"type":"frame","parent":"lm0000ff","order":"a4","name":"color/muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000fx": {"type":"rect","parent":"lm0000fw","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000fy": {"type":"text","parent":"lm0000fw","order":"a1","name":"Name","content":"muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000fz": {"type":"text","parent":"lm0000fw","order":"a2","name":"Value","content":"#9AA3B2","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000g0": {"type":"frame","parent":"lm0000ff","order":"a5","name":"color/border","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000g1": {"type":"rect","parent":"lm0000g0","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/border"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000g2": {"type":"text","parent":"lm0000g0","order":"a1","name":"Name","content":"border","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000g3": {"type":"text","parent":"lm0000g0","order":"a2","name":"Value","content":"#2A313C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000g4": {"type":"frame","parent":"lm0000ff","order":"a6","name":"color/accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000g5": {"type":"rect","parent":"lm0000g4","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000g6": {"type":"text","parent":"lm0000g4","order":"a1","name":"Name","content":"accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000g7": {"type":"text","parent":"lm0000g4","order":"a2","name":"Value","content":"#7C9BFF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000g8": {"type":"frame","parent":"lm0000ff","order":"a7","name":"color/accent-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000g9": {"type":"rect","parent":"lm0000g8","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/accent-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000ga": {"type":"text","parent":"lm0000g8","order":"a1","name":"Name","content":"accent-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000gb": {"type":"text","parent":"lm0000g8","order":"a2","name":"Value","content":"#1C2747","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000gc": {"type":"frame","parent":"lm0000ff","order":"a8","name":"color/on-accent","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000gd": {"type":"rect","parent":"lm0000gc","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-accent"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000ge": {"type":"text","parent":"lm0000gc","order":"a1","name":"Name","content":"on-accent","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000gf": {"type":"text","parent":"lm0000gc","order":"a2","name":"Value","content":"#0E1116","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000gg": {"type":"frame","parent":"lm0000ff","order":"a9","name":"color/success","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000gh": {"type":"rect","parent":"lm0000gg","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/success"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000gi": {"type":"text","parent":"lm0000gg","order":"a1","name":"Name","content":"success","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000gj": {"type":"text","parent":"lm0000gg","order":"a2","name":"Value","content":"#4ACB8B","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000gk": {"type":"frame","parent":"lm0000ff","order":"aA","name":"color/success-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000gl": {"type":"rect","parent":"lm0000gk","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/success-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000gm": {"type":"text","parent":"lm0000gk","order":"a1","name":"Name","content":"success-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000gn": {"type":"text","parent":"lm0000gk","order":"a2","name":"Value","content":"#13301F","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000go": {"type":"frame","parent":"lm0000ff","order":"aB","name":"color/warning","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000gp": {"type":"rect","parent":"lm0000go","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/warning"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000gq": {"type":"text","parent":"lm0000go","order":"a1","name":"Name","content":"warning","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000gr": {"type":"text","parent":"lm0000go","order":"a2","name":"Value","content":"#F2B54B","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000gs": {"type":"frame","parent":"lm0000ff","order":"aC","name":"color/warning-soft","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000gt": {"type":"rect","parent":"lm0000gs","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/warning-soft"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000gu": {"type":"text","parent":"lm0000gs","order":"a1","name":"Name","content":"warning-soft","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000gv": {"type":"text","parent":"lm0000gs","order":"a2","name":"Value","content":"#33240C","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000gw": {"type":"frame","parent":"lm0000ff","order":"aD","name":"color/inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000gx": {"type":"rect","parent":"lm0000gw","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000gy": {"type":"text","parent":"lm0000gw","order":"a1","name":"Name","content":"inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000gz": {"type":"text","parent":"lm0000gw","order":"a2","name":"Value","content":"#1B2A4A","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000h0": {"type":"frame","parent":"lm0000ff","order":"aE","name":"color/on-inverse","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000h1": {"type":"rect","parent":"lm0000h0","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/on-inverse"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000h2": {"type":"text","parent":"lm0000h0","order":"a1","name":"Name","content":"on-inverse","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000h3": {"type":"text","parent":"lm0000h0","order":"a2","name":"Value","content":"#EEF1F5","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000h4": {"type":"frame","parent":"lm0000ff","order":"aF","name":"color/inverse-muted","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000h5": {"type":"rect","parent":"lm0000h4","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/inverse-muted"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000h6": {"type":"text","parent":"lm0000h4","order":"a1","name":"Name","content":"inverse-muted","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000h7": {"type":"text","parent":"lm0000h4","order":"a2","name":"Value","content":"#9FB0CF","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000h8": {"type":"frame","parent":"lm0000ff","order":"aG","name":"color/art-1","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000h9": {"type":"rect","parent":"lm0000h8","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-1"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000ha": {"type":"text","parent":"lm0000h8","order":"a1","name":"Name","content":"art-1","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000hb": {"type":"text","parent":"lm0000h8","order":"a2","name":"Value","content":"#2A3A6E","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000hc": {"type":"frame","parent":"lm0000ff","order":"aH","name":"color/art-2","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000hd": {"type":"rect","parent":"lm0000hc","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-2"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000he": {"type":"text","parent":"lm0000hc","order":"a1","name":"Name","content":"art-2","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000hf": {"type":"text","parent":"lm0000hc","order":"a2","name":"Value","content":"#1F4A36","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000hg": {"type":"frame","parent":"lm0000ff","order":"aI","name":"color/art-3","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000hh": {"type":"rect","parent":"lm0000hg","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-3"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000hi": {"type":"text","parent":"lm0000hg","order":"a1","name":"Name","content":"art-3","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000hj": {"type":"text","parent":"lm0000hg","order":"a2","name":"Value","content":"#5A3F17","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000hk": {"type":"frame","parent":"lm0000ff","order":"aJ","name":"color/art-4","w":104,"layout":{"dir":"column","gap":8}}
+
+, "lm0000hl": {"type":"rect","parent":"lm0000hk","order":"a0","name":"Swatch","w":104,"h":64,"radius":10,"fill":{"$ref":"color/art-4"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000hm": {"type":"text","parent":"lm0000hk","order":"a1","name":"Name","content":"art-4","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000hn": {"type":"text","parent":"lm0000hk","order":"a2","name":"Value","content":"#5A2431","style":{"size":11,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ho": {"type":"frame","parent":"lmFoundations","order":"a2","name":"Type","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm0000hp": {"type":"frame","parent":"lm0000ho","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm0000hq": {"type":"text","parent":"lm0000hp","order":"a0","name":"Section title","content":"Type","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000hr": {"type":"rect","parent":"lm0000hp","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000hs": {"type":"frame","parent":"lm0000ho","order":"a1","name":"Type items","w":{"mode":"fill"},"layout":{"dir":"column","gap":20}}
+
+, "lm0000ht": {"type":"frame","parent":"lm0000hs","order":"a0","name":"type/display","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000hu": {"type":"frame","parent":"lm0000ht","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000hv": {"type":"text","parent":"lm0000hu","order":"a0","name":"Name","content":"display","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000hw": {"type":"text","parent":"lm0000hu","order":"a1","name":"Values","content":"Inter 64 / 1.05 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000hx": {"type":"text","parent":"lm0000ht","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/display"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000hy": {"type":"frame","parent":"lm0000hs","order":"a1","name":"type/h1","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000hz": {"type":"frame","parent":"lm0000hy","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000i0": {"type":"text","parent":"lm0000hz","order":"a0","name":"Name","content":"h1","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000i1": {"type":"text","parent":"lm0000hz","order":"a1","name":"Values","content":"Inter 48 / 1.1 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000i2": {"type":"text","parent":"lm0000hy","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000i3": {"type":"frame","parent":"lm0000hs","order":"a2","name":"type/heading","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000i4": {"type":"frame","parent":"lm0000i3","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000i5": {"type":"text","parent":"lm0000i4","order":"a0","name":"Name","content":"heading","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000i6": {"type":"text","parent":"lm0000i4","order":"a1","name":"Values","content":"Inter 32 / 1.2 · 700","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000i7": {"type":"text","parent":"lm0000i3","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/heading"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000i8": {"type":"frame","parent":"lm0000hs","order":"a3","name":"type/title","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000i9": {"type":"frame","parent":"lm0000i8","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000ia": {"type":"text","parent":"lm0000i9","order":"a0","name":"Name","content":"title","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ib": {"type":"text","parent":"lm0000i9","order":"a1","name":"Values","content":"Inter 20 / 1.35 · 600","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ic": {"type":"text","parent":"lm0000i8","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000id": {"type":"frame","parent":"lm0000hs","order":"a4","name":"type/body-lg","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000ie": {"type":"frame","parent":"lm0000id","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000if": {"type":"text","parent":"lm0000ie","order":"a0","name":"Name","content":"body-lg","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ig": {"type":"text","parent":"lm0000ie","order":"a1","name":"Values","content":"Inter 18 / 1.6 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ih": {"type":"text","parent":"lm0000id","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ii": {"type":"frame","parent":"lm0000hs","order":"a5","name":"type/body","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000ij": {"type":"frame","parent":"lm0000ii","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000ik": {"type":"text","parent":"lm0000ij","order":"a0","name":"Name","content":"body","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000il": {"type":"text","parent":"lm0000ij","order":"a1","name":"Values","content":"Inter 16 / 1.55 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000im": {"type":"text","parent":"lm0000ii","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000in": {"type":"frame","parent":"lm0000hs","order":"a6","name":"type/label","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000io": {"type":"frame","parent":"lm0000in","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000ip": {"type":"text","parent":"lm0000io","order":"a0","name":"Name","content":"label","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000iq": {"type":"text","parent":"lm0000io","order":"a1","name":"Values","content":"Inter 14 / 1.3 · 600","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ir": {"type":"text","parent":"lm0000in","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000is": {"type":"frame","parent":"lm0000hs","order":"a7","name":"type/small","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000it": {"type":"frame","parent":"lm0000is","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000iu": {"type":"text","parent":"lm0000it","order":"a0","name":"Name","content":"small","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000iv": {"type":"text","parent":"lm0000it","order":"a1","name":"Values","content":"Inter 13 / 1.45 · 400","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000iw": {"type":"text","parent":"lm0000is","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000ix": {"type":"frame","parent":"lm0000hs","order":"a8","name":"type/mono","w":{"mode":"fill"},"layout":{"dir":"row","gap":32,"align":"center"}}
+
+, "lm0000iy": {"type":"frame","parent":"lm0000ix","order":"a0","name":"Spec","w":220,"layout":{"dir":"column","gap":4}}
+
+, "lm0000iz": {"type":"text","parent":"lm0000iy","order":"a0","name":"Name","content":"mono","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000j0": {"type":"text","parent":"lm0000iy","order":"a1","name":"Values","content":"JetBrains Mono 13 / 1.4 · 500","style":{"size":12,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000j1": {"type":"text","parent":"lm0000ix","order":"a1","name":"Sample","content":"Ledgerline marketing site","style":{"typography":{"$ref":"type/mono"}},"fill":{"$ref":"color/ink"}}
+
+, "lm0000j2": {"type":"frame","parent":"lmFoundations","order":"a3","name":"Spacing","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm0000j3": {"type":"frame","parent":"lm0000j2","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm0000j4": {"type":"text","parent":"lm0000j3","order":"a0","name":"Section title","content":"Spacing","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000j5": {"type":"rect","parent":"lm0000j3","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000j6": {"type":"frame","parent":"lm0000j2","order":"a1","name":"Spacing items","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm0000j7": {"type":"frame","parent":"lm0000j6","order":"a0","name":"space/1","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000j8": {"type":"text","parent":"lm0000j7","order":"a0","name":"Name","w":120,"content":"space/1","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000j9": {"type":"rect","parent":"lm0000j7","order":"a1","name":"Bar","w":{"$ref":"space/1"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000ja": {"type":"frame","parent":"lm0000j6","order":"a1","name":"space/2","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jb": {"type":"text","parent":"lm0000ja","order":"a0","name":"Name","w":120,"content":"space/2","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000jc": {"type":"rect","parent":"lm0000ja","order":"a1","name":"Bar","w":{"$ref":"space/2"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000jd": {"type":"frame","parent":"lm0000j6","order":"a2","name":"space/3","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000je": {"type":"text","parent":"lm0000jd","order":"a0","name":"Name","w":120,"content":"space/3","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000jf": {"type":"rect","parent":"lm0000jd","order":"a1","name":"Bar","w":{"$ref":"space/3"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000jg": {"type":"frame","parent":"lm0000j6","order":"a3","name":"space/4","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jh": {"type":"text","parent":"lm0000jg","order":"a0","name":"Name","w":120,"content":"space/4","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ji": {"type":"rect","parent":"lm0000jg","order":"a1","name":"Bar","w":{"$ref":"space/4"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000jj": {"type":"frame","parent":"lm0000j6","order":"a4","name":"space/5","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jk": {"type":"text","parent":"lm0000jj","order":"a0","name":"Name","w":120,"content":"space/5","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000jl": {"type":"rect","parent":"lm0000jj","order":"a1","name":"Bar","w":{"$ref":"space/5"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000jm": {"type":"frame","parent":"lm0000j6","order":"a5","name":"space/6","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jn": {"type":"text","parent":"lm0000jm","order":"a0","name":"Name","w":120,"content":"space/6","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000jo": {"type":"rect","parent":"lm0000jm","order":"a1","name":"Bar","w":{"$ref":"space/6"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000jp": {"type":"frame","parent":"lm0000j6","order":"a6","name":"space/8","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jq": {"type":"text","parent":"lm0000jp","order":"a0","name":"Name","w":120,"content":"space/8","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000jr": {"type":"rect","parent":"lm0000jp","order":"a1","name":"Bar","w":{"$ref":"space/8"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000js": {"type":"frame","parent":"lm0000j6","order":"a7","name":"space/10","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jt": {"type":"text","parent":"lm0000js","order":"a0","name":"Name","w":120,"content":"space/10","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ju": {"type":"rect","parent":"lm0000js","order":"a1","name":"Bar","w":{"$ref":"space/10"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000jv": {"type":"frame","parent":"lm0000j6","order":"a8","name":"space/12","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jw": {"type":"text","parent":"lm0000jv","order":"a0","name":"Name","w":120,"content":"space/12","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000jx": {"type":"rect","parent":"lm0000jv","order":"a1","name":"Bar","w":{"$ref":"space/12"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000jy": {"type":"frame","parent":"lm0000j6","order":"a9","name":"space/16","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000jz": {"type":"text","parent":"lm0000jy","order":"a0","name":"Name","w":120,"content":"space/16","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000k0": {"type":"rect","parent":"lm0000jy","order":"a1","name":"Bar","w":{"$ref":"space/16"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000k1": {"type":"frame","parent":"lm0000j6","order":"aA","name":"space/20","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000k2": {"type":"text","parent":"lm0000k1","order":"a0","name":"Name","w":120,"content":"space/20","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000k3": {"type":"rect","parent":"lm0000k1","order":"a1","name":"Bar","w":{"$ref":"space/20"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000k4": {"type":"frame","parent":"lm0000j6","order":"aB","name":"space/24","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000k5": {"type":"text","parent":"lm0000k4","order":"a0","name":"Name","w":120,"content":"space/24","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000k6": {"type":"rect","parent":"lm0000k4","order":"a1","name":"Bar","w":{"$ref":"space/24"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000k7": {"type":"frame","parent":"lm0000j6","order":"aC","name":"space/30","layout":{"dir":"row","gap":24,"align":"center"}}
+
+, "lm0000k8": {"type":"text","parent":"lm0000k7","order":"a0","name":"Name","w":120,"content":"space/30","grow":"fixed-width","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000k9": {"type":"rect","parent":"lm0000k7","order":"a1","name":"Bar","w":{"$ref":"space/30"},"h":16,"radius":4,"fill":{"$ref":"color/accent"}}
+
+, "lm0000ka": {"type":"frame","parent":"lmFoundations","order":"a4","name":"Radius","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm0000kb": {"type":"frame","parent":"lm0000ka","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm0000kc": {"type":"text","parent":"lm0000kb","order":"a0","name":"Section title","content":"Radius","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000kd": {"type":"rect","parent":"lm0000kb","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000ke": {"type":"frame","parent":"lm0000ka","order":"a1","name":"Radius items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"wrap":true}}
+
+, "lm0000kf": {"type":"frame","parent":"lm0000ke","order":"a0","name":"radius/sm","layout":{"dir":"column","gap":10}}
+
+, "lm0000kg": {"type":"rect","parent":"lm0000kf","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/sm"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000kh": {"type":"text","parent":"lm0000kf","order":"a1","name":"Name","content":"radius/sm","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ki": {"type":"frame","parent":"lm0000ke","order":"a1","name":"radius/md","layout":{"dir":"column","gap":10}}
+
+, "lm0000kj": {"type":"rect","parent":"lm0000ki","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000kk": {"type":"text","parent":"lm0000ki","order":"a1","name":"Name","content":"radius/md","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000kl": {"type":"frame","parent":"lm0000ke","order":"a2","name":"radius/lg","layout":{"dir":"column","gap":10}}
+
+, "lm0000km": {"type":"rect","parent":"lm0000kl","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000kn": {"type":"text","parent":"lm0000kl","order":"a1","name":"Name","content":"radius/lg","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ko": {"type":"frame","parent":"lm0000ke","order":"a3","name":"radius/xl","layout":{"dir":"column","gap":10}}
+
+, "lm0000kp": {"type":"rect","parent":"lm0000ko","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000kq": {"type":"text","parent":"lm0000ko","order":"a1","name":"Name","content":"radius/xl","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000kr": {"type":"frame","parent":"lm0000ke","order":"a4","name":"radius/pill","layout":{"dir":"column","gap":10}}
+
+, "lm0000ks": {"type":"rect","parent":"lm0000kr","order":"a0","name":"Tile","w":88,"h":88,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}}}
+
+, "lm0000kt": {"type":"text","parent":"lm0000kr","order":"a1","name":"Name","content":"radius/pill","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000ku": {"type":"frame","parent":"lmFoundations","order":"a5","name":"Shadow","w":{"mode":"fill"},"layout":{"dir":"column","gap":24}}
+
+, "lm0000kv": {"type":"frame","parent":"lm0000ku","order":"a0","name":"Section header","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
+
+, "lm0000kw": {"type":"text","parent":"lm0000kv","order":"a0","name":"Section title","content":"Shadow","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000kx": {"type":"rect","parent":"lm0000kv","order":"a1","name":"Divider","w":{"mode":"fill"},"h":1,"fill":{"$ref":"color/border"}}
+
+, "lm0000ky": {"type":"frame","parent":"lm0000ku","order":"a1","name":"Shadow items","w":{"mode":"fill"},"layout":{"dir":"row","gap":40,"crossGap":40,"pad":[8,8,24,8],"wrap":true}}
+
+, "lm0000kz": {"type":"frame","parent":"lm0000ky","order":"a0","name":"shadow/card","layout":{"dir":"column","gap":14}}
+
+, "lm0000l0": {"type":"rect","parent":"lm0000kz","order":"a0","name":"Tile","w":160,"h":96,"radius":12,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/card"}}
+
+, "lm0000l1": {"type":"text","parent":"lm0000kz","order":"a1","name":"Name","content":"shadow/card","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lm0000l2": {"type":"frame","parent":"lm0000ky","order":"a1","name":"shadow/pop","layout":{"dir":"column","gap":14}}
+
+, "lm0000l3": {"type":"rect","parent":"lm0000l2","order":"a0","name":"Tile","w":160,"h":96,"radius":12,"fill":{"$ref":"color/surface"},"effects":{"$ref":"shadow/pop"}}
+
+, "lm0000l4": {"type":"text","parent":"lm0000l2","order":"a1","name":"Name","content":"shadow/pop","style":{"size":12,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/muted"}}
+
+, "lmAvInit": {"type":"text","parent":"lmAvatar","order":"a0","name":"Initials","content":"MO","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lmAvatar": {"type":"frame","parent":"lm00000k","order":"a1","name":"Avatar","component":{"props":{"initials":{"type":"text","order":"a0","target":"lmAvInit","field":"content","default":"MO"},"size":{"type":"enum","order":"a1","options":{"lg":null,"md":null,"sm":null},"targets":{"lg":[{"field":"w","target":"lmAvatar","value":56},{"field":"h","target":"lmAvatar","value":56},{"field":"style/size","target":"lmAvInit","value":18}],"md":[{"field":"w","target":"lmAvatar","value":40},{"field":"h","target":"lmAvatar","value":40},{"field":"style/size","target":"lmAvInit","value":14}],"sm":[{"field":"w","target":"lmAvatar","value":28},{"field":"h","target":"lmAvatar","value":28},{"field":"style/size","target":"lmAvInit","value":11}]}},"tone":{"type":"enum","order":"a2","options":{"amber":null,"blue":null,"green":null,"rose":null},"targets":{"amber":[{"field":"fill","target":"lmAvatar","value":{"$ref":"color/art-3"}}],"blue":[{"field":"fill","target":"lmAvatar","value":{"$ref":"color/art-1"}}],"green":[{"field":"fill","target":"lmAvatar","value":{"$ref":"color/art-2"}}],"rose":[{"field":"fill","target":"lmAvatar","value":{"$ref":"color/art-4"}}]}}}},"w":40,"h":40,"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/art-1"},"layout":{"dir":"row","justify":"center","align":"center"}}
+
+, "lmBadge": {"type":"frame","parent":"lm00000d","order":"a1","name":"Badge","component":{"props":{"label":{"type":"text","order":"a0","target":"lmBadgeLbl","field":"content","default":"Badge"},"tone":{"type":"enum","order":"a1","options":{"accent":null,"neutral":null,"success":null,"warning":null},"targets":{"accent":[{"field":"fill","target":"lmBadge","value":{"$ref":"color/accent-soft"}},{"field":"fill","target":"lmBadgeLbl","value":{"$ref":"color/accent"}}],"neutral":[{"field":"fill","target":"lmBadge","value":{"$ref":"color/subtle"}},{"field":"fill","target":"lmBadgeLbl","value":{"$ref":"color/muted"}}],"success":[{"field":"fill","target":"lmBadge","value":{"$ref":"color/success-soft"}},{"field":"fill","target":"lmBadgeLbl","value":{"$ref":"color/success"}}],"warning":[{"field":"fill","target":"lmBadge","value":{"$ref":"color/warning-soft"}},{"field":"fill","target":"lmBadgeLbl","value":{"$ref":"color/warning"}}]}}}},"radius":{"$ref":"radius/pill"},"fill":{"$ref":"color/accent-soft"},"layout":{"dir":"row","pad":[4,10]}}
+
+, "lmBadgeLbl": {"type":"text","parent":"lmBadge","order":"a0","name":"Label","content":"Badge","style":{"weight":600,"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/accent"}}
+
+, "lmBcArt": {"type":"rect","parent":"lmBlogCard","order":"a0","name":"Cover","w":{"mode":"fill"},"h":216,"radius":{"$ref":"radius/lg"},"fill":{"kind":"linear","stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/accent-soft"}}],"rotation":135}}
+
+, "lmBcAuth": {"type":"text","parent":"lm00002z","order":"a1","name":"Name","content":"Author","style":{"weight":500,"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lmBcAv": {"type":"instance","parent":"lm00002z","order":"a0","of":"lmAvatar","args":{"size":"sm"}}
+
+, "lmBcDate": {"type":"text","parent":"lm00002y","order":"a1","name":"Date","content":"Oct 1, 2026","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lmBcExc": {"type":"text","parent":"lmBlogCard","order":"a3","name":"Excerpt","w":{"mode":"fill"},"content":"One or two sentences about the post.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmBcTag": {"type":"instance","parent":"lm00002y","order":"a0","of":"lmBadge","args":{"label":"Close process"}}
+
+, "lmBcTitle": {"type":"text","parent":"lmBlogCard","order":"a2","name":"Title","w":{"mode":"fill"},"content":"Post title","grow":"fixed-width","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lmBlogCard": {"type":"frame","parent":"lm00002w","order":"a1","name":"Blog card","component":{"props":{"art":{"type":"enum","order":"a6","options":{"amber":null,"blue":null,"green":null,"rose":null},"targets":{"amber":[{"field":"fill","target":"lmBcArt","value":{"kind":"linear","rotation":135,"stops":[{"at":0,"color":{"$ref":"color/art-3"}},{"at":1,"color":{"$ref":"color/warning-soft"}}]}}],"blue":[{"field":"fill","target":"lmBcArt","value":{"kind":"linear","rotation":135,"stops":[{"at":0,"color":{"$ref":"color/art-1"}},{"at":1,"color":{"$ref":"color/accent-soft"}}]}}],"green":[{"field":"fill","target":"lmBcArt","value":{"kind":"linear","rotation":135,"stops":[{"at":0,"color":{"$ref":"color/art-2"}},{"at":1,"color":{"$ref":"color/success-soft"}}]}}],"rose":[{"field":"fill","target":"lmBcArt","value":{"kind":"linear","rotation":135,"stops":[{"at":0,"color":{"$ref":"color/art-4"}},{"at":1,"color":{"$ref":"color/subtle"}}]}}]}},"author":{"type":"text","order":"a4","target":"lmBcAuth","field":"content","default":"Author"},"date":{"type":"text","order":"a1","target":"lmBcDate","field":"content","default":"Oct 1, 2026"},"excerpt":{"type":"text","order":"a3","target":"lmBcExc","field":"content","default":"One or two sentences about the post."},"initials":{"type":"text","order":"a5","target":"lmBcAv/lmAvInit","field":"content","default":"MO"},"tag":{"type":"text","order":"a0","target":"lmBcTag/lmBadgeLbl","field":"content","default":"Close process"},"title":{"type":"text","order":"a2","target":"lmBcTitle","field":"content","default":"Post title"}}},"w":384,"layout":{"dir":"column","gap":16}}
+
+, "lmBtn0": {"type":"frame","parent":"lm000009","order":"a1","name":"Button","component":{"props":{"icon":{"type":"boolean","order":"a1","target":"lmBtnIcon","field":"visible","default":false},"label":{"type":"text","order":"a0","target":"lmBtnLabel","field":"content","default":"Button"},"size":{"type":"enum","order":"a3","options":{"lg":null,"md":null},"targets":{"lg":[{"field":"layout/pad","target":"lmBtn0","value":[14,22]},{"field":"style/size","target":"lmBtnLabel","value":16}],"md":[{"field":"layout/pad","target":"lmBtn0","value":[10,16]},{"field":"style/size","target":"lmBtnLabel","value":14}]}},"variant":{"type":"enum","order":"a2","options":{"primary":null,"secondary":null,"subtle":null},"targets":{"primary":[{"field":"fill","target":"lmBtn0","value":{"$ref":"color/accent"}},{"field":"stroke","target":"lmBtn0","value":{"paint":{"$ref":"color/accent"}}},{"field":"fill","target":"lmBtnLabel","value":{"$ref":"color/on-accent"}},{"field":"color","target":"lmBtnIcon","value":{"$ref":"color/on-accent"}}],"secondary":[{"field":"fill","target":"lmBtn0","value":{"$ref":"color/surface"}},{"field":"stroke","target":"lmBtn0","value":{"paint":{"$ref":"color/border"}}},{"field":"fill","target":"lmBtnLabel","value":{"$ref":"color/ink"}},{"field":"color","target":"lmBtnIcon","value":{"$ref":"color/ink"}}],"subtle":[{"field":"fill","target":"lmBtn0","value":{"$ref":"color/subtle"}},{"field":"stroke","target":"lmBtn0","value":{"paint":{"$ref":"color/subtle"}}},{"field":"fill","target":"lmBtnLabel","value":{"$ref":"color/ink"}},{"field":"color","target":"lmBtnIcon","value":{"$ref":"color/ink"}}]}}}},"radius":{"$ref":"radius/md"},"fill":{"$ref":"color/accent"},"stroke":{"paint":{"$ref":"color/accent"}},"layout":{"dir":"row","gap":8,"pad":[10,16],"justify":"center","align":"center"},"meta":{"kimo.component.description":"Primary, secondary or subtle; md or lg. One primary per view."}}
+
+, "lmBtnIcon": {"type":"icon","parent":"lmBtn0","order":"a1","name":"Icon/arrow-right","w":16,"h":16,"set":"lucide","icon":"arrow-right","color":{"$ref":"color/on-accent"},"visible":false}
+
+, "lmBtnLabel": {"type":"text","parent":"lmBtn0","order":"a0","name":"Label","content":"Button","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/on-accent"}}
+
+, "lmBtnSec": {"type":"instance","parent":"lm00000b","order":"a1","name":"Button/Secondary","of":"lmBtn0","component":true,"args":{"variant":"secondary"}}
+
+, "lmCheck": {"type":"frame","parent":"lm00002i","order":"a1","name":"Check item","component":{"props":{"label":{"type":"text","order":"a0","target":"lmCkLbl","field":"content","default":"Included feature"},"state":{"type":"enum","order":"a1","options":{"excluded":null,"included":null},"targets":{"excluded":[{"field":"icon","target":"lmCkIcon","value":"minus"},{"field":"color","target":"lmCkIcon","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmCkLbl","value":{"$ref":"color/muted"}}],"included":[{"field":"icon","target":"lmCkIcon","value":"check"},{"field":"color","target":"lmCkIcon","value":{"$ref":"color/success"}},{"field":"fill","target":"lmCkLbl","value":{"$ref":"color/ink"}}]}}}},"w":320,"layout":{"dir":"row","gap":10}}
+
+, "lmCkIcon": {"type":"icon","parent":"lmCheck","order":"a0","name":"Icon/check","w":18,"h":18,"set":"lucide","icon":"check","color":{"$ref":"color/success"}}
+
+, "lmCkLbl": {"type":"text","parent":"lmCheck","order":"a1","name":"Label","w":{"mode":"fill"},"content":"Included feature","grow":"fixed-width","style":{"size":15,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lmCover": {"type":"frame","parent":null,"order":"a1","name":"Cover","x":0,"y":0,"w":1440,"h":900,"clip":true,"fill":{"$ref":"color/bg"},"layout":{"dir":"row","gap":72,"pad":[96,0,96,96],"align":"center"},"page":"lmPage2"}
+
+, "lmFaq0": {"type":"frame","parent":"lm000029","order":"a1","name":"FAQ item","component":{"props":{"answer":{"type":"text","order":"a1","target":"lmFaqA","field":"content","default":"Answer."},"open":{"type":"boolean","order":"a2","target":"lmFaqA","field":"visible","default":true},"question":{"type":"text","order":"a0","target":"lmFaqQ","field":"content","default":"Question"}}},"w":800,"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"column","gap":12,"pad":[24,0]}}
+
+, "lmFaqA": {"type":"text","parent":"lmFaq0","order":"a1","name":"Answer","w":{"mode":"fill"},"content":"Answer.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmFaqQ": {"type":"text","parent":"lm00002b","order":"a0","name":"Question","w":{"mode":"fill"},"content":"Question","grow":"fixed-width","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lmFeatBody": {"type":"text","parent":"lmFeatCard","order":"a2","name":"Body","w":{"mode":"fill"},"content":"What it does.","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmFeatCard": {"type":"frame","parent":"lm00001x","order":"a1","name":"Feature card","component":{"props":{"body":{"type":"text","order":"a1","target":"lmFeatBody","field":"content","default":"What it does."},"title":{"type":"text","order":"a0","target":"lmFeatTitle","field":"content","default":"Feature"}}},"w":384,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"layout":{"dir":"column","gap":16,"pad":{"$ref":"space/8"}}}
+
+, "lmFeatIcon": {"type":"icon","parent":"lm00001z","order":"a0","name":"Icon/list-checks","w":22,"h":22,"set":"lucide","icon":"list-checks","color":{"$ref":"color/accent"}}
+
+, "lmFeatTitle": {"type":"text","parent":"lmFeatCard","order":"a1","name":"Title","content":"Feature","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lmFooter": {"type":"frame","parent":"lm000010","order":"a1","name":"Footer","component":true,"w":1440,"fill":{"$ref":"color/subtle"},"layout":{"dir":"column","gap":48,"pad":[64,120,40,120]}}
+
+, "lmFoundations": {"type":"frame","parent":null,"order":"a8","name":"Foundations","x":0,"y":0,"w":1600,"fill":{"$ref":"color/bg"},"layout":{"dir":"column","gap":56,"pad":64},"page":"lmPage4"}
+
+, "lmInHint": {"type":"text","parent":"lmInput","order":"a2","name":"Hint","content":"Hint","style":{"typography":{"$ref":"type/small"}},"visible":false,"fill":{"$ref":"color/muted"}}
+
+, "lmInLbl": {"type":"text","parent":"lmInput","order":"a0","name":"Label","content":"Label","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lmInPh": {"type":"text","parent":"lm000037","order":"a0","name":"Placeholder","content":"Placeholder","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmInput": {"type":"frame","parent":"lm000035","order":"a1","name":"Input","component":{"props":{"hint":{"type":"text","order":"a2","target":"lmInHint","field":"content","default":"Hint"},"label":{"type":"text","order":"a0","target":"lmInLbl","field":"content","default":"Label"},"placeholder":{"type":"text","order":"a1","target":"lmInPh","field":"content","default":"Placeholder"},"showHint":{"type":"boolean","order":"a3","target":"lmInHint","field":"visible","default":false}}},"w":400,"layout":{"dir":"column","gap":8}}
+
+, "lmLibBoard": {"type":"frame","parent":null,"order":"a0","name":"Components","x":0,"y":0,"w":1600,"fill":{"$ref":"color/bg"},"layout":{"dir":"column","gap":56,"pad":64},"page":"lmPage1"}
+
+, "lmLogo": {"type":"frame","parent":"lm000027","order":"a1","name":"Customer logo","component":{"props":{"name":{"type":"text","order":"a0","target":"lmLogoName","field":"content","default":"Company"}}},"layout":{"dir":"row","gap":8,"align":"center"}}
+
+, "lmLogoIcon": {"type":"icon","parent":"lmLogo","order":"a0","name":"Icon/building-2","w":22,"h":22,"set":"lucide","icon":"building-2","color":{"$ref":"color/muted"}}
+
+, "lmLogoName": {"type":"text","parent":"lmLogo","order":"a1","name":"Name","content":"Company","style":{"weight":700,"letterSpacing":-0.4,"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/muted"}}
+
+, "lmNavBar": {"type":"frame","parent":"lm00000r","order":"a1","name":"Nav bar","component":{"props":{"active":{"type":"enum","order":"a0","options":{"blog":null,"customers":null,"pricing":null,"product":null},"targets":{"blog":[{"field":"fill","target":"lmNavL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL3","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL4","value":{"$ref":"color/ink"}}],"customers":[{"field":"fill","target":"lmNavL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL3","value":{"$ref":"color/ink"}},{"field":"fill","target":"lmNavL4","value":{"$ref":"color/muted"}}],"pricing":[{"field":"fill","target":"lmNavL1","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL2","value":{"$ref":"color/ink"}},{"field":"fill","target":"lmNavL3","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL4","value":{"$ref":"color/muted"}}],"product":[{"field":"fill","target":"lmNavL1","value":{"$ref":"color/ink"}},{"field":"fill","target":"lmNavL2","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL3","value":{"$ref":"color/muted"}},{"field":"fill","target":"lmNavL4","value":{"$ref":"color/muted"}}]}}}},"w":1440,"fill":{"$ref":"color/bg"},"stroke":{"paint":{"$ref":"color/border"},"width":{"b":1}},"layout":{"dir":"row","pad":[20,120],"justify":"between","align":"center"}}
+
+, "lmNavCta": {"type":"instance","parent":"lm00000y","order":"a1","of":"lmBtn0","args":{"label":"Start free trial"}}
+
+, "lmNavL1": {"type":"text","parent":"lm00000x","order":"a0","name":"Product","content":"Product","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/ink"}}
+
+, "lmNavL2": {"type":"text","parent":"lm00000x","order":"a1","name":"Pricing","content":"Pricing","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmNavL3": {"type":"text","parent":"lm00000x","order":"a2","name":"Customers","content":"Customers","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmNavL4": {"type":"text","parent":"lm00000x","order":"a3","name":"Blog","content":"Blog","style":{"weight":500,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmPrcBdgWrap": {"type":"frame","parent":"lm00002n","order":"a1","name":"Popular","visible":false,"layout":{"dir":"row"}}
+
+, "lmPrcCta": {"type":"instance","parent":"lmPrice","order":"a2","of":"lmBtn0","props":{"w":{"mode":"fill"}},"args":{"label":"Start free trial","size":"lg"}}
+
+, "lmPrcDesc": {"type":"text","parent":"lm00002m","order":"a1","name":"Who the plan is for.","w":{"mode":"fill"},"content":"Who the plan is for.","grow":"fixed-width","style":{"size":15,"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmPrcFeat": {"type":"frame","parent":"lmPrice","order":"a4","name":"Features","w":{"mode":"fill"},"layout":{"dir":"column","gap":12},"slot":{"suggested":["lmCheck"]}}
+
+, "lmPrcName": {"type":"text","parent":"lm00002n","order":"a0","name":"Plan","content":"Plan","style":{"typography":{"$ref":"type/title"}},"fill":{"$ref":"color/ink"}}
+
+, "lmPrcPer": {"type":"text","parent":"lm00002p","order":"a1","name":"Period","w":{"mode":"fill"},"content":"per seat / month","grow":"fixed-width","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lmPrcPrice": {"type":"text","parent":"lm00002p","order":"a0","name":"$0","content":"$0","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "lmPrice": {"type":"frame","parent":"lm00002k","order":"a1","name":"Pricing card","component":{"props":{"cta":{"type":"instance","order":"a5","target":"lmPrcCta","default":"lmBtn0"},"ctaLabel":{"type":"text","order":"a6","target":"lmPrcCta/lmBtnLabel","field":"content","default":"Start free trial"},"description":{"type":"text","order":"a3","target":"lmPrcDesc","field":"content","default":"Who the plan is for."},"features":{"type":"slot","order":"a7","target":"lmPrcFeat"},"period":{"type":"text","order":"a2","target":"lmPrcPer","field":"content","default":"per seat / month"},"plan":{"type":"text","order":"a0","target":"lmPrcName","field":"content","default":"Plan"},"popular":{"type":"boolean","order":"a4","target":"lmPrcBdgWrap","field":"visible","default":false},"price":{"type":"text","order":"a1","target":"lmPrcPrice","field":"content","default":"$0"},"tone":{"type":"enum","order":"a8","options":{"featured":null,"standard":null},"targets":{"featured":[{"field":"stroke","target":"lmPrice","value":{"paint":{"$ref":"color/accent"},"width":2}},{"field":"effects","target":"lmPrice","value":{"$ref":"shadow/pop"}}],"standard":[{"field":"stroke","target":"lmPrice","value":{"paint":{"$ref":"color/border"}}},{"field":"effects","target":"lmPrice","value":{"$ref":"shadow/card"}}]}}}},"w":384,"radius":{"$ref":"radius/xl"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column","gap":24,"pad":{"$ref":"space/8"}},"meta":{"kimo.component.description":"Plan card. Fill the Features slot with Check items."}}
+
+, "lmQAv0": {"type":"instance","parent":"lm000025","order":"a0","of":"lmAvatar"}
+
+, "lmQName": {"type":"text","parent":"lm000026","order":"a0","name":"Name","content":"Name","style":{"typography":{"$ref":"type/label"}},"fill":{"$ref":"color/ink"}}
+
+, "lmQRole": {"type":"text","parent":"lm000026","order":"a1","name":"Role","content":"Role","style":{"typography":{"$ref":"type/small"}},"fill":{"$ref":"color/muted"}}
+
+, "lmQText": {"type":"text","parent":"lmQuote","order":"a1","name":"Quote","w":{"mode":"fill"},"content":"Quote","grow":"fixed-width","style":{"typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/ink"}}
+
+, "lmQuote": {"type":"frame","parent":"lm000022","order":"a1","name":"Quote card","component":{"props":{"initials":{"type":"text","order":"a3","target":"lmQAv0/lmAvInit","field":"content","default":"MO"},"name":{"type":"text","order":"a1","target":"lmQName","field":"content","default":"Name"},"quote":{"type":"text","order":"a0","target":"lmQText","field":"content","default":"Quote"},"role":{"type":"text","order":"a2","target":"lmQRole","field":"content","default":"Role"}}},"w":384,"radius":{"$ref":"radius/lg"},"fill":{"$ref":"color/surface"},"stroke":{"paint":{"$ref":"color/border"}},"effects":{"$ref":"shadow/card"},"layout":{"dir":"column","gap":24,"pad":{"$ref":"space/8"}}}
+
+, "lmSecEye": {"type":"text","parent":"lmSecHead","order":"a0","name":"Eyebrow","content":"Eyebrow","style":{"letterSpacing":1,"case":"upper","typography":{"$ref":"type/label"}},"fill":{"$ref":"color/accent"}}
+
+, "lmSecHead": {"type":"frame","parent":"lm00001v","order":"a1","name":"Section header","component":{"props":{"align":{"type":"enum","order":"a4","options":{"center":null,"left":null},"targets":{"center":[{"field":"layout/align","target":"lmSecHead","value":"center"},{"field":"style/align","target":"lmSecTitle","value":"center"},{"field":"style/align","target":"lmSecSub","value":"center"}],"left":[{"field":"layout/align","target":"lmSecHead","value":"start"},{"field":"style/align","target":"lmSecTitle","value":"left"},{"field":"style/align","target":"lmSecSub","value":"left"}]}},"eyebrow":{"type":"text","order":"a0","target":"lmSecEye","field":"content","default":"Eyebrow"},"showSubtitle":{"type":"boolean","order":"a3","target":"lmSecSub","field":"visible","default":true},"subtitle":{"type":"text","order":"a2","target":"lmSecSub","field":"content","default":"Supporting sentence."},"title":{"type":"text","order":"a1","target":"lmSecTitle","field":"content","default":"Section title"}}},"w":760,"layout":{"dir":"column","gap":16,"align":"center"}}
+
+, "lmSecSub": {"type":"text","parent":"lmSecHead","order":"a2","name":"Supporting sentence.","w":{"mode":"fill"},"content":"Supporting sentence.","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/body-lg"}},"fill":{"$ref":"color/muted"}}
+
+, "lmSecTitle": {"type":"text","parent":"lmSecHead","order":"a1","name":"Section title","w":{"mode":"fill"},"content":"Section title","grow":"fixed-width","style":{"align":"center","typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+
+, "lmStat": {"type":"frame","parent":"lm000020","order":"a1","name":"Stat","component":{"props":{"label":{"type":"text","order":"a1","target":"lmStatLbl","field":"content","default":"Metric"},"tone":{"type":"enum","order":"a2","options":{"default":null,"inverse":null},"targets":{"default":[{"field":"fill","target":"lmStatVal","value":{"$ref":"color/ink"}},{"field":"fill","target":"lmStatLbl","value":{"$ref":"color/muted"}}],"inverse":[{"field":"fill","target":"lmStatVal","value":{"$ref":"color/on-inverse"}},{"field":"fill","target":"lmStatLbl","value":{"$ref":"color/inverse-muted"}}]}},"value":{"type":"text","order":"a0","target":"lmStatVal","field":"content","default":"0"}}},"w":260,"layout":{"dir":"column","gap":8}}
+
+, "lmStatLbl": {"type":"text","parent":"lmStat","order":"a1","name":"Label","w":{"mode":"fill"},"content":"Metric","grow":"fixed-width","style":{"typography":{"$ref":"type/body"}},"fill":{"$ref":"color/muted"}}
+
+, "lmStatVal": {"type":"text","parent":"lmStat","order":"a0","name":"Value","content":"0","style":{"typography":{"$ref":"type/h1"}},"fill":{"$ref":"color/ink"}}
+}
+}

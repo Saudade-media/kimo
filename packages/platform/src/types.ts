@@ -48,6 +48,12 @@ export interface KimoPlatform {
   readonly files: FilesApi
   readonly dialogs: DialogsApi
   readonly recents: RecentsApi
+  /**
+   * Board 37 §3: Move to Trash with Restore. Desktop moves files to the OS trash and keeps an
+   * index (`~/.kimo/trash.json`) so the Trash view can list and restore them; memory scripts it.
+   * Absent in the browser (the web library soft-deletes with `trashedAt` instead).
+   */
+  readonly trash?: TrashApi
   readonly leases: LeasesApi
   readonly recovery: RecoveryApi
   readonly git: GitApi
@@ -77,6 +83,11 @@ export interface KimoPlatform {
    */
   readonly help?: HelpHostApi
   /**
+   * Audit G3: plain-text clipboard writes that work outside a user gesture (a native menu item
+   * is not one in WKWebView). Desktop only; pages use `navigator.clipboard` without it.
+   */
+  readonly clipboard?: ClipboardApi
+  /**
    * Board 27 §9/§10: native menu-bar items that act on the focused editor (File › Export…,
    * Copy selection as PNG, View › Preview); desktop only.
    */
@@ -98,12 +109,38 @@ export type HelpMenuAction =
   | "report-issue"
   | "copy-diagnostics"
 
-/** A native menu-bar item the focused editor window runs (`kimo://editor-menu`). */
-export type EditorMenuAction = "export" | "copy-png" | "preview"
+/**
+ * A native menu-bar item the focused editor window runs (`kimo://editor-menu`). The editor runs
+ * all of them; Home runs `new-file` / `open-file` and the Edit items. `undo` / `redo` /
+ * `select-all` act on a focused text field (`execCommand`) before the document.
+ */
+export type EditorMenuAction =
+  | "export"
+  | "copy-png"
+  | "preview"
+  | "go-home"
+  | "new-file"
+  | "open-file"
+  | "undo"
+  | "redo"
+  | "select-all"
+
+/** What an editor window shows; the native menu enables the document items for `"editor"`. */
+export type MenuContext = "home" | "editor"
 
 export interface EditorMenuApi {
-  /** Native File / View menu items picked while this window is the focused editor. */
+  /** Native File / Edit / View menu items picked while this window is the focused editor. */
   onAction(listener: (action: EditorMenuAction) => void): () => void
+  /**
+   * This window now shows Home or a document (board 37, audit A6/G2): Back to files, Export…,
+   * Copy selection as PNG and Preview are disabled while the focused window shows Home.
+   */
+  setContext(context: MenuContext): Promise<void>
+}
+
+export interface ClipboardApi {
+  /** Replaces the clipboard with `text`. Rejects when the system clipboard refuses it. */
+  writeText(text: string): Promise<void>
 }
 
 export interface HelpHostApi {
@@ -186,6 +223,13 @@ export interface FilesApi {
   ): Promise<AtomicWriteResult>
   /** Removes a file; resolves when it does not exist. */
   remove(ref: FileRef): Promise<void>
+  /**
+   * Renames (moves) a file. Never overwrites: rejects `EXISTS` when `to` exists and
+   * `NOT_FOUND` when `from` is missing (Home › Rename, board 37 §5).
+   */
+  rename(from: FileRef, to: FileRef): Promise<void>
+  /** Copies a file. Never overwrites: rejects `EXISTS` when `to` exists (Home › Duplicate). */
+  copy(from: FileRef, to: FileRef): Promise<void>
   /** Metadata, or null when nothing exists at `ref`. */
   stat(ref: FileRef): Promise<FileStat | null>
   /** Entries of a directory (non-recursive), optionally filtered by extension (no dot). */
@@ -294,6 +338,63 @@ export interface RecentsApi {
   scanFolder(ref: FileRef): Promise<RecentFile[]>
   /** Fires when the lists change (a file was saved, a branch switched, a folder added). */
   onChange(listener: () => void): Unsubscribe
+}
+
+// ===============================================================================================
+// Trash (Home, board 37 §3)
+// ===============================================================================================
+
+/*
+ * Desktop contract (Rust, `src-tauri`; TS side in tauri.ts / tauri-platform.ts):
+ * - `kimo_fs_rename {from, to} -> null` and `kimo_fs_copy {from, to} -> null`: never overwrite.
+ *   Code `EXISTS` (errno `EEXIST`) when `to` exists, `NOT_FOUND` when `from` is missing. Both
+ *   paths must be in the fs scope; grant `to` on success.
+ * - `kimo_trash_move {path} -> TrashedFile`: moves the file to the OS trash (macOS `~/.Trash`),
+ *   records where it landed in `~/.kimo/trash.json`, drops it from recents, emits
+ *   `kimo://recents-changed`.
+ * - `kimo_trash_list {} -> TrashedFile[]`: newest first; entries whose item left the trash are
+ *   dropped.
+ * - `kimo_trash_restore {id, path: string | null} -> string`: puts the item back at `path`
+ *   (null = `originalRef`), creating the parent folder; `EXISTS` when the target is taken (never
+ *   overwrite), `NOT_FOUND` when the item left the trash. Grants scope, notes it in recents,
+ *   emits `kimo://recents-changed`. Returns the restored path.
+ * - `kimo_trash_remove {id} -> null`: deletes that item for good and drops the entry.
+ * - `kimo_trash_empty {} -> number`: deletes every item Kimo moved there; other items in the
+ *   trash stay. Kimo never empties the trash on its own.
+ * - `error.rs`: map `EEXIST` / `io::ErrorKind::AlreadyExists` to code `EXISTS` (as
+ *   `codeForErrno` does).
+ */
+
+/** A file Kimo moved to the OS trash (one entry of `~/.kimo/trash.json`). */
+export interface TrashedFile {
+  /** Opaque entry id. */
+  id: string
+  /** Where the file lived; Restore puts it back here. */
+  originalRef: FileRef
+  /** File name at `originalRef` (`home.kimo`). */
+  name: string
+  trashedAt: number
+}
+
+/**
+ * Kimo's view of the OS trash. Only files Kimo moved there are listed; other items in the
+ * trash are never touched. Kimo never empties the trash on its own.
+ */
+export interface TrashApi {
+  /** Moves a file to the OS trash and records it. Fires `recents.onChange`. */
+  move(ref: FileRef): Promise<TrashedFile>
+  /** Entries still in the OS trash, newest first (entries emptied elsewhere are dropped). */
+  list(): Promise<TrashedFile[]>
+  /**
+   * Puts a file back at `originalRef`, or at `to` ("Restore as copy"). Rejects `EXISTS` when
+   * the target is taken and `NOT_FOUND` when the item left the trash. Resolves to the restored
+   * ref. Fires `recents.onChange`.
+   */
+  restore(id: string, to?: FileRef): Promise<FileRef>
+  /** Deletes one entry's file for good. */
+  remove(id: string): Promise<void>
+  /** Deletes every file Kimo moved to the trash for good; resolves to how many. */
+  empty(): Promise<number>
 }
 
 // ===============================================================================================
@@ -624,14 +725,23 @@ export interface WindowApi {
   setDocumentEdited(edited: boolean): Promise<void>
   /**
    * Opens Settings: a separate window on desktop (⌘,) → `"window"`; on the web nothing opens
-   * and the result is `"dialog"`, so the app shows its in-app Settings dialog.
+   * and the result is `"dialog"`, so the app shows its in-app Settings dialog. `focus` names
+   * what the pane opens on: an MCP client to expand (Agents & MCP) or `usage` (AI providers).
    */
-  openSettings(pane?: SettingsPane): Promise<"window" | "dialog">
+  openSettings(pane?: SettingsPane, focus?: string | null): Promise<"window" | "dialog">
+  /**
+   * File › New window (audit G4): another editor window on Home. Desktop only (a browser tab
+   * opens a new window itself).
+   */
+  openNewWindow?(): Promise<void>
   /**
    * Runs before the window closes (and before quit). Resolve false to keep it open (e.g. a
-   * save failed); the handler should flush sessions first. One handler per window.
+   * save failed); the handler should flush sessions first. One handler per window. `quitting`
+   * is true when the window closes because the app quits (desktop), false for a user close.
    */
-  onCloseRequested(handler: () => Promise<boolean> | boolean): Unsubscribe
+  onCloseRequested(
+    handler: (info: { quitting: boolean }) => Promise<boolean> | boolean,
+  ): Unsubscribe
   close(): Promise<void>
 }
 
@@ -669,6 +779,8 @@ export interface OpenRequest {
   refs: FileRef[]
   /** From a deep link's `node`. */
   node?: string
+  /** From a deep link's `page` (board 27 §1 "Copy link to page"). */
+  page?: string
 }
 
 export interface LaunchApi {

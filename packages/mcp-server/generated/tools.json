@@ -4175,7 +4175,7 @@
           },
           "token": {
             "type": "string",
-            "description": "undo: undoToken."
+            "description": "undo / redo: undoToken."
           },
           "limit": {
             "type": "integer",
@@ -4508,6 +4508,10 @@
               "canRedo": {
                 "type": "boolean",
                 "description": "Your redo stack is not empty."
+              },
+              "undoToken": {
+                "type": "string",
+                "description": "redo: the group's token, valid again."
               }
             },
             "additionalProperties": false,

@@ -8,7 +8,7 @@ import { type E2EContext, expect, type Scenario } from "./run"
 
 async function openNewFile(page: Page, url: string) {
   await page.goto(url)
-  await page.getByRole("button", { name: "New file" }).click()
+  await page.getByRole("button", { name: "New file" }).first().click()
   await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
   await page.getByRole("treeitem", { name: /Home — Desktop/ }).waitFor()
 }
@@ -56,8 +56,14 @@ export const scenarios: Scenario[] = [
       await page.goto(url)
       await page.getByRole("heading", { name: "Recents" }).waitFor()
       await page.getByRole("heading", { name: "What do you want to design?" }).waitFor()
-      expect(await page.getByRole("button", { name: "New file" }).isVisible(), "New file button")
-      expect(await page.getByRole("button", { name: "Open file" }).isVisible(), "Open file button")
+      expect(
+        await page.getByRole("button", { name: "New file" }).first().isVisible(),
+        "New file button",
+      )
+      expect(
+        await page.getByRole("button", { name: "Open file" }).first().isVisible(),
+        "Open file button",
+      )
       // M6 Home composer (board 22 w9bz9): no provider yet → the first-run card, Send disabled.
       await page.getByLabel("Describe what to design").waitFor()
       expect(await page.getByRole("button", { name: "Send" }).isDisabled(), "send needs a provider")

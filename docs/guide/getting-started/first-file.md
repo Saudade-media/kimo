@@ -2,12 +2,20 @@
 
 ## Home
 
-Kimo opens on **Home** (or on your last files, see **Settings › General › On launch**). From there:
+Kimo opens on **Home**. In the desktop app, **Settings › General › On launch** set to **Last files** (the default) reopens the file that was open when you quit; a window you close yourself is not reopened. From there:
 
-- **New file** (`⌘N`) starts a design. In the desktop app it opens an untitled file right away and asks where to save it the first time you press `⌘S` (new files go to `~/Documents/Kimo` by default). In the browser a new file starts from a sample design.
+- **New file** (`⌘N`) starts a design. In the desktop app it opens an untitled file right away and asks where to save it the first time you press `⌘S`. The save panel starts in the folder you last saved to, else in **Settings › Files & autosave › New files go to** (`~/Documents/Kimo` by default). In the browser a new file starts from a sample design.
 - **Open file** (`⌘O`) opens a `.kimo` or `.kimoz` file. In the browser this imports a copy into the browser's library.
-- **Recents** and **All files** list your files, as a grid or a list, with **Search files**.
-- In the desktop app, **Local folders** (**+**) adds a folder whose files Kimo lists.
+- The sidebar switches what Home shows, and the search box searches that list:
+  - **Recents**: the files you opened lately.
+  - **All files**: every file Kimo knows. In the desktop app that is Recents plus every `.kimo` file in your local folders; in the browser, the browser's library.
+  - **Templates**: the bundled examples. **Use template** (or a click on the card) copies one into a new file and opens it. In the desktop app the copy goes to the new-files folder (`landing.kimo`, then `landing 2.kimo`), and a template that imports a library brings a copy of the library along.
+  - **Design systems**: files that other files import, or that publish components, with "N components · used by M files". Click one to open it.
+  - **Trash**: files you moved to the Trash, with **Restore** and **Delete forever**. In the desktop app they sit in the macOS Trash until you empty it (**Empty trash…** deletes only the files Kimo moved there). In the browser they are deleted for good after 30 days.
+- In the desktop app, **Local folders** (**+**) adds a folder whose files Kimo lists. Click a folder to list its files. Its **⋯** (or a right-click) has **Reveal in Finder** and **Remove from Kimo**, which stops listing it and leaves the files on disk.
+- A file's **⋯** (or a right-click on a row or card) has **Open**, **Reveal in Finder**, **Rename**, **Duplicate**, **Remove from Recents** and **Move to Trash** (`⌘⌫`). Moving a file to the Trash never asks; the toast's **Undo** brings it back. In the browser the menu has **Download .kimo** instead of Reveal.
+- A file that was moved or deleted outside Kimo shows as **Missing**. Its menu has **Locate…**, **Reveal folder** and **Remove from Recents**.
+- On macOS, the menu bar's **File › New window** (`⇧⌘N`) opens another window on Home. In a file, **File › Back to files** returns to Home.
 - The composer at the top creates a new file and hands your request to the [built-in agent](../built-in-agent/providers.md), which starts building in it.
 
 For ready-made files to open, see the [examples](../../../examples/README.md).

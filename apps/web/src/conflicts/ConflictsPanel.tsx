@@ -13,6 +13,7 @@ import type { NodeData } from "@kimo/editor-state"
 import { Button, type ConflictBase, ConflictRow, ResolvedRow } from "@kimo/ui"
 import { Check, ChevronDown, ChevronRight } from "lucide-react"
 import { useEffect, useRef, useState, useSyncExternalStore } from "react"
+import { useFailureToast } from "../editor/failure-toast"
 import { typeIcon } from "../editor/props"
 import { Icon } from "../lib/icons"
 import type { ConflictRowView } from "../platform/contract"
@@ -55,6 +56,7 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
     })
   const commit = session.info?.base ?? null
   const [saving, setSaving] = useState(false)
+  const fail = useFailureToast()
   const root = useRef<HTMLDivElement>(null)
 
   // Next conflict (⌘') focuses the row: scroll it into view and focus its first choice.
@@ -198,7 +200,8 @@ export function ConflictsPanel({ session, getNode }: ConflictsPanelProps) {
             setSaving(true)
             session
               .markResolvedAndSave()
-              .catch((e) => console.warn("Kimo: Mark resolved & save", e))
+              // A5: a failed write keeps the conflicts and says why (Toast/Danger).
+              .catch((e: unknown) => fail(`save ${session.fileName()}`, e))
               .finally(() => setSaving(false))
           }}
         >

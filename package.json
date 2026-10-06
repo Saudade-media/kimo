@@ -19,6 +19,8 @@
     "gen:scope-checklist": "bun scripts/gen-scope-checklist.ts",
     "build:examples": "bun scripts/build-examples.ts",
     "check:examples": "bun scripts/build-examples.ts --check && kimo validate --strict examples/*/*.kimo",
+    "build:templates": "bun scripts/build-templates.ts",
+    "check:templates": "bun scripts/build-templates.ts --check && kimo validate --strict packages/templates/files/*/*.kimo",
     "version:plan": "bun scripts/version.ts"
   },
   "devDependencies": {

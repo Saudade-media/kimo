@@ -58,7 +58,8 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 # Board 32 "Dock activity": the animated Dock tile (NSDockTile content view, reduce-motion check).
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSGeometry", "NSProcessInfo", "NSUserDefaults", "NSString"] }
+# Board 37 §3 Move to Trash (NSFileManager trashItemAtURL), Help › Copy diagnostics (NSPasteboard).
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSError", "NSFileManager", "NSGeometry", "NSProcessInfo", "NSURL", "NSUserDefaults", "NSString"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = [
   "std",
   "NSAccessibility",
@@ -67,6 +68,7 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
   "NSDockTile",
   "NSImage",
   "NSImageView",
+  "NSPasteboard",
   "NSResponder",
   "NSView",
   "NSWindow",

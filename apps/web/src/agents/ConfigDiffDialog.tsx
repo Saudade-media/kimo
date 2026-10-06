@@ -13,7 +13,7 @@
  *   │   Write config (primary h 28)
  *   └ Footnote (v3QurW) sans 11 text-tertiary "Backup → <path>.kimo-<date>.bak"
  */
-import { CompactButton, DialogScrim, useDismiss } from "@kimo/ui"
+import { Banner, CompactButton, DialogScrim, useDismiss } from "@kimo/ui"
 import { useEffect, useRef } from "react"
 import { AgentIcon } from "./icons"
 
@@ -82,6 +82,10 @@ export interface ConfigDiffDialogProps {
   before: string | null
   after: string | null
   error?: string
+  /** Board 37 F7: the write is running ("Writing…", disabled); the dialog stays open. */
+  writing?: boolean
+  /** Board 37 F7 DwSsz: the write failed; the primary button reads "Try again". */
+  writeError?: { title: string; body: string } | null
   onCopy(text: string): void
   onCancel(): void
   onConfirm(): void
@@ -146,6 +150,16 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
             })}
           </div>
         )}
+        {p.writeError && (
+          <Banner
+            tone="danger"
+            className="agents-config-diff__banner"
+            data-pen="DwSsz"
+            data-testid="agents-config-write-error"
+            title={p.writeError.title}
+            body={p.writeError.body}
+          />
+        )}
         <div className="agents-config-diff__footer">
           <CompactButton
             variant="ghost"
@@ -164,10 +178,16 @@ export function ConfigDiffDialog(p: ConfigDiffDialogProps) {
             variant="primary"
             height={28}
             padX={10}
-            disabled={!!p.error}
+            disabled={!!p.error || p.writing}
             onClick={p.onConfirm}
           >
-            {p.action === "remove" ? "Remove" : "Write config"}
+            {p.writing
+              ? "Writing…"
+              : p.writeError
+                ? "Try again"
+                : p.action === "remove"
+                  ? "Remove"
+                  : "Write config"}
           </CompactButton>
         </div>
         <p className="agents-config-diff__footnote">

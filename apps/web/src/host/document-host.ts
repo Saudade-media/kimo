@@ -40,6 +40,7 @@ import type {
   KimoPlatform,
   McpApprovalChoice,
   McpConnectionInfo,
+  McpHistoryResult,
   McpHttpRequest,
   TauriMcpEventMap,
 } from "@kimo/platform"
@@ -114,6 +115,23 @@ export interface DocumentHostService {
 }
 
 /** Read-only reason of a host session (null when writable). */
+/**
+ * kimo_history undo / redo result → the activity log's answer. REVISION_CONFLICT: the group is
+ * not on top of the agent's stack (newer edits first), which is not a lost connection.
+ */
+export function historyResult(r: {
+  ok: boolean
+  data?: unknown
+  errors?: readonly { code: string; message?: string }[]
+}): McpHistoryResult {
+  if (r.ok) return { ok: true, stale: (r.data as { stale?: boolean } | undefined)?.stale === true }
+  const e = r.errors?.[0]
+  const message = e?.message ?? "The document refused it."
+  return e?.code === "REVISION_CONFLICT"
+    ? { ok: false, stale: false, conflict: true, message }
+    : { ok: false, stale: false, message }
+}
+
 function readOnlyReasonOf(s: FileDocumentSession): string | null {
   if (s.store.readOnly) return s.store.readOnly.reason
   const st = s.state()
@@ -373,11 +391,22 @@ export async function startDocumentHostService(
       .catch(() => policies)
   }
   await refreshPolicies()
+  // Settings › "Ask before destructive or out-of-scope ops" (D14): off, no client's destructive
+  // edits wait for approval, whatever its own `confirmDestructive` says.
+  let askBeforeDestructive = true
+  const effectivePolicy = (p: ClientPolicy): ClientPolicy =>
+    askBeforeDestructive || !p.confirmDestructive ? p : { ...p, confirmDestructive: false }
+  askBeforeDestructive = await bridge
+    .invoke<{ askBeforeDestructive?: boolean }>("kimo_mcp_server_settings_get", {})
+    .then(
+      (s) => s?.askBeforeDestructive ?? true,
+      () => true,
+    )
   const runtime = createMcpHostRuntime({
     host,
     approvals: "ask",
     ...(options.approvalTimeoutMs ? { approvalTimeoutMs: options.approvalTimeoutMs } : {}),
-    policyFor: (id) => policies[id.client] ?? DEFAULT_POLICY,
+    policyFor: (id) => effectivePolicy(policies[id.client] ?? DEFAULT_POLICY),
     activity: options.activity ?? bridgeActivityStore(bridge),
     onActivity: (fileId, entry) => void bridge.emit("kimo://mcp-activity", { fileId, entry }),
     handlerOptions: {
@@ -431,9 +460,17 @@ export async function startDocumentHostService(
         const { [client]: _gone, ...rest } = policies
         policies = rest
       }
-      runtime.setClientPolicy(client, policy ?? DEFAULT_POLICY)
+      runtime.setClientPolicy(client, effectivePolicy(policy ?? DEFAULT_POLICY))
     },
   )
+  await listen<{ askBeforeDestructive?: boolean }>("kimo://mcp-status", (s) => {
+    const next = s?.askBeforeDestructive ?? askBeforeDestructive
+    if (next === askBeforeDestructive) return
+    askBeforeDestructive = next
+    const clients = new Set(runtime.connections().map((c) => c.identity.client))
+    for (const c of clients)
+      runtime.setClientPolicy(c, effectivePolicy(policies[c] ?? DEFAULT_POLICY))
+  })
 
   const identityOf = (
     client: string | undefined,
@@ -856,8 +893,22 @@ export async function startDocumentHostService(
         action: "undo",
         ...(typeof args.undoToken === "string" ? { token: args.undoToken } : {}),
       })
-      const r = out.result
-      return { ok: r.ok, stale: r.ok ? (r.data as { stale?: boolean }).stale === true : false }
+      return historyResult(out.result)
+    },
+    /**
+     * Redo an agent's undone op group (AgentsController.redoEntry, board 24 h). With `undoToken`,
+     * only that group (refused with `conflict` when it is not the last one undone).
+     */
+    async agentRedo(args) {
+      const conn = runtime.connections().find((c) => c.origin === args.origin && !c.closed)
+      const docId = host.docIdForPath(String(args.ref))
+      if (!conn || !docId) return { ok: false, stale: false }
+      const out = await conn.call("kimo_history", {
+        docId,
+        action: "redo",
+        ...(typeof args.undoToken === "string" ? { token: args.undoToken } : {}),
+      })
+      return historyResult(out.result)
     },
   }
   await listen<Rpc>(HOST_EVENTS.rpc, async ({ from, id, method, args }) => {

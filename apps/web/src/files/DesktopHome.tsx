@@ -22,7 +22,8 @@ import {
   IconButton,
   Segmented,
 } from "@kimo/ui"
-import { Folder, FolderGit2, LayoutGrid, List, Plus } from "lucide-react"
+import { Ellipsis, Folder, FolderGit2, LayoutGrid, List, Plus } from "lucide-react"
+import type { MouseEvent, ReactNode } from "react"
 import { displayDir, modifiedLabel } from "../platform/format"
 
 /** GIT column label and dot tone (board 16 rows). */
@@ -54,33 +55,70 @@ export interface LocalFoldersProps {
   /** "+": add a folder (`dialogs.pickFolder` → `recents.addFolder`). */
   onAdd?: () => void
   onOpenFolder?: (folder: WatchedFolder) => void
+  /** The folder whose section Home shows (board 37 fiCwk active row, `aria-current=page`). */
   activeRef?: string | null
+  /**
+   * Board 37 Vgu6J / InPFe: the folder menu, from the ⋯ that replaces the branch on hover
+   * (`button`) or a right-click on the row (`event`).
+   */
+  onMenu?: (folder: WatchedFolder, from: { button: HTMLElement } | { event: MouseEvent }) => void
+  /** The folder whose menu is open (its ⋯ stays shown, fill bg-muted). */
+  menuRef?: string | null
 }
 
 /** Sidebar section "LOCAL FOLDERS". */
-export function LocalFolders({ folders, onAdd, onOpenFolder, activeRef }: LocalFoldersProps) {
+export function LocalFolders({
+  folders,
+  onAdd,
+  onOpenFolder,
+  activeRef,
+  onMenu,
+  menuRef,
+}: LocalFoldersProps) {
   return (
     <>
       <div className="kimo-files-folders-header" data-pen="fgqWk">
         <span className="kimo-files-folders-header__label">LOCAL FOLDERS</span>
-        <IconButton
-          className="kimo-files-folders-header__add"
-          label="Add folder"
-          icon={<Plus />}
-          tone="quiet"
-          onClick={onAdd}
-        />
+        {onAdd && (
+          <IconButton
+            className="kimo-files-folders-header__add"
+            label="Add folder"
+            icon={<Plus />}
+            tone="quiet"
+            onClick={onAdd}
+          />
+        )}
       </div>
       {folders.map((f) => {
         const Icon = f.git ? FolderGit2 : Folder
+        const active = activeRef === f.ref
+        const open = () => onOpenFolder?.(f)
         return (
-          <button
+          // biome-ignore lint/a11y/useSemanticElements: the row holds its own ⋯ button
+          <div
             key={f.ref}
-            type="button"
-            className={`kimo-files-folder${activeRef === f.ref ? " kimo-files-folder--active" : ""}`}
+            role="link"
+            tabIndex={0}
+            className={cx(
+              "kimo-files-folder",
+              active && "kimo-files-folder--active",
+              menuRef === f.ref && "kimo-files-folder--menu",
+            )}
+            {...(active ? { "aria-current": "page" as const } : {})}
             title={f.ref}
             data-folder={f.ref}
-            onClick={() => onOpenFolder?.(f)}
+            onClick={open}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.target === e.currentTarget) open()
+            }}
+            onContextMenu={
+              onMenu
+                ? (e) => {
+                    e.preventDefault()
+                    onMenu(f, { event: e })
+                  }
+                : undefined
+            }
           >
             <Icon className="kimo-files-folder__icon" aria-hidden="true" />
             <span className="kimo-files-folder__label">{f.label}</span>
@@ -92,12 +130,29 @@ export function LocalFolders({ folders, onAdd, onOpenFolder, activeRef }: LocalF
               </span>
             )}
             {f.git?.branch && <span className="kimo-files-folder__branch">{f.git.branch}</span>}
-          </button>
+            {onMenu && (
+              <IconButton
+                className="kimo-files-folder__menu"
+                label={`More actions for ${f.label}`}
+                aria-haspopup="menu"
+                aria-expanded={menuRef === f.ref}
+                icon={<Ellipsis />}
+                tone="quiet"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onMenu(f, { button: e.currentTarget })
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            )}
+          </div>
         )
       })}
     </>
   )
 }
+
+const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ")
 
 export type RecentView = "list" | "grid"
 
@@ -108,20 +163,34 @@ const VIEWS = [
 
 export interface RecentFilesHeaderProps {
   folderCount: number
-  view: RecentView
-  onViewChange: (view: RecentView) => void
+  /** Board 37 §1: the section's count ("24 files"); default "Recent files". */
+  title?: string
+  /** Default "from 3 folders on disk · sorted by modified". */
+  note?: string
+  view?: RecentView
+  /** Without a handler the view toggle is not shown (Templates, Trash). */
+  onViewChange?: (view: RecentView) => void
 }
 
 /** "Recent files" · "from 3 folders on disk · sorted by modified" · view toggle. */
-export function RecentFilesHeader({ folderCount, view, onViewChange }: RecentFilesHeaderProps) {
+export function RecentFilesHeader({
+  folderCount,
+  title = "Recent files",
+  note,
+  view,
+  onViewChange,
+}: RecentFilesHeaderProps) {
   return (
     <div className="kimo-files-recent-header" data-pen="Xp6lo">
-      <h2 className="kimo-files-recent-header__title">Recent files</h2>
+      <h2 className="kimo-files-recent-header__title">{title}</h2>
       <span className="kimo-files-recent-header__note">
-        from {folderCount} folder{folderCount === 1 ? "" : "s"} on disk · sorted by modified
+        {note ??
+          `from ${folderCount} folder${folderCount === 1 ? "" : "s"} on disk · sorted by modified`}
       </span>
       <span className="kimo-files-recent-header__spacer" aria-hidden="true" />
-      <Segmented label="View" options={VIEWS} value={view} onChange={onViewChange} />
+      {onViewChange && view && (
+        <Segmented label="View" options={VIEWS} value={view} onChange={onViewChange} />
+      )}
     </div>
   )
 }
@@ -131,11 +200,24 @@ export interface RecentFilesProps {
   now: number
   selected?: string | null
   onOpen: (file: RecentFile) => void
-  onMenu?: (file: RecentFile, anchor: HTMLElement) => void
+  /** The ⋯ menu (list) or right-click (list and grid). */
+  onMenu?: (file: RecentFile, from: { button: HTMLElement } | { event: MouseEvent }) => void
+  /** The file whose menu is open (⋯ fill bg-muted / card thumbnail stroke accent). */
+  menuRef?: string | null
+  /** Board 37 zucQA: the row being renamed shows this field in its Name cell. */
+  renaming?: { ref: string; field: ReactNode } | null
 }
 
 /** List view: header + one FileRow per file. */
-export function RecentFilesList({ files, now, selected, onOpen, onMenu }: RecentFilesProps) {
+export function RecentFilesList({
+  files,
+  now,
+  selected,
+  onOpen,
+  onMenu,
+  menuRef,
+  renaming,
+}: RecentFilesProps) {
   return (
     <div className="kimo-files-list" data-pen="eso4o">
       <FileRowHeader />
@@ -152,8 +234,21 @@ export function RecentFilesList({ files, now, selected, onOpen, onMenu }: Recent
             gitLabel={git.label}
             gitTone={git.tone}
             selected={selected === f.ref}
-            onOpen={() => onOpen(f)}
-            {...(onMenu ? { onMenu: (e) => onMenu(f, e.currentTarget) } : {})}
+            missing={f.missing}
+            menuOpen={menuRef === f.ref}
+            {...(renaming?.ref === f.ref ? { nameSlot: renaming.field } : {})}
+            onOpen={() => {
+              if (renaming?.ref !== f.ref) onOpen(f)
+            }}
+            {...(onMenu
+              ? {
+                  onMenu: (e) => onMenu(f, { button: e.currentTarget }),
+                  onContextMenu: (e) => {
+                    e.preventDefault()
+                    onMenu(f, { event: e })
+                  },
+                }
+              : {})}
           />
         )
       })}
@@ -167,7 +262,14 @@ export function RecentFilesGrid({
   folders,
   now,
   onOpen,
-}: RecentFilesProps & { folders: readonly WatchedFolder[] }) {
+  onMenu,
+  menuRef,
+  info,
+}: RecentFilesProps & {
+  folders: readonly WatchedFolder[]
+  /** Card info line; default "folder · branch · modified". */
+  info?: (file: RecentFile) => string
+}) {
   const rows: RecentFile[][] = []
   for (let i = 0; i < files.length; i += 4) rows.push(files.slice(i, i + 4))
   return (
@@ -178,10 +280,22 @@ export function RecentFilesGrid({
             <FileCard
               key={f.ref}
               data-file={f.ref}
-              className="kimo-files-grid__card"
+              className={cx(
+                "kimo-files-grid__card",
+                menuRef === f.ref && "kimo-files-grid__card--menu",
+                f.missing && "kimo-files-grid__card--missing",
+              )}
               name={f.name}
-              info={gridInfo(f, folders, now)}
+              info={info ? info(f) : gridInfo(f, folders, now)}
               onClick={() => onOpen(f)}
+              {...(onMenu
+                ? {
+                    onContextMenu: (e) => {
+                      e.preventDefault()
+                      onMenu(f, { event: e })
+                    },
+                  }
+                : {})}
             />
           ))}
           {["pad-a", "pad-b", "pad-c"].slice(0, 4 - row.length).map((k) => (
@@ -195,7 +309,7 @@ export function RecentFilesGrid({
 
 /** Adds a watched folder through the folder picker. Resolves to the folder or null. */
 export async function addWatchedFolder(platform: KimoPlatform): Promise<string | null> {
-  const ref = await platform.dialogs.pickFolder({ title: "Add folder" }).catch(() => null)
+  const ref = await platform.dialogs.pickFolder({ title: "Add folder" })
   if (ref) await platform.recents.addFolder(ref)
   return ref
 }

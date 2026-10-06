@@ -186,7 +186,13 @@ function LayerTree({
   const treeRev = useLayerTreeRev(m3)
   // Board 27 §8 Kpf1o: instances with broken overrides (memoized per tree rev + variables).
   const broken = m3.brokenInstances()
-  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  // `selection`: the selection before the right-click (Child Menu "Replace with selection").
+  const [menu, setMenu] = useState<{
+    id: string
+    x: number
+    y: number
+    selection: readonly string[]
+  } | null>(null)
   /** Board 27 §2 (c): a row drag in progress. */
   const [drag, setDrag] = useState<{
     ids: readonly string[]
@@ -365,7 +371,7 @@ function LayerTree({
       select,
       apply: (op, label) => latest.current.apply(op, label),
       hover: (id) => latest.current.ui.getState().setHovered(id),
-      menu: (id, x, y) => setMenu({ id, x, y }),
+      menu: (id, x, y) => setMenu({ id, x, y, selection: latest.current.ui.getState().selection }),
       contextSelect: (id) => {
         const u = latest.current.ui.getState()
         if (!u.selection.includes(id))
@@ -612,7 +618,15 @@ function LayerTree({
           style={{ height: (rows.length - end) * ROW_PITCH - ROW_GAP }}
         />
       )}
-      {menu && <ChildMenu m3={m3} id={menu.id} at={menu} onClose={() => setMenu(null)} />}
+      {menu && (
+        <ChildMenu
+          m3={m3}
+          id={menu.id}
+          at={menu}
+          selection={menu.selection}
+          onClose={() => setMenu(null)}
+        />
+      )}
       {drag?.drop && drag.drop.kind !== "into" && (
         <DropIndicator
           className="layer-tree__drop"
@@ -707,8 +721,9 @@ const LayerItem = memo(function LayerItem({
       return
     }
     e.preventDefault()
-    actions.select(id, { shiftKey: false, metaKey: false, ctrlKey: false })
+    // Menu first: it keeps the selection from before this row is selected.
     actions.menu(id, e.clientX, e.clientY)
+    actions.select(id, { shiftKey: false, metaKey: false, ctrlKey: false })
   }
   if (dropInto)
     return (
@@ -734,6 +749,7 @@ const LayerItem = memo(function LayerItem({
         selected={selected}
         emphasized={depth === 0}
         onClick={(e) => actions.select(id, e)}
+        onContextMenu={onContextMenu}
         onPointerEnter={() => actions.hover(id)}
       />
     )
@@ -805,6 +821,7 @@ const LayerItem = memo(function LayerItem({
         }
         onSelect={(e) => actions.select(id, e)}
         onHover={() => actions.hover(id)}
+        onContextMenu={onContextMenu}
         onRename={(name) => actions.apply({ op: "update", id, set: { name } }, "Rename layer")}
       />
     )
@@ -875,6 +892,7 @@ function AgentLayerRow({
   onToggleVisible,
   onSelect,
   onHover,
+  onContextMenu,
   onRename,
 }: {
   kind: "note" | "prompt" | "placeholder"
@@ -892,6 +910,8 @@ function AgentLayerRow({
   onToggleVisible(): void
   onSelect(e: Mods): void
   onHover(): void
+  /** Board 27 §2: the layer row context menu (the canvas menu's commands). */
+  onContextMenu(e: React.MouseEvent): void
   onRename(name: string): void
 }) {
   const [renaming, setRenaming] = useState(false)
@@ -925,6 +945,7 @@ function AgentLayerRow({
         .join(" ")}
       style={{ paddingLeft: 8 + 14 * depth }}
       onClick={(e) => onSelect(e)}
+      onContextMenu={onContextMenu}
       onPointerEnter={onHover}
       onDoubleClick={(e) => {
         if ((e.target as HTMLElement).closest("button")) return

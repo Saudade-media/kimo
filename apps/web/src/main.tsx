@@ -18,7 +18,9 @@ if (!container) throw new Error("Kimo: #root element missing from index.html")
 initTheme()
 // One platform + session manager per window (ADR 0012); files the window was started with
 // (argv, file association, deep links) open in the editor route.
-void createAppRuntime((session, request) => navigate(diskPath(session.ref, request.node))).then(
+void createAppRuntime((session, request) =>
+  navigate(diskPath(session.ref, request.node, request.page)),
+).then(
   (runtime) => {
     // General › Appearance drives `[data-theme]` (system follows prefers-color-scheme live).
     bindAppearance(runtime.platform.settings, setTheme)

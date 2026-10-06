@@ -10,30 +10,34 @@ import type { KimoPlatform, SettingsPane } from "@kimo/platform"
 import { useFocusTrap } from "@kimo/ui"
 import { useEffect, useRef, useState } from "react"
 import { matches } from "../shortcuts/shortcuts"
-import { DEFAULT_PANE, parseSettingsHash, settingsHash } from "./model"
+import { DEFAULT_PANE, parseSettingsFocus, parseSettingsHash, settingsHash } from "./model"
 import { SettingsView, type SettingsViewProps } from "./SettingsView"
 
 /** Opens Settings; resolves `"dialog"` when the caller must show {@link SettingsDialog}. */
 export async function openSettings(
   platform: KimoPlatform,
   pane: SettingsPane = DEFAULT_PANE,
+  focus: string | null = null,
 ): Promise<"window" | "dialog"> {
   try {
-    return await platform.window.openSettings(pane)
+    return await platform.window.openSettings(pane, focus)
   } catch {
     return "dialog"
   }
 }
 
 export interface SettingsDialogProps
-  extends Omit<SettingsViewProps, "variant" | "pane" | "onPaneChange" | "onClose"> {
+  extends Omit<SettingsViewProps, "variant" | "pane" | "onPaneChange" | "onClose" | "focus"> {
   initialPane?: SettingsPane
+  /** What the first pane opens on (an MCP client, `usage`). */
+  initialFocus?: string | null
   onClose: () => void
 }
 
 /** The in-app Settings dialog (web). Escape, an outside press and the red light close it. */
 export function SettingsDialog({
   initialPane = DEFAULT_PANE,
+  initialFocus = null,
   onClose,
   ...rest
 }: SettingsDialogProps) {
@@ -62,6 +66,7 @@ export function SettingsDialog({
         {...rest}
         variant="dialog"
         pane={pane}
+        focus={pane === initialPane ? initialFocus : null}
         onPaneChange={setPane}
         onClose={onClose}
       />
@@ -80,6 +85,7 @@ export function SettingsRoute(
       {...rest}
       variant="window"
       pane={pane}
+      focus={parseSettingsFocus(hash)}
       onPaneChange={(p) => {
         location.hash = settingsHash(p)
       }}

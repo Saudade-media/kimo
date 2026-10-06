@@ -158,12 +158,17 @@ pub fn rotate_http_token(paths: &KimoPaths, client: &str) -> R<(String, BTreeMap
 
 // --- Server settings and log --------------------------------------------------------------------
 
-/// `~/.kimo/mcp/server.json`: Settings › Agents › "Start server when Kimo opens" (default on).
+/// `~/.kimo/mcp/server.json`: Settings › Agents › "Start server when Kimo opens" and "Ask before
+/// destructive or out-of-scope ops" (both default on).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerSettings {
     #[serde(default = "default_true")]
     pub start_on_launch: bool,
+    /// Off: no client's destructive edits wait for approval, whatever its own policy says (the
+    /// document host ANDs this with each policy's `confirmDestructive`).
+    #[serde(default = "default_true")]
+    pub ask_before_destructive: bool,
 }
 
 fn default_true() -> bool {
@@ -174,6 +179,7 @@ impl Default for ServerSettings {
     fn default() -> Self {
         Self {
             start_on_launch: true,
+            ask_before_destructive: true,
         }
     }
 }

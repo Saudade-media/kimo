@@ -15,6 +15,8 @@ import type { HostOS, SettingsApi } from "@kimo/platform"
 import type { PopoverAnchor } from "@kimo/ui"
 import { MenuDense, MenuDivider, MenuItemDense } from "@kimo/ui"
 import { type CanvasViewPrefs, toggleViewPref, type ViewToggleKey } from "../canvas/view-prefs"
+import { usesMacGlyphs } from "./FileMenu"
+import { useFailureToast } from "./failure-toast"
 
 /** F5DXf `width: 244`. */
 export const VIEW_MENU_WIDTH = 244
@@ -30,12 +32,14 @@ export interface ViewMenuProps {
   zoomToFit(): void
   zoomToSelection(): void
   onPreview(): void
+  /** E10: the frame Preview would open (`usePreviewTarget`); null disables Preview (no frames). */
+  previewTarget?: string | null
   onClose(): void
 }
 
 /** The design's macOS glyphs; off macOS ⌘ reads Ctrl+ and ⇧ reads Shift+ (board 20 VJFSo). */
 export function viewMeta(os: HostOS, mac: string): string {
-  if (os === "macos" || os === "web") return mac
+  if (usesMacGlyphs(os)) return mac
   return mac.replace("⇧", "Shift+").replace("⌘", "Ctrl+")
 }
 
@@ -45,7 +49,9 @@ export function ViewMenu(props: ViewMenuProps) {
     onClose()
     f()
   }
-  const toggle = (key: ViewToggleKey) => run(() => toggleViewPref(settings, key))
+  const fail = useFailureToast()
+  const toggle = (key: ViewToggleKey) =>
+    run(() => toggleViewPref(settings, key, (e) => fail("change the view setting", e)))
   const m = (mac: string) => viewMeta(os, mac)
   return (
     <MenuDense
@@ -96,7 +102,12 @@ export function ViewMenu(props: ViewMenuProps) {
         toggled={prefs.layerNames}
         onSelect={toggle("canvas.layerNames")}
       />
-      <MenuItemDense label="Preview" meta={m("⇧Space")} onSelect={run(props.onPreview)} />
+      <MenuItemDense
+        label="Preview"
+        meta={m("⇧Space")}
+        disabled={props.previewTarget === null}
+        onSelect={run(props.onPreview)}
+      />
     </MenuDense>
   )
 }

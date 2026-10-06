@@ -529,6 +529,13 @@
   box-sizing: border-box;
   box-shadow: inset 0 0 0 1.5px var(--kimo-agent);
 }
+/* Activity row hover: each target of the entry outlined in $agent (same stroke as a ghost). */
+.agents-highlight {
+  position: absolute;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1.5px var(--kimo-agent);
+  pointer-events: none;
+}
 /* delete: box opacity 0.4 + danger stroke; the canvas-coloured veil fades the node under it. */
 .agents-ghost--delete .agents-ghost__chip {
   background: var(--kimo-danger-soft);
@@ -1373,4 +1380,23 @@
   gap: 6px;
   padding: 8px 12px 4px;
   border-top: 1px solid var(--kimo-border);
+}
+
+/* Board 37 F7 Banner · Error (DwSsz): Banner/Danger above the footer, padding [8, 12],
+   alignItems start, radius-md, 1 px danger-soft stroke; Message (uBHpk) column, gap 2, start;
+   Actions and Dismiss hidden. */
+.agents-config-diff__banner.kimo-banner {
+  flex: none;
+  align-items: flex-start;
+  padding: 8px 12px;
+  border-radius: var(--kimo-radius-md);
+  box-shadow: inset 0 0 0 1px var(--kimo-danger-soft);
+}
+.agents-config-diff__banner .kimo-banner__message {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.agents-config-diff__banner .kimo-banner__body {
+  flex: none;
 }

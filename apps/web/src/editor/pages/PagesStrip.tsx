@@ -9,6 +9,7 @@
  * collapsed strip is just the header (state per file).
  */
 import { pagesOf } from "@kimo/editor-state"
+import { formatDeepLink } from "@kimo/platform"
 import {
   Dialog,
   DialogScrim,
@@ -24,6 +25,10 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useDocHeader } from "../../lib/header"
 import { useTreeRevision, useUi } from "../../lib/hooks"
 import { Icon } from "../../lib/icons"
+import { isUntitledRef } from "../../platform/contract"
+import { shortcutLabel } from "../../shortcuts/shortcuts"
+import { failureText } from "../errors"
+import { keyHint } from "../kbd"
 import type { M3Controller } from "../m3/controller"
 import type { FileSession } from "../session"
 import {
@@ -64,6 +69,12 @@ export function usePageList(session: FileSession) {
   }, [header, page, session.store])
 }
 
+/** The active page's name (topbar breadcrumb): live on rename, switch, add and delete. */
+export function useActivePageName(session: FileSession): string {
+  const { pages, active } = usePageList(session)
+  return (pages.find((p) => p.id === active) ?? pages[0])?.name ?? ""
+}
+
 interface DragState {
   id: string
   from: number
@@ -84,12 +95,18 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
   const [drag, setDrag] = useState<DragState | null>(null)
   const list = useRef<HTMLDivElement>(null)
 
-  // "Copy link to page": a link with `page=<id>` opens on that page.
+  // "Copy link to page": a link with `page=<id>` opens on that page, on mount and when a deep
+  // link re-routes to the already open file.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per mounted file
   useEffect(() => {
-    const query = location.hash.split("?")[1]
-    const id = query ? new URLSearchParams(query).get("page") : null
-    if (id && pagesOf(session.store).some((p) => p.id === id)) activatePage(ctx, id)
+    const go = () => {
+      const query = location.hash.split("?")[1]
+      const id = query ? new URLSearchParams(query).get("page") : null
+      if (id && pagesOf(session.store).some((p) => p.id === id)) activatePage(ctx, id)
+    }
+    go()
+    window.addEventListener("hashchange", go)
+    return () => window.removeEventListener("hashchange", go)
   }, [session.id])
 
   const toggleCollapsed = () => {
@@ -223,6 +240,12 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
                   if (!renaming) activatePage(ctx, id)
                 }}
                 onDoubleClick={() => setRenaming({ id })}
+                onKeyDown={(e) => {
+                  // E9: ⌫ / Delete on the focused row asks to delete the page (the menu's hint).
+                  if (renaming || !isDeleteKey(e)) return
+                  e.preventDefault()
+                  askDelete(id)
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   setMenu({ id, x: e.clientX, y: e.clientY })
@@ -259,6 +282,12 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
           label="Page menu"
           autoFocus
           onClose={() => setMenu(null)}
+          onKeyDown={(e) => {
+            if (!isDeleteKey(e) || pages.length <= 1) return
+            e.preventDefault()
+            askDelete(menu.id)
+            setMenu(null)
+          }}
           anchor={{ x: menu.x, y: menu.y, width: 0, height: 0 }}
         >
           <MenuItemDense
@@ -279,10 +308,18 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
           />
           <MenuItemDense
             label="Copy link to page"
-            disabled={menu.id === null}
+            disabled={menu.id === null || pageLink(session, menu.id) === null}
             onSelect={() => {
-              if (menu.id) void copyPageLink(menu.id)
+              const id = menu.id
+              const name = pages.find((p) => p.id === id)?.name ?? ""
               setMenu(null)
+              if (id)
+                void copyPageLink(session, id).then(
+                  () =>
+                    m3.toast({ tone: "success", icon: "link-2", text: `Copied link to ${name}` }),
+                  (e: unknown) =>
+                    m3.toast({ tone: "danger", text: failureText("copy the link", e) }),
+                )
             }}
           />
           <MenuDivider />
@@ -306,7 +343,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
           <MenuItemDense
             className="pages-strip__menu-delete"
             label="Delete page…"
-            meta="⌫"
+            meta={DELETE_KEY}
             disabled={pages.length <= 1}
             onSelect={() => {
               askDelete(menu.id)
@@ -321,7 +358,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
             size="sm"
             icon={<Icon name="trash-2" size={16} />}
             title={`Delete “${confirm.name}”?`}
-            description={`Its ${confirm.layers} ${confirm.layers === 1 ? "layer is" : "layers are"} removed from this file. You can undo with ⌘Z until you close the file.`}
+            description={`Its ${confirm.layers} ${confirm.layers === 1 ? "layer is" : "layers are"} removed from this file. You can undo with ${keyHint("undo", "⌘Z")} until you close the file.`}
             confirmLabel="Delete page"
             confirmTone="danger"
             onCancel={() => setConfirm(null)}
@@ -336,19 +373,40 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
   )
 }
 
-/** "Copy link to page": the editor URL with `page=<id>` (opening it activates the page). */
-async function copyPageLink(id: string): Promise<void> {
+/**
+ * "Copy link to page" (E9): on the desktop a `kimo://open?path=…&page=<id>` deep link (the
+ * window's own URL is an internal `tauri://` one); in a browser the editor URL with
+ * `page=<id>`. Opening either activates the page. Null when the file has no shareable link
+ * (a never-saved file on the desktop).
+ */
+export function pageLink(session: FileSession, id: string): string | null {
+  const doc = session.document
+  if (doc?.manager.platform.capabilities.deepLinks) {
+    if (isUntitledRef(doc.ref)) return null
+    return formatDeepLink({ action: "open", path: doc.ref, page: id })
+  }
   const url = new URL(location.href)
   const [route, query = ""] = url.hash.split("?")
   const params = new URLSearchParams(query)
   params.set("page", id)
   url.hash = `${route}?${params.toString()}`
-  try {
-    await navigator.clipboard.writeText(url.toString())
-  } catch {
-    // Clipboard denied (no user activation): nothing else to do.
-  }
+  return url.toString()
 }
+
+async function copyPageLink(session: FileSession, id: string): Promise<void> {
+  const link = pageLink(session, id)
+  if (!link) throw new Error("Save the file first")
+  // The desktop's own clipboard write works outside a user gesture (WKWebView, audit G3).
+  const clipboard = session.document?.manager.platform.clipboard ?? navigator.clipboard
+  if (!clipboard) throw new Error("The clipboard isn't available")
+  await clipboard.writeText(link)
+}
+
+const isDeleteKey = (e: { key: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean }) =>
+  (e.key === "Backspace" || e.key === "Delete") && !e.metaKey && !e.ctrlKey && !e.altKey
+
+/** The key that deletes the focused page row (the menu's hint). */
+const DELETE_KEY = shortcutLabel("delete")
 
 /**
  * Board 27 §1 (d) wsA6U: the footer is a button — "1 page" / "N pages" (live) and Kbd ⌘P; click
@@ -372,7 +430,7 @@ export function PagesFooter({
       </span>
       <span className="left-panel__footer-label">{n === 1 ? "1 page" : `${n} pages`}</span>
       <span className="left-panel__footer-spacer" />
-      <Kbd>⌘P</Kbd>
+      <Kbd>{shortcutLabel("pageSwitcher")}</Kbd>
     </button>
   )
 }

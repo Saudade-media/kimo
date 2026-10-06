@@ -1,15 +1,16 @@
 /**
- * Board 37 §2 Templates (B1): the bundled examples (`examples/<dir>`, merge-demo excluded) with
- * their `preview.png`. Picking one copies the file and opens it, no dialog (rules "Templates"):
+ * Board 37 §2 Templates (B1): the templates bundled with Kimo (`@kimo/templates`) with their
+ * cover images. Picking one copies the file and opens it, no dialog (rules "Templates"):
  * - desktop writes it to Files › New files go to, `landing 2.kimo` on a taken name, and copies an
  *   imported library next to it (the `imports` path is rewritten) so the import still resolves;
  * - web adds it to the browser library under the template name (`Landing page 2` when taken)
  *   and stores the imported library as the file's library snapshot.
- * The documents load lazily (their own chunk); the previews are asset URLs.
+ * The documents load lazily (fetched on pick); the covers are asset URLs.
  */
 import type { KimoDocument } from "@kimo/core-schema"
 import { serialize } from "@kimo/editor-state"
 import { type FileRef, KIMO_FILE_FILTER, type KimoPlatform } from "@kimo/platform"
+import { getTemplate, listTemplates, loadTemplate } from "@kimo/templates"
 import { LibraryManager } from "../editor/m3/libraries"
 import { importKimoFile, listFiles, patchFile } from "../lib/files"
 import { defaultNewFilesDir } from "../settings/model"
@@ -35,45 +36,24 @@ export interface Template {
   library?: TemplateLibrary
 }
 
-/** The five templates, in the board's order (xBv9b › cOoFh). */
-export const TEMPLATES: readonly Template[] = [
-  { dir: "landing-page", file: "landing.kimo", name: "Landing page", info: "Auto layout page" },
-  { dir: "mobile-app", file: "streak.kimo", name: "Habit tracker", info: "3 mobile screens" },
-  { dir: "dashboard", file: "dashboard.kimo", name: "Dashboard", info: "Variants, 2 themes" },
-  {
-    dir: "design-system",
-    file: "kimo-ds.lib.kimo",
-    name: "Design system",
-    info: "Library to import",
-  },
-  {
-    dir: "library-consumer",
-    file: "settings.kimo",
-    name: "Settings page",
-    info: "Imports the library",
-    library: { alias: "ds", dir: "design-system", file: "kimo-ds.lib.kimo" },
-  },
-]
+/**
+ * The templates bundled with Kimo (`@kimo/templates`, 10 files built by
+ * `scripts/build-templates.ts`): each is self-contained, with its own component library and
+ * tokens, so none imports a library.
+ */
+export const TEMPLATES: readonly Template[] = listTemplates().map((t) => ({
+  dir: t.slug,
+  file: `${t.slug}.kimo`,
+  name: t.name,
+  info: t.category,
+}))
 
-const documents = import.meta.glob<string>("../../../../examples/*/*.kimo", {
-  query: "?raw",
-  import: "default",
-})
-const previews = import.meta.glob<string>("../../../../examples/*/preview.png", {
-  query: "?url",
-  import: "default",
-  eager: true,
-})
+/** The template's cover PNG URL. */
+export const previewUrl = (dir: string): string | undefined => getTemplate(dir)?.cover
 
-/** The template's `preview.png` URL. */
-export const previewUrl = (dir: string): string | undefined =>
-  previews[`../../../../examples/${dir}/preview.png`]
-
-/** Text of `examples/<dir>/<file>`. */
-export async function loadExample(dir: string, file: string): Promise<string> {
-  const load = documents[`../../../../examples/${dir}/${file}`]
-  if (!load) throw new Error(`The ${file} template is missing from this build`)
-  return load()
+/** Text of a bundled template (`dir` is its slug). */
+export async function loadExample(dir: string, _file: string): Promise<string> {
+  return loadTemplate(dir)
 }
 
 /** A consumer document with `imports[alias]` pointed at `path`, in canonical form. */

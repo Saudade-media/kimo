@@ -15,7 +15,7 @@
  * Duplicate, Design systems count (B4, B7).
  */
 import type { Page } from "playwright"
-import { disk, LOOM, open, readFile, SITE } from "./m4-app.e2e"
+import { disk, LOOM, open, SITE } from "./m4-app.e2e"
 import { type E2EContext, expect, type Scenario } from "./run"
 
 const KIMO_SITE = "/Users/me/Work/kimo-site"
@@ -119,13 +119,14 @@ export const scenarios: Scenario[] = [
       // Templates, Design systems, Trash.
       await page.locator('a.home-nav[href="#/templates"]').click()
       await page.locator(".home-template-card").first().waitFor()
-      expect((await page.locator(".home-template-card").count()) === 5, "5 templates")
+      expect((await page.locator(".home-template-card").count()) === 10, "10 templates")
       const names = await page.locator(".home-template-card__name").allInnerTexts()
       expect(
-        names.join() === "Landing page,Habit tracker,Dashboard,Design system,Settings page",
+        names.join() ===
+          "Keel sales CRM,Oriel studio portfolio,Tidemark subscription analytics,Basalt UI kit,Fernhill home goods store,Offset conference site,Tidewell personal banking,Brisk fitness coach,Fieldwork project tracker,Ledgerline marketing site",
         `templates ${names}`,
       )
-      await page.getByRole("searchbox", { name: "Search templates" }).fill("dash")
+      await page.getByRole("searchbox", { name: "Search templates" }).fill("keel")
       expect((await page.locator(".home-template-card").count()) === 1, "search scope")
 
       await page.locator('a.home-nav[href="#/libraries"]').click()
@@ -322,56 +323,46 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "board37: Templates create the file (and its library) and open it; failure → Choose folder…",
+    name: "board37: Templates create the file and open it; failure → Choose folder…",
     async run(ctx) {
       const { page } = ctx
       await home(ctx, "#/templates")
       await page
-        .locator('[data-template="landing-page"]')
+        .locator('[data-template="saas-marketing"]')
         .getByRole("button", { name: /Use the/ })
         .click()
       await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
-      expect((await hash(page)) === disk(`${NEW_DIR}/landing.kimo`), `opened ${await hash(page)}`)
+      expect(
+        (await hash(page)) === disk(`${NEW_DIR}/saas-marketing.kimo`),
+        `opened ${await hash(page)}`,
+      )
       // A taken name gets " 2"; a card click works too.
       await page.evaluate(() => {
         location.hash = "#/templates"
       })
-      await page.locator('[data-template="landing-page"] .home-template-card__thumbnail').click()
-      await page.waitForFunction((h) => location.hash === h, disk(`${NEW_DIR}/landing 2.kimo`), {
-        timeout: 15_000,
-      })
-      // Settings page copies the library next to it and points its import at the copy.
-      await page.evaluate(() => {
-        location.hash = "#/templates"
-      })
-      await page
-        .locator('[data-template="library-consumer"]')
-        .getByRole("button", { name: /Use the/ })
-        .click()
-      await page.waitForFunction((h) => location.hash === h, disk(`${NEW_DIR}/settings.kimo`), {
-        timeout: 15_000,
-      })
-      const settings = (await readFile(page, `${NEW_DIR}/settings.kimo`)) ?? ""
-      expect(settings.includes('"ds":"kimo-ds.lib.kimo"'), "import rewritten")
-      expect((await readFile(page, `${NEW_DIR}/kimo-ds.lib.kimo`)) !== null, "library copied")
-
+      await page.locator('[data-template="saas-marketing"] .home-template-card__thumbnail').click()
+      await page.waitForFunction(
+        (h) => location.hash === h,
+        disk(`${NEW_DIR}/saas-marketing 2.kimo`),
+        { timeout: 15_000 },
+      )
       // Failure: Toast/Danger with Choose folder… (Save as…).
       await page.evaluate(() => {
         location.hash = "#/templates"
       })
-      await page.locator('[data-template="dashboard"]').waitFor()
+      await page.locator('[data-template="analytics-dashboard"]').waitFor()
       await page.evaluate((r) => {
         const a = (window as unknown as App).__kimoApp
         a.control.failNextWrite("PERMISSION", "EACCES", r)
         a.platform.dialogs.saveFile = async () => "/Users/me/Work/kimo-site/dash.kimo"
-      }, `${NEW_DIR}/dashboard.kimo`)
+      }, `${NEW_DIR}/analytics-dashboard.kimo`)
       await page
-        .locator('[data-template="dashboard"]')
+        .locator('[data-template="analytics-dashboard"]')
         .getByRole("button", { name: /Use the/ })
         .click()
       await toast(page, "template").waitFor()
       const t = await toast(page, "template").innerText()
-      expect(t.includes("Couldn't create dashboard.kimo. Permission denied."), t)
+      expect(t.includes("Couldn't create analytics-dashboard.kimo. Permission denied."), t)
       await toast(page, "template").getByRole("button", { name: "Choose folder…" }).click()
       await page.waitForFunction(
         (h) => location.hash === h,
@@ -603,7 +594,7 @@ export const scenarios: Scenario[] = [
         timeout: 15_000,
       })
       await page.goto(`${url}#/all`)
-      const card = page.locator(".kimo-file-card", { hasText: "Design system" }).first()
+      const card = page.locator(".kimo-file-card", { hasText: "Basalt UI kit" }).first()
       await card.waitFor({ timeout: 15_000 })
       // Design systems lists it (meta.library) with its component count.
       const libCount = await page

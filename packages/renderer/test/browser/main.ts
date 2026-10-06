@@ -15,10 +15,46 @@ try {
   const t0 = performance.now()
   await r.init()
   const initMs = performance.now() - t0
+  // Spec §7.1 mesh and shader paints: a mesh orb and an animated (@time) shader orb.
+  const orbs = {
+    orbs000001: { type: "frame", parent: null, order: "z", x: 620, y: 300, w: 80, h: 150 },
+    mesh000001: {
+      type: "ellipse",
+      parent: "orbs000001",
+      order: "a",
+      x: 12,
+      y: 0,
+      w: 56,
+      h: 56,
+      fill: {
+        kind: "mesh",
+        cols: 2,
+        rows: 2,
+        colors: ["#BDF4F6", "#3B67C8", "#05566A", "#081A36"],
+        points: [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+          [1, 1],
+        ],
+      },
+    },
+    shad000001: {
+      type: "ellipse",
+      parent: "orbs000001",
+      order: "b",
+      x: 12,
+      y: 80,
+      w: 56,
+      h: 56,
+      fill: { kind: "shader", src: "./shaders/agent-liquid.glsl", uniforms: { u_speed: 1.5 } },
+    },
+  }
   const doc = {
     ...textDoc,
     nodes: {
       ...paintsDoc.nodes,
+      ...orbs,
       ...Object.fromEntries(
         Object.entries(textDoc.nodes).map(([k, v]) => [
           k,
@@ -27,7 +63,15 @@ try {
       ),
     },
   }
-  const scene = sceneOf(doc as never)
+  const shaders = import.meta.glob<string>("../../../../shaders/agent-liquid.glsl", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  })
+  const liquid = Object.values(shaders)[0] ?? ""
+  const scene = sceneOf(doc as never, {
+    "./shaders/agent-liquid.glsl": new TextEncoder().encode(liquid),
+  })
   r.attach(canvas, { dpr })
   r.setDocument(scene)
   r.setLayout(simpleLayout(scene, r.textMeasurer()))
@@ -54,6 +98,11 @@ try {
     icons.load("feather", "x"),
     icons.load("lucide", "no-such-glyph-zz"),
   ])
+  // The shader source loads on first draw; then @time keeps frames coming (~30 fps) unasked.
+  await new Promise((res) => setTimeout(res, 300))
+  const framesBefore = r.stats().frames
+  await new Promise((res) => setTimeout(res, 1000))
+  const shaderFrames = r.stats().frames - framesBefore
   const iconRequests = performance
     .getEntriesByType("resource")
     .filter(isShard)
@@ -61,6 +110,7 @@ try {
   w.__result = {
     initMs,
     stats: r.stats(),
+    shaderFrames,
     errors,
     hit,
     icons: {

@@ -12,7 +12,7 @@
 
 import { referencedAssets } from "@kimo/core-schema"
 import { createLayoutEngine, type LayoutResult } from "@kimo/layout"
-import { KIMO_FILE_FILTER } from "@kimo/platform"
+import { KIMO_OPEN_FILTER } from "@kimo/platform"
 import type { DocumentFontFace, FontFaceKey, OverlayTheme } from "@kimo/renderer"
 import { browserIconProvider, createRenderer } from "@kimo/renderer/browser"
 import { EmptyState } from "@kimo/ui"
@@ -180,6 +180,11 @@ export function Editor({ fileId }: { fileId: string }) {
 export function DiskEditor({ fileRef, node }: { fileRef: string; node?: string | null }) {
   const { manager } = useRuntime()
   const state = useDiskSession(manager, fileRef)
+  const openedRef = state.status === "ready" ? state.session.id : null
+  useEffect(() => {
+    // A `.pen` opens as the `.kimo` it was converted to: show that file's route instead.
+    if (openedRef && openedRef !== fileRef) location.replace(`#${diskPath(openedRef, node)}`)
+  }, [openedRef, fileRef, node])
   if (state.status === "ready")
     return <EditorShell key={state.session.id} session={state.session} focusNode={node ?? null} />
   return (
@@ -526,7 +531,7 @@ function EditorShell({
     // Desktop (and files on disk): a native open dialog through the session manager.
     if (doc || platform.kind === "desktop") {
       const [ref] = await platform.dialogs
-        .openFile({ title: "Open", filters: [KIMO_FILE_FILTER] })
+        .openFile({ title: "Open", filters: [KIMO_OPEN_FILTER] })
         .catch(() => [] as string[])
       if (ref) navigate(diskPath(ref))
       return

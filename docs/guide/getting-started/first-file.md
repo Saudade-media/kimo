@@ -5,7 +5,7 @@
 Kimo opens on **Home**. In the desktop app, **Settings › General › On launch** set to **Last files** (the default) reopens the file that was open when you quit; a window you close yourself is not reopened. From there:
 
 - **New file** (`⌘N`) starts a design. In the desktop app it opens an untitled file right away and asks where to save it the first time you press `⌘S`. The save panel starts in the folder you last saved to, else in **Settings › Files & autosave › New files go to** (`~/Documents/Kimo` by default). In the browser a new file starts from a sample design.
-- **Open file** (`⌘O`) opens a `.kimo` or `.kimoz` file. In the browser this imports a copy into the browser's library.
+- **Open file** (`⌘O`) opens a `.kimo`, `.kimoz` or `.pen` file. In the browser this imports a copy into the browser's library.
 - The sidebar switches what Home shows, and the search box searches that list:
   - **Recents**: the files you opened lately.
   - **All files**: every file Kimo knows. In the desktop app that is Recents plus every `.kimo` file in your local folders; in the browser, the browser's library.
@@ -55,5 +55,14 @@ A `.kimo` file is plain UTF-8 JSON, written so that it diffs and merges well in 
 - Kimo writes the same canonical form every time, so saving without changes changes nothing.
 
 Opening a file made with an older format asks to **Upgrade and save** (or **Open read-only**). A file from a newer Kimo opens read-only.
+
+### Opening `.pen` files
+
+Kimo opens pen.dev `.pen` design files (the plain-JSON format, schema 2.x) like its own: pick one in **Open file**, drop it on the Dock icon, or choose Kimo in Finder's **Open With**. The first time, Kimo converts it into a `.kimo` with the same name in the same folder (`design.pen` → `design.kimo`) and stores its images in `assets/`; that `.kimo` is the file you edit and save. The `.pen` is never changed.
+
+- Opening the same, unchanged `.pen` again reopens that `.kimo`, with your edits.
+- If `design.kimo` already exists and did not come from this `.pen` (or the `.pen` changed since), Kimo writes `design 2.kimo` instead. It never replaces a file.
+- Components, instances and their overrides, slots, variables and themes, auto layout, gradients, images, mesh gradients and shader fills all carry over. Shader files (`.glsl`) stay where they are and are referenced relative to the file.
+- In the browser, only images linked by `https://` URL can be fetched; images next to the `.pen` show as missing.
 
 The full definition is the [file format spec](../../spec/kimo-format-1.0.md). For merging `.kimo` files in git, see [`kimo merge`](../../../packages/cli/README.md#kimo-merge-the-git-merge-driver).

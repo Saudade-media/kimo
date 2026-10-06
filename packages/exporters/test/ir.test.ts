@@ -64,7 +64,8 @@ describe("sizing and placement", () => {
   })
   test("fill → main-axis grow / cross-axis stretch", () => {
     const n = node(ir, "FillMain01")
-    expect(n.w).toEqual({ kind: "fill", axis: "main", weight: 2 })
+    // A fixed-width row: the main axis is shared from a zero basis (§6.1).
+    expect(n.w).toEqual({ kind: "fill", axis: "main", weight: 2, zero: true })
     expect(n.h).toEqual({ kind: "fill", axis: "cross", weight: 1 })
     expect(n.placement).toEqual({ mode: "flow", dir: "row", index: 0, lead: 0 })
   })
@@ -97,6 +98,44 @@ describe("sizing and placement", () => {
       { kind: "fixed", px: { v: 40 } },
     ])
     expect(node(ir, "GroupKid01").placement).toEqual({ mode: "absolute", x: 0, y: 0 })
+  })
+})
+
+describe("fill basis (§6.1)", () => {
+  const fill = { mode: "fill" }
+  const row = (parent: string | null, w: unknown, extra: Record<string, unknown> = {}) => ({
+    type: "frame",
+    parent,
+    w,
+    h: 40,
+    layout: { dir: "row", ...extra },
+  })
+  const kid = (parent: string) => ({ type: "rect", parent, w: fill, h: 10 })
+  const ir = buildIR(
+    doc({
+      Fixed00001: row(null, 400),
+      FixedKid01: kid("Fixed00001"),
+      Nested0001: row("Fixed00001", fill),
+      NestedKid1: kid("Nested0001"),
+      Hug0000001: row(null, { mode: "fit" }),
+      HugKid0001: kid("Hug0000001"),
+      HugFill001: row("Hug0000001", fill),
+      HugFillKid: kid("HugFill001"),
+      Wrap000001: row(null, 400, { wrap: true }),
+      WrapKid001: kid("Wrap000001"),
+    }),
+  )
+  const zero = (id: string) => (node(ir, id).w as { zero?: boolean }).zero
+  test("a definite, non-wrapping parent shares its main axis from a zero basis", () => {
+    expect(zero("FixedKid01")).toBe(true)
+    expect(zero("Nested0001")).toBe(true)
+    expect(zero("NestedKid1")).toBe(true)
+  })
+  test("hug and wrapping parents keep the content as the basis", () => {
+    expect(zero("HugKid0001")).toBe(false)
+    expect(zero("HugFill001")).toBe(false)
+    expect(zero("HugFillKid")).toBe(false)
+    expect(zero("WrapKid001")).toBe(false)
   })
 })
 

@@ -22,7 +22,7 @@ import { emitDtcg, emitTailwindTheme, emitTokensCss } from "./emit/tokens"
 import type { ExportFile } from "./emit/types"
 import { buildIR } from "./ir/build"
 import { kebab } from "./ir/names"
-import type { ExportIssue, IRDocument, IRNode } from "./ir/types"
+import type { ExportIssue, IRDocument, IRNode, IRPaint } from "./ir/types"
 
 export const EXPORT_TARGETS = [
   "react-tailwind",
@@ -201,7 +201,54 @@ export async function exportDocument(
       files = await emitPng(ir, options)
       break
   }
+  ir.issues.push(...paintIssues(ir, target))
   return { files, issues: attributeIssues(ir, target, files), ir }
+}
+
+/**
+ * What `target` does with the mesh and shader paints of the exported nodes (spec §7.1): HTML /
+ * CSS / React approximate a mesh with radial gradients, SVG and PDF use its mean vertex color;
+ * shaders are drawn by PNG only. One issue per node and message; none for PNG and token
+ * targets. `exportDocument` adds them; hosts that only build the IR (an Export dialog's PNG /
+ * PDF preflight) call it themselves.
+ */
+export function paintIssues(ir: IRDocument, target: ExportTarget): ExportIssue[] {
+  if (target === "png" || target.startsWith("tokens") || target === "tailwind-theme") return []
+  const out: ExportIssue[] = []
+  const seen = new Set<string>()
+  const add = (code: ExportIssue["code"], message: string, nodeId: string) => {
+    const k = `${code}|${message}|${nodeId}`
+    if (seen.has(k)) return
+    seen.add(k)
+    out.push({ code, message, nodeId })
+  }
+  const mesh =
+    target === "svg"
+      ? "SVG has no mesh gradient; the mesh's mean vertex color is used"
+      : target === "pdf"
+        ? "PDF mesh gradients use the mean vertex color"
+        : "mesh gradient approximated with radial gradients from its vertex colors"
+  const check = (paints: readonly IRPaint[], id: string) => {
+    for (const p of paints) {
+      if (p.kind === "mesh") add("GRADIENT_APPROXIMATED", mesh, id)
+      else if (p.kind === "shader")
+        add(
+          "PAINT_UNSUPPORTED",
+          `shader ${p.src} is not exported (the canvas and PNG export render it)`,
+          id,
+        )
+    }
+  }
+  const walk = (n: IRNode) => {
+    check(n.visual.fills, n.id)
+    if (n.visual.stroke) check(n.visual.stroke.paints, n.id)
+    if (n.text) check(n.text.fills, n.id)
+    for (const c of n.children) walk(c)
+    for (const list of Object.values(n.instance?.slots ?? {})) for (const c of list) walk(c)
+  }
+  for (const r of ir.roots) walk(r)
+  for (const c of ir.components) walk(c.root)
+  return out
 }
 
 /**

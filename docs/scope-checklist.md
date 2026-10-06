@@ -35,7 +35,7 @@ Hosted models, cloud sharing, real-time multiplayer, Figma `.fig` import, the li
 shaders, mesh gradients, slides, and `.pen` import. `.pen` import from public-schema JSON is
 scheduled for v1.x (section 12):
 
-- [ ] **`.pen` import** (public-schema, plain-JSON files only; never decrypt) · `v1.x` · non-goal for v1
+- [x] **`.pen` import** (public-schema, plain-JSON files only; never decrypt) · `v1.x` · opening a `.pen` converts it to a `.kimo` beside it (`@kimo/core-schema` `importPen`)
 
 ## 3.1 Canvas and editing
 

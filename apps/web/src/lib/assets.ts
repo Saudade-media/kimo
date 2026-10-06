@@ -4,7 +4,7 @@
  * Image fills and the canvas Image tool reference them as `./assets/<hash>.<ext>`; the
  * renderer reads them through {@link AssetStore.source}.
  */
-import { dirnameOf, type FileRef, type KimoPlatform } from "@kimo/platform"
+import { dirnameOf, type FileRef, type KimoPlatform, resolveAgainstFile } from "@kimo/platform"
 import type { AssetSource } from "@kimo/renderer"
 
 /** What a stored asset carries besides its bytes (the spec's manifest entry). */
@@ -178,11 +178,32 @@ export function createAssetStore(fileId: string): AssetStore {
   return assetStoreOver(indexedDbRows(fileId))
 }
 
+/** Shader sources a `shader` paint may reference (spec §7.1: a path relative to the `.kimo`). */
+const SHADER_SOURCE = /^\.{1,2}\/(?:[^\\/\s]+\/)*[^\\/\s]+\.(?:glsl|frag|fs|fsh)$/i
+
 /**
  * The asset store of a `.kimo` on disk: `assets/<hash>.<ext>` beside the file (spec §12),
  * read and written through `platform.files` (atomic writes; the folder is created on demand).
+ * Its renderer source also reads shader paint sources (`./shaders/x.glsl`, `../x.glsl`)
+ * relative to the file.
  */
 export function createFolderAssetStore(platform: KimoPlatform, kimoRef: FileRef): AssetStore {
+  const store = folderAssetStore(platform, kimoRef)
+  const assets = store.source
+  const source: AssetSource = {
+    async load(src) {
+      if (assetKey(src) || !SHADER_SOURCE.test(src)) return assets.load(src)
+      try {
+        return await platform.files.readBytes(resolveAgainstFile(kimoRef, src))
+      } catch {
+        return null
+      }
+    },
+  }
+  return { ...store, source }
+}
+
+function folderAssetStore(platform: KimoPlatform, kimoRef: FileRef): AssetStore {
   const dir = `${dirnameOf(kimoRef).replace(/\/$/, "")}/assets`
   const mimeOf = (key: string) => {
     const ext = key.slice(key.lastIndexOf(".") + 1).toLowerCase()

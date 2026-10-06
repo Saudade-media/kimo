@@ -22,7 +22,14 @@ import type { Canvas, CanvasKit, ImageFilter, Paint, Path } from "canvaskit-wasm
 import { parseHex, type RGBA } from "./color"
 import { invert, resolveNum, resolveRadii, toCk, union } from "./geometry"
 import type { IconRegistry } from "./icons/registry"
-import { applyBlend, imageSources, isNonNormalBlend, type PaintFactory, paintList } from "./paint"
+import {
+  applyBlend,
+  imageSources,
+  isNonNormalBlend,
+  type PaintFactory,
+  paintList,
+  shaderSources,
+} from "./paint"
 import {
   normalizeDash,
   outerFraction,
@@ -87,6 +94,8 @@ export interface DrawCounters {
   layers?: number
   /** Icon glyphs still loading when recorded (the picture must be redrawn when they land). */
   pendingIcons?: number
+  /** Shared pictures drawn that hold `@time` shader paints: the root draws live. */
+  timed?: number
 }
 
 const PLACEHOLDER_FILL: RGBA = [0, 0, 0, 0.04]
@@ -1354,6 +1363,16 @@ export class Painter {
     for (const s of imageSources(n.fill)) out.add(s)
     if (isObject(n.stroke)) for (const s of imageSources(n.stroke.paint)) out.add(s)
     for (const c of this.children(ctx, id)) this.imagesOf(ctx, c, out)
+    return out
+  }
+
+  /** Shader srcs used by a subtree (export waits for them). */
+  shadersOf(ctx: PaintContext, id: string, out: Set<string> = new Set()): Set<string> {
+    const n = ctx.nodes.getNode(id)
+    if (!n) return out
+    for (const s of shaderSources(n.fill)) out.add(s)
+    if (isObject(n.stroke)) for (const s of shaderSources(n.stroke.paint)) out.add(s)
+    for (const c of this.children(ctx, id)) this.shadersOf(ctx, c, out)
     return out
   }
 }

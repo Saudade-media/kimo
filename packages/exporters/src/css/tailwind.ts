@@ -36,7 +36,7 @@ const KEYWORDS: Record<string, Record<string, string>> = {
   "justify-self": { start: "justify-self-start" },
   "flex-shrink": { "0": "shrink-0", "1": "shrink" },
   "flex-grow": { "1": "grow" },
-  "flex-basis": { auto: "basis-auto" },
+  "flex-basis": { auto: "basis-auto", "0": "basis-0" },
   "min-width": { "0": "min-w-0" },
   "min-height": { "0": "min-h-0" },
   width: { "max-content": "w-max" },

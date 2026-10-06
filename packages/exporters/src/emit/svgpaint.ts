@@ -155,6 +155,11 @@ export class SvgPainter {
         )
         return [[prop, `url(#${id})`]]
       }
+      // Mesh and shader issues are reported per node by `paintIssues` (export.ts).
+      case "mesh":
+        return this.colorAttrs({ css: "", rgba: mean(p.colors.map((c) => c.rgba)) }, prop)
+      case "shader":
+        return null
     }
   }
 

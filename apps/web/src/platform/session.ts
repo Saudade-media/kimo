@@ -92,6 +92,7 @@ import {
 } from "./contract"
 import { displayPath, fileNameOf, formatTime, majorMinor } from "./format"
 import { forgetWindowFile } from "./last-files"
+import { convertPenFile, isPenPath } from "./pen"
 
 /** The nodes stored conflicts are about (prop / node / move conflicts), deduplicated. */
 function conflictNodeIds(doc: KimoDocument): string[] {
@@ -1263,6 +1264,8 @@ export class FileSessionManager implements SessionManager {
   private readonly hideOwn: boolean
   private readonly byRef = new Map<FileRef, FileDocumentSession>()
   private readonly opening = new Map<FileRef, Promise<FileDocumentSession>>()
+  /** `.pen` files opened in this window → the `.kimo` each was converted to. */
+  private readonly penTargets = new Map<FileRef, Promise<FileRef>>()
   private readonly listeners = new Set<() => void>()
   private offClose: Unsubscribe | null = null
   private offOpen: Unsubscribe | null = null
@@ -1306,8 +1309,10 @@ export class FileSessionManager implements SessionManager {
       return ok
     })
     this.offOpen = this.platform.launch.onOpenRequest((req) => {
-      void this.handleOpenRequest(req).then(() => {
-        const s = req.refs[0] ? this.byRef.get(req.refs[0]) : undefined
+      void this.handleOpenRequest(req).then(async () => {
+        const first = req.refs[0]
+        const ref = first && isPenPath(first) ? await this.penTarget(first) : first
+        const s = ref ? this.byRef.get(ref) : undefined
         if (s) onOpened?.(s, req)
       })
     })
@@ -1318,6 +1323,8 @@ export class FileSessionManager implements SessionManager {
   }
 
   async open(ref: FileRef, options: OpenOptions = {}): Promise<FileDocumentSession> {
+    // A pen.dev `.pen` opens as the `.kimo` it is converted to (once per window).
+    if (isPenPath(ref)) return this.open(await this.penTarget(ref), options)
     const existing = this.byRef.get(ref)
     if (existing) return existing
     const pending = this.opening.get(ref)
@@ -1352,6 +1359,24 @@ export class FileSessionManager implements SessionManager {
 
   get(ref: FileRef): FileDocumentSession | undefined {
     return this.byRef.get(ref)
+  }
+
+  /** The `.kimo` a `.pen` converts to (converting it on first use; see `convertPenFile`). */
+  penTarget(penRef: FileRef): Promise<FileRef> {
+    let p = this.penTargets.get(penRef)
+    if (!p) {
+      p = convertPenFile(this.platform, penRef).then((c) => {
+        if (c.warnings.length)
+          console.info(
+            `kimo: converted ${penRef} → ${c.ref}`,
+            c.warnings.map((w) => `${w.code} ×${w.count}: ${w.message}`),
+          )
+        return c.ref
+      })
+      this.penTargets.set(penRef, p)
+      p.catch(() => this.penTargets.delete(penRef))
+    }
+    return p
   }
 
   sessions(): FileDocumentSession[] {

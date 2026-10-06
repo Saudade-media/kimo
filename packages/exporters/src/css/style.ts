@@ -10,12 +10,13 @@
  * top-left corner.
  */
 import { withAlphaCss } from "../ir/build"
-import { fmt } from "../ir/color"
+import { fmt, rgbaCss } from "../ir/color"
 import { cssVarName } from "../ir/names"
 import type {
   ExportIssueCode,
   IRColor,
   IRGradientPaint,
+  IRMeshPaint,
   IRNode,
   IRNum,
   IRPaint,
@@ -156,7 +157,7 @@ export class CssWriter {
         const s = mainSize as Extract<IRSize, { kind: "fill" }>
         placement.push(d("flex-grow", fmt(s.weight)))
         placement.push(d("flex-shrink", "1"))
-        placement.push(d("flex-basis", "auto"))
+        placement.push(d("flex-basis", s.zero ? (s.basis ? `${fmt(s.basis)}px` : "0") : "auto"))
         if (s.min === undefined)
           placement.push(d(p.dir === "row" ? "min-width" : "min-height", "0"))
       } else placement.push(d("flex-shrink", "0"))
@@ -264,12 +265,45 @@ export class CssWriter {
 
   // --- Paints -------------------------------------------------------------------------------
 
+  /**
+   * CSS background layers of a paint, top first: one for most paints; a mesh is approximated
+   * by a radial gradient per vertex over its mean color; a shader has none (canvas / PNG only).
+   */
+  paintLayers(p: IRPaint, w?: number, h?: number): CssLayer[] {
+    // Reported per node by `paintIssues` (export.ts).
+    if (p.kind === "shader") return []
+    if (p.kind === "mesh") return this.meshLayers(p)
+    return [this.paintImage(p, w, h)]
+  }
+
+  /**
+   * A mesh as layered CSS: a soft ellipse per vertex (one grid cell in radius, its color
+   * fading to transparent) over the mean color of the vertices.
+   */
+  private meshLayers(p: IRMeshPaint): CssLayer[] {
+    const rx = 100 / Math.max(1, p.cols - 1)
+    const ry = 100 / Math.max(1, p.rows - 1)
+    const layer = (image: string): CssLayer => ({
+      image,
+      size: "auto",
+      repeat: "repeat",
+      position: "0% 0%",
+    })
+    const blobs = p.colors.map((c, i) => {
+      const [x, y] = p.points[i] ?? [0.5, 0.5]
+      return layer(
+        `radial-gradient(${fmt(rx, 3)}% ${fmt(ry, 3)}% at ${fmt(x * 100, 3)}% ${fmt(y * 100, 3)}%, ${this.color(c)}, transparent)`,
+      )
+    })
+    const m = [0, 0, 0, 0]
+    for (const c of p.colors)
+      for (let i = 0; i < 4; i++) m[i] = (m[i] as number) + (c.rgba[i] as number) / p.colors.length
+    const base = rgbaCss(m as unknown as [number, number, number, number])
+    return [...blobs.reverse(), layer(`linear-gradient(${base}, ${base})`)]
+  }
+
   /** CSS image of a paint (`linear-gradient(…)`, `url(…)`), plus size/position/repeat. */
-  paintImage(
-    p: IRPaint,
-    w?: number,
-    h?: number,
-  ): { image: string; size: string; repeat: string; position: string } {
+  paintImage(p: Exclude<IRPaint, { kind: "mesh" | "shader" }>, w?: number, h?: number): CssLayer {
     switch (p.kind) {
       case "solid": {
         const c = this.color(p.color)
@@ -355,9 +389,12 @@ export class CssWriter {
       return
     }
     // CSS background layers paint first-on-top; the spec paints last-on-top.
-    const layers = [...fills].reverse().map((p) => this.paintImage(p, w, h))
+    const layers = [...fills]
+      .reverse()
+      .flatMap((p) => this.paintLayers(p, w, h).map((l) => ({ ...l, blend: cssBlend(p.blend) })))
+    if (layers.length === 0) return
     if (
-      fills.some((p) => p.kind !== "solid" && p.kind !== "image") &&
+      fills.some((p) => p.kind === "linear" || p.kind === "radial" || p.kind === "angular") &&
       (w === undefined || h === undefined)
     )
       this.onIssue?.(
@@ -372,7 +409,7 @@ export class CssWriter {
       own.push(this.d("background-repeat", layers.map((l) => l.repeat).join(", ")))
     if (layers.some((l) => l.position !== "0% 0%"))
       own.push(this.d("background-position", layers.map((l) => l.position).join(", ")))
-    const blends = [...fills].reverse().map((p) => cssBlend(p.blend))
+    const blends = layers.map((l) => l.blend)
     if (blends.some((b) => b !== "normal"))
       own.push(this.d("background-blend-mode", blends.join(", ")))
   }
@@ -382,7 +419,9 @@ export class CssWriter {
     for (let i = paints.length - 1; i >= 0; i--) {
       const p = paints[i] as IRPaint
       if (p.kind === "solid") return p.color
-      if (p.kind !== "image") return (p.stops[p.stops.length - 1] as { color: IRColor }).color
+      if (p.kind === "mesh") return p.colors[Math.floor(p.colors.length / 2)] ?? null
+      if (p.kind === "linear" || p.kind === "radial" || p.kind === "angular")
+        return (p.stops[p.stops.length - 1] as { color: IRColor }).color
     }
     return null
   }
@@ -558,13 +597,23 @@ export class CssWriter {
     const onlySolid = t.fills.length === 1 && t.fills[0]?.kind === "solid"
     if (c && onlySolid) own.push(d("color", this.color(c), this.tok("color", c.ref)))
     else if (t.fills.length > 0) {
-      const layers = [...t.fills].reverse().map((p) => this.paintImage(p))
-      own.push(d("background-image", layers.map((l) => l.image).join(", ")))
+      const layers = [...t.fills].reverse().flatMap((p) => this.paintLayers(p))
+      own.push(
+        d("background-image", layers.length ? layers.map((l) => l.image).join(", ") : "none"),
+      )
       own.push(d("-webkit-background-clip", "text"))
       own.push(d("background-clip", "text"))
       own.push(d("color", "transparent"))
     } else own.push(d("color", "transparent"))
   }
+}
+
+/** One CSS background layer. */
+export interface CssLayer {
+  image: string
+  size: string
+  repeat: string
+  position: string
 }
 
 /** `"liga" 0, "ss01" 1` — booleans as 0/1, sorted by tag. */

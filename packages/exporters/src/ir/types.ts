@@ -72,7 +72,27 @@ export interface IRImagePaint {
   blend: IRBlend
 }
 
-export type IRPaint = IRSolidPaint | IRGradientPaint | IRImagePaint
+/**
+ * A mesh gradient (spec §7.1): `cols × rows` vertex colors, row-major, at normalized positions
+ * (handles are not kept: no export target draws Coons patches; CSS approximates).
+ */
+export interface IRMeshPaint {
+  kind: "mesh"
+  cols: number
+  rows: number
+  colors: IRColor[]
+  points: [number, number][]
+  blend: IRBlend
+}
+
+/** A GLSL shader paint (spec §7.1): drawn by the canvas and PNG export only. */
+export interface IRShaderPaint {
+  kind: "shader"
+  src: string
+  blend: IRBlend
+}
+
+export type IRPaint = IRSolidPaint | IRGradientPaint | IRImagePaint | IRMeshPaint | IRShaderPaint
 
 export interface IRSides<T> {
   t: T
@@ -128,8 +148,21 @@ export type IRSize =
   | { kind: "fixed"; px: IRNum }
   /** Content size; `min`/`max` clamp (feature `size/min-max`). */
   | { kind: "fit"; min?: number; max?: number }
-  /** Flex: grow by `weight` on the parent's main axis, stretch on its cross axis. */
-  | { kind: "fill"; axis: "main" | "cross"; weight: number; min?: number; max?: number }
+  /**
+   * Flex: grow by `weight` on the parent's main axis, stretch on its cross axis. `zero`: the
+   * main-axis space is shared by weight from a zero basis (a definite, non-wrapping parent);
+   * `basis` is then weight × the siblings' largest main padding / weight, in px, so padded
+   * siblings still end with equal outer sizes (engine.ts `syncBases`).
+   */
+  | {
+      kind: "fill"
+      axis: "main" | "cross"
+      weight: number
+      zero?: boolean
+      basis?: number
+      min?: number
+      max?: number
+    }
 
 /** Where a node sits in its parent. */
 export type IRPlacement =

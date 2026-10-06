@@ -142,6 +142,20 @@ interface Entry {
   frozen: boolean
   /** `yoga`: the bounds are Yoga's (fallback); `css`: resolveFlexClamps() applies them. */
   clampMode: "yoga" | "css"
+  /**
+   * What fill children read from this node (set by applyStyle()): definite width / height
+   * (`1`/`0`) and wrap. A change re-styles the flowing children (their flex basis, §6.1).
+   */
+  basisKey: string
+  /** True once applyStyle() ran (the parent may then re-style it when `basisKey` changes). */
+  styled: boolean
+  /**
+   * Weight of a fill item that shares its parent's main axis from a zero basis (§6.1), else 0.
+   * Its Yoga basis is set by syncBases(): weight × k, so padded siblings still end equal.
+   */
+  zeroWeight: number
+  /** The unfrozen flex basis written by applyStyle() / syncBases(). */
+  basisPx: number | "auto"
 }
 
 interface FlexClamp {
@@ -342,6 +356,10 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       flexClamp: null,
       frozen: false,
       clampMode: "css",
+      basisKey: "",
+      styled: false,
+      zeroWeight: 0,
+      basisPx: "auto",
     }
     readFlags(e)
     return e
@@ -515,6 +533,10 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
     const pdir = e.parent?.kind === "layout" ? e.parent.dir : null
     const flow = e.flow
+    // §6.1: fill items share the parent's main-axis space by weight from a zero basis when
+    // that space is definite and the parent does not wrap; else their content is the basis.
+    const pkey = flow ? (e.parent as Entry).basisKey : ""
+    const zeroBasis = pkey[pdir === "row" ? 0 : 1] === "1" && pkey[2] === "0"
 
     // Negative main-axis gaps: Yoga clamps gaps to ≥ 0, so pull each later child back instead.
     const lead = flow && e.parent && e.parent.gap < 0 && e.flowIndex > 0 ? e.parent.gap : 0
@@ -532,6 +554,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
     let grow = 0
     let shrink = 0
+    let zeroWeight = 0
     let alignSelf = Align.Auto
     let needsMeasure = e.kind === "box"
     e.emptyW = undefined
@@ -567,6 +590,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
           if (isMain) {
             grow = spec.weight
             shrink = 1
+            if (zeroBasis) zeroWeight = spec.weight
             if (min !== undefined || max !== undefined) {
               // CSS freezes min/max violators after distributing (resolveFlexClamps).
               clamp = { axis: a, min, max, weight: spec.weight }
@@ -605,6 +629,13 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     setFlexClamp(e, clamp)
     put(e, "grow", grow, (v) => y.setFlexGrow(v))
     put(e, "shrink", shrink, (v) => y.setFlexShrink(v))
+    // Zero-basis items get their basis from syncBases(), which needs every sibling's padding.
+    e.zeroWeight = zeroWeight
+    if (zeroWeight === 0) {
+      e.basisPx = "auto"
+      put(e, "basis", "auto" as const, (v) => y.setFlexBasis(v))
+    }
+    if (flow && e.parent) basisDirty.add(e.parent)
     put(e, "alignSelf", alignSelf, (v) => y.setAlignSelf(v))
 
     // Container properties (zero for non-layout kinds, so a kind change resets them).
@@ -647,6 +678,22 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
     setMeasure(e, needsMeasure && e.kind !== "layout")
     if (e.measured) y.markDirty()
+
+    // Definite main sizes for fill children: fixed, a fallback outside a flow, or a fill whose
+    // parent is definite on that axis (a fit parent sizes fill items by content, FIT_ALL_FILL).
+    const definite = (m: SpecMode, a: Axis) =>
+      m === "fixed" ||
+      (m === "fill+" && !flow) ||
+      ((m === "fill" || m === "fill+") && flow && pkey[a === "w" ? 0 : 1] === "1")
+    const key =
+      e.kind === "layout"
+        ? `${definite(e.specW, "w") ? 1 : 0}${definite(e.specH, "h") ? 1 : 0}${wrap === Wrap.Wrap ? 1 : 0}`
+        : ""
+    const restyleKids = e.styled && key !== e.basisKey
+    e.basisKey = key
+    e.styled = true
+    if (e.kind === "layout") basisDirty.add(e)
+    if (restyleKids) for (const c of e.attached) if (c.styled) applyStyle(c)
   }
 
   // --- Measurement --------------------------------------------------------------------------
@@ -752,6 +799,37 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     }
   }
 
+  // --- Zero bases (§6.1) -----------------------------------------------------------------------
+
+  /** Layout containers whose flowing children were re-styled since the last syncBases(). */
+  const basisDirty = new Set<Entry>()
+
+  /**
+   * Fill items sharing a main axis from a zero basis end with equal outer sizes by weight, as in
+   * pen.dev and Figma. Yoga (like CSS) floors a flex basis at the item's padding, which would
+   * start padded items ahead; bases proportional to the weights (weight × k, k the largest
+   * padding / weight) are all above that floor and grow and shrink to the same split.
+   */
+  const syncBases = (p: Entry) => {
+    const row = p.dir === "row"
+    let k = 0
+    for (const c of p.attached) {
+      if (c.zeroWeight === 0) continue
+      const pad = c.kind === "layout" ? (row ? c.pad[1] + c.pad[3] : c.pad[0] + c.pad[2]) : 0
+      k = Math.max(k, pad / c.zeroWeight)
+    }
+    for (const c of p.attached) {
+      if (c.zeroWeight === 0) continue
+      c.basisPx = c.zeroWeight * k
+      if (!c.frozen) put(c, "basis", c.basisPx, (v) => c.y.setFlexBasis(v))
+    }
+  }
+
+  const flushBases = () => {
+    for (const p of basisDirty) if (p.alive) syncBases(p)
+    basisDirty.clear()
+  }
+
   const calc = (e: Entry, only: Set<Entry> | null) => {
     if (only && !only.has(e)) return
     for (const c of e.children) calc(c, only)
@@ -798,6 +876,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     put(e, key, size, (v) => (key === "w" ? e.y.setWidth(v) : e.y.setHeight(v)))
     put(e, "grow", 0, (v) => e.y.setFlexGrow(v))
     put(e, "shrink", 0, (v) => e.y.setFlexShrink(v))
+    put(e, "basis", "auto" as const, (v) => e.y.setFlexBasis(v))
   }
 
   const unfreeze = (e: Entry) => {
@@ -806,6 +885,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     put(e, c.axis, "auto" as const, (v) => (c.axis === "w" ? e.y.setWidth(v) : e.y.setHeight(v)))
     put(e, "grow", c.weight, (v) => e.y.setFlexGrow(v))
     put(e, "shrink", 1, (v) => e.y.setFlexShrink(v))
+    put(e, "basis", e.basisPx, (v) => e.y.setFlexBasis(v))
   }
 
   /** Gives the item's main-axis bounds to Yoga (`yoga`) or takes them out (`css`); thaws it. */
@@ -1309,6 +1389,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     }
     for (const r of roots) configure(r)
     for (const e of entries.values()) if (isTop(e.id)) reindex.add(e.id)
+    flushBases()
     for (const r of roots) calc(r, null)
     const out: Emit = { nodes: new Map(), changed: new Set(), only: null }
     for (const r of roots) emit(r, IDENTITY, true, true, out)
@@ -1605,6 +1686,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
     for (const e of seeds) if (e.alive) mark(e)
     for (const e of fresh) mark(e)
 
+    flushBases()
     for (const r of roots) calc(r, only)
     const out: Emit = { nodes: new Map(prevResult.nodes), changed: new Set(), only }
     for (const id of removedIds) {

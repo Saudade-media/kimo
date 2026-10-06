@@ -9,6 +9,7 @@ import {
   dirnameOf,
   type FileRef,
   KIMO_FILE_FILTER,
+  KIMO_OPEN_FILTER,
   type KimoPlatform,
   type RecentFile,
   type TrashedFile,
@@ -225,7 +226,7 @@ export function DesktopHomeView({
 
   const openPicked = useCallback(async () => {
     try {
-      const [ref] = await platform.dialogs.openFile({ title: "Open", filters: [KIMO_FILE_FILTER] })
+      const [ref] = await platform.dialogs.openFile({ title: "Open", filters: [KIMO_OPEN_FILTER] })
       if (ref) navigate(diskPath(ref))
     } catch (e) {
       fail(failure("open the file", e))

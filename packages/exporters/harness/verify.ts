@@ -37,6 +37,7 @@ export const HARNESS_FIXTURES: { name: string; path: string; libs?: Record<strin
   { name: "wrap-edge", path: join(OWN, "wrap-edge.kimo") },
   { name: "text-styles", path: join(OWN, "text-styles.kimo") },
   { name: "paints-effects", path: join(OWN, "paints-effects.kimo") },
+  { name: "fill-padding", path: join(OWN, "fill-padding.kimo") },
 ]
 
 export function loadFixture(f: (typeof HARNESS_FIXTURES)[number]): {

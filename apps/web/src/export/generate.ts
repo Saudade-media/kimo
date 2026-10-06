@@ -195,7 +195,10 @@ export async function generateExport(
     const planned = targets.pdf
       ? [{ path: "export.pdf" }]
       : ir.roots.map(() => ({ path: `x@${scale}x.png` }))
-    issues.push(...ex.attributeIssues(ir, targets.pdf ? "pdf" : "png", planned))
+    // What the PDF emitter does with mesh / shader paints, known without emitting it.
+    const target = targets.pdf ? "pdf" : "png"
+    ir.issues.push(...ex.paintIssues(ir, target))
+    issues.push(...ex.attributeIssues(ir, target, planned))
     for (const [id, n] of namesOf(ir)) names.set(id, n)
   }
   const binary: ExportFile[] = []

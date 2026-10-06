@@ -10,6 +10,7 @@
  */
 import { FORMAT_VERSION, type KimoDocument, SCHEMA_URL, serialize } from "@kimo/core-schema"
 import type { DocStore, Revision } from "@kimo/editor-state"
+import { resolveAgainstFile } from "@kimo/platform"
 import type { DocRef, RevisionToken, ToolImage } from "../envelope"
 import type { DocumentHost, HostDocument, HostResult } from "../runtime"
 import { formatDocId, parseDocId } from "../topology"
@@ -26,6 +27,9 @@ import {
   sha256Hex,
   toToken,
 } from "./util"
+
+/** Shader sources a `shader` paint may reference (a path relative to the `.kimo`). */
+const SHADER_SOURCE = /^\.{1,2}\/(?:[^\\/\s]+\/)*[^\\/\s]+\.(?:glsl|frag|fs|fsh)$/i
 
 /** One document a backend holds. */
 export interface BackendDocument {
@@ -268,9 +272,13 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
       const d = f.value
       const dir = dirname(d.path)
       const r = await scene.render(d.store, ids, opts, async (src) => {
-        if (!/^\.\/assets\//.test(src)) return null
+        // Assets, and shader paint sources relative to the document (spec §7.1).
+        const shader = SHADER_SOURCE.test(src)
+        if (!/^\.\/assets\//.test(src) && !shader) return null
         try {
-          return await backend.files.readBytes(joinPath(dir, src.slice(2)))
+          return await backend.files.readBytes(
+            shader ? resolveAgainstFile(d.path, src) : joinPath(dir, src.slice(2)),
+          )
         } catch {
           return null
         }

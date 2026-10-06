@@ -170,3 +170,41 @@ describe("raster and vector seams", () => {
     expect(lookup.get("phosphor", "bell", 700)?.paths.length).toBe(1)
   })
 })
+
+describe("mesh / shader paint issues (spec §7.1)", () => {
+  test("exportDocument reports them per target; PNG and tokens don't", async () => {
+    const { exportDocument, paintIssues, buildIR } = await import("../src")
+    const doc = {
+      kimo: "1.0.0",
+      features: ["fill/mesh", "fill/shader"],
+      nodes: {
+        mesh000001: {
+          type: "rect",
+          parent: null,
+          order: "a",
+          w: 10,
+          h: 10,
+          fill: { kind: "mesh", cols: 1, rows: 1, colors: ["#f00"], points: [[0, 0]] },
+        },
+        shad000001: {
+          type: "rect",
+          parent: null,
+          order: "b",
+          w: 10,
+          h: 10,
+          fill: { kind: "shader", src: "./a.glsl" },
+        },
+      },
+    } as never
+    const html = await exportDocument(doc, "html-css")
+    expect(html.issues.map((i) => [i.code, i.nodeId])).toEqual([
+      ["GRADIENT_APPROXIMATED", "mesh000001"],
+      ["PAINT_UNSUPPORTED", "shad000001"],
+    ])
+    const ir = buildIR(doc)
+    expect(paintIssues(ir, "svg")[0]?.message).toContain("SVG has no mesh gradient")
+    expect(paintIssues(ir, "pdf")[0]?.message).toContain("PDF mesh gradients")
+    expect(paintIssues(ir, "png")).toEqual([])
+    expect(paintIssues(ir, "tokens-css")).toEqual([])
+  })
+})

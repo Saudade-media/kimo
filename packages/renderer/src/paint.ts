@@ -1,12 +1,16 @@
 /**
  * `.kimo` Paint values (spec §7.1) → CanvasKit paints: solid colors, linear/radial/angular
- * gradients (sRGB or OKLab interpolation), and image fills (cover/contain/stretch/tile).
+ * gradients (sRGB or OKLab interpolation), image fills (cover/contain/stretch/tile), mesh
+ * gradients (rasterized once per mesh and size) and GLSL shaders (SkSL runtime effects).
  */
 import { isObject, isRef } from "@kimo/core-schema"
 import type { Matrix, Resolver } from "@kimo/layout"
 import type { Blender, BlendMode, CanvasKit, Image, Paint, Shader } from "canvaskit-wasm"
 import { oklabToSrgb, parseColor, type RGBA, srgbToOklab, withAlpha } from "./color"
 import { invert, multiply, toCk } from "./geometry"
+import { uniformValue } from "./glsl"
+import { tessellateMesh } from "./mesh"
+import type { ShaderCache } from "./shader"
 import type { AssetSource } from "./types"
 
 export const BLEND_NAMES = [
@@ -259,11 +263,41 @@ export function imageSources(value: unknown): string[] {
   )
 }
 
+/** Shader srcs referenced by a paint list (for preloading before export). */
+export function shaderSources(value: unknown): string[] {
+  const list = paintList(value) ?? []
+  return list.flatMap((p) =>
+    isObject(p) && p.kind === "shader" && typeof p.src === "string" ? [p.src] : [],
+  )
+}
+
+/** Mesh rasters kept (least recently made go first). */
+const MESH_MAX = 256
+/** Largest mesh raster side (px): mesh gradients are smooth, so they upscale cleanly. */
+const MESH_MAX_SIDE = 512
+
 export class PaintFactory {
   constructor(
     private readonly ck: CanvasKit,
     private readonly images: ImageCache,
+    private readonly shaders: ShaderCache | null = null,
   ) {}
+
+  /** Seconds on the shader clock (`@time`); 0 for static output (pictures, exports). */
+  time = 0
+  /**
+   * Shader paints made, and those reading `@time` (monotonic: the renderer compares them
+   * around a recording to know which roots hold shaders).
+   */
+  readonly usage = { shaders: 0, timed: 0 }
+  /** Mesh rasters by mesh, resolved colors and raster size. */
+  private readonly meshes = new Map<string, Image | null>()
+
+  /** Frees the mesh rasters. */
+  clear(): void {
+    for (const img of this.meshes.values()) img?.delete()
+    this.meshes.clear()
+  }
 
   color(c: RGBA): Float32Array {
     return this.ck.Color4f(c[0], c[1], c[2], c[3])
@@ -331,10 +365,148 @@ export class PaintFactory {
         paint.setAlphaf(Math.max(0, Math.min(1, this.num(resolve, nodeId, v.opacity, 1))))
         return paint
       }
+      case "mesh": {
+        const shader = this.mesh(resolve, nodeId, v, w, h)
+        if (!shader) break
+        paint.setShader(shader)
+        shader.delete()
+        return paint
+      }
+      case "shader": {
+        const shader = this.shader(resolve, nodeId, v, w, h)
+        if (!shader) break
+        paint.setShader(shader)
+        shader.delete()
+        return paint
+      }
     }
-    // mesh / shader / malformed: not rendered in M1.
+    // Malformed, still loading, or a shader that does not compile: nothing drawn.
     paint.delete()
     return null
+  }
+
+  /**
+   * A mesh paint as an image shader over the box: the Coons-patch mesh is drawn as colored
+   * triangles into a raster of about 2 px per box unit (capped), cached per mesh and size.
+   */
+  private mesh(
+    resolve: Resolver,
+    nodeId: string,
+    m: Record<string, unknown>,
+    w: number,
+    h: number,
+  ): Shader | null {
+    const ck = this.ck
+    const cols = typeof m.cols === "number" ? Math.floor(m.cols) : 0
+    const rows = typeof m.rows === "number" ? Math.floor(m.rows) : 0
+    if (cols < 1 || rows < 1 || w <= 0 || h <= 0 || cols * rows > 4096) return null
+    if (!Array.isArray(m.colors) || m.colors.length < cols * rows) return null
+    const colors: RGBA[] = []
+    for (let i = 0; i < cols * rows; i++)
+      colors.push(this.resolveColor(resolve, nodeId, m.colors[i]) ?? [0, 0, 0, 0])
+    const points = Array.isArray(m.points) ? m.points : []
+    const W = Math.max(4, Math.min(MESH_MAX_SIDE, Math.ceil(w * 2)))
+    const H = Math.max(4, Math.min(MESH_MAX_SIDE, Math.ceil(h * 2)))
+    const key = JSON.stringify([cols, rows, colors, points, W, H])
+    let img = this.meshes.get(key)
+    if (img === undefined) {
+      img = this.rasterizeMesh(cols, rows, points, colors, W, H)
+      if (this.meshes.size >= MESH_MAX) {
+        const first = this.meshes.keys().next().value as string
+        this.meshes.get(first)?.delete()
+        this.meshes.delete(first)
+      }
+      this.meshes.set(key, img)
+    } else {
+      // Most recently used last.
+      this.meshes.delete(key)
+      this.meshes.set(key, img)
+    }
+    if (!img) return null
+    return img.makeShaderOptions(
+      ck.TileMode.Clamp,
+      ck.TileMode.Clamp,
+      ck.FilterMode.Linear,
+      ck.MipmapMode.None,
+      toCk(SCALE(w / W, h / H)),
+    )
+  }
+
+  private rasterizeMesh(
+    cols: number,
+    rows: number,
+    points: readonly unknown[],
+    colors: RGBA[],
+    W: number,
+    H: number,
+  ): Image | null {
+    const ck = this.ck
+    const tri = tessellateMesh(cols, rows, points, colors)
+    if (tri.positions.length / 2 > 65535) return null
+    const pos = new Float32Array(tri.positions.length)
+    for (let i = 0; i < pos.length; i += 2) {
+      pos[i] = (tri.positions[i] as number) * W
+      pos[i + 1] = (tri.positions[i + 1] as number) * H
+    }
+    const surface = ck.MakeSurface(W, H)
+    if (!surface) return null
+    const vertices = ck.MakeVertices(
+      ck.VertexMode.Triangles,
+      pos,
+      null,
+      tri.colors,
+      Array.from(tri.indices),
+      false,
+    )
+    const p = new ck.Paint()
+    try {
+      const c = surface.getCanvas()
+      c.clear(ck.TRANSPARENT)
+      // Vertex colors only (the paint has no shader): `Dst` keeps the interpolated colors.
+      c.drawVertices(vertices, ck.BlendMode.Dst, p)
+      surface.flush()
+      return surface.makeImageSnapshot()
+    } finally {
+      p.delete()
+      vertices.delete()
+      surface.delete()
+    }
+  }
+
+  /**
+   * A shader paint: the GLSL fragment shader at `src` (once loaded and compiled) as a runtime
+   * effect shader over the box, with its uniforms from the paint, `@default`s and the
+   * renderer's clock.
+   */
+  private shader(
+    resolve: Resolver,
+    nodeId: string,
+    v: Record<string, unknown>,
+    w: number,
+    h: number,
+  ): Shader | null {
+    if (!this.shaders || typeof v.src !== "string" || w <= 0 || h <= 0) return null
+    const state = this.shaders.get(v.src)
+    if (state.status !== "ready") return null
+    const sh = state.shader
+    const overrides = isObject(v.uniforms) ? v.uniforms : {}
+    const data = new Float32Array(sh.floats)
+    const put = (name: string, vals: readonly number[]) => {
+      const slot = sh.slots.get(name)
+      if (!slot) return
+      for (let i = 0; i < slot.size && i < vals.length; i++) data[slot.slot + i] = vals[i] as number
+    }
+    put("_k_size", [w, h])
+    const ctx = {
+      resolution: [w, h] as const,
+      time: this.time,
+      resolve: (x: unknown) => resolve.value(nodeId, x as never),
+      color: (x: unknown) => parseColor(x),
+    }
+    for (const u of sh.uniforms) put(u.name, uniformValue(u, overrides[u.name], ctx))
+    this.usage.shaders++
+    if (sh.timed) this.usage.timed++
+    return sh.effect.makeShader(data)
   }
 
   private gradient(

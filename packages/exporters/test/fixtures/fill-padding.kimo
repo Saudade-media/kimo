@@ -1,0 +1,31 @@
+{
+"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"format": "1.0.0",
+"features": ["size/min-max"],
+"meta": {"name":"Fill padding"},
+"nodes": {
+"Board00001": {"type":"frame","parent":null,"order":"a0","name":"Board","x":0,"y":0,"w":720,"fill":"#FFFFFF","layout":{"dir":"column","gap":16,"pad":16}}
+
+, "Row0000001": {"type":"frame","parent":"Board00001","order":"a0","name":"Padded fills","w":{"mode":"fill"},"layout":{"dir":"row","gap":24}}
+
+, "PadA000001": {"type":"frame","parent":"Row0000001","order":"a0","name":"Padded A","w":{"mode":"fill"},"fill":"#E0E7FF","layout":{"dir":"column","pad":20}}
+
+, "PadA000002": {"type":"text","parent":"PadA000001","order":"a0","w":{"mode":"fill"},"content":"Padded twenty on each side","grow":"fixed-width","style":{"font":"Inter","size":13}}
+
+, "PadB000001": {"type":"frame","parent":"Row0000001","order":"a1","name":"Padded B","w":{"mode":"fill"},"fill":"#FCE7F3","layout":{"dir":"column","pad":[8,20]}}
+
+, "PadB000002": {"type":"text","parent":"PadB000001","order":"a0","w":{"mode":"fill"},"content":"Short","grow":"fixed-width","style":{"font":"Inter","size":13}}
+
+, "Bare000001": {"type":"frame","parent":"Row0000001","order":"a2","name":"Unpadded","w":{"mode":"fill"},"fill":"#DCFCE7","layout":{"dir":"column"}}
+
+, "Bare000002": {"type":"text","parent":"Bare000001","order":"a0","w":{"mode":"fill"},"content":"No padding here, so this text would wrap sooner if the column were narrower","grow":"fixed-width","style":{"font":"Inter","size":13}}
+
+, "Row0000002": {"type":"frame","parent":"Board00001","order":"a1","name":"Weights and stroke","w":{"mode":"fill"},"h":40,"layout":{"dir":"row","gap":8}}
+
+, "Wt20000001": {"type":"frame","parent":"Row0000002","order":"a0","name":"Weight 2 padded","w":{"mode":"fill","weight":2},"h":{"mode":"fill"},"fill":"#FEF3C7","stroke":{"paint":"#F59E0B","width":4},"layout":{"dir":"row","pad":[0,30],"includeStroke":true}}
+
+, "Wt10000001": {"type":"frame","parent":"Row0000002","order":"a1","name":"Weight 1","w":{"mode":"fill"},"h":{"mode":"fill"},"fill":"#E0F2FE","layout":{"dir":"row"}}
+
+, "Max0000001": {"type":"frame","parent":"Row0000002","order":"a2","name":"Max padded","w":{"mode":"fill","max":120},"h":{"mode":"fill"},"fill":"#F3E8FF","layout":{"dir":"row","pad":[0,40]}}
+}
+}

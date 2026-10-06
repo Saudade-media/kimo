@@ -133,6 +133,7 @@ export {
   pageOfRoot,
   rootsByPage,
 } from "./pages"
+export * from "./pen/index"
 export {
   defaultTextFill,
   defaultTheme,

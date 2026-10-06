@@ -306,7 +306,7 @@ pub fn run() {
                 .iter()
                 .filter(|u| u.scheme() == "file")
                 .filter_map(|u| u.to_file_path().ok())
-                .filter(|p| util::is_kimo_path(p))
+                .filter(|p| util::is_openable_path(p))
                 .map(|p| util::path_str(&p))
                 .collect();
             if !refs.is_empty() {

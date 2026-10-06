@@ -4,7 +4,13 @@
  * Also the `.kimo` open/save helpers (File System Access API with an upload/download fallback).
  */
 
-import { type KimoDocument, localComponents } from "@kimo/core-schema"
+import {
+  importPen,
+  isPenDocument,
+  type KimoDocument,
+  localComponents,
+  penImageUrls,
+} from "@kimo/core-schema"
 import {
   createDocStore,
   type DocStore,
@@ -16,7 +22,16 @@ import { readFontInfo } from "@kimo/renderer"
 import { IndexedDbProvider } from "@kimo/sync/indexeddb"
 import { copyThumbnail, libraryThumbnails } from "../thumbnails/store"
 import { assetRefs } from "./asset-manifest"
-import { type AssetStore, createAssetStore, deleteAssetDb, type ManifestEntry } from "./assets"
+import {
+  type AssetStore,
+  contentHash,
+  createAssetStore,
+  deleteAssetDb,
+  extensionFor,
+  MAX_ASSET_BYTES,
+  type ManifestEntry,
+  sniffImage,
+} from "./assets"
 import { buildSampleDocument, newDocument } from "./sample"
 import { isZip, readZip, writeZip } from "./zip"
 
@@ -281,9 +296,48 @@ export async function importKimo(text: string, fileName: string): Promise<string
   return (await importKimoFile(text, fileName)).id
 }
 
-/** Opens a picked `.kimo` (JSON text) or `.kimoz` (package with `assets/`) file. */
+/**
+ * Imports a pen.dev `.pen` (plain JSON) as a new local file: converted to `.kimo`, with the
+ * images it links by http(s) URL fetched into the file's assets. Images it links by relative
+ * path cannot be read from a browser and stay missing (desktop opens them from disk).
+ */
+export async function importPenFile(text: string, fileName: string): Promise<ImportResult> {
+  let pen: unknown
+  try {
+    pen = JSON.parse(text)
+  } catch {
+    pen = null
+  }
+  if (!isPenDocument(pen)) throw new OpenFileError(`${fileName} is not a .pen design document`)
+  const packaged = new Map<string, Uint8Array>()
+  const images = new Map<string, string>()
+  for (const url of penImageUrls(pen)) {
+    if (!/^https?:\/\//i.test(url)) continue
+    try {
+      const res = await fetch(url)
+      if (!res.ok) continue
+      const bytes = new Uint8Array(await res.arrayBuffer())
+      const mime = sniffImage(bytes)
+      const ext = mime ? extensionFor(mime) : null
+      if (!mime || !ext || bytes.byteLength > MAX_ASSET_BYTES) continue
+      const key = `${await contentHash(bytes)}.${ext}`
+      packaged.set(key, bytes)
+      images.set(url, `./assets/${key}`)
+    } catch {
+      // Unreachable image: it stays a missing asset (checkerboard).
+    }
+  }
+  const name = fileName.replace(/\.pen$/i, "")
+  // No asset manifest: images that could not be fetched stay as unlisted missing references.
+  const result = importPen(pen, { name, images })
+  return importKimoFile(serialize(result.doc), fileName, packaged)
+}
+
+/** Opens a picked `.kimo` (JSON text), `.kimoz` (package with `assets/`) or `.pen` file. */
 export async function importFile(file: File): Promise<ImportResult> {
   const bytes = new Uint8Array(await file.arrayBuffer())
+  if (!isZip(bytes) && /\.pen$/i.test(file.name))
+    return importPenFile(new TextDecoder().decode(bytes), file.name)
   if (!isZip(bytes)) return importKimoFile(new TextDecoder().decode(bytes), file.name)
   let entries: Awaited<ReturnType<typeof readZip>>
   try {
@@ -448,12 +502,12 @@ interface PickerWindow {
 const KIMO_TYPES = [
   {
     description: "Kimo document",
-    accept: { "application/json": [".kimo"], "application/zip": [".kimoz"] },
+    accept: { "application/json": [".kimo", ".pen"], "application/zip": [".kimoz"] },
   },
 ]
 const KIMOZ_TYPES = [{ description: "Kimo package", accept: { "application/zip": [".kimoz"] } }]
 
-/** Lets the user pick a `.kimo` or `.kimoz` file. Resolves null on cancel. */
+/** Lets the user pick a `.kimo`, `.kimoz` or `.pen` file. Resolves null on cancel. */
 export async function pickKimoFile(): Promise<File | null> {
   const w = window as unknown as PickerWindow
   if (w.showOpenFilePicker) {
@@ -468,7 +522,7 @@ export async function pickKimoFile(): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input")
     input.type = "file"
-    input.accept = ".kimo,.kimoz,application/json,application/zip"
+    input.accept = ".kimo,.kimoz,.pen,application/json,application/zip"
     input.style.display = "none"
     let done = false
     const finish = (file: File | null) => {

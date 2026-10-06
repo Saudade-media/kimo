@@ -27,6 +27,7 @@ body { -webkit-font-smoothing: antialiased; }
   min-width: 100px;
   height: 100px;
   display: grid;
+  background-image: radial-gradient(100% 100% at 100% 0%, #00F, transparent), radial-gradient(100% 100% at 0% 0%, #F00, transparent), linear-gradient(#800080, #800080);
 }
 
 .k-frame-2 {

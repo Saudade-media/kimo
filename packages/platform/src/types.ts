@@ -313,6 +313,11 @@ export interface DialogsApi {
 
 /** The filter used by Open… / Save as… */
 export const KIMO_FILE_FILTER: FileFilter = { name: "Kimo document", extensions: ["kimo", "kimoz"] }
+/** Open dialogs: Kimo documents plus pen.dev `.pen` files (converted to `.kimo` on open). */
+export const KIMO_OPEN_FILTER: FileFilter = {
+  name: "Kimo document",
+  extensions: ["kimo", "kimoz", "pen"],
+}
 
 // ===============================================================================================
 // Recent files and watched folders (Home, board 16)

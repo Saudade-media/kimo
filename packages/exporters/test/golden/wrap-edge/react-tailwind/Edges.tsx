@@ -9,7 +9,7 @@ export function Edges() {
       <p className="relative shrink-0 w-[90px] [font-family:'Inter',_sans-serif] text-[length:14px] font-normal [line-height:normal] whitespace-pre-wrap [overflow-wrap:break-word] text-[#000000]">Supercalifragilistic word</p>
       <div className="relative shrink-0 self-stretch flex flex-row items-center gap-x-[8px]">
         <div className="relative shrink-0 w-[32px] h-[32px] bg-[#E11D48] rounded-[8px]" />
-        <p className="relative grow shrink basis-auto min-w-0 [font-family:'Inter',_sans-serif] text-[length:13px] font-normal leading-[18.2px] whitespace-pre-wrap [overflow-wrap:break-word] text-[#000000]">This paragraph fills the remaining width of the row and wraps at its edge.</p>
+        <p className="relative grow shrink basis-0 min-w-0 [font-family:'Inter',_sans-serif] text-[length:13px] font-normal leading-[18.2px] whitespace-pre-wrap [overflow-wrap:break-word] text-[#000000]">This paragraph fills the remaining width of the row and wraps at its edge.</p>
       </div>
       <p className="relative shrink-0 w-[220px] [font-family:'Inter',_sans-serif] text-[length:14px] font-semibold [line-height:normal] tracking-[1.5px] uppercase whitespace-pre-wrap [overflow-wrap:break-word] text-[#000000]">Letter spacing changes where lines break</p>
       <p className="relative shrink-0 w-[180px] [font-family:'Inter',_sans-serif] text-[length:15px] font-normal leading-[22px] text-center whitespace-pre-wrap [overflow-wrap:break-word] text-[#000000]">Centered text that wraps onto lines</p>

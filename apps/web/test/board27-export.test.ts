@@ -114,6 +114,10 @@ describe("Issues tab model (rule AiMJh)", () => {
     // PDF (no text target): the IR's issues still show, under export.pdf.
     const pdf = await generateExport(sourceOf("features-all"), "pdf", DEFAULT_TOGGLES)
     expect(pdf.issues.map((x) => x.file)).toEqual(["export.pdf"])
+    // …including what PDF does with mesh and shader paints (spec §7.1).
+    const messages = (g: typeof pdf) => g.issues.flatMap((x) => x.issues).map((i) => i.message)
+    expect(messages(pdf).some((m) => m.includes("PDF mesh gradients"))).toBe(true)
+    expect(messages(pdf).some((m) => m.includes("shader"))).toBe(true)
   })
 })
 

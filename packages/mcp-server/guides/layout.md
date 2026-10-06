@@ -29,9 +29,10 @@ Hidden children (`visible: false`) take no space.
 
 - a number: fixed px;
 - `{"mode":"fit"}`: hug the content (the default for frames);
-- `{"mode":"fill"}`: take the free space of a layout parent. On the main axis it grows like
-  `flex: 1` (`weight` shares space between several fill children). On the cross axis it
-  stretches.
+- `{"mode":"fill"}`: take the space of a layout parent. On the main axis it is `flex: <weight> 1 0`:
+  fill siblings share the space left by the others by `weight`, ignoring their content (two fill
+  texts get equal widths, as in pen.dev and Figma); in a parent that hugs that axis or wraps,
+  the content size is the basis. On the cross axis it stretches.
 
 `fallback` gives the size used when `fill` has no layout parent, or when `fit` has no children.
 `min`/`max` need feature `size/min-max`.

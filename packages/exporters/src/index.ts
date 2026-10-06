@@ -32,6 +32,7 @@ export {
   type IconLoader,
   layoutDocument,
   loadIcons,
+  paintIssues,
   type RasterSource,
 } from "./export"
 export { type BuildIROptions, buildIR, findNode } from "./ir/build"

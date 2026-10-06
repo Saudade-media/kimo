@@ -57,7 +57,12 @@ try {
     ic.requests.length <= 5 &&
     !ic.requests.some((p) => p.includes("catalog"))
   if (!iconsOk) console.error("icon lazy-load check failed")
-  failed = !!out.error || res?.stats?.backend !== "webgl" || !res?.stats?.frames || !iconsOk
+  // An animated shader paint is on screen: frames keep coming without input (~30 fps).
+  const shaderFrames = (res as { shaderFrames?: number } | undefined)?.shaderFrames ?? 0
+  const shadersOk = shaderFrames >= 10
+  if (!shadersOk) console.error(`shader animation check failed: ${shaderFrames} frames in 1 s`)
+  failed =
+    !!out.error || res?.stats?.backend !== "webgl" || !res?.stats?.frames || !iconsOk || !shadersOk
 } finally {
   await browser.close()
   await server.close()

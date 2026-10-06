@@ -68,8 +68,13 @@ into an **IR**, and **emitters** turn the IR into files. Dependencies: `@kimo/co
 
 `box-sizing: border-box`, no margins or borders (a reset). Frames with layout are flex
 containers (`align-content: flex-start` when wrapping, as Yoga). Non-fill flow items never shrink
-(`flex-shrink: 0`); fill items grow with `flex-basis: auto` and `min-width/height: 0` (Yoga has
-no automatic minimum). Out-of-flow boxes and auto text are `width: max-content` (the canvas lays
+(`flex-shrink: 0`); fill items grow by weight with `flex-basis: 0` (spec §6.1: the main axis is
+shared from a zero basis, content ignored, as pen.dev/Figma) — `flex-basis: auto` when the parent
+hugs that axis or wraps — and `min-width/height: 0` (Yoga has no automatic minimum). CSS floors a
+basis at the item's padding, so when fill siblings are padded each gets `flex-basis: weight × k`
+px (k = the largest main-axis padding / weight among them), which ends at the same equal outer
+split as the canvas. Residual: k is computed at export time, so a padding bound to a themed
+variable that changes at runtime (`data-*` theme switch) no longer balances exactly. Out-of-flow boxes and auto text are `width: max-content` (the canvas lays
 them out unconstrained). Strokes never take space: uniform strokes are an `outline` with
 `outline-offset` −w / −w/2 / 0 (painted over the content and not clipped by the node's own
 `overflow`, as on the canvas); per-side widths are an `::after` overlay. Transforms use

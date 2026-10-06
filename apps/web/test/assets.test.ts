@@ -98,4 +98,29 @@ describe("folder asset store (a .kimo on disk)", () => {
     expect(await store.source.load(`./assets/${key}`)).toEqual(data)
     store.dispose()
   })
+
+  test("folder store: shader sources resolve relative to the .kimo", async () => {
+    const { createMemoryPlatform } = await import("@kimo/platform/memory")
+    const { createFolderAssetStore } = await import("../src/lib/assets")
+    const platform = createMemoryPlatform({
+      files: {
+        "/p/d/doc.kimo": "{}",
+        "/p/d/shaders/a.glsl": "void main() {}",
+        "/p/b.frag": "void main() { }",
+        "/p/d/notes.txt": "x",
+      },
+    })
+    const store = createFolderAssetStore(platform, "/p/d/doc.kimo")
+    const text = async (src: string) => {
+      const b = await store.source.load(src)
+      return b ? new TextDecoder().decode(b) : null
+    }
+    expect(await text("./shaders/a.glsl")).toBe("void main() {}")
+    expect(await text("../b.frag")).toBe("void main() { }")
+    expect(await text("./missing.glsl")).toBeNull()
+    // Only shader sources: other relative paths are not read.
+    expect(await text("./notes.txt")).toBeNull()
+    expect(await text("/p/b.frag")).toBeNull()
+    store.dispose()
+  })
 })

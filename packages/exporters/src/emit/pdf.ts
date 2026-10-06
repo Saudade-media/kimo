@@ -187,7 +187,8 @@ export async function emitPdf(ir: IRDocument, options: PdfOptions): Promise<Expo
         }
         const c = color(p)
         if (!c) continue
-        if (p.kind !== "solid")
+        // Mesh (mean vertex color) and shader issues: `paintIssues` (export.ts).
+        if (p.kind !== "solid" && p.kind !== "mesh")
           issue("GRADIENT_APPROXIMATED", "PDF gradients use the mean color", node.id)
         withMatrix(yUp, () =>
           page.drawSvgPath(pathD, { x: 0, y: 0, color: c.rgb, opacity: a * c.a, borderWidth: 0 }),
@@ -325,11 +326,11 @@ function color(p: IRPaint): { rgb: ReturnType<typeof rgb>; a: number } | null {
     const [r, g, b, a] = p.color.rgba
     return { rgb: rgb(r, g, b), a }
   }
-  if (p.kind === "image") return null
+  if (p.kind === "image" || p.kind === "shader") return null
+  const cs = p.kind === "mesh" ? p.colors : p.stops.map((s) => s.color)
   const m = [0, 0, 0, 0]
-  for (const s of p.stops)
-    for (let i = 0; i < 4; i++)
-      m[i] = (m[i] as number) + (s.color.rgba[i] as number) / p.stops.length
+  for (const c of cs)
+    for (let i = 0; i < 4; i++) m[i] = (m[i] as number) + (c.rgba[i] as number) / cs.length
   return { rgb: rgb(m[0] as number, m[1] as number, m[2] as number), a: m[3] as number }
 }
 

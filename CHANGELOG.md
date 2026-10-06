@@ -14,6 +14,36 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+### Added
+
+- Kimo opens pen.dev `.pen` design files (plain JSON, schema 2.x): from Open file, Finder's
+  Open With (registered as an alternate app, so pen.dev stays the default) or the command line.
+  The first open converts the file into `<name>.kimo` beside it, with its images in `assets/`;
+  reopening the same unchanged `.pen` reopens that `.kimo`, and an existing file is never
+  replaced (`<name> 2.kimo`). The `.pen` is never written. In the browser a `.pen` imports into
+  the library (only `https://` images can be fetched). Components, instances and overrides,
+  slots, themed variables, auto layout, paints, effects, mesh gradients and shader fills carry
+  over (`@kimo/core-schema` `importPen`).
+- Mesh gradient and shader fills render on the canvas and in PNG export (pen.dev-compatible:
+  Coons-patch mesh, GLSL ES 1.00 fragment shaders with `@resolution`/`@time` annotations,
+  animated while visible, still under reduced motion). HTML/CSS/React approximate meshes with
+  radial gradients, SVG/PDF use the mean color; shaders are reported as unsupported there.
+
+### Changed
+
+- `fill` sizes share the parent's main axis equally by weight, ignoring content size and
+  padding, as in pen.dev and Figma (CSS `flex: <weight> 1 0`): two fill texts in a row now get
+  the same width whatever their length, so text wraps as in pen.dev, and padded and unpadded
+  fill siblings end with equal outer sizes. A parent that hugs (`fit`) that axis or wraps keeps
+  the content size as the basis. The canvas layout and the HTML/CSS and React exports change
+  together (`flex-basis: 0`, or a px basis proportional to the weights when siblings are
+  padded); min/max clamps are resolved from the same basis.
+
+### Format
+
+- Spec §6.1 clarifies how `fill` shares main-axis space (zero basis; content basis in a hug or
+  wrapping parent), §20 row 34. No format version or feature change.
+
 ## [1.0.0] - 2026-10-04
 
 The first public release: release engineering, polish, the new mark and the format 1.0 freeze.

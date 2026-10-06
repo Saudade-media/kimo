@@ -32,7 +32,7 @@ export const SizeFit = Strict({
   max: opt(nonNeg),
 })
 
-/** `{ mode: "fill" }`: take the parent's free space, shared by `weight`. */
+/** `{ mode: "fill" }`: take the parent's space, shared by `weight` from a zero basis (§6.1). */
 export const SizeFill = Strict({
   mode: Type.Literal("fill"),
   fallback: opt(nonNeg),

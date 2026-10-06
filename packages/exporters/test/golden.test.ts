@@ -15,6 +15,7 @@ import {
   emitTailwindTheme,
   emitTokensCss,
   layoutDocument,
+  paintIssues,
 } from "../src"
 import { FIXTURES, fakeIcons, fakeMeasurer, golden, loadFixture } from "./helpers"
 
@@ -36,9 +37,13 @@ async function outputs(f: (typeof FIXTURES)[number]): Promise<Record<string, str
     out[`svg/${file.path}`] = file.contents
   const pdf = await emitPdf(vec, { layout, measureText: fakeMeasurer, icons: fakeIcons })
   out[`pdf/${pdf.path}`] = pdf.contents
-  const issues = [...html.issues, ...vec.issues].map(
-    (i) => `${i.code} ${i.nodeId ?? "-"} ${i.message}`,
-  )
+  const issues = [
+    ...html.issues,
+    ...vec.issues,
+    ...paintIssues(html, "html-css"),
+    ...paintIssues(vec, "svg"),
+    ...paintIssues(vec, "pdf"),
+  ].map((i) => `${i.code} ${i.nodeId ?? "-"} ${i.message}`)
   out["issues.txt"] = `${[...new Set(issues)].sort().join("\n")}\n`
   return out
 }

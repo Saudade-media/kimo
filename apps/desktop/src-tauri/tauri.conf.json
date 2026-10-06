@@ -42,6 +42,13 @@
         "description": "Kimo document package",
         "role": "Editor",
         "mimeType": "application/vnd.kimo+zip"
+      },
+      {
+        "ext": ["pen"],
+        "name": "Design File (.pen)",
+        "description": "Design file, opened as a Kimo document",
+        "role": "Editor",
+        "rank": "Alternate"
       }
     ]
   },

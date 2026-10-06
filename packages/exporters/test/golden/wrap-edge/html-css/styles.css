@@ -104,7 +104,7 @@ body { -webkit-font-smoothing: antialiased; }
   position: relative;
   flex-grow: 1;
   flex-shrink: 1;
-  flex-basis: auto;
+  flex-basis: 0;
   min-width: 0;
   font-family: "Inter", sans-serif;
   font-size: 13px;

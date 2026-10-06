@@ -84,6 +84,12 @@ pub fn is_kimo_path(p: &Path) -> bool {
     lower.ends_with(".kimo") || lower.ends_with(".kimoz")
 }
 
+/// A file Kimo opens from Finder, "Open With" or the command line: a Kimo document, or a
+/// pen.dev `.pen` file (the window converts it to a `.kimo` beside it).
+pub fn is_openable_path(p: &Path) -> bool {
+    is_kimo_path(p) || p.to_string_lossy().to_lowercase().ends_with(".pen")
+}
+
 /// Whether `pid` is a running process on this machine.
 pub fn pid_alive(pid: u32) -> bool {
     if pid == 0 {

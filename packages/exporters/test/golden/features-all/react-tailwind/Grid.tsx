@@ -2,7 +2,7 @@
 export function Grid() {
   return (
     <section className="relative w-max min-w-[320px] max-w-[1200px] flex flex-row flex-wrap content-start items-stretch gap-y-[16px] gap-x-space-s shadow-[0px_4px_12px_0px_#0000001F]" data-kimo-theme="" data-mode="light">
-      <div className="relative grow-[2] shrink basis-auto min-w-[100px] h-[100px] grid" />
+      <div className="relative grow-[2] shrink basis-auto min-w-[100px] h-[100px] grid [background-image:radial-gradient(100%_100%_at_100%_0%,_#00F,_transparent),_radial-gradient(100%_100%_at_0%_0%,_#F00,_transparent),_linear-gradient(#800080,_#800080)]" />
       <div className="relative grow shrink basis-auto min-w-0 h-[100px] grid" />
       <p className="relative shrink-0 w-[200px] [font-family:'Inter',_sans-serif] text-[length:16px] font-normal leading-[24px] [font-feature-settings:'cv11'_1,_'liga'_0,_'ss01'_1] text-justify whitespace-pre-wrap [overflow-wrap:break-word] text-[#000000]">
         <span>{"Hello "}</span>

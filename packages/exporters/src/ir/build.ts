@@ -291,7 +291,12 @@ class Builder {
     return this.value(id, n.visible, "visible").v !== false
   }
 
-  private buildNode(id: string, placement: IRPlacement, parentFlex: IRFlex | null): IRNode | null {
+  private buildNode(
+    id: string,
+    placement: IRPlacement,
+    parentFlex: IRFlex | null,
+    parentDefinite: readonly [boolean, boolean] = [false, false],
+  ): IRNode | null {
     const n = this.node(id)
     if (!n || SKIPPED.has(n.type)) return null
     const visible = this.isVisible(id, n)
@@ -334,6 +339,16 @@ class Builder {
     const flow = placement.mode === "flow"
     node.w = this.size(id, n, "w", flow ? placement.dir : null)
     node.h = this.size(id, n, "h", flow ? placement.dir : null)
+    // §6.1 (engine.ts `basisKey`): a definite size is fixed, or a fill in a definite parent.
+    const definite = (["w", "h"] as const).map(
+      (a, i) => node[a].kind === "fixed" || (node[a].kind === "fill" && parentDefinite[i]),
+    ) as [boolean, boolean]
+    if (flow) {
+      const row = placement.dir === "row"
+      const main = node[row ? "w" : "h"]
+      if (main.kind === "fill" && main.axis === "main")
+        main.zero = parentDefinite[row ? 0 : 1] && parentFlex?.wrap !== true
+    }
 
     // Children.
     const kids = this.ctx.view.children(id)
@@ -363,9 +378,10 @@ class Builder {
             ? { mode: "absolute", ...this.xy(c.n) }
             : { mode: "flow", dir: flex.dir, index, lead: index > 0 ? lead : 0 }
           if (!absolute && this.isVisible(c.id, c.n)) index++
-          const cnode = this.buildNode(c.id, p, flex)
+          const cnode = this.buildNode(c.id, p, flex, definite)
           if (cnode) node.children.push(cnode)
         }
+        this.zeroBases(node.children, flex.dir)
       } else if (type === "frame") {
         const anyVisible = childNodes.some((c) => this.isVisible(c.id, c.n))
         for (const a of ["w", "h"] as const) {
@@ -406,8 +422,28 @@ class Builder {
     }
     node.visual.isolate = this.needsIsolation(node)
     if (this.options.components) node.instance = this.instanceRef(id, n, node)
-    void parentFlex
     return node
+  }
+
+  /** Bases of zero-basis fill items: weight × the largest main padding / weight (§6.1). */
+  private zeroBases(kids: IRNode[], dir: "row" | "column") {
+    const items: Extract<IRSize, { kind: "fill" }>[] = []
+    let k = 0
+    for (const c of kids) {
+      const s = c[dir === "row" ? "w" : "h"]
+      if (!c.visible || c.placement.mode !== "flow" || s.kind !== "fill" || !s.zero) continue
+      items.push(s)
+      const f = c.flex
+      const [a, b] = dir === "row" ? [1, 3] : [0, 2]
+      const pad = f
+        ? (f.pad[a] as IRNum).v +
+          (f.padExtra[a] as number) +
+          (f.pad[b] as IRNum).v +
+          (f.padExtra[b] as number)
+        : 0
+      k = Math.max(k, pad / s.weight)
+    }
+    if (k > 0) for (const s of items) s.basis = s.weight * k
   }
 
   /** Ids kept although hidden (boolean prop targets inside component files). */
@@ -732,6 +768,43 @@ class Builder {
           blend,
         }
       }
+      case "mesh": {
+        const cols = num(p.cols)
+        const rows = num(p.rows)
+        if (cols === undefined || rows === undefined || cols < 1 || rows < 1) return null
+        const n = Math.floor(cols) * Math.floor(rows)
+        if (!Array.isArray(p.colors) || p.colors.length < n) return null
+        const colors: IRColor[] = []
+        for (let i = 0; i < n; i++) {
+          const c = this.color(id, p.colors[i])
+          if (!c) return null
+          colors.push(c)
+        }
+        const pts = Array.isArray(p.points) ? p.points : []
+        const points: [number, number][] = []
+        for (let i = 0; i < n; i++) {
+          // `[x, y]` or `{ position: [x, y], …handles }` (pen.dev mesh points).
+          const raw = pts[i]
+          const at = Array.isArray(raw) ? raw : isObject(raw) ? raw.position : undefined
+          const xy = Array.isArray(at) ? [num(at[0]), num(at[1])] : []
+          const c = i % Math.floor(cols)
+          const r = Math.floor(i / Math.floor(cols))
+          points.push([
+            xy[0] ?? (cols > 1 ? c / (Math.floor(cols) - 1) : 0.5),
+            xy[1] ?? (rows > 1 ? r / (Math.floor(rows) - 1) : 0.5),
+          ])
+        }
+        return {
+          kind: "mesh",
+          cols: Math.floor(cols),
+          rows: Math.floor(rows),
+          colors,
+          points,
+          blend,
+        }
+      }
+      case "shader":
+        return typeof p.src === "string" ? { kind: "shader", src: p.src, blend } : null
       default:
         this.issue("PAINT_UNSUPPORTED", `paint kind ${String(p.kind)} is not exported`, id)
         return null

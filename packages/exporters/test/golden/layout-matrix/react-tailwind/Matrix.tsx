@@ -4,15 +4,15 @@ export function Matrix() {
     <section className="relative w-[900px] flex flex-row flex-wrap content-start items-start gap-y-[10px] gap-x-gap-m pt-pad-l pr-pad-l pb-pad-l pl-pad-l bg-[#E2E8F0]" data-kimo-theme="">
       <div className="relative shrink-0 w-[420px] flex flex-row items-stretch gap-x-[8px] pt-[12px] pr-[14px] pb-[16px] pl-[18px] bg-[#FFFFFF] [outline:2px_solid_#94A3B8] [outline-offset:-2px]">
         <div className="relative shrink-0 w-[60px] h-[40px] bg-[#6366F1]" />
-        <div className="relative grow shrink basis-auto min-w-0 h-[24px] bg-[#8B5CF6]" />
-        <div className="relative grow-[3] shrink basis-auto min-w-0 self-stretch bg-[#D946EF]" />
+        <div className="relative grow shrink basis-0 min-w-0 h-[24px] bg-[#8B5CF6]" />
+        <div className="relative grow-[3] shrink basis-0 min-w-0 self-stretch bg-[#D946EF]" />
         <div className="relative shrink-0 w-[30px] h-[56px] bg-[#F43F5E] rounded-[4px_8px_12px_16px]" />
         <div className="absolute left-[300px] top-[4px] w-[20px] h-[20px] bg-[#EF4444]" />
       </div>
       <div className="relative shrink-0 w-[240px] h-[200px] flex flex-col justify-between items-center pt-[8px] pr-[16px] pb-[8px] pl-[16px] bg-[#FFFFFF]">
         <div className="relative shrink-0 self-stretch h-[30px] bg-[#A855F7]" />
-        <div className="relative mt-[-4px] grow-[2] shrink basis-auto min-h-0 w-[80px] bg-[#EC4899]" />
-        <div className="relative mt-[-4px] grow shrink basis-auto min-h-0 w-[60px] bg-[#F97316]" />
+        <div className="relative mt-[-4px] grow-[2] shrink basis-0 min-h-0 w-[80px] bg-[#EC4899]" />
+        <div className="relative mt-[-4px] grow shrink basis-0 min-h-0 w-[60px] bg-[#F97316]" />
       </div>
       <div className="relative shrink-0 w-[300px] h-[60px] flex flex-row justify-evenly items-end bg-[#FFFFFF]">
         <div className="relative shrink-0 w-[40px] h-[20px] bg-[#0F766E]" />

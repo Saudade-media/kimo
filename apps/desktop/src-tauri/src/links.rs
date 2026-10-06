@@ -40,6 +40,11 @@ pub fn is_kimo_path(p: &str) -> bool {
     l.ends_with(".kimo") || l.ends_with(".kimoz")
 }
 
+/// A path a launch argument may open: a Kimo document or a pen.dev `.pen` file.
+pub fn is_openable_path(p: &str) -> bool {
+    is_kimo_path(p) || p.to_lowercase().ends_with(".pen")
+}
+
 fn valid_node_id(id: &str) -> bool {
     (6..=24).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric())
 }
@@ -85,8 +90,8 @@ pub fn parse_deep_link(raw: &str) -> Option<DeepLink> {
 }
 
 /// Turns command-line arguments (argv minus the program, or a second instance's argv) into
-/// open requests: `kimo:` URLs become deep-link requests, `.kimo`/`.kimoz` paths (resolved
-/// against `cwd`) one `source` request.
+/// open requests: `kimo:` URLs become deep-link requests, `.kimo`/`.kimoz`/`.pen` paths
+/// (resolved against `cwd`) one `source` request.
 pub fn requests_from_args(
     args: &[String],
     cwd: &std::path::Path,
@@ -109,7 +114,7 @@ pub fn requests_from_args(
             }
             continue;
         }
-        if !is_kimo_path(a) {
+        if !is_openable_path(a) {
             continue;
         }
         let p = std::path::Path::new(a);
@@ -215,6 +220,7 @@ mod tests {
             "--flag",
             "a.kimo",
             "/abs/b.kimoz",
+            "design.PEN",
             "notes.txt",
             "kimo://open?path=%2Fc.kimo&node=Abc123xyz9",
         ]
@@ -227,7 +233,11 @@ mod tests {
             r[0],
             OpenRequest {
                 source: "argv",
-                refs: vec!["/work/a.kimo".into(), "/abs/b.kimoz".into()],
+                refs: vec![
+                    "/work/a.kimo".into(),
+                    "/abs/b.kimoz".into(),
+                    "/work/design.PEN".into()
+                ],
                 node: None,
                 page: None
             }

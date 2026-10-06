@@ -33,6 +33,7 @@ import { packageIconSource, packIconSource, SourceIconProvider } from "./icons/p
 import { IconRegistry } from "./icons/registry"
 import { DEFAULT_OVERLAY_THEME, OverlayPainter } from "./overlay"
 import { ImageCache, PaintFactory, releaseBlenders, retainBlenders } from "./paint"
+import { ShaderCache } from "./shader"
 import { StrokeGeometry } from "./stroke"
 import { TextEngine } from "./text"
 import {
@@ -69,6 +70,8 @@ interface RootEntry {
   layers: number
   /** The picture skipped icon glyphs that were still loading. */
   pendingIcons: boolean
+  /** The subtree paints a shader reading `@time`: drawn live (see {@link SHADER_FRAME_MS}). */
+  timed: boolean
   /** What the recording read from the header (stale on a header change, see HeaderUse). */
   header: HeaderUse
   /**
@@ -96,6 +99,7 @@ interface SharedPicture {
   draws: number
   layers: number
   pendingIcons: boolean
+  timed: boolean
   /** What the recording read from the header (see {@link CanvasKitRenderer.invalidate}). */
   header: HeaderUse
   /** The subtree blends non-normally (answers the painter's isolation check). */
@@ -218,8 +222,26 @@ const UNBOUNDED_CULL = 1e6
  * bounds them (older levels go first).
  */
 const RASTER_LEVELS = 3
+/**
+ * Animated shader paints (spec §7.1, `@time`): a runtime effect's uniforms are baked into a
+ * recording, so while shaders animate, roots holding a `@time` shader are drawn live from the
+ * painter instead of replaying their picture (zoomed out they draw from their t = 0 raster).
+ * While one is visible, frames keep coming at most every this many ms (more when drawing them
+ * live costs more), and stop once none is visible; never under `prefers-reduced-motion`.
+ */
+const SHADER_FRAME_MS = 33
 /** Raster scales are powers of two ≥ the device scale, so a raster is downsampled ≤ 2×. */
 const rasterBucket = (s: number) => 2 ** Math.max(-8, Math.ceil(Math.log2(s)))
+
+let motionQuery: { matches: boolean } | null | undefined
+/** `prefers-reduced-motion: reduce` (browsers; false elsewhere). */
+function reducedMotion(): boolean {
+  if (motionQuery === undefined) {
+    const mm = (globalThis as { matchMedia?: (q: string) => { matches: boolean } }).matchMedia
+    motionQuery = typeof mm === "function" ? mm("(prefers-reduced-motion: reduce)") : null
+  }
+  return motionQuery?.matches ?? false
+}
 
 type Backend = RenderStats["backend"]
 
@@ -234,6 +256,8 @@ export class CanvasKitRenderer implements Renderer {
   private fontProvider: CkFontProvider | null = null
   private textEngine: TextEngine | null = null
   private images: ImageCache | null = null
+  private shaderCache: ShaderCache | null = null
+  private paintFactory: PaintFactory | null = null
   private painter: Painter | null = null
   private overlayPainter: OverlayPainter | null = null
   private theme: OverlayTheme = DEFAULT_OVERLAY_THEME
@@ -305,6 +329,17 @@ export class CanvasKitRenderer implements Renderer {
   private prevZoom = 0
   private settleTimer: ReturnType<typeof setTimeout> | null = null
 
+  /**
+   * Animate `@time` shader paints on screen (default: in browsers). Off, or under
+   * `prefers-reduced-motion`, they draw at t = 0.
+   */
+  shaderAnimation = isBrowser()
+  /** Set while drawing roots live: shared instance pictures with `@time` shaders are bypassed. */
+  private live = false
+  /** Origin of the shader clock (ms, `performance.now()`). */
+  private clockStart = -1
+  private shaderTimer: ReturnType<typeof setTimeout> | null = null
+
   private frameTimes: number[] = []
   private frameStamps: number[] = []
   private frames = 0
@@ -373,11 +408,14 @@ export class CanvasKitRenderer implements Renderer {
       const text = new TextEngine(ck, fonts)
       const images = new ImageCache(ck, () => this.dropAll(false))
       if (this.scene) images.assets = this.scene.assets
+      const shaders = new ShaderCache(ck, () => this.dropAll(false))
+      if (this.scene) shaders.assets = this.scene.assets
       this.ck = ck
       retainBlenders(ck)
       this.fontProvider = fonts
       this.textEngine = text
       this.images = images
+      this.shaderCache = shaders
       const provider =
         options.icons ??
         this.defaultIcons?.() ??
@@ -388,7 +426,9 @@ export class CanvasKitRenderer implements Renderer {
       // Only pictures that skipped a still-loading glyph need re-recording (dropping every
       // root per arriving glyph re-recorded a whole 5k-node document several times on open).
       this.unsubscribeIcons = provider.onIconLoaded(() => this.dropPendingIcons())
-      this.painter = new Painter(ck, new PaintFactory(ck, images), text, registry)
+      const factory = new PaintFactory(ck, images, shaders)
+      this.paintFactory = factory
+      this.painter = new Painter(ck, factory, text, registry)
       this.painter.subtree = (c, ctx, id, counters) => this.drawShared(c, ctx, id, counters)
       this.painter.knownBlends = (ctx, id) => this.sharedFor(ctx, id)?.sp.blends
       this.applyAgentTheme()
@@ -549,6 +589,8 @@ export class CanvasKitRenderer implements Renderer {
   detach(): void {
     if (this.settleTimer) clearTimeout(this.settleTimer)
     this.settleTimer = null
+    if (this.shaderTimer) clearTimeout(this.shaderTimer)
+    this.shaderTimer = null
     this.removeListeners?.()
     this.removeListeners = null
     this.dropRasters()
@@ -563,6 +605,8 @@ export class CanvasKitRenderer implements Renderer {
     this.dropAll(false)
     this.textEngine?.dispose()
     this.images?.clear()
+    this.shaderCache?.clear()
+    this.paintFactory?.clear()
     this.fontProvider?.dispose()
     this.unsubscribeIcons?.()
     this.unsubscribeIcons = null
@@ -574,6 +618,8 @@ export class CanvasKitRenderer implements Renderer {
     this.painter = null
     this.textEngine = null
     this.images = null
+    this.shaderCache = null
+    this.paintFactory = null
     this.fontProvider = null
     this.overlayPainter = null
     this.initPromise = null
@@ -582,6 +628,9 @@ export class CanvasKitRenderer implements Renderer {
   // --- state --------------------------------------------------------------------------------
 
   setDocument(scene: RenderScene): void {
+    // Shader srcs are relative paths: another source may resolve them to other files.
+    if (this.scene && this.scene.assets !== scene.assets) this.shaderCache?.forgetSources()
+    if (this.shaderCache) this.shaderCache.assets = scene.assets
     this.scene = scene
     this.grouping = null
     this.headerKey = null
@@ -685,6 +734,7 @@ export class CanvasKitRenderer implements Renderer {
           draws: 0,
           layers: 0,
           pendingIcons: false,
+          timed: false,
           header: NO_HEADER,
           wrap: null,
           raster: null,
@@ -928,6 +978,7 @@ export class CanvasKitRenderer implements Renderer {
     const counters: DrawCounters = { nodes: 0, draws: 0 }
     const outer = this.recFlags
     const flags: HeaderUse = { refs: false, textDefault: null }
+    const usage = { ...this.paintFactory?.usage }
     this.recFlags = flags
     this.recRoot = root
     this.recWrap = null
@@ -947,6 +998,8 @@ export class CanvasKitRenderer implements Renderer {
     e.draws = counters.draws
     e.layers = counters.layers ?? 0
     e.pendingIcons = (counters.pendingIcons ?? 0) > 0
+    const used = this.paintFactory?.usage
+    e.timed = (used?.timed ?? 0) > (usage.timed ?? 0) || (counters.timed ?? 0) > 0
     e.data = e.ids.map((id) => ctx.nodes.getNode(id))
     const cull = e.picture.cullRect()
     let bounds: Rect | null = null
@@ -1063,9 +1116,14 @@ export class CanvasKitRenderer implements Renderer {
       this.recFlags = flags
       const hook = painter.subtree
       const known = painter.knownBlends
+      const usage = { ...this.paintFactory?.usage }
       painter.subtree = null
       painter.knownBlends = null
       let picture: SkPicture
+      // A shared picture may be recorded while a root draws live: it holds the t = 0 frame.
+      const f = this.paintFactory
+      const time = f?.time ?? 0
+      if (f) f.time = 0
       try {
         const c = rec.beginRecording(ck.LTRBRect(-1e7, -1e7, 1e7, 1e7), true)
         // Local space: the instance's own transform is applied where the picture is drawn.
@@ -1077,6 +1135,7 @@ export class CanvasKitRenderer implements Renderer {
         painter.subtree = hook
         painter.knownBlends = known
         this.recFlags = outer
+        if (f) f.time = time
       }
       painter.knownBlends = null
       const blends = painter.subtreeBlends(ctx, id)
@@ -1092,6 +1151,7 @@ export class CanvasKitRenderer implements Renderer {
         draws: c2.draws,
         layers: c2.layers ?? 0,
         pendingIcons: (c2.pendingIcons ?? 0) > 0,
+        timed: (this.paintFactory?.usage.timed ?? 0) > (usage.timed ?? 0),
         header: flags,
         blends,
         used: this.frames,
@@ -1115,6 +1175,8 @@ export class CanvasKitRenderer implements Renderer {
     const w = this.sharedFor(ctx, id)
     if (!w) return false
     const { sp, T } = w
+    // Live roots draw animated shader instances from the painter (current clock).
+    if (this.live && sp.timed) return false
     if (id === this.recRoot) this.recWrap = w
     canvas.save()
     placeAt(canvas, T)
@@ -1124,6 +1186,7 @@ export class CanvasKitRenderer implements Renderer {
     counters.draws += sp.draws
     if (sp.layers) counters.layers = (counters.layers ?? 0) + sp.layers
     if (sp.pendingIcons) counters.pendingIcons = (counters.pendingIcons ?? 0) + 1
+    if (sp.timed) counters.timed = (counters.timed ?? 0) + 1
     const f = this.recFlags
     if (f) {
       if (sp.header.refs) f.refs = true
@@ -1155,6 +1218,7 @@ export class CanvasKitRenderer implements Renderer {
     e.draws = sp.draws
     e.layers = sp.layers
     e.pendingIcons = sp.pendingIcons
+    e.timed = sp.timed
     e.header = sp.header
     if (sp.bounds) {
       const b = sp.bounds
@@ -1330,6 +1394,30 @@ export class CanvasKitRenderer implements Renderer {
             break
           }
       let behind = false
+      // Animated shaders: live roots get the current clock (see SHADER_FRAME_MS).
+      const animate = this.shaderAnimation && !reducedMotion()
+      if (animate && this.clockStart < 0) this.clockStart = now()
+      const shaderTime = animate ? (now() - this.clockStart) / 1000 : 0
+      let liveMs = 0
+      let timedVisible = false
+      const drawLive = (root: string, e: RootEntry) => {
+        e.used = this.frames + 1
+        const t = now()
+        const f = this.paintFactory
+        if (f) f.time = shaderTime
+        this.live = true
+        const counters: DrawCounters = { nodes: 0, draws: 0 }
+        try {
+          this.need().painter.drawNode(canvas, ctx, root, counters)
+        } finally {
+          this.live = false
+          if (f) f.time = 0
+        }
+        drawn += counters.nodes
+        draws += counters.draws
+        liveMs += now() - t
+        timedVisible = true
+      }
       /** Draws a wrapper root: its variant's raster when zoomed out (one per variant), else
        * the shared picture under the root's transform. */
       const drawWrapped = (e: RootEntry, w: NonNullable<RootEntry["wrap"]>) => {
@@ -1417,7 +1505,8 @@ export class CanvasKitRenderer implements Renderer {
               culled += e.nodes
               continue
             }
-            drawWrapped(e, e.wrap)
+            if (e.timed && animate && !bucket) drawLive(root, e)
+            else drawWrapped(e, e.wrap)
             continue
           }
           e.wrap = null
@@ -1448,7 +1537,8 @@ export class CanvasKitRenderer implements Renderer {
           recordMs += now() - t
           if (w) {
             this.last.wrapped++
-            drawWrapped(e, w)
+            if (e.timed && animate && !bucket) drawLive(root, e)
+            else drawWrapped(e, w)
             continue
           }
         }
@@ -1465,6 +1555,10 @@ export class CanvasKitRenderer implements Renderer {
         if (!pic) continue
         if (e.bounds && !intersects(e.bounds, visible)) {
           culled += e.nodes
+          continue
+        }
+        if (e.timed && animate && !bucket) {
+          drawLive(root, e)
           continue
         }
         e.used = this.frames + 1
@@ -1572,6 +1666,14 @@ export class CanvasKitRenderer implements Renderer {
       this.last.recordMs = recordMs
       this.last.rasterMs = rasterMs
       if (behind) this.requestFrame()
+      if (animate && timedVisible && !this.shaderTimer)
+        this.shaderTimer = setTimeout(
+          () => {
+            this.shaderTimer = null
+            this.requestFrame()
+          },
+          Math.max(SHADER_FRAME_MS, liveMs * 3),
+        )
     }
     if (this.overlayPainter) {
       canvas.save()
@@ -1815,6 +1917,7 @@ export class CanvasKitRenderer implements Renderer {
     fit: (box: Rect) => { w: number; h: number; scale: number; dx: number; dy: number },
   ): Promise<Uint8Array> {
     const { ck, painter, images } = this.need()
+    const shaders = this.shaderCache
     const ctx0 = this.context()
     const ids = nodeIds.filter((id) => ctx0?.layout.nodes.get(id))
     if (!ctx0 || !ids.length || ids.length !== nodeIds.length)
@@ -1826,6 +1929,7 @@ export class CanvasKitRenderer implements Renderer {
     await Promise.all(
       ids.flatMap((id) => [
         ...[...painter.imagesOf(ctx0, id)].map((src) => images.load(src)),
+        ...[...painter.shadersOf(ctx0, id)].map((src) => shaders?.load(src)),
         this.iconRegistry?.ensure(painter.iconsOf(ctx0, id)),
       ]),
     )

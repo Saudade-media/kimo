@@ -93,12 +93,13 @@
   cursor: pointer;
 }
 
-/* Thumbnail (wlebL): fill × 164, radius-xl, 1px border, clip; bg-muted under the preview
-   image (cover). */
+/* Thumbnail (wlebL): radius-xl, 1px border, clip; bg-muted under the preview image (cover).
+   The node is 260 × 164; the card fills its grid column, so the thumbnail keeps that ratio
+   (the template covers are rendered at the same 1.6:1) instead of a fixed height. */
 .home-template-card__thumbnail {
   box-sizing: border-box;
   display: block;
-  height: 164px;
+  aspect-ratio: 260 / 164;
   overflow: hidden;
   border: 1px solid var(--kimo-border);
   border-radius: var(--kimo-radius-xl);

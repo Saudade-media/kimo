@@ -14,8 +14,13 @@
  * Web (the real app over IndexedDB): template, Move to Trash / Restore / Delete forever, Rename,
  * Duplicate, Design systems count (B4, B7).
  */
+
+import { createHash } from "node:crypto"
 import type { Page } from "playwright"
+import { readZip, writeZip } from "../src/lib/zip"
 import { disk, LOOM, open, SITE } from "./m4-app.e2e"
+import { nextFileChooser } from "./qa-helpers"
+import { noPickers, PNG_2x2 } from "./qa-m2-helpers"
 import { type E2EContext, expect, type Scenario } from "./run"
 
 const KIMO_SITE = "/Users/me/Work/kimo-site"
@@ -76,6 +81,27 @@ async function rowMenu(page: Page, ref: string) {
 
 export const scenarios: Scenario[] = [
   {
+    name: "board37: Recents with no opened file but watched files → Nothing opened yet (B10)",
+    async run(ctx) {
+      const { page } = ctx
+      await page.goto("about:blank") // fresh memory host: nothing opened yet
+      await home(ctx, "#/")
+      const empty = page.locator('[data-empty="no-recents"]')
+      await empty.waitFor({ timeout: 10_000 })
+      const allCount = await page.locator('a.home-nav[href="#/all"] .home-nav__count').innerText()
+      expect(Number(allCount) > 0, `watched folders hold files: ${allCount}`)
+      expect(
+        (await page.locator('[data-empty="no-files"]').count()) === 0,
+        "never says No files yet while folders hold files",
+      )
+      const text = await empty.innerText()
+      expect(/Nothing opened yet/.test(text) && /Files you open show up here\./.test(text), text)
+      await empty.getByRole("button", { name: "Show all files" }).click()
+      await page.waitForFunction(() => location.hash === "#/all")
+      await page.locator(".kimo-file-row, .kimo-file-card").first().waitFor({ timeout: 10_000 })
+    },
+  },
+  {
     name: "board37: sidebar rows switch Home's section (active row, h1, list)",
     async run(ctx) {
       const { page } = ctx
@@ -132,8 +158,9 @@ export const scenarios: Scenario[] = [
       await page.locator('a.home-nav[href="#/libraries"]').click()
       await page.waitForFunction(() => location.hash === "#/libraries")
       await waitH1(page, "Design systems")
-      // board18's marketing.kimo publishes components.
-      await page.locator(`.kimo-file-card[data-file="${LOOM}/marketing.kimo"]`).waitFor()
+      // marketing.kimo has local components but nothing imports it and it isn't marked as a
+      // library, so Design systems is empty here (pAjZM).
+      await page.getByText("No design systems yet").waitFor()
       expect(
         (await page.getByRole("searchbox").inputValue()) === "",
         "a new section starts with an empty search",
@@ -392,6 +419,54 @@ export const scenarios: Scenario[] = [
         { timeout: 10_000 },
       )
       expect((await row.locator(".kimo-status-pill--missing").count()) === 1, "Missing pill")
+
+      // B11 grid (board 37 de22N "Card · missing"): file-x thumbnail, name text-tertiary, info
+      // row "folder · branch" + StatusPill/Missing (gap 6, center), no modified date.
+      await page.getByRole("radio", { name: "Grid view" }).click()
+      const card = page.locator(`.kimo-file-card[data-file="${SITE}/home.kimo"]`)
+      await card.waitFor({ timeout: 10_000 })
+      const g = await card.evaluate((el) => {
+        const cs = (q: string) => getComputedStyle(el.querySelector(q) as Element)
+        const tertiary = getComputedStyle(document.documentElement)
+          .getPropertyValue("--kimo-text-tertiary")
+          .trim()
+        const probe = document.createElement("span")
+        probe.style.color = tertiary
+        document.body.append(probe)
+        const tertiaryRgb = getComputedStyle(probe).color
+        probe.remove()
+        const icon = el.querySelector(".kimo-files-grid__missing-icon")?.getBoundingClientRect()
+        return {
+          missing: el.classList.contains("kimo-files-grid__card--missing"),
+          info: (el.querySelector(".kimo-file-card__info") as HTMLElement).innerText,
+          pill: el.querySelectorAll(".kimo-file-card__info .kimo-status-pill--missing").length,
+          miniFrame: el.querySelectorAll(".kimo-file-card__mini-frame").length,
+          icon: icon ? [icon.width, icon.height] : null,
+          iconColor: cs(".kimo-files-grid__missing-icon").color,
+          name: cs(".kimo-file-card__name").color,
+          tertiaryRgb,
+          infoDisplay: cs(".kimo-file-card__info").display,
+          infoGap: cs(".kimo-file-card__info").columnGap,
+          infoAlign: cs(".kimo-file-card__info").alignItems,
+        }
+      })
+      expect(g.missing && g.pill === 1, `missing card + pill ${JSON.stringify(g)}`)
+      expect(/Missing$/.test(g.info.replace(/\s+/g, " ")), `info ends with Missing: ${g.info}`)
+      expect(!/ago|Jan|today/i.test(g.info), `no modified date: ${g.info}`)
+      expect(g.miniFrame === 0 && g.icon?.[0] === 24 && g.icon?.[1] === 24, `file-x 24 ${g.icon}`)
+      expect(
+        g.name === g.tertiaryRgb && g.iconColor === g.tertiaryRgb,
+        `text-tertiary ${g.name} ${g.iconColor} vs ${g.tertiaryRgb}`,
+      )
+      expect(
+        g.infoDisplay === "flex" && g.infoGap === "6px" && g.infoAlign === "center",
+        `info row ${g.infoDisplay} ${g.infoGap} ${g.infoAlign}`,
+      )
+      await card.click()
+      await toast(page, "missing").waitFor()
+      expect((await hash(page)) === "#/", "a missing card never opens the editor")
+      await page.getByRole("radio", { name: "List view" }).click()
+      await row.waitFor()
       await row.click()
       await toast(page, "missing").waitFor()
       expect((await hash(page)) === "#/", "never opens the editor")
@@ -451,7 +526,7 @@ export const scenarios: Scenario[] = [
       expect(info === "1 component · used by 1 file", `library info ${info}`)
       const n = await page.locator('a.home-nav[href="#/libraries"] .home-nav__count').innerText()
       const cards = await page.locator(".kimo-file-card").count()
-      expect(n === String(cards) && cards >= 2, `Design systems count ${n} = ${cards} cards`)
+      expect(n === String(cards) && cards >= 1, `Design systems count ${n} = ${cards} cards`)
     },
   },
   {
@@ -531,6 +606,7 @@ export const scenarios: Scenario[] = [
         const img = q(".home-template-card__image") as HTMLImageElement
         return {
           thumbH: thumb.height,
+          thumbW: thumb.width,
           metaGap: Math.round(meta.y - (thumb.y + thumb.height)),
           useH: use.height,
           colGap: Math.round((cards[1]?.x ?? 0) - ((cards[0]?.x ?? 0) + card.width)),
@@ -540,7 +616,12 @@ export const scenarios: Scenario[] = [
           cardW: card.width,
         }
       })
-      expect(t.thumbH === 164, `thumbnail 164 (${t.thumbH})`)
+      // 260 × 164 in the design: the thumbnail keeps that ratio as the card fills its column.
+      const ratio = t.thumbW / t.thumbH
+      expect(
+        Math.abs(ratio - 260 / 164) < 0.01,
+        `thumbnail ratio 260:164 (${t.thumbW}×${t.thumbH})`,
+      )
       expect(t.metaGap === 10, `card gap 10 (${t.metaGap})`)
       expect(t.useH === 28, `Use template h28 (${t.useH})`)
       expect(t.colGap === 20, `card gap 20 (${t.colGap})`)
@@ -610,6 +691,55 @@ export const scenarios: Scenario[] = [
       await field.press("Enter")
       const renamed = page.locator(".kimo-file-card", { hasText: "Kimo DS" }).first()
       await renamed.waitFor()
+
+      // B4: "used by M files" counts the recorded snapshot origin (sourceId), never the name.
+      // No known origin → the component count only; a renamed library keeps its count.
+      const libId = (await renamed.getAttribute("data-file-id")) ?? ""
+      const libInfo = async () => {
+        await page.locator('a.home-nav[href="#/libraries"]').click()
+        await waitH1(page, "Design systems")
+        const c = page.locator(`.kimo-file-card[data-file-id="${libId}"] .kimo-file-card__info`)
+        await c.waitFor({ timeout: 10_000 })
+        return c.innerText()
+      }
+      const unknown = await libInfo()
+      expect(/^\d+ components?$/.test(unknown), `origin unknown → count only: ${unknown}`)
+      await page.evaluate(async (source) => {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const req = indexedDB.open("kimo-libraries", 1)
+          req.onupgradeneeded = () => req.result.createObjectStore("snapshots", { keyPath: "key" })
+          req.onsuccess = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+        })
+        await new Promise<void>((resolve, reject) => {
+          const t = db.transaction("snapshots", "readwrite")
+          const s = t.objectStore("snapshots")
+          s.put({
+            key: "importer-a\u0000ds",
+            text: "{}",
+            path: "./ds.kimo",
+            savedAt: 0,
+            sourceId: source,
+          })
+          // A snapshot of a disk file with the same name must not count (no origin).
+          s.put({
+            key: "importer-b\u0000ds",
+            text: '{"meta":{"name":"Kimo DS"}}',
+            path: "./x",
+            savedAt: 0,
+          })
+          t.oncomplete = () => resolve()
+          t.onerror = () => reject(t.error)
+        })
+        db.close()
+      }, libId)
+      await page.locator('a.home-nav[href="#/all"]').click()
+      await page.reload()
+      await page.locator(".home-sidebar").waitFor({ timeout: 15_000 })
+      const known = await libInfo()
+      expect(/^\d+ components? · used by 1 file$/.test(known), `counted by source id: ${known}`)
+      await page.locator('a.home-nav[href="#/all"]').click()
+      await renamed.waitFor()
       // Duplicate → "Kimo DS copy".
       await renamed.click({ button: "right" })
       const items = await page.locator(".home-menu .kimo-menu-item-dense__label").allInnerTexts()
@@ -641,6 +771,102 @@ export const scenarios: Scenario[] = [
       await row.getByRole("button", { name: /forever/ }).click()
       await page.getByRole("dialog").getByRole("button", { name: "Delete forever" }).click()
       await page.locator('[data-empty="trash"]').waitFor()
+    },
+  },
+  {
+    name: "board37 web: Home's Download follows Settings › Embed fonts in .kimoz packages (D4)",
+    async run(ctx) {
+      const { page, url } = ctx
+      await noPickers(page)
+      // A .kimoz with an image (so it downloads as a package) and a font file in its manifest.
+      const key = (b: Buffer, ext: string) =>
+        `${createHash("sha256").update(b).digest("hex").slice(0, 16)}.${ext}`
+      const font = Buffer.from("wOF2-not-a-real-font-but-bytes")
+      const png = key(PNG_2x2, "png")
+      const woff = key(font, "woff2")
+      const doc = {
+        $schema: "https://kimo.design/schema/kimo-1.0.json",
+        format: "1.0.0",
+        meta: { name: "Fonts package" },
+        assets: {
+          [png]: { mime: "image/png", bytes: PNG_2x2.length, width: 2, height: 2 },
+          [woff]: { name: "Inter.woff2", mime: "font/woff2", bytes: font.length },
+        },
+        nodes: {
+          Photo00001: {
+            type: "rect",
+            parent: null,
+            order: "a0",
+            name: "Photo",
+            x: 0,
+            y: 0,
+            w: 100,
+            h: 100,
+            fill: { kind: "image", src: `./assets/${png}`, fit: "cover" },
+          },
+        },
+      }
+      const zip = writeZip([
+        { name: "Fonts package.kimo", data: Buffer.from(JSON.stringify(doc)) },
+        { name: `assets/${png}`, data: PNG_2x2 },
+        { name: `assets/${woff}`, data: font },
+      ])
+      await page.goto(`${url}#/`)
+      await page.locator(".home-sidebar").waitFor({ timeout: 15_000 })
+      const chooser = nextFileChooser(page)
+      await page.getByRole("button", { name: "Open…" }).first().click()
+      await (await chooser).setFiles({
+        name: "Fonts package.kimoz",
+        mimeType: "application/zip",
+        buffer: Buffer.from(zip),
+      })
+      await page.waitForFunction(() => location.hash.startsWith("#/file/"), undefined, {
+        timeout: 15_000,
+      })
+      await page.goto(`${url}#/all`)
+      const card = page.locator(".kimo-file-card", { hasText: "Fonts package" }).first()
+      await card.waitFor({ timeout: 15_000 })
+      const download = async () => {
+        await card.click({ button: "right" })
+        const [dl] = await Promise.all([
+          page.waitForEvent("download", { timeout: 10_000 }),
+          page.locator('.home-menu [data-item="download"]').click(),
+        ])
+        const chunks: Buffer[] = []
+        for await (const c of await dl.createReadStream()) chunks.push(c as Buffer)
+        const entries = await readZip(new Uint8Array(Buffer.concat(chunks)))
+        const kimo = entries.find((e) => e.name.endsWith(".kimo"))
+        const manifest = JSON.parse(Buffer.from(kimo?.data ?? []).toString("utf8")).assets ?? {}
+        return {
+          name: dl.suggestedFilename(),
+          files: entries.map((e) => e.name).sort(),
+          manifest: Object.keys(manifest).sort(),
+        }
+      }
+      // Embed fonts On (default): the font file travels with the package.
+      const on = await download()
+      expect(on.name === "Fonts package.kimoz", `package (${on.name})`)
+      expect(on.files.includes(`assets/${woff}`), `On: font in the package (${on.files})`)
+      expect(on.manifest.includes(woff), `On: font in the manifest (${on.manifest})`)
+      // Settings › Fonts & privacy › Embed fonts in .kimoz packages → Off.
+      await page.keyboard.press("ControlOrMeta+,")
+      await page.locator(".settings-window").waitFor()
+      await page.locator('.settings-nav-item[data-pane="fonts"]').click()
+      const toggle = page.getByRole("switch", { name: "Embed fonts in .kimoz packages" })
+      expect((await toggle.getAttribute("aria-checked")) === "true", "Embed fonts starts On")
+      await toggle.click()
+      await page
+        .locator(
+          '[role="switch"][aria-label="Embed fonts in .kimoz packages"][aria-checked="false"], .kimo-setting-row:has-text("Embed fonts") [role="switch"][aria-checked="false"]',
+        )
+        .first()
+        .waitFor({ timeout: 5000 })
+      await page.keyboard.press("Escape")
+      await page.locator(".settings-window").waitFor({ state: "detached" })
+      const off = await download()
+      expect(!off.files.includes(`assets/${woff}`), `Off: no font in the package (${off.files})`)
+      expect(!off.manifest.includes(woff), `Off: no font in the manifest (${off.manifest})`)
+      expect(off.files.includes(`assets/${png}`), `Off: the image stays (${off.files})`)
     },
   },
 ]

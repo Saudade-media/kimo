@@ -396,6 +396,7 @@ pub async fn kimo_recents_add_folder(app: AppHandle, path: String, st: St<'_>) -
     }
     st.recents.add_folder(&p)?;
     st.scope.allow_dir(&p);
+    crate::folder_watch::sync(&app, &st.recents.load().folders);
     recents_changed(&app);
     Ok(())
 }
@@ -403,6 +404,7 @@ pub async fn kimo_recents_add_folder(app: AppHandle, path: String, st: St<'_>) -
 #[tauri::command]
 pub async fn kimo_recents_remove_folder(app: AppHandle, path: String, st: St<'_>) -> R<()> {
     st.recents.remove_folder(&path)?;
+    crate::folder_watch::sync(&app, &st.recents.load().folders);
     recents_changed(&app);
     Ok(())
 }

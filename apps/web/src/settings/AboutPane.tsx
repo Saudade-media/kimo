@@ -39,7 +39,7 @@ import {
   Search,
   Shield,
 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useContext, useEffect, useMemo, useState } from "react"
 import { aboutLinks } from "./help"
 import { useUpdaterStatus } from "./hooks"
 import {
@@ -50,7 +50,7 @@ import {
   noticeCount,
   noticeText,
 } from "./notices"
-import type { PaneProps } from "./panes"
+import { type PaneProps, SettingsFailContext } from "./panes"
 import { versionInfo, versionLine, versionString } from "./version-info"
 
 const LINK_ICONS = {
@@ -73,6 +73,7 @@ export function AboutPane({
 }) {
   const info = useMemo(() => versionInfo(platform), [platform])
   const status = useUpdaterStatus(platform)
+  const fail = useContext(SettingsFailContext)
   const [copied, setCopied] = useState(false)
   const [query, setQuery] = useState("")
   /** The licence sheet: one package, or the whole THIRD_PARTY_NOTICES.txt (desktop "Open file"). */
@@ -83,7 +84,8 @@ export function AboutPane({
     return () => clearTimeout(t)
   }, [copied])
   const shown = filterNotices(notices, query)
-  const open = (url: string) => void platform.files.openExternalUrl(url).catch(() => {})
+  const open = (url: string) =>
+    void platform.files.openExternalUrl(url).catch((e: unknown) => fail("open the link", e))
   const openFile = () => {
     // Web: the file is served next to index.html; desktop: it is inside the app bundle, so it
     // opens in the same sheet.
@@ -117,7 +119,7 @@ export function AboutPane({
             onClick={() =>
               void writeClipboard(versionString(info))
                 .then(() => setCopied(true))
-                .catch(() => {})
+                .catch((e: unknown) => fail("copy the version info", e))
             }
           >
             {copied ? "Copied" : "Copy version info"}
@@ -129,7 +131,9 @@ export function AboutPane({
               className="about-button"
               icon={<RefreshCw />}
               disabled={status.state === "checking" || status.state === "downloading"}
-              onClick={() => void platform.updater.check().catch(() => {})}
+              onClick={() =>
+                void platform.updater.check().catch((e: unknown) => fail("check for updates", e))
+              }
             >
               Check for updates…
             </Button>

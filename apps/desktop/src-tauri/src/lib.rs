@@ -15,6 +15,7 @@ pub mod dock_activity;
 #[rustfmt::skip]
 pub mod dock_frames;
 pub mod error;
+pub mod folder_watch;
 pub mod fonts;
 pub mod fs_ops;
 pub mod git;
@@ -106,6 +107,9 @@ pub fn run() {
             let handle = app.handle().clone();
             // Board 32: the macOS Dock tile animates while agents work.
             dock_activity::install(&handle);
+            // Audit B12: Home re-lists watched folders when their .kimo files change on disk.
+            app.manage(folder_watch::FolderWatch::default());
+            folder_watch::sync(&handle, &st.recents.load().folders);
 
             // M6 (ADR 0014 §4, §11): keychain, AI relay, local agent CLI host.
             app.manage(Arc::new(ai::AiServices::new(

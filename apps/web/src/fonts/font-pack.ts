@@ -164,9 +164,8 @@ function createController(platform: KimoPlatform): FontPackController {
     },
     async remove() {
       abort?.abort()
-      await store()
-        ?.clear()
-        .catch(() => {})
+      // A failed clear keeps the "ready" state and rethrows, so the row can say why.
+      await store()?.clear()
       set({ status: "empty" })
       announce()
     },

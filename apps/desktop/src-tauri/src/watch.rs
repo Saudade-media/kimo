@@ -141,7 +141,7 @@ fn map_events(
     out
 }
 
-fn debouncer(
+pub(crate) fn debouncer(
     ms: u64,
     handler: impl FnMut(DebounceEventResult) + Send + 'static,
 ) -> R<Debouncer<notify::RecommendedWatcher, RecommendedCache>> {
@@ -149,7 +149,7 @@ fn debouncer(
         .map_err(|e| io_msg(format!("Could not start a file watcher: {e}")))
 }
 
-fn watch_path(
+pub(crate) fn watch_path(
     d: &mut Debouncer<notify::RecommendedWatcher, RecommendedCache>,
     p: &Path,
     mode: RecursiveMode,

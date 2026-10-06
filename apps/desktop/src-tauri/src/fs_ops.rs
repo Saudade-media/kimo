@@ -176,12 +176,36 @@ fn ensure_free(to: &Path) -> R<()> {
     Ok(())
 }
 
+/// True when both paths name the same existing file (same device and inode on Unix, same
+/// canonical path elsewhere).
+fn same_file(a: &Path, b: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        match (fs::metadata(a), fs::metadata(b)) {
+            (Ok(x), Ok(y)) => x.dev() == y.dev() && x.ino() == y.ino(),
+            _ => false,
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        match (fs::canonicalize(a), fs::canonicalize(b)) {
+            (Ok(x), Ok(y)) => x == y,
+            _ => false,
+        }
+    }
+}
+
 /// Moves `from` to `to` without overwriting (`EXISTS`), creating `to`'s folder when `mkdirs`.
 /// Falls back to copy + remove across volumes.
 pub fn rename_no_clobber(from: &Path, to: &Path, mkdirs: bool) -> R<()> {
     let what = path_str(from);
     fs::symlink_metadata(from).map_err(ctx(&what))?;
-    ensure_free(to)?;
+    // A case-only rename (home.kimo -> Home.kimo) on a case-insensitive volume: `to` resolves to
+    // `from` itself, so it is not taken.
+    if !same_file(from, to) {
+        ensure_free(to)?;
+    }
     if mkdirs {
         if let Some(dir) = to.parent() {
             fs::create_dir_all(dir).map_err(ctx(&path_str(dir)))?;
@@ -295,6 +319,21 @@ mod tests {
             .map(|e| e.unwrap().file_name())
             .collect();
         assert_eq!(names.len(), 1);
+    }
+
+    #[test]
+    fn rename_never_clobbers_but_allows_a_case_only_change() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = dir.path().join("home.kimo");
+        let b = dir.path().join("other.kimo");
+        fs::write(&a, b"a").unwrap();
+        fs::write(&b, b"b").unwrap();
+        let e = rename_no_clobber(&a, &b, false).unwrap_err();
+        assert_eq!(e.code, "EXISTS");
+        let upper = dir.path().join("Home.kimo");
+        rename_no_clobber(&a, &upper, false).unwrap();
+        assert_eq!(fs::read(&upper).unwrap(), b"a");
+        assert_eq!(fs::read(&b).unwrap(), b"b");
     }
 
     #[test]

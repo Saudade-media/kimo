@@ -478,6 +478,7 @@ function FontPackRow({
   googleOn: boolean
   home: string | null
 }) {
+  const fail = useContext(SettingsFailContext)
   const pack = fontPackController(platform)
   const state = useSyncExternalStore(pack.subscribe, pack.state, pack.state)
   const off = blocked ? "ntpf" : googleOn ? null : "google-off"
@@ -501,7 +502,12 @@ function FontPackRow({
     control = (
       <>
         <ValueText>{formatSize(state.bytes)}</ValueText>
-        <RowButton variant="ghost" onClick={() => void pack.remove()}>
+        <RowButton
+          variant="ghost"
+          onClick={() =>
+            void pack.remove().catch((e: unknown) => fail("remove the offline font pack", e))
+          }
+        >
           Remove
         </RowButton>
       </>

@@ -68,6 +68,12 @@ export interface WindowState {
   fullscreen: boolean
   /** `Some({x:16,y:18})` on macOS editor windows, `None` elsewhere. */
   trafficLightPosition: { x: number; y: number } | null
+  /**
+   * macOS: right edge of the zoom button in window points, measured from the real buttons
+   * (76 with macOS 26's 14 pt buttons, 68 with the older 12 pt ones). `null` until measured
+   * and off macOS.
+   */
+  trafficLightsRight?: number | null
 }
 
 /**
@@ -208,6 +214,8 @@ export interface TauriCommandMap {
 
   // --- window ---
   kimo_window_state: { args: Record<string, never>; result: WindowState }
+  /** Title bar double-click: macOS honors the system zoom / minimize / none setting. */
+  kimo_window_titlebar_double_click: { args: Record<string, never>; result: null }
   kimo_window_set_title: { args: { title: string }; result: null }
   kimo_window_set_document_edited: { args: { edited: boolean }; result: null }
   /** Opens (or focuses) the `settings` window. */
@@ -321,6 +329,7 @@ export const TAURI_COMMANDS = [
   "kimo_updater_download",
   "kimo_updater_restart",
   "kimo_window_state",
+  "kimo_window_titlebar_double_click",
   "kimo_window_set_title",
   "kimo_window_set_document_edited",
   "kimo_window_open_settings",

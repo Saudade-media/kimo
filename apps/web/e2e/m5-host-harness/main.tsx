@@ -51,6 +51,10 @@ const platform = createMemoryPlatform({
 })
 const net = createMemoryBridgeNetwork()
 net.commands.set("kimo_mcp_policies_get", () => ({}))
+// Board 36: relayed connections (a CLI engine's kimo-mcp shim) answer through this command.
+const relayOut: { connectionId: string; message: string }[] = []
+net.commands.set("kimo_mcp_send", (a) => void relayOut.push(a as never))
+net.commands.set("kimo_mcp_host_ready", () => {})
 // What Rust answers for the window's McpHostApi (the relay itself is not in the page).
 net.commands.set("kimo_mcp_status", () => ({
   socket: { path: "/Users/me/.kimo/socket/kimo.sock", listening: true },
@@ -63,12 +67,32 @@ net.commands.set("kimo_mcp_status", () => ({
   home: "/Users/me",
 }))
 
+let rpcId = 0
+/** One JSON-RPC request on a relayed connection; resolves its `result`. */
+async function relayRpc(connectionId: string, method: string, params: unknown): Promise<unknown> {
+  const id = ++rpcId
+  net.rustEmit(
+    "kimo://mcp-in",
+    { connectionId, message: JSON.stringify({ jsonrpc: "2.0", id, method, params }) },
+    HOST_LABEL,
+  )
+  for (let i = 0; i < 1000; i++) {
+    const hit = relayOut.find(
+      (m) =>
+        m.connectionId === connectionId && (JSON.parse(m.message) as { id?: number }).id === id,
+    )
+    if (hit) return (JSON.parse(hit.message) as { result?: unknown }).result
+    await new Promise((r) => setTimeout(r, 10))
+  }
+  throw new Error(`relay ${method} timed out`)
+}
+
 async function boot() {
   const service = await startDocumentHostService({
     platform,
     bridge: net.bridge(HOST_LABEL),
     version: "0.5.0-e2e",
-    relay: false,
+    relay: true,
     scene: browserScene,
   })
   const client = await HostClient.connect(net.bridge("main"), 5000)
@@ -93,6 +117,41 @@ async function boot() {
       service,
       manager,
       call: async (tool: string, input: unknown) => (await mcp.call(tool, input)).result,
+      /**
+       * Board 36: a relayed MCP connection as Rust opens it for a kimo-mcp shim (hello with the
+       * shim's cwd), initialized; `relayCall` runs one tools/call on it and resolves its result.
+       */
+      relayOpen: async (connectionId: string, client: string, cwd: string) => {
+        net.rustEmit(
+          "kimo://mcp-connection",
+          {
+            connectionId,
+            state: "open",
+            transport: "socket",
+            hello: { client, pid: 1, ppid: 2, cwd, relay: { name: "kimo-mcp", version: "1" } },
+          },
+          HOST_LABEL,
+        )
+        await relayRpc(connectionId, "initialize", {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: client, version: "2" },
+        })
+        net.rustEmit(
+          "kimo://mcp-in",
+          {
+            connectionId,
+            message: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+          },
+          HOST_LABEL,
+        )
+      },
+      relayCall: async (connectionId: string, name: string, args: unknown) =>
+        (
+          (await relayRpc(connectionId, "tools/call", { name, arguments: args })) as {
+            structuredContent?: unknown
+          }
+        ).structuredContent,
       /**
        * An in-app agent's call through the host RPC `agentCall` (the editor's host tool host):
        * `n` = 0 for the lead (unscoped), else a child scoped to `scope`.

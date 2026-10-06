@@ -62,7 +62,7 @@ import { altDragCloneOps, type DuplicateMainPref } from "../editor/m3/component-
 import { pageScopedSource, withActivePage } from "../editor/pages/model"
 import { manifestOps } from "../lib/asset-manifest"
 import { type Combo, matchCombo, matches, pointerHeld, shortcut } from "../shortcuts/shortcuts"
-import { AgentCanvasModel, type AgentDomState, SHIMMER_FRAME_MS } from "./agent-canvas"
+import { AgentCanvasModel, type AgentDomState } from "./agent-canvas"
 import { BuildMotion } from "./agent-motion"
 import {
   canMove,
@@ -4550,7 +4550,6 @@ export class CanvasController {
     nodeIds: () => this.store.nodeIds(),
   })
   private agentRaf = 0
-  private agentLast = 0
   /** Board 35: entrance / reflow motion of layers agents add (render only). */
   readonly buildMotion = new BuildMotion(
     { getNode: (id) => this.store.getNode(id) as Record<string, unknown> | undefined },
@@ -4580,20 +4579,14 @@ export class CanvasController {
   }
 
   /**
-   * Shimmer / flash / rejected-pill animation: one overlay pass per tick (≤ 30 fps), only
-   * while something animates — nothing runs (and no picture is re-recorded) otherwise.
+   * Board 36 cursor glide / rejected flash: one overlay pass per display frame, only while
+   * something animates — nothing runs (and no picture is re-recorded) otherwise.
    */
   private scheduleAgentFrame(): void {
     if (this.agentRaf || this.disposed || !this.agent.animating()) return
-    this.agentRaf = requestAnimationFrame((t) => {
+    this.agentRaf = requestAnimationFrame(() => {
       this.agentRaf = 0
       if (this.disposed) return
-      if (t - this.agentLast < SHIMMER_FRAME_MS - 1) {
-        this.scheduleAgentFrame()
-        return
-      }
-      this.agentLast = t
-      this.agent.prune()
       this.updateOverlay()
     })
   }

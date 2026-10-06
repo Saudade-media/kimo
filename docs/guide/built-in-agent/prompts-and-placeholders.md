@@ -15,9 +15,9 @@ Prompts and notes are not design: the [Code tab](../export/code-tab.md) and expo
 
 ## Placeholders
 
-While an agent builds a frame, the frame carries a **placeholder** flag and the canvas shows who is working on it (`<agent> · building <name>`). It is a signal for people and other agents, not a lock: you can still edit the frame.
+While an agent builds a frame, the frame carries a **placeholder** flag. Its row in the Layers panel shows a loader and a lock, and on the canvas the agent's cursor and section outline show where it works ([On the canvas](agent-tab.md#on-the-canvas)); the frame itself gets no tag or tint. The flag is a signal for people and other agents, not a lock: you can still edit the frame.
 
-An agent clears its placeholders when its turn ends, whether it finished, was stopped or failed. This holds for local CLI agents too, including flags they set through MCP. When an MCP client disconnects, its placeholders are cleared. If a placeholder stays behind and its agent is no longer running, the tag reads **Interrupted**; right-click it for **Clear flag**, **Resume agent**, or **Ask Kimo to finish** when the session is gone.
+An agent clears its placeholders when its turn ends, whether it finished, was stopped or failed. This holds for local CLI agents too, including flags they set through MCP. When an MCP client disconnects, its placeholders are cleared. If a placeholder stays behind and its agent is no longer running, right-click the frame on the canvas or its layer row for **Clear flag**, **Resume agent**, or **Ask Kimo to finish** when the session is gone.
 
 A placeholder never survives closing Kimo. Quitting or closing the window while an agent works stops the turn, clears its placeholders and saves the file. If Kimo is killed or crashes mid-turn, the placeholders still in the file are cleared the next time the file opens, because no agent can still be working on it.
 

@@ -148,7 +148,7 @@ export function AiProvidersPane({ platform, controller, openUrl }: AiProvidersPa
 
   return (
     <div className="ai-pane" data-pen="EGVxF">
-      <div className="ai-title-bar" data-pen="oXKjz">
+      <div className="ai-title-bar" data-pen="oXKjz" data-tauri-drag-region="deep">
         <h2 className="ai-title">AI providers</h2>
         <span className="ai-spacer" />
         <AgentTonePill

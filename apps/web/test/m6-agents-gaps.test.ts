@@ -1,6 +1,6 @@
 /**
  * Board 24 › 5 agent gap vignettes on the M5 surfaces: (c) config diff, (d) 2+ agents
- * popover order + personas, (e) queue badge, (g) cursor placement, (h) undone entries.
+ * popover order + personas, (e) queue badge, (h) undone entries.
  */
 import { describe, expect, test } from "bun:test"
 import type { McpActivityEntry } from "@kimo/platform"
@@ -14,7 +14,6 @@ import {
   chipMarkState,
   chipPersonas,
   diffRows,
-  placeCursor,
   sortChips,
   unifiedDiffText,
 } from "../src/agents"
@@ -115,32 +114,6 @@ describe("(d) 2+ agents popover, (e) queue badge", () => {
     expect(p.get("mcp:claude-code.a")).toBe("teal")
     expect(p.get("mcp:codex.b")).toBe("teal")
     expect(p.get("agent:kimo.s1.2")).toBe("iris")
-  })
-})
-
-describe("(g) cursor placement rules (joR0E)", () => {
-  const view = { w: 800, h: 600 }
-  test("anchor = target top-left + (4, 4); flips near the edges; stacks 4 px apart", () => {
-    expect(placeCursor({ x: 100, y: 120, w: 50, h: 50 }, view)).toEqual({
-      kind: "on-canvas",
-      x: 104,
-      y: 124,
-      flipX: false,
-      flipY: false,
-    })
-    const edge = placeCursor({ x: 700, y: 570, w: 50, h: 20 }, view)
-    expect(edge.flipX && edge.flipY).toBe(true)
-    expect(placeCursor({ x: 100, y: 100, w: 10, h: 10 }, view, { stack: 1 }).y).toBe(104 + 30)
-  })
-  test("off-screen target docks to the nearest edge with an arrow; never under the dry-run bar", () => {
-    const below = placeCursor({ x: 300, y: 900, w: 10, h: 10 }, view)
-    expect(below).toMatchObject({ kind: "docked", arrow: "arrow-down" })
-    expect(below.y).toBe(600 - 8 - 26)
-    expect(placeCursor({ x: 1200, y: -50, w: 1, h: 1 }, view).arrow).toBe("arrow-up-right")
-    expect(placeCursor({ x: 100, y: 20, w: 1, h: 1 }, view, { reservedTop: 52 })).toMatchObject({
-      kind: "docked",
-      y: 60,
-    })
   })
 })
 

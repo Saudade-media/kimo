@@ -217,7 +217,7 @@ export function Topbar(props: TopbarProps) {
   const fileMenu = useFileMenu(props)
 
   return (
-    <header className="topbar">
+    <header className="topbar" data-tauri-drag-region="">
       <button type="button" className="topbar__logo" aria-label="Kimo home" onClick={props.onHome}>
         <KimoLogo size={28} />
       </button>
@@ -263,7 +263,7 @@ export function Topbar(props: TopbarProps) {
       {fileMenu.menu}
       <span className="topbar__sep">/</span>
       <span className="topbar__page">{props.pageName}</span>
-      <span className="topbar__spacer" />
+      <span className="topbar__spacer" data-tauri-drag-region="" />
       <span className="topbar__saved" data-status={props.syncStatus}>
         <span className="topbar__saved-icon">
           <Icon name={saved} size={14} />

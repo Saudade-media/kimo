@@ -620,10 +620,10 @@ export interface CanvasHostProps {
 
   // --- M6 -----------------------------------------------------------------------------------
   /**
-   * Built-in agent surfaces on the canvas (board 22 D0zDSY, board 24 iLW1l): placeholder
-   * frames, scope outlines + ScopeTag, persona cursors and selections, rejected-op pills,
-   * prompt connectors, prompt footers with Run. Absent = no agent: notes and prompts still
-   * draw, placeholders show as Interrupted (no live owner).
+   * Built-in agent surfaces on the canvas (board 22 D0zDSY, board 36 XDVdg): one cursor and
+   * a section outline per agent, a ring per landed edit on its section, rejected-op pills,
+   * prompt connectors, prompt footers with Run, the Iterate pass chip. Absent = no agent: notes
+   * and prompts still draw. Placeholder frames draw nothing of their own.
    */
   agentCanvas?: AgentCanvasProps
   /** Author display name written on new notes / prompts (`note.author`, the OS user name). */
@@ -653,31 +653,27 @@ export interface CanvasAgentScope {
   origin: string
   /** Scope root node ids. */
   roots: readonly string[]
-  /**
-   * `side-by-side`: outset outline + ScopeTag above ("Agent 1 · only inside Pricing · v1");
-   * `split`: outline flush on the section + ScopeTag inside its top-right;
-   * `single` / `iterate`: outset outline + "Agent can only edit inside <name>".
-   */
+  /** The mode that set the scope (board 36: no scope outline or ScopeTag on the canvas). */
   mode: "single" | "side-by-side" | "split" | "iterate"
   /** Iterate: the Pass Chip under the outline (h6oHb `NCElh` "Iterate · pass 2 of 3 · review"). */
   iterate?: { pass: number; of: number; reviewing: boolean }
 }
 
-/** Where an agent is working (persona cursor + selection outline, board 24 GmEAl). */
+/** Where an agent is working (board 36: one cursor + an outline on the section it works in). */
 export interface CanvasAgentCursor {
   origin: string
   /** Node the current op targets. */
   nodeId: string
   /**
    * The whole area the agent works on (the layers the current step reads or edits, else the
-   * ones its last landed edit created / changed). The cursor sits at the top-left of their union
-   * box (+4, +4); absent = `[nodeId]`.
+   * ones its last landed edit created / changed). Board 36: their section (the direct child of
+   * the top-level frame that holds them) is outlined and the cursor sits on its center; absent =
+   * `[nodeId]`.
    */
   nodeIds?: readonly string[]
   /**
-   * Board 31 "Agent cursor": the layer the cursor points at (its top-left +4, +4): the last
-   * layer the agent's latest landed edit added, else the last one it changed. Absent, or not
-   * laid out = the work area's top-left. The outline still frames the whole work area.
+   * Board 31 "Agent cursor": the last layer the agent's latest landed edit added, else the last
+   * one it changed. Board 36: its section wins when it lies in the work area's sections.
    */
   pointerId?: string
   /** "setting Headline font…" (the pill reads "<label> · <text>"). */
@@ -696,8 +692,8 @@ export interface CanvasAgentRejection {
 }
 
 /**
- * Board 31 "Landing flash": the top-most layers one successful agent edit changed. Each new key
- * flashes them once (1.2 s, persona hue outline + soft ring); the viewport never moves.
+ * Board 31 "Landing flash": the top-most layers one successful agent edit changed. Board 36:
+ * each new key rings their section once (3 px persona-soft, 1.2 s); the viewport never moves.
  */
 export interface CanvasAgentLanded {
   key: string
@@ -709,13 +705,13 @@ export interface CanvasAgentLanded {
 export type CanvasPromptRun = import("@kimo/ai-agent").PromptRunState
 
 export interface AgentCanvasProps {
-  /** Origins that are running; a placeholder whose `by` is not live shows "Interrupted". */
+  /** Origins that are running. */
   liveOrigins: ReadonlySet<string>
   agent(origin: string): CanvasAgentInfo | null
   scopes?: readonly CanvasAgentScope[]
   cursors?: readonly CanvasAgentCursor[]
   rejections?: readonly CanvasAgentRejection[]
-  /** Board 31: edits that just landed (flash their layers once per key). */
+  /** Board 31 / 36: edits that just landed (ring their section once per key). */
   landed?: readonly CanvasAgentLanded[]
   /** Run state of a prompt node (app data keyed by `<fileId>/<nodeId>`); absent = never run. */
   promptRun?(nodeId: string): CanvasPromptRun | undefined
@@ -726,11 +722,7 @@ export interface AgentCanvasProps {
   usd?(v: number | null): string
   onRunPrompt?(nodeId: string): void
   onStopPrompt?(nodeId: string): void
-  /** Placeholder tooltip "Pause agent": pause the owning session. */
-  onPauseAgent?(origin: string): void
-  /** "<name> ready · N ops · Review" chip: open the change card in the Agent tab. */
-  onReviewPlaceholder?(nodeId: string, origin: string): void
-  /** Reduced motion: no shimmer sweep, no cursor easing. Default: the media query. */
+  /** Reduced motion: the cursor jumps between sections. Default: the media query. */
   reducedMotion?: boolean
 }
 

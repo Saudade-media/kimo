@@ -58,6 +58,12 @@ export interface PreviewOverlayProps extends PreviewRenderDeps {
   roots?: () => readonly string[]
   /** Leaves Preview with the last previewed frame and whether ‹ › navigation happened. */
   onExit(last: string, navigated: boolean): void
+  /**
+   * Width the macOS traffic lights take at the bar's left edge (`platform.window
+   * .trafficLightInset()`). The overlay covers the whole window, so the bar starts after the
+   * lights plus the 8 pt topbar gap. 0 where the OS draws its own title bar.
+   */
+  lightsInset?: number
 }
 
 export function PreviewOverlay(props: PreviewOverlayProps) {
@@ -265,7 +271,15 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
       data-zoom={view ? view.zoom.toFixed(4) : undefined}
       data-box={box ? `${box.x},${box.y},${box.w},${box.h}` : undefined}
     >
-      <div className="preview__bar">
+      <div
+        className="preview__bar"
+        data-tauri-drag-region="deep"
+        style={
+          props.lightsInset && props.lightsInset > 4
+            ? { paddingLeft: props.lightsInset + 8 }
+            : undefined
+        }
+      >
         <span className="preview__logo">
           <KimoLogo size={16} />
         </span>

@@ -61,6 +61,7 @@ pub const COMMANDS: &[&str] = &[
     "kimo_updater_download",
     "kimo_updater_restart",
     "kimo_window_state",
+    "kimo_window_titlebar_double_click",
     "kimo_window_set_title",
     "kimo_window_set_document_edited",
     "kimo_window_open_settings",

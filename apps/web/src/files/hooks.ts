@@ -41,9 +41,11 @@ export function useWindowChrome(platform: KimoPlatform): WindowChromeState {
   const subscribe = (cb: () => void) => {
     const a = platform.window.onFocusChange(cb)
     const b = platform.window.onFullscreenChange(cb)
+    const c = platform.window.onTrafficLightInsetChange(cb)
     return () => {
       a()
       b()
+      c()
     }
   }
   const focused = useSyncExternalStore(subscribe, () => platform.window.isFocused())

@@ -38,7 +38,7 @@ export interface PaneProps {
 
 export function PaneTitle({ children }: { children: string }) {
   return (
-    <div className="settings-title-bar">
+    <div className="settings-title-bar" data-tauri-drag-region="deep">
       <h2 className="settings-title">{children}</h2>
     </div>
   )

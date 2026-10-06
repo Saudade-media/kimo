@@ -711,9 +711,21 @@ pub async fn kimo_window_state(window: WebviewWindow) -> R<WindowState> {
     Ok(window::window_state(&window))
 }
 
+/// Title bar double-click on the overlay chrome: the system's zoom / minimize / none setting
+/// on macOS, toggle maximize elsewhere.
+#[tauri::command]
+pub async fn kimo_window_titlebar_double_click(window: WebviewWindow) -> R<()> {
+    window::titlebar_double_click(&window)
+}
+
 #[tauri::command]
 pub async fn kimo_window_set_title(window: WebviewWindow, title: String) -> R<()> {
-    window.set_title(&title).map_err(|e| io_msg(e.to_string()))
+    window
+        .set_title(&title)
+        .map_err(|e| io_msg(e.to_string()))?;
+    // AppKit relays out the title bar when the title changes.
+    window::align_lights(&window);
+    Ok(())
 }
 
 #[tauri::command]

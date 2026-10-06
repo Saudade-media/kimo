@@ -8,7 +8,12 @@ import type {
   TypedInvoke,
   TypedListen,
 } from "../src/tauri"
-import { bytesToBase64, createTauriPlatform, toPlatformError } from "../src/tauri-platform"
+import {
+  bytesToBase64,
+  createTauriPlatform,
+  toPlatformError,
+  trafficLightInsetOf,
+} from "../src/tauri-platform"
 
 type Handler = (args: Record<string, unknown>) => unknown
 
@@ -202,6 +207,33 @@ describe("createTauriPlatform", () => {
     await tick()
     expect(t.last("kimo_window_confirm_close")).toEqual({ requestId: "r3", allow: false })
     p.dispose()
+  })
+
+  test("the topbar inset is the right edge of the lights the shell measured", async () => {
+    const lights = { x: 16, y: 18 }
+    const base = { focused: true, fullscreen: false, trafficLightPosition: lights }
+    expect(trafficLightInsetOf(base)).toBe(68)
+    expect(trafficLightInsetOf({ ...base, trafficLightsRight: 76 })).toBe(76)
+    expect(trafficLightInsetOf({ ...base, trafficLightsRight: 75.2 })).toBe(76)
+    expect(trafficLightInsetOf({ ...base, trafficLightsRight: null })).toBe(68)
+    expect(trafficLightInsetOf({ ...base, trafficLightsRight: 76, fullscreen: true })).toBe(4)
+    expect(
+      trafficLightInsetOf({ focused: true, fullscreen: false, trafficLightPosition: null }),
+    ).toBe(0)
+
+    const t = fakeTauri({
+      kimo_window_state: () => ({ ...base, trafficLightsRight: 76 }),
+      kimo_window_titlebar_double_click: () => null,
+    })
+    const p = await createTauriPlatform(t.bridge)
+    expect(p.window.trafficLightInset()).toBe(76)
+    const seen: number[] = []
+    p.window.onTrafficLightInsetChange((n) => seen.push(n))
+    t.emit("kimo://window-state", { ...base, trafficLightsRight: 68 })
+    t.emit("kimo://window-state", { ...base, trafficLightsRight: 68 })
+    expect(seen).toEqual([68])
+    await p.window.titlebarDoubleClick()
+    expect(t.last("kimo_window_titlebar_double_click")).toEqual({})
   })
 
   test("window, updater, settings and launch events", async () => {

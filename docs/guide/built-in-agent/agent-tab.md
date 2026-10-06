@@ -10,13 +10,22 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 
 ## While the agent works
 
-The agent builds in steps you can watch: it plans the sections, then adds one finished section per edit, with its real content. After every edit the design looks complete so far, with no empty boxes waiting to be filled. Each edit lands on the canvas as soon as it is made, the layers it changed flash briefly in the agent's color, and the agent's cursor moves to the last layer it added. The canvas never moves by itself.
+The agent builds in steps you can watch: it plans the sections, then adds one finished section per edit, with its real content. After every edit the design looks complete so far, with no empty boxes waiting to be filled. Each edit lands on the canvas as soon as it is made. The canvas never moves by itself.
+
+### On the canvas
+
+While an agent works, the canvas shows two things for it:
+
+- **A cursor**: a pointer and a pill with the agent's name, in the middle of the section it is editing. A section is a direct child of the top-level frame, such as Nav, Hero, Article or Footer; an edit to the top-level frame itself, or to a top-level frame with no children yet, uses that frame. The cursor floats gently while it stays in a section and glides to the next one in 600 ms. It stays on its section while you pan or zoom.
+- **A thin outline** on that section, in the agent's color. Each edit that lands rings the section once.
+
+Nothing else is drawn: no tint over frames, no labels on the layers being built, no outlines on small layers. The built-in agent always shows its own name ("Kimo", "Agent 2"), also when it runs on Claude Code or Codex. Agents connected over MCP on their own (Claude Code, Codex, Gemini CLI, Cursor…) get the same cursor and outline with their client's name while they write.
 
 ### New layers grow in
 
 Layers an agent adds grow into place instead of popping in. This covers the built-in agent and agents connected over MCP. Each new layer fades in, scales up from 96 % and rises 6 px over 200 ms. Layers next to it in an auto-layout frame slide to their new places over the same 200 ms, and the frame grows with them. When an MCP client adds many layers in one call, they appear one after another in layer order, 16 ms apart, and the whole batch finishes within 600 ms. A call that adds more than 200 layers fades in the frame that holds them once instead.
 
-The motion is drawn on screen only. The file holds the final values from the first frame, so exports, `kimo_render`, thumbnails and selection never see a layer halfway in. Your own edits, undo and redo, and edits from collaborators draw at once. With **Reduce motion** on (System Settings › Accessibility › Display, or the matching setting on Windows and Linux) layers appear at once; the color flash still plays.
+The motion is drawn on screen only. The file holds the final values from the first frame, so exports, `kimo_render`, thumbnails and selection never see a layer halfway in. Your own edits, undo and redo, and edits from collaborators draw at once. With **Reduce motion** on (System Settings › Accessibility › Display, or the matching setting on Windows and Linux) layers appear at once and the cursor jumps between sections without floating; the ring on the section still plays.
 
 After each edit Kimo tells the agent about clear problems in what it just built: an empty frame, text that doesn't fit its box or is cut off, a layer of zero size or outside its parent, a missing variable, a shape that draws nothing. The agent fixes them before it moves on and checks the whole page once more before it replies. You don't see these checks; they only shape what lands on the canvas.
 
@@ -24,7 +33,7 @@ Instead of streaming text, the thread shows one status line that updates in plac
 
 - **What it is doing now:** the agent's own short note for the current step ("Building the pricing section"), or, when it wrote none, what the tool is doing ("Adding 12 layers in Pricing", "Reading the Home page"). Its reasoning is never shown.
 - **Elapsed time** and the number of steps so far.
-- **Follow:** zooms the canvas to the layer the agent's cursor points at, the last one it added. It jumps once per click.
+- **Follow:** zooms the canvas to the last layer the agent added. It jumps once per click.
 
 The written reply appears when the turn ends. Replies show formatted text: paragraphs, bullet and numbered lists, **bold**, *italic*, inline code, code blocks and links (http, https and mailto). Links open in your browser.
 

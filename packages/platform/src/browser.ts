@@ -754,6 +754,8 @@ export function createBrowserPlatform(options: BrowserPlatformOptions = {}): Kim
       label: "web",
       trafficLightPosition: () => null,
       trafficLightInset: () => 0,
+      onTrafficLightInsetChange: () => () => {},
+      titlebarDoubleClick: async () => {},
       isFocused: () => document.hasFocus(),
       onFocusChange(l) {
         const on = () => l(true)

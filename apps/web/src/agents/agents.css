@@ -487,73 +487,6 @@
   pointer-events: none;
 }
 
-/* Agent Outline (LMWYr): stroke 1.5 agent, the node's radius. Fades 2 s after commit. */
-.agents-attribution {
-  transition: opacity 400ms ease-out;
-}
-.agents-attribution--faded {
-  opacity: 0;
-}
-.agents-attribution__outline {
-  box-sizing: border-box;
-  position: absolute;
-  /* stroke 1.5 inside: a box-shadow keeps the fractional width (borders snap to 1 device px) */
-  box-shadow: inset 0 0 0 1.5px var(--kimo-agent);
-}
-/* Agent Attribution (GSUtG): row, gap 4, padding [0, 6, 0, 3], center, h 18, agent, radius-xs. */
-.agents-attribution__tag {
-  box-sizing: border-box;
-  position: absolute;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  height: 18px;
-  padding: 0 6px 0 3px;
-  border-radius: var(--kimo-radius-xs);
-  background: var(--kimo-agent);
-  white-space: nowrap;
-}
-.agents-attribution__tag-label {
-  color: var(--kimo-on-accent);
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 13px;
-}
-/* Agent Cursor (IJH2i): column, gap 2: Pointer 18 agent · Pill. */
-.agents-cursor {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-.agents-cursor__pointer {
-  display: block;
-  color: var(--kimo-agent);
-}
-/* Pill (pIYVd): row, gap 6, padding [4, 10, 4, 4], center, agent, radius 999, shadow 0 4 12. */
-.agents-cursor__pill {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 4px;
-  border-radius: 999px;
-  background: var(--kimo-agent);
-  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
-  white-space: nowrap;
-}
-.agents-cursor__label {
-  color: var(--kimo-on-accent);
-  font-family: var(--kimo-font-sans);
-  font-size: 12px;
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 15px;
-}
-
 /* Ghost (Atu30): column, gap 6: Label Row (gap 6, center) · Box (stroke 1.5, radius-xs). */
 .agents-ghost {
   position: absolute;
@@ -1192,45 +1125,6 @@
 /* Settings nav item for this pane (J9yS0): the only coloured nav icon (bot in agent). */
 .settings-nav-item[data-pane="agents-mcp"] .settings-nav-item__icon {
   color: var(--kimo-agent);
-}
-
-/* Cursor label pill flips left / up within 8 px of a viewport edge (board 24 g rule 2). */
-.agents-cursor[data-flip-x] {
-  align-items: flex-end;
-  transform: translateX(-100%);
-}
-.agents-cursor[data-flip-y] {
-  flex-direction: column-reverse;
-  transform: translateY(-100%);
-}
-.agents-cursor[data-flip-x][data-flip-y] {
-  transform: translate(-100%, -100%);
-}
-/* Board 31 "Position lock": no easing on left/top (it trailed the canvas while panning). */
-/* Off-screen pointer (joR0E nLvHN): row, gap 4, padding [2, 8, 2, 3], center, agent, pill ›
-   AgentMark 12 · Label sans 11 / 500 on-accent · Arrow 12 on-accent. Click pans to the node. */
-.agents-cursor-docked {
-  box-sizing: border-box;
-  position: absolute;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  margin: 0;
-  padding: 2px 8px 2px 3px;
-  border: 0;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-agent);
-  color: var(--kimo-on-accent);
-  white-space: nowrap;
-  cursor: pointer;
-  pointer-events: auto;
-}
-.agents-cursor-docked__label {
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 13px;
 }
 
 /* Config diff preview (board 24 › 5 · (c) K5Dnf): column, gap 14, padding 20, bg-overlay,

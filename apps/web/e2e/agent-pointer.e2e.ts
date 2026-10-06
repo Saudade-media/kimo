@@ -2,10 +2,10 @@
  * Agent pointer (board 31 "Agent cursor"): a scripted built-in agent turn in the real editor
  * (real agent panel controller and loop, the Anthropic adapter over a routed Messages endpoint,
  * the in-window tools, the real canvas) edits a card at world (800, 400) that sits inside a page
- * frame at 0:0. The persona cursor must point at the last layer the edit added (the badge, at
- * its top-left + 4, inside the card's screen rect, never the page frame's 0:0 corner), stay
- * locked to it while the canvas pans and zooms, Follow must target that same layer, and the
- * cursor goes away once the turn ends.
+ * frame at 0:0. The pointer is the last layer the edit added (the badge, never the page frame's
+ * 0:0 corner); board 36: the cursor sits on the center of its section (the card) with one outline
+ * on the card, stays locked there while the canvas pans and zooms, Follow targets the badge, and
+ * the cursor goes away once the turn ends.
  */
 import type { Page, Route } from "playwright"
 import { openEditor, settle, setViewport } from "./qa-helpers"
@@ -215,8 +215,8 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
       )
       throw e
     })
-  await page.locator('[data-testid="persona-cursor"]').waitFor({ timeout: 10_000 })
-  await page.waitForTimeout(400) // the 280 ms glide
+  await page.locator('[data-testid="agent-cursor"]').waitFor({ timeout: 10_000 })
+  await page.waitForTimeout(700) // the 600 ms glide (board 36)
   await settle(page)
   const inCard = async () =>
     page.evaluate((id) => {
@@ -225,7 +225,7 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
       const v = canvas.renderer.viewport
       const b = canvas.layout()?.nodes.get(id)?.world as Box
       const host = (document.querySelector(".canvas-host") as HTMLElement).getBoundingClientRect()
-      const el = document.querySelector('[data-testid="persona-cursor"]') as HTMLElement
+      const el = document.querySelector('[data-testid="agent-cursor"]') as HTMLElement
       const e = el.getBoundingClientRect()
       const r = {
         x: host.x + (b.x - v.x) * v.zoom,
@@ -248,29 +248,40 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
   expect(before.inside, `cursor inside the card's screen rect: ${JSON.stringify(before)}`)
   expect(before.display !== "none" && before.height > 0, "cursor rendered")
 
-  // The cursor points at the badge (the last added layer): its top-left + (4, 4).
+  // The pointer is the badge (the last added layer); board 36: the cursor sits on the center of
+  // its section (the card, the page frame's direct child), the outline on the card's box.
   const badge = await page.evaluate((card) => {
     const w = window as unknown as W
     const canvas = w.__kimo.canvas()
     const v = canvas.renderer.viewport
     const id = w.__kimo.agent?.state.canvas.cursors[0]?.pointerId ?? ""
-    const b = canvas.layout()?.nodes.get(id)?.world as Box
+    const b = canvas.layout()?.nodes.get(card)?.world as Box
     const host = (document.querySelector(".canvas-host") as HTMLElement).getBoundingClientRect()
     const e = (
-      document.querySelector('[data-testid="persona-cursor"]') as HTMLElement
+      document.querySelector('[data-testid="agent-cursor"]') as HTMLElement
+    ).getBoundingClientRect()
+    const o = (
+      document.querySelector('[data-testid="agent-section-outline"]') as HTMLElement
     ).getBoundingClientRect()
     return {
       id,
       isCard: id === card,
-      dx: e.x - (host.x + (b.x - v.x) * v.zoom + 4),
-      dy: e.y - (host.y + (b.y - v.y) * v.zoom + 4),
+      dx: e.x + 3 - (host.x + (b.x + b.w / 2 - v.x) * v.zoom),
+      dy: e.y + 3 - (host.y + (b.y + b.h / 2 - v.y) * v.zoom),
+      ox: o.x - (host.x + (b.x - v.x) * v.zoom),
+      ow: o.width - b.w * v.zoom,
+      outlines: document.querySelectorAll('[data-testid="agent-section-outline"]').length,
     }
   }, CARD)
   log(`  pointer ${badge.id} offset ${badge.dx.toFixed(2)},${badge.dy.toFixed(2)}`)
   expect(!badge.isCard && !!badge.id, `pointer on the added badge: ${JSON.stringify(badge)}`)
   expect(
     Math.abs(badge.dx) <= 0.5 && Math.abs(badge.dy) <= 0.5,
-    `cursor at the badge's top-left + 4: ${JSON.stringify(badge)}`,
+    `cursor tip on the card section's center: ${JSON.stringify(badge)}`,
+  )
+  expect(
+    badge.outlines === 1 && Math.abs(badge.ox) <= 0.5 && Math.abs(badge.ow) <= 0.5,
+    `one outline, on the card: ${JSON.stringify(badge)}`,
   )
 
   // Follow targets the layer the cursor points at.
@@ -286,8 +297,8 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
   )
 
   // Position lock: sample every drawn canvas frame while panning / zooming. The cursor's screen
-  // position must equal the pointed layer's top-left (+4, +4) as drawn in that frame (≤ 0.5 px).
-  await page.evaluate(() => {
+  // position must equal its section's center as drawn in that frame (≤ 0.5 px).
+  await page.evaluate((card) => {
     const w = window as unknown as W & { __lock: { rx: number; ry: number; zoom: number }[] }
     const canvas = w.__kimo.canvas()
     const r = canvas.renderer
@@ -298,23 +309,19 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
       draw()
       const v = r.viewport
       const cur = w.__kimo.agent?.state.canvas.cursors[0]
-      const el = document.querySelector('[data-testid="persona-cursor"]')
+      const el = document.querySelector('[data-testid="agent-cursor"]')
       if (!el || !cur) return
-      const boxes = (cur.pointerId ? [cur.pointerId] : (cur.nodeIds ?? [cur.nodeId]))
-        .map((id) => canvas.layout()?.nodes.get(id)?.world)
-        .filter((x): x is Box => !!x)
-      if (!boxes.length) return
-      const ax = Math.min(...boxes.map((x) => x.x))
-      const ay = Math.min(...boxes.map((x) => x.y))
+      const b = canvas.layout()?.nodes.get(card)?.world
+      if (!b) return
       const h = host.getBoundingClientRect()
       const e = el.getBoundingClientRect()
       w.__lock.push({
-        rx: e.x - h.x - ((ax - v.x) * v.zoom + 4),
-        ry: e.y - h.y - ((ay - v.y) * v.zoom + 4),
+        rx: e.x + 3 - h.x - (b.x + b.w / 2 - v.x) * v.zoom,
+        ry: e.y + 3 - h.y - (b.y + b.h / 2 - v.y) * v.zoom,
         zoom: v.zoom,
       })
     }
-  })
+  }, CARD)
   const host = await page.locator(".canvas-host").boundingBox()
   const c = { x: (host?.x ?? 0) + 400, y: (host?.y ?? 0) + 300 }
   await page.mouse.move(c.x, c.y)
@@ -354,14 +361,14 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
   )
   await settle(page)
   expect(
-    (await page.locator('[data-testid="persona-cursor"]').count()) === 0,
+    (await page.locator('[data-testid="agent-cursor"]').count()) === 0,
     "no cursor once the turn ended",
   )
 }
 
 export const scenarios: Scenario[] = [
   {
-    name: "agent pointer: a scripted edit moves the cursor to the layer it added (not 0:0), locked while panning",
+    name: "agent pointer: a scripted edit moves the cursor to the layer it added (not 0:0), centered in its section, locked while panning",
     run: scriptedEdit,
   },
 ]

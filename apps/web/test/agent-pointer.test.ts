@@ -1,8 +1,9 @@
 /**
  * Agent pointer (board 31 "Agent cursor"): the cursor points at the last layer the agent's
  * latest landed edit added (else the last one it changed); before any edit lands it sits on the
- * area the agent works on, never on the page frame's 0:0 corner. It glides in world space (no
- * drift while panning). The outline frames the whole work area.
+ * area the agent works on, never on the page frame's 0:0 corner. Board 36: the canvas cursor sits
+ * on the center of that layer's section and glides 600 ms in world space (no drift while
+ * panning).
  */
 import { describe, expect, test } from "bun:test"
 import type { KimoDocument } from "@kimo/core-schema"
@@ -12,7 +13,7 @@ import { callTargets } from "@kimo/mcp-server"
 import { createAgentPanelController } from "../src/agent-panel/controller"
 import { createTestRuntime, type Script } from "../src/agent-panel/testing"
 import { createInWindowTools } from "../src/agent-panel/tools"
-import { CURSOR_GLIDE_MS, unionBox, workAreaIds } from "../src/canvas/agent-area"
+import { CURSOR_GLIDE_MS, glideEase, unionBox, workAreaIds } from "../src/canvas/agent-area"
 import { AgentCanvasModel } from "../src/canvas/agent-canvas"
 import type { AgentCanvasProps } from "../src/canvas/contract"
 
@@ -258,69 +259,67 @@ describe("canvas cursor projection (AgentCanvasModel)", () => {
     return { m, layout, clock, props }
   }
 
-  test("the anchor is the union box's top-left (+4, +4)", async () => {
+  type Tip = { x: number; y: number }
+  const tipAt = (
+    m: AgentCanvasModel,
+    layout: Parameters<AgentCanvasModel["dom"]>[0],
+    v: { x: number; y: number; zoom: number },
+  ) => m.dom(layout, v, { w: 1440, h: 900 }).cursors[0]?.tip as Tip
+
+  test("board 36: the tip is the section's center (the first work-area layer's section)", async () => {
     const { m, layout, props } = await setup()
     m.setProps(props(["AreaA00001", "AreaB00001"]))
     m.overlay(layout)
-    const d = m.dom(layout, { x: 0, y: 0, zoom: 1 }, { w: 1440, h: 900 })
-    expect(d.cursors[0]).toMatchObject({ left: 804, top: 404 })
+    const c = m.dom(layout, { x: 0, y: 0, zoom: 1 }, { w: 1440, h: 900 }).cursors[0]
+    expect(c?.sectionId).toBe("AreaA00001")
+    expect(c?.tip).toEqual({ x: 900, y: 450 })
+    expect(c?.section).toMatchObject({ x: 800, y: 400, w: 200, h: 100 })
   })
 
-  test("glides between areas in world space; a pan mid-glide moves it with the canvas", async () => {
+  test("glides 600 ms between sections in world space; a pan mid-glide moves it with the canvas", async () => {
     const { m, layout, clock, props } = await setup()
     m.setProps(props(["AreaA00001"]))
     m.overlay(layout)
+    tipAt(m, layout, { x: 0, y: 0, zoom: 1 })
     expect(m.animating()).toBe(false)
     m.setProps(props(["AreaC00001"]))
-    m.overlay(layout)
+    expect(tipAt(m, layout, { x: 0, y: 0, zoom: 1 })).toEqual({ x: 900, y: 450 })
     expect(m.animating()).toBe(true)
-    const at = (v: { x: number; y: number; zoom: number }) =>
-      m.dom(layout, v, { w: 1440, h: 900 }).cursors[0] as { left: number; top: number }
-    expect(at({ x: 0, y: 0, zoom: 1 })).toMatchObject({ left: 804, top: 404 })
     clock.t += CURSOR_GLIDE_MS / 2
-    const mid = at({ x: 0, y: 0, zoom: 1 })
-    expect(mid.left).toBeLessThan(804)
-    expect(mid.left).toBeGreaterThan(104)
+    const mid = tipAt(m, layout, { x: 0, y: 0, zoom: 1 })
+    // Ease-in-out cubic: halfway in time is halfway in space.
+    expect(mid.x).toBeCloseTo((900 + 150) / 2, 5)
+    expect(mid.y).toBeCloseTo((450 + 950) / 2, 5)
     // Same instant, panned and zoomed: the same world point, projected (no trailing).
-    const panned = at({ x: -50, y: 30, zoom: 2 })
-    expect(panned.left).toBeCloseTo((mid.left - 4 + 50) * 2 + 4, 5)
-    expect(panned.top).toBeCloseTo((mid.top - 4 - 30) * 2 + 4, 5)
+    const panned = tipAt(m, layout, { x: -50, y: 30, zoom: 2 })
+    expect(panned.x).toBeCloseTo((mid.x + 50) * 2, 5)
+    expect(panned.y).toBeCloseTo((mid.y - 30) * 2, 5)
+    clock.t += CURSOR_GLIDE_MS / 4
+    const late = tipAt(m, layout, { x: 0, y: 0, zoom: 1 })
+    expect(late.x).toBeCloseTo(900 + (150 - 900) * glideEase(0.75), 5)
     clock.t += CURSOR_GLIDE_MS
-    expect(at({ x: 0, y: 0, zoom: 1 })).toMatchObject({ left: 104, top: 904 })
+    expect(tipAt(m, layout, { x: 0, y: 0, zoom: 1 })).toEqual({ x: 150, y: 950 })
     expect(m.animating()).toBe(false)
   })
 
-  test("the anchor is the pointed layer's top-left (+4, +4), not the area's", async () => {
+  test("the pointed layer's section wins when it lies in the work area", async () => {
     const { m, layout, clock, props } = await setup()
     m.setProps(props(["AreaA00001", "AreaB00001"], "AreaB00001"))
     m.overlay(layout)
-    const d = m.dom(layout, { x: 0, y: 0, zoom: 1 }, { w: 1440, h: 900 })
-    expect(d.cursors[0]).toMatchObject({ left: 904, top: 454 })
-    // A pointer that is not laid out falls back to the area.
+    expect(tipAt(m, layout, { x: 0, y: 0, zoom: 1 })).toEqual({ x: 1000, y: 600 })
+    // A pointer that is not laid out falls back to the work area's section.
     m.setProps(props(["AreaA00001"], "Missing0001"))
-    m.overlay(layout)
+    tipAt(m, layout, { x: 0, y: 0, zoom: 1 })
     clock.t += CURSOR_GLIDE_MS
-    expect(m.dom(layout, { x: 0, y: 0, zoom: 1 }, { w: 1440, h: 900 }).cursors[0]).toMatchObject({
-      left: 804,
-      top: 404,
-    })
+    expect(tipAt(m, layout, { x: 0, y: 0, zoom: 1 })).toEqual({ x: 900, y: 450 })
   })
 
-  test("a new last added layer glides the pointer in world space; pan and zoom never drift", async () => {
-    const { m, layout, clock, props } = await setup()
-    m.setProps(props(["AreaA00001", "AreaB00001"], "AreaA00001"))
-    m.overlay(layout)
-    m.setProps(props(["AreaA00001", "AreaC00001"], "AreaC00001"))
-    m.overlay(layout)
-    expect(m.animating()).toBe(true)
-    const at = (v: { x: number; y: number; zoom: number }) =>
-      m.dom(layout, v, { w: 1440, h: 900 }).cursors[0] as { left: number; top: number }
-    clock.t += CURSOR_GLIDE_MS / 3
-    const mid = at({ x: 0, y: 0, zoom: 1 })
-    const zoomed = at({ x: 120, y: -40, zoom: 0.5 })
-    expect(zoomed.left).toBeCloseTo((mid.left - 4 - 120) * 0.5 + 4, 5)
-    expect(zoomed.top).toBeCloseTo((mid.top - 4 + 40) * 0.5 + 4, 5)
-    clock.t += CURSOR_GLIDE_MS
-    expect(at({ x: 0, y: 0, zoom: 1 })).toMatchObject({ left: 104, top: 904 })
+  test("reduced motion jumps", async () => {
+    const { m, layout, props } = await setup()
+    const reduced = (ids: string[]) => ({ ...props(ids), reducedMotion: true })
+    m.setProps(reduced(["AreaA00001"]))
+    tipAt(m, layout, { x: 0, y: 0, zoom: 1 })
+    m.setProps(reduced(["AreaC00001"]))
+    expect(tipAt(m, layout, { x: 0, y: 0, zoom: 1 })).toEqual({ x: 150, y: 950 })
   })
 })

@@ -6,6 +6,8 @@
   "permissions": [
     "core:event:allow-listen",
     "core:event:allow-unlisten",
+    "core:window:allow-start-dragging",
+    "core:window:allow-internal-toggle-maximize",
     "allow-kimo-app-info",
     "allow-kimo-fs-read-text",
     "allow-kimo-fs-read-bytes",
@@ -65,6 +67,7 @@
     "allow-kimo-updater-download",
     "allow-kimo-updater-restart",
     "allow-kimo-window-state",
+    "allow-kimo-window-titlebar-double-click",
     "allow-kimo-window-set-title",
     "allow-kimo-window-set-document-edited",
     "allow-kimo-window-open-settings",

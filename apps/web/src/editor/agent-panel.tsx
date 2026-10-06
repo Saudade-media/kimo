@@ -288,7 +288,7 @@ export function useEditorAgentPanel({
 
   const canvasProps = useMemo((): AgentCanvasProps | undefined => {
     if (!controller || !agent) return undefined
-    return agentCanvasProps({ canvas: agent.canvas } as AgentPanelViewState, controller, {
+    return agentCanvasProps({ canvas: agent.canvas } as AgentPanelViewState, {
       promptRun: (id) => agent.promptRuns[id],
       modelLabel: (m) =>
         m && typeof m === "object"
@@ -296,9 +296,8 @@ export function useEditorAgentPanel({
           : String(m ?? ""),
       onRunPrompt: (id) => runRef.current(id),
       onStopPrompt: (id) => controller.stopPrompt(id),
-      onReviewPlaceholder: () => openAgentTab(),
     })
-  }, [controller, agent, ai, openAgentTab])
+  }, [controller, agent, ai])
 
   const panel =
     controller && ai ? (

@@ -1,7 +1,8 @@
 /**
- * M6 canvas model (board 22 D0zDSY, board 24 iLW1l): placeholder / prompt tracking, renderer
- * overlay fields, flash on clear, DOM projections (tags, ready chip, ScopeTags, rejected pill,
- * persona cursors, prompt footers, target chips), personas and the Note / Prompt tools.
+ * M6 canvas model (board 22 D0zDSY, board 24 iLW1l) under board 36 (XDVdg): placeholder /
+ * prompt tracking, renderer overlay fields (placeholders draw nothing), DOM projections (rejected
+ * pill, pass chip, cursor + section outline, prompt footers, target chips), personas and the
+ * Note / Prompt tools.
  */
 import { describe, expect, test } from "bun:test"
 import { createDocStore, type DocStore, type Op } from "@kimo/editor-state"
@@ -11,14 +12,7 @@ import {
   type LayoutResult,
   type TextMeasurer,
 } from "@kimo/layout"
-import {
-  AgentCanvasModel,
-  defaultAgo,
-  FLASH_MS,
-  personaFor,
-  READY_CHIP_MS,
-  REJECT_MS,
-} from "../src/canvas/agent-canvas"
+import { AgentCanvasModel, defaultAgo, personaFor, REJECT_MS } from "../src/canvas/agent-canvas"
 import { type AgentCanvasProps, CANVAS_TOOLS } from "../src/canvas/contract"
 
 const measure: TextMeasurer = {
@@ -145,106 +139,53 @@ describe("tracking", () => {
   })
 })
 
-describe("renderer overlay fields", () => {
-  test("placeholders: building vs interrupted, skeleton only while empty, persona", async () => {
+describe("renderer overlay fields (board 36)", () => {
+  test("placeholders draw nothing: no outline, shimmer, skeleton, scope or selection", async () => {
     const store = doc()
     const layout = await layoutOf(store)
     const m = model(store)
-    m.setProps(props())
-    const o = m.overlay(layout)
-    expect(o.placeholders).toEqual([
-      { id: "holder", persona: "agent", state: "building", skeleton: true },
-      { id: "orphan", persona: "agent", state: "interrupted", skeleton: true },
-    ])
-    expect(o.promptConnectors).toEqual([{ prompt: "prompt", target: "pricing" }])
-    expect(typeof o.shimmerPhase).toBe("number")
-    // A child arrives: no skeleton (DzQcZ f7c6p1 "Skeleton bars only while the frame has no children").
-    store.apply(
-      [{ op: "insert", id: "kid001", parent: "holder", node: { type: "rect", w: 10, h: 10 } }],
-      { origin: "user" },
+    m.setProps(
+      props({
+        scopes: [{ origin: A1, roots: ["pricing"], mode: "split" }],
+        cursors: [{ origin: A1, nodeId: "pricing", text: "", state: "working" }],
+      }),
     )
-    m.scan(["kid001", "holder"])
-    expect(m.overlay(layout).placeholders?.[0]?.skeleton).toBe(false)
+    const o = m.overlay(layout)
+    expect(o.placeholders).toBeUndefined()
+    expect(o.shimmerPhase).toBeUndefined()
+    expect(o.scopes).toBeUndefined()
+    expect(o.agentSelections).toBeUndefined()
+    expect(o.placeholderFlashes).toBeUndefined()
+    expect(o.promptConnectors).toEqual([{ prompt: "prompt", target: "pricing" }])
   })
 
-  test("without agent props every owned placeholder is interrupted (no live owner)", async () => {
+  test("a building placeholder alone never animates (no shimmer frames)", async () => {
     const store = doc()
     const m = model(store)
-    const o = m.overlay(await layoutOf(store))
-    expect(o.placeholders?.every((p) => p.state === "interrupted")).toBe(true)
-  })
-
-  test("reduced motion: the shimmer stands still, nothing animates for it", async () => {
-    const store = doc()
-    const m = model(store)
-    m.setProps(props({ reducedMotion: true }))
-    expect(m.overlay(await layoutOf(store)).shimmerPhase).toBeNull()
+    m.setProps(props())
     expect(m.animating()).toBe(false)
-    m.setProps(props())
-    expect(m.animating()).toBe(true)
   })
 
-  test("clearing a placeholder flashes 1.2 s and shows the ready chip 4 s", async () => {
-    const store = doc()
-    const layout = await layoutOf(store)
-    const clock = { t: 1000 }
-    const m = model(store, clock)
-    m.setProps(props())
-    store.apply([{ op: "update", id: "holder", unset: ["placeholder"] }], { origin: "user" })
-    m.scan(["holder"])
-    expect(m.overlay(layout).placeholderFlashes).toEqual([
-      { id: "holder", progress: 0, persona: "agent" },
-    ])
-    expect(m.dom(layout, V, SIZE).ready).toEqual([
-      {
-        id: "holder",
-        origin: LEAD,
-        left: 740,
-        top: 52 + 300 + 12,
-        text: "Features ready · 14 ops",
-      },
-    ])
-    clock.t += FLASH_MS
-    expect(m.overlay(layout).placeholderFlashes).toEqual([])
-    expect(m.dom(layout, V, SIZE).ready.length).toBe(1)
-    clock.t += READY_CHIP_MS - FLASH_MS
-    m.prune()
-    expect(m.dom(layout, V, SIZE).ready.length).toBe(0)
-  })
-
-  test("scopes: split = flush, others outset; persona selections and rejected flashes", async () => {
+  test("rejected flashes for 3 s", async () => {
     const store = doc()
     const layout = await layoutOf(store)
     const clock = { t: 1000 }
     const m = model(store, clock)
     m.setProps(
       props({
-        scopes: [
-          { origin: A1, roots: ["pricing"], mode: "split" },
-          { origin: LEAD, roots: ["holder"], mode: "side-by-side" },
-        ],
-        cursors: [
-          { origin: A1, nodeId: "pricing", text: "setting Headline font…", state: "working" },
-        ],
         rejections: [
           { key: "r1", origin: A1, nodeId: "pricing", text: "update Navbar → OUT_OF_SCOPE" },
         ],
       }),
     )
-    const o = m.overlay(layout)
-    expect(o.scopes).toEqual([
-      { id: "pricing", persona: "iris", fit: "flush" },
-      { id: "holder", persona: "agent", fit: "outset" },
-    ])
-    expect(o.agentSelections).toEqual([{ id: "pricing", persona: "iris" }])
-    expect(o.rejected).toEqual(["pricing"])
+    expect(m.overlay(layout).rejected).toEqual(["pricing"])
     clock.t += REJECT_MS
     expect(m.overlay(layout).rejected).toEqual([])
   })
 })
 
-describe("DOM projection", () => {
-  test("tags, ScopeTags, rejected pill, cursor, prompt footer and target chip positions", async () => {
+describe("DOM projection (board 36)", () => {
+  test("rejected pill, pass chip, cursor + section outline, prompt footer and target chip", async () => {
     const store = doc()
     const layout = await layoutOf(store)
     const m = model(store)
@@ -252,7 +193,6 @@ describe("DOM projection", () => {
       props({
         scopes: [
           { origin: A1, roots: ["pricing"], mode: "split" },
-          { origin: LEAD, roots: ["holder"], mode: "side-by-side" },
           {
             origin: LEAD,
             roots: ["holder"],
@@ -273,33 +213,8 @@ describe("DOM projection", () => {
       }),
     )
     const d = m.dom(layout, { x: 0, y: 0, zoom: 1 }, SIZE)
-    // Tag inside the frame's 16 px padding (EKCy7); board 31: the agent's name only.
-    expect(d.tags.find((t) => t.id === "holder")).toMatchObject({
-      left: 756,
-      top: 68,
-      text: "Kimo",
-      state: "building",
-    })
-    // Board 25 §3 (UMRAO): an orphan reads "Agent stopped · <name>".
-    expect(d.tags.find((t) => t.id === "orphan")).toMatchObject({
-      text: expect.stringMatching(/^Agent stopped · /),
-      state: "interrupted",
-    })
-    // ScopeTags: split inside top-right (6 px), side by side 3 px above the 3 px outset outline.
-    expect(d.scopes[0]).toMatchObject({
-      left: 360 + 340 - 6,
-      top: 58,
-      anchor: "right",
-      text: "Agent 1 · only inside Pricing",
-      persona: "iris",
-    })
-    expect(d.scopes[1]).toMatchObject({
-      left: 737,
-      top: 52 - 3 - 3 - 20,
-      anchor: "left",
-      text: "Kimo · only inside Features",
-    })
-    expect(d.scopes[2]?.text).toBe("Agent can only edit inside Features")
+    // No placeholder tags, ready chips or ScopeTags exist any more.
+    expect(Object.keys(d).sort()).toEqual(["cursors", "flashes", "passes", "prompts", "rejected"])
     // Pass Chip (NCElh): 7 below the outset outline (outline bottom 451 → chip 458 in h6oHb).
     expect(d.passes).toEqual([
       {
@@ -314,18 +229,36 @@ describe("DOM projection", () => {
       top: 64,
       text: "Agent 1 · update Navbar → OUT_OF_SCOPE",
     })
-    expect(d.cursors[0]).toMatchObject({
-      left: 364,
-      top: 56,
-      text: "Agent 1",
-      persona: "iris",
-      stack: 0,
-    })
+    // Pricing is top-level with no children: it is its own section; the tip sits on its center.
+    expect(d.cursors).toEqual([
+      expect.objectContaining({
+        origin: A1,
+        kind: "builtin",
+        label: "Agent 1",
+        persona: "iris",
+        sectionId: "pricing",
+        section: { x: 360, y: 52, w: 340, h: 230, radius: 0 },
+        tip: { x: 530, y: 167 },
+        stack: 0,
+      }),
+    ])
     const p = d.prompts[0]
     expect(p?.box.w).toBe(300)
     expect(p?.footer).toBe("Ran 4m ago · 18 ops · $0.06")
     expect(p?.action).toBe("run")
     expect(p?.target).toEqual({ left: 360, top: 52 + 230 + 10, text: "target · Pricing" })
+  })
+
+  test("placeholders and orphans project nothing", async () => {
+    const store = doc()
+    const layout = await layoutOf(store)
+    const m = model(store)
+    m.setProps(props())
+    const d = m.dom(layout, V, SIZE)
+    expect(d.cursors).toEqual([])
+    expect(d.flashes).toEqual([])
+    expect(JSON.stringify(d)).not.toContain("holder")
+    expect(JSON.stringify(d)).not.toContain("orphan")
   })
 
   test("prompt states: never run, running (Stop), failed (Retry)", async () => {
@@ -347,13 +280,12 @@ describe("DOM projection", () => {
     ).toMatchObject({ status: "failed", footer: "Failed · no key for Gemini", action: "retry" })
   })
 
-  test("zoomed out: projections scale, tiny placeholders get no tag", async () => {
+  test("zoomed out: projections scale", async () => {
     const store = doc()
     const layout = await layoutOf(store)
     const m = model(store)
     m.setProps(props())
     const d = m.dom(layout, { x: 0, y: 0, zoom: 0.1 }, SIZE)
-    expect(d.tags.length).toBe(0)
     expect(d.prompts[0]?.zoom).toBe(0.1)
   })
 
@@ -362,8 +294,23 @@ describe("DOM projection", () => {
     const m = model(store)
     const layout = await layoutOf(store)
     expect(m.active()).toBe(false)
-    expect(m.dom(layout, V, SIZE).tags).toEqual([])
+    expect(m.dom(layout, V, SIZE).cursors).toEqual([])
     expect(m.overlay(layout)).toEqual({})
+  })
+
+  test("a document with only placeholders is not active (no DOM, no frames)", async () => {
+    const store = doc()
+    store.apply(
+      [
+        { op: "delete", id: "prompt" },
+        { op: "delete", id: "note01" },
+      ],
+      { origin: "user" },
+    )
+    const m = model(store)
+    m.setProps(props())
+    expect(m.placeholders.size).toBe(2)
+    expect(m.active()).toBe(false)
   })
 })
 

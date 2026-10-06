@@ -150,9 +150,11 @@ function WebHome() {
       </nav>
 
       <main className="home-main">
-        <header className="home-header">
-          <h1 className="home-header__title">Recents</h1>
-          <span className="home-header__spacer" />
+        <header className="home-header" data-tauri-drag-region="">
+          <h1 className="home-header__title" data-tauri-drag-region="">
+            Recents
+          </h1>
+          <span className="home-header__spacer" data-tauri-drag-region="" />
           <Input
             icon={<Icon name="search" size={16} />}
             type="search"
@@ -342,10 +344,12 @@ function DesktopHome({ platform }: { platform: KimoPlatform }) {
         <SettingsRow onOpen={() => openSettings("general")} />
       </nav>
 
-      <main className="home-main home-main--desktop">
-        <header className="home-header">
-          <h1 className="home-header__title">Recents</h1>
-          <span className="home-header__spacer" />
+      <main className="home-main home-main--desktop" data-tauri-drag-region="">
+        <header className="home-header" data-tauri-drag-region="">
+          <h1 className="home-header__title" data-tauri-drag-region="">
+            Recents
+          </h1>
+          <span className="home-header__spacer" data-tauri-drag-region="" />
           <Input
             icon={<Icon name="search" size={16} />}
             type="search"

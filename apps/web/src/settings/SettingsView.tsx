@@ -99,7 +99,7 @@ export function SettingsView({
         : {})}
     >
       <nav className="settings-sidebar" aria-label="Settings sections">
-        <div className="settings-lights" data-pen="L2zCG">
+        <div className="settings-lights" data-pen="L2zCG" data-tauri-drag-region="">
           {drawLights && (
             <>
               <button

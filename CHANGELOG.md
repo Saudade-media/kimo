@@ -210,8 +210,14 @@ The first public release: release engineering, polish, the new mark and the form
   served from the prompt cache plus output; the tooltip shows the cached input left out), and
   the thread header and usage ledger count the same way. Each reply's steps are folded behind an "N steps" toggle
   (always folded by default; a failed step adds a red count). The per-turn cost warning is unchanged.
-- Canvas agent labels (cursor pill, attribution tag, placeholder tag) show only the agent's
-  name; what it is doing lives in the panel.
+- Agents on the canvas (board 36): each agent shows one cursor in the middle of the section it
+  edits (a direct child of the top-level frame) and a 1 px outline on that section. The cursor
+  floats 3 px every 2.4 s and glides 600 ms between sections; each landed edit rings the
+  section once. The placeholder tag, tooltip, shimmer, skeleton and "ready" chip, the
+  attribution tag, scope outlines and ScopeTags, the docked off-screen pill and outlines on
+  small layers are gone. The label is the agent's name only: the built-in agent shows its
+  persona name ("Kimo") also when it runs on Claude Code or Codex, and its own MCP connection
+  no longer draws a second "Claude Code" cursor.
 - The image size limit is 20 MB (was 50 MB).
 - Docs:
   - Kimo collects no telemetry (SECURITY.md, teardown).

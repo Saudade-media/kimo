@@ -69,12 +69,18 @@ One per file; renders only while an agent is paused by READ_ONLY / DOCUMENT_LOCK
       return { x: p.x, y: p.y, w: b.w * zoom, h: b.h * zoom, radius: radiusOf(id) * zoom }
     }}
     viewportKey={`${zoom}:${panX}:${panY}:${layoutVersion}`}
+    parentOf={(id) => store.getNode(id)?.parent ?? null}   // board 36 section rule
+    world={(id) => layout.get()?.nodes.get(id)?.world ?? null}
+    toLayer={(p) => viewport.worldToScreen(p)}            // world-space glide
   />
 </div>
 ```
 
 The layer is `position:absolute; inset:0; pointer-events:none` (only the Dry Run Bar takes
-clicks). It draws the attribution outline + tag + agent cursor, dry-run ghosts and the bar.
+clicks). It draws, per MCP client (board 36), one cursor on the center of the section it
+writes in and a 1 px outline on that section, a ring per landed op group, dry-run ghosts and
+the bar. The built-in agent's own connections (`agent:*` origins, and a CLI engine's relay from
+`~/.kimo/cli-workspaces/<session>`) draw nothing here: the agent panel's cursor stands for them.
 
 ## 5. Left panel (LeftPanel.tsx)
 
@@ -171,9 +177,10 @@ window's "Open activity" has no cross-window channel to the editor's Activity ta
   nothing applied", Discard (Esc) / Apply (⌘↩, approval-backed dry runs). For an agent's
   dry-run *call* it replaces the presence chip; an approval's dry run keeps the chip (the prompt
   hangs from it).
-- **Agent cursor placement** (joR0E rules): anchor = target top-left + (4, 4), pill flips near
-  edges, off-screen targets dock to the nearest edge with an arrow (`onPanTo` on
-  `AgentCanvasLayer`), stacked 4 px apart, eases 120 ms, hides after 3 s idle.
+- **Agent cursor placement** (board 36 XDVdg, supersedes joR0E rules 1, 3, 5): pointer tip on
+  the section center, pill flips near edges, stacked 26 px apart, glides 600 ms ease-in-out
+  cubic in world space, floats 3 px every 2.4 s, gone 2 s after the last write; nothing is
+  drawn for an off-screen section.
 - **Activity**: empty log = EmptyState (history) + "Connect an agent…" when no agent is connected
   (`onConnectAgent` on `AgentActivityPanel`); undone entries stay (struck label, "Undone by you ·
   10:52", Redo when the history can redo: `AgentHistory.redo`, the store-based default can).

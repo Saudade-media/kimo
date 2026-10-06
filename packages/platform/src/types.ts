@@ -607,6 +607,14 @@ export interface WindowApi {
   trafficLightPosition(): { x: number; y: number } | null
   /** Width the topbar reserves for the lights: 68 on macOS, 4 in fullscreen, 0 elsewhere. */
   trafficLightInset(): number
+  /** The inset changed (first measurement of the native lights, display or theme change). */
+  onTrafficLightInsetChange(listener: (inset: number) => void): Unsubscribe
+  /**
+   * Title bar double-click on a drag region. macOS runs the system "Double-click a window's
+   * title bar to" action (zoom, minimize or nothing); Windows and Linux toggle maximize; the
+   * browser does nothing.
+   */
+  titlebarDoubleClick(): Promise<void>
   isFocused(): boolean
   onFocusChange(listener: (focused: boolean) => void): Unsubscribe
   isFullscreen(): boolean

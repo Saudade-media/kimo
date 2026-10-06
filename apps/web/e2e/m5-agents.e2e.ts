@@ -622,71 +622,67 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "m5-agents: canvas attribution outline + tag + agent cursor; fades after commit; measured",
+    name: "m5-agents: board 36 — one cursor on the section center + section outline; gone after the write; measured",
     async run(ctx) {
       const { page } = ctx
       await open(ctx)
       await agentEdits(page)
       const agent = await token(page, "--kimo-agent")
       const onAccent = await token(page, "--kimo-on-accent")
-      const c = checker(ctx, "Canvas attribution (LMWYr / GSUtG / IJH2i)")
+      const c = checker(ctx, "Agent on canvas (board 36 XDVdg)")
+      await page.locator("[data-testid=agent-cursor]").waitFor()
       const m = await measure(page, {
         canvas: "[data-testid=canvas]",
-        outline: "[data-testid=agent-outline]",
-        tag: "[data-testid=agent-tag]",
-        tagOrb: "[data-testid=agent-tag] .kimo-agent-mark",
-        tagLabel: ".agents-attribution__tag-label",
+        outline: "[data-testid=agent-section-outline]",
         cursor: "[data-testid=agent-cursor]",
-        pointer: ".agents-cursor__pointer",
-        pill: ".agents-cursor__pill",
-        pillOrb: ".agents-cursor__pill .kimo-agent-mark",
-        pillLabel: ".agents-cursor__label",
+        float: ".agent-section__float",
+        pointer: ".agent-section__pointer",
+        pill: ".agent-section__pill",
+        pillOrb: ".agent-section__pill .kimo-agent-mark",
+        pillLabel: ".agent-section__label",
       })
       const cx = m.canvas?.x ?? 0
       const cy = m.canvas?.y ?? 0
-      c.box("Agent Outline (LMWYr)", m.outline, { w: 136, h: 220, radius: 20 })
+      // The edits touched Card 2 and a badge inside it: their section is Cards (the direct child
+      // of the Pricing frame), 44,132 · 480 × 260 in the harness.
+      c.box("Section Outline (B4NH4)", m.outline, { w: 480, h: 260 })
       c.check(
-        "Agent Outline",
+        "Section Outline",
         "x, y",
         `${(m.outline?.x ?? 0) - cx},${(m.outline?.y ?? 0) - cy}`,
-        "216,152",
+        "44,132",
       )
-      c.check("Agent Outline", "stroke", m.outline?.shadow, `${agent} 0px 0px 0px 1.5px inset`)
-      c.box("Agent Attribution (GSUtG)", m.tag, {
-        h: 18,
-        gap: 4,
-        pad: [0, 6, 0, 3],
-        radius: 4,
-        bg: agent,
-      })
-      c.check("Agent Attribution", "y", (m.tag?.y ?? 0) - cy, 131)
-      c.box("AgentMark/12 (was Orb TVSAy)", m.tagOrb, { w: 12, h: 12 })
-      c.box("Label (pF4zL)", m.tagLabel, { fs: 11, fw: "500", lh: 13, color: onAccent })
-      c.box("Agent Cursor (IJH2i)", m.cursor, { gap: 2 })
-      c.box("Pointer (ehJ5c)", m.pointer, { w: 18, h: 18, color: agent })
-      c.box("Pill (pIYVd)", m.pill, { gap: 6, pad: [4, 10, 4, 4], bg: agent, h: 23 })
-      // Board 24 GmEAl: the cursor pill mark is AgentMark/12 (was Orb 14).
-      c.box("AgentMark/12 (c0aVjQ, was Orb vocxw)", m.pillOrb, { w: 12, h: 12 })
+      c.check("Section Outline", "stroke", m.outline?.shadow, `${agent} 0px 0px 0px 1px inset`)
       c.check(
         "Agent Cursor",
-        "anchor = target top-left + (4, 4) (board 24 g)",
+        "box = section center − (3, 3)",
         `${(m.cursor?.x ?? 0) - cx},${(m.cursor?.y ?? 0) - cy}`,
-        "220,156",
+        "281,259",
       )
-      c.box("Label (FnfGU)", m.pillLabel, { fs: 12, fw: "500", color: onAccent })
+      c.box("Float (column)", m.float, { gap: 2 })
+      c.box("Pointer", m.pointer, { w: 18, h: 18 })
+      c.check("Pointer", "color", m.pointer?.color, agent)
+      c.box("Pill", m.pill, { gap: 6, pad: [4, 10, 4, 4], bg: agent, h: 23 })
+      c.box("AgentMark/12", m.pillOrb, { w: 12, h: 12 })
+      c.box("Label", m.pillLabel, { fs: 12, fw: "500", lh: 15, color: onAccent })
       c.flush()
-      if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "m5-attribution.png") })
-      // Board 31 "Canvas label": the agent's name only (no layer, state or tool).
+      if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "m5-on-canvas.png") })
       expect(
-        (await page.locator(".agents-attribution__tag-label").innerText()) === "Claude Code",
-        "tag copy",
+        (await page.locator(".agent-section__label").innerText()) === "Claude Code",
+        "cursor label: the client's name",
       )
       expect(
-        (await page.locator(".agents-cursor__label").innerText()) === "Claude Code",
-        "cursor copy",
+        (await page.locator("[data-testid=agent-cursor]").count()) === 1 &&
+          (await page.locator("[data-testid=agent-section-outline]").count()) === 1,
+        "one cursor, one outline",
       )
-      // Board 31 "Agent cursor": with a pointed layer (the last one its edit added) the cursor
-      // sits on that layer's top-left (+4, +4); the outline keeps framing the work area.
+      expect(
+        (await page
+          .locator("[data-testid=agent-tag], [data-testid=agent-cursor-docked]")
+          .count()) === 0,
+        "no attribution tag, no docked pill",
+      )
+      // A pointed layer in the same section keeps the cursor there.
       await page.evaluate(() => {
         const a = (window as unknown as Agents).__agents
         ;(
@@ -699,14 +695,12 @@ export const scenarios: Scenario[] = [
       await page.waitForTimeout(400)
       const pm = await measure(page, {
         canvas: "[data-testid=canvas]",
-        outline: "[data-testid=agent-outline]",
         cursor: "[data-testid=agent-cursor]",
       })
       const px = (pm.cursor?.x ?? 0) - (pm.canvas?.x ?? 0)
       const py = (pm.cursor?.y ?? 0) - (pm.canvas?.y ?? 0)
-      expect(px === 372 && py === 156, `cursor on the pointed layer (372,156): ${px},${py}`)
-      expect((pm.outline?.x ?? 0) - (pm.canvas?.x ?? 0) === 216, "outline stays on the work area")
-      // Commit (idle) → outline fades after 2 s.
+      expect(px === 281 && py === 259, `cursor stays on the Cards center: ${px},${py}`)
+      // Commit (idle) → cursor and outline go 2 s after the last write.
       await page.evaluate(() => {
         const a = (window as unknown as Agents).__agents
         ;(
@@ -717,7 +711,7 @@ export const scenarios: Scenario[] = [
         })
       })
       await page.waitForFunction(
-        () => !!document.querySelector(".agents-attribution--faded"),
+        () => !document.querySelector("[data-testid=agent-section-outline]"),
         null,
         { timeout: 5000 },
       )

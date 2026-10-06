@@ -1,16 +1,31 @@
 /**
- * Canvas-side agent surfaces (board 21): attribution outline + tag and the agent cursor (AxgvU,
- * rule "Canvas attribution"), dry-run ghosts and the Dry Run Bar (L2eaCu / P1Ulp, rule "Dry
- * run"). A DOM layer stacked over the canvas (pointer-events: none except the bar); the caller
- * projects node ids to layer coordinates.
+ * Canvas-side agent surfaces of MCP clients (board 21, under board 36 "Agent on canvas"
+ * XDVdg): per client one cursor (pointer + name pill) on the center of the section it works in
+ * and a 1 px outline on that section, one ring per landed edit on the section, dry-run ghosts
+ * and the Dry Run Bar (L2eaCu / P1Ulp, rule "Dry run"). A DOM layer stacked over the canvas
+ * (pointer-events: none except the bar); the caller projects node ids to layer coordinates.
+ * The built-in agent's own CLI connection draws nothing here: its cursor is the agent panel's.
  */
 import { AgentMark, CompactButton } from "@kimo/ui"
 import { useEffect, useRef, useState } from "react"
-import { CURSOR_GLIDE_MS, glideEase, unionBox } from "../canvas/agent-area"
+import {
+  AgentSectionLayer,
+  cursorFlip,
+  type SectionCursorView,
+  type SectionFlashView,
+} from "../canvas/AgentSectionCursor"
+import {
+  CURSOR_GLIDE_MS,
+  centerOf,
+  type Glide,
+  glideAt,
+  pickSection,
+  retarget,
+  SECTION_FLASH_MS,
+} from "../canvas/agent-area"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
 import { useAgentsState } from "./hooks"
-import { AgentIcon } from "./icons"
-import type { GhostKind } from "./model"
+import { builtInCliSession, type GhostKind } from "./model"
 
 /** A node's box in the layer's coordinate space (screen px), with its corner radius. */
 export interface ProjectedBox {
@@ -27,12 +42,12 @@ export interface AgentCanvasLayerProps {
   project: (id: string) => ProjectedBox | null
   /** Changes whenever the viewport or layout changes, so boxes re-project. */
   viewportKey?: unknown
-  /** Outline fades this long after the op group commits (rule: 2 s). */
+  /** Cursor and outline stay this long after the client's last write (board 36: 2 s). */
   fadeMs?: number
-  /** Off-screen cursor pill click: pan to the node (board 24 g rule 3). */
-  onPanTo?: (nodeId: string) => void
+  /** A node's parent (board 36 section rule). Absent: the first focus layer is the section. */
+  parentOf?: (id: string) => string | null
   /**
-   * World box of a node and world → layer projection: the cursor glides between work areas in
+   * World box of a node and world → layer projection: the cursor glides between sections in
    * world space (board 31 "Position lock": a pan mid-glide moves it with the canvas). Without
    * them the cursor jumps.
    */
@@ -40,76 +55,20 @@ export interface AgentCanvasLayerProps {
   toLayer?: (p: { x: number; y: number }) => { x: number; y: number }
 }
 
-/** Cursor hides after this much idle time (board 24 g rule 5). */
-export const CURSOR_IDLE_MS = 3000
-
-export interface CursorPlacement {
-  kind: "on-canvas" | "docked"
-  /** Pointer position (on canvas) or the docked pill's position. */
-  x: number
-  y: number
-  /** Label pill flipped left / up near a viewport edge (rule 2). */
-  flipX: boolean
-  flipY: boolean
-  /** Docked: arrow toward the target. */
-  arrow?:
-    | "arrow-up-left"
-    | "arrow-up"
-    | "arrow-up-right"
-    | "arrow-left"
-    | "arrow-right"
-    | "arrow-down-left"
-    | "arrow-down"
-    | "arrow-down-right"
-}
-
 /**
- * Board 24 › 5 · (g) cursor placement rules: anchor = top-left of the target node (+4, +4); the
- * label pill sits below-right of the pointer and flips left/up within 8 px of a viewport edge; an
- * off-screen target docks the pill to the nearest edge with an arrow; several agents on one node
- * stack 4 px apart (lead on top) and never overlap the dry-run bar.
+ * Whether a chip is the built-in agent's own connection (board 36 › dedupe): an in-app agent
+ * (`agent:kimo.<session>.<n>` through the document host) or a CLI engine's MCP relay from its
+ * session workspace. The agent panel's cursor stands for it, so this layer draws nothing.
  */
-export function placeCursor(
-  box: ProjectedBox,
-  view: { w: number; h: number },
-  opts: { stack?: number; pill?: { w: number; h: number }; reservedTop?: number } = {},
-): CursorPlacement {
-  const pill = opts.pill ?? { w: 180, h: 26 }
-  const stack = (opts.stack ?? 0) * (pill.h + 4)
-  const top = opts.reservedTop ?? 0
-  const ax = box.x + 4
-  const ay = box.y + 4 + stack
-  const off = ax < 0 || ay < top || ax > view.w || ay > view.h
-  if (!off) {
-    return {
-      kind: "on-canvas",
-      x: ax,
-      y: ay,
-      flipX: ax + 18 + pill.w > view.w - 8,
-      flipY: ay + 20 + pill.h > view.h - 8,
-    }
-  }
-  const h = ax < 0 ? "left" : ax > view.w ? "right" : ""
-  const v = ay < top ? "up" : ay > view.h ? "down" : ""
-  const arrow = (
-    v && h ? `arrow-${v}-${h}` : v ? `arrow-${v}` : `arrow-${h || "right"}`
-  ) as CursorPlacement["arrow"]
-  return {
-    kind: "docked",
-    x: Math.max(8, Math.min(view.w - 8 - pill.w, ax)),
-    y: Math.max(top + 8, Math.min(view.h - 8 - pill.h, ay)),
-    flipX: false,
-    flipY: false,
-    ...(arrow ? { arrow } : {}),
-  }
-}
+export const isBuiltInConnection = (chip: AgentChipView): boolean =>
+  chip.origin.startsWith("agent:") || builtInCliSession(chip.connection.cwd) !== null
 
 export function AgentCanvasLayer({
   controller,
   project,
   viewportKey,
   fadeMs = 2000,
-  onPanTo,
+  parentOf,
   world,
   toLayer,
 }: AgentCanvasLayerProps) {
@@ -125,36 +84,74 @@ export function AgentCanvasLayer({
     return () => ro.disconnect()
   }, [])
   const [tick, setTick] = useState(0)
-  // Re-render once the fade window of the most recent edit passes.
+  const now = Date.now()
+  // Re-render once the fade window of the most recent edit (or flash) passes.
   const latest = Math.max(0, ...state.chips.map((c) => c.lastActivityAt))
   useEffect(() => {
-    const left = latest + fadeMs - Date.now()
+    const left = latest + Math.max(fadeMs, SECTION_FLASH_MS) - Date.now()
     if (left <= 0) return
     const t = setTimeout(() => setTick((n) => n + 1), left + 20)
     return () => clearTimeout(t)
   }, [latest, fadeMs])
   void tick
   void viewportKey
+  const chips = state.chips.filter(
+    (c) =>
+      c.presence !== "paused" &&
+      !isBuiltInConnection(c) &&
+      (c.state === "editing" || now - c.lastActivityAt < fadeMs),
+  )
+  // Board 36 › Section: the pointed layer's section when it lies in the work area, else the
+  // first focus layer's.
+  const sectionOf = (chip: AgentChipView): string | null =>
+    parentOf
+      ? pickSection(chip.focus.slice(0, 50), chip.pointer, parentOf, (id) => !!project(id))
+      : (chip.focus.find((id) => !!project(id)) ?? null)
+  const sections = new Map(chips.map((c) => [c.connectionId, sectionOf(c)]))
+  const targets = new Map<string, { x: number; y: number }>()
+  for (const c of chips) {
+    const s = sections.get(c.connectionId)
+    const w = s && world ? world(s) : null
+    if (w) targets.set(c.connectionId, centerOf(w))
+  }
+  const glides = useWorldGlides(targets)
+  const perSection = new Map<string, number>()
+  const cursors: SectionCursorView[] = []
+  const flashes: SectionFlashView[] = []
+  for (const c of chips) {
+    const s = sections.get(c.connectionId)
+    const box = s ? project(s) : null
+    if (!s || !box) continue
+    const stack = perSection.get(s) ?? 0
+    perSection.set(s, stack + 1)
+    const g = glides.get(c.connectionId)
+    const tip = g && toLayer ? toLayer(g) : { x: box.x + box.w / 2, y: box.y + box.h / 2 }
+    cursors.push({
+      origin: c.origin,
+      kind: "mcp",
+      persona: "agent",
+      // Board 36 › Label: the client's name ("Claude Code", "Codex").
+      label: c.label,
+      state: c.state === "editing" ? "working" : "idle",
+      section: box,
+      sectionId: s,
+      tip,
+      stack,
+      ...cursorFlip(tip, view),
+    })
+    // Board 36 › Section flash: the client's latest op group, once, on its section.
+    const last = c.session.groups[c.session.groups.length - 1]
+    if (last && now - last.time < SECTION_FLASH_MS)
+      flashes.push({
+        key: `${c.origin}:${c.session.groups.length}:${last.time}`,
+        persona: "agent",
+        box,
+      })
+  }
   const dry = state.dryRun && !state.dryRunHidden ? state.dryRun : null
   return (
     <div ref={layer} className="agents-canvas-layer" data-testid="agent-canvas-layer">
-      {state.chips.map((chip, i) => (
-        <Attribution
-          key={chip.connectionId}
-          chip={chip}
-          project={project}
-          fadeMs={fadeMs}
-          view={view}
-          stack={
-            state.chips
-              .slice(0, i)
-              .filter((c) => c.focus[0] !== undefined && c.focus[0] === chip.focus[0]).length
-          }
-          reservedTop={dry || state.dryRun ? 52 : 0}
-          {...(onPanTo ? { onPanTo } : {})}
-          {...(world && toLayer ? { world, toLayer } : {})}
-        />
-      ))}
+      <AgentSectionLayer cursors={cursors} flashes={flashes} />
       {dry?.ghosts.map((g) => {
         const box = project(g.id)
         return box ? (
@@ -166,161 +163,28 @@ export function AgentCanvasLayer({
   )
 }
 
-function Attribution({
-  chip,
-  project,
-  fadeMs,
-  view,
-  stack,
-  reservedTop,
-  onPanTo,
-  world,
-  toLayer,
-}: {
-  chip: AgentChipView
-  project: AgentCanvasLayerProps["project"]
-  fadeMs: number
-  view: { w: number; h: number }
-  stack: number
-  reservedTop: number
-  onPanTo?: (id: string) => void
-  world?: AgentCanvasLayerProps["world"]
-  toLayer?: AgentCanvasLayerProps["toLayer"]
-}) {
-  // Board 31 "Agent cursor": the pointer glides to the layer the last landed edit added (its
-  // top-left), else to the work area's top-left.
-  const pointed = world && chip.pointer ? world(chip.pointer) : null
-  const area = pointed ?? (world ? unionBox(chip.focus.slice(0, 50).map((f) => world(f))) : null)
-  const glide = useWorldGlide(area ? { x: area.x, y: area.y } : null)
-  const writing = chip.state === "editing" || Date.now() - chip.lastActivityAt < fadeMs
-  if (chip.presence === "paused") return null
-  // The work area: the union of the focus layers' boxes.
-  const boxes = chip.focus.slice(0, 50).flatMap((f) => {
-    const b = project(f)
-    return b ? [{ id: f, b }] : []
-  })
-  const first = boxes[0]
-  if (!first) return null
-  const id = first.id
-  const u = unionBox(boxes.map((x) => x.b))
-  if (!u) return null
-  // A box that contains the whole area is the area (it keeps its corner radius).
-  const box: ProjectedBox =
-    boxes.find(
-      (x) =>
-        x.b.x <= u.x + 0.5 &&
-        x.b.y <= u.y + 0.5 &&
-        x.b.x + x.b.w >= u.x + u.w - 0.5 &&
-        x.b.y + x.b.h >= u.y + u.h - 0.5,
-    )?.b ?? u
-  // Cursor anchor: the glided world point of the pointed layer's (else the area's) top-left,
-  // projected now.
-  const pointedBox = chip.pointer ? project(chip.pointer) : null
-  const target = pointedBox ?? box
-  const at = glide && toLayer ? toLayer(glide) : { x: target.x, y: target.y }
-  const anchor: ProjectedBox = { ...target, x: at.x, y: at.y }
-  const panTo = pointedBox && chip.pointer ? chip.pointer : id
-  const idle = Date.now() - chip.lastActivityAt > CURSOR_IDLE_MS && chip.state !== "editing"
-  const place = view.w > 0 ? placeCursor(anchor, view, { stack, reservedTop }) : null
-  const markState = chip.state === "editing" ? "working" : "idle"
-  return (
-    <div
-      className={`agents-attribution${writing ? "" : " agents-attribution--faded"}`}
-      data-origin={chip.origin}
-    >
-      {/* Agent Outline (LMWYr): 1.5 agent, the node's radius */}
-      <div
-        className="agents-attribution__outline"
-        data-testid="agent-outline"
-        style={{
-          left: box.x,
-          top: box.y,
-          width: box.w,
-          height: box.h,
-          borderRadius: box.radius ?? 0,
-        }}
-      />
-      {/* Agent Attribution tag (GSUtG): 18 tall, 3 px above the outline; mark → AgentMark 12 */}
-      <div
-        className="agents-attribution__tag"
-        data-testid="agent-tag"
-        style={{ left: box.x, top: box.y - 21 }}
-      >
-        <AgentMark size={12} state={markState} />
-        {/* Board 31 "Canvas label": the agent's name only. */}
-        <span className="agents-attribution__tag-label">{chip.label}</span>
-      </div>
-      {/* Agent Cursor (IJH2i; board 24 g placement): anchor = node top-left + (4, 4) */}
-      {!idle && place?.kind === "docked" && (
-        <button
-          type="button"
-          className="agents-cursor-docked"
-          data-testid="agent-cursor-docked"
-          style={{ left: place.x, top: place.y }}
-          onClick={() => onPanTo?.(panTo)}
-        >
-          <AgentMark size={12} state={markState} />
-          <span className="agents-cursor-docked__label">{chip.label}</span>
-          <AgentIcon name={place.arrow ?? "arrow-right"} size={12} />
-        </button>
-      )}
-      {!idle && chip.state === "editing" && place?.kind !== "docked" && (
-        <div
-          className="agents-cursor"
-          data-testid="agent-cursor"
-          data-flip-x={place?.flipX || undefined}
-          data-flip-y={place?.flipY || undefined}
-          style={{ left: place?.x ?? anchor.x + 4, top: place?.y ?? anchor.y + 4 }}
-        >
-          <AgentIcon name="mouse-pointer-2" size={18} className="agents-cursor__pointer" />
-          <div className="agents-cursor__pill">
-            <AgentMark size={12} state="working" />
-            <span className="agents-cursor__label">{chip.label}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 /**
- * World-space glide of the cursor anchor between work areas (CURSOR_GLIDE_MS, ease-out): the
- * returned point is in world space and the caller projects it with the current viewport, so the
- * cursor never trails a pan or zoom. Reduced motion jumps.
+ * World-space glides of the cursors (CURSOR_GLIDE_MS, ease-in-out cubic): the returned points
+ * are in world space and the caller projects them with the current viewport, so a cursor never
+ * trails a pan or zoom. Reduced motion jumps.
  */
-function useWorldGlide(target: { x: number; y: number } | null): { x: number; y: number } | null {
-  const g = useRef<{
-    from: { x: number; y: number }
-    to: { x: number; y: number }
-    at: number
-  } | null>(null)
+function useWorldGlides(
+  targets: ReadonlyMap<string, { x: number; y: number }>,
+): Map<string, { x: number; y: number }> {
+  const g = useRef(new Map<string, Glide>())
   const [, setFrame] = useState(0)
   const now = performance.now()
-  if (target) {
-    const cur = g.current
-    if (!cur) g.current = { from: target, to: target, at: now - CURSOR_GLIDE_MS }
-    else if (Math.abs(cur.to.x - target.x) > 0.5 || Math.abs(cur.to.y - target.y) > 0.5) {
-      const reduced =
-        typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches
-      g.current = { from: reduced ? target : pointAt(cur, now), to: target, at: now }
-    }
-  }
-  const cur = g.current
-  const gliding = !!cur && now - cur.at < CURSOR_GLIDE_MS
+  const reduced =
+    typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches
+  for (const [k, to] of targets) g.current.set(k, retarget(g.current.get(k), to, now, reduced))
+  for (const k of [...g.current.keys()]) if (!targets.has(k)) g.current.delete(k)
+  const gliding = [...g.current.values()].some((x) => now - x.at < CURSOR_GLIDE_MS)
   useEffect(() => {
     if (!gliding) return
     const raf = requestAnimationFrame(() => setFrame((n) => n + 1))
     return () => cancelAnimationFrame(raf)
   })
-  return target && cur ? pointAt(cur, now) : null
-}
-
-function pointAt(
-  g: { from: { x: number; y: number }; to: { x: number; y: number }; at: number },
-  t: number,
-): { x: number; y: number } {
-  const k = glideEase((t - g.at) / CURSOR_GLIDE_MS)
-  return { x: g.from.x + (g.to.x - g.from.x) * k, y: g.from.y + (g.to.y - g.from.y) * k }
+  return new Map([...g.current].map(([k, x]) => [k, glideAt(x, now)]))
 }
 
 const OP_LABEL: Record<GhostKind, string> = { delete: "delete", insert: "insert", update: "update" }

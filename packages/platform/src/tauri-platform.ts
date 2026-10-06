@@ -98,6 +98,20 @@ const newWatchId = () =>
     ? crypto.randomUUID()
     : `w${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`
 
+/**
+ * Width the topbar reserves for the lights. The native lights are measured (macOS 26 draws
+ * 14 pt buttons: 76; older systems 12 pt: 68), so the inset is the reported right edge of the
+ * zoom button; 68 until the first measurement arrives. Fullscreen hides them.
+ */
+export function trafficLightInsetOf(s: WindowState): number {
+  if (s.trafficLightPosition === null) return 0
+  if (s.fullscreen) return MACOS_CHROME.fullscreenInset
+  const right = s.trafficLightsRight
+  return typeof right === "number" && Number.isFinite(right) && right > 0
+    ? Math.ceil(right)
+    : MACOS_CHROME.inset
+}
+
 export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlatform> {
   const call = async <C extends TauriCommand>(
     command: C,
@@ -119,6 +133,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
   const updaterEvents = new Emitter<[UpdaterStatus]>()
   const focusEvents = new Emitter<[boolean]>()
   const fullscreenEvents = new Emitter<[boolean]>()
+  const insetEvents = new Emitter<[number]>()
   const settingsEvents = new Emitter<[string, unknown]>()
   const openEvents = new Emitter<[OpenRequest]>()
   const helpEvents = new Emitter<[HelpMenuAction]>()
@@ -132,6 +147,8 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     windowState = s
     if (prev.focused !== s.focused) focusEvents.emit(s.focused)
     if (prev.fullscreen !== s.fullscreen) fullscreenEvents.emit(s.fullscreen)
+    const inset = trafficLightInsetOf(s)
+    if (trafficLightInsetOf(prev) !== inset) insetEvents.emit(inset)
   }
   const onCloseRequested = async ({ requestId }: { requestId: string }) => {
     let allow = true
@@ -468,12 +485,11 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       label: info.windowLabel,
       trafficLightPosition: () =>
         windowState.trafficLightPosition ? { ...windowState.trafficLightPosition } : null,
-      trafficLightInset: () =>
-        windowState.trafficLightPosition === null
-          ? 0
-          : windowState.fullscreen
-            ? MACOS_CHROME.fullscreenInset
-            : MACOS_CHROME.inset,
+      trafficLightInset: () => trafficLightInsetOf(windowState),
+      onTrafficLightInsetChange: (l) => insetEvents.on(l),
+      titlebarDoubleClick: async () => {
+        await call("kimo_window_titlebar_double_click", none)
+      },
       isFocused: () => windowState.focused,
       onFocusChange: (l) => focusEvents.on(l),
       isFullscreen: () => windowState.fullscreen,

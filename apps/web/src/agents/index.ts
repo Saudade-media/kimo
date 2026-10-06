@@ -16,11 +16,9 @@ export { ApprovalPrompt, type ApprovalPromptProps } from "./ApprovalPrompt"
 export {
   AgentCanvasLayer,
   type AgentCanvasLayerProps,
-  CURSOR_IDLE_MS,
-  type CursorPlacement,
   DryRunBar,
+  isBuiltInConnection,
   type ProjectedBox,
-  placeCursor,
 } from "./CanvasLayer"
 export {
   backupPath,

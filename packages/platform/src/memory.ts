@@ -623,6 +623,13 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
         os === "macos" ? { ...MACOS_CHROME.trafficLightPosition } : null,
       trafficLightInset: () =>
         os !== "macos" ? 0 : fullscreen ? MACOS_CHROME.fullscreenInset : MACOS_CHROME.inset,
+      onTrafficLightInsetChange: (l) =>
+        fullscreenEvents.on((f) =>
+          l(os !== "macos" ? 0 : f ? MACOS_CHROME.fullscreenInset : MACOS_CHROME.inset),
+        ),
+      async titlebarDoubleClick() {
+        calls.push("titlebar double-click")
+      },
       isFocused: () => focused,
       onFocusChange: (l) => focusEvents.on(l),
       isFullscreen: () => fullscreen,

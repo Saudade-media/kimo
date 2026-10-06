@@ -1,0 +1,123 @@
+/*
+ * Board 36 "Agent on canvas" (desing.pen XDVdg). Cursor = board 24 GmEAl Agent Cursor (lTGEE):
+ * column, gap 2 › Pointer mouse-pointer-2 18 (hue) · Pill (hue, radius 999, gap 6, padding
+ * [4, 10, 4, 4], shadow 0 4 12 $shadow) › AgentMark 12 + Label sans 12 / 500 on-accent.
+ * Section Outline: 1 px hue inside the section box, the section's radius.
+ * Section flash: 3 px agent-soft ring inside the box, opacity 1 → 0 over 1200 ms, linear.
+ * Float: translateY 0 → −3 → 0 px, 2400 ms, ease-in-out, infinite (reduced motion: still).
+ */
+
+.agent-section--agent {
+  --agent-section-hue: var(--kimo-agent, #0093a3);
+  --agent-section-soft: var(--kimo-agent-soft, #e3f5f7);
+}
+.agent-section--iris {
+  --agent-section-hue: var(--kimo-agent-iris, #4f5fe8);
+  --agent-section-soft: var(--kimo-agent-iris-soft, #eceeff);
+}
+.agent-section--violet {
+  --agent-section-hue: var(--kimo-agent-violet, #8b47de);
+  --agent-section-soft: var(--kimo-agent-violet-soft, #f3ebfc);
+}
+.agent-section--rose {
+  --agent-section-hue: var(--kimo-agent-rose, #d6457f);
+  --agent-section-soft: var(--kimo-agent-rose-soft, #fbe9f0);
+}
+.agent-section--ember {
+  --agent-section-hue: var(--kimo-agent-ember, #e8652a);
+  --agent-section-soft: var(--kimo-agent-ember-soft, #fdeee6);
+}
+.agent-section--moss {
+  --agent-section-hue: var(--kimo-agent-moss, #5e8a2e);
+  --agent-section-soft: var(--kimo-agent-moss-soft, #eef4e4);
+}
+
+/* Section Outline (B4NH4): stroke 1 hue, inside. Position lock: no transition on the box. */
+.agent-section__outline {
+  position: absolute;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1px var(--agent-section-hue);
+  pointer-events: none;
+}
+
+/* Flash Ring (A1Oy5o): stroke 3 agent-soft inside the section box, 1200 ms fade. */
+.agent-section__flash {
+  position: absolute;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 3px var(--agent-section-soft);
+  pointer-events: none;
+  animation: agent-section-flash 1200ms linear forwards;
+}
+@keyframes agent-section-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Agent Cursor (lTGEE): box top-left = section center − (3, 3); no easing on left / top. */
+.agent-section__cursor {
+  position: absolute;
+  pointer-events: none;
+}
+.agent-section__float {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  animation: agent-section-float 2400ms ease-in-out infinite;
+}
+@keyframes agent-section-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-section__float {
+    animation: none;
+  }
+}
+.agent-section__pointer {
+  display: inline-flex;
+  color: var(--agent-section-hue);
+}
+.agent-section__pill {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--agent-section-hue);
+  box-shadow: 0 4px 12px var(--kimo-shadow);
+  white-space: nowrap;
+}
+.agent-section__label {
+  font-family: var(--kimo-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 15px;
+  color: var(--kimo-on-accent, #ffffff);
+}
+/* Board 24 g rule 2 (kept): the pill flips left / up within 8 px of a viewport edge. */
+.agent-section__cursor--flip-x {
+  transform: translateX(-100%);
+}
+.agent-section__cursor--flip-x .agent-section__float {
+  align-items: flex-end;
+}
+.agent-section__cursor--flip-y {
+  transform: translateY(-100%);
+}
+.agent-section__cursor--flip-y .agent-section__float {
+  flex-direction: column-reverse;
+}
+.agent-section__cursor--flip-x.agent-section__cursor--flip-y {
+  transform: translate(-100%, -100%);
+}

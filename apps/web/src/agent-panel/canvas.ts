@@ -4,7 +4,7 @@
  * builder draws them (board 22 Modes, board 24 GmEAl); this file only maps the panel state.
  */
 import type { AgentCanvasProps, CanvasAgentPersona } from "../canvas/contract"
-import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
+import type { AgentPanelViewState } from "./controller"
 
 const persona = (p: string): CanvasAgentPersona =>
   p === "teal" ? "agent" : (p as CanvasAgentPersona)
@@ -12,7 +12,6 @@ const persona = (p: string): CanvasAgentPersona =>
 /** Maps the panel's canvas state to `AgentCanvasProps` (pass the result to the canvas). */
 export function agentCanvasProps(
   state: AgentPanelViewState,
-  controller: AgentPanelControllerExt,
   extra: Partial<AgentCanvasProps> = {},
 ): AgentCanvasProps {
   const c = state.canvas
@@ -34,7 +33,6 @@ export function agentCanvasProps(
     })),
     rejections: c.rejections,
     landed: c.landed,
-    onPauseAgent: () => controller.stop(),
     ...extra,
   }
 }

@@ -1,8 +1,9 @@
 /**
- * M6 canvas scenarios (board 22 D0zDSY, board 24 iLW1l): note / prompt cards, placeholder
- * frames (outline, skeleton, tag + tooltip, orphan 'Agent stopped', clear → flash + ready chip), scope
- * outlines + ScopeTags, persona cursor + selection, rejected pill, prompt footer with Run, target
- * chip and connector, the Layers rows and the Note / Prompt toolbar entries.
+ * M6 canvas scenarios (board 22 D0zDSY, board 24 iLW1l) under board 36 "Agent on canvas"
+ * (XDVdg): note / prompt cards; placeholder frames draw nothing of their own (no outline,
+ * skeleton, shimmer, tag, tooltip or ready chip; no ScopeTag); per agent one cursor on its
+ * section's center + a 1 px section outline; rejected pill, prompt footer with Run, target chip
+ * and connector, the Layers rows and the Note / Prompt toolbar entries.
  *
  * Each scenario ends with ONE measured pass: `getComputedStyle` + `getBoundingClientRect` of
  * every DOM piece against its design node, canvas pixels against the token colors, and every
@@ -161,7 +162,6 @@ async function fixture(page: Page) {
         }),
         onRunPrompt: (id: string) => w.__m6.runs.push(id),
         onStopPrompt: (id: string) => w.__m6.stops.push(id),
-        onPauseAgent: (o: string) => w.__m6.paused.push(o),
         reducedMotion: true,
       })
     },
@@ -229,93 +229,73 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
   const noteFill = await pixel(page, await toCanvas(page, { x: 32 + 110, y: 40 + 90 }))
   check(near(noteFill, NOTE, 3), `note fill #FFF1B8, got ${noteFill}`)
 
-  // --- Placeholder: canvas outline + skeleton ---
+  // --- Board 36: a placeholder frame draws nothing of its own ---
   // (x 760 + 60: the canvas is ~900 px wide in the e2e window.)
-  const outline = await pixel(page, await toCanvas(page, { x: 760 + 60, y: 52.3 }))
-  check(near(outline, AGENT, 40), `placeholder outline agent, got ${outline}`)
+  const edge = await pixel(page, await toCanvas(page, { x: 760 + 60, y: 52.3 }))
+  check(!near(edge, AGENT, 40), `no placeholder outline, got ${edge}`)
   const bar = await pixel(page, await toCanvas(page, { x: 760 + 16 + 10, y: 52 + 52 + 7 }))
-  check(near(bar, [227, 245, 247], 24), `skeleton Bar · title agent-soft, got ${bar}`)
+  check(!near(bar, [227, 245, 247], 4), `no skeleton bar, got ${bar}`)
+  const retired = await page
+    .locator(
+      '[data-testid="placeholder-tag"], [data-testid="placeholder-tooltip"], [data-testid="scope-tag"], [data-testid="placeholder-ready"]',
+    )
+    .count()
+  check(retired === 0, `no placeholder tag, tooltip, ScopeTag or ready chip (${retired})`)
 
-  // --- Placeholder tag (EKCy7 iyhUZ) ---
-  const tag = await measure(page, '[data-testid="placeholder-tag"][data-node-id="holder0001"]')
-  check(!!tag && tag.display !== "none" && tag.h === 20, `tag 20 high, got ${tag?.h}`)
-  check(tag?.x === 776 && tag?.y === 68, `tag at frame + 16, got ${tag?.x},${tag?.y}`)
-  check(tag?.bg === "rgb(0, 147, 163)", `tag fill agent, got ${tag?.bg}`)
-  check(
-    tag?.padding === "0px 7px 0px 5px" && tag?.gap === "4px",
-    `tag padding/gap ${tag?.padding} ${tag?.gap}`,
-  )
-  check(tag?.radius === "4px", `tag radius-xs, got ${tag?.radius}`)
-  // Board 31 "Canvas label": the agent's name only.
-  check(tag?.text === "Kimo", `tag copy, got "${tag?.text}"`)
-  const tagLabel = await measure(page, '[data-node-id="holder0001"] .agent-canvas__tag-label')
-  check(tagLabel?.fontSize === "11px" && tagLabel?.fontWeight === "500", `tag label 11/500`)
-  const orphan = await measure(page, '[data-testid="placeholder-tag"][data-node-id="orphan0001"]')
-  // Board 25 §3 (UMRAO): orphans read "Agent stopped · <name>" on bg-muted.
-  const muted = await page.evaluate(() => {
-    const el = document.createElement("span")
-    el.style.color = "var(--kimo-bg-muted)"
-    document.body.append(el)
-    const c = getComputedStyle(el).color
-    el.remove()
-    return c
+  // --- Board 36: the Hero section's outline (1 px iris) and the cursor on its center ---
+  const hero = await world(page, "hero000001")
+  const outline = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="agent-section-outline"]') as HTMLElement
+    const host = (document.querySelector(".canvas-host") as HTMLElement).getBoundingClientRect()
+    const r = el.getBoundingClientRect()
+    return {
+      x: r.x - host.x,
+      y: r.y - host.y,
+      w: r.width,
+      h: r.height,
+      shadow: getComputedStyle(el).boxShadow,
+      node: el.getAttribute("data-node-id"),
+      n: document.querySelectorAll('[data-testid="agent-section-outline"]').length,
+    }
   })
   check(
-    !!orphan?.text?.startsWith("Agent stopped · ") && orphan?.bg === muted,
-    `orphan tag grey, got ${orphan?.text} ${orphan?.bg}`,
-  )
-
-  // Tooltip on hover (vqqTf): 280 wide, padding 12, buttons 26 high.
-  await page.locator('[data-testid="placeholder-tag"][data-node-id="holder0001"]').hover()
-  await settle(page)
-  const tip = await measure(page, '[data-testid="placeholder-tooltip"]')
-  check(
-    tip?.w === 280 && tip?.padding === "12px 12px 12px 12px",
-    `tooltip 280 / 12, got ${tip?.w} ${tip?.padding}`,
-  )
-  check(!!tip?.text.includes("Kimo is building this frame"), "tooltip title copy")
-  const btn = await measure(page, '[data-testid="placeholder-tooltip"] .kimo-button')
-  check(
-    btn?.h === 26 && btn?.padding === "0px 10px 0px 10px",
-    `tooltip button 26 / [0,10], got ${btn?.h} ${btn?.padding}`,
-  )
-  await page.getByRole("button", { name: "Pause agent" }).click()
-  const paused = await page.evaluate(() => (window as unknown as W).__m6.paused)
-  check(paused[0] === LEAD, `Pause agent → onPauseAgent(${LEAD}), got ${paused}`)
-
-  // --- Split scope (flush) + ScopeTag (NKE7Z) ---
-  const hero = await world(page, "hero000001")
-  const scopeEdge = await pixel(
-    page,
-    await toCanvas(page, { x: (hero?.x ?? 0) + 0.4, y: (hero?.y ?? 0) + 60 }),
-  )
-  check(near(scopeEdge, IRIS, 50), `split scope outline agent-iris, got ${scopeEdge}`)
-  const scope = await measure(page, '[data-testid="scope-tag"]')
-  check(
-    scope?.h === 20 && scope?.bg === "rgb(79, 95, 232)",
-    `ScopeTag 20 high iris, got ${scope?.h} ${scope?.bg}`,
+    outline.n === 1 &&
+      outline.node === "hero000001" &&
+      Math.abs(outline.x - (hero?.x ?? 0)) < 0.5 &&
+      Math.abs(outline.y - (hero?.y ?? 0)) < 0.5 &&
+      Math.abs(outline.w - (hero?.w ?? 0)) < 0.5 &&
+      Math.abs(outline.h - (hero?.h ?? 0)) < 0.5,
+    `section outline = Hero box, got ${JSON.stringify(outline)} vs ${JSON.stringify(hero)}`,
   )
   check(
-    Math.abs((scope?.x ?? 0) + (scope?.w ?? 0) - (360 + 340 - 6)) < 0.5 && scope?.y === 52 + 6,
-    `ScopeTag inside top-right (6 px), got ${scope?.x}+${scope?.w},${scope?.y}`,
+    outline.shadow === "rgb(79, 95, 232) 0px 0px 0px 1px inset",
+    `outline 1 px iris inside, got ${outline.shadow}`,
   )
-  check(scope?.text === "Agent 1 · only inside Hero", `ScopeTag copy, got "${scope?.text}"`)
-
-  // --- Persona cursor (H6ncRy) + selection outline 2 px outside the node ---
-  const cursor = await measure(page, '[data-testid="persona-cursor"] .agent-canvas__cursor-pill')
+  const cursor = await measure(page, '[data-testid="agent-cursor"]')
   check(
-    cursor?.bg === "rgb(79, 95, 232)" && cursor?.padding === "4px 10px 4px 4px",
-    `cursor pill iris / [4,10,4,4], got ${cursor?.bg} ${cursor?.padding}`,
+    Math.abs((cursor?.x ?? 0) + 3 - ((hero?.x ?? 0) + (hero?.w ?? 0) / 2)) < 0.5 &&
+      Math.abs((cursor?.y ?? 0) + 3 - ((hero?.y ?? 0) + (hero?.h ?? 0) / 2)) < 0.5,
+    `cursor tip on the Hero center, got ${cursor?.x},${cursor?.y}`,
   )
+  const pill = await measure(page, '[data-testid="agent-cursor"] .agent-section__pill')
+  check(
+    pill?.bg === "rgb(79, 95, 232)" && pill?.padding === "4px 10px 4px 4px" && pill?.gap === "6px",
+    `cursor pill iris / [4,10,4,4] / 6, got ${pill?.bg} ${pill?.padding} ${pill?.gap}`,
+  )
+  check(pill?.text === "Agent 1", `one label: the agent's name, got "${pill?.text}"`)
+  const label = await measure(page, '[data-testid="agent-cursor"] .agent-section__label')
+  check(
+    label?.fontSize === "12px" && label?.fontWeight === "500",
+    `label 12 / 500, got ${label?.fontSize} ${label?.fontWeight}`,
+  )
+  const pointer = await measure(page, '[data-testid="agent-cursor"] .agent-section__pointer svg')
+  check(pointer?.w === 18 && pointer?.h === 18, `pointer 18, got ${pointer?.w}×${pointer?.h}`)
+  // No canvas-drawn selection 2 px outside the node (board 24 GmEAl, retired).
   const sel = await pixel(
     page,
     await toCanvas(page, { x: (hero?.x ?? 0) + 200, y: (hero?.y ?? 0) - 1.4 }),
   )
-  // Anti-aliased 1.5 px line: assert the iris hue dominates (blue ≫ red/green).
-  check(
-    (sel[2] ?? 0) > 200 && (sel[2] ?? 0) - (sel[0] ?? 0) > 50 && (sel[2] ?? 0) - (sel[1] ?? 0) > 50,
-    `persona selection outline iris, got ${sel}`,
-  )
+  check(!near(sel, IRIS, 60), `no persona selection outline, got ${sel}`)
 
   // --- Rejected pill (O2Whh) + danger flash ---
   const rej = await measure(page, '[data-testid="rejected-pill"]')
@@ -373,7 +353,7 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
   )
   check(hidden.length === 0, `agent DOM boxes visible, hidden: ${hidden.join(", ")}`)
 
-  // --- Clear → ready chip (i6wxFe), 12 below the frame ---
+  // --- Clear: no ready chip (board 36) ---
   await page.evaluate(() =>
     (window as unknown as W).__kimo.session.apply(
       [{ op: "update", id: "holder0001", unset: ["placeholder"] }],
@@ -382,15 +362,13 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
   )
   await settle(page)
   await settle(page)
-  const ready = await measure(page, '[data-testid="placeholder-ready"]')
   check(
-    ready?.h === 22 && ready?.x === 760 && ready?.y === 52 + 300 + 12,
-    `ready chip 22 @ +12, got ${ready?.h} ${ready?.x},${ready?.y}`,
+    (await page.locator('[data-testid="placeholder-ready"]').count()) === 0,
+    "no ready chip after a placeholder clears",
   )
-  check(ready?.text === "Features v2 ready · 14 ops · Review", `ready copy, got "${ready?.text}"`)
 
-  // Shimmer cost: with motion on, the overlay pass re-runs ≤ 30 fps; the scene pictures stay.
-  const shimmer = await page.evaluate(async () => {
+  // A building placeholder costs nothing: no shimmer frames with motion on.
+  const idle = await page.evaluate(async () => {
     const w = window as unknown as W
     const c = w.__kimo.canvas()
     c.setAgentCanvas?.({
@@ -402,16 +380,13 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
       [{ op: "update", id: "orphan0001", set: { placeholder: { by: "agent:kimo.s1.0" } } }],
       "rebuild",
     )
+    await new Promise((r) => setTimeout(r, 200))
     const f0 = c.stats().frames
     await new Promise((r) => setTimeout(r, 1000))
-    const s = c.stats()
-    return { frames: s.frames - f0, p95: s.frameMsP95, recorded: s.recorded ?? 0 }
+    return { frames: c.stats().frames - f0 }
   })
-  log(
-    `shimmer: ${shimmer.frames} frames/s, render p95 ${shimmer.p95.toFixed(2)} ms, pictures recorded in the last frame ${shimmer.recorded}`,
-  )
-  check(shimmer.frames >= 15 && shimmer.frames <= 40, `shimmer ≈ 30 fps, got ${shimmer.frames}`)
-  check(shimmer.recorded === 0, `shimmer frames record no pictures, got ${shimmer.recorded}`)
+  log(`building placeholder: ${idle.frames} frames in 1 s`)
+  check(idle.frames <= 2, `no shimmer frames, got ${idle.frames}`)
 
   log(diffs.length ? `measured diffs:\n  ${diffs.join("\n  ")}` : "measured pass: 0 diffs")
   expect(diffs.length === 0, `M6 measured pass:\n${diffs.join("\n")}`)
@@ -514,9 +489,9 @@ async function layersAndToolbar({ page, url, log }: E2EContext) {
 
 /**
  * Board 31 "Position lock": while the canvas pans and zooms (wheel, ctrl+wheel, space+drag,
- * middle drag), every canvas frame is sampled right after the renderer draws it; the persona
- * cursor and the placeholder tag must sit at a fixed offset from their layer's screen box as
- * drawn in that frame (0 px drift, ±0.5).
+ * middle drag), every canvas frame is sampled right after the renderer draws it; board 36: the
+ * cursor must sit on its section's center (box − 3) and the outline on its box, as drawn in
+ * that frame (0 px drift, ±0.5).
  */
 async function labelsStayLocked({ page, url, log }: E2EContext) {
   await openEditor(page, url)
@@ -539,20 +514,18 @@ async function labelsStayLocked({ page, url, log }: E2EContext) {
       draw()
       const v = r.viewport
       const h = host.getBoundingClientRect()
-      const at = (k: string, sel: string, id: string) => {
+      const at = (k: string, sel: string, id: string, center: boolean) => {
         const el = document.querySelector(sel)
         const b = layout?.nodes.get(id)?.world
         if (!el || !b) return
         const e = el.getBoundingClientRect()
-        w.__drift.rows.push({
-          k,
-          dx: e.x - h.x - (b.x - v.x) * v.zoom,
-          dy: e.y - h.y - (b.y - v.y) * v.zoom,
-        })
+        const ax = center ? (b.x + b.w / 2 - v.x) * v.zoom - 3 : (b.x - v.x) * v.zoom
+        const ay = center ? (b.y + b.h / 2 - v.y) * v.zoom - 3 : (b.y - v.y) * v.zoom
+        w.__drift.rows.push({ k, dx: e.x - h.x - ax, dy: e.y - h.y - ay })
       }
       w.__drift.frames++
-      at("cursor", '[data-testid="persona-cursor"]', "hero000001")
-      at("tag", '[data-testid="placeholder-tag"][data-node-id="holder0001"]', "holder0001")
+      at("cursor", '[data-testid="agent-cursor"]', "hero000001", true)
+      at("outline", '[data-testid="agent-section-outline"]', "hero000001", false)
     }
   })
   const host = await page.locator(".canvas-host").boundingBox()
@@ -601,15 +574,15 @@ async function labelsStayLocked({ page, url, log }: E2EContext) {
     expect(spread <= 0.5, `${k}: drift ${spread.toFixed(2)} px while panning / zooming`)
   }
   log(`  position lock (${d.frames} canvas frames):\n    ${report.join("\n    ")}`)
-  expect(byKey.has("cursor") && byKey.has("tag"), "cursor and tag were on screen")
-  // The cursor keeps its +4, +4 anchor (board 24 g) in every frame.
-  for (const r of byKey.get("cursor") ?? [])
-    expect(Math.abs(r.dx - 4) <= 0.5 && Math.abs(r.dy - 4) <= 0.5, `cursor offset ${r.dx},${r.dy}`)
+  expect(byKey.has("cursor") && byKey.has("outline"), "cursor and outline were on screen")
+  // Board 36: the cursor stays on the section center and the outline on its box in every frame.
+  for (const r of [...(byKey.get("cursor") ?? []), ...(byKey.get("outline") ?? [])])
+    expect(Math.abs(r.dx) <= 0.5 && Math.abs(r.dy) <= 0.5, `offset ${r.dx},${r.dy}`)
 }
 
 export const scenarios: Scenario[] = [
   {
-    name: "m6 canvas: cards, placeholders, scopes, cursors, rejected, prompt footer",
+    name: "m6 canvas: cards, placeholders draw nothing, section cursor + outline, rejected, prompt footer",
     run: cardsAndPlaceholders,
   },
   { name: "m6 canvas: layer rows + Note / Prompt toolbar", run: layersAndToolbar },

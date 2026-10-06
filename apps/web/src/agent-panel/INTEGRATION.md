@@ -93,13 +93,14 @@ useHomeHandoff(agentPanel, handoffPath, () => setTab("agent"))
 ```tsx
 import { agentCanvasProps, useAgentPanelState } from "../agent-panel"
 const agentState = useAgentPanelState(agentPanel)
-<Canvas agentCanvas={agentCanvasProps(agentState, agentPanel, {
-  onReviewPlaceholder: () => setTab("agent"),
+<Canvas agentCanvas={agentCanvasProps(agentState, {
+  onRunPrompt: (id) => runPrompt(id),
 })} … />
 ```
 
 Live origins, persona + label per origin, enforced scopes (side by side / split / iterate),
-persona cursors and rejected-op flashes come from the panel; the canvas builder draws them.
+cursors, landed edits and rejected-op flashes come from the panel; the canvas draws them per
+board 36 (one cursor + a section outline per agent, a ring per landed edit on its section).
 For other canvas-side pieces the panel exports `ModeSummaryPill` (jDKaM), `VariantActions`
 (avr2x), `PassChip` (NCElh), `AgentCursorPill` (GmEAl) and `RejectedOpPill` (O2Whh).
 

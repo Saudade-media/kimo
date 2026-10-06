@@ -65,6 +65,11 @@ const BOXES: Record<string, ProjectedBox> = {
   OldHero001: { x: 600, y: 152, w: 220, h: 190, radius: 4 },
 }
 
+/** Projection-only boxes (not drawn): Cards, the section the cards sit in (board 36). */
+const SECTIONS: Record<string, ProjectedBox> = {
+  Cards00001: { x: 44, y: 132, w: 480, h: 260 },
+}
+
 const store = importDocument(pricingDoc())
 const host = createScriptedMcpHost({
   connections: [],
@@ -229,7 +234,11 @@ function EditorScene() {
           )}
           <AgentCanvasLayer
             controller={controller}
-            project={(id) => (store.hasNode(id) ? (BOXES[id] ?? null) : null)}
+            project={(id) => (store.hasNode(id) ? (BOXES[id] ?? SECTIONS[id] ?? null) : null)}
+            parentOf={(id) => {
+              const p = (store.getNode(id) as { parent?: unknown } | undefined)?.parent
+              return typeof p === "string" ? p : null
+            }}
           />
         </main>
         <aside className="h-right" data-testid="right-panel">

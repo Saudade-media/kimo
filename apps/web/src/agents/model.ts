@@ -94,6 +94,18 @@ const FILES_LABEL: Record<FilesScope, string> = {
 }
 
 /** Reads the files scope back from a policy's allow-list. */
+/**
+ * The built-in agent's CLI session whose MCP connection this is, or null (board 36 › dedupe): a
+ * CLI engine (Claude Code, Codex, Gemini) runs in `~/.kimo/cli-workspaces/<session>/` and its
+ * Kimo MCP relay inherits that cwd. Such a connection draws nothing on the canvas; the agent
+ * panel's cursor stands for it.
+ */
+export function builtInCliSession(cwd: string | undefined): string | null {
+  if (!cwd) return null
+  const m = /(?:^|[\\/])\.kimo[\\/]cli-workspaces[\\/]([^\\/]+)(?:[\\/].*)?$/.exec(cwd)
+  return m?.[1] ?? null
+}
+
 export function filesScopeOf(policy: McpClientPolicy, cwd?: string): FilesScope {
   if (policy.files.some((g) => g === "**" || g === "/**" || g === "**/*")) return "any"
   if (policy.files.length === 0) return "current"

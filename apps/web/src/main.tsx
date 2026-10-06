@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client"
 import { App } from "./App"
 import { LaunchLoaderExit, setLaunchStatus } from "./launch-loader"
 import { initTheme, setTheme } from "./lib/theme"
+import { installTitlebarDoubleClick } from "./lib/titlebar"
 import { createAppRuntime, RuntimeContext } from "./platform/runtime"
 import { diskPath, navigate } from "./router"
 import { bindAppearance } from "./settings"
@@ -21,6 +22,10 @@ void createAppRuntime((session, request) => navigate(diskPath(session.ref, reque
   (runtime) => {
     // General › Appearance drives `[data-theme]` (system follows prefers-color-scheme live).
     bindAppearance(runtime.platform.settings, setTheme)
+    // macOS overlay title bar: honor the system double-click setting (zoom / minimize / none).
+    if (runtime.platform.kind === "desktop" && runtime.platform.os === "macos") {
+      installTitlebarDoubleClick(() => void runtime.platform.window.titlebarDoubleClick())
+    }
     createRoot(container).render(
       <StrictMode>
         <RuntimeContext.Provider value={runtime}>

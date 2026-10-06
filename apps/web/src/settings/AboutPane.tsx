@@ -92,7 +92,7 @@ export function AboutPane({
   }
   return (
     <>
-      <div className="settings-title-bar">
+      <div className="settings-title-bar" data-tauri-drag-region="deep">
         <h2 className="settings-title settings-title--about">About & licenses</h2>
       </div>
       <div className="about-identity" data-pen="urFVA">

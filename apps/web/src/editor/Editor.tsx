@@ -35,7 +35,14 @@ import {
   exportToastOf,
   pdfFontsFrom,
 } from "../export"
-import { BannerHost, FailedLoadView, MigrationDialog, ToastHost, useWebTabTitle } from "../files"
+import {
+  BannerHost,
+  FailedLoadView,
+  MigrationDialog,
+  ToastHost,
+  useWebTabTitle,
+  useWindowChrome,
+} from "../files"
 import {
   createFontSystem,
   type DocumentFontAsset,
@@ -200,6 +207,7 @@ function EditorShell({
 }) {
   const { platform, manager, hostClient = null } = useRuntime()
   const openSettings = useOpenSettings()
+  const windowChrome = useWindowChrome(platform)
   /** The document session of a file on disk (null: browser library). */
   const doc = session.document
   const [name, setName] = useState(session.meta.name)
@@ -1009,6 +1017,7 @@ function EditorShell({
         )}
         {preview && (
           <PreviewOverlay
+            lightsInset={platform.kind === "desktop" ? windowChrome.inset : 0}
             store={session.store}
             libraries={() => m3.libraries()}
             frameId={preview.frame}

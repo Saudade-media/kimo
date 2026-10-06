@@ -218,6 +218,10 @@ function AgentCanvasHost({
         }
       }}
       viewportKey={layoutNow ? `${viewport.zoom}:${viewport.x}:${viewport.y}` : "none"}
+      parentOf={(id) => {
+        const p = (session.store.getNode(id) as { parent?: unknown } | undefined)?.parent
+        return typeof p === "string" && p ? p : null
+      }}
       world={(id) => layoutNow?.nodes.get(id)?.world ?? null}
       toLayer={(p) => ({
         x: (p.x - viewport.x) * viewport.zoom,

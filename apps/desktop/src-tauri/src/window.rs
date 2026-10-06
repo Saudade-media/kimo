@@ -47,6 +47,9 @@ pub struct WindowState {
     pub focused: bool,
     pub fullscreen: bool,
     pub traffic_light_position: Option<Point>,
+    /// macOS: right edge of the zoom button in whole window points, measured from the real buttons
+    /// (14 pt buttons on macOS 26, 12 pt before). `None` until measured and off macOS.
+    pub traffic_lights_right: Option<f64>,
 }
 
 pub fn is_editor_label(label: &str) -> bool {
@@ -67,7 +70,39 @@ pub fn window_state<Rt: Runtime>(w: &WebviewWindow<Rt>) -> WindowState {
         focused: w.is_focused().unwrap_or(false),
         fullscreen: w.is_fullscreen().unwrap_or(false),
         traffic_light_position: traffic_lights(w.label()),
+        traffic_lights_right: lights_right(w.label()),
     }
+}
+
+fn lights_right(label: &str) -> Option<f64> {
+    if has_overlay_chrome(label) {
+        crate::window_chrome::lights_right_of(label)
+    } else {
+        None
+    }
+}
+
+/// Title bar double-click: the system preference on macOS, toggle maximize elsewhere.
+pub fn titlebar_double_click<Rt: Runtime>(w: &WebviewWindow<Rt>) -> R<()> {
+    #[cfg(target_os = "macos")]
+    let r = crate::window_chrome::double_click(w);
+    #[cfg(not(target_os = "macos"))]
+    let r = if w.is_maximized().unwrap_or(false) {
+        w.unmaximize()
+    } else if w.is_resizable().unwrap_or(false) {
+        w.maximize()
+    } else {
+        Ok(())
+    };
+    r.map_err(|e| io_msg(e.to_string()))
+}
+
+/// Centers the traffic lights on the 48 pt topbar and publishes their right edge (macOS).
+pub fn align_lights<Rt: Runtime>(w: &WebviewWindow<Rt>) {
+    #[cfg(target_os = "macos")]
+    crate::window_chrome::schedule(w);
+    #[cfg(not(target_os = "macos"))]
+    let _ = w;
 }
 
 /// Creates (or focuses) an editor window.
@@ -107,6 +142,7 @@ pub fn create_editor_window<Rt: Runtime>(app: &AppHandle<Rt>, label: &str) -> R<
     let w = b
         .build()
         .map_err(|e| io_msg(format!("Could not open a window: {e}")))?;
+    align_lights(&w);
     if appearance != "light" && appearance != "dark" {
         let os_dark = matches!(w.theme(), Ok(tauri::Theme::Dark));
         let _ = w.set_background_color(Some(launch_background(appearance, os_dark)));
@@ -178,8 +214,10 @@ pub fn open_settings<Rt: Runtime>(app: &AppHandle<Rt>, pane: Option<&str>) -> R<
         ));
     #[cfg(not(target_os = "macos"))]
     let b = b.decorations(true);
-    b.build()
+    let w = b
+        .build()
         .map_err(|e| io_msg(format!("Could not open Settings: {e}")))?;
+    align_lights(&w);
     Ok(())
 }
 
@@ -235,6 +273,18 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
     let label = window.label().to_string();
     let app = window.app_handle();
     let st = state(app);
+    // AppKit relays out the title bar on these (leaving fullscreen, theme, display changes).
+    if matches!(
+        event,
+        WindowEvent::Resized(_)
+            | WindowEvent::Focused(_)
+            | WindowEvent::ThemeChanged(_)
+            | WindowEvent::ScaleFactorChanged { .. }
+    ) {
+        if let Some(w) = app.get_webview_window(&label) {
+            align_lights(&w);
+        }
+    }
     match event {
         WindowEvent::Focused(focused) => {
             let fullscreen = window.is_fullscreen().unwrap_or(false);
@@ -242,6 +292,7 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
                 focused: *focused,
                 fullscreen,
                 traffic_light_position: traffic_lights(&label),
+                traffic_lights_right: lights_right(&label),
             };
             let _ = app.emit_to(label.as_str(), "kimo://window-state", s);
         }
@@ -257,6 +308,7 @@ pub fn on_window_event<Rt: Runtime>(window: &tauri::Window<Rt>, event: &WindowEv
                     focused: window.is_focused().unwrap_or(false),
                     fullscreen,
                     traffic_light_position: traffic_lights(&label),
+                    traffic_lights_right: lights_right(&label),
                 };
                 let _ = app.emit_to(label.as_str(), "kimo://window-state", s);
             }

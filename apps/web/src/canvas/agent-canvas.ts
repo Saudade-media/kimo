@@ -1,29 +1,28 @@
 /**
- * M6 canvas model (board 22 "Built-in Agent (M6)" D0zDSY, board 24 iLW1l, ADR 0014 §8–9):
- * tracks the document's placeholder frames and prompt nodes incrementally from store changes,
- * turns the host's {@link AgentCanvasProps} into renderer overlay fields (outlines, shimmer,
- * skeleton, flashes, scopes, persona selections, rejected flashes, connectors) and projects the
- * DOM pieces (placeholder tags, ready chips, ScopeTags, rejected pills, persona cursors, prompt
- * footers, target chips) to screen space. Framework-free; CanvasHost renders the DOM.
+ * M6 canvas model (board 22 "Built-in Agent (M6)" D0zDSY, board 24 iLW1l, ADR 0014 §8–9) under
+ * board 36 "Agent on canvas" (XDVdg): tracks the document's placeholder frames and prompt nodes
+ * incrementally from store changes, and turns the host's {@link AgentCanvasProps} into what the
+ * canvas shows while the built-in agent works: per agent one cursor on the center of its section
+ * plus a 1 px outline on that section, one ring per landed edit on the section, the rejected-op
+ * flash and pill, prompt connectors, footers and target chips, and the Iterate pass chip.
+ * Placeholder frames draw nothing of their own (no tag, shimmer or skeleton). Framework-free;
+ * CanvasHost renders the DOM.
  */
-import { isOrphanPlaceholder, placeholderOwner, promptFooter } from "@kimo/ai-agent"
+import { promptFooter } from "@kimo/ai-agent"
 import { type LayoutResult, PROMPT_CHROME, type Rect } from "@kimo/layout"
+import { OVERLAY_SPEC_M6, type Overlay, type Viewport } from "@kimo/renderer"
+import type { SectionCursorView, SectionFlashView } from "./AgentSectionCursor"
+import { cursorFlip } from "./AgentSectionCursor"
 import {
-  type AgentPersona,
-  OVERLAY_SPEC_M6,
-  type Overlay,
-  type PlaceholderFlash,
-  type PlaceholderOverlay,
-  type Viewport,
-} from "@kimo/renderer"
-import { CURSOR_GLIDE_MS, glideEase, unionBox } from "./agent-area"
-import type {
-  AgentCanvasProps,
-  CanvasAgentCursor,
-  CanvasAgentMarkState,
-  CanvasAgentPersona,
-  CanvasPromptRun,
-} from "./contract"
+  CURSOR_GLIDE_MS,
+  centerOf,
+  type Glide,
+  glideAt,
+  pickSection,
+  retarget,
+  SECTION_FLASH_MS,
+} from "./agent-area"
+import type { AgentCanvasProps, CanvasAgentPersona, CanvasPromptRun } from "./contract"
 
 /** Minimal node reader (DocStore / NodeSource). */
 export interface AgentNodeReader {
@@ -32,13 +31,10 @@ export interface AgentNodeReader {
   nodeIds?(): string[]
 }
 
-/** F1viK5: the flash lasts 1.2 s; the "ready" chip stays 4 s. */
-export const FLASH_MS = OVERLAY_SPEC_M6.flash.durationMs
-export const READY_CHIP_MS = 4000
+/** Board 36 section flash: 1.2 s. */
+export const FLASH_MS = SECTION_FLASH_MS
 /** Rejected-op pill and target flash (house value: the design gives no duration). */
 export const REJECT_MS = 3000
-/** Shimmer frame interval: 30 fps is enough for a 1.6 s sweep at 12 % alpha. */
-export const SHIMMER_FRAME_MS = 1000 / 30
 
 /** Board 24 GmEAl: Lead = Teal, then Iris → Violet → Rose → Ember → Moss (repeating). */
 export const PERSONA_ORDER: readonly CanvasAgentPersona[] = [
@@ -54,53 +50,12 @@ export function personaFor(n: number): CanvasAgentPersona {
   return n <= 0 ? "agent" : (PERSONA_ORDER[(n - 1) % PERSONA_ORDER.length] as CanvasAgentPersona)
 }
 
-type Pt = { x: number; y: number }
-
-interface Flash {
-  at: number
-  origin: string | undefined
-  name: string
-  ops: number | undefined
-  persona: AgentPersona
-}
-
 const nameOf = (n: Record<string, unknown> | undefined, fallback: string): string =>
   typeof n?.name === "string" && n.name ? n.name : fallback
 
 const isPlaceholder = (v: unknown): boolean => v !== undefined && v !== null && v !== false
 
 // --- DOM projection types ------------------------------------------------------------------
-
-export interface PlaceholderTagView {
-  id: string
-  origin: string | undefined
-  /** Screen top-left of the tag (inside the frame's padding 16, EKCy7). */
-  left: number
-  top: number
-  text: string
-  state: "building" | "interrupted"
-  persona: CanvasAgentPersona
-  /** Tooltip copy: "<label> is building this frame". */
-  label: string
-}
-
-export interface ReadyChipView {
-  id: string
-  origin: string | undefined
-  left: number
-  top: number
-  text: string
-}
-
-export interface ScopeTagView {
-  key: string
-  left: number
-  top: number
-  /** `right`: `left` is the tag's right edge (split: inside the section's top-right). */
-  anchor: "left" | "right"
-  text: string
-  persona: CanvasAgentPersona
-}
 
 /** Iterate Pass Chip (h6oHb `NCElh`): 7 below the outset outline, left-aligned with it. */
 export interface PassChipView {
@@ -118,20 +73,6 @@ export interface RejectedPillView {
   text: string
 }
 
-export interface CursorView {
-  origin: string
-  left: number
-  top: number
-  /** Pill flips left / up within 8 px of a viewport edge (board 24 decision G2). */
-  flipX: boolean
-  flipY: boolean
-  text: string
-  persona: CanvasAgentPersona
-  state: CanvasAgentMarkState
-  /** Stack index among cursors on the same node (pills 4 px apart, lead on top). */
-  stack: number
-}
-
 export interface PromptView {
   id: string
   /** Screen box of the card. */
@@ -145,22 +86,20 @@ export interface PromptView {
 }
 
 export interface AgentDomState {
-  tags: PlaceholderTagView[]
-  ready: ReadyChipView[]
-  scopes: ScopeTagView[]
+  /** Board 36: one cursor + section outline per agent. */
+  cursors: SectionCursorView[]
+  /** Board 36: one ring per landed edit, on its section. */
+  flashes: SectionFlashView[]
   passes: PassChipView[]
   rejected: RejectedPillView[]
-  cursors: CursorView[]
   prompts: PromptView[]
 }
 
 export const EMPTY_DOM: AgentDomState = {
-  tags: [],
-  ready: [],
-  scopes: [],
+  cursors: [],
+  flashes: [],
   passes: [],
   rejected: [],
-  cursors: [],
   prompts: [],
 }
 
@@ -181,20 +120,20 @@ export function defaultUsd(v: number | null): string {
 
 export class AgentCanvasModel {
   props: AgentCanvasProps | null = null
-  /** Frames carrying `placeholder` → their value. */
+  /** Frames carrying `placeholder` → their value (no canvas drawing; board 36). */
   readonly placeholders = new Map<string, unknown>()
   /** Prompt nodes → their `target`. */
   readonly prompts = new Map<string, string | undefined>()
-  private readonly flashes = new Map<string, Flash>()
   private readonly rejectedSeen = new Map<string, number>()
-  /** Board 31 landing flashes: key → when it was first seen. */
+  /** Board 36 section flashes: landed key → when it was first seen. */
   private readonly landedSeen = new Map<string, number>()
   /**
-   * Agent cursors' world anchors (top-left of the work area): the cursor glides from `from` to
-   * `to` in world space, so a pan or zoom mid-glide moves it with the canvas (board 31
-   * "Position lock").
+   * Agent cursors' world anchors (the section center): the cursor glides from `from` to `to` in
+   * world space, so a pan or zoom mid-glide moves it with the canvas (board 31 "Position lock").
    */
-  private readonly glides = new Map<string, { from: Pt; to: Pt; at: number }>()
+  private readonly glides = new Map<string, Glide>()
+  /** Each cursor's section (resolved with the glide). */
+  private readonly sections = new Map<string, string>()
   private reduced: boolean
 
   constructor(
@@ -232,114 +171,80 @@ export class AgentCanvasModel {
     this.placeholders.clear()
     this.prompts.clear()
     const ids = this.nodes.nodeIds?.() ?? []
-    for (const id of ids) this.read(id, false)
+    for (const id of ids) this.read(id)
   }
 
-  /** Incremental: re-reads changed ids; a cleared placeholder starts its flash. */
+  /** Incremental: re-reads changed ids. */
   scan(ids: Iterable<string>): void {
-    for (const id of ids) this.read(id, true)
+    for (const id of ids) this.read(id)
   }
 
-  private read(id: string, flash: boolean): void {
+  private read(id: string): void {
     const n = this.nodes.getNode(id)
-    const had = this.placeholders.get(id)
-    const wasPlaceholder = this.placeholders.has(id)
-    if (n && n.type === "frame" && isPlaceholder(n.placeholder)) {
+    if (n && n.type === "frame" && isPlaceholder(n.placeholder))
       this.placeholders.set(id, n.placeholder)
-      this.flashes.delete(id)
-    } else {
-      this.placeholders.delete(id)
-      if (flash && wasPlaceholder && n) {
-        const origin = placeholderOwner(had)
-        const info = origin ? this.props?.agent(origin) : null
-        this.flashes.set(id, {
-          at: this.now(),
-          origin,
-          name: nameOf(n, "Frame"),
-          ops: info?.ops,
-          persona: info?.persona ?? "agent",
-        })
-      }
-    }
+    else this.placeholders.delete(id)
     if (n && n.type === "prompt")
       this.prompts.set(id, typeof n.target === "string" ? n.target : undefined)
     else this.prompts.delete(id)
   }
 
-  private live(): ReadonlySet<string> {
-    return this.props?.liveOrigins ?? EMPTY_SET
+  private parentOf = (id: string): string | null => {
+    const p = this.nodes.getNode(id)?.parent
+    return typeof p === "string" && p ? p : null
   }
 
-  /** Building placeholders (not orphaned) exist: the shimmer needs frames. */
-  private building(): boolean {
-    const live = this.live()
-    for (const v of this.placeholders.values()) if (!isOrphanPlaceholder(v, live)) return true
-    return false
-  }
-
-  /** The ids of a cursor's work area that are laid out (cursor `nodeIds`, else `nodeId`). */
-  private cursorIds(c: CanvasAgentCursor, layout: LayoutResult): string[] {
-    const ids = c.nodeIds?.length ? c.nodeIds : [c.nodeId]
-    return ids.filter((id) => layout.nodes.get(id)?.visible).slice(0, 50)
+  /** Board 36 › Section of layout-visible ids. */
+  private sectionFor(
+    area: readonly string[],
+    pointer: string | undefined,
+    layout: LayoutResult,
+  ): string | null {
+    return pickSection(area, pointer, this.parentOf, (id) => !!layout.nodes.get(id)?.visible)
   }
 
   /**
-   * Re-targets each cursor (world): the top-left of the layer it points at (board 31 "Agent
-   * cursor": the last layer the latest landed edit added), else of its work area. Targets
-   * resolve once the layout has the new nodes; a changed target starts a glide from where the
-   * cursor is now.
+   * Re-targets each cursor (world): the center of its section (board 36). Sections resolve once
+   * the layout has the new nodes; a changed target starts a 600 ms glide from where the cursor
+   * is now.
    */
   private syncCursors(layout: LayoutResult): void {
     const t = this.now()
     const seen = new Set<string>()
     for (const c of this.props?.cursors ?? []) {
-      const p = c.pointerId ? layout.nodes.get(c.pointerId) : undefined
-      const area = p?.visible
-        ? p.world
-        : unionBox(this.cursorIds(c, layout).map((id) => layout.nodes.get(id)?.world))
-      if (!area) continue
+      const area = c.nodeIds?.length ? c.nodeIds : [c.nodeId]
+      const section = this.sectionFor(area.slice(0, 50), c.pointerId, layout)
+      const box = section ? layout.nodes.get(section)?.world : undefined
+      if (!section || !box) continue
       seen.add(c.origin)
-      const to = { x: area.x, y: area.y }
-      const g = this.glides.get(c.origin)
-      if (!g) {
-        this.glides.set(c.origin, { from: to, to, at: t - CURSOR_GLIDE_MS })
-        continue
-      }
-      if (Math.abs(g.to.x - to.x) < 0.5 && Math.abs(g.to.y - to.y) < 0.5) continue
-      const from = this.reducedMotion ? to : this.glideAt(g, t)
-      this.glides.set(c.origin, { from, to, at: t })
+      this.sections.set(c.origin, section)
+      this.glides.set(
+        c.origin,
+        retarget(this.glides.get(c.origin), centerOf(box), t, this.reducedMotion),
+      )
     }
-    for (const k of this.glides.keys()) if (!seen.has(k)) this.glides.delete(k)
+    for (const k of this.glides.keys())
+      if (!seen.has(k)) {
+        this.glides.delete(k)
+        this.sections.delete(k)
+      }
   }
 
-  private glideAt(g: { from: Pt; to: Pt; at: number }, t: number): Pt {
-    const k = glideEase((t - g.at) / CURSOR_GLIDE_MS)
-    return { x: g.from.x + (g.to.x - g.from.x) * k, y: g.from.y + (g.to.y - g.from.y) * k }
-  }
-
-  /** True while something animates (shimmer, flash, ready chip, rejected pill, cursor glide). */
+  /** True while the canvas must redraw per frame: a cursor glide or a rejected flash. */
   animating(): boolean {
     const t = this.now()
     for (const g of this.glides.values()) if (t - g.at < CURSOR_GLIDE_MS) return true
-    if (!this.reducedMotion && this.building()) return true
-    for (const f of this.flashes.values()) if (t - f.at < READY_CHIP_MS) return true
     for (const at of this.rejectedSeen.values()) if (t - at < REJECT_MS) return true
-    for (const at of this.landedSeen.values()) if (t - at < FLASH_MS) return true
     return false
   }
 
-  /** Drops expired flashes / rejections (call per frame). */
-  prune(): void {
-    const t = this.now()
-    for (const [id, f] of this.flashes) if (t - f.at >= READY_CHIP_MS) this.flashes.delete(id)
-  }
+  /** Kept for callers: nothing expires per frame any more (flashes are CSS). */
+  prune(): void {}
 
   /** True when there is anything for the overlay or DOM. */
   active(): boolean {
     return (
-      this.placeholders.size > 0 ||
       this.prompts.size > 0 ||
-      this.flashes.size > 0 ||
       !!this.props?.scopes?.length ||
       !!this.props?.cursors?.length ||
       this.rejectedSeen.size > 0 ||
@@ -354,50 +259,10 @@ export class AgentCanvasModel {
   /** Renderer overlay fields (merged into the controller's overlay). */
   overlay(layout: LayoutResult): Partial<Overlay> {
     if (!this.active()) return {}
+    // Re-targets the cursors here too, so a new target starts its glide frames at once.
     this.syncCursors(layout)
     const t = this.now()
-    const live = this.live()
-    const placeholders: PlaceholderOverlay[] = []
-    for (const [id, v] of this.placeholders) {
-      if (!layout.nodes.has(id)) continue
-      placeholders.push({
-        id,
-        persona: this.persona(placeholderOwner(v)),
-        state: isOrphanPlaceholder(v, live) ? "interrupted" : "building",
-        skeleton: this.nodes.children(id).length === 0,
-      })
-    }
-    const flashes: PlaceholderFlash[] = []
-    for (const [id, f] of this.flashes) {
-      const p = (t - f.at) / FLASH_MS
-      if (p < 1 && layout.nodes.has(id)) flashes.push({ id, progress: p, persona: f.persona })
-    }
     const p = this.props
-    // Board 31: each landed edit flashes its top-most layers once (same ring as F1viK5).
-    for (const l of p?.landed ?? []) {
-      const at = this.landedSeen.get(l.key)
-      if (at === undefined) continue
-      const progress = (t - at) / FLASH_MS
-      if (progress >= 1) continue
-      const persona = this.persona(l.origin)
-      for (const id of l.ids)
-        if (layout.nodes.has(id) && !this.placeholders.has(id))
-          flashes.push({ id, progress, persona })
-    }
-    const scopes = (p?.scopes ?? []).flatMap((s) =>
-      s.roots
-        .filter((id) => layout.nodes.has(id))
-        .map((id) => ({
-          id,
-          persona: this.persona(s.origin),
-          fit: s.mode === "split" ? ("flush" as const) : ("outset" as const),
-        })),
-    )
-    const agentSelections = (p?.cursors ?? []).flatMap((c) =>
-      this.cursorIds(c, layout)
-        .slice(0, 24)
-        .map((id) => ({ id, persona: this.persona(c.origin) })),
-    )
     const rejected = (p?.rejections ?? [])
       .filter(
         (r) => t - (this.rejectedSeen.get(r.key) ?? t) < REJECT_MS && layout.nodes.has(r.nodeId),
@@ -406,18 +271,7 @@ export class AgentCanvasModel {
     const promptConnectors = [...this.prompts]
       .filter(([id, target]) => target && layout.nodes.has(id) && layout.nodes.has(target))
       .map(([prompt, target]) => ({ prompt, target: target as string }))
-    return {
-      placeholders,
-      placeholderFlashes: flashes,
-      shimmerPhase: this.reducedMotion
-        ? null
-        : (t % OVERLAY_SPEC_M6.placeholder.shimmerPeriodMs) /
-          OVERLAY_SPEC_M6.placeholder.shimmerPeriodMs,
-      scopes,
-      agentSelections,
-      rejected,
-      promptConnectors,
-    }
+    return { rejected, promptConnectors }
   }
 
   /** DOM pieces in screen space (canvas CSS px). */
@@ -425,103 +279,38 @@ export class AgentCanvasModel {
     if (!layout || !this.active()) return EMPTY_DOM
     this.syncCursors(layout)
     const t = this.now()
-    const live = this.live()
     const p = this.props
-    const screen = (id: string): Rect | null => {
+    const toScreen = (w: { x: number; y: number }) => ({
+      x: (w.x - v.x) * v.zoom,
+      y: (w.y - v.y) * v.zoom,
+    })
+    const radiusOf = (id: string) => {
+      const r = this.nodes.getNode(id)?.radius
+      return typeof r === "number" ? r * v.zoom : 0
+    }
+    const screen = (id: string): (Rect & { radius: number }) | null => {
       const l = layout.nodes.get(id)
       if (!l?.visible) return null
-      return {
-        x: (l.world.x - v.x) * v.zoom,
-        y: (l.world.y - v.y) * v.zoom,
-        w: l.world.w * v.zoom,
-        h: l.world.h * v.zoom,
-      }
+      const o = toScreen(l.world)
+      return { ...o, w: l.world.w * v.zoom, h: l.world.h * v.zoom, radius: radiusOf(id) }
     }
     const onScreen = (r: Rect) =>
       size.w === 0 || (r.x + r.w > -64 && r.x < size.w + 64 && r.y + r.h > -64 && r.y < size.h + 64)
 
-    // Placeholder tags (EKCy7 Tag: inside the 16 px padding) — hidden on tiny frames.
-    const tags: PlaceholderTagView[] = []
-    for (const [id, val] of this.placeholders) {
-      const r = screen(id)
-      if (!r || !onScreen(r) || r.w < 48 || r.h < 28) continue
-      const origin = placeholderOwner(val)
-      const info = origin ? p?.agent(origin) : null
-      const orphan = isOrphanPlaceholder(val, live)
-      const label = info?.label ?? "Kimo"
-      const name = nameOf(this.nodes.getNode(id), "Frame")
-      const inset = Math.min(16, r.w / 8)
-      tags.push({
-        id,
-        origin,
-        left: r.x + inset,
-        top: r.y + inset,
-        state: orphan ? "interrupted" : "building",
-        // Board 25 §3 kTwwU / rule jMJaL: an orphan reads "Agent stopped · <name>".
-        // Board 31 "Canvas label": the agent's name only (no state, tool or counts).
-        text: orphan ? `Agent stopped · ${name}` : label,
-        persona: info?.persona ?? "agent",
-        label,
-      })
-    }
-
-    // "<name> ready · N ops · Review" (Done Chip i6wxFe: 12 below the frame, left-aligned).
-    const ready: ReadyChipView[] = []
-    for (const [id, f] of this.flashes) {
-      if (t - f.at >= READY_CHIP_MS) continue
-      const r = screen(id)
-      if (!r || !onScreen(r)) continue
-      ready.push({
-        id,
-        origin: f.origin,
-        left: r.x,
-        top: r.y + r.h + 12,
-        text: `${f.name} ready${f.ops ? ` · ${f.ops} ops` : ""}`,
-      })
-    }
-
-    // ScopeTags (NKE7Z): outset → 3 px above the outline, left-aligned (t51Sk / R6qeO);
-    // split → inside the section's top edge, right-aligned (HHDET / laiQs).
-    const scopes: ScopeTagView[] = []
+    // Iterate pass chip (NCElh): 7 below the scope root's outset box, left-aligned with it.
     const passes: PassChipView[] = []
     for (const s of p?.scopes ?? []) {
-      const info = p?.agent(s.origin)
+      if (s.mode !== "iterate" || !s.iterate) continue
       for (const id of s.roots) {
         const r = screen(id)
         if (!r || !onScreen(r)) continue
-        const name = nameOf(this.nodes.getNode(id), "Frame")
-        const persona = info?.persona ?? "agent"
-        const text =
-          s.mode === "single" || s.mode === "iterate"
-            ? `Agent can only edit inside ${name}`
-            : `${info?.label ?? "Agent"} · only inside ${name}`
-        if (s.mode === "split")
-          scopes.push({
-            key: `${s.origin}/${id}`,
-            left: r.x + r.w - 6,
-            top: r.y + 6,
-            anchor: "right",
-            text,
-            persona,
-          })
-        else {
-          const o = OVERLAY_SPEC_M6.scope.outset
-          if (s.mode === "iterate" && s.iterate)
-            passes.push({
-              key: `${s.origin}/${id}`,
-              left: r.x - o,
-              top: r.y + r.h + o + 7,
-              text: `Iterate · pass ${s.iterate.pass} of ${s.iterate.of}${s.iterate.reviewing ? " · review" : ""}`,
-            })
-          scopes.push({
-            key: `${s.origin}/${id}`,
-            left: r.x - o,
-            top: r.y - o - 3 - 20,
-            anchor: "left",
-            text,
-            persona,
-          })
-        }
+        const o = OVERLAY_SPEC_M6.scope.outset
+        passes.push({
+          key: `${s.origin}/${id}`,
+          left: r.x - o,
+          top: r.y + r.h + o + 7,
+          text: `Iterate · pass ${s.iterate.pass} of ${s.iterate.of}${s.iterate.reviewing ? " · review" : ""}`,
+        })
       }
     }
 
@@ -541,10 +330,10 @@ export class AgentCanvasModel {
       })
     }
 
-    // Persona cursors: anchor = the pointed layer's top-left (else the work area's) + (4, 4),
-    // gliding in world space between targets; pills stack per anchor, lead on top.
-    const cursors: CursorView[] = []
-    const perNode = new Map<string, number>()
+    // Board 36: one cursor per agent on its section's center (gliding in world space) and the
+    // section outline; agents in one section stack their pills 26 px apart, lead on top.
+    const cursors: SectionCursorView[] = []
+    const perSection = new Map<string, number>()
     const sorted = [...(p?.cursors ?? [])].sort(
       (a, b) =>
         (p?.agent(a.origin)?.persona === "agent" ? 0 : 1) -
@@ -552,26 +341,40 @@ export class AgentCanvasModel {
     )
     for (const c of sorted) {
       const g = this.glides.get(c.origin)
-      if (!g) continue
-      const w = this.glideAt(g, t)
-      const key = `${Math.round(g.to.x)}:${Math.round(g.to.y)}`
-      const stack = perNode.get(key) ?? 0
-      perNode.set(key, stack + 1)
+      const section = this.sections.get(c.origin)
+      if (!g || !section) continue
+      const stack = perSection.get(section) ?? 0
+      perSection.set(section, stack + 1)
       const info = p?.agent(c.origin)
-      const left = (w.x - v.x) * v.zoom + 4
-      const top = (w.y - v.y) * v.zoom + 4
+      const tip = toScreen(glideAt(g, t))
       cursors.push({
         origin: c.origin,
-        left,
-        top,
-        flipX: size.w > 0 && left + 240 > size.w - 8,
-        flipY: size.h > 0 && top + 18 + 2 + 22 > size.h - 8,
-        // Board 31 "Canvas label": the agent's name only; status lives in the panel.
-        text: info?.label ?? "Agent",
+        kind: "builtin",
         persona: info?.persona ?? "agent",
+        // Board 36 › Label: the agent's persona name only, whatever its engine.
+        label: info?.label ?? "Kimo",
         state: c.state,
+        section: screen(section),
+        sectionId: section,
+        tip,
         stack,
+        ...cursorFlip(tip, size),
       })
+    }
+
+    // Board 36 › Section flash: each landed edit rings its section(s) once.
+    const flashes: SectionFlashView[] = []
+    for (const l of p?.landed ?? []) {
+      const at = this.landedSeen.get(l.key)
+      if (at === undefined || t - at >= FLASH_MS) continue
+      const done = new Set<string>()
+      for (const id of l.ids) {
+        const s = this.sectionFor([id], undefined, layout)
+        if (!s || done.has(s)) continue
+        done.add(s)
+        const box = screen(s)
+        if (box) flashes.push({ key: `${l.key}/${s}`, persona: this.persona(l.origin), box })
+      }
     }
 
     // Prompt footers (poE5B Footer) + target chips (sWQ2b: 10 below the frame).
@@ -599,7 +402,7 @@ export class AgentCanvasModel {
       }
       prompts.push({
         id,
-        box: r,
+        box: { x: r.x, y: r.y, w: r.w, h: r.h },
         zoom: v.zoom,
         status,
         footer,
@@ -607,11 +410,9 @@ export class AgentCanvasModel {
         target: chip,
       })
     }
-    return { tags, ready, scopes, passes, rejected, cursors, prompts }
+    return { cursors, flashes, passes, rejected, prompts }
   }
 }
-
-const EMPTY_SET: ReadonlySet<string> = new Set()
 
 /** Prompt footer height in world units (DOM footer = 42 × zoom). */
 export const PROMPT_FOOTER_H = PROMPT_CHROME.footerHeight

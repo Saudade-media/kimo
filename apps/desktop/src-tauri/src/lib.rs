@@ -32,6 +32,7 @@ pub mod updater;
 pub mod util;
 mod watch;
 mod window;
+mod window_chrome;
 
 use state::AppState;
 use std::sync::Arc;
@@ -215,6 +216,7 @@ pub fn run() {
             commands::kimo_updater_download,
             commands::kimo_updater_restart,
             commands::kimo_window_state,
+            commands::kimo_window_titlebar_double_click,
             commands::kimo_window_set_title,
             commands::kimo_window_set_document_edited,
             commands::kimo_window_open_settings,
@@ -365,7 +367,7 @@ mod tests {
     #[test]
     fn command_surface_matches_tauri_ts() {
         let ts = ts_commands();
-        assert_eq!(ts.len(), 69);
+        assert_eq!(ts.len(), 70);
         let rust: Vec<String> = super::command_list::COMMANDS
             .iter()
             .map(|s| s.to_string())
@@ -416,8 +418,15 @@ mod tests {
             .iter()
             .filter(|p| {
                 !p.starts_with("allow-kimo-")
-                    && !["core:event:allow-listen", "core:event:allow-unlisten"]
-                        .contains(&p.as_str())
+                    && ![
+                        "core:event:allow-listen",
+                        "core:event:allow-unlisten",
+                        // Drag regions on the overlay title bar; Windows / Linux maximize
+                        // through the internal toggle, macOS through the double-click command.
+                        "core:window:allow-start-dragging",
+                        "core:window:allow-internal-toggle-maximize",
+                    ]
+                    .contains(&p.as_str())
             })
             .collect();
         assert!(extra.is_empty(), "unexpected permissions: {extra:?}");

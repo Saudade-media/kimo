@@ -1,8 +1,8 @@
 /**
  * Board 25 §3 (jWmmU): the canvas context menu for agent nodes in the real editor (m4-app
  * harness). Note → Convert to prompt; prompt → Run prompt · Set as target (pick mode: crosshair,
- * $agent outline, click sets / empty clears, Esc cancels); orphaned placeholder → grey "Agent
- * stopped" tag, Resume agent (reopens the owning session and continues) + Clear flag. Each menu
+ * $agent outline, click sets / empty clears, Esc cancels); orphaned placeholder → no canvas tag
+ * (board 36), Resume agent (reopens the owning session and continues) + Clear flag. Each menu
  * gets one measured pass (getComputedStyle + getBoundingClientRect vs the node values).
  */
 import type { Page } from "playwright"
@@ -394,7 +394,7 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "board25 §3 (c): orphaned placeholder → grey 'Agent stopped' tag, Resume agent reopens its session, Clear flag",
+    name: "board25 §3 (c): orphaned placeholder → no canvas tag (board 36), Resume agent reopens its session, Clear flag",
     async run(ctx) {
       const { page } = ctx
       await editor(ctx)
@@ -464,51 +464,14 @@ export const scenarios: Scenario[] = [
           placeholder: { by: "agent:kimo.deleted.0", since: "2026-10-04T00:00:00.000Z" },
         },
       })
-      // Tag (UMRAO iyhUZ): bg-muted, unplug 11 text-secondary, "Agent stopped · Pricing".
-      const tag = page.locator('[data-testid="placeholder-tag"][data-node-id="Orphan25cc"]')
-      await tag.waitFor()
-      const t = await tag.evaluate((e) => {
-        const cs = getComputedStyle(e)
-        const svg = e.querySelector("svg")
-        const label = e.querySelector(".agent-canvas__tag-label")
-        return {
-          text: label?.textContent,
-          bg: cs.backgroundColor,
-          h: e.getBoundingClientRect().height,
-          gap: cs.columnGap,
-          pad: cs.padding,
-          icon: svg?.getAttribute("class") ?? "",
-          iconW: svg?.getBoundingClientRect().width ?? 0,
-          iconColor: svg ? getComputedStyle(svg).color : "",
-          labelColor: label ? getComputedStyle(label).color : "",
-          labelSize: label ? getComputedStyle(label).fontSize : "",
-          labelWeight: label ? getComputedStyle(label).fontWeight : "",
-        }
-      })
-      const d: Diff[] = []
-      check(d, "tag label", "Agent stopped · Pricing", t.text ?? "")
-      check(d, "tag fill ($bg-muted)", await token(page, "--kimo-bg-muted"), t.bg)
-      check(d, "tag height (20)", 20, t.h)
-      check(d, "tag gap (4)", "4px", t.gap)
-      check(d, "tag padding ([0,7,0,5])", "0px 7px 0px 5px", t.pad)
-      check(d, "tag icon (unplug)", true as unknown as string, String(/unplug/.test(t.icon)))
-      check(d, "tag icon size (11)", 11, t.iconW)
-      check(
-        d,
-        "tag icon ($text-secondary)",
-        await token(page, "--kimo-text-secondary"),
-        t.iconColor,
+      // Board 36: an orphaned placeholder draws nothing on the canvas (no "Agent stopped" tag);
+      // its Layers row and this context menu handle it.
+      await page.locator('[data-agent-row="placeholder"]').first().waitFor()
+      await page.waitForTimeout(300)
+      expect(
+        (await page.locator('[data-testid="placeholder-tag"]').count()) === 0,
+        "no placeholder tag on the canvas",
       )
-      check(
-        d,
-        "tag label ($text-secondary)",
-        await token(page, "--kimo-text-secondary"),
-        t.labelColor,
-      )
-      check(d, "tag label size ($text-xs)", "11px", t.labelSize)
-      check(d, "tag label weight (500)", "500", t.labelWeight)
-      ctx.log(`measured orphan tag: ${d.length === 0 ? "no diffs" : JSON.stringify(d)}`)
-      expect(d.length === 0, `orphan tag diffs ${JSON.stringify(d)}`)
 
       await rightClick(page, "Orphan25cc", 0.6)
       expect(
@@ -555,9 +518,10 @@ export const scenarios: Scenario[] = [
       await page.waitForFunction(
         () => window.__kimo?.session.store.getNode("Gone25cccc")?.placeholder === undefined,
       )
-      await page
-        .locator('[data-testid="placeholder-tag"][data-node-id="Gone25cccc"]')
-        .waitFor({ state: "detached", timeout: 5_000 })
+      expect(
+        (await page.locator('[data-testid="placeholder-tag"]').count()) === 0,
+        "still no placeholder tag",
+      )
     },
   },
   {

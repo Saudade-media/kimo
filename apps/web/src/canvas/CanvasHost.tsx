@@ -146,7 +146,6 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
     agentKey.current = key
     agentStore.set(d)
   }, [agentStore])
-  const hovered = useUi(uiStore, (s) => s.hovered)
   // Harness / imperative override of the agent state (`CanvasHandle.setAgentCanvas`).
   const [agentOverride, setAgentOverride] = useState<AgentCanvasProps | null>(null)
   // The imperative override wins while set (harnesses drive a mounted editor); null returns
@@ -576,7 +575,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
       )}
       {structure && <StructureOverlay dom={structure} />}
       {ready && agentDom !== EMPTY_DOM && (
-        <AgentCanvasDom dom={agentDom} props={agentCanvas ?? null} hovered={hovered} />
+        <AgentCanvasDom dom={agentDom} props={agentCanvas ?? null} />
       )}
       {ready && compDom && (
         <ComponentDom overlay={compDom} onQuickInsert={(q) => cb.current.onQuickInsert?.(q)} />

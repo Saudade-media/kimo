@@ -182,6 +182,24 @@ pub fn state<Rt: Runtime>(app: &AppHandle<Rt>) -> std::sync::Arc<AppState> {
     app.state::<std::sync::Arc<AppState>>().inner().clone()
 }
 
+/// Open requests that arrive before `setup` has managed the state: macOS delivers the files of
+/// a cold launch from Finder ("Open With", double-click) through `RunEvent::Opened`, which can
+/// run before `setup`. They are queued here and handed over by [`take_early_opens`].
+static EARLY_OPENS: std::sync::Mutex<Vec<OpenRequest>> = std::sync::Mutex::new(Vec::new());
+
+/// Routes an open request to the state, or queues it until the state exists.
+pub fn open_or_defer<Rt: Runtime>(app: &AppHandle<Rt>, req: OpenRequest) {
+    match app.try_state::<std::sync::Arc<AppState>>() {
+        Some(st) => st.inner().clone().open_request(app, req),
+        None => EARLY_OPENS.lock().unwrap().push(req),
+    }
+}
+
+/// The requests queued by [`open_or_defer`] before the state was managed.
+pub fn take_early_opens() -> Vec<OpenRequest> {
+    std::mem::take(&mut *EARLY_OPENS.lock().unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

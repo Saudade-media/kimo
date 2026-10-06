@@ -134,6 +134,10 @@ pub fn run() {
             for r in links::requests_from_args(&args, &cwd, "argv") {
                 st.open_request(&handle, r);
             }
+            // macOS: files from a Finder launch that arrived before this point.
+            for r in state::take_early_opens() {
+                st.open_request(&handle, r);
+            }
 
             #[cfg(any(windows, target_os = "linux"))]
             {
@@ -310,7 +314,7 @@ pub fn run() {
                 .map(|p| util::path_str(&p))
                 .collect();
             if !refs.is_empty() {
-                state::state(app).open_request(
+                state::open_or_defer(
                     app,
                     links::OpenRequest {
                         source: "file-association",

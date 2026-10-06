@@ -895,7 +895,8 @@ export function matchesKind(kind: McpActivityKind, f: KindFilter): boolean {
   if (f === "all") return true
   if (f === "writes") return WRITE_KINDS.has(kind)
   if (f === "errors") return ERROR_KINDS.has(kind)
-  return WRITE_KINDS.has(kind) || ERROR_KINDS.has(kind)
+  // Board 38: web searches and page reads show with writes and errors (the default view).
+  return WRITE_KINDS.has(kind) || ERROR_KINDS.has(kind) || kind === "web"
 }
 
 const UNDOABLE = new Set<McpActivityKind>(["edit", "undo", "redo"])
@@ -982,7 +983,11 @@ export function activityRowView(
           : t
   }
   let target: string
-  if (flags.stale) target = "stale · nothing left to undo"
+  if (e.kind === "web") {
+    // Board 38 §4: "Searched the web for “q”" · web_search · the query or the URL, no Undo.
+    tool = e.tool ?? "web_search"
+    target = e.detail ?? ""
+  } else if (flags.stale) target = "stale · nothing left to undo"
   else if (failed) target = `${nodes || "document"} · no change`
   else if (!nodes && !rev) target = "no doc change"
   else target = [nodes, rev].filter(Boolean).join(" · ")

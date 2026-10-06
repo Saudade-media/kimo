@@ -16,6 +16,7 @@ import type {
   ToolCallPart,
   Usage,
 } from "../types"
+import type { WebTool } from "../web"
 import { getJson, parseArgs, postStream, trimSlash } from "./http"
 import {
   availableOn,
@@ -82,7 +83,9 @@ export class OpenAICompatibleProvider implements Provider {
   body(req: ProviderRequest): Record<string, unknown> {
     const info = this.modelInfo(req.model)
     return this.api === "responses"
-      ? buildResponsesBody(req, info)
+      ? buildResponsesBody(req, info, {
+          webSearch: !!req.webAccess && this.config.kind === "openai",
+        })
       : buildChatBody(req, info, { modernTokens: this.config.kind === "openai" })
   }
 
@@ -173,7 +176,24 @@ export class OpenAICompatibleProvider implements Provider {
         case "response.reasoning_summary_text.delta":
           yield { type: "thinking_delta", text: e.delta ?? "" }
           break
+        case "response.output_item.done":
+          // Board 38: a hosted web search (its action is known once it ran).
+          if (e.item?.type === "web_search_call" && e.item.id) {
+            const w = webCallOf({ ...e.item, id: e.item.id })
+            yield {
+              type: "web_end",
+              id: e.item.id,
+              tool: w.tool,
+              ok: e.item.status !== "failed",
+              input: w.input,
+            }
+          }
+          break
         case "response.output_item.added":
+          if (e.item?.type === "web_search_call" && e.item.id) {
+            yield { type: "web_start", id: e.item.id, tool: "web_search", input: {} }
+            break
+          }
           if (e.item?.type === "function_call") {
             const c = {
               callId: e.item.call_id ?? e.item.id ?? "",
@@ -271,7 +291,7 @@ export class OpenAICompatibleProvider implements Provider {
             inputSchema: { type: "object", properties: {}, additionalProperties: false },
           },
         ],
-        thinking: "off",
+        thinking: "low",
         maxTokens: 16,
         ...(signal ? { signal } : {}),
       }
@@ -436,6 +456,8 @@ interface ResponsesItem {
   call_id?: string
   name?: string
   arguments?: string
+  status?: string
+  action?: { type?: string; query?: string; url?: string }
 }
 
 interface ResponsesEvent {
@@ -466,7 +488,29 @@ function responsesUsage(u: NonNullable<NonNullable<ResponsesEvent["response"]>["
   }
 }
 
-export function buildResponsesBody(req: ProviderRequest, info: ModelInfo): Record<string, unknown> {
+/** An OpenAI `web_search_call` output item (board 38). */
+interface WebSearchCall {
+  id: string
+  status?: string
+  action?: { type?: string; query?: string; url?: string }
+}
+
+/** A web_search_call's action as a web step: a search, or a page it opened. */
+export function webCallOf(item: WebSearchCall): {
+  tool: WebTool
+  input: Record<string, unknown>
+} {
+  const a = item.action ?? {}
+  if (a.type === "open_page" || a.type === "find" || (a.url && !a.query))
+    return { tool: "web_fetch", input: { url: a.url ?? "" } }
+  return { tool: "web_search", input: { query: a.query ?? "" } }
+}
+
+export function buildResponsesBody(
+  req: ProviderRequest,
+  info: ModelInfo,
+  opts: { webSearch?: boolean } = {},
+): Record<string, unknown> {
   const input: Record<string, unknown>[] = []
   for (const m of req.messages) {
     if (m.role === "user")
@@ -512,14 +556,16 @@ export function buildResponsesBody(req: ProviderRequest, info: ModelInfo): Recor
     stream: true,
     store: false,
   }
-  if (req.tools.length)
-    body.tools = req.tools.map((t) => ({
-      type: "function",
-      name: t.name,
-      description: t.description,
-      parameters: t.inputSchema,
-      strict: false,
-    }))
+  const tools: Record<string, unknown>[] = req.tools.map((t) => ({
+    type: "function",
+    name: t.name,
+    description: t.description,
+    parameters: t.inputSchema,
+    strict: false,
+  }))
+  // Board 38: OpenAI's hosted web search (Responses API only).
+  if (opts.webSearch) tools.push({ type: "web_search" })
+  if (tools.length) body.tools = tools
   if (req.maxTokens) body.max_output_tokens = req.maxTokens
   if (effort) body.reasoning = { effort, summary: "auto" }
   if (req.responseSchema)

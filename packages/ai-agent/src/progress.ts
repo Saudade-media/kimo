@@ -12,6 +12,7 @@
  */
 import type { ToolCallRequest } from "./toolhost"
 import type { ChatMessage } from "./types"
+import { webLabel, webToolOf } from "./web"
 
 /** Node names for step labels ("Editing 6 layers in Pricing"). All optional. */
 export interface StepNames {
@@ -107,6 +108,9 @@ const STATIC: Record<string, string> = {
 export function stepLabel(call: ToolCallRequest, names: StepNames = {}): string {
   const i = call.input
   const nameOf = (id: unknown) => (typeof id === "string" ? names.name?.(id) : undefined)
+  // Board 38: a CLI's web search / page read ("Searching the web for “q”", "Reading host").
+  const web = webToolOf(call.name)
+  if (web) return webLabel(web, i, "running")
   switch (call.name) {
     case "kimo_apply_ops": {
       if (typeof i.retryId === "string") return "Fixing the last edit"

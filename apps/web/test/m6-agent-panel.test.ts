@@ -326,7 +326,7 @@ describe("skills, model picker, sessions", () => {
     expect(c.state.skills.enabled).toEqual(["kimo-design", "kimo-tokens"])
   })
 
-  test("picker: local CLIs first (Claude Code default when signed in), API providers, Add-a-key rows", () => {
+  test("picker: local CLIs first (Claude Code default when signed in), connected API providers", () => {
     const clis: CliDetection[] = [
       { id: "codex", label: "Codex", installed: true, signedIn: true, billing: "subscription" },
       {
@@ -345,19 +345,24 @@ describe("skills, model picker, sessions", () => {
       defaultSelection: { provider: "cli:claude-code", model: "default" },
       labelOf: (p) => p,
     })
-    expect(g.map((x) => x.provider)).toEqual([
-      "cli:claude-code",
-      "cli:codex",
-      "anthropic",
-      "gemini",
-    ])
+    // Board 39: CLIs first in detection order, then connected APIs; "no key" rows are gone.
+    expect(g.map((x) => x.provider)).toEqual(["cli:claude-code", "cli:codex", "anthropic"])
+    expect(g.map((x) => x.chip)).toEqual(["Claude Code", "Codex", "Anthropic"])
     expect(g[0]?.isDefault).toBe(true)
     expect(g[0]?.tag).toBe("subscription")
-    expect(g[2]?.models.map((m) => [m.label, m.role])).toEqual([
-      ["Claude Opus 5.5", "agent"],
-      ["Claude Haiku 4.5", "fast"],
+    expect(g[0]?.models.map((m) => m.label)).toEqual([
+      "Default (CLI decides)",
+      "Opus 5.5",
+      "Sonnet 5.5",
+      "Haiku 4.5",
+      "Fable 5.1",
     ])
-    expect(g[3]).toMatchObject({ available: false, tag: "no key" })
+    expect(g[2]?.models.map((m) => [m.label, m.role, m.tag])).toEqual([
+      ["Opus 5.5", "agent", "best"],
+      ["Sonnet 5.5", undefined, undefined],
+      ["Haiku 4.5", "fast", "fast"],
+      ["Fable 5.1", undefined, undefined],
+    ])
     const web = pickerGroups({
       platform: "web",
       providers: [MOCK_ANTHROPIC],
@@ -862,7 +867,7 @@ describe("formats (board 22 copy)", () => {
       createdAt: 0,
       updatedAt: 0,
       model: { provider: "anthropic", model: "claude-opus-5-5" },
-      thinking: "auto" as const,
+      thinking: "high" as const,
       mode: {
         mode: "single" as const,
         agents: 3,

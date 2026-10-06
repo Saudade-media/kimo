@@ -21,6 +21,7 @@ import { AgentMark } from "../agent-mark/AgentMark"
 import type { AgentMarkState } from "../agent-mark/faces"
 import { type Persona, personaVar } from "../agent-mark/persona"
 import { cx, mergeRefs } from "../internal/util"
+import { WebAccessButton, type WebAccessButtonProps } from "./WebAccessButton"
 
 /** Props for {@link ComposerAgent}. Remaining `<div>` props go to the frame. */
 export interface ComposerAgentProps
@@ -44,10 +45,17 @@ export interface ComposerAgentProps
    * warning-soft (on). Omitted: not rendered.
    */
   autoApprove?: { on: boolean; onClick?: () => void; disabled?: boolean }
+  /** Board 38 web access globe, right after the auto-approve shield. Omitted: not rendered. */
+  webAccess?: Omit<WebAccessButtonProps, "disabled">
   /** Model chip (KnAC9): label, its mark state, persona tint (split), open state. */
   model?: {
     label: string
     markState?: AgentMarkState
+    /**
+     * Board 39 G: a 12 px provider mark before the name (terminal CLI, cloud API, hard-drive
+     * Local), in place of the AgentMark. Omitted: the AgentMark.
+     */
+    mark?: ReactNode
     persona?: Persona
     open?: boolean
     onClick?: () => void
@@ -89,6 +97,7 @@ export function ComposerAgent({
   onSkills,
   modeChip,
   autoApprove,
+  webAccess,
   model,
   action = "send",
   sendDisabled = false,
@@ -180,6 +189,7 @@ export function ComposerAgent({
             {autoApprove.on ? <ShieldCheck aria-hidden="true" /> : <Shield aria-hidden="true" />}
           </button>
         )}
+        {webAccess && <WebAccessButton {...webAccess} disabled={disabled} />}
         <span className="kimo-composer-agent__spacer" aria-hidden="true" />
         {model && (
           <button
@@ -204,7 +214,13 @@ export function ComposerAgent({
             onClick={model.onClick}
             disabled={model.disabled}
           >
-            <AgentMark size={12} state={model.markState ?? "idle"} persona={persona} />
+            {model.mark != null ? (
+              <span className="kimo-composer-agent__model-mark" aria-hidden="true">
+                {model.mark}
+              </span>
+            ) : (
+              <AgentMark size={12} state={model.markState ?? "idle"} persona={persona} />
+            )}
             <span className="kimo-composer-agent__model-label">{model.label}</span>
             <ChevronDown className="kimo-composer-agent__model-chevron" aria-hidden="true" />
           </button>

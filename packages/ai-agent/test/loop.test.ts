@@ -29,7 +29,7 @@ function opts(
     turnId: "t1",
     model: { provider: "anthropic", model: "claude-opus-5-5" },
     info: opus,
-    thinking: "auto",
+    thinking: "high",
     system: { stable: "Kimo" },
     history: [],
     user: { role: "user", content: [{ type: "text", text: "Add a waitlist form" }] },

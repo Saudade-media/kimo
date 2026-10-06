@@ -206,7 +206,7 @@ async function cloudTest(
       system: { stable: "Connection test. Reply with OK." },
       messages: [{ role: "user", content: [{ type: "text", text: "OK?" }] }],
       tools: [],
-      thinking: "off",
+      thinking: "low",
       maxTokens: 16,
     })
     return { ok: true, latencyMs: now() - t0, detail: `${model} reachable · streaming` }
@@ -946,7 +946,7 @@ export function createAiSettingsController(deps: AiSettingsDeps): AiSettingsCont
           },
           messages: [{ role: "user", content: [{ type: "text", text: prompt.slice(0, 2000) }] }],
           tools: [],
-          thinking: "off",
+          thinking: "low",
           maxTokens: 64,
           responseSchema: TITLE_SCHEMA,
           signal: abort.signal,

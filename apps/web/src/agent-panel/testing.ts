@@ -19,6 +19,7 @@ import {
   type ProviderRequest,
   type StreamEvent,
   type Usage,
+  type WebTool,
 } from "@kimo/ai-agent"
 import type { AgentPanelRuntime } from "./runtime"
 import type { ToolHostFactory } from "./tools"
@@ -38,6 +39,11 @@ export type ScriptStep =
        */
       streamInput?: { chunk: number; delayMs: number }
       stop?: "end_turn" | "refusal" | "max_tokens"
+      /**
+       * Board 38: server-side web calls the provider runs before its text (only when the
+       * request has web access; otherwise they are skipped like a provider without the tools).
+       */
+      web?: { tool: WebTool; input: Record<string, unknown>; ok?: boolean }[]
     }
   | { error: ProviderErrorKind; message?: string; status?: number; retryAfterMs?: number }
 
@@ -88,6 +94,13 @@ export function createMockProvider(
         cacheWriteTokens: step.usage?.cacheWriteTokens ?? 0,
       }
       if (step.thinking) yield { type: "thinking_delta", text: step.thinking }
+      if (req.webAccess)
+        for (const [k, w] of (step.web ?? []).entries()) {
+          const id = `srvtoolu_${i}_${k}`
+          yield { type: "web_start", id, tool: w.tool, input: w.input }
+          if (delay) await sleep(delay, req.signal)
+          yield { type: "web_end", id, tool: w.tool, ok: w.ok !== false }
+        }
       const words = (step.text ?? "").split(/(?<= )/)
       for (const w of words) {
         if (!w) continue
@@ -240,11 +253,24 @@ export function createTestRuntime(o: {
   platform?: "desktop" | "web"
   usage?: AgentPanelRuntime["usage"]
   now?: () => number
-}): AgentPanelRuntime & { providersMade: ReturnType<typeof createMockProvider>[] } {
+  /** Board 38: Allow web access / No third-party fetch (default: on, not blocked). */
+  webAccess?: AgentPanelRuntime["webAccess"]
+  /** Board 39 Recent: the saved picks (in memory; `recentSaved` reads them back). */
+  recentModels?: ModelSelection[]
+}): AgentPanelRuntime & {
+  providersMade: ReturnType<typeof createMockProvider>[]
+  recentSaved(): ModelSelection[]
+} {
   const providers = o.providers ?? [MOCK_ANTHROPIC]
   const made: ReturnType<typeof createMockProvider>[] = []
+  let recent = [...(o.recentModels ?? [])]
   return {
     providersMade: made,
+    recentSaved: () => recent,
+    recentModels: () => recent,
+    saveRecentModels: (list) => {
+      recent = [...list]
+    },
     platform: o.platform ?? "web",
     providers: async () => providers,
     unavailable: () => [{ id: "gemini", label: "Google Gemini", tag: "no key" }],
@@ -269,6 +295,7 @@ export function createTestRuntime(o: {
     tools: o.tools,
     sessions: createMemorySessionStore(),
     ...(o.usage ? { usage: o.usage } : {}),
+    ...(o.webAccess ? { webAccess: o.webAccess } : {}),
     online: () => true,
     random: seeded(7),
     ...(o.now ? { now: o.now } : {}),

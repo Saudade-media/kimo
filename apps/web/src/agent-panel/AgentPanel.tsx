@@ -31,11 +31,13 @@ import {
 import {
   BookOpen,
   CircleX,
+  Cloud,
   Component,
   Copy,
   Download,
   FilePlus,
   FolderOpen,
+  HardDrive,
   History,
   Pencil,
   Plus,
@@ -45,6 +47,7 @@ import {
   ShieldCheck,
   SquareDashed,
   SquarePen,
+  Terminal,
   Trash2,
   Variable,
   X,
@@ -510,11 +513,29 @@ export function AgentPanel({
               onClick: () =>
                 state.autoApprove ? controller.setAutoApprove(false) : setConfirmAuto(true),
             }}
+            webAccess={{
+              on: state.webAccess.on,
+              blocked: state.webAccess.disabled,
+              onToggle: (on) => controller.setWebAccess(on),
+            }}
             model={{
               label: state.modelLabel,
               open: state.menu === "model",
               disabled: state.composerDisabled,
               markState: state.busy ? "working" : "idle",
+              // Board 39 G: terminal for a CLI, cloud for an API, hard-drive for Local.
+              ...(state.modelMark
+                ? {
+                    mark:
+                      state.modelMark === "cli" ? (
+                        <Terminal />
+                      ) : state.modelMark === "local" ? (
+                        <HardDrive />
+                      ) : (
+                        <Cloud />
+                      ),
+                  }
+                : {}),
               onClick: () => {
                 setAgentModelTarget(null)
                 controller.openMenu("model")

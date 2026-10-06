@@ -247,12 +247,22 @@ async function run(which: "claude" | "codex" | "api"): Promise<RunResult> {
   const node = createNodeCliHost()
   const cliHost: CliProcessHost = {
     ...node,
-    spawn: (spec) =>
-      node.spawn(
+    spawn: (spec) => {
+      // Board 39: show the model and effort flags the adapter passed.
+      const flags = spec.args.flatMap((a, i) =>
+        a === "--model" || a === "--effort" || /^model_reasoning_effort=/.test(a)
+          ? [a.startsWith("--") ? `${a} ${spec.args[i + 1]}` : a]
+          : [],
+      )
+      console.log(
+        `spawn ${spec.path.split("/").pop()}: ${flags.join(" ") || "(no model/effort flags)"}`,
+      )
+      return node.spawn(
         spec.path.endsWith("/claude")
           ? { ...spec, args: [...spec.args, "--max-turns", "6"] }
           : spec,
-      ),
+      )
+    },
   }
   const secrets = createMemorySecrets(mock ? { "provider.anthropic": "sk-ant-local-mock" } : {})
   const ai = createAiSettingsController({
@@ -295,12 +305,16 @@ async function run(which: "claude" | "codex" | "api"): Promise<RunResult> {
   await c.refresh()
   const selection =
     which === "claude"
-      ? { provider: "cli:claude-code", model: "haiku" }
+      ? {
+          provider: "cli:claude-code",
+          model: process.env.KIMO_CLAUDE_MODEL ?? "claude-haiku-4-5-20251001",
+        }
       : which === "codex"
         ? { provider: "cli:codex", model: process.env.KIMO_CODEX_MODEL ?? "gpt-5.6-luna" }
         : { provider: "anthropic", model: "claude-haiku-4-5-20251001" }
   c.setModel(selection)
-  c.setThinking("off")
+  // Board 39 Effort (KIMO_EFFORT: low | medium | high | max), clamped per model by the adapter.
+  c.setThinking((process.env.KIMO_EFFORT as "low" | "medium" | "high" | "max" | undefined) ?? "low")
   const t0 = Date.now()
   await c.send(PROMPT(file))
   // Wait for the turn (send resolves at turn end; be safe for queued work).

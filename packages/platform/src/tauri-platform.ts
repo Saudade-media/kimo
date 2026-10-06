@@ -25,6 +25,7 @@ import type {
   TypedListen,
   WindowState,
 } from "./tauri"
+import { createFileThumbnails, type ThumbnailsApi } from "./thumbnails"
 import {
   type EditorMenuAction,
   type FileRef,
@@ -293,6 +294,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       }),
   }
 
+  let thumbnails: ThumbnailsApi | null = null
   const platform: KimoPlatform = {
     kind: "desktop",
     os,
@@ -416,6 +418,11 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       },
       scanFolder: (ref) => call("kimo_recents_scan_folder", { path: ref }),
       onChange: (l) => recentsEvents.on(l),
+    },
+    // Board 37 §9: previews in `~/.kimo/thumbs` (allowed by the scope: the Kimo home).
+    get thumbnails() {
+      thumbnails ??= createFileThumbnails(platform.files, `${info.kimoHome}/thumbs`)
+      return thumbnails
     },
     trash: {
       move: (ref) => call("kimo_trash_move", { path: ref }),

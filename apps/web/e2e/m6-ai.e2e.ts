@@ -285,11 +285,17 @@ export const scenarios: Scenario[] = [
         amount: ".ai-amount",
         defaultProvider: '[data-pen="AseJa"]',
         defaultModel: '[data-pen="WmFb2"]',
+        webAccess: "[data-testid=ai-web-access]",
       }
       const m = await measure(page, sel)
       // Board 27 §10 (a) q2UAb puts Default provider / Default model right under the Title Bar:
-      // every board 23 offset below it moves down by their height.
-      const top = (m.content?.y ?? 0) + (m.defaultProvider?.h ?? 0) + (m.defaultModel?.h ?? 0)
+      // every board 23 offset below it moves down by their height, and by board 38's Allow web
+      // access row under them.
+      const top =
+        (m.content?.y ?? 0) +
+        (m.defaultProvider?.h ?? 0) +
+        (m.defaultModel?.h ?? 0) +
+        (m.webAccess?.h ?? 0)
       const c = checker(ctx, "Settings › AI providers (g6AqH)")
       const y = (el: string, b: Box | null | undefined, want: number) =>
         c.check(el, "y (in Content)", b ? b.y - top : null, want, 1.5)

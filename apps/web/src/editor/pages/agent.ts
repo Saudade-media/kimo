@@ -3,7 +3,7 @@
  * page by default, like the editor's own (`withActivePage`). Rewrites `kimo_apply_ops` input
  * before dispatch; an explicit `page` from the model is kept.
  */
-import type { ToolHost, ToolStream } from "@kimo/ai-agent"
+import type { ToolHost, ToolStream, WebNote } from "@kimo/ai-agent"
 import { PartialJsonObject } from "@kimo/mcp-server"
 
 type Wire = Record<string, unknown> & { op?: unknown }
@@ -80,6 +80,7 @@ function scriptOnPage(inner: ToolStream, pageId: string): ToolStream {
 export function pageAwareToolHost(host: ToolHost, page: () => string | null): ToolHost {
   return {
     tools: () => host.tools(),
+    ...(host.note ? { note: (entry: WebNote) => host.note?.(entry) } : {}),
     ...(host.stream
       ? {
           stream(call: { id: string; name: string }): ToolStream | undefined {

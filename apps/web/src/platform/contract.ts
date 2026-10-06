@@ -14,6 +14,7 @@ import {
   type CliDetection as AgentCliDetection,
   type CliProcessHost as AgentCliProcessHost,
   type ConnectionTest as AgentConnectionTest,
+  type EffortLevel as AgentEffortLevel,
   type ErrorCard as AgentErrorCard,
   type ErrorCardAction as AgentErrorCardAction,
   type GenericCliConfig as AgentGenericCliConfig,
@@ -1107,11 +1108,16 @@ export const AGENT_USAGE_DEFAULTS: AgentUsageSettings = {
   defaultModel: null,
 }
 
-/** One row of the Agent tab's model picker (board 22 C): grouped by provider, default first. */
+/**
+ * One provider of the Agent tab's model chooser (board 39): a provider chip and its model list.
+ * CLIs first (Claude Code, Codex, Gemini CLI), then API providers.
+ */
 export interface ModelPickerGroup {
   /** `anthropic`, `openai`, `custom:ollama`, `cli:claude-code`, … */
   provider: string
   label: string
+  /** Board 39 chip text: "Claude Code", "Anthropic", "OpenAI", "Gemini", "Local", "OpenRouter". */
+  chip: string
   family: "api" | "cli"
   isDefault: boolean
   /** False → an "Add a key…" / "Sign in…" row that opens Settings. */
@@ -1120,7 +1126,24 @@ export interface ModelPickerGroup {
   tag?: string
   /** Subscription CLIs show tokens/turns, never dollars. */
   billing: AgentTurnRecord["billing"]
-  models: { id: string; label: string; role?: "agent" | "fast" | "local"; thinking: boolean }[]
+  models: ModelPickerModel[]
+}
+
+/** One model row of the chooser (board 39). */
+export interface ModelPickerModel {
+  id: string
+  /** Short name: "Opus 5.5", "Default (CLI decides)", "llama3.3:70b". */
+  label: string
+  /** The provider's agent / fast model (Settings). */
+  role?: "agent" | "fast" | "local"
+  /** Board 39 meta slot: at most one of Best, Fast, Local. */
+  tag?: "best" | "fast" | "local"
+  /** Board 39 B hover line: "1M context · 128K output · always thinks". */
+  detail?: string
+  /** Effort levels the model supports (empty: no Effort row). */
+  efforts: AgentEffortLevel[]
+  /** Same as `efforts.length > 0`. */
+  thinking: boolean
 }
 
 /** An AgentStep row (running = teal loader). */
@@ -1233,9 +1256,12 @@ export interface AgentComposerView {
   /** Typing while streaming queues follow-ups, sent when the turn ends. */
   queued: string[]
   model: AgentModelSelection | null
+  /** Board 39 Effort: the session's level (sent clamped to what the model supports). */
   thinking: AgentThinkingMode
-  /** Off / Auto / Max shown only for models that support it. */
+  /** The Effort row shows only for models that support a level. */
   thinkingAvailable: boolean
+  /** The levels the current model supports, lowest first (empty: no Effort row). */
+  efforts: AgentEffortLevel[]
   mode: AgentModeConfig
   attachments: AttachmentChipView[]
   /** "/" menu open with the filter text. */

@@ -40,6 +40,7 @@ import { revealLabel } from "../platform/contract"
 import { displayDir, displayPath, modifiedLabel } from "../platform/format"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { diskPath, type HomeSection, homeSectionPath, navigate } from "../router"
+import { copyThumbnail, diskThumbnails, forgetThumbnails } from "../thumbnails/store"
 import { HomeComposer } from "./HomeComposer"
 import {
   copyName,
@@ -186,6 +187,8 @@ export function DesktopHomeView({
   const { manager } = useRuntime()
   const { lists, error: listError, reload } = useDesktopLists(platform)
   const libraries = useLibraries(platform, lists?.all)
+  // Board 37 §9: the grid cards' previews (`~/.kimo/thumbs`).
+  const thumbnails = useMemo(() => diskThumbnails(platform), [platform])
   const now = useNow()
   const [query, setQuery] = useState("")
   const [view, setView] = useState<RecentView>("list")
@@ -303,6 +306,7 @@ export function DesktopHomeView({
     try {
       await release(f.ref)
       await platform.files.rename(f.ref, to)
+      await thumbnails?.move(f.ref, to).catch(() => {})
       if (f.openedAt !== null) {
         await platform.recents.removeFile(f.ref).catch(() => {})
         await platform.recents.noteOpened(to).catch(() => {})
@@ -321,6 +325,7 @@ export function DesktopHomeView({
         copyName(f.name, (n) => taken.has(n)),
       )
       await platform.files.copy(f.ref, to)
+      await copyThumbnail(thumbnails, f.ref, to)
       await platform.recents.noteOpened(to)
     } catch (e) {
       fail(failure(`duplicate ${f.name}`, e))
@@ -581,6 +586,7 @@ export function DesktopHomeView({
           <NoMatch query={query} onClear={() => setQuery("")} />
         ) : libView === "grid" ? (
           <RecentFilesGrid
+            thumbnails={thumbnails}
             files={libShown}
             folders={lists?.folders ?? []}
             now={now}
@@ -668,6 +674,7 @@ export function DesktopHomeView({
           </div>
         ) : (
           <RecentFilesGrid
+            thumbnails={thumbnails}
             files={shown}
             folders={lists?.folders ?? []}
             now={now}
@@ -836,7 +843,8 @@ function EmptyTrashButton({
         void (async () => {
           const trash = platform.trash
           if (!trash) throw new Error("This host has no Trash.")
-          const n = (await trash.list()).length
+          const entries = await trash.list()
+          const n = entries.length
           if (n === 0) throw new Error("It's already empty.")
           onConfirm({
             title: "Empty the Trash?",
@@ -846,6 +854,11 @@ function EmptyTrashButton({
             run: async () => {
               try {
                 await trash.empty()
+                // Board 37 §9: previews of files deleted for good go too.
+                await forgetThumbnails(
+                  diskThumbnails(platform),
+                  entries.map((e) => e.originalRef),
+                )
               } finally {
                 onEmptied()
               }
@@ -900,6 +913,7 @@ function DesktopTrash({
     setBusy(t.id)
     try {
       const ref = await trash.restore(t.id, to)
+      if (ref !== t.originalRef) await copyThumbnail(diskThumbnails(platform), t.originalRef, ref)
       onToast({ tone: "success", kind: "restored", text: `Restored ${basenameOf(ref)}` })
     } catch (e) {
       if (isExists(e))
@@ -966,6 +980,7 @@ function DesktopTrash({
                   failTitle: `Couldn't delete ${t.name}`,
                   run: async () => {
                     await platform.trash?.remove(t.id)
+                    await forgetThumbnails(diskThumbnails(platform), [t.originalRef])
                     await load()
                   },
                 })

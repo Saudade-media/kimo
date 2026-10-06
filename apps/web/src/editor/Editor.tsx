@@ -85,6 +85,7 @@ import "./m3/m3.css"
 import "./m3/m3-panels.css"
 import "./m3/component-dialogs.css"
 import { type Combo, matchCombo, matches, SHORTCUTS, shortcut } from "../shortcuts/shortcuts"
+import { useThumbnailWriter } from "../thumbnails/writer"
 import { ComponentDialogs } from "./m3/ComponentDialogs"
 import { LibraryChanges, LibraryManager } from "./m3/popovers"
 import { VariablesDialog } from "./m3/VariablesDialog"
@@ -217,6 +218,8 @@ function EditorShell({
   // Layout passes go to a bus, not React state: only panels that show a changed box re-render.
   const layout = useMemo(() => createBus<LayoutResult | null>(null), [])
   const canvas = useRef<CanvasHandle | null>(null)
+  // Board 37 §9: Home's preview of this file, refreshed after saves while the editor is idle.
+  useThumbnailWriter(session, canvas, platform)
   /** ⌘K "Ask Kimo" (set once the agent panel exists). */
   const askRef = useRef<(() => void) | null>(null)
   const syncStatus = useSyncStatus(session.provider)

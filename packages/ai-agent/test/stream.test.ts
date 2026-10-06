@@ -81,7 +81,7 @@ function run(provider: ReturnType<typeof scriptedProvider>, tools: ToolHost, sig
     provider,
     model: { provider: "anthropic", model: "claude-opus-5-5" },
     info: opus,
-    thinking: "auto",
+    thinking: "high",
     system: { stable: "Kimo" },
     history: [],
     user: { role: "user", content: [{ type: "text", text: "Design a pricing page" }] },

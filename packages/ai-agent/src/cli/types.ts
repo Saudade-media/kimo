@@ -6,7 +6,7 @@
  * `@kimo/platform`'s `CliAgentsApi` (or by Node in tests and the `kimo` CLI).
  */
 import type { AgentEvent } from "../loop"
-import type { ThinkingMode, Usage } from "../types"
+import type { EffortLevel, ThinkingMode, Usage } from "../types"
 
 export const CLI_AGENT_IDS = ["claude-code", "codex", "gemini-cli"] as const
 export type KnownCliId = (typeof CLI_AGENT_IDS)[number]
@@ -112,6 +112,11 @@ export interface CliTurnInput {
   context?: string
   mcp: KimoMcpLaunch
   workspace: string
+  /**
+   * Board 38: the CLI's own web search and page tools are allowed this turn (Claude Code
+   * WebSearch/WebFetch, Codex live web_search, Gemini CLI google_web_search/web_fetch).
+   */
+  webAccess?: boolean
 }
 
 /** The user message text of a turn: the volatile context first, then the request. */
@@ -141,7 +146,15 @@ export type CliEvent =
    */
   | { type: "tool_input_delta"; callId: string; tool: string; partialJson: string }
   | { type: "step_start"; callId: string; tool: string; input: Record<string, unknown> }
-  | { type: "step_end"; callId: string; tool: string; ok: boolean; output: string }
+  | {
+      type: "step_end"
+      callId: string
+      tool: string
+      ok: boolean
+      output: string
+      /** The call's input when only the end tells it (Codex web_search items). */
+      input?: Record<string, unknown>
+    }
   | { type: "usage"; usage: Usage }
   | {
       type: "result"
@@ -176,6 +189,23 @@ export interface CliProbeSpec {
   authEnv?: string[]
 }
 
+/**
+ * One model a CLI accepts (board 39 chooser). `default` = the CLI's own configured model. Ids
+ * are the exact `--model` values, each verified with a real one-message call.
+ */
+export interface CliModel {
+  id: string
+  label: string
+  /** Effort levels the CLI passes for this model; empty or omitted: no Effort control. */
+  efforts?: readonly EffortLevel[]
+  /** Board 39 tag (at most one): Best or Fast. */
+  tag?: "best" | "fast"
+  /** Board 39 hover detail line ("1M context · 128K output", "Claude Code's own model setting"). */
+  detail?: string
+  /** False: still runs (saved selections), but the chooser does not list it. */
+  listed?: false
+}
+
 export interface CliAgentDef {
   id: string
   label: string
@@ -185,7 +215,7 @@ export interface CliAgentDef {
   searchPaths: string[]
   probe: CliProbeSpec
   /** Model choices for the picker ("default" first). Other ids pass through to the CLI. */
-  models: { id: string; label: string }[]
+  models: CliModel[]
   /** Docs URL the flags were verified against. */
   docs: string
 }

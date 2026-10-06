@@ -43,6 +43,8 @@ export {
   type NudgePreset,
   normalizeSettings,
   nudgeSteps,
+  RECENT_MODELS_MAX,
+  type RecentModel,
   SETTING_CHOICES,
   SETTING_KEYS,
   SETTINGS_DEFAULTS,
@@ -50,9 +52,17 @@ export {
   type Settings,
   type SettingsSchema,
   type UpdateChannel,
+  webAccessAllowed,
 } from "./settings"
 export { createSettingsStore, type SettingsBackend } from "./settings-store"
 export * from "./skills"
 export { createTauriPlatform, type TauriBridge } from "./tauri-platform"
+export {
+  createFileThumbnails,
+  createMemoryThumbnails,
+  type ThumbnailInfo,
+  type ThumbnailsApi,
+  thumbnailKey,
+} from "./thumbnails"
 export * from "./types"
 export { createBatcher, DEFAULT_WATCH_DEBOUNCE_MS, Emitter, sha256Hex } from "./util"

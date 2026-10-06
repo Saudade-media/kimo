@@ -286866,6 +286866,277 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "UJ2qv",
+          "name": "9 · File previews",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "prUUT",
+              "name": "Section Header",
+              "width": "fill_container",
+              "stroke": "$border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 12,
+              "padding": [
+                0,
+                0,
+                12,
+                0
+              ],
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "XRHea",
+                  "name": "Section Title",
+                  "fill": "$text-primary",
+                  "content": "9 · File previews",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "zJ6qM",
+                  "name": "Section Note",
+                  "fill": "$text-tertiary",
+                  "content": "Grid cards show a preview of the file's first frame · list rows keep the icon tile",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-sm",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kFA4c",
+              "name": "Row A",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "iU4sX",
+                  "name": "FileCard · thumbnail states (desktop and web grids)",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "j3tIA",
+                      "name": "Caption",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "FileCard · Thumbnail: preview image (cover, no padding, Mini Frame hidden) · template cover until the first save · placeholder until a preview exists",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FT5BP",
+                      "name": "Stage",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "gap": 20,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "id": "hVoFQ",
+                          "type": "ref",
+                          "ref": "byua1",
+                          "name": "Card · preview",
+                          "descendants": {
+                            "cnqrK": {
+                              "fill": [
+                                "$bg-muted",
+                                {
+                                  "type": "image",
+                                  "enabled": true,
+                                  "url": "packages/templates/files/saas-app/cover.png",
+                                  "mode": "cover"
+                                }
+                              ],
+                              "padding": 0,
+                              "clip": true
+                            },
+                            "fBMds": {
+                              "enabled": false
+                            },
+                            "PJMqM": {
+                              "content": "dashboard.kimo"
+                            },
+                            "upTZI": {
+                              "content": "atlas-app · main · 2 min ago"
+                            }
+                          }
+                        },
+                        {
+                          "id": "gL7Iy",
+                          "type": "ref",
+                          "ref": "byua1",
+                          "name": "Card · template cover",
+                          "descendants": {
+                            "cnqrK": {
+                              "fill": [
+                                "$bg-muted",
+                                {
+                                  "type": "image",
+                                  "enabled": true,
+                                  "url": "packages/templates/files/saas-marketing/cover.png",
+                                  "mode": "cover"
+                                }
+                              ],
+                              "padding": 0,
+                              "clip": true
+                            },
+                            "fBMds": {
+                              "enabled": false
+                            },
+                            "PJMqM": {
+                              "content": "saas-marketing.kimo"
+                            },
+                            "upTZI": {
+                              "content": "Kimo · Just now"
+                            }
+                          }
+                        },
+                        {
+                          "id": "oCGP9",
+                          "type": "ref",
+                          "ref": "byua1",
+                          "name": "Card · no preview yet",
+                          "descendants": {
+                            "PJMqM": {
+                              "content": "wireframes.kimo"
+                            },
+                            "upTZI": {
+                              "content": "loom · main · last week"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sMlgl",
+                  "name": "Rules Column",
+                  "width": 420,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "S67bF",
+                      "name": "Caption",
+                      "fill": "$text-tertiary",
+                      "content": "Preview rules",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aBvg6",
+                      "name": "Rules Table",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LsIGb",
+                          "name": "Rule",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Source: the first page's first top-level frame, else all of its roots",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "xCP0y",
+                          "name": "Rule",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Rendered after a save, when the editor is idle; skipped when the file didn't change",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "n55DA",
+                          "name": "Rule",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Size 520 × 328 (2× of 260 × 164), cover fit",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "zzFMs",
+                          "name": "Rule",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A file made from a template shows its cover until the first save",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Qldh9",
+                          "name": "Rule",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Missing files keep the file-x state; list rows keep the icon tile",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-sm",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },

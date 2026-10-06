@@ -18,6 +18,7 @@ import type { DeepLink } from "./links"
 import type { McpHostApi } from "./mcp"
 import type { SettingKey, Settings, SettingsSchema, UpdateChannel } from "./settings"
 import type { SkillsApi } from "./skills"
+import type { ThumbnailsApi } from "./thumbnails"
 
 export type Unsubscribe = () => void
 
@@ -54,6 +55,11 @@ export interface KimoPlatform {
    * Absent in the browser (the web library soft-deletes with `trashedAt` instead).
    */
   readonly trash?: TrashApi
+  /**
+   * Board 37 §9: Home's file previews, cached in `~/.kimo/thumbs` (desktop over the files API,
+   * memory scripted). Absent in the browser (the web library keeps them in IndexedDB).
+   */
+  readonly thumbnails?: ThumbnailsApi
   readonly leases: LeasesApi
   readonly recovery: RecoveryApi
   readonly git: GitApi

@@ -21,6 +21,7 @@ import {
   toMcpDescriptor,
 } from "@kimo/mcp-server"
 import type { ToolSpec } from "./types"
+import type { WebNote } from "./web"
 
 /** Result of one tool call as the loop sees it. */
 export interface ToolOutcome {
@@ -62,6 +63,11 @@ export interface ToolHost {
    * call that has not started; an in-flight op batch always commits or rolls back atomically.
    */
   call(call: ToolCallRequest, signal: AbortSignal): Promise<ToolOutcome>
+  /**
+   * Optional (board 38): a web search or page read the provider ran itself. The document host
+   * writes it to the Activity log under the agent's origin.
+   */
+  note?(entry: WebNote): void
 }
 
 /** A tool implemented by the agent package itself (not in the M5 registry). */

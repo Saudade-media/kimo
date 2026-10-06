@@ -5,7 +5,7 @@
  * fails loudly ({@link resolveModel}), never falls back.
  */
 import { ProviderError } from "./errors"
-import type { ModelSelection, ThinkingMode } from "./types"
+import { EFFORT_LEVELS, type EffortLevel, type ModelSelection } from "./types"
 
 /** Adapter families. `custom` speaks OpenAI- or Anthropic-compatible wire formats. */
 export const PROVIDER_KINDS = [
@@ -20,7 +20,7 @@ export const PROVIDER_KINDS = [
 ] as const
 export type ProviderKind = (typeof PROVIDER_KINDS)[number]
 
-/** How a model takes the Off / Auto / Max control. `none` hides the control in the picker. */
+/** How a model takes the Effort control (board 39). `none` hides the control in the chooser. */
 export type ThinkingStyle =
   /** Anthropic Opus/Sonnet 5.x, Fable: adaptive thinking, depth via `output_config.effort`. */
   | "effort"
@@ -39,9 +39,16 @@ export interface ModelInfo {
   vision: boolean
   contextWindow: number
   maxOutput: number
-  /** Thinking cannot be disabled (Claude Opus 5.5: Off maps to the lowest effort). */
+  /** Thinking cannot be disabled (Claude Opus 5.5): the detail line says "always thinks". */
   thinkingAlwaysOn?: boolean
+  /** Board 39 tag in the chooser's meta slot (at most one per row). */
+  tag?: ModelTag
+  /** False: an alias of a listed id (resolves, but the chooser does not list it twice). */
+  listed?: false
 }
+
+/** Board 39 row tags: Best, Fast, Local (Local comes from the provider, not the model). */
+export type ModelTag = "best" | "fast" | "local"
 
 /**
  * Known models per adapter family (picker labels and capabilities). Open-ended families
@@ -55,6 +62,7 @@ export const MODEL_CATALOG: Readonly<Record<ProviderKind, readonly ModelInfo[]>>
       label: "Claude Opus 5.5",
       thinking: "effort",
       thinkingAlwaysOn: true,
+      tag: "best",
       vision: true,
       contextWindow: 1_000_000,
       maxOutput: 128_000,
@@ -71,6 +79,7 @@ export const MODEL_CATALOG: Readonly<Record<ProviderKind, readonly ModelInfo[]>>
       id: "claude-haiku-4-5-20251001",
       label: "Claude Haiku 4.5",
       thinking: "budget",
+      tag: "fast",
       vision: true,
       contextWindow: 200_000,
       maxOutput: 64_000,
@@ -79,6 +88,8 @@ export const MODEL_CATALOG: Readonly<Record<ProviderKind, readonly ModelInfo[]>>
       id: "claude-haiku-4-5",
       label: "Claude Haiku 4.5",
       thinking: "budget",
+      tag: "fast",
+      listed: false,
       vision: true,
       contextWindow: 200_000,
       maxOutput: 64_000,
@@ -106,6 +117,7 @@ export const MODEL_CATALOG: Readonly<Record<ProviderKind, readonly ModelInfo[]>>
       id: "gpt-4.1-mini",
       label: "gpt-4.1-mini",
       thinking: "none",
+      tag: "fast",
       vision: true,
       contextWindow: 1_047_576,
       maxOutput: 32_768,
@@ -114,6 +126,7 @@ export const MODEL_CATALOG: Readonly<Record<ProviderKind, readonly ModelInfo[]>>
       id: "o3",
       label: "o3",
       thinking: "reasoning-effort",
+      tag: "best",
       vision: true,
       contextWindow: 200_000,
       maxOutput: 100_000,
@@ -124,6 +137,7 @@ export const MODEL_CATALOG: Readonly<Record<ProviderKind, readonly ModelInfo[]>>
       id: "gemini-2.5-pro",
       label: "Gemini 2.5 Pro",
       thinking: "gemini-budget",
+      tag: "best",
       vision: true,
       contextWindow: 1_048_576,
       maxOutput: 65_536,
@@ -132,6 +146,7 @@ export const MODEL_CATALOG: Readonly<Record<ProviderKind, readonly ModelInfo[]>>
       id: "gemini-2.5-flash",
       label: "Gemini 2.5 Flash",
       thinking: "gemini-budget",
+      tag: "fast",
       vision: true,
       contextWindow: 1_048_576,
       maxOutput: 65_536,
@@ -262,46 +277,141 @@ export function resolveLegacyModelId(
   return resolveModel({ provider: (matches[0] as ConfiguredProvider).id, model: id }, providers)
 }
 
-// --- Thinking mapping -------------------------------------------------------------------------
+// --- Effort mapping (board 39) ---------------------------------------------------------------
+
+/** The Effort levels a thinking style supports, lowest first. Empty: the chooser hides Effort. */
+export function effortLevelsOf(style: ThinkingStyle): readonly EffortLevel[] {
+  switch (style) {
+    case "effort":
+    case "budget":
+    case "gemini-budget":
+      return EFFORT_LEVELS
+    case "reasoning-effort":
+      return ["low", "medium", "high"]
+    case "none":
+      return []
+  }
+}
+
+/** The Effort levels this model supports (board 39 "only the levels the model supports"). */
+export function effortLevels(info: ModelInfo): readonly EffortLevel[] {
+  return effortLevelsOf(info.thinking)
+}
+
+/** The level a new session starts at (board 39 A: High). */
+export const DEFAULT_EFFORT: EffortLevel = "high"
+
+/**
+ * Reads a saved effort: board 39 levels pass through; the old Off / Auto / Max map to Low /
+ * High / Max (Auto was "high" for effort models, the agentic default); anything else → High.
+ */
+export function migrateThinking(v: unknown): EffortLevel {
+  if (typeof v !== "string") return DEFAULT_EFFORT
+  if ((EFFORT_LEVELS as readonly string[]).includes(v)) return v as EffortLevel
+  if (v === "off") return "low"
+  if (v === "max") return "max"
+  return DEFAULT_EFFORT
+}
+
+/**
+ * The level to send for `levels`: the wanted one when supported, else the nearest supported
+ * one (lower first: Max on a Low/Medium/High model is High). Undefined when `levels` is empty.
+ */
+export function clampEffort(
+  levels: readonly EffortLevel[],
+  wanted: unknown,
+): EffortLevel | undefined {
+  if (levels.length === 0) return undefined
+  const want = migrateThinking(wanted)
+  if (levels.includes(want)) return want
+  const at = EFFORT_LEVELS.indexOf(want)
+  let best = levels[0] as EffortLevel
+  let dist = Number.POSITIVE_INFINITY
+  for (const l of levels) {
+    const d = Math.abs(EFFORT_LEVELS.indexOf(l) - at)
+    // Ties go to the lower level.
+    if (d < dist || (d === dist && EFFORT_LEVELS.indexOf(l) < EFFORT_LEVELS.indexOf(best))) {
+      best = l
+      dist = d
+    }
+  }
+  return best
+}
 
 export type AnthropicThinking =
-  | { thinking?: undefined; effort: "low" | "medium" | "high" | "max" }
+  | { thinking?: undefined; effort: EffortLevel }
   | { thinking: { type: "enabled"; budget_tokens: number }; effort?: undefined }
   | { thinking?: undefined; effort?: undefined }
 
+/** Haiku 4.5 budgets per level (Low runs without extended thinking). */
+export const ANTHROPIC_BUDGETS: Readonly<Record<EffortLevel, number>> = {
+  low: 0,
+  medium: 4_096,
+  high: 8_192,
+  max: 16_000,
+}
+
 /**
- * Off / Auto / Max → Anthropic parameters (claude-api skill, 2026-09):
- * - `effort` models (Opus 5.5 cannot disable thinking): Off = effort `low`, Auto = `high`
- *   (agentic design work; Opus 5.5's own default is `medium`, so it is always set explicitly),
- *   Max = `max`. `thinking` is omitted (adaptive).
- * - `budget` models (Haiku 4.5): Off = no thinking, Auto = 4 096, Max = 16 000 budget tokens.
+ * Effort → Anthropic parameters (claude-api skill, 2026-09):
+ * - `effort` models (Opus/Sonnet 5.5, Fable 5.1): `output_config.effort` = the level as is
+ *   (always set: Opus 5.5's own default is `medium`). `thinking` is adaptive.
+ * - `budget` models (Haiku 4.5): Low = no thinking, Medium 4 096, High 8 192, Max 16 000
+ *   budget tokens.
  */
-export function anthropicThinking(info: ModelInfo, mode: ThinkingMode): AnthropicThinking {
-  if (info.thinking === "effort")
-    return { effort: mode === "off" ? "low" : mode === "max" ? "max" : "high" }
+export function anthropicThinking(info: ModelInfo, level: unknown): AnthropicThinking {
+  const l = clampEffort(effortLevels(info), level)
+  if (!l) return {}
+  if (info.thinking === "effort") return { effort: l }
   if (info.thinking === "budget") {
-    if (mode === "off") return {}
-    return { thinking: { type: "enabled", budget_tokens: mode === "max" ? 16_000 : 4_096 } }
+    const budget = ANTHROPIC_BUDGETS[l]
+    return budget > 0 ? { thinking: { type: "enabled", budget_tokens: budget } } : {}
   }
   return {}
 }
 
-/** OpenAI `reasoning_effort` for reasoning models; undefined otherwise. */
+/** OpenAI `reasoning_effort` for reasoning models (Low / Medium / High); undefined otherwise. */
 export function openaiReasoningEffort(
   info: ModelInfo,
-  mode: ThinkingMode,
+  level: unknown,
 ): "low" | "medium" | "high" | undefined {
   if (info.thinking !== "reasoning-effort") return undefined
-  return mode === "off" ? "low" : mode === "max" ? "high" : "medium"
+  return clampEffort(effortLevels(info), level) as "low" | "medium" | "high" | undefined
 }
 
-/** Gemini `thinkingBudget`: 0 off, -1 dynamic, 24 576 max. */
-export function geminiThinkingBudget(info: ModelInfo, mode: ThinkingMode): number | undefined {
+/** Gemini 2.5 `thinkingBudget` per level (Pro cannot turn thinking off, so Low is 1 024). */
+export const GEMINI_BUDGETS: Readonly<Record<EffortLevel, number>> = {
+  low: 1_024,
+  medium: 8_192,
+  high: 16_384,
+  max: 24_576,
+}
+
+/** Gemini `thinkingBudget` for the level; undefined for models without it. */
+export function geminiThinkingBudget(info: ModelInfo, level: unknown): number | undefined {
   if (info.thinking !== "gemini-budget") return undefined
-  return mode === "off" ? 0 : mode === "max" ? 24_576 : -1
+  const l = clampEffort(effortLevels(info), level)
+  return l ? GEMINI_BUDGETS[l] : undefined
 }
 
-/** Whether the picker shows Off / Auto / Max for this model (board 22 "shown only for models that support it"). */
+/** Whether the chooser shows Effort for this model (board 39 "hidden when it supports none"). */
 export function supportsThinkingControl(info: ModelInfo): boolean {
-  return info.thinking !== "none"
+  return effortLevels(info).length > 0
+}
+
+/** "1M", "200K", "128K", "65K" (board 39 detail line). */
+export function compactTokens(n: number): string {
+  if (n >= 1_000_000) return `${Math.floor(n / 100_000) / 10}M`
+  return `${Math.floor(n / 1000)}K`
+}
+
+/** Board 39 B detail line: "1M context · 128K output · always thinks". */
+export function modelDetail(
+  info: Pick<ModelInfo, "contextWindow" | "maxOutput" | "thinkingAlwaysOn">,
+): string {
+  const parts = [
+    `${compactTokens(info.contextWindow)} context`,
+    `${compactTokens(info.maxOutput)} output`,
+  ]
+  if (info.thinkingAlwaysOn) parts.push("always thinks")
+  return parts.join(" · ")
 }

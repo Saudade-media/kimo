@@ -17,7 +17,8 @@
  * - Gemini CLI: `GEMINI_SYSTEM_MD=<workspace>/.gemini/system.md` replaces the built-in system
  *   prompt (docs/cli/system-prompt.md; not installed here, so unverified).
  */
-import type { Usage } from "../types"
+import { clampEffort } from "../models"
+import { EFFORT_LEVELS, type EffortLevel, type Usage } from "../types"
 import {
   type CliAdapter,
   type CliAgentDef,
@@ -66,6 +67,24 @@ const textOf = (content: unknown): string => {
   return ""
 }
 
+/**
+ * The Effort levels a CLI passes for `model` (board 39). A model id the CLI does not list (one
+ * the user typed, or a newer id) gets the levels of its "default" row.
+ */
+export function cliModelEfforts(def: CliAgentDef, model: string): readonly EffortLevel[] {
+  const m = def.models.find((x) => x.id === model) ?? def.models.find((x) => x.id === "default")
+  return m?.efforts ?? []
+}
+
+/** The effort flag value for this turn, or undefined when the model takes none. */
+export function cliEffort(
+  def: CliAgentDef,
+  model: string,
+  wanted: unknown,
+): EffortLevel | undefined {
+  return clampEffort(cliModelEfforts(def, model), wanted)
+}
+
 // --- Claude Code ---------------------------------------------------------------------------------
 
 export const CLAUDE_CODE: CliAgentDef = {
@@ -91,11 +110,45 @@ export const CLAUDE_CODE: CliAgentDef = {
       }
     },
   },
+  // Board 39: full model names, each run with a one-message `claude -p --model <id>` call on
+  // 2.1.291 (2026-10-06). `--effort` takes low, medium, high, xhigh, max; Haiku 4.5 has no effort
+  // parameter, so it gets no Effort control.
   models: [
-    { id: "default", label: "Claude Code default" },
-    { id: "opus", label: "Opus (latest)" },
-    { id: "sonnet", label: "Sonnet (latest)" },
-    { id: "haiku", label: "Haiku (latest)" },
+    {
+      id: "default",
+      label: "Default (CLI decides)",
+      efforts: EFFORT_LEVELS,
+      detail: "Claude Code's own model setting",
+    },
+    {
+      id: "claude-opus-5-5",
+      label: "Opus 5.5",
+      tag: "best",
+      efforts: EFFORT_LEVELS,
+      detail: "1M context · 128K output · always thinks",
+    },
+    {
+      id: "claude-sonnet-5-5",
+      label: "Sonnet 5.5",
+      efforts: EFFORT_LEVELS,
+      detail: "1M context · 128K output",
+    },
+    {
+      id: "claude-haiku-4-5-20251001",
+      label: "Haiku 4.5",
+      tag: "fast",
+      detail: "200K context · 64K output",
+    },
+    {
+      id: "claude-fable-5-1",
+      label: "Fable 5.1",
+      efforts: EFFORT_LEVELS,
+      detail: "1M context · 128K output · always thinks",
+    },
+    // Saved before board 39: the "(latest)" aliases still run, but are not listed.
+    { id: "opus", label: "Opus (latest)", efforts: EFFORT_LEVELS, listed: false },
+    { id: "sonnet", label: "Sonnet (latest)", efforts: EFFORT_LEVELS, listed: false },
+    { id: "haiku", label: "Haiku (latest)", listed: false },
   ],
   docs: "https://code.claude.com/docs/en/cli-reference",
 }
@@ -120,10 +173,11 @@ export function claudeInvocation(i: CliTurnInput) {
     "--mcp-config",
     JSON.stringify(mcp),
     "--strict-mcp-config",
+    // Board 38: only the web tools join the Kimo MCP server; file, shell and edit tools stay off.
     "--tools",
-    "",
+    i.webAccess ? CLAUDE_WEB_TOOLS.join(",") : "",
     "--allowedTools",
-    "mcp__kimo",
+    i.webAccess ? ["mcp__kimo", ...CLAUDE_WEB_TOOLS].join(",") : "mcp__kimo",
     "--permission-mode",
     "dontAsk",
     "--disable-slash-commands",
@@ -131,7 +185,8 @@ export function claudeInvocation(i: CliTurnInput) {
     i.systemPrompt,
   ]
   if (i.model !== "default") args.push("--model", i.model)
-  if (i.thinking !== "auto") args.push("--effort", i.thinking === "off" ? "low" : "max")
+  const effort = cliEffort(CLAUDE_CODE, i.model, i.thinking)
+  if (effort) args.push("--effort", effort)
   if (i.cliSessionId) args.push("--resume", i.cliSessionId)
   const content: unknown[] = [
     ...(i.images ?? []).map((im) => ({
@@ -143,6 +198,9 @@ export function claudeInvocation(i: CliTurnInput) {
   const stdin = `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`
   return { args, stdin, env: CLAUDE_ENV }
 }
+
+/** Claude Code's built-in web tools (board 38), checked against 2.1.290. */
+export const CLAUDE_WEB_TOOLS = ["WebSearch", "WebFetch"] as const
 
 /** The user's CLAUDE.md files and auto-memory are coding notes, not design context. */
 export const CLAUDE_ENV: Readonly<Record<string, string>> = {
@@ -294,7 +352,30 @@ export const CODEX: CliAgentDef = {
       return { signedIn: /logged in/i.test(text) ? true : null, billing: null }
     },
   },
-  models: [{ id: "default", label: "Codex default" }],
+  // Board 39: ids from Codex's model list, each run with a one-message `codex exec -m <id>` call
+  // on codex-cli 0.146.0 (2026-10-06); gpt-6-luna and gpt-5.6-sol were refused for a ChatGPT
+  // account, so they are not listed. `model_reasoning_effort` low, medium, high and max all ran.
+  models: [
+    {
+      id: "default",
+      label: "Default (CLI decides)",
+      efforts: EFFORT_LEVELS,
+      detail: "Codex's own model setting",
+    },
+    {
+      id: "gpt-5.6-terra",
+      label: "GPT-5.6 Terra",
+      efforts: EFFORT_LEVELS,
+      detail: "272K context · balanced",
+    },
+    {
+      id: "gpt-5.6-luna",
+      label: "GPT-5.6 Luna",
+      tag: "fast",
+      efforts: EFFORT_LEVELS,
+      detail: "272K context · fast and efficient",
+    },
+  ],
   docs: "https://developers.openai.com/codex/cli/reference",
 }
 
@@ -328,12 +409,14 @@ export function codexInvocation(i: CliTurnInput) {
     'mcp_servers.kimo.default_tools_approval_mode="approve"',
   )
   if (i.model !== "default") args.push("--model", i.model)
-  args.push(
-    "-c",
-    `model_reasoning_effort=${toml(i.thinking === "off" ? "low" : i.thinking === "max" ? "high" : "medium")}`,
-  )
+  const effort = cliEffort(CODEX, i.model, i.thinking)
+  if (effort) args.push("-c", `model_reasoning_effort=${toml(effort)}`)
   // Kimo's prompt replaces Codex's base instructions (written by the engine before spawning).
   args.push("-c", `model_instructions_file=${toml(`${i.workspace}/${CODEX_INSTRUCTIONS}`)}`)
+  // Board 38: Codex defaults to cached web search, so "off" must be explicit. ChatGPT apps
+  // (connectors, incl. a web_run search tool) stay off in every turn: measured on codex-cli
+  // 0.146, with apps on a "web off" turn still read news.ycombinator.com through codex_apps.
+  args.push("-c", `web_search=${toml(i.webAccess ? "live" : "disabled")}`, "--disable", "apps")
   args.push("-")
   return {
     args,
@@ -364,6 +447,8 @@ export function codexParser(): CliStreamParser {
                 input: argsOf(item.arguments),
               },
             ]
+          if (item?.type === "web_search")
+            return [{ type: "step_start", callId: String(item.id), tool: "web_search", input: {} }]
           if (item?.type === "command_execution")
             return [
               {
@@ -389,6 +474,22 @@ export function codexParser(): CliStreamParser {
                 tool: kimoToolName(String(item.tool ?? "")),
                 ok: !err && item.status !== "failed",
                 output: err?.message ?? textOf(result?.content),
+              },
+            ]
+          }
+          if (item?.type === "web_search") {
+            // Board 38: a search (action.type "search") or a page it opened (the URL in query).
+            const action = (item.action ?? {}) as { type?: string; query?: string; url?: string }
+            const q = String(action.query ?? item.query ?? "")
+            const page = action.type !== "search" && /^https?:\/\//.test(action.url ?? q)
+            return [
+              {
+                type: "step_end",
+                callId: String(item.id),
+                tool: page ? "web_fetch" : "web_search",
+                ok: item.status !== "failed",
+                output: "",
+                input: page ? { url: action.url ?? q } : { query: q },
               },
             ]
           }
@@ -454,10 +555,22 @@ export const GEMINI_CLI: CliAgentDef = {
     ],
     authEnv: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
   },
+  // Gemini CLI has no effort flag (board 39 F: no Effort row). Not installed here: the ids follow
+  // its docs and are unverified (ADR 0014 open questions).
   models: [
-    { id: "default", label: "Gemini CLI default" },
-    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+    { id: "default", label: "Default (CLI decides)", detail: "Gemini CLI's own model setting" },
+    {
+      id: "gemini-2.5-pro",
+      label: "Gemini 2.5 Pro",
+      tag: "best",
+      detail: "1M context · 65K output",
+    },
+    {
+      id: "gemini-2.5-flash",
+      label: "Gemini 2.5 Flash",
+      tag: "fast",
+      detail: "1M context · 65K output",
+    },
   ],
   docs: "https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/headless.md",
 }
@@ -470,7 +583,15 @@ export const GEMINI_CLI: CliAgentDef = {
 export function geminiInvocation(i: CliTurnInput) {
   const settings = {
     mcpServers: { kimo: { command: i.mcp.command, args: i.mcp.args, trust: true } },
-    tools: { exclude: ["write_file", "replace", "run_shell_command", "web_fetch"] },
+    // Board 38: the web tools are allowed only while web access is on.
+    tools: {
+      exclude: [
+        "write_file",
+        "replace",
+        "run_shell_command",
+        ...(i.webAccess ? [] : ["web_fetch", "google_web_search"]),
+      ],
+    },
   }
   const args = ["--output-format", "stream-json", "--allowed-mcp-server-names", "kimo"]
   if (i.model !== "default") args.push("--model", i.model)
@@ -590,7 +711,7 @@ export function genericAdapter(c: GenericCliConfig): CliAdapter {
       versionArgs: c.versionArgs ?? ["--version"],
       parseVersion: (s) => /(\d+\.\d+\.\d+)/.exec(s)?.[1],
     },
-    models: [{ id: "default", label: `${c.label} default` }],
+    models: [{ id: "default", label: "Default (CLI decides)" }],
     docs: "",
   }
   return {

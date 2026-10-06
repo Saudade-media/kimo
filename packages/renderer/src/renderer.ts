@@ -53,6 +53,7 @@ import {
   type RendererInitOptions,
   type RenderScene,
   type RenderStats,
+  type ThumbnailExportOptions,
   type Viewport,
 } from "./types"
 
@@ -1781,32 +1782,74 @@ export class CanvasKitRenderer implements Renderer {
   }
 
   async exportRaster(nodeId: string, options: RasterExportOptions = {}): Promise<Uint8Array> {
+    const scale = options.scale ?? 1
+    return this.encodeRaster([nodeId], options.background, (box) => ({
+      w: Math.max(1, Math.ceil(box.w * scale)),
+      h: Math.max(1, Math.ceil(box.h * scale)),
+      scale,
+      dx: 0,
+      dy: 0,
+    }))
+  }
+
+  async exportThumbnail(
+    nodeIds: readonly string[],
+    options: ThumbnailExportOptions,
+  ): Promise<Uint8Array> {
+    const w = Math.max(1, Math.round(options.width))
+    const h = Math.max(1, Math.round(options.height))
+    return this.encodeRaster(nodeIds, options.background, (box) => {
+      // object-fit: cover, centered.
+      const scale = Math.max(w / Math.max(box.w, 1e-6), h / Math.max(box.h, 1e-6))
+      return { w, h, scale, dx: (w - box.w * scale) / 2, dy: (h - box.h * scale) / 2 }
+    })
+  }
+
+  /**
+   * Draws `nodeIds` (their world boxes' union) onto a CPU raster surface sized by `fit` and
+   * encodes it as PNG. Waits for the nodes' fonts, images and icons first.
+   */
+  private async encodeRaster(
+    nodeIds: readonly string[],
+    background: string | undefined,
+    fit: (box: Rect) => { w: number; h: number; scale: number; dx: number; dy: number },
+  ): Promise<Uint8Array> {
     const { ck, painter, images } = this.need()
     const ctx0 = this.context()
-    const l = ctx0?.layout.nodes.get(nodeId)
-    if (!ctx0 || !l) throw new RendererError("NODE_NOT_FOUND", `node ${nodeId} is not laid out`)
-    await this.ensureFonts(nodeId)
-    await Promise.all([
-      ...[...painter.imagesOf(ctx0, nodeId)].map((src) => images.load(src)),
-      this.iconRegistry?.ensure(painter.iconsOf(ctx0, nodeId)),
-    ])
+    const ids = nodeIds.filter((id) => ctx0?.layout.nodes.get(id))
+    if (!ctx0 || !ids.length || ids.length !== nodeIds.length)
+      throw new RendererError(
+        "NODE_NOT_FOUND",
+        `node ${nodeIds.find((id) => !ctx0?.layout.nodes.get(id)) ?? nodeIds[0]} is not laid out`,
+      )
+    for (const id of ids) await this.ensureFonts(id)
+    await Promise.all(
+      ids.flatMap((id) => [
+        ...[...painter.imagesOf(ctx0, id)].map((src) => images.load(src)),
+        this.iconRegistry?.ensure(painter.iconsOf(ctx0, id)),
+      ]),
+    )
     const ctx = this.context() ?? ctx0
-    const box = ctx.layout.nodes.get(nodeId)?.world ?? l.world
-    const scale = options.scale ?? 1
-    const w = Math.max(1, Math.ceil(box.w * scale))
-    const h = Math.max(1, Math.ceil(box.h * scale))
-    const surface = ck.MakeSurface(w, h)
+    let box: Rect | null = null
+    for (const id of ids) {
+      const b = (ctx.layout.nodes.get(id) ?? ctx0.layout.nodes.get(id))?.world
+      if (b) box = union(box, b)
+    }
+    if (!box) throw new RendererError("NODE_NOT_FOUND", `node ${ids[0]} is not laid out`)
+    const f = fit(box)
+    const surface = ck.MakeSurface(f.w, f.h)
     if (!surface)
-      throw new RendererError("NOT_IMPLEMENTED", `cannot allocate a ${w}×${h} raster surface`)
+      throw new RendererError("NOT_IMPLEMENTED", `cannot allocate a ${f.w}×${f.h} raster surface`)
     try {
       const c = surface.getCanvas()
-      const bg = options.background ? parseColor(options.background) : null
+      const bg = background ? parseColor(background) : null
       c.clear(bg ? ck.Color4f(bg[0], bg[1], bg[2], bg[3]) : ck.TRANSPARENT)
-      c.scale(scale, scale)
+      c.translate(f.dx, f.dy)
+      c.scale(f.scale, f.scale)
       c.translate(-box.x, -box.y)
       painter.skipAgentNodes = true
       try {
-        painter.drawNode(c, ctx, nodeId, { nodes: 0, draws: 0 })
+        for (const id of ids) painter.drawNode(c, ctx, id, { nodes: 0, draws: 0 })
       } finally {
         painter.skipAgentNodes = false
       }

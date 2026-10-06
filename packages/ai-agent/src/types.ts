@@ -10,6 +10,8 @@
  * - Tool calls carry the M5 registry tool name verbatim (`kimo_apply_ops`, …).
  */
 
+import type { WebTool } from "./web"
+
 /** Typed model selection (ADR 0006 §4): never a delimited string. */
 export interface ModelSelection {
   /** Configured provider id: `anthropic`, `openai`, `gemini`, `openrouter`, `custom:<slug>`, … */
@@ -17,8 +19,23 @@ export interface ModelSelection {
   model: string
 }
 
-/** Thinking control per session (board 22 model picker): Off / Auto / Max. */
-export type ThinkingMode = "off" | "auto" | "max"
+/**
+ * Board 39 Effort: how hard the model thinks this turn. Each model lists the levels it supports
+ * (`effortLevels`); a model with none hides the control.
+ */
+export type EffortLevel = "low" | "medium" | "high" | "max"
+
+/** Every effort level, lowest first. */
+export const EFFORT_LEVELS: readonly EffortLevel[] = ["low", "medium", "high", "max"]
+
+/**
+ * The per-session effort (`thinking` in sessions, turns and requests). Before board 39 it was
+ * Off / Auto / Max; `migrateThinking` reads those saved values.
+ */
+export type ThinkingMode = EffortLevel
+
+/** Saved values from before board 39 (Off / Auto / Max), still read from old sessions. */
+export type LegacyThinkingMode = "off" | "auto" | "max"
 
 // --- Content -----------------------------------------------------------------------------------
 
@@ -107,6 +124,8 @@ export interface Usage {
   cacheReadTokens: number
   /** Prompt-cache writes (Anthropic `cache_creation_input_tokens`). */
   cacheWriteTokens: number
+  /** Server-side web searches billed per search (Anthropic `server_tool_use.web_search_requests`). */
+  webSearches?: number
 }
 
 export const ZERO_USAGE: Usage = {
@@ -117,11 +136,13 @@ export const ZERO_USAGE: Usage = {
 }
 
 export function addUsage(a: Usage, b: Usage): Usage {
+  const searches = (a.webSearches ?? 0) + (b.webSearches ?? 0)
   return {
     inputTokens: a.inputTokens + b.inputTokens,
     outputTokens: a.outputTokens + b.outputTokens,
     cacheReadTokens: a.cacheReadTokens + b.cacheReadTokens,
     cacheWriteTokens: a.cacheWriteTokens + b.cacheWriteTokens,
+    ...(searches ? { webSearches: searches } : {}),
   }
 }
 
@@ -142,6 +163,11 @@ export interface ProviderRequest {
   responseSchema?: { name: string; schema: Record<string, unknown> }
   /** Cancels the request and the stream (Stop / Esc). */
   signal?: AbortSignal
+  /**
+   * Board 38: offer the provider's own web tools (server-side search / page fetch) when it has
+   * them. Their calls come back as `web_start` / `web_end` events, never as tool calls.
+   */
+  webAccess?: boolean
 }
 
 export type StopReason =
@@ -158,6 +184,17 @@ export type StreamEvent =
   | { type: "thinking_delta"; text: string }
   | { type: "tool_call_start"; id: string; name: string }
   | { type: "tool_call_delta"; id: string; partialJson: string }
+  /** A server-side web call (board 38) started, with its input. */
+  | { type: "web_start"; id: string; tool: WebTool; input: Record<string, unknown> }
+  /** Its result arrived (the provider ran it; nothing for the loop to run). */
+  | {
+      type: "web_end"
+      id: string
+      tool: WebTool
+      ok: boolean
+      /** The call's input when it is only known at the end (OpenAI web_search_call actions). */
+      input?: Record<string, unknown>
+    }
   /** Live token counts while streaming (board 22 "Streaming" meta). */
   | { type: "usage"; usage: Usage }
   | {

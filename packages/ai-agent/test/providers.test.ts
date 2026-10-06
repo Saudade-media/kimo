@@ -28,7 +28,7 @@ const req = (extra: Partial<ProviderRequest> = {}): ProviderRequest => ({
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
     },
   ],
-  thinking: "auto",
+  thinking: "high",
   ...extra,
 })
 
@@ -83,7 +83,7 @@ describe("Anthropic adapter", () => {
     const opus = MODEL_CATALOG.anthropic[0] as (typeof MODEL_CATALOG.anthropic)[number]
     const haiku = MODEL_CATALOG.anthropic.find((m) => m.id === "claude-haiku-4-5-20251001")
     if (!haiku) throw new Error()
-    const off = buildAnthropicParams(req({ thinking: "off" }), opus, "a", {
+    const off = buildAnthropicParams(req({ thinking: "low" }), opus, "a", {
       fallback: false,
     }) as unknown as Record<string, unknown>
     expect(off.output_config).toEqual({ effort: "low" })
@@ -96,7 +96,7 @@ describe("Anthropic adapter", () => {
     }) as unknown as Record<string, unknown>
     expect(h.thinking).toEqual({ type: "enabled", budget_tokens: 16000 })
     expect(h.max_tokens as number).toBeGreaterThan(16000)
-    const hoff = buildAnthropicParams(req({ model: haiku.id, thinking: "off" }), haiku, "a", {
+    const hoff = buildAnthropicParams(req({ model: haiku.id, thinking: "low" }), haiku, "a", {
       fallback: false,
     }) as unknown as Record<string, unknown>
     expect(hoff.thinking).toBeUndefined()
@@ -360,7 +360,7 @@ describe("Gemini adapter", () => {
       },
       runtime(fetch),
     )
-    const r = await complete(p, req({ model: "gemini-2.5-pro", thinking: "off" }))
+    const r = await complete(p, req({ model: "gemini-2.5-pro", thinking: "low" }))
     expect(r.text).toBe("Sure")
     expect(r.stopReason).toBe("tool_use")
     expect(r.usage.inputTokens).toBe(40)
@@ -371,7 +371,7 @@ describe("Gemini adapter", () => {
       generationConfig: { thinkingConfig: { thinkingBudget: number } }
     }
     expect(body.tools[0]?.functionDeclarations[0]?.parametersJsonSchema).toBeDefined()
-    expect(body.generationConfig.thinkingConfig.thinkingBudget).toBe(0)
+    expect(body.generationConfig.thinkingConfig.thinkingBudget).toBe(1024)
     // Native parts (with thoughtSignature) are kept for replay.
     expect(JSON.stringify(r.message.native?.content)).toContain("s1")
   })

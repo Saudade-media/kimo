@@ -742,6 +742,23 @@ export async function startDocumentHostService(
     return hit?.conn ?? null
   }
 
+  /** Board 38: one `web` Activity row for a connection, on the file `ref` names. */
+  const recordWeb = (conn: McpConnection, ref: string, raw: unknown) => {
+    const e = (raw ?? {}) as Record<string, unknown>
+    const tool = e.tool === "web_fetch" ? "web_fetch" : "web_search"
+    const docId = ref ? host.docIdForPath(ref) : undefined
+    conn.context().recordActivity({
+      time: Date.now(),
+      origin: conn.origin,
+      actor: conn.identity.label,
+      kind: "web",
+      tool: e.ok === false ? `${tool} · failed` : tool,
+      summary: String(e.summary ?? "").slice(0, 200),
+      detail: String(e.detail ?? "").slice(0, 500),
+      ...(docId ? { docId } : {}),
+    } as Omit<ActivityEntry, "seq">)
+  }
+
   // --- Window RPC -------------------------------------------------------------------------------
   type Rpc = { from: string; id: string; method: string; args: Record<string, unknown> }
   const rpc: Record<string, (args: Record<string, unknown>, from: string) => Promise<unknown>> = {
@@ -865,6 +882,21 @@ export async function startDocumentHostService(
         String(args.reason ?? "Stopped."),
       )
       return { ok: true }
+    },
+    /**
+     * Board 38: a web search or page read the in-app agent's provider ran. One Activity row
+     * under the agent's origin (no document change, no Undo).
+     */
+    async agentWeb(args, from) {
+      const conn = agentConnection(args.spec as AgentCallSpec, from)
+      recordWeb(conn, String(args.ref ?? ""), args.entry)
+      return { ok: true }
+    },
+    /** Board 38: the same for a local CLI, under its MCP connection (matched by workspace). */
+    async cliWeb(args) {
+      const conn = cliConnection(String(args.workspace ?? ""))
+      if (conn) recordWeb(conn, String(args.ref ?? ""), args.entry)
+      return { ok: !!conn }
     },
     /** The window's answer to a forwarded approval (Stop answers deny). */
     async agentApproval(args, from) {

@@ -55,6 +55,11 @@ export { AttachmentChip, type AttachmentChipProps } from "./attachment-chip/Atta
 export { AttachmentThumb, type AttachmentThumbProps } from "./attachment-thumb/AttachmentThumb"
 export { CompactButton, type CompactButtonProps } from "./compact-button/CompactButton"
 export { ComposerAgent, type ComposerAgentProps } from "./composer-agent/ComposerAgent"
+export {
+  type WebAccessBlock,
+  WebAccessButton,
+  type WebAccessButtonProps,
+} from "./composer-agent/WebAccessButton"
 export { MessageMeta, type MessageMetaProps } from "./message-meta/MessageMeta"
 export { type AgentModeId, MODE_ICONS, ModeChip, type ModeChipProps } from "./mode-chip/ModeChip"
 export { ModeOption, type ModeOptionProps } from "./mode-option/ModeOption"

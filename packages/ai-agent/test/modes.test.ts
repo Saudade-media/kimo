@@ -156,7 +156,7 @@ describe("modes", () => {
       scopeRoots: [`F${i}`],
       policy: childPolicy([`F${i}`]),
       model: { provider: "anthropic", model: "claude-opus-5-5" },
-      thinking: "auto",
+      thinking: "high",
       brief: "b",
     })
     let running = 0
@@ -199,7 +199,7 @@ describe("modes", () => {
       session: "s1",
       leadScope: [],
       defaultModel: { provider: "anthropic", model: "claude-opus-5-5" },
-      thinking: "auto",
+      thinking: "high",
       validateFrame: (_d, f) => (f.startsWith("F") ? null : `${f} is not a frame`),
       nextIndex: () => ++n,
       runner: async (s) => {

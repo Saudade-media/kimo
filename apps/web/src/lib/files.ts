@@ -14,6 +14,7 @@ import {
 } from "@kimo/editor-state"
 import { readFontInfo } from "@kimo/renderer"
 import { IndexedDbProvider } from "@kimo/sync/indexeddb"
+import { copyThumbnail, libraryThumbnails } from "../thumbnails/store"
 import { assetRefs } from "./asset-manifest"
 import { type AssetStore, createAssetStore, deleteAssetDb, type ManifestEntry } from "./assets"
 import { buildSampleDocument, newDocument } from "./sample"
@@ -135,6 +136,8 @@ export async function duplicateFile(id: string, name: string): Promise<string> {
   } finally {
     store.destroy()
   }
+  // Board 37 §9: the copy starts with the original's preview (same content).
+  await copyThumbnail(libraryThumbnails, id, next)
   const from = createAssetStore(id)
   const to = createAssetStore(next)
   try {
@@ -177,6 +180,8 @@ export async function deleteFile(id: string): Promise<void> {
     req.onsuccess = req.onerror = req.onblocked = () => resolve()
   })
   await deleteAssetDb(id)
+  // Board 37 §9: its preview goes too.
+  await libraryThumbnails.remove(id).catch(() => {})
 }
 
 /** Root-frame count of a store. */

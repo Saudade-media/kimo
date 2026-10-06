@@ -4,6 +4,7 @@
  * $0.38", relative times "now / 1h / yesterday / Oct 1".
  */
 import {
+  BUILTIN_CLI_ADAPTERS,
   type CliDetection,
   cliIdOf,
   formatTokens,
@@ -76,12 +77,17 @@ export function headerCostLabel(
   return `${formatUsd(h.costUsd ?? null)} · ${k}`
 }
 
-/** "Opus 5.5", "Haiku 4.5", "gpt-4.1", "Claude Code". */
+/**
+ * Board 39 G: the model name only. "Opus 5.5", "Haiku 4.5", "gpt-4.1", "GPT-5.6 Luna"; a CLI's
+ * Default (CLI decides) shows the CLI's name ("Claude Code"), since the CLI picks the model.
+ */
 export function modelLabel(sel: ModelSelection | null, clis: readonly CliDetection[]): string {
   if (!sel) return "No model"
   if (isCliProvider(sel.provider)) {
     const d = clis.find((c) => c.id === cliIdOf(sel.provider))
-    return sel.model === "default" ? (d?.label ?? cliIdOf(sel.provider)) : sel.model
+    if (sel.model === "default") return d?.label ?? cliIdOf(sel.provider)
+    const def = BUILTIN_CLI_ADAPTERS.find((a) => a.def.id === cliIdOf(sel.provider))?.def
+    return def?.models.find((m) => m.id === sel.model)?.label ?? sel.model
   }
   for (const list of Object.values(MODEL_CATALOG)) {
     const m = list.find((x) => x.id === sel.model)

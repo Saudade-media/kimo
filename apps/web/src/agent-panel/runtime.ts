@@ -25,6 +25,7 @@ import {
   type SessionStore,
   type SkillSource,
   type ToolStream,
+  type WebNote,
 } from "@kimo/ai-agent"
 import { createTauriCliHost, type KimoPlatform } from "@kimo/platform"
 import type { AiSettingsController } from "../ai-settings/controller"
@@ -69,6 +70,16 @@ export interface AgentPanelRuntime {
    * Absent: CLI edits land when their call arrives.
    */
   cliToolStream?(call: { id: string; name: string; workspace: string }): ToolStream | undefined
+  /**
+   * Board 38: Settings › AI providers › Allow web access, and whether No third-party fetch
+   * blocks it. Absent: on, not blocked (the setting's default).
+   */
+  webAccess?(): { enabled: boolean; blocked: boolean }
+  /** Board 38: a local CLI's web search / page read for the Activity log (document host). */
+  cliWebNote?(entry: WebNote & { workspace: string }): void
+  /** Board 39 Recent: the saved last two provider + model picks (settings `ai.recentModels`). */
+  recentModels?(): ModelSelection[]
+  saveRecentModels?(list: ModelSelection[]): void | Promise<void>
   /** The document side (in-window tools or the document host's). */
   tools: ToolHostFactory
   sessions: SessionStore
@@ -121,11 +132,15 @@ export function createAppAgentRuntime(o: {
   cliHost?: CliProcessHost | null
   mcpLaunch?: (cli: string) => KimoMcpLaunch
   cliToolStream?: AgentPanelRuntime["cliToolStream"]
+  cliWebNote?: AgentPanelRuntime["cliWebNote"]
+  /** App settings (Allow web access, No third-party fetch). */
+  settings?: KimoPlatform["settings"]
   skills?: SkillSource
   openSettings?: AgentPanelRuntime["openSettings"]
   openLink?: AgentPanelRuntime["openLink"]
 }): AgentPanelRuntime {
   const ai = o.ai
+  const settings = o.settings
   const online = () => (typeof navigator === "object" ? navigator.onLine !== false : true)
   return {
     platform: ai.state.platform,
@@ -145,13 +160,42 @@ export function createAppAgentRuntime(o: {
     cliHost: o.cliHost ?? null,
     ...(o.mcpLaunch ? { mcpLaunch: o.mcpLaunch } : {}),
     ...(o.cliToolStream ? { cliToolStream: o.cliToolStream } : {}),
+    ...(o.cliWebNote ? { cliWebNote: o.cliWebNote } : {}),
+    ...(settings
+      ? {
+          webAccess: () => {
+            const v = settings.all()
+            return { enabled: v["ai.webAccess"], blocked: v["privacy.noThirdPartyFetch"] }
+          },
+        }
+      : {}),
+    ...(settings
+      ? {
+          recentModels: () => settings.all()["ai.recentModels"].map((r) => ({ ...r })),
+          saveRecentModels: (list: ModelSelection[]) =>
+            settings
+              .set(
+                "ai.recentModels",
+                list.map((s) => ({ provider: s.provider, model: s.model })),
+              )
+              .catch(() => {}),
+        }
+      : {}),
     tools: o.tools,
     sessions: o.sessions ?? createIndexedDbSessionStore(),
     promptRuns: o.promptRuns ?? createPromptRunStore(),
     ...(o.skills ? { skills: o.skills } : {}),
     usage: () => ({ ...ai.state.settings, monthUsd: ai.state.usage.costUsd }),
     recordUsage: (e) => ai.recordUsage(e),
-    subscribe: (l) => ai.subscribe(() => l()),
+    subscribe: (l) => {
+      const offAi = ai.subscribe(() => l())
+      // Board 38: the composer's globe follows Allow web access / No third-party fetch.
+      const offSettings = settings?.onChange(() => l())
+      return () => {
+        offAi()
+        offSettings?.()
+      }
+    },
     online,
     ...(o.openSettings ? { openSettings: o.openSettings } : {}),
     ...(o.openLink ? { openLink: o.openLink } : {}),
@@ -202,11 +246,12 @@ export function createPlatformAgentRuntime(
       ai,
       tools,
       fetchFor,
+      settings: platform.settings,
       cliHost: createTauriCliHost(relay),
       ...extra,
     })
   }
-  return createAppAgentRuntime({ ai, tools, fetchFor, ...extra })
+  return createAppAgentRuntime({ ai, tools, fetchFor, settings: platform.settings, ...extra })
 }
 
 // --- Sessions: IndexedDB `kimo-sessions` (ADR 0014 §7) -----------------------------------------

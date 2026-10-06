@@ -41,6 +41,7 @@ import type {
   StreamEvent,
   Usage,
 } from "../types"
+import { anthropicWebTools, type WebTool, webToolOf } from "../web"
 import {
   availableOn,
   type ConnectionTest,
@@ -50,6 +51,10 @@ import {
 } from "./provider"
 
 export const ANTHROPIC_BASE_URL = "https://api.anthropic.com"
+/** Board 38: searches / page reads per request (each search is billed). */
+const WEB_MAX_USES = 5
+/** Board 38: a fetched page's text in the context, approximately. */
+const WEB_FETCH_MAX_TOKENS = 20_000
 const FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 export class AnthropicProvider implements Provider {
@@ -96,6 +101,9 @@ export class AnthropicProvider implements Provider {
   params(req: ProviderRequest): MessageCreateParamsStreaming {
     return buildAnthropicParams(req, this.modelInfo(req.model), this.id, {
       fallback: this.config.refusalFallback === true && this.firstParty(),
+      ...(req.webAccess
+        ? { web: anthropicWebTools(this.config.kind, req.model, this.firstParty()) }
+        : {}),
     })
   }
 
@@ -108,10 +116,10 @@ export class AnthropicProvider implements Provider {
     } catch (e) {
       throw this.mapError(e)
     }
-    const toolIds = new Map<number, string>()
+    const blocks: BlockState = { tools: new Map(), server: new Map() }
     try {
       for await (const ev of stream as AsyncIterable<BetaRawMessageStreamEvent>) {
-        const out = mapEvent(ev, toolIds)
+        const out = mapEvent(ev, blocks)
         if (out) yield out
       }
       const final: BetaMessage = await stream.finalMessage()
@@ -172,7 +180,7 @@ export class AnthropicProvider implements Provider {
             inputSchema: { type: "object", properties: {}, additionalProperties: false },
           },
         ],
-        thinking: "off",
+        thinking: "low",
         maxTokens: 16,
       })
       await this.sdk()
@@ -224,7 +232,11 @@ export function buildAnthropicParams(
   req: ProviderRequest,
   info: ModelInfo,
   providerId: string,
-  opts: { fallback: boolean },
+  opts: {
+    fallback: boolean
+    /** Board 38: server web tool versions to offer (from {@link anthropicWebTools}). */
+    web?: { search?: string; fetch?: string }
+  },
 ): MessageCreateParamsStreaming {
   const t = anthropicThinking(info, req.thinking)
   const budget = t.thinking?.budget_tokens ?? 0
@@ -235,6 +247,22 @@ export function buildAnthropicParams(
     input_schema: s.inputSchema as { type: "object"; [k: string]: unknown },
     eager_input_streaming: true,
   }))
+  // Server tools (board 38): Anthropic runs them; results come back in the same response.
+  // max_uses bounds one request's searches (billed per search); fetched pages are capped so a
+  // long page never floods the context.
+  if (opts.web?.search)
+    tools.push({
+      type: opts.web.search,
+      name: "web_search",
+      max_uses: WEB_MAX_USES,
+    } as BetaToolUnion)
+  if (opts.web?.fetch)
+    tools.push({
+      type: opts.web.fetch,
+      name: "web_fetch",
+      max_uses: WEB_MAX_USES,
+      max_content_tokens: WEB_FETCH_MAX_TOKENS,
+    } as BetaToolUnion)
   const system: { type: "text"; text: string; cache_control?: { type: "ephemeral" } }[] = [
     { type: "text", text: req.system.stable, cache_control: { type: "ephemeral" } },
   ]
@@ -327,25 +355,71 @@ export function toAnthropicMessages(
   return out
 }
 
-function mapEvent(ev: BetaRawMessageStreamEvent, toolIds: Map<number, string>): StreamEvent | null {
+/** Per-stream block bookkeeping: client tool ids and server (web) tool calls by index. */
+interface BlockState {
+  tools: Map<number, string>
+  server: Map<number, { id: string; tool: WebTool; json: string }>
+}
+
+function mapEvent(ev: BetaRawMessageStreamEvent, blocks: BlockState): StreamEvent | null {
   switch (ev.type) {
-    case "content_block_start":
-      if (ev.content_block.type === "tool_use") {
-        toolIds.set(ev.index, ev.content_block.id)
-        return { type: "tool_call_start", id: ev.content_block.id, name: ev.content_block.name }
+    case "content_block_start": {
+      const b = ev.content_block
+      if (b.type === "tool_use") {
+        blocks.tools.set(ev.index, b.id)
+        return { type: "tool_call_start", id: b.id, name: b.name }
       }
+      if (b.type === "server_tool_use") {
+        const tool = webToolOf(b.name)
+        if (tool) blocks.server.set(ev.index, { id: b.id, tool, json: "" })
+        return null
+      }
+      if (b.type === "web_search_tool_result")
+        return {
+          type: "web_end",
+          id: b.tool_use_id,
+          tool: "web_search",
+          // Success is a list of results; an error is a single error object.
+          ok: Array.isArray(b.content),
+        }
+      if (b.type === "web_fetch_tool_result")
+        return {
+          type: "web_end",
+          id: b.tool_use_id,
+          tool: "web_fetch",
+          ok: (b.content as { type?: string } | null)?.type === "web_fetch_result",
+        }
       return null
-    case "content_block_delta":
+    }
+    case "content_block_delta": {
       if (ev.delta.type === "text_delta") return { type: "text_delta", text: ev.delta.text }
       if (ev.delta.type === "thinking_delta")
         return { type: "thinking_delta", text: ev.delta.thinking }
-      if (ev.delta.type === "input_json_delta")
+      if (ev.delta.type === "input_json_delta") {
+        const server = blocks.server.get(ev.index)
+        if (server) {
+          server.json += ev.delta.partial_json
+          return null
+        }
         return {
           type: "tool_call_delta",
-          id: toolIds.get(ev.index) ?? "",
+          id: blocks.tools.get(ev.index) ?? "",
           partialJson: ev.delta.partial_json,
         }
+      }
       return null
+    }
+    case "content_block_stop": {
+      const server = blocks.server.get(ev.index)
+      if (!server) return null
+      blocks.server.delete(ev.index)
+      let input: Record<string, unknown> = {}
+      try {
+        const v = JSON.parse(server.json || "{}") as unknown
+        if (v && typeof v === "object") input = v as Record<string, unknown>
+      } catch {}
+      return { type: "web_start", id: server.id, tool: server.tool, input }
+    }
     case "message_delta":
       return ev.usage ? { type: "usage", usage: usageOf(ev.usage as UsageLike) } : null
     default:
@@ -358,14 +432,17 @@ interface UsageLike {
   output_tokens?: number | null
   cache_read_input_tokens?: number | null
   cache_creation_input_tokens?: number | null
+  server_tool_use?: { web_search_requests?: number | null } | null
 }
 
 function usageOf(u: UsageLike): Usage {
+  const searches = u.server_tool_use?.web_search_requests ?? 0
   return {
     inputTokens: u.input_tokens ?? 0,
     outputTokens: u.output_tokens ?? 0,
     cacheReadTokens: u.cache_read_input_tokens ?? 0,
     cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
+    ...(searches ? { webSearches: searches } : {}),
   }
 }
 

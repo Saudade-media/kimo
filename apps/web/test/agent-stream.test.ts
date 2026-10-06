@@ -273,7 +273,7 @@ for (const t of ["Title", "Body"]) Insert(page, {type: "text", name: t, content:
       provider: provider as never,
       model: { provider: "anthropic", model: "m" },
       info: provider.modelInfo("m") as never,
-      thinking: "off",
+      thinking: "low",
       system: { stable: "Kimo" },
       history: [],
       user: { role: "user", content: [{ type: "text", text: "go" }] },

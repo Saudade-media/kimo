@@ -12,10 +12,10 @@ import {
   dirnameOf,
   type KimoPlatform,
   type RecentFile,
+  type ThumbnailsApi,
   type WatchedFolder,
 } from "@kimo/platform"
 import {
-  FileCard,
   FileRow,
   type FileRowGitTone,
   FileRowHeader,
@@ -26,6 +26,7 @@ import {
 import { Ellipsis, FileX, Folder, FolderGit2, LayoutGrid, List, Plus } from "lucide-react"
 import type { MouseEvent, ReactNode } from "react"
 import { displayDir, modifiedLabel } from "../platform/format"
+import { PreviewFileCard } from "../thumbnails/PreviewFileCard"
 
 /** GIT column label and dot tone (board 16 rows). */
 export function gitColumn(file: RecentFile): { label: string; tone: FileRowGitTone } {
@@ -271,10 +272,13 @@ export function RecentFilesGrid({
   onMenu,
   menuRef,
   info,
+  thumbnails = null,
 }: RecentFilesProps & {
   folders: readonly WatchedFolder[]
   /** Card info line; default "folder · branch · modified". */
   info?: (file: RecentFile) => string
+  /** Board 37 §9: where the cards' previews are read from (null: placeholders). */
+  thumbnails?: ThumbnailsApi | null
 }) {
   const rows: RecentFile[][] = []
   for (let i = 0; i < files.length; i += 4) rows.push(files.slice(i, i + 4))
@@ -283,8 +287,11 @@ export function RecentFilesGrid({
       {rows.map((row) => (
         <div key={row[0]?.ref} className="kimo-files-grid__row" data-pen="a2kRP">
           {row.map((f) => (
-            <FileCard
+            <PreviewFileCard
               key={f.ref}
+              store={f.missing ? null : thumbnails}
+              fileKey={f.ref}
+              version={f.modifiedAt}
               data-file={f.ref}
               className={cx(
                 "kimo-files-grid__card",

@@ -181,6 +181,8 @@ export const SETTING_LABELS: Record<SettingKey, string> = {
   "files.pauseAutosaveDuringGit": "Pause autosave during git operations",
   "files.newFilesDir": "New files go to",
   "privacy.noThirdPartyFetch": "No third-party fetch",
+  "ai.webAccess": "Allow web access",
+  "ai.recentModels": "Recent models",
   "fonts.google": "Google Fonts",
   "fonts.extraFolders": "Extra font folders",
   "fonts.embedInKimoz": "Embed fonts in .kimoz packages",

@@ -8,7 +8,7 @@
 import "@kimo/design-tokens/editor.css"
 import "@kimo/ui/styles.css"
 import "../../src/fonts.css"
-import type { ProviderRequest } from "@kimo/ai-agent"
+import type { ProviderConfig, ProviderRequest } from "@kimo/ai-agent"
 import type { KimoDocument } from "@kimo/core-schema"
 import { createEmptyDocument, importDocument } from "@kimo/editor-state"
 import {
@@ -31,7 +31,79 @@ import {
   RejectedOpPill,
   useAgentPanelState,
 } from "../../src/agent-panel"
-import { createTestRuntime, type Script } from "../../src/agent-panel/testing"
+import { createTestRuntime, MOCK_ANTHROPIC, type Script } from "../../src/agent-panel/testing"
+
+/** Board 39 states A, C, D, E, F: which CLIs and providers the chooser lists. */
+function chooserSetup(state: string): Partial<Parameters<typeof createTestRuntime>[0]> {
+  const cli = (id: string, label: string, signedIn = true) => ({
+    id,
+    label,
+    installed: true,
+    path: `/Users/me/.local/bin/${id}`,
+    signedIn,
+    billing: signedIn ? ("subscription" as const) : null,
+  })
+  const providers: ProviderConfig[] = [
+    MOCK_ANTHROPIC,
+    {
+      id: "openai",
+      kind: "openai",
+      label: "OpenAI-compatible",
+      models: { agent: "gpt-4.1", fast: "gpt-4.1-mini" },
+      apiKey: "sk-test",
+    },
+    {
+      id: "gemini",
+      kind: "gemini",
+      label: "Google Gemini",
+      models: { agent: "gemini-2.5-pro", fast: "gemini-2.5-flash" },
+      apiKey: "g-test",
+    },
+    {
+      id: "custom:ollama",
+      kind: "custom",
+      label: "Ollama · localhost",
+      models: { agent: "llama3.3:70b", fast: "qwen2.5-coder:32b" },
+      free: true,
+    },
+  ]
+  if (state === "c")
+    providers.push({
+      id: "openrouter",
+      kind: "openrouter",
+      label: "OpenRouter",
+      models: { agent: "anthropic/claude-sonnet-5-5", fast: "google/gemini-2.5-flash" },
+      extraModels: Array.from({ length: 8 }, (_, i) => `vendor/model-${i + 1}`),
+      apiKey: "or-test",
+    })
+  if (state === "d") return { platform: "desktop", providers: [], clis: [], defaultSelection: null }
+  const clis =
+    state === "e"
+      ? [
+          cli("claude-code", "Claude Code", false),
+          cli("codex", "Codex"),
+          cli("gemini-cli", "Gemini CLI"),
+        ]
+      : [cli("claude-code", "Claude Code"), cli("codex", "Codex"), cli("gemini-cli", "Gemini CLI")]
+  return {
+    platform: "desktop",
+    providers,
+    clis,
+    defaultSelection:
+      state === "f"
+        ? { provider: "custom:ollama", model: "llama3.3:70b" }
+        : state === "e"
+          ? { provider: "cli:codex", model: "default" }
+          : { provider: "cli:claude-code", model: "claude-sonnet-5-5" },
+    recentModels:
+      state === "a"
+        ? [
+            { provider: "cli:claude-code", model: "claude-sonnet-5-5" },
+            { provider: "anthropic", model: "claude-haiku-4-5-20251001" },
+          ]
+        : [],
+  }
+}
 
 function doc(): KimoDocument {
   const d = createEmptyDocument("Marketing site") as KimoDocument & {
@@ -253,6 +325,17 @@ const script: Script = (req) => {
     }
   if (text.includes("Tidy the navbar"))
     return { text: "Tidied the navbar.", usage: { inputTokens: 600, outputTokens: 40 } }
+  // Board 38: a search and a page read before the reply, which ends with its sources.
+  if (text.includes("Tailwind v4"))
+    return {
+      web: [
+        { tool: "web_search", input: { query: "tailwind v4 fonts" } },
+        { tool: "web_fetch", input: { url: "https://tailwindcss.com/docs/font-family" } },
+      ],
+      text: "Body now uses the Tailwind v4 default sans stack, system fonts first and the emoji fonts last.\n\nSources:\n- https://tailwindcss.com/docs/font-family",
+      usage: { inputTokens: 900, outputTokens: 60 },
+      delayMs: 400,
+    }
   // Board 33 §1: a reply with every block of the Markdown subset.
   if (text.includes("formatted reply"))
     return { text: FORMATTED_REPLY, usage: { inputTokens: 900, outputTokens: 120 }, delayMs: 10 }
@@ -360,10 +443,18 @@ const harnessUsage = {
   showCost: true,
   defaultModel: null,
 }
+// Board 38: Allow web access / No third-party fetch, flipped through `window.__m6.web` +
+// `controller.refresh()`.
+const harnessWeb = { enabled: true, blocked: false }
+// `?chooser=a|c|d|e|f` (board 39 qNrfY states): desktop CLIs and providers for the model chooser.
+const chooserQ = new URLSearchParams(location.search).get("chooser")
+const chooserRuntime = chooserQ ? chooserSetup(chooserQ) : {}
 const base = createTestRuntime({
   tools: tools.factory,
   script,
   platform: "web",
+  webAccess: () => harnessWeb,
+  ...chooserRuntime,
   ...(warnQ ? { usage: () => ({ ...harnessUsage, monthUsd: 0 }) } : {}),
   ...(firstRun
     ? {
@@ -425,6 +516,7 @@ declare global {
       copied: string[]
       usage: typeof harnessUsage
       followed: string[][]
+      web: typeof harnessWeb
     }
   }
 }
@@ -436,6 +528,7 @@ window.__m6 = {
   copied: [],
   usage: harnessUsage,
   followed: [],
+  web: harnessWeb,
 }
 
 function PanelScene() {

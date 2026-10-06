@@ -9,11 +9,18 @@
  */
 import type { KimoDocument } from "@kimo/core-schema"
 import { serialize } from "@kimo/editor-state"
-import { type FileRef, KIMO_FILE_FILTER, type KimoPlatform } from "@kimo/platform"
+import {
+  type FileRef,
+  KIMO_FILE_FILTER,
+  type KimoPlatform,
+  type ThumbnailsApi,
+} from "@kimo/platform"
 import { getTemplate, listTemplates, loadTemplate } from "@kimo/templates"
 import { LibraryManager } from "../editor/m3/libraries"
 import { importKimoFile, listFiles, patchFile } from "../lib/files"
 import { defaultNewFilesDir } from "../settings/model"
+import { templateHash } from "../thumbnails/model"
+import { diskThumbnails, libraryThumbnails } from "../thumbnails/store"
 import { joinPath, numberedName } from "./model"
 
 export interface TemplateLibrary {
@@ -50,6 +57,27 @@ export const TEMPLATES: readonly Template[] = listTemplates().map((t) => ({
 
 /** The template's cover PNG URL. */
 export const previewUrl = (dir: string): string | undefined => getTemplate(dir)?.cover
+
+/**
+ * Board 37 §9: a file made from a template shows the template's cover until its first save
+ * renders a real preview. Best effort: a missing cover leaves the placeholder.
+ */
+export async function seedTemplateCover(
+  store: ThumbnailsApi | null,
+  key: string,
+  slug: string,
+  fetchCover: (url: string) => Promise<Uint8Array> = async (url) =>
+    new Uint8Array(await (await fetch(url)).arrayBuffer()),
+): Promise<void> {
+  const url = previewUrl(slug)
+  if (!store || !url) return
+  try {
+    const png = await fetchCover(url)
+    if (png.byteLength) await store.write(key, templateHash(slug), png)
+  } catch {
+    // No cover: the card keeps its placeholder until the first save.
+  }
+}
 
 /** Text of a bundled template (`dir` is its slug). */
 export async function loadExample(dir: string, _file: string): Promise<string> {
@@ -105,6 +133,7 @@ export async function createTemplateOnDisk(
       numberedName(t.file, (n) => taken.has(n)),
     )
   await platform.files.writeTextAtomic(ref, text, { mkdirs: true })
+  await seedTemplateCover(diskThumbnails(platform), ref, t.dir)
   await platform.recents.noteOpened(ref).catch(() => {})
   return ref
 }
@@ -135,6 +164,7 @@ export async function createTemplateInBrowser(
   const text = await load(t.dir, t.file)
   const { id } = await importKimoFile(text, t.file)
   await patchFile(id, { name })
+  await seedTemplateCover(libraryThumbnails, id, t.dir)
   if (t.library) {
     const libText = await load(t.library.dir, t.library.file)
     const path = (JSON.parse(text) as { imports?: Record<string, string> }).imports?.[

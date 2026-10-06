@@ -48,6 +48,22 @@
   background: var(--kimo-bg-muted);
 }
 
+/* Board 37 §9 "Card · preview" (hVoFQ): Thumbnail fill [bg-muted, image cover], padding 0,
+   clip; the Mini Frame is hidden. */
+.kimo-file-card__thumbnail--image {
+  padding: 0;
+}
+
+.kimo-file-card__image {
+  display: block;
+  flex: 1 1 0;
+  align-self: stretch;
+  width: 100%;
+  min-height: 0;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
 .kimo-file-card:focus-visible .kimo-file-card__thumbnail {
   outline: 2px solid var(--kimo-accent);
   outline-offset: 2px;

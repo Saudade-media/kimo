@@ -8,6 +8,7 @@
  */
 import type { ProviderKind } from "./models"
 import type { Usage } from "./types"
+import { ANTHROPIC_SEARCH_USD } from "./web"
 
 /** USD per 1M tokens. */
 export interface ModelPrice {
@@ -25,11 +26,14 @@ export interface PriceTable {
   models: Readonly<Record<string, ModelPrice>>
   /** True when every request is free (local runtimes). */
   free?: boolean
+  /** USD per server-side web search (board 38; Anthropic: $10 per 1,000). */
+  searchUsd?: number
 }
 
 const anthropic: PriceTable = {
   version: "2026-09-25",
   source: "https://platform.claude.com/docs/en/about-claude/pricing",
+  searchUsd: ANTHROPIC_SEARCH_USD,
   models: {
     // Cache writes (5-minute TTL) are 1.25× input; reads as published.
     "claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 },
@@ -112,7 +116,8 @@ export function estimateCost(
       usage.outputTokens * p.output +
       usage.cacheReadTokens * p.cacheRead +
       usage.cacheWriteTokens * p.cacheWrite) /
-    1_000_000
+      1_000_000 +
+    (usage.webSearches ?? 0) * (table.searchUsd ?? 0)
   return { usd, estimated: true, priceVersion: table.version }
 }
 

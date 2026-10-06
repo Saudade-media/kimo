@@ -379,11 +379,206 @@
   outline: none;
 }
 
-/* Model Menu (XxdJv): 280 wide, right edge on the composer's, 4 above the Composer Wrap. */
+/* Model chooser (board 39 VlWzE): 304 wide, right edge on the composer's, 4 above the Composer
+   Wrap. */
 .agent-menu--model {
   right: 12px;
   bottom: calc(100% + 4px);
-  width: 280px;
+  width: 304px;
+}
+
+/* Board 39: the selected model shows check + weight 500 only (o4YRr has no fill); hover and
+   keyboard focus keep bg-hover. */
+.agent-chooser .kimo-menu-item-dense--checked:not(:hover):not(:focus):not([data-highlighted]) {
+  background: transparent;
+}
+
+/* Providers (Rr81H): column, gap 2, padding 4 › CLI Row / API Row (o0dBeN): row, gap 2. */
+.agent-chooser__providers {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 4px;
+}
+
+.agent-chooser__chip-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: 100%;
+}
+
+/* Provider chip (mRxOq): h 24, gap 5, padding [0, 8], radius-sm, center › Label sans 11 / 500
+   text-secondary. Selected: fill bg-muted, label text-primary. */
+.agent-chooser__chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.agent-chooser__chip:hover:not(.agent-chooser__chip--on) {
+  background: var(--kimo-bg-hover);
+}
+
+.agent-chooser__chip:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: -2px;
+}
+
+.agent-chooser__chip--on {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.agent-chooser__chip-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* Signed-out dot (gL5Bd): 6 × 6, warning, radius-pill. */
+.agent-chooser__dot {
+  display: block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-warning);
+}
+
+/* Hover Detail (PXNa8): padding [0, 8, 4, 30] › sans 11 text-tertiary. */
+.agent-chooser__detail {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  width: 100%;
+  padding: 0 8px 4px 30px;
+}
+
+.agent-chooser__detail-text {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+  white-space: nowrap;
+}
+
+/* Search (O6JGzY): h 32, gap 8, padding [0, 10], fill bg-muted, stroke 1 border, radius-md ›
+   search 16 text-tertiary · text sans 13 text-primary. */
+.agent-chooser__search {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  cursor: text;
+}
+
+.agent-chooser__search-icon {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--kimo-text-tertiary);
+}
+
+.agent-chooser__search-input {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 16px; /* Pencil text box: round(13 × 1.21) for Inter */
+  outline: none;
+}
+
+.agent-chooser__search-input::placeholder {
+  color: var(--kimo-text-tertiary);
+}
+
+/* Empty (d37as): column, gap 4, padding [16, 12, 12, 12], center › plug 20 text-tertiary ·
+   Title sans 12 / 500 text-primary · Hint sans 11 text-tertiary. */
+.agent-chooser__empty {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 16px 12px 12px;
+}
+
+.agent-chooser__empty-icon {
+  display: block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--kimo-text-tertiary);
+}
+
+.agent-chooser__empty-title,
+.agent-chooser__signed-out-title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
+}
+
+.agent-chooser__empty-hint {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
+}
+
+/* Signed Out (w2OSk7): column, gap 4, padding [12, 8, 8, 8] › Title sans 12 regular. */
+.agent-chooser__signed-out {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 8px 8px;
+}
+
+.agent-chooser__signed-out-title {
+  font-weight: var(--kimo-font-weight-regular);
 }
 
 /* Skills Menu (e2cwq): as wide as the composer (x 12, 336), 4 above. */

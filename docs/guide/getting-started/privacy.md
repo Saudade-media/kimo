@@ -12,6 +12,7 @@ Kimo only talks to the network for these:
 | **Offline font pack** | Only when you press **Download** in Settings › Fonts & privacy | `fonts.googleapis.com`, `fonts.gstatic.com` |
 | **AI providers** | Only when you configure a provider and use the built-in agent: each turn, **Test**, and naming sessions and files with the fast model | The provider you chose (Anthropic, OpenAI, Google, OpenRouter, your own endpoint, AWS, Google Cloud or Azure) |
 | **Agent CLIs** | When the built-in agent runs on Claude Code, Codex or Gemini CLI | Whatever that CLI contacts; Kimo only starts it |
+| **Agent web access** | When the built-in agent searches the web or reads a page for a task ([web access](../built-in-agent/providers.md#web-access), on by default) | The provider or CLI runs the search and fetches the page, not Kimo: Anthropic's or OpenAI's servers, or the CLI on your machine |
 | **Update check** (desktop) | When the app starts, and **Check now** | GitHub releases. **Download updates** controls whether updates download |
 
 Links you click (provider key pages, install guides, docs) open in your browser.
@@ -21,11 +22,11 @@ Links you click (provider key pages, install guides, docs) open in your browser.
 **Settings › Fonts & privacy**:
 
 - **Google Fonts** off: Kimo never fetches fonts; missing fonts render with a fallback until you install them.
-- **No third-party fetch** on: blocks every request to Google, including the offline font pack download. Kimo never loads remote image URLs in any case: images are always files in the file's `assets/` folder.
+- **No third-party fetch** on: blocks every request to Google, including the offline font pack download, and turns off the agent's web access. Kimo never loads remote image URLs in any case: images are always files in the file's `assets/` folder.
 
 Fonts already stored in a file, installed, in the [offline font pack](../editor/fonts.md#offline-font-pack) or in the cache keep working either way.
 
-The built-in agent makes no request until you add a provider or a CLI is used.
+The built-in agent makes no request until you add a provider or a CLI is used. To keep it off the web but still use it, turn off **Settings › AI providers › Allow web access**, or the globe in the composer for one session.
 
 ## Keys and conversations
 

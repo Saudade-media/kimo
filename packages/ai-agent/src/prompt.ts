@@ -7,6 +7,7 @@ import type { Mode } from "./modes"
 import { type Skill, skillsPrompt } from "./skills/index"
 import { REPLY_STYLE } from "./style"
 import type { SystemPrompt } from "./types"
+import { WEB_PROMPT } from "./web"
 
 /**
  * The base prompt. `streamed`: the agent's tool input streams to the canvas (ADR 0013 §4.7:
@@ -67,12 +68,15 @@ export interface PromptContext {
   outline?: string
   /** The agent's tool input streams to the canvas (streamed edits): the larger call size. */
   streamed?: boolean
+  /** Board 38: the agent can search the web and read pages this session. */
+  webAccess?: boolean
 }
 
 export function buildSystemPrompt(ctx: PromptContext): SystemPrompt {
   const stable = [
     ctx.streamed ? basePrompt({ streamed: true }) : BASE_SYSTEM_PROMPT,
     MODE_BRIEF[ctx.mode],
+    ctx.webAccess ? WEB_PROMPT : "",
     skillsPrompt(ctx.skills),
   ]
     .filter(Boolean)

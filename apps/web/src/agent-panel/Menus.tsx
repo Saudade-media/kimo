@@ -1,10 +1,11 @@
 /**
- * The composer's menus (board 22): Model Menu (C, XxdJv), Skills Menu (D, e2cwq) and Mode Menu
- * (ZFOQf, d5X1eG). Each sits just above the composer: the model menu right-aligned to it
- * (280 wide, 4 px gap), the skills menu as wide as the composer (4 px gap), the mode menu as
- * wide as the composer (6 px gap, the "Stack" of the vignette).
+ * The composer's menus: the Model chooser (board 39 qNrfY, which replaced board 22 C XxdJv),
+ * Skills Menu (board 22 D, e2cwq) and Mode Menu (ZFOQf, d5X1eG). Each sits just above the
+ * composer: the model chooser right-aligned to it (304 wide, 4 px gap), the skills menu as wide
+ * as the composer (4 px gap), the mode menu as wide as the composer (6 px gap, the "Stack" of
+ * the vignette).
  */
-import type { ModelSelection, ThinkingMode } from "@kimo/ai-agent"
+import type { EffortLevel, ModelSelection } from "@kimo/ai-agent"
 import {
   AgentMark,
   CompactButton,
@@ -17,10 +18,28 @@ import {
   Select,
   SkillRow,
 } from "@kimo/ui"
-import { ChevronDown, FolderOpen, Minus, Plus, Settings2 } from "lucide-react"
-import { type CSSProperties, type ReactNode, useEffect, useRef } from "react"
+import { ChevronDown, FolderOpen, Minus, Plug, Plus, Search } from "lucide-react"
+import {
+  type CSSProperties,
+  Fragment,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
 import { modelLabel } from "./format"
+import {
+  type ChooserChip,
+  type ChooserRow,
+  type ChooserState,
+  chooserKey,
+  chooserView,
+  initialActive,
+  navRows,
+} from "./model-chooser"
 
 /** The shared floating frame (Menu/Dense geometry: bg-overlay, radius-lg, shadow 0 8 24). */
 function MenuFrame({
@@ -28,17 +47,25 @@ function MenuFrame({
   label,
   children,
   onClose,
+  onKeyDown,
+  rootRef,
   style,
   testId,
+  ...data
 }: {
   className: string
   label: string
   children: ReactNode
   onClose(): void
+  /** Runs first; a handled key (defaultPrevented) skips the frame's own Escape. */
+  onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void
+  rootRef?: RefObject<HTMLDivElement | null>
   style?: CSSProperties
   testId: string
-}) {
-  const root = useRef<HTMLDivElement>(null)
+} & { [k: `data-${string}`]: string | undefined }) {
+  const own = useRef<HTMLDivElement>(null)
+  const root = rootRef ?? own
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `root` is a ref (stable).
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
       const t = e.target as Element | null
@@ -51,6 +78,7 @@ function MenuFrame({
   }, [onClose])
   return (
     <div
+      {...data}
       ref={root}
       role="menu"
       aria-label={label}
@@ -59,6 +87,8 @@ function MenuFrame({
       className={`agent-menu ${className}`}
       style={style}
       onKeyDown={(e) => {
+        onKeyDown?.(e)
+        if (e.defaultPrevented) return
         if (e.key === "Escape") {
           e.stopPropagation()
           onClose()
@@ -97,13 +127,21 @@ const BUILTIN_SOURCE: Record<string, string> = {
   "kimo-tokens": "variables & themes",
 }
 
-const THINKING: { value: ThinkingMode; label: string }[] = [
-  { value: "off", label: "Off" },
-  { value: "auto", label: "Auto" },
-  { value: "max", label: "Max" },
-]
+const EFFORT_LABEL: Record<EffortLevel, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  max: "Max",
+}
 
-/** Board 22 C Model Menu (XxdJv). `target` set: picks the model of one split / side-by-side agent. */
+const isPrintable = (e: KeyboardEvent) =>
+  e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey
+
+/**
+ * Board 39 Model chooser (desing.pen qNrfY, VlWzE): Recent › provider chips › the provider's
+ * models › Effort › "Connect a provider…". 304 wide, right-aligned above the composer.
+ * `target` set: picks the model of one split / side-by-side agent (no Effort row).
+ */
 export function ModelMenu({
   controller,
   state,
@@ -119,6 +157,25 @@ export function ModelMenu({
     target != null && Array.isArray(state.composer.mode.models)
       ? (state.composer.mode.models[target] ?? state.composer.model)
       : state.composer.model
+  const [cs, setCs] = useState<ChooserState>({
+    provider: null,
+    query: "",
+    active: -1,
+    zone: "list",
+  })
+  const [detail, setDetail] = useState<string | null>(null)
+  const root = useRef<HTMLDivElement>(null)
+  const search = useRef<HTMLInputElement>(null)
+  const view = chooserView({
+    groups: state.picker,
+    current,
+    recent: state.recentModels,
+    effort: state.composer.thinking,
+    effortHidden: target != null,
+    state: cs,
+  })
+  const rows = navRows(view)
+
   const pick = (sel: ModelSelection) => {
     if (target != null) {
       const n = state.composer.mode.agents
@@ -131,71 +188,204 @@ export function ModelMenu({
       controller.openMenu(null)
     } else controller.setModel(sel)
   }
+  const manage = () => {
+    controller.openMenu(null)
+    onManage?.()
+  }
+
+  // Focus the field when there is one (type to filter), else the menu (keys work at once).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the field appears.
+  useEffect(() => {
+    ;(search.current ?? root.current)?.focus({ preventScroll: true })
+  }, [view.showSearch])
+
+  const focusRow = (key: string | undefined) => {
+    if (!key) return
+    root.current
+      ?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
+      ?.focus({ preventScroll: false })
+  }
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented) return
+    if (isPrintable(e) && view.showSearch && e.target !== search.current) {
+      // Type to filter from anywhere in the menu.
+      e.preventDefault()
+      setCs((s) => ({ ...s, query: s.query + e.key, active: -1, zone: "list" }))
+      search.current?.focus()
+      return
+    }
+    const active = cs.active >= 0 ? cs.active : initialActive(view)
+    const r = chooserKey({ ...cs, active }, { key: e.key, shiftKey: e.shiftKey }, view)
+    if (!r.handled) return
+    e.preventDefault()
+    e.stopPropagation()
+    setCs(r.state)
+    const a = r.action
+    if (a?.type === "close") controller.openMenu(null)
+    else if (a?.type === "pick") pick(a.selection)
+    else if (a?.type === "effort") controller.setThinking(a.level)
+    else if (a?.type === "sign-in") manage()
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") focusRow(rows[r.state.active]?.key)
+    else if (e.key === "Tab")
+      (r.state.zone === "effort"
+        ? root.current?.querySelector<HTMLElement>(".agent-chooser__effort [aria-checked=true]")
+        : (search.current ?? root.current)
+      )?.focus()
+    else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      if (r.state.provider !== cs.provider) setDetail(null)
+    }
+  }
+
+  const rowItem = (r: ChooserRow, index: number) => (
+    <Fragment key={`${index}:${r.key}`}>
+      <MenuItemDense
+        label={r.label}
+        checked={r.checked}
+        // Board 39 C (r8UvyD): while typing, the row Enter picks is highlighted.
+        highlighted={view.kind === "search" && index === (cs.active >= 0 ? cs.active : 0)}
+        {...(r.meta ? { meta: r.meta, metaFont: "sans" as const } : {})}
+        data-row-key={r.key}
+        data-provider={r.provider}
+        data-model={r.model}
+        onHighlight={() => {
+          setDetail(r.key)
+          setCs((s) =>
+            s.active === index && s.zone === "list" ? s : { ...s, active: index, zone: "list" },
+          )
+        }}
+        onSelect={() => pick({ provider: r.provider, model: r.model })}
+      />
+      {detail === r.key && r.detail && (
+        <div className="agent-chooser__detail" data-testid="agent-model-detail">
+          <span className="agent-chooser__detail-text">{r.detail}</span>
+        </div>
+      )}
+    </Fragment>
+  )
+
+  const chip = (c: ChooserChip) => (
+    <button
+      key={c.provider}
+      type="button"
+      className={c.selected ? "agent-chooser__chip agent-chooser__chip--on" : "agent-chooser__chip"}
+      aria-pressed={c.selected}
+      data-provider={c.provider}
+      title={c.signedOut ? `${c.label} is signed out` : undefined}
+      aria-label={c.signedOut ? `${c.label} (signed out)` : c.label}
+      onClick={() => {
+        setDetail(null)
+        setCs((s) => ({ ...s, provider: c.provider, active: -1, zone: "list" }))
+      }}
+    >
+      {c.signedOut && <span className="agent-chooser__dot" aria-hidden="true" />}
+      <span className="agent-chooser__chip-label">{c.label}</span>
+    </button>
+  )
+
   return (
     <MenuFrame
-      className="agent-menu--model"
+      className="agent-menu--model agent-chooser"
       label="Model"
       testId="agent-model-menu"
+      rootRef={root}
+      onKeyDown={onKeyDown}
       onClose={() => controller.openMenu(null)}
+      data-state={view.kind}
     >
-      {state.picker.map((g) => (
-        <div key={g.provider} className="agent-menu__section" data-provider={g.provider}>
-          <GroupHeader
-            label={g.label}
-            {...(g.isDefault ? { status: "default" } : g.tag ? { status: g.tag } : {})}
+      {view.showSearch && (
+        <label className="agent-chooser__search">
+          <Search className="agent-chooser__search-icon" aria-hidden="true" />
+          <input
+            ref={search}
+            className="agent-chooser__search-input"
+            type="text"
+            placeholder="Search models"
+            aria-label="Search models"
+            value={cs.query}
+            spellCheck={false}
+            onChange={(e) => {
+              const query = e.target.value
+              setCs((s) => ({ ...s, query, active: -1, zone: "list" }))
+            }}
           />
-          {g.available ? (
-            g.models.map((m) => {
-              const checked = current?.provider === g.provider && current.model === m.id
-              return (
-                <MenuItemDense
-                  key={m.id}
-                  label={m.label}
-                  checked={checked}
-                  {...(m.role ? { meta: m.role } : {})}
-                  data-model={m.id}
-                  onSelect={() => pick({ provider: g.provider, model: m.id })}
-                />
-              )
-            })
-          ) : (
-            <MenuItemDense
-              label={
-                g.family === "cli"
-                  ? `Sign in to use ${g.label}…`
-                  : `Add a key to use ${g.label.replace(/^Google /, "")}…`
-              }
-              className="agent-menu__add"
-              onSelect={() => onManage?.()}
-            />
-          )}
-        </div>
-      ))}
-      {state.composer.thinkingAvailable && target == null && (
+        </label>
+      )}
+      {view.kind === "search" &&
+        (() => {
+          let i = 0
+          return view.groups.map((g) => (
+            <Fragment key={g.provider}>
+              <GroupHeader label={g.label} />
+              {g.rows.map((r) => rowItem(r, i++))}
+            </Fragment>
+          ))
+        })()}
+      {view.kind !== "search" && view.kind !== "empty" && (
         <>
-          <MenuDivider />
-          <div className="agent-menu__effort">
-            <span className="agent-menu__effort-label">Thinking</span>
-            <span className="agent-menu__spacer" aria-hidden="true" />
-            <SegmentedText
-              className="agent-seg-sm"
-              label="Thinking"
-              options={THINKING}
-              value={state.composer.thinking}
-              onChange={(v) => controller.setThinking(v)}
-            />
+          {view.recent.length > 0 && (
+            <>
+              <GroupHeader label="Recent" />
+              {view.recent.map((r, i) => rowItem(r, i))}
+              <MenuDivider />
+            </>
+          )}
+          <div className="agent-chooser__providers">
+            {view.chips.cli.length > 0 && (
+              <div className="agent-chooser__chip-row">{view.chips.cli.map(chip)}</div>
+            )}
+            {view.chips.api.length > 0 && (
+              <div className="agent-chooser__chip-row">{view.chips.api.map(chip)}</div>
+            )}
           </div>
+          <MenuDivider />
+          {view.kind === "models" && view.rows.map((r, i) => rowItem(r, view.recent.length + i))}
+          {view.kind === "signed-out" && view.provider && (
+            <>
+              <div className="agent-chooser__signed-out">
+                <span className="agent-chooser__signed-out-title">
+                  {view.provider.label} is signed out
+                </span>
+              </div>
+              <MenuItemDense
+                label="Sign in…"
+                className="agent-chooser__sign-in"
+                onSelect={manage}
+              />
+            </>
+          )}
+          {view.efforts.length > 0 && (
+            <>
+              <MenuDivider />
+              <div className="agent-menu__effort agent-chooser__effort">
+                <span className="agent-menu__effort-label">Effort</span>
+                <span className="agent-menu__spacer" aria-hidden="true" />
+                <SegmentedText
+                  className="agent-seg-sm"
+                  label="Effort"
+                  options={view.efforts.map((l) => ({ value: l, label: EFFORT_LABEL[l] }))}
+                  value={view.effort ?? "high"}
+                  onChange={(v) => controller.setThinking(v)}
+                />
+              </div>
+            </>
+          )}
         </>
+      )}
+      {view.kind === "empty" && (
+        <div className="agent-chooser__empty">
+          <Plug className="agent-chooser__empty-icon" aria-hidden="true" />
+          <span className="agent-chooser__empty-title">No provider connected</span>
+          <span className="agent-chooser__empty-hint">Sign in to a CLI or add an API key.</span>
+        </div>
       )}
       <MenuDivider />
       <MenuItemDense
-        label="Manage providers…"
-        icon={<Settings2 />}
+        label="Connect a provider…"
+        icon={<Plus />}
+        meta="⌘,"
         className="agent-menu__manage"
-        onSelect={() => {
-          controller.openMenu(null)
-          onManage?.()
-        }}
+        onSelect={manage}
       />
     </MenuFrame>
   )

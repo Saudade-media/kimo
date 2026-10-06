@@ -178,7 +178,7 @@ export class GeminiProvider implements Provider {
             inputSchema: { type: "object", properties: {}, additionalProperties: false },
           },
         ],
-        thinking: "off",
+        thinking: "low",
         maxTokens: 16,
         ...(signal ? { signal } : {}),
       })) {

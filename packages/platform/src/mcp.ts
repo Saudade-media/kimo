@@ -90,6 +90,8 @@ export type McpActivityKind =
   | "approval"
   | "denied"
   | "error"
+  /** Board 38: a web search or page read (no document change). */
+  | "web"
 
 export interface McpActivityEntry {
   seq: number
@@ -110,6 +112,8 @@ export interface McpActivityEntry {
   opCount?: number
   /** Revision before the call, for edits (with `revision` = after). */
   revisionBefore?: { epoch: string; seq: number }
+  /** Board 38 `web`: the query or the URL (the row's target line). */
+  detail?: string
 }
 
 export type McpHostId = "claude-code" | "codex" | "gemini-cli" | "cursor" | "vscode"

@@ -48,7 +48,9 @@ tracking, on or off. The only network requests are Google Fonts (`fonts.googleap
 `fonts.gstatic.com` only: when a file uses a Google font you don't have, after which the font is
 stored in the file's `assets/` folder and never fetched again; and the optional offline font pack,
 only when you press Download), the AI provider you configure (only when you use the built-in
-agent), and the desktop update check against GitHub releases. "No third-party fetch" (Settings ›
-Fonts & privacy) blocks every Google request, including the pack. Kimo never loads remote image
+agent), the agent's web searches and page reads (run by the provider's servers or the agent CLI,
+never by Kimo; on by default, Settings › AI providers › Allow web access), and the desktop update
+check against GitHub releases. "No third-party fetch" (Settings › Fonts & privacy) blocks every
+Google request, including the pack, and turns off the agent's web access. Kimo never loads remote image
 URLs: format 1.0 images are files in `assets/`. Local endpoints bind to loopback
 only and require tokens. These are commitments; a deviation from them is a security bug.

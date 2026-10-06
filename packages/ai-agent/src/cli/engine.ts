@@ -27,6 +27,7 @@ import {
   type UserMessage,
   ZERO_USAGE,
 } from "../types"
+import { type WebNote, type WebStep, webStep, webToolOf } from "../web"
 import type {
   CliAdapter,
   CliBilling,
@@ -64,6 +65,13 @@ export interface RunCliTurnOptions {
    * CLI's calls apply when they arrive, as before.
    */
   toolStream?: (call: { id: string; name: string; workspace: string }) => ToolStream | undefined
+  /** Board 38: the CLI's web tools are allowed this turn. */
+  webAccess?: boolean
+  /**
+   * Board 38: a web search or page read the CLI ran. The editor writes it to the Activity log
+   * under the CLI's MCP connection (`workspace` identifies it).
+   */
+  webNote?: (entry: WebNote & { workspace: string }) => void
 }
 
 /** The MCP launch for a CLI: bundled shim with `--client <cli>` (ADR 0013 §9 entry shape). */
@@ -92,6 +100,9 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
   const opGroups: OpGroup[] = []
   let opsApplied = 0
   const stepTools = new Map<string, string>()
+  /** Board 38: inputs of the CLI's running web calls, and the turn's finished ones. */
+  const webInputs = new Map<string, Record<string, unknown>>()
+  const web: WebStep[] = []
   /** Tool calls the CLI's model is writing (streamed edits), by tool-use id. */
   const live = new Map<string, ToolStream | null>()
   let workspace = ""
@@ -140,6 +151,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
         if (text.trim()) lastNote = text
         text = ""
         stepTools.set(e.callId, e.tool)
+        if (webToolOf(e.tool)) webInputs.set(e.callId, e.input)
         o.onEvent({
           type: "step_start",
           callId: e.callId,
@@ -152,6 +164,28 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
         // The call ran: the host committed or rolled back its stream.
         live.delete(e.callId)
         const tool = e.tool || stepTools.get(e.callId) || ""
+        const webTool = webToolOf(tool)
+        if (webTool) {
+          const step = webStep(e.callId, webTool, e.input ?? webInputs.get(e.callId) ?? {}, e.ok)
+          webInputs.delete(e.callId)
+          web.push(step)
+          o.onEvent({
+            type: "step_end",
+            callId: e.callId,
+            tool: webTool,
+            ok: step.ok,
+            summary: step.label,
+            changed: [],
+          })
+          o.webNote?.({
+            tool: step.tool,
+            summary: step.label,
+            detail: step.detail,
+            ok: step.ok,
+            workspace,
+          })
+          break
+        }
         const env = parseEnvelope(e.output)
         let summary = e.output.slice(0, 200)
         let changed: string[] = []
@@ -235,6 +269,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
       ...(o.context ? { context: o.context } : {}),
       mcp: o.mcp,
       workspace,
+      ...(o.webAccess ? { webAccess: true } : {}),
     })
     if (inv.workspaceFiles?.length) await o.host.prepareWorkspace(o.session, inv.workspaceFiles)
     const proc = await o.host.spawn({
@@ -307,6 +342,7 @@ export async function runCliTurn(o: RunCliTurnOptions): Promise<TurnRecord> {
     ...(failure ? { error: errorCard(failure, { providerLabel: label, opsApplied }) } : {}),
     servedBy: o.model.model,
     skillsUsed: [],
+    ...(web.length ? { web } : {}),
     billing,
     cli: {
       id: o.adapter.def.id,

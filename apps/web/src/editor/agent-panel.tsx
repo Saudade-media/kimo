@@ -13,7 +13,7 @@
  * no host (web, older shell) or an untitled document, the M5 registry runs in process over the
  * window's own store (`createInWindowTools`). See agent-panel/INTEGRATION.md.
  */
-import { type NoteView, type PromptNodeView, shimLaunch } from "@kimo/ai-agent"
+import { type NoteView, type PromptNodeView, shimLaunch, type WebNote } from "@kimo/ai-agent"
 import { pagesOf } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { KimoPlatform } from "@kimo/platform"
@@ -175,12 +175,13 @@ export function useEditorAgentPanel({
   worldBoxRef.current = worldBoxOf
 
   // Read at call time: the controller lives for the file, not for these values.
-  const latest = useRef({ shim: mcp.shim, openSettings, fileName: "", onError })
+  const latest = useRef({ shim: mcp.shim, openSettings, fileName: "", onError, ref: "" })
   latest.current = {
     shim: mcp.shim,
     openSettings,
     onError,
     fileName: doc ? doc.fileName : session.meta.name,
+    ref: doc?.ref ?? "",
   }
   const store = session.store
   /** The active page id, or null for a one-page document (no `page` fields needed). */
@@ -211,6 +212,11 @@ export function useEditorAgentPanel({
                         tool: call.name,
                       }).stream
                     : undefined,
+                // Board 38: a CLI's web step → one Activity row under its MCP connection.
+                cliWebNote: ({ workspace, ...entry }: WebNote & { workspace: string }) =>
+                  void hostClient
+                    .call("cliWeb", { workspace, ref: latest.current.ref, entry })
+                    .catch(() => {}),
               }
             : {}),
           openSettings: (pane) => latest.current.openSettings(pane ?? "ai-providers"),

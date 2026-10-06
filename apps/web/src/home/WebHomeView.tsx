@@ -4,7 +4,7 @@
  * Access API, B13), Templates, Design systems or Trash (soft delete, `trashedAt`, 30 days).
  */
 import type { KimoPlatform, RecentFile, WatchedFolder } from "@kimo/platform"
-import { Button, FileCard, Input, Segmented } from "@kimo/ui"
+import { Button, Input, Segmented } from "@kimo/ui"
 import { FilePlus, FolderOpen, SwatchBook, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { RecentFilesGrid, RecentFilesHeader, useNow } from "../files"
@@ -32,6 +32,8 @@ import { Icon } from "../lib/icons"
 import { useHomeCommands } from "../lib/native-menu"
 import { useOpenSettings } from "../platform/runtime"
 import { diskPath, type HomeSection, homeSectionPath, navigate } from "../router"
+import { PreviewFileCard } from "../thumbnails/PreviewFileCard"
+import { libraryThumbnails } from "../thumbnails/store"
 import { NoMatch, TemplatesGrid } from "./DesktopHomeView"
 import { HomeComposer } from "./HomeComposer"
 import {
@@ -704,8 +706,11 @@ function FileGrid({
                 </span>
               </div>
             ) : (
-              <FileCard
+              <PreviewFileCard
                 key={f.id}
+                store={libraryThumbnails}
+                fileKey={f.id}
+                version={f.updatedAt}
                 data-file-id={f.id}
                 className={`home-grid__card${menuId === f.id ? " kimo-files-grid__card--menu" : ""}`}
                 name={f.name}

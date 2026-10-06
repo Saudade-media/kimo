@@ -37,6 +37,7 @@ import {
   type UserMessage,
   ZERO_USAGE,
 } from "./types"
+import { type WebStep, type WebTool, webLabel, webStep } from "./web"
 
 /** One op group applied by the turn (an M5 `kimo_apply_ops` / `kimo_import` success). */
 export interface OpGroup {
@@ -74,6 +75,8 @@ export interface TurnRecord {
   cli?: { id: string; sessionId?: string; reportedCostUsd?: number; turns?: number }
   /** Board 34: the thread lines of requests auto-approve let through ("Approved automatically: …"). */
   autoApproved?: string[]
+  /** Board 38: the turn's web searches and page reads, in order (session transcript). */
+  web?: WebStep[]
 }
 
 /** Events for the agent panel (board 22 A: streaming text, AgentStep rows, live meta). */
@@ -162,6 +165,8 @@ export interface RunTurnOptions {
   providerLabel?: string
   /** Layer names for step labels ("Editing 6 layers in Pricing"). */
   names?: StepNames
+  /** Board 38: offer the provider's web tools this turn. */
+  webAccess?: boolean
 }
 
 export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
@@ -180,6 +185,19 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
     live.clear()
   }
   const appended: ChatMessage[] = [o.user]
+  /** Board 38: web calls the provider ran, and the inputs of the ones still running. */
+  const web: WebStep[] = []
+  const webRunning = new Map<string, { tool: WebTool; input: Record<string, unknown> }>()
+  const webStart = (id: string, tool: WebTool, input: Record<string, unknown>) => {
+    webRunning.set(id, { tool, input })
+    o.onEvent({
+      type: "step_start",
+      callId: id,
+      tool,
+      label: webLabel(tool, input, "running"),
+      input,
+    })
+  }
   const opGroups: OpGroup[] = []
   let usage: Usage = { ...ZERO_USAGE }
   let opsApplied = 0
@@ -219,10 +237,32 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
             tools: o.tools.tools(),
             thinking: o.thinking,
             ...(o.maxTokens ? { maxTokens: o.maxTokens } : {}),
+            ...(o.webAccess ? { webAccess: true } : {}),
             signal: o.signal,
           })) {
             if (ev.type === "text_delta" || ev.type === "thinking_delta") o.onEvent(ev)
-            else if (ev.type === "tool_call_start") {
+            else if (ev.type === "web_start") webStart(ev.id, ev.tool, ev.input)
+            else if (ev.type === "web_end") {
+              const started = webRunning.get(ev.id)
+              if (!started) webStart(ev.id, ev.tool, ev.input ?? {})
+              webRunning.delete(ev.id)
+              const step = webStep(ev.id, ev.tool, ev.input ?? started?.input ?? {}, ev.ok)
+              web.push(step)
+              o.onEvent({
+                type: "step_end",
+                callId: ev.id,
+                tool: ev.tool,
+                ok: ev.ok,
+                summary: step.label,
+                changed: [],
+              })
+              o.tools.note?.({
+                tool: step.tool,
+                summary: step.label,
+                detail: step.detail,
+                ok: step.ok,
+              })
+            } else if (ev.type === "tool_call_start") {
               const s = o.tools.stream?.({ id: ev.id, name: ev.name })
               if (s) {
                 live.set(ev.id, s)
@@ -426,6 +466,7 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
     ...(card ? { error: card } : {}),
     servedBy,
     skillsUsed: o.skillsUsed ?? [],
+    ...(web.length ? { web } : {}),
   }
   o.onEvent({ type: "turn_end", record })
   return record

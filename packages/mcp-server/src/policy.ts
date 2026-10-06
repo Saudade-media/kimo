@@ -293,6 +293,8 @@ export type ActivityKind =
   | "approval"
   | "denied"
   | "error"
+  /** Board 38: a web search or page read the agent's provider ran (no document change). */
+  | "web"
 
 export interface ActivityEntry {
   /** Monotonic per file. */
@@ -321,6 +323,8 @@ export interface ActivityEntry {
   opCount?: number
   /** Revision before the call, for edits. */
   revisionBefore?: { epoch: string; seq: number }
+  /** Board 38 `web`: the query or the URL (the row's target line). */
+  detail?: string
 }
 
 /** Keeps the newest {@link ACTIVITY_LIMIT} entries. */

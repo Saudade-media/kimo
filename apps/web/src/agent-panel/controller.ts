@@ -12,7 +12,6 @@ import {
   addUsage,
   agentOrigin,
   appendTurn,
-  BUILTIN_CLI_ADAPTERS,
   buildSystemPrompt,
   CHILD_EXCLUDED_TOOLS,
   type ChatMessage,
@@ -24,6 +23,7 @@ import {
   cliProviderId,
   complete,
   createSpawnTool,
+  DEFAULT_EFFORT,
   DEFAULT_MODE,
   type ErrorCard,
   type ErrorCardAction,
@@ -40,9 +40,9 @@ import {
   leadPolicy,
   loadSkills,
   MAX_AGENTS,
-  MODEL_CATALOG,
   type ModeConfig,
   type ModelSelection,
+  migrateThinking,
   type NoteView,
   newSession,
   newSessionId,
@@ -71,7 +71,6 @@ import {
   type StepNames,
   shimLaunch,
   sumCosts,
-  supportsThinkingControl,
   type ThinkingMode,
   TITLE_SCHEMA,
   type ToolHost,
@@ -79,6 +78,7 @@ import {
   titlePrompt,
   type Usage,
   type UserMessage,
+  webSupported,
   ZERO_USAGE,
 } from "@kimo/ai-agent"
 import { type ApprovalOutcome, type ApprovalRequest, callTargets } from "@kimo/mcp-server"
@@ -98,11 +98,12 @@ import {
   type HomeAgentHandoff,
   type MessageMetaView,
   type ModeAgentRowView,
-  type ModelPickerGroup,
 } from "../platform/contract"
 import { autoApprovalLine } from "./approval"
 import { type CostWarningView, estimateTurn, shouldWarn } from "./cost-warning"
 import { modelLabel, newTokens } from "./format"
+import { pushRecent } from "./model-chooser"
+import { type ProviderMark, pickerGroups, providerMark, selectionEfforts } from "./picker-groups"
 import { type AgentPanelRuntime, providerFor } from "./runtime"
 
 // --- View types (contract + what the board draws beyond it) ---------------------------------------
@@ -208,6 +209,10 @@ export interface AgentPanelViewState extends AgentPanelState {
   composerFocused: boolean
   /** Short label of the composer's model chip ("Opus 5.5"). */
   modelLabel: string
+  /** Board 39 G: the chip's provider mark (terminal CLI, cloud API, hard-drive Local). */
+  modelMark: ProviderMark | null
+  /** Board 39 Recent: the last two distinct provider + model picks, newest first. */
+  recentModels: ModelSelection[]
   /** Mode chip copy ("Single", "Side by side · 3"). */
   modeLabel: string
   /** Running or waiting. */
@@ -231,6 +236,11 @@ export interface AgentPanelViewState extends AgentPanelState {
    */
   autoApprove: boolean
   /**
+   * Board 38: the composer's globe. `on` is what the next turn gets; `disabled` names why the
+   * session can't use the web (No third-party fetch, or a model without web tools).
+   */
+  webAccess: WebAccessView
+  /**
    * Agent tab first run (board 25 §5): a detected, signed-in CLI to confirm (FrS9y), or the
    * inline Anthropic key card (D8covN). Null once a provider passed its Test / a CLI is chosen.
    */
@@ -244,6 +254,12 @@ export interface AgentPanelViewState extends AgentPanelState {
    * until Send anyway / Edit message.
    */
   costWarning: CostWarningView | null
+}
+
+/** Board 38 composer globe: on / off, or disabled with a reason. */
+export interface WebAccessView {
+  on: boolean
+  disabled: "privacy" | "model" | null
 }
 
 /** Agent tab first run (board 25 p55vU). */
@@ -307,6 +323,11 @@ export interface AgentPanelControllerExt extends AgentPanelController {
    * (the UI asks first); a new or reopened session starts off.
    */
   setAutoApprove(on: boolean): void
+  /**
+   * Board 38: web access for this session (the composer's globe). A new or reopened session
+   * starts from Settings › AI providers › Allow web access.
+   */
+  setWebAccess(on: boolean): void
   /** Cost warning "Send anyway": sends the held message without asking again. */
   sendAnyway(): Promise<void>
   /** Cost warning "Edit message": drops the hold; the text stays in the composer. */
@@ -431,7 +452,14 @@ export function messagesFromTurns(
         fromHome: false,
       })
     }
-    const steps: AgentStepView[] = []
+    // Board 38: the turn's web searches and page reads (CLI turns keep no tool calls).
+    const steps: AgentStepView[] = (t.web ?? []).map((w) => ({
+      callId: w.callId,
+      tool: w.tool,
+      label: w.label,
+      state: w.ok ? ("done" as const) : ("failed" as const),
+      changed: [],
+    }))
     for (const m of t.messages)
       if (m.role === "assistant")
         for (const p of m.content)
@@ -478,94 +506,8 @@ export function turnMeta(t: TurnRecord, canRegenerate: boolean): MessageMetaView
   }
 }
 
-/** Model picker groups (board 22 C): local CLIs first (Claude Code default when signed in), then API providers, default first. */
-export function pickerGroups(input: {
-  platform: "desktop" | "web" | "node"
-  providers: readonly ProviderConfig[]
-  unavailable: readonly { id: string; label: string; tag: string }[]
-  clis: readonly CliDetection[]
-  defaultSelection: ModelSelection | null
-  labelOf(provider: string): string
-}): ModelPickerGroup[] {
-  const groups: ModelPickerGroup[] = []
-  if (input.platform === "desktop") {
-    const order = [...input.clis].sort(
-      (a, b) => Number(b.id === "claude-code") - Number(a.id === "claude-code"),
-    )
-    for (const d of order) {
-      if (!d.installed) continue
-      const adapter = BUILTIN_CLI_ADAPTERS.find((a) => a.def.id === d.id)
-      const signedIn = d.signedIn === true
-      groups.push({
-        provider: cliProviderId(d.id),
-        label: d.label,
-        family: "cli",
-        isDefault: input.defaultSelection?.provider === cliProviderId(d.id),
-        available: signedIn,
-        ...(signedIn
-          ? { tag: d.billing === "cli-api-key" ? "API key" : "subscription" }
-          : { tag: "not signed in" }),
-        billing: d.billing ?? "subscription",
-        models: (adapter?.def.models ?? [{ id: "default", label: d.label }]).map((m) => ({
-          id: m.id,
-          label: m.label,
-          thinking: d.id === "claude-code" || d.id === "codex",
-        })),
-      })
-    }
-  }
-  const apis = [...input.providers].sort(
-    (a, b) =>
-      Number(b.id === input.defaultSelection?.provider) -
-      Number(a.id === input.defaultSelection?.provider),
-  )
-  for (const p of apis) {
-    const ids = [...new Set([p.models.agent, p.models.fast, ...(p.extraModels ?? [])])].filter(
-      Boolean,
-    )
-    groups.push({
-      provider: p.id,
-      label: p.label,
-      family: "api",
-      isDefault: input.defaultSelection?.provider === p.id,
-      available: true,
-      ...(p.free ? { tag: "local" } : {}),
-      billing: p.free ? "local" : "api",
-      models: ids.map((id) => {
-        const info =
-          MODEL_CATALOG[p.kind].find((m) => m.id === id) ??
-          (p.kind === "bedrock" || p.kind === "vertex" || p.kind === "foundry"
-            ? MODEL_CATALOG.anthropic.find((m) => m.id === id)
-            : undefined)
-        return {
-          id,
-          label: info?.label ?? id,
-          ...(p.free
-            ? { role: "local" as const }
-            : id === p.models.agent
-              ? { role: "agent" as const }
-              : id === p.models.fast
-                ? { role: "fast" as const }
-                : {}),
-          thinking: info ? supportsThinkingControl(info) : false,
-        }
-      }),
-    })
-  }
-  for (const u of input.unavailable)
-    if (!groups.some((g) => g.provider === u.id))
-      groups.push({
-        provider: u.id,
-        label: u.label,
-        family: "api",
-        isDefault: false,
-        available: false,
-        tag: u.tag,
-        billing: "api",
-        models: [],
-      })
-  return groups
-}
+/** Model chooser groups (board 39): see `picker-groups.ts`. */
+export { pickerGroups }
 
 let turnSeq = 0
 const turnId = () => `t${Date.now().toString(36)}${(++turnSeq).toString(36)}`
@@ -585,7 +527,13 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let images: AttachmentChipView[] = []
   let text = ""
   let model: ModelSelection | null = rt.defaultSelection()
-  let thinking: ThinkingMode = "auto"
+  let thinking: ThinkingMode = DEFAULT_EFFORT
+  /**
+   * Board 39 Recent: the last two distinct picks, newest first. Null until this window picks:
+   * read from settings `ai.recentModels` (loaded after start, shared by every window).
+   */
+  let recents: ModelSelection[] | null = null
+  const recentList = () => recents ?? rt.recentModels?.() ?? []
   let mode: ModeConfig = { ...DEFAULT_MODE }
   let enabledSkills: string[] = ["kimo-design"]
   let messages: AgentMessageView[] = []
@@ -597,6 +545,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let sessionList: SessionMeta[] = []
   let approvalQueue: (ApprovalPromptView & { resolve(o: ApprovalOutcome): void })[] = []
   let autoApprove = false
+  /** Board 38: the session's own choice (null: follow Allow web access). Never saved. */
+  let webOverride: boolean | null = null
   let connect: { connecting: boolean; error: string | null } = { connecting: false, error: null }
   let abort: AbortController | null = null
   let composerState: AgentComposerView["state"] = "idle"
@@ -628,16 +578,6 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
 
   // --- State ------------------------------------------------------------------------------------
 
-  const info = (sel: ModelSelection | null) => {
-    if (!sel || isCliProvider(sel.provider)) return null
-    const p = providers.find((x) => x.id === sel.provider)
-    if (!p) return null
-    return (
-      MODEL_CATALOG[p.kind].find((m) => m.id === sel.model) ??
-      MODEL_CATALOG.anthropic.find((m) => m.id === sel.model) ??
-      null
-    )
-  }
   const billingOf = (sel: ModelSelection | null): MessageMetaView["billing"] => {
     if (!sel) return "api"
     if (isCliProvider(sel.provider)) {
@@ -739,11 +679,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       defaultSelection: rt.defaultSelection(),
       labelOf: rt.labelOf,
     })
-    const inf = info(model)
-    const cliThinking =
-      model && isCliProvider(model.provider)
-        ? ["claude-code", "codex"].includes(cliIdOf(model.provider))
-        : false
+    const efforts = selectionEfforts(groups, model, providers)
     const tokens = session ? newTokens(session.usage) : 0
     const firstRun = !model && providers.length === 0 && !clis.some((c) => c.signedIn === true)
     const busy = composerState !== "idle"
@@ -758,7 +694,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         queued,
         model,
         thinking,
-        thinkingAvailable: inf ? supportsThinkingControl(inf) : cliThinking,
+        thinkingAvailable: efforts.length > 0,
+        efforts,
         mode,
         attachments: attachments(),
         slash: slash(),
@@ -778,6 +715,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         errors: catalog.errors.map((e) => `${e.path ?? ""}${e.path ? ": " : ""}${e.message}`),
       },
       picker: groups,
+      recentModels: recentList(),
+      modelMark: providerMark(model, providers),
       modeSummary: modeRun
         ? {
             mode: modeRun.mode,
@@ -808,6 +747,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           }
         : null,
       autoApprove,
+      webAccess: webView(),
       approvals: approvalQueue.map((a, i) => ({
         request: a.request,
         queued: approvalQueue.length - i,
@@ -870,6 +810,15 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   }
 
   let state = compute()
+  /** Board 38: what the composer's globe shows and what the next turn gets. */
+  function webView(sel: ModelSelection | null = model): WebAccessView {
+    const w = rt.webAccess?.() ?? { enabled: true, blocked: false }
+    if (w.blocked) return { on: false, disabled: "privacy" }
+    const config = sel ? providers.find((p) => p.id === sel.provider) : undefined
+    if (!sel || !webSupported(sel, config)) return { on: false, disabled: "model" }
+    return { on: webOverride ?? w.enabled, disabled: null }
+  }
+
   function emit() {
     if (disposed) return
     state = compute()
@@ -1135,8 +1084,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   async function runAgent(i: AgentRunInput): Promise<TurnRecord> {
     const id = turnId()
     const activePage = o.activePage?.() ?? null
+    // Board 38: web tools for this run (the session's globe, the setting, the model).
+    const web = webView(i.model).on
     const system = buildSystemPrompt({
       mode: i.modeName,
+      ...(web ? { webAccess: true } : {}),
       skills: i.skills,
       ...(i.scope ? { scope: i.scope } : {}),
       ...(i.selectionSummary ? { selection: i.selectionSummary } : {}),
@@ -1222,6 +1174,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         now,
         names: stepNames,
         ...(rt.cliToolStream ? { toolStream: (c) => rt.cliToolStream?.(c) } : {}),
+        ...(web ? { webAccess: true } : {}),
+        ...(rt.cliWebNote ? { webNote: (n) => rt.cliWebNote?.(n) } : {}),
       })
     }
     const provider = providerFor(rt, resolved.config)
@@ -1242,6 +1196,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       skillsUsed: i.skills.map((s) => s.name),
       providerLabel: rt.labelOf(i.model.provider),
       names: stepNames,
+      ...(web ? { webAccess: true } : {}),
       ...(resolved.config.free ? { free: true } : {}),
       ...(rt.online ? { online: rt.online } : {}),
       ...(rt.waitForOnline ? { waitForOnline: rt.waitForOnline } : {}),
@@ -1537,7 +1492,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
             system: { stable: "You name design sessions." },
             messages: [{ role: "user", content: [{ type: "text", text: titlePrompt(first) }] }],
             tools: [],
-            thinking: "off",
+            thinking: "low",
             maxTokens: 64,
             responseSchema: TITLE_SCHEMA as unknown as {
               name: string
@@ -2687,6 +2642,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       if (composerState !== "idle") controller.stop()
       session = null
       autoApprove = false
+      webOverride = null
       messages = []
       modeRun = null
       costWarning = null
@@ -2712,8 +2668,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       }
       session = s
       autoApprove = false
+      webOverride = null
       model = s.model
-      thinking = s.thinking
+      // Sessions saved before board 39 carry Off / Auto / Max.
+      thinking = migrateThinking(s.thinking)
       mode = s.mode
       enabledSkills = s.enabledSkills
       messages = messagesFromTurns(s.turns, (t, last) => turnMeta(t, last))
@@ -2744,8 +2702,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     },
     setModel(sel) {
       model = sel
-      const inf = info(sel)
-      if (inf && !supportsThinkingControl(inf)) thinking = "auto"
+      // Board 39: the effort level stays; each turn sends it clamped to the model's levels.
+      recents = pushRecent(recentList(), sel)
+      void rt.saveRecentModels?.(recents)
       if (session) session = { ...session, model: sel }
       menu = null
       emit()
@@ -2782,6 +2741,11 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     },
     async answerApproval(id, choice: McpApprovalChoice) {
       settleApproval(choice, id || undefined)
+    },
+    setWebAccess(on) {
+      if (webView().disabled) return
+      webOverride = on
+      emit()
     },
     setAutoApprove(on) {
       if (autoApprove === on) return
@@ -2957,6 +2921,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       model = h.model
       session = null
       autoApprove = false
+      webOverride = null
       messages = []
       mode = { ...DEFAULT_MODE }
       ensureSession("home", h.sessionId)

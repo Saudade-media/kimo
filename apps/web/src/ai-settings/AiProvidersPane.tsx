@@ -49,6 +49,7 @@ import {
 } from "lucide-react"
 import { type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { ProviderRowView } from "../platform/contract"
+import { useSetSetting, useSettings } from "../settings/hooks"
 import { SettingsBannerContext, SettingsFailContext } from "../settings/panes"
 import { AddProviderDialog } from "./AddProviderDialog"
 import { CloudCards } from "./CloudCards"
@@ -184,6 +185,7 @@ export function AiProvidersPane({ platform, controller, openUrl, section }: AiPr
       </div>
       {banner}
       <DefaultRows s={s} ctl={ctl} />
+      {platform && <WebAccessRow platform={platform} />}
       <p className="ai-intro" data-pen="L56aX">
         {introCopy(s)}
       </p>
@@ -406,6 +408,42 @@ function DefaultRows({ s, ctl }: { s: AiSettingsState; ctl: AiSettingsController
         }
       />
     </>
+  )
+}
+
+// --- Allow web access (board 38 §1) ---------------------------------------------------------------
+
+/**
+ * Setting · Allow web access: SettingRow (MuoTX) right after Default model, Toggle in the
+ * Control slot. Board 38 B: while No third-party fetch is on the row is dimmed 0.45 with the
+ * toggle off and disabled, and the description names the reason.
+ */
+function WebAccessRow({ platform }: { platform: KimoPlatform }) {
+  const fail = useContext(SettingsFailContext)
+  const settings = useSettings(platform.settings)
+  const set = useSetSetting(platform.settings, (e) => fail("save Allow web access", e))
+  const blocked = settings["privacy.noThirdPartyFetch"]
+  return (
+    <SettingRow
+      className="ai-web-row"
+      data-testid="ai-web-access"
+      label="Allow web access"
+      description={
+        blocked
+          ? "Off while No third-party fetch is on in Settings › Fonts & privacy."
+          : "The agent can search the web and read pages when a task needs outside facts. Each search and page shows in the thread. New sessions start with this setting."
+      }
+      dimmed={blocked}
+      control={(ids) => (
+        <Toggle
+          checked={!blocked && settings["ai.webAccess"]}
+          disabled={blocked}
+          aria-labelledby={ids.labelId}
+          aria-describedby={ids.descriptionId}
+          onChange={(v) => void set("ai.webAccess", v)}
+        />
+      )}
+    />
   )
 }
 

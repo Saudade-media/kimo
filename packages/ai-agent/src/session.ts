@@ -4,6 +4,7 @@
  */
 import type { CliBilling } from "./cli/types"
 import type { TurnRecord } from "./loop"
+import { migrateThinking } from "./models"
 import { DEFAULT_MODE, type ModeConfig } from "./modes"
 import type { ChatMessage, ModelSelection, ThinkingMode, Usage, UserMessage } from "./types"
 import { ZERO_USAGE } from "./types"
@@ -81,7 +82,7 @@ export function newSession(init: {
     createdAt: now,
     updatedAt: now,
     model: init.model,
-    thinking: init.thinking ?? "auto",
+    thinking: migrateThinking(init.thinking),
     mode: init.mode ?? DEFAULT_MODE,
     origin: init.origin ?? "panel",
     enabledSkills: init.enabledSkills ?? ["kimo-design"],
@@ -142,7 +143,8 @@ export function planRegenerate(session: Session, turnId: string): RegeneratePlan
     undo: [...last.opGroups].reverse().map((g) => ({ docId: g.docId, token: g.undoToken })),
     prompt,
     model: last.model,
-    thinking: last.thinking,
+    // Turns saved before board 39 carry Off / Auto / Max.
+    thinking: migrateThinking(last.thinking),
     rest: { ...session, turns: session.turns.slice(0, -1) },
   }
 }

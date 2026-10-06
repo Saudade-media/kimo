@@ -20,6 +20,56 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Added
 
+- Model chooser for the built-in agent (board 39), replacing the composer's model menu. It picks
+  a provider, then a specific model, then the effort: **Recent** (the last two provider + model
+  picks, saved in `ai.recentModels`, shown when 2+ providers are connected), provider chips (CLIs,
+  then connected API providers; a signed-out CLI keeps its chip with a warning dot and offers
+  **Sign in…**), the provider's models with at most one tag (Best, Fast, Local) and a detail line
+  on hover ("1M context · 128K output · always thinks"), **Effort** (Low, Medium, High, Max; only
+  the levels the model supports, hidden when none), and **Connect a provider…** (`⌘,`). A search
+  field appears when a provider lists 9+ models and filters across providers. Keys: type to
+  filter, `←`/`→` providers, `↑`/`↓`, `Enter`, `Tab` to Effort, `Esc`. The composer chip shows
+  the model name only, after a 12 px provider mark (terminal, cloud, hard drive). CLIs now list
+  specific models, each checked with a real one-message call: Claude Code `claude-opus-5-5`,
+  `claude-sonnet-5-5`, `claude-haiku-4-5-20251001`, `claude-fable-5-1` (2.1.291); Codex
+  `gpt-5.6-terra`, `gpt-5.6-luna` (0.146.0), after "Default (CLI decides)". Effort maps to
+  `output_config.effort` (Opus, Sonnet, Fable), Haiku 4.5 thinking budgets (none, 4,096, 8,192,
+  16,000), OpenAI `reasoning_effort` (low to high), Gemini 2.5 `thinkingBudget`, Claude Code
+  `--effort` and Codex `model_reasoning_effort` (low, medium, high, max). Sessions saved with the
+  old Off / Auto / Max open as Low / High / Max.
+
+- Web access for the built-in agent (board 38), on by default. The agent can search the web and
+  read pages when a task needs outside facts; the prompt tells it to use the web only then, never
+  to paste page text into the design, and to end its reply with "Sources:" and plain links.
+  **Settings › AI providers › Allow web access** (`ai.webAccess`, default on) sets it for new
+  sessions; a globe button after the auto-approve shield in the composer turns it off or on for
+  the current session only. **No third-party fetch** turns it off everywhere: the setting row is
+  dimmed with its toggle off and disabled, and the globe is disabled with the reason in its
+  tooltip ("Web access is off: No third-party fetch is on"); a model without web tools gets
+  "This model can't use the web". Each search and page read is a step and the status line
+  ("Searching the web for “…”", "Reading example.com"), is saved in the session transcript
+  (`TurnRecord.web`) and, on desktop, is an Activity row (kind `web`, tool `web_search` /
+  `web_fetch`, the query or URL, no Undo). No approval is asked; auto-approve is unaffected.
+  Providers: Claude Code gets `--tools "WebSearch,WebFetch"` and both in `--allowedTools` (file,
+  shell and edit tools stay off); Codex `-c web_search="live"` (`"disabled"` when off, and its
+  ChatGPT apps are now off in every turn, since they carry their own web tool); Gemini CLI stops
+  excluding `web_fetch` and allows `google_web_search`; the Anthropic API adds the
+  `web_search` / `web_fetch` server tools (`_20260209` on Opus and Sonnet 4.6 and later, the basic
+  versions on Haiku and Foundry, search only on Vertex, at most 5 uses each per request, fetched
+  pages capped at 20,000 tokens) and bills searches at $10 per 1,000 in the cost estimate; OpenAI
+  on the Responses API adds `web_search`. Gemini API, OpenRouter, custom endpoints, Bedrock and
+  Chat Completions have no web tools in this release.
+- File previews on Home (board 37 §9). Grid cards in Recents, All files, folders and Design
+  systems, on desktop and on the web, show a 520 × 328 PNG of the file's first frame on its first
+  page (or the union of that page's layers), cover-fit, in place of the placeholder sketch. The
+  editor renders it with the renderer's raster export (`Renderer.exportThumbnail`) after a save
+  (desktop) or an autosaved edit (browser library): debounced 1.5 s, at least 4 s apart, in an
+  idle callback, skipped when the content hash matches the stored preview's. A render that runs
+  past 5 s, or a page above 20,000 layers, keeps the old preview. The desktop app keeps previews
+  in `~/.kimo/thumbs` (`<sha256(path)>.png` and `.json`, `platform.thumbnails`); the browser
+  keeps them in the IndexedDB database `kimo-thumbs`. Rename moves a preview, Duplicate copies
+  it, Delete forever and Empty trash drop it. A file made from a template starts with the
+  template's cover until its first save. List rows keep the icon tile.
 - Streamed agent edits. Layers appear on the canvas while the agent is still writing an edit:
   each op of a `kimo_apply_ops` call lands as soon as the model has written it, the status reads
   "Adding <layer>…" and the agent's pointer follows the last layer added. When the call arrives

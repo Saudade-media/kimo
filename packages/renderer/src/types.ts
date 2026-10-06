@@ -978,6 +978,15 @@ export interface RasterExportOptions {
   background?: string
 }
 
+/** Options for {@link Renderer.exportThumbnail}. */
+export interface ThumbnailExportOptions {
+  /** Output size in pixels (board 37 §9: 520 × 328, 2× of the 260 × 164 card). */
+  width: number
+  height: number
+  /** Background behind the nodes; default transparent. */
+  background?: string
+}
+
 /** Rolling frame statistics for the perf gate (M1: 5k nodes at 60 fps). */
 export interface RenderStats {
   /** Frames rendered since attach. */
@@ -1117,6 +1126,12 @@ export interface Renderer {
    * headless). Waits for its fonts and image assets. Overlays are never included.
    */
   exportRaster(nodeId: string, options?: RasterExportOptions): Promise<Uint8Array>
+  /**
+   * Board 37 §9 file previews: PNG of the union of `nodeIds` (top-level nodes), scaled to cover
+   * `width` × `height` and centered (CSS `object-fit: cover`), on a CPU raster surface. Waits
+   * for fonts and images like {@link exportRaster}. Optional for fakes.
+   */
+  exportThumbnail?(nodeIds: readonly string[], options: ThumbnailExportOptions): Promise<Uint8Array>
   /**
    * M2 (#4 "Pixel readout"): the document's own color of the one document pixel containing
    * world point `world` (no canvas background, no overlays), as unpremultiplied RGBA 0–255;

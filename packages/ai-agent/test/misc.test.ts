@@ -225,7 +225,7 @@ describe("sessions", () => {
   const turn = (id: string, groups: number): TurnRecord => ({
     id,
     model: { provider: "anthropic", model: "claude-opus-5-5" },
-    thinking: "auto",
+    thinking: "high",
     startedAt: 0,
     endedAt: 1,
     messages: [

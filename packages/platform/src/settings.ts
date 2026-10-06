@@ -19,6 +19,15 @@ export type ExternalChangePolicy =
   /** Ask before merging (toast with Review). */
   | "ask"
 
+/** One Recent row of the agent's model chooser (board 39): a provider + model pick. */
+export interface RecentModel {
+  provider: string
+  model: string
+}
+
+/** Board 39: Recent shows two rows. */
+export const RECENT_MODELS_MAX = 2
+
 /** Every setting with its value type. */
 export interface SettingsSchema {
   /** Files & autosave › Autosave. */
@@ -35,6 +44,16 @@ export interface SettingsSchema {
   "files.newFilesDir": string | null
   /** Fonts & privacy › No third-party fetch (blocks Google Fonts and remote image URLs). */
   "privacy.noThirdPartyFetch": boolean
+  /**
+   * AI providers › Allow web access: the agent may search the web and read pages (board 38).
+   * New agent sessions start from it; off while No third-party fetch is on.
+   */
+  "ai.webAccess": boolean
+  /**
+   * Agent model chooser › Recent (board 39): the last two distinct provider + model picks,
+   * newest first. Not a SettingRow; kept here so every window shares it.
+   */
+  "ai.recentModels": RecentModel[]
   /** Fonts & privacy › Google Fonts (off while No third-party fetch is on). */
   "fonts.google": boolean
   /** Fonts & privacy › Extra font folders (absolute paths). */
@@ -83,6 +102,8 @@ export const SETTINGS_DEFAULTS: Readonly<Settings> = Object.freeze({
   "files.pauseAutosaveDuringGit": true,
   "files.newFilesDir": null,
   "privacy.noThirdPartyFetch": false,
+  "ai.webAccess": true,
+  "ai.recentModels": [],
   "fonts.google": true,
   "fonts.extraFolders": [],
   "fonts.embedInKimoz": true,
@@ -123,6 +144,19 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => v is SettingsSchema[K] } 
   "files.pauseAutosaveDuringGit": (v): v is boolean => typeof v === "boolean",
   "files.newFilesDir": (v): v is string | null => v === null || (typeof v === "string" && v !== ""),
   "privacy.noThirdPartyFetch": (v): v is boolean => typeof v === "boolean",
+  "ai.webAccess": (v): v is boolean => typeof v === "boolean",
+  "ai.recentModels": (v): v is RecentModel[] =>
+    Array.isArray(v) &&
+    v.length <= RECENT_MODELS_MAX &&
+    v.every(
+      (x) =>
+        x !== null &&
+        typeof x === "object" &&
+        typeof (x as RecentModel).provider === "string" &&
+        typeof (x as RecentModel).model === "string" &&
+        (x as RecentModel).provider !== "" &&
+        (x as RecentModel).model !== "",
+    ),
   "fonts.google": (v): v is boolean => typeof v === "boolean",
   "fonts.extraFolders": (v): v is string[] =>
     Array.isArray(v) && v.every((x) => typeof x === "string" && x !== ""),
@@ -174,6 +208,14 @@ export function googleFontsAllowed(
   s: Pick<Settings, "privacy.noThirdPartyFetch" | "fonts.google">,
 ) {
   return s["fonts.google"] && !s["privacy.noThirdPartyFetch"]
+}
+
+/**
+ * Whether the agent may use the web under these settings (board 38): Allow web access on and
+ * No third-party fetch off. A session can still turn it off for itself.
+ */
+export function webAccessAllowed(s: Pick<Settings, "privacy.noThirdPartyFetch" | "ai.webAccess">) {
+  return s["ai.webAccess"] && !s["privacy.noThirdPartyFetch"]
 }
 
 /** `"1/10"` → `{ step: 1, big: 10 }` (arrow / ⇧ arrow nudge in px). */

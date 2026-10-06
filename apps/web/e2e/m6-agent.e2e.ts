@@ -164,7 +164,8 @@ export const scenarios: Scenario[] = [
         skills: ".kimo-composer-agent__skills",
         mode: ".kimo-mode-chip",
         model: ".kimo-composer-agent__model",
-        modelMark: ".kimo-composer-agent__model .kimo-agent-mark",
+        // Board 39 G (Q2sql agr1b): a 12 px provider mark replaces the chip's AgentMark/12.
+        modelMark: ".kimo-composer-agent__model .kimo-composer-agent__model-mark svg",
         modelLabel: ".kimo-composer-agent__model-label",
         send: ".kimo-composer-agent__send",
       })
@@ -323,7 +324,7 @@ export const scenarios: Scenario[] = [
       c.box("Skills (X2Uuj)", m.skills, { h: 24, gap: 4, pad: [0, 6, 0, 6] })
       c.box("Mode (SzC72)", m.mode, { h: 24, gap: 4, pad: [0, 8, 0, 6], bg: bgMuted })
       c.box("Model (KnAC9)", m.model, { gap: 4, pad: [2, 6, 2, 6] })
-      c.box("Model › AgentMark/12 (P9Dzzb)", m.modelMark, { w: 12, h: 12 })
+      c.box("Model › Provider Mark (board 39 agr1b)", m.modelMark, { w: 12, h: 12 })
       c.box("Model › Label (H5ZJ9)", m.modelLabel, { fs: 11, color: tertiary })
       c.box("Send (fh2Ry)", m.send, { w: 28, h: 28, radius: 999, bg: accent })
       c.flush()
@@ -442,7 +443,7 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "m6-agent: panel C — model picker + measured",
+    name: "m6-agent: panel C — model chooser (board 39) + measured",
     async run(ctx) {
       const { page } = ctx
       await open(ctx)
@@ -450,17 +451,13 @@ export const scenarios: Scenario[] = [
       const menu = page.locator("[data-testid=agent-model-menu]")
       await menu.waitFor()
       const overlay = await token(page, "--kimo-bg-overlay")
-      const hover = await token(page, "--kimo-bg-hover")
       const tertiary = await token(page, "--kimo-text-tertiary")
-      const c = checker(ctx, "Model picker C (r6eAFo › XxdJv)")
+      const c = checker(ctx, "Model chooser (board 39 VlWzE, replaces board 22 XxdJv)")
       const m = await measure(page, {
         panel: "[data-testid=right-panel]",
         wrap: ".agent-panel__composer-wrap",
-        comp: "[data-testid=agent-composer]",
         menu: "[data-testid=agent-model-menu]",
-        group: "[data-testid=agent-model-menu] .agent-menu__group",
-        groupLabel: "[data-testid=agent-model-menu] .agent-menu__group-label",
-        status: "[data-testid=agent-model-menu] .agent-menu__group-status",
+        chip: "[data-testid=agent-model-menu] .agent-chooser__chip--on",
         checked: "[data-testid=agent-model-menu] [aria-checked=true]",
         meta: "[data-testid=agent-model-menu] [aria-checked=true] .kimo-menu-item-dense__meta",
         effort: ".agent-menu__effort",
@@ -468,41 +465,42 @@ export const scenarios: Scenario[] = [
         seg: ".agent-menu__effort .kimo-seg-text__segment",
         segLabel: ".agent-menu__effort .kimo-seg-text__label",
         modelOpen: ".kimo-composer-agent__model--open",
-        modelOpenLabel: ".kimo-composer-agent__model--open .kimo-composer-agent__model-label",
       })
-      c.box("Model Menu (XxdJv)", m.menu, {
-        w: 280,
+      c.box("Model Menu (VlWzE)", m.menu, {
+        w: 304,
         gap: 1,
         pad: [4, 4, 4, 4],
         radius: 16,
         bg: overlay,
       })
-      c.check("Model Menu", "x = panel x + 68", (m.menu?.x ?? 0) - (m.panel?.x ?? 0), 68)
+      c.check("Model Menu", "x = panel x + 44", (m.menu?.x ?? 0) - (m.panel?.x ?? 0), 44)
       c.check(
         "Model Menu",
         "bottom = composer wrap top − 4",
         (m.menu?.y ?? 0) + (m.menu?.h ?? 0),
         (m.wrap?.y ?? 0) - 4,
       )
-      c.box("Group · Anthropic (zMLnz)", m.group, { gap: 6, pad: [6, 8, 2, 8] })
-      c.box("Group label (PvAr4)", m.groupLabel, { fs: 11, fw: "500", color: tertiary })
-      c.box("Status 'default' (y0GYY)", m.status, { fs: 11, color: tertiary })
-      c.box("Model · Claude Opus 5.5 (zTZCq)", m.checked, { h: 28, bg: hover })
-      c.box("role tag 'agent' (T4CD1)", m.meta, { fs: 11, ff: "JetBrains Mono" })
-      c.box("Effort (e9Njhu)", m.effort, { gap: 8, pad: [4, 8, 4, 8] })
-      c.box("Thinking (h5wcjY)", m.effortLabel, { fs: 12 })
-      c.box("Effort segment (mgJRy override)", m.seg, { h: 20, pad: [0, 8, 0, 8] })
-      c.box("Effort label", m.segLabel, { fs: 11 })
+      c.box("Provider · Anthropic (mRxOq)", m.chip, { h: 24, pad: [0, 8, 0, 8] })
+      // Board 39: the checked row has no fill (check + 500 only), its tag is sans "Best".
+      c.box("Model · Opus 5.5 (I9Yvt)", m.checked, { h: 28, bg: "rgba(0, 0, 0, 0)" })
+      c.box("Meta 'Best' (T4CD1)", m.meta, { fs: 11, ff: "Inter", color: tertiary })
+      c.box("Effort (j6ZMj)", m.effort, { gap: 8, pad: [4, 8, 4, 8] })
+      c.box("Effort label (i5vLr4)", m.effortLabel, { fs: 12 })
+      c.box("Segment (V8EykG)", m.seg, { h: 20, pad: [0, 8, 0, 8] })
+      c.box("Segment label", m.segLabel, { fs: 11 })
       c.box("Composer Model open (U4mrI KnAC9)", m.modelOpen, { radius: 999 })
       c.flush()
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "m6-panel-c.png") })
-      const groups = await menu.locator(".agent-menu__group-label").allInnerTexts()
-      expect(groups.join("|") === "Anthropic|Google Gemini", `groups: ${groups.join("|")}`)
+      // Board 39: only connected providers (Gemini has no key → not listed).
+      const chips = await menu.locator(".agent-chooser__chip").allInnerTexts()
+      expect(chips.join("|") === "Anthropic", `chips: ${chips.join("|")}`)
+      const rows = await menu.getByRole("menuitemradio").allInnerTexts()
       expect(
-        (await menu.locator(".agent-menu__add").innerText()).includes("Add a key to use Gemini…"),
-        "add-a-key row",
+        rows.map((r) => r.split("\n")[0]).join("|") === "Opus 5.5|Sonnet 5.5|Haiku 4.5|Fable 5.1",
+        `rows: ${rows.join("|")}`,
       )
-      await menu.getByRole("menuitemradio", { name: /Claude Haiku 4.5/ }).click()
+      expect((await menu.locator(".agent-menu__effort-label").innerText()) === "Effort", "Effort")
+      await menu.getByRole("menuitemradio", { name: /Haiku 4.5/ }).click()
       expect(
         (await page.locator(".kimo-composer-agent__model-label").innerText()) === "Haiku 4.5",
         "picked",

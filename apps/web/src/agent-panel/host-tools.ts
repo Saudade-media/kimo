@@ -93,6 +93,10 @@ export function createHostTools(o: HostToolsOptions): HostTools {
     const sends = new Map<string, { sent: () => Promise<void>; ran: () => void }>()
     const host: ToolHost = {
       tools: () => specs,
+      // Board 38: a web step the provider ran → one Activity row on the host.
+      note(entry) {
+        void o.client.call("agentWeb", { spec: wire, ref: o.ref, entry }).catch(() => {})
+      },
       stream(call) {
         if (!STREAMED_TOOLS.has(call.name) || !allowed.has(call.name)) return undefined
         const s = rpcToolStream(o.client, "agentStream", "agentStreamClose", {

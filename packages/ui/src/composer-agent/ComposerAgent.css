@@ -119,6 +119,46 @@
   color: var(--kimo-warning);
 }
 
+/* Board 38 Web access (v41pS / vfhgZ / vcbyI / BzyJO): 24 × 24, radius-sm. On: globe 14
+   text-secondary. Off: globe-x 14 text-tertiary. Blocked: opacity 0.45, no hover. */
+.kimo-composer-agent__web {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: none;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kimo-composer-agent__web--off {
+  color: var(--kimo-text-tertiary);
+}
+
+.kimo-composer-agent__web--blocked {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kimo-composer-agent__web:not(.kimo-composer-agent__web--blocked):not(:disabled):hover {
+  background: var(--kimo-bg-hover);
+}
+
+.kimo-composer-agent__web svg {
+  display: block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
 .kimo-composer-agent__attach:hover,
 .kimo-composer-agent__auto:not(.kimo-composer-agent__auto--on):hover,
 .kimo-composer-agent__skills:hover {
@@ -195,6 +235,20 @@
 
 .kimo-composer-agent__model--open .kimo-composer-agent__model-label {
   color: var(--kimo-text-primary);
+}
+
+/* Board 39 G Provider Mark (agr1b): icon 12, text-tertiary (the chip's color). */
+.kimo-composer-agent__model-mark {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.kimo-composer-agent__model-mark > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
 }
 
 .kimo-composer-agent__model-chevron {

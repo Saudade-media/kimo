@@ -8,6 +8,9 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 - **Images.** Paste, drop or attach PNG, JPEG or WebP images up to 5 MB each.
 - **Follow-ups.** While a turn runs you can keep typing. Queued messages show greyed in the thread, and you can edit or remove them before they run. They are sent when the turn ends.
 
+- **Model.** The chip at the right of the composer shows the model's name. Click it to pick a provider, a model and an effort level. See [The model chooser](providers.md#the-model-chooser).
+- **Web access.** The globe next to the auto-approve shield lets the agent search the web and read pages in this session. It starts from **Settings › AI providers › Allow web access** (on by default). It is disabled, with the reason in its tooltip, while **No third-party fetch** is on or when the model has no web tools. See [Web access](providers.md#web-access).
+
 ## While the agent works
 
 The agent builds in steps you can watch: it plans the sections, then adds one finished section per edit, with its real content. After every edit the design looks complete so far, with no empty boxes waiting to be filled. Each edit lands on the canvas as soon as it is made. The canvas never moves by itself.
@@ -31,7 +34,7 @@ After each edit Kimo tells the agent about clear problems in what it just built:
 
 Instead of streaming text, the thread shows one status line that updates in place:
 
-- **What it is doing now:** the agent's own short note for the current step ("Building the pricing section"), or, when it wrote none, what the tool is doing ("Adding 12 layers in Pricing", "Reading the Home page"). Its reasoning is never shown.
+- **What it is doing now:** the agent's own short note for the current step ("Building the pricing section"), or, when it wrote none, what the tool is doing ("Adding 12 layers in Pricing", "Reading the Home page", "Searching the web for “tailwind v4 fonts”", "Reading tailwindcss.com"). Its reasoning is never shown.
 - **Elapsed time** and the number of steps so far.
 - **Follow:** zooms the canvas to the last layer the agent added. It jumps once per click.
 
@@ -45,7 +48,7 @@ With **Reduce motion** on (System Settings › Accessibility › Display) nothin
 
 ## Replies
 
-Under each reply, **N steps** opens the list of tool steps the agent took. It is always folded by default; if a step failed, the toggle shows how many in red. Hover a reply to see its tokens, cost and time (`4.5k new tokens · $0.034 · 11.2s`), **Copy** and **Regenerate**. Tokens count only what the turn really spent: input not served from the prompt cache plus output. Cached re-reads of the conversation are left out; the tooltip shows the split. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed. Regenerate can't start while another turn is running. If a later edit sits on top of the turn's changes, they leave the layers as they are, and the reply says why.
+Under each reply, **N steps** opens the list of tool steps the agent took, including each web search and page read ("Searched the web for “…”", "Read example.com"). A reply that used the web ends with **Sources:** and its links. It is always folded by default; if a step failed, the toggle shows how many in red. Hover a reply to see its tokens, cost and time (`4.5k new tokens · $0.034 · 11.2s`), **Copy** and **Regenerate**. Tokens count only what the turn really spent: input not served from the prompt cache plus output. Cached re-reads of the conversation are left out; the tooltip shows the split. **Regenerate** reruns the last turn and **Undo turn** reverts everything a turn changed. Regenerate can't start while another turn is running. If a later edit sits on top of the turn's changes, they leave the layers as they are, and the reply says why.
 
 ## Edit size
 
@@ -104,7 +107,7 @@ Some limits are not approvals, so auto-approve doesn't lift them:
 
 ## Sessions
 
-Each conversation is a session. **New** starts one; **History** lists the sessions for this file first, then those of other files, with search over titles and messages. Opening a session restores its model, thinking, mode and skills. After the first turn the session is named automatically.
+Each conversation is a session. **New** starts one; **History** lists the sessions for this file first, then those of other files, with search over titles and messages. Opening a session restores its model, effort, mode and skills. After the first turn the session is named automatically.
 
 Sessions are stored on this device (in the app's browser storage), not in the `.kimo` file.
 

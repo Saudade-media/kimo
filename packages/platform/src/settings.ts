@@ -54,6 +54,11 @@ export interface SettingsSchema {
    * newest first. Not a SettingRow; kept here so every window shares it.
    */
   "ai.recentModels": RecentModel[]
+  /**
+   * Multiplayer › Relay URL: the user's own `kimo-mp/1` relay (self-hosted, Docker, Fly, Railway).
+   * There is no default relay: null until the user enters one (docs/adr/0016).
+   */
+  "multiplayer.relayUrl": string | null
   /** Fonts & privacy › Google Fonts (off while No third-party fetch is on). */
   "fonts.google": boolean
   /** Fonts & privacy › Extra font folders (absolute paths). */
@@ -104,6 +109,7 @@ export const SETTINGS_DEFAULTS: Readonly<Settings> = Object.freeze({
   "privacy.noThirdPartyFetch": false,
   "ai.webAccess": true,
   "ai.recentModels": [],
+  "multiplayer.relayUrl": null,
   "fonts.google": true,
   "fonts.extraFolders": [],
   "fonts.embedInKimoz": true,
@@ -157,6 +163,8 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => v is SettingsSchema[K] } 
         (x as RecentModel).provider !== "" &&
         (x as RecentModel).model !== "",
     ),
+  "multiplayer.relayUrl": (v): v is string | null =>
+    v === null || (typeof v === "string" && v !== "" && v.length <= 2048),
   "fonts.google": (v): v is boolean => typeof v === "boolean",
   "fonts.extraFolders": (v): v is string[] =>
     Array.isArray(v) && v.every((x) => typeof x === "string" && x !== ""),

@@ -183,6 +183,7 @@ export const SETTING_LABELS: Record<SettingKey, string> = {
   "privacy.noThirdPartyFetch": "No third-party fetch",
   "ai.webAccess": "Allow web access",
   "ai.recentModels": "Recent models",
+  "multiplayer.relayUrl": "Relay URL",
   "fonts.google": "Google Fonts",
   "fonts.extraFolders": "Extra font folders",
   "fonts.embedInKimoz": "Embed fonts in .kimoz packages",

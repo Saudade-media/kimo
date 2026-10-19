@@ -20,6 +20,7 @@ pub fn defaults() -> Map<String, Value> {
         "privacy.noThirdPartyFetch": false,
         "ai.webAccess": true,
         "ai.recentModels": [],
+        "multiplayer.relayUrl": null,
         "fonts.google": true,
         "fonts.extraFolders": [],
         "fonts.embedInKimoz": true,
@@ -71,6 +72,9 @@ pub fn validate(key: &str, v: &Value) -> Option<bool> {
         "files.autosaveIntervalMs" | "files.recoverySnapshotMs" => positive_ms(v),
         "files.onExternalChange" => one_of(v, &["merge-and-tell", "ask"]),
         "files.newFilesDir" => v.is_null() || v.as_str().is_some_and(|s| !s.is_empty()),
+        "multiplayer.relayUrl" => {
+            v.is_null() || v.as_str().is_some_and(|s| !s.is_empty() && s.len() <= 2048)
+        }
         "fonts.extraFolders" => v
             .as_array()
             .is_some_and(|a| a.iter().all(|x| x.as_str().is_some_and(|s| !s.is_empty()))),
@@ -193,8 +197,8 @@ mod tests {
             .filter_map(|l| l.trim().strip_prefix('"')?.split('"').next())
             .collect();
         let d = defaults();
-        assert_eq!(keys.len(), 24);
-        assert_eq!(d.len(), 24);
+        assert_eq!(keys.len(), 25);
+        assert_eq!(d.len(), 25);
         for k in keys {
             assert!(d.contains_key(k), "{k}");
             assert_eq!(validate(k, &d[k]), Some(true), "{k}");

@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@kimo/core-schema": "workspace:*",
-    "@kimo/editor-state": "workspace:*"
+    "@kimo/editor-state": "workspace:*",
+    "@kimo/mcp-server": "workspace:*"
   }
 }

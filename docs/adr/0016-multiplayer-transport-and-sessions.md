@@ -129,6 +129,30 @@ hold. The relay stores and forwards ciphertext, enforces capability tokens, and 
     relay enforces it on presence and log entries. Because the relay is blind, a remote agent is a
     headless Kimo client holding the room key (the same provider in Bun), not code inside the
     relay.
+16. **Agent area claims.** Two agents must not rebuild the same frame at once, but the relay is
+    blind and cannot see node ids, so claims are soft and enforced by every client for its own
+    agents. Before an agent (`agent:<id>`) applies an op group, it claims the nodes the group
+    edits (ids, insert and move parents; claiming a node claims its subtree). MCP clients
+    respect claims but hold none: they have no turn that would end a claim, so their
+    concurrency stays on `baseRevision`. Agents of one session (a lead and the children it
+    spawned, `agent:kimo.<session>.<n>`) never block each other: node scopes already split
+    their work. The claim is kept
+    in a per-document registry (`claimsFor(store)`, `@kimo/editor-state`) and published in the
+    sealed presence as `PresenceState.claims` (records `{holder, ids, since, renewed, turn?,
+    label?}`, `working` = their ids). An op group that touches a node inside, above or below
+    another live claim, local or remote, by an agent or an MCP client, fails with the new MCP
+    code `AREA_BUSY`
+    (`{holder, holderLabel, ids, touched, since}`, retryable after a wait; the agent works
+    elsewhere or waits). Claims taken at the same time on two clients are resolved the same way
+    everywhere: the earlier `since` wins, then the lower holder id; the loser lets go on the next
+    presence update. Claims end at turn end (with the placeholders, done, stopped or error), when
+    the holder's connection or peer goes, and after 10 minutes without activity (every write
+    renews). People are never blocked: an edit by a person inside an agent's claim makes that
+    agent's next write fail once with `REVISION_CONFLICT` (detail `human-edit`), so it re-reads
+    before it continues. We reuse `REVISION_CONFLICT` because every agent already knows to
+    re-read and retry on it. Offline or single-player only the local registry applies, and a
+    single agent only pays a parent walk per touched node. Op groups that only set or clear `placeholder`
+    are exempt (a placeholder is never a lock).
 
 Rollout: v2.0 relay, provider with presence, client compaction and repair, blob sync, links with
 view/edit/expiry/revocation/reset, headless share API, Docker image, self-host and deploy guides.
@@ -159,6 +183,10 @@ role, content re-keying without a new room, accounts.
   and is unaffected.
 - The desktop CSP must allow `https:` and `wss:` connections to user-provided relays.
 - The `network.ts` module comment is rewritten to describe the blind protocol.
+- Agent claims are cooperative: a modified client can ignore them, as it can write anything.
+  A remote change cannot be attributed to a person or an agent (presence carries the claims, the
+  log entry only the token origin), so a network change inside a local claim counts as a human
+  edit unless a remote claim covers it; an agent may re-read once more than strictly needed.
 - Losing every copy of the link and the owner's device loses the key: the relay alone cannot
   restore a room's content. The owner's device keeps the keys (non-extractable where possible)
   and the document.

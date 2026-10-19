@@ -4,7 +4,7 @@
  * room's awareness key and bound to the sender's peer id. A collaborator's `origin` comes from
  * the relay-stamped peers table, never from the payload.
  */
-import type { LocalOrigin } from "@kimo/editor-state"
+import type { ClaimRecord, LocalOrigin } from "@kimo/editor-state"
 import {
   fromUtf8,
   MAX_AWARENESS_BYTES,
@@ -213,6 +213,35 @@ function parsePresence(json: string, origin: MpOrigin): PresenceState | null {
     state.cursor = { x: cursor.x as number, y: cursor.y as number }
   if (isStringList(value.selection)) state.selection = value.selection
   if (isStringList(value.working)) state.working = value.working
+  const claims = parseClaims(value.claims)
+  if (claims.length) state.claims = claims
   if (isString(value.page)) state.page = value.page
   return state
+}
+
+/** Most claim records and ids per record accepted from one peer. */
+const MAX_CLAIM_RECORDS = 64
+const MAX_CLAIM_IDS = 256
+const HOLDER = /^(?:agent|mcp):\S+$/
+
+/** Validates published claim records; malformed ones are dropped. */
+export function parseClaims(value: unknown): ClaimRecord[] {
+  if (!Array.isArray(value)) return []
+  const out: ClaimRecord[] = []
+  for (const raw of value.slice(0, MAX_CLAIM_RECORDS)) {
+    if (typeof raw !== "object" || raw === null) continue
+    const r = raw as Record<string, unknown>
+    if (!isString(r.holder) || !HOLDER.test(r.holder)) continue
+    if (!isStringList(r.ids) || r.ids.length === 0 || r.ids.length > MAX_CLAIM_IDS) continue
+    if (!Number.isFinite(r.since) || !Number.isFinite(r.renewed)) continue
+    out.push({
+      holder: r.holder,
+      ids: r.ids,
+      since: r.since as number,
+      renewed: r.renewed as number,
+      ...(isString(r.turn) ? { turn: r.turn } : {}),
+      ...(isString(r.label) ? { label: r.label.slice(0, 80) } : {}),
+    })
+  }
+  return out
 }

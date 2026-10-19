@@ -5,7 +5,7 @@
  * (canonical paths, open-document check, node scope). Used by the desktop document host (one
  * connection per relayed socket/HTTP client) and by headless `kimo mcp` (one stdio client).
  */
-import type { DocStore, NodeData } from "@kimo/editor-state"
+import { type DocStore, type NodeData, releaseClaims } from "@kimo/editor-state"
 import type { WireOp } from "../ops"
 import {
   type ActivityEntry,
@@ -93,6 +93,13 @@ export interface McpConnection {
   readonly policy: ClientPolicy
   /** Replaces the policy for later calls (scope of the next turn); session allowances stay. */
   setPolicy(policy: ClientPolicy): void
+  /** The agent's current turn id (null between turns and for MCP clients). */
+  readonly turn: string | null
+  /**
+   * A turn starts (`turn`) or ends (null). Ending one releases the connection's area claims on
+   * every document (ADR 0016 item 16); closing the connection does too.
+   */
+  setTurn(turn: string | null): void
   readonly allowances: SessionAllowances
   /** A fresh per-call context (createKimoMcpServer calls it once per tool call). */
   context(): ToolContext
@@ -340,6 +347,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
     const identity: ClientIdentity = { ...idIn, session: idIn.session ?? randomId(6) }
     const origin = opts.origin ?? originOf(identity)
     let policy = opts.policy ?? basePolicy(identity)
+    let turn: string | null = null
     const allowances = emptyAllowances()
     const abort = new AbortController()
     const at = now()
@@ -394,6 +402,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         now,
         newId: () => randomId(10),
         ...(streamedNow ? { streamed: true } : {}),
+        ...(turn ? { turn } : {}),
       }
       return ctx
     }
@@ -583,6 +592,13 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         presence.update(origin, { policy: next })
         if (autoApproves(next)) approvals.approveWhere((r) => r.client.session === identity.session)
       },
+      get turn() {
+        return turn
+      },
+      setTurn(next) {
+        if (next === null || (turn && turn !== next)) releaseClaims(origin)
+        turn = next
+      },
       allowances,
       context,
       targets,
@@ -614,6 +630,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         streams.clear()
         abort.abort()
         approvals.cancelSession(identity.session)
+        releaseClaims(origin)
         presence.remove(origin)
         conns.delete(conn)
         activity.record("global", {

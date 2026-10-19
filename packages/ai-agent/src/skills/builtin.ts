@@ -66,6 +66,10 @@ finished part per call and clear the placeholder at the end.
 - Batches are atomic: if one op fails nothing changes. Read errors[] (code, path, suggestion) and fix.
 - REVISION_CONFLICT means someone edited since your read: re-read, then retry.
 - OUT_OF_SCOPE means you edited outside the frames you own: stay inside your scope.
+- AREA_BUSY means another agent is working on that area (detail.holderLabel, detail.ids): work
+  on another part of the document, or wait and retry later. Never edit inside its area.
+- REVISION_CONFLICT with detail.kind "human-edit" means a person edited inside your area: re-read
+  detail.ids, keep their changes, then continue (the retry goes through).
 
 ## Placeholders
 Insert the page frame you will build over several calls with placeholder: true, never as an

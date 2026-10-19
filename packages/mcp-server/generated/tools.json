@@ -181,6 +181,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -235,7 +236,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -833,6 +834,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -887,7 +889,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -1128,6 +1130,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -1182,7 +1185,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -1604,6 +1607,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -1658,7 +1662,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -2080,6 +2084,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -2134,7 +2139,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -2549,6 +2554,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -2603,7 +2609,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -2906,6 +2912,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -2960,7 +2967,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -3275,6 +3282,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -3329,7 +3337,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -3681,6 +3689,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -3735,7 +3744,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -3984,6 +3993,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -4038,7 +4048,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -4351,6 +4361,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -4405,7 +4416,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -4814,6 +4825,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -4868,7 +4880,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -5151,6 +5163,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -5205,7 +5218,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -5496,6 +5509,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -5550,7 +5564,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -5901,6 +5915,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -5955,7 +5970,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -6379,6 +6394,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -6433,7 +6449,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -6740,6 +6756,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -6794,7 +6811,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -7104,6 +7121,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -7158,7 +7176,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -7422,6 +7440,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -7476,7 +7495,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false
@@ -7902,6 +7921,7 @@
                     "LOAD_FAILED",
                     "READ_ONLY",
                     "REVISION_CONFLICT",
+                    "AREA_BUSY",
                     "NODE_NOT_FOUND",
                     "NODE_EXISTS",
                     "INVALID_PROPERTY",
@@ -7956,7 +7976,7 @@
                     }
                   },
                   "additionalProperties": true,
-                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
+                  "description": "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}."
                 }
               },
               "additionalProperties": false

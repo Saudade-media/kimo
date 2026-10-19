@@ -81,6 +81,9 @@ export function pageAwareToolHost(host: ToolHost, page: () => string | null): To
   return {
     tools: () => host.tools(),
     ...(host.note ? { note: (entry: WebNote) => host.note?.(entry) } : {}),
+    ...(host.turn
+      ? { turn: (phase: "start" | "end", turnId: string) => host.turn?.(phase, turnId) }
+      : {}),
     ...(host.stream
       ? {
           stream(call: { id: string; name: string }): ToolStream | undefined {

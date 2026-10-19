@@ -827,6 +827,85 @@ Repairer = the lowest `peer` id among this client (if `edit`) and every known pe
 - `setToken(token)`: if open, send `refresh`; on `token {exp}` update `exp`. If closed with a
   fatal auth error, reconnect with the new token.
 
+### 15.11 Agent area claims
+
+ADR 0016 item 16. The relay never sees node ids, so claims are cooperative: each client enforces
+the claims it knows (its own agents' and the ones peers publish) on its own agents.
+
+**Registry** (`packages/editor-state/src/claims.ts`). `claimsFor(store)` returns the document's
+`ClaimRegistry` (created on first use; it follows `store.onChange`). A holder is an agent origin
+(`agent:<id>`, `isClaimingOrigin`). MCP clients (`mcp:<client>`) are refused inside claims but
+hold none, since no turn would end them (`isClaimRespectingOrigin`); `user` never claims and is
+never refused.
+
+- Overlap: a request for ids `T` conflicts with a claim on ids `C` when some `t` in `T` has an
+  ancestor-or-self in `C`, or some `c` in `C` has an ancestor-or-self in `T`.
+- `check(holder, ids)` returns the oldest overlapping claim of another holder (local or remote),
+  or null. Local agents of one session (`claimTeam`: `agent:kimo.<session>.<n>` without `.<n>`,
+  a lead and its spawned children) are one holder for this check; their split is enforced by
+  node scopes (`OUT_OF_SCOPE`). A remote record is always another holder; `claim(holder, ids, {label, turn})` checks and, when clear, records the ids the holder
+  does not cover yet as a new record with `since = now`. Every claim and write renews the
+  holder's records (`renewed = now`).
+- Expiry: a local record lapses `CLAIM_TTL_MS` (10 min) after `renewed`; a remote record lapses
+  10 min after this client last received it with a new `renewed` (local clock, skew-free). The
+  last minute reads as `expiring`.
+- Release: `releaseClaims(holder, turn?)` on every document at turn end; the MCP connection's
+  `setTurn(null)` and `close()` call it; a peer's claims go with `peer-left` or its withdrawn
+  presence; `clearRemote()` on disconnect (offline only local claims remain).
+- Tie-break (`setRemote`): when a local record overlaps a remote record that wins (smaller
+  `since`, then the smaller `holder` string; identical on every client), the local holder drops
+  the overlapping ids at once and republishes. Its next write there gets `AREA_BUSY`.
+- Human edits: a committed change whose origin is `user` or `remote:user` (a window relayed by
+  the document host) inside a local claim is recorded for that holder; so is a network change
+  (`remote`, `remote:mp:<room>`) unless a remote claim covers the node. Agent and MCP origins,
+  `file` loads and `system` repairs are ignored. A node deleted by a person is matched by its own
+  id only.
+- UI: `list()` gives `ClaimView`s `{holder, label, ids, since, renewed, turn, local, peer,
+  expiresAt, state: "live" | "expiring"}` (a stable array until something changes), `claimAt(id)`
+  the claim covering a node, and `subscribe(listener)` change notifications (for
+  `useSyncExternalStore`). A timer at the next expiry or `expiring` transition notifies.
+
+**Presence record** (`PresenceState.claims`, sealed like the rest of the state). Published by
+`bindClaimsToPresence(registry, awareness, {user?})` (`packages/sync/src/claims-presence.ts`),
+which also feeds every peer's `claims` into `registry.setRemote(peer, …)` and puts the claims
+back when the app replaces its own presence:
+
+```json
+{"user": {"id": "u1", "name": "Ana", "color": "#3366ff"},
+ "claims": [{"holder": "agent:kimo.k3x9qa.1", "ids": ["Hero000001"], "since": 1792396800000,
+             "renewed": 1792396812000, "turn": "t_8f2", "label": "Kimo"}],
+ "working": ["Hero000001"]}
+```
+
+| Field | Type | Rule |
+|---|---|---|
+| `holder` | string | `agent:<id>` or `mcp:<client>`; other values drop the record |
+| `ids` | string[] | 1 to 256 node ids; each claims its subtree. A holder publishes at most 256 ids |
+| `since` | number | ms since the epoch (holder's clock) when the record was taken |
+| `renewed` | number | ms since the epoch of the holder's last activity |
+| `turn` | string? | the holder's turn id |
+| `label` | string? | display name, up to 80 characters kept |
+
+At most 64 records per peer are read. `working` is the union of the ids while claims exist and
+is removed with them.
+
+**Tool layer** (`packages/mcp-server/src/claims.ts`). `dispatch` gates `kimo_apply_ops` (and the
+call `kimo_script` compiles to) of agent and MCP origins after authorization, before any approval
+prompt, and again (check and, for agents, claim at once) after it; the streamed-edit engine gates each
+provisional batch and holds the stream instead of failing. The claimed ids are the op group's
+`id`, `instance`, `frame`, `node` and `ids` fields and insert, instantiate, move and copy
+`parent`s (never `root`, `@key`s or a copy's source; an IdPath claims its instance). After the
+call lands, changed nodes the claim does not cover (layers created at the top level) join it.
+Dry runs and groups that only set or clear `placeholder` are exempt.
+
+| Code | When | Envelope |
+|---|---|---|
+| `AREA_BUSY` | The group touches a node inside, above or below another holder's live claim | `retryable: true`, `nodeId` = first touched id, `suggestion` (work elsewhere or wait), `detail {kind: "area", holder, holderLabel?, ids, touched, since}` (`since` ISO 8601). Not patch-retryable (`retryId` is not set) |
+| `REVISION_CONFLICT` | A person edited inside the caller's claim since its last write | `detail {kind: "human-edit", ids, by: "local" \| "remote", current}`. Reported once: the retry goes through |
+
+The built-in agent's `ToolHost.turn("start" | "end", turnId)` (desktop: host RPC `agentTurn`)
+stamps claims with the turn and releases them at the end, before the placeholder clear.
+
 ## 16. Web integration
 
 ### 16.1 Share service (headless)
@@ -1282,7 +1361,7 @@ Decided while implementing module A; they are normative for the other modules.
 
 ```ts
 // network.ts
-import type { DocStore, LocalOrigin } from "@kimo/editor-state"
+import type { ClaimRecord, DocStore, LocalOrigin } from "@kimo/editor-state"
 import type { MpErrorCode, MultiplayerError, PeerInfo, RelayLimits, Role } from "./mp"
 import type { SyncProvider } from "./provider"
 import type { RoomStateStore } from "./room-state"
@@ -1294,6 +1373,8 @@ export interface PresenceState {
   cursor?: { x: number; y: number }
   selection?: readonly string[]
   working?: readonly string[]
+  /** Agent area claims (§15.11). */
+  claims?: readonly ClaimRecord[]
   /** Page the collaborator is looking at. */
   page?: string
 }
@@ -1607,6 +1688,15 @@ does not verify signatures (that is module C's job) but enforces roles from a ta
   restores `autoRepair` and read-only and withdraws presence.
 - `packages/editor-state/test/auto-repair.test.ts`: `setAutoRepair(false)` leaves a merged cycle
   in place; `true` repairs on the next remote update; `repair()` works in both modes.
+- `claims-presence.test.ts` (§15.11): local claims published with `working`, kept when the app
+  replaces its presence, withdrawn on release; remote claims feed the registry and leave with the
+  peer; simultaneous claims settle on the earlier one; malformed records are dropped.
+- `packages/editor-state/test/claims.test.ts`: overlap (subtree, ancestor, siblings free), the
+  tie-break on both sides, TTL and `expiring`, remote expiry on the local clock, release by turn
+  and across documents, the published id cap, human-edit detection by origin.
+- `packages/mcp-server/test/claims.test.ts`: `AREA_BUSY` envelope between two agents, top-level
+  inserts join the claim, dry runs and placeholder clears exempt, release at turn end and on
+  close, the `human-edit` conflict reported once, a streamed batch held in another's area.
 
 ### 18.C Relay (`apps/server/test/`)
 
@@ -1647,6 +1737,9 @@ WebSockets from Bun, with tokens and admin commands made by module A.
 - `e2e-multiplayer.test.ts` (runs after B lands): two `NetworkProvider`s with real
   `YjsDocStore`s converge through the real relay; view-only guest; compaction under load; owner
   revokes a guest mid-session; a blob uploaded by one is fetched and verified by the other.
+- `e2e-claims.test.ts` (§15.11): two clients, each with an MCP runtime and one agent; the second
+  agent gets `AREA_BUSY` inside the first one's frame and edits elsewhere; the claim is released
+  at turn end and when the holder's client disconnects.
 - Docker (manual, documented in the README): `docker build -f apps/server/Dockerfile .` and a
   `/healthz` probe.
 

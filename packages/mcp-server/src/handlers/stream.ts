@@ -19,6 +19,7 @@
  */
 import type { Libraries } from "@kimo/core-schema"
 import type { DocStore, LocalOrigin, NormalizedOp, Op, Revision } from "@kimo/editor-state"
+import { claimGate } from "../claims"
 import type { RevisionToken } from "../envelope"
 import type { WireOp } from "../ops"
 import { type PartialEvent, PartialJsonObject } from "../partial-json"
@@ -370,6 +371,12 @@ class Stream implements ApplyStream {
         auth.kind === "deny" ? auth.error.message : "An op needs approval: the call asks for it.",
       )
     if (this.state !== "open" || this.closed) return
+    // Agent area claims: a busy area or an unread human edit holds the stream (the call itself
+    // reports it); otherwise the touched nodes are claimed before the ops land.
+    const busy = claimGate(def, { docId: this.docId, ops: ready }, ctx, {
+      provisional: true,
+    })?.take()
+    if (busy) return this.hold(busy.message)
     this.applyReady(d, ready, from, pending.length)
   }
 

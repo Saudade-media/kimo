@@ -898,6 +898,15 @@ export async function startDocumentHostService(
       if (conn) recordWeb(conn, String(args.ref ?? ""), args.entry)
       return { ok: !!conn }
     },
+    /**
+     * An in-app agent's turn starts or ends (ADR 0016 item 16): claims it takes carry the turn
+     * id, and the end releases them on every document.
+     */
+    async agentTurn(args, from) {
+      const conn = agentConnection(args.spec as AgentCallSpec, from)
+      conn.setTurn(args.phase === "start" ? String(args.turnId ?? "") || null : null)
+      return { ok: true }
+    },
     /** The window's answer to a forwarded approval (Stop answers deny). */
     async agentApproval(args, from) {
       const p = agentPrompts.get(String(args.id))

@@ -29,6 +29,23 @@ export {
   type ReadOnlyReason,
   serialize,
 } from "@kimo/core-schema"
+export {
+  CLAIM_EXPIRING_MS,
+  CLAIM_TTL_MS,
+  type ClaimConflict,
+  type ClaimRecord,
+  ClaimRegistry,
+  type ClaimRegistryOptions,
+  type ClaimTree,
+  type ClaimView,
+  claimsFor,
+  claimTeam,
+  type HumanEdit,
+  isClaimingOrigin,
+  isClaimRespectingOrigin,
+  MAX_PUBLISHED_CLAIM_IDS,
+  releaseClaims,
+} from "./claims"
 export { generateId, isNodeId } from "./ids"
 export type {
   BatchOp,

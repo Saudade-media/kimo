@@ -48,7 +48,7 @@
  * Revisions stay local; per-origin undo stays local to each replica (`Y.UndoManager` never
  * undoes remote changes).
  */
-import type { LocalOrigin } from "@kimo/editor-state"
+import type { ClaimRecord, LocalOrigin } from "@kimo/editor-state"
 import type { MpErrorCode, MultiplayerError, PeerInfo, RelayLimits, Role } from "./mp/index"
 import { RelayNetworkProvider } from "./network-provider"
 import type { SyncProvider } from "./provider"
@@ -63,8 +63,13 @@ export interface PresenceState {
   cursor?: { x: number; y: number }
   /** Selected node ids. */
   selection?: readonly string[]
-  /** Node ids an agent is currently working on (agent cursors). */
+  /** Node ids an agent is currently working on (agent cursors; the union of `claims` ids). */
   working?: readonly string[]
+  /**
+   * Area claims of the agents on this client (ADR 0016 item 16, spec §15.11): each claims its
+   * `ids` and their subtrees. Published by `bindClaimsToPresence`.
+   */
+  claims?: readonly ClaimRecord[]
   /** Page the collaborator is looking at. */
   page?: string
 }

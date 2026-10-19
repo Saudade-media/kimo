@@ -92,7 +92,7 @@ Window ↔ host events are JS only; Rust just routes them, and both sides need
 
 | Event | Direction | Payload |
 |---|---|---|
-| `kimo://host-rpc` | window → host | `{from, id, method, args}`. Methods: `ping`, `open`, `release`, `command`, `agentUndo`, `mcpState` (connections, pending prompts, paused clients), `mcpPause` (`{client, paused}`) and the in-app agent calls `agentCall` (`{spec: {origin, label, session, policy}, name, input}` → `{result, images?}`; no timeout on the window side), `agentApproval` (`{id, outcome}`), `agentRelease` (`{origins?}`) and `agentDocId` (`{ref}` → `{docId}`). |
+| `kimo://host-rpc` | window → host | `{from, id, method, args}`. Methods: `ping`, `open`, `release`, `command`, `agentUndo`, `mcpState` (connections, pending prompts, paused clients), `mcpPause` (`{client, paused}`) and the in-app agent calls `agentCall` (`{spec: {origin, label, session, policy}, name, input}` → `{result, images?}`; no timeout on the window side), `agentApproval` (`{id, outcome}`), `agentTurn` (`{spec, phase: "start" | "end", turnId}`: stamps and, at the end, releases the agent's area claims), `agentRelease` (`{origins?}`) and `agentDocId` (`{ref}` → `{docId}`). |
 | `kimo://host-rpc-reply` | host → window | `{id, ok, value?, error?}` |
 | `kimo://host-sync` | both | `{from, msg: HostSyncMessage}` (`@kimo/sync` host-sync, base64 Yjs updates with their origin) |
 | `kimo://host-session-state` | host → windows showing the file | `{ref, state: SessionState}` |

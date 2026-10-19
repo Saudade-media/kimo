@@ -13,7 +13,8 @@
  * - `@kimo/sync/mp`: the `kimo-mp/1` protocol core (no CRDT code; the relay loads only this).
  */
 export type { DocStore } from "@kimo/editor-state"
-export { type AwarenessHost, KimoAwareness } from "./awareness"
+export { type AwarenessHost, KimoAwareness, parseClaims } from "./awareness"
+export { type BindClaimsOptions, bindClaimsToPresence } from "./claims-presence"
 export {
   countChangedNodes,
   type DocumentMerge,

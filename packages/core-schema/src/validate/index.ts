@@ -1359,7 +1359,24 @@ class Validation {
     }
   }
 
+  /** Spec §12 rule 2: a key's 16-hex hash is the prefix of its entry's `sha256`. */
+  private assetHashes(): void {
+    const manifest = (this.doc as unknown as Obj).assets
+    if (this.scope || !isObject(manifest)) return
+    for (const [file, entry] of Object.entries(manifest)) {
+      const sha = isObject(entry) ? entry.sha256 : undefined
+      if (typeof sha !== "string" || !/^[0-9a-f]{64}$/.test(sha)) continue
+      if (!sha.startsWith(file.slice(0, 16)))
+        this.sink.add(
+          "ASSET_HASH_MISMATCH",
+          ptr("assets", file, "sha256"),
+          `Asset "${file}": sha256 does not start with the key's hash`,
+        )
+    }
+  }
+
   private assets(): void {
+    this.assetHashes()
     const manifest = (this.doc as unknown as Obj).assets
     if (!this.lints || this.scope || !isObject(manifest)) return
     for (const [file, entry] of Object.entries(manifest)) {

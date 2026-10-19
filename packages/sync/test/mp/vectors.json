@@ -1,0 +1,69 @@
+{
+  "description": "kimo-mp/1 test vectors (docs/spec/multiplayer.md §19). seq(n, s) is the n bytes s, s+1, ... (mod 256).",
+  "inputs": {
+    "rootSeed": { "seq": [32, 0] },
+    "linkSeed": { "seq": [32, 32] },
+    "roomKey": { "seq": [32, 128] },
+    "jti": { "seq": [16, 64] },
+    "nonce": { "seq": [16, 96] },
+    "iv": { "seq": [12, 160] },
+    "pkcs8Prefix": "302e020100300506032b657004220420"
+  },
+  "identity": {
+    "rootPublicKey": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+    "linkPublicKey": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+    "roomIdRaw": "ea430121c5dc8fae55cfb181df66e0eb7aee5371",
+    "roomId": "5jbqciof3sh24vopwga56zxa5n5o4u3r"
+  },
+  "token": {
+    "role": "edit",
+    "kid": 1,
+    "iat": 1792000000,
+    "exp": 1792604800,
+    "origin": "user",
+    "payload": "0101020100000001000000006acfc000000000006ad8fa80404142434445464748494a4b4c4d4e4fea430121c5dc8fae55cfb181df66e0eb7aee53710475736572",
+    "token": "AQECAQAAAAEAAAAAas_AAAAAAABq2PqAQEFCQ0RFRkdISUpLTE1OT-pDASHF3I-uVc-xgd9m4Ot67lNxBHVzZXJ2FlsrmK0JREaV0L_ibWiLecAb-9TXhKdYUb6bDGHh5FainGWKimydh8BwkHwKZ-jQCVMbkSU8yZ4WMdQGTM0A"
+  },
+  "linkCert": {
+    "kid": 1,
+    "iat": 1792000000,
+    "cert": "AQIAAAABAAAAAGrPwADqQwEhxdyPrlXPsYHfZuDreu5TcSmsuuFBvMrwsi4alNNNC8c2HlJtC_4SyJeUvJMilm3XlfEHTp83eo5H6pDKcTgovP9QtevMqIxxtwL470mx93t3S5jkrMcCyJsEB4wiVqQRGgIeqhGw3ewWyOjukaBiCg"
+  },
+  "adminRegister": {
+    "iat": 1792000000000,
+    "body": "{\"rootPub\":\"A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg\",\"cert\":\"AQIAAAABAAAAAGrPwADqQwEhxdyPrlXPsYHfZuDreu5TcSmsuuFBvMrwsi4alNNNC8c2HlJtC_4SyJeUvJMilm3XlfEHTp83eo5H6pDKcTgovP9QtevMqIxxtwL470mx93t3S5jkrMcCyJsEB4wiVqQRGgIeqhGw3ewWyOjukaBiCg\"}",
+    "signature": "28d79e827f1b52b26317a4570826451cfa390028329dba81619b7acf238d37ae053730c3f6ebab91391d0e07d52d963b66ba8a41907ac58b3e2e06eca396d604"
+  },
+  "keys": {
+    "roomKeyBase64Url": "gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp8",
+    "doc": "5ffbbb77eaff8a816cdcf55d44beb0cb99ea35f7392e12d3458b9366bbaca26a",
+    "awareness": "4a5fc70e71439c18d8b1d7d7c27c19d58588a26b2607055e5fd21d9830a8ac89",
+    "blobMac": "6ccbfdf4184ba47d6393d950921cf9046e52fc95d1a75a040eb9e96899dbafbe"
+  },
+  "blob": {
+    "plaintextUtf8": "hello kimo",
+    "sha256": "978572b8044ecdc8403db938049f6808120195f2ece130eb2f310d6741999996",
+    "blobKey": "56a9597f94a9fcb6d061475f0f3c64d6de94f137a428601dc306a868a00cd89f",
+    "blobId": "3da84b154c006f21c523a835c68ebcd712dced1081cd032797091d5ebb93544d",
+    "envelope": "0104a0a1a2a3a4a5a6a7a8a9aaabde67c060acff9e588edc2966932d335a1657350c1344585f369c"
+  },
+  "envelopes": {
+    "update": {
+      "plaintext": "01020304",
+      "aad": "kimo/v1|5jbqciof3sh24vopwga56zxa5n5o4u3r|update",
+      "envelope": "0101a0a1a2a3a4a5a6a7a8a9aaab430e1296ffa0b9011cedb736af59da8da865629f"
+    },
+    "snapshot": {
+      "upTo": 42,
+      "plaintext": "01020304",
+      "aad": "kimo/v1|5jbqciof3sh24vopwga56zxa5n5o4u3r|snapshot|42",
+      "envelope": "0102a0a1a2a3a4a5a6a7a8a9aaab430e129608cec055011c129a4b9efa2201a003ff"
+    },
+    "awareness": {
+      "peer": 7,
+      "plaintextUtf8": "{\"user\":{\"id\":\"u1\",\"name\":\"Ana\",\"color\":\"#3366ff\"}}",
+      "aad": "kimo/v1|5jbqciof3sh24vopwga56zxa5n5o4u3r|awareness|7",
+      "envelope": "0103a0a1a2a3a4a5a6a7a8a9aaabcddf0ef194cc8f26c7d07e4c6d3654efe7cce76f9349dc9edfa8697036677c51bdcd459e2537649de0e75209f51a3dd56e8147a459edc90d3d3bcd43734817fad916d3"
+    }
+  }
+}

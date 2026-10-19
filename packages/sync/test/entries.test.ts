@@ -34,10 +34,18 @@ describe("entry points", () => {
       ".": "./src/index.ts",
       "./file": "./src/file.ts",
       "./indexeddb": "./src/indexeddb.ts",
+      "./mp": "./src/mp/index.ts",
     })
     const file = await import("@kimo/sync/file")
     expect(typeof file.FileProvider).toBe("function")
     const idb = await import("@kimo/sync/indexeddb")
     expect(typeof idb.IndexedDbProvider).toBe("function")
+    const mp = await import("@kimo/sync/mp")
+    expect(mp.PROTOCOL).toBe("kimo-mp/1")
+  })
+
+  test("@kimo/sync/mp imports no CRDT, editor-state or Node code (the blind relay loads it)", () => {
+    const specs = [...closure(join(SRC, "mp/index.ts")).values()].flat()
+    expect(specs.filter((s) => !s.startsWith(".") && !s.startsWith("lib0/"))).toEqual([])
   })
 })

@@ -1,16 +1,19 @@
 /**
- * @kimo/sync — persistence and transport for a {@link DocStore} behind one
+ * @kimo/sync: persistence and transport for a {@link DocStore} behind one
  * {@link SyncProvider} interface (teardown 9.1, ADR 0001 §4).
  *
  * Entry points (platform-specific providers live in their own files so that importing this
  * package in a browser never pulls `node:fs`):
- * - `@kimo/sync`: the interface, {@link MemoryProvider} and the network provider contract;
+ * - `@kimo/sync`: the interface, {@link MemoryProvider} and the end-to-end encrypted network
+ *   provider (`createNetworkProvider`, `kimo-mp/1`);
  * - `@kimo/sync`: also `FileDocumentProvider`, the runtime-neutral M4 file provider over an
  *   `AtomicFileStore` (`@kimo/platform` files);
  * - `@kimo/sync/file`: `FileProvider` (Bun/Node file system);
- * - `@kimo/sync/indexeddb`: `IndexedDbProvider` (browser/worker, y-indexeddb).
+ * - `@kimo/sync/indexeddb`: `IndexedDbProvider` (browser/worker, y-indexeddb);
+ * - `@kimo/sync/mp`: the `kimo-mp/1` protocol core (no CRDT code; the relay loads only this).
  */
 export type { DocStore } from "@kimo/editor-state"
+export { type AwarenessHost, KimoAwareness } from "./awareness"
 export {
   countChangedNodes,
   type DocumentMerge,
@@ -36,14 +39,20 @@ export {
   type WindowSyncProviderOptions,
 } from "./host-sync"
 export { MemoryHub, MemoryProvider } from "./memory"
-export type {
-  Awareness,
-  CreateNetworkProvider,
-  NetworkProvider,
-  NetworkProviderOptions,
-  PresenceState,
+export {
+  type Awareness,
+  type CreateNetworkProvider,
+  createNetworkProvider,
+  type NetworkEnvironment,
+  type NetworkEvent,
+  type NetworkProvider,
+  type NetworkProviderOptions,
+  type NetworkTiming,
+  type PresenceState,
 } from "./network"
+export { VIEW_ONLY_REASON } from "./network-provider"
 export { BaseProvider, type SyncProvider, type SyncStatus, type SyncStatusEvent } from "./provider"
+export { MemoryRoomStateStore, type RoomCursor, type RoomStateStore } from "./room-state"
 export { recoveryIdFor, sha256Sync } from "./sha256"
 export {
   type AtomicFileStore,

@@ -230,6 +230,13 @@ export interface DocStore {
    */
   onUpdate(listener: (update: Uint8Array, origin: Origin) => void): () => void
 
+  /**
+   * Whether cycle and orphan repair runs automatically after merges (default true). The network
+   * provider turns it off on every replica but the elected repairer (multiplayer spec §15.8).
+   */
+  readonly autoRepair: boolean
+  setAutoRepair(enabled: boolean): void
+
   /** Releases resources (undo managers, observers). The store is unusable afterwards. */
   destroy(): void
 }

@@ -584,7 +584,10 @@ export class YjsDocStore implements DocStore {
     const origin = options.origin ?? "file"
     this.transact(origin, "load", () => {
       // Header members.
-      for (const k of [...this.yHeader.keys()]) if (!Object.hasOwn(src, k)) this.yHeader.delete(k)
+      // Merged records are never deleted here (that would only be recreated empty below, a
+      // spurious update on every identical reload).
+      for (const k of [...this.yHeader.keys()])
+        if (!Object.hasOwn(src, k) && !MERGED_HEADER_KEYS.has(k)) this.yHeader.delete(k)
       for (const [k, v] of Object.entries(src)) {
         if (SPLIT_KEYS.has(k)) continue
         if (!jsonEqual(plain(this.yHeader.get(k)), v))
@@ -621,6 +624,14 @@ export class YjsDocStore implements DocStore {
     }
     this.baseline = null
     this.log_({ kind: "load", origin, revision: this.revision, time: this.options.now() })
+  }
+
+  get autoRepair(): boolean {
+    return this.options.autoRepair
+  }
+
+  setAutoRepair(enabled: boolean): void {
+    this.options.autoRepair = enabled
   }
 
   setReadOnly(reason: string | null): void {

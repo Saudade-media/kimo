@@ -12,7 +12,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "bun test ./test",
+    "test": "../../scripts/safe-test.sh ./test",
     "measure:gallery": "bun run scripts/measure-gallery.ts"
   },
   "dependencies": {

@@ -10,8 +10,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "bun test ./test",
-    "test:update-goldens": "UPDATE_GOLDENS=1 bun test ./test",
+    "test": "../../scripts/safe-test.sh ./test",
+    "test:update-goldens": "UPDATE_GOLDENS=1 ../../scripts/safe-test.sh ./test",
     "verify": "bun run harness/verify.ts"
   },
   "dependencies": {

@@ -349,7 +349,8 @@ export type RegistryFiles = Pick<FilesApi, "readText" | "writeTextAtomic">
  * the platform's atomic files API. Writes are serialized so concurrent puts never lose data.
  *
  * A JSON file cannot hold CryptoKeys, so here the owner's private keys and the room keys are
- * plain text on disk, with the file's default permissions. Prefer {@link indexedDbRegistryBackend}
+ * plain text on disk. Writes ask for `ownerOnly`: on desktop the file is 0600 and its directory
+ * 0700 (Unix), so other accounts on the machine cannot read it. Prefer {@link indexedDbRegistryBackend}
  * wherever IndexedDB exists (the desktop webview has it); use this one only when it cannot.
  */
 export function fileRegistryBackend(files: RegistryFiles, ref: string): RegistryBackend {
@@ -376,7 +377,9 @@ export function fileRegistryBackend(files: RegistryFiles, ref: string): Registry
   const write = (data: Data) =>
     (queue = queue
       .catch(() => undefined)
-      .then(() => files.writeTextAtomic(ref, JSON.stringify(data), { mkdirs: true })))
+      .then(() =>
+        files.writeTextAtomic(ref, JSON.stringify(data), { mkdirs: true, ownerOnly: true }),
+      ))
   return {
     async get(store, key) {
       return (await load())[store][key]

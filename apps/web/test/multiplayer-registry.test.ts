@@ -97,11 +97,13 @@ describe("registry", () => {
         if (text === undefined) throw new PlatformError("NOT_FOUND", "missing")
         return { text, hash: "" }
       },
-      async writeTextAtomic(ref: string, text: string) {
+      async writeTextAtomic(ref: string, text: string, options?: { ownerOnly?: boolean }) {
         disk.set(ref, text)
+        writes.push(options ?? {})
         return { hash: "" } as never
       },
     }
+    const writes: { ownerOnly?: boolean }[] = []
     const first = createRegistry(fileRegistryBackend(files, "/home/.kimo/rooms.json"))
     const room = await owned()
     await first.putOwned(room)
@@ -109,5 +111,8 @@ describe("registry", () => {
     const second = createRegistry(fileRegistryBackend(files, "/home/.kimo/rooms.json"))
     expect((await second.getOwned(room.room))?.fileKey).toBe("/a.kimo")
     expect(disk.get("/home/.kimo/rooms.json")).not.toContain("BEGIN")
+    // Owner keys are secrets: every write asks for an owner-only file (0600 in a 0700 dir).
+    expect(writes.length).toBeGreaterThan(0)
+    expect(writes.every((w) => w.ownerOnly === true)).toBe(true)
   })
 })

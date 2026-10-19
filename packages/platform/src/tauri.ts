@@ -92,7 +92,7 @@ export interface TauriCommandMap {
   kimo_fs_read_bytes: { args: { path: string }; result: ArrayBuffer }
   /** temp file → fsync → rename → fsync dir → read back → SHA-256 compare. */
   kimo_fs_write_text_atomic: {
-    args: { path: string; text: string; mkdirs: boolean }
+    args: { path: string; text: string; mkdirs: boolean; ownerOnly?: boolean }
     result: AtomicWriteResult
   }
   /** Same, bytes as a base64 string (IPC requests are JSON). */

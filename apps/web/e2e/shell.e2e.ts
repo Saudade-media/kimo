@@ -219,6 +219,10 @@ export const scenarios: Scenario[] = [
       await fileName.fill("Loom site")
       await fileName.press("Enter")
       await page.locator(".topbar__file-name", { hasText: "Loom site" }).waitFor()
+      // Files open framed on their content, so start the zoom step from 100 %.
+      await page.getByRole("button", { name: "Zoom" }).click()
+      await page.getByRole("menuitem", { name: "Zoom to 100 %" }).click()
+      await page.locator(".topbar__zoom-value", { hasText: "100%" }).waitFor()
       await page.getByRole("button", { name: "Zoom" }).click()
       await page.getByRole("menuitem", { name: "Zoom in" }).click()
       await page.locator(".topbar__zoom-value", { hasText: "200%" }).waitFor()

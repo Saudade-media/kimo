@@ -42,6 +42,13 @@ async function openEditor(page: Page, url: string) {
   await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
   await page.locator('.canvas-host[data-ready="true"]').waitFor({ timeout: 30_000 })
   await settle(page)
+  // Files open framed on their content; these scenarios measure board 03 from the origin at 100 %.
+  await page.evaluate(() =>
+    (window as unknown as { __kimo: KimoHook }).__kimo.session.ui
+      .getState()
+      .setViewport({ x: 0, y: 0, zoom: 1 }),
+  )
+  await settle(page)
 }
 
 const idOf = (page: Page, name: string) =>

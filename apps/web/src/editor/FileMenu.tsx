@@ -43,15 +43,20 @@ export interface FileMenuActions {
   onNewWindow?: () => void
   onOpenFile(): void
   onOpenRecent(ref: FileRef): void
-  onSave(): void
-  onSaveAs(): void
+  /**
+   * Save and Save as… (a copy). Absent hides the row: a View link has neither (board 41 section
+   * 9, `canDuplicate` false).
+   */
+  onSave?: () => void
+  onSaveAs?: () => void
   /** Board 27 §10 (d): Export… ⇧⌘E — the Export dialog (selection, else the current page). */
   onExportDialog?: () => void
   /** Board 27 §10 (d): Copy selection as PNG ⇧⌘C — a 2× PNG on the clipboard. */
   onCopyPng?: () => void
   /** Desktop only: the web build has no filesystem path (board 20 V7Lu4m omits it). */
   onReveal?: () => void
-  onCleanUpAssets(): void
+  /** Absent hides the row (a joined room's assets are not this device's). */
+  onCleanUpAssets?: () => void
   onSettings(): void
 }
 
@@ -229,20 +234,24 @@ export function FileMenu(props: FileMenuProps) {
           }
         }}
       />
-      <MenuItemDense
-        icon={<Icon name="save" size={14} />}
-        label="Save"
-        meta={menuShortcut(os, "S")}
-        onPointerEnter={hoverOther}
-        onSelect={run(props.onSave)}
-      />
-      <MenuItemDense
-        icon={<Icon name="file-output" size={14} />}
-        label="Save as…"
-        meta={menuShortcut(os, "S", true)}
-        onPointerEnter={hoverOther}
-        onSelect={run(props.onSaveAs)}
-      />
+      {props.onSave && (
+        <MenuItemDense
+          icon={<Icon name="save" size={14} />}
+          label="Save"
+          meta={menuShortcut(os, "S")}
+          onPointerEnter={hoverOther}
+          onSelect={run(props.onSave)}
+        />
+      )}
+      {props.onSaveAs && (
+        <MenuItemDense
+          icon={<Icon name="file-output" size={14} />}
+          label="Save as…"
+          meta={menuShortcut(os, "S", true)}
+          onPointerEnter={hoverOther}
+          onSelect={run(props.onSaveAs)}
+        />
+      )}
       {(props.onExportDialog || props.onCopyPng) && <MenuDivider />}
       {props.onExportDialog && (
         <MenuItemDense
@@ -271,13 +280,15 @@ export function FileMenu(props: FileMenuProps) {
           onSelect={run(props.onReveal)}
         />
       )}
-      <MenuItemDense
-        icon={<Icon name="brush-cleaning" size={14} />}
-        label="Clean up assets…"
-        onPointerEnter={hoverOther}
-        onSelect={run(props.onCleanUpAssets)}
-      />
-      <MenuDivider />
+      {props.onCleanUpAssets && (
+        <MenuItemDense
+          icon={<Icon name="brush-cleaning" size={14} />}
+          label="Clean up assets…"
+          onPointerEnter={hoverOther}
+          onSelect={run(props.onCleanUpAssets)}
+        />
+      )}
+      {(props.onReveal || props.onCleanUpAssets) && <MenuDivider />}
       <MenuItemDense
         icon={<Icon name="settings" size={14} />}
         label="Settings…"

@@ -66,6 +66,24 @@ export function parseDeepLink(url: string): DeepLink | null {
   return link
 }
 
+/**
+ * The join link in `kimo://join#<relay>/<room>/<token>/<key>` (or `kimo:join#...`): the whole
+ * URL, for the app's join route to parse (it validates the parts). Null for any other URL or an
+ * empty fragment. The key stays in the fragment.
+ */
+export function parseJoinDeepLink(url: string): string | null {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  if (u.protocol !== `${DEEP_LINK_SCHEME}:`) return null
+  const action = u.host || u.pathname.replace(/^\/+/, "")
+  if (action !== "join" || u.hash.length < 2) return null
+  return url.trim()
+}
+
 /** Builds a deep link for a file (and optionally a node). */
 export function formatDeepLink(link: DeepLink): string {
   const q = new URLSearchParams({ path: link.path })

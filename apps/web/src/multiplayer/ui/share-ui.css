@@ -1,0 +1,718 @@
+/*
+ * Board 41 "Multiplayer" (desing.pen kCAYr), sections 1-4, 6 B and 10: the topbar share cluster,
+ * the Share popover, the Reset all links confirm, the people list and Settings › Multiplayer.
+ * Node values are quoted per rule; tokens only (dark mode is the same tokens, section 10).
+ */
+
+/* --- Avatar stack (Pxomg): row, gap -4, padding [0, 4], alignItems center ------------------- */
+.mp-stack {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--kimo-radius-pill);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.mp-stack:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+/* Section 2 E / F: presence is stale while the relay is gone. */
+.mp-stack--dim {
+  opacity: 0.5;
+}
+
+/* gap -4: each avatar after the first overlaps the previous one by 4. */
+.mp-stack > * + * {
+  margin-left: -4px;
+}
+
+/* Avatar (FVhW0) instances: fill presence-*, stroke 2 bg-app outer; Initials on-accent. */
+.mp-avatar.kimo-avatar {
+  background: var(--mp-color);
+}
+
+.mp-avatar .kimo-avatar__initials {
+  color: var(--kimo-on-accent);
+}
+
+.mp-stack .mp-avatar,
+.mp-stack__more {
+  box-shadow: 0 0 0 2px var(--kimo-bg-app);
+}
+
+/* Avatar · +2 (l3uAg): 24 × 24, bg-muted, radius-pill, center; Count sans 10 / 600 secondary. */
+.mp-stack__more {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: 10px;
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* --- Share popover (MN5Yp / iCSXL / c6fdt): 360 wide; People (ZccsX): 300 ------------------- */
+.mp-popover.kimo-popover {
+  width: 360px;
+  /* The expiry menu (Menu/Dense 232) may hang below a short popover. */
+  overflow: visible;
+}
+
+.mp-people.kimo-popover {
+  width: 300px;
+}
+
+/* Close (u1Onj): IconButton 24, fill #00000000, x 14 in the component's text-secondary. */
+.mp-popover .mp-close,
+.mp-people .mp-close {
+  color: var(--kimo-text-secondary);
+}
+
+/* The Popover body is a pass-through here: Body and Footer are its own children. */
+.mp-popover .kimo-popover__body,
+.mp-people .kimo-popover__body {
+  display: contents;
+}
+
+/* Body (el67L / VqVfF): vertical, gap 12, padding 12. Live (si0Hr): gap 14. */
+.mp-body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+}
+
+.mp-body--live {
+  gap: 14px;
+}
+
+/* Footer (U55Bh): top stroke 1 border, row, gap 8, padding [10, 12], alignItems center. */
+.mp-footer {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.mp-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Footnote (LFNMn): sans 11 text-tertiary. */
+.mp-footnote {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Popover buttons (Tzskd, kmhAO, mr24I, yk1p9, Tlak3): height 28, padding [0, 12]; the label
+   keeps the component's text-base and the icon its 16. */
+.mp-button.kimo-button {
+  height: 28px;
+  padding: 0 12px;
+}
+
+/* Change in Settings (kmhAO): label text-sm. */
+.mp-button--small-label.kimo-button {
+  font-size: var(--kimo-text-sm);
+}
+
+/* Start sharing while the relay has not answered (Tzskd): opacity 0.4. */
+.mp-button.kimo-button:disabled {
+  opacity: 0.4;
+}
+
+/* Reset all links (yk1p9): Button/Ghost, icon and label danger. */
+.mp-button--danger.kimo-button {
+  color: var(--kimo-danger);
+}
+
+/* Intro (I862WR): row, gap 12 › Icon Wrap 32 bg-muted pill, server 16 primary · Text column gap 4. */
+.mp-intro {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+.mp-icon-wrap {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.mp-icon-wrap > svg {
+  display: block;
+}
+
+/* Connection Icon Wrap (lBDqd): 28, lock 14. */
+.mp-icon-wrap--28 {
+  width: 28px;
+  height: 28px;
+}
+
+.mp-text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mp-text--2 {
+  gap: 2px;
+}
+
+.mp-text--1 {
+  gap: 1px;
+}
+
+/* Title (d9zk8G): sans 12 / 600 primary. */
+.mp-title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+/* Connection Title (L5peCg), link Role (XR3nr), person Label (M45g8): sans 12 / 500 primary. */
+.mp-label-strong {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Desc (h5H6Dc, hw1gF, dklqB): sans 11 secondary, line-height 1.45, fixed width. */
+.mp-desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Meta (Y8ONJ, UMS2E, LBGqS): mono 11 tertiary. */
+.mp-meta-mono {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Meta (rx50e, UWlnG): sans 11 tertiary. */
+.mp-meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Field · Relay URL (mHqqj) / New Link (r8JQX): column, gap 6 › Label sans 11 / 500 secondary. */
+.mp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+}
+
+.mp-field-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* A relay URL value is mono 12 primary (BwYzP override); the empty field shows the component's
+   sans 13 tertiary placeholder (first run). */
+.mp-relay-input .kimo-input__field:not(:placeholder-shown) {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+}
+
+/* Guide Link (M26asu): row, gap 6, center › book-open 14 secondary · Label sans 11 / 500 primary ·
+   arrow-up-right 12 tertiary. Settings (z6LPvG): gap 4, no leading icon. */
+.mp-guide {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  cursor: pointer;
+  appearance: none;
+}
+
+.mp-guide--settings {
+  gap: 4px;
+}
+
+.mp-guide:hover .mp-guide__label {
+  text-decoration: underline;
+}
+
+.mp-guide:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.mp-guide__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.mp-guide__external {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-guide svg {
+  display: block;
+}
+
+/* Check / Result (iyUcU, mm8zF): row, gap 8, center. */
+.mp-result {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-result__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.mp-result__icon > svg {
+  display: block;
+}
+
+/* Spinner (yCJ8r) text-tertiary; triangle-alert warning; circle-x danger. */
+.mp-result__icon--testing {
+  color: var(--kimo-text-tertiary);
+  animation: mp-spin 1s linear infinite;
+}
+
+.mp-result__icon--warning {
+  color: var(--kimo-warning);
+}
+
+.mp-result__icon--danger {
+  color: var(--kimo-danger);
+}
+
+@keyframes mp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-result__icon--testing {
+    animation: none;
+  }
+}
+
+/* Message (B0yqw7): sans 11 secondary, lh 1.45, fill. Testing meta (h6Udew): sans 11 tertiary. */
+.mp-result__text {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+.mp-result__text--testing {
+  flex: 0 1 auto;
+  color: var(--kimo-text-tertiary);
+  line-height: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Connection (SxNEm): row, gap 10, center. */
+.mp-connection {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Controls (ayd1m): row, gap 6, center › SegmentedText · Select fill · Create link. */
+.mp-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.mp-controls .kimo-seg-text {
+  flex: none;
+}
+
+.mp-controls .kimo-select {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+/* Active Links (BeO20): column, gap 2 › Head padding [0, 0, 4, 0]. */
+.mp-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mp-links__head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  padding: 0 0 4px 0;
+}
+
+/* Link row (kXq9i): 44 tall, radius-sm, gap 8, padding [0, 4, 0, 8], center; hover bg-hover. */
+.mp-link {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--kimo-radius-sm);
+}
+
+.mp-link:hover,
+.mp-link:focus-within {
+  background: var(--kimo-bg-hover);
+}
+
+.mp-link__role {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.mp-link__role > svg {
+  display: block;
+}
+
+/* Copy / Revoke (PKzG6, TQgIv): IconButton 24, transparent, 14 icons; text-tertiary at rest,
+   Copy text-primary and Revoke danger on the hovered row. */
+.mp-link .mp-link__action {
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-link:hover .mp-link__copy,
+.mp-link:focus-within .mp-link__copy {
+  color: var(--kimo-text-primary);
+}
+
+.mp-link:hover .mp-link__revoke,
+.mp-link:focus-within .mp-link__revoke {
+  color: var(--kimo-danger);
+}
+
+.mp-link .mp-link__action:hover:not(:disabled) {
+  background: var(--kimo-bg-muted);
+}
+
+/* E2E Note (t38q0s): bg-subtle, radius-md, gap 8, padding [8, 10] › key-round 14 tertiary. */
+.mp-note {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.mp-note__icon {
+  display: inline-flex;
+  flex: none;
+  /* The row has no alignItems: the icon sits at the top. */
+  align-self: flex-start;
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-note__icon > svg {
+  display: block;
+}
+
+/* --- People list (ZccsX) ------------------------------------------------------------------- */
+
+/* Body (qO5G7): column, gap 2, padding 6. */
+.mp-people__body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+
+/* Person / Agent row (tW5ly): 36 tall, radius-sm, gap 8, padding [0, 4, 0, 6], center. */
+.mp-person {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 4px 0 6px;
+  border-radius: var(--kimo-radius-sm);
+}
+
+.mp-person:hover,
+.mp-person:focus-within {
+  background: var(--kimo-bg-hover);
+}
+
+/* Idle (nuLeV): the avatar at 0.5. */
+.mp-person--idle .mp-avatar {
+  opacity: 0.5;
+}
+
+/* Name (al8lG): row, gap 6, center, fill. */
+.mp-person__name {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mp-person__name .mp-label-strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Follow Slot (nJERa): 24 × 24 (your row has no Follow). */
+.mp-person__slot {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+/* Follow (sYI4S): IconButton 24, transparent, eye 14 text-tertiary. Hover row and following
+   (ov7rt): fill bg-muted, eye text-primary. */
+.mp-follow.kimo-icon-button {
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-person:hover .mp-follow.kimo-icon-button,
+.mp-follow.kimo-icon-button:focus-visible,
+.mp-follow.kimo-icon-button[aria-pressed="true"] {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+/* Divider (jB0Pw): fill_container × 1, border. */
+.mp-divider {
+  flex: none;
+  margin: 0;
+  border: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--kimo-border);
+}
+
+/* Agents Head (Hkm9s): padding [6, 6, 2, 6] › Label sans 11 / 500 tertiary. */
+.mp-agents-head {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 6px 2px 6px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* Mark Wrap (zs45q): 24 × 24, center › AgentMark 12. */
+.mp-mark-wrap {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+/* Agent Meta (tKHOY): sans 11 in the persona hue. */
+.mp-agent-meta {
+  overflow: hidden;
+  color: var(--mp-color);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Reset all links (aaSGr): Dialog; Confirm label #FFFFFF (bzZjb override, both themes) ---- */
+.mp-reset-dialog .kimo-button.kimo-dialog__button--danger {
+  color: #ffffff; /* pen-literal: qqpfr/bzZjb fill #FFFFFF */
+}
+
+/* --- Settings › Multiplayer (WpWSj) --------------------------------------------------------- */
+
+/* What a relay is (tMoaA): bg-subtle, radius-md, gap 10, padding [10, 12] › server 16 secondary. */
+.mp-relay-box {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.mp-relay-box__icon {
+  display: inline-flex;
+  flex: none;
+  /* The row has no alignItems: the icon sits at the top. */
+  align-self: flex-start;
+  color: var(--kimo-text-secondary);
+}
+
+.mp-relay-box__icon > svg {
+  display: block;
+}
+
+/* Setting · Relay URL (pXQUm): column, gap 8, padding [12, 0], bottom stroke 1 border. */
+.mp-setting {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 0;
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+}
+
+/* Label (S0JpK): sans 12 / 500 primary. Text (iTU0m): column, gap 2. */
+.mp-setting__label {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* Input Row (RVowC): row, gap 8, center › Input fill · Test (Button/Secondary 32, padding [0, 14]). */
+.mp-input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-input-row .kimo-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Testing (P9RYIb): Test at opacity 0.5. */
+.mp-test.kimo-button:disabled {
+  opacity: 0.5;
+}
+
+/* Your name (iNDSG): Input 160 × 28, no icon, value sans 12 primary. */
+.mp-name-input.kimo-input {
+  width: 160px;
+  height: 28px;
+}
+
+.mp-name-input .kimo-input__field {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+}
+
+/* Fetch images and fonts (kpGju): Select 120. */
+.mp-fetch-select.kimo-select {
+  width: 120px;
+}

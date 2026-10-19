@@ -14,7 +14,7 @@
  * window's own store (`createInWindowTools`). See agent-panel/INTEGRATION.md.
  */
 import { type NoteView, type PromptNodeView, shimLaunch, type WebNote } from "@kimo/ai-agent"
-import { pagesOf } from "@kimo/editor-state"
+import { claimsFor, pagesOf } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { KimoPlatform } from "@kimo/platform"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
@@ -37,11 +37,14 @@ import {
   storeOutline,
   useHomeHandoff,
 } from "../agent-panel"
+import type { AreaBusyEnv } from "../agent-panel/AreaBusyCard"
 import { useAiProviders } from "../ai-settings"
 import { SIDE_BY_SIDE_GAP, sideBySideAnchor } from "../canvas/agent-canvas"
 import type { AgentCanvasProps, CanvasHandle } from "../canvas/contract"
 import { type HostClient, HostedDocumentSession } from "../host/client"
 import type { Bus } from "../lib/hooks"
+import { pausesFor } from "../multiplayer/agent-pause"
+import { claimAwareToolHost } from "../multiplayer/claim-tools"
 import { useDockAgentActivity } from "../platform/dock-activity"
 import type { FileDocumentSession } from "../platform/session"
 import { useFileId } from "./agents"
@@ -87,6 +90,7 @@ export function useEditorAgentPanel({
   openSettings,
   openAgentTab,
   onError,
+  areaBusy,
 }: {
   platform: KimoPlatform
   hostClient: HostClient | null
@@ -100,6 +104,8 @@ export function useEditorAgentPanel({
   openAgentTab: () => void
   /** A failed panel action (session history, links): Toast/Danger. */
   onError: (text: string) => void
+  /** Board 41 › 7 C: the thread's AREA_BUSY card. */
+  areaBusy?: AreaBusyEnv
 }): EditorAgentPanel {
   const ai = useAiProviders(platform)
   const path = doc && !doc.untitled ? doc.ref : null
@@ -197,7 +203,12 @@ export function useEditorAgentPanel({
       runtime: createPlatformAgentRuntime(
         platform,
         ai,
-        (spec) => pageAwareToolHost(tools.factory(spec), pageForAgent),
+        // Board 41 › 7: writes wait while the agent is paused or waiting for an area.
+        (spec) =>
+          claimAwareToolHost(pageAwareToolHost(tools.factory(spec), pageForAgent), {
+            origin: spec.origin,
+            store,
+          }),
         {
           mcpLaunch: (cli) => shimLaunch(latest.current.shim ?? "kimo-mcp", cli),
           // Streamed edits (ADR 0013 §4.7): a CLI's partial tool calls reach the document host,
@@ -267,6 +278,21 @@ export function useEditorAgentPanel({
     })
   }, [ai, fileId, tools, platform, store, pageForAgent, hostClient])
   useEffect(() => () => controller?.dispose(), [controller])
+  // Board 41 › 7: Stop on a paused agent's note ends its turn (this window's pauses, or the
+  // document host's `agentStop` event for documents it holds).
+  useEffect(() => {
+    if (!controller) return
+    const end = (origin: string) => {
+      const c = controller.state.canvas
+      if (controller.state.busy && (c.live.includes(origin) || origin in c.info)) controller.stop()
+    }
+    const offLocal = pausesFor(claimsFor(store)).onStopped(end)
+    const offHost = hostClient?.onAgentStop(end)
+    return () => {
+      offLocal()
+      offHost?.()
+    }
+  }, [controller, store, hostClient])
   // Board 32: the macOS Dock tile animates while this window's agent turns run.
   useDockAgentActivity(platform, controller)
 
@@ -328,6 +354,7 @@ export function useEditorAgentPanel({
           const parent = str(n?.parent)
           return parent ? nodeNameIn(session, parent) : undefined
         }}
+        {...(areaBusy ? { areaBusy } : {})}
         onFollow={(ids) => {
           // Board 31 Follow: one jump to the layers the agent last landed; the selection stays.
           const live = ids.filter((id) => session.store.getNode(id))

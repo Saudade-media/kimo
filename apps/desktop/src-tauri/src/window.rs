@@ -23,6 +23,8 @@ pub const SETTINGS_PANES: &[&str] = &[
     "agents-mcp",
     // M6 (board 22/23): right after Agents & MCP.
     "ai-providers",
+    // Board 41 section 4: right after AI providers.
+    "multiplayer",
     "updates",
     "about",
 ];

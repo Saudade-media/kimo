@@ -31,11 +31,14 @@ export function FloatingToolbar({
   ui,
   onActivate,
   onAsk,
+  viewOnly = false,
 }: {
   ui: UiStore
   onActivate(id: CanvasToolId): void
   /** "Ask Kimo" (⌘K): opens the Agent tab (M6). Absent: the M5 disabled state. */
   onAsk?: () => void
+  /** Board 41 section 9 (X2wngo): only Select is live; the rest sits at 35 %. */
+  viewOnly?: boolean
 }) {
   const tool = useUi(ui, (s) => s.tool)
   const { placement, penHint, shape, pathEdit } = useCanvasToolState(ui)
@@ -70,7 +73,7 @@ export function FloatingToolbar({
       {/* Board 27 §5 (c): the path-edit toolbar replaces this one while editing a path. */}
       <div
         ref={bar}
-        className="floating-toolbar"
+        className={viewOnly ? "floating-toolbar floating-toolbar--view-only" : "floating-toolbar"}
         role="toolbar"
         aria-label="Tools"
         hidden={pathEdit !== null}

@@ -65,6 +65,7 @@ export class AgentPauses {
    */
   private readonly seen = new Map<string, HumanEdit>()
   private readonly listeners = new Set<() => void>()
+  private readonly stopListeners = new Set<(holder: string) => void>()
   private snapshot: readonly AgentPauseView[] = []
   private timer: unknown = null
   private readonly off: () => void
@@ -110,7 +111,17 @@ export class AgentPauses {
     this.resume(holder)
     this.registry.release(holder)
     this.options.onStop?.(holder)
+    for (const l of [...this.stopListeners]) l(holder)
     this.changed()
+  }
+
+  /**
+   * Stop was chosen for `holder` (any window of this document): the agent panel running it ends
+   * its turn. Returns the unsubscribe.
+   */
+  onStopped(listener: (holder: string) => void): () => void {
+    this.stopListeners.add(listener)
+    return () => this.stopListeners.delete(listener)
   }
 
   destroy(): void {
@@ -119,6 +130,7 @@ export class AgentPauses {
     this.timer = null
     for (const holder of [...this.paused.keys()]) this.resume(holder)
     this.listeners.clear()
+    this.stopListeners.clear()
   }
 
   /** Looks for new human edits inside local claims. */

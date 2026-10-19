@@ -188,12 +188,26 @@ export interface MissingFontsHostProps {
   addDocumentFont?: (font: PickedFont) => Promise<void>
   /** Board 28 (c): the blocked banner's "Open settings" (Settings › Fonts & privacy). */
   openFontSettings?: () => void
+  /** Board 41 › 8 D: families shared by name only (their rows read "Name only"). */
+  nameOnly?: readonly string[]
+  /** Board 41 › 8 D: each new value opens the dialog again (the banner's Fonts action). */
+  openRequest?: number
 }
 
 /** Detects missing fonts once per file per session and shows the dialog. */
 export function MissingFontsHost(props: MissingFontsHostProps) {
-  const { platform, system, fileKey, fileName, doc, apply, addDocumentFont, openFontSettings } =
-    props
+  const {
+    platform,
+    system,
+    fileKey,
+    fileName,
+    doc,
+    apply,
+    addDocumentFont,
+    openFontSettings,
+    nameOnly,
+    openRequest = 0,
+  } = props
   const [fonts, setFonts] = useState<MissingFont[] | null>(null)
   const [choices, setChoices] = useState<ReplaceChoice[]>([])
   const [, bump] = useState(0)
@@ -214,6 +228,22 @@ export function MissingFontsHost(props: MissingFontsHostProps) {
 
   useEffect(() => system.subscribe(() => bump((n) => n + 1)), [system])
 
+  // The banner's Fonts action: detect again and show the dialog (not limited to once per file).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs per request only
+  useEffect(() => {
+    if (!openRequest) return
+    let live = true
+    void (async () => {
+      const missing = await system.missingFonts(doc())
+      if (!live || !missing.length) return
+      setChoices(await replaceChoices(platform))
+      if (live) setFonts(missing)
+    })()
+    return () => {
+      live = false
+    }
+  }, [openRequest])
+
   if (!fonts?.length) return null
   const close = () => setFonts(null)
   const refresh = async () => {
@@ -229,6 +259,7 @@ export function MissingFontsHost(props: MissingFontsHostProps) {
         choices={choices}
         canFetch={system.googleAllowed() && system.online()}
         blocked={blockedBy(platform)}
+        {...(nameOnly?.length ? { nameOnly } : {})}
         {...(openFontSettings ? { onOpenSettings: openFontSettings } : {})}
         onKeep={close}
         onReplace={(mapping) => {

@@ -148,8 +148,8 @@ export const scenarios: Scenario[] = [
       await hook(page, (k) => k.show({ kind: "settings", pane: "files" }))
       await page.waitForSelector(".settings-window")
       expect(
-        (await page.locator(".settings-nav-item").count()) === 8,
-        "eight panes (M6 AI providers, board 27 Canvas)",
+        (await page.locator(".settings-nav-item").count()) === 9,
+        "nine panes (M6 AI providers, board 27 Canvas, board 41 Multiplayer)",
       )
       expect(
         (await page.locator(".settings-nav-item").nth(4).getAttribute("data-pane")) ===

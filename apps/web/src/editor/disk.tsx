@@ -8,6 +8,8 @@ import { type ReactNode, useCallback, useEffect, useRef, useSyncExternalStore } 
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import type { EditorConflictSession } from "../conflicts"
 import { FileTopbar } from "../files"
+import { SaveStatusPill } from "../files/SaveStatusPill"
+import { TopbarShare, TopbarSyncStatus } from "../multiplayer/ui/TopbarShare"
 import { hasUnsavedChanges, isEdited, type SessionState, windowTitle } from "../platform/contract"
 import type { FileDocumentSession } from "../platform/session"
 import type { FileMenuActions } from "./FileMenu"
@@ -75,6 +77,8 @@ export function DiskTopbar({
         {...(onHomeFolder ? { onFolderClick: onHomeFolder } : {})}
         onFileClick={(e) => fileMenu.toggle(e.currentTarget)}
         presence={presence}
+        // Board 41 §1/§2: sync status in the Save Status slot while shared, Share after Theme.
+        status={<TopbarSyncStatus docKey={doc.ref} fallback={<SaveStatusPill session={doc} />} />}
         trailing={
           <TopbarTrailing
             ui={ui}
@@ -82,6 +86,21 @@ export function DiskTopbar({
             onPreview={onPreview}
             onExport={onExport}
             previewTarget={previewTarget}
+            share={
+              <TopbarShare
+                docKey={doc.ref}
+                nodeName={(id) => {
+                  const name = doc.store.getNode(id)?.name
+                  return typeof name === "string" ? name : null
+                }}
+                onRevealNodes={(ids) => {
+                  const live = ids.filter((id) => doc.store.getNode(id))
+                  if (!live.length) return
+                  ui.getState().select(live)
+                  canvas()?.zoomToFit(live, 96)
+                }}
+              />
+            }
           />
         }
       />

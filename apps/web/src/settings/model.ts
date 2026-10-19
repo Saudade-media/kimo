@@ -20,7 +20,16 @@ export interface PaneInfo {
   id: SettingsPane
   label: string
   /** Lucide icon name (Nav · … Icon). */
-  icon: "settings" | "ruler" | "hard-drive" | "shield" | "bot" | "key-round" | "refresh-cw" | "info"
+  icon:
+    | "settings"
+    | "ruler"
+    | "hard-drive"
+    | "shield"
+    | "bot"
+    | "key-round"
+    | "users"
+    | "refresh-cw"
+    | "info"
 }
 
 /** Sidebar order (XmeDB > Sidebar h7qQD). */
@@ -34,6 +43,9 @@ export const SETTINGS_PANES: readonly PaneInfo[] = [
   { id: "agents-mcp", label: "Agents & MCP", icon: "bot" },
   // Board 22 pane rule "Placement": right after Agents & MCP; key-round in $agent (b13pOm).
   { id: "ai-providers", label: "AI providers", icon: "key-round" },
+  // Board 41 section 4 shows the pane, not its nav item: placed after AI providers, with the
+  // Share button's lucide `users` (house choice).
+  { id: "multiplayer", label: "Multiplayer", icon: "users" },
   { id: "updates", label: "Updates", icon: "refresh-cw" },
   { id: "about", label: "About & licenses", icon: "info" },
 ]

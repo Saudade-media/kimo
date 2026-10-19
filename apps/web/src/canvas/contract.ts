@@ -726,6 +726,13 @@ export interface AgentCanvasProps {
   onStopPrompt?(nodeId: string): void
   /** Reduced motion: the cursor jumps between sections. Default: the media query. */
   reducedMotion?: boolean
+  /**
+   * Board 41 › 7: agents whose area claim draws their one outline (the claim layer): board 36's
+   * section outline gives way to it, never both for one agent.
+   */
+  claimedOrigins?: ReadonlySet<string>
+  /** Board 41 › 7: paused agents (a person edited inside their claim) hide their cursor. */
+  hiddenOrigins?: ReadonlySet<string>
 }
 
 /** M2: where the I key asked for an icon. */

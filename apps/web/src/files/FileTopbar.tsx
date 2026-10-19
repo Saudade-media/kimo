@@ -110,6 +110,11 @@ export interface FileTopbarProps {
   presence?: ReactNode
   /** Board 37 (E3): the folder crumb opens Home on that folder. */
   onFolderClick?: (dir: string) => void
+  /**
+   * Board 41 §2: replaces the Save Status slot (the sync status of a shared file, which falls
+   * back to the Save Status pill while the file is not shared).
+   */
+  status?: ReactNode
 }
 
 /** The 28px topbar logo: KimoLogo 28 (bm1JR), replacing the old "k" pill (board 26 §4 KlpS9). */
@@ -131,6 +136,7 @@ export function FileTopbar({
   presence,
   onHome,
   onFolderClick,
+  status,
 }: FileTopbarProps) {
   const chrome = useWindowChrome(session.manager.platform)
   // macOS draws the lights (inset 68, 4 in fullscreen); everywhere else the OS (or the browser)
@@ -152,7 +158,7 @@ export function FileTopbar({
         />
       }
       branch={session.untitled ? null : <FileBranchChip session={session} />}
-      status={<SaveStatusPill session={session} />}
+      status={status ?? <SaveStatusPill session={session} />}
       presence={presence}
       trailing={trailing}
     />

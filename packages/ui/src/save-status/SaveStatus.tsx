@@ -8,7 +8,7 @@ import {
   LockKeyhole,
   type LucideIcon,
 } from "lucide-react"
-import type { ComponentPropsWithRef } from "react"
+import type { ComponentPropsWithRef, ReactNode } from "react"
 import { cx } from "../internal/util"
 
 /** The seven designed states (02d "SaveStatus · 7 states"). */
@@ -48,6 +48,11 @@ export interface SaveStatusProps extends Omit<ComponentPropsWithRef<"button">, "
   kind: SaveStatusKind
   /** Pill label; defaults to {@link SAVE_STATUS_LABEL}. */
   label?: string
+  /**
+   * Replaces the state's icon (an SVG, sized 14 by the pill). Board 41 sync status reuses the
+   * pill looks with its own icons: `refresh-cw` on Paused, `wifi-off` and `eye` on ReadOnly.
+   */
+  icon?: ReactNode
 }
 
 /**
@@ -58,7 +63,14 @@ export interface SaveStatusProps extends Omit<ComponentPropsWithRef<"button">, "
  * paused/locked: warning-soft, warning · failed: danger-soft, danger.
  * A `<button>` so it can open the lease details (Locked) or show its tooltip on focus.
  */
-export function SaveStatus({ kind, label, className, type = "button", ...rest }: SaveStatusProps) {
+export function SaveStatus({
+  kind,
+  label,
+  icon,
+  className,
+  type = "button",
+  ...rest
+}: SaveStatusProps) {
   const Icon = ICON[kind]
   return (
     <button
@@ -67,7 +79,13 @@ export function SaveStatus({ kind, label, className, type = "button", ...rest }:
       data-status={kind}
       className={cx("kimo-save-status", `kimo-save-status--${kind}`, className)}
     >
-      <Icon className="kimo-save-status__icon" aria-hidden="true" />
+      {icon !== undefined ? (
+        <span className="kimo-save-status__icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : (
+        <Icon className="kimo-save-status__icon" aria-hidden="true" />
+      )}
       <span className="kimo-save-status__label">{label ?? SAVE_STATUS_LABEL[kind]}</span>
     </button>
   )

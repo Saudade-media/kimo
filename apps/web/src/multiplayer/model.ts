@@ -306,6 +306,8 @@ export interface JoinState {
   /** Once joined: the room and its document key ({@link roomKeyOf}). */
   room: string | null
   key: string | null
+  /** Once joined: the room session (store, assets) the joined editor opens on. */
+  session: SharedSession | null
   error: { kind: JoinErrorKind; code: string; message: string } | null
 }
 
@@ -993,6 +995,7 @@ const JOIN_IDLE: JoinState = {
   progress: null,
   room: null,
   key: null,
+  session: null,
   error: null,
 }
 
@@ -1136,6 +1139,7 @@ function createJoinModel(
           progress: 1,
           room: session.room,
           key: roomKeyOf(session.room),
+          session,
           steps: { reachedRelay: true, linkValid: true, decrypted: true },
         })
         return state

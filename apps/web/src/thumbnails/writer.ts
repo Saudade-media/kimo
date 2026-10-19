@@ -43,6 +43,8 @@ function target(
   session: FileSession,
   platform: KimoPlatform,
 ): { store: ThumbnailsApi; key: string } | null {
+  // A joined room is not a file of this device: no preview.
+  if (session.shared) return null
   const doc = session.document
   if (!doc) return { store: libraryThumbnails, key: session.id }
   if (doc.untitled) return null

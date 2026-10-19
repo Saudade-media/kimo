@@ -14,12 +14,13 @@
 import type { RecentFile } from "@kimo/platform"
 import type { SyncStatus } from "@kimo/sync"
 import { Button, IconButton, KimoLogo, Tooltip } from "@kimo/ui"
-import { useEffect, useState } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import { useCanvasViewPrefs } from "../canvas/view-prefs"
 import { useUi } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { getTheme } from "../lib/theme"
+import { TopbarShare, TopbarSyncStatus } from "../multiplayer/ui/TopbarShare"
 import { useRuntime } from "../platform/runtime"
 import { runHelpAction } from "../settings/help"
 import { shortcutLabel } from "../shortcuts/shortcuts"
@@ -44,6 +45,12 @@ export interface TopbarProps extends FileMenuActions {
    */
   previewTarget?: string | null
   onHome(): void
+  /**
+   * Board 41 §1/§2: the multiplayer document key of this editor (a room joined from a link,
+   * `roomKeyOf(room)`). Set, the sync status replaces "Saved locally" while it is shared, and the
+   * avatar stack and Share sit after Theme.
+   */
+  shareKey?: string | null
 }
 
 const SAVED_LABEL: Partial<Record<SyncStatus, [icon: string, label: string]>> = {
@@ -130,7 +137,8 @@ export function useFileMenu(actions: FileMenuActions) {
 
 /**
  * Zoom, Theme, Preview, Export (board 03 / XDqrb trailing controls). The zoom control opens the
- * View menu (board 27 §4 rmQMe).
+ * View menu (board 27 §4 rmQMe). `share` (board 41 §1: avatar stack + Share) sits after Theme,
+ * before Preview.
  */
 export function TopbarTrailing({
   ui,
@@ -138,7 +146,10 @@ export function TopbarTrailing({
   onPreview,
   onExport,
   previewTarget,
-}: Pick<TopbarProps, "ui" | "canvas" | "onPreview" | "onExport" | "previewTarget">) {
+  share,
+}: Pick<TopbarProps, "ui" | "canvas" | "onPreview" | "onExport" | "previewTarget"> & {
+  share?: ReactNode
+}) {
   const zoom = useUi(ui, (s) => s.viewport.zoom)
   const toggleAppearance = useToggleAppearance()
   const { platform } = useRuntime()
@@ -192,6 +203,7 @@ export function TopbarTrailing({
         icon={<Icon name="sun" size={16} />}
         onClick={toggleAppearance}
       />
+      {share}
       {/* Board 27 §9 (b): ghost look kept; tooltip names the frame; disabled at 40 % (aria). */}
       <Tooltip
         label={
@@ -219,6 +231,25 @@ export function TopbarTrailing({
         Export
       </Button>
     </>
+  )
+}
+
+function SavedLocally({
+  status,
+  icon,
+  label,
+}: {
+  status: SyncStatus
+  icon: string
+  label: string
+}) {
+  return (
+    <span className="topbar__saved" data-status={status}>
+      <span className="topbar__saved-icon">
+        <Icon name={icon} size={14} />
+      </span>
+      <span className="topbar__saved-label">{label}</span>
+    </span>
   )
 }
 
@@ -275,18 +306,21 @@ export function Topbar(props: TopbarProps) {
       <span className="topbar__sep">/</span>
       <span className="topbar__page">{props.pageName}</span>
       <span className="topbar__spacer" data-tauri-drag-region="" />
-      <span className="topbar__saved" data-status={props.syncStatus}>
-        <span className="topbar__saved-icon">
-          <Icon name={saved} size={14} />
-        </span>
-        <span className="topbar__saved-label">{savedLabel}</span>
-      </span>
+      {props.shareKey ? (
+        <TopbarSyncStatus
+          docKey={props.shareKey}
+          fallback={<SavedLocally status={props.syncStatus} icon={saved} label={savedLabel} />}
+        />
+      ) : (
+        <SavedLocally status={props.syncStatus} icon={saved} label={savedLabel} />
+      )}
       <TopbarTrailing
         ui={props.ui}
         canvas={props.canvas}
         onPreview={props.onPreview}
         previewTarget={props.previewTarget}
         onExport={props.onExport}
+        {...(props.shareKey ? { share: <TopbarShare docKey={props.shareKey} /> } : {})}
       />
     </header>
   )

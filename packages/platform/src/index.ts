@@ -26,6 +26,7 @@ export {
   isOpenableUrl,
   KIMO_EXTENSIONS,
   parseDeepLink,
+  parseJoinDeepLink,
   rebaseRelativeRefs,
   relativeRefBetween,
   resolveAgainstFile,

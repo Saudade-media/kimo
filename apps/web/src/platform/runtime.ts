@@ -14,6 +14,7 @@ import { createContext, useContext } from "react"
 import webPackage from "../../package.json"
 import { conflictSessionFactory } from "../conflicts"
 import type { HostClient } from "../host/client"
+import { joinPath } from "../join/link"
 import type { MultiplayerModel } from "../multiplayer/model"
 import { createWindowMultiplayer } from "../multiplayer/window"
 import { takeLastFiles } from "./last-files"
@@ -161,6 +162,10 @@ function finishRuntime(
   // The desktop Settings window (`#/settings/<pane>`) edits settings only: it never opens files.
   if (settingsRoute()) return runtime
   manager.install(onOpened)
+  // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route.
+  platform.launch.onOpenRequest((request) => {
+    if (request.join) location.hash = `#${joinPath(request.join)}`
+  })
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
     // General › On launch: with nothing else to open, the main window reopens the file that was
@@ -176,6 +181,10 @@ function finishRuntime(
     )
       requests.push({ source: "argv", refs: [last[0]] })
     for (const request of requests) {
+      if (request.join) {
+        location.hash = `#${joinPath(request.join)}`
+        continue
+      }
       await manager.handleOpenRequest(request).catch((e: unknown) => {
         console.warn("Kimo: could not open", request.refs, e)
       })

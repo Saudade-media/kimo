@@ -50,6 +50,11 @@ export interface MissingFontsDialogProps {
   inline?: boolean
   /** Initial replacements (defaults: {@link suggestReplacement} for every missing family). */
   initialReplacements?: Record<string, string | null>
+  /**
+   * Board 41 › 8 D: families a shared file's owner could only send by name (not open-licensed):
+   * their FontRow/Missing source reads "Name only" (`OO0zZ`).
+   */
+  nameOnly?: readonly string[]
 }
 
 /** Board 28 (c) banner copy (zzcpD). */
@@ -89,7 +94,9 @@ export function MissingFontsDialog({
   onChooseFile,
   inline = false,
   initialReplacements,
+  nameOnly,
 }: MissingFontsDialogProps) {
+  const byName = new Set((nameOnly ?? []).map((f) => f.toLowerCase()))
   const [replacements, setReplacements] = useState<Record<string, string | null>>(() => {
     const out: Record<string, string | null> = {}
     for (const f of fonts)
@@ -145,7 +152,7 @@ export function MissingFontsDialog({
               key={f.family}
               family={f.family}
               meta={fontRowMeta(f.weights, f.nodeIds.length)}
-              source="Document"
+              source={byName.has(f.family.toLowerCase()) ? "Name only" : "Document"}
               status="missing"
               action={
                 <FontReplaceSelect

@@ -147,7 +147,18 @@ pub fn run() {
             app.deep_link().on_open_url(move |event| {
                 let st = state::state(&h);
                 for url in event.urls() {
-                    if let Some(l) = links::parse_deep_link(url.as_str()) {
+                    if let Some(j) = links::parse_join_link(url.as_str()) {
+                        st.open_request(
+                            &h,
+                            links::OpenRequest {
+                                source: "deep-link",
+                                refs: vec![],
+                                node: None,
+                                page: None,
+                                join: Some(j),
+                            },
+                        );
+                    } else if let Some(l) = links::parse_deep_link(url.as_str()) {
                         st.open_request(
                             &h,
                             links::OpenRequest {
@@ -155,6 +166,7 @@ pub fn run() {
                                 refs: vec![l.path],
                                 node: l.node,
                                 page: l.page,
+                                join: None,
                             },
                         );
                     }
@@ -321,6 +333,7 @@ pub fn run() {
                         refs,
                         node: None,
                         page: None,
+                        join: None,
                     },
                 );
             }

@@ -12,7 +12,7 @@ import type { NodeData } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
 import { Badge, EmptyState, Tabs } from "@kimo/ui"
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useCropSession } from "../canvas/crop"
 import { type CodeExportPreset, CodeTab } from "../code-tab"
 import { ConflictsPanel, conflictsTabLabel, type EditorConflictSession } from "../conflicts"
@@ -35,6 +35,7 @@ import {
 import { KindPill } from "./m3/ui"
 import { PanelContext, type Sel } from "./panel-context"
 import { kindLabel, MIXED, nodeName, shared, typeIcon } from "./props"
+import { ViewOnlyContext } from "./view-only"
 import "./right-panel.css"
 import { EffectsSection } from "./sections/EffectsSection"
 import { IconSection } from "./sections/IconSection"
@@ -238,6 +239,19 @@ export const HAS_STROKE = new Set([
   "browser",
 ])
 
+/**
+ * View only: the sections go inert in a `display: contents` wrapper. Everyone else gets the
+ * sections as the design tab's own children (no wrapper).
+ */
+function InertSections({ on, children }: { on: boolean; children: ReactNode }) {
+  if (!on) return <>{children}</>
+  return (
+    <div className="design-tab__sections" inert>
+      {children}
+    </div>
+  )
+}
+
 function DesignTab({
   session,
   layout,
@@ -253,6 +267,8 @@ function DesignTab({
   m3: M3Controller
   fonts: FontSystem | null
 }) {
+  // View only (board 41 section 9): the sections read, dimmed to 50 %, and take no input.
+  const viewOnly = useContext(ViewOnlyContext)
   // Re-renders when the selection or a selected node changes, not on every document edit.
   const selection = useUi(session.ui, (s) => s.selection)
   const realSel: readonly Sel[] = useNodes(session.store, selection)
@@ -362,44 +378,49 @@ function DesignTab({
           )}
         </div>
         <OverrideFieldsContext.Provider value={overrides}>
-          {crop && single === crop.nodeId && <ImageCropSection crop={crop} />}
-          {/* Board 14 (PEcqt): a node with theme pins shows Theme first, under the header. */}
-          {themeFirst && <ThemeSection m3={m3} id={themeFirst} />}
-          {single && m3kind === "instance" && <InstanceSection m3={m3} id={single} />}
-          {single && m3kind === "instance" && !view.isVirtual(single) && (
-            <PropertiesSection m3={m3} id={single} />
-          )}
-          {single && (m3kind === "component" || m3kind === "derived") && (
-            <ComponentSection m3={m3} id={single} />
-          )}
-          {single && !inInstance && first.node.type === "frame" && (
-            <SlotSection m3={m3} id={single} />
-          )}
-          <LayerSection sel={sel} />
-          <PositionSection sel={sel} />
-          {/* Board 20 (YjE2h): Text after Position (Resizing drives the W/H modes there); auto
+          {/* `display: contents` keeps the sections the design tab's own children. */}
+          <InertSections on={viewOnly}>
+            {crop && single === crop.nodeId && <ImageCropSection crop={crop} />}
+            {/* Board 14 (PEcqt): a node with theme pins shows Theme first, under the header. */}
+            {themeFirst && <ThemeSection m3={m3} id={themeFirst} />}
+            {single && m3kind === "instance" && <InstanceSection m3={m3} id={single} />}
+            {single && m3kind === "instance" && !view.isVirtual(single) && (
+              <PropertiesSection m3={m3} id={single} />
+            )}
+            {single && (m3kind === "component" || m3kind === "derived") && (
+              <ComponentSection m3={m3} id={single} />
+            )}
+            {single && !inInstance && first.node.type === "frame" && (
+              <SlotSection m3={m3} id={single} />
+            )}
+            <LayerSection sel={sel} />
+            <PositionSection sel={sel} />
+            {/* Board 20 (YjE2h): Text after Position (Resizing drives the W/H modes there); auto
               layout is hidden for text nodes. */}
-          {allText && (
-            // Board 30: while editing (or for a text with runs) the section acts on ranges.
-            <RichTextScope sel={sel}>
-              {(view, editing) => <TextSection sel={view} fonts={fonts} editing={editing} />}
-            </RichTextScope>
-          )}
-          {!allText && <AutoLayoutSection sel={sel} />}
-          {all(new Set(["icon"])) && <IconSection sel={sel} />}
-          {/* Board 27 §5 (b): Polygon & Star share one section. */}
-          {all(new Set(["polygon"])) && <PolygonSection sel={sel} />}
-          {(all(HAS_FILL) || all(new Set(["icon"])) || (instance && all(new Set(["instance"])))) &&
-            (allText ? (
-              <RichTextScope sel={sel}>{(view) => <FillSection sel={view} />}</RichTextScope>
-            ) : (
-              <FillSection sel={sel} />
-            ))}
-          {all(HAS_STROKE) && <StrokeSection sel={sel} />}
-          <EffectsSection sel={sel} />
-          {single && !themeFirst && (first.node.type === "frame" || m3kind === "instance") && (
-            <ThemeSection m3={m3} id={single} />
-          )}
+            {allText && (
+              // Board 30: while editing (or for a text with runs) the section acts on ranges.
+              <RichTextScope sel={sel}>
+                {(view, editing) => <TextSection sel={view} fonts={fonts} editing={editing} />}
+              </RichTextScope>
+            )}
+            {!allText && <AutoLayoutSection sel={sel} />}
+            {all(new Set(["icon"])) && <IconSection sel={sel} />}
+            {/* Board 27 §5 (b): Polygon & Star share one section. */}
+            {all(new Set(["polygon"])) && <PolygonSection sel={sel} />}
+            {(all(HAS_FILL) ||
+              all(new Set(["icon"])) ||
+              (instance && all(new Set(["instance"])))) &&
+              (allText ? (
+                <RichTextScope sel={sel}>{(view) => <FillSection sel={view} />}</RichTextScope>
+              ) : (
+                <FillSection sel={sel} />
+              ))}
+            {all(HAS_STROKE) && <StrokeSection sel={sel} />}
+            <EffectsSection sel={sel} />
+            {single && !themeFirst && (first.node.type === "frame" || m3kind === "instance") && (
+              <ThemeSection m3={m3} id={single} />
+            )}
+          </InertSections>
         </OverrideFieldsContext.Provider>
       </div>
     </PanelContext.Provider>

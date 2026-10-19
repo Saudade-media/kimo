@@ -366,14 +366,20 @@ class PenImporter {
   // --- Variables --------------------------------------------------------------------------------
 
   private registerVariables(): void {
-    for (const name of Object.keys(this.pen.variables ?? {})) {
+    const names = Object.keys(this.pen.variables ?? {})
+    // Valid names keep theirs; a renamed one never takes a name already in use ("a b" next to "a-b").
+    const taken = new Set(names.filter((n) => VAR_RE.test(n)))
+    for (const name of names) {
       let k = name
       if (!VAR_RE.test(k)) {
-        k =
+        const base =
           name
             .replace(/^\$+/, "")
             .replace(/[\s:]+/g, "-")
-            .slice(0, 128) || "var"
+            .slice(0, 120) || "var"
+        k = base
+        for (let i = 2; taken.has(k); i++) k = `${base}-${i}`
+        taken.add(k)
         this.warn("VARIABLE_RENAMED", `Variable "${name}" renamed to "${k}"`)
       }
       this.varNames.set(name, k)

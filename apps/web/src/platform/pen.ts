@@ -57,6 +57,17 @@ async function sourceOf(
   }
 }
 
+/** The file name an image URL ends in, decoded when it is valid percent-encoding. */
+function assetName(url: string): string | undefined {
+  const last = url.split(/[?#]/)[0]?.split("/").pop() ?? ""
+  try {
+    return decodeURIComponent(last) || undefined
+  } catch {
+    // A stray "%" (e.g. "100%.png") is not an escape: keep the name as written.
+    return last || undefined
+  }
+}
+
 /** Bytes of an image a `.pen` references: relative to the `.pen`, or an http(s) URL. */
 async function loadImage(
   platform: KimoPlatform,
@@ -114,7 +125,7 @@ export async function convertPenFile(
     for (const url of penImageUrls(pen)) {
       const bytes = await loadImage(platform, penRef, url)
       if (!bytes) continue
-      const name = decodeURIComponent(url.split(/[?#]/)[0]?.split("/").pop() ?? "") || undefined
+      const name = assetName(url)
       try {
         const blob = new Blob([bytes as Uint8Array<ArrayBuffer>]) as Blob & { name?: string }
         if (name) blob.name = name

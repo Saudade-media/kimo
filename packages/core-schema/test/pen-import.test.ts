@@ -306,6 +306,27 @@ describe(".pen import", () => {
     expect(validate(missing.doc).errors).toEqual([])
   })
 
+  test("a renamed variable never takes another variable's name", () => {
+    const r = importPen({
+      version: "2.20",
+      variables: {
+        "a-b": { type: "number", value: 1 },
+        "a b": { type: "number", value: 2 },
+        $x: { type: "number", value: 3 },
+        x: { type: "number", value: 4 },
+      },
+      children: [
+        { type: "frame", id: "Frm01", width: 10, height: 10, gap: "$a b", opacity: "$$x" },
+      ],
+    } as unknown as PenDocument)
+    const vars = r.doc.variables as Record<string, { value: unknown }>
+    expect(vars["a-b"]?.value).toBe(1)
+    expect(vars["a-b-2"]?.value).toBe(2)
+    expect(vars.x?.value).toBe(4)
+    expect(vars["x-2"]?.value).toBe(3)
+    expect(validate(r.doc).errors).toEqual([])
+  })
+
   test("order keys are increasing fractional-index heads", () => {
     const keys = Array.from({ length: 5000 }, (_, i) => penOrderKey(i))
     expect(keys.slice(0, 3)).toEqual(["a0", "a1", "a2"])

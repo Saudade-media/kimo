@@ -1264,9 +1264,9 @@ export class FileSessionManager implements SessionManager {
   private readonly hideOwn: boolean
   private readonly byRef = new Map<FileRef, FileDocumentSession>()
   private readonly opening = new Map<FileRef, Promise<FileDocumentSession>>()
-  /** `.pen` files opened in this window → the `.kimo` each was converted to. */
+  /** `.pen` conversions in flight (concurrent opens of the same `.pen` share one). */
   private readonly penTargets = new Map<FileRef, Promise<FileRef>>()
-  /** The same, once each conversion has finished (for synchronous lookups). */
+  /** `.pen` files opened in this window → the `.kimo` each last converted to (for synchronous lookups). */
   private readonly penConverted = new Map<FileRef, FileRef>()
   private readonly listeners = new Set<() => void>()
   private offClose: Unsubscribe | null = null
@@ -1363,7 +1363,11 @@ export class FileSessionManager implements SessionManager {
     return this.byRef.get(this.penConverted.get(ref) ?? ref)
   }
 
-  /** The `.kimo` a `.pen` converts to (converting it on first use; see `convertPenFile`). */
+  /**
+   * The `.kimo` a `.pen` converts to (see `convertPenFile`). Checked on every open, not cached:
+   * an unchanged `.pen` finds its earlier `.kimo` by hash, an edited one converts again, and a
+   * moved or deleted `.kimo` is recreated.
+   */
   penTarget(penRef: FileRef): Promise<FileRef> {
     let p = this.penTargets.get(penRef)
     if (!p) {
@@ -1377,7 +1381,8 @@ export class FileSessionManager implements SessionManager {
         return c.ref
       })
       this.penTargets.set(penRef, p)
-      p.catch(() => this.penTargets.delete(penRef))
+      const done = () => this.penTargets.delete(penRef)
+      p.then(done, done)
     }
     return p
   }

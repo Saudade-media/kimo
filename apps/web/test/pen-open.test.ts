@@ -105,6 +105,34 @@ describe("opening .pen files", () => {
     expect(session.store.readOnly).toBeNull()
   })
 
+  test("an image named with a stray % does not stop the conversion", async () => {
+    const withImage = JSON.stringify({
+      version: "2.20",
+      children: [
+        {
+          type: "rectangle",
+          id: "Img01",
+          width: 10,
+          height: 10,
+          fill: { type: "image", url: "./100%.png", mode: "cover" },
+        },
+      ],
+    })
+    const { platform } = await setup({ [PEN]: withImage, [`${DIR}/100%.png`]: "not a png" })
+    const c = await convertPenFile(platform, PEN)
+    expect(validate(parse((await platform.files.readText(c.ref)).text)).errors).toEqual([])
+  })
+
+  test("reopening a .pen edited on disk in the same window opens its new conversion", async () => {
+    const { platform, manager } = await setup({ [PEN]: penText() })
+    const first = await manager.open(PEN)
+    expect(first.ref).toBe(`${DIR}/design.kimo`)
+    await platform.files.writeTextAtomic(PEN, penText("Changed"))
+    const second = await manager.open(PEN)
+    expect(second.ref).toBe(`${DIR}/design 2.kimo`)
+    expect(manager.get(PEN)?.ref).toBe(`${DIR}/design 2.kimo`)
+  })
+
   test("a file that is not a .pen document is refused", async () => {
     const { platform } = await setup({ [PEN]: "not json" })
     await expect(convertPenFile(platform, PEN)).rejects.toThrow("not a readable .pen file")

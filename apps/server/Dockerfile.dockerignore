@@ -1,0 +1,16 @@
+# Read by BuildKit for `docker build -f apps/server/Dockerfile .` (context: the repository root).
+**/node_modules
+**/.git
+.git
+**/dist
+**/target
+**/coverage
+**/*.tsbuildinfo
+**/.dist-*
+.playwright-mcp
+.env
+**/data
+desing.pen
+examples
+docs
+shaders

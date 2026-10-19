@@ -1,18 +1,24 @@
-/** Entry point: `bun apps/server/src/main.ts` (reads `PORT`, default 8787). */
-import { createServer } from "./index"
+/** Entry point: `bun apps/server/src/main.ts`. Configuration comes from the environment (README). */
+import { createServer, loadConfig } from "./index"
 
-const raw = process.env.PORT ?? "8787"
-const port = Number.parseInt(raw, 10)
-if (!Number.isInteger(port) || port < 0 || port > 65535) {
-  console.error(`Invalid PORT: ${raw}`)
+let config: ReturnType<typeof loadConfig>
+try {
+  config = loadConfig(process.env)
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error)
   process.exit(1)
 }
 
-const server = createServer({ port, hostname: process.env.HOST ?? "127.0.0.1" })
-console.log(`@kimo/server (stub) listening on ${server.url.href}`)
+const server = createServer({
+  port: config.port,
+  hostname: config.hostname,
+  config,
+  log: (line) => console.log(line),
+})
+console.log(`@kimo/server listening on ${server.url.href} (data: ${config.dataDir})`)
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
-    void server.stop().then(() => process.exit(0))
+    void server.stop(true).then(() => process.exit(0))
   })
 }

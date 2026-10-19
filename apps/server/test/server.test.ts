@@ -1,78 +1,88 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
+import { PROTOCOL } from "@kimo/sync/mp"
 import pkg from "../package.json" with { type: "json" }
-import {
-  createServer,
-  MULTIPLAYER_ADR,
-  type NotImplementedBody,
-  type VersionInfo,
-} from "../src/index"
+import { handleRequest, type VersionInfo } from "../src/index"
+import { type Harness, startRelay } from "./helpers"
 
-let server: ReturnType<typeof createServer>
-let base: string
+let h: Harness
 
 beforeAll(() => {
-  server = createServer({ port: 0 })
-  base = server.url.href.replace(/\/$/, "")
+  h = startRelay()
 })
 
 afterAll(async () => {
-  await server.stop(true)
+  await h.stop()
 })
 
-describe("@kimo/server stub", () => {
+describe("@kimo/server", () => {
   test("listens on an ephemeral port", () => {
-    expect(server.port).toBeGreaterThan(0)
+    expect(h.server.port).toBeGreaterThan(0)
   })
 
   test("GET /healthz returns ok", async () => {
-    const res = await fetch(`${base}/healthz`)
+    const res = await fetch(`${h.base}/healthz`)
     expect(res.status).toBe(200)
     expect(res.headers.get("content-type")).toContain("application/json")
     expect(await res.json()).toEqual({ ok: true })
   })
 
-  test("GET /version returns name and version from package.json", async () => {
-    const res = await fetch(`${base}/version`)
+  test("GET /version reports protocol and limits", async () => {
+    const res = await fetch(`${h.base}/version`)
     expect(res.status).toBe(200)
     const body = (await res.json()) as VersionInfo
     expect(body.name).toBe(pkg.name)
     expect(body.version).toBe(pkg.version)
+    expect(body.protocol).toBe(PROTOCOL)
+    expect(body.limits.maxBlobBytes).toBe(20 * 1024 * 1024)
+    expect(body.createSecretRequired).toBe(false)
   })
 
-  test("/sync WebSocket upgrade responds 501 with an explanation", async () => {
-    const res = await fetch(`${base}/sync`, {
-      headers: {
-        connection: "Upgrade",
-        upgrade: "websocket",
-        "sec-websocket-version": "13",
-        "sec-websocket-key": "dGhlIHNhbXBsZSBub25jZQ==",
-      },
-    })
-    expect(res.status).toBe(501)
-    const body = (await res.json()) as NotImplementedBody
-    expect(body.error).toBe("NOT_IMPLEMENTED")
-    expect(body.message).toMatch(/multiplayer/i)
-    expect(body.adr).toBe(MULTIPLAYER_ADR)
+  test("/version reflects the create secret setting", async () => {
+    const guarded = startRelay({ createSecret: "s3cret" })
+    const body = (await (await fetch(`${guarded.base}/version`)).json()) as VersionInfo
+    expect(body.createSecretRequired).toBe(true)
+    await guarded.stop()
   })
 
-  test("a real WebSocket client fails to connect to /sync", async () => {
-    const ws = new WebSocket(`${base.replace(/^http/, "ws")}/sync`)
-    const outcome = await new Promise<string>((resolve) => {
-      ws.onopen = () => resolve("open")
-      ws.onerror = () => resolve("error")
-      ws.onclose = () => resolve("close")
-    })
-    expect(outcome).not.toBe("open")
+  test("handleRequest serves the static routes without a socket", async () => {
+    expect(handleRequest(new Request("http://x/healthz")).status).toBe(200)
+    const version = (await handleRequest(new Request("http://x/version")).json()) as VersionInfo
+    expect(version.protocol).toBe(PROTOCOL)
+    expect(handleRequest(new Request("http://x/nope")).status).toBe(404)
+  })
+
+  test("/sync without an upgrade is 400", async () => {
+    const res = await fetch(`${h.base}/sync/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`)
+    expect(res.status).toBe(400)
+    expect(((await res.json()) as { error: string }).error).toBe("BAD_REQUEST")
+    expect((await fetch(`${h.base}/sync`)).status).toBe(400)
   })
 
   test("non-GET on /healthz is 405", async () => {
-    const res = await fetch(`${base}/healthz`, { method: "POST" })
+    const res = await fetch(`${h.base}/healthz`, { method: "POST" })
     expect(res.status).toBe(405)
     expect(res.headers.get("allow")).toBe("GET, HEAD")
   })
 
   test("unknown routes are 404", async () => {
-    const res = await fetch(`${base}/nope`)
-    expect(res.status).toBe(404)
+    expect((await fetch(`${h.base}/nope`)).status).toBe(404)
+  })
+
+  test("CORS preflight is 204 and responses carry CORS headers", async () => {
+    const pre = await fetch(`${h.base}/room/x`, { method: "OPTIONS" })
+    expect(pre.status).toBe(204)
+    expect(pre.headers.get("access-control-allow-origin")).toBe("*")
+    expect(pre.headers.get("access-control-allow-headers")).toContain("kimo-create-secret")
+  })
+
+  test("an allow list answers only listed origins", async () => {
+    const strict = startRelay({ allowedOrigins: ["https://app.example"] })
+    const ok = await fetch(`${strict.base}/healthz`, { headers: { origin: "https://app.example" } })
+    expect(ok.headers.get("access-control-allow-origin")).toBe("https://app.example")
+    const other = await fetch(`${strict.base}/healthz`, {
+      headers: { origin: "https://evil.example" },
+    })
+    expect(other.headers.get("access-control-allow-origin")).toBeNull()
+    await strict.stop()
   })
 })

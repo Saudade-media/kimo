@@ -2,7 +2,7 @@
   "name": "@kimo/server",
   "version": "1.0.0",
   "private": true,
-  "description": "Reserved Kimo server (multiplayer sync relay, sharing). Stub in v1.",
+  "description": "Kimo blind multiplayer relay: encrypted log, snapshots and blobs per room.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -12,5 +12,12 @@
     "start": "bun src/main.ts",
     "dev": "bun --watch src/main.ts",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@kimo/sync": "workspace:*"
+  },
+  "devDependencies": {
+    "@kimo/core-schema": "workspace:*",
+    "@kimo/editor-state": "workspace:*"
   }
 }

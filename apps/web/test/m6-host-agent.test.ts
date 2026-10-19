@@ -204,6 +204,13 @@ describe("agentCall: in-app agents through the document host", () => {
       docId,
       ops: [{ op: "update", id: "Frame00002", set: { name: "Agent rename" } }],
     }
+    // Board 41: the agent paused when the person edited in its area (its calls wait in the host
+    // until 10 s pass without edits there); Resume now lets it go on.
+    const status = (await service.multiplayer?.rpc["mp.status"]?.({ ref: REF }, "editor-1")) as {
+      paused: { holder: string }[]
+    }
+    expect(status.paused.map((p) => p.holder)).toEqual([origin])
+    await service.multiplayer?.rpc["mp.resumeAgent"]?.({ ref: REF, holder: origin }, "editor-1")
     const told = (await run(host, "kimo_apply_ops", rename)).result
     expect(!told.ok && told.errors[0]?.code).toBe("REVISION_CONFLICT")
     expect(!told.ok && told.errors[0]?.detail).toMatchObject({ kind: "human-edit", by: "local" })

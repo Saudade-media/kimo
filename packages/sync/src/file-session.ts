@@ -151,6 +151,19 @@ export interface FileDocumentProviderOptions {
    * assets the text uses in the `assets` manifest here. Must be pure and idempotent.
    */
   prepareWrite?: (doc: KimoDoc) => KimoDoc
+  /**
+   * Multiplayer (docs/spec/multiplayer.md §16.3): called once on attach with the opened file,
+   * before it loads into the (empty) store. Resolves true when it loaded the store itself: a
+   * shared file whose room state came first and the file added only its own changes. The
+   * provider then treats the file as its merge base without loading it. False loads it as usual.
+   */
+  openInto?: (doc: KimoDoc, store: DocStore) => Promise<boolean>
+  /**
+   * Called synchronously with the document right before it is written to the working file; the
+   * function it returns runs once the file holds it (the write landed, or the file already had
+   * that text). Multiplayer records the store state the shared file corresponds to here.
+   */
+  onFileWrite?: (doc: KimoDoc) => (() => void) | undefined
 }
 
 interface UndoSnapshot {
@@ -355,7 +368,13 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
       )
       return
     }
-    this.applyOpened(text, result)
+    let adopted = false
+    if (this.opts.openInto && !result.readOnly) {
+      // A failing hook leaves the file to load as usual (the session is then not shared).
+      adopted = await this.opts.openInto(result.doc, store).catch(() => false)
+      if (this._store !== store) return
+    }
+    this.applyOpened(text, result, adopted)
     if (this.loadError) this.failedText = text
   }
 
@@ -713,14 +732,16 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
   }
 
   /** Loads an opened document into the store (read-only when the open result says so). */
-  private applyOpened(text: string, result: OpenResult): void {
+  /** `adopted`: the store already holds the document ({@link FileDocumentProviderOptions.openInto}). */
+  private applyOpened(text: string, result: OpenResult, adopted = false): void {
     const store = this._store as DocStore
     this.openResult = result
     if (this.madeReadOnly) {
       store.setReadOnly(null)
       this.madeReadOnly = false
     }
-    this.withLoading(() => store.loadDocument(result.doc, { origin: "file", validate: false }))
+    if (!adopted)
+      this.withLoading(() => store.loadDocument(result.doc, { origin: "file", validate: false }))
     if (result.readOnly) {
       const msg = result.readOnlyReasons.map((r) => r.message).join("; ")
       this.failLoad(new FileLoadError("READ_ONLY", msg, result.readOnlyReasons))
@@ -873,7 +894,8 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
       const store = this._store
       if (!store || !this.canSave) throw new SaveRefusedError("READ_ONLY", "File is read-only")
       const revision = store.revision
-      const text = serialize(this.toWrite(store))
+      const doc = this.toWrite(store)
+      const text = serialize(doc)
       const editsAtStart = this._edits
       if (target === "recovery") {
         this._dirty = false
@@ -904,7 +926,9 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
         }
       }
       this._dirty = false
+      const written = this.opts.onFileWrite?.(doc)
       if (!force && this.base === text) {
+        written?.()
         this._edits = 0
         this.clearFailure()
         await this.discardRecovery()
@@ -915,6 +939,7 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
       this.setStatus("saving")
       try {
         const { bytes, hash } = await this.files.writeTextAtomic(this.path, text)
+        written?.()
         this.base = text
         this.mismatchText = null
         this._lastSavedAt = this.now()

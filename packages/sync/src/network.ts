@@ -72,6 +72,13 @@ export interface PresenceState {
   claims?: readonly ClaimRecord[]
   /** Page the collaborator is looking at. */
   page?: string
+  /**
+   * The visible world rectangle and zoom of the collaborator's canvas, for following them
+   * (board 41 "Follow"): `x`, `y` the top-left corner, `w`, `h` the size, in world units.
+   */
+  viewport?: { x: number; y: number; w: number; h: number; zoom: number }
+  /** Set by the room's owner (the people list puts them first). Cosmetic: never trusted. */
+  owner?: boolean
 }
 
 /** Presence channel (reduced to what Kimo needs). */

@@ -299,6 +299,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     kind: "desktop",
     os,
     appVersion: info.version,
+    kimoHome: info.kimoHome,
     arch: info.arch,
     help: {
       onMenu: (l) => helpEvents.on(l),

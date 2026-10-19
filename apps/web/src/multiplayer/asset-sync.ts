@@ -35,6 +35,8 @@ export interface AssetSync {
   uploadMissing(): Promise<AssetSyncUploadResult>
   /** Fires on every state change. */
   subscribe(listener: () => void): () => void
+  /** Upload and fetch progress, per asset (the Share UI's "Sharing 2 images" and fetch bars). */
+  onProgress(listener: (event: BlobProgress) => void): () => void
 }
 
 export interface AssetSyncOptions {
@@ -68,6 +70,11 @@ function manifestOf(store: DocStore): Record<string, BlobManifestEntry> {
 
 export function createAssetSync(options: AssetSyncOptions): AssetSync {
   const { provider, store, assets } = options
+  const progressListeners = new Set<(event: BlobProgress) => void>()
+  const onProgress = (event: BlobProgress) => {
+    options.onProgress?.(event)
+    for (const listener of [...progressListeners]) listener(event)
+  }
   /**
    * Asset keys this replica authored: the ones the document referenced when sync was set up, and
    * the ones a local edit (or the owner's own file delta) referenced since. A key that only a
@@ -113,7 +120,7 @@ export function createAssetSync(options: AssetSyncOptions): AssetSync {
     },
     ...(options.fetch ? { fetch: options.fetch } : {}),
     ...(options.backoff ? { backoff: options.backoff } : {}),
-    ...(options.onProgress ? { onProgress: options.onProgress } : {}),
+    onProgress,
     ...(options.onSkipped ? { onSkipped: options.onSkipped } : {}),
     ...(options.onError ? { onError: options.onError } : {}),
   })
@@ -344,6 +351,10 @@ export function createAssetSync(options: AssetSyncOptions): AssetSync {
     state: (key) => blobs.state(key),
     uploadMissing,
     subscribe: (listener) => blobs.subscribe(listener),
+    onProgress(listener) {
+      progressListeners.add(listener)
+      return () => progressListeners.delete(listener)
+    },
   }
 }
 
@@ -352,8 +363,16 @@ export function createAssetSync(options: AssetSyncOptions): AssetSync {
  * triggers `ensure` once (state `unknown`) and returns the miss as before, so the existing
  * missing-asset placeholder shows until `subscribe` fires with the fetched bytes.
  */
-export function withRemoteAssets(assets: AssetStore, sync: AssetSync): AssetStore {
+export function withRemoteAssets(
+  assets: AssetStore,
+  sync: AssetSync,
+  options: {
+    /** Settings › Multiplayer "Fetch images and fonts": false leaves misses as they are. */
+    autoFetch?: () => boolean
+  } = {},
+): AssetStore {
   const request = (key: string | null) => {
+    if (options.autoFetch && !options.autoFetch()) return
     if (key && sync.state(key) === "unknown") void sync.ensure(key).catch(() => false)
   }
   const keyOf = (src: string) => assetKey(src)

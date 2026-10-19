@@ -185,6 +185,19 @@ export interface ShareServiceDeps {
   missingRetry?: [min: number, max: number]
   timing?: NetworkProviderOptions["timing"]
   now?: () => number
+  /** Timers for the owner's token renewal (tests pass a fake clock). Default the globals. */
+  timers?: ShareTimers
+  /**
+   * Settings › Multiplayer "Fetch images and fonts": when it returns false, a missing asset is
+   * not fetched on its own (an explicit `assetSync.ensure` still is). Default always.
+   */
+  autoFetchAssets?: () => boolean
+}
+
+/** The timer functions the share service schedules with. */
+export interface ShareTimers {
+  setTimeout(fn: () => void, ms: number): unknown
+  clearTimeout(handle: unknown): void
 }
 
 export interface ShareService {
@@ -208,6 +221,15 @@ export interface ShareService {
    * the file holds. Until the first call the file is assumed to equal the document as shared.
    */
   noteSaved(target: Pick<ShareTarget, "fileKey" | "store">, doc: KimoDocument): Promise<void>
+  /**
+   * {@link ShareService.noteSaved} in two steps for writers that may fail: call it synchronously
+   * with the document being written (it captures the store state then), and run the function it
+   * returns once the file holds that document.
+   */
+  captureSaved(
+    target: Pick<ShareTarget, "fileKey" | "store">,
+    doc: KimoDocument,
+  ): () => Promise<void>
   mintLink(room: string, options: MintLinkOptions): Promise<IssuedLink>
   listLinks(room: string): Promise<IssuedLink[]>
   revokeLink(room: string, jti: string): Promise<void>
@@ -233,6 +255,12 @@ export interface ShareService {
 const DAY_S = 86_400
 /** The owner's own connection token lives 30 days and is re-minted with a day left. */
 const SELF_TTL_S = 30 * DAY_S
+/**
+ * How often an open owner session checks its token, at most. A timer set for the whole 29 days
+ * can fire late (a machine asleep, a throttled background tab), so it wakes at least hourly and
+ * re-mints as soon as less than a day is left.
+ */
+export const SELF_RENEW_CHECK_MS = 60 * 60_000
 
 /** The role a token grants; the reserved `comment` role reads as `view`. */
 function roleOfToken(token: string): Role {
@@ -353,6 +381,10 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       : createRegistry(indexedDbRegistryBackend()))
   const now = deps.now ?? Date.now
   const nowS = () => Math.floor(now() / 1000)
+  const timers: ShareTimers = deps.timers ?? {
+    setTimeout: (fn, ms) => setTimeout(fn, ms),
+    clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+  }
   const live = new Map<string, Set<Live>>()
   /**
    * The open session of each room, registered before the first await so concurrent callers share
@@ -823,17 +855,22 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     })
     // The owner's token is re-minted a day before it expires, so a window left open past the
     // 30 days (or asleep across the expiry) never loses its connection. The relay closes an
-    // expired token for good, and the provider does not retry a fatal close.
+    // expired token for good, and the provider does not retry a fatal close. The timer runs from
+    // the moment the session opens (a relay that is down never sends the welcome that would
+    // otherwise arm it) and wakes at least every SELF_RENEW_CHECK_MS.
     let left = false
-    let renewTimer: ReturnType<typeof setTimeout> | null = null
+    let renewTimer: unknown = null
     const scheduleRenewal = (exp: number) => {
-      if (renewTimer) clearTimeout(renewTimer)
+      if (renewTimer !== null) timers.clearTimeout(renewTimer)
       renewTimer = null
       if (!options.isOwner || exp === 0 || left) return
-      // setTimeout cannot wait longer than 2^31 ms: an early wake finds the token still fresh.
-      const wait = Math.min(Math.max((exp - DAY_S - nowS() + 1) * 1000, 1000), 2 ** 31 - 1)
-      renewTimer = setTimeout(() => {
+      const due = (exp - DAY_S - nowS() + 1) * 1000
+      const wait = Math.min(Math.max(due, 1000), SELF_RENEW_CHECK_MS)
+      renewTimer = timers.setTimeout(() => {
         renewTimer = null
+        if (left) return
+        // Still more than a day left: check again later, without touching the registry.
+        if (exp - nowS() > DAY_S) return scheduleRenewal(exp)
         void withOwned(room, selfToken).then(
           (next) => {
             if (left) return
@@ -843,13 +880,16 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
             }
             scheduleRenewal(parseToken(next).exp)
           },
-          () => undefined,
+          // The registry could not be read: try again on the next check.
+          () => scheduleRenewal(exp),
         )
       }, wait)
+      ;(renewTimer as { unref?: () => void } | null)?.unref?.()
     }
     const offRenew = provider.onEvent((event) => {
       if (event.type === "welcome") scheduleRenewal(event.exp)
     })
+    if (options.isOwner) scheduleRenewal(parseToken(entry.token).exp)
     const sync = createAssetSync({
       room,
       relayUrl: options.relayUrl,
@@ -869,7 +909,8 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       unregister()
       offWelcome()
       offRenew()
-      if (renewTimer) clearTimeout(renewTimer)
+      if (renewTimer !== null) timers.clearTimeout(renewTimer)
+      renewTimer = null
       sync.stop()
       await provider.detach().catch(() => undefined)
       await replica?.detach().catch(() => undefined)
@@ -904,7 +945,11 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     }
     options.afterNetwork?.(replicaHadState, provider)
     sync.start()
-    const assets = withRemoteAssets(assetStore, sync)
+    const assets = withRemoteAssets(
+      assetStore,
+      sync,
+      deps.autoFetchAssets ? { autoFetch: deps.autoFetchAssets } : {},
+    )
     const session: SharedSession = {
       room,
       get role() {
@@ -983,6 +1028,17 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
           await registry.saves.save(room, { state, fileHash })
         }),
     }
+  }
+
+  const captureSaved: ShareService["captureSaved"] = (target, doc) => {
+    // Captured before any await: the state the written document corresponds to.
+    const state = target.store.encodeStateAsUpdate()
+    return () =>
+      locked(`file:${target.fileKey}`, async () => {
+        const owned = await registry.ownedForFile(target.fileKey)
+        if (!owned) return
+        await registry.saves.save(owned.room, { state, fileHash: await documentHash(doc) })
+      })
   }
 
   // Service -----------------------------------------------------------------------------------
@@ -1090,15 +1146,8 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       })
     },
 
-    async noteSaved(target, doc) {
-      // Captured before any await: the state the written document corresponds to.
-      const state = target.store.encodeStateAsUpdate()
-      await locked(`file:${target.fileKey}`, async () => {
-        const owned = await registry.ownedForFile(target.fileKey)
-        if (!owned) return
-        await registry.saves.save(owned.room, { state, fileHash: await documentHash(doc) })
-      })
-    },
+    noteSaved: (target, doc) => captureSaved(target, doc)(),
+    captureSaved,
 
     async mintLink(room, options) {
       return withOwned(room, async (owned) => {

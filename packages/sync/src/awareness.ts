@@ -216,6 +216,23 @@ function parsePresence(json: string, origin: MpOrigin): PresenceState | null {
   const claims = parseClaims(value.claims)
   if (claims.length) state.claims = claims
   if (isString(value.page)) state.page = value.page
+  if (value.owner === true) state.owner = true
+  const viewport = value.viewport as Record<string, unknown> | null | undefined
+  if (
+    typeof viewport === "object" &&
+    viewport !== null &&
+    ["x", "y", "w", "h", "zoom"].every((k) => Number.isFinite(viewport[k])) &&
+    (viewport.w as number) >= 0 &&
+    (viewport.h as number) >= 0 &&
+    (viewport.zoom as number) > 0
+  )
+    state.viewport = {
+      x: viewport.x as number,
+      y: viewport.y as number,
+      w: viewport.w as number,
+      h: viewport.h as number,
+      zoom: viewport.zoom as number,
+    }
   return state
 }
 

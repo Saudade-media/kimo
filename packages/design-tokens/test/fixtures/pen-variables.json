@@ -397,6 +397,48 @@
         { "value": "#EEF4E4", "theme": { "mode": "light" } },
         { "value": "#1A2610", "theme": { "mode": "dark" } }
       ]
+    },
+    "presence-slate": {
+      "type": "color",
+      "value": [
+        { "value": "#5A6569", "theme": { "mode": "light" } },
+        { "value": "#A9B1B4", "theme": { "mode": "dark" } }
+      ]
+    },
+    "presence-clay": {
+      "type": "color",
+      "value": [
+        { "value": "#9A5236", "theme": { "mode": "light" } },
+        { "value": "#E09A7C", "theme": { "mode": "dark" } }
+      ]
+    },
+    "presence-ochre": {
+      "type": "color",
+      "value": [
+        { "value": "#6A6224", "theme": { "mode": "light" } },
+        { "value": "#C9C27E", "theme": { "mode": "dark" } }
+      ]
+    },
+    "presence-pine": {
+      "type": "color",
+      "value": [
+        { "value": "#2B6650", "theme": { "mode": "light" } },
+        { "value": "#7BBE9E", "theme": { "mode": "dark" } }
+      ]
+    },
+    "presence-plum": {
+      "type": "color",
+      "value": [
+        { "value": "#76386A", "theme": { "mode": "light" } },
+        { "value": "#CF8FC0", "theme": { "mode": "dark" } }
+      ]
+    },
+    "presence-graphite": {
+      "type": "color",
+      "value": [
+        { "value": "#3F3F3F", "theme": { "mode": "light" } },
+        { "value": "#C9C9C9", "theme": { "mode": "dark" } }
+      ]
     }
   },
   "themes": { "mode": ["light", "dark"] }

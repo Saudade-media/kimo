@@ -7,9 +7,9 @@
  */
 
 import type { KimoDocument } from "@kimo/core-schema"
-import { createDocStore, type DocStore } from "@kimo/editor-state"
+import { claimsFor, createDocStore, type DocStore } from "@kimo/editor-state"
 import { type FileRef, type KimoPlatform, resolveAgainstFile } from "@kimo/platform"
-import type { SyncStatusEvent } from "@kimo/sync"
+import { bindClaimsToPresence, type PresenceState, type SyncStatusEvent } from "@kimo/sync"
 import {
   type MpOrigin,
   MultiplayerError,
@@ -19,15 +19,19 @@ import {
 } from "@kimo/sync/mp"
 import { type AssetStore, createAssetStore, createFolderAssetStore } from "../lib/assets"
 import {
+  createRegistry,
   createShareService,
+  fileRegistryBackend,
   type IssuedLink,
   type PresenceChange,
+  type Registry,
   type SharedSession,
   type ShareService,
   type ShareServiceDeps,
   type StopSharingResult,
   type SweepResult,
 } from "../multiplayer"
+import { pickPresenceColor } from "../multiplayer/presence"
 
 /** What sharing needs of an open document: the file it came from and its store. */
 export interface ShareableSession {
@@ -79,6 +83,45 @@ export function assertRelayReachable(platform: Pick<KimoPlatform, "kind">, relay
   )
 }
 
+/** Where the desktop keeps the owner's room registry: `${kimoHome}/multiplayer/rooms.json`. */
+export function desktopRegistryPath(kimoHome: string): string {
+  return `${kimoHome.replace(/[\\/]+$/, "")}/multiplayer/rooms.json`
+}
+
+/**
+ * The owner's registry on `platform`: on desktop a JSON file under the Kimo home (the document
+ * host owns the shared files there, and only it writes this file); elsewhere undefined, so the
+ * share service keeps it in IndexedDB.
+ */
+export function registryFor(platform: Pick<KimoPlatform, "kind" | "kimoHome" | "files">) {
+  if (platform.kind !== "desktop" || !platform.kimoHome) return undefined
+  return createRegistry(fileRegistryBackend(platform.files, desktopRegistryPath(platform.kimoHome)))
+}
+
+/** What a client publishes about its pointer and view (the user part is filled in). */
+export type LocalPresence = Omit<PresenceState, "origin" | "user" | "claims" | "working">
+
+const USER_ID_KEY = "kimo.multiplayer.userId"
+
+/** A random id that names this person in presence, kept in local storage when it can be. */
+function deviceUserId(): string {
+  const fresh = () =>
+    Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, 16)
+  try {
+    const store = (globalThis as { localStorage?: Storage }).localStorage
+    if (!store) return fresh()
+    const known = store.getItem(USER_ID_KEY)
+    if (known && /^[0-9a-f]{16}$/.test(known)) return known
+    const id = fresh()
+    store.setItem(USER_ID_KEY, id)
+    return id
+  } catch {
+    return fresh()
+  }
+}
+
 export interface PlatformShareDeps {
   platform: KimoPlatform
   /** Test seam: the underlying service. Default: built from `platform`. */
@@ -87,6 +130,14 @@ export interface PlatformShareDeps {
   serviceDeps?: Partial<ShareServiceDeps>
   /** The asset store of a session being shared. Default: `assets/` beside the file. */
   assetsFor?(session: ShareableSession): AssetStore
+  /**
+   * The owner's registry. Default {@link registryFor}: the JSON file under the Kimo home on
+   * desktop, IndexedDB elsewhere. Desktop editor windows (guests only) pass `"indexeddb"`, so
+   * just the document host writes the file.
+   */
+  registry?: Registry | "indexeddb"
+  /** This person's presence id. Default: a random id kept in local storage. */
+  userId?: string
 }
 
 export interface PlatformShare {
@@ -106,6 +157,11 @@ export interface PlatformShare {
    * as newer than the room.
    */
   noteSaved(session: ShareableSession, doc: KimoDocument): Promise<void>
+  /**
+   * {@link ShareService.captureSaved} for a session: call it with the document being written to
+   * the shared file; run the returned function once the write landed.
+   */
+  captureSaved(session: ShareableSession, doc: KimoDocument): () => Promise<void>
   /** Reopens a document that was shared before; null when it was not. */
   reopenShared(
     session: ShareableSession,
@@ -130,6 +186,17 @@ export interface PlatformShare {
   status(room?: string): SyncStatusEvent["status"] | null
   onStatus(listener: (room: string, event: SyncStatusEvent) => void): () => void
   onFontNotShared: ShareService["onFontNotShared"]
+  /**
+   * Publishes this person's pointer, selection, page and viewport in `room` (default: the active
+   * one). The user part (id, display name or empty for Guest N, presence color) is filled in.
+   */
+  setLocalPresence(fields: LocalPresence, room?: string): void
+  /** This person's presence user in `room` as published (the color is per room). */
+  localUser(room?: string): PresenceState["user"]
+  /** The room open for a file, if any. */
+  roomOfFile(ref: FileRef): string | null
+  /** Fires when a room session opens or closes here (share, reopen, join, leave, stop). */
+  onSessionsChange(listener: () => void): () => void
   readonly service: ShareService
 }
 
@@ -138,6 +205,9 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
   const origin =
     deps.serviceDeps?.webOrigin ??
     (platform.kind === "desktop" ? "kimo:" : typeof location === "object" ? location.origin : "")
+  const registry =
+    deps.serviceDeps?.registry ??
+    (deps.registry === "indexeddb" ? undefined : (deps.registry ?? registryFor(platform)))
   const service =
     deps.service ??
     createShareService({
@@ -146,16 +216,59 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
         store: createDocStore(),
         assets: createAssetStore(`room-${room}-${binding}`),
       }),
+      autoFetchAssets: () => platform.settings.get("multiplayer.fetchAssets") !== false,
+      ...(registry ? { registry } : {}),
       ...deps.serviceDeps,
     })
 
+  const userId = deps.userId ?? deviceUserId()
+  /** Per room: the presence color picked and the fields last published. */
+  const local = new Map<string, { color: string; fields: LocalPresence }>()
+  const displayName = () => {
+    const name = platform.settings.get("multiplayer.displayName")
+    return typeof name === "string" ? name.trim().slice(0, 80) : ""
+  }
+  const userIn = (session: SharedSession): PresenceState["user"] => {
+    const mine = local.get(session.room)
+    const self = session.provider.awareness.clientId
+    // People who joined before this replica (lower peer ids) keep their colors.
+    const earlier = [...session.presence()]
+      .filter(([peer, state]) => peer !== self && peer < self && state.origin === "user")
+      .map(([, state]) => state.user.color)
+    const color = pickPresenceColor(mine?.color, self === 0 ? [] : earlier)
+    return { id: userId, name: displayName(), color }
+  }
+  const publish = (session: SharedSession) => {
+    const user = userIn(session)
+    const entry = local.get(session.room) ?? { color: user.color, fields: {} }
+    entry.color = user.color
+    local.set(session.room, entry)
+    const current = session.provider.awareness.getLocalState()
+    const { origin: _o, ...rest } = current ?? ({} as Partial<PresenceState>)
+    const next = {
+      ...rest,
+      ...entry.fields,
+      user,
+      ...(owners.has(session.room) ? { owner: true } : {}),
+    } as Omit<PresenceState, "origin">
+    for (const key of ["cursor", "selection", "page", "viewport"] as const)
+      if (!(key in entry.fields)) delete next[key]
+    session.setPresence(next)
+  }
+
   const sessions = new Map<string, SharedSession>()
+  /** Rooms this device owns (their presence says so: the people list puts the owner first). */
+  const owners = new Set<string>()
   const targets = new Map<string, ShareableSession>()
   const presenceListeners = new Set<(room: string, change: PresenceChange) => void>()
   const statusListeners = new Set<(room: string, event: SyncStatusEvent) => void>()
+  const sessionListeners = new Set<() => void>()
+  const sessionsChanged = () => {
+    for (const l of [...sessionListeners]) l()
+  }
   let active: string | null = null
 
-  const track = (session: SharedSession): SharedSession => {
+  const track = (session: SharedSession, owner = false): SharedSession => {
     const previous = sessions.get(session.room)
     if (previous === session) {
       active = session.room
@@ -163,21 +276,51 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
     }
     if (previous) void previous.leave()
     sessions.set(session.room, session)
+    if (owner) owners.add(session.room)
+    else owners.delete(session.room)
     active = session.room
+    // Agent area claims travel in presence: this client's agents publish theirs, and peers'
+    // claims gate the agents here (spec §15.11). One binding per shared document.
+    const unbindClaims = bindClaimsToPresence(
+      claimsFor(session.store),
+      session.provider.awareness,
+      { user: userIn(session) },
+    )
+    publish(session)
+    // Only presence this layer published is kept in step (a caller that set its own user through
+    // `session.setPresence` keeps it).
+    const ours = () => {
+      const cur = session.provider.awareness.getLocalState()
+      return !cur || cur.user.id === userId
+    }
     const offs = [
+      unbindClaims,
       session.onStatus((event) => {
         for (const l of [...statusListeners]) l(session.room, event)
       }),
       session.onPresence((change) => {
+        // An earlier joiner took this replica's color: pick again.
+        const mine = local.get(session.room)?.color
+        if (mine !== undefined && ours() && userIn(session).color !== mine) publish(session)
         for (const l of [...presenceListeners]) l(session.room, change)
       }),
+      session.onEvent((event) => {
+        // The relay assigns the peer id on welcome: the color is settled against it.
+        if (event.type === "welcome" && ours()) publish(session)
+      }),
+      platform.settings.onChange((key) => {
+        if (key === "multiplayer.displayName" && ours()) publish(session)
+      }),
     ]
+    queueMicrotask(sessionsChanged)
     const leave = session.leave.bind(session)
     // Leaving forgets the session here too.
     ;(session as { leave: () => Promise<void> }).leave = async () => {
       for (const off of offs) off()
+      local.delete(session.room)
       if (sessions.get(session.room) === session) sessions.delete(session.room)
       if (active === session.room) active = null
+      sessionsChanged()
       await leave()
     }
     return session
@@ -229,7 +372,8 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
         ...(options.createSecret ? { createSecret: options.createSecret } : {}),
       })
       // `startSharing` connected a session; the registry-backed `connect` returns the tracked one.
-      const live = sessions.get(summary.room) ?? track(await service.connect(target, summary.room))
+      const live =
+        sessions.get(summary.room) ?? track(await service.connect(target, summary.room), true)
       targets.set(live.room, session)
       const ttl = options.ttlSeconds ?? null
       // Reuse only links the relay still takes: this key generation and not expired.
@@ -253,11 +397,14 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
     noteSaved: (session, doc) =>
       service.noteSaved({ fileKey: session.ref, store: session.store }, doc),
 
+    captureSaved: (session, doc) =>
+      service.captureSaved({ fileKey: session.ref, store: session.store }, doc),
+
     async reopenShared(session, file, assets) {
       const shared = await service.reopenShared(targetFor(session, assets), file)
       if (!shared) return null
       targets.set(shared.room, session)
-      return track(shared)
+      return track(shared, true)
     },
 
     async joinLink(link) {
@@ -291,10 +438,14 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
 
     async stopSharing(room) {
       const id = roomOf(room)
+      // Through the tracked leave, so this layer's bindings (claims, presence) go with it.
+      await sessions.get(id)?.leave()
       const result = await service.stopSharing(id)
       sessions.delete(id)
       targets.delete(id)
+      owners.delete(id)
       if (active === id) active = null
+      sessionsChanged()
       return result
     },
 
@@ -315,6 +466,32 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
       return () => statusListeners.delete(listener)
     },
     onFontNotShared: (listener) => service.onFontNotShared(listener),
+
+    setLocalPresence(fields, room) {
+      const session = sessions.get(room ?? active ?? "")
+      if (!session) return
+      const entry = local.get(session.room) ?? { color: userIn(session).color, fields: {} }
+      entry.fields = { ...fields }
+      local.set(session.room, entry)
+      publish(session)
+    },
+
+    localUser(room) {
+      const session = sessions.get(room ?? active ?? "")
+      if (!session) return { id: userId, name: displayName(), color: "presence-clay" }
+      return userIn(session)
+    },
+
+    onSessionsChange(listener) {
+      sessionListeners.add(listener)
+      return () => sessionListeners.delete(listener)
+    },
+
+    roomOfFile(ref) {
+      for (const [room, target] of targets)
+        if (target.ref === ref && sessions.has(room)) return room
+      return null
+    },
   }
   return self
 }

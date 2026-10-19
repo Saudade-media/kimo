@@ -144,6 +144,29 @@ export interface SessionManagerOptions {
    * Ignored when `createSession` is given.
    */
   sessionFactory?: Promise<SessionManagerOptions["createSession"]>
+  /** Multiplayer hooks (docs/spec/multiplayer.md §16.3). Settable later: `manager.shared`. */
+  shared?: SharedFileHooks | null
+}
+
+/**
+ * How the share layer (`../multiplayer/room-session.ts`) joins a file session's lifecycle
+ * (docs/spec/multiplayer.md §16.3, ADR 0016). Files that were never shared behave exactly as
+ * without hooks.
+ */
+export interface SharedFileHooks {
+  /**
+   * The file was read and parsed; the session's store is still empty. Resolves true when the
+   * file is shared and the hook loaded the store itself (the room state, then only what the file
+   * changed since the owner last saved it), false to load the file as usual.
+   */
+  open(session: FileDocumentSession, doc: KimoDocument): Promise<boolean>
+  /**
+   * `doc` is about to be written to the session's file (called synchronously). The function it
+   * returns runs once the file holds it.
+   */
+  writing(session: FileDocumentSession, doc: KimoDocument): (() => void) | undefined
+  /** The session closed (its room connection, if any, ends). */
+  closed(session: FileDocumentSession): void
 }
 
 const READER_FORMAT = majorMinor(FORMAT_VERSION)
@@ -485,6 +508,12 @@ export class FileDocumentSession implements DocumentSession {
       name: this.fileName,
       ...(manager.saveRetryMs !== undefined ? { retryMs: manager.saveRetryMs } : {}),
       prepareWrite: (doc) => this.prepareWrite(doc as KimoDocument) as typeof doc,
+      // Multiplayer: a shared file reconnects to its room as it opens (spec §16.3).
+      openInto: async (doc) => {
+        const shared = manager.shared
+        return shared ? shared.open(this, doc as KimoDocument) : false
+      },
+      onFileWrite: (doc) => manager.shared?.writing(this, doc as KimoDocument),
     })
     this.provider = p
     this.providerUnsubs.push(
@@ -1230,6 +1259,7 @@ export class FileDocumentSession implements DocumentSession {
     for (const u of this.unsubs.splice(0)) u()
     if (this.savingTimer !== null) clearTimeout(this.savingTimer)
     await this.teardownProvider()
+    this.manager.shared?.closed(this)
     if (this.lease) await this.platform.leases.release(this.lease).catch(() => {})
     this.lease = null
     this.phase = "closed"
@@ -1273,6 +1303,8 @@ export class FileSessionManager implements SessionManager {
   private offOpen: Unsubscribe | null = null
   /** The folder of the last Save as / open (the untitled save panel starts there). */
   lastFolder: FileRef | null = null
+  /** Multiplayer hooks (set by the share layer once it exists). */
+  shared: SharedFileHooks | null
 
   constructor(options: SessionManagerOptions) {
     this.platform = options.platform
@@ -1296,6 +1328,7 @@ export class FileSessionManager implements SessionManager {
       )
     this.hideOwn = options.hideOwnRecovery ?? true
     this.saveRetryMs = options.saveRetryMs
+    this.shared = options.shared ?? null
   }
 
   /** Flush-before-close and launch requests (call once per window). */

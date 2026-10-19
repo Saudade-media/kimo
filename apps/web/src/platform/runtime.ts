@@ -14,6 +14,8 @@ import { createContext, useContext } from "react"
 import webPackage from "../../package.json"
 import { conflictSessionFactory } from "../conflicts"
 import type { HostClient } from "../host/client"
+import type { MultiplayerModel } from "../multiplayer/model"
+import { createWindowMultiplayer } from "../multiplayer/window"
 import { takeLastFiles } from "./last-files"
 import {
   createSessionManager,
@@ -31,6 +33,8 @@ export interface AppRuntime {
    * first open resolves, so the editor, which mounts on an open session, always sees it.
    */
   hostClient?: HostClient | null
+  /** Multiplayer view model (board 41): share state, people, links, join, settings. */
+  multiplayer?: MultiplayerModel
 }
 
 /** True inside the Tauri webview (same test as `@kimo/desktop` `isTauri`). */
@@ -88,8 +92,11 @@ export async function createAppRuntime(
   }
   // Desktop editor windows are clients of the document host when one answers; otherwise (an
   // older shell, the browser) sessions stay local to the window as in M4.
-  if (!inTauri())
-    return finishRuntime({ platform, manager: createAppSessionManager(platform) }, onOpened)
+  if (!inTauri()) {
+    const manager = createAppSessionManager(platform)
+    const { model } = createWindowMultiplayer({ platform, manager })
+    return finishRuntime({ platform, manager, multiplayer: model }, onOpened)
+  }
   const host = await import("../host")
   // M5: the window's `platform.mcp` (Rust relay + document host).
   const attach = async (client: HostClient | null) => {
@@ -106,7 +113,15 @@ export async function createAppRuntime(
   if (settingsRoute()) {
     const hostClient = await host.connectWindowToHost(undefined, 3000).catch(() => null)
     await attach(hostClient)
-    return { platform, manager: createAppSessionManager(platform), hostClient }
+    const manager = createAppSessionManager(platform)
+    // Settings › Multiplayer only reads settings and tests relays: no share backend is needed.
+    const { model } = createWindowMultiplayer({
+      platform,
+      manager,
+      hostBackend: async (local) =>
+        hostClient ? host.createHostShareBackend(hostClient, { local }) : null,
+    })
+    return { platform, manager, hostClient, multiplayer: model }
   }
   // Editor windows render right away (the host webview starts in parallel and may still be
   // loading). Opens wait for the host's answer, so files go to the host-backed session whenever
@@ -119,11 +134,17 @@ export async function createAppRuntime(
       await attach(client)
       return client ? host.hostedSessionFactory(client) : undefined
     })
-  const runtime: AppRuntime = {
+  const manager = createAppSessionManager(platform, undefined, factory)
+  const { model } = createWindowMultiplayer({
     platform,
-    manager: createAppSessionManager(platform, undefined, factory),
-    hostClient: null,
-  }
+    manager,
+    hostBackend: async (local) => {
+      await factory
+      const client = runtime.hostClient
+      return client ? host.createHostShareBackend(client, { local }) : null
+    },
+  })
+  const runtime: AppRuntime = { platform, manager, hostClient: null, multiplayer: model }
   return finishRuntime(runtime, onOpened)
 }
 

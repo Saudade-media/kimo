@@ -44,6 +44,11 @@ export interface KimoPlatform {
   readonly os: HostOS
   /** The app's version (`0.4.2`), shown in Settings › Updates / About. */
   readonly appVersion: string
+  /**
+   * Desktop: the Kimo home (`~/.kimo`), inside the files API's scope. Multiplayer keeps the
+   * owner's room registry under `multiplayer/` there. Undefined on other hosts.
+   */
+  readonly kimoHome?: string
   /** What this host supports; the UI hides affordances for false entries. */
   readonly capabilities: AppliedCapabilities
   readonly files: FilesApi

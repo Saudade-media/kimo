@@ -43,6 +43,16 @@ export const HOST_EVENTS = {
    * `agentApproval {id, outcome}`.
    */
   agentApproval: "kimo://host-agent-approval",
+  /**
+   * Host → windows showing a file: `{ref, snapshot: ShareSnapshot}` (multiplayer share state,
+   * docs/spec/multiplayer.md §16.8). Windows ask for them with the RPC `mp.watch {ref}`.
+   */
+  share: "kimo://host-share",
+  /**
+   * Host → the window running an in-app agent: `{origin}`. A person chose Stop on the agent
+   * after it paused inside its claim: the window ends the agent's turn.
+   */
+  agentStop: "kimo://host-agent-stop",
 } as const
 
 interface TauriInternals {

@@ -47,6 +47,8 @@ export class HostClient {
   private readonly focusListeners = new Set<(f: HostFocusRequest) => void>()
   private readonly readyListeners = new Set<() => void>()
   private readonly syncListeners = new Set<(m: HostSyncMessage) => void>()
+  private readonly shareListeners = new Map<string, Set<(snapshot: unknown) => void>>()
+  private readonly agentStopListeners = new Set<(origin: string) => void>()
   private readonly offs: (() => void)[] = []
 
   private constructor(readonly bridge: HostBridge) {}
@@ -109,6 +111,12 @@ export class HostClient {
       ),
       await b.listen<HostFocusRequest>(HOST_EVENTS.focus, (f) => {
         for (const l of [...this.focusListeners]) l(f)
+      }),
+      await b.listen<{ ref: string; snapshot: unknown }>(HOST_EVENTS.share, ({ ref, snapshot }) => {
+        for (const l of [...(this.shareListeners.get(ref) ?? [])]) l(snapshot)
+      }),
+      await b.listen<{ origin: string }>(HOST_EVENTS.agentStop, ({ origin }) => {
+        for (const l of [...this.agentStopListeners]) l(origin)
       }),
       await b.listen<{ from: string; msg: HostSyncMessage }>(HOST_EVENTS.sync, ({ msg }) => {
         for (const l of [...this.syncListeners]) l(msg)
@@ -184,6 +192,26 @@ export class HostClient {
     }
     set.add(l)
     return () => set.delete(l)
+  }
+
+  /** Multiplayer share snapshots of `ref` the host pushes (after `mp.watch`). */
+  onShare(ref: string, l: (snapshot: unknown) => void): () => void {
+    let set = this.shareListeners.get(ref)
+    if (!set) {
+      set = new Set()
+      this.shareListeners.set(ref, set)
+    }
+    set.add(l)
+    return () => {
+      set.delete(l)
+      if (set.size === 0) this.shareListeners.delete(ref)
+    }
+  }
+
+  /** A person chose Stop on one of this window's paused agents (`origin`): end its turn. */
+  onAgentStop(l: (origin: string) => void): () => void {
+    this.agentStopListeners.add(l)
+    return () => this.agentStopListeners.delete(l)
   }
 
   /** `kimo_focus` requests for documents this window shows (the editor selects / zooms). */

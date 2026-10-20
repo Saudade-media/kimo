@@ -5,7 +5,13 @@ pipeline, and the rules that keep the file format, the design system and the arc
 coherent. The plan of record is [docs/teardown.md](docs/teardown.md); decisions live in
 [docs/adr](docs/adr/README.md).
 
-By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). Questions go to
+[GitHub Discussions](https://github.com/Saudade-media/kimo/discussions); [SUPPORT.md](SUPPORT.md)
+lists where everything else goes.
+
+This repository holds the apps, the packages and the docs. The website, getkimo.design, lives in
+a separate private repository and renders the docs from this one at a pinned commit, so a docs
+change lands here and reaches the site with its next update.
 
 ## Setup
 
@@ -36,13 +42,29 @@ Node, Bun, browsers and workers. Only `apps/*` may depend on React or Tauri, wit
 | Lint + format | `bun run lint` (`biome check .`) | Biome; 2 spaces, double quotes, no semicolons. Fix with `bunx biome check --write <paths>` |
 | Typecheck | `bun run typecheck` | `tsc` per workspace; strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax` |
 | Generated artifacts | `bun run check:generated` | Each package's `check:generated` verifies committed generated files (JSON Schema, design tokens) are up to date; it fails if they are stale |
-| Tests | `bun run test` | `bun test`; files named `*.test.ts` under each package's `test/` directory |
+| Tests | `bun run test` | `scripts/test-all.sh`: one guarded `bun test` per workspace; files named `*.test.ts` under each package's `test/` directory |
 
-Run a single package with `bun test packages/<name>` and
-`bunx tsc -p packages/<name>/tsconfig.json`.
+### Running tests safely
+
+A runaway `bun test` once grew past 200 GB of memory and crashed the machine it ran on, so tests
+run through a guard:
+
+- Run tests only through `scripts/safe-test.sh` or `bun run test`. The guard kills the run at
+  4 GB of memory or after 15 minutes, applies a 10 s per-test timeout (also set in
+  `bunfig.toml`) and holds a machine-wide lock, so only one guarded run happens at a time.
+  - One file or package: `scripts/safe-test.sh ./packages/layout/test/property.test.ts`
+  - Tighter limits: `SAFE_TEST_MAX_RSS_MB=1024 SAFE_TEST_TIMEOUT=60 scripts/safe-test.sh <path>`
+  - Everything: `bun run test`, one guarded process per workspace (a single process over the
+    whole repo passes 4 GB).
+- Never run bare `bun test`, and don't run several test processes in parallel.
+- Keep test fakes bounded: no endless streams, unbounded loops or retries.
+
+Typecheck one package with `bunx tsc -p packages/<name>/tsconfig.json`.
 
 Browser end-to-end and perf runs are separate from `check`: `bun run --filter @kimo/web e2e` and
-`bun run --filter @kimo/web e2e:perf`. **Exception to bun-only:** these two scripts run their
+`bun run --filter @kimo/web e2e:perf` (`bun run --filter @kimo/web e2e "<name filter>"` runs the
+scenarios whose name matches). CI runs the e2e suite on macOS, because the scenarios measure the
+app against the design boards, which are drawn for macOS. **Exception to bun-only:** these two scripts run their
 Playwright driver under Node through `tsx` (an `apps/web` devDependency), because under Bun 1.3.5
 the pipe to Chromium is intermittently closed mid-session and the scenario hangs until its timeout
 (details in `apps/web/e2e/run.ts`). Bun remains the package manager and the script runner, and
@@ -56,13 +78,24 @@ rather than restating code.
 
 ## Commits and pull requests
 
-- Use [Conventional Commits](https://www.conventionalcommits.org/):
-  `type(scope): summary`, where `type` is one of `feat`, `fix`, `docs`, `refactor`, `test`,
-  `perf`, `build`, `ci`, `chore`, and `scope` is a package or app name without the `@kimo/`
-  prefix (e.g. `feat(core-schema): add canonical serializer`). Mark breaking changes with `!`.
-- Keep commits focused; a PR should do one thing. Regenerated files go in the same commit as the
-  change that requires them.
-- Describe *what* and *why* in the PR, link the issue or ADR, and note any spec or format impact.
+`main` is protected: every change lands through a pull request, and pull requests are
+**squash-merged** once CI is green, so `main` has one commit per pull request and a linear
+history.
+
+1. Fork the repository (or, with write access, create a branch), and branch from `main`.
+2. Commit as you like on your branch; the commits are squashed on merge.
+3. Open a pull request against `main`. **Its title becomes the commit title on `main`, and its
+   description becomes the commit message**, so write both for the log:
+   - The title is a plain sentence that says what changes, like the existing history
+     (`git log --oneline`), e.g. "PDF export rounds content stream numbers so output is
+     byte-identical across platforms". No `feat:` / `fix:` prefixes.
+   - The description says *what* and *why*, links the issue or ADR (`Closes #123`), and notes any
+     spec or format impact.
+4. CI (`check` and, for desktop changes, `rust`) must pass. A maintainer reviews, then
+   squash-merges.
+
+Keep a pull request to one thing. Regenerated files go in the same pull request as the change
+that requires them.
 
 ## Architecture decisions (ADRs)
 
@@ -129,5 +162,11 @@ Kimo is [MIT](LICENSE). Contributions are accepted under the same licence
 
 ## Reporting bugs and security issues
 
-Open a GitHub issue for bugs and feature requests. For vulnerabilities, follow
-[SECURITY.md](SECURITY.md) instead of opening a public issue.
+Open a [GitHub issue](https://github.com/Saudade-media/kimo/issues/new/choose) for bugs and
+feature requests, and use [Discussions](https://github.com/Saudade-media/kimo/discussions) for
+questions. For vulnerabilities, follow [SECURITY.md](SECURITY.md) instead of opening a public
+issue.
+
+New issues get the `needs triage` label until a maintainer looks at them. Issues labeled
+`good first issue` are small and well scoped, a good place to start; `help wanted` marks issues
+where an outside contribution is especially welcome.

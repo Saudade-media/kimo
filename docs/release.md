@@ -44,6 +44,14 @@ bunx tauri signer generate -w ~/.tauri/kimo-updater.key
   uploads tauri-action's `latest.json` and, for non-prerelease tags, a copy named
   `latest-stable.json`. Check that the repository slug in the endpoint is the real one.
 
+### Social preview image
+
+The image shown when the repository is linked (Slack, X, search results) can only be set in the
+web UI: *Settings → General → Social preview → Edit → Upload an image*. Use
+`docs/assets/readme-header.png` (the README header, 1280 × 320). GitHub accepts it (the minimum
+is 640 × 320) but recommends 2:1 (1280 × 640), so a 2:1 export of the header would fill link cards
+without letterboxing.
+
 ## 1. Before the release
 
 - [ ] `main` is green: `check` (lint, typecheck, generated files, unit tests, examples, e2e,
@@ -148,7 +156,9 @@ Windows 11, Ubuntu 22.04 or later).
 **Updater**
 
 - [ ] Install the previous release, then *Check for updates*: it finds this version, verifies
-      the signature, installs and relaunches (Windows: passive installer).
+      the signature, installs and relaunches (Windows: passive installer). For the first
+      release there is no previous one: check instead that *Check for updates* reports no
+      update, and run this check on the second release.
 - [ ] A prerelease tag is not offered to stable installs.
 
 **Agents (real, not scripted)**
@@ -164,7 +174,12 @@ Windows 11, Ubuntu 22.04 or later).
 
 ## 6. Publish
 
-- [ ] Write the release notes from `CHANGELOG.md` on the draft; mark prereleases as such.
+- [ ] Edit the release notes on the draft. The workflow creates it with GitHub's generated
+      notes (merged pull requests since the previous tag, grouped by label as configured in
+      `.github/release.yml`, Dependabot updates left out); add the highlights from
+      `CHANGELOG.md` above them and mark prereleases as such. The first release has no previous
+      tag, so its generated notes list every merged pull request: replace them with the
+      `CHANGELOG.md` entry.
 - [ ] Publish the draft. Then
       `curl -L https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json`
       returns this version.

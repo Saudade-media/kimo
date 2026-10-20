@@ -1,0 +1,36 @@
+# Categories for GitHub's generated release notes. The release workflow creates each draft with
+# `generate_release_notes`, so the notes list the merged pull requests since the previous tag,
+# grouped by label. Dependabot updates are left out; CHANGELOG.md lists the ones that matter.
+changelog:
+  exclude:
+    labels:
+      - dependencies
+      - skip changelog
+    authors:
+      - dependabot
+      - dependabot[bot]
+  categories:
+    - title: Format
+      labels:
+        - format
+    - title: New features
+      labels:
+        - enhancement
+    - title: Bug fixes
+      labels:
+        - bug
+    - title: Agents and MCP
+      labels:
+        - agents
+    - title: Multiplayer
+      labels:
+        - multiplayer
+    - title: Desktop
+      labels:
+        - desktop
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Other changes
+      labels:
+        - "*"

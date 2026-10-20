@@ -71,7 +71,8 @@ The desktop app also needs Rust and the
 - The website, getkimo.design, renders these docs from this repository; its code lives in
   [Saudade-media/kimo-site](https://github.com/Saudade-media/kimo-site) (private)
 - [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md),
-  [Security policy](SECURITY.md)
+  [Security policy](SECURITY.md), [Support](SUPPORT.md) (questions go to
+  [Discussions](https://github.com/Saudade-media/kimo/discussions))
 
 ## License
 

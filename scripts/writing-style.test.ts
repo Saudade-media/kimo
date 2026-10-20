@@ -23,6 +23,7 @@ const CODE_SKIP = /(^|\/)(gallery|harness|generated)\/|\.test\.|(^|\/)testing\.t
 const DOCS = [
   "README.md",
   "SECURITY.md",
+  "SUPPORT.md",
   "CONTRIBUTING.md",
   "CHANGELOG.md",
   "examples/README.md",

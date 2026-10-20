@@ -1,7 +1,8 @@
 # Release: a `v*` tag builds the desktop installers on macOS, Windows and Linux (with the
 # kimo-mcp shim bundled as a sidecar), the static web app and a dry run of the CLI package, and
-# collects everything in a DRAFT GitHub release. Nothing is published: a maintainer reviews the
-# draft and publishes it by hand (docs/release.md).
+# collects everything in a DRAFT GitHub release with GitHub's generated notes (categories in
+# .github/release.yml). Nothing is published: a maintainer reviews the draft and publishes it by
+# hand (docs/release.md).
 #
 # `workflow_dispatch` runs the same builds without a tag or a release (artifacts only), to test
 # packaging and signing on a branch.
@@ -80,7 +81,7 @@ jobs:
         run: |
           id="$(gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
             -f tag_name="$TAG" -f name="Kimo ${TAG#v}" \
-            -F draft=true -F prerelease="$PRERELEASE" \
+            -F draft=true -F prerelease="$PRERELEASE" -F generate_release_notes=true \
             -f body="Draft built by the release workflow. See CHANGELOG.md; checklist in docs/release.md." \
             --jq .id)"
           echo "release_id=$id" >> "$GITHUB_OUTPUT"

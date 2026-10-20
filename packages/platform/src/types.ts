@@ -714,8 +714,8 @@ export interface UpdaterApi {
 
 /** Placeholders until the release infrastructure exists (ADR 0012). */
 export const UPDATE_FEED_PLACEHOLDER =
-  "https://github.com/kimo-design/kimo/releases/latest/download/latest-{channel}.json"
-export const REPO_URL_PLACEHOLDER = "https://github.com/kimo-design/kimo"
+  "https://github.com/Saudade-media/kimo/releases/latest/download/latest-{channel}.json"
+export const REPO_URL_PLACEHOLDER = "https://github.com/Saudade-media/kimo"
 
 // ===============================================================================================
 // Window (02d "Window chrome (macOS)")

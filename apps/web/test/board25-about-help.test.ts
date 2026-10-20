@@ -79,7 +79,7 @@ describe("Help menu (A0qRF, rule oKY0y)", () => {
       "Kimo 1.0.0 (412) · macOS · arm64\nHost: desktop\nRenderer: CanvasKit · WebGL 2\nLocale: en-US",
     )
     const url = new URL(reportIssueUrl(block))
-    expect(url.origin + url.pathname).toBe("https://github.com/kimo-design/kimo/issues/new")
+    expect(url.origin + url.pathname).toBe("https://github.com/Saudade-media/kimo/issues/new")
     expect(url.searchParams.get("body")).toContain(block)
     expect([...url.searchParams.keys()]).toEqual(["body"])
   })
@@ -94,7 +94,7 @@ describe("Help menu (A0qRF, rule oKY0y)", () => {
   test("About links (t4H8L)", () => {
     expect(aboutLinks("1.0.0").map((l) => [l.label, l.meta, l.icon])).toEqual([
       ["Documentation", "kimo.design/docs", "book-open"],
-      ["Source code", "github.com/kimo-design/kimo", "git-branch"],
+      ["Source code", "github.com/Saudade-media/kimo", "git-branch"],
       ["Release notes", "1.0.0", "scroll-text"],
       ["Privacy", "No telemetry · keys stay in this browser", "shield"],
     ])
@@ -103,7 +103,7 @@ describe("Help menu (A0qRF, rule oKY0y)", () => {
     expect(meta("macos")).toBe("No telemetry · keys stay in your Keychain")
     expect(meta("windows")).toBe("No telemetry · keys stay in Credential Manager")
     expect(meta("linux")).toBe("No telemetry · keys stay in Secret Service")
-    expect(releaseNotesUrl("1.0.0")).toBe("https://github.com/kimo-design/kimo/releases/tag/v1.0.0")
+    expect(releaseNotesUrl("1.0.0")).toBe("https://github.com/Saudade-media/kimo/releases/tag/v1.0.0")
   })
 })
 

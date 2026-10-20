@@ -11,7 +11,7 @@ use tauri::{AppHandle, Emitter, Runtime};
 use tauri_plugin_updater::UpdaterExt;
 
 pub const UPDATE_FEED_PLACEHOLDER: &str =
-    "https://github.com/kimo-design/kimo/releases/latest/download/latest-{channel}.json";
+    "https://github.com/Saudade-media/kimo/releases/latest/download/latest-{channel}.json";
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

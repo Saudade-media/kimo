@@ -48,4 +48,4 @@
 
 ## Still stuck
 
-**Copy diagnostics** in the Help menu copies your version, platform, renderer and locale, nothing else. Include it when you [open an issue](https://github.com/kimo-design/kimo/issues).
+**Copy diagnostics** in the Help menu copies your version, platform, renderer and locale, nothing else. Include it when you [open an issue](https://github.com/Saudade-media/kimo/issues).

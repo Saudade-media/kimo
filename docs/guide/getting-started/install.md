@@ -4,7 +4,7 @@ Kimo is a local-first design canvas that coding agents can edit. It runs as a de
 
 ## Desktop app
 
-Download the build for your system from the latest [GitHub release](https://github.com/kimo-design/kimo/releases/latest):
+Download the build for your system from the latest [GitHub release](https://github.com/Saudade-media/kimo/releases/latest):
 
 | System | Download |
 |---|---|

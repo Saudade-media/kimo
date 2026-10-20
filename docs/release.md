@@ -40,7 +40,7 @@ bunx tauri signer generate -w ~/.tauri/kimo-updater.key
   injects it over `UPDATER_PUBKEY_PLACEHOLDER` in `tauri.conf.json`; once the key is final,
   commit it to `tauri.conf.json` as well so local release builds match.
 - The app's updater endpoint is
-  `https://github.com/kimo-design/kimo/releases/latest/download/latest-stable.json`. The workflow
+  `https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json`. The workflow
   uploads tauri-action's `latest.json` and, for non-prerelease tags, a copy named
   `latest-stable.json`. Check that the repository slug in the endpoint is the real one.
 
@@ -166,7 +166,7 @@ Windows 11, Ubuntu 22.04 or later).
 
 - [ ] Write the release notes from `CHANGELOG.md` on the draft; mark prereleases as such.
 - [ ] Publish the draft. Then
-      `curl -L https://github.com/kimo-design/kimo/releases/latest/download/latest-stable.json`
+      `curl -L https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json`
       returns this version.
 - [ ] Deploy `kimo-web-X.Y.Z.tar.gz` to the static host.
 - [ ] CLI: `@kimo/cli` is still `private`, because it imports unpublished workspace packages

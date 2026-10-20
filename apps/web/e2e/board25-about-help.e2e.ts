@@ -362,7 +362,7 @@ export const scenarios: Scenario[] = [
       const k = await calls(page)
       expect(k.includes("openExternalUrl https://kimo.design/docs/"), `calls ${k.join(", ")}`)
       expect(
-        k.includes("openExternalUrl https://github.com/kimo-design/kimo/releases/tag/v0.0.0"),
+        k.includes("openExternalUrl https://github.com/Saudade-media/kimo/releases/tag/v0.0.0"),
         "release notes",
       )
     },
@@ -429,7 +429,7 @@ export const scenarios: Scenario[] = [
       await confirm.getByRole("button", { name: "Open GitHub" }).click()
       await confirm.waitFor({ state: "detached" })
       const issue = (await calls(page)).find((c) =>
-        c.startsWith("openExternalUrl https://github.com/kimo-design/kimo/issues/new?"),
+        c.startsWith("openExternalUrl https://github.com/Saudade-media/kimo/issues/new?"),
       )
       expect(issue, "issue URL opened")
       const body =
@@ -479,7 +479,7 @@ export const scenarios: Scenario[] = [
       const k = await calls(page)
       expect(k.includes("openExternalUrl https://kimo.design/docs/"), "docs")
       expect(
-        k.includes("openExternalUrl https://github.com/kimo-design/kimo/releases/tag/v0.0.0"),
+        k.includes("openExternalUrl https://github.com/Saudade-media/kimo/releases/tag/v0.0.0"),
         "what's new",
       )
     },

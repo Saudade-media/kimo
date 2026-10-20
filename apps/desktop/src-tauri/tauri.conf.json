@@ -61,7 +61,7 @@
     "updater": {
       "pubkey": "UPDATER_PUBKEY_PLACEHOLDER",
       "endpoints": [
-        "https://github.com/kimo-design/kimo/releases/latest/download/latest-stable.json"
+        "https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json"
       ],
       "windows": {
         "installMode": "passive"

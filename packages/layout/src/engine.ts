@@ -200,6 +200,22 @@ const ALIGN: Record<string, Align> = {
 const num = (v: unknown): number | undefined =>
   typeof v === "number" && Number.isFinite(v) ? v : undefined
 
+/**
+ * One Yoga WebAssembly instance for every engine in the process. Each `loadYoga()` call decodes
+ * and instantiates the module again, with its own memory. Exports and tests create and dispose
+ * many engines: an instance each made the layout suite 3x slower, timed a property test out on
+ * CI, and left a wasm memory per engine for the GC (long CI runs also saw Yoga trap with "access
+ * to a null reference"). Engines still own their config and nodes and free them on dispose.
+ */
+let sharedYoga: Promise<Yoga> | null = null
+const yoga = (): Promise<Yoga> => {
+  sharedYoga ??= loadYoga().catch((e: unknown) => {
+    sharedYoga = null
+    throw e
+  })
+  return sharedYoga
+}
+
 /** Creates the Yoga layout engine. Call `init()` before use. */
 export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEngine {
   let Y: Yoga | null = null
@@ -1701,7 +1717,7 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
 
   return {
     init() {
-      initPromise ??= loadYoga().then((y) => {
+      initPromise ??= yoga().then((y) => {
         Y = y
         config = y.Config.create()
         // No pixel-grid rounding: boxes keep the document's fractional values.

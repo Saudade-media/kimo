@@ -28,7 +28,7 @@ export interface AdminResult {
   body: Record<string, unknown>
 }
 
-function constantTimeEqual(a: string, b: string): boolean {
+export function constantTimeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder()
   const left = enc.encode(a)
   const right = enc.encode(b)

@@ -227,6 +227,28 @@ export class RelayHttpClient {
     }
   }
 
+  /**
+   * `POST /create-secret/check`: whether `createSecret` (or none) would let this client create a
+   * room, without creating one. `CREATE_FORBIDDEN` when the relay refuses it; null when the relay
+   * predates the route (404), so the secret can only be checked by creating a room.
+   */
+  async checkCreateSecret(
+    createSecret: string | null,
+  ): Promise<{ required: boolean; accepted: boolean } | null> {
+    const headers: Record<string, string> = {}
+    if (createSecret) headers["kimo-create-secret"] = createSecret
+    return this.request(
+      "POST",
+      "/create-secret/check",
+      { headers },
+      async (response, kick) => {
+        const body = await jsonObject("create secret check")(response, kick)
+        return { required: body.required === true, accepted: body.accepted === true }
+      },
+      () => null,
+    )
+  }
+
   /** `POST /room/<room>/admin` with signed command bytes; the parsed JSON success body. */
   async admin(
     room: string,

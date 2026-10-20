@@ -67,6 +67,7 @@ when the relay is reachable directly.
 | Route | Auth | Purpose |
 |---|---|---|
 | `GET /healthz`, `GET /version` | none | Liveness; protocol (`kimo-mp/1`), version, limits, whether a create secret is required |
+| `POST /create-secret/check` | `kimo-create-secret` header | Whether that secret (or none) may create rooms, without creating one (Kimo's relay test) |
 | `WS /sync/<room>` | token in the first frame | Encrypted log, awareness and snapshot notices (subprotocol `kimo-mp.1`) |
 | `POST /room/<room>/admin` | owner signature | Register, revoke a link, reset all links, close, blob sweep |
 | `GET /room/<room>` | view or edit token | Head, snapshot and usage |

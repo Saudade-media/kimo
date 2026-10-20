@@ -421,6 +421,7 @@ status from §13. `429` and `503` carry `retry-after` (seconds).
 |---|---|---|---|
 | `GET /healthz` | none | | `200 {"ok":true}` |
 | `GET /version` | none | | `200 {"name":"@kimo/server","version":"x.y.z","protocol":"kimo-mp/1","limits":RelayLimits,"createSecretRequired":boolean}` |
+| `POST /create-secret/check` | `kimo-create-secret` header (optional) | | `200 {"required":boolean,"accepted":true}`; `403 CREATE_FORBIDDEN` for a missing or wrong secret. Creates nothing; shares the admin rate limit. Clients treat `404` as an older relay |
 | `OPTIONS *` | none | CORS preflight | `204` |
 | `POST /room/<room>/admin` | admin signature (§6) | Body: admin command bytes. Header `kimo-create-secret` for register when configured | Per op (§6); `400 BAD_REQUEST`, `401 AUTH_INVALID` (signature), `403 CREATE_FORBIDDEN`, `404 ROOM_NOT_FOUND` (non-register on unknown room), `409 NONCE_REPLAY`, `410 ROOM_CLOSED` (non-register on closed room), `413 TOO_LARGE`, `422 ROOM_ID_MISMATCH`, `422 STALE_REQUEST`, `422 KEY_ID_INVALID` (rotate with a non-increasing kid), `429`, `503 RELAY_FULL` (room cap) |
 | `GET /room/<room>` | view or edit | | `200 {"room","kid","head","base","snapshot":{"upTo","gen","bytes"}|null,"usedBytes","quotaBytes","peers":n}` |

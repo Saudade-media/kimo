@@ -17,7 +17,7 @@ import {
 } from "@kimo/sync/mp"
 import type { Server } from "bun"
 import pkg from "../package.json" with { type: "json" }
-import { runAdmin } from "./admin"
+import { constantTimeEqual, runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
@@ -206,6 +206,22 @@ export function createFetchHandler(relay: Relay) {
     return json(result.body, result.status)
   }
 
+  /**
+   * `POST /create-secret/check`: whether the `kimo-create-secret` header would let this caller
+   * create a room, without creating one (the relay setup wizard's Test). Shares the admin rate
+   * limit, so it is no faster a way to guess the secret than registering rooms.
+   */
+  function checkCreateSecret(req: Request, server: Server<SocketData>): Response {
+    if (req.method !== "POST") return methodNotAllowed("POST")
+    const wait = relay.adminLimiter.take(clientIp(relay, req, server), relay.now())
+    if (wait > 0) fail("RATE_LIMITED", "too many admin requests", wait)
+    if (config.createSecret === null) return json({ required: false, accepted: true })
+    const given = req.headers.get("kimo-create-secret")
+    if (given === null || !constantTimeEqual(given, config.createSecret))
+      fail("CREATE_FORBIDDEN", "missing or wrong create secret")
+    return json({ required: true, accepted: true })
+  }
+
   async function roomInfo(req: Request, roomId: string): Promise<Response> {
     if (req.method !== "GET") return methodNotAllowed("GET")
     const { room } = await authorize(relay, req, roomId, "view")
@@ -341,6 +357,7 @@ export function createFetchHandler(relay: Relay) {
       if (req.method !== "GET" && req.method !== "HEAD") return methodNotAllowed("GET, HEAD")
       return json(url.pathname === "/healthz" ? { ok: true } : versionBody(relay))
     }
+    if (url.pathname === "/create-secret/check") return checkCreateSecret(req, server)
     if (head === "sync" && parts.length <= 2) {
       if (!roomId) fail("BAD_REQUEST", "expected /sync/<room>")
       return upgrade(req, server, roomId)

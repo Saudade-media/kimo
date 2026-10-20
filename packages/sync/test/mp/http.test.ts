@@ -107,6 +107,21 @@ describe("RelayHttpClient", () => {
     )
   })
 
+  test("checkCreateSecret sends the secret and reads the answer", async () => {
+    route = () => json(200, { required: true, accepted: true })
+    expect(await client().checkCreateSecret("s3cret")).toEqual({ required: true, accepted: true })
+    expect(seen[0]).toMatchObject({ method: "POST", path: "/create-secret/check" })
+    expect(seen[0]?.headers.get("kimo-create-secret")).toBe("s3cret")
+    route = () => json(200, { required: false, accepted: true })
+    expect(await client().checkCreateSecret(null)).toEqual({ required: false, accepted: true })
+    expect(seen[0]?.headers.get("kimo-create-secret")).toBeNull()
+    route = () => json(403, { error: "CREATE_FORBIDDEN", message: "wrong" })
+    await expectCode(client().checkCreateSecret("nope"), "CREATE_FORBIDDEN")
+    // A relay from before the route: nothing to check against.
+    route = () => json(404, { error: "NOT_FOUND", message: "No route" })
+    expect(await client().checkCreateSecret("s3cret")).toBeNull()
+  })
+
   test("admin posts the command bytes with the create secret", async () => {
     route = () => json(201, { room: ROOM, kid: 1 })
     const c = client()

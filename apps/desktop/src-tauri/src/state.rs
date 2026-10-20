@@ -188,6 +188,7 @@ pub fn state<Rt: Runtime>(app: &AppHandle<Rt>) -> std::sync::Arc<AppState> {
 static EARLY_OPENS: std::sync::Mutex<Vec<OpenRequest>> = std::sync::Mutex::new(Vec::new());
 
 /// Routes an open request to the state, or queues it until the state exists.
+#[cfg(target_os = "macos")]
 pub fn open_or_defer<Rt: Runtime>(app: &AppHandle<Rt>, req: OpenRequest) {
     match app.try_state::<std::sync::Arc<AppState>>() {
         Some(st) => st.inner().clone().open_request(app, req),

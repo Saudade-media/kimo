@@ -61,6 +61,7 @@ impl Shim {
         serde_json::from_str(&line).unwrap()
     }
 
+    #[cfg(unix)]
     fn no_output_for(&self, d: Duration) {
         if let Ok(l) = self.lines.recv_timeout(d) {
             panic!("unexpected output: {l}");

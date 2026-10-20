@@ -116,7 +116,7 @@ impl LocalFonts {
             }
             fams.into_iter()
                 .map(|(family, mut styles)| {
-                    styles.sort_by(|a, b| (a.weight, a.italic).cmp(&(b.weight, b.italic)));
+                    styles.sort_by_key(|a| (a.weight, a.italic));
                     LocalFontFamily { family, styles }
                 })
                 .collect()
@@ -274,7 +274,7 @@ impl FontCache {
             .into_values()
             .filter(|e| self.file_for(&e.key).is_some())
             .collect();
-        v.sort_by(|a, b| b.cached_at.cmp(&a.cached_at));
+        v.sort_by_key(|a| std::cmp::Reverse(a.cached_at));
         v
     }
 

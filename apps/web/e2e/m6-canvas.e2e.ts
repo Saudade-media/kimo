@@ -290,7 +290,11 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
     `label 12 / 500, got ${label?.fontSize} ${label?.fontWeight}`,
   )
   const pointer = await measure(page, '[data-testid="agent-cursor"] .agent-section__pointer svg')
-  check(pointer?.w === 18 && pointer?.h === 18, `pointer 18, got ${pointer?.w}×${pointer?.h}`)
+  // Within 0.01: the cursor sits at a fractional canvas offset, so the box can read 18.00002.
+  check(
+    Math.abs((pointer?.w ?? 0) - 18) < 0.01 && Math.abs((pointer?.h ?? 0) - 18) < 0.01,
+    `pointer 18, got ${pointer?.w}×${pointer?.h}`,
+  )
   // No canvas-drawn selection 2 px outside the node (board 24 GmEAl, retired).
   const sel = await pixel(
     page,

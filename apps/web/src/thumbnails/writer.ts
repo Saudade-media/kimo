@@ -68,9 +68,17 @@ export function useThumbnailWriter(
     let written: { key: string; hash: string } | null = null
     // The refresh on open keeps a template's cover; the first save replaces it.
     let saved = false
+    // Polls left while the canvas starts up (a slow machine may not have it laid out by the
+    // first run, which would leave a file opened without a preview until its next save).
+    let notReady = 20
     const scheduler = createThumbnailScheduler(async () => {
       const t = target(session, platform)
       if (!t) return
+      const c = canvas.current
+      if (!c?.renderer || !c.layout()) {
+        if (notReady-- > 0) scheduler.poke()
+        return
+      }
       const result: RefreshResult = await refreshThumbnail({
         hash: () => savedHash(session),
         storedHash: async () =>

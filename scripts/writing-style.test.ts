@@ -1,7 +1,8 @@
 /**
  * Keeps AI-tell phrasing out of UI copy and docs (docs/style/writing.md). Runs `aiTellPhrases`
  * from @kimo/ai-agent over:
- * - string literals and JSX text in the app, the UI kit and the landing page (comments skipped),
+ * - string literals and JSX text in the app and the UI kit (comments skipped; the website's
+ *   landing page is checked in its own repo, github.com/Saudade-media/kimo-site),
  * - the user-facing markdown: README, the user guide, SECURITY, CONTRIBUTING, CHANGELOG and the
  *   examples README (fenced code skipped).
  * A hit fails with file:line and the phrase. Add an ALLOW entry only when the phrase is right in
@@ -15,7 +16,7 @@ import { type AiTell, aiTellPhrases } from "../packages/ai-agent/src/style"
 
 const ROOT = join(import.meta.dir, "..")
 
-const CODE_ROOTS = ["apps/web/src", "packages/ui/src", "apps/site/src/landing"]
+const CODE_ROOTS = ["apps/web/src", "packages/ui/src"]
 /** Dev-only surfaces: the component gallery, e2e harnesses, test doubles, generated data. */
 const CODE_SKIP = /(^|\/)(gallery|harness|generated)\/|\.test\.|(^|\/)testing\.ts$|\.d\.ts$/
 
@@ -51,8 +52,6 @@ const ALLOW: Allow[] = [
   { file: /var-cell\/VarCell\.tsx$/, text: /^—$/, kind: "em-dash" },
   // Arrows and © are typography, not emoji (Extended_Pictographic includes them).
   { file: /./, text: /./, kind: "emoji", match: /^[↔↕↗©]$/ },
-  // The mock terminal's window title on the landing page ("zsh — feature/hero").
-  { file: /landing\/desktop\.ts$/, text: /zsh — feature\/hero/, kind: "em-dash" },
   // Markdown table cells that hold the empty-value glyph, and release headings.
   { file: /\.md$/, text: /\|\s*—\s*\|/, kind: "em-dash" },
   { file: /^CHANGELOG\.md$/, text: /^## \[[\d.]+\] - \d{4}-\d{2}-\d{2} — /, kind: "em-dash" },

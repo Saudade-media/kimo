@@ -34,8 +34,12 @@ bun workspaces. Packages export TypeScript source directly (no build step).
 |---|---|---|
 | `apps/web` | `@kimo/web` | React + Vite editor: the whole UI, in the browser and inside Tauri |
 | `apps/desktop` | `@kimo/desktop` | Tauri v2 shell: files, dialogs, watch, file association, document host and MCP socket |
-| `apps/site` | `@kimo/site` | kimo.design: the landing page and the docs, built from the repository's markdown |
 | `apps/server` | `@kimo/server` | Reserved, a stub in v1. Self-hostable; nothing depends on it |
+
+The website (kimo.design: the landing page and the docs) lives in its own private repository,
+[Saudade-media/kimo-site](https://github.com/Saudade-media/kimo-site). It renders the docs from
+this repository's markdown (docs/, the CLI and examples READMEs, CONTRIBUTING and the changelog)
+at a pinned commit, so a docs change here reaches the site when kimo-site bumps its `kimo.ref`.
 
 ### Packages
 

@@ -1,20 +1,25 @@
 /**
  * docs/guide/editor/shortcuts.md, generated from the app's single shortcut table
- * (apps/web/src/shortcuts/shortcuts.ts: SHORTCUT_LIST, the same rows the in-app Keyboard
- * shortcuts sheet renders), so the docs can't drift from the bindings.
+ * (src/shortcuts/shortcuts.ts: SHORTCUT_LIST, the same rows the in-app Keyboard shortcuts sheet
+ * renders), so the docs can't drift from the bindings. The website renders the page like any
+ * other doc.
  *
- *   bun scripts/gen-shortcuts.ts           # rewrite the page
- *   bun scripts/gen-shortcuts.ts --check   # fail when it is stale (the site test does this too)
+ *   bun scripts/gen-shortcuts.ts           rewrite the page
+ *   bun scripts/gen-shortcuts.ts --check   exit 1 when it is stale (CI, check:generated)
  */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 import {
   formatShortcut,
   SHORTCUT_GROUPS,
   SHORTCUT_LIST,
   type Shortcut,
-} from "../../../web/src/shortcuts/shortcuts"
+} from "../src/shortcuts/shortcuts"
 
-export const SHORTCUTS_SOURCE = "apps/web/src/shortcuts/shortcuts.ts"
-export const SHORTCUTS_PAGE = "docs/guide/editor/shortcuts.md"
+const ROOT = join(import.meta.dir, "..", "..", "..")
+
+const SHORTCUTS_SOURCE = "apps/web/src/shortcuts/shortcuts.ts"
+const SHORTCUTS_PAGE = "docs/guide/editor/shortcuts.md"
 
 const MODE_TITLES: Record<string, string> = {
   pen: "Pen",
@@ -36,9 +41,9 @@ function rows(list: readonly Shortcut[]): string {
   return out.join("\n")
 }
 
-export function shortcutsMarkdown(): string {
+function shortcutsMarkdown(): string {
   const parts = [
-    `<!-- Generated from ${SHORTCUTS_SOURCE} by apps/site/scripts/gen-shortcuts.ts. Do not edit by hand. -->`,
+    `<!-- Generated from ${SHORTCUTS_SOURCE} by apps/web/scripts/gen-shortcuts.ts. Do not edit by hand. -->`,
     "",
     "# Keyboard shortcuts",
     "",
@@ -66,4 +71,17 @@ export function shortcutsMarkdown(): string {
     }
   }
   return `${parts.join("\n")}\n`
+}
+
+const path = join(ROOT, SHORTCUTS_PAGE)
+const md = shortcutsMarkdown()
+if (process.argv.includes("--check")) {
+  if (!existsSync(path) || readFileSync(path, "utf8") !== md) {
+    console.error(`${SHORTCUTS_PAGE} is stale: run bun run gen:shortcuts in apps/web`)
+    process.exit(1)
+  }
+} else {
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, md)
+  console.log(`wrote ${SHORTCUTS_PAGE}`)
 }

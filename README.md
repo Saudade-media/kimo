@@ -68,6 +68,8 @@ The desktop app also needs Rust and the
 - [Agent guides](docs/agents/index.md): the MCP tools and the `.kimo` model for coding agents
 - [`kimo` CLI](packages/cli/README.md)
 - [Docs index](docs/README.md), [ADRs](docs/adr/README.md), [changelog](CHANGELOG.md)
+- The website, kimo.design, renders these docs from this repository; its code lives in
+  [Saudade-media/kimo-site](https://github.com/Saudade-media/kimo-site) (private)
 - [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md),
   [Security policy](SECURITY.md)
 

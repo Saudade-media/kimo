@@ -45,14 +45,6 @@ jobs:
           path: apps/web/dist
           if-no-files-found: error
           retention-days: 7
-      - name: build site (landing + docs, apps/site)
-        run: bun run --filter @kimo/site build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: site-dist
-          path: apps/site/dist
-          if-no-files-found: error
-          retention-days: 7
 
   e2e:
     name: e2e (Chromium)
@@ -96,9 +88,6 @@ jobs:
           mkdir -p "$KIMO_E2E_SHOTS"
           set -o pipefail
           bun run e2e 2>&1 | tee "$RUNNER_TEMP/e2e.log"
-      - name: site e2e (smoke + measured pass against board 26)
-        working-directory: apps/site
-        run: bun run e2e
       - name: flaky / infra report
         if: always()
         run: |

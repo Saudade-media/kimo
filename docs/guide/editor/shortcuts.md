@@ -1,4 +1,4 @@
-<!-- Generated from apps/web/src/shortcuts/shortcuts.ts by apps/site/scripts/gen-shortcuts.ts. Do not edit by hand. -->
+<!-- Generated from apps/web/src/shortcuts/shortcuts.ts by apps/web/scripts/gen-shortcuts.ts. Do not edit by hand. -->
 
 # Keyboard shortcuts
 

@@ -17,6 +17,7 @@
     "e2e:perf": "tsx e2e/perf/run.ts",
     "test": "bun test ./test",
     "gen:notices": "bun scripts/gen-notices.ts",
+    "screenshots:readme": "tsx scripts/readme-screenshots.ts",
     "check:generated": "bun scripts/gen-notices.ts --check"
   },
   "dependencies": {

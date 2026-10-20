@@ -75,7 +75,7 @@ new ones, not rewritten. See [docs/adr/README.md](docs/adr/README.md).
 
 Two rules from [ADR 0001](docs/adr/0001-monorepo-and-server-readiness.md) are checked in review:
 
-- **Dependency direction** as listed in the README; nothing depends on `apps/server`.
+- **Dependency direction** as listed in [docs/architecture.md](docs/architecture.md#dependency-rule); nothing depends on `apps/server`.
 - **One op path:** every document mutation (UI, agent, MCP, file watcher) goes through
   `editor-state` ops with an origin. No direct writes to the Yjs document or the file.
 

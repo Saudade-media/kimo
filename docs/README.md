@@ -2,6 +2,7 @@
 
 | Document | What it is |
 |---|---|
+| [architecture.md](architecture.md) | Principles, the monorepo map (apps and packages), the dependency and server-readiness rules, and notes on `desing.pen` |
 | [teardown.md](teardown.md) | The pen.dev teardown and the Kimo plan: principles (8), architecture (9), `.kimo` format draft (10), MCP tool set (11), roadmap (12), risks (13). **The plan of record.** |
 | [spec/kimo-format-1.0.md](spec/kimo-format-1.0.md) | `.kimo` file format specification 1.0, stable (normative types live in `@kimo/core-schema`) |
 | [spec/kimo-format-v0.1.md](spec/kimo-format-v0.1.md) | The v0.1 draft, superseded by 1.0 and kept as a historical record |
@@ -15,7 +16,7 @@ Repository-level documents:
 
 | Document | What it is |
 |---|---|
-| [README](../README.md) | Overview, principles, monorepo map, quickstart |
+| [README](../README.md) | Overview, screenshots, how to try Kimo and run it from source |
 | [CONTRIBUTING](../CONTRIBUTING.md) | Setup, check pipeline, commit style, ADR, design and spec change process, licensing |
 | [CODE_OF_CONDUCT](../CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
 | [SECURITY](../SECURITY.md) | How to report vulnerabilities, and what is in scope |

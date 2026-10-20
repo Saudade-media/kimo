@@ -54,6 +54,8 @@ import {
   type RendererInitOptions,
   type RenderScene,
   type RenderStats,
+  type TextCharBox,
+  type TextGeometry,
   type ThumbnailExportOptions,
   type Viewport,
 } from "./types"
@@ -1801,6 +1803,37 @@ export class CanvasKitRenderer implements Renderer {
 
   textMeasurer(): TextMeasurer {
     return this.need().text.measurer()
+  }
+
+  textGeometry(nodeId: string): TextGeometry | null {
+    const ctx = this.context()
+    const text = this.textEngine
+    if (!ctx || !text) return null
+    const node = ctx.nodes.getNode(nodeId)
+    const l = ctx.layout.nodes.get(nodeId)
+    if (node?.type !== "text" || !l?.visible) return null
+    // Laid out as drawn (`Painter.drawText`): the width, then the vertical alignment.
+    const input = resolveText(nodeId, node, ctx.resolve)
+    const auto = node.grow === undefined || node.grow === "auto"
+    const { w, h } = l.local
+    const g = text.geometry(input, auto ? Math.max(w, l.text?.w ?? 0) + 0.01 : w)
+    const valign = input.style.valign
+    const dy =
+      h > g.height
+        ? valign === "middle"
+          ? (h - g.height) / 2
+          : valign === "bottom"
+            ? h - g.height
+            : 0
+        : 0
+    const o = apply(l.transform, { x: 0, y: dy })
+    const world = (b: TextCharBox | null): TextCharBox | null =>
+      b && { ...b, x0: b.x0 + o.x, x1: b.x1 + o.x, top: b.top + o.y }
+    return {
+      text: g.text,
+      char: (i) => world(g.char(i)),
+      lineStart: (line) => world(g.lineStart(line)),
+    }
   }
 
   // --- export -------------------------------------------------------------------------------

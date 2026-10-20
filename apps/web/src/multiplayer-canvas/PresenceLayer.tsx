@@ -14,6 +14,7 @@
 import type { LayoutResult } from "@kimo/layout"
 import { useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react"
 import type { UiStore } from "../canvas/contract"
+import { currentTextSession, subscribeTextSession } from "../canvas/rich-text/session"
 import type { Bus } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import {
@@ -73,10 +74,12 @@ export function PresenceLayer({ doc, ui, layout, showCursors }: PresenceLayerPro
         if (s.page !== prev.page || s.selection !== prev.selection) l()
       })
       const c = layout.subscribe(l)
+      const d = subscribeTextSession(ui, l)
       return () => {
         a()
         b()
         c()
+        d()
       }
     },
     [doc, ui, layout],
@@ -93,6 +96,7 @@ export function PresenceLayer({ doc, ui, layout, showCursors }: PresenceLayerPro
       selections: selectionOutlines(view.people, {
         page,
         box: (id) => (has(id) ? { x: 0, y: 0, w: 0, h: 0 } : null),
+        editing: currentTextSession(ui)?.nodeId ?? null,
       }).map(({ box: _box, ...rest }) => rest),
       follow: view.follow
         ? { peer: view.follow.peer, label: view.follow.label, color: view.follow.color }
@@ -221,7 +225,7 @@ export function PresenceLayer({ doc, ui, layout, showCursors }: PresenceLayerPro
         />
       ))}
       {shape.selections.map((s) =>
-        s.tags.length === 1 ? (
+        s.tags.length === 0 ? null : s.tags.length === 1 ? (
           <SelectionTag
             key={`t:${s.id}`}
             tag={s.tags[0] as Shape["selections"][0]["tags"][0]}

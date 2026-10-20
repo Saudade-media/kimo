@@ -1,6 +1,6 @@
 /**
- * Remote carets and selections inside text layers (live text, ADR 0016 item 17). The visuals are
- * a later design pass; this module is their data:
+ * Remote carets and selections inside text layers (live text, ADR 0016 item 17). This module is
+ * their data; board 41 › 11 draws them (`multiplayer-canvas/TextCaretLayer.tsx`):
  *
  * - {@link localTextPresence}: what this client publishes (`PresenceState.text`) while a person
  *   edits a text layer live: the node and the anchor and focus as opaque positions that follow

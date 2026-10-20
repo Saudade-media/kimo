@@ -13,6 +13,7 @@ import type {
 } from "canvaskit-wasm"
 import { parseColor } from "./color"
 import type { CkFontProvider } from "./fonts"
+import type { TextCharBox } from "./types"
 
 /** How the glyphs are painted: a color, or a CanvasKit paint (gradient/image shader). */
 export type TextFill = { color: Float32Array } | { paint: Paint; key: string }
@@ -39,6 +40,8 @@ const NO_WRAP_WIDTH = 1e7
 export class TextEngine {
   private readonly measureCache = new Map<string, TextMetrics>()
   private readonly drawCache = new Map<string, { key: string; para: Paragraph }>()
+  /** Paragraphs queried for character positions (live text carets), per node. */
+  private readonly geometryCache = new Map<string, { key: string; geometry: ParagraphGeometry }>()
   private readonly black: Float32Array
 
   constructor(
@@ -174,12 +177,28 @@ export class TextEngine {
     return para
   }
 
+  /**
+   * Character positions of a node's text laid out at `width` (as drawn), in paragraph
+   * coordinates; cached per node until its text, width or fonts change.
+   */
+  geometry(input: TextMeasureInput, width: number | undefined): ParagraphGeometry {
+    const key = `${this.fonts.generation}|${width ?? "-"}|${JSON.stringify(input.runs)}|${input.style.align}`
+    const cached = this.geometryCache.get(input.nodeId)
+    if (cached?.key === key) return cached.geometry
+    cached?.geometry.dispose()
+    const geometry = new ParagraphGeometry(input, this.build(input, null, width))
+    this.geometryCache.set(input.nodeId, { key, geometry })
+    return geometry
+  }
+
   /** Drops cached paragraphs (all, or for the given node ids). */
   invalidate(nodeIds?: Iterable<string>): void {
     if (!nodeIds) {
       for (const c of this.drawCache.values()) c.para.delete()
       this.drawCache.clear()
       this.measureCache.clear()
+      for (const c of this.geometryCache.values()) c.geometry.dispose()
+      this.geometryCache.clear()
       return
     }
     for (const id of nodeIds) {
@@ -187,6 +206,11 @@ export class TextEngine {
       if (c) {
         c.para.delete()
         this.drawCache.delete(id)
+      }
+      const g = this.geometryCache.get(id)
+      if (g) {
+        g.geometry.dispose()
+        this.geometryCache.delete(id)
       }
     }
   }
@@ -215,5 +239,87 @@ export class TextEngine {
     this.invalidate()
     this.bg?.delete()
     this.bg = null
+  }
+}
+
+/**
+ * A laid-out paragraph queried by UTF-16 offset (live text carets): each character's advance
+ * and the box of its line (paragraph coordinates), read once per character and kept.
+ */
+export class ParagraphGeometry {
+  readonly text: string
+  /** Paragraph height (vertical alignment inside a taller box). */
+  readonly height: number
+  private readonly lines: { top: number; height: number; left: number }[]
+  private readonly sizes: { end: number; size: number }[] = []
+  private readonly chars: (TextCharBox | null | undefined)[] = []
+  private para: Paragraph | null
+
+  constructor(input: TextMeasureInput, para: Paragraph) {
+    this.para = para
+    let end = 0
+    let text = ""
+    for (const r of input.runs) {
+      const t = applyCase(r.text, r.style.case)
+      text += t
+      end += t.length
+      this.sizes.push({ end, size: r.style.fontSize })
+    }
+    this.text = text
+    this.height = para.getHeight()
+    this.lines = para.getLineMetrics().map((m) => ({
+      top: m.baseline - m.ascent,
+      height: m.ascent + m.descent,
+      left: m.left,
+    }))
+  }
+
+  private sizeAt(i: number): number {
+    for (const s of this.sizes) if (i < s.end) return s.size
+    return this.sizes[this.sizes.length - 1]?.size ?? 16
+  }
+
+  char(i: number): TextCharBox | null {
+    if (i < 0 || i >= this.text.length || this.text[i] === "\n") return null
+    const known = this.chars[i]
+    if (known !== undefined) return known
+    let box: TextCharBox | null = null
+    const para = this.para
+    if (para) {
+      const info = para.getGlyphInfoAt(i)
+      const line = para.getLineNumberAt(i)
+      const l = this.lines[line]
+      if (info && l) {
+        const r = info.graphemeLayoutBounds
+        box = {
+          x0: r[0] as number,
+          x1: r[2] as number,
+          top: l.top,
+          height: l.height,
+          fontSize: this.sizeAt(i),
+          line,
+        }
+      }
+    }
+    this.chars[i] = box
+    return box
+  }
+
+  lineStart(line: number): TextCharBox | null {
+    const l = this.lines[line]
+    if (!l) return null
+    // The size of the text before the line (an empty line takes the newline's run).
+    let at = 0
+    for (let n = 0, i = 0; i < this.text.length && n < line; i++)
+      if (this.text[i] === "\n") {
+        n++
+        at = i
+      }
+    return { x0: l.left, x1: l.left, top: l.top, height: l.height, fontSize: this.sizeAt(at), line }
+  }
+
+  dispose(): void {
+    this.para?.delete()
+    this.para = null
   }
 }

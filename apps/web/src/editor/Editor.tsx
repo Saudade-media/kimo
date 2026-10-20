@@ -879,6 +879,10 @@ function EditorShell({
     [],
   )
   const [fontsRequest, setFontsRequest] = useState(0)
+  const textGeometry = useCallback(
+    (node: string) => canvas.current?.renderer?.textGeometry?.(node) ?? null,
+    [],
+  )
   const multiplayer = useEditorMultiplayer({
     session,
     shareKey,
@@ -888,6 +892,7 @@ function EditorShell({
     personaOf,
     fonts,
     onOpenFonts: () => setFontsRequest((n) => n + 1),
+    textGeometry,
   })
   const agentPanel = useEditorAgentPanel({
     platform,

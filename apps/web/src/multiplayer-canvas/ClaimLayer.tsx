@@ -26,9 +26,11 @@ export interface ClaimLayerProps {
   ui: UiStore
   onResume(holder: string): void
   onStop(holder: string): void
+  /** Section 11 D: agents whose text caret shows (their one cursor is that caret). */
+  hideCursors?: ReadonlySet<string>
 }
 
-export function ClaimLayer({ outlines, ui, onResume, onStop }: ClaimLayerProps) {
+export function ClaimLayer({ outlines, ui, onResume, onStop, hideCursors }: ClaimLayerProps) {
   const getViewport = () => ui.getState().viewport
   const v = useSyncExternalStore(ui.subscribe, getViewport, getViewport)
   if (!outlines.length) return null
@@ -104,7 +106,7 @@ export function ClaimLayer({ outlines, ui, onResume, onStop }: ClaimLayerProps) 
       })}
       {/* Other people's agents: their one cursor on their area's center (board 36 cursor). */}
       {outlines
-        .filter((o) => !o.local && !o.paused)
+        .filter((o) => !o.local && !o.paused && !hideCursors?.has(o.holder))
         .map((o) => {
           const b = toScreen(o.box)
           const tip = { x: b.x + b.w / 2, y: b.y + b.h / 2 }

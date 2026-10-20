@@ -381,3 +381,78 @@
 .mp-asset--uploading .mp-asset__bar {
   background: #ffffff;
 }
+
+/* --- Live text (section 11, ExORz; rules pCwkf) ------------------------------------------ */
+.mp-text {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+/* Remote Range (d7UsO): the person's color at 0.24, full line height, per line. */
+.mp-text-range {
+  position: absolute;
+  inset: 0;
+}
+.mp-text-range__row {
+  position: absolute;
+  background: var(--mp-color);
+  opacity: 0.24;
+}
+/* Remote Caret (T12pYW): 2 wide, the line box tall, layout none. Idle (tTnQN): 0.5. */
+.mp-text-caret {
+  position: absolute;
+  width: 2px;
+}
+.mp-text-caret--idle {
+  opacity: 0.5;
+}
+/* Bar (qs7mU): 2 screen px, presence color (agents: persona hue). */
+.mp-text-caret__bar {
+  position: absolute;
+  left: 0;
+  width: 2px;
+}
+/* Flag (BkOUb): presence fill, gap 3, padding [1, 5], center; agents (gTDLB) [1, 5, 1, 2]. */
+.mp-text-flag {
+  position: absolute;
+  left: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  transition: opacity 150ms ease-out;
+}
+.mp-text-flag--agent {
+  padding: 1px 5px 1px 2px;
+}
+.mp-text-flag > svg {
+  flex: none;
+}
+/* Typing shows the flag at once; 3 s later it fades over 150 ms. */
+.mp-text-flag[data-state="shown"] {
+  transition: none;
+}
+.mp-text-flag[data-state="faded"] {
+  opacity: 0;
+}
+.mp-text-flag[data-state="hidden"],
+.mp-text-flag[data-state="tooltip"] {
+  display: none;
+}
+/* Label (DqtWi): sans text-xs 500 on-accent; a 13 px line makes the flag 15 tall. */
+.mp-text-flag__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  line-height: 13px;
+  color: var(--kimo-on-accent);
+}
+/* Below 50 % zoom: the name as a Tooltip, 6 px above the caret. */
+.mp-text-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+}

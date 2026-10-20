@@ -259,6 +259,32 @@ describe("agent claims (section 7)", () => {
     expect(html).toContain("mp-claim--warning")
   })
 
+  test("live text (section 11 D): a remote agent's pointer hides while its text caret shows", () => {
+    const ui = {
+      subscribe: () => () => {},
+      getState: () => ({ viewport: { x: 0, y: 0, zoom: 1 } }),
+    }
+    const outlines = claimOutlines(
+      [claim({ holder: "agent:kimo.m9.3", ids: ["Pricing"], label: "Sol" })],
+      o,
+    )
+    const html = (hide?: ReadonlySet<string>) =>
+      renderToStaticMarkup(
+        <ClaimLayer
+          outlines={outlines}
+          ui={ui as never}
+          onResume={() => {}}
+          onStop={() => {}}
+          {...(hide ? { hideCursors: hide } : {})}
+        />,
+      )
+    expect(html()).toContain('data-testid="agent-cursor"')
+    const hidden = html(new Set(["agent:kimo.m9.3"]))
+    expect(hidden).not.toContain('data-testid="agent-cursor"')
+    // Still one outline: the claim is its only one.
+    expect(hidden.match(/data-testid="mp-claim-outline"/g)).toHaveLength(1)
+  })
+
   test("Resume now and Stop act on the pause tracker; Stop notifies the agent panel", () => {
     const store = importDocument(createEmptyDocument("t"))
     const registry = claimsFor(store)

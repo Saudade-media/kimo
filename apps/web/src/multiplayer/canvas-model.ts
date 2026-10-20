@@ -284,29 +284,31 @@ export interface SelectionOutlineView {
 /**
  * Remote selections on this page: one outline per layer in the color of the first person (join
  * order) who selected it, every selecting person's tag side by side. You are left out.
+ *
+ * Live text (section 11 C): the text layer a person edits gets their outline with no tag (their
+ * caret flag carries the name); the layer you edit (`editing`) keeps only your own outline.
  */
 export function selectionOutlines(
   people: readonly PersonView[],
-  o: { page: string | null; box(id: string): Rect | null },
+  o: { page: string | null; box(id: string): Rect | null; editing?: string | null },
 ): SelectionOutlineView[] {
   const byId = new Map<string, SelectionOutlineView>()
   for (const p of people) {
     if (p.isYou) continue
     if (p.page !== null && o.page !== null && p.page !== o.page) continue
-    for (const id of p.selection) {
+    const typing = p.text?.node ?? null
+    const ids = typing && !p.selection.includes(typing) ? [...p.selection, typing] : p.selection
+    for (const id of ids) {
+      if (id === o.editing) continue
+      const tags = id === typing ? [] : [{ peer: p.peer, label: p.label, color: p.color }]
       const known = byId.get(id)
       if (known) {
-        known.tags.push({ peer: p.peer, label: p.label, color: p.color })
+        known.tags.push(...tags)
         continue
       }
       const box = o.box(id)
       if (!box) continue
-      byId.set(id, {
-        id,
-        box,
-        color: p.color,
-        tags: [{ peer: p.peer, label: p.label, color: p.color }],
-      })
+      byId.set(id, { id, box, color: p.color, tags })
     }
   }
   return [...byId.values()]

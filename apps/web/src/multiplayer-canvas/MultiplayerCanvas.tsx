@@ -12,8 +12,9 @@
  * - Fonts shared by name only and not installed here: Banner/Warning with Fonts.
  * - `areaBusy`: what the agent thread's AREA_BUSY card reads.
  */
-import { type ClaimView, claimsFor, type DocStore } from "@kimo/editor-state"
+import { type ClaimView, claimsFor, type DocStore, type Origin } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
+import type { TextGeometry } from "@kimo/renderer"
 import { Banner } from "@kimo/ui"
 import {
   type ReactNode,
@@ -41,10 +42,16 @@ import type {
   DocumentShareView,
   MultiplayerSettingsModel,
 } from "../multiplayer/model"
+import {
+  type AgentTextCaret,
+  type AgentTextCarets,
+  createAgentTextCarets,
+} from "../multiplayer/text-caret-view"
 import { localTextPresence } from "../multiplayer/text-carets"
 import { AssetLayer } from "./AssetLayer"
 import { ClaimLayer } from "./ClaimLayer"
 import { PresenceLayer } from "./PresenceLayer"
+import { TextCaretLayer } from "./TextCaretLayer"
 import "./multiplayer-canvas.css"
 
 const NONE: ReadonlySet<string> = new Set()
@@ -86,6 +93,8 @@ export interface EditorMultiplayerOptions {
   fonts: FontSystem
   /** Banner › Fonts: the fonts list (FontRow/Missing). */
   onOpenFonts?(): void
+  /** The renderer's layout of a text layer (live text carets on layers you are not editing). */
+  textGeometry?(node: string): TextGeometry | null
 }
 
 export interface EditorMultiplayer {
@@ -166,7 +175,19 @@ export function useEditorMultiplayer(o: EditorMultiplayerOptions): EditorMultipl
     [claims, lay, session.store, agents, people, paused, personaOf],
   )
   const claimedOrigins = useStableSet(outlines.map((x) => x.holder))
-  const hiddenOrigins = useStableSet(paused.map((p) => p.holder))
+
+  // Live text (section 11 D): an agent's caret after its writes, inside its claim; its pointer
+  // hides while the caret shows (one cursor per agent).
+  const attribution = useRef({ claims, people, store: session.store })
+  attribution.current = { claims, people, store: session.store }
+  const agentCarets = useAgentTextCarets(session.store, attribution)
+  const typingAgents = useStableSet(agentCarets.map((c) => c.holder))
+  const hiddenOrigins = useStableSet([
+    ...paused.map((p) => p.holder),
+    ...agentCarets
+      .filter((c) => outlines.some((o) => o.holder === c.holder && o.local))
+      .map((c) => c.holder),
+  ])
 
   const resume = useCallback(
     (holder: string) => {
@@ -202,7 +223,22 @@ export function useEditorMultiplayer(o: EditorMultiplayerOptions): EditorMultipl
           ensure={ensure}
         />
       )}
-      <ClaimLayer outlines={outlines} ui={session.ui} onResume={resume} onStop={stop} />
+      <ClaimLayer
+        outlines={outlines}
+        ui={session.ui}
+        onResume={resume}
+        onStop={stop}
+        hideCursors={typingAgents}
+      />
+      <TextCaretLayer
+        doc={shared ? doc : null}
+        store={session.store}
+        ui={session.ui}
+        layout={layout}
+        geometry={o.textGeometry ?? noGeometry}
+        agentCarets={agentCarets}
+        outlines={outlines}
+      />
       {shared && doc && (
         <PresenceLayer
           doc={doc}
@@ -257,6 +293,66 @@ export function useEditorMultiplayer(o: EditorMultiplayerOptions): EditorMultipl
     resume,
     stop,
   }
+}
+
+const noGeometry = () => null
+const NO_AGENT_CARETS: readonly AgentTextCaret[] = []
+
+/** True when `node` is `id` or inside it. */
+function within(store: DocStore, node: string, id: string): boolean {
+  let at: string | null = node
+  for (let depth = 0; at && depth < 256; depth++) {
+    if (at === id) return true
+    const n = store.getNode(at) as { parent?: unknown } | undefined
+    at = typeof n?.parent === "string" && n.parent ? n.parent : null
+  }
+  return false
+}
+
+/**
+ * Which agent wrote a text change, for its caret (section 11 D): a local agent's own origin (or
+ * one relayed by the desktop host, `remote:agent:…`), else a change from the room into a text
+ * inside another client's agent claim that no person is typing in live. Only inside the agent's
+ * claim.
+ */
+export function agentOfTextChange(
+  origin: Origin,
+  node: string,
+  o: {
+    claims: readonly ClaimView[]
+    people: readonly { isYou: boolean; text?: { node: string } | null }[]
+    store: DocStore
+  },
+): string | null {
+  const bare = origin.startsWith("remote:") ? origin.slice(7) : origin
+  const claimsNode = (c: ClaimView) => c.ids.some((id) => within(o.store, node, id))
+  if (bare.startsWith("agent:") || bare.startsWith("mcp:"))
+    return o.claims.some((c) => c.holder === bare && claimsNode(c)) ? bare : null
+  if (origin !== "remote" && !origin.startsWith("remote:")) return null
+  if (o.people.some((p) => !p.isYou && p.text?.node === node)) return null
+  const c = [...o.claims].sort((a, b) => b.since - a.since).find((x) => !x.local && claimsNode(x))
+  return c?.holder ?? null
+}
+
+/** Agents' carets after their writes (see `createAgentTextCarets`). */
+function useAgentTextCarets(
+  store: DocStore,
+  attribution: {
+    current: Parameters<typeof agentOfTextChange>[2]
+  },
+): readonly AgentTextCaret[] {
+  const [tracker, setTracker] = useState<AgentTextCarets | null>(null)
+  useEffect(() => {
+    const t = createAgentTextCarets(store, (origin, node) =>
+      agentOfTextChange(origin, node, attribution.current),
+    )
+    setTracker(t)
+    return () => t.dispose()
+  }, [store, attribution])
+  return useSyncExternalStore(
+    useCallback((l: () => void) => (tracker ? tracker.subscribe(l) : () => {}), [tracker]),
+    () => tracker?.list() ?? NO_AGENT_CARETS,
+  )
 }
 
 /** The same Set while its members do not change. */

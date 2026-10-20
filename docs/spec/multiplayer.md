@@ -987,7 +987,18 @@ positions exceed 256. `PersonView.text` and `AgentView.text` (agents connected w
 link) carry it; `remoteTextCarets(view, store, nodeId)` and `useRemoteTextCarets(model, key,
 store, nodeId)` (`apps/web/src/multiplayer/text-carets.ts`) resolve them to
 `{key, kind, peer, label, color, idle, anchor, focus}` offsets for one text node, updated as the
-text changes. The caret and selection visuals follow their own design pass.
+text changes.
+
+**Visuals (board 41 › 11).** `TextCaretLayer` (`apps/web/src/multiplayer-canvas/`) draws them:
+a 2 screen px bar 1.2 × the font size tall, centered on the line box, in the presence color (an
+agent's persona hue), with a name flag (text-xs 500 on-accent, padding 1 5, radius 3 3 3 0) on
+the bar's top, flipped below on the layer's first line; ranges at 0.24 per line box. Flags fade
+150 ms after 3 s without a keystroke (a keystroke is a remote change ending at the person's
+caret), show on hover, hide below 50 % zoom (a Tooltip on hover) and while you drag. Positions
+come from `Renderer.textGeometry(nodeId)` (the canvas layout) for layers you are not editing
+and from the contenteditable's range rects for the one you are. Agents have no live caret: a
+write inside an agent's claim shows its caret at the end of the changed region for 3 s
+(`createAgentTextCarets`), and its pointer hides meanwhile.
 
 ## 16. Web integration
 

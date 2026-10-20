@@ -15,6 +15,7 @@ import {
   concatTransformationMatrix,
   endPath,
   LineCapStyle,
+  PDFContentStream,
   PDFDocument,
   type PDFFont,
   type PDFImage,
@@ -317,8 +318,31 @@ export async function emitPdf(ir: IRDocument, options: PdfOptions): Promise<Expo
     void yUp
   }
 
+  roundContentNumbers(doc)
   const bytes = await doc.save({ useObjectStreams: false })
   return { path: options.path ?? "export.pdf", contents: bytes }
+}
+
+/**
+ * Rounds every number in the page content streams to 6 decimals. pdf-lib turns arcs into curves
+ * with `Math.sin`/`Math.cos`, whose last bits differ between platform math libraries (macOS vs
+ * glibc), so full-precision output was not byte-identical across machines.
+ */
+function roundContentNumbers(doc: PDFDocument) {
+  for (const [, obj] of doc.context.enumerateIndirectObjects()) {
+    if (!(obj instanceof PDFContentStream)) continue
+    const ops = (obj as unknown as { operators: PDFOperator[] }).operators
+    for (let i = 0; i < ops.length; i++) {
+      const op = ops[i] as unknown as { name: PDFOperatorNames; args: unknown[] }
+      if (!op.args.some((a) => a instanceof PDFNumber)) continue
+      ops[i] = PDFOperator.of(
+        op.name,
+        op.args.map((a) =>
+          a instanceof PDFNumber ? PDFNumber.of(Number(a.asNumber().toFixed(6)) + 0) : a,
+        ) as Parameters<typeof PDFOperator.of>[1],
+      )
+    }
+  }
 }
 
 function color(p: IRPaint): { rgb: ReturnType<typeof rgb>; a: number } | null {

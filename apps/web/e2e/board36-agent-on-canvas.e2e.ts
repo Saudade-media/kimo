@@ -372,8 +372,9 @@ export const scenarios: Scenario[] = [
         Math.abs(end - toY) <= 0.5
           ? (glide.samples.find((s) => Math.abs(s.y - end) <= 0.05)?.t ?? Infinity)
           : Infinity
-      // A sample is up to one frame behind the glide's clock, and a loaded runner draws at
-      // 13 fps: every bound below widens by the longest frame seen (about 17 ms at 60 fps).
+      // The start is only known to a frame (the drawn position can trail the glide's clock by
+      // one), and a loaded runner draws at 8 to 20 fps: every bound below widens by the longest
+      // frame seen, either way (about 17 ms at 60 fps).
       let gap = 0
       for (let i = 1; i < glide.samples.length; i++)
         gap = Math.max(gap, (glide.samples[i]?.t ?? 0) - (glide.samples[i - 1]?.t ?? 0))
@@ -387,12 +388,12 @@ export const scenarios: Scenario[] = [
       log(
         `  glide: ${glide.samples.length} frames (longest ${gap.toFixed(0)} ms), reached at ${done.toFixed(0)} ms, halfway at ${half.toFixed(0)} ms`,
       )
-      expect(done >= 560 && done <= 700 + gap, `glide ends ≈ 600 ms (${done.toFixed(0)} ms)`)
+      expect(done >= 560 - gap && done <= 700 + gap, `glide ends ≈ 600 ms (${done.toFixed(0)} ms)`)
       expect(Math.abs(half - 300) <= 60 + gap, `halfway ≈ 300 ms (${half.toFixed(0)} ms)`)
-      // Soft start: slower than linear early on (a late sample only makes it slower).
-      const early = glide.samples.find((s) => s.t >= 100 && s.t < 300)
+      // Soft start: slower than linear early on.
+      const early = glide.samples.find((s) => s.t >= 100 && s.t + gap < 300)
       expect(
-        !early || k(early.y) < early.t / 600,
+        !early || k(early.y) < (early.t + gap) / 600,
         `soft start (ease-in-out) ${JSON.stringify(early)}`,
       )
       const m3 = await measure(page)

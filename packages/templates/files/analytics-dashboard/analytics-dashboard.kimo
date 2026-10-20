@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
 "meta": {"name":"Tidemark subscription analytics","kimo.template":{"category":"Dashboard","description":"Six-screen analytics dashboard for a subscription business: overview, funnels, cohort retention, revenue, customers and a report builder.","slug":"analytics-dashboard"}},

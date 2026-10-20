@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
 "meta": {"name":"Oriel studio portfolio","kimo.template":{"category":"Portfolio","description":"Editorial portfolio site for a small design studio: home, work index, case study, about and contact on desktop, with mobile home and case study.","slug":"agency-portfolio"}},

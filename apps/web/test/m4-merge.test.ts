@@ -100,7 +100,7 @@ describe("board 18 rows", () => {
   test("move and variable rows", () => {
     const base = parse(
       serialize({
-        $schema: "https://kimo.design/schema/kimo-1.0.json",
+        $schema: "https://getkimo.design/schema/kimo-1.0.json",
         format: "1.0.0",
         themes: { mode: ["light", "dark"] },
         variables: {

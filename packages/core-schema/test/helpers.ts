@@ -24,7 +24,7 @@ export function loadFixture(path: string): KimoDocument {
 export const uiLibrary = () => loadFixture("valid/libs/kimo-ui.lib.kimo")
 
 export const HEADER = {
-  $schema: "https://kimo.design/schema/kimo-1.0.json",
+  $schema: "https://getkimo.design/schema/kimo-1.0.json",
   format: "1.0.0",
 } as const
 

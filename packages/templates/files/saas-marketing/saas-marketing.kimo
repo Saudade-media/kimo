@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
 "meta": {"name":"Ledgerline marketing site","kimo.template":{"category":"Website","description":"Six-screen marketing site for a B2B finance tool: home, pricing, customers, blog, article and sign-up.","slug":"saas-marketing"}},

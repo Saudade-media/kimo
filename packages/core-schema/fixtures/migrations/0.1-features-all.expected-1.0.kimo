@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["fill/mesh","fill/shader","layout/stretch-baseline","layout/wrap","node/browser","node/script","size/min-max","text/runs","tokens/composite"],
 "themes": {"mode":["light","dark"]},

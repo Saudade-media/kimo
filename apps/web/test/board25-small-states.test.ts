@@ -55,9 +55,9 @@ describe("(b) link popover · invalid URL (u0adcp)", () => {
       scheme: "http",
       prefixed: true,
     })
-    expect(parseLinkUrl("www.kimo.design/pricing?x=1#a")).toMatchObject({
+    expect(parseLinkUrl("www.getkimo.design/pricing?x=1#a")).toMatchObject({
       kind: "ok",
-      url: "https://www.kimo.design/pricing?x=1#a",
+      url: "https://www.getkimo.design/pricing?x=1#a",
     })
   })
   test("invalid scheme / unparsable stays invalid", () => {

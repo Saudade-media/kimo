@@ -84,7 +84,7 @@ export const scenarios: Scenario[] = [
       await pop.waitFor()
       const field = page.getByRole("textbox", { name: "Link URL" })
       // Valid state first: the hint's position (no layout jump when it turns into the error).
-      await field.fill("https://kimo.design")
+      await field.fill("https://getkimo.design")
       await page.waitForTimeout(300)
       const before = await measure(page, { hint: ".kimo-link-popover__hint" })
       await field.fill("javascript:alert(1)")

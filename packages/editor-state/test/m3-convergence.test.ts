@@ -20,7 +20,7 @@ const RUNS = Number(process.env.KIMO_PROPERTY_RUNS ?? 100)
 
 const base = (): KimoDocument =>
   ({
-    $schema: "https://kimo.design/schema/kimo-1.0.json",
+    $schema: "https://getkimo.design/schema/kimo-1.0.json",
     format: "1.0.0",
     themes: { density: ["comfortable", "compact"], mode: ["light", "dark"] },
     variables: {

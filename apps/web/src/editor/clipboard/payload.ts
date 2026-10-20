@@ -327,7 +327,7 @@ export function pasteOps(
     .map(([id]) => id)
   if (toDetach.length) {
     let scratch: KimoDocument = {
-      $schema: "https://kimo.design/schema/kimo-1.0.json",
+      $schema: "https://getkimo.design/schema/kimo-1.0.json",
       format: "1.0.0",
       ...(p.variables ? { variables: p.variables as KimoDocument["variables"] } : {}),
       ...(p.themes ? { themes: p.themes } : {}),

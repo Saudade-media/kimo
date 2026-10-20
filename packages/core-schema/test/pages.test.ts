@@ -12,7 +12,7 @@ import {
 } from "../src/index"
 import { readFixture } from "./helpers"
 
-const base = { $schema: "https://kimo.design/schema/kimo-1.0.json", format: "1.0.0" } as const
+const base = { $schema: "https://getkimo.design/schema/kimo-1.0.json", format: "1.0.0" } as const
 
 describe("pages (spec §5.6)", () => {
   const doc = parse(readFixture("valid/pages.kimo"))

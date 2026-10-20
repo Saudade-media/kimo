@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
 "meta": {"name":"Fieldwork project tracker","kimo.template":{"category":"Web app","description":"Six-screen web app for a design studio's project tracker: overview, projects, kanban board, team, settings and billing.","slug":"saas-app"}},

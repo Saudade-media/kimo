@@ -2792,10 +2792,10 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
           void controller.continueTurn()
           break
         case "get_desktop":
-          controller.openLink("https://kimo.design/docs/getting-started/")
+          controller.openLink("https://getkimo.design/docs/getting-started/")
           break
         case "provider_matrix":
-          controller.openLink("https://kimo.design/docs/built-in-agent/#api-providers")
+          controller.openLink("https://getkimo.design/docs/built-in-agent/#api-providers")
           break
       }
     },

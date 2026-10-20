@@ -7,7 +7,7 @@ export function Text() {
         <span>{"Mixed "}</span>
         <span className="font-bold">bold</span>
         <span>{" and "}</span>
-        <a className="underline" href="https://kimo.design">linked</a>
+        <a className="underline" href="https://getkimo.design">linked</a>
         <span>{" runs in one paragraph."}</span>
       </p>
       <p className="relative shrink-0 w-max [font-family:'Inter',_sans-serif] text-[length:14px] font-normal italic [line-height:normal] [text-decoration-line:underline_line-through] [font-feature-settings:'liga'_0,_'tnum'_1] whitespace-pre text-[#000000]">Underlined, struck, italic, tabular 0123</p>

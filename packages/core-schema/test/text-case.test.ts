@@ -6,7 +6,7 @@ import { describe, expect, test } from "bun:test"
 import { parse, serialize, validate } from "../src"
 
 const doc = (style: Record<string, unknown>) => ({
-  $schema: "https://kimo.design/schema/kimo-1.0.json",
+  $schema: "https://getkimo.design/schema/kimo-1.0.json",
   format: "1.0.0",
   nodes: {
     Text000001: { type: "text", parent: null, order: "a0", content: "Plan less.", style },

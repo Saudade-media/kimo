@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["text/runs"],
 "meta": {"name":"Text styles"},
@@ -22,7 +22,7 @@
 
 , "Heading001": {"type":"text","parent":"Text000001","order":"a0","name":"Heading","content":"Export exactly","style":{"font":"Inter","size":32,"weight":700,"lineHeight":1.2,"letterSpacing":-0.5},"fill":{"$ref":"ink"},"meta":{"kimo.export.tag":"h1"}}
 
-, "Runs000001": {"type":"text","parent":"Text000001","order":"a1","name":"Runs","w":360,"content":[{"text":"Mixed "},{"text":"bold","style":{"weight":700}},{"text":" and "},{"text":"linked","style":{"decoration":["underline"]},"href":"https://kimo.design"},{"text":" runs in one paragraph."}],"grow":"fixed-width","style":{"font":"Inter","size":16,"lineHeight":1.5}}
+, "Runs000001": {"type":"text","parent":"Text000001","order":"a1","name":"Runs","w":360,"content":[{"text":"Mixed "},{"text":"bold","style":{"weight":700}},{"text":" and "},{"text":"linked","style":{"decoration":["underline"]},"href":"https://getkimo.design"},{"text":" runs in one paragraph."}],"grow":"fixed-width","style":{"font":"Inter","size":16,"lineHeight":1.5}}
 
 , "Text000001": {"type":"frame","parent":null,"order":"a0","name":"Text","x":0,"y":0,"w":480,"fill":{"$ref":"surface"},"layout":{"dir":"column","gap":10,"pad":24}}
 }

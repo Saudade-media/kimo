@@ -32,7 +32,7 @@ describe("canonical layout (10.2 rules 1–2)", () => {
 
   test("header members one per line, in canonical order, nodes last", () => {
     expect(lines.slice(1, 5)).toEqual([
-      `"$schema": "https://kimo.design/schema/kimo-1.0.json",`,
+      `"$schema": "https://getkimo.design/schema/kimo-1.0.json",`,
       `"format": "1.0.0",`,
       `"meta": {"name":"x"},`,
       `"variables": {`,
@@ -55,7 +55,7 @@ describe("canonical layout (10.2 rules 1–2)", () => {
 
   test("empty tables stay on one line", () => {
     expect(serialize(doc({}))).toBe(
-      `{\n"$schema": "https://kimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"nodes": {}\n}\n`,
+      `{\n"$schema": "https://getkimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"nodes": {}\n}\n`,
     )
   })
 })
@@ -154,10 +154,10 @@ describe("canonical key order", () => {
       zz: 1,
       aa: [1],
       format: "1.0.0",
-      $schema: "https://kimo.design/schema/kimo-1.0.json",
+      $schema: "https://getkimo.design/schema/kimo-1.0.json",
     })
     expect(out).toBe(
-      `{\n"$schema": "https://kimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"aa": [1],\n"zz": 1,\n"nodes": {}\n}\n`,
+      `{\n"$schema": "https://getkimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"aa": [1],\n"zz": 1,\n"nodes": {}\n}\n`,
     )
   })
 
@@ -168,10 +168,10 @@ describe("canonical key order", () => {
       description: { b: 1, a: 2 },
       name: "x",
       format: "1.0.0",
-      $schema: "https://kimo.design/schema/kimo-1.0.json",
+      $schema: "https://getkimo.design/schema/kimo-1.0.json",
     })
     expect(out).toBe(
-      `{\n"$schema": "https://kimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"description": {"a":2,"b":1},\n"name": "x",\n"zzz": 1,\n"nodes": {}\n}\n`,
+      `{\n"$schema": "https://getkimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"description": {"a":2,"b":1},\n"name": "x",\n"zzz": 1,\n"nodes": {}\n}\n`,
     )
   })
 

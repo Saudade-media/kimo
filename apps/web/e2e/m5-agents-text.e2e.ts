@@ -355,10 +355,10 @@ export const scenarios: Scenario[] = [
       await page.keyboard.press("Meta+k")
       const link = page.getByRole("textbox", { name: "Link URL" })
       await link.waitFor()
-      await link.fill("https://kimo.design/pricing")
+      await link.fill("https://getkimo.design/pricing")
       await page.keyboard.press("Enter")
       await page.waitForFunction(() => !document.querySelector('[data-testid="text-link-popover"]'))
-      expect((await style(page)).href === "https://kimo.design/pricing", "href set")
+      expect((await style(page)).href === "https://getkimo.design/pricing", "href set")
       await openMenu(page)
       const linkItem = page
         .getByTestId("text-more-menu")

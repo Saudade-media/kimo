@@ -13,7 +13,7 @@ import { buildPayload, libraryAliasFor, pasteOps } from "../src/editor/clipboard
 import { altDragCloneOps } from "../src/editor/m3/component-actions"
 import { M3Controller } from "../src/editor/m3/controller"
 
-const SCHEMA = "https://kimo.design/schema/kimo-1.0.json"
+const SCHEMA = "https://getkimo.design/schema/kimo-1.0.json"
 
 function doc(): KimoDocument {
   return {

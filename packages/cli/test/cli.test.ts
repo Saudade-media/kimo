@@ -33,7 +33,7 @@ function capture(cwd?: string, env?: Record<string, string>) {
 
 const base = (): KimoDocument =>
   ({
-    $schema: "https://kimo.design/schema/kimo-1.0.json",
+    $schema: "https://getkimo.design/schema/kimo-1.0.json",
     format: "1.0.0",
     nodes: {
       Page000001: { type: "frame", parent: null, order: "a0", name: "Home", w: 1440, h: 900 },

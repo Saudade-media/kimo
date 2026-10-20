@@ -360,7 +360,7 @@ export const scenarios: Scenario[] = [
       await page.locator('.about-link[data-link="release-notes"]').click()
       await page.getByRole("button", { name: "Check for updates…" }).click()
       const k = await calls(page)
-      expect(k.includes("openExternalUrl https://kimo.design/docs/"), `calls ${k.join(", ")}`)
+      expect(k.includes("openExternalUrl https://getkimo.design/docs/"), `calls ${k.join(", ")}`)
       expect(
         k.includes("openExternalUrl https://github.com/Saudade-media/kimo/releases/tag/v0.0.0"),
         "release notes",
@@ -477,7 +477,7 @@ export const scenarios: Scenario[] = [
       await page.evaluate(() => window.__kimoApp.control.helpMenu("docs"))
       await page.evaluate(() => window.__kimoApp.control.helpMenu("whats-new"))
       const k = await calls(page)
-      expect(k.includes("openExternalUrl https://kimo.design/docs/"), "docs")
+      expect(k.includes("openExternalUrl https://getkimo.design/docs/"), "docs")
       expect(
         k.includes("openExternalUrl https://github.com/Saudade-media/kimo/releases/tag/v0.0.0"),
         "what's new",

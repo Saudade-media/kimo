@@ -67,7 +67,7 @@ export class OpenAICompatibleProvider implements Provider {
     const h: Record<string, string> = { ...(this.config.headers ?? {}) }
     if (this.config.apiKey) h.authorization = `Bearer ${this.config.apiKey}`
     if (this.config.kind === "openrouter") {
-      h["HTTP-Referer"] ??= "https://kimo.design"
+      h["HTTP-Referer"] ??= "https://getkimo.design"
       h["X-Title"] ??= "Kimo"
     }
     return h

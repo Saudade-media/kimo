@@ -20,7 +20,7 @@ Kimo checks for an update when it starts and, with **Download updates** on (the 
 
 ## In a browser
 
-Open the web app from **Open in browser** on [kimo.design](https://kimo.design). It runs entirely in the browser; your files stay in that browser's storage until you save them to disk.
+Open the web app from **Open in browser** on [getkimo.design](https://getkimo.design). It runs entirely in the browser; your files stay in that browser's storage until you save them to disk.
 
 | | Desktop | Browser |
 |---|---|---|

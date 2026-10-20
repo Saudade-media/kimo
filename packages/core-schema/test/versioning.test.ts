@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test"
 import {
   FORMAT_VERSION,
   formatStatus,
+  isCurrentSchemaUrl,
   type JsonObject,
+  LEGACY_SCHEMA_URL,
   MIGRATE_0_1_TO_1_0,
   MIGRATIONS,
   type Migration,
@@ -11,13 +13,14 @@ import {
   parse,
   SCHEMA_URL,
   serialize,
+  validate,
 } from "../src/index"
 import { type Loose, readFixture } from "./helpers"
 
 describe("format version", () => {
   test("FORMAT_VERSION is 1.0.0 and the registry holds the 0.1 → 1.0 step", () => {
     expect(FORMAT_VERSION).toBe("1.0.0")
-    expect(SCHEMA_URL).toBe("https://kimo.design/schema/kimo-1.0.json")
+    expect(SCHEMA_URL).toBe("https://getkimo.design/schema/kimo-1.0.json")
     expect(MIGRATIONS).toEqual([MIGRATE_0_1_TO_1_0])
     expect(MIGRATIONS.map((m) => `${m.from}→${m.to}`)).toEqual(["0.1→1.0"])
   })
@@ -61,7 +64,7 @@ const history: Migration[] = [
 ]
 
 const old: JsonObject = {
-  $schema: "https://kimo.design/schema/kimo-0.0.json",
+  $schema: "https://getkimo.design/schema/kimo-0.0.json",
   format: "0.0.4",
   vendorThing: { keep: true },
   nodes: {
@@ -105,7 +108,7 @@ describe("migrate", () => {
     const r = migrate(old, { migrations: history, target: "1.1.0" })
     expect(r.applied).toHaveLength(3)
     expect(r.doc.format).toBe("1.1.0")
-    expect(r.doc.$schema).toBe("https://kimo.design/schema/kimo-1.1.json")
+    expect(r.doc.$schema).toBe("https://getkimo.design/schema/kimo-1.1.json")
   })
   test("current, newer, invalid and missing paths leave the document unchanged", () => {
     const cur = { format: "1.0.3", nodes: {} }
@@ -177,7 +180,7 @@ describe("0.1 → 1.0 (spec freeze)", () => {
     const b = v10.split("\n")
     expect(b.length).toBe(a.length)
     expect(a.flatMap((l, i) => (l === b[i] ? [] : [b[i]]))).toEqual([
-      `"$schema": "https://kimo.design/schema/kimo-1.0.json",`,
+      `"$schema": "https://getkimo.design/schema/kimo-1.0.json",`,
       `"format": "1.0.0",`,
     ])
   })
@@ -236,5 +239,45 @@ describe("forward compatibility conformance (10.2 rule 7)", () => {
     expect(out).toContain(`"cornerSmoothing":0.6`)
     expect(out).toContain(`"type":"sticker"`)
     expect(out).toContain(`"sections": {"Sect000001":{"name":"Home","order":"a0"}}`)
+  })
+})
+
+describe("legacy kimo.design $schema host", () => {
+  const file = ($schema: string) =>
+    `{\n"$schema": "${$schema}",\n"format": "1.0.0",\n"nodes": {}\n}\n`
+
+  test("both hosts name format 1.0", () => {
+    expect(LEGACY_SCHEMA_URL).toBe("https://kimo.design/schema/kimo-1.0.json")
+    expect(isCurrentSchemaUrl(SCHEMA_URL)).toBe(true)
+    expect(isCurrentSchemaUrl(LEGACY_SCHEMA_URL)).toBe(true)
+    expect(isCurrentSchemaUrl("https://kimo.design/schema/kimo-1.1.json")).toBe(false)
+  })
+
+  test("a file on the legacy URL validates clean, with no warning", () => {
+    const r = validate(parse(file(LEGACY_SCHEMA_URL)))
+    expect(r).toEqual({ ok: true, errors: [], warnings: [] })
+  })
+
+  test("a file on the new URL validates clean", () => {
+    const r = validate(parse(file(SCHEMA_URL)))
+    expect(r).toEqual({ ok: true, errors: [], warnings: [] })
+  })
+
+  test("another version's URL still warns on either host", () => {
+    for (const host of ["kimo.design", "getkimo.design"]) {
+      const r = validate(parse(file(`https://${host}/schema/kimo-0.2.json`)))
+      expect(r.warnings.map((w) => w.code)).toEqual(["SCHEMA_URL_MISMATCH"])
+    }
+  })
+
+  test("a legacy file opens current and round-trips byte-identical", () => {
+    const text = readFixture("valid/minimal.kimo")
+    expect(text).toContain(LEGACY_SCHEMA_URL)
+    const r = openDocument(text)
+    expect(r.needsUpgradeConsent).toBe(false)
+    expect(r.readOnly).toBe(false)
+    expect(r.validation?.ok).toBe(true)
+    expect(r.validation?.warnings).toEqual([])
+    expect(serialize(r.doc)).toBe(text)
   })
 })

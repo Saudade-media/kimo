@@ -12,7 +12,7 @@
 | [Templates](../packages/templates/README.md) | The starter templates bundled with the app (`@kimo/templates`): what each contains, how the app loads them offline, how to rebuild. Writing a new one: [scripts/templates/README.md](../scripts/templates/README.md) |
 | [kimo CLI](../packages/cli/README.md) | `kimo merge` (semantic git merge driver), `kimo gc`, `kimo validate`, `kimo mcp` (MCP server, attach or headless) and `kimo mcp install/remove/status`: usage and exit codes |
 
-The website at kimo.design renders these docs (the guide, the spec, the agent guides, the CLI
+The website at getkimo.design renders these docs (the guide, the spec, the agent guides, the CLI
 README, CONTRIBUTING and the changelog) from this repository at a pinned commit. Its code and its
 design file live in the private repository
 [Saudade-media/kimo-site](https://github.com/Saudade-media/kimo-site).

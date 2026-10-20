@@ -183,6 +183,8 @@ export {
   type FormatVersion,
   formatLine,
   formatStatus,
+  isCurrentSchemaUrl,
+  LEGACY_SCHEMA_URL,
   parseFormatVersion,
   SCHEMA_ID,
   SCHEMA_URL,

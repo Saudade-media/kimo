@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
 "meta": {"name":"Tidewell personal banking","kimo.template":{"category":"Mobile","description":"Seven-screen iPhone app for a personal bank: passcode sign-in, a balance slab with activity, a receipt, sending money, a frozen card and monthly insights.","slug":"mobile-banking"}},

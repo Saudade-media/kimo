@@ -29,7 +29,7 @@ function setup() {
 const RUNS = [
   { text: "Save " },
   { text: "40%", style: { weight: 700 }, fill: "#E5484D" },
-  { text: " today", href: "https://kimo.design" },
+  { text: " today", href: "https://getkimo.design" },
 ]
 
 describe("kimo_apply_ops with text runs", () => {

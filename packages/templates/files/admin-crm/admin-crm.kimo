@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
 "meta": {"name":"Keel sales CRM","kimo.template":{"category":"Web app","description":"Six-screen B2B sales CRM: pipeline board, deals table, deal timeline, contacts, company profile and reports.","slug":"admin-crm"}},

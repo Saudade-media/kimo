@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/wrap","tokens/composite"],
 "meta": {"name":"Basalt UI kit","library":true,"kimo.template":{"category":"Design system","description":"A published UI kit with 39 components and their variants, light and dark tokens, and six page patterns built from them.","slug":"design-system"}},

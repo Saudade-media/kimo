@@ -4,7 +4,7 @@
  */
 import Type, { type Static, type TSchema } from "typebox"
 import { FEATURE_PATTERN } from "../features"
-import { SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
+import { LEGACY_SCHEMA_URL, SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
 import { ShadowEffect } from "./graphics"
 import { Conflicts, MergeInfo } from "./merge"
 import { Node } from "./nodes"
@@ -157,7 +157,7 @@ export const KimoDocument = Strict(
   {
     $schema: Type.String({
       pattern: SCHEMA_URL_PATTERN,
-      description: `For format 1.0: "${SCHEMA_URL}". Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate().`,
+      description: `For format 1.0: "${SCHEMA_URL}" (the legacy "${LEGACY_SCHEMA_URL}" means the same). Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate().`,
     }),
     format: Type.String({ pattern: FORMAT_1_0_PATTERN }),
     features: opt(Type.Array(Type.String({ pattern: FEATURE_PATTERN }), { uniqueItems: true })),

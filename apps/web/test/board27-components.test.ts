@@ -17,7 +17,7 @@ import {
   withOptionTargets,
 } from "../src/editor/m3/enum-targets"
 
-const SCHEMA = "https://kimo.design/schema/kimo-1.0.json"
+const SCHEMA = "https://getkimo.design/schema/kimo-1.0.json"
 
 describe("enum targets (a, FZirR)", () => {
   const types: Record<string, string> = { Btn: "frame", Lbl: "text", Ico: "icon" }

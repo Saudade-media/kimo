@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kimo.design/schema/kimo-1.0.json",
+  "$id": "https://getkimo.design/schema/kimo-1.0.json",
   "description": "Structural schema of the .kimo file format 1.0.0. Semantic rules (referential integrity, override paths, variable types, …) are checked by validate() in @kimo/core-schema; see docs/spec/kimo-format-1.0.md. Known features: layout/wrap, layout/stretch-baseline, size/min-max, text/runs, tokens/composite, fill/mesh, fill/shader, node/script, node/browser, merge/conflicts.",
   "type": "object",
   "required": ["$schema", "format", "nodes"],
   "properties": {
     "$schema": {
       "type": "string",
-      "pattern": "^https://kimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$",
-      "description": "For format 1.0: \"https://kimo.design/schema/kimo-1.0.json\". Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate()."
+      "pattern": "^https://(?:get)?kimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$",
+      "description": "For format 1.0: \"https://getkimo.design/schema/kimo-1.0.json\" (the legacy \"https://kimo.design/schema/kimo-1.0.json\" means the same). Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate()."
     },
     "format": {
       "type": "string",

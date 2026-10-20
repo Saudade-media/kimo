@@ -9,14 +9,26 @@
 export const FORMAT_VERSION = "1.0.0"
 
 /** `$schema` URL written into every document of this format version. */
-export const SCHEMA_URL = "https://kimo.design/schema/kimo-1.0.json"
+export const SCHEMA_URL = "https://getkimo.design/schema/kimo-1.0.json"
 
 /** JSON Schema `$id` of the generated schema (same as {@link SCHEMA_URL}). */
 export const SCHEMA_ID = SCHEMA_URL
 
-/** Pattern of a `$schema` URL for any format version. */
+/**
+ * `$schema` URL of format 1.0 on the legacy host. The site moved from kimo.design to
+ * getkimo.design in 2026-10; files written before keep this URL, and it means the same as
+ * {@link SCHEMA_URL} (no warning, no rewrite on save).
+ */
+export const LEGACY_SCHEMA_URL = "https://kimo.design/schema/kimo-1.0.json"
+
+/** Pattern of a `$schema` URL for any format version, on either host. */
 export const SCHEMA_URL_PATTERN =
-  "^https://kimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$"
+  "^https://(?:get)?kimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$"
+
+/** Whether `url` names this format version ({@link SCHEMA_URL} or {@link LEGACY_SCHEMA_URL}). */
+export function isCurrentSchemaUrl(url: unknown): boolean {
+  return url === SCHEMA_URL || url === LEGACY_SCHEMA_URL
+}
 
 /** Pattern of the `format` header (semver core, no pre-release or build metadata). */
 export const FORMAT_PATTERN = "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
@@ -52,7 +64,7 @@ export function formatLine(v: FormatVersion): string {
 
 /** The `$schema` URL that belongs to a version. */
 export function schemaUrlFor(v: FormatVersion): string {
-  return `https://kimo.design/schema/kimo-${v.major}.${v.minor}.json`
+  return `https://getkimo.design/schema/kimo-${v.major}.${v.minor}.json`
 }
 
 /** The parsed {@link FORMAT_VERSION}. */

@@ -11,7 +11,7 @@ import { fakeMeasurer } from "./helpers"
 const ref = (name: string) => ({ $ref: name })
 
 const lib = {
-  $schema: "https://kimo.design/schema/kimo-1.0.json",
+  $schema: "https://getkimo.design/schema/kimo-1.0.json",
   format: "1.0.0",
   variables: {
     pad: { type: "dimension", value: { value: 10, unit: "px" } },
@@ -78,7 +78,7 @@ const nodes: Record<string, Record<string, unknown>> = {
 }
 
 const doc = {
-  $schema: "https://kimo.design/schema/kimo-1.0.json",
+  $schema: "https://getkimo.design/schema/kimo-1.0.json",
   format: "1.0.0",
   imports: { ui: "./ui.kimo" },
   variables: {

@@ -257,8 +257,8 @@ describe("A5: agent-panel actions report their failures", () => {
     p.c.cardAction("t1", "provider_matrix")
     await new Promise((r) => setTimeout(r, 0))
     expect(p.errors).toEqual([
-      "Couldn't open https://kimo.design/docs/getting-started/. No browser.",
-      "Couldn't open https://kimo.design/docs/built-in-agent/#api-providers. No browser.",
+      "Couldn't open https://getkimo.design/docs/getting-started/. No browser.",
+      "Couldn't open https://getkimo.design/docs/built-in-agent/#api-providers. No browser.",
     ])
   })
 

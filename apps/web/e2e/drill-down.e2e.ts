@@ -306,7 +306,7 @@ function deepDoc() {
     size -= 56
   })
   return {
-    $schema: "https://kimo.design/schema/kimo-1.0.json",
+    $schema: "https://getkimo.design/schema/kimo-1.0.json",
     format: "1.0.0",
     meta: { name: "deep" },
     nodes,

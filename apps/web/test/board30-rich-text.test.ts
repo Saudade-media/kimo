@@ -46,13 +46,13 @@ describe("model: node ↔ runs", () => {
         content: [
           { text: "Save " },
           { text: "40%", style: { weight: 700 }, fill: "#E5484D" },
-          { text: " now", href: "https://kimo.design" },
+          { text: " now", href: "https://getkimo.design" },
         ],
       }),
     )
     expect(runs.map((r) => r.text)).toEqual(["Save ", "40%", " now"])
     expect(runs[1]?.attrs).toEqual({ font: "Inter", size: 16, weight: 700, fill: "#E5484D" })
-    expect(runs[2]?.attrs.href).toBe("https://kimo.design")
+    expect(runs[2]?.attrs.href).toBe("https://getkimo.design")
   })
   test("equal adjacent spans merge", () => {
     const runs = runsOf(text({ content: [{ text: "a" }, { text: "b" }, { text: "c", style: {} }] }))

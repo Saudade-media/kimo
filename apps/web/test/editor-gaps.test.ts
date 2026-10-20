@@ -15,7 +15,7 @@ import { type Banner, bannerCopy } from "../src/platform/contract"
 import { bannerFormatters } from "../src/platform/format"
 import { diskPath, parseRoute } from "../src/router"
 
-const SCHEMA = "https://kimo.design/schema/kimo-1.0.json"
+const SCHEMA = "https://getkimo.design/schema/kimo-1.0.json"
 
 function doc(): KimoDocument {
   return {

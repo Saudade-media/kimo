@@ -38,11 +38,17 @@ the dates are those of the milestone commits.
   the content size as the basis. The canvas layout and the HTML/CSS and React exports change
   together (`flex-basis: 0`, or a px basis proportional to the weights when siblings are
   padded); min/max clamps are resolved from the same basis.
+- The website moves from kimo.design to getkimo.design: the web app, the docs, Help links and
+  the agent's links point to getkimo.design.
 
 ### Format
 
 - Spec §6.1 clarifies how `fill` shares main-axis space (zero basis; content basis in a hug or
   wrapping parent), §20 row 34. No format version or feature change.
+- New files write `"$schema": "https://getkimo.design/schema/kimo-1.0.json"`. The legacy
+  `https://kimo.design/schema/kimo-<major>.<minor>.json` stays valid as an alias with no
+  warning, and existing files keep their `$schema` on save (spec erratum in the header table).
+  No format version change.
 
 ## [1.0.0] - 2026-10-04
 

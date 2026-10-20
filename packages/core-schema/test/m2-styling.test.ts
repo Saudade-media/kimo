@@ -14,7 +14,7 @@ import {
 } from "../src/index"
 import { codes, readFixture } from "./helpers"
 
-const HEADER = `"$schema": "https://kimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",`
+const HEADER = `"$schema": "https://getkimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",`
 const docWith = (node: Record<string, unknown>) =>
   parse(
     `{${HEADER} "nodes": {"Node000001": ${JSON.stringify({ parent: null, order: "a0", ...node })}}}`,

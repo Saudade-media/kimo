@@ -37,7 +37,7 @@ backend.
 
 ## Try it
 
-- **In your browser:** [kimo.design/app](https://kimo.design/app/). Files stay in the browser
+- **In your browser:** [getkimo.design/app](https://getkimo.design/app/). Files stay in the browser
   until you save them to disk.
 - **Desktop app:** download the installer for macOS, Windows or Linux from
   [GitHub Releases](https://github.com/Saudade-media/kimo/releases).
@@ -68,7 +68,7 @@ The desktop app also needs Rust and the
 - [Agent guides](docs/agents/index.md): the MCP tools and the `.kimo` model for coding agents
 - [`kimo` CLI](packages/cli/README.md)
 - [Docs index](docs/README.md), [ADRs](docs/adr/README.md), [changelog](CHANGELOG.md)
-- The website, kimo.design, renders these docs from this repository; its code lives in
+- The website, getkimo.design, renders these docs from this repository; its code lives in
   [Saudade-media/kimo-site](https://github.com/Saudade-media/kimo-site) (private)
 - [Contributing](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md),
   [Security policy](SECURITY.md)

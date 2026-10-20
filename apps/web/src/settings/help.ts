@@ -50,7 +50,7 @@ export function logsLabel(os: KimoPlatform["os"]): string {
       : "Show logs in Finder"
 }
 
-export const DOCS_URL = "https://kimo.design/docs/"
+export const DOCS_URL = "https://getkimo.design/docs/"
 export const REPO_URL = REPO_URL_PLACEHOLDER
 
 /**
@@ -75,7 +75,7 @@ export function aboutLinks(
     {
       id: "docs",
       label: "Documentation",
-      meta: "kimo.design/docs",
+      meta: "getkimo.design/docs",
       icon: "book-open",
       url: DOCS_URL,
     },

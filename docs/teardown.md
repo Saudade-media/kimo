@@ -842,7 +842,7 @@ type Size =
   | { mode: "fill"; fallback?: number; weight?: number; min?: number; max?: number };
 
 interface KimoFile {
-  $schema: "https://kimo.design/schema/kimo-1.0.json";
+  $schema: "https://getkimo.design/schema/kimo-1.0.json";
   format: "1.0.0";                          // semver of the format
   features?: string[];                      // e.g. ["layout/wrap", "text/runs", "fill/shader"]; unknown → read-only (10.2 rule 7)
   meta?: { name?: string; library?: boolean; createdWith?: string };
@@ -1035,7 +1035,7 @@ Design notes on the sketch:
 
 ```jsonc
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/wrap"],
 "meta": { "name": "Kimo landing" },

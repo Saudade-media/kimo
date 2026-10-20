@@ -34,7 +34,7 @@ const doc = {
         { text: "Save " },
         { text: "40%", style: { weight: 700, size: 24 }, fill: "#E5484D" },
         { text: " on ", style: { italic: true } },
-        { text: "Pro", fill: { $ref: "accent" }, href: "https://kimo.design" },
+        { text: "Pro", fill: { $ref: "accent" }, href: "https://getkimo.design" },
       ],
       style: { font: "Inter", size: 16 },
       fill: "#111111",
@@ -55,7 +55,7 @@ describe("rich text export", () => {
     expect(t?.runs[1]?.color?.css).toBe("#E5484D")
     expect(t?.runs[2]?.style.italic).toBe(true)
     expect(t?.runs[3]?.color?.ref).toBe("accent")
-    expect(t?.runs[3]?.href).toBe("https://kimo.design")
+    expect(t?.runs[3]?.href).toBe("https://getkimo.design")
     expect(t?.runs[0]?.color).toBeUndefined()
   })
 
@@ -64,7 +64,7 @@ describe("rich text export", () => {
     const all = files.map((f) => String(f.contents)).join("\n")
     expect(all).toContain(">Save </span>")
     expect(all).toContain(">40%</span>")
-    expect(all).toContain('href="https://kimo.design"')
+    expect(all).toContain('href="https://getkimo.design"')
     expect(all).toMatch(/color:\s*(#E5484D|var\(--accent\)|#2F6BFF)/)
     expect(all).toContain("font-weight: 700")
     expect(all).toContain("font-style: italic")
@@ -75,7 +75,7 @@ describe("rich text export", () => {
     const all = files.map((f) => String(f.contents)).join("\n")
     expect(all).toContain("40%")
     expect(all).toContain("Pro")
-    expect(all).toContain("https://kimo.design")
+    expect(all).toContain("https://getkimo.design")
     expect(all).toMatch(/E5484D/i)
   })
 

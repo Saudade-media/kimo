@@ -39,7 +39,7 @@ function git(cwd: string, ...args: string[]) {
 }
 
 const base = (): Loose => ({
-  $schema: "https://kimo.design/schema/kimo-1.0.json",
+  $schema: "https://getkimo.design/schema/kimo-1.0.json",
   format: "1.0.0",
   nodes: {
     Page000001: { type: "frame", parent: null, order: "a0", name: "Home" },

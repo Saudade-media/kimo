@@ -26,7 +26,7 @@ import { canvasMenuModel } from "../src/editor/context-menu"
 import { withActivePage } from "../src/editor/pages/model"
 import { fuzzyScore } from "../src/editor/pages/PageSwitcher"
 
-const SCHEMA = "https://kimo.design/schema/kimo-1.0.json"
+const SCHEMA = "https://getkimo.design/schema/kimo-1.0.json"
 
 /** A frame "Hero" (0,0 336×180) with two cards and a free text; a component "Btn" with an instance. */
 function fixture(): KimoDocument {

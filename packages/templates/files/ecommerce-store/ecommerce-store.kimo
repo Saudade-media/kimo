@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/stretch-baseline","layout/wrap","tokens/composite"],
 "meta": {"name":"Fernhill home goods store","kimo.template":{"category":"eCommerce","description":"Nine-screen editorial online store for an independent home goods shop: home, category, product, cart, checkout and confirmation on desktop, plus home, product and cart on mobile.","slug":"ecommerce-store"}},

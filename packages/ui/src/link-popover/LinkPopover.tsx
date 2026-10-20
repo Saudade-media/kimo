@@ -22,7 +22,7 @@ export const LINK_ERROR = "Not a supported link. Use http(s), mailto:, tel: or a
 /** Board 25 §6 (b): validation runs on input after 250 ms (and at once on blur / Enter). */
 export const LINK_VALIDATE_DELAY_MS = 250
 
-/** "pricing.com", "www.kimo.design/pricing?x=1#a", "kimo.design:8080": a host name without a scheme. */
+/** "pricing.com", "www.getkimo.design/pricing?x=1#a", "getkimo.design:8080": a host name without a scheme. */
 const BARE_HOST = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i
 
 /**

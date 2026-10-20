@@ -60,7 +60,7 @@ const old = doc("Checkout", ["Rect000001"])
   .replace('"format": "1.0.0"', '"format": "0.1.0"')
   .replace("kimo-1.0.json", "kimo-0.1.json")
 const newer = `{
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "features": ["layout/grid","layout/wrap"],
 "nodes": {

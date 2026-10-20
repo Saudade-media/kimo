@@ -36,7 +36,7 @@ A `.kimo` file is plain UTF-8 JSON, written so that it diffs and merges well in 
 
 ```json
 {
-  "$schema": "https://kimo.design/schema/kimo-1.0.json",
+  "$schema": "https://getkimo.design/schema/kimo-1.0.json",
   "format": "1.0.0",
   "variables": {
     "color/bg": { "type": "color", "value": "#FBFAF7" }

@@ -25,7 +25,7 @@ describe("LinkPopover (NpwJS)", () => {
   test("Header › Leading (icon, Link) · Close; Body › Field · Hint · Actions (Open, Remove, Spacer, Apply)", () => {
     const html = renderToString(
       h(LinkPopover, {
-        value: "https://kimo.design/pricing",
+        value: "https://getkimo.design/pricing",
         onApply() {},
         onRemove() {},
         onOpen() {},
@@ -39,7 +39,7 @@ describe("LinkPopover (NpwJS)", () => {
       "kimo-popover__close",
       "kimo-link-popover__body",
       "kimo-link-popover__field",
-      'value="https://kimo.design/pricing"',
+      'value="https://getkimo.design/pricing"',
       "kimo-link-popover__hint",
       "http(s), mailto:, tel: or #frame",
       "kimo-link-popover__actions",

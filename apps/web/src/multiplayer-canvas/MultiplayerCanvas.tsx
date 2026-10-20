@@ -12,7 +12,7 @@
  * - Fonts shared by name only and not installed here: Banner/Warning with Fonts.
  * - `areaBusy`: what the agent thread's AREA_BUSY card reads.
  */
-import { type ClaimView, claimsFor } from "@kimo/editor-state"
+import { type ClaimView, claimsFor, type DocStore } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import { Banner } from "@kimo/ui"
 import {
@@ -26,6 +26,7 @@ import {
 } from "react"
 import type { AreaBusyEnv } from "../agent-panel/AreaBusyCard"
 import type { CanvasAgentPersona, UiStore } from "../canvas/contract"
+import { currentTextSession, subscribeTextSession } from "../canvas/rich-text/session"
 import type { FileSession } from "../editor/session"
 import type { FontSystem } from "../fonts/font-system"
 import type { AssetStore } from "../lib/assets"
@@ -40,6 +41,7 @@ import type {
   DocumentShareView,
   MultiplayerSettingsModel,
 } from "../multiplayer/model"
+import { localTextPresence } from "../multiplayer/text-carets"
 import { AssetLayer } from "./AssetLayer"
 import { ClaimLayer } from "./ClaimLayer"
 import { PresenceLayer } from "./PresenceLayer"
@@ -181,7 +183,7 @@ export function useEditorMultiplayer(o: EditorMultiplayerOptions): EditorMultipl
     [doc, modelPaused, pauses],
   )
 
-  usePublishPresence(shared ? doc : null, session.ui, o.container)
+  usePublishPresence(shared ? doc : null, session.ui, o.container, session.store)
 
   // Local image keys (asset placeholders), only while shared.
   const localKeys = useLocalKeys(shared ? o.assets : null)
@@ -290,12 +292,15 @@ function useLocalKeys(assets: AssetStore | null): ReadonlySet<string> {
 
 /**
  * Publishes your pointer (world), selection, page and viewport (world rectangle + zoom) at most
- * every 50 ms, the last value always. Off while the file is not shared (`doc` null).
+ * every 50 ms, the last value always. Off while the file is not shared (`doc` null). With a
+ * `store`, also your caret and selection inside the text layer you edit live (`text`, positions
+ * that follow edits; see `multiplayer/text-carets.ts`).
  */
 export function usePublishPresence(
   doc: DocumentShareModel | null,
   ui: UiStore,
   container: { current: HTMLElement | null },
+  store?: DocStore,
 ) {
   useEffect(() => {
     if (!doc) return
@@ -313,7 +318,14 @@ export function usePublishPresence(
         viewport: { x: v.x, y: v.y, w: w / v.zoom, h: h / v.zoom, zoom: v.zoom },
       }
     }
-    const throttle = createThrottle((f: ReturnType<typeof fields>) => doc.setLocalPresence(f))
+    // The text caret is read when the frame goes out (encoding it writes pending typing).
+    const withText = (f: ReturnType<typeof fields>) => {
+      const text = store ? localTextPresence(currentTextSession(ui), store) : null
+      return text ? { ...f, text } : f
+    }
+    const throttle = createThrottle((f: ReturnType<typeof fields>) =>
+      doc.setLocalPresence(withText(f)),
+    )
     const push = () => throttle.push(fields())
     const onMove = (e: PointerEvent) => {
       if (!el) return
@@ -332,14 +344,25 @@ export function usePublishPresence(
       if (s.selection !== prev.selection || s.page !== prev.page || s.viewport !== prev.viewport)
         push()
     })
+    // The live text edit: its caret, selection and text changes (and its start and end).
+    let offSession: (() => void) | null = null
+    const watchSession = () => {
+      offSession?.()
+      offSession = currentTextSession(ui)?.subscribe(push) ?? null
+      push()
+    }
+    const offBus = store ? subscribeTextSession(ui, watchSession) : () => {}
+    if (store) watchSession()
     push()
     return () => {
       el?.removeEventListener("pointermove", onMove)
       el?.removeEventListener("pointerleave", onLeave)
       off()
+      offBus()
+      offSession?.()
       throttle.cancel()
     }
-  }, [doc, ui, container])
+  }, [doc, ui, container, store])
 }
 
 /**

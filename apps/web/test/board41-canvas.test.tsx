@@ -74,6 +74,7 @@ const person = (p: Partial<PersonView> & Pick<PersonView, "peer" | "label">): Pe
   selection: [],
   page: null,
   viewport: null,
+  text: null,
   agents: [],
   ...p,
 })

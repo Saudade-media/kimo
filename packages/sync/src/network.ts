@@ -79,6 +79,19 @@ export interface PresenceState {
   viewport?: { x: number; y: number; w: number; h: number; zoom: number }
   /** Set by the room's owner (the people list puts them first). Cosmetic: never trusted. */
   owner?: boolean
+  /**
+   * The caret and selection inside the text layer the collaborator is editing (live text, ADR
+   * 0016 item 17): `node` the text node, `anchor` and `focus` opaque positions from
+   * `DocStore.encodeTextPosition` that follow edits (resolve them with `resolveTextPosition`).
+   */
+  text?: TextPresence
+}
+
+/** A collaborator's caret and selection in a text layer (see {@link PresenceState.text}). */
+export interface TextPresence {
+  node: string
+  anchor: string
+  focus: string
 }
 
 /** Presence channel (reduced to what Kimo needs). */

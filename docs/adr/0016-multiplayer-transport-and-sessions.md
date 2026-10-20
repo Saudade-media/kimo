@@ -153,6 +153,28 @@ hold. The relay stores and forwards ciphertext, enforces capability tokens, and 
     re-read and retry on it. Offline or single-player only the local registry applies, and a
     single agent only pays a parent walk per touched node. Op groups that only set or clear `placeholder`
     are exempt (a placeholder is never a lock).
+17. **Live collaborative text.** Text layers are edited live: two people typing in one text layer
+    merge character by character with formatting, and nobody's typing is lost. A text node's
+    `content` is a `Y.Text` inside the node map whose characters carry the span attributes as
+    formatting (flat keys `style.<key>`, `href`, `fill`, canonical JSON values). Everything that
+    reads the store sees the same plain content as before (a string, or spans), so the `.kimo`
+    format, exporters, MCP reads and validation are unchanged; content whose shape would not
+    survive the round trip (and bindings) stays a plain value. `DocStore` gains text edits at
+    offsets (`editText`), runs (`textRuns`), text change events with origin (`onTextChange`), a
+    pre-change hook for batching editors (`onBeforeChange`), an inline-edit undo handle
+    (`beginTextEdit`) and opaque positions that follow edits (`encodeTextPosition`,
+    `resolveTextPosition`); no Yjs type leaves `editor-state`. Local typing goes out every
+    keystroke, batched at most 50 ms; remote changes apply to the live contenteditable with the
+    caret moved through them, and wait while an IME composition is open. Undo stays the
+    person's own: inside the editor it walks their typing bursts, after it the whole edit is one
+    "Edit text" step, and other people's edits are never undone. Whole-content writes (agents,
+    the Text section field, a file reload) land as a minimal diff, so concurrent typing
+    survives; agents still go through claims. Plain content from older clients converts on its
+    first edit, and two replicas converting at once neither double nor lose text. Presence
+    carries the caret and selection (`PresenceState.text`) for remote caret visuals, which get
+    their own design pass. Only canvas text layers are live: short fields (names, component text
+    props, the Text section content field, variable values) keep committing on Enter, and note
+    and prompt bodies commit when editing ends. Details: multiplayer spec §15.12.
 
 Rollout: v2.0 relay, provider with presence, client compaction and repair, blob sync, links with
 view/edit/expiry/revocation/reset, headless share API, Docker image, self-host and deploy guides.
@@ -162,8 +184,12 @@ role, content re-keying without a new room, accounts.
 
 ## Consequences
 
-- No editor changes beyond read-only mode, presence and the Share UI; the provider plugs into the
-  existing seam. `DocStore` gains one method (`setAutoRepair`).
+- No editor changes beyond read-only mode, presence, the Share UI and live text (item 17); the
+  provider plugs into the existing seam. `DocStore` gains `setAutoRepair` and the live text
+  methods of item 17.
+- Live text makes every inline text edit write to the document while the person types (one op
+  group per 50 ms batch) instead of once at the end; the op log and file autosave see those
+  groups, and the undo stack still shows one "Edit text" step.
 - The relay is simpler than a plaintext relay (no `DocStore`, no Yjs in the server, memory
   independent of document size), but clients carry more: encryption, compaction, catch-up from
   snapshot plus log, repair election, blob sync.

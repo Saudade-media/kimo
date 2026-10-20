@@ -142,6 +142,8 @@ export interface AgentView {
   editing: readonly string[]
   /** Paused because a person edited inside its claim (local agents only). */
   paused: AgentPauseView | null
+  /** Its caret in a text layer (an agent connected with its own link), encoded positions. */
+  text: PresenceState["text"] | null
 }
 
 export interface PersonView {
@@ -165,6 +167,11 @@ export interface PersonView {
   selection: readonly string[]
   page: string | null
   viewport: PresenceState["viewport"] | null
+  /**
+   * Their caret and selection in the text layer they are editing (encoded positions; resolve
+   * them with `remoteTextCarets` in `text-carets.ts`).
+   */
+  text: PresenceState["text"] | null
   /** Agents this person runs, under them in the people list. */
   agents: readonly AgentView[]
 }
@@ -566,6 +573,7 @@ function createDocumentModel(
           isYours: owner.isYours,
           editing: [...new Set([...(prior?.editing ?? []), ...r.ids])],
           paused: owner.isYours ? (pausedBy.get(r.holder) ?? null) : null,
+          text: null,
         })
       }
       return [...byHolder.values()]
@@ -599,6 +607,7 @@ function createDocumentModel(
         selection: h.state.selection ?? [],
         page: h.state.page ?? null,
         viewport: h.state.viewport ?? null,
+        text: h.state.text ?? null,
         agents,
       }
     })
@@ -628,6 +637,7 @@ function createDocumentModel(
           isYours: false,
           editing: p.state?.working ?? [],
           paused: null,
+          text: p.state?.text ?? null,
         })
 
     if (following !== null && !people.some((p) => p.peer === following && !p.isYou))

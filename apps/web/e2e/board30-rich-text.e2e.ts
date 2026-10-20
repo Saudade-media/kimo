@@ -286,7 +286,8 @@ async function ranges({ page, url, log }: E2EContext) {
     `brave bold italic ${JSON.stringify(sp)}`,
   )
   expect(sp.find((s) => s.text === "Hello ")?.weight === "400", "rest stays regular")
-  // ⌘Z inside the editor undoes the last step (italic) only, and the document is untouched.
+  // ⌘Z inside the editor undoes the last step (italic) only. The edit is live (ADR 0016 item
+  // 17): the document already holds it.
   await page.keyboard.press("ControlOrMeta+z")
   await settle(page)
   sp = await spans(page)
@@ -295,7 +296,16 @@ async function ranges({ page, url, log }: E2EContext) {
       sp.find((s) => s.text === "brave")?.weight === "700",
     `⌘Z undid italic only ${JSON.stringify(sp)}`,
   )
-  expect((await node(page, id))?.content === "Hello brave new world", "doc untouched while editing")
+  const live = (await node(page, id))?.content
+  expect(
+    JSON.stringify(live) ===
+      JSON.stringify([
+        { text: "Hello " },
+        { text: "brave", style: { weight: 700 } },
+        { text: " new world" },
+      ]),
+    `the document holds the live edit (bold, not italic): ${JSON.stringify(live)}`,
+  )
   // "new" = [12, 15): ⌘U.
   await selectRange(page, 12, 15)
   await page.keyboard.press("ControlOrMeta+u")

@@ -50,6 +50,7 @@ export {
   type NetworkProviderOptions,
   type NetworkTiming,
   type PresenceState,
+  type TextPresence,
 } from "./network"
 export { VIEW_ONLY_REASON } from "./network-provider"
 export { BaseProvider, type SyncProvider, type SyncStatus, type SyncStatusEvent } from "./provider"

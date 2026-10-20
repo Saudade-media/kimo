@@ -172,6 +172,7 @@ import {
   toggleAnchorKind,
 } from "./path-tools"
 import { cssColor, runCss } from "./rich-text/css"
+import { createLiveText } from "./rich-text/live"
 import { type Attrs, runsOf, virtualNode } from "./rich-text/model"
 import type { RichEditGeometry, RunCss } from "./rich-text/RichTextEditor"
 import { publishTextSession, RichTextSession } from "./rich-text/session"
@@ -823,6 +824,8 @@ export class CanvasController {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    // A live text edit writes what is pending and closes its undo step.
+    this.editing?.session.dispose()
     if (this.raf) cancelAnimationFrame(this.raf)
     if (this.agentRaf) cancelAnimationFrame(this.agentRaf)
     if (this.motionRaf) cancelAnimationFrame(this.motionRaf)
@@ -4722,6 +4725,13 @@ export class CanvasController {
             : (cssColor(fill) ?? "#000000")
       const runs = runsOf(n, input.runs.map((r) => r.text).join(""))
       const session = new RichTextSession(id, n, runs, !card)
+      // ADR 0016 item 17: a text layer of the document is edited live (typing reaches others
+      // as it happens and merges with theirs). Text the router rewrites (instance content) and
+      // note / prompt bodies keep the commit when editing ends.
+      if (!card && this.liveTextFor(id)) {
+        const link = createLiveText(this.store, id, this.opts.origin, "Edit text")
+        if (link) session.attach(link)
+      }
       state = {
         id,
         at: body
@@ -4774,11 +4784,34 @@ export class CanvasController {
     this.opts.onTextEdit?.(state)
   }
 
+  /** True when text node `id` is edited live: a real node the router passes through as is. */
+  private liveTextFor(id: string): boolean {
+    const n = this.store.getNode(id)
+    if (n?.type !== "text") return false
+    const probe: Op[] = [{ op: "update", id, set: { content: n.content } } as Op]
+    const routed = this.opts.route ? this.opts.route(probe) : probe
+    const op = routed?.[0] as { op?: string; id?: string } | undefined
+    return routed?.length === 1 && op?.op === "update" && op.id === id
+  }
+
   /** Commits the overlay text (`value` null = keep the overlay's last reported value). */
   commitText(value: string | null): void {
     const s = this.editing
     if (!s) return
     const legacy = value ?? this.lastText
+    if (s.id && s.session.live) {
+      // Live: the text is in the document already; the edit closes as one undo step, with the
+      // deletion of an emptied text in it (⌘Z restores the text in one step).
+      s.session.flush()
+      this.closeText(false)
+      const what = s.kind ?? "text"
+      const text = legacy ?? s.session.text
+      if (!text.trim()) this.apply([{ op: "delete", id: s.id }], `Delete ${what}`)
+      else if (legacy !== null && legacy !== s.session.text)
+        this.apply([{ op: "update", id: s.id, set: { content: legacy } }], `Edit ${what}`)
+      s.session.dispose()
+      return
+    }
     this.closeText()
     const layout = this.layoutResult
     const what = s.kind ?? "text"
@@ -4931,8 +4964,10 @@ export class CanvasController {
     this.closeText()
   }
 
-  private closeText(): void {
+  /** Closes the overlay; `end` also ends a live edit (cancel, a node removed underneath). */
+  private closeText(end = true): void {
     const id = this.editingNode?.id
+    if (end) this.editing?.session.dispose()
     publishTextSession(this.ui, null)
     this.editing = null
     this.editingNode = null

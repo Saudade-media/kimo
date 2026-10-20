@@ -4,6 +4,7 @@
  * consumers use this interface, never Yjs types, so the CRDT can be swapped.
  */
 import type { KimoDocument, ValidateOptions, ValidationIssue } from "@kimo/core-schema"
+import type { TextDelta, TextEdit, TextRun } from "./live-text"
 import type { NodeData, NormalizedOp, Op } from "./ops"
 import type { LocalOrigin, Origin, RemoteOrigin } from "./origin"
 import type { TreeRepair } from "./repair"
@@ -141,6 +142,46 @@ export interface LoadOptions {
   newEpoch?: boolean
 }
 
+/** Options for {@link DocStore.editText}. */
+export interface TextEditOptions extends ApplyOptions {
+  /** Other ops committed in the same group (the node's own `style` / `fill`, a feature). */
+  with?: readonly Op[]
+}
+
+/**
+ * A change of a live text layer's characters (live text, ADR 0016 item 17). Emitted after the
+ * transaction, before the {@link StoreChange}.
+ */
+export interface TextChangeEvent {
+  /** The text node. */
+  id: string
+  /**
+   * How positions moved, in the text as it was before the change; null when the whole content
+   * was replaced (a binding set, an older client's write, a conversion).
+   */
+  delta: TextDelta | null
+  origin: Origin
+  cause: ChangeCause
+}
+
+/**
+ * One inline edit of a text layer (live text). While it is open every change the origin makes
+ * joins ONE undo step on the origin's stack ("Edit text"), and {@link undo} / {@link redo} walk
+ * the origin's own steps inside the edit (bursts split by {@link breakStep}), never other
+ * people's changes.
+ */
+export interface TextEditHandle {
+  /** The next change starts a new step of the edit's own undo. */
+  breakStep(): void
+  readonly canUndo: boolean
+  readonly canRedo: boolean
+  /** Undoes the origin's latest step of this edit. True when something changed. */
+  undo(): boolean
+  redo(): boolean
+  /** Ends the edit: everything it changed stays one undo step of the origin. Idempotent. */
+  end(): void
+}
+
 /** Read-only state of a store. */
 export interface ReadOnlyState {
   reason: string
@@ -183,6 +224,36 @@ export interface DocStore {
   setReadOnly(reason: string | null): void
   /** Detects and repairs parent cycles and orphans (normally automatic after merges). */
   repair(): TreeRepair[]
+
+  // --- Live text (ADR 0016 item 17) ---------------------------------------------------------
+  /**
+   * The `content` of a text node as normalized runs with flat span attributes (a string is one
+   * run, empty text none); null for a node without text content (or a binding).
+   */
+  textRuns(id: string): TextRun[] | null
+  /**
+   * Applies character edits to a node's text content as one op group (validated like `apply`;
+   * `with` ops join it). On live text the edits land as character inserts, deletes and format
+   * changes, so concurrent edits of the same text by others merge with them.
+   */
+  editText(id: string, edits: readonly TextEdit[], options: TextEditOptions): ApplyResult
+  /** Opens an inline edit of node `id` by `origin` (see {@link TextEditHandle}). */
+  beginTextEdit(id: string, origin: LocalOrigin): TextEditHandle
+  /**
+   * An opaque position at `offset` of node `id`'s text that follows edits (for presence:
+   * remote carets and selections). `assoc` < 0 sticks to the character before. Null when the
+   * node has no text content.
+   */
+  encodeTextPosition(id: string, offset: number, assoc?: number): string | null
+  /** The current offset of a position from {@link encodeTextPosition}, or null when lost. */
+  resolveTextPosition(id: string, position: string): number | null
+  /** Subscribes to changes of text layers' characters (any origin). */
+  onTextChange(listener: (event: TextChangeEvent) => void): () => void
+  /**
+   * Runs `listener` before the store starts any change (an op group, undo, redo, load, repair,
+   * a binary update), so a live editor writes its batched local edits first. Not re-entered.
+   */
+  onBeforeChange(listener: () => void): () => void
 
   // --- History ----------------------------------------------------------------------------
   undo(origin: LocalOrigin): UndoResult
@@ -266,6 +337,11 @@ export interface DocStoreOptions {
   jitter?: number
   /** Repair cycles/orphans automatically after remote updates and undo/redo. Default true. */
   autoRepair?: boolean
+  /**
+   * Hold text layers' content as live collaborative text (default true). False keeps it a
+   * plain value, as clients before live text did (tests of mixed rooms).
+   */
+  liveText?: boolean
 }
 
 /** Thrown by {@link DocStore.loadDocument} for invalid documents. */

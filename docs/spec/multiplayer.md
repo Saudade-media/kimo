@@ -906,6 +906,89 @@ Dry runs and groups that only set or clear `placeholder` are exempt.
 The built-in agent's `ToolHost.turn("start" | "end", turnId)` (desktop: host RPC `agentTurn`)
 stamps claims with the turn and releases them at the end, before the placeholder clear.
 
+### 15.12 Live collaborative text
+
+ADR 0016 item 17. Two people typing in one text layer merge character by character, formatting
+included; nobody's typing is lost.
+
+**CRDT shape.** A text node's (`type: "text"`) `content` is a `Y.Text` in the node's map
+(`packages/editor-state/src/yjs-store.ts`, the only module that imports Yjs). Each character
+carries its span's attributes as Yjs formatting under flat keys: `style.<key>` for every member
+of the span's `style`, `href` and `fill` for the span's own fields. Every value is the canonical
+JSON of the span value (object keys sorted), so equal values are equal strings and Yjs merges
+runs. Concurrent formats of different keys on overlapping ranges both apply.
+
+**Reads are unchanged.** The store's plain mirror (and so `getNode`, `toDocument`, `serialize`,
+exporters, MCP reads and validation) sees the content exactly as before: a string when the text
+has one run without attributes (or is empty), else spans `{text, style?, href?, fill?}` with
+adjacent equal runs merged (`contentOf` in `live-text.ts`). The `.kimo` format does not change.
+Only content that is exactly that canonical form of its own runs is held as `Y.Text`
+(`liveRepresentable`); any other shape (a single bare span, adjacent equal spans, an empty span,
+a binding `{$ref}`) stays a plain value with its exact shape and last-writer-wins, as before.
+Node fields other than `content` (`style`, `fill`) stay last-writer-wins map entries.
+
+**Writes.** `DocStore.editText(id, edits, {origin, label?, with?})` applies character edits
+(`insert {at, text, attrs?}`, `delete {at, length}`, `format {at, length, attrs}` with `null`
+removing a key; UTF-16 offsets, applied in order) as one validated op group; `with` ops (the
+node's `style` / `fill`, the `text/runs` feature) join it. An `update` op that sets a live
+text's `content` (agents, MCP, the Text section field, a file reload) is applied as the minimal
+diff of the current runs: one replaced region (common prefix and suffix kept) plus format
+changes of the kept characters (`diffTextRuns`), so concurrent typing elsewhere in the text
+survives. Agents still claim the node first (§15.11, `AREA_BUSY`).
+
+**Upgrade.** `loadDocument` and node inserts create `Y.Text` for canonical text content, so
+documents upgrade on load. Content written as a plain value by an older client (a room snapshot
+made before live text) becomes a `Y.Text` on its first change ("first touch"), starting from the
+plain value and then applying the change. Two replicas converting the same plain content at once
+each set their own `Y.Text`; the map key keeps one, so no text is doubled, and the replica whose
+text lost replays what it changed since the conversion onto the winner as one replaced region
+(mapped around the winner's own change), so no typing is lost. `DocStoreOptions.liveText: false`
+keeps content plain (tests of mixed rooms).
+
+**Events.** `onTextChange({id, delta, origin, cause})` reports each transaction's character
+changes of a text node (`delta`: retain / insert / delete in the text before the change; `null`
+when the content was replaced as a whole), before the `StoreChange`. `onBeforeChange(listener)`
+runs before the store starts any change (an op group, undo, redo, load, repair, a binary update;
+not re-entered), so a live editor writes its batched local edits first and every remote change
+it then receives is relative to a text that already holds them.
+
+**Editor** (`apps/web/src/canvas/rich-text/`). Editing a text layer of the document (a real node
+the M3 router passes through unchanged) is live (`live.ts`, `RichTextSession.attach`):
+
+- Typing and deleting reach the document at most 50 ms after the keystroke (one op group, so one
+  network update, per batch); style changes, line breaks, pastes and panel range edits go at
+  once. Each write is the session's runs through the same canonical form as before
+  (`toNodePatch`), diffed into character edits with the caret placing an insertion among
+  repeated characters, plus the node's own `style` / `fill`.
+- A change by anyone else (a person, an agent, the panel's paragraph edits) re-reads the runs and
+  re-renders the contenteditable. The DOM selection is read first; the caret sticks to the
+  character before it (text someone types at the same place lands after the caret), and a range
+  keeps text inserted at its edges outside. A content replaced as a whole keeps the offsets
+  (clamped).
+- IME: at `compositionstart` pending edits are written and remote changes queue; at
+  `compositionend` the queued changes are applied, the composed text's place is moved through
+  them, and the composed text is typed there.
+- Undo: `DocStore.beginTextEdit(id, origin)` opens the edit. Inside the editor ⌘Z / ⇧⌘Z walk the
+  person's own steps (a typing burst, a deletion burst, a paste, a line break, a style change;
+  a per-edit undo manager tracking only that origin), never other people's edits. Every change
+  of the origin while the edit is open is one undo step on the origin's stack, so after editing
+  ends ⌘Z undoes the whole edit ("Edit text"), the deletion of an emptied text included.
+- Not live (commit when editing ends, as before): a new text (no node yet), note and prompt
+  bodies, text the router rewrites (instance content becomes overrides), bound content. Short
+  fields (layer names, component text props, the Text section content field, variable values)
+  keep committing on Enter; a whole-content write still merges as a diff.
+
+**Presence.** `PresenceState.text = {node, anchor, focus}` while a person edits a text layer
+live: `anchor` and `focus` are opaque positions from `DocStore.encodeTextPosition(id, offset,
+assoc?)` (a base64 Yjs relative position, `r…`, or a plain offset `o<n>` for content that is not
+live text yet) that follow edits; `resolveTextPosition(id, position)` gives the current offset,
+or null. The receiver drops a `text` member whose `node` exceeds 64 characters or whose
+positions exceed 256. `PersonView.text` and `AgentView.text` (agents connected with their own
+link) carry it; `remoteTextCarets(view, store, nodeId)` and `useRemoteTextCarets(model, key,
+store, nodeId)` (`apps/web/src/multiplayer/text-carets.ts`) resolve them to
+`{key, kind, peer, label, color, idle, anchor, focus}` offsets for one text node, updated as the
+text changes. The caret and selection visuals follow their own design pass.
+
 ## 16. Web integration
 
 ### 16.1 Share service (headless)
@@ -1399,6 +1482,8 @@ export interface PresenceState {
   claims?: readonly ClaimRecord[]
   /** Page the collaborator is looking at. */
   page?: string
+  /** Caret and selection in the text layer being edited live (§15.12). */
+  text?: { node: string; anchor: string; focus: string }
 }
 export interface Awareness {
   /** Relay-assigned peer id of this replica (0 before the first welcome). */

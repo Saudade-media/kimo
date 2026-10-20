@@ -217,6 +217,17 @@ function parsePresence(json: string, origin: MpOrigin): PresenceState | null {
   if (claims.length) state.claims = claims
   if (isString(value.page)) state.page = value.page
   if (value.owner === true) state.owner = true
+  const text = value.text as Record<string, unknown> | null | undefined
+  const short = (v: unknown, max: number): v is string =>
+    isString(v) && v.length > 0 && v.length <= max
+  if (
+    typeof text === "object" &&
+    text !== null &&
+    short(text.node, 64) &&
+    short(text.anchor, MAX_TEXT_POSITION) &&
+    short(text.focus, MAX_TEXT_POSITION)
+  )
+    state.text = { node: text.node, anchor: text.anchor, focus: text.focus }
   const viewport = value.viewport as Record<string, unknown> | null | undefined
   if (
     typeof viewport === "object" &&
@@ -235,6 +246,9 @@ function parsePresence(json: string, origin: MpOrigin): PresenceState | null {
     }
   return state
 }
+
+/** Longest encoded text position accepted (a Yjs relative position is a few dozen bytes). */
+const MAX_TEXT_POSITION = 256
 
 /** Most claim records and ids per record accepted from one peer. */
 const MAX_CLAIM_RECORDS = 64

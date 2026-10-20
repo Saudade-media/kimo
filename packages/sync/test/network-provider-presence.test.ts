@@ -38,6 +38,7 @@ describe("network provider: presence", () => {
       cursor: { x: 1, y: 2 },
       selection: ["Node000001"],
       page: "Page000001",
+      text: { node: "Node000001", anchor: "rAQID", focus: "o3" },
     } as Omit<PresenceState, "origin">)
     const peer = pa.peer as number
     await waitFor(() => pb.awareness.getStates().has(peer))
@@ -47,6 +48,7 @@ describe("network provider: presence", () => {
       cursor: { x: 1, y: 2 },
       selection: ["Node000001"],
       page: "Page000001",
+      text: { node: "Node000001", anchor: "rAQID", focus: "o3" },
     })
     expect(pa.awareness.getLocalState()?.origin).toBe("agent:bot")
     const frames = relay.allSockets.flatMap((s) => s.sent.filter((m) => m.type === "awareness"))

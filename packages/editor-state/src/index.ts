@@ -47,6 +47,23 @@ export {
   releaseClaims,
 } from "./claims"
 export { generateId, isNodeId } from "./ids"
+export {
+  applyTextEdits,
+  changedRegion,
+  contentOf,
+  diffTextRuns,
+  liveRepresentable,
+  normalizeTextRuns,
+  sameTextAttrs,
+  type TextAttrs,
+  type TextDelta,
+  type TextEdit,
+  TextEditError,
+  type TextRun,
+  textOfRuns,
+  textRunsOf,
+  transformOffset,
+} from "./live-text"
 export type {
   BatchOp,
   DeleteOp,

@@ -52,7 +52,16 @@ async function measureLoader(ctx: E2EContext, surface: string, dark: boolean) {
     opacity: "1",
   })
   box("Center E3aNK7", g("center"), { dir: "column", align: "center", gap: 16 })
-  box("Mark z5TGCg", g("mark"), { w: 64, h: 64 })
+  // The mark turns and pulses (scale) from the first frame, so its bounding box is the rotated
+  // one: read its size from layout, and its position from its center (the transform origin).
+  const markSize = await page.evaluate((sel) => {
+    const cs = getComputedStyle(document.querySelector(sel) as Element)
+    return { w: parseFloat(cs.width), h: parseFloat(cs.height) }
+  }, LOADER.mark)
+  check("Mark z5TGCg", "w", markSize.w, 64)
+  check("Mark z5TGCg", "h", markSize.h, 64)
+  const mark = g("mark")
+  const markTop = mark.y + mark.h / 2 - 32
   box("Status VnVK0", g("status"), {
     fs: 11,
     h: 11 * 1.45,
@@ -66,8 +75,8 @@ async function measureLoader(ctx: E2EContext, surface: string, dark: boolean) {
   const centerH = 64 + 16 + 11 * 1.45
   check("Center", "h", c.h, centerH)
   check("Center", "y (centred)", c.y, (vw.h - centerH) / 2)
-  check("Mark", "x (centred)", g("mark").x, (vw.w - 64) / 2)
-  check("Status", "y = mark + 64 + 16", g("status").y - g("mark").y, 80)
+  check("Mark", "x (centred)", mark.x + mark.w / 2 - 32, (vw.w - 64) / 2)
+  check("Status", "y = mark + 64 + 16", g("status").y - markTop, 80)
   // The mark's fill is currentColor = $text-primary.
   const fill = await page.evaluate(
     () =>

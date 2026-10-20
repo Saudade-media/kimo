@@ -15,10 +15,10 @@
   "dependencies": {
     "@kimo/core-schema": "workspace:*",
     "@kimo/design-tokens": "workspace:*",
-    "marked": "^18.0.0"
+    "marked": "^18.1.1"
   },
   "devDependencies": {
-    "playwright": "^1.63.0",
+    "playwright": "^1.64.1",
     "tsx": "^4.23.15"
   }
 }

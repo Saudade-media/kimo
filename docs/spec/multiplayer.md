@@ -670,8 +670,10 @@ Invalid values make `main.ts` print the variable and exit 1.
   (`docker build -f apps/server/Dockerfile .`); base `oven/bun:1.3-alpine`; copies the workspace
   manifests and `packages/sync`, `apps/server`; `bun install --production --frozen-lockfile`;
   `ENV HOST=0.0.0.0 KIMO_DATA_DIR=/data`; `VOLUME /data`; `EXPOSE 8787`; runs as the `bun` user;
-  `HEALTHCHECK` on `/healthz`; `CMD ["bun", "apps/server/src/main.ts"]`.
-- `apps/server/deploy/fly.toml`: one shared-cpu-1x 256 MB machine, a volume mounted at `/data`,
+  `HEALTHCHECK` on `/healthz`; `CMD ["bun", "apps/server/src/main.ts"]`. CI
+  (`.github/workflows/relay-image.yml`) publishes it as `ghcr.io/saudade-media/kimo-relay`
+  (amd64 and arm64; `latest` follows `main`, version tags publish semver tags).
+- `apps/server/deploy/fly.toml`: deploys that image (`[build] image`), one shared-cpu-1x 256 MB machine, a volume mounted at `/data`,
   `auto_stop_machines = "off"` (WebSockets), `http_service` with `force_https = true`, health
   check `/healthz`.
 - Guides (`docs/guide/relay/`): self-host (process, Docker, Caddy TLS, env table, backups of

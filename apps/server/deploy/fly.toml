@@ -1,12 +1,17 @@
-# Example Fly.io config for a Kimo relay you run yourself. Edit `app` first (names are global).
-# Deploy from the repository root:
-#   fly launch --copy-config --config apps/server/deploy/fly.toml --dockerfile apps/server/Dockerfile --no-deploy
-#   fly volumes create kimo_data --size 1 --region iad
-#   fly secrets set KIMO_CREATE_SECRET="$(openssl rand -hex 24)"
-#   fly deploy --config apps/server/deploy/fly.toml --dockerfile apps/server/Dockerfile .
-# Keep exactly one machine: the relay stores rooms in a local SQLite file on the volume.
+# Fly.io config for a Kimo relay you run yourself. It deploys the published relay image
+# (ghcr.io/saudade-media/kimo-relay, built from apps/server/Dockerfile by CI). Kimo's relay setup
+# wizard runs these same steps with flyctl; by hand, from the repository root:
+#   fly launch --copy-config -c apps/server/deploy/fly.toml --no-deploy
+#   fly volumes create kimo_data --size 1
+#   fly secrets set KIMO_CREATE_SECRET="$(openssl rand -hex 32)"
+#   fly deploy -c apps/server/deploy/fly.toml
+# To build from source instead, delete [build] and add `--dockerfile apps/server/Dockerfile .` to
+# fly deploy. Keep exactly one machine: the relay stores rooms in a local SQLite file on the volume.
 app = "my-kimo-relay"
 primary_region = "iad"
+
+[build]
+  image = "ghcr.io/saudade-media/kimo-relay:latest"
 
 [env]
   HOST = "0.0.0.0"

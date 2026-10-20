@@ -14,6 +14,34 @@ CRDT code. The contract is [docs/spec/multiplayer.md](../../docs/spec/multiplaye
 **You host it.** Kimo ships no default relay and no project-run service. The relay URL is always
 the one you (or your team) provide: paste `https://<your-relay>` into Kimo's Share dialog.
 
+## The quickest way: Set up a relay in Kimo
+
+Share (when no relay is set yet) and Settings › Multiplayer both have **Set up a relay**, a wizard
+that does the steps below for you and then tests the relay:
+
+- **This computer** (desktop app): Kimo runs this relay with your installed Bun (it offers to run
+  the official bun.sh installer when Bun is missing), on port 8787 or the next free one. People on
+  your network use the `ws://<your-lan-address>:<port>` it shows; for the internet it starts your
+  installed `cloudflared`, either a quick tunnel (a `trycloudflare.com` address that changes on
+  every restart) or a named tunnel on your own domain. The relay stops when Kimo quits.
+- **Docker or your own server**: a ready `docker run` command for the published image below.
+- **Fly.io**: one click when `flyctl` is installed (log in, app name, Deploy with a live log),
+  otherwise the same commands to copy.
+- **Railway**: opens the template and gives you the variables to paste.
+- **I already have a relay**: its URL and, when it asks for one, its create secret.
+
+Kimo generates the create secret (32 random bytes) and puts it into the command, the Fly secrets
+or the Railway variables, and keeps it in the OS keychain (desktop) or browser storage (web),
+never in a link or a `.kimo` file. On web it adds the page's origin to `KIMO_ALLOWED_ORIGINS`.
+The test checks that the relay answers, speaks `kimo-mp/1` and accepts the secret
+(`POST /create-secret/check`), then saves the URL to Settings.
+
+## The image
+
+CI publishes the relay as `ghcr.io/saudade-media/kimo-relay` (linux/amd64 and linux/arm64): `latest`
+follows `main`, and version tags publish `1.2.3` and `1.2`. It is built from `apps/server/Dockerfile`
+by `.github/workflows/relay-image.yml`.
+
 ## Run it
 
 ```sh
@@ -102,16 +130,24 @@ than modified.
 
 ## Docker
 
-Build from the repository root (the build needs the workspace):
+Run the published image (Kimo's wizard fills in the secret and origins for you):
+
+```sh
+docker run -d --name kimo-relay --restart unless-stopped \
+  -p 8787:8787 -v kimo-relay:/data \
+  -e KIMO_CREATE_SECRET="$(openssl rand -hex 32)" \
+  -e KIMO_ALLOWED_ORIGINS="https://app.example.com" \
+  ghcr.io/saudade-media/kimo-relay
+curl http://127.0.0.1:8787/healthz     # {"ok":true}
+```
+
+Leave out `KIMO_ALLOWED_ORIGINS` when only the desktop app connects (it sends no browser origin).
+Update with `docker pull ghcr.io/saudade-media/kimo-relay` and recreate the container.
+
+To build the image yourself, from the repository root (the build needs the workspace):
 
 ```sh
 docker build -f apps/server/Dockerfile -t kimo-relay .
-docker run -d --name kimo-relay -p 8787:8787 \
-  -v kimo-relay-data:/data \
-  -e KIMO_CREATE_SECRET="$(openssl rand -hex 24)" \
-  -e KIMO_ALLOWED_ORIGINS="https://app.example.com" \
-  kimo-relay
-curl http://127.0.0.1:8787/healthz     # {"ok":true}
 ```
 
 The image is `oven/bun` (Alpine), binds `0.0.0.0`, stores data in the `/data` volume and runs as
@@ -120,38 +156,42 @@ the `bun` user (it starts as root only to fix the ownership of a mounted volume)
 
 ## Deploy on Fly.io
 
-You need `flyctl` and your own Fly account. Run these from the repository root; edit `app` in
-`apps/server/deploy/fly.toml` to a unique name first.
+You need `flyctl` and your own Fly account. With `flyctl` installed, the desktop wizard does all of
+this for you (Log in, app name, Deploy). By hand, from the repository root; edit `app` in
+`apps/server/deploy/fly.toml` to a unique name first:
 
 ```sh
-fly launch --copy-config --config apps/server/deploy/fly.toml \
-  --dockerfile apps/server/Dockerfile --no-deploy
-fly volumes create kimo_data --size 1 --region iad
-fly secrets set KIMO_CREATE_SECRET="$(openssl rand -hex 24)" \
+fly launch --copy-config -c apps/server/deploy/fly.toml --no-deploy
+fly volumes create kimo_data --size 1
+fly secrets set KIMO_CREATE_SECRET="$(openssl rand -hex 32)" \
   KIMO_ALLOWED_ORIGINS="https://app.example.com"
-fly deploy --config apps/server/deploy/fly.toml --dockerfile apps/server/Dockerfile .
+fly deploy -c apps/server/deploy/fly.toml
 fly status && curl https://<your-app>.fly.dev/healthz
 ```
 
-The config keeps one `shared-cpu-1x` 256 MB machine with the volume at `/data`,
-`auto_stop_machines = "off"` (WebSocket connections are long-lived), `force_https`, and a health
-check on `/healthz`. Do not scale to several machines: each one would have its own SQLite file.
-Cost is whatever Fly charges for one small machine plus a 1 GB volume (check their pricing page);
-raise the volume with `fly volumes extend` when rooms grow.
+The config deploys the published `ghcr.io/saudade-media/kimo-relay` image (delete its `[build]`
+section and pass `--dockerfile apps/server/Dockerfile .` to build from source). It keeps one
+`shared-cpu-1x` 256 MB machine with the volume at `/data`, `auto_stop_machines = "off"`
+(WebSocket connections are long-lived), `force_https`, and a health check on `/healthz`. Do not
+scale to several machines: each one would have its own SQLite file. Cost is whatever Fly charges
+for one small machine plus a 1 GB volume (check their pricing page); raise the volume with
+`fly volumes extend` when rooms grow.
 
-Then paste `https://<your-app>.fly.dev` into Kimo's Share dialog.
+Then paste `https://<your-app>.fly.dev` into Kimo's Share dialog, or let the wizard test and save it.
 
 ## Deploy on Railway
 
-You need your own Railway account.
+You need your own Railway account. The wizard's **Deploy on Railway** opens the Kimo template and
+shows the variables to paste. By hand:
 
-1. New project, then "Deploy from GitHub repo" and pick your fork or clone of Kimo.
-2. In the service settings, keep the root directory at the repository root and set the variable
+1. New project, then "Deploy a Docker image" with `ghcr.io/saudade-media/kimo-relay`, or "Deploy
+   from GitHub repo" with your fork of Kimo and the variable
    `RAILWAY_DOCKERFILE_PATH=apps/server/Dockerfile` so Railway builds the relay image.
-3. Add a volume to the service and mount it at `/data`.
-4. Set variables: `KIMO_CREATE_SECRET` (a long random string), `KIMO_ALLOWED_ORIGINS` (your web
-   origin), `KIMO_TRUST_PROXY=1`. Railway provides `PORT`; the relay reads it.
-5. Under Settings, set the healthcheck path to `/healthz`, keep one replica, and generate a public
+2. Add a volume to the service and mount it at `/data`.
+3. Set variables: `KIMO_CREATE_SECRET` (a long random string), `KIMO_ALLOWED_ORIGINS` (your web
+   origin, only if Kimo runs in a browser), `KIMO_TRUST_PROXY=1`. Railway provides `PORT`; the
+   relay reads it.
+4. Under Settings, set the healthcheck path to `/healthz`, keep one replica, and generate a public
    domain (Networking).
 
 Cost follows Railway's usage-based pricing for one small service and a volume. Then paste

@@ -2,20 +2,24 @@
 
 ## Supported versions
 
+Kimo has not published a release yet. Until it does, security fixes land on `main`.
+
 | Version | Supported |
 | --- | --- |
-| 1.0.x | Yes |
-| < 1.0 | No (development milestones, never released) |
+| `main` | Yes |
+| Latest release (once there is one) | Yes |
+| Older releases, 0.x milestones | No |
 
-Security fixes ship as 1.0.x patch releases. Desktop apps receive them through the built-in
-updater.
+After the first release, security fixes ship as patch releases of the latest version, and the
+desktop app receives them through its built-in updater.
 
 ## Reporting a vulnerability
 
 Please **do not open a public issue** for security problems.
 
-Report it through GitHub's private vulnerability reporting ("Report a vulnerability" under the
-repository's **Security** tab).
+Report it through GitHub's private vulnerability reporting: open
+[Report a vulnerability](https://github.com/Saudade-media/kimo/security/advisories/new) (also
+under the repository's **Security** tab). Only the maintainers see the report.
 
 Include what is affected (package, app, version or commit), how to reproduce it, and the impact
 you expect. We aim to acknowledge reports within 3 working days and to agree on a fix and

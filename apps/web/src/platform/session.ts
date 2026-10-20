@@ -524,7 +524,12 @@ export class FileDocumentSession implements DocumentSession {
     this.refreshConflicts()
     this.unsubs.push(
       this.store.onChange((c) => {
-        if (c.header || this.conflictCounts) this.refreshConflicts()
+        if (!c.header && !this.conflictCounts) return
+        const before = this.conflictKey()
+        this.refreshConflicts()
+        // An undo or a remote edit can bring conflicts back (or clear them) with nothing else
+        // to re-render: the banner must follow without waiting for an unrelated emit.
+        if (this.conflictKey() !== before) this.emit()
       }),
     )
     if (platform.capabilities.git) {
@@ -645,6 +650,12 @@ export class FileDocumentSession implements DocumentSession {
       this.gitBannerHidden = false
       if (reconcile) void this.reconcile()
     }
+  }
+
+  /** What the banners read from the conflict state, to tell whether a refresh changed it. */
+  private conflictKey(): string {
+    const c = this.conflictCounts
+    return `${c ? `${c.open}/${c.total}` : "-"} ${this.mergeReady}`
   }
 
   private refreshConflicts(): void {

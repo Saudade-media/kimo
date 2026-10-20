@@ -360,19 +360,39 @@ export const scenarios: Scenario[] = [
       )
       const toY = hero.y + hero.h / 2 - 3
       const total = toY - glide.from.y
-      const done = glide.samples.find((s) => Math.abs(s.y - toY) <= 0.5)?.t ?? Infinity
-      const mid = glide.samples.reduce((a, b) =>
-        Math.abs(b.t - 300) < Math.abs(a.t - 300) ? b : a,
-      )
-      const midK = (mid.y - glide.from.y) / total
+      // Times count from the frame the glide started in (the last one before the cursor moves):
+      // on a busy runner that frame can come well after setAgentCanvas returned.
+      const moved = glide.samples.findIndex((s) => Math.abs(s.y - glide.from.y) > 0.001)
+      const start = moved > 0 ? (glide.samples[moved - 1]?.t ?? 0) : 0
+      for (const s of glide.samples) s.t -= start
+      // Ended: at rest on its final position (the eased tail is within 0.5 px of it some 40 ms
+      // early), and that position is the Hero center.
+      const end = glide.samples[glide.samples.length - 1]?.y ?? Number.NaN
+      const done =
+        Math.abs(end - toY) <= 0.5
+          ? (glide.samples.find((s) => Math.abs(s.y - end) <= 0.05)?.t ?? Infinity)
+          : Infinity
+      // A sample is up to one frame behind the glide's clock, and a loaded runner draws at
+      // 13 fps: every bound below widens by the longest frame seen (about 17 ms at 60 fps).
+      let gap = 0
+      for (let i = 1; i < glide.samples.length; i++)
+        gap = Math.max(gap, (glide.samples[i]?.t ?? 0) - (glide.samples[i - 1]?.t ?? 0))
+      // When the cursor crosses halfway (linear between the samples around it).
+      const k = (y: number) => (y - glide.from.y) / total
+      const after = glide.samples.findIndex((s) => k(s.y) >= 0.5)
+      const a = glide.samples[after - 1]
+      const b = glide.samples[after]
+      const half =
+        a && b ? a.t + ((0.5 - k(a.y)) / (k(b.y) - k(a.y) || 1)) * (b.t - a.t) : Number.NaN
       log(
-        `  glide: ${glide.samples.length} frames, reached at ${done.toFixed(0)} ms, at ${mid.t.toFixed(0)} ms k=${midK.toFixed(3)}`,
+        `  glide: ${glide.samples.length} frames (longest ${gap.toFixed(0)} ms), reached at ${done.toFixed(0)} ms, halfway at ${half.toFixed(0)} ms`,
       )
-      expect(done >= 560 && done <= 700, `glide ends ≈ 600 ms (${done.toFixed(0)} ms)`)
-      expect(midK > 0.3 && midK < 0.7, `halfway ≈ 300 ms (k ${midK.toFixed(3)})`)
-      const early = glide.samples.find((s) => s.t >= 100)
+      expect(done >= 560 && done <= 700 + gap, `glide ends ≈ 600 ms (${done.toFixed(0)} ms)`)
+      expect(Math.abs(half - 300) <= 60 + gap, `halfway ≈ 300 ms (${half.toFixed(0)} ms)`)
+      // Soft start: slower than linear early on (a late sample only makes it slower).
+      const early = glide.samples.find((s) => s.t >= 100 && s.t < 300)
       expect(
-        !!early && (early.y - glide.from.y) / total < 0.15,
+        !early || k(early.y) < early.t / 600,
         `soft start (ease-in-out) ${JSON.stringify(early)}`,
       )
       const m3 = await measure(page)

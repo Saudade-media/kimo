@@ -41,6 +41,8 @@ async function make(cache: boolean | "always") {
   const r = new CanvasKitRenderer()
   await r.init({ offlineFonts: true })
   r.rasterCache = cache
+  // Every root rasterizes in its first frame, however slow the machine (no per-frame budget).
+  r.rasterFrameMs = Number.POSITIVE_INFINITY
   const scene = sceneOf(doc())
   r.setDocument(scene)
   r.setLayout(simpleLayout(scene, r.textMeasurer()))

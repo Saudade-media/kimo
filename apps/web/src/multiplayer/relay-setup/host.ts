@@ -5,6 +5,7 @@
  * (apps/desktop/src-tauri/src/relay_host.rs): it runs only those programs, with arguments it
  * checks, and stops every one when Kimo quits. Web has none of this (`null`).
  */
+import { TAURI_RELAY_EVENTS } from "@kimo/platform"
 
 export type RelayTool = "bun" | "cloudflared" | "flyctl"
 
@@ -68,24 +69,8 @@ export interface RelayHostApi {
   attach(info: RelayProcInfo, onLine: (line: ProcLine) => void): RelayProc
 }
 
-export const RELAY_OUTPUT_EVENT = "kimo://relay-output"
-export const RELAY_EXIT_EVENT = "kimo://relay-exit"
-
-/** The Rust commands (also listed in command_list_relay.rs). */
-export const TAURI_RELAY_COMMANDS = [
-  "kimo_relay_secret_get",
-  "kimo_relay_secret_set",
-  "kimo_relay_secret_delete",
-  "kimo_relay_find_tool",
-  "kimo_relay_port_free",
-  "kimo_relay_lan_address",
-  "kimo_relay_fly_region",
-  "kimo_relay_cloudflared_logged_in",
-  "kimo_relay_write_fly_config",
-  "kimo_relay_spawn",
-  "kimo_relay_kill",
-  "kimo_relay_running",
-] as const
+export const RELAY_OUTPUT_EVENT = TAURI_RELAY_EVENTS[0]
+export const RELAY_EXIT_EVENT = TAURI_RELAY_EVENTS[1]
 
 export interface Bridge {
   invoke(cmd: string, args?: Record<string, unknown>): Promise<unknown>

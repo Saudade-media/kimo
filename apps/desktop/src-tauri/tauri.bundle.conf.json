@@ -1,6 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
-    "externalBin": ["binaries/kimo-mcp"]
+    "externalBin": ["binaries/kimo-mcp"],
+    "resources": {
+      "resources/relay/kimo-relay.js": "relay/kimo-relay.js"
+    }
   }
 }

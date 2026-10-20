@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "relay-setup",
+  "description": "Board 42 relay setup, from the Share popover (editor windows) and Settings › Multiplayer: the create secret in the keychain, finding Bun, cloudflared and flyctl, the port and LAN address, and running the relay, the bun.sh installer, cloudflared and flyctl with arguments relay_host.rs checks. The hidden document host gets none of it.",
+  "windows": ["main", "editor-*", "settings"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-kimo-relay-secret-get",
+    "allow-kimo-relay-secret-set",
+    "allow-kimo-relay-secret-delete",
+    "allow-kimo-relay-find-tool",
+    "allow-kimo-relay-port-free",
+    "allow-kimo-relay-lan-address",
+    "allow-kimo-relay-fly-region",
+    "allow-kimo-relay-cloudflared-logged-in",
+    "allow-kimo-relay-write-fly-config",
+    "allow-kimo-relay-spawn",
+    "allow-kimo-relay-kill",
+    "allow-kimo-relay-running"
+  ]
+}

@@ -34,6 +34,7 @@ export {
 } from "./links"
 export * from "./mcp"
 export * from "./mcp-memory"
+export * from "./relay-host"
 export * from "./secrets"
 export {
   type Appearance,

@@ -211,7 +211,7 @@ fn valid_command_name(s: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
 }
 
-fn valid_env_name(s: &str) -> bool {
+pub(crate) fn valid_env_name(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 128
         && s.bytes()
@@ -244,7 +244,7 @@ pub fn blocked_env(name: &str) -> bool {
         )
 }
 
-fn expand(p: &str, home: &Path) -> PathBuf {
+pub(crate) fn expand(p: &str, home: &Path) -> PathBuf {
     if p == "~" {
         home.to_path_buf()
     } else if let Some(r) = p.strip_prefix("~/") {
@@ -254,7 +254,7 @@ fn expand(p: &str, home: &Path) -> PathBuf {
     }
 }
 
-fn is_executable(p: &Path) -> bool {
+pub(crate) fn is_executable(p: &Path) -> bool {
     let Ok(m) = std::fs::metadata(p) else {
         return false;
     };
@@ -936,14 +936,14 @@ fn pump(mut r: Box<dyn Read + Send>, stream: &str, id: &str, sink: &dyn EventSin
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum Sig {
+pub(crate) enum Sig {
     Int,
     Term,
     Kill,
 }
 
 #[cfg(unix)]
-fn signal_group(pid: u32, sig: Sig) {
+pub(crate) fn signal_group(pid: u32, sig: Sig) {
     let s = match sig {
         Sig::Int => libc::SIGINT,
         Sig::Term => libc::SIGTERM,
@@ -958,7 +958,7 @@ fn signal_group(pid: u32, sig: Sig) {
 }
 
 #[cfg(windows)]
-fn signal_group(pid: u32, sig: Sig) {
+pub(crate) fn signal_group(pid: u32, sig: Sig) {
     let mut c = Command::new("taskkill");
     c.args(["/PID", &pid.to_string(), "/T"]);
     if sig == Sig::Kill {
@@ -972,7 +972,7 @@ fn signal_group(pid: u32, sig: Sig) {
 }
 
 #[cfg(not(any(unix, windows)))]
-fn signal_group(_pid: u32, _sig: Sig) {}
+pub(crate) fn signal_group(_pid: u32, _sig: Sig) {}
 
 fn exit_signal(s: &std::process::ExitStatus) -> Option<String> {
     #[cfg(unix)]
@@ -999,7 +999,7 @@ fn exit_signal(s: &std::process::ExitStatus) -> Option<String> {
 
 /// The login shell's environment (macOS/Linux GUI apps don't inherit the user's shell setup).
 /// Values stay in memory: they feed spawned CLIs and `has_env`, never IPC.
-fn read_login_env() -> Option<HashMap<String, String>> {
+pub(crate) fn read_login_env() -> Option<HashMap<String, String>> {
     if cfg!(windows) {
         return None;
     }

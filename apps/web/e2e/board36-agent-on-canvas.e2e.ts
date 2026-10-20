@@ -349,7 +349,8 @@ export const scenarios: Scenario[] = [
             cursors: [{ origin, nodeId: heroId, nodeIds: [heroId], text: "", state: "working" }],
             reducedMotion: false,
           })
-          while (performance.now() - t0 < 1000) {
+          // Past the 600 ms glide with room for a late first frame on a loaded runner.
+          while (performance.now() - t0 < 1600) {
             await new Promise((r) => requestAnimationFrame(r))
             samples.push({ t: performance.now() - t0, y: pos().y })
           }

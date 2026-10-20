@@ -199,6 +199,7 @@ export const SETTING_LABELS: Record<SettingKey, string> = {
   "multiplayer.displayName": "Display name",
   "multiplayer.showCursors": "Show other people's cursors",
   "multiplayer.fetchAssets": "Fetch images and fonts",
+  "multiplayer.relaySetup": "Relay setup",
   "fonts.google": "Google Fonts",
   "fonts.extraFolders": "Extra font folders",
   "fonts.embedInKimoz": "Embed fonts in .kimoz packages",

@@ -46,6 +46,7 @@ export {
   nudgeSteps,
   RECENT_MODELS_MAX,
   type RecentModel,
+  type RelaySetupSetting,
   SETTING_CHOICES,
   SETTING_KEYS,
   SETTINGS_DEFAULTS,

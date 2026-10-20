@@ -29,6 +29,16 @@ export interface RecentModel {
 export const RECENT_MODELS_MAX = 2
 
 /** Every setting with its value type. */
+/** `multiplayer.relaySetup` (read leniently by the web app's relay setup store). */
+export interface RelaySetupSetting {
+  path?: "local" | "docker" | "fly" | "railway" | "existing" | null
+  secretMode?: "auto" | "custom" | "none"
+  extraOrigins?: string[]
+  local?: { port?: number; reach?: "lan" | "quick" | "named"; hostname?: string | null } | null
+  fly?: { app?: string; region?: string; byKimo?: boolean } | null
+  restartPending?: boolean
+}
+
 export interface SettingsSchema {
   /** Files & autosave › Autosave. */
   "files.autosave": boolean
@@ -68,6 +78,12 @@ export interface SettingsSchema {
   "multiplayer.showCursors": boolean
   /** Multiplayer › Fetch images and fonts of shared files on demand. */
   "multiplayer.fetchAssets": boolean
+  /**
+   * Multiplayer › Set up a relay (board 42 "What Kimo stores"): where the relay runs, the create
+   * secret's mode, extra allowed origins and, for This computer, port, tunnel and hostname. The
+   * secret itself is in the keychain (desktop) or browser storage (web), never here.
+   */
+  "multiplayer.relaySetup": RelaySetupSetting | null
   /** Fonts & privacy › Google Fonts (off while No third-party fetch is on). */
   "fonts.google": boolean
   /** Fonts & privacy › Extra font folders (absolute paths). */
@@ -122,6 +138,7 @@ export const SETTINGS_DEFAULTS: Readonly<Settings> = Object.freeze({
   "multiplayer.displayName": "",
   "multiplayer.showCursors": true,
   "multiplayer.fetchAssets": true,
+  "multiplayer.relaySetup": null,
   "fonts.google": true,
   "fonts.extraFolders": [],
   "fonts.embedInKimoz": true,
@@ -180,6 +197,8 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => v is SettingsSchema[K] } 
   "multiplayer.displayName": (v): v is string => typeof v === "string" && v.length <= 80,
   "multiplayer.showCursors": (v): v is boolean => typeof v === "boolean",
   "multiplayer.fetchAssets": (v): v is boolean => typeof v === "boolean",
+  "multiplayer.relaySetup": (v): v is RelaySetupSetting | null =>
+    v === null || (typeof v === "object" && !Array.isArray(v) && JSON.stringify(v).length <= 8192),
   "fonts.google": (v): v is boolean => typeof v === "boolean",
   "fonts.extraFolders": (v): v is string[] =>
     Array.isArray(v) && v.every((x) => typeof x === "string" && x !== ""),

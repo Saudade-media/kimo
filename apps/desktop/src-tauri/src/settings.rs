@@ -24,6 +24,7 @@ pub fn defaults() -> Map<String, Value> {
         "multiplayer.displayName": "",
         "multiplayer.showCursors": true,
         "multiplayer.fetchAssets": true,
+        "multiplayer.relaySetup": null,
         "fonts.google": true,
         "fonts.extraFolders": [],
         "fonts.embedInKimoz": true,
@@ -81,6 +82,9 @@ pub fn validate(key: &str, v: &Value) -> Option<bool> {
             v.is_null() || v.as_str().is_some_and(|s| !s.is_empty() && s.len() <= 2048)
         }
         "multiplayer.displayName" => v.as_str().is_some_and(|s| s.chars().count() <= 80),
+        "multiplayer.relaySetup" => {
+            v.is_null() || (v.is_object() && v.to_string().len() <= 8192)
+        }
         "fonts.extraFolders" => v
             .as_array()
             .is_some_and(|a| a.iter().all(|x| x.as_str().is_some_and(|s| !s.is_empty()))),

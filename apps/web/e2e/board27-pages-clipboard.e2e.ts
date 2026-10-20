@@ -64,6 +64,21 @@ const selection = (page: Page) => page.evaluate(() => window.__kimo.session.ui.g
 const select = (page: Page, ids: string[]) =>
   page.evaluate((i) => window.__kimo.session.ui.getState().select(i), ids)
 
+/**
+ * Waits for a paste to land (it reads the clipboard asynchronously): it selects what it pasted,
+ * none of which was selected before the shortcut.
+ */
+async function waitForPaste(page: Page, before: string[]) {
+  await page.waitForFunction(
+    (b) => {
+      const s = window.__kimo.session.ui.getState().selection
+      return s.length > 0 && s.every((id) => !b.includes(id))
+    },
+    before,
+    { timeout: 5000 },
+  )
+}
+
 async function focusCanvas(page: Page) {
   await page.locator(".canvas-host").focus()
 }
@@ -440,8 +455,8 @@ export const scenarios: Scenario[] = [
       await settle(page)
       await select(page, ["HeroFrame1"])
       await page.keyboard.press("ControlOrMeta+v")
+      await waitForPaste(page, ["HeroFrame1"])
       await settle(page)
-      await page.waitForTimeout(200)
       const pasted = (await selection(page))[0] as string
       const pn = await node(page, pasted)
       ctx.log("pasted", JSON.stringify(pn))
@@ -460,8 +475,8 @@ export const scenarios: Scenario[] = [
       // ⇧⌘V in place: same parent and x/y as the copied node.
       await select(page, [])
       await page.keyboard.press("ControlOrMeta+Shift+v")
+      await waitForPaste(page, [])
       await settle(page)
-      await page.waitForTimeout(200)
       const inPlace = await node(page, (await selection(page))[0] as string)
       expect(inPlace?.parent === "HeroFrame1" && inPlace.x === 20 && inPlace.y === 24, "in place")
       // ⌘D: +16/+16.

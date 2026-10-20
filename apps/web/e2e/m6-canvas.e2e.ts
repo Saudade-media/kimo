@@ -29,7 +29,7 @@ type W = {
       } | null
     }
   }
-  __m6: { runs: string[]; stops: string[]; paused: string[] }
+  __m6: { runs: string[]; stops: string[]; paused: string[]; props?: Record<string, unknown> }
 }
 
 const LEAD = "agent:kimo.s1.0"
@@ -139,7 +139,7 @@ async function fixture(page: Page) {
     ({ LEAD, A1 }) => {
       const w = window as unknown as W
       w.__m6 = { runs: [], stops: [], paused: [] }
-      w.__kimo.canvas().setAgentCanvas?.({
+      w.__m6.props = {
         liveOrigins: new Set([LEAD, A1]),
         agent: (o: string) =>
           o === LEAD
@@ -163,7 +163,8 @@ async function fixture(page: Page) {
         onRunPrompt: (id: string) => w.__m6.runs.push(id),
         onStopPrompt: (id: string) => w.__m6.stops.push(id),
         reducedMotion: true,
-      })
+      }
+      w.__kimo.canvas().setAgentCanvas?.(w.__m6.props)
     },
     { LEAD, A1 },
   )
@@ -298,6 +299,17 @@ async function cardsAndPlaceholders({ page, url, log }: E2EContext) {
   check(!near(sel, IRIS, 60), `no persona selection outline, got ${sel}`)
 
   // --- Rejected pill (O2Whh) + danger flash ---
+  // The pill shows for 3 s and the flash for 1.2 s after a rejection is first seen, and the
+  // checks above can take longer on a slow runner: report a fresh rejection right before.
+  await page.evaluate(() => {
+    const w = window as unknown as W
+    const props = w.__m6.props as { rejections: { key: string }[] }
+    w.__kimo.canvas().setAgentCanvas?.({
+      ...props,
+      rejections: props.rejections.map((r) => ({ ...r, key: `${r.key}-again` })),
+    })
+  })
+  await settle(page)
   const rej = await measure(page, '[data-testid="rejected-pill"]')
   check(
     rej?.h === 24 && rej?.bg === "rgb(221, 34, 41)",

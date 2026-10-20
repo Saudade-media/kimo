@@ -397,6 +397,8 @@ interface Reloc {
   /** Latest pointer event, replayed by the dwell timer. */
   pointer: { e: PointerEvent; p: Point } | null
   dwellTimer: ReturnType<typeof setTimeout> | null
+  /** The dwell start the pending timer was armed for. */
+  dwellSince: number | null
   /** Containers entered by dwell: kept while the pointer stays inside them. */
   entered: Set<string>
   /** The original parent's children in the order the ops apply to (copies after originals). */
@@ -2987,16 +2989,28 @@ export class CanvasController {
     return found
   }
 
-  /** Re-runs the move step once the dwell time has passed with the pointer at rest. */
+  /**
+   * Re-runs the move step once the dwell time has passed with the pointer at rest. The timer
+   * counts from the current dwell's start: a timer armed for an earlier dwell (the pointer moved
+   * on since) would fire too soon, find the dwell short and wait a whole period more.
+   */
   private armDwell(r: Reloc): void {
-    if (r.dwellTimer !== null) return
-    r.dwellTimer = setTimeout(() => {
-      r.dwellTimer = null
-      const d = this.drag
-      if (d?.kind !== "move" || d.reloc !== r || !r.pointer) return
-      this.pendingPointer = r.pointer
-      this.schedule()
-    }, INTO_DWELL_MS + 20)
+    const since = r.dwell?.since ?? Date.now()
+    if (r.dwellTimer !== null) {
+      if (r.dwellSince === since) return
+      clearTimeout(r.dwellTimer)
+    }
+    r.dwellSince = since
+    r.dwellTimer = setTimeout(
+      () => {
+        r.dwellTimer = null
+        const d = this.drag
+        if (d?.kind !== "move" || d.reloc !== r || !r.pointer) return
+        this.pendingPointer = r.pointer
+        this.schedule()
+      },
+      Math.max(0, since + INTO_DWELL_MS - Date.now()) + 20,
+    )
   }
 
   /** True when `id` is a strict descendant of `ancestor` (null = the root: always). */
@@ -3253,6 +3267,7 @@ export class CanvasController {
       dwell: null,
       pointer: null,
       dwellTimer: null,
+      dwellSince: null,
       entered: new Set(),
       base,
       last: null,

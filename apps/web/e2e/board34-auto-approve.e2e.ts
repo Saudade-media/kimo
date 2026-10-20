@@ -522,7 +522,21 @@ export const scenarios: Scenario[] = [
         [640, 400, "200 % zoom (640 × 400)"],
       ] as const) {
         await page.setViewportSize({ width: w, height: h })
-        await page.waitForTimeout(50)
+        // The prompt re-lays out after the resize reaches the page; a fixed 50 ms was not always
+        // enough on a busy runner. Wait for it to fit, then measure (a timeout still measures,
+        // so a real overflow reports its numbers).
+        await page
+          .waitForFunction(
+            ({ s, w, h }) => {
+              const el = document.querySelector(s)
+              if (!el || window.innerWidth !== w || window.innerHeight !== h) return false
+              const r = el.getBoundingClientRect()
+              return r.left >= 0 && r.top >= 0 && r.right <= w + 0.5 && r.bottom <= h + 0.5
+            },
+            { s: P, w, h },
+            { timeout: 5000 },
+          )
+          .catch(() => {})
         await promptFits(ctx, label)
         if (ctx.shots)
           await page.screenshot({ path: join(ctx.shots, `board34-many-${w}x${h}.png`) })

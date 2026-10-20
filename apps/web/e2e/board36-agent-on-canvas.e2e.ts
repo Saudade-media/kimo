@@ -360,7 +360,18 @@ export const scenarios: Scenario[] = [
       )
       const toY = hero.y + hero.h / 2 - 3
       const total = toY - glide.from.y
-      const done = glide.samples.find((s) => Math.abs(s.y - toY) <= 0.5)?.t ?? Infinity
+      // Times count from the frame the glide started in (the last one before the cursor moves):
+      // on a busy runner that frame can come well after setAgentCanvas returned.
+      const moved = glide.samples.findIndex((s) => Math.abs(s.y - glide.from.y) > 0.001)
+      const start = moved > 0 ? (glide.samples[moved - 1]?.t ?? 0) : 0
+      for (const s of glide.samples) s.t -= start
+      // Ended: at rest on its final position (the eased tail is within 0.5 px of it some 40 ms
+      // early), and that position is the Hero center.
+      const end = glide.samples[glide.samples.length - 1]?.y ?? Number.NaN
+      const done =
+        Math.abs(end - toY) <= 0.5
+          ? (glide.samples.find((s) => Math.abs(s.y - end) <= 0.05)?.t ?? Infinity)
+          : Infinity
       const mid = glide.samples.reduce((a, b) =>
         Math.abs(b.t - 300) < Math.abs(a.t - 300) ? b : a,
       )

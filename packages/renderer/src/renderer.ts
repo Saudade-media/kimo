@@ -322,6 +322,11 @@ export class CanvasKitRenderer implements Renderer {
   rasterCache: boolean | "always" = true
   /** Motion raster cache (see {@link MOTION_MS}); only where `rasterCache` applies. */
   motionRasterCache = true
+  /**
+   * CPU ms per frame spent creating rasters ({@link RASTER_FRAME_MS}). Tests that count rasters
+   * per frame raise it, so a slow machine does not defer roots to a later frame.
+   */
+  rasterFrameMs = RASTER_FRAME_MS
   private rasterPx = 0
   /** Timestamp until which the viewport counts as moving (motion raster cache). */
   private motionUntil = 0
@@ -1442,7 +1447,7 @@ export class CanvasKitRenderer implements Renderer {
         if (!sr && target && sp.bounds) {
           sr = this.levelAt(sp, target) ?? sp.raster
           if (sr?.scale !== target) {
-            if (rasterMs < RASTER_FRAME_MS || !sr) {
+            if (rasterMs < this.rasterFrameMs || !sr) {
               const t = now()
               sr = this.rasterize(sp, sp.picture, sp.bounds, target) ?? sr
               rasterMs += now() - t
@@ -1604,7 +1609,7 @@ export class CanvasKitRenderer implements Renderer {
           const sp = wrap.sp
           let sr = this.levelAt(sp, target) ?? sp.raster
           if (sr?.scale !== target) {
-            if (rasterMs < RASTER_FRAME_MS) {
+            if (rasterMs < this.rasterFrameMs) {
               const t = now()
               sr = this.rasterize(sp, sp.picture, sp.bounds as Rect, target) ?? null
               rasterMs += now() - t
@@ -1634,7 +1639,7 @@ export class CanvasKitRenderer implements Renderer {
         if (!r && target && e.bounds) {
           r = this.levelAt(e, target) ?? e.raster
           if (r?.scale !== target) {
-            if (rasterMs < RASTER_FRAME_MS) {
+            if (rasterMs < this.rasterFrameMs) {
               const t = now()
               r = this.rasterize(e, pic, e.bounds, target) ?? null
               rasterMs += now() - t

@@ -273,6 +273,31 @@ fn noise(kind: ProcKind, line: &str) -> bool {
             .all(|c| c == '#' || c == '%' || c == '.' || c.is_ascii_digit() || c.is_whitespace())
 }
 
+/// `Mayas-MacBook-Pro.lan` → `mayas-macbook-pro.local`; None for a name that is not a DNS label.
+pub fn local_name(host: &str) -> Option<String> {
+    let label = host.trim().split('.').next()?.to_ascii_lowercase();
+    let ok = !label.is_empty()
+        && label.len() <= 63
+        && !label.starts_with('-')
+        && !label.ends_with('-')
+        && label
+            .bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+        && label != "localhost";
+    ok.then(|| format!("{label}.local"))
+}
+
+/// The source address of a route to a documentation address (no packet is sent), when it is a
+/// private IPv4 address.
+fn lan_ip() -> Option<String> {
+    let s = UdpSocket::bind("0.0.0.0:0").ok()?;
+    s.connect("192.0.2.1:9").ok()?;
+    match s.local_addr().ok()?.ip() {
+        std::net::IpAddr::V4(ip) if ip.is_private() => Some(ip.to_string()),
+        _ => None,
+    }
+}
+
 // --- Host ---------------------------------------------------------------------------------------------
 
 impl RelayHost {
@@ -459,15 +484,12 @@ impl RelayHost {
             && TcpListener::bind(("127.0.0.1", port)).is_ok()
     }
 
-    /// This computer's address on the local network: the source address of a route to a
-    /// documentation address (no packet is sent), when it is a private IPv4 address.
+    /// This computer's name on the local network: `<host>.local` (Bonjour / mDNS). The desktop
+    /// webview's CSP lets plain `ws://` reach only localhost, 127.0.0.1 and `*.local`, so the
+    /// same-network address is the `.local` name; the private IPv4 address only when the host
+    /// name can't make one.
     pub fn lan_address() -> Option<String> {
-        let s = UdpSocket::bind("0.0.0.0:0").ok()?;
-        s.connect("192.0.2.1:9").ok()?;
-        match s.local_addr().ok()?.ip() {
-            std::net::IpAddr::V4(ip) if ip.is_private() => Some(ip.to_string()),
-            _ => None,
-        }
+        local_name(&gethostname::gethostname().to_string_lossy()).or_else(lan_ip)
     }
 
     pub fn cloudflared_logged_in(&self) -> bool {
@@ -1002,6 +1024,22 @@ mod tests {
             f.host.write_fly_config("rm -rf").unwrap_err().code,
             "INVALID"
         );
+    }
+
+    #[test]
+    fn same_network_name() {
+        assert_eq!(
+            local_name("Mayas-MacBook-Pro.local").as_deref(),
+            Some("mayas-macbook-pro.local")
+        );
+        assert_eq!(
+            local_name("maya-mbp.lan").as_deref(),
+            Some("maya-mbp.local")
+        );
+        assert_eq!(local_name("studio").as_deref(), Some("studio.local"));
+        assert_eq!(local_name("Maya's Mac"), None);
+        assert_eq!(local_name("localhost"), None);
+        assert_eq!(local_name(""), None);
     }
 
     #[test]

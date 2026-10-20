@@ -54,7 +54,10 @@ export interface SpawnInput {
 export interface RelayHostApi {
   findTool(tool: RelayTool): Promise<ToolInfo | null>
   portFree(port: number): Promise<boolean>
-  /** This computer's private IPv4 address on the local network. */
+  /**
+   * This computer on the local network: its `<name>.local` (the desktop CSP lets plain ws reach
+   * only localhost, 127.0.0.1 and `*.local`), else its private IPv4 address.
+   */
   lanAddress(): Promise<string | null>
   /** The Fly.io region closest to this computer, or null. */
   flyRegion(): Promise<string | null>

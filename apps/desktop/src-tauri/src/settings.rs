@@ -235,10 +235,15 @@ mod tests {
             s.set("updates.channel", json!("nightly")).unwrap_err().code,
             "INVALID"
         );
-        s.set("multiplayer.relaySetup", json!({ "path": "local", "secretMode": "auto" }))
-            .unwrap();
+        s.set(
+            "multiplayer.relaySetup",
+            json!({ "path": "local", "secretMode": "auto" }),
+        )
+        .unwrap();
         assert_eq!(
-            s.set("multiplayer.relaySetup", json!("local")).unwrap_err().code,
+            s.set("multiplayer.relaySetup", json!("local"))
+                .unwrap_err()
+                .code,
             "INVALID"
         );
         s.set("privacy.noThirdPartyFetch", json!(true)).unwrap();

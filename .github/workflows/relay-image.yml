@@ -1,12 +1,13 @@
 # The relay image (apps/server/Dockerfile) on GitHub Container Registry: ghcr.io/saudade-media/kimo-relay
 # for linux/amd64 and linux/arm64. Pushes to main publish `latest`, `main` and `sha-<short>`;
+# pushes to multiplayer publish `multiplayer` and `sha-<short>` (until it merges into main);
 # version tags (v1.2.3) publish `1.2.3` and `1.2`. Pull requests only build it. The relay setup
 # wizard's docker run command, the Fly.io config and the Railway template all use this image.
 name: relay-image
 
 on:
   push:
-    branches: [main]
+    branches: [main, multiplayer]
     tags: ["v*"]
   pull_request:
     paths:

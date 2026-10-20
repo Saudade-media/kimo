@@ -908,6 +908,73 @@ export const scenarios: Scenario[] = [
   both("board41 share: §6 B people list, follow, agents", people),
   both("board41 share: §4 Settings › Multiplayer relay test states and settings", settings),
   both(
+    "board41 share: a browser library file shows Share and starts sharing",
+    async (ctx, theme) => {
+      const { page } = ctx
+      await open(ctx, "library", theme)
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await waitCanvas(page)
+      const share = page.locator(".mp-share-button")
+      await share.waitFor()
+      expect((await share.innerText()) === "Share", "Share reads Share")
+      expect((await page.locator(".mp-sync-status").count()) === 0, "no sync status before sharing")
+      const order = await page.evaluate(() => {
+        const s = document.querySelector(".mp-share-button")
+        return {
+          prev: s?.previousElementSibling?.getAttribute("aria-label"),
+          next: s?.nextElementSibling?.textContent,
+        }
+      })
+      expect(order.prev === "Toggle theme", `Share follows Theme (${order.prev})`)
+      expect(order.next?.includes("Preview"), `Preview follows Share (${order.next})`)
+      const T = await tokens(page, COLORS)
+      const c = checker(ctx, `library file Share (${theme})`)
+      c.box("Share (Secondary)", (await measure(page, { s: ".mp-share-button" })).s, {
+        h: 32,
+        pad: "0 14 0 14",
+        gap: 6,
+        bg: T["--kimo-bg-muted"] as string,
+        color: T["--kimo-text-primary"] as string,
+      })
+      // The relay is set and answers: Start sharing goes live under the library key.
+      await share.click()
+      await page.locator('.mp-popover .mp-result[data-result="ok"]').waitFor()
+      await page.locator(POPOVER.start).click()
+      await page.locator('.mp-popover[data-stage="live"]').waitFor()
+      const h = await page.evaluate(() => {
+        const b = (
+          window as unknown as { __board41: { fake: { calls: string[] }; fileId: string } }
+        ).__board41
+        return { calls: b.fake.calls, fileId: b.fileId }
+      })
+      expect(
+        h.calls.some((call) => call.startsWith(`start:kimo-lib:${h.fileId}:`)),
+        `started under kimo-lib:${h.fileId} (${h.calls.join(", ")})`,
+      )
+      await page.keyboard.press("Escape")
+      await page.locator(".mp-popover").waitFor({ state: "detached" })
+      expect((await share.innerText()) === "Sharing", "Share reads Sharing once live")
+      // Board 41 §2: the sync status takes the "Saved locally" slot.
+      const sync = page.locator(".mp-sync-status")
+      await sync.waitFor()
+      expect((await sync.innerText()) === "Synced", "the topbar reads Synced")
+      const m = await measure(page, { share: ".mp-share-button", sync: ".mp-sync-status" })
+      c.box("Sharing (Soft)", m.share, {
+        h: 32,
+        bg: T["--kimo-accent-soft"] as string,
+        color: T["--kimo-accent-text"] as string,
+      })
+      c.box("Synced", m.sync, {
+        h: 24,
+        pad: "0 10 0 8",
+        gap: 6,
+        bg: T0,
+        color: T["--kimo-text-tertiary"] as string,
+      })
+      c.flush()
+    },
+  ),
+  both(
     "board41 share: the editor topbar of a file on disk shows Share after Theme and opens the first run",
     async (ctx, theme) => {
       const { page } = ctx

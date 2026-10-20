@@ -4,14 +4,16 @@
  * the desktop document host's `mp.*` RPC (docs/spec/multiplayer.md §16.8, where the owner's
  * authoritative store lives in the host).
  *
- * A document is named by a key: a file's ref, or `kimo-room:<room>` for a room joined from a link
- * (a guest's document has no file).
+ * A document is named by a key: a file's ref, `kimo-lib:<fileId>` for a browser library file
+ * (`./library`), or `kimo-room:<room>` for a room joined from a link (a guest's document has no
+ * file).
  */
 import type { ClaimView, DocStore } from "@kimo/editor-state"
 import { claimsFor } from "@kimo/editor-state"
 import type { FileRef } from "@kimo/platform"
 import type { PresenceState, SyncStatus } from "@kimo/sync"
 import { MultiplayerError, type Role } from "@kimo/sync/mp"
+import type { AssetStore } from "../lib/assets"
 import type { LocalPresence, PlatformShare } from "../platform/share"
 import { type AgentPausesOptions, type AgentPauseView, pausesFor } from "./agent-pause"
 import type { IssuedLink } from "./registry"
@@ -162,8 +164,11 @@ export interface LocalShareBackendOptions {
   share: PlatformShare
   /** The open session's store of a file (claims and pauses also exist for unshared files). */
   storeFor(ref: FileRef): DocStore | null
-  /** The session of a file, for `start` (the share layer needs its ref and store). */
-  sessionFor(ref: FileRef): { ref: FileRef; store: DocStore } | null
+  /**
+   * The session of a file, for `start` (the share layer needs its ref and store, and the asset
+   * store when it is not the folder beside the file: a browser library file's).
+   */
+  sessionFor(ref: FileRef): { ref: FileRef; store: DocStore; assets?: AssetStore } | null
   now?: () => number
   /** Agent pause timing and Stop (the window's agent controller or the host's connection). */
   pauses?: AgentPausesOptions
@@ -429,6 +434,7 @@ export function createLocalShareBackend(options: LocalShareBackendOptions): Shar
       try {
         await share.shareSession(session, start.relayUrl, {
           ...(start.createSecret ? { createSecret: start.createSecret } : {}),
+          ...(session.assets ? { assets: session.assets } : {}),
         })
       } catch (error) {
         startErrors.set(key, errorOf(error, true))

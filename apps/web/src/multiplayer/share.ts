@@ -245,6 +245,12 @@ export interface ShareService {
    * cleared and the result says the relay was not told.
    */
   stopSharing(room: string): Promise<StopSharingResult>
+  /**
+   * Forgets an owned room on this device without telling the relay: its sessions end and the
+   * registry record, cursor, saved state and replica go. For a room whose document is gone (a
+   * deleted library file) when {@link ShareService.stopSharing} could not close it at the relay.
+   */
+  forgetOwnedRoom(room: string): Promise<void>
   join(link: string): Promise<SharedSession>
   listJoinedRooms(): Promise<JoinedRoomSummary[]>
   forgetJoinedRoom(room: string): Promise<void>
@@ -1041,6 +1047,18 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       })
   }
 
+  /** Ends the room's sessions here and deletes everything this device kept about it. */
+  async function dropOwned(owned: OwnedRoom): Promise<void> {
+    const { room } = owned
+    for (const entry of [...(live.get(room) ?? [])]) await entry.close()
+    const binding = await roomBinding(owned.relayUrl, owned.roomKey)
+    await registry.deleteOwned(room)
+    await registry.cursors.clear(cursorKey(room, binding))
+    await registry.saves.clear(room)
+    await dropReplica(room, binding)
+    guards.delete(room)
+  }
+
   // Service -----------------------------------------------------------------------------------
 
   return {
@@ -1224,14 +1242,15 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
           if (!(error instanceof MultiplayerError) || !isRetryable(error)) throw error
           relayError = error
         }
-        for (const entry of [...(live.get(room) ?? [])]) await entry.close()
-        const binding = await roomBinding(owned.relayUrl, owned.roomKey)
-        await registry.deleteOwned(room)
-        await registry.cursors.clear(cursorKey(room, binding))
-        await registry.saves.clear(room)
-        await dropReplica(room, binding)
-        guards.delete(room)
+        await dropOwned(owned)
         return relayError ? { relayNotified: false, relayError } : { relayNotified: true }
+      })
+    },
+
+    async forgetOwnedRoom(room) {
+      await locked(`owned:${room}`, async () => {
+        const owned = await registry.getOwned(room)
+        if (owned) await dropOwned(owned)
       })
     },
 

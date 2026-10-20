@@ -5,10 +5,11 @@
  * page: `?surface=<name>&theme=light|dark`. Built by `e2e/board41-share.e2e.ts`; driven through
  * `window.__board41`.
  *
- * Surfaces: `topbar` (section 2, the six cards), `share-a` / `share-b` / `share-c` (section 3),
- * `reset` (3 D), `people` (6 B, following Maya), `settings` (section 4), and `app`: the real App
- * with the window's multiplayer wiring over a memory platform with a `.kimo` on disk
- * (`#/disk/…`), to check the Share button in the editor topbar.
+ * Surfaces: `topbar` (section 2, the six cards), `share-a` / `share-b` / `share-c` (section 3), `reset` (3 D), `people` (6 B, following Maya),
+ * `settings` (section 4), `app`: the real App with the window's multiplayer wiring over a memory
+ * platform with a `.kimo` on disk (`#/disk/…`), to check the Share button in the editor topbar,
+ * and `library`: the real App on a browser library file (`#/file/<id>`, IndexedDB) over the
+ * scripted backend, to check that a library file shares.
  */
 import "@kimo/design-tokens/editor.css"
 import "@kimo/ui/styles.css"
@@ -21,9 +22,11 @@ import { type ReactNode, StrictMode, useState } from "react"
 import { createRoot } from "react-dom/client"
 import { App } from "../../src/App"
 import { M3Context } from "../../src/editor/m3/controller"
+import { createFile } from "../../src/lib/files"
 import { Icon } from "../../src/lib/icons"
 import { setTheme } from "../../src/lib/theme"
 import { MultiplayerContext } from "../../src/multiplayer/hooks"
+import { createLibraryShare } from "../../src/multiplayer/library"
 import { createMultiplayerModel } from "../../src/multiplayer/model"
 import { PeoplePopover } from "../../src/multiplayer/ui/PeoplePopover"
 import { ResetLinksDialog } from "../../src/multiplayer/ui/ResetLinksDialog"
@@ -41,6 +44,7 @@ import {
 } from "../../src/multiplayer/ui/testing"
 import { createWindowMultiplayer } from "../../src/multiplayer/window"
 import { createAppSessionManager, RuntimeContext } from "../../src/platform/runtime"
+import { createPlatformShare } from "../../src/platform/share"
 import { SettingsView } from "../../src/settings/SettingsView"
 
 const params = new URLSearchParams(location.search)
@@ -278,11 +282,50 @@ function renderApp(root: HTMLElement) {
   )
 }
 
-void seed().then(() => {
+/** A browser library file in the real editor, its Share over the scripted backend. */
+async function renderLibrary(root: HTMLElement) {
+  const appPlatform = createMemoryPlatform({
+    os: "macos",
+    settings: { "general.appearance": theme, "multiplayer.relayUrl": "wss://relay.maya.studio" },
+  })
+  const manager = createAppSessionManager(appPlatform)
+  manager.install()
+  const libFake = createFakeShareBackend()
+  const libModel = createMultiplayerModel({
+    backend: libFake.backend,
+    settings: appPlatform.settings,
+    platformKind: "browser",
+    probe: fakeProbe({ "relay.maya.studio": { version: "1.2", delayMs: 20 } }),
+  })
+  // The editor registers the open file with the window's library share (no relay is reached:
+  // the file was never shared, so it opens with no room).
+  const libraryShare = createLibraryShare(createPlatformShare({ platform: appPlatform }))
+  const fileId = await createFile("Library file", { empty: true })
+  location.hash = `#/file/${fileId}`
+  Object.assign(window, {
+    __board41: { platform: appPlatform, model: libModel, fake: libFake, fileId, libraryShare },
+  })
+  createRoot(root).render(
+    <StrictMode>
+      <RuntimeContext.Provider
+        value={{ platform: appPlatform, manager, multiplayer: libModel, libraryShare }}
+      >
+        <App />
+      </RuntimeContext.Provider>
+    </StrictMode>,
+  )
+}
+
+void seed().then(async () => {
   const root = document.getElementById("root")
   if (!root) return
   if (surface === "app") {
     renderApp(root)
+    document.documentElement.dataset.ready = "1"
+    return
+  }
+  if (surface === "library") {
+    await renderLibrary(root)
     document.documentElement.dataset.ready = "1"
     return
   }

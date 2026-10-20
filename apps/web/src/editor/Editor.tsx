@@ -64,6 +64,7 @@ import { runTextEdit } from "../lib/native-menu"
 import { cssToken, useTheme } from "../lib/theme"
 import { roomKeyOf } from "../multiplayer/backend"
 import { useMultiplayer } from "../multiplayer/hooks"
+import { libraryKeyOf } from "../multiplayer/library"
 import type { Capabilities } from "../multiplayer/model"
 import type { SharedSession } from "../multiplayer/share"
 import { useEditorMultiplayer } from "../multiplayer-canvas/MultiplayerCanvas"
@@ -272,7 +273,7 @@ function EditorShell({
   /** A joined room: the role the "You joined" Toast names. */
   joinedRole?: "edit" | "view" | null
 }) {
-  const { platform, manager, hostClient = null } = useRuntime()
+  const { platform, manager, hostClient = null, libraryShare = null } = useRuntime()
   const openSettings = useOpenSettings()
   const windowChrome = useWindowChrome(platform)
   /** The document session of a file on disk (null: browser library). */
@@ -306,6 +307,14 @@ function EditorShell({
   )
   // A room's asset store belongs to the room session.
   useEffect(() => () => (room ? undefined : assets.dispose()), [assets, room])
+  /** The share key of this document: a joined room, a file on disk, a browser library file. */
+  const shareKey = room ? roomKeyOf(room.room) : doc ? doc.ref : libraryKeyOf(session.id)
+  // Board 41: a browser library file shares like a file on disk; one this device shared
+  // reconnects to its room while the editor shows it.
+  useEffect(() => {
+    if (room || doc || !libraryShare) return
+    return libraryShare.open({ fileId: session.id, store: session.store, assets })
+  }, [room, doc, libraryShare, session, assets])
   // Fonts (board 19): one font system per editor window, Document → Local → Pack → Cache →
   // Google. Board 28: a face fetched from Google is stored once in the file's assets/ (never a
   // document edit); writes list it in the `assets` manifest (`withFontManifest`).
@@ -872,7 +881,7 @@ function EditorShell({
   const [fontsRequest, setFontsRequest] = useState(0)
   const multiplayer = useEditorMultiplayer({
     session,
-    shareKey: room ? roomKeyOf(room.room) : doc ? doc.ref : null,
+    shareKey,
     layout,
     assets,
     container: canvasEl,
@@ -1050,8 +1059,9 @@ function EditorShell({
               }}
               onPreview={openPreview}
               previewTarget={previewTarget}
-              // Board 41 §1/§2: a joined room's sync status, avatar stack and people list.
-              shareKey={room ? roomKeyOf(room.room) : null}
+              // Board 41 §1/§2: sync status, avatar stack, people list and Share (a library
+              // file's Share, or a joined room's).
+              shareKey={shareKey}
             />
           )}
           {viewOnly && <ViewOnlyBanner shared={room} />}

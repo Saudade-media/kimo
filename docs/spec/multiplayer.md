@@ -936,6 +936,8 @@ without UI; errors are `MultiplayerError`s. See §17.D for the exact types.
 **`revokeLink`**: admin op 2, mark revoked locally. **`resetAllLinks`**: new link key with
 `kid + 1`, admin op 3, mark every issued link revoked, re-mint the self token, reconnect.
 **`stopSharing`**: admin op 4, detach providers, delete the `OwnedRoom` and the room replica.
+**`forgetOwnedRoom`**: the local half of `stopSharing` without the relay (a deleted library file
+whose close the relay refused for good).
 **`sweepBlobs`**: `keep` = blob ids of every manifest entry with `sha256` in the current
 document; admin op 5.
 
@@ -970,6 +972,16 @@ Secrets never leave this database except inside links the owner mints.
   file session's store creation (`FileSessionManager` / `FileDocumentProvider` load path) without
   changing behaviour for unshared files.
 - Guests: the replica is their only copy; their asset store is `kimo-assets-room-<room>`.
+- **Browser library files** (`#/file/<id>`, `multiplayer/library.ts`): the document key and the
+  registry's `fileKey` are `kimo-lib:<fileId>`, stable across reloads; the owner's keys stay in the
+  IndexedDB registry. The library's own persistence (`kimo-doc-<id>`) stores the CRDT updates
+  themselves, the room's included, so the library copy and the room are two replicas of one
+  document: opening the editor attaches the room to the store the library loaded (`connect`, no
+  file delta and no saved state to record; there is no file write). Closing the editor ends the
+  room connection. Trash keeps the room; deleting the file for good (Delete forever, Empty Trash,
+  the 30-day purge) stops sharing, and when the relay refuses the close for good the room is
+  forgotten locally (`forgetOwnedRoom`), since nothing could reopen it. On desktop, library keys
+  stay with the window's own share backend, not the document host.
 
 ### 16.4 Asset sync (`asset-sync.ts`)
 
@@ -1596,6 +1608,8 @@ export interface ShareService {
   resetAllLinks(room: string): Promise<{ kid: number }>
   sweepBlobs(room: string, target: ShareTarget, options?: { graceDays?: number }): Promise<SweepResult>
   stopSharing(room: string): Promise<void>
+  /** Local only: ends the sessions and deletes the record, cursor, saved state and replica. */
+  forgetOwnedRoom(room: string): Promise<void>
   join(link: string): Promise<SharedSession>
   listJoinedRooms(): Promise<JoinedRoomSummary[]>
   forgetJoinedRoom(room: string): Promise<void>

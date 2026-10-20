@@ -15,6 +15,7 @@ import webPackage from "../../package.json"
 import { conflictSessionFactory } from "../conflicts"
 import type { HostClient } from "../host/client"
 import { joinPath } from "../join/link"
+import type { LibraryShare } from "../multiplayer/library"
 import type { MultiplayerModel } from "../multiplayer/model"
 import { createWindowMultiplayer } from "../multiplayer/window"
 import { takeLastFiles } from "./last-files"
@@ -36,6 +37,8 @@ export interface AppRuntime {
   hostClient?: HostClient | null
   /** Multiplayer view model (board 41): share state, people, links, join, settings. */
   multiplayer?: MultiplayerModel
+  /** Sharing of browser library files (`#/file/:id`): the editor registers the open file. */
+  libraryShare?: LibraryShare
 }
 
 /** True inside the Tauri webview (same test as `@kimo/desktop` `isTauri`). */
@@ -95,8 +98,8 @@ export async function createAppRuntime(
   // older shell, the browser) sessions stay local to the window as in M4.
   if (!inTauri()) {
     const manager = createAppSessionManager(platform)
-    const { model } = createWindowMultiplayer({ platform, manager })
-    return finishRuntime({ platform, manager, multiplayer: model }, onOpened)
+    const { model, library } = createWindowMultiplayer({ platform, manager })
+    return finishRuntime({ platform, manager, multiplayer: model, libraryShare: library }, onOpened)
   }
   const host = await import("../host")
   // M5: the window's `platform.mcp` (Rust relay + document host).
@@ -136,7 +139,7 @@ export async function createAppRuntime(
       return client ? host.hostedSessionFactory(client) : undefined
     })
   const manager = createAppSessionManager(platform, undefined, factory)
-  const { model } = createWindowMultiplayer({
+  const { model, library } = createWindowMultiplayer({
     platform,
     manager,
     hostBackend: async (local) => {
@@ -145,7 +148,13 @@ export async function createAppRuntime(
       return client ? host.createHostShareBackend(client, { local }) : null
     },
   })
-  const runtime: AppRuntime = { platform, manager, hostClient: null, multiplayer: model }
+  const runtime: AppRuntime = {
+    platform,
+    manager,
+    hostClient: null,
+    multiplayer: model,
+    libraryShare: library,
+  }
   return finishRuntime(runtime, onOpened)
 }
 

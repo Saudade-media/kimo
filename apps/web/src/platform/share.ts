@@ -31,6 +31,7 @@ import {
   type StopSharingResult,
   type SweepResult,
 } from "../multiplayer"
+import { libraryFileOfKey } from "../multiplayer/library"
 import { pickPresenceColor } from "../multiplayer/presence"
 
 /** What sharing needs of an open document: the file it came from and its store. */
@@ -168,6 +169,12 @@ export interface PlatformShare {
     file: KimoDocument,
     assets?: AssetStore,
   ): Promise<SharedSession | null>
+  /**
+   * Reconnects a shared document whose own persistence is a CRDT replica of the room (a browser
+   * library file, `kimo-lib:<id>`): the store already holds what the room had when it was last
+   * open here, so the room attaches with no file delta. Null when the document is not shared.
+   */
+  reconnectReplica(session: ShareableSession, assets?: AssetStore): Promise<SharedSession | null>
   /** Joins from a link (the fragment of `https://<web-origin>/join#...`). */
   joinLink(link: string): Promise<SharedSession>
   /** Mints a link for `role` that expires at `exp` (unix seconds; 0 or null never). */
@@ -338,13 +345,23 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
     return { fileKey: targets.get(room)?.ref ?? room, store: session.store, assets: session.assets }
   }
 
-  const targetFor = (session: ShareableSession, assets?: AssetStore) => ({
-    fileKey: session.ref,
-    store: session.store,
-    assets: assets ?? deps.assetsFor?.(session) ?? createFolderAssetStore(platform, session.ref),
-    readRelative: (path: string) =>
-      platform.files.readBytes(resolveAgainstFile(session.ref, path)).catch(() => null),
-  })
+  const targetFor = (session: ShareableSession, assets?: AssetStore) => {
+    // A browser library file: its assets live in IndexedDB, and it has no folder to read from.
+    const libraryFile = libraryFileOfKey(session.ref)
+    if (libraryFile !== null)
+      return {
+        fileKey: session.ref,
+        store: session.store,
+        assets: assets ?? deps.assetsFor?.(session) ?? createAssetStore(libraryFile),
+      }
+    return {
+      fileKey: session.ref,
+      store: session.store,
+      assets: assets ?? deps.assetsFor?.(session) ?? createFolderAssetStore(platform, session.ref),
+      readRelative: (path: string) =>
+        platform.files.readBytes(resolveAgainstFile(session.ref, path)).catch(() => null),
+    }
+  }
 
   const self: PlatformShare = {
     service,
@@ -403,6 +420,14 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
     async reopenShared(session, file, assets) {
       const shared = await service.reopenShared(targetFor(session, assets), file)
       if (!shared) return null
+      targets.set(shared.room, session)
+      return track(shared, true)
+    },
+
+    async reconnectReplica(session, assets) {
+      const owned = await service.roomForFile(session.ref)
+      if (!owned) return null
+      const shared = await service.connect(targetFor(session, assets), owned.room)
       targets.set(shared.room, session)
       return track(shared, true)
     },

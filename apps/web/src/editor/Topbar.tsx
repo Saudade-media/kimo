@@ -46,9 +46,9 @@ export interface TopbarProps extends FileMenuActions {
   previewTarget?: string | null
   onHome(): void
   /**
-   * Board 41 §1/§2: the multiplayer document key of this editor (a room joined from a link,
-   * `roomKeyOf(room)`). Set, the sync status replaces "Saved locally" while it is shared, and the
-   * avatar stack and Share sit after Theme.
+   * Board 41 §1/§2: the multiplayer document key of this editor (a browser library file,
+   * `libraryKeyOf(id)`, or a room joined from a link, `roomKeyOf(room)`). Set, the sync status
+   * replaces "Saved locally" while it is shared, and the avatar stack and Share sit after Theme.
    */
   shareKey?: string | null
 }

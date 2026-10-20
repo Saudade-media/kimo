@@ -1,8 +1,8 @@
 /**
  * The share backend of a desktop editor window (docs/spec/multiplayer.md §16.8): files are shared
  * by the document host, which owns their stores, so file keys go to its `mp.*` RPC and its pushed
- * snapshots (`kimo://host-share`). Rooms joined from a link live in the window (they have no
- * file) and go to the window's own backend.
+ * snapshots (`kimo://host-share`). Rooms joined from a link and browser library files live in the
+ * window (they have no file the host holds) and go to the window's own backend.
  */
 import {
   emptySnapshot,
@@ -10,6 +10,7 @@ import {
   type ShareBackend,
   type ShareSnapshot,
 } from "../multiplayer/backend"
+import { libraryFileOfKey } from "../multiplayer/library"
 import type { IssuedLink } from "../multiplayer/registry"
 import type { LocalPresence } from "../platform/share"
 import type { HostClient } from "./client"
@@ -28,7 +29,9 @@ export function createHostShareBackend(
   const pending = new Map<string, LocalPresence>()
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
-  const forLocal = (key: string) => roomOfKey(key) !== null && local !== null
+  // Joined rooms and browser library files live in the window, not in the document host.
+  const forLocal = (key: string) =>
+    (roomOfKey(key) !== null || libraryFileOfKey(key) !== null) && local !== null
   const set = (key: string, snapshot: ShareSnapshot) => {
     snapshots.set(key, snapshot)
     for (const l of [...(listeners.get(key) ?? [])]) l()

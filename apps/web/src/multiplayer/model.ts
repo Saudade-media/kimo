@@ -271,7 +271,16 @@ export interface MultiplayerSettingsModel {
 export type RelayTestState =
   | { kind: "idle" }
   | { kind: "testing"; url: string }
-  | { kind: "ok"; url: string; name: string; version: string; protocol: string; ms: number }
+  | {
+      kind: "ok"
+      url: string
+      name: string
+      version: string
+      protocol: string
+      ms: number
+      /** Whether creating a room needs the relay's create secret. */
+      createSecretRequired?: boolean
+    }
   | { kind: "not-a-relay"; url: string; message: string }
   | { kind: "unreachable"; url: string; message: string }
   /** The relay speaks an older protocol (`protocol` when it said which). */
@@ -970,6 +979,7 @@ function createRelayTestModel(
           version: info.version,
           protocol: info.protocol,
           ms: Math.max(0, timers.now() - started),
+          createSecretRequired: info.createSecretRequired === true,
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

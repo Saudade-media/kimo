@@ -1,8 +1,10 @@
 /**
  * Board 41 section 3: the Share popover (360 wide, under Share, right edge on the button's).
  *
- * - A `first-run` (MN5Yp): no relay yet. Intro, Relay URL, the self-hosting guide; Start sharing
- *   stays disabled (0.4) until the URL answers as a Kimo relay.
+ * - A `first-run` (MN5Yp, board 42 section 1 A): no relay yet. Intro, Set up a relay (Primary,
+ *   full width: the relay setup wizard over the editor), "or use one you have", Relay URL and
+ *   Create secret; Start sharing stays disabled (0.4) until the URL answers as a Kimo relay and,
+ *   when the relay asks for one, a secret is entered.
  * - B `ready` (iCSXL): the relay answered. Relay URL (mono), the check (StatusPill + time), what
  *   starting does; Change in Settings · Start sharing. The check runs on blur and on paste, and
  *   a passing URL is kept in Settings › Multiplayer.
@@ -11,6 +13,8 @@
  *   Stop sharing.
  *
  * Revoke is final on the relay, so its toast has no Undo (the board's "Undo" is left out).
+ * On a quick tunnel (board 42 section 3 I) every link row says it stops working when the relay
+ * restarts. Start sharing sends the create secret kept for the relay (keychain or browser).
  */
 import type { Role } from "@kimo/sync/mp"
 import {
@@ -42,6 +46,8 @@ import {
   type LinkView,
   type MultiplayerModel,
 } from "../model"
+import { isQuickTunnelUrl } from "../relay-setup/local"
+import { useRelaySetupServices } from "../relay-setup/services"
 import {
   connectionMeta,
   EXPIRY_LABEL,
@@ -76,9 +82,18 @@ export interface SharePopoverProps {
   onClose(): void
   /** Reset all links: the confirm dialog (it lives outside the popover). */
   onResetAll(): void
+  /** Set up a relay: the relay setup wizard (it lives outside the popover). */
+  onSetUpRelay?(): void
 }
 
-export function SharePopover({ model, docKey, anchor, onClose, onResetAll }: SharePopoverProps) {
+export function SharePopover({
+  model,
+  docKey,
+  anchor,
+  onClose,
+  onResetAll,
+  onSetUpRelay,
+}: SharePopoverProps) {
   const share = useShareState(model, docKey)
   const settings = useMultiplayerSettings(model)
   const stage = sharePopoverStage(share, settings.relayUrl)
@@ -109,7 +124,12 @@ export function SharePopover({ model, docKey, anchor, onClose, onResetAll }: Sha
       {stage === "live" ? (
         <LiveBody model={model} docKey={docKey} onResetAll={onResetAll} />
       ) : (
-        <SetupBody model={model} docKey={docKey} firstRun={stage === "first-run"} />
+        <SetupBody
+          model={model}
+          docKey={docKey}
+          firstRun={stage === "first-run"}
+          {...(onSetUpRelay ? { onSetUpRelay } : {})}
+        />
       )}
     </Popover>
   )
@@ -121,13 +141,18 @@ function SetupBody({
   model,
   docKey,
   firstRun,
+  onSetUpRelay,
 }: {
   model: MultiplayerModel
   docKey: string
   firstRun: boolean
+  onSetUpRelay?(): void
 }) {
   const runtime = useOptionalRuntime()
   const platform = runtime?.platform ?? null
+  const relaySetup = useRelaySetupServices(platform)
+  const [secret, setSecret] = useState("")
+  const secretId = useId()
   const openSettings = useOpenSettings()
   const toast = useShareToast()
   const settings = useMultiplayerSettings(model)
@@ -159,13 +184,26 @@ function SetupBody({
     if (settings.relayUrl && !relayReady(test, settings.relayUrl)) void check(settings.relayUrl)
   }, [])
 
-  // Start sharing needs a Kimo relay for what the field says now (checked on blur and paste).
+  // Start sharing needs a Kimo relay for what the field says now (checked on blur and paste) and,
+  // on first run, a secret when the relay asks for one.
+  const needsSecret = firstRun && test.kind === "ok" && test.createSecretRequired === true
   const canStart =
-    test.kind === "ok" && url.trim() === checked.current && share.status !== "starting"
+    test.kind === "ok" &&
+    url.trim() === checked.current &&
+    share.status !== "starting" &&
+    (!needsSecret || secret.trim() !== "")
   const start = async () => {
     if (test.kind !== "ok") return
     try {
-      await model.document(docKey).startSharing({ relayUrl: test.url })
+      let createSecret: string | null = null
+      if (firstRun && secret.trim()) {
+        // Typed by hand: kept as the Custom secret ("Saved to Settings").
+        await relaySetup?.store.setCustomSecret(secret)
+        createSecret = secret.trim()
+      } else createSecret = (await relaySetup?.store.sendSecret()) ?? null
+      await model
+        .document(docKey)
+        .startSharing({ relayUrl: test.url, ...(createSecret ? { createSecret } : {}) })
     } catch (e) {
       toast({ tone: "danger", text: failureText("start sharing", e) })
     }
@@ -235,20 +273,56 @@ function SetupBody({
             <div className="mp-text">
               <p className="mp-title">Share through your own relay</p>
               <p className="mp-desc">
-                Kimo runs no server. Edits travel end-to-end encrypted through a relay you host, and
-                the relay never sees the design.
+                Kimo runs no server. A relay you host passes end-to-end encrypted edits and never
+                sees the design.
               </p>
             </div>
           </div>
         )}
+        {firstRun && onSetUpRelay && (
+          <>
+            <Button
+              variant="primary"
+              className="mp-setup-relay"
+              icon={<Icon name="wand-sparkles" size={16} />}
+              onClick={onSetUpRelay}
+            >
+              Set up a relay
+            </Button>
+            <div className="mp-or" data-pen="HxQ2J">
+              <span className="mp-or__line" aria-hidden="true" />
+              <span className="mp-or__label">or use one you have</span>
+              <span className="mp-or__line" aria-hidden="true" />
+            </div>
+          </>
+        )}
         {field}
         {resultRow}
         {firstRun ? (
-          <GuideLink
-            label="How to host a relay, about 5 minutes"
-            leadingIcon
-            onOpen={() => void openRelayGuide(platform)}
-          />
+          onSetUpRelay ? (
+            <div className="mp-field" data-pen="x0O8mK">
+              <label className="mp-field-label" htmlFor={secretId}>
+                Create secret
+              </label>
+              <Input
+                id={secretId}
+                type="password"
+                frameProps={{ className: "mp-relay-input" }}
+                icon={<Icon name="key-round" size={16} />}
+                placeholder="Paste the relay's secret"
+                spellCheck={false}
+                autoComplete="off"
+                value={secret}
+                onChange={(e) => setSecret(e.currentTarget.value)}
+              />
+            </div>
+          ) : (
+            <GuideLink
+              label="How to host a relay, about 5 minutes"
+              leadingIcon
+              onOpen={() => void openRelayGuide(platform)}
+            />
+          )
         ) : (
           <p className="mp-desc">
             Starting gives this file a new encryption key. Nothing leaves this device until you
@@ -258,7 +332,9 @@ function SetupBody({
       </div>
       <div className="mp-footer">
         {firstRun ? (
-          <span className="mp-footnote">Set once, kept in Settings</span>
+          <span className="mp-footnote">
+            {onSetUpRelay ? "Saved to Settings" : "Set once, kept in Settings"}
+          </span>
         ) : (
           <Button
             variant="ghost"
@@ -353,6 +429,8 @@ function LiveBody({
     }
   }
   const now = Date.now()
+  // Board 42 section 3 I: a trycloudflare.com address changes when the relay restarts.
+  const quickTunnel = isQuickTunnelUrl(share.relayHost ? `https://${share.relayHost}` : null)
 
   return (
     <>
@@ -402,13 +480,23 @@ function LiveBody({
               <span className="mp-field-label">Active links · {links.items.length}</span>
             </div>
             {links.items.map((l) => (
-              <div key={l.jti} className="mp-link" data-role={l.role}>
+              <div
+                key={l.jti}
+                className={`mp-link${quickTunnel ? " mp-link--quick" : ""}`}
+                data-role={l.role}
+              >
                 <span className="mp-link__role" aria-hidden="true">
                   <Icon name={l.role === "edit" ? "pencil" : "eye"} size={14} />
                 </span>
                 <div className="mp-text mp-text--2">
                   <span className="mp-label-strong">{ROLE_LABEL[l.role]}</span>
                   <span className="mp-meta">{linkMeta(l, now)}</span>
+                  {quickTunnel && (
+                    <span className="mp-quick-note" data-pen="m1FYw">
+                      <Icon name="triangle-alert" size={11} />
+                      Stops working when your relay restarts
+                    </span>
+                  )}
                 </div>
                 <IconButton
                   className="mp-link__action mp-link__copy"

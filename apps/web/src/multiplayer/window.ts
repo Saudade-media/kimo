@@ -15,6 +15,7 @@ import { createPlatformShare, type PlatformShare } from "../platform/share"
 import { createLocalShareBackend, type ShareBackend, switchingShareBackend } from "./backend"
 import { createLibraryShare, type LibraryShare } from "./library"
 import { createMultiplayerModel, type MultiplayerModel } from "./model"
+import { relaySetupFor } from "./relay-setup/services"
 import { createSharedFileHooks } from "./room-session"
 
 export interface WindowMultiplayer {
@@ -74,5 +75,40 @@ export function createWindowMultiplayer(options: WindowMultiplayerOptions): Wind
     platformKind: platform.kind,
     join: (link) => share.joinLink(link),
   })
+  if (platform.kind === "desktop") guardLocalRelay(platform, manager, model)
   return { share, backend, model, library }
+}
+
+/**
+ * Board 42: quitting stops the relay on this computer (Rust ends it); when people are connected
+ * through it from this window's files, ask first.
+ */
+function guardLocalRelay(
+  platform: KimoPlatform,
+  manager: FileSessionManager,
+  model: MultiplayerModel,
+) {
+  manager.addCloseGuard(async ({ quitting }) => {
+    if (!quitting) return true
+    const local = relaySetupFor(platform).local?.getState()
+    if (local?.status !== "running") return true
+    const hosts = new Set(
+      [local.lanUrl, local.publicUrl].flatMap((u) => {
+        try {
+          return u ? [new URL(u).host] : []
+        } catch {
+          return []
+        }
+      }),
+    )
+    const people: string[] = []
+    for (const s of manager.sessions()) {
+      const view = model.document(s.ref).getState()
+      if (!view.share.relayHost || !hosts.has(view.share.relayHost)) continue
+      for (const p of view.people) if (!p.isYou && !people.includes(p.label)) people.push(p.label)
+    }
+    if (people.length === 0) return true
+    const { confirmStopRelay } = await import("./ui/StopRelayConfirm")
+    return confirmStopRelay({ people: people.slice(0, 3), more: Math.max(0, people.length - 3) })
+  })
 }

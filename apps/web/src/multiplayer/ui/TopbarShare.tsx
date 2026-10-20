@@ -14,6 +14,7 @@
 import { Button, SaveStatus, Tooltip } from "@kimo/ui"
 import { type ReactNode, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
+import { useOptionalRuntime } from "../../platform/runtime"
 import {
   useAssetTransfers,
   useCapabilities,
@@ -22,8 +23,10 @@ import {
   useShareState,
 } from "../hooks"
 import type { MultiplayerModel } from "../model"
+import { useRelaySetupServices } from "../relay-setup/services"
 import { stackDimmed, stackOf, topbarSyncStatus } from "./copy"
 import { PeoplePopover } from "./PeoplePopover"
+import { RelayWizard } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
 import { PresenceAvatar } from "./shared"
@@ -96,7 +99,9 @@ function ShareCluster({
   const share = useShareState(model, docKey)
   const people = useCollaborators(model, docKey)
   const caps = useCapabilities(model, docKey)
-  const [open, setOpen] = useState<"share" | "people" | "reset" | null>(null)
+  const [open, setOpen] = useState<"share" | "people" | "reset" | "relay" | null>(null)
+  const runtime = useOptionalRuntime()
+  const relaySetup = useRelaySetupServices(runtime?.platform ?? null)
   const shareButton = useRef<HTMLButtonElement>(null)
   const stackButton = useRef<HTMLButtonElement>(null)
   const others = people.filter((p) => !p.isYou)
@@ -151,6 +156,26 @@ function ShareCluster({
             shareButton.current?.focus({ preventScroll: true })
           }}
           onResetAll={() => setOpen("reset")}
+          {...(relaySetup ? { onSetUpRelay: () => setOpen("relay") } : {})}
+        />
+      )}
+      {open === "relay" && relaySetup && (
+        <RelayWizard
+          services={relaySetup}
+          from="share"
+          displayName={model.settings.getState().displayName}
+          saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
+          onStartSharing={async (relayUrl) => {
+            const createSecret = await relaySetup.store.sendSecret()
+            await model
+              .document(docKey)
+              .startSharing({ relayUrl, ...(createSecret ? { createSecret } : {}) })
+            setOpen("share")
+          }}
+          onClose={() => {
+            setOpen((o) => (o === "relay" ? null : o))
+            shareButton.current?.focus({ preventScroll: true })
+          }}
         />
       )}
       {open === "reset" && (

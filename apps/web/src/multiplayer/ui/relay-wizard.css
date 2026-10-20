@@ -1,0 +1,1207 @@
+/*
+ * Board 42 "Relay setup" (desing.pen UYvSG): the wizard sheet (sections 2-8), its pieces in the
+ * Share popover and Settings › Multiplayer (section 1, 3 I) and dark (section 9, same tokens).
+ * Node values are quoted per rule; tokens where the node uses a variable.
+ */
+
+/* --- Wizard shell (f4OYFV): 600, clip, bg-overlay, radius-xl, stroke 1 border, Dialog shadow -- */
+.rw-shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 600px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow: 0 16px 48px var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+}
+
+.rw-shell:focus-visible {
+  outline: none;
+}
+
+.rw-shell svg {
+  display: block;
+}
+
+/* Head (ceEr5): row, gap 12, padding [16, 12, 12, 20], alignItems center. */
+.rw-head {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 12px 12px 20px;
+}
+
+/* Icon Wrap (WgvNC): 32, bg-muted, radius-pill, center › Icon 16 text-primary. */
+.rw-icon-wrap {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+/* Text (fE2Aj): column, gap 2, fill › Title sans 14 / 600 primary · Sub sans 11 secondary. */
+.rw-head__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rw-head__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.rw-head__sub {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Close (xLNDc): IconButton 24, fill #00000000, x 14 text-secondary. */
+.rw-shell .rw-close.kimo-icon-button {
+  color: var(--kimo-text-secondary);
+}
+
+/* Stepper (VhJwA): row, gap 8, padding [0, 20, 14, 20], alignItems center. */
+.rw-stepper {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0 20px 14px 20px;
+  list-style: none;
+}
+
+/* Step (wtElY): row, gap 6, center. */
+.rw-step {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Dot (Erops): 18, radius-pill, center › Num sans 10 / 600. Current accent / on-accent; done
+   success-soft › check 12 success; to come bg-muted / text-tertiary. */
+.rw-step__dot {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-tertiary);
+  font-size: 10px;
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.rw-step[data-state="current"] .rw-step__dot {
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+}
+
+.rw-step[data-state="done"] .rw-step__dot {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
+/* Label sans 12: current primary 600, done primary, to come tertiary. */
+.rw-step__label {
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.rw-step[data-state="current"] .rw-step__label {
+  color: var(--kimo-text-primary);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+.rw-step[data-state="done"] .rw-step__label {
+  color: var(--kimo-text-primary);
+}
+
+/* Connector (LETVK): 24 × 1, border-strong. */
+.rw-connector {
+  flex: none;
+  width: 24px;
+  height: 1px;
+  background: var(--kimo-border-strong);
+}
+
+/* Body (UZAY5): column, gap 8 (Choose) / 14 / 16, padding 20, top stroke 1 border. */
+.rw-body {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-height: 0;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.rw-body[data-gap="8"] {
+  gap: 8px;
+}
+
+.rw-body[data-gap="14"] {
+  gap: 14px;
+}
+
+/* Footer (IqSJT): row, gap 8, padding [12, 20], center, top stroke 1 border. */
+.rw-footer {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.rw-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+}
+
+/* Footnote (leBJf): sans 11 text-tertiary. */
+.rw-footnote {
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Buttons: footer instances h 30, padding [0, 12]; row actions h 26 / 28, padding [0, 10] / [0, 12].
+   The label keeps the component's text-base, the icon its 16. */
+.rw-btn.kimo-button {
+  height: 30px;
+  padding: 0 12px;
+}
+
+.rw-btn--26.kimo-button {
+  height: 26px;
+  padding: 0 10px;
+}
+
+.rw-btn--28.kimo-button {
+  height: 28px;
+  padding: 0 12px;
+}
+
+/* Disabled Primary (fzDvZ while nothing can run, knlw3, ETM1A, dcZaX): opacity 0.4. */
+.rw-btn.kimo-button:disabled,
+.rw-btn--26.kimo-button:disabled,
+.rw-btn--28.kimo-button:disabled {
+  opacity: 0.4;
+}
+
+/* Ghost danger (JnKKR Stop relay): icon and label danger. */
+.rw-btn--danger.kimo-button {
+  color: var(--kimo-danger);
+}
+
+/* Ghost buttons in rows (Show, Hide, Regenerate, Copy Kimo's secret, Edit URL): the component's
+   text-secondary. */
+.rw-shell .kimo-button--ghost,
+.rw-secret .kimo-button--ghost {
+  color: var(--kimo-text-secondary);
+}
+
+.rw-shell .rw-btn--danger.kimo-button--ghost {
+  color: var(--kimo-danger);
+}
+
+/* IconButton 24 (Copy, Show), fill #00000000, 14 icons text-secondary. */
+.rw-icon-btn.kimo-icon-button {
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+/* --- Choose (section 2) ------------------------------------------------------------------- */
+
+/* Option (i2Vair): row, gap 12, padding [12, 14], center, radius-md, stroke 1 border; selected:
+   fill bg-subtle, stroke 1.5 accent. */
+.rw-option {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.rw-option[aria-checked="true"] {
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1.5px var(--kimo-accent);
+}
+
+.rw-option:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.rw-option[aria-disabled="true"] {
+  cursor: default;
+}
+
+/* Radio (wIwnA): 16, bg-app, radius-pill, stroke 1.5 border-strong; selected stroke 5 accent. */
+.rw-radio {
+  box-sizing: border-box;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1.5px var(--kimo-border-strong);
+}
+
+[aria-checked="true"] > .rw-radio {
+  box-shadow: inset 0 0 0 5px var(--kimo-accent);
+}
+
+/* Option Icon Wrap (biuXF): 32, bg-muted, radius-md, center › 16 text-primary. */
+.rw-option__icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+/* Web: This computer disabled (WyBKH, EZrLo opacity 0.5; text tertiary). */
+.rw-option[aria-disabled="true"] .rw-radio,
+.rw-option[aria-disabled="true"] .rw-option__icon {
+  opacity: 0.5;
+}
+
+/* Text (g3mkl): column, gap 2, fill › Title sans 12 / 500 primary · Desc sans 11 secondary 1.45. */
+.rw-text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rw-text--1 {
+  gap: 1px;
+}
+
+.rw-text--4 {
+  gap: 4px;
+}
+
+.rw-option__title,
+.rw-label-strong {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+.rw-option__desc,
+.rw-desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+.rw-desc--tertiary {
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-option[aria-disabled="true"] .rw-option__title,
+.rw-option[aria-disabled="true"] .rw-option__desc {
+  color: var(--kimo-text-tertiary);
+}
+
+/* Title (E8d3fw, gz5Oz, m2cr3o): sans 12 / 600 primary. */
+.rw-title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.rw-badge.kimo-badge {
+  flex: none;
+}
+
+/* Web Note (UMwDK), Tradeoff Note (Brdqo), Info (LzwSt): row, gap 8, padding [8, 10], center,
+   bg-subtle, radius-md › icon 14 text-tertiary · Text sans 11 secondary 1.45. */
+.rw-note {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.rw-note__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+/* Quick Tunnel Warning (CeGmj): warning-soft › triangle-alert 14 warning. */
+.rw-note--warning {
+  background: var(--kimo-warning-soft);
+}
+
+.rw-note--warning .rw-note__icon {
+  color: var(--kimo-warning);
+}
+
+.rw-note .rw-desc {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* --- Callouts: Missing (a0e1b), Installed (KeY5s), Fix (gnLEW) ------------------------------ */
+
+/* Missing: row, gap 10, padding [10, 12], warning-soft, radius-md (no alignItems: top). */
+.rw-callout {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-warning-soft);
+}
+
+.rw-callout__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-warning);
+}
+
+/* Installed: success-soft, alignItems center › circle-check 16 success. */
+.rw-callout--success {
+  align-items: center;
+  background: var(--kimo-success-soft);
+}
+
+.rw-callout--success .rw-callout__icon {
+  color: var(--kimo-success);
+}
+
+/* Fix (gnLEW): column, gap 8, padding [10, 12], danger-soft, radius-md. */
+.rw-fix {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-danger-soft);
+}
+
+/* Actions (yErox, rjlqI): row, gap 6, center. */
+.rw-actions {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Message (O3kUn5): column, gap 4. */
+.rw-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+/* --- Groups, checks, fields ------------------------------------------------------------------ */
+
+/* Group (PEjEh): column, gap 8 › Label sans 11 / 500 secondary. */
+.rw-group {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rw-label {
+  margin: 0;
+  padding: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* Check (RP1lp): row, gap 8, center › icon 14 · Label sans 12 · Spacer · Meta mono 11 tertiary. */
+.rw-check {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.rw-check__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-check[data-status="ok"] .rw-check__icon {
+  color: var(--kimo-success);
+}
+
+.rw-check[data-status="warning"] .rw-check__icon {
+  color: var(--kimo-warning);
+}
+
+.rw-check[data-status="failed"] .rw-check__icon {
+  color: var(--kimo-danger);
+}
+
+.rw-check[data-status="running"] .rw-check__icon {
+  color: var(--kimo-text-primary);
+}
+
+.rw-check__label {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.rw-check[data-status="pending"] .rw-check__label {
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-mono {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.rw-mono--secondary {
+  color: var(--kimo-text-secondary);
+}
+
+.rw-mono--primary {
+  color: var(--kimo-text-primary);
+}
+
+.rw-spin {
+  animation: rw-spin 1s linear infinite;
+}
+
+@keyframes rw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rw-spin {
+    animation: none;
+  }
+}
+
+/* Field (Hk33f): column, gap 6 › Label Row (row, gap 6, center) · Input Row (row, gap 4,
+   center) · Help sans 11 tertiary 1.45. */
+.rw-field {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.rw-label-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.rw-input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.rw-input-row .kimo-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Values are mono 12 primary (BwYzP overrides); placeholders keep sans 13 tertiary. */
+.rw-mono-input .kimo-input__field:not(:placeholder-shown) {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+}
+
+/* Add origin (NxT8y): Input h 28, placeholder text-sm. */
+.rw-input-28.kimo-input {
+  height: 28px;
+}
+
+.rw-input-28 .kimo-input__field {
+  font-size: var(--kimo-text-sm);
+}
+
+/* Tag (qn4GV): mono 11 text-tertiary. */
+.rw-tag {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* --- Secret (TCYdX / O29Rk8) ------------------------------------------------------------------ */
+.rw-secret {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.rw-secret .kimo-seg-text {
+  flex: none;
+}
+
+/* Settings: Label sans 12 / 500 primary (gRkkL). */
+.rw-secret--settings .rw-label {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+}
+
+/* Automatic (u8lap) and Address (abyOA), Code (ak2oz): row, gap 10 (code 8), padding [8, 6, 8, 12],
+   center, bg-subtle, radius-md, stroke 1 border. */
+.rw-box {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 6px 8px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+.rw-box--code {
+  gap: 8px;
+}
+
+.rw-box__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.rw-box--address .rw-box__icon {
+  color: var(--kimo-text-tertiary);
+}
+
+/* The secret, shown (zlRFi): mono 11 primary. */
+.rw-secret-value {
+  overflow: hidden;
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+
+/* Code Text (bTML6): mono 11 primary, line-height 1.45, fill, wraps. */
+.rw-code {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* None (L5vX4b): row, gap 8, padding [8, 12], center, bg-subtle, radius-md › circle-check 14 success. */
+.rw-none {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.rw-none__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-success);
+}
+
+.rw-none .rw-desc {
+  flex: 1 1 0;
+}
+
+/* Redeploying (Qa7I6): column, gap 8, padding [10, 12], bg-subtle, radius-md, stroke 1 border. */
+.rw-progress-box {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+/* Banner/Warning (PgMN3) in Settings: radius-md. */
+.rw-banner.kimo-banner {
+  border-radius: var(--kimo-radius-md);
+}
+
+/* --- Origins (joY17) ------------------------------------------------------------------------- */
+
+/* Auto Row (sWw1w): row, gap 8, center (wraps when narrow). */
+.rw-origins-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Origin Chip (T79ly): row, gap 5, padding [3, 10, 3, 8], center, bg-muted, radius-pill › icon 12
+   tertiary · Label sans 11 secondary (an origin in mono). */
+.rw-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.rw-chip--mono {
+  font-family: var(--kimo-font-mono);
+}
+
+.rw-chip__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-chip__remove {
+  display: inline-flex;
+  margin: 0 -4px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+
+/* Add Row (cKFIV): row, gap 6, center. */
+.rw-add-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.rw-add-row .kimo-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* --- Reach (g4bDs) ---------------------------------------------------------------------------- */
+
+/* Reach row (Dq2QR): row, gap 10, padding [10, 12], radius-md, stroke 1 border (top aligned);
+   selected bg-subtle, stroke 1.5 accent. */
+.rw-reach {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.rw-reach[aria-checked="true"] {
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1.5px var(--kimo-accent);
+}
+
+.rw-reach:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.rw-reach[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Title Row (xbvhE): row, gap 6, center. */
+.rw-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Running (X1Bnq) -------------------------------------------------------------------------- */
+.rw-status {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* People (g4BVfR): row, gap 6, center › users 14 tertiary · Label sans 11 secondary. */
+.rw-people {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-people__label {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-xs);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* In-progress pills (Installing Bun, Deploying, Testing): fill bg-muted, dot and label secondary.
+   Failures: danger-soft / danger; warnings: warning-soft / warning. */
+.rw-pill--muted.kimo-status-pill {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+.rw-pill--muted .kimo-status-pill__dot {
+  background: var(--kimo-text-secondary);
+}
+
+/* --- Log (LgfaB): column, gap 6, padding [10, 12], bg-subtle, radius-md, stroke 1 border ------- */
+.rw-log {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  list-style: none;
+}
+
+/* Line (N8hMC): row, gap 8, center › icon 12 · Text mono 11 (pending tertiary) · Meta. */
+.rw-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.rw-line__text {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rw-line[data-status="pending"] .rw-line__text {
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-line[data-status="failed"] .rw-line__text {
+  color: var(--kimo-danger);
+}
+
+.rw-line__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-line[data-status="done"] .rw-line__icon {
+  color: var(--kimo-success);
+}
+
+.rw-line[data-status="running"] .rw-line__icon {
+  color: var(--kimo-text-primary);
+}
+
+.rw-line[data-status="failed"] .rw-line__icon {
+  color: var(--kimo-danger);
+}
+
+/* The failed command's last lines. */
+.rw-tail {
+  margin: 0;
+  padding: 0 0 0 20px;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.rw-output summary {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-xs);
+  cursor: pointer;
+}
+
+.rw-output pre {
+  max-height: 160px;
+  margin: 6px 0 0 0;
+  overflow: auto;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+/* Track (i00iF): fill × 4, bg-muted, radius-pill › Bar accent. */
+.rw-track {
+  flex: none;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.rw-track__bar {
+  height: 4px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+  transition: width 200ms ease;
+}
+
+/* Link (Ibb9D): row, gap 4, center › Label sans 11 / 500 primary · arrow-up-right 12 tertiary. */
+.rw-link {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  cursor: pointer;
+}
+
+.rw-link:hover > span:first-child {
+  text-decoration: underline;
+}
+
+.rw-link__icon {
+  display: inline-flex;
+  color: var(--kimo-text-tertiary);
+}
+
+/* Target (EXZrd): row, gap 8, center › server 14 tertiary · URL mono 11 primary · Status. */
+.rw-target {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.rw-target .rw-mono--primary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Probe (B37YM): row, gap 8, center. */
+.rw-probe {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* --- Saved (oNhnE): column, gap 14, padding [32, 24, 24, 24], center --------------------------- */
+.rw-saved {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 32px 24px 24px 24px;
+}
+
+/* Icon Wrap (IuTuB): 40, success-soft, radius-pill, center › circle-check 18 success. */
+.rw-saved__icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
+/* Text (c96cT): column, gap 6, center › Title sans 14 / 600 · Desc sans 12 secondary 1.45, centred. */
+.rw-saved__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.rw-saved__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Over the window: the Dialog scrim. */
+.rw-scrim {
+  z-index: 60;
+}
+
+/* --- Share popover, no relay (section 1 A) ----------------------------------------------------- */
+
+/* Set up a relay (GTJaY): Button/Primary h 30, padding [0, 12], full width, centred. */
+.mp-setup-relay.kimo-button {
+  justify-content: center;
+  width: 100%;
+  height: 30px;
+  padding: 0 12px;
+}
+
+/* Divider · or (HxQ2J): row, gap 8, center › Line fill × 1 border · Label sans 11 tertiary. */
+.mp-or {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-or__line {
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--kimo-border);
+}
+
+.mp-or__label {
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Settings › What a relay is › Actions (TPCDP): row, gap 12, padding [4, 0, 0, 0], center. */
+.mp-relay-box__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 0 0;
+}
+
+.mp-relay-box__actions .mp-guide {
+  align-self: center;
+}
+
+/* Section 3 I: links on a quick tunnel. Link row (YZC4Z): padding [6, 4, 6, 8], no fixed height;
+   Quick Tunnel Note (m1FYw): row, gap 4, center › triangle-alert 11 warning · Label sans 11 warning. */
+.mp-link--quick {
+  height: auto;
+  padding: 6px 4px 6px 8px;
+}
+
+.mp-quick-note {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  color: var(--kimo-warning);
+  font-size: var(--kimo-text-xs);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.mp-quick-note svg {
+  display: block;
+}
+
+/* Install Bun? (O273cM) › Body Placeholder (BoSUg): fill × 40, bg-subtle, radius-md, center ›
+   Label (za4jn) mono 11 text-tertiary: the exact command. */
+.rw-dialog-code {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  user-select: all;
+}

@@ -1350,6 +1350,8 @@ export class FileSessionManager implements SessionManager {
     this.offClose = this.platform.window.onCloseRequested(async (info) => {
       // Board 24 (i): never-saved documents ask first; Cancel keeps the window open.
       if (!(await this.confirmCloseAll())) return false
+      for (const guard of [...this.closeGuards])
+        if (!(await guard({ quitting: info?.quitting === true }))) return false
       // Quit mid-turn: agents stop and release what they flagged before the clean save.
       await this.runCloseHooks()
       const ok = (await this.flushAll()).ok
@@ -1533,6 +1535,16 @@ export class FileSessionManager implements SessionManager {
   }
 
   private readonly closeHooks = new Set<() => void | Promise<void>>()
+  private readonly closeGuards = new Set<(info: { quitting: boolean }) => Promise<boolean>>()
+
+  /**
+   * Asks before the window closes, after "Save changes?": false keeps it open (board 42: quitting
+   * Kimo stops the relay on this computer, after a confirm when people are connected).
+   */
+  addCloseGuard(guard: (info: { quitting: boolean }) => Promise<boolean>): Unsubscribe {
+    this.closeGuards.add(guard)
+    return () => this.closeGuards.delete(guard)
+  }
 
   /**
    * Runs once the window is going to close (after "Save changes?" is confirmed) and before the

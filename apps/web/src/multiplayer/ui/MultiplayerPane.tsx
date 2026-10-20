@@ -5,16 +5,23 @@
  * guide) · Relay URL (pXQUm: Input + Test, then one result: testing, a Kimo relay answered, not a
  * relay, unreachable within 5 s, relay too old) · Your name (empty shows Guest N) · Show other
  * cursors · Fetch images and fonts (On demand / Never). Every control writes at once.
+ *
+ * Board 42 section 1 B: the explainer gets Set up a relay (Secondary, opens the relay setup
+ * wizard over Settings) next to the guide, and Create secret sits under Relay URL
+ * (`RelaySecretSetting`). A passing Test also checks the create secret.
  */
 import type { KimoPlatform } from "@kimo/platform"
 import { Button, Input, Select, SettingRow, StatusPill, Toggle } from "@kimo/ui"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { PaneTitle } from "../../settings/panes"
 import { emptySnapshot, type ShareBackend } from "../backend"
 import { useMultiplayer, useMultiplayerSettings, useRelayTest } from "../hooks"
 import { createMultiplayerModel, type MultiplayerModel } from "../model"
+import { useRelaySetupServices } from "../relay-setup/services"
 import { refusedText, relayResultView } from "./copy"
+import { confirmSecret, RelaySecretSetting } from "./RelaySecretSetting"
+import { RelayWizard } from "./RelayWizard"
 import { GuideLink, openRelayGuide } from "./shared"
 import "./share-ui.css"
 
@@ -70,6 +77,10 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
   const [url, setUrl] = useState(settings.relayUrl ?? "")
   const [name, setName] = useState(settings.displayName)
   const [urlError, setUrlError] = useState<string | null>(null)
+  const relaySetup = useRelaySetupServices(platform)
+  const [wizard, setWizard] = useState(false)
+  const [secretRejected, setSecretRejected] = useState(false)
+  const customRef = useRef<HTMLInputElement>(null)
   // A change from elsewhere (the Share popover) shows here.
   useEffect(() => setUrl(settings.relayUrl ?? ""), [settings.relayUrl])
   useEffect(() => setName(settings.displayName), [settings.displayName])
@@ -84,8 +95,12 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
     }
   }
   const runTest = async () => {
+    setSecretRejected(false)
     const result = await model.relayTest.test(url)
-    if (result.kind === "ok") await saveUrl(result.url)
+    if (result.kind !== "ok") return
+    await saveUrl(result.url)
+    if (relaySetup && (await confirmSecret(relaySetup, result.url)) === "rejected")
+      setSecretRejected(true)
   }
   const result =
     urlError !== null
@@ -108,12 +123,24 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
             accounts, and Kimo does not run one for you. Host kimo-relay on any small server, or use
             one a teammate runs.
           </p>
-          <GuideLink
-            label="Self-hosting guide"
-            leadingIcon={false}
-            className="mp-guide--settings"
-            onOpen={() => void openRelayGuide(platform)}
-          />
+          <div className="mp-relay-box__actions" data-pen="TPCDP">
+            {relaySetup && (
+              <Button
+                variant="secondary"
+                className="rw-btn--28 mp-setup-relay-settings"
+                icon={<Icon name="wand-sparkles" size={16} />}
+                onClick={() => setWizard(true)}
+              >
+                Set up a relay
+              </Button>
+            )}
+            <GuideLink
+              label="Self-hosting guide"
+              leadingIcon={false}
+              className="mp-guide--settings"
+              onOpen={() => void openRelayGuide(platform)}
+            />
+          </div>
         </div>
       </div>
       <div className="mp-setting" data-pen="pXQUm">
@@ -179,7 +206,46 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
             )}
           </div>
         )}
+        {secretRejected && (
+          <div className="mp-result" data-result="secret-rejected" role="status">
+            <span className="mp-result__icon mp-result__icon--danger">
+              <Icon name="circle-x" size={14} />
+            </span>
+            <p className="mp-result__text">
+              The relay rejected the create secret. It has a different KIMO_CREATE_SECRET.
+            </p>
+            <Button
+              variant="secondary"
+              className="rw-btn--26"
+              icon={<Icon name="key-round" size={16} />}
+              onClick={() => {
+                setSecretRejected(false)
+                void relaySetup?.store
+                  .update({ secretMode: "custom" })
+                  .then(() => requestAnimationFrame(() => customRef.current?.focus()))
+              }}
+            >
+              Enter the relay's secret
+            </Button>
+          </div>
+        )}
       </div>
+      {relaySetup && (
+        <RelaySecretSetting
+          services={relaySetup}
+          relayUrl={settings.relayUrl}
+          customRef={customRef}
+        />
+      )}
+      {wizard && relaySetup && (
+        <RelayWizard
+          services={relaySetup}
+          from="settings"
+          displayName={settings.displayName}
+          saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
+          onClose={() => setWizard(false)}
+        />
+      )}
       <SettingRow
         label="Your name"
         description="Shown on your cursor and in the list, kept on this device. Leave it empty to appear as Guest 1, Guest 2 and so on."

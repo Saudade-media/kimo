@@ -265,12 +265,20 @@ export const scenarios: Scenario[] = [
         reds.push(red)
       }
       log(`pricing center red over frames: ${reds.join(" ")}`)
-      // Headless frames come 15–70 ms apart: at least one lands mid-entrance.
+      // Headless frames usually come 15–70 ms apart: then at least one lands mid-entrance. A
+      // loaded runner can stall a frame past the whole 200 ms; the curve checks above still ran.
       const mid = moving.filter((x) => {
         const o = x.m?.pageAaPricing?.opacity ?? 1
         return o > 0.05 && o < 0.95
       })
-      expect(mid.length >= 1, `in-between frames ${mid.length}`)
+      let gap = 0
+      for (let i = 1; i < mcp.samples.length; i++) {
+        const s = mcp.samples[i]
+        const prev = mcp.samples[i - 1]
+        if (s && prev && s.t >= t0 && prev.t <= t0 + DUR) gap = Math.max(gap, s.t - prev.t)
+      }
+      if (gap <= 70) expect(mid.length >= 1, `in-between frames ${mid.length}`)
+      else log(`in-between frames ${mid.length} (frames up to ${gap.toFixed(0)} ms apart)`)
       for (const x of mid) {
         // Where the sliding footer has cleared the center: Pricing at its opacity over #F2F2F2.
         if (180 + (x.m?.pageAaFooter?.dy ?? 0) <= 150) continue

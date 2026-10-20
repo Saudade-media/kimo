@@ -319742,8 +319742,3456 @@
         },
         {
           "type": "frame",
+          "id": "ExORz",
+          "name": "11 · Live text",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Orym6",
+              "name": "Section Header",
+              "width": "fill_container",
+              "stroke": "$border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 12,
+              "padding": [
+                0,
+                0,
+                12,
+                0
+              ],
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tNlCM",
+                  "name": "Section Title",
+                  "fill": "$text-primary",
+                  "content": "11 · Live text",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-xl",
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "SRSMn",
+                  "name": "Section Note",
+                  "fill": "$text-tertiary",
+                  "content": "Text layers merge character by character, about every 50 ms · board 30 editing look for you · remote caret 2 px + name flag, remote range at 0.2 in the person's color · nobody's caret blocks typing",
+                  "fontFamily": "$font-sans",
+                  "fontSize": "$text-sm",
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "S1e9r",
+              "name": "Row 1 · You and Maya in one layer",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "sQsyq",
+                  "name": "Vignette · A · you and Maya · single line",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "C9Niq1",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "A · you and Maya · single line",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SjRJL",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "mUj80",
+                          "name": "Text Box",
+                          "width": 340,
+                          "stroke": "$selection",
+                          "strokeWidth": 1.5,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yALJV",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "eYh3O",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "vdQHF",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Plan less. ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "id": "naY4i",
+                                  "name": "Caret",
+                                  "fill": "$text-primary",
+                                  "width": 1.5,
+                                  "height": 24
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "cIeDE",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "U2FCJU",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Ship more ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YVS3v",
+                                  "name": "Run · remote selected",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "d7UsO",
+                                      "layoutPosition": "absolute",
+                                      "x": 0,
+                                      "y": 0,
+                                      "name": "Remote Range",
+                                      "opacity": 0.24,
+                                      "fill": "$presence-clay",
+                                      "width": 80,
+                                      "height": 28
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "keIje",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "together",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "T12pYW",
+                                  "name": "Remote Caret · Maya",
+                                  "width": 2,
+                                  "height": 28,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "qs7mU",
+                                      "x": 0,
+                                      "y": 2,
+                                      "name": "Bar",
+                                      "fill": "$presence-clay",
+                                      "width": 2,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "BkOUb",
+                                      "x": 0,
+                                      "y": 26,
+                                      "name": "Flag · Maya",
+                                      "fill": "$presence-clay",
+                                      "cornerRadius": [
+                                        0,
+                                        3,
+                                        3,
+                                        3
+                                      ],
+                                      "gap": 3,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "DqtWi",
+                                          "name": "Label",
+                                          "fill": "$on-accent",
+                                          "content": "Maya",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": "$text-xs",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "y34eab",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "kWwM9",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": ".",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "mvEU2",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "You: caret after “less.” (board 30, 1.5 text-primary). Maya: range “together” at 0.24 clay, her caret 2 px clay at its end. First line of the layer, so her flag flips below the caret.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lbHOD",
+                  "name": "Vignette · B · you and Maya · paragraph",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "kDPfm",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "B · you and Maya · paragraph",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "r5NOjr",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "W80X6h",
+                          "name": "Text Box",
+                          "width": 300,
+                          "stroke": "$selection",
+                          "strokeWidth": 1.5,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Tjjtz",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "k1BQu",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "pdKDr",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Plan less. ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "PFw0B",
+                                  "name": "Run · selected",
+                                  "height": 28,
+                                  "fill": "$selection-soft",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "xi0KX",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Ship more together,",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OVSJ5",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "dR9ne",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "t3IrY",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "on ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Vxdnw",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "PsSMA",
+                                      "name": "Text",
+                                      "fill": "$text-tertiary",
+                                      "content": "one canvas",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal",
+                                      "fontStyle": "italic"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "J0oaRe",
+                                  "name": "Remote Caret · Maya",
+                                  "width": 2,
+                                  "height": 28,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "V6fYJ",
+                                      "x": 0,
+                                      "y": 2,
+                                      "name": "Bar",
+                                      "fill": "$presence-clay",
+                                      "width": 2,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Y2tdK",
+                                      "x": 0,
+                                      "y": -13,
+                                      "name": "Flag · Maya",
+                                      "fill": "$presence-clay",
+                                      "cornerRadius": [
+                                        3,
+                                        3,
+                                        3,
+                                        0
+                                      ],
+                                      "gap": 3,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "nlND7",
+                                          "name": "Label",
+                                          "fill": "$on-accent",
+                                          "content": "Maya",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": "$text-xs",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Cg5pQ",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "WySEK",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": ", right next to",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "WNKkH",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "itMhG",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "B9xGl",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "your code.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Mcxzw",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "You: “Ship more together,” selected (selection-soft). Maya types in line 2 after “one canvas”; not the first line, so the flag sits above and overlaps line 1 without pushing text.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LW21Z",
+                  "name": "Vignette · C · Maya edits a layer you are not editing",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "B3qsRh",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "C · Maya edits a layer you are not editing",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JB7a5",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "BywAU",
+                          "name": "Text Box",
+                          "width": 300,
+                          "stroke": "$presence-clay",
+                          "strokeWidth": 1.5,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Xxcqv",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "VS2Lm",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "i3zxP",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Plan less. Ship more together,",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "zeOoz",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "BSBBY",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "eb9aD",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "on one canvas, ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "g9kSrL",
+                                  "name": "Run · remote selected",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "aMeuk",
+                                      "layoutPosition": "absolute",
+                                      "x": 0,
+                                      "y": 0,
+                                      "name": "Remote Range",
+                                      "opacity": 0.24,
+                                      "fill": "$presence-clay",
+                                      "width": 90,
+                                      "height": 28
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "K99t6j",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "right next",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "m7jg0N",
+                                  "name": "Remote Caret · Maya",
+                                  "width": 2,
+                                  "height": 28,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "ZbAwA",
+                                      "x": 0,
+                                      "y": 2,
+                                      "name": "Bar",
+                                      "fill": "$presence-clay",
+                                      "width": 2,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "J6dUS",
+                                      "x": 0,
+                                      "y": -13,
+                                      "name": "Flag · Maya",
+                                      "fill": "$presence-clay",
+                                      "cornerRadius": [
+                                        3,
+                                        3,
+                                        3,
+                                        0
+                                      ],
+                                      "gap": 3,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "cO5v9",
+                                          "name": "Label",
+                                          "fill": "$on-accent",
+                                          "content": "Maya",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": "$text-xs",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "AEN4O",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Tzg3c",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": " to",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Rr4yZ",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "UH4Cm",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "MEwQQ",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "your code.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "UKfM7",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "No blue outline: the layer gets Maya's 1.5 clay outline (remote selection rule), no corner tag, the caret flag carries her name. Her range shows at 0.24.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "RozGm",
+              "name": "Row 2 · Agent and edge states",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kTzfh",
+                  "name": "Vignette · D · agent typing inside its claim",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zMChH",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "D · agent typing inside its claim",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Tx4GP",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 240,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "C0mAvd",
+                          "name": "Hero · claimed",
+                          "width": 360,
+                          "fill": "#F4F6F8",
+                          "stroke": "$agent",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            40,
+                            20,
+                            24,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "X9xvm",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Claim Tag · Kimo",
+                              "fill": "$agent",
+                              "cornerRadius": [
+                                0,
+                                0,
+                                6,
+                                0
+                              ],
+                              "gap": 5,
+                              "padding": [
+                                3,
+                                8,
+                                3,
+                                4
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "E4Qvy",
+                                  "type": "ref",
+                                  "ref": "ethZq",
+                                  "name": "AgentMark"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "rV7Li",
+                                  "name": "Label",
+                                  "fill": "$on-accent",
+                                  "content": "Kimo is editing Hero",
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MtWp8",
+                              "name": "Text Box",
+                              "width": 300,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "EJXpt",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "CAvjM",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "h2su1E",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Plan less. Ship more",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "yyG0R",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "f9Jf5K",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "gVoGW",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "tog",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "M6NdhN",
+                                      "name": "Remote Caret · Kimo",
+                                      "width": 2,
+                                      "height": 28,
+                                      "layout": "none",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "wzXv8",
+                                          "x": 0,
+                                          "y": 2,
+                                          "name": "Bar",
+                                          "fill": "$agent",
+                                          "width": 2,
+                                          "height": 24
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "gTDLB",
+                                          "x": 0,
+                                          "y": -13,
+                                          "name": "Flag · Kimo",
+                                          "fill": "$agent",
+                                          "cornerRadius": [
+                                            3,
+                                            3,
+                                            3,
+                                            0
+                                          ],
+                                          "gap": 3,
+                                          "padding": [
+                                            1,
+                                            5,
+                                            1,
+                                            2
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "id": "g5O4ZV",
+                                              "type": "ref",
+                                              "ref": "ethZq",
+                                              "name": "AgentMark"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "NwpNa",
+                                              "name": "Label",
+                                              "fill": "$on-accent",
+                                              "content": "Kimo",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": "$text-xs",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "ypQ2Y",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Kimo streams text into Headline inside its Hero claim. Caret 2 px $agent, flag with its mark. While its caret is in text the pointer cursor is hidden: still one cursor, one outline.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b1I6Z1",
+                  "name": "Vignette · E · caret at a line end and at a wrap",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "BcIRR",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "E · caret at a line end and at a wrap",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mqr34",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "xAQBY",
+                          "name": "Text Box",
+                          "width": 300,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "HhDfp",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "aksKA",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "zjco3",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Plan less. Ship more together,",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "X1SHaF",
+                                  "name": "Remote Caret · Maya",
+                                  "width": 2,
+                                  "height": 28,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "s8QHM",
+                                      "x": 0,
+                                      "y": 2,
+                                      "name": "Bar",
+                                      "fill": "$presence-clay",
+                                      "width": 2,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "L34mj",
+                                      "x": 0,
+                                      "y": 26,
+                                      "name": "Flag · Maya",
+                                      "fill": "$presence-clay",
+                                      "cornerRadius": [
+                                        0,
+                                        3,
+                                        3,
+                                        3
+                                      ],
+                                      "gap": 3,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "c3AAWv",
+                                          "name": "Label",
+                                          "fill": "$on-accent",
+                                          "content": "Maya",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": "$text-xs",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "f2joc",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "PuWPz",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "jJgnA",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "on one canvas, right next to",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "CJDf1",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "s3t1t",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "cI6dV",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "your code.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "sb1CA",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Maya's caret after “together,” where line 1 soft-wraps: it draws at the end of the upper line, as the local caret does (upstream affinity). Still the first line, so the flag sits below.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KdajG",
+                  "name": "Vignette · F · two remote carets at one spot",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AdwbR",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "F · two remote carets at one spot",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sYkcg",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "C93nap",
+                          "name": "Text Box",
+                          "width": 300,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "CpfAz",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "j7otBp",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "TqZp3",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Plan less. Ship more",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "lM1Sh",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "EKi37",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "taknk",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "together, on one ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "K5Jj8v",
+                                  "name": "Remote Caret · Jonas + Maya",
+                                  "width": 2,
+                                  "height": 28,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "A5TGj",
+                                      "x": 0,
+                                      "y": 2,
+                                      "name": "Bar",
+                                      "fill": "$presence-pine",
+                                      "width": 2,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Z9jkKv",
+                                      "x": 0,
+                                      "y": -13,
+                                      "name": "Flag · Jonas",
+                                      "fill": "$presence-pine",
+                                      "cornerRadius": [
+                                        3,
+                                        3,
+                                        3,
+                                        0
+                                      ],
+                                      "gap": 3,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "K5Q2f",
+                                          "name": "Label",
+                                          "fill": "$on-accent",
+                                          "content": "Jonas",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": "$text-xs",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "t2btnL",
+                                      "x": 0,
+                                      "y": -30,
+                                      "name": "Flag · Maya",
+                                      "fill": "$presence-clay",
+                                      "cornerRadius": [
+                                        3,
+                                        3,
+                                        3,
+                                        0
+                                      ],
+                                      "gap": 3,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Fo8Ry",
+                                          "name": "Label",
+                                          "fill": "$on-accent",
+                                          "content": "Maya",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": "$text-xs",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "B6vp4",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "gQhOX",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "canvas",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "T3wAS",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Jonas typed last, so his bar is on top. Flags stack upward, 2 apart, most recent closest to the caret. Never offset the bars.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "BF9wk",
+              "name": "Row 3 · Zoom and idle",
+              "width": "fill_container",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wMVjS",
+                  "name": "Vignette · G · zoomed out below 50%",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WsVe0",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "G · zoomed out below 50%",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "v6yLY",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "xibzR",
+                          "name": "Text Box",
+                          "width": 120,
+                          "stroke": "$presence-clay",
+                          "strokeWidth": 1.5,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yFKoE",
+                              "name": "Line",
+                              "height": 11,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "THW16",
+                                  "name": "Run",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "r6zz9T",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Plan less. Ship more together,",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 8,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "zvUxE",
+                              "name": "Line",
+                              "height": 11,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "EESwF",
+                                  "name": "Run",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "I6i1V",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "on one canvas, ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 8,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YipSa",
+                                  "name": "Run · remote selected",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "Z7bYZ",
+                                      "layoutPosition": "absolute",
+                                      "x": 0,
+                                      "y": 0,
+                                      "name": "Remote Range",
+                                      "opacity": 0.24,
+                                      "fill": "$presence-clay",
+                                      "width": 36,
+                                      "height": 11
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "d3U6Pn",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "right next",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 8,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "abld2",
+                                  "name": "Remote Caret · Maya",
+                                  "width": 2,
+                                  "height": 11,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "K7DUX",
+                                      "x": 0,
+                                      "y": 0.5,
+                                      "name": "Bar",
+                                      "fill": "$presence-clay",
+                                      "width": 2,
+                                      "height": 10
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "gYUEx",
+                                  "name": "Run",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "WlqDM",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": " to",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 8,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hqfZq",
+                              "name": "Line",
+                              "height": 11,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ScUD8",
+                                  "name": "Run",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "fRlFM",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "your code.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 8,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RNwjc",
+                          "layoutPosition": "absolute",
+                          "x": 12,
+                          "y": 12,
+                          "name": "Zoom Chip",
+                          "fill": "$bg-app",
+                          "cornerRadius": "$radius-pill",
+                          "stroke": "$border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            2,
+                            8
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "exGxG",
+                              "name": "Label",
+                              "fill": "$text-secondary",
+                              "content": "40%",
+                              "fontFamily": "$font-mono",
+                              "fontSize": "$text-xs",
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "e6ljOw",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Under 50% zoom flags hide, carets stay 2 screen px wide and the range stays tinted. Hovering the caret brings the flag back as a Tooltip.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Rg6H6",
+                  "name": "Vignette · H · Maya idle in the text",
+                  "width": "fill_container",
+                  "fill": "$bg-app",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "lQVc0",
+                      "name": "Label",
+                      "fill": "$text-secondary",
+                      "content": "H · Maya idle in the text",
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SbsMC",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 200,
+                      "fill": "$bg-canvas",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Z2sZ1t",
+                          "name": "Text Box",
+                          "width": 300,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "UyCQB",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "vRgwU",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "XL7Vy",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "Plan less. Ship more together,",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "DiwIO",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "J9l2fZ",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "N0wYT",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "on one canvas, ",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "HhhPM",
+                                  "name": "Run · remote selected",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "iYom4",
+                                      "layoutPosition": "absolute",
+                                      "x": 0,
+                                      "y": 0,
+                                      "name": "Remote Range",
+                                      "opacity": 0.24,
+                                      "fill": "$presence-clay",
+                                      "width": 90,
+                                      "height": 28
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "YXWZE",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "right next",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "tTnQN",
+                                  "name": "Remote Caret · Maya · idle",
+                                  "opacity": 0.5,
+                                  "width": 2,
+                                  "height": 28,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "PMZS7",
+                                      "x": 0,
+                                      "y": 2,
+                                      "name": "Bar",
+                                      "fill": "$presence-clay",
+                                      "width": 2,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "ShWlc",
+                                      "x": 0,
+                                      "y": -13,
+                                      "name": "Flag · Maya · idle",
+                                      "fill": "$presence-clay",
+                                      "cornerRadius": [
+                                        3,
+                                        3,
+                                        3,
+                                        0
+                                      ],
+                                      "gap": 3,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "zYvYU",
+                                          "name": "Label",
+                                          "fill": "$on-accent",
+                                          "content": "Maya · idle",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": "$text-xs",
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "VBqYP",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "q4w52",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": " to",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "x3Kgu",
+                              "name": "Line",
+                              "height": 28,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "gwFV7",
+                                  "name": "Run",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "FLg1V",
+                                      "name": "Text",
+                                      "fill": "$text-primary",
+                                      "content": "your code.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "Inter",
+                                      "fontSize": 20,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "wK1SY",
+                      "name": "Note",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "No keystroke or caret move for 60 s, as for cursors: caret and flag at 0.5, flag reads “Maya · idle”. Her range is kept. Typing again restores full opacity.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XpkQR",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": 1
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "rgTfp",
+              "name": "Caption",
+              "fill": "$text-tertiary",
+              "content": "Dark · A, B and the edge states E to H",
+              "fontFamily": "$font-sans",
+              "fontSize": "$text-xs",
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "dJVNd",
+              "name": "Dark · Live text",
+              "theme": {
+                "mode": "dark"
+              },
+              "width": "fill_container",
+              "fill": "$bg-canvas",
+              "cornerRadius": "$radius-md",
+              "layout": "vertical",
+              "gap": 24,
+              "padding": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CT3Ml",
+                  "name": "Dark Row 1",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Eh8fF",
+                      "name": "Vignette · A · you and Maya · single line",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "l7OyeF",
+                          "name": "Label",
+                          "fill": "$text-secondary",
+                          "content": "A · you and Maya · single line",
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "nbklC",
+                          "name": "Stage",
+                          "width": "fill_container",
+                          "height": 200,
+                          "fill": "$bg-canvas",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "HEcJq",
+                              "name": "Text Box",
+                              "width": 340,
+                              "stroke": "$selection",
+                              "strokeWidth": 1.5,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "DbcBJ",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "TOhKq",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "hGXi6",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Plan less. ",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "id": "a7cwFp",
+                                      "name": "Caret",
+                                      "fill": "$text-primary",
+                                      "width": 1.5,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "R28J8",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "YNQ9o",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Ship more ",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "v9jcEh",
+                                      "name": "Run · remote selected",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "J1sC5o",
+                                          "layoutPosition": "absolute",
+                                          "x": 0,
+                                          "y": 0,
+                                          "name": "Remote Range",
+                                          "opacity": 0.24,
+                                          "fill": "$presence-clay",
+                                          "width": 80,
+                                          "height": 28
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "l7ljuT",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "together",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "qrpG2",
+                                      "name": "Remote Caret · Maya",
+                                      "width": 2,
+                                      "height": 28,
+                                      "layout": "none",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "mfV3j",
+                                          "x": 0,
+                                          "y": 2,
+                                          "name": "Bar",
+                                          "fill": "$presence-clay",
+                                          "width": 2,
+                                          "height": 24
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "FA6Vq",
+                                          "x": 0,
+                                          "y": 26,
+                                          "name": "Flag · Maya",
+                                          "fill": "$presence-clay",
+                                          "cornerRadius": [
+                                            0,
+                                            3,
+                                            3,
+                                            3
+                                          ],
+                                          "gap": 3,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "t9Guv",
+                                              "name": "Label",
+                                              "fill": "$on-accent",
+                                              "content": "Maya",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": "$text-xs",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "edSvc",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "HOc8f",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": ".",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "H7DYb2",
+                          "name": "Note",
+                          "fill": "$text-tertiary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "You: caret after “less.” (board 30, 1.5 text-primary). Maya: range “together” at 0.2 clay, her caret 2 px clay at its end, flag 11/500 on top.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "U5MaCM",
+                      "name": "Vignette · B · you and Maya · paragraph",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tJqor",
+                          "name": "Label",
+                          "fill": "$text-secondary",
+                          "content": "B · you and Maya · paragraph",
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ad9xn",
+                          "name": "Stage",
+                          "width": "fill_container",
+                          "height": 200,
+                          "fill": "$bg-canvas",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "KOSUS",
+                              "name": "Text Box",
+                              "width": 300,
+                              "stroke": "$selection",
+                              "strokeWidth": 1.5,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "QHalc",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "B9Xqm",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "R5ACx",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Plan less. ",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "ou9ZB",
+                                      "name": "Run · selected",
+                                      "height": 28,
+                                      "fill": "$selection-soft",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "qVWY8",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Ship more together,",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "u53gH",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "ljl5c",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "kG5AA",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "on ",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "wF0oz",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "S8M0pr",
+                                          "name": "Text",
+                                          "fill": "$text-tertiary",
+                                          "content": "one canvas",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal",
+                                          "fontStyle": "italic"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "kiTHm",
+                                      "name": "Remote Caret · Maya",
+                                      "width": 2,
+                                      "height": 28,
+                                      "layout": "none",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "vzmPA",
+                                          "x": 0,
+                                          "y": 2,
+                                          "name": "Bar",
+                                          "fill": "$presence-clay",
+                                          "width": 2,
+                                          "height": 24
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "YHdon",
+                                          "x": 0,
+                                          "y": -13,
+                                          "name": "Flag · Maya",
+                                          "fill": "$presence-clay",
+                                          "cornerRadius": [
+                                            3,
+                                            3,
+                                            3,
+                                            0
+                                          ],
+                                          "gap": 3,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Om4pF",
+                                              "name": "Label",
+                                              "fill": "$on-accent",
+                                              "content": "Maya",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": "$text-xs",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "bW4E9",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "lTbk4",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": ", right next to",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "cqrUn",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "xpDye",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "VrTnh",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "your code.",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "EfrYC",
+                          "name": "Note",
+                          "fill": "$text-tertiary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "You: “Ship more together,” selected (selection-soft). Maya types in line 2 after “one canvas”; the flag sits over line 1 and never pushes text.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GCHiu",
+                      "name": "Vignette · E · caret at a line end and at a wrap",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uRqOR",
+                          "name": "Label",
+                          "fill": "$text-secondary",
+                          "content": "E · caret at a line end and at a wrap",
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lBOcS",
+                          "name": "Stage",
+                          "width": "fill_container",
+                          "height": 200,
+                          "fill": "$bg-canvas",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YzS05",
+                              "name": "Text Box",
+                              "width": 300,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "rhNTM",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "egcGM",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "aVyxd",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Plan less. Ship more together,",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Q0dpL",
+                                      "name": "Remote Caret · Maya",
+                                      "width": 2,
+                                      "height": 28,
+                                      "layout": "none",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "KcJYS",
+                                          "x": 0,
+                                          "y": 2,
+                                          "name": "Bar",
+                                          "fill": "$presence-clay",
+                                          "width": 2,
+                                          "height": 24
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "sXVgO",
+                                          "x": 0,
+                                          "y": 26,
+                                          "name": "Flag · Maya",
+                                          "fill": "$presence-clay",
+                                          "cornerRadius": [
+                                            0,
+                                            3,
+                                            3,
+                                            3
+                                          ],
+                                          "gap": 3,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "KR52N",
+                                              "name": "Label",
+                                              "fill": "$on-accent",
+                                              "content": "Maya",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": "$text-xs",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "FtUQe",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "tfnnr",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "QFUq0",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "on one canvas, right next to",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "W9nl7d",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "GWmlz",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "vMmdW",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "your code.",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "CXjoG",
+                          "name": "Note",
+                          "fill": "$text-tertiary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Maya's caret after “together,” where line 1 soft-wraps: it draws at the end of the upper line, as the local caret does (upstream affinity). After a hard return it draws at the start of the next line.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sydlW",
+                  "name": "Dark Row 2",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "r7aOM",
+                      "name": "Vignette · F · two remote carets at one spot",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "gfIOy",
+                          "name": "Label",
+                          "fill": "$text-secondary",
+                          "content": "F · two remote carets at one spot",
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "FqOuD",
+                          "name": "Stage",
+                          "width": "fill_container",
+                          "height": 200,
+                          "fill": "$bg-canvas",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "lljqQ",
+                              "name": "Text Box",
+                              "width": 300,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "vLhnZ",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "o1YKpx",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "X7vpfQ",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Plan less. Ship more",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "OLUu0",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "XyxWO",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Dh6Vq",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "together, on one ",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "p2RoI",
+                                      "name": "Remote Caret · Jonas + Maya",
+                                      "width": 2,
+                                      "height": 28,
+                                      "layout": "none",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "KAe3M",
+                                          "x": 0,
+                                          "y": 2,
+                                          "name": "Bar",
+                                          "fill": "$presence-pine",
+                                          "width": 2,
+                                          "height": 24
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "V2pGJ",
+                                          "x": 0,
+                                          "y": -13,
+                                          "name": "Flag · Jonas",
+                                          "fill": "$presence-pine",
+                                          "cornerRadius": [
+                                            3,
+                                            3,
+                                            3,
+                                            0
+                                          ],
+                                          "gap": 3,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "kjDH8",
+                                              "name": "Label",
+                                              "fill": "$on-accent",
+                                              "content": "Jonas",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": "$text-xs",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "rcphW",
+                                          "x": 0,
+                                          "y": -30,
+                                          "name": "Flag · Maya",
+                                          "fill": "$presence-clay",
+                                          "cornerRadius": [
+                                            3,
+                                            3,
+                                            3,
+                                            0
+                                          ],
+                                          "gap": 3,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "QnHMw",
+                                              "name": "Label",
+                                              "fill": "$on-accent",
+                                              "content": "Maya",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": "$text-xs",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "zkHXP",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "P3UTu",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "canvas",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Zxv3Y",
+                          "name": "Note",
+                          "fill": "$text-tertiary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Jonas typed last, so his bar is on top. Flags stack upward, 2 apart, most recent closest to the caret. Never offset the bars.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w74TmZ",
+                      "name": "Vignette · G · zoomed out below 50%",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AotwD",
+                          "name": "Label",
+                          "fill": "$text-secondary",
+                          "content": "G · zoomed out below 50%",
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "S3D6C",
+                          "name": "Stage",
+                          "width": "fill_container",
+                          "height": 200,
+                          "fill": "$bg-canvas",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "OouuZ",
+                              "name": "Text Box",
+                              "width": 120,
+                              "stroke": "$presence-clay",
+                              "strokeWidth": 1.5,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "wWaSK",
+                                  "name": "Line",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "KMF6d",
+                                      "name": "Run",
+                                      "height": 11,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "YqoRN",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Plan less. Ship more together,",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 8,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YPVF6",
+                                  "name": "Line",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "xlbl9",
+                                      "name": "Run",
+                                      "height": 11,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "fCdSg",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "on one canvas, ",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 8,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "s2Bz9E",
+                                      "name": "Run · remote selected",
+                                      "height": 11,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "c4Zzx",
+                                          "layoutPosition": "absolute",
+                                          "x": 0,
+                                          "y": 0,
+                                          "name": "Remote Range",
+                                          "opacity": 0.24,
+                                          "fill": "$presence-clay",
+                                          "width": 36,
+                                          "height": 11
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "f6e2Cy",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "right next",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 8,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "L60UcO",
+                                      "name": "Remote Caret · Maya",
+                                      "width": 2,
+                                      "height": 11,
+                                      "layout": "none",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "E36ULB",
+                                          "x": 0,
+                                          "y": 0.5,
+                                          "name": "Bar",
+                                          "fill": "$presence-clay",
+                                          "width": 2,
+                                          "height": 10
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "sqiHB",
+                                      "name": "Run",
+                                      "height": 11,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "b6TLbt",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": " to",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 8,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "hgpi4",
+                                  "name": "Line",
+                                  "height": 11,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "q5CDr",
+                                      "name": "Run",
+                                      "height": 11,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "q8Epvd",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "your code.",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 8,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "u7zut",
+                              "layoutPosition": "absolute",
+                              "x": 12,
+                              "y": 12,
+                              "name": "Zoom Chip",
+                              "fill": "$bg-app",
+                              "cornerRadius": "$radius-pill",
+                              "stroke": "$border",
+                              "strokeWidth": 1,
+                              "padding": [
+                                2,
+                                8
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wdfIF",
+                                  "name": "Label",
+                                  "fill": "$text-secondary",
+                                  "content": "40%",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": "$text-xs",
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Y2kiM",
+                          "name": "Note",
+                          "fill": "$text-tertiary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Under 50% zoom flags hide, carets stay 2 screen px wide and the range stays tinted. Hovering the caret brings the flag back as a Tooltip.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S89wz",
+                      "name": "Vignette · H · Maya idle in the text",
+                      "width": "fill_container",
+                      "fill": "$bg-app",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qIMN0",
+                          "name": "Label",
+                          "fill": "$text-secondary",
+                          "content": "H · Maya idle in the text",
+                          "fontFamily": "$font-sans",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "AJQuf",
+                          "name": "Stage",
+                          "width": "fill_container",
+                          "height": 200,
+                          "fill": "$bg-canvas",
+                          "cornerRadius": "$radius-md",
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "uTqZU",
+                              "name": "Text Box",
+                              "width": 300,
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "uYBg7",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "brw2d",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "eAon2",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "Plan less. Ship more together,",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "TUsAV",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "J2z2S",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "E58x9J",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "on one canvas, ",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "g2vjU",
+                                      "name": "Run · remote selected",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "fqvXZ",
+                                          "layoutPosition": "absolute",
+                                          "x": 0,
+                                          "y": 0,
+                                          "name": "Remote Range",
+                                          "opacity": 0.24,
+                                          "fill": "$presence-clay",
+                                          "width": 90,
+                                          "height": 28
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "I6qsxx",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "right next",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "ddVht",
+                                      "name": "Remote Caret · Maya · idle",
+                                      "opacity": 0.5,
+                                      "width": 2,
+                                      "height": 28,
+                                      "layout": "none",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "id": "BZcoY",
+                                          "x": 0,
+                                          "y": 2,
+                                          "name": "Bar",
+                                          "fill": "$presence-clay",
+                                          "width": 2,
+                                          "height": 24
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "JjqJW",
+                                          "x": 0,
+                                          "y": -13,
+                                          "name": "Flag · Maya · idle",
+                                          "fill": "$presence-clay",
+                                          "cornerRadius": [
+                                            3,
+                                            3,
+                                            3,
+                                            0
+                                          ],
+                                          "gap": 3,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "ifyXj",
+                                              "name": "Label",
+                                              "fill": "$on-accent",
+                                              "content": "Maya · idle",
+                                              "fontFamily": "$font-sans",
+                                              "fontSize": "$text-xs",
+                                              "fontWeight": "500"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "U5kpNM",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Y6X4G6",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": " to",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "MBza8",
+                                  "name": "Line",
+                                  "height": 28,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "gVWfb",
+                                      "name": "Run",
+                                      "height": 28,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "xxce0",
+                                          "name": "Text",
+                                          "fill": "$text-primary",
+                                          "content": "your code.",
+                                          "lineHeight": 1.4,
+                                          "fontFamily": "Inter",
+                                          "fontSize": 20,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "d8JZXN",
+                          "name": "Note",
+                          "fill": "$text-tertiary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "No keystroke or caret move for 60 s, as for cursors: caret and flag at 0.5, flag reads “Maya · idle”. Her range is kept. Typing again restores full opacity.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": "$text-xs",
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "Rw5dQ",
-          "name": "11 · Rules",
+          "name": "12 · Rules",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 20,
@@ -319771,7 +323219,7 @@
                   "id": "woEK0",
                   "name": "Section Title",
                   "fill": "$text-primary",
-                  "content": "11 · Rules",
+                  "content": "12 · Rules",
                   "fontFamily": "$font-sans",
                   "fontSize": "$text-xl",
                   "fontWeight": "600"
@@ -320536,6 +323984,10 @@
                   "id": "kBFpf",
                   "name": "Rule · View only",
                   "width": "fill_container",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
                   "gap": 12,
                   "padding": [
                     10,
@@ -320590,7 +324042,7 @@
                   "width": "fill_container",
                   "stroke": "$border",
                   "strokeWidth": {
-                    "top": 1
+                    "bottom": 1
                   },
                   "gap": 12,
                   "padding": [
@@ -320632,6 +324084,394 @@
                       "textGrowth": "fixed-width",
                       "width": 200,
                       "content": "settings.displayName",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "vBxyY",
+                  "name": "Rule · Live text",
+                  "width": "fill_container",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AtL11",
+                      "name": "Control",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": 150,
+                      "content": "Live text",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "V5016W",
+                      "name": "Spec",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Text layers merge character by character, sent about every 50 ms. Nobody's caret or range ever blocks typing: concurrent edits at one spot interleave and both stay.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "S8Ipq",
+                      "name": "Prop",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "text-crdt",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EwnNo",
+                  "name": "Rule · Remote caret",
+                  "width": "fill_container",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "N6tkoH",
+                      "name": "Control",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": 150,
+                      "content": "Remote caret",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "L2LhH",
+                      "name": "Spec",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "2 px wide (screen px at any zoom), 24 tall on a 28 line at 20 px type, in the person's presence color or the agent's persona hue. Your own caret stays board 30: 1.5 text-primary. At a soft wrap it draws at the end of the upper line.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iOWiC",
+                      "name": "Prop",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "remote-caret",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QnhIA",
+                  "name": "Rule · Caret flag",
+                  "width": "fill_container",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Jzbg2",
+                      "name": "Control",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": 150,
+                      "content": "Caret flag",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "hUY9E",
+                      "name": "Spec",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Name tag on top of the caret: text-xs 500 on-accent, padding 1 5, radius 3 3 3 0, bottom edge on the caret top, left edge on the caret. Agents add AgentMark 12 (padding 1 5 1 2, gap 3). Two carets at one spot: flags stack upward, 2 apart, most recent closest.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ThSYe",
+                      "name": "Prop",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "remote-caret-flag",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GFWSZ",
+                  "name": "Rule · Remote range",
+                  "width": "fill_container",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "bGKKs",
+                      "name": "Control",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": 150,
+                      "content": "Remote range",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "u1gSqU",
+                      "name": "Spec",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Behind the glyphs, full line height, person's color at opacity 0.2 (light and dark). Your own range stays selection-soft.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iVCr7",
+                      "name": "Prop",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "remote-range",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q7uSru",
+                  "name": "Rule · Outline",
+                  "width": "fill_container",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zw70k",
+                      "name": "Control",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": 150,
+                      "content": "Outline",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "cf4k0",
+                      "name": "Spec",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "You editing: board 30 1.5 selection outline. Someone else editing a layer you are not: their 1.5 outline, no corner tag, the flag carries the name. Agent typing: no extra outline, its claim outline is its only one, and its pointer hides while its caret is in text.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Evl6E",
+                      "name": "Prop",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "remote-text-outline",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "j4gyy",
+                  "name": "Rule · Flags hide",
+                  "width": "fill_container",
+                  "stroke": "$border",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "iLUd1",
+                      "name": "Control",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": 150,
+                      "content": "Flags hide",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "G52454",
+                      "name": "Spec",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Below 50% zoom flags hide; caret and range stay. Hover a caret to show the name as a Tooltip. Flags also hide while you drag a selection across them.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "o0rfU",
+                      "name": "Prop",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "remote-caret-zoom",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-mono",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ugc1F",
+                  "name": "Rule · Idle",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wN1IP",
+                      "name": "Control",
+                      "fill": "$text-primary",
+                      "textGrowth": "fixed-width",
+                      "width": 150,
+                      "content": "Idle",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-sm",
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "EidLE",
+                      "name": "Spec",
+                      "fill": "$text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "No keystroke or caret move for 60 s (same as cursors): caret and flag at 0.5, flag reads “<name> · idle”, range kept. Any input restores it.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": "$text-xs",
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VhxFC",
+                      "name": "Prop",
+                      "fill": "$text-tertiary",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "remote-caret-idle",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-mono",
                       "fontSize": "$text-xs",

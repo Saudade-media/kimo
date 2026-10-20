@@ -201,11 +201,10 @@ pub fn take_early_opens() -> Vec<OpenRequest> {
     std::mem::take(&mut *EARLY_OPENS.lock().unwrap())
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
-    #[cfg(unix)]
     #[test]
     fn new_files_dir_is_granted_at_startup() {
         let d = tempfile::tempdir().unwrap();

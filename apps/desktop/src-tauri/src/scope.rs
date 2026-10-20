@@ -64,11 +64,10 @@ impl Scope {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
-    #[cfg(unix)]
     #[test]
     fn deny_by_default_then_widen() {
         let s = Scope::default();

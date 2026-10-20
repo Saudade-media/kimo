@@ -1252,6 +1252,7 @@ mod tests {
         assert!(matches!(a, RelayAuth::Cloud { region: Some(r), .. } if r == "us-east-1"));
     }
 
+    #[cfg(unix)]
     fn foundry(credentials: Option<&str>) -> RelayAuth {
         RelayAuth::Cloud {
             platform: "foundry".into(),
@@ -1277,6 +1278,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     async fn sent(r: &Relay, q: &RelayRequest) -> Prepared {
         match plan_of(r, q).await {
             Planned::Send(p) => p,

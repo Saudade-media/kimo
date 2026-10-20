@@ -192,7 +192,7 @@ impl RecoveryStore {
                 out.push(self.entry(meta, &bytes));
             }
         }
-        out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        out.sort_by_key(|a| std::cmp::Reverse(a.updated_at));
         Ok(out)
     }
 

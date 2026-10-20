@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "build:templates": "bun ../../scripts/build-templates.ts",
     "check:generated": "bun ../../scripts/build-templates.ts --check",
-    "test": "bun test test"
+    "test": "../../scripts/safe-test.sh test"
   },
   "files": [
     "src",

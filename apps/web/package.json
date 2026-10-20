@@ -15,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "e2e": "tsx e2e/run.ts",
     "e2e:perf": "tsx e2e/perf/run.ts",
-    "test": "bun test ./test",
+    "test": "../../scripts/safe-test.sh ./test",
     "gen:notices": "bun scripts/gen-notices.ts",
     "gen:shortcuts": "bun scripts/gen-shortcuts.ts",
     "screenshots:readme": "tsx scripts/readme-screenshots.ts",

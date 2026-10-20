@@ -210,9 +210,14 @@ describe("determinism and limits", () => {
       maxPrints: 2,
       maxPrintChars: 10,
       maxArgBytes: 1000,
+      // Generous time so the memory limit, not the clock, ends the allocation loop on a slow
+      // CI runner.
+      timeMs: 8_000,
+      totalTimeMs: 9_000,
     }
     const s = await inProcessRunner().open({}, {}, limits)
-    const oom = await s.run("const big = []; while (true) big.push(new Array(10000).fill(7))")
+    // Unfilled arrays: `fill` runs interpreted in QuickJS and took over 1 s to reach 8 MB.
+    const oom = await s.run("const big = []; while (true) big.push(new Array(10000))")
     expect((oom.result as { message: string }).message).toMatch(/out of memory/)
     const deep = await s.run("function f(n) { return f(n + 1) + 1 } f(0)")
     expect((deep.result as { message: string }).message).toMatch(/stack|recursion/i)

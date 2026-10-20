@@ -251,7 +251,8 @@ mod tests {
             .collect();
         assert_eq!(names, vec!["brand", "zeta"]);
         assert_eq!(got[0].text, SKILL);
-        assert!(got[0].path.ends_with("skills/brand/SKILL.md"));
+        // Component-wise, so it holds with Windows separators too.
+        assert!(Path::new(&got[0].path).ends_with("skills/brand/SKILL.md"));
     }
 
     #[test]

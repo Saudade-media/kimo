@@ -1,0 +1,3 @@
+[test]
+# Per-test limit (ms). scripts/safe-test.sh passes the same default when run from a package.
+timeout = 10000

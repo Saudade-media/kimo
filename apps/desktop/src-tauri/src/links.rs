@@ -228,6 +228,10 @@ mod tests {
         .map(|s| s.to_string())
         .collect();
         let r = requests_from_args(&args, cwd, "argv");
+        // `/work` is not absolute on Windows, so there only the deep link (always last) remains.
+        let link = r.last().unwrap();
+        #[cfg(unix)]
+        assert_eq!(r.len(), 2);
         #[cfg(unix)]
         assert_eq!(
             r[0],
@@ -243,7 +247,7 @@ mod tests {
             }
         );
         assert_eq!(
-            r[1],
+            *link,
             OpenRequest {
                 source: "deep-link",
                 refs: vec!["/c.kimo".into()],
@@ -252,7 +256,7 @@ mod tests {
             }
         );
         assert_eq!(
-            serde_json::to_value(&r[1]).unwrap(),
+            serde_json::to_value(link).unwrap(),
             serde_json::json!({"source":"deep-link","refs":["/c.kimo"],"node":"Abc123xyz9"})
         );
     }

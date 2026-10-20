@@ -583,7 +583,9 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/../../../packages/platform/src/types.ts"
         ))
-        .unwrap();
+        .unwrap()
+        // A Windows checkout may have CRLF line endings.
+        .replace("\r\n", "\n");
         let union = ts
             .split("export type EditorMenuAction =")
             .nth(1)

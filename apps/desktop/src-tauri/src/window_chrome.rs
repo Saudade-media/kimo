@@ -6,6 +6,10 @@
 //! above the topbar's middle and their right edge ran into the breadcrumb. This module reads the
 //! real `standardWindowButton` frames, centers the buttons on the topbar and reports the right
 //! edge of the zoom button, which the web uses as the topbar's leading inset.
+//!
+//! The geometry helpers below are only called by the macOS code, but they stay platform-neutral
+//! so their unit tests run on every platform.
+#![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
 use serde::Serialize;
 

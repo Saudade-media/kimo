@@ -330,10 +330,14 @@ pub fn git_watch<Rt: Runtime>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
     use notify::event::{CreateKind, DataChange, RemoveKind};
+    #[cfg(unix)]
     use notify_debouncer_full::DebouncedEvent;
+    #[cfg(unix)]
     use std::time::Instant;
 
+    #[cfg(unix)]
     fn ev(kind: EventKind, paths: &[&str]) -> DebouncedEvent {
         let mut e = notify::Event::new(kind);
         for p in paths {

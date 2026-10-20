@@ -93,6 +93,8 @@ describe("loadConfig (section 14.9)", () => {
     ["PORT", "-1"],
     ["KIMO_ALLOWED_ORIGINS", "not a url"],
     ["KIMO_ALLOWED_ORIGINS", "ftp://x.example"],
+    // The desktop origins are admitted by the relay itself, never listed.
+    ["KIMO_ALLOWED_ORIGINS", "tauri://localhost"],
     ["KIMO_MAX_ROOMS", "-3"],
     ["KIMO_MAX_PEERS", "0"],
     ["KIMO_TRUST_PROXY_HOPS", "0"],

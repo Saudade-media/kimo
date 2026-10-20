@@ -70,7 +70,7 @@ when the relay is reachable directly.
 | `PORT` | `8787` | Listen port |
 | `HOST` | `127.0.0.1` | Bind address (the Docker image sets `0.0.0.0`) |
 | `KIMO_DATA_DIR` | `./data` | SQLite file (`relay.sqlite`) and `blobs/` directory |
-| `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated web origins allowed for CORS and WebSocket `Origin`, for example `https://app.example.com`. Clients without an `Origin` header (desktop, Bun) are always allowed |
+| `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated web origins allowed for CORS and WebSocket `Origin`, for example `https://app.example.com`. Clients without an `Origin` header (Bun, scripts) and the Kimo desktop app (`tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost`, which no web page can send) are always allowed |
 | `KIMO_CREATE_SECRET` | unset | When set, creating a room needs the `kimo-create-secret` header. Recommended on any public relay |
 | `KIMO_MAX_ROOMS` | `0` (unlimited) | Cap on open rooms |
 | `KIMO_MAX_PEERS` | `32` | Sockets per room |
@@ -141,7 +141,8 @@ docker run -d --name kimo-relay --restart unless-stopped \
 curl http://127.0.0.1:8787/healthz     # {"ok":true}
 ```
 
-Leave out `KIMO_ALLOWED_ORIGINS` when only the desktop app connects (it sends no browser origin).
+Leave out `KIMO_ALLOWED_ORIGINS` when only the desktop app connects: the relay always admits its
+webview origins (`tauri://localhost`, `http://tauri.localhost`), whatever the list says.
 Update with `docker pull ghcr.io/saudade-media/kimo-relay` and recreate the container.
 
 To build the image yourself, from the repository root (the build needs the workspace):

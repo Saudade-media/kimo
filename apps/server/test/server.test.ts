@@ -85,4 +85,21 @@ describe("@kimo/server", () => {
     expect(other.headers.get("access-control-allow-origin")).toBeNull()
     await strict.stop()
   })
+
+  test("an allow list also answers the desktop app's webview origins", async () => {
+    const strict = startRelay({ allowedOrigins: ["https://app.example"] })
+    for (const origin of [
+      "tauri://localhost",
+      "http://tauri.localhost",
+      "https://tauri.localhost",
+    ]) {
+      const res = await fetch(`${strict.base}/version`, { headers: { origin } })
+      expect(res.headers.get("access-control-allow-origin")).toBe(origin)
+    }
+    const random = await fetch(`${strict.base}/version`, {
+      headers: { origin: "https://random.example" },
+    })
+    expect(random.headers.get("access-control-allow-origin")).toBeNull()
+    await strict.stop()
+  })
 })

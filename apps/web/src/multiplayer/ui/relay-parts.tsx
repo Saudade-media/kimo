@@ -419,7 +419,7 @@ export function OriginsGroup({
         <span className="rw-desc rw-desc--tertiary">
           {kind === "web"
             ? "Added automatically from this page"
-            : "The relay always admits clients without a browser Origin"}
+            : "The relay always admits the Kimo desktop app"}
         </span>
       </div>
       <div className="rw-add-row">

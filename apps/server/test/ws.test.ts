@@ -97,6 +97,41 @@ describe("connection rules", () => {
     await strict.stop()
   })
 
+  test("an allow list still admits the desktop app's webview origins, and refuses others", async () => {
+    const strict = startRelay({ allowedOrigins: ["https://app.example"] })
+    const owner = await registered(strict)
+    const opens = (origin: string) =>
+      new Promise<boolean>((resolve) => {
+        const ws = new WebSocket(`${strict.wsBase}/sync/${owner.room.id}`, {
+          protocols: ["kimo-mp.1"],
+          headers: { origin },
+        } as unknown as string[])
+        const t = setTimeout(() => {
+          ws.close()
+          resolve(false)
+        }, 3000)
+        ws.onopen = () => {
+          clearTimeout(t)
+          ws.close()
+          resolve(true)
+        }
+        ws.onerror = () => {
+          clearTimeout(t)
+          resolve(false)
+        }
+      })
+    for (const origin of ["tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"])
+      expect(await opens(origin)).toBe(true)
+    expect(await opens("https://app.example")).toBe(true)
+    expect(await opens("https://random.example")).toBe(false)
+    const refused = await fetch(`${strict.base}/sync/${owner.room.id}`, {
+      headers: upgradeHeaders("kimo-mp.1", { origin: "https://random.example" }),
+    })
+    expect(refused.status).toBe(403)
+    expect(((await refused.json()) as { error: string }).error).toBe("ORIGIN_FORBIDDEN")
+    await strict.stop()
+  })
+
   test("the per-IP connect rate limit is 429 with retry-after", async () => {
     const limited = startRelay({ connectRatePerMin: 2 })
     const owner = await registered(limited)

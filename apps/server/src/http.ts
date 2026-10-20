@@ -92,6 +92,18 @@ export function clientIp(relay: Relay, req: Request, server: Server<SocketData>)
   return server.requestIP(req)?.address ?? "unknown"
 }
 
+/**
+ * The Kimo desktop app's webview origins (Tauri 2, `WebviewUrl::App`, no `useHttpsScheme`):
+ * `tauri://localhost` on macOS and Linux, `http://tauri.localhost` on Windows (and
+ * `https://tauri.localhost` with the https scheme). No web page can send them, so like a
+ * missing Origin they are always admitted, whatever `KIMO_ALLOWED_ORIGINS` lists.
+ */
+export const DESKTOP_ORIGINS: readonly string[] = [
+  "tauri://localhost",
+  "http://tauri.localhost",
+  "https://tauri.localhost",
+]
+
 function corsHeaders(relay: Relay, req: Request): Record<string, string> {
   const allowed = relay.config.allowedOrigins
   const headers: Record<string, string> = {
@@ -105,7 +117,8 @@ function corsHeaders(relay: Relay, req: Request): Record<string, string> {
   } else {
     const origin = req.headers.get("origin")
     headers.vary = "origin"
-    if (origin && allowed.includes(origin)) headers["access-control-allow-origin"] = origin
+    if (origin && (allowed.includes(origin) || DESKTOP_ORIGINS.includes(origin)))
+      headers["access-control-allow-origin"] = origin
   }
   return headers
 }
@@ -113,7 +126,12 @@ function corsHeaders(relay: Relay, req: Request): Record<string, string> {
 function originAllowed(relay: Relay, req: Request): boolean {
   const allowed = relay.config.allowedOrigins
   const origin = req.headers.get("origin")
-  return allowed === "*" || origin === null || allowed.includes(origin)
+  return (
+    allowed === "*" ||
+    origin === null ||
+    DESKTOP_ORIGINS.includes(origin) ||
+    allowed.includes(origin)
+  )
 }
 
 /** Reads a request body as a stream, cancelling as soon as it passes `max` bytes. */

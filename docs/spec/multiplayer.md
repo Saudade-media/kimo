@@ -333,7 +333,10 @@ the 16-hex key again. The relay checks only the ciphertext size and the id gramm
 - Subprotocol: the client MUST request `kimo-mp.1`; the relay MUST select it and refuse the
   upgrade otherwise (`426`, `PROTOCOL_MISMATCH`).
 - The relay checks the `Origin` header against `KIMO_ALLOWED_ORIGINS` before upgrading (`403`,
-  `ORIGIN_FORBIDDEN`). Requests without `Origin` (Bun, desktop host) are allowed.
+  `ORIGIN_FORBIDDEN`). Requests without `Origin` (Bun, scripts) are allowed, and so are the Kimo
+  desktop webview's origins (Tauri 2: `tauri://localhost` on macOS and Linux,
+  `http://tauri.localhost` on Windows, `https://tauri.localhost` with the https scheme): no web
+  page can send them, so the list (which takes only http and https origins) never needs them.
 - Upgrade-time checks on the room: unknown room `404 ROOM_NOT_FOUND`, closed `410 ROOM_CLOSED`,
   per-IP connect rate `429 RATE_LIMITED`, peer cap `503 ROOM_FULL`. The token is not sent at
   upgrade time.
@@ -646,7 +649,7 @@ Per-IP uses `server.requestIP(req)`, or the first `x-forwarded-for` address when
 | `PORT` | `8787` | Listen port |
 | `HOST` | `127.0.0.1` | Bind address (the Docker image sets `0.0.0.0`) |
 | `KIMO_DATA_DIR` | `./data` | SQLite file and blob directory |
-| `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins allowed for CORS and WebSocket `Origin` |
+| `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins allowed for CORS and WebSocket `Origin` (the desktop webview origins are always allowed) |
 | `KIMO_CREATE_SECRET` | unset | When set, room registration requires the `kimo-create-secret` header |
 | `KIMO_MAX_ROOMS` | `0` (unlimited) | Registered rooms cap (`RELAY_FULL`) |
 | `KIMO_MAX_PEERS` | `32` | Sockets per room |

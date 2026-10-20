@@ -175,6 +175,11 @@ export interface PlatformShare {
    * open here, so the room attaches with no file delta. Null when the document is not shared.
    */
   reconnectReplica(session: ShareableSession, assets?: AssetStore): Promise<SharedSession | null>
+  /**
+   * The document `from` now lives at `to` (Save As): its room follows it, here and in the owner's
+   * registry, so the new file stays shared. A no-op for a document that is not shared.
+   */
+  fileMoved(from: FileRef, to: FileRef): Promise<void>
   /** Joins from a link (the fragment of `https://<web-origin>/join#...`). */
   joinLink(link: string): Promise<SharedSession>
   /** Mints a link for `role` that expires at `exp` (unix seconds; 0 or null never). */
@@ -430,6 +435,15 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
       const shared = await service.connect(targetFor(session, assets), owned.room)
       targets.set(shared.room, session)
       return track(shared, true)
+    },
+
+    async fileMoved(from, to) {
+      if (from === to) return
+      // Targets saved as plain objects keep the old ref; a live session already reads the new one.
+      for (const [room, target] of targets)
+        if (target.ref === from) targets.set(room, { ref: to, store: target.store })
+      await service.moveFile(from, to)
+      sessionsChanged()
     },
 
     async joinLink(link) {

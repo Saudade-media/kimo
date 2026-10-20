@@ -1,10 +1,11 @@
 /**
  * Browser library files share like files on disk (`kimo-lib:<fileId>`): the key is stable across
  * reloads, a shared library file reconnects when the editor opens it (room and library copy meet
- * as CRDT replicas, with no file delta), and deleting it for good stops sharing.
+ * as CRDT replicas, with no file delta), deleting it for good stops sharing, and Save As of a
+ * shared disk file moves the room to the new file.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { createEmptyDocument, YjsDocStore } from "@kimo/editor-state"
+import { createEmptyDocument, serialize, YjsDocStore } from "@kimo/editor-state"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { MultiplayerError } from "@kimo/sync/mp"
 import { createMemoryAssetStore } from "../src/lib/assets"
@@ -17,7 +18,10 @@ import {
   libraryFileOfKey,
   libraryKeyOf,
 } from "../src/multiplayer/library"
+import { createSharedFileHooks } from "../src/multiplayer/room-session"
+import { createSessionManager } from "../src/platform/session"
 import { createPlatformShare } from "../src/platform/share"
+import { docText, nodeMerge } from "./m4-helpers"
 import { MemoryReplica, type Relay, startRelay, until } from "./multiplayer-helpers"
 
 let relay: Relay
@@ -270,5 +274,97 @@ describe("deleting a shared library file", () => {
     offFailing()
     fileDeleted("b")
     expect(seen).toEqual(["a"])
+  })
+})
+
+describe("Save As of a shared disk file", () => {
+  test("the room follows the session to the new file, which reopens shared", async () => {
+    const FROM = "/Users/me/loom/site.kimo"
+    const TO = "/Users/me/loom/site copy.kimo"
+    const platform = createMemoryPlatform({ files: { [FROM]: docText("Site", ["Rect000001"]) } })
+    const registry = createMemoryRegistry()
+    const share = createPlatformShare({
+      platform,
+      assetsFor: () => createMemoryAssetStore(),
+      serviceDeps: {
+        registry,
+        webOrigin: "https://kimo.test",
+        backoff: [5, 40],
+        replica: () => null,
+        openGuestDocument: async () => ({
+          store: new YjsDocStore(),
+          assets: createMemoryAssetStore(),
+        }),
+      },
+    })
+    const manager = createSessionManager({
+      platform,
+      merge: nodeMerge,
+      shared: createSharedFileHooks(share),
+    })
+    const session = await manager.open(FROM)
+    // Shared through the backend (a plain `{ ref, store }` target, as the Share popover does).
+    const backend = createLocalShareBackend({
+      share,
+      storeFor: (ref) => manager.get(ref)?.store ?? null,
+      sessionFor: (ref) => {
+        const s = manager.get(ref)
+        return s ? { ref: s.ref, store: s.store } : null
+      },
+    })
+    await backend.start(FROM, { relayUrl: relay.url })
+    const room = share.roomOfFile(FROM) as string
+    expect(room).not.toBeNull()
+
+    platform.dialogs.saveFile = async () => TO
+    session.store.apply(
+      { op: "update", id: "Rect000001", set: { name: "Before Save As" } },
+      { origin: "user" },
+    )
+    expect(await session.saveAs()).toBe(TO)
+    expect(session.ref).toBe(TO)
+    expect((await registry.ownedForFile(TO))?.room).toBe(room)
+    expect(await registry.ownedForFile(FROM)).toBeNull()
+    expect(share.roomOfFile(TO)).toBe(room)
+    expect(share.roomOfFile(FROM)).toBeNull()
+    expect(backend.snapshot(TO).room).toBe(room)
+    // The new file holds what was recorded for it: a reopen adds no delta.
+    const saved = await registry.saves.load(room)
+    expect(saved?.fileHash).not.toBeNull()
+
+    // Close and reopen the new file: it reconnects to the same room.
+    expect(await session.close()).toBe(true)
+    expect(share.roomOfFile(TO)).toBeNull()
+    const again = await manager.open(TO)
+    expect(share.roomOfFile(TO)).toBe(room)
+    expect(again.store.getNode("Rect000001")?.name).toBe("Before Save As")
+    // The old file opens unshared.
+    const old = await manager.open(FROM)
+    expect(share.roomOfFile(FROM)).toBeNull()
+    await old.close()
+    await again.close()
+    await share.service.stopSharing(room)
+  })
+
+  test("Save As of an unshared file records nothing", async () => {
+    const FROM = "/Users/me/loom/plain.kimo"
+    const platform = createMemoryPlatform({ files: { [FROM]: docText("Plain", ["Rect000001"]) } })
+    const registry = createMemoryRegistry()
+    const share = createPlatformShare({
+      platform,
+      assetsFor: () => createMemoryAssetStore(),
+      serviceDeps: { registry, webOrigin: "https://kimo.test", replica: () => null },
+    })
+    const manager = createSessionManager({
+      platform,
+      merge: nodeMerge,
+      shared: createSharedFileHooks(share),
+    })
+    const session = await manager.open(FROM)
+    platform.dialogs.saveFile = async () => "/Users/me/loom/plain 2.kimo"
+    expect(await session.saveAs()).toBe("/Users/me/loom/plain 2.kimo")
+    expect(await registry.listOwned()).toEqual([])
+    expect(serialize(session.store.toDocument())).toContain("Rect000001")
+    await session.close()
   })
 })

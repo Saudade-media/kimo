@@ -167,6 +167,12 @@ export interface SharedFileHooks {
   writing(session: FileDocumentSession, doc: KimoDocument): (() => void) | undefined
   /** The session closed (its room connection, if any, ends). */
   closed(session: FileDocumentSession): void
+  /**
+   * Save As wrote the document to `to` and the session moves there from `from`: a shared
+   * document's room follows it, so the new file reopens shared. Awaited before the session
+   * reads `to`.
+   */
+  moved?(session: FileDocumentSession, from: FileRef, to: FileRef): Promise<void>
 }
 
 const READER_FORMAT = majorMinor(FORMAT_VERSION)
@@ -945,7 +951,6 @@ export class FileDocumentSession implements DocumentSession {
       }
     }
     // Board 27 §8 rule gPEqc: library imports stay relative to the file's new location.
-    let out = text
     if (!untitled) {
       const imports = (this.store.toDocument().imports ?? {}) as Record<string, string>
       const rebased = rebaseRelativeRefs(imports, this._ref, target)
@@ -957,13 +962,22 @@ export class FileDocumentSession implements DocumentSession {
             label: "Update library paths",
           },
         )
-        out = serialize(this.prepareWrite(this.store.toDocument()))
       }
     }
+    // The document as it is now (edits made while the dialog was open included).
+    const written = this.prepareWrite(this.store.toDocument())
+    const out = serialize(written)
+    const oldRef = this._ref
+    const shared = this.manager.shared
+    // Multiplayer: a shared document records the store state the new file holds (taken with the
+    // document being written), so reopening it there adds nothing the room already has.
+    const committed = shared?.writing(this, written)
     await platform.files.writeTextAtomic(target, out, { mkdirs: true })
+    committed?.()
+    // ...and its room follows the session to the new file before the session reads it.
+    await shared?.moved?.(this, oldRef, target).catch(() => undefined)
     this.manager.lastFolder = dirnameOf(target)
     const old = this.provider
-    const oldRef = this._ref
     if (old?.hasRecoveryCopy) await platform.recovery.discard(old.recoveryId).catch(() => {})
     if (untitled) {
       // From now on autosave writes the file; the recovery snapshot is no longer needed.

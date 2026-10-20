@@ -937,7 +937,8 @@ without UI; errors are `MultiplayerError`s. See §17.D for the exact types.
 `kid + 1`, admin op 3, mark every issued link revoked, re-mint the self token, reconnect.
 **`stopSharing`**: admin op 4, detach providers, delete the `OwnedRoom` and the room replica.
 **`forgetOwnedRoom`**: the local half of `stopSharing` without the relay (a deleted library file
-whose close the relay refused for good).
+whose close the relay refused for good). **`moveFile(from, to)`**: Save As moved the shared
+document; the `OwnedRoom` is re-keyed to `to` after any save of `from` still being recorded.
 **`sweepBlobs`**: `keep` = blob ids of every manifest entry with `sha256` in the current
 document; admin op 5.
 
@@ -972,6 +973,11 @@ Secrets never leave this database except inside links the owner mints.
   file session's store creation (`FileSessionManager` / `FileDocumentProvider` load path) without
   changing behaviour for unshared files.
 - Guests: the replica is their only copy; their asset store is `kimo-assets-room-<room>`.
+- **Save As of a shared file**: the session records the state the new file holds (as for any
+  write of a shared file), then the room follows it (`moveFile`: the registry's `fileKey` becomes
+  the new path) before the session reads the new file, so the new file reopens shared with no
+  delta and the old file is no longer the shared one. The session manager has no rename or move
+  of its own; a file moved outside Kimo is a new path and opens unshared.
 - **Browser library files** (`#/file/<id>`, `multiplayer/library.ts`): the document key and the
   registry's `fileKey` are `kimo-lib:<fileId>`, stable across reloads; the owner's keys stay in the
   IndexedDB registry. The library's own persistence (`kimo-doc-<id>`) stores the CRDT updates
@@ -1614,6 +1620,8 @@ export interface ShareService {
   stopSharing(room: string): Promise<void>
   /** Local only: ends the sessions and deletes the record, cursor, saved state and replica. */
   forgetOwnedRoom(room: string): Promise<void>
+  /** Save As: the owned room of `from` is recorded under `to`; false when `from` is not shared. */
+  moveFile(from: string, to: string): Promise<boolean>
   join(link: string): Promise<SharedSession>
   listJoinedRooms(): Promise<JoinedRoomSummary[]>
   forgetJoinedRoom(room: string): Promise<void>

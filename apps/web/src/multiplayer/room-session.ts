@@ -8,6 +8,8 @@
  *   since the owner last saved it (`reopenShared`). Unshared files load as before.
  * - Write: each write of a shared file records the state it holds (`captureSaved`), so the next
  *   reopen diffs against it and never reverts collaborators' edits.
+ * - Save As: the room follows the session to its new file (the registry's file key moves), so
+ *   the new file reopens shared; the file it came from is no longer the shared one.
  * - Close: the room connection of the session ends with it.
  */
 import type { KimoDocument } from "@kimo/core-schema"
@@ -50,6 +52,13 @@ export function createSharedFileHooks(
       const commit = share.captureSaved(session, doc)
       return () => {
         void commit().catch(() => undefined)
+      }
+    },
+    async moved(_session, from, to) {
+      try {
+        await share.fileMoved(from, to)
+      } catch (error) {
+        options.onError?.(to, error)
       }
     },
     closed(session) {

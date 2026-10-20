@@ -251,6 +251,11 @@ export interface ShareService {
    * deleted library file) when {@link ShareService.stopSharing} could not close it at the relay.
    */
   forgetOwnedRoom(room: string): Promise<void>
+  /**
+   * The shared document of `from` now lives at `to` (Save As): its owned room follows it, so the
+   * new file reopens shared and its saves are recorded. Resolves false when `from` is not shared.
+   */
+  moveFile(from: string, to: string): Promise<boolean>
   join(link: string): Promise<SharedSession>
   listJoinedRooms(): Promise<JoinedRoomSummary[]>
   forgetJoinedRoom(room: string): Promise<void>
@@ -1251,6 +1256,20 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       await locked(`owned:${room}`, async () => {
         const owned = await registry.getOwned(room)
         if (owned) await dropOwned(owned)
+      })
+    },
+
+    moveFile(from, to) {
+      // After any save of `from` still being recorded (same lock as `captureSaved`).
+      return locked(`file:${from}`, async () => {
+        const found = await registry.ownedForFile(from)
+        if (!found) return false
+        if (from === to) return true
+        await withOwned(found.room, async (owned) => {
+          owned.fileKey = to
+          await registry.putOwned(owned)
+        })
+        return true
       })
     },
 

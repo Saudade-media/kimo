@@ -2249,7 +2249,7 @@ dependencies = [
  "bytes",
  "fontdb",
  "gethostname",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "hex",
  "http-body-util",
  "hyper",

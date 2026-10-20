@@ -48,7 +48,7 @@ hyper = { version = "1", features = ["server", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
 bytes = "1"
-getrandom = "0.3"
+getrandom = "0.4"
 # M6 (ADR 0014 §4): HMAC (Bedrock SigV4) and RS256 (Vertex service-account ADC).
 ring = "0.17"
 

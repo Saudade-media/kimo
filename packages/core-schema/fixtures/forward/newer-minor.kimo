@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.1.json",
+"$schema": "https://getkimo.design/schema/kimo-1.1.json",
 "format": "1.1.0",
 "sections": {"Sect000001":{"name":"Home","order":"a0"}},
 "nodes": {

@@ -38,17 +38,11 @@ the dates are those of the milestone commits.
   the content size as the basis. The canvas layout and the HTML/CSS and React exports change
   together (`flex-basis: 0`, or a px basis proportional to the weights when siblings are
   padded); min/max clamps are resolved from the same basis.
-- The website moves from kimo.design to getkimo.design: the web app, the docs, Help links and
-  the agent's links point to getkimo.design.
 
 ### Format
 
 - Spec §6.1 clarifies how `fill` shares main-axis space (zero basis; content basis in a hug or
   wrapping parent), §20 row 34. No format version or feature change.
-- New files write `"$schema": "https://getkimo.design/schema/kimo-1.0.json"`. The legacy
-  `https://kimo.design/schema/kimo-<major>.<minor>.json` stays valid as an alias with no
-  warning, and existing files keep their `$schema` on save (spec erratum in the header table).
-  No format version change.
 
 ## [1.0.0] - 2026-10-04
 
@@ -319,7 +313,7 @@ The first public release: release engineering, polish, the new mark and the form
 - The image size limit is 20 MB (was 50 MB).
 - Docs:
   - Kimo collects no telemetry (SECURITY.md, teardown).
-  - Links use kimo.design.
+  - Links use getkimo.design.
   - ADR 0014: agent sessions are stored in IndexedDB on every platform.
 
 ### Fixed
@@ -412,7 +406,7 @@ The first public release: release engineering, polish, the new mark and the form
   `fit: "crop"` using the existing `crop` transform (§7.1); enum component props with per-option
   `targets` (§9.6, `PROP_TARGET_INVALID`).
   Documents are written with `"format": "1.0.0"` and
-  `"$schema": "https://kimo.design/schema/kimo-1.0.json"`.
+  `"$schema": "https://getkimo.design/schema/kimo-1.0.json"`.
 - Spec: `docs/spec/kimo-format-1.0.md` (status *Stable*). The open draft items are decided: mesh
   `points` and the shader protocol stay opaque (stored and round-tripped, rendering optional),
   library-of-library references stay unresolved, and lints are not part of the format

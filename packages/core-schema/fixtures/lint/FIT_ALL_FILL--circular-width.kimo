@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "nodes": {
 "Kid0000001": {"type":"frame","parent":"Row0000001","order":"a0","w":{"mode":"fill"},"h":10}

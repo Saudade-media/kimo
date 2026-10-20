@@ -6,7 +6,7 @@ export function Grid() {
       <div className="relative grow shrink basis-auto min-w-0 h-[100px] grid" />
       <p className="relative shrink-0 w-[200px] [font-family:'Inter',_sans-serif] text-[length:16px] font-normal leading-[24px] [font-feature-settings:'cv11'_1,_'liga'_0,_'ss01'_1] text-justify whitespace-pre-wrap [overflow-wrap:break-word] text-[#000000]">
         <span>{"Hello "}</span>
-        <a className="font-bold underline" href="https://kimo.design">world</a>
+        <a className="font-bold underline" href="https://getkimo.design">world</a>
       </p>
     </section>
   )

@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Status** | **Draft v0.1** (format version `0.1.0`). Not frozen; breaking changes are allowed until 1.0 and are delivered through migrations (§16). |
-| **Schema** | `https://kimo.design/schema/kimo-0.1.json` (JSON Schema draft 2020-12), generated into `packages/core-schema/schema/kimo-0.1.schema.json` |
+| **Schema** | `https://getkimo.design/schema/kimo-0.1.json` (JSON Schema draft 2020-12), generated into `packages/core-schema/schema/kimo-0.1.schema.json` |
 | **Reference implementation** | `@kimo/core-schema` (`packages/core-schema`). Where this document and the implementation disagree, that is a bug in one of them; file an issue. |
 | **Plan of record** | `docs/teardown.md` §10. Every place where this spec resolves an ambiguity in, or deviates from, that section is listed in §20. |
 | **License** | MIT |
@@ -62,7 +62,7 @@ Numbers MUST be finite. Colors are specified in their own space; renderers and e
 
 | Member | Required | Type | Meaning |
 |---|---|---|---|
-| `$schema` | yes | string | `https://kimo.design/schema/kimo-<major>.<minor>.json` for the document's format. For 0.1: `https://kimo.design/schema/kimo-0.1.json`. |
+| `$schema` | yes | string | `https://getkimo.design/schema/kimo-<major>.<minor>.json` for the document's format. For 0.1: `https://getkimo.design/schema/kimo-0.1.json`. |
 | `format` | yes | `major.minor.patch` | Format version (§16). This spec defines `0.1.x`. |
 | `features` | no | string[] (unique) | Feature flags used by the document (§13). Writers MUST list every feature they use and MUST sort the list by code unit. |
 | `meta` | no | struct | `name` (string), `library` (boolean: this is a library), `createdWith` (string), plus namespaced keys (Meta key grammar) with any JSON value. Kimo-owned root keys: `kimo.themes.order` (string[]: display order of theme axes; axes not listed follow by name). |
@@ -77,7 +77,7 @@ Numbers MUST be finite. Colors are specified in their own space; renderers and e
 
 No other members are defined in 0.1. A 0.1 validator reports any other member as `UNKNOWN_PROPERTY`; every reader MUST nevertheless preserve it (§16.3).
 
-The published JSON Schema accepts any `$schema` of the form `https://kimo.design/schema/kimo-<major>.<minor>.json`; that the URL names the document's own format version is checked by validators only (`SCHEMA_URL_MISMATCH`, a warning), so JSON Schema tooling and `validate()` agree.
+The published JSON Schema accepts any `$schema` of the form `https://getkimo.design/schema/kimo-<major>.<minor>.json`; that the URL names the document's own format version is checked by validators only (`SCHEMA_URL_MISMATCH`, a warning), so JSON Schema tooling and `validate()` agree.
 
 ## 5. Nodes
 
@@ -459,7 +459,7 @@ The canonical serialization is a pure function of the document's data. Writers M
 
 ```
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"$schema": "https://getkimo.design/schema/kimo-0.1.json",
 "format": "0.1.0",
 "features": ["layout/wrap"],
 "meta": {"name":"Kimo landing"},
@@ -611,7 +611,7 @@ Independent edits: 8 of 10 scenarios merge cleanly, and every clean result is th
 
 ```
 {
-"$schema": "https://kimo.design/schema/kimo-0.1.json",
+"$schema": "https://getkimo.design/schema/kimo-0.1.json",
 "format": "0.1.0",
 "features": ["layout/wrap"],
 "meta": {"name":"Kimo landing"},

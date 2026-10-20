@@ -1,5 +1,5 @@
 {
-"$schema": "https://kimo.design/schema/kimo-1.0.json",
+"$schema": "https://getkimo.design/schema/kimo-1.0.json",
 "format": "1.0.0",
 "nodes": {
 "Photo00001": {"type":"rect","parent":null,"order":"a2","name":"Photo","x":240,"y":0,"w":200,"h":150,"fill":{"kind":"image","src":"./assets/0123456789abcdef.png","fit":"crop","crop":[0.5,0,0,0.5,0.25,0.25]}}

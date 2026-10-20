@@ -30,7 +30,7 @@ import {
   VARIABLE_NAME_PATTERN,
 } from "../schema/primitives"
 import { compareCodeUnits, getOrInit } from "../tree"
-import { formatStatus, isCurrentSchemaUrl, SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
+import { formatStatus, SCHEMA_URL, SCHEMA_URL_PATTERN } from "../version"
 import { IssueSink, type ValidationResult } from "./issues"
 import { checkConflicts } from "./merge"
 import { schemaIssues } from "./structural"
@@ -281,11 +281,7 @@ class Validation {
       return
     }
     const url = raw.$schema
-    if (
-      typeof url === "string" &&
-      !isCurrentSchemaUrl(url) &&
-      new RegExp(SCHEMA_URL_PATTERN).test(url)
-    ) {
+    if (typeof url === "string" && url !== SCHEMA_URL && new RegExp(SCHEMA_URL_PATTERN).test(url)) {
       this.sink.add(
         "SCHEMA_URL_MISMATCH",
         "/$schema",

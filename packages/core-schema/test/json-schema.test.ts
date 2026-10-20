@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import Schema from "typebox/schema"
-import { buildJsonSchema, LEGACY_SCHEMA_URL, SCHEMA_ID } from "../src/index"
+import { buildJsonSchema, SCHEMA_ID } from "../src/index"
 import { FIXTURES } from "./helpers"
 
 const file = JSON.parse(
@@ -29,13 +29,5 @@ describe("generated JSON Schema", () => {
     const v = Schema.Compile(file)
     expect(v.Check({ $schema: SCHEMA_ID, format: "1.0.0", nodes: {} })).toBe(true)
     expect(v.Check({ $schema: SCHEMA_ID, format: "1.0.0" })).toBe(false)
-  })
-  test("accepts the legacy kimo.design host and rejects other hosts", () => {
-    const v = Schema.Compile(file)
-    const doc = ($schema: string) => ({ $schema, format: "1.0.0", nodes: {} })
-    expect(v.Check(doc(LEGACY_SCHEMA_URL))).toBe(true)
-    expect(v.Check(doc("https://getkimo.design/schema/kimo-1.0.json"))).toBe(true)
-    expect(v.Check(doc("https://example.com/schema/kimo-1.0.json"))).toBe(false)
-    expect(v.Check(doc("https://www.kimo.design/schema/kimo-1.0.json"))).toBe(false)
   })
 })

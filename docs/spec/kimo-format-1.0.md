@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Stable** (format version `1.0.0`, frozen 2026-10). Backward compatible within 1.x (§16.4). Supersedes the draft [v0.1](kimo-format-v0.1.md), kept as a historical record; 0.1 files open through the `0.1 → 1.0` migration (§16.2). |
-| **Schema** | `https://getkimo.design/schema/kimo-1.0.json` (JSON Schema draft 2020-12), generated into `packages/core-schema/schema/kimo-1.0.schema.json`. The 0.1 schema stays published at `…/kimo-0.1.json` (`schema/kimo-0.1.schema.json`, frozen). **Erratum (2026-10):** the website moved from kimo.design to getkimo.design. The legacy form `https://kimo.design/schema/kimo-<major>.<minor>.json` is an alias of the getkimo.design URL: readers and validators MUST accept it as equivalent, with no warning, and writers keep a document's existing `$schema` as it is. |
+| **Schema** | `https://getkimo.design/schema/kimo-1.0.json` (JSON Schema draft 2020-12), generated into `packages/core-schema/schema/kimo-1.0.schema.json`. The 0.1 schema stays published at `…/kimo-0.1.json` (`schema/kimo-0.1.schema.json`, frozen). |
 | **Reference implementation** | `@kimo/core-schema` (`packages/core-schema`). Where this document and the implementation disagree, that is a bug in one of them; file an issue. |
 | **Plan of record** | `docs/teardown.md` §10. Every place where this spec resolves an ambiguity in, or deviates from, that section is listed in §20. |
 | **License** | MIT |
@@ -76,7 +76,7 @@ Numbers MUST be finite. Colors are specified in their own space; renderers and e
 
 No other members are defined in 1.0. A 1.0 validator reports any other member as `UNKNOWN_PROPERTY`; every reader MUST nevertheless preserve it (§16.3).
 
-The published JSON Schema accepts any `$schema` of the form `https://getkimo.design/schema/kimo-<major>.<minor>.json` (or the legacy `https://kimo.design/...` alias); that the URL names the document's own format version is checked by validators only (`SCHEMA_URL_MISMATCH`, a warning), so JSON Schema tooling and `validate()` agree.
+The published JSON Schema accepts any `$schema` of the form `https://getkimo.design/schema/kimo-<major>.<minor>.json`; that the URL names the document's own format version is checked by validators only (`SCHEMA_URL_MISMATCH`, a warning), so JSON Schema tooling and `validate()` agree.
 
 ## 5. Nodes
 

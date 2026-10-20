@@ -7,8 +7,8 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "pattern": "^https://(?:get)?kimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$",
-      "description": "For format 1.0: \"https://getkimo.design/schema/kimo-1.0.json\" (the legacy \"https://kimo.design/schema/kimo-1.0.json\" means the same). Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate()."
+      "pattern": "^https://getkimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$",
+      "description": "For format 1.0: \"https://getkimo.design/schema/kimo-1.0.json\". Another version's URL is only a SCHEMA_URL_MISMATCH warning in validate()."
     },
     "format": {
       "type": "string",

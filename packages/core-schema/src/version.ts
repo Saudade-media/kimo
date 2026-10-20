@@ -14,21 +14,9 @@ export const SCHEMA_URL = "https://getkimo.design/schema/kimo-1.0.json"
 /** JSON Schema `$id` of the generated schema (same as {@link SCHEMA_URL}). */
 export const SCHEMA_ID = SCHEMA_URL
 
-/**
- * `$schema` URL of format 1.0 on the legacy host. The site moved from kimo.design to
- * getkimo.design in 2026-10; files written before keep this URL, and it means the same as
- * {@link SCHEMA_URL} (no warning, no rewrite on save).
- */
-export const LEGACY_SCHEMA_URL = "https://kimo.design/schema/kimo-1.0.json"
-
-/** Pattern of a `$schema` URL for any format version, on either host. */
+/** Pattern of a `$schema` URL for any format version. */
 export const SCHEMA_URL_PATTERN =
-  "^https://(?:get)?kimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$"
-
-/** Whether `url` names this format version ({@link SCHEMA_URL} or {@link LEGACY_SCHEMA_URL}). */
-export function isCurrentSchemaUrl(url: unknown): boolean {
-  return url === SCHEMA_URL || url === LEGACY_SCHEMA_URL
-}
+  "^https://getkimo\\.design/schema/kimo-(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.json$"
 
 /** Pattern of the `format` header (semver core, no pre-release or build metadata). */
 export const FORMAT_PATTERN = "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"

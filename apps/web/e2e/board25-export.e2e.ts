@@ -226,6 +226,8 @@ export const scenarios: Scenario[] = [
       await page.waitForFunction(
         () => document.querySelector('.kimo-file-status[data-status="writing"]') !== null,
       )
+      // The writing icon spins; its bounding box grows up to 14√2 mid-turn. Measure it at rest.
+      await page.emulateMedia({ reducedMotion: "reduce" })
       {
         const m = await measure(page, {
           run: ".export-run",
@@ -263,6 +265,7 @@ export const scenarios: Scenario[] = [
         const label = await page.locator(".kimo-progress__label").textContent()
         expect(/^Writing \d of 2 · ~\/loom$/.test(label ?? ""), `progress label (${label})`)
       }
+      await page.emulateMedia({ reducedMotion: "no-preference" })
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "board25-export-progress.png") })
       await page.waitForFunction(() => (window as unknown as Win).__export.outcomes.length === 1)
       const t1 = await page.evaluate(() => (window as unknown as Win).__export.toasts[0])

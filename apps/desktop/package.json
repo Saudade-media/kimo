@@ -22,9 +22,9 @@
   },
   "dependencies": {
     "@kimo/platform": "workspace:*",
-    "@tauri-apps/api": "^2.12.1"
+    "@tauri-apps/api": "^2.12.4"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.12.1"
+    "@tauri-apps/cli": "^2.12.3"
   }
 }

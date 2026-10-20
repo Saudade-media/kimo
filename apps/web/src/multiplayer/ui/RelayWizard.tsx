@@ -447,7 +447,19 @@ export function RelayWizard(props: RelayWizardProps) {
 
   // --- Shell --------------------------------------------------------------------------------------
   const root = useRef<HTMLDivElement>(null)
-  const trap = useFocusTrap(root, props.inline ? "none" : "first")
+  const trap = useFocusTrap(root, "none")
+  // Focus: the chosen card on Choose (arrow keys move, Enter continues), else the sheet.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on each step
+  useEffect(() => {
+    if (props.inline) return
+    const el = root.current
+    if (!el || el.contains(document.activeElement)) return
+    const target =
+      step === "choose"
+        ? el.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')
+        : null
+    ;(target ?? el).focus({ preventScroll: true })
+  }, [step])
   const stepIndex = STEP_INDEX[step]
   const sub =
     step === "choose"

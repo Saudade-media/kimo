@@ -225,6 +225,96 @@ async function topbar(ctx: E2EContext, theme: Theme) {
   c.flush()
 }
 
+// --- Section 8 E: sync status while assets move ------------------------------------------------
+
+async function assetsMoving(ctx: E2EContext, theme: Theme) {
+  const { page } = ctx
+  await open(ctx, "topbar", theme)
+  const card = '[data-card="assets"]'
+  await page.locator(`${card} .mp-sync-status[data-moving="fetching"]`).waitFor()
+  const T = await tokens(page, COLORS)
+  const R = await px(page, ["--kimo-radius-pill"])
+  const up = `${card} .mp-sync-status[data-moving="uploading"]`
+  const down = `${card} .mp-sync-status[data-moving="fetching"]`
+  const m = await measure(page, {
+    card,
+    up,
+    upIcon: `${up} .kimo-save-status__icon`,
+    upLabel: `${up} .kimo-save-status__label`,
+    down,
+    downIcon: `${down} .kimo-save-status__icon`,
+    downLabel: `${down} .kimo-save-status__label`,
+  })
+  const c = checker(ctx, `§8 E sync status while assets move (${theme})`)
+  // Card (FudP9): 56 tall, gap 8, padding [0, 12], justify end, align center.
+  c.box("Card", m.card, { h: 56, gap: 8, pad: "0 12 0 12", align: "center" })
+  // Sharing images (hdYq9 → SaveStatus/Saving hbDxo): no fill, text-tertiary, arrow-up.
+  for (const [name, pill, icon, label] of [
+    ["Sharing images", m.up, m.upIcon, m.upLabel],
+    ["Fetching", m.down, m.downIcon, m.downLabel],
+  ] as const) {
+    // SaveStatus (EdNXU): 24 tall, padding [0, 10, 0, 8], gap 6, radius pill.
+    c.box(name, pill, {
+      h: 24,
+      pad: "0 10 0 8",
+      gap: 6,
+      bg: T0,
+      color: T["--kimo-text-tertiary"] as string,
+      radius: R["--kimo-radius-pill"] as number,
+    })
+    c.box(`${name} icon`, icon, { w: 14, h: 14 })
+    c.box(`${name} label`, label, { fs: 12, fw: "500" })
+  }
+  expect((await text(page, up)) === "Sharing 2 images", "E reads Sharing 2 images")
+  expect((await text(page, down)) === "Fetching 5 images", "E reads Fetching 5 images")
+  const looks = await page.evaluate(
+    ([u, d]) => {
+      const el = (s: string) => document.querySelector(s)
+      const iconOf = (s: string) => el(`${s} svg`)?.getAttribute("class") ?? ""
+      return {
+        upStatus: el(u as string)?.getAttribute("data-status"),
+        downStatus: el(d as string)?.getAttribute("data-status"),
+        upIcon: iconOf(u as string),
+        downIcon: iconOf(d as string),
+      }
+    },
+    [up, down],
+  )
+  expect(looks.upStatus === "saving", `Sharing is SaveStatus/Saving (${looks.upStatus})`)
+  expect(looks.downStatus === "saved", `Fetching is SaveStatus (${looks.downStatus})`)
+  expect(looks.upIcon.includes("lucide-arrow-up"), `Sharing icon arrow-up (${looks.upIcon})`)
+  expect(
+    looks.downIcon.includes("lucide-arrow-down"),
+    `Fetching icon arrow-down (${looks.downIcon})`,
+  )
+  // Sibling order: Sharing, then Fetching.
+  if (m.up && m.down) c.check("Order", "Sharing left of Fetching", m.up.x < m.down.x ? 1 : 0, 1)
+  // Edits first: a pending edit past 600 ms turns the slot to Syncing…; assets come back after.
+  await page.evaluate(() =>
+    (
+      window as unknown as {
+        __board41: { fake: { set(k: string, p: Record<string, unknown>): void } }
+      }
+    ).__board41.fake.set("down", { status: "saving" }),
+  )
+  await page.locator(`${card} .mp-sync-status[data-relay="syncing"]`).waitFor({ timeout: 3000 })
+  expect(
+    (await page
+      .locator(`${card} .mp-sync-status[data-relay="syncing"]`)
+      .getAttribute("data-moving")) === null,
+    "Syncing… keeps the slot while images wait",
+  )
+  await page.evaluate(() =>
+    (
+      window as unknown as {
+        __board41: { fake: { set(k: string, p: Record<string, unknown>): void } }
+      }
+    ).__board41.fake.set("down", { status: "synced" }),
+  )
+  await page.locator(down).waitFor()
+  c.flush()
+}
+
 // --- Section 3: the Share popover ----------------------------------------------------------------
 
 const POPOVER = {
@@ -907,6 +997,7 @@ export const scenarios: Scenario[] = [
   both("board41 share: §3 D Reset all links confirm", resetDialog),
   both("board41 share: §6 B people list, follow, agents", people),
   both("board41 share: §4 Settings › Multiplayer relay test states and settings", settings),
+  both("board41 share: §8 E topbar sync status while assets move", assetsMoving),
   both(
     "board41 share: a browser library file shows Share and starts sharing",
     async (ctx, theme) => {

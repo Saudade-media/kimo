@@ -5,7 +5,8 @@
  * page: `?surface=<name>&theme=light|dark`. Built by `e2e/board41-share.e2e.ts`; driven through
  * `window.__board41`.
  *
- * Surfaces: `topbar` (section 2, the six cards), `share-a` / `share-b` / `share-c` (section 3), `reset` (3 D), `people` (6 B, following Maya),
+ * Surfaces: `topbar` (section 2, the six cards, and the section 8 E card of assets moving),
+ * `share-a` / `share-b` / `share-c` (section 3), `reset` (3 D), `people` (6 B, following Maya),
  * `settings` (section 4), `app`: the real App with the window's multiplayer wiring over a memory
  * platform with a `.kimo` on disk (`#/disk/…`), to check the Share button in the editor topbar,
  * and `library`: the real App on a browser library file (`#/file/<id>`, IndexedDB) over the
@@ -84,6 +85,20 @@ function seedTopbar() {
   // Connected once, then the relay dropped: Reconnecting… (E), and past 30 s Offline (F).
   fake.set("e", full)
   fake.set("f", full)
+  // Section 8 E: two images uploading ("Sharing 2 images"), five fetching ("Fetching 5 images").
+  const transfers = { unavailable: [], failed: [] }
+  fake.set("up", {
+    ...full,
+    assets: { ...transfers, uploading: ["a1.png", "a2.png"], fetching: [] },
+  })
+  fake.set("down", {
+    ...full,
+    assets: {
+      ...transfers,
+      uploading: [],
+      fetching: ["b1", "b2", "b3", "b4", "b5"].map((k) => ({ key: `${k}.png`, bytes: 2048 })),
+    },
+  })
 }
 
 function settleTopbar() {
@@ -142,6 +157,11 @@ function Topbar() {
           <TopbarShare docKey={k} nodeName={nodeName} />
         </Card>
       ))}
+      {/* Section 8 E (FudP9): Sharing images, then Fetching. */}
+      <Card id="assets">
+        <TopbarSyncStatus docKey="up" fallback={saved} />
+        <TopbarSyncStatus docKey="down" fallback={saved} />
+      </Card>
     </div>
   )
 }

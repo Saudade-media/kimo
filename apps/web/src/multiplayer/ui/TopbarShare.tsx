@@ -2,8 +2,9 @@
  * Board 41 sections 1 and 2: the editor topbar while a file is shared.
  *
  * - {@link TopbarSyncStatus}: SaveStatus in the slot of "Saved locally" (rules row "Sync status",
- *   prop `topbar-sync`): Synced, Syncing… (after 600 ms), Sharing N images, Reconnecting…
- *   (Paused), Offline · edits kept (ReadOnly), View only (ReadOnly, eye). Not shared: `fallback`.
+ *   prop `topbar-sync`): Synced, Syncing… (after 600 ms), Reconnecting… (Paused), Offline · edits
+ *   kept (ReadOnly), View only (ReadOnly, eye), and while assets move (section 8 E, edits first)
+ *   Sharing N images (Saving, arrow-up) or Fetching N images (arrow-down). Not shared: `fallback`.
  * - {@link TopbarShare}: the avatar stack (`presence-stack`: Avatar 24, overlap 4, 2 px bg-app
  *   ring, max 3 then +N, join order, you excluded, 0.5 while the relay is gone; opens the people
  *   list) and the Share button (`topbar-share`: Button/Secondary "Share" with users, live
@@ -13,9 +14,15 @@
 import { Button, SaveStatus, Tooltip } from "@kimo/ui"
 import { type ReactNode, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
-import { useCapabilities, useCollaborators, useMultiplayer, useShareState } from "../hooks"
+import {
+  useAssetTransfers,
+  useCapabilities,
+  useCollaborators,
+  useMultiplayer,
+  useShareState,
+} from "../hooks"
 import type { MultiplayerModel } from "../model"
-import { stackDimmed, stackOf, syncStatusView } from "./copy"
+import { stackDimmed, stackOf, topbarSyncStatus } from "./copy"
 import { PeoplePopover } from "./PeoplePopover"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
@@ -47,8 +54,9 @@ function SyncStatusFor({
   fallback: ReactNode
 }) {
   const share = useShareState(model, docKey)
+  const transfers = useAssetTransfers(model, docKey)
   if (share.relay === null) return <>{fallback}</>
-  const view = syncStatusView(share.relay, share.uploading)
+  const view = topbarSyncStatus(share.relay, transfers)
   return (
     <Tooltip label={view.tooltip}>
       <SaveStatus
@@ -57,6 +65,7 @@ function SyncStatusFor({
         icon={<Icon name={view.icon} size={14} />}
         className="mp-sync-status"
         data-relay={share.relay}
+        data-moving={view.moving ?? undefined}
       />
     </Tooltip>
   )

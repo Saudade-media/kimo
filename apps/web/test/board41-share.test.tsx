@@ -30,6 +30,7 @@ import {
   stackDimmed,
   stackOf,
   syncStatusView,
+  topbarSyncStatus,
 } from "../src/multiplayer/ui/copy"
 import { PeoplePopover } from "../src/multiplayer/ui/PeoplePopover"
 import { SharePopover } from "../src/multiplayer/ui/SharePopover"
@@ -76,6 +77,68 @@ describe("§2 sync status (rules row topbar-sync)", () => {
     expect(syncStatusView("saving", 1).label).toBe("Sharing 1 image")
     // "Hover explains it" on Offline.
     expect(syncStatusView("offline").tooltip).toContain("more than 30 s")
+  })
+
+  test("§8 E assets moving: Sharing then Fetching, only where no edit is pending", () => {
+    const none = { uploading: [], fetching: [] }
+    const up = { uploading: ["a.png", "b.png"], fetching: [] }
+    const down = { uploading: [], fetching: [1, 2, 3, 4, 5] }
+    const both = { uploading: ["a.png"], fetching: [1] }
+    // Synced with uploads: SaveStatus/Saving (hbDxo), arrow-up.
+    expect(topbarSyncStatus("synced", up)).toMatchObject({
+      kind: "saving",
+      icon: "arrow-up",
+      label: "Sharing 2 images",
+      moving: "uploading",
+    })
+    // The model's "saving" is Synced with uploads.
+    expect(topbarSyncStatus("saving", up).label).toBe("Sharing 2 images")
+    // Fetching: SaveStatus (EdNXU), arrow-down.
+    expect(topbarSyncStatus("synced", down)).toMatchObject({
+      kind: "saved",
+      icon: "arrow-down",
+      label: "Fetching 5 images",
+      moving: "fetching",
+    })
+    expect(topbarSyncStatus("synced", { uploading: [], fetching: [1] }).label).toBe(
+      "Fetching 1 image",
+    )
+    // Uploads first.
+    expect(topbarSyncStatus("synced", both).label).toBe("Sharing 1 image")
+    // A viewer fetching images sees them come in; View only comes back after.
+    expect(topbarSyncStatus("view-only", down).label).toBe("Fetching 5 images")
+    expect(topbarSyncStatus("view-only", none).label).toBe("View only")
+    // Edits first: pending edits, a dropped relay and offline keep the slot.
+    for (const relay of ["syncing", "reconnecting", "offline"] as const)
+      for (const t of [up, down, both])
+        expect(topbarSyncStatus(relay, t)).toMatchObject({
+          ...syncStatusView(relay),
+          moving: null,
+        })
+    // Nothing moving: the relay status as is ("saving" without uploads reads Synced).
+    expect(topbarSyncStatus("synced", none)).toMatchObject({ label: "Synced", moving: null })
+    expect(topbarSyncStatus("saving", none)).toMatchObject({ label: "Synced", moving: null })
+  })
+
+  test("the topbar renders the asset status from the document's transfers", () => {
+    const fake = createFakeShareBackend()
+    const model = createMultiplayerModel({ backend: fake.backend })
+    const snap = board41Snapshot(Date.now())
+    fake.set("f", {
+      ...snap,
+      assets: {
+        uploading: [],
+        fetching: [{ key: "k.png", bytes: 9 }],
+        unavailable: [],
+        failed: [],
+      },
+    })
+    const html = renderToString(
+      h(TopbarSyncStatus, { model, docKey: "f", fallback: h("span", null, "Saved locally") }),
+    )
+    expect(html).toContain("Fetching 1 image")
+    expect(html).toContain('data-moving="fetching"')
+    model.dispose()
   })
 
   test("the stack dims only while the relay is gone", () => {

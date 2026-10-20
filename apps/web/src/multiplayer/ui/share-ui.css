@@ -716,3 +716,9 @@
 .mp-fetch-select.kimo-select {
   width: 120px;
 }
+
+/* Section 8 E: Sharing images keeps the SaveStatus/Saving look (hbDxo) with a still arrow-up; only
+   the loader of Syncing… spins. */
+.mp-sync-status[data-moving] .kimo-save-status__icon {
+  animation: none;
+}

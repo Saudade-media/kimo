@@ -5,6 +5,7 @@
 
 import type { Role } from "@kimo/sync/mp"
 import type { Persona, SaveStatusKind } from "@kimo/ui"
+import { assetSyncStatus } from "../canvas-model"
 import type {
   AgentView,
   ExpiryChoice,
@@ -53,10 +54,10 @@ export function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusVie
       }
     case "saving":
       return {
-        kind: "saved",
+        kind: "saving",
         icon: "arrow-up",
         label: `Sharing ${plural(uploading, "image")}`,
-        tooltip: "Others see these images once the relay has them",
+        tooltip: SHARING_TOOLTIP,
       }
     case "reconnecting":
       return {
@@ -81,6 +82,42 @@ export function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusVie
         tooltip: "You joined with a view link",
       }
   }
+}
+
+const SHARING_TOOLTIP = "Others see these images once the relay has them"
+const FETCHING_TOOLTIP = "Images others added are on their way from the relay"
+
+/**
+ * Board 41 › 8 E "sync status while assets move": edits sync first, assets after, so the asset
+ * work ({@link assetSyncStatus}) shows only when no edit is pending and the relay is there, where
+ * the status would read Synced or View only. Uploads come first: "Sharing N images" (arrow-up,
+ * SaveStatus/Saving hbDxo), then "Fetching N images" (arrow-down, SaveStatus EdNXU). Syncing…,
+ * Reconnecting… and Offline · edits kept keep the slot while assets wait.
+ */
+export function topbarSyncStatus(
+  relay: RelayStatus,
+  transfers: { uploading: readonly string[]; fetching: readonly unknown[] },
+): SyncStatusView & { moving: "uploading" | "fetching" | null } {
+  const quiet = relay === "synced" || relay === "saving" || relay === "view-only"
+  const assets = quiet ? assetSyncStatus(transfers) : null
+  if (assets?.icon === "arrow-up")
+    return {
+      kind: "saving",
+      icon: "arrow-up",
+      label: assets.text,
+      tooltip: SHARING_TOOLTIP,
+      moving: "uploading",
+    }
+  if (assets)
+    return {
+      kind: "saved",
+      icon: "arrow-down",
+      label: assets.text,
+      tooltip: FETCHING_TOOLTIP,
+      moving: "fetching",
+    }
+  // "saving" is Synced with uploads; with none left it reads Synced.
+  return { ...syncStatusView(relay === "saving" ? "synced" : relay), moving: null }
 }
 
 /** Presence is stale while the relay is gone: the avatar stack dims to 0.5. */

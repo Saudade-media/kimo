@@ -1000,6 +1000,10 @@ Secrets never leave this database except inside links the owner mints.
 - Manifest entries without `sha256` (older files) are skipped for upload; when an `edit` client
   has the bytes and the 16-hex prefix matches, it fills in `sha256` with a `system` load as in
   §16.1 step 3.
+- **Topbar status** (board 41 › 8 E, `topbarSyncStatus` over `assetSyncStatus`): edits sync
+  first, assets after. Where the status would read Synced or View only, uploads show "Sharing N
+  images" (SaveStatus/Saving look, still arrow-up), else fetches show "Fetching N images"
+  (SaveStatus, arrow-down). Syncing…, Reconnecting… and Offline · edits kept keep the slot.
 
 ### 16.5 Font policy (`font-policy.ts`)
 

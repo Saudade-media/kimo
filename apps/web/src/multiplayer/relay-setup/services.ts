@@ -8,7 +8,10 @@ import { RelayHttpClient } from "@kimo/sync/mp"
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react"
 import { tauriBridge } from "../../host/bridge"
 import { inTauri } from "../../platform/runtime"
-import { ownershipFor } from "../device"
+import { createCloudClient } from "../cloud/client"
+import { resolveCloudApiUrl } from "../cloud/config"
+import { type CloudState, type CloudStore, createCloudStore } from "../cloud/store"
+import { deviceKeysFor, deviceNameFor, ownershipFor } from "../device"
 import type { OwnershipClient } from "../ownership"
 import { copyText } from "../ui/shared"
 import { createTauriRelayHost, type RelayHostApi } from "./host"
@@ -31,6 +34,8 @@ export interface RelaySetupServices {
   openUrl(url: string): Promise<void>
   copy(text: string): Promise<void>
   clock: Clock
+  /** Kimo Cloud (board 43); null when the build or settings hide it. */
+  cloud: CloudStore | null
 }
 
 /** The relay test over the network (the relay's `/version`, then ownership as this device). */
@@ -46,6 +51,26 @@ export function networkTestDeps(
     },
     ...clock,
   }
+}
+
+/**
+ * Kimo Cloud for `platform`: the API origin from the `multiplayer.cloudApiUrl` setting or the
+ * build, this install's device key, pages opened with `openUrl`.
+ */
+export function createPlatformCloud(
+  platform: KimoPlatform,
+  openUrl: (url: string) => Promise<void>,
+  clock: Clock = realClock,
+): CloudStore | null {
+  const apiUrl = resolveCloudApiUrl(platform.settings?.get("multiplayer.cloudApiUrl") ?? null)
+  if (!apiUrl) return null
+  return createCloudStore({
+    client: createCloudClient({ apiUrl, deviceKeys: deviceKeysFor(platform) }),
+    deviceName: () => deviceNameFor(platform),
+    clientKind: platform.kind === "desktop" ? "desktop" : "web",
+    openUrl,
+    clock,
+  })
 }
 
 export function createRelaySetupServices(
@@ -66,6 +91,14 @@ export function createRelaySetupServices(
         : null
   const clock = overrides.clock ?? realClock
   const info = { os: platform.os, arch: platform.arch ?? "aarch64" }
+  // Desktop: the system browser through the opener plugin; web: a new tab.
+  const openUrl =
+    overrides.openUrl ??
+    ((url: string) => {
+      if (platform.kind === "desktop") return platform.files.openExternalUrl(url)
+      window.open(url, "_blank", "noopener")
+      return Promise.resolve()
+    })
   return {
     kind: overrides.kind ?? (desktop || platform.kind === "desktop" ? "desktop" : "web"),
     os: info.os,
@@ -88,15 +121,13 @@ export function createRelaySetupServices(
           ? new LocalRelay(host, info, clock)
           : null,
     test: overrides.test ?? networkTestDeps(ownership, clock),
-    openUrl:
-      overrides.openUrl ??
-      ((url) => {
-        if (platform.kind === "desktop") return platform.files.openExternalUrl(url)
-        window.open(url, "_blank", "noopener")
-        return Promise.resolve()
-      }),
+    openUrl,
     copy: overrides.copy ?? ((text) => copyText(platform, text)),
     clock,
+    cloud:
+      overrides.cloud !== undefined
+        ? overrides.cloud
+        : createPlatformCloud(platform, openUrl, clock),
   }
 }
 
@@ -123,11 +154,35 @@ export function useRelaySetupServices(platform: KimoPlatform | null): RelaySetup
   )
 }
 
+const NO_CLOUD_SUB = () => () => {}
+
 export function useRelaySetupState(store: RelaySetupStore): RelaySetupState {
   return useSyncExternalStore(store.subscribe, store.getState, store.getState)
 }
 
+const NO_SETUP = () => null
+
+/** {@link useRelaySetupState} for surfaces that may have no relay setup services. */
+export function useRelaySetupStateOrNull(store: RelaySetupStore | null): RelaySetupState | null {
+  return useSyncExternalStore(
+    store ? store.subscribe : NO_CLOUD_SUB,
+    store ? store.getState : NO_SETUP,
+    store ? store.getState : NO_SETUP,
+  )
+}
+
 const STOPPED_SUB = () => () => {}
+
+const NO_CLOUD = () => null
+
+/** Kimo Cloud's state (null when it is hidden). */
+export function useCloudState(cloud: CloudStore | null): CloudState | null {
+  return useSyncExternalStore(
+    cloud ? cloud.subscribe : NO_CLOUD_SUB,
+    cloud ? cloud.getState : NO_CLOUD,
+    cloud ? cloud.getState : NO_CLOUD,
+  )
+}
 
 export function useLocalRelay(local: LocalRelay | null): LocalRelayState | null {
   return useSyncExternalStore(

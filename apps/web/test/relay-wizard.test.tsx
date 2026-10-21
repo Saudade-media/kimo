@@ -45,6 +45,8 @@ const ownership = createOwnershipClient({
 function services(kind: "web" | "desktop") {
   const platform = createMemoryPlatform({ os: "macos" })
   return createRelaySetupServices(platform, {
+    // Board 42 / 41 without Kimo Cloud (board 43 has its own harness).
+    cloud: null,
     kind,
     host: kind === "desktop" ? createFakeRelayHost() : null,
     pageOrigin: kind === "web" ? "https://design.maya.studio" : null,

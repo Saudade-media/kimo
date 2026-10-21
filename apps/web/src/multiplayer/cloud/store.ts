@@ -105,7 +105,7 @@ export interface CloudStore {
   setEmail(email: string): void
   startSignIn(email?: string): Promise<void>
   resend(): Promise<void>
-  useDifferentEmail(): void
+  changeEmail(): void
   signOut(): Promise<void>
   /** Section 5: rename or sign out a device of the account (another one or this one). */
   renameDevice(pub: string, name: string): Promise<void>
@@ -419,7 +419,7 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
       if (s.phase === "sent" && clock.now() < s.resendAfter) return
       await startSignIn(s.email)
     },
-    useDifferentEmail() {
+    changeEmail() {
       stopSignInPoll()
       const s = state.signIn
       set({

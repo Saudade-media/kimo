@@ -1,0 +1,582 @@
+/*
+ * Board 43 "Kimo Cloud" (desing.pen yj64A): what the hosted relay adds to the relay wizard
+ * (sections 1 to 3), the Share popover (4, 6 A), Settings › Multiplayer (5) and the plan and error
+ * states (6). Pieces with the same node values as board 41 / 42 keep those classes (rw-option,
+ * rw-radio, rw-icon-wrap, rw-saved, mp-intro, mp-setting, mp-device); this file holds the rest.
+ * Node values are quoted per rule; tokens where the node uses a variable.
+ */
+
+/* --- Wizard (sections 1 to 3) ------------------------------------------------------------------ */
+
+/* Disclosure · Host your own, free (xxZJW / v9lVfI): row, gap 12, padding [12, 14], center,
+   radius-md, stroke 1 border; open: fill bg-subtle › Chevron 16 text-secondary · Text (gap 2):
+   Title sans 12 / 500 primary · Hint sans 11 secondary 1.45. */
+.rw-disclosure {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.rw-disclosure[aria-expanded="true"] {
+  background: var(--kimo-bg-subtle);
+}
+
+.rw-disclosure:focus-visible,
+.mp-disclosure:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.rw-disclosure__chevron,
+.mp-disclosure__chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+/* Intro (YKm4P, kzYPR, B12cl, MG0Dt, YJzno): row, gap 12 (top aligned) › Icon Wrap 32 pill ›
+   icon 16 · Text column, gap 4: Title sans 12 / 600 · Desc sans 11 secondary 1.45. */
+.rw-intro {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Icon Wrap tones: success-soft › circle-check success (kzYPR); warning-soft › mail-x,
+   circle-alert warning (B12cl, YJzno). */
+.rw-icon-wrap--success {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
+.rw-icon-wrap--warning {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
+/* Field · Email (jxPa7): column, gap 6 › Label sans 11 / 500 secondary · Input. */
+.rw-email {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.rw-email .kimo-input {
+  width: 100%;
+}
+
+/* Value (BwYzP): sans, text-base, text-primary. */
+.rw-email .kimo-input__field {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-base);
+}
+
+/* Center (m9egRl, n2kDVA): column, gap 14, padding [12, 0, 4, 0], center. */
+.rw-center {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 0 4px 0;
+}
+
+/* Icon Wrap (mkPRB, cQRak): 40, accent-soft, radius-pill › icon 18 accent-text. */
+.rw-center__icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent-soft);
+  color: var(--kimo-accent-text);
+}
+
+/* Text (sZSWs): column, gap 6, center, fill › Title sans 14 / 600 · Desc sans 12 secondary 1.45,
+   centred. */
+.rw-center__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.rw-center__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.rw-center__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Waiting (xutUA, QFnf7): row, gap 6, center › loader-circle 14 tertiary · Label sans 11
+   tertiary. */
+.rw-waiting {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--kimo-text-tertiary);
+}
+
+.rw-waiting__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.rw-waiting__label {
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Signed in · List (HOAjL): the board 41 device list (mp-device-list). */
+.rw-shell .mp-device-list {
+  flex: none;
+}
+
+/* Billing (ev4k1): row, gap 8 › two Options (fill), each row, gap 12, padding [12, 14], center. */
+.rw-billing {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+}
+
+.rw-billing .rw-option {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Includes (J8NxK): column, gap 8 › Item (row, gap 8, center): check 14 success · Label sans 12
+   primary. */
+.rw-includes {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rw-include {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.rw-include__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-success);
+}
+
+.rw-include__label {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Ready (N3Fw7) › Actions (uFLph): row, gap 8, center. */
+.rw-actions--ready {
+  gap: 8px;
+}
+
+/* Close (jzkFr): Button/Ghost h 30, padding [0, 12], label text-primary (sqJv4). */
+.rw-shell .rw-ready-close.kimo-button--ghost {
+  color: var(--kimo-text-primary);
+}
+
+/* The service's line under a step that stays on screen (rate limited, provider down). */
+.rw-cloud-error {
+  flex: none;
+}
+
+/* --- Share popover (section 4, 6 A) ----------------------------------------------------------- */
+
+/* Price (Izt0F, WF1WG): sans 11 text-tertiary. */
+.mp-price {
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Disclosure (pHrwB / A3yUU): row, gap 10, padding [10, 12], center, radius-md, stroke 1 border;
+   open: bg-subtle. */
+.mp-disclosure {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--kimo-radius-md);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.mp-disclosure[aria-expanded="true"] {
+  background: var(--kimo-bg-subtle);
+}
+
+.mp-disclosure .mp-text {
+  gap: 2px;
+}
+
+/* Title (jHsKH): sans 12 / 500 primary. */
+.mp-disclosure__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* Set up a relay (f8hmy): Button/Secondary h 30, padding [0, 12], full width, centred. */
+.mp-setup-relay--secondary.kimo-button {
+  justify-content: center;
+}
+
+/* Icon Wrap · warning (WdNIW): warning-soft › cloud-off 16 warning. */
+.mp-icon-wrap--warning {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
+/* Account (UGZqi): row, gap 8, center › user 14 tertiary · Email mono 11 primary · Spacer ·
+   StatusPill. */
+.mp-account {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mp-account__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-account__email {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Body Fragment (6 D, E, F): column, gap 12; framed: padding 20, bg-overlay, radius-lg,
+   stroke 1 border ------------------------------------------------------------------------------ */
+.cloud-notice {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.cloud-notice--framed {
+  padding: 20px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-overlay);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+/* Target (apEeH): row, gap 8, center › icon 14 tertiary · Label mono 11 primary · Spacer · Status. */
+.cloud-notice__target {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cloud-notice__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.cloud-notice__label {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Message (FeSPM): column, gap 4 › Title sans 12 / 600 · Desc sans 11 secondary 1.45. */
+.cloud-notice__message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.cloud-notice__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.cloud-notice__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Actions (iF9qD): row, gap 6, center › Button/Secondary h 26, padding [0, 10]. */
+.cloud-notice__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.cloud-notice__action.kimo-button {
+  height: 26px;
+  padding: 0 10px;
+}
+
+/* --- Settings › Multiplayer (section 5) --------------------------------------------------------- */
+
+/* Relay · Kimo Cloud (uXwF3): fill × 32, bg-subtle, radius-md, row, gap 8, padding [0, 10],
+   center › cloud 16 secondary · Value sans 12 primary · Spacer · StatusPill. */
+.mp-cloud-relay {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.mp-cloud-relay__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.mp-cloud-relay__value {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Change (mxOH0): Button/Secondary h 32, padding [0, 14], repeat 14, label sans 12. */
+.mp-cloud-change.kimo-button {
+  --kimo-button-icon-size: 14px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: var(--kimo-text-sm);
+}
+
+/* Rows (IYFvi, oHDbc, r2rda): row, gap 8, center › Key sans 11 tertiary, 72 wide · Value sans
+   12 primary (Storage: mono 11) · Meta sans 11 tertiary. */
+.mp-kv {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mp-kv__key {
+  flex: none;
+  width: 72px;
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+.mp-kv__value {
+  overflow: hidden;
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mp-kv__value--mono {
+  flex: none;
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+}
+
+.mp-kv__meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+}
+
+/* Bar (rWXeH): fill × 6, bg-muted, radius-pill › Used: accent; warning at 90 %, danger at 100 %. */
+.mp-storage {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.mp-storage__used {
+  height: 6px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+}
+
+.mp-storage[data-level="warning"] .mp-storage__used {
+  background: var(--kimo-warning);
+}
+
+.mp-storage[data-level="danger"] .mp-storage__used {
+  background: var(--kimo-danger);
+}
+
+/* Actions (U7MgTk): row, gap 8, padding [4, 0, 0, 0], center › Manage billing (Button/Secondary
+   h 28, padding [0, 12], external-link 14, label sans 12) · Sign out (Button/Ghost h 28, padding
+   [0, 10], log-out). */
+.mp-account-actions {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0 0 0;
+}
+
+.mp-billing.kimo-button {
+  --kimo-button-icon-size: 14px;
+  height: 28px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+.mp-sign-out.kimo-button {
+  height: 28px;
+  padding: 0 10px;
+}
+
+/* Sign out (ti3HR): log-out 14 danger. */
+.mp-device__sign-out.kimo-icon-button {
+  color: var(--kimo-danger);
+}
+
+/* Devices › Footer (gn7mM): row, gap 8, center › info 14 tertiary · Hint sans 11 tertiary. */
+.mp-cloud-hint {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-cloud-hint__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-cloud-hint__text {
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}

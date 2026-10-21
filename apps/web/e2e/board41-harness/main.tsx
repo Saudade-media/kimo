@@ -261,6 +261,8 @@ const DEVICES: RelayDevice[] = [
 ]
 /** No network: the relay setup services over an ownership stub that answers with DEVICES. */
 const relaySetup = createRelaySetupServices(platform, {
+  // Board 42 / 41 without Kimo Cloud (board 43 has its own harness).
+  cloud: null,
   kind: "web",
   host: null,
   ownership: {

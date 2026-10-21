@@ -75,6 +75,8 @@ const host = desktop
     })
   : null
 const services = createRelaySetupServices(platform, {
+  // Board 42 / 41 without Kimo Cloud (board 43 has its own harness).
+  cloud: null,
   kind: desktop ? "desktop" : "web",
   host,
   pageOrigin: desktop ? null : "https://design.maya.studio",

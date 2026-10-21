@@ -283,7 +283,7 @@ describe("store · sign in (section 2)", () => {
     // Send a new link from 2E.
     await store.resend()
     expect(store.getState().signIn.phase).toBe("sent")
-    store.useDifferentEmail()
+    store.changeEmail()
     expect(store.getState().signIn).toMatchObject({ phase: "email", email: "maya@studio.design" })
     expect(clock.pending()).toBe(0)
     store.dispose()

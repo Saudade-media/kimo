@@ -14,11 +14,18 @@
  * - Test (section 8): reach, handshake, protocol, ownership within 5 s (an unclaimed relay is
  *   claimed for this device; one another Kimo owns is "Not yours"); Save and use only after ok;
  *   then Saved (D): from the Share popover Start sharing, from Settings Close.
+ *
+ * Board 43 (yj64A, ADR 0018), when Kimo Cloud is on (`services.cloud`): Choose lists Kimo Cloud
+ * first and selected, the five self-host paths behind a collapsed "Host your own, free" row that
+ * stays open once one of them is chosen. The Kimo Cloud path is Choose · Sign in · Subscribe
+ * (`CloudWizardSteps`), then Kimo Cloud is ready (3 C). A device already signed in with a plan
+ * skips both (1 B, Use Kimo Cloud).
  */
 import { Button, Dialog, DialogScrim, IconButton, Input, useFocusTrap } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { Icon } from "../../lib/icons"
+import { priceFor, priceLine, readyMeta } from "../cloud/view"
 import type { RelayOwnerState } from "../ownership"
 import {
   autoOrigins,
@@ -45,8 +52,14 @@ import {
 } from "../relay-setup/local"
 import { pendingChecks, type RelaySetupTest, testRelaySetup } from "../relay-setup/relay-test"
 import { type FlyRun, type LocalChecks, runFlySteps, stepTime } from "../relay-setup/runner"
-import { type RelaySetupServices, useLocalRelay, useRelaySetupState } from "../relay-setup/services"
+import {
+  type RelaySetupServices,
+  useCloudState,
+  useLocalRelay,
+  useRelaySetupState,
+} from "../relay-setup/services"
 import type { RelayPath } from "../relay-setup/store"
+import { type CloudStep, cloudStepView } from "./CloudWizardSteps"
 import { AddThisDeviceDialog, NOT_YOURS_DESC, NotYoursFix, RESET_OWNERSHIP_URL } from "./ownership"
 import {
   Badge,
@@ -68,8 +81,12 @@ import {
 import { RELAY_GUIDE_URL, useShareToast } from "./shared"
 import "./share-ui.css"
 import "./relay-wizard.css"
+import "./cloud.css"
 
-type Step = "choose" | "setup" | "test" | "saved"
+type Step = "choose" | "setup" | "test" | "saved" | CloudStep | "ready"
+
+/** Where the wizard opens (board 43): Choose, or a Kimo Cloud step from the Share popover. */
+export type WizardStart = "choose" | "sign-in" | "subscribe" | "renew"
 
 export const PATH_LABEL: Record<RelayPath, string> = {
   local: "This computer",
@@ -87,7 +104,15 @@ const PATH_ICON: Record<RelayPath, string> = {
   existing: "plug",
 }
 
-const STEP_INDEX: Record<Step, number> = { choose: 0, setup: 1, test: 2, saved: 2 }
+const STEP_INDEX: Record<Step, number> = {
+  choose: 0,
+  setup: 1,
+  test: 2,
+  saved: 2,
+  "sign-in": 1,
+  subscribe: 2,
+  ready: 2,
+}
 
 export interface RelayWizardProps {
   services: RelaySetupServices
@@ -102,6 +127,8 @@ export interface RelayWizardProps {
   displayName?: string
   /** Render in place (harness specimens) instead of over a scrim in a portal. */
   inline?: boolean
+  /** Board 43: open at a Kimo Cloud step (Use Kimo Cloud, Subscribe, Renew plan). */
+  start?: WizardStart
 }
 
 type LocalView =
@@ -136,7 +163,20 @@ export function RelayWizard(props: RelayWizardProps) {
   )
 
   // --- Draft --------------------------------------------------------------------------------------
-  const [step, setStep] = useState<Step>("choose")
+  const cloud = services.cloud
+  const cloudState = useCloudState(cloud)
+  const [step, setStep] = useState<Step>(
+    !cloud || !props.start || props.start === "choose"
+      ? "choose"
+      : props.start === "sign-in"
+        ? "sign-in"
+        : "subscribe",
+  )
+  // Board 43: Kimo Cloud is first and selected on a fresh install; Host your own starts collapsed.
+  const [cloudChosen, setCloudChosen] = useState(
+    cloud !== null && (setup.path === null || setup.path === "cloud"),
+  )
+  const [hostOpen, setHostOpen] = useState(!cloudChosen)
   const [path, setPath] = useState<RelayPath>(
     setup.path && setup.path !== "cloud" && !(web && setup.path === "local")
       ? setup.path
@@ -428,6 +468,65 @@ export function RelayWizard(props: RelayWizardProps) {
     }
   }
 
+  // --- Kimo Cloud (board 43) ---------------------------------------------------------------------
+  // The account and prices when the wizard opens; Subscribe and Renew start at 3 A or 3 B.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
+  useEffect(() => {
+    if (!cloud) return
+    void cloud.loadPlans()
+    void cloud.refresh().then((s) => {
+      if (s.session !== "signed-in" && cloud.getState().signIn.phase === "signed-in")
+        cloud.changeEmail()
+    })
+    if (props.start === "subscribe" || props.start === "renew") cloud.backToChoose()
+    if (props.start === "renew") void cloud.startCheckout()
+  }, [])
+
+  const savingCloud = useRef(false)
+  const saveCloud = useCallback(async () => {
+    if (!cloud || savingCloud.current) return
+    savingCloud.current = true
+    setSaving(true)
+    try {
+      const relay = await cloud.relay()
+      const saved = (await props.saveRelayUrl(relay.relayUrl)) ?? relay.relayUrl
+      await store.save({ patch: { path: "cloud" } })
+      setSavedUrl(saved)
+      setStep("ready")
+    } catch (e) {
+      toast({
+        tone: "danger",
+        text: `Couldn't save Kimo Cloud: ${e instanceof Error ? e.message : e}`,
+      })
+    } finally {
+      savingCloud.current = false
+      setSaving(false)
+    }
+  }, [cloud, props.saveRelayUrl, store, toast])
+
+  // 2 C → 3 C when the plan already allows sharing; 3 B → 3 C once the payment went through.
+  const signInPhase = cloudState?.signIn.phase
+  const checkoutPhase = cloudState?.checkout.phase
+  const canShare = cloudState?.account?.plan.canShare === true
+  useEffect(() => {
+    if (step === "sign-in" && signInPhase === "signed-in" && canShare) void saveCloud()
+    if (step === "subscribe" && checkoutPhase === "ready") void saveCloud()
+  }, [step, signInPhase, checkoutPhase, canShare, saveCloud])
+
+  /** Choose › Continue on Kimo Cloud: signed in with a plan saves it; else Sign in or Subscribe. */
+  const continueCloud = () => {
+    if (!cloud) return
+    const s = cloud.getState()
+    if (s.session === "signed-in" && s.account?.plan.canShare) return void saveCloud()
+    if (s.session === "signed-in") {
+      cloud.backToChoose()
+      setStep("subscribe")
+      return
+    }
+    if (s.signIn.phase === "signed-in") cloud.changeEmail()
+    setStep("sign-in")
+  }
+
   // --- Shell --------------------------------------------------------------------------------------
   const root = useRef<HTMLDivElement>(null)
   const trap = useFocusTrap(root, "none")
@@ -444,19 +543,31 @@ export function RelayWizard(props: RelayWizardProps) {
     ;(target ?? el).focus({ preventScroll: true })
   }, [step])
   const stepIndex = STEP_INDEX[step]
+  const onCloudPath =
+    step === "sign-in" || step === "subscribe" || (step === "choose" && cloudChosen)
   const sub =
     step === "choose"
       ? "Step 1 of 3 · Choose where it runs"
+      : step === "sign-in"
+        ? "Step 2 of 3 · Sign in"
+        : step === "subscribe"
+          ? "Step 3 of 3 · Subscribe"
+          : step === "setup"
+            ? `Step 2 of 3 · ${PATH_LABEL[path]}${
+                path === "local" && localView === "named"
+                  ? " · Named tunnel"
+                  : path === "docker" && web
+                    ? " · on web"
+                    : ""
+              }`
+            : "Step 3 of 3 · Test"
+  const headIcon = onCloudPath
+    ? "cloud"
+    : step === "choose"
+      ? "server"
       : step === "setup"
-        ? `Step 2 of 3 · ${PATH_LABEL[path]}${
-            path === "local" && localView === "named"
-              ? " · Named tunnel"
-              : path === "docker" && web
-                ? " · on web"
-                : ""
-          }`
-        : "Step 3 of 3 · Test"
-  const headIcon = step === "choose" ? "server" : step === "setup" ? PATH_ICON[path] : "activity"
+        ? PATH_ICON[path]
+        : "activity"
 
   let body: ReactNode
   let footer: ReactNode
@@ -523,19 +634,21 @@ export function RelayWizard(props: RelayWizardProps) {
 
   if (step === "choose") {
     bodyGap = 8
+    // Board 43 A2 lists the self-host paths as "Free" with the hosted plan above them; without
+    // Kimo Cloud they keep board 42's badges.
     const options: { value: RelayPath; desc: string; badges: string[]; disabled?: boolean }[] = [
       {
         value: "local",
         desc: web
           ? "Needs the Kimo desktop app: it starts a relay with Bun on your machine."
           : "Kimo starts a relay here with Bun. Same network right away, internet through a Cloudflare tunnel.",
-        badges: web ? ["Desktop only"] : ["Fastest", "Free"],
+        badges: web ? ["Desktop only"] : cloud ? ["Free"] : ["Fastest", "Free"],
         disabled: web,
       },
       {
         value: "docker",
         desc: "A ready docker run command with a volume filled in, origins added for you.",
-        badges: ["Always on"],
+        badges: cloud ? ["Free"] : ["Always on"],
       },
       {
         value: "fly",
@@ -546,59 +659,185 @@ export function RelayWizard(props: RelayWizardProps) {
       },
       {
         value: "railway",
-        desc: "Deploy on Railway from the Kimo template, paste the variables, then the URL.",
+        desc: cloud
+          ? "Deploy on Railway from the Kimo template, then paste its domain."
+          : "Deploy on Railway from the Kimo template, paste the variables, then the URL.",
         badges: ["Free tier"],
       },
       { value: "existing", desc: "Enter its URL.", badges: [] },
     ]
-    body = (
-      <>
+    const selfRows = options.map((o) => (
+      <RadioRow
+        key={o.value}
+        className="rw-option"
+        value={o.value}
+        checked={!(cloud && cloudChosen) && path === o.value}
+        {...(o.disabled ? { disabled: true } : {})}
+        onSelect={() => {
+          setPath(o.value)
+          setCloudChosen(false)
+        }}
+        onActivate={() => {
+          setCloudChosen(false)
+          goSetup(o.value)
+        }}
+      >
+        <span className="rw-option__icon" aria-hidden="true">
+          <Icon name={PATH_ICON[o.value]} size={16} />
+        </span>
+        <span className="rw-text">
+          <span className="rw-option__title">{PATH_LABEL[o.value]}</span>
+          <span className="rw-option__desc">{o.desc}</span>
+        </span>
+        {o.badges.map((b) => (
+          <Badge key={b} className="rw-badge">
+            {b}
+          </Badge>
+        ))}
+      </RadioRow>
+    ))
+    if (cloud && cloudState) {
+      const account = cloudState.session === "signed-in" ? cloudState.account : null
+      const ready = account?.plan.canShare === true
+      const month = priceFor(cloudState.plans.plans, "month")
+      const keys = [
+        { value: "cloud" },
+        ...(hostOpen ? options.map((o) => ({ value: o.value, disabled: o.disabled })) : []),
+      ]
+      body = (
         <div
           className="rw-options"
           role="radiogroup"
           aria-label="Where the relay runs"
           style={{ display: "contents" }}
-          onKeyDown={(e) => radioKeys(e, options, path, (v) => setPath(v as RelayPath))}
+          onKeyDown={(e) => {
+            if ((e.target as HTMLElement).getAttribute("role") !== "radio") return
+            radioKeys(e, keys, cloudChosen ? "cloud" : path, (v) => {
+              if (v === "cloud") setCloudChosen(true)
+              else {
+                setPath(v as RelayPath)
+                setCloudChosen(false)
+              }
+            })
+          }}
         >
-          {options.map((o) => (
-            <RadioRow
-              key={o.value}
-              className="rw-option"
-              value={o.value}
-              checked={path === o.value}
-              {...(o.disabled ? { disabled: true } : {})}
-              onSelect={() => setPath(o.value)}
-              onActivate={() => goSetup(o.value)}
-            >
-              <span className="rw-option__icon" aria-hidden="true">
-                <Icon name={PATH_ICON[o.value]} size={16} />
+          <RadioRow
+            className="rw-option"
+            value="cloud"
+            checked={cloudChosen}
+            onSelect={() => setCloudChosen(true)}
+            onActivate={continueCloud}
+          >
+            <span className="rw-option__icon" aria-hidden="true">
+              <Icon name="cloud" size={16} />
+            </span>
+            <span className="rw-text">
+              <span className="rw-option__title">Kimo Cloud</span>
+              <span className="rw-option__desc">
+                {ready && account
+                  ? `Signed in as ${account.account.email}. Your plan is active.`
+                  : "We run the relay for you. Sign in, subscribe, share."}
               </span>
-              <span className="rw-text">
-                <span className="rw-option__title">{PATH_LABEL[o.value]}</span>
-                <span className="rw-option__desc">{o.desc}</span>
+            </span>
+            {ready ? (
+              <Badge className="rw-badge">Active</Badge>
+            ) : (
+              <>
+                <Badge className="rw-badge">No setup</Badge>
+                {month && <Badge className="rw-badge">{priceLine(month)}</Badge>}
+              </>
+            )}
+          </RadioRow>
+          <button
+            type="button"
+            className="rw-disclosure"
+            aria-expanded={hostOpen}
+            data-action="host-your-own"
+            onClick={() => {
+              // Stays open once a self-host path is chosen.
+              if (hostOpen && !cloudChosen) return
+              setHostOpen((o) => !o)
+            }}
+          >
+            <span className="rw-disclosure__chevron" aria-hidden="true">
+              <Icon name={hostOpen ? "chevron-down" : "chevron-right"} size={16} />
+            </span>
+            <span className="rw-text">
+              <span className="rw-option__title">Host your own, free</span>
+              <span className="rw-option__desc">
+                This computer, Docker, Fly.io, Railway or a relay you have
               </span>
-              {o.badges.map((b) => (
-                <Badge key={b} className="rw-badge">
-                  {b}
-                </Badge>
-              ))}
-            </RadioRow>
-          ))}
+            </span>
+          </button>
+          {hostOpen && selfRows}
+          {hostOpen && web && (
+            <Note icon="info">
+              A browser tab can't run a server. Get the desktop app to host from this computer.
+            </Note>
+          )}
         </div>
-        {web && (
-          <Note icon="info">
-            A browser tab can't run a server. Get the desktop app to host from this computer.
-          </Note>
-        )}
-      </>
-    )
-    footer = (
-      <>
-        <span className="rw-footnote">Kimo runs no servers for you</span>
-        <Spacer />
-        {primary("Continue", () => goSetup(), { name: "continue" })}
-      </>
-    )
+      )
+      footer = (
+        <>
+          <span className="rw-footnote">
+            {cloudChosen && ready ? "Nothing to set up" : "Self-hosting is always free"}
+          </span>
+          <Spacer />
+          {cloudChosen && ready
+            ? primary(saving ? "Saving…" : "Use Kimo Cloud", () => void saveCloud(), {
+                name: "use-cloud",
+                disabled: saving,
+              })
+            : primary("Continue", () => (cloudChosen ? continueCloud() : goSetup()), {
+                icon: "arrow-right",
+                name: "continue",
+              })}
+        </>
+      )
+    } else {
+      body = (
+        <>
+          <div
+            className="rw-options"
+            role="radiogroup"
+            aria-label="Where the relay runs"
+            style={{ display: "contents" }}
+            onKeyDown={(e) => radioKeys(e, options, path, (v) => setPath(v as RelayPath))}
+          >
+            {selfRows}
+          </div>
+          {web && (
+            <Note icon="info">
+              A browser tab can't run a server. Get the desktop app to host from this computer.
+            </Note>
+          )}
+        </>
+      )
+      footer = (
+        <>
+          <span className="rw-footnote">Kimo runs no servers for you</span>
+          <Spacer />
+          {primary("Continue", () => goSetup(), { name: "continue" })}
+        </>
+      )
+    }
+  } else if ((step === "sign-in" || step === "subscribe") && cloud && cloudState) {
+    const view = cloudStepView({
+      step,
+      cloud,
+      state: cloudState,
+      clock: services.clock,
+      saving,
+      onChoose: () => setStep("choose"),
+      onUseCloud: () => void saveCloud(),
+      onSubscribe: () => {
+        cloud.backToChoose()
+        setStep("subscribe")
+      },
+    })
+    body = view.body
+    footer = view.footer
+    bodyGap = view.bodyGap
   } else if (step === "setup") {
     const toChoose = () => setStep("choose")
     if (path === "local") {
@@ -1460,8 +1699,76 @@ export function RelayWizard(props: RelayWizardProps) {
     )
   }
 
+  const readyAccount = cloudState?.account ?? null
   const shell =
-    step === "saved" ? (
+    step === "ready" ? (
+      <div
+        ref={root}
+        className="rw-shell rw-shell--saved"
+        role="dialog"
+        aria-modal={props.inline ? undefined : "true"}
+        aria-label="Kimo Cloud is ready"
+        data-step="ready"
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && !e.defaultPrevented) {
+            e.preventDefault()
+            props.onClose()
+            return
+          }
+          trap(e)
+        }}
+      >
+        <div className="rw-saved">
+          <span className="rw-saved__icon" aria-hidden="true">
+            <Icon name="circle-check" size={18} />
+          </span>
+          <div className="rw-saved__text">
+            <h2 className="rw-head__title">Kimo Cloud is ready</h2>
+            <p className="rw-saved__desc">
+              Saved to Settings › Multiplayer. Start sharing from the Share button.
+            </p>
+          </div>
+          <span className="rw-mono">
+            {readyMeta(readyAccount?.account.email ?? "", readyAccount?.plan ?? null)}
+          </span>
+          <div className="rw-actions rw-actions--ready">
+            {from === "share" && props.onStartSharing ? (
+              <>
+                <Button
+                  variant="ghost"
+                  className="rw-btn rw-ready-close"
+                  data-action="close"
+                  onClick={props.onClose}
+                >
+                  Close
+                </Button>
+                <Button
+                  variant="primary"
+                  className="rw-btn"
+                  icon={<Icon name="radio" size={16} />}
+                  data-action="start-sharing"
+                  onClick={() => {
+                    if (savedUrl) void props.onStartSharing?.(savedUrl).then(props.onClose)
+                  }}
+                >
+                  Start sharing
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="primary"
+                className="rw-btn"
+                data-action="close"
+                onClick={props.onClose}
+              >
+                Close
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    ) : step === "saved" ? (
       <div
         ref={root}
         className="rw-shell rw-shell--saved"
@@ -1560,24 +1867,26 @@ export function RelayWizard(props: RelayWizardProps) {
           />
         </div>
         <ol className="rw-stepper" aria-label="Steps">
-          {["Choose", "Set up", "Test"].map((label, i) => {
-            const state = i < stepIndex ? "done" : i === stepIndex ? "current" : "next"
-            return (
-              <li key={label} style={{ display: "contents" }}>
-                {i > 0 && <span className="rw-connector" aria-hidden="true" />}
-                <span
-                  className="rw-step"
-                  data-state={state}
-                  aria-current={state === "current" ? "step" : undefined}
-                >
-                  <span className="rw-step__dot" aria-hidden="true">
-                    {state === "done" ? <Icon name="check" size={12} /> : i + 1}
+          {(onCloudPath ? ["Choose", "Sign in", "Subscribe"] : ["Choose", "Set up", "Test"]).map(
+            (label, i) => {
+              const state = i < stepIndex ? "done" : i === stepIndex ? "current" : "next"
+              return (
+                <li key={label} style={{ display: "contents" }}>
+                  {i > 0 && <span className="rw-connector" aria-hidden="true" />}
+                  <span
+                    className="rw-step"
+                    data-state={state}
+                    aria-current={state === "current" ? "step" : undefined}
+                  >
+                    <span className="rw-step__dot" aria-hidden="true">
+                      {state === "done" ? <Icon name="check" size={12} /> : i + 1}
+                    </span>
+                    <span className="rw-step__label">{label}</span>
                   </span>
-                  <span className="rw-step__label">{label}</span>
-                </span>
-              </li>
-            )
-          })}
+                </li>
+              )
+            },
+          )}
         </ol>
         <div className="rw-body" data-gap={bodyGap}>
           {body}

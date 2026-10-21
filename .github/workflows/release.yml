@@ -243,8 +243,7 @@ jobs:
             --config src-tauri/tauri.bundle.conf.json
             --config ${{ runner.temp }}/kimo-release.conf.json
           releaseId: ${{ needs.prepare.outputs.release_id }}
-          includeUpdaterJson: true
-          updaterJsonPreferNativeAssets: true
+          uploadUpdaterJson: true
 
       - name: keep the bundles as workflow artifacts
         uses: actions/upload-artifact@v7

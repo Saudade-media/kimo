@@ -48,6 +48,7 @@ import {
   createAgentTextCarets,
 } from "../multiplayer/text-caret-view"
 import { localTextPresence } from "../multiplayer/text-carets"
+import { EditorCloudBanner } from "../multiplayer/ui/CloudPlanBanner"
 import { AssetLayer } from "./AssetLayer"
 import { ClaimLayer } from "./ClaimLayer"
 import { PresenceLayer } from "./PresenceLayer"
@@ -275,12 +276,16 @@ export function useEditorMultiplayer(o: EditorMultiplayerOptions): EditorMultipl
   )
 
   const banner = (
-    <NameOnlyFontBanner
-      families={shared ? nameOnly : NO_LIST}
-      fonts={o.fonts}
-      doc={() => session.store.toDocument()}
-      {...(o.onOpenFonts ? { onOpen: o.onOpenFonts } : {})}
-    />
+    <>
+      {/* Board 43 6 B and C: the owner's Kimo Cloud plan, before the fonts banner. */}
+      {model && shareKey && shared && <EditorCloudBanner model={model} docKey={shareKey} />}
+      <NameOnlyFontBanner
+        families={shared ? nameOnly : NO_LIST}
+        fonts={o.fonts}
+        doc={() => session.store.toDocument()}
+        {...(o.onOpenFonts ? { onOpen: o.onOpenFonts } : {})}
+      />
+    </>
   )
 
   return {

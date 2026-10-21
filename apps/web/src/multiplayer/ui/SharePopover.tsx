@@ -204,9 +204,11 @@ function SetupBody({
   // B: a saved relay is checked when the popover opens; Kimo Cloud's account is refreshed.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
+    // Prices are public; the account is asked only once this device chose Kimo Cloud (the
+    // wizard asks when it opens), so a self-hosting install never sends its key to Kimo Cloud.
     if (cloud) {
-      void cloud.refresh()
       void cloud.loadPlans()
+      if (setup?.path === "cloud") void cloud.refresh()
     }
     if (cloudRelay) return
     if (settings.relayUrl && !relayReady(test, settings.relayUrl)) void check(settings.relayUrl)

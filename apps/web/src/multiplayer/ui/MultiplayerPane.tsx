@@ -132,8 +132,10 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
   // account is refreshed instead.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
-    if (cloud) void cloud.refresh()
-    if (cloudRelay) return
+    if (cloudRelay) {
+      void cloud?.refresh()
+      return
+    }
     if (settings.relayUrl && !(test.kind === "ok" && test.url === settings.relayUrl))
       void model.relayTest.test(settings.relayUrl)
   }, [])

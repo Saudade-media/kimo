@@ -477,6 +477,14 @@ export function RelayWizard(props: RelayWizardProps) {
     void cloud.refresh().then((s) => {
       if (s.session !== "signed-in" && cloud.getState().signIn.phase === "signed-in")
         cloud.changeEmail()
+      // Opened at Sign in on a device that is signed in already: on to the plan.
+      if (s.session === "signed-in" && props.start === "sign-in") {
+        if (s.account?.plan.canShare) void saveCloud()
+        else {
+          cloud.backToChoose()
+          setStep("subscribe")
+        }
+      }
     })
     if (props.start === "subscribe" || props.start === "renew") cloud.backToChoose()
     if (props.start === "renew") void cloud.startCheckout()

@@ -18,6 +18,7 @@ import {
   createRelaySetupServices,
   RelaySetupContext,
 } from "../src/multiplayer/relay-setup/services"
+import { CloudPlanBanner } from "../src/multiplayer/ui/CloudPlanBanner"
 import { CloudNotice, CloudSignOutDialog } from "../src/multiplayer/ui/cloud-parts"
 import { MultiplayerPane } from "../src/multiplayer/ui/MultiplayerPane"
 import { RelayWizard, type WizardStart } from "../src/multiplayer/ui/RelayWizard"
@@ -262,5 +263,45 @@ describe("Settings › Multiplayer (section 5) and the fragments (6 D to F)", ()
       }),
     )
     expect(other).toContain("Sign out Chrome on Windows?")
+  })
+})
+
+describe("editor banners (6 B, 6 C)", () => {
+  const banner = (store: CloudStore, owner = true, relayHost = "relay.cloud.test") =>
+    renderToString(
+      h(CloudPlanBanner, {
+        cloud: store,
+        state: store.getState(),
+        docKey: "/Users/maya/home.kimo",
+        relayHost,
+        owner,
+      }),
+    )
+
+  test("grace: the owner's warning banner with Manage billing and Renew plan", async () => {
+    const { store } = await signedIn("grace")
+    await store.relay()
+    const html = banner(store)
+    expect(html).toContain("Kimo Cloud plan ended")
+    expect(html).toMatch(/This file keeps syncing until \w{3} \d+, then turns read-only\./)
+    expect(html).toContain("Manage billing")
+    expect(html).toContain("Renew plan")
+    expect(html).toContain('aria-label="Dismiss"')
+    expect(banner(store, false)).toBe("")
+    expect(banner(store, true, "relay.maya.studio")).toBe("")
+  })
+
+  test("read-only: no dismiss; an active plan shows nothing", async () => {
+    const lapsed = await signedIn("grace")
+    lapsed.fake.setPlan("maya@studio.design", "read_only")
+    await lapsed.store.refresh()
+    await lapsed.store.relay()
+    const html = banner(lapsed.store)
+    expect(html).toContain("Read-only")
+    expect(html).toContain("The owner&#x27;s Kimo Cloud plan ended. Everyone keeps their own copy.")
+    expect(html).not.toContain('aria-label="Dismiss"')
+    const active = await signedIn("active")
+    await active.store.relay()
+    expect(banner(active.store)).toBe("")
   })
 })

@@ -62,7 +62,7 @@ device's public key, so they have no claim window. The create secret is removed.
    another relay the same device owns.
 3. **Owner commands.** `POST /owner` takes one signed command (type 4), the same shape and replay
    rules as admin commands (`iat` within 5 minutes, nonce stored 10 minutes), signed by the
-   device key and bound to the `relayId`. Ops: claim, devices, pair, remove, cancel pairing. Each
+   device key and bound to the `relayId`. Ops: claim, devices, pair, remove, cancel pairing, rename. Each
    is one round trip.
 4. **Claim.** Allowed only while the set is empty; the insert is one SQLite transaction, so of two
    racing claims the first wins and the other gets `409 RELAY_CLAIMED`. A claim by a device that
@@ -118,7 +118,7 @@ before its owner's Kimo does can claim it.
   is end-to-end encrypted. They also cannot remove a later owner, because there is none: the real
   owner is locked out, not attacked.
 - **How the owner sees it:** the wizard's Test and Start sharing say "This relay belongs to
-  another Kimo". The fix is `KIMO_RESET_OWNER=1`, restart, claim, and the relay keeps the owner's
+  another Kimo". The fix is setting `KIMO_RESET_OWNER` to any new value (for example today's date), restart, claim, and the relay keeps the owner's
   data. The reset does not touch rooms; rooms the squatter created stay until room expiry
   (`KIMO_ROOM_TTL_DAYS`) or until the owner wipes the data dir, since only their root keys can
   close them.
@@ -142,11 +142,13 @@ Other notes:
 - Pairing links are bearer credentials for 15 minutes and one use. Anyone who intercepts one can
   add a device. The link is shown with its expiry and a Cancel; the owner sees every device in
   Settings and can remove it.
-- Device names are stored on the relay in clear text. The operator is the owner, so this is
-  informational, but names must not include anything Kimo would not show the owner.
+- Device names are stored on the relay in clear text, without encryption. They default to the
+  platform only ("Mac", "Windows", "Chrome on Mac"), never the OS account, computer or person
+  name; the user can rename a device.
 - A lost only device (cleared browser data, a wiped machine) locks room creation until
   `KIMO_RESET_OWNER`. Existing rooms keep working for guests; their owner-side admin (revoke,
-  rotate, close) was lost with the room keys anyway. Settings suggests adding a second device.
+  rotate, close) was lost with the room keys anyway. Settings shows a soft hint to add a second
+  device and nothing more.
 
 ## Consequences
 

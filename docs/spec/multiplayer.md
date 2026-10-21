@@ -281,7 +281,7 @@ per Kimo install. Bytes: `payload || signature`, the raw body of `POST /owner`
 |---|---|---|---|
 | 0 | u8 | `version` | `1` |
 | 1 | u8 | `type` | `4` (owner) |
-| 2 | u8 | `op` | `1` claim, `2` devices, `3` pair, `4` remove, `5` cancel pairing |
+| 2 | u8 | `op` | `1` claim, `2` devices, `3` pair, `4` remove, `5` cancel pairing, `6` rename |
 | 3 | u8 | reserved | `0` |
 | 4 | u64 | `iat` | Unix **milliseconds** |
 | 12 | 16 bytes | `nonce` | Random |
@@ -308,6 +308,7 @@ A `name` is a device display name: trimmed, 1 to 64 UTF-8 bytes, no control char
 | 3 pair | `{"token": b64url(pairing token), "name"}` | Signed by the **new** device | §6.2 verification; in one transaction insert `devicePub` (`via: "pair"`, `addedBy` the issuer) and the token's `jti` into `pairings_used` | `201 {"devices"}`; `200 {"devices"}` when `devicePub` is already an owner (the token is not used up) | `401 AUTH_INVALID`; `401 PAIRING_EXPIRED`; `409 PAIRING_USED`; `403 RELAY_UNCLAIMED` |
 | 4 remove | `{"pub": b64url}` | `devicePub` is an owner (it may remove itself) | Delete the device | `200 {"devices"}` | `403 NOT_OWNER`; `404 NOT_FOUND` (not a device); `409 LAST_DEVICE` |
 | 5 cancel pairing | `{"jti": hex(16 bytes), "exp": number}` | `devicePub` is an owner | Insert the `jti` into `pairings_used` until `exp` | `200 {}` | `403 NOT_OWNER` |
+| 6 rename | `{"pub": b64url, "name"}` | `devicePub` is an owner (any device, itself included) | Set that device's name | `200 {"devices"}` | `403 NOT_OWNER`; `404 NOT_FOUND` (not a device) |
 
 Two claims racing on an empty set: the transaction makes exactly one win; the other answers
 `409 RELAY_CLAIMED`. The response never says who the owner is.
@@ -797,7 +798,7 @@ Per-IP uses `server.requestIP(req)`, or the first `x-forwarded-for` address when
 | `KIMO_DATA_DIR` | `./data` | SQLite file and blob directory |
 | `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins allowed for CORS and WebSocket `Origin` (the desktop webview origins are always allowed) |
 | `KIMO_OWNER_KEY` | unset | Comma-separated device public keys (base64url, 43 characters each). At boot, when the owner set is empty, the relay adds them (`via: "env"`, name "Added at deploy"; the device renames itself on its first claim). Ignored once the relay has an owner. Public values: safe in commands, URLs and logs (§14.11) |
-| `KIMO_RESET_OWNER` | unset | Any non-empty value: at boot, clear the owner set and the used pairings and log a warning, once per distinct value (§14.11). Rooms are untouched |
+| `KIMO_RESET_OWNER` | unset | Any non-empty value: at boot, clear the owner set and the used pairings and log a warning, once per distinct value (§14.11). Guides phrase it as "set it to any new value, for example today's date". Rooms are untouched |
 | `KIMO_MAX_ROOMS` | `0` (unlimited) | Registered rooms cap (`RELAY_FULL`) |
 | `KIMO_MAX_PEERS` | `32` | Sockets per room |
 | `KIMO_ROOM_QUOTA_MB` | `500` | Default room quota |
@@ -830,7 +831,8 @@ Invalid values make `main.ts` print the variable and exit 1.
   `/data`, upgrading, `KIMO_OWNER_KEY` and `KIMO_RESET_OWNER`), Fly.io (`fly launch
   --copy-config`, volume, `KIMO_OWNER_KEY`, cost note), Railway (the template, volume at `/data`,
   `KIMO_OWNER_KEY` prefilled when the deploy link carries it, cost note),
-  and a "This relay belongs to another Kimo" recovery section (`KIMO_RESET_OWNER`). Each guide ends with "paste `https://<your-relay>` into Kimo's Share dialog". No
+  and a "This relay belongs to another Kimo" recovery section: "Set `KIMO_RESET_OWNER` to any new
+  value, for example today's date, restart the relay, then open Kimo to claim it." Each guide ends with "paste `https://<your-relay>` into Kimo's Share dialog". No
   guide may present any relay as a project service.
 
 ### 14.11 Ownership (`owners.ts`)
@@ -857,7 +859,8 @@ redemptions of one pairing token give one `201` and one `409 PAIRING_USED`; two 
 would empty the set give one `200` and one `409 LAST_DEVICE`. The hourly maintenance job prunes
 `pairings_used` rows whose `exp` passed. Removing a device closes nothing: its rooms stay with
 their root keys, and pairing tokens it issued stop verifying (§6.2 step 3). Device names are
-stored in clear text; the relay logs neither names nor public keys.
+stored in clear text (they name a platform by default, never a person, §16.9); the relay logs
+neither names nor public keys.
 
 **Claim race (see ADR 0017).** A relay that starts unclaimed (no `KIMO_OWNER_KEY`) can be claimed by whoever reaches it first. That grants room creation
 (storage on the operator's bill), never access to a room's content. There is no claim deadline.
@@ -1340,8 +1343,11 @@ never rotated (a lost key is replaced by pairing a new one).
 - `devicePublicKey()` returns the base64url public key. It is not a secret: Kimo puts it in the
   local relay's environment, the Docker command, the Fly deploy and the Railway link as
   `KIMO_OWNER_KEY`.
-- Default device name: desktop, the OS computer name; web, `<Browser> on <OS>` (for example
-  "Chrome on macOS"). Sent on claim and pair, at most 64 bytes.
+- Default device name: the platform only. Desktop: "Mac", "Windows" or "Linux". Web:
+  `<Browser> on <platform>` ("Chrome on Mac", "Safari on iPhone"). Never the OS account name, the
+  computer name or any person's name. Sent on claim and pair, at most 64 bytes; the user can
+  rename any device (op 6). Two devices with the same default name are told apart by "This
+  device" and the added date.
 
 **Ownership state** of a relay, from `/version` plus op 2 when claimed:
 
@@ -1373,7 +1379,8 @@ the relay until the link is used; `cancelPairingLink` sends op 5. On the new dev
 `acceptPairingLink(link, { name })` parses it (`BAD_LINK`), probes the relay, sends op 3 with its
 own device key, and saves the relay URL as `multiplayer.relayUrl` when none is set.
 
-**Devices.** `listDevices(relayUrl)` (op 2) and `removeDevice(relayUrl, pub)` (op 4). Removing
+**Devices.** `listDevices(relayUrl)` (op 2), `renameDevice(relayUrl, pub, name)` (op 6) and
+`removeDevice(relayUrl, pub)` (op 4). Removing
 this device is allowed when another remains; afterwards the state is `other`.
 
 **Removed.** The create secret goes away in full: `relay-setup/secret.ts`, the relay setup
@@ -1394,8 +1401,9 @@ belongs to another Kimo", "Add device", "Pairing link". Error codes are mapped t
 - Share popover first run: relay URL and Test only; Start sharing claims silently when unclaimed;
   refusal inline with the same two actions.
 - Settings › Multiplayer: the Create secret row is removed. The relay row shows the ownership
-  state. A Devices group (only when `yours`) lists name, "This device", added date and Remove
-  (disabled on the last device), a one-device hint, and Add device, which opens the pairing link
+  state. A Devices group (only when `yours`) lists name, "This device", added date, Rename (the
+  name edits in place) and Remove (disabled on the last device), the one-device hint "Add another
+  device so you can still manage this relay if this one is lost." (no other prompt), and Add device, which opens the pairing link
   sheet (link, Copy, 15 minute countdown, Cancel; then used, expired or cancelled).
 - Remove confirms, with separate copy for this device.
 - Pairing sheet on the new device (`/pair`, `kimo://pair`): relay host, device name, Add device;
@@ -1541,13 +1549,14 @@ export function verifyRegisterOwner(
   owner: { pub: string; sig: string },
   input: { relayId: Uint8Array; room: RoomId; nonce: Uint8Array; iat: number; rootPub: Uint8Array },
 ): Promise<boolean>
-export type OwnerOp = "claim" | "devices" | "pair" | "remove" | "cancel-pairing"
+export type OwnerOp = "claim" | "devices" | "pair" | "remove" | "cancel-pairing" | "rename"
 export type OwnerBody =
   | { op: "claim"; name: string }
   | { op: "devices" }
   | { op: "pair"; token: string; name: string }
   | { op: "remove"; pub: string }
   | { op: "cancel-pairing"; jti: string; exp: number }
+  | { op: "rename"; pub: string; name: string }
 export interface OwnerCommand {
   op: OwnerOp
   /** Unix ms. */
@@ -2069,6 +2078,7 @@ export interface ShareService {
   claimRelay(relayUrl: string, options?: { name?: string }): Promise<RelayDevice[]>
   listDevices(relayUrl: string): Promise<RelayDevice[]>
   removeDevice(relayUrl: string, pub: string): Promise<RelayDevice[]>
+  renameDevice(relayUrl: string, pub: string, name: string): Promise<RelayDevice[]>
   createPairingLink(relayUrl: string, options?: { ttlSeconds?: number }): Promise<IssuedPairingLink>
   cancelPairingLink(relayUrl: string, link: IssuedPairingLink): Promise<void>
   acceptPairingLink(link: string, options?: { name?: string }): Promise<{ relayUrl: string; devices: RelayDevice[] }>
@@ -2241,7 +2251,8 @@ WebSockets from Bun, with tokens and admin commands made by module A.
   another relay's token, a removed issuer's token, a token from before the issuer was re-added,
   `exp - iat > 3600` and a tampered token are `AUTH_INVALID`; a cancelled token is
   `PAIRING_USED`; an existing owner redeeming gets `200` and the token stays usable. Remove: works
-  for another device and for itself, `LAST_DEVICE` on the last, `NOT_FOUND` for an unknown key.
+  for another device and for itself, `LAST_DEVICE` on the last, `NOT_FOUND` for an unknown key. Rename: any owner renames any
+  device, a bad name is `BAD_REQUEST`, a stranger `NOT_OWNER`, an unknown key `NOT_FOUND`.
   Replay: the same owner command twice is `NONCE_REPLAY`; `iat` outside 5 minutes
   `STALE_REQUEST`. Rate limit shared with admin.
 - `owners-boot.test.ts`: `KIMO_OWNER_KEY` seeds an empty set and is ignored once claimed;
@@ -2274,7 +2285,9 @@ WebSockets from Bun, with tokens and admin commands made by module A.
 - `multiplayer-ownership.test.ts`: `relayOwnership` gives `unclaimed`, `yours` and `other`; `createPairingLink` then `acceptPairingLink` from a second
   service with its own memory device key adds it, and the second device can start sharing;
   expired, used and cancelled links surface their codes; `removeDevice` of this device turns the
-  state to `other`; the last device cannot be removed.
+  state to `other`; the last device cannot be removed; `renameDevice` updates the list; the
+  default name is platform only ("Mac", "Chrome on Mac") and never contains the OS user or host
+  name.
 - `multiplayer-device-key.test.ts`: the memory and IndexedDB-shaped stores return the same key
   pair across calls and create it once; the private key is non-extractable; the keychain store
   round trips the seed through a fake `invoke`.

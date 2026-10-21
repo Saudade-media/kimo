@@ -182,8 +182,10 @@ Then paste `https://<your-app>.fly.dev` into Kimo's Share dialog, or let the wiz
 
 ## Deploy on Railway
 
-You need your own Railway account. The wizard's **Deploy on Railway** opens the Kimo template and
-shows the variables to paste. By hand:
+You need your own Railway account. The wizard's **Deploy on Railway** opens the
+[Kimo Relay template](https://railway.com/deploy/Q_WYo8) (the relay image, a volume at `/data`, the
+healthcheck and a generated `KIMO_CREATE_SECRET`) and shows the variables to paste over its
+defaults. By hand:
 
 1. New project, then "Deploy a Docker image" with `ghcr.io/saudade-media/kimo-relay`, or "Deploy
    from GitHub repo" with your fork of Kimo and the variable

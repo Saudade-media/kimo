@@ -14,16 +14,11 @@ export const RELAY_IMAGE = "ghcr.io/saudade-media/kimo-relay"
 /** The relay's default port. */
 export const RELAY_PORT = 8787
 
-/** The repository the guides and the Railway template point at. */
-export const KIMO_REPO = "github.com/Saudade-media/kimo"
-
 /** The Fly config in the repository (copy-paste path) and as shown in the one-click log. */
 export const FLY_CONFIG_PATH = "apps/server/deploy/fly.toml"
 
-/** Deploy on Railway: the template from the repository (apps/server/Dockerfile). */
-export const RAILWAY_TEMPLATE_URL = `https://railway.com/new/template?template=${encodeURIComponent(
-  `https://${KIMO_REPO}`,
-)}`
+/** Deploy on Railway: the Kimo Relay template (the published relay image, a volume at /data). */
+export const RAILWAY_TEMPLATE_URL = "https://railway.com/deploy/Q_WYo8"
 
 /** The official Bun installer, shown in full before Kimo runs it (and for Install it myself). */
 export const BUN_INSTALL_COMMAND = "curl -fsSL https://bun.sh/install | bash"

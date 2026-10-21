@@ -402,7 +402,7 @@ export function TextCaretLayer(props: TextCaretLayerProps) {
   const tipGroup = tip ? shape.groups.find((g) => g.id === tip) : undefined
   const tipCaret = tipGroup ? byKey.get(tipGroup.keys[0] ?? "") : undefined
   return (
-    <div ref={layer} className="mp-text" data-testid="mp-text-layer">
+    <div ref={layer} className="mp-text-layer" data-testid="mp-text-layer">
       {shape.ranges.map((key) => {
         const c = byKey.get(key)
         if (!c) return null

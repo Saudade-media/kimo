@@ -383,7 +383,7 @@
 }
 
 /* --- Live text (section 11, ExORz; rules pCwkf) ------------------------------------------ */
-.mp-text {
+.mp-text-layer {
   position: absolute;
   inset: 0;
   overflow: hidden;

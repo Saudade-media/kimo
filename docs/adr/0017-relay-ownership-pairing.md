@@ -54,7 +54,7 @@ device's public key, so they have no claim window. The create secret is removed.
    desktop deliberately does not follow its room registry (plain JWK in `rooms.json`): the device
    key is the one credential that outlives every room, and the keychain is already a dependency
    (`keyring`). The public key travels as base64url (43 characters).
-2. **Owner set.** Stored in `relay.sqlite` in the data dir (`owners` table, schema version 2),
+2. **Owner set.** Stored in `relay.sqlite` in the data dir (`owners` table, joining schema version 1 with no migration, since nothing has shipped),
    with a display name and the time each device was added. Empty means **unclaimed**. An
    unclaimed relay refuses room registration (`RELAY_UNCLAIMED`); joining by capability link,
    sync, snapshots and blobs need no ownership and are unchanged. Each relay also gets a random

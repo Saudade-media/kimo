@@ -14,6 +14,7 @@ import { JoinStage } from "../join/JoinCard"
 import { Icon } from "../lib/icons"
 import { deviceNameFor, ownershipFor } from "../multiplayer/device"
 import { useMultiplayer } from "../multiplayer/hooks"
+import type { OwnershipClient } from "../multiplayer/ownership"
 import { useOptionalRuntime } from "../platform/runtime"
 import { navigate } from "../router"
 import "../join/join.css"
@@ -131,10 +132,21 @@ const hostOf = (url: string) => {
   }
 }
 
-export function PairRoute({ link }: { link: string }) {
+export function PairRoute({
+  link,
+  ownership: given,
+  deviceName: givenName,
+}: {
+  link: string
+  /** Harnesses: the device to add instead of this window's. */
+  ownership?: OwnershipClient
+  deviceName?: string
+}) {
   const runtime = useOptionalRuntime()
   const model = useMultiplayer()
   const platform = runtime?.platform ?? null
+  const client = given ?? (platform ? ownershipFor(platform) : null)
+  const fallbackName = givenName ?? (platform ? deviceNameFor(platform) : "")
   const parsed = useMemo(() => {
     try {
       const l = parsePairingLink(link)
@@ -143,7 +155,7 @@ export function PairRoute({ link }: { link: string }) {
       return null
     }
   }, [link])
-  const [name, setName] = useState(() => (platform ? deviceNameFor(platform) : ""))
+  const [name, setName] = useState(fallbackName)
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<PairOutcome | null>(() =>
     !parsed ? "invalid" : parsed.exp * 1000 <= Date.now() ? "expired" : null,
@@ -160,19 +172,19 @@ export function PairRoute({ link }: { link: string }) {
 
   const host = parsed ? hostOf(parsed.relayUrl) : ""
   const add = async () => {
-    if (!platform || !parsed || busy) return
+    if (!client || !parsed || busy) return
     setBusy(true)
     try {
-      const result = await ownershipFor(platform).acceptPairingLink(link, {
-        name: name.trim() || deviceNameFor(platform),
+      const result = await client.acceptPairingLink(link, {
+        name: name.trim() || fallbackName,
       })
       // The relay becomes this device's default when none is set (§16.9).
       const current = model?.settings.getState().relayUrl ?? null
       if (!current)
         await (model
           ? model.settings.setRelayUrl(result.relayUrl)
-          : platform.settings.set("multiplayer.relayUrl", result.relayUrl)
-        ).catch(() => undefined)
+          : platform?.settings.set("multiplayer.relayUrl", result.relayUrl)
+        )?.catch(() => undefined)
       setOutcome(result.added ? "added" : "already")
     } catch (e) {
       setOutcome(pairErrorOutcome(e))
@@ -244,7 +256,7 @@ export function PairRoute({ link }: { link: string }) {
             maxLength={64}
             spellCheck={false}
             autoComplete="off"
-            disabled={busy}
+            readOnly={busy}
             onChange={(e) => setName(e.currentTarget.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") void add()
@@ -268,7 +280,7 @@ export function PairRoute({ link }: { link: string }) {
             className="pair-card__add"
             data-action="add-device"
             data-busy={busy}
-            aria-disabled={busy || !platform}
+            aria-disabled={busy || !client}
             {...(busy ? { icon: <Icon name="loader-circle" size={16} /> } : {})}
             onClick={() => void add()}
           >

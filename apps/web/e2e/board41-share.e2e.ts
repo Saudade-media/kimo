@@ -478,9 +478,9 @@ async function shareReady(ctx: E2EContext, theme: Theme) {
     color: T["--kimo-text-secondary"] as string,
   })
   c.box("Start sharing", m.start, { h: 28, pad: "0 12 0 12", opacity: "1" })
-  expect((await text(page, ".mp-popover .kimo-status-pill")) === "Kimo relay 1.2", "pill text")
+  expect((await text(page, ".mp-popover .kimo-status-pill")) === "Your relay", "pill text")
   expect(
-    /^answered in \d+ ms$/.test(await text(page, ".mp-popover .mp-result .mp-meta-mono")),
+    /^Kimo relay 1\.2 · \d+ ms$/.test(await text(page, ".mp-popover .mp-result .mp-meta-mono")),
     "meta",
   )
   // Start sharing: the file goes live and the popover turns to C.
@@ -902,11 +902,17 @@ async function settings(ctx: E2EContext, theme: Theme) {
     await field.fill(url)
     await page.locator(`${pane} .mp-test`).click()
   }
-  // OK: "Kimo relay 1.2" + "answered in N ms · protocol 1".
+  // OK (ADR 0017, section 4 row 1): "Yours" + "Kimo relay 1.2 · answered in N ms".
   await testUrl("wss://relay.maya.studio")
   await result("ok")
   const meta = await text(page, `${pane} .mp-result .mp-meta-mono`)
-  expect(/^answered in \d+ ms · protocol 1$/.test(meta), `ok meta: ${meta}`)
+  expect(/^Kimo relay 1\.2 · answered in \d+ ms$/.test(meta), `ok meta: ${meta}`)
+  expect((await text(page, `${pane} .mp-result .kimo-status-pill`)) === "Yours", "Yours")
+  await page.locator(`${pane} .mp-devices .mp-device`).nth(1).waitFor()
+  expect(
+    (await text(page, `${pane} .mp-devices`)).includes("Chrome on Windows"),
+    "Devices lists this Mac and Chrome on Windows",
+  )
   // Testing: spinner, "Testing wss://slow.example…", Test at 0.5, the field stays editable.
   await testUrl("wss://slow.example")
   await result("testing")

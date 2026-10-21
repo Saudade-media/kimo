@@ -7,7 +7,8 @@
  * Surfaces: `share` (web: Share opens the popover, whose Set up a relay opens the wizard; the
  * relay test reaches the real relay the e2e starts), `settings` (web: Settings › Multiplayer),
  * `desktop` (the wizard on desktop over a scripted relay host: Bun and cloudflared found, the
- * relay and a quick tunnel answer).
+ * relay and a quick tunnel answer), `pair` (the pairing link landing for `&link=<link>`, adding
+ * this page's device).
  */
 import "@kimo/design-tokens/editor.css"
 import "@kimo/ui/styles.css"
@@ -32,6 +33,7 @@ import { RelayWizard } from "../../src/multiplayer/ui/RelayWizard"
 import { SharePopover } from "../../src/multiplayer/ui/SharePopover"
 import { type ShareToast, ShareToastContext } from "../../src/multiplayer/ui/shared"
 import { createFakeShareBackend } from "../../src/multiplayer/ui/testing"
+import { PairRoute } from "../../src/pair/PairRoute"
 
 const params = new URLSearchParams(location.search)
 const surface = params.get("surface") ?? "share"
@@ -84,8 +86,16 @@ const services = createRelaySetupServices(platform, {
 
 const toasts: ShareToast[] = []
 let toastSeq = 0
+/** Another device of the same person: redeems a pairing link the way its own Kimo would. */
+const pairOther = (link: string, name: string) =>
+  createOwnershipClient({
+    deviceKeys: createMemoryDeviceKeyStore(),
+    deviceName: () => name,
+    webOrigin: location.origin,
+  }).acceptPairingLink(link)
+
 Object.assign(window, {
-  __board42: { platform, model, fake, host, services, ownership, toasts },
+  __board42: { platform, model, fake, host, services, ownership, pairOther, toasts },
 })
 
 const style = document.createElement("style")
@@ -163,7 +173,13 @@ function Harness() {
   return (
     <ShareToastContext.Provider value={push}>
       <RelaySetupContext.Provider value={services}>
-        {surface === "settings" ? (
+        {surface === "pair" ? (
+          <PairRoute
+            link={params.get("link") ?? ""}
+            ownership={ownership}
+            deviceName="Chrome on Mac"
+          />
+        ) : surface === "settings" ? (
           <div className="b42-pane">
             <MultiplayerPane platform={platform} model={model} />
           </div>

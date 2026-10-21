@@ -271,7 +271,7 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
           devices={devices}
           onDevices={setDevices}
           onRemovedSelf={() => void model.relayTest.test(yoursUrl)}
-          copy={(text) => copyText(platform, text)}
+          copy={(text) => (relaySetup ? relaySetup.copy(text) : copyText(platform, text))}
         />
       )}
       {addThisDevice && (

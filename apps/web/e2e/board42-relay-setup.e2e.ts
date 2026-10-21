@@ -1,9 +1,13 @@
 /**
- * Board 42 "Relay setup" (desing.pen UYvSG): the wizard from the Share popover and from
- * Settings › Multiplayer, end to end against a real relay (apps/server, started here on a free
- * port with a create secret): I already have a relay, a wrong secret comes back as Secret
- * rejected, Enter the relay's secret, the test passes, Save and use, Start sharing. The desktop
- * path (This computer, quick tunnel) runs over a scripted relay host.
+ * Board 42 "Relay setup" (desing.pen UYvSG) and the board 41 ownership states (kCAYr sections 3,
+ * 4 and 5, ADR 0017), end to end against a real relay (apps/server, started here on a free port,
+ * unclaimed): the Share popover on a relay nobody claimed (G); I already have a relay, free to
+ * claim; the Test claims it (claimed by you); Save and use, Start sharing. A second page is another
+ * device: the probe and the Test say Not yours (C), the popover shows the Fix (H). Settings ›
+ * Multiplayer lists the devices; Add device makes a pairing link that another device redeems
+ * (Added); rename in place; remove with a confirm. The pairing link landing adds this page's
+ * device. The desktop path (This computer, quick tunnel) runs over a scripted relay host and
+ * starts the relay with this device's key.
  *
  * One measured pass per surface (getComputedStyle + getBoundingClientRect vs the node values),
  * light and dark.
@@ -20,7 +24,6 @@ import { type E2EContext, expect, type Scenario } from "./run"
 
 const here = fileURLToPath(new URL(".", import.meta.url))
 const repo = join(here, "..", "..", "..")
-const SECRET = "e2e-board42-secret"
 let built: Promise<string> | null = null
 
 async function harnessUrl(ctx: E2EContext): Promise<string> {
@@ -77,7 +80,7 @@ interface TestRelay {
   stop(): Promise<void>
 }
 
-/** apps/server on a free port (never 8787), in memory, with a create secret; 15 s to start. */
+/** apps/server on a free port (never 8787), in memory, unclaimed; 15 s to start. */
 async function startRelay(): Promise<TestRelay> {
   const port = await freePort()
   const child: ChildProcess = spawn(
@@ -89,7 +92,6 @@ async function startRelay(): Promise<TestRelay> {
         PORT: String(port),
         HOST: "127.0.0.1",
         KIMO_DATA_DIR: ":memory:",
-        KIMO_CREATE_SECRET: SECRET,
       },
       stdio: "ignore",
     },
@@ -260,12 +262,31 @@ async function measureShell(ctx: E2EContext, label: string, bodyGap: number) {
 
 // --- Section 1 A + 7 + 8: from the Share popover to sharing, over a real relay --------------------
 
+/** Types a relay URL into the open Share popover's field and waits for its result. */
+async function popoverCheck(page: Page, url: string, owner: string) {
+  const input = page.locator(".mp-popover .mp-relay-input input")
+  await input.fill(url)
+  await input.blur()
+  await page
+    .locator(`.mp-popover .mp-result[data-result="ok"]`)
+    .waitFor({ timeout: 8000 })
+    .catch(() => undefined)
+  await page.waitForFunction(
+    (o) =>
+      document.querySelector(".mp-popover .mp-result [data-tone]")?.textContent?.includes(o) ===
+      true,
+    owner,
+    { timeout: 8000 },
+  )
+}
+
 async function fromShare(ctx: E2EContext, theme: Theme, relay: TestRelay) {
   const { page } = ctx
   await open(ctx, "share", theme)
   await page.click(".b42-share")
   await page.locator('.mp-popover[data-stage="first-run"]').waitFor()
   const T = await tokens(page, COLORS)
+  const R = await px(page, ["--kimo-radius-md"])
   {
     const m = await measure(page, {
       body: ".mp-popover .mp-body",
@@ -273,7 +294,7 @@ async function fromShare(ctx: E2EContext, theme: Theme, relay: TestRelay) {
       or: ".mp-or",
       line: ".mp-or__line",
       orLabel: ".mp-or__label",
-      secret: '.mp-field[data-pen="x0O8mK"]',
+      field: '.mp-field[data-pen="mHqqj"]',
       footnote: ".mp-popover .mp-footnote",
     })
     const c = checker(ctx, `§1 A Share popover · no relay (${theme})`)
@@ -287,18 +308,62 @@ async function fromShare(ctx: E2EContext, theme: Theme, relay: TestRelay) {
     c.box("Divider · or (HxQ2J)", m.or, { gap: 8, align: "center", dir: "row" })
     c.box("Line (Z44jF)", m.line, { h: 1, bg: T["--kimo-border"] as string })
     c.box("Label (cjkVK)", m.orLabel, { fs: 11, color: T["--kimo-text-tertiary"] as string })
-    c.box("Field · Create secret (x0O8mK)", m.secret, { gap: 6, dir: "column" })
+    c.box("Field · Relay URL (mHqqj)", m.field, { gap: 6, dir: "column" })
     expect(
-      (await page.locator(".mp-popover .mp-footnote").innerText()) === "Saved to Settings",
+      (await page.locator(".mp-popover .mp-footnote").innerText()) === "Set once, kept in Settings",
       "footnote",
     )
     expect(
-      (m.or?.y ?? 0) > (m.setUp?.y ?? 0) && (m.secret?.y ?? 0) > (m.or?.y ?? 0),
-      "Set up a relay sits above the manual fields",
+      (await page.locator(".mp-popover").innerText()).toLowerCase().includes("secret") === false,
+      "the popover never says secret",
+    )
+    expect(
+      (m.or?.y ?? 0) > (m.setUp?.y ?? 0) && (m.field?.y ?? 0) > (m.or?.y ?? 0),
+      "Set up a relay sits above the manual field",
     )
     c.flush()
   }
+  // G: a relay nobody claimed yet. Start sharing would claim it; Settings keeps it.
+  await popoverCheck(page, relay.url, "Not set up yet")
+  {
+    const m = await measure(page, {
+      pill: ".mp-popover .mp-result [data-tone]",
+      meta: ".mp-popover .mp-result .mp-meta-mono",
+      desc: ".mp-popover .mp-body > .mp-desc",
+    })
+    const c = checker(ctx, `§3 G not claimed yet (${theme})`)
+    c.box("Status · Not set up yet (wV2JS)", m.pill, {
+      bg: T["--kimo-bg-muted"] as string,
+      color: T["--kimo-text-secondary"] as string,
+    })
+    c.box("Meta (x8w3Kz)", m.meta, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+    c.box("Desc (A0k08E)", m.desc, { fs: 11, color: T["--kimo-text-secondary"] as string })
+    c.flush()
+    expect(
+      (await page.locator(".mp-popover .mp-body > .mp-desc").innerText()).startsWith(
+        "Kimo will claim it when you start sharing",
+      ),
+      "G says Start sharing claims it",
+    )
+    expect(
+      /^Kimo relay \d.* · \d+ ms$/.test(
+        await page.locator(".mp-popover .mp-result .mp-meta-mono").innerText(),
+      ),
+      "meta: Kimo relay version · ms",
+    )
+  }
 
+  // A passing check keeps the URL in Settings (the popover turns to B); clear it to see A again.
+  await page.evaluate(() =>
+    (
+      window as unknown as {
+        __board42: { model: { settings: { setRelayUrl(u: string | null): Promise<unknown> } } }
+      }
+    ).__board42.model.settings.setRelayUrl(null),
+  )
+  await page.click(".b42-share")
+  await page.click(".b42-share")
+  await page.locator('.mp-popover[data-stage="first-run"]').waitFor()
   // Set up a relay → the wizard over the window.
   await page.click(".mp-setup-relay")
   await page.locator('.rw-shell[data-step="choose"]').waitFor()
@@ -375,6 +440,10 @@ async function fromShare(ctx: E2EContext, theme: Theme, relay: TestRelay) {
     c.box("Footnote (BBsrJ)", m.footnote, { fs: 11, color: T["--kimo-text-tertiary"] as string })
     c.flush()
   }
+  expect(
+    (await page.locator(".rw-shell").innerText()).toLowerCase().includes("secret") === false,
+    "the wizard never says secret",
+  )
   // This computer is disabled on web; arrow keys move; pick I already have a relay.
   await page.click('.rw-option[data-value="local"]', { force: true })
   expect(
@@ -394,124 +463,81 @@ async function fromShare(ctx: E2EContext, theme: Theme, relay: TestRelay) {
     (await page.locator(".rw-head__sub").innerText()) === "Step 2 of 3 · I already have a relay",
     "step line",
   )
-  // The probe runs on blur: the relay needs a secret, so Custom.
+  // §7 A: the probe runs on blur and says the relay is free to claim; nothing is claimed yet.
   const urlInput = page.locator(".rw-body .rw-field input").first()
   await urlInput.fill(relay.url)
   await urlInput.blur()
-  await page.locator('.rw-probe[data-probe="ok"]').waitFor({ timeout: 8000 })
+  await page.locator('.rw-probe[data-probe="unclaimed"]').waitFor({ timeout: 8000 })
   expect(
-    (await page.locator(".rw-probe").innerText()).includes("needs a create secret"),
-    "the probe says the relay needs a secret",
-  )
-  expect(
-    (await page.locator('.rw-secret[data-mode="custom"]').count()) === 1,
-    "Custom is chosen for a relay that needs a secret",
-  )
-  expect(
-    (await page.locator('.rw-secret .kimo-seg-text [data-value="auto"]').isDisabled()) === true,
-    "Automatic is not offered for a relay Kimo did not start",
+    (await page.locator(".rw-probe .rw-mono").innerText()) === "not claimed yet",
+    "the probe says not claimed yet",
   )
   {
-    const { c } = await measureShell(ctx, `§7 A I already have a relay · Custom (${theme})`, 16)
+    const { c } = await measureShell(ctx, `§7 A I already have a relay · free (${theme})`, 16)
     const m = await measure(page, {
       field: ".rw-body .rw-field",
       label: ".rw-body .rw-field .rw-label",
       inputRow: ".rw-body .rw-field .rw-input-row",
       probe: ".rw-probe",
       probeMeta: ".rw-probe .rw-mono",
-      secret: ".rw-secret",
-      labelRow: ".rw-secret > .rw-label-row",
-      tag: ".rw-secret .rw-tag",
-      secretRow: ".rw-secret .rw-input-row",
-      help: ".rw-secret > .rw-desc",
+      free: '.rw-none[data-claim="free"]',
+      freeIcon: '.rw-none[data-claim="free"] .rw-none__icon',
+      freeText: '.rw-none[data-claim="free"] .rw-desc',
     })
-    c.box("Field · Relay URL (iZ1Db)", m.field, { gap: 6, dir: "column" })
-    c.box("Label (O6zFIu)", m.label, {
+    c.box("Field · Relay URL (hZYRP)", m.field, { gap: 6, dir: "column" })
+    c.box("Label (N3i1S0)", m.label, {
       fs: 11,
       fw: "500",
       color: T["--kimo-text-secondary"] as string,
     })
-    c.box("Input Row (BXULo)", m.inputRow, { gap: 4, align: "center" })
-    c.box("Probe (B37YM)", m.probe, { gap: 8, align: "center" })
-    c.box("Meta (E36jfx)", m.probeMeta, { fs: 11, color: T["--kimo-text-tertiary"] as string })
-    c.box("Secret · Custom (OPtGz)", m.secret, { gap: 8, dir: "column" })
-    c.box("Label Row (MEfhh)", m.labelRow, { gap: 6, align: "center" })
-    c.box("Tag (mwfMY)", m.tag, { fs: 11, color: T["--kimo-text-tertiary"] as string })
-    c.box("Input Row (Torls)", m.secretRow, { gap: 4, align: "center" })
-    c.box("Help (oBtix)", m.help, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+    c.box("Input Row (mZIXN)", m.inputRow, { gap: 4, align: "center" })
+    c.box("Probe (JkSYm)", m.probe, { gap: 8, align: "center" })
+    c.box("Meta (nwxwO)", m.probeMeta, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+    c.box("Free (L5vX4b)", m.free, {
+      pad: "8 12 8 12",
+      gap: 8,
+      align: "center",
+      radius: R["--kimo-radius-md"] as number,
+      bg: T["--kimo-bg-subtle"] as string,
+    })
+    c.box("Icon (G12xt8)", m.freeIcon, { w: 14, h: 14, color: T["--kimo-success"] as string })
+    c.box("Text (n3Aw2r)", m.freeText, { fs: 11, color: T["--kimo-text-secondary"] as string })
     c.flush()
   }
-  // A wrong secret: Secret rejected; Enter the relay's secret goes back to its field.
-  await page.locator(".rw-secret input").fill("not-the-secret")
+  // §8 B: the Test claims it for this device.
   await page.click('[data-action="test-relay"]')
   await page.locator('.rw-shell[data-step="test"]').waitFor()
-  await page.locator(".rw-fix").waitFor({ timeout: 8000 })
-  expect(
-    (await page.locator('[data-check="secret"]').innerText()).includes("rejected · 403"),
-    "the secret line says rejected",
-  )
-  expect(
-    (await page.getAttribute('.rw-footer [data-action="save"]', "disabled")) !== null,
-    "Save and use waits for a passing test",
-  )
-  {
-    const m = await measure(page, {
-      fix: ".rw-fix",
-      fixTitle: ".rw-fix .rw-title",
-      actions: ".rw-fix .rw-actions",
-      enter: '[data-action="enter-secret"]',
-      pill: '.rw-target [data-tone="danger"]',
-    })
-    const c = checker(ctx, `§8 C secret rejected (${theme})`)
-    c.box("Fix (gnLEW)", m.fix, {
-      pad: "10 12 10 12",
-      gap: 8,
-      radius: 10,
-      bg: T["--kimo-danger-soft"] as string,
-    })
-    c.box("Title (gz5Oz)", m.fixTitle, { fs: 12, fw: "600" })
-    c.box("Actions (yErox)", m.actions, { gap: 6, align: "center" })
-    c.box("Enter the relay's secret (Q8sxg)", m.enter, { h: 26, pad: "0 10 0 10" })
-    c.box("Status · Secret rejected (BpLpq)", m.pill, {
-      bg: T["--kimo-danger-soft"] as string,
-      color: T["--kimo-danger"] as string,
-    })
-    c.flush()
-  }
-  await page.click('[data-action="enter-secret"]')
-  await page.locator('.rw-shell[data-step="setup"]').waitFor()
-  await page.waitForTimeout(50)
-  expect(
-    await page.evaluate(() => document.activeElement?.closest(".rw-secret") != null),
-    "the secret field has focus",
-  )
-  await page.locator(".rw-secret input").fill(SECRET)
-  await page.click('[data-action="test-relay"]')
   await page.locator('.rw-target [data-tone="success"]').waitFor({ timeout: 8000 })
+  // Test relay sat where Save and use is now: move off it, so the measure is not a hover.
+  await page.mouse.move(0, 0)
   {
-    const { c } = await measureShell(ctx, `§8 B test ok (${theme})`, 16)
+    const { c } = await measureShell(ctx, `§8 B test ok · claimed by you (${theme})`, 16)
     const m = await measure(page, {
       target: ".rw-target",
       url: ".rw-target .rw-mono--primary",
       checks: '.rw-group[data-group="test"]',
-      row: '[data-check="reach"]',
-      label: '[data-check="reach"] .rw-check__label',
-      meta: '[data-check="reach"] .rw-mono',
-      icon: '[data-check="reach"] .rw-check__icon',
+      row: '[data-check="ownership"]',
+      label: '[data-check="ownership"] .rw-check__label',
+      meta: '[data-check="ownership"] .rw-mono',
+      icon: '[data-check="ownership"] .rw-check__icon',
     })
     c.box("Target (nhcsR)", m.target, { gap: 8, align: "center" })
     c.box("URL (w2HvQb)", m.url, { fs: 11, color: T["--kimo-text-primary"] as string })
     c.box("Checks (yF639)", m.checks, { gap: 8, dir: "column" })
-    c.box("Check · Reached the relay (cZE4c)", m.row, { gap: 8, align: "center" })
-    c.box("Label (e2dB54)", m.label, { fs: 12, color: T["--kimo-text-primary"] as string })
-    c.box("Meta (qG6kG)", m.meta, { fs: 11, color: T["--kimo-text-tertiary"] as string })
-    c.box("Icon (XcqV6)", m.icon, { w: 14, h: 14, color: T["--kimo-success"] as string })
+    c.box("Check · Ownership (v5f1V)", m.row, { gap: 8, align: "center" })
+    c.box("Label (QlBVW)", m.label, { fs: 12, color: T["--kimo-text-primary"] as string })
+    c.box("Meta (qccOZ)", m.meta, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+    c.box("Icon (S47PUY)", m.icon, { w: 14, h: 14, color: T["--kimo-success"] as string })
     c.flush()
   }
   const lines = await page.locator('.rw-group[data-group="test"] .rw-check').allInnerTexts()
   expect(lines.length === 4, `four checks (${lines.join(" | ")})`)
   expect(lines[2]?.includes("kimo-mp/1"), "protocol kimo-mp/1")
-  expect(lines[3]?.includes("accepted"), "secret accepted")
+  expect(lines[3]?.includes("Ownership") && lines[3]?.includes("claimed by you"), "claimed")
+  const owner = await fetch(`${relay.url}/version`).then(
+    (r) => r.json() as Promise<{ owner: string }>,
+  )
+  expect(owner.owner === "claimed", "the relay now has an owner")
   await page.click('[data-action="save"]')
   await page.locator('.rw-shell[data-step="saved"]').waitFor()
   {
@@ -539,6 +565,10 @@ async function fromShare(ctx: E2EContext, theme: Theme, relay: TestRelay) {
     c.box("Start sharing (Jp7Zr)", m.start, { h: 30, pad: "0 12 0 12" })
     c.flush()
   }
+  expect(
+    (await page.locator(".rw-saved__desc").innerText()).includes("This relay is yours now."),
+    "saved says yours",
+  )
   const stored = await page.evaluate(() => {
     const w = window as unknown as {
       __board42: { platform: { settings: { get(k: string): unknown } } }
@@ -546,96 +576,541 @@ async function fromShare(ctx: E2EContext, theme: Theme, relay: TestRelay) {
     return {
       url: w.__board42.platform.settings.get("multiplayer.relayUrl"),
       setup: w.__board42.platform.settings.get("multiplayer.relaySetup"),
-      secret: localStorage.getItem("kimo.relay.secret"),
     }
   })
   expect(stored.url === relay.url, `relay URL saved (${stored.url})`)
-  expect(stored.secret === SECRET, "the secret is in browser storage")
-  expect(!JSON.stringify(stored.setup).includes(SECRET), "the secret is not in Settings")
   expect(
-    (stored.setup as { secretMode?: string; path?: string }).secretMode === "custom" &&
-      (stored.setup as { path?: string }).path === "existing",
+    (stored.setup as { path?: string }).path === "existing" &&
+      !JSON.stringify(stored.setup).includes("secret"),
     `setup stored (${JSON.stringify(stored.setup)})`,
   )
-  // Start sharing: this file goes live on the saved relay with its secret.
+  // Start sharing: this file goes live on the saved relay.
   await page.click('[data-action="start-sharing"]')
   await page.waitForFunction(() => (window as unknown as { __started?: unknown }).__started != null)
   const started = await page.evaluate(
-    () =>
-      (window as unknown as { __started: { relayUrl: string; createSecret: string } }).__started,
+    () => (window as unknown as { __started: { relayUrl: string } }).__started,
   )
-  expect(
-    started.relayUrl === relay.url && started.createSecret === SECRET,
-    "shared with the secret",
-  )
+  expect(started.relayUrl === relay.url, "shared on the saved relay")
   await page.locator('.mp-popover[data-stage="live"]').waitFor()
 }
 
-// --- Section 1 B: Settings › Multiplayer ------------------------------------------------------------
+// --- Another device: not yours (§3 H, §8 C) ------------------------------------------------------
+
+async function notYours(ctx: E2EContext, theme: Theme, relay: TestRelay) {
+  const { page } = ctx
+  // A fresh page is a new device (its key lives in memory).
+  await open(ctx, "share", theme)
+  const T = await tokens(page, COLORS)
+  const R = await px(page, ["--kimo-radius-md"])
+  await page.click(".b42-share")
+  await page.locator('.mp-popover[data-stage="first-run"]').waitFor()
+  await popoverCheck(page, relay.url, "Not yours")
+  const fix = async (scope: string, label: string, ids: Record<string, string>) => {
+    const m = await measure(page, {
+      fix: `${scope} .rw-fix[data-fix="not-yours"]`,
+      title: `${scope} .rw-fix .rw-title`,
+      desc: `${scope} .rw-fix .rw-desc`,
+      actions: `${scope} .rw-fix .rw-actions`,
+      add: `${scope} [data-action="add-this-device"]`,
+      reset: `${scope} [data-action="reset-ownership"]`,
+      pill: `${scope} [data-tone="warning"]`,
+    })
+    const c = checker(ctx, label)
+    c.box(`Fix (${ids.fix})`, m.fix, {
+      pad: "10 12 10 12",
+      gap: 8,
+      dir: "column",
+      radius: R["--kimo-radius-md"] as number,
+      bg: T["--kimo-warning-soft"] as string,
+    })
+    c.box(`Title (${ids.title})`, m.title, {
+      fs: 12,
+      fw: "600",
+      color: T["--kimo-text-primary"] as string,
+    })
+    c.box(`Desc (${ids.desc})`, m.desc, { fs: 11, color: T["--kimo-text-secondary"] as string })
+    c.box(`Actions (${ids.actions})`, m.actions, { gap: 6, align: "center" })
+    c.box(`Add this device (${ids.add})`, m.add, { h: 26, pad: "0 10 0 10" })
+    c.box(`Reset ownership (${ids.reset})`, m.reset, { h: 26, pad: "0 10 0 10" })
+    c.box(`Status · Not yours (${ids.pill})`, m.pill, {
+      bg: T["--kimo-warning-soft"] as string,
+      color: T["--kimo-warning"] as string,
+    })
+    c.flush()
+  }
+  await fix(".mp-popover", `§3 H belongs to another Kimo (${theme})`, {
+    fix: "U5YOHw",
+    title: "Aq1Qq",
+    desc: "UUS2u",
+    actions: "fC303",
+    add: "a9rbX",
+    reset: "S1MiNd",
+    pill: "ixz8K",
+  })
+  expect(
+    (await page.getAttribute(".mp-popover .mp-start", "disabled")) !== null,
+    "Start sharing is disabled on another Kimo's relay",
+  )
+  // I: Add this device explains the pairing link.
+  await page.click('.mp-popover [data-action="add-this-device"]')
+  await page.locator(".mp-add-this-device").waitFor()
+  expect(
+    (await page.locator(".mp-add-this-device").innerText()).includes(
+      "open Settings › Multiplayer and choose Add device",
+    ),
+    "the steps name Add device",
+  )
+  await page.click(".mp-add-this-device .kimo-dialog__button--confirm")
+  await page.locator(".mp-add-this-device").waitFor({ state: "detached" })
+
+  // The wizard's Test says the same (§8 C).
+  await open(ctx, "share", theme)
+  await page.click(".b42-share")
+  await page.click(".mp-setup-relay")
+  await page.click('.rw-option[data-value="existing"]')
+  await page.click('[data-action="continue"]')
+  const urlInput = page.locator(".rw-body .rw-field input").first()
+  await urlInput.fill(relay.url)
+  await urlInput.blur()
+  await page.locator('.rw-probe[data-probe="other"]').waitFor({ timeout: 8000 })
+  await page.click('[data-action="test-relay"]')
+  await page.locator('.rw-target [data-tone="warning"]').waitFor({ timeout: 8000 })
+  expect(
+    (await page.locator('[data-check="ownership"]').innerText()).includes("not yours"),
+    "the Ownership line says not yours",
+  )
+  expect(
+    (await page.getAttribute('.rw-footer [data-action="save"]', "disabled")) !== null,
+    "Save and use waits for a relay that is yours",
+  )
+  await fix(".rw-body", `§8 C belongs to another Kimo (${theme})`, {
+    fix: "gnLEW",
+    title: "gz5Oz",
+    desc: "Yy3BN",
+    actions: "yErox",
+    add: "Q8sxg",
+    reset: "Nir4N",
+    pill: "BpLpq",
+  })
+  expect(
+    (await page.locator('.rw-footer [data-action="test-again"]').count()) === 1,
+    "Test again in the footer",
+  )
+}
+
+// --- Section 4: Settings › Multiplayer › Devices ------------------------------------------------------
 
 async function fromSettings(ctx: E2EContext, theme: Theme) {
   const { page } = ctx
-  await open(ctx, "settings", theme)
-  await page.locator(".mp-setup-relay-settings").waitFor()
-  const T = await tokens(page, COLORS)
-  const m = await measure(page, {
-    actions: ".mp-relay-box__actions",
-    setUp: ".mp-setup-relay-settings",
-    setting: '.mp-setting[data-pen="O29Rk8"]',
-    secretLabel: '.mp-setting[data-pen="O29Rk8"] .rw-label',
-    auto: '[data-box="automatic"]',
-    autoIcon: '[data-box="automatic"] .rw-box__icon',
-    autoTitle: '[data-box="automatic"] .rw-label-strong',
-    autoDesc: '[data-box="automatic"] .rw-desc',
-    show: '[data-box="automatic"] .kimo-button',
-  })
-  const c = checker(ctx, `§1 B Settings › Multiplayer (${theme})`)
-  c.box("Actions (TPCDP)", m.actions, { pad: "4 0 0 0", gap: 12, align: "center" })
-  c.box("Set up a relay (a3mrXQ)", m.setUp, {
-    h: 28,
-    pad: "0 12 0 12",
-    bg: T["--kimo-bg-muted"] as string,
-  })
-  c.box("Setting · Create secret (O29Rk8)", m.setting, {
-    pad: "12 0 12 0",
-    gap: 8,
-    shadowHas: `${T["--kimo-border"]} 0px -1px 0px 0px inset`,
-  })
-  c.box("Label (gRkkL)", m.secretLabel, {
-    fs: 12,
-    fw: "500",
-    color: T["--kimo-text-primary"] as string,
-  })
-  c.box("Automatic (yrems)", m.auto, {
-    pad: "8 6 8 12",
-    gap: 10,
-    align: "center",
-    radius: 10,
-    bg: T["--kimo-bg-subtle"] as string,
-    shadowHas: `${T["--kimo-border"]} 0px 0px 0px 1px inset`,
-  })
-  c.box("Icon (C0RqtO)", m.autoIcon, { w: 14, h: 14, color: T["--kimo-text-secondary"] as string })
-  c.box("Title (sC4Nm)", m.autoTitle, { fs: 12, fw: "500" })
-  c.box("Desc (L9NPq)", m.autoDesc, { fs: 11, color: T["--kimo-text-tertiary"] as string })
-  c.box("Show (SE8ZS)", m.show, { h: 26, pad: "0 10 0 10" })
-  c.flush()
-  // Show reveals the secret with Copy; Copy puts the real value on the clipboard.
-  await page.click('[data-box="automatic"] .kimo-button:has-text("Show")')
-  await page.locator('[data-secret="shown"]').waitFor()
-  const shown = await page.locator('[data-secret="shown"]').innerText()
-  expect(/^kimo_cs_[A-Za-z0-9_-]{43}$/.test(shown), `an Automatic secret (${shown.slice(0, 10)}…)`)
-  await page.click('[data-box="automatic"] [aria-label="Copy secret"]')
-  const clip = await page.evaluate(
-    () => (window as unknown as { __clipboard?: string }).__clipboard,
-  )
-  expect(clip === shown, "Copy copies the real value")
-  await page.click('[data-box="automatic"] .kimo-button:has-text("Hide")')
-  expect((await page.locator('[data-secret="shown"]').count()) === 0, "Hide masks it again")
-  // Set up a relay opens the same wizard; Escape closes it.
-  await page.click(".mp-setup-relay-settings")
-  await page.locator('.rw-shell[data-step="choose"]').waitFor()
-  await page.keyboard.press("Escape")
-  await page.locator(".rw-shell").waitFor({ state: "detached" })
+  const relay = await startRelay()
+  try {
+    await open(ctx, "settings", theme)
+    await page.locator(".mp-setup-relay-settings").waitFor()
+    // This page's device claims the relay, which is then the saved one.
+    await page.evaluate(async (url) => {
+      const w = window as unknown as {
+        __board42: {
+          ownership: { claimRelay(u: string): Promise<unknown> }
+          model: { settings: { setRelayUrl(u: string): Promise<unknown> } }
+        }
+      }
+      await w.__board42.ownership.claimRelay(url)
+      await w.__board42.model.settings.setRelayUrl(url)
+    }, relay.url)
+    await open(ctx, "settings", theme)
+    // The harness keeps no state across loads: this page is another device, so not yours.
+    await page.evaluate(async (url) => {
+      const w = window as unknown as {
+        __board42: {
+          ownership: { claimRelay(u: string): Promise<unknown> }
+          model: {
+            settings: { setRelayUrl(u: string): Promise<unknown> }
+            relayTest: { test(u: string): Promise<unknown> }
+          }
+        }
+      }
+      await w.__board42.model.settings.setRelayUrl(url)
+      await w.__board42.model.relayTest.test(url)
+    }, relay.url)
+    await page.locator(".mp-result-group, .mp-result").first().waitFor({ timeout: 8000 })
+    const T = await tokens(page, COLORS)
+    const R = await px(page, ["--kimo-radius-md", "--kimo-radius-pill", "--kimo-radius-xl"])
+    {
+      // Not yours: the first load claimed it as another device.
+      await page.locator('.mp-result-group[data-owner="other"]').waitFor({ timeout: 8000 })
+      const m = await measure(page, {
+        group: '.mp-result-group[data-owner="other"]',
+        row: '.mp-result-group[data-owner="other"] .mp-result',
+        pill: '.mp-result-group [data-tone="warning"]',
+        message: ".mp-result-group > .mp-desc",
+        actions: ".mp-result-group > .rw-actions",
+        add: '.mp-result-group [data-action="add-this-device"]',
+      })
+      const c = checker(ctx, `§4 Ownership · not yours (${theme})`)
+      c.box("Result (dXh4T)", m.group, { gap: 8, dir: "column" })
+      c.box("Status Row (EWlXa)", m.row, { gap: 8, align: "center" })
+      c.box("Status · Not yours (is3ic)", m.pill, {
+        bg: T["--kimo-warning-soft"] as string,
+        color: T["--kimo-warning"] as string,
+      })
+      c.box("Message (X00Qb)", m.message, {
+        fs: 11,
+        color: T["--kimo-text-secondary"] as string,
+      })
+      c.box("Actions (lKzP3)", m.actions, { gap: 6, align: "center" })
+      c.box("Add this device (f9DdU)", m.add, { h: 26, pad: "0 10 0 10" })
+      c.flush()
+      expect((await page.locator(".mp-devices").count()) === 0, "no Devices when not yours")
+    }
+    // A fresh relay this page claims: Yours, and the Devices group.
+    const mine = await startRelay()
+    try {
+      await page.evaluate(async (url) => {
+        const w = window as unknown as {
+          __board42: {
+            ownership: { claimRelay(u: string): Promise<unknown> }
+            model: {
+              settings: { setRelayUrl(u: string): Promise<unknown> }
+              relayTest: { test(u: string): Promise<unknown> }
+            }
+          }
+        }
+        await w.__board42.ownership.claimRelay(url)
+        await w.__board42.model.settings.setRelayUrl(url)
+        await w.__board42.model.relayTest.test(url)
+      }, mine.url)
+      await page.locator(".mp-devices .mp-device").first().waitFor({ timeout: 8000 })
+      expect(
+        (await page.locator(".mp-result [data-tone]").innerText()) === "Yours",
+        "the result says Yours",
+      )
+      {
+        const m = await measure(page, {
+          setting: ".mp-devices",
+          label: ".mp-devices .mp-setting__label",
+          desc: ".mp-devices .mp-text .mp-desc",
+          list: ".mp-device-list",
+          row: ".mp-device",
+          icon: ".mp-device__icon",
+          name: ".mp-device__name",
+          badge: ".mp-device__self",
+          meta: ".mp-device__meta",
+          hint: ".mp-device-hint",
+          hintIcon: ".mp-device-hint__icon",
+          hintText: ".mp-device-hint__text",
+          footer: ".mp-devices__footer",
+          add: '[data-action="add-device"]',
+          footHint: ".mp-devices__footer .mp-meta",
+        })
+        const c = checker(ctx, `§4 Devices · last device (${theme})`)
+        c.box("Setting · Devices (gon1u)", m.setting, {
+          pad: "12 0 12 0",
+          gap: 8,
+          dir: "column",
+          shadowHas: `${T["--kimo-border"]} 0px -1px 0px 0px inset`,
+        })
+        c.box("Label (rjAw4)", m.label, {
+          fs: 12,
+          fw: "500",
+          color: T["--kimo-text-primary"] as string,
+        })
+        c.box("Desc (aTQyB)", m.desc, { fs: 11, color: T["--kimo-text-secondary"] as string })
+        c.box("List (YC312)", m.list, {
+          dir: "column",
+          radius: R["--kimo-radius-md"] as number,
+          shadowHas: `${T["--kimo-border"]} 0px 0px 0px 1px inset`,
+        })
+        c.box("Device · Mac (ITYAY)", m.row, { pad: "8 8 8 10", gap: 10, align: "center" })
+        c.box("Icon Wrap (v9o91)", m.icon, {
+          w: 28,
+          h: 28,
+          radius: R["--kimo-radius-pill"] as number,
+          bg: T["--kimo-bg-muted"] as string,
+          color: T["--kimo-text-secondary"] as string,
+        })
+        c.box("Name (zIRtS)", m.name, {
+          fs: 12,
+          fw: "500",
+          color: T["--kimo-text-primary"] as string,
+        })
+        c.box("This device (CvNPZ)", m.badge, {
+          pad: "2 8 2 8",
+          bg: T["--kimo-bg-muted"] as string,
+        })
+        c.box("Meta (KmveM)", m.meta, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+        c.box("Hint · one device (PdZQM)", m.hint, { gap: 6, dir: "row" })
+        c.box("Icon (bS0j6)", m.hintIcon, { color: T["--kimo-text-tertiary"] as string })
+        c.box("Text (ZRM7m)", m.hintText, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+        c.box("Footer (TpdGV)", m.footer, { gap: 8, align: "center" })
+        c.box("Add device (n1w0fL)", m.add, { h: 28, pad: "0 12 0 12", fs: 12 })
+        c.box("Hint (pAyol)", m.footHint, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+        c.flush()
+      }
+      expect(
+        (await page.locator(".mp-device__remove").getAttribute("disabled")) !== null,
+        "the last device cannot be removed",
+      )
+      // Add device: the sheet makes the link and copies it at once.
+      await page.click('[data-action="add-device"]')
+      await page.locator('.mp-sheet[data-sheet="link"] [data-testid="pairing-link"]').waitFor()
+      await page.waitForFunction(() =>
+        ((window as unknown as { __clipboard?: string }).__clipboard ?? "").includes("/pair#"),
+      )
+      const link = await page.evaluate(
+        () => (window as unknown as { __clipboard: string }).__clipboard,
+      )
+      expect(
+        link.includes(`/pair#${mine.url}/`),
+        `a pairing link for the relay (${link.slice(0, 40)}…)`,
+      )
+      {
+        const m = await measure(page, {
+          sheet: ".mp-sheet",
+          head: ".mp-sheet__head",
+          icon: ".mp-sheet__icon",
+          title: ".mp-sheet__title",
+          desc: ".mp-sheet__desc",
+          link: ".mp-sheet__link",
+          row: ".mp-sheet__link-row",
+          field: ".mp-sheet__field",
+          url: ".mp-sheet__url",
+          copy: ".mp-sheet__copy",
+          status: ".mp-sheet__status",
+          footer: ".mp-sheet__footer",
+          cancel: ".mp-sheet__cancel",
+          done: ".mp-sheet__done",
+        })
+        const c = checker(ctx, `§4 Add device · link ready (${theme})`)
+        c.box("Sheet · Add device (sgnIX)", m.sheet, {
+          w: 464,
+          pad: "20 20 20 20",
+          gap: 14,
+          dir: "column",
+          radius: R["--kimo-radius-xl"] as number,
+          bg: T["--kimo-bg-overlay"] as string,
+          shadowHas: "0px 16px 48px",
+        })
+        c.box("Head (W8JU4F)", m.head, { gap: 12, dir: "row" })
+        c.box("Icon Wrap (wk6OE)", m.icon, {
+          w: 32,
+          h: 32,
+          bg: T["--kimo-bg-muted"] as string,
+          color: T["--kimo-text-primary"] as string,
+        })
+        c.box("Title (NUJMJ)", m.title, { fs: 14, fw: "600" })
+        c.box("Desc (CeC0H)", m.desc, { fs: 12, color: T["--kimo-text-secondary"] as string })
+        c.box("Link (HWe4n)", m.link, { gap: 8, dir: "column" })
+        c.box("Link Row (QM17u)", m.row, { gap: 8, align: "center" })
+        c.box("Field (Zf48v)", m.field, {
+          h: 32,
+          pad: "0 10 0 10",
+          gap: 8,
+          radius: R["--kimo-radius-md"] as number,
+          bg: T["--kimo-bg-muted"] as string,
+        })
+        c.box("URL (l4XsXi)", m.url, { fs: 11, color: T["--kimo-text-primary"] as string })
+        c.box("Copy (I92WY)", m.copy, { h: 32, pad: "0 12 0 12" })
+        c.box("Status (GbN9C)", m.status, {
+          gap: 6,
+          align: "center",
+          fs: 11,
+          color: T["--kimo-text-tertiary"] as string,
+        })
+        c.box("Footer (kyK4z)", m.footer, { gap: 8, align: "center" })
+        c.box("Cancel link (RF4Td)", m.cancel, { h: 30, pad: "0 12 0 12" })
+        c.box("Done (JILUE)", m.done, { h: 30, pad: "0 14 0 14" })
+        c.flush()
+      }
+      expect(
+        /Waiting for the other device · 1[45]:\d\d left/.test(
+          await page.locator(".mp-sheet__status").innerText(),
+        ),
+        "a live countdown",
+      )
+      // Another device uses the link: the sheet turns into Added, the list grows.
+      await page.evaluate(
+        (l) =>
+          (
+            window as unknown as {
+              __board42: { pairOther(link: string, name: string): Promise<unknown> }
+            }
+          ).__board42.pairOther(l, "Chrome on Windows"),
+        link,
+      )
+      await page.locator('.mp-sheet[data-sheet="added"]').waitFor({ timeout: 8000 })
+      expect(
+        (await page.locator(".mp-sheet__title").innerText()) === "Added Chrome on Windows",
+        "Added names the device",
+      )
+      await page.click('.mp-sheet [data-action="done"]')
+      await page.locator(".mp-sheet").waitFor({ state: "detached" })
+      expect((await page.locator(".mp-device").count()) === 2, "two devices")
+      expect((await page.locator(".mp-device-hint").count()) === 0, "no hint with two")
+      // Rename in place: Enter saves.
+      const first = page.locator(".mp-device").first()
+      await first.hover()
+      await first.locator(".mp-device__rename").click()
+      await page.locator(".mp-device__name-field").waitFor()
+      {
+        const m = await measure(page, { field: ".mp-device__name-field" })
+        const c = checker(ctx, `§4 Devices · rename in place (${theme})`)
+        c.box("Name Field (QgcKp)", m.field, {
+          w: 160,
+          h: 24,
+          pad: "0 6 0 6",
+          fs: 12,
+          fw: "500",
+          bg: T["--kimo-bg-muted"] as string,
+          shadowHas: `${T["--kimo-accent"]} 0px 0px 0px 1px inset`,
+        })
+        c.flush()
+      }
+      await page.locator(".mp-device__name-field").fill("Work Mac")
+      await page.keyboard.press("Enter")
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll(".mp-device__name")].some(
+          (e) => e.textContent === "Work Mac",
+        ),
+      )
+      // Remove the other device: confirm first.
+      const other = page.locator(".mp-device", { hasText: "Chrome on Windows" })
+      await other.hover()
+      await other.locator(".mp-device__remove").click()
+      await page.locator(".mp-remove-device").waitFor()
+      expect(
+        (await page.locator(".mp-remove-device .kimo-dialog__title").innerText()) ===
+          "Remove Chrome on Windows?",
+        "the confirm names the device",
+      )
+      await page.click(".mp-remove-device .kimo-dialog__button--confirm")
+      await page.waitForFunction(() => document.querySelectorAll(".mp-device").length === 1)
+      expect(
+        (await page.locator(".b42-pane").innerText()).toLowerCase().includes("secret") === false,
+        "Settings never says secret",
+      )
+    } finally {
+      await mine.stop()
+    }
+  } finally {
+    await relay.stop()
+  }
+}
+
+// --- Section 5 H to N: the pairing link landing ------------------------------------------------------
+
+async function pairLanding(ctx: E2EContext, theme: Theme) {
+  const { page } = ctx
+  const relay = await startRelay()
+  try {
+    // An owner device (in this page) makes a link; a fresh page opens it.
+    await open(ctx, "settings", theme)
+    const link = await page.evaluate(async (url) => {
+      const w = window as unknown as {
+        __board42: {
+          ownership: {
+            claimRelay(u: string): Promise<unknown>
+            createPairingLink(u: string): Promise<{ link: string }>
+          }
+        }
+      }
+      await w.__board42.ownership.claimRelay(url)
+      return (await w.__board42.ownership.createPairingLink(url)).link
+    }, relay.url)
+    await page.goto(
+      `${await harnessUrl(ctx)}?run=${Date.now()}&surface=pair&theme=${theme}&link=${encodeURIComponent(link)}`,
+    )
+    await page.locator('[data-testid="pair-card"][data-outcome="ready"]').waitFor()
+    const T = await tokens(page, COLORS)
+    const R = await px(page, ["--kimo-radius-xl"])
+    {
+      const m = await measure(page, {
+        card: '[data-testid="pair-card"]',
+        head: ".join-card__head",
+        title: ".join-card__title",
+        host: ".join-card__head .join-card__meta",
+        desc: ".pair-card__desc",
+        meta: '[data-testid="pair-card"] > .join-card__meta',
+        field: ".pair-card__field",
+        label: ".pair-card__label",
+        actions: ".pair-card__actions",
+        notNow: ".pair-card__not-now",
+        add: ".pair-card__add",
+      })
+      const c = checker(ctx, `§5 H pairing link · add this device (${theme})`)
+      c.box("Pair Card (VQHDH)", m.card, {
+        w: 360,
+        pad: "24 24 24 24",
+        gap: 16,
+        dir: "column",
+        radius: R["--kimo-radius-xl"] as number,
+        bg: T["--kimo-bg-app"] as string,
+        shadowHas: `${T["--kimo-border"]} 0px 0px 0px 1px inset`,
+      })
+      c.box("Head (w5L5e2)", m.head, { gap: 10, align: "center" })
+      c.box("Title (LHW5I)", m.title, { fs: 14, fw: "600" })
+      c.box("Host (RkHYa)", m.host, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+      c.box("Desc (NIS9l)", m.desc, { fs: 12, color: T["--kimo-text-secondary"] as string })
+      c.box("Meta (Mf6w1)", m.meta, { fs: 11, color: T["--kimo-text-tertiary"] as string })
+      c.box("Field · Device name (ttxWg)", m.field, { gap: 6, dir: "column" })
+      c.box("Label (gzz66)", m.label, {
+        fs: 11,
+        fw: "500",
+        color: T["--kimo-text-secondary"] as string,
+      })
+      c.box("Actions (C2FgOF)", m.actions, { gap: 8, align: "center" })
+      c.box("Not now (uw00b)", m.notNow, { h: 30, pad: "0 12 0 12" })
+      c.box("Add device (xktjR)", m.add, { h: 30, pad: "0 14 0 14" })
+      c.flush()
+    }
+    expect(
+      (await page.locator('[data-testid="pair-card"]').innerText()).includes(
+        "Works once · 15 min left",
+      ),
+      "Works once · 15 min left",
+    )
+    expect(
+      (await page.locator(".pair-card__field input").inputValue()) === "Chrome on Mac",
+      "the name is the platform",
+    )
+    await page.click('[data-action="add-device"]')
+    await page.locator('[data-testid="pair-card"][data-outcome="added"]').waitFor({ timeout: 8000 })
+    {
+      const m = await measure(page, {
+        card: '[data-testid="pair-card"]',
+        wrap: ".join-card__wrap--success",
+        heading: ".join-card__heading",
+        open: '[data-action="open-kimo"]',
+      })
+      const c = checker(ctx, `§5 J pairing link · added (${theme})`)
+      c.box("Pair Card (avpph)", m.card, { gap: 14, align: "center", pad: "24 24 24 24" })
+      c.box("Icon Wrap (ZbDkf)", m.wrap, {
+        w: 40,
+        h: 40,
+        bg: T["--kimo-success-soft"] as string,
+        color: T["--kimo-success"] as string,
+      })
+      c.box("Title (HSmSi)", m.heading, { fs: 14, fw: "600", ta: "center" })
+      c.box("Open Kimo (sTwx9)", m.open, { bg: T["--kimo-accent"] as string })
+      c.flush()
+    }
+    // The same link again (another page, another device): already used.
+    await page.goto(
+      `${await harnessUrl(ctx)}?run=${Date.now()}&surface=pair&theme=${theme}&link=${encodeURIComponent(link)}`,
+    )
+    await page.click('[data-action="add-device"]')
+    await page.locator('[data-testid="pair-card"][data-outcome="used"]').waitFor({ timeout: 8000 })
+    // A link that does not parse.
+    await page.goto(
+      `${await harnessUrl(ctx)}?run=${Date.now()}&surface=pair&theme=${theme}&link=${encodeURIComponent("https://x.test/pair#nope")}`,
+    )
+    await page.locator('[data-testid="pair-card"][data-outcome="invalid"]').waitFor()
+    expect(
+      (await page.locator(".join-card__heading").innerText()) === "This link doesn't work",
+      "not valid",
+    )
+  } finally {
+    await relay.stop()
+  }
 }
 
 // --- Section 3: This computer on desktop (scripted host) -----------------------------------------------
@@ -661,9 +1136,7 @@ async function desktopLocal(ctx: E2EContext, theme: Theme) {
       reach: '.rw-reach[data-value="lan"]',
       quick: '.rw-reach[data-value="quick"]',
       titleRow: '.rw-reach[data-value="quick"] .rw-title-row',
-      auto: '[data-box="automatic"]',
       note: ".rw-body > .rw-note",
-      dotDone: '.rw-step[data-state="done"] .rw-step__dot',
     })
     c.box("Group · Checks (XTEjW)", m.checks, { gap: 8 })
     c.box("Check · Bun (RGy5V)", m.check, { gap: 8, align: "center" })
@@ -678,7 +1151,6 @@ async function desktopLocal(ctx: E2EContext, theme: Theme) {
       shadowHas: `${T["--kimo-accent"]} 0px 0px 0px 1.5px inset`,
     })
     c.box("Title Row (pDdac)", m.titleRow, { gap: 6, align: "center" })
-    c.box("Automatic (u8lap)", m.auto, { pad: "8 6 8 12", gap: 10 })
     c.box("Tradeoff Note (Brdqo)", m.note, {
       pad: "8 10 8 10",
       gap: 8,
@@ -689,6 +1161,10 @@ async function desktopLocal(ctx: E2EContext, theme: Theme) {
   expect(
     (await page.locator('.rw-group[data-group="checks"]').innerText()).includes("Bun 1.2.19"),
     "Bun found",
+  )
+  expect(
+    (await page.locator(".rw-shell").innerText()).toLowerCase().includes("secret") === false,
+    "This computer shows no secret",
   )
   await page.click('[data-action="start-relay"]')
   await page.locator('[data-address="globe"]').waitFor({ timeout: 8000 })
@@ -720,15 +1196,25 @@ async function desktopLocal(ctx: E2EContext, theme: Theme) {
   const addresses = await page.locator('.rw-group[data-group="addresses"]').innerText()
   expect(addresses.includes("ws://192.168.1.24:8787"), "same-network address")
   expect(addresses.includes("wss://quiet-otter-lime.trycloudflare.com"), "quick tunnel address")
-  const spawned = await page.evaluate(() => {
+  const { spawned, devicePub } = await page.evaluate(async () => {
     const w = window as unknown as {
-      __board42: { host: { spawned: { kind: string; env?: Record<string, string> }[] } }
+      __board42: {
+        host: { spawned: { kind: string; env?: Record<string, string> }[] }
+        ownership: { devicePublicKey(): Promise<string> }
+      }
     }
-    return w.__board42.host.spawned.map((s) => ({ kind: s.kind, env: s.env ?? {} }))
+    return {
+      spawned: w.__board42.host.spawned.map((s) => ({ kind: s.kind, env: s.env ?? {} })),
+      devicePub: await w.__board42.ownership.devicePublicKey(),
+    }
   })
   const relayEnv = spawned.find((s) => s.kind === "relay")?.env ?? {}
   expect(relayEnv.PORT === "8787", "port 8787")
-  expect(/^kimo_cs_/.test(relayEnv.KIMO_CREATE_SECRET ?? ""), "the Automatic secret is injected")
+  expect(relayEnv.KIMO_OWNER_KEY === devicePub, "this device's key is KIMO_OWNER_KEY")
+  expect(
+    !Object.keys(relayEnv).some((k) => k.includes("SECRET")),
+    `no secret in the relay's environment (${Object.keys(relayEnv).join(", ")})`,
+  )
   expect(relayEnv.KIMO_ALLOWED_ORIGINS === undefined, "desktop adds no origins")
   await page.click('[data-action="stop-relay"]')
   await page.locator('.rw-group[data-group="reach"]').waitFor()
@@ -744,17 +1230,20 @@ const both = (name: string, run: (ctx: E2EContext, theme: Theme) => Promise<void
 
 export const scenarios: Scenario[] = [
   {
-    name: "board42 relay setup: Share popover → I already have a relay → secret rejected → test ok → save → share",
+    name: "board42 relay setup: Share popover → I already have a relay → claimed by the test → save → share; another device sees Not yours",
     async run(ctx) {
-      const relay = await startRelay()
-      try {
-        await fromShare(ctx, "light", relay)
-        await fromShare(ctx, "dark", relay)
-      } finally {
-        await relay.stop()
+      for (const theme of ["light", "dark"] as const) {
+        const relay = await startRelay()
+        try {
+          await fromShare(ctx, theme, relay)
+          await notYours(ctx, theme, relay)
+        } finally {
+          await relay.stop()
+        }
       }
     },
   },
-  both("board42 relay setup: Settings › Multiplayer secret and Set up a relay", fromSettings),
+  both("board42 relay setup: Settings › Multiplayer ownership and devices", fromSettings),
+  both("board41 pairing link landing: add this device, used, not valid", pairLanding),
   both("board42 relay setup: This computer on desktop with a quick tunnel", desktopLocal),
 ]

@@ -29,6 +29,11 @@ import { setTheme } from "../../src/lib/theme"
 import { MultiplayerContext } from "../../src/multiplayer/hooks"
 import { createLibraryShare } from "../../src/multiplayer/library"
 import { createMultiplayerModel } from "../../src/multiplayer/model"
+import type { OwnershipClient, RelayDevice } from "../../src/multiplayer/ownership"
+import {
+  createRelaySetupServices,
+  RelaySetupContext,
+} from "../../src/multiplayer/relay-setup/services"
 import { PeoplePopover } from "../../src/multiplayer/ui/PeoplePopover"
 import { ResetLinksDialog } from "../../src/multiplayer/ui/ResetLinksDialog"
 import { SharePopover } from "../../src/multiplayer/ui/SharePopover"
@@ -69,6 +74,8 @@ const model = createMultiplayerModel({
       message: "this relay speaks an older protocol (protocol 0)",
     },
   }),
+  // ADR 0017: Maya's relay is hers (B reads Your relay).
+  ownership: async () => "yours",
 })
 
 const now = Date.now()
@@ -233,38 +240,70 @@ function Surface() {
   }
 }
 
+/** Maya's devices on her relay (section 4 row 1): this Mac and Chrome on Windows. */
+const DEVICES: RelayDevice[] = [
+  {
+    pub: "a".repeat(43),
+    name: "Mac",
+    addedAt: new Date(2026, 9, 2).getTime(),
+    addedBy: null,
+    via: "claim",
+    self: true,
+  },
+  {
+    pub: "b".repeat(43),
+    name: "Chrome on Windows",
+    addedAt: new Date(2026, 9, 21).getTime(),
+    addedBy: "a".repeat(43),
+    via: "pair",
+    self: false,
+  },
+]
+/** No network: the relay setup services over an ownership stub that answers with DEVICES. */
+const relaySetup = createRelaySetupServices(platform, {
+  kind: "web",
+  host: null,
+  ownership: {
+    devicePublicKey: async () => "a".repeat(43),
+    relayOwnership: async (relayUrl: string) => ({ relayUrl, state: "yours", devices: DEVICES }),
+    listDevices: async () => DEVICES,
+  } as unknown as OwnershipClient,
+})
+
 function Harness() {
   const [toasts, setToasts] = useState<ShareToast[]>([])
   const push = (t: ShareToast) => setToasts((list) => [...list, t])
   ;(window as unknown as { __board41: unknown }).__board41 = { fake, model, platform, toasts }
   return (
     <MultiplayerContext.Provider value={model}>
-      <M3Context.Provider value={null}>
-        <ShareToastContext.Provider value={push}>
-          <div className="b41-root">
-            <Surface />
-            <div className="b41-toasts">
-              {toasts.map((t, i) => (
-                <Toast
-                  // biome-ignore lint/suspicious/noArrayIndexKey: append-only log
-                  key={i}
-                  className="b41-toast"
-                  tone={t.tone === "component" ? "neutral" : t.tone}
-                  icon={
-                    <Icon
-                      name={t.icon ?? (t.tone === "danger" ? "circle-x" : "circle-check")}
-                      size={16}
-                    />
-                  }
-                  {...(t.action ? { actionLabel: t.action.label, onAction: t.action.run } : {})}
-                >
-                  {t.text}
-                </Toast>
-              ))}
+      <RelaySetupContext.Provider value={relaySetup}>
+        <M3Context.Provider value={null}>
+          <ShareToastContext.Provider value={push}>
+            <div className="b41-root">
+              <Surface />
+              <div className="b41-toasts">
+                {toasts.map((t, i) => (
+                  <Toast
+                    // biome-ignore lint/suspicious/noArrayIndexKey: append-only log
+                    key={i}
+                    className="b41-toast"
+                    tone={t.tone === "component" ? "neutral" : t.tone}
+                    icon={
+                      <Icon
+                        name={t.icon ?? (t.tone === "danger" ? "circle-x" : "circle-check")}
+                        size={16}
+                      />
+                    }
+                    {...(t.action ? { actionLabel: t.action.label, onAction: t.action.run } : {})}
+                  >
+                    {t.text}
+                  </Toast>
+                ))}
+              </div>
             </div>
-          </div>
-        </ShareToastContext.Provider>
-      </M3Context.Provider>
+          </ShareToastContext.Provider>
+        </M3Context.Provider>
+      </RelaySetupContext.Provider>
     </MultiplayerContext.Provider>
   )
 }

@@ -32,8 +32,12 @@ Cloud plugs its account check into.**
 3. **Accounts.** Owners only, signed in with an email magic link. Signing in on a device links
    that device's key (0017 decision 1) to the account, so the account replaces pairing links on
    Kimo Cloud: any signed-in device is an owner device.
-4. **Payments.** A merchant of record (Paddle or Polar) sells the plan, so EU VAT and sales tax are
-   handled for Saudade Media OÜ. The provider's customer portal is the first billing UI.
+4. **Payments.** Polar (polar.sh) is the merchant of record, so EU VAT and sales tax are handled
+   for Saudade Media OÜ. Prices are in USD with tax added at checkout. Polar's customer portal is
+   the first billing UI. Polar won on developer experience (local webhook CLI, customer state
+   API), at fees level with Paddle for the first year's volume; Paddle is the fallback. kimo-cloud
+   keeps subscriptions and entitlements in its own database, with provider ids only as foreign
+   keys, so switching stays cheap. Comparison: [payments research](../research/payments-paddle-vs-polar.md).
 5. **One shared relay fleet.** Kimo Cloud runs the open relay image as a multi-tenant service, not
    one relay per customer. Tenancy is the owner policy below; content stays end to end encrypted,
    so Kimo Cloud stores ciphertext and never sees designs.
@@ -80,6 +84,5 @@ infrastructure or keys, and Kimo sells the hosted version.
 
 ## Open questions
 
-- Paddle or Polar.
-- Exact price, storage cap, grace and retention periods.
+- Exact price (before tax), storage cap, grace and retention periods.
 - Kimo Cloud domains (for example `relay.getkimo.design` and `cloud.getkimo.design`).

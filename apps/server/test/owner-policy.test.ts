@@ -21,13 +21,16 @@ import {
   device,
   devicePub,
   type Harness,
+  joinAs,
   makeOwner,
   type Owner,
   ownerCommand,
+  putSnapshotRaw,
   register,
   rotateOwner,
   startRelay,
   token,
+  update,
 } from "./helpers"
 
 const code = async (res: Response) => ((await res.json()) as { error: string }).error
@@ -81,8 +84,11 @@ afterEach(async () => {
   for (const h of relays.splice(0)) await h.stop()
 })
 
-function external(policy: OwnerPolicyModule): Harness {
-  const h = startRelay({}, { ownerPolicy: policy })
+function external(
+  policy: OwnerPolicyModule,
+  config: Parameters<typeof startRelay>[0] = {},
+): Harness {
+  const h = startRelay(config, { ownerPolicy: policy })
   relays.push(h)
   return h
 }
@@ -224,6 +230,116 @@ describe("owner policy: external (ADR 0018, section 14.12)", () => {
     expect(h.relay.db.getRoom(third.room.id)).toBeNull()
     expect((await register(h, third, { device: other })).status).toBe(201)
     expect(h.relay.db.getRoom(third.room.id)?.account).toBe("acct-c")
+  })
+
+  test("log appends and snapshots count against the account limit across its rooms", async () => {
+    const t = testPolicy()
+    const account: Account = { id: "acct-a", plan: true, limit: null }
+    t.devices.set(DEVICE, account)
+    const h = external(t.policy)
+    // Empty rooms add nothing, so both register under any limit.
+    const first = await room(h)
+    const second = await room(h)
+    const a = await joinAs(h, first, "edit")
+    a.client.send({ type: "append", cid: 1, env: await update(first, "x".repeat(200)) })
+    await a.client.next("ack")
+    const used = h.relay.db.accountBytes("acct-a")
+    expect(used).toBeGreaterThan(200)
+
+    // The next editor join refreshes the limit the policy answers.
+    account.limit = used + 10
+    const b = await joinAs(h, second, "edit")
+    expect(t.writes.at(-1)).toMatchObject({ room: second.room.id, account: "acct-a", bytes: 0 })
+    expect(h.relay.db.accountLimit("acct-a")).toBe(used + 10)
+    b.client.send({ type: "append", cid: 2, env: await update(second, "y".repeat(200)) })
+    expect(await b.client.next("denied")).toMatchObject({ code: "ACCOUNT_QUOTA_EXCEEDED", cid: 2 })
+    const snap = await putSnapshotRaw(h, second, await token(second, "edit"), 0)
+    expect(snap.status).toBe(507)
+    expect(await code(snap)).toBe("ACCOUNT_QUOTA_EXCEEDED")
+    expect(h.relay.db.accountBytes("acct-a")).toBe(used)
+    a.client.close()
+    b.client.close()
+  })
+
+  test("a lapsed plan turns the account read-only at the next editor join", async () => {
+    const t = testPolicy()
+    const account: Account = { id: "acct-a", plan: true, limit: null }
+    t.devices.set(DEVICE, account)
+    const h = external(t.policy)
+    const owner = await room(h)
+    const before = await joinAs(h, owner, "edit")
+    before.client.send({ type: "append", cid: 1, env: await update(owner, "paid") })
+    await before.client.next("ack")
+    before.client.close()
+
+    account.plan = false
+    const lapsed = await joinAs(h, owner, "edit")
+    expect(h.relay.db.accountLimit("acct-a")).toBe(0)
+    lapsed.client.send({ type: "append", cid: 2, env: await update(owner, "late") })
+    expect(await lapsed.client.next("denied")).toMatchObject({
+      code: "ACCOUNT_QUOTA_EXCEEDED",
+      cid: 2,
+    })
+    expect((await putSnapshotRaw(h, owner, await token(owner, "edit"), 1)).status).toBe(507)
+    const view = await joinAs(h, owner, "view")
+    expect(view.welcome.head).toBe(1)
+    lapsed.client.close()
+    view.client.close()
+
+    account.plan = true
+    const renewed = await joinAs(h, owner, "edit")
+    expect(h.relay.db.accountLimit("acct-a")).toBeNull()
+    renewed.client.send({ type: "append", cid: 3, env: await update(owner, "back") })
+    expect((await renewed.client.next("ack")).cid).toBe(3)
+    renewed.client.close()
+  })
+
+  test("the policy is asked last: a bad cert, a replayed nonce or a full relay never reach it", async () => {
+    const t = testPolicy()
+    t.devices.set(DEVICE, { id: "acct-a", plan: true, limit: null })
+    const h = external(t.policy, { maxRooms: 1 })
+    const owner = await makeOwner(1, Math.floor(h.clock.now / 1000))
+    const stranger = await makeOwner(1, Math.floor(h.clock.now / 1000))
+    const badCert = await admin(h, owner, {
+      op: "register",
+      rootPub: toBase64Url(owner.rootPub),
+      cert: toBase64Url(stranger.cert.bytes),
+    })
+    expect(await code(badCert)).toBe("AUTH_INVALID")
+    expect(t.registers).toHaveLength(0)
+
+    const nonce = new Uint8Array(16).fill(7)
+    const body = {
+      op: "register",
+      rootPub: toBase64Url(owner.rootPub),
+      cert: toBase64Url(owner.cert.bytes),
+    } as const
+    expect((await admin(h, owner, body, { nonce })).status).toBe(201)
+    expect(t.registers).toHaveLength(1)
+    expect(await code(await admin(h, owner, body, { nonce }))).toBe("NONCE_REPLAY")
+    expect(t.registers).toHaveLength(1)
+
+    const full = await register(h, stranger)
+    expect(await code(full)).toBe("RELAY_FULL")
+    expect(t.registers).toHaveLength(1)
+  })
+
+  test("a room registered before the switch to external is not asked about on a repeat", async () => {
+    const t = testPolicy()
+    const h = external(t.policy)
+    const owner = await makeOwner(1, Math.floor(h.clock.now / 1000))
+    h.relay.db.insertRoom({
+      id: owner.room.id,
+      rootPub: owner.rootPub,
+      kid: owner.cert.kid,
+      linkPub: owner.cert.linkPub,
+      cert: owner.cert.bytes,
+      at: h.clock.now,
+    })
+    // No account for this device: asking the policy would answer NOT_OWNER.
+    expect((await register(h, owner)).status).toBe(200)
+    expect(t.registers).toHaveLength(0)
+    expect(h.relay.db.getRoom(owner.room.id)?.account).toBeNull()
   })
 
   test("a lapsed account cannot write blobs; existing rooms keep their other routes", async () => {
@@ -374,6 +490,7 @@ describe("owner policy: configuration and loading", () => {
           .map((column) => column.name)
         expect(columns).toContain("account")
         expect(db.accountBytes("acct-a")).toBe(0)
+        expect(db.accountLimit("acct-a")).toBeNull()
       } finally {
         db.close()
       }

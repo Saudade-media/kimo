@@ -74,6 +74,13 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
       return relay.closeSocket(ws, codeOf(error))
     }
     if (ws.readyState !== 1) return
+    // An editor joining a room with an account refreshes the account's limit (§14.12), so a
+    // lapsed plan turns the account read-only without waiting for a blob upload.
+    if (verified.token.role === "edit") {
+      const before = relay.db.getRoom(data.room)
+      if (before && before.closed_at === null) await relay.owner.join(before)
+      if (ws.readyState !== 1) return
+    }
     // The room may have been closed, rotated or the token revoked while the signature was checked.
     const row = relay.db.getRoom(data.room)
     if (!row || row.closed_at !== null) return relay.closeSocket(ws, "ROOM_CLOSED")
@@ -130,8 +137,11 @@ export function websocketHandlers(relay: Relay): WebSocketHandler<SocketData> {
     const row = relay.db.getRoom(room.id)
     if (!row || row.closed_at !== null) return relay.closeSocket(ws, "ROOM_CLOSED")
     if (row.log_bytes > relay.config.logMaxBytes) return relay.closeSocket(ws, "LOG_FULL")
-    if (row.blob_bytes + row.snapshot_bytes + row.log_bytes + env.length > relay.quotaFor(row))
+    const after = row.blob_bytes + row.snapshot_bytes + row.log_bytes + env.length
+    if (after > relay.quotaFor(row))
       return deny(ws, "QUOTA_EXCEEDED", cid, "room storage quota exceeded")
+    if (relay.accountOver(row, after))
+      return deny(ws, "ACCOUNT_QUOTA_EXCEEDED", cid, "account storage quota exceeded")
     const seq = relay.append(room, ws, env)
     relay.afterAppend(room, ws, cid, seq, env)
   }

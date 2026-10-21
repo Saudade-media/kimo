@@ -148,16 +148,23 @@ export default {
 } satisfies OwnerPolicyModule
 ```
 
-- `register({ relayId, room, devicePub, state })` runs on every room registration, after the relay
-  has checked that the device signed it. Answer `{ allow: true, account, storageLimitBytes }`, or
+- `register({ relayId, room, devicePub, state })` runs on a room registration that passed every
+  other check (device signature, certificate, nonce, room cap). Answer
+  `{ allow: true, account, storageLimitBytes }`, or
   `{ allow: false, code: "NOT_OWNER" | "PLAN_REQUIRED", message }`. The relay stores the account on
-  the room.
+  the room. A repeat for a room created before the switch to `external` (no account) is not asked.
 - `write({ relayId, room, account, bytes })` runs before a new blob is stored in a room that has an
-  account, with the same answers minus `account`.
+  account, and with `bytes` 0 when an editor joins such a room, with the same answers minus
+  `account`.
 - `storageLimitBytes` caps the account's stored bytes over its open rooms (log, snapshots and
-  blobs, the same counts as the room quota); leave it out for no limit. Past it, new rooms and
-  blob uploads answer `ACCOUNT_QUOTA_EXCEEDED`; editing keeps working within each room's quota.
-- A throw, a malformed answer or no answer within 10 seconds fails the request with `INTERNAL`.
+  blobs, the same counts as the room quota); leave it out for no limit. The relay keeps the latest
+  answer per account and checks it on every write: past it, new rooms, edits, snapshots and blob
+  uploads answer `ACCOUNT_QUOTA_EXCEEDED`. A `write` denial records a limit of 0, which makes the
+  account's rooms read-only (they still open and sync to viewers) until an answer allows again.
+- Calls are questions, not commits: a register the module allowed can still fail, and closes are
+  not reported. Keep limits in your answers rather than counting calls.
+- A throw, a malformed answer or no answer within 10 seconds fails the request with `INTERNAL`
+  (the join refresh keeps the previous limit instead).
 - In this mode `/version` reports `owner: "external"`, every `POST /owner` answers
   `OWNER_EXTERNAL`, and `KIMO_OWNER_KEY` and `KIMO_RESET_OWNER` do nothing.
 

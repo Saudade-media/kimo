@@ -164,14 +164,32 @@ export class Relay {
   }
 
   /**
-   * Throws `ACCOUNT_QUOTA_EXCEEDED` when `adding` more bytes would take the account past its limit
-   * (§14.12). A new room adds nothing yet, so it is refused only once the account is full.
+   * Whether an open `room` holding `roomBytes` after a write would take its account past the limit
+   * its owner policy last gave (§14.12). Callers pass the same count the room quota checks, so a
+   * snapshot leaves the log out as it does there.
    */
-  checkAccountStorage(grant: RoomGrant, adding: number): void {
-    const { account, storageLimitBytes: limit } = grant
-    if (account === null || limit === null) return
-    const used = this.db.accountBytes(account)
-    if (adding === 0 ? used >= limit : used + adding > limit)
+  accountOver(room: RoomRow, roomBytes: number): boolean {
+    if (room.account === null) return false
+    const limit = this.db.accountLimit(room.account)
+    if (limit === null) return false
+    const current = room.log_bytes + room.snapshot_bytes + room.blob_bytes
+    return this.db.accountBytes(room.account) - current + roomBytes > limit
+  }
+
+  /** Throws `ACCOUNT_QUOTA_EXCEEDED` when {@link accountOver}. */
+  checkAccountStorage(room: RoomRow, roomBytes: number): void {
+    if (this.accountOver(room, roomBytes))
+      throw new MultiplayerError("ACCOUNT_QUOTA_EXCEEDED", "account storage quota exceeded")
+  }
+
+  /**
+   * Throws `ACCOUNT_QUOTA_EXCEEDED` when a room is about to be created or reopened for an account
+   * already at or over its limit (§14.12). The new room holds nothing yet.
+   */
+  checkAccountRoom(grant: RoomGrant): void {
+    if (grant.account === null) return
+    const limit = this.db.accountLimit(grant.account)
+    if (limit !== null && this.db.accountBytes(grant.account) >= limit)
       throw new MultiplayerError("ACCOUNT_QUOTA_EXCEEDED", "account storage quota exceeded")
   }
 

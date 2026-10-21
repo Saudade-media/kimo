@@ -156,6 +156,12 @@ CREATE TABLE IF NOT EXISTS pairings_used (
   jti BLOB PRIMARY KEY,
   exp INTEGER NOT NULL
 ) STRICT, WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS accounts (
+  account       TEXT PRIMARY KEY,
+  storage_limit INTEGER,
+  at            INTEGER NOT NULL
+) STRICT, WITHOUT ROWID;
 `
 
 export class RelayDb {
@@ -183,8 +189,8 @@ export class RelayDb {
       )
     // Every statement is CREATE IF NOT EXISTS: the ownership tables joined version 1 before
     // multiplayer shipped (ADR 0017), so a development database from before them gains them here.
-    // `rooms.account` joined version 1 the same way (ADR 0018); a development table made before it
-    // gains the column first, since the index below names it.
+    // `rooms.account` and `accounts` joined version 1 the same way (ADR 0018); a development table
+    // made before the column gains it first, since the index below names it.
     const rooms = this.sqlite
       .query<{ name: string }, []>("SELECT name FROM pragma_table_info('rooms')")
       .all()
@@ -255,6 +261,23 @@ export class RelayDb {
       )
       .get(account)
     return row?.n ?? 0
+  }
+
+  /** The storage limit the owner policy last gave the account (§14.12); null: none recorded. */
+  accountLimit(account: string): number | null {
+    const row = this.sqlite
+      .query<{ storage_limit: number | null }, [string]>(
+        "SELECT storage_limit FROM accounts WHERE account = ?",
+      )
+      .get(account)
+    return row?.storage_limit ?? null
+  }
+
+  /** Records the account's storage limit from the latest policy answer; null for no limit. */
+  setAccountLimit(account: string, limit: number | null, at: number): void {
+    this.sqlite
+      .query("INSERT OR REPLACE INTO accounts (account, storage_limit, at) VALUES (?, ?, ?)")
+      .run(account, limit, at)
   }
 
   setLinkKey(id: string, kid: number, linkPub: Uint8Array, cert: Uint8Array): void {

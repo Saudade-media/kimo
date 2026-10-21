@@ -288,6 +288,7 @@ export function createFetchHandler(relay: Relay) {
     const retained = cur ? cur.bytes : 0
     if (room.blob_bytes + retained + env.length > relay.quotaFor(room))
       fail("QUOTA_EXCEEDED", "room storage quota exceeded")
+    relay.checkAccountStorage(room, room.blob_bytes + retained + env.length)
     const gen = db.putSnapshot(roomId, upTo, carries, relay.now(), env)
     relay.snapshotAccepted(roomId, { upTo, gen, bytes: env.length }, carries)
     return json({ gen, upTo }, 201)
@@ -313,21 +314,15 @@ export function createFetchHandler(relay: Relay) {
       fail("BAD_REQUEST", "not a blob envelope")
     const bytesWait = relay.blobBytesLimiter.take(roomId, relay.now(), body.length)
     if (bytesWait > 0) fail("RATE_LIMITED", "too many upload bytes", bytesWait)
-    // A room with an account asks the owner policy for that account's limit (§14.12).
+    // A room with an account asks the owner policy, which records the account's limit (§14.12).
     const before = db.getRoom(roomId)
     const account = before?.account ?? null
-    const limit =
-      before && account !== null
-        ? await relay.owner.write({ ...before, account }, body.length)
-        : null
+    if (before && account !== null) await relay.owner.write({ ...before, account }, body.length)
     // The room may have been closed, or the link revoked or reset, while the body was uploading.
     const fresh = recheckToken(db, verified, Math.floor(relay.now() / 1000))
-    if (
-      fresh.blob_bytes + fresh.snapshot_bytes + fresh.log_bytes + body.length >
-      relay.quotaFor(fresh)
-    )
-      fail("QUOTA_EXCEEDED", "room storage quota exceeded")
-    relay.checkAccountStorage({ account: fresh.account, storageLimitBytes: limit }, body.length)
+    const after = fresh.blob_bytes + fresh.snapshot_bytes + fresh.log_bytes + body.length
+    if (after > relay.quotaFor(fresh)) fail("QUOTA_EXCEEDED", "room storage quota exceeded")
+    relay.checkAccountStorage(fresh, after)
     relay.blobs.put(roomId, id, body)
     try {
       if (db.getBlob(roomId, id)) db.clearUnref(roomId, id)

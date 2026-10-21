@@ -4,7 +4,8 @@
  * `relay.sqlite` (`./owners`), unchanged. `external` hands the register decision to a module the
  * operator names in `KIMO_OWNER_POLICY_MODULE`: it says whether a device may create a room, for
  * which account, and how many bytes that account may store. The relay records the account on the
- * room and enforces the limit from its own byte counts; owner commands answer `OWNER_EXTERNAL`.
+ * room and the limit on the account, and enforces it from its own byte counts on every write (log
+ * append, snapshot, blob); owner commands answer `OWNER_EXTERNAL`.
  */
 import { pathToFileURL } from "node:url"
 import {
@@ -33,12 +34,15 @@ export interface RegisterRequest {
   state: "new" | "open" | "closed"
 }
 
-/** What the relay asks before storing a blob in a room that has an account. */
+/**
+ * What the relay asks before storing a blob in a room that has an account, and (with `bytes` 0)
+ * when an editor joins such a room, to refresh the account's limit.
+ */
 export interface WriteRequest {
   relayId: string
   room: string
   account: string
-  /** Envelope bytes about to be stored. */
+  /** Envelope bytes about to be stored; 0 for the refresh as an editor joins. */
   bytes: number
 }
 
@@ -67,10 +71,9 @@ export interface OwnerPolicyModule {
   write(request: WriteRequest): WriteDecision | Promise<WriteDecision>
 }
 
-/** A register the policy allowed: the room's account and that account's limit (null: none). */
+/** A register the policy allowed: the account to record on a new or reopened room (null: none). */
 export interface RoomGrant {
   account: string | null
-  storageLimitBytes: number | null
 }
 
 /** The relay's owner checks, behind one interface (§14.12). */
@@ -78,10 +81,23 @@ export interface OwnerPolicy {
   readonly mode: "devices" | "external"
   /** The `/version` `owner` field. */
   status(): "unclaimed" | "claimed" | "external"
-  /** The register owner check (§6), after the root signature and freshness. */
-  register(command: AdminCommand, rootPub: Uint8Array, row: RoomRow | null): Promise<RoomGrant>
-  /** The account's storage limit before a blob write into `room` (which has an account). */
-  write(room: RoomRow & { account: string }, bytes: number): Promise<number | null>
+  /** The register owner proof (§6), after the root signature and freshness, before the cert. */
+  register(command: AdminCommand, rootPub: Uint8Array): Promise<void>
+  /**
+   * The room's account, asked last: after the owner proof, the certificate, the nonce and the
+   * room checks, so only a register that would otherwise commit is asked about.
+   */
+  grant(command: AdminCommand, row: RoomRow | null): Promise<RoomGrant>
+  /**
+   * Before a blob write into `room` (which has an account): records the account's limit, or
+   * throws the denial after recording the account read-only (limit 0).
+   */
+  write(room: RoomRow & { account: string }, bytes: number): Promise<void>
+  /**
+   * As an editor joins `room`: refreshes its account's limit like `write` with no bytes. Never
+   * throws: a module that fails or does not answer leaves the recorded limit as it was.
+   */
+  join(room: RoomRow): Promise<void>
   /** `POST /owner` (§6.1). */
   owner(bytes: Uint8Array): Promise<OwnerResult>
 }
@@ -93,9 +109,10 @@ export function devicesPolicy(relay: Relay): OwnerPolicy {
     status: () => (relay.db.countOwners() === 0 ? "unclaimed" : "claimed"),
     async register(command, rootPub) {
       await checkRegisterOwner(relay, command, rootPub)
-      return { account: null, storageLimitBytes: null }
     },
-    write: async () => null,
+    grant: async () => ({ account: null }),
+    write: async () => {},
+    join: async () => {},
     owner: (bytes) => runOwner(relay, bytes),
   }
 }
@@ -150,10 +167,32 @@ function allowed(decision: unknown, what: string): Record<string, unknown> {
  */
 export function externalPolicy(relay: Relay, module: OwnerPolicyModule): OwnerPolicy {
   const relayId = () => toBase64Url(relay.relayId)
+  const record = (account: string, limit: number | null) =>
+    relay.db.setAccountLimit(account, limit, relay.now())
+  const write = async (room: RoomRow & { account: string }, bytes: number) => {
+    let decision: Record<string, unknown>
+    try {
+      decision = allowed(
+        await bounded(
+          module.write({ relayId: relayId(), room: room.id, account: room.account, bytes }),
+        ),
+        "write decision",
+      )
+    } catch (error) {
+      // A denial makes the account read-only until the module next allows (ADR 0018 decision 8).
+      if (
+        error instanceof MultiplayerError &&
+        (error.code === "NOT_OWNER" || error.code === "PLAN_REQUIRED")
+      )
+        record(room.account, 0)
+      throw error
+    }
+    record(room.account, limitOf(decision.storageLimitBytes))
+  }
   return {
     mode: "external",
     status: () => "external",
-    async register(command, rootPub, row) {
+    async register(command, rootPub) {
       const owner = command.body.owner as { pub: string; sig: string } | undefined
       if (owner === undefined) throw new MultiplayerError("NOT_OWNER", "missing owner proof")
       if (!isDevicePub(owner.pub)) throw new MultiplayerError("NOT_OWNER", "bad owner proof key")
@@ -165,6 +204,12 @@ export function externalPolicy(relay: Relay, module: OwnerPolicyModule): OwnerPo
         rootPub,
       })
       if (!ok) throw new MultiplayerError("AUTH_INVALID", "bad owner proof")
+    },
+    async grant(command, row) {
+      const owner = command.body.owner as { pub: string }
+      // A repeat for an open room without an account (registered before the switch to external)
+      // changes nothing, so the module is not asked about it.
+      if (row && row.closed_at === null && row.account === null) return { account: null }
       const state = !row ? "new" : row.closed_at === null ? "open" : "closed"
       const decision = allowed(
         await bounded(
@@ -180,16 +225,14 @@ export function externalPolicy(relay: Relay, module: OwnerPolicyModule): OwnerPo
       const account = decision.account
       if (typeof account !== "string" || account.length < 1 || account.length > MAX_ACCOUNT_LENGTH)
         throw malformed("account")
-      return { account, storageLimitBytes: limitOf(decision.storageLimitBytes) }
+      record(account, limitOf(decision.storageLimitBytes))
+      return { account }
     },
-    async write(room, bytes) {
-      const decision = allowed(
-        await bounded(
-          module.write({ relayId: relayId(), room: room.id, account: room.account, bytes }),
-        ),
-        "write decision",
-      )
-      return limitOf(decision.storageLimitBytes)
+    write,
+    async join(room) {
+      const { account } = room
+      if (account === null) return
+      await write({ ...room, account }, 0).catch(() => {})
     },
     owner: async () => {
       throw new MultiplayerError("OWNER_EXTERNAL", "this relay's owners are managed outside Kimo")

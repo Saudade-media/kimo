@@ -273,9 +273,12 @@ rotate, close and sweep stay root-key only, so a room keeps working after the de
 it is removed.
 
 Under the `external` owner policy (§14.12) there is no owner set: `owner` missing or `owner.pub`
-not a device key is `403 NOT_OWNER`, a proof that does not verify is `401 AUTH_INVALID`, and then
-the policy module decides (`403 NOT_OWNER`, `402 PLAN_REQUIRED`, or the room's account). Creating
-or reopening a room for an account already at its storage limit is `507 ACCOUNT_QUOTA_EXCEEDED`.
+not a device key is `403 NOT_OWNER`, and a proof that does not verify is `401 AUTH_INVALID`. The
+policy module is asked last, after the certificate, the nonce and the room checks
+(`400 BAD_REQUEST` for another key, `422 KEY_ID_INVALID`, `503 RELAY_FULL`), so it hears only
+about a register that would otherwise commit; it decides `403 NOT_OWNER`, `402 PLAN_REQUIRED`, or
+the room's account. Creating or reopening a room for an account already at its storage limit is
+`507 ACCOUNT_QUOTA_EXCEEDED`.
 
 ### 6.1 Owner commands
 
@@ -525,6 +528,8 @@ client types (`BAD_MESSAGE`).
   store or forward.
 - On `append` with an envelope over `maxEntryBytes` (but within the frame limit): `denied`
   (`TOO_LARGE`, with the `cid`). Over the frame limit Bun closes with 1009.
+- On `append` past the room quota: `denied` (`QUOTA_EXCEEDED`, with the `cid`); past the room's
+  account limit (§14.12): `denied` (`ACCOUNT_QUOTA_EXCEEDED`, with the `cid`).
 - On `awareness`: drop if `clock` is not greater than the last one from this connection or the
   connection exceeds `awarenessHz` (no reply), deny `TOO_LARGE` over 16 KiB, else cache it and
   publish `awareness` with the sender's `peer` to the other sockets.
@@ -554,7 +559,7 @@ status from §13. `429` and `503` carry `retry-after` (seconds).
 | `POST /room/<room>/admin` | admin signature (§6), plus the owner proof for register | Body: admin command bytes | Per op (§6); `400 BAD_REQUEST`, `401 AUTH_INVALID` (signature or owner proof), `403 RELAY_UNCLAIMED`, `403 NOT_OWNER`, `404 ROOM_NOT_FOUND` (non-register on unknown room), `409 NONCE_REPLAY`, `410 ROOM_CLOSED` (non-register on closed room), `413 TOO_LARGE`, `422 ROOM_ID_MISMATCH`, `422 STALE_REQUEST`, `422 KEY_ID_INVALID` (rotate with a non-increasing kid), `429`, `503 RELAY_FULL` (room cap); under the `external` owner policy also `402 PLAN_REQUIRED` and `507 ACCOUNT_QUOTA_EXCEEDED` (§14.12) |
 | `GET /room/<room>` | view or edit | | `200 {"room","kid","head","base","snapshot":{"upTo","gen","bytes"}|null,"usedBytes","quotaBytes","peers":n}` |
 | `GET /room/<room>/snapshot` | view or edit | | `200` `application/octet-stream` envelope with headers `kimo-up-to`, `kimo-gen`; `404 NOT_FOUND` when there is none |
-| `PUT /room/<room>/snapshot?upTo=<n>[&carries=1]` | edit | Body: snapshot envelope | `201 {"gen","upTo"}`; `400 BAD_REQUEST`; `409 SNAPSHOT_STALE`; `413 TOO_LARGE`; `422 SNAPSHOT_AHEAD`; `507 QUOTA_EXCEEDED` |
+| `PUT /room/<room>/snapshot?upTo=<n>[&carries=1]` | edit | Body: snapshot envelope | `201 {"gen","upTo"}`; `400 BAD_REQUEST`; `409 SNAPSHOT_STALE`; `413 TOO_LARGE`; `422 SNAPSHOT_AHEAD`; `507 QUOTA_EXCEEDED`; for a room with an account (§14.12) also `507 ACCOUNT_QUOTA_EXCEEDED` |
 | `PUT /blob/<room>/<id>` | edit | Body: blob envelope | `201` stored, `200` already present (body ignored, mark cleared); `400 BAD_REQUEST` (id grammar); `413 TOO_LARGE`; `429 RATE_LIMITED`; `507 QUOTA_EXCEEDED`; for a room with an account (§14.12) also `402 PLAN_REQUIRED` and `507 ACCOUNT_QUOTA_EXCEEDED` |
 | `HEAD /blob/<room>/<id>` | view or edit | | `200` with `content-length`; `404` |
 | `GET /blob/<room>/<id>` | view or edit | | `200` `application/octet-stream`, `cache-control: private, max-age=31536000, immutable`; `404 NOT_FOUND` |
@@ -669,6 +674,12 @@ CREATE TABLE rooms (
 ) STRICT;
 
 CREATE INDEX rooms_account ON rooms(account) WHERE account IS NOT NULL;
+
+CREATE TABLE accounts (                     -- external owner policy only (§14.12)
+  account       TEXT PRIMARY KEY,
+  storage_limit INTEGER,                    -- bytes from the latest policy answer; NULL = no limit
+  at            INTEGER NOT NULL            -- ms of that answer
+) STRICT, WITHOUT ROWID;
 
 CREATE TABLE log (
   room   TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -901,28 +912,47 @@ The module default-exports an `OwnerPolicyModule` (§17.C) with two methods, eac
 
 | Call | When | Request | Answer |
 |---|---|---|---|
-| `register` | Every register, after the owner proof verifies (§6) | `{relayId, room, devicePub, state}`; `state` is `new`, `open` (an idempotent repeat) or `closed` (a reopen) | `{allow: true, account, storageLimitBytes?}` or `{allow: false, code: "NOT_OWNER" \| "PLAN_REQUIRED", message?}` |
-| `write` | Before storing a new blob in a room that has an account | `{relayId, room, account, bytes}` | `{allow: true, storageLimitBytes?}` or a denial as above |
+| `register` | A register that passed every other check (§6): owner proof, certificate, nonce, room state and `RELAY_FULL` | `{relayId, room, devicePub, state}`; `state` is `new`, `open` (an idempotent repeat) or `closed` (a reopen) | `{allow: true, account, storageLimitBytes?}` or `{allow: false, code: "NOT_OWNER" \| "PLAN_REQUIRED", message?}` |
+| `write` | Before storing a new blob in a room that has an account, and with `bytes` 0 when an `edit` token joins such a room (on `hello`, before `welcome`) | `{relayId, room, account, bytes}` | `{allow: true, storageLimitBytes?}` or a denial as above |
 
 `relayId` and `devicePub` are base64url, `room` the room id. `account` is an opaque string of 1
 to 256 characters that the relay stores on the room (`rooms.account`, set on create and on
 reopen; an idempotent repeat keeps the stored one). `storageLimitBytes` is a non-negative integer,
 or null or absent for no limit. A denial answers its code; anything else (a malformed answer, a
-throw, no answer within 10 s) is `500 INTERNAL` and stores nothing.
+throw, no answer within 10 s) is `500 INTERNAL` and stores nothing. The join refresh never fails
+the join: a malformed answer, a throw or a timeout there keeps the recorded limit.
 
-**Account storage.** An account's usage is the sum of `log_bytes + snapshot_bytes + blob_bytes`
-over its open rooms, the same counts the room quota uses, so closing a room frees its bytes. The
-relay checks it in the same synchronous step as the room quota:
+A call is a question, not a commit: a register the module allowed can still fail
+(`ACCOUNT_QUOTA_EXCEEDED`, or a concurrent register of the same room), and the relay reports
+neither commits nor closes. A module should therefore not count rooms from its calls; the relay
+enforces the limit it answers from its own counts.
+
+**Account storage.** Every allowed answer records its `storageLimitBytes` as the account's limit
+(`accounts`), replacing the previous one; a `write` denial records a limit of 0. An account's
+usage is the sum of `log_bytes + snapshot_bytes + blob_bytes` over its open rooms, the same counts
+the room quota uses, so closing a room frees its bytes. The relay checks the recorded limit in the
+same synchronous step as the room quota, on every write:
 
 - Register that creates or reopens a room: refused with `507 ACCOUNT_QUOTA_EXCEEDED` when usage is
-  already at or over the limit (after `RELAY_FULL`).
+  already at or over the limit (after `RELAY_FULL` and the policy's answer).
+- Log append: `denied` (`ACCOUNT_QUOTA_EXCEEDED`, with the `cid`, §11.3) when usage plus the entry
+  would pass the limit.
+- Snapshot `PUT`: refused with `507 ACCOUNT_QUOTA_EXCEEDED` when usage, with this room counted as
+  the room quota counts it for a snapshot (blobs, the retained generation and the new one), would
+  pass the limit.
 - Blob `PUT` that stores new bytes: refused with `507 ACCOUNT_QUOTA_EXCEEDED` when usage plus the
   envelope would pass the limit (after the room quota). A blob already present asks nothing.
 
-Log appends and snapshots are held only by the room quota, so a room whose account lapsed or
-filled keeps syncing; ADR 0018 decision 8 (grace, then read-only) is the module's to apply through
-its answers. Rooms registered before a relay switched to `external` have no account and are
-never asked about.
+So the limit bounds the account's bytes however many rooms it holds, and ADR 0018 decision 8
+(grace, then read-only) is the module's to apply: during the grace it keeps allowing, and after it
+answers a denial (or a limit of 0). From the next editor join or blob upload in any of the
+account's rooms, every write in all of them is refused while reads, joins and view links keep
+working. An allowed answer later lifts it.
+
+Rooms registered before a relay switched to `external` have no account: a repeat register for one
+changes nothing and does not ask the module, and their writes are held only by the room quota.
+Reopening one after a close asks the module (`state: closed`) and records the account it
+answers.
 
 ## 15. Client provider behaviour
 
@@ -1782,7 +1812,7 @@ export interface RelayInfo {
   protocol: typeof PROTOCOL
   limits: RelayLimits
   relayId: Uint8Array
-  owner: "unclaimed" | "claimed"
+  owner: "unclaimed" | "claimed" | "external"
 }
 export interface OwnerDevice {
   pub: string
@@ -2040,7 +2070,7 @@ export interface WriteRequest {
   relayId: string
   room: string
   account: string
-  bytes: number
+  bytes: number // 0 for the refresh as an editor joins
 }
 export interface PolicyDenial {
   allow: false
@@ -2359,13 +2389,18 @@ WebSockets from Bun, with tokens and admin commands made by module A.
   the account; `NOT_OWNER` and `PLAN_REQUIRED` from the policy, while a missing proof
   (`NOT_OWNER`) or a bad one (`AUTH_INVALID`) never reaches it; claim, devices and pair answer
   `OWNER_EXTERNAL`; the account limit spans its rooms for blob writes and new rooms
-  (`ACCOUNT_QUOTA_EXCEEDED`) and another account is unaffected; a lapsed account's blob write is
-  `PLAN_REQUIRED`; close frees the account's bytes and reopen records the new account; malformed
+  (`ACCOUNT_QUOTA_EXCEEDED`) and another account is unaffected; log appends and snapshots count
+  against it too, so empty rooms registered first cannot multiply it, and an editor join refreshes
+  the limit (`write` with 0 bytes); a lapsed plan makes the account read-only at the next editor
+  join (appends denied, snapshots refused, view joins still work) and a renewed one lifts it; the
+  policy is asked last, so a bad certificate, a replayed nonce or `RELAY_FULL` never reach it; a
+  repeat register for a room from before the switch to `external` does not ask the policy; a
+  lapsed account's blob write is `PLAN_REQUIRED`; close frees the account's bytes and reopen records the new account; malformed
   answers and a throwing module are `INTERNAL`; `devices` stays the default with NULL accounts.
   Config: `KIMO_OWNER_POLICY` values and its pairing with `KIMO_OWNER_POLICY_MODULE`; a relay
   whose config names a module refuses to start without it; `loadOwnerPolicy` imports a default
   export and rejects other shapes and missing files; a development database gains
-  `rooms.account`.
+  `rooms.account` and `accounts`.
 - `blind.test.ts`: the relay never imports `yjs` or `@kimo/editor-state` (check the module graph
   of `src/index.ts`), and the stored log and blob bytes never contain a plaintext marker string
   that the test's clients encrypted.

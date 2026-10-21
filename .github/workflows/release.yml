@@ -52,7 +52,7 @@ jobs:
       prerelease: ${{ steps.version.outputs.prerelease }}
       release_id: ${{ steps.draft.outputs.release_id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -117,7 +117,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Linux system libraries
         if: runner.os == 'Linux'
         run: |
@@ -247,7 +247,7 @@ jobs:
           updaterJsonPreferNativeAssets: true
 
       - name: keep the bundles as workflow artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.target }}
           path: apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle
@@ -261,7 +261,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -271,7 +271,7 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: tar -C apps/web/dist -czf "kimo-web-$VERSION.tar.gz" .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: kimo-web-${{ needs.prepare.outputs.version }}
           path: apps/web/dist
@@ -289,7 +289,7 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json

@@ -69,12 +69,12 @@ yoga-layout 3.2.1               MIT
   https://github.com/facebook/yoga
   Used by: @kimo/layout (M1)
 
-lucide-react 1.49.0             ISC
+lucide-react 1.59.0             ISC
   Copyright (c) Lucide Contributors
   https://github.com/lucide-icons/lucide
   Used by: @kimo/ui, @kimo/web (M1)
 
-lucide-static 1.49.0            ISC (and MIT for the Feather-derived icons)
+lucide-static 1.59.0            ISC (and MIT for the Feather-derived icons)
   Copyright (c) 2026 Lucide Icons and Contributors
   Icons derived from the Feather project: Copyright (c) 2013-present Cole Bemis,
   MIT License (the list of those icons is in the licence file below)

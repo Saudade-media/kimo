@@ -14,7 +14,7 @@
     "test": "../../scripts/safe-test.sh test"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.131.0",
+    "@anthropic-ai/sdk": "0.135.0",
     "@kimo/core-schema": "workspace:*",
     "@kimo/mcp-server": "workspace:*"
   },

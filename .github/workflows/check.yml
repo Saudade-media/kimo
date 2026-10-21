@@ -39,7 +39,7 @@ jobs:
         run: bun run check:examples
       - name: build web app
         run: bun run --filter @kimo/web build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: apps/web/dist
@@ -111,7 +111,7 @@ jobs:
           grep '↻' "$log" | sed 's/^ *↻ //' | while IFS= read -r line; do
             echo "::warning title=flaky e2e scenario::${line}"
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-report
@@ -152,7 +152,7 @@ jobs:
           fi
       - name: box diff (exported HTML vs layout, every fixture)
         run: bun run --filter @kimo/exporters verify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: exporters-boxdiff

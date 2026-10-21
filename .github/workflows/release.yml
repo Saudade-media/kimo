@@ -247,7 +247,7 @@ jobs:
           updaterJsonPreferNativeAssets: true
 
       - name: keep the bundles as workflow artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.target }}
           path: apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle
@@ -271,7 +271,7 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: tar -C apps/web/dist -czf "kimo-web-$VERSION.tar.gz" .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: kimo-web-${{ needs.prepare.outputs.version }}
           path: apps/web/dist

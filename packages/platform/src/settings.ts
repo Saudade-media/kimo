@@ -31,7 +31,8 @@ export const RECENT_MODELS_MAX = 2
 /** Every setting with its value type. */
 /** `multiplayer.relaySetup` (read leniently by the web app's relay setup store). */
 export interface RelaySetupSetting {
-  path?: "local" | "docker" | "fly" | "railway" | "existing" | null
+  /** `cloud`: Kimo Cloud, the hosted relay (board 43, ADR 0018). */
+  path?: "cloud" | "local" | "docker" | "fly" | "railway" | "existing" | null
   extraOrigins?: string[]
   local?: { port?: number; reach?: "lan" | "quick" | "named"; hostname?: string | null } | null
   fly?: { app?: string; region?: string; byKimo?: boolean } | null
@@ -81,6 +82,11 @@ export interface SettingsSchema {
    * allowed origins and, for This computer, port, tunnel and hostname.
    */
   "multiplayer.relaySetup": RelaySetupSetting | null
+  /**
+   * Multiplayer › Kimo Cloud API origin, for development (board 43): null uses the build's
+   * `VITE_KIMO_CLOUD_API_URL` (default `https://cloud.getkimo.design`).
+   */
+  "multiplayer.cloudApiUrl": string | null
   /** Fonts & privacy › Google Fonts (off while No third-party fetch is on). */
   "fonts.google": boolean
   /** Fonts & privacy › Extra font folders (absolute paths). */
@@ -136,6 +142,7 @@ export const SETTINGS_DEFAULTS: Readonly<Settings> = Object.freeze({
   "multiplayer.showCursors": true,
   "multiplayer.fetchAssets": true,
   "multiplayer.relaySetup": null,
+  "multiplayer.cloudApiUrl": null,
   "fonts.google": true,
   "fonts.extraFolders": [],
   "fonts.embedInKimoz": true,
@@ -196,6 +203,8 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => v is SettingsSchema[K] } 
   "multiplayer.fetchAssets": (v): v is boolean => typeof v === "boolean",
   "multiplayer.relaySetup": (v): v is RelaySetupSetting | null =>
     v === null || (typeof v === "object" && !Array.isArray(v) && JSON.stringify(v).length <= 8192),
+  "multiplayer.cloudApiUrl": (v): v is string | null =>
+    v === null || (typeof v === "string" && v !== "" && v.length <= 2048),
   "fonts.google": (v): v is boolean => typeof v === "boolean",
   "fonts.extraFolders": (v): v is string[] =>
     Array.isArray(v) && v.every((x) => typeof x === "string" && x !== ""),

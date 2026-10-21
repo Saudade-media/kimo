@@ -138,7 +138,11 @@ export function RelayWizard(props: RelayWizardProps) {
   // --- Draft --------------------------------------------------------------------------------------
   const [step, setStep] = useState<Step>("choose")
   const [path, setPath] = useState<RelayPath>(
-    setup.path && !(web && setup.path === "local") ? setup.path : web ? "docker" : "local",
+    setup.path && setup.path !== "cloud" && !(web && setup.path === "local")
+      ? setup.path
+      : web
+        ? "docker"
+        : "local",
   )
   const [extraOrigins, setExtraOrigins] = useState<string[]>(setup.extraOrigins)
   const [url, setUrl] = useState("")
@@ -1276,7 +1280,9 @@ export function RelayWizard(props: RelayWizardProps) {
                         ? "not claimed yet"
                         : r.owner === "yours"
                           ? "yours"
-                          : "not yours"}
+                          : r.owner === "external"
+                            ? "managed by its host"
+                            : "not yours"}
                     </span>
                   )}
                 </>

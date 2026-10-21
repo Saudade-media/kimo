@@ -9,9 +9,11 @@ import type { RelaySetupSetting, SettingsApi } from "@kimo/platform"
 import type { Reach } from "./local"
 
 export type RelayPath = "local" | "docker" | "fly" | "railway" | "existing"
+/** Where the saved relay runs: a self-host path, or Kimo Cloud (board 43). */
+export type RelayHome = RelayPath | "cloud"
 
 export interface RelaySetupState {
-  path: RelayPath | null
+  path: RelayHome | null
   extraOrigins: string[]
   local: { port: number; reach: Reach; hostname: string | null } | null
   /** A relay deployed on Fly.io; `byKimo` when Kimo ran the deploy with flyctl. */
@@ -25,14 +27,14 @@ export const EMPTY_SETUP: RelaySetupState = Object.freeze({
   fly: null,
 }) as RelaySetupState
 
-const PATHS: readonly RelayPath[] = ["local", "docker", "fly", "railway", "existing"]
+const PATHS: readonly RelayHome[] = ["cloud", "local", "docker", "fly", "railway", "existing"]
 const REACH: readonly Reach[] = ["lan", "quick", "named"]
 
 /** Reads `multiplayer.relaySetup` leniently: unknown or invalid fields fall back. */
 export function parseSetup(raw: RelaySetupSetting | null | undefined): RelaySetupState {
   if (!raw || typeof raw !== "object") return EMPTY_SETUP
   const str = (v: unknown) => (typeof v === "string" && v ? v : null)
-  const path = PATHS.includes(raw.path as RelayPath) ? (raw.path as RelayPath) : null
+  const path = PATHS.includes(raw.path as RelayHome) ? (raw.path as RelayHome) : null
   const extraOrigins = Array.isArray(raw.extraOrigins)
     ? raw.extraOrigins.filter((o): o is string => typeof o === "string" && o !== "").slice(0, 32)
     : []

@@ -25,6 +25,7 @@ pub fn defaults() -> Map<String, Value> {
         "multiplayer.showCursors": true,
         "multiplayer.fetchAssets": true,
         "multiplayer.relaySetup": null,
+        "multiplayer.cloudApiUrl": null,
         "fonts.google": true,
         "fonts.extraFolders": [],
         "fonts.embedInKimoz": true,
@@ -78,7 +79,7 @@ pub fn validate(key: &str, v: &Value) -> Option<bool> {
         "files.autosaveIntervalMs" | "files.recoverySnapshotMs" => positive_ms(v),
         "files.onExternalChange" => one_of(v, &["merge-and-tell", "ask"]),
         "files.newFilesDir" => v.is_null() || v.as_str().is_some_and(|s| !s.is_empty()),
-        "multiplayer.relayUrl" => {
+        "multiplayer.relayUrl" | "multiplayer.cloudApiUrl" => {
             v.is_null() || v.as_str().is_some_and(|s| !s.is_empty() && s.len() <= 2048)
         }
         "multiplayer.displayName" => v.as_str().is_some_and(|s| s.chars().count() <= 80),

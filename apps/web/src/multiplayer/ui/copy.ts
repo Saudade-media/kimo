@@ -319,6 +319,8 @@ export function ownerPill(
       return { tone: "muted", label: where === "popover" ? "Not set up yet" : "Not claimed yet" }
     case "other":
       return { tone: "warning", label: "Not yours" }
+    case "external":
+      return { tone: "success", label: where === "popover" ? "Managed relay" : "Managed" }
     default:
       return { tone: "success", label: relay }
   }

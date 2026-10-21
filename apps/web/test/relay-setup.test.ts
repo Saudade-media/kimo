@@ -336,6 +336,28 @@ describe("relay test", () => {
     expect(clock.pending()).toBe(0)
   })
 
+  test("external owner policy (Kimo Cloud): ok with nothing claimed or listed", async () => {
+    const clock = fakeClock()
+    let asked = 0
+    const r = await testRelaySetup(
+      "https://relay.maya.studio",
+      testDeps(clock, async () => info("external"), {
+        claim: async () => {
+          asked++
+        },
+        ownership: async () => {
+          asked++
+          return "other"
+        },
+      }),
+    )
+    expect(r.outcome).toBe("ok")
+    expect(r.owned).toBe("external")
+    expect(asked).toBe(0)
+    expect(r.checks.at(-1)).toEqual({ id: "ownership", status: "ok", meta: "by its host" })
+    expect(clock.pending()).toBe(0)
+  })
+
   test("already yours (KIMO_OWNER_KEY): nothing is claimed", async () => {
     const clock = fakeClock()
     let claims = 0

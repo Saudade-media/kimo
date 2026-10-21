@@ -29,8 +29,11 @@ export type RelayTestOutcome =
   | "too-old"
   | "not-yours"
 
-/** How the relay became this device's: claimed by this test, or already (pre-claimed). */
-export type RelayOwnedHow = "claimed" | "already"
+/**
+ * How the relay became this device's: claimed by this test, already (pre-claimed), or `external`
+ * (an owner policy decides who shares, spec §14.12: nothing to claim).
+ */
+export type RelayOwnedHow = "claimed" | "already" | "external"
 
 export interface RelaySetupTest {
   outcome: RelayTestOutcome
@@ -172,6 +175,11 @@ export async function testRelaySetup(
         ownership: { status: "running", meta: info.owner === "unclaimed" ? "claiming" : null },
       },
     )
+    if (info.owner === "external")
+      return set(
+        { outcome: "ok", owned: "external" },
+        { ownership: { status: "ok", meta: "by its host" } },
+      )
     try {
       if (info.owner === "unclaimed") {
         try {

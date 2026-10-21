@@ -1120,9 +1120,10 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
         if (existing) return summarize(existing)
         const relayUrl = normalizeRelayUrl(options.relayUrl)
         // Ownership before anything changes: claim an unclaimed relay, refuse another's (§16.9).
+        // An external owner policy (Kimo Cloud, §14.12) answers at register instead.
         const info = await ownership.probe(relayUrl)
         if (info.owner === "unclaimed") await ownership.claimRelay(relayUrl)
-        else await ownership.listDevices(relayUrl)
+        else if (info.owner !== "external") await ownership.listDevices(relayUrl)
 
         // Non-extractable wherever the registry can store CryptoKeys (script in the app origin
         // can then use the keys through the registry but never copy them out).

@@ -280,7 +280,8 @@ export type RelayTestState =
       protocol: string
       ms: number
       /**
-       * Whose relay it is (§16.9): `unclaimed`, `yours` or `other`; null when the model has no
+       * Whose relay it is (§16.9): `unclaimed`, `yours`, `other` or `external` (an owner policy
+       * decides, §14.12); null when the model has no
        * ownership check or it failed (Start sharing finds out then).
        */
       owner: RelayOwnerState | null
@@ -980,7 +981,8 @@ function createRelayTestModel(
       try {
         const info = await Promise.race([probe(url), timeout])
         const ms = Math.max(0, timers.now() - started)
-        let owner: RelayOwnerState | null = info.owner === "unclaimed" ? "unclaimed" : null
+        let owner: RelayOwnerState | null =
+          info.owner === "unclaimed" ? "unclaimed" : info.owner === "external" ? "external" : null
         if (info.owner === "claimed" && ownership)
           owner = await Promise.race([ownership(url), timeout]).catch(() => null)
         result = {

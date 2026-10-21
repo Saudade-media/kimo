@@ -25,7 +25,11 @@ import {
 } from "@kimo/sync/mp"
 import { type DeviceKeyStore, devicePubOf } from "./device-key"
 
-export type RelayOwnerState = "unclaimed" | "yours" | "other"
+/**
+ * `external`: an owner policy module decides who may share (spec §14.12, Kimo Cloud, ADR 0018):
+ * there is nothing to claim and no owner set to list or pair into.
+ */
+export type RelayOwnerState = "unclaimed" | "yours" | "other" | "external"
 
 export interface RelayDevice extends OwnerDevice {
   /** This install's key. */
@@ -143,6 +147,7 @@ export function createOwnershipClient(deps: OwnershipDeps): OwnershipClient {
       const url = normalizeRelayUrl(relayUrl)
       const info = await probe(url)
       if (info.owner === "unclaimed") return { relayUrl: url, state: "unclaimed", devices: null }
+      if (info.owner === "external") return { relayUrl: url, state: "external", devices: null }
       try {
         const { devices } = await send(url, { op: "devices" })
         return { relayUrl: url, state: "yours", devices: await withSelf(devices) }

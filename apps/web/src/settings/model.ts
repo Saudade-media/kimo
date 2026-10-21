@@ -200,6 +200,7 @@ export const SETTING_LABELS: Record<SettingKey, string> = {
   "multiplayer.showCursors": "Show other people's cursors",
   "multiplayer.fetchAssets": "Fetch images and fonts",
   "multiplayer.relaySetup": "Relay setup",
+  "multiplayer.cloudApiUrl": "Kimo Cloud address",
   "fonts.google": "Google Fonts",
   "fonts.extraFolders": "Extra font folders",
   "fonts.embedInKimoz": "Embed fonts in .kimoz packages",

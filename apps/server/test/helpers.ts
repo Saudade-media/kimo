@@ -31,7 +31,7 @@ import {
   type TokenRole,
   toBase64Url,
 } from "@kimo/sync/mp"
-import { createServer, type RelayConfig, relayOf } from "../src/index"
+import { createServer, type OwnerPolicyModule, type RelayConfig, relayOf } from "../src/index"
 
 /** The device that owns every test relay unless a test passes its own `ownerKeys`. */
 export const device = await generateSigningKeyPair()
@@ -109,7 +109,7 @@ export interface Harness {
 
 export function startRelay(
   config: Partial<RelayConfig> = {},
-  options: { realTime?: boolean } = {},
+  options: { realTime?: boolean; ownerPolicy?: OwnerPolicyModule } = {},
 ): Harness {
   const clock = { now: Date.now() }
   const server = createServer({
@@ -123,6 +123,7 @@ export function startRelay(
       ...config,
     },
     ...(options.realTime ? { tickMs: 250 } : { now: () => clock.now, tickMs: 3_600_000 }),
+    ...(options.ownerPolicy ? { ownerPolicy: options.ownerPolicy } : {}),
   })
   const base = server.url.href.replace(/\/$/, "")
   return {

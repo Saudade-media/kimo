@@ -3,8 +3,8 @@
 Status: Draft for v2.0 ([ADR 0016](../adr/0016-multiplayer-transport-and-sessions.md), research in
 [docs/research/multiplayer.md](../research/multiplayer.md)). Licence: MIT. Date: 2026-10-19.
 Amended 2026-10-21 by [ADR 0017](../adr/0017-relay-ownership-pairing.md): relays belong to a set
-of device keys (§6.1, §6.2, §7.1, §14.11, §16.9); the create secret no longer authorizes room
-registration.
+of device keys (§6.1, §6.2, §7.1, §14.11, §16.9). The create secret (`KIMO_CREATE_SECRET`, the
+`kimo-create-secret` header, `/create-secret/check`) is removed.
 
 This document is the contract four builders implement in parallel. It fixes every byte format,
 message, endpoint, status code, file and exported signature that crosses a module boundary.
@@ -263,19 +263,13 @@ with `nonce` and `iat` the command's own, so the proof is single use through the
 The relay checks, after the root signature and `STALE_REQUEST` and before the certificate, first
 failure wins:
 
-1. Owner set empty: `403 RELAY_UNCLAIMED`, except the legacy rule below.
+1. Owner set empty: `403 RELAY_UNCLAIMED`.
 2. `owner` missing: `403 NOT_OWNER`. `owner.pub` not in the owner set: `403 NOT_OWNER`.
 3. `owner.sig` does not verify: `401 AUTH_INVALID`.
 
 Every register needs the proof, including the idempotent one and reopening a closed room. Revoke,
 rotate, close and sweep stay root-key only, so a room keeps working after the device that created
 it is removed.
-
-**Legacy register (migration, removed one minor release after ADR 0017).** A register without
-`owner` is accepted, as before, when the owner set is empty, `KIMO_CREATE_SECRET` is set and the
-`kimo-create-secret` header matches it in constant time; a wrong or missing header is then
-`403 CREATE_FORBIDDEN`. On a claimed relay, or an unclaimed one without the variable, a register
-without `owner` follows steps 1 and 2. The header never authorizes anything else.
 
 ### 6.1 Owner commands
 
@@ -309,7 +303,7 @@ A `name` is a device display name: trimmed, 1 to 64 UTF-8 bytes, no control char
 
 | op | Body | Allowed when | Relay action | Success | Errors |
 |---|---|---|---|---|---|
-| 1 claim | `{"name", "claimSecret"?: string}` | Owner set empty, or `devicePub` already in it | If `KIMO_CREATE_SECRET` is set, `claimSecret` must match it in constant time. In one transaction: if the set is empty, insert `devicePub` (`via: "claim"`); else if `devicePub` is in it, update its name | `201 {"devices"}` claimed; `200 {"devices"}` already an owner | `403 CREATE_FORBIDDEN` (secret missing or wrong, checked only while unclaimed); `409 RELAY_CLAIMED` |
+| 1 claim | `{"name"}` | Owner set empty, or `devicePub` already in it | In one transaction: if the set is empty, insert `devicePub` (`via: "claim"`); else if `devicePub` is in it, update its name | `201 {"devices"}` claimed; `200 {"devices"}` already an owner | `409 RELAY_CLAIMED` |
 | 2 devices | `{}` | `devicePub` is an owner | | `200 {"devices"}` | `403 RELAY_UNCLAIMED`; `403 NOT_OWNER` |
 | 3 pair | `{"token": b64url(pairing token), "name"}` | Signed by the **new** device | §6.2 verification; in one transaction insert `devicePub` (`via: "pair"`, `addedBy` the issuer) and the token's `jti` into `pairings_used` | `201 {"devices"}`; `200 {"devices"}` when `devicePub` is already an owner (the token is not used up) | `401 AUTH_INVALID`; `401 PAIRING_EXPIRED`; `409 PAIRING_USED`; `403 RELAY_UNCLAIMED` |
 | 4 remove | `{"pub": b64url}` | `devicePub` is an owner (it may remove itself) | Delete the device | `200 {"devices"}` | `403 NOT_OWNER`; `404 NOT_FOUND` (not a device); `409 LAST_DEVICE` |
@@ -544,11 +538,10 @@ status from §13. `429` and `503` carry `retry-after` (seconds).
 | Method and path | Auth | Request | Responses |
 |---|---|---|---|
 | `GET /healthz` | none | | `200 {"ok":true}` |
-| `GET /version` | none | | `200 {"name":"@kimo/server","version":"x.y.z","protocol":"kimo-mp/1","limits":RelayLimits,"ownership":1,"relayId":b64url(16 bytes),"owner":"unclaimed"\|"claimed","claimSecretRequired":boolean,"createSecretRequired":boolean}`. `claimSecretRequired`: `KIMO_CREATE_SECRET` is set and the relay is unclaimed. `createSecretRequired` is deprecated (equal to `claimSecretRequired`) and kept for one minor release |
+| `GET /version` | none | | `200 {"name":"@kimo/server","version":"x.y.z","protocol":"kimo-mp/1","limits":RelayLimits,"relayId":b64url(16 bytes),"owner":"unclaimed"\|"claimed"}` |
 | `POST /owner` | device signature (§6.1) | Body: owner command bytes | Per op (§6.1); also `413 TOO_LARGE`, `429` |
-| `POST /create-secret/check` | `kimo-create-secret` header (optional) | | Deprecated, kept for one minor release for older clients. `200 {"required":boolean,"accepted":true}` with `required = claimSecretRequired`; `403 CREATE_FORBIDDEN` for a missing or wrong secret while it is required. Creates nothing; shares the admin rate limit |
 | `OPTIONS *` | none | CORS preflight | `204` |
-| `POST /room/<room>/admin` | admin signature (§6), plus the owner proof for register | Body: admin command bytes. Header `kimo-create-secret` only for a legacy register (§6) | Per op (§6); `400 BAD_REQUEST`, `401 AUTH_INVALID` (signature or owner proof), `403 RELAY_UNCLAIMED`, `403 NOT_OWNER`, `403 CREATE_FORBIDDEN` (legacy register), `404 ROOM_NOT_FOUND` (non-register on unknown room), `409 NONCE_REPLAY`, `410 ROOM_CLOSED` (non-register on closed room), `413 TOO_LARGE`, `422 ROOM_ID_MISMATCH`, `422 STALE_REQUEST`, `422 KEY_ID_INVALID` (rotate with a non-increasing kid), `429`, `503 RELAY_FULL` (room cap) |
+| `POST /room/<room>/admin` | admin signature (§6), plus the owner proof for register | Body: admin command bytes | Per op (§6); `400 BAD_REQUEST`, `401 AUTH_INVALID` (signature or owner proof), `403 RELAY_UNCLAIMED`, `403 NOT_OWNER`, `404 ROOM_NOT_FOUND` (non-register on unknown room), `409 NONCE_REPLAY`, `410 ROOM_CLOSED` (non-register on closed room), `413 TOO_LARGE`, `422 ROOM_ID_MISMATCH`, `422 STALE_REQUEST`, `422 KEY_ID_INVALID` (rotate with a non-increasing kid), `429`, `503 RELAY_FULL` (room cap) |
 | `GET /room/<room>` | view or edit | | `200 {"room","kid","head","base","snapshot":{"upTo","gen","bytes"}|null,"usedBytes","quotaBytes","peers":n}` |
 | `GET /room/<room>/snapshot` | view or edit | | `200` `application/octet-stream` envelope with headers `kimo-up-to`, `kimo-gen`; `404 NOT_FOUND` when there is none |
 | `PUT /room/<room>/snapshot?upTo=<n>[&carries=1]` | edit | Body: snapshot envelope | `201 {"gen","upTo"}`; `400 BAD_REQUEST`; `409 SNAPSHOT_STALE`; `413 TOO_LARGE`; `422 SNAPSHOT_AHEAD`; `507 QUOTA_EXCEEDED` |
@@ -564,23 +557,14 @@ accept iff `upTo <= head` and (`cur` is none, or `upTo > cur.upTo`, or `upTo == 
 first snapshot of an empty room has `upTo = 0` (the genesis seed).
 
 CORS on every response: `access-control-allow-origin` (the request origin when allowed, `*` when
-the allow list is `*`), `access-control-allow-headers: authorization, content-type,
-kimo-create-secret`, `access-control-allow-methods: GET, HEAD, PUT, POST, OPTIONS`,
+the allow list is `*`), `access-control-allow-headers: authorization, content-type`,
+`access-control-allow-methods: GET, HEAD, PUT, POST, OPTIONS`,
 `access-control-expose-headers: kimo-up-to, kimo-gen, retry-after`, `access-control-max-age: 600`.
 Tokens MUST NOT appear in access logs; the relay logs method, path, status and duration only.
-(`kimo-create-secret` leaves the allowed headers when the legacy register is removed.)
 
-**Compatibility with clients and relays from before ADR 0017.** The protocol string stays
-`kimo-mp/1`: sync frames, capability tokens, envelopes and blobs are unchanged, and a new string
-would make every older client report an updated relay as `NOT_A_RELAY`. Ownership is announced by
-`"ownership": 1` in `/version` instead.
-
-| Client | Relay | Behaviour |
-|---|---|---|
-| New | New | §6, §6.1, §16.9 |
-| Older | New, unclaimed, `KIMO_CREATE_SECRET` set | Legacy register with the header works until a new client claims the relay |
-| Older | New, claimed, or unclaimed without the variable | Register fails with `NOT_OWNER` / `RELAY_UNCLAIMED`; an older client does not know these codes and maps the `403` to `ORIGIN_FORBIDDEN` with the relay's message ("this relay belongs to another Kimo; update Kimo"). Joining and syncing existing rooms keep working |
-| New | Older (no `ownership` in `/version`) | Legacy mode: register with the `kimo-create-secret` header when the relay setup store still holds a value, without one otherwise; no claim, devices or pairing. When the relay requires a secret Kimo does not hold, the UI shows "Relay needs an update" (§16.9). Removed together with the legacy register |
+The protocol string stays `kimo-mp/1`: ownership changes only who may register a room, and
+multiplayer has not shipped, so there is no older relay or client to stay compatible with.
+`probe` treats a `/version` without `relayId` and `owner` as `NOT_A_RELAY`.
 
 ## 13. Error codes
 
@@ -597,7 +581,6 @@ relay closes with it.
 | `VIEW_ONLY` | 403 | (denied) | n/a | Write attempted with a `view` token |
 | `ROLE_UNSUPPORTED` | 403 | 4405 | no | `comment` or unknown role |
 | `ORIGIN_FORBIDDEN` | 403 | | no | Browser `Origin` not allowed by the relay |
-| `CREATE_FORBIDDEN` | 403 | | no | Missing or wrong `KIMO_CREATE_SECRET` value on a claim, or on a legacy register (§6) |
 | `RELAY_UNCLAIMED` | 403 | | no | Register (or an owner op) on a relay with no owner device yet; the client claims first (§6.1) |
 | `NOT_OWNER` | 403 | | no | Register or an owner op by a device that is not in the relay's owner set |
 | `PAIRING_EXPIRED` | 401 | | no | Pairing token `exp` passed |
@@ -647,8 +630,8 @@ Close codes `1001`, `1006` and `1012` map to `RELAY_UNREACHABLE` (retry). `1009`
 ### 14.2 Schema (`bun:sqlite`, `${KIMO_DATA_DIR}/relay.sqlite`)
 
 `PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;`
-`PRAGMA user_version = 2` marks this schema (version 1 lacked the last four tables; the
-migration from 1 creates them, generates `relay_id` and leaves the relay unclaimed).
+`PRAGMA user_version = 1` marks this schema (multiplayer has not shipped, so the ownership
+tables join version 1 instead of a migration).
 
 ```sql
 CREATE TABLE rooms (
@@ -815,7 +798,6 @@ Per-IP uses `server.requestIP(req)`, or the first `x-forwarded-for` address when
 | `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins allowed for CORS and WebSocket `Origin` (the desktop webview origins are always allowed) |
 | `KIMO_OWNER_KEY` | unset | Comma-separated device public keys (base64url, 43 characters each). At boot, when the owner set is empty, the relay adds them (`via: "env"`, name "Added at deploy"; the device renames itself on its first claim). Ignored once the relay has an owner. Public values: safe in commands, URLs and logs (§14.11) |
 | `KIMO_RESET_OWNER` | unset | Any non-empty value: at boot, clear the owner set and the used pairings and log a warning, once per distinct value (§14.11). Rooms are untouched |
-| `KIMO_CREATE_SECRET` | unset | Optional operator setting: when set, claiming the relay requires this value (`claimSecret`). No longer needed by any Kimo setup path. Also enables the legacy register while unclaimed (§6) |
 | `KIMO_MAX_ROOMS` | `0` (unlimited) | Registered rooms cap (`RELAY_FULL`) |
 | `KIMO_MAX_PEERS` | `32` | Sockets per room |
 | `KIMO_ROOM_QUOTA_MB` | `500` | Default room quota |
@@ -847,7 +829,7 @@ Invalid values make `main.ts` print the variable and exit 1.
 - Guides (`docs/guide/relay/`): self-host (process, Docker, Caddy TLS, env table, backups of
   `/data`, upgrading, `KIMO_OWNER_KEY` and `KIMO_RESET_OWNER`), Fly.io (`fly launch
   --copy-config`, volume, `KIMO_OWNER_KEY`, cost note), Railway (the template, volume at `/data`,
-  no secret variable; `KIMO_OWNER_KEY` prefilled when the deploy link carries it, cost note),
+  `KIMO_OWNER_KEY` prefilled when the deploy link carries it, cost note),
   and a "This relay belongs to another Kimo" recovery section (`KIMO_RESET_OWNER`). Each guide ends with "paste `https://<your-relay>` into Kimo's Share dialog". No
   guide may present any relay as a project service.
 
@@ -867,8 +849,7 @@ owner commands (§6.1). Empty means **unclaimed**.
    on every redeploy; resetting again takes a different value.
 3. Owner set empty and `KIMO_OWNER_KEY` set: insert each key (`via: "env"`, `added_by` NULL).
    Invalid keys make `loadConfig` fail naming the variable.
-4. Log one line: `owner: claimed (n devices)`, `owner: unclaimed, claim it from Kimo`, or
-   `owner: unclaimed, claim needs KIMO_CREATE_SECRET`.
+4. Log one line: `owner: claimed (n devices)` or `owner: unclaimed, claim it from Kimo`.
 
 **Rules.** Claim, pair, remove and cancel run each in one SQLite transaction, so concurrent
 requests serialize: two claims on an empty set give one `201` and one `409 RELAY_CLAIMED`; two
@@ -878,8 +859,7 @@ would empty the set give one `200` and one `409 LAST_DEVICE`. The hourly mainten
 their root keys, and pairing tokens it issued stop verifying (§6.2 step 3). Device names are
 stored in clear text; the relay logs neither names nor public keys.
 
-**Claim race (see ADR 0017).** A relay that starts unclaimed with neither `KIMO_OWNER_KEY` nor
-`KIMO_CREATE_SECRET` can be claimed by whoever reaches it first. That grants room creation
+**Claim race (see ADR 0017).** A relay that starts unclaimed (no `KIMO_OWNER_KEY`) can be claimed by whoever reaches it first. That grants room creation
 (storage on the operator's bill), never access to a room's content. There is no claim deadline.
 Kimo's own setup paths pass `KIMO_OWNER_KEY`, so they start claimed.
 
@@ -1214,14 +1194,13 @@ without UI; errors are `MultiplayerError`s. See §17.D for the exact types.
 **`startSharing(target, { relayUrl })`**:
 
 1. `probeRelay(relayUrl)` (`NOT_A_RELAY`, `RELAY_UNREACHABLE`). If the relay is `unclaimed`,
-   `claimRelay(relayUrl)` first (§16.9); `RELAY_CLAIMED` and `CREATE_FORBIDDEN` end here.
+   `claimRelay(relayUrl)` first (§16.9); `RELAY_CLAIMED` ends here.
 2. Generate root, link (kid 1) and room keys; derive `roomId`.
 3. Prepare the document: compute `sha256` for every manifest asset the local store holds, add
    manifest entries (with `sha256`) for fonts the policy shares (§16.5), embed shaders (§16.6).
    If anything changed, apply it with
    `store.loadDocument(next, { origin: "system", newEpoch: false })` (one non-undoable change).
-4. Register (admin op 1) with the owner proof signed by the device key (§6). A relay without
-   `ownership` gets the legacy register (§12 compatibility).
+4. Register (admin op 1) with the owner proof signed by the device key (§6).
 5. Mint the owner's own `edit` token (origin `user`, 30 days, flagged `self`, re-minted when
    less than one day remains).
 6. Seed: in one synchronous step capture `state = store.encodeStateAsUpdate()` and
@@ -1368,20 +1347,15 @@ never rotated (a lost key is replaced by pairing a new one).
 
 | State | Meaning | Start sharing |
 |---|---|---|
-| `unclaimed` | No owner yet; `claimSecretRequired` says whether a setup code is needed | Claims first, then registers |
+| `unclaimed` | No owner yet | Claims first, then registers |
 | `yours` | This device is in the owner set (op 2 answered) | Registers |
 | `other` | Claimed, op 2 answered `NOT_OWNER` | Refused: "This relay belongs to another Kimo" |
-| `legacy` | No `ownership` in `/version` (relay older than ADR 0017) | Legacy register (§12) |
 
-**Claim.** `claimRelay(relayUrl, { claimSecret? })` sends op 1. Without an explicit
-`claimSecret` it sends the value the relay setup store still holds for this relay, if any
-(migration: relays deployed with an Automatic or Custom secret before ADR 0017). After a `201` or
-`200` the stored value is deleted. Kimo claims:
+**Claim.** `claimRelay(relayUrl)` sends op 1 with the device name. Kimo claims:
 
 - in the wizard's Test (board 42 section 8), as its fourth check "Ownership", for every path;
 - on Start sharing when the relay is still unclaimed (a relay saved without a Test);
-- in Settings › Multiplayer when it tests the saved relay and finds it unclaimed with no setup
-  code needed.
+- in Settings › Multiplayer when it tests the saved relay and finds it unclaimed.
 
 Setup paths and what they put into the relay (no secret in any of them):
 
@@ -1390,8 +1364,8 @@ Setup paths and what they put into the relay (no secret in any of them):
 | This computer | `KIMO_OWNER_KEY=<this device>` in the local process | `yours` (already, `via: "env"`) |
 | Docker or your own server | `-e KIMO_OWNER_KEY=<this device>` in the command | `yours` |
 | Fly.io (one click or commands) | `KIMO_OWNER_KEY` as a Fly env value | `yours` |
-| Railway | The template has no secret variable. The deploy link carries `KIMO_OWNER_KEY=<this device>` as a prefilled variable when Railway supports it (to verify, ADR 0017); otherwise the relay starts unclaimed | `yours`, or claimed by the Test |
-| I already have a relay | Nothing | Claimed by the Test; a "Setup code" field appears only when `claimSecretRequired` |
+| Railway | The deploy link carries `KIMO_OWNER_KEY=<this device>` as a prefilled variable when Railway supports it (to verify, ADR 0017); otherwise the relay starts unclaimed | `yours`, or claimed by the Test |
+| I already have a relay | Nothing (its operator may set `KIMO_OWNER_KEY` themselves) | Claimed by the Test |
 
 **Pairing.** On an owner device, `createPairingLink(relayUrl)` mints a token (§6.2, 15 minutes)
 and formats the link (§7.1) with this window's web origin (`kimo:` on desktop). Nothing is sent to
@@ -1402,17 +1376,21 @@ own device key, and saves the relay URL as `multiplayer.relayUrl` when none is s
 **Devices.** `listDevices(relayUrl)` (op 2) and `removeDevice(relayUrl, pub)` (op 4). Removing
 this device is allowed when another remains; afterwards the state is `other`.
 
+**Removed.** The create secret goes away in full: `relay-setup/secret.ts`, the relay setup
+store's secret and mode, `RelaySecretSetting.tsx`, the wizard's secret blocks and Regenerate
+flows, `RelayHttpClient.checkCreateSecret`, `startSharing`'s `createSecret`, the
+`kimo_relay_secret_*` desktop commands, and on the relay `KIMO_CREATE_SECRET`, the
+`kimo-create-secret` header and `/create-secret/check`.
+
 **Copy rules.** The UI never says "secret". The words are: "Yours", "Not claimed yet", "This relay
-belongs to another Kimo", "Add device", "Pairing link", "Setup code" (only for an operator-set
-`KIMO_CREATE_SECRET`), "Relay needs an update". Error codes are mapped to sentences, never shown.
+belongs to another Kimo", "Add device", "Pairing link". Error codes are mapped to sentences, never shown.
 
 **UI states** (boards 41 and 42, redesigned for ADR 0017):
 
 - Wizard Set up: no secret block, no Automatic or Custom choice, no Railway variables step when
   the link prefills the key. Wizard Test: the fourth check is "Ownership" with metas `claiming`,
-  `yours`, `already yours`, `belongs to another Kimo`, `needs a setup code`. Outcomes "Belongs to
-  another Kimo" (actions: Add this device, Reset ownership guide) and "Relay needs an update"
-  replace "Secret rejected".
+  `yours`, `already yours`, `belongs to another Kimo`. The outcome "Belongs to another Kimo"
+  (actions: Add this device, Reset ownership guide) replaces "Secret rejected".
 - Share popover first run: relay URL and Test only; Start sharing claims silently when unclaimed;
   refusal inline with the same two actions.
 - Settings › Multiplayer: the Create secret row is removed. The relay row shows the ownership
@@ -1444,7 +1422,8 @@ export function randomBytes(length: number): Uint8Array
 // errors.ts
 export type MpErrorCode =
   | "BAD_REQUEST" | "BAD_MESSAGE" | "AUTH_INVALID" | "KEY_ROTATED" | "TOKEN_REVOKED"
-  | "VIEW_ONLY" | "ROLE_UNSUPPORTED" | "ORIGIN_FORBIDDEN" | "CREATE_FORBIDDEN"
+  | "VIEW_ONLY" | "ROLE_UNSUPPORTED" | "ORIGIN_FORBIDDEN"
+  | "RELAY_UNCLAIMED" | "NOT_OWNER" | "PAIRING_EXPIRED" | "PAIRING_USED" | "RELAY_CLAIMED" | "LAST_DEVICE"
   | "ROOM_NOT_FOUND" | "NOT_FOUND" | "HELLO_TIMEOUT" | "NONCE_REPLAY" | "SNAPSHOT_STALE"
   | "ROOM_CLOSED" | "TOO_LARGE" | "TOKEN_EXPIRED" | "ROOM_ID_MISMATCH" | "STALE_REQUEST"
   | "KEY_ID_INVALID" | "SNAPSHOT_AHEAD" | "PROTOCOL_MISMATCH" | "RATE_LIMITED" | "INTERNAL"
@@ -1526,7 +1505,7 @@ export function verifyTokenSignature(token: ParsedToken, linkPublicKey: Uint8Arr
 export function isMpOrigin(value: unknown): value is MpOrigin
 export type AdminOp = "register" | "revoke" | "rotate" | "close" | "sweep"
 export type AdminBody =
-  | { op: "register"; rootPub: string; cert: string; owner?: { pub: string; sig: string } } // owner omitted only by the legacy register
+  | { op: "register"; rootPub: string; cert: string; owner: { pub: string; sig: string } }
   | { op: "revoke"; jti: string; exp: number }
   | { op: "rotate"; cert: string }
   | { op: "close" }
@@ -1564,7 +1543,7 @@ export function verifyRegisterOwner(
 ): Promise<boolean>
 export type OwnerOp = "claim" | "devices" | "pair" | "remove" | "cancel-pairing"
 export type OwnerBody =
-  | { op: "claim"; name: string; claimSecret?: string }
+  | { op: "claim"; name: string }
   | { op: "devices" }
   | { op: "pair"; token: string; name: string }
   | { op: "remove"; pub: string }
@@ -1731,10 +1710,8 @@ export interface RelayInfo {
   version: string
   protocol: typeof PROTOCOL
   limits: RelayLimits
-  /** Null for a relay older than ADR 0017 (no `ownership` in /version). */
-  ownership: { relayId: Uint8Array; owner: "unclaimed" | "claimed"; claimSecretRequired: boolean } | null
-  /** Deprecated; read only in legacy mode. */
-  createSecretRequired: boolean
+  relayId: Uint8Array
+  owner: "unclaimed" | "claimed"
 }
 export interface OwnerDevice {
   pub: string
@@ -1759,12 +1736,9 @@ export class RelayHttpClient {
   constructor(options: RelayHttpClientOptions)
   readonly relayUrl: string
   probe(): Promise<RelayInfo>
-  /** `createSecret` only for the legacy register (§6). */
-  admin(room: string, command: Uint8Array, options?: { createSecret?: string }): Promise<Record<string, unknown>>
+  admin(room: string, command: Uint8Array): Promise<Record<string, unknown>>
   /** `POST /owner`: the parsed JSON success body (`{devices}` or `{}`). */
   owner(command: Uint8Array): Promise<{ status: 200 | 201; devices: OwnerDevice[] | null }>
-  /** Deprecated with `/create-secret/check`; legacy mode only. */
-  checkCreateSecret(createSecret: string | null): Promise<{ required: boolean; accepted: boolean } | null>
   roomInfo(room: string, token: string): Promise<RoomInfo>
   getSnapshot(room: string, token: string): Promise<FetchedSnapshot | null>
   putSnapshot(room: string, token: string, upTo: number, envelope: Uint8Array, options?: { carries?: boolean }): Promise<{ gen: number; upTo: number }>
@@ -1945,8 +1919,6 @@ export interface RelayConfig {
   hostname: string
   dataDir: string
   allowedOrigins: "*" | readonly string[]
-  /** KIMO_CREATE_SECRET: gates the claim (and the legacy register). */
-  createSecret: string | null
   /** KIMO_OWNER_KEY, decoded (32 bytes each). */
   ownerKeys: readonly Uint8Array[]
   /** KIMO_RESET_OWNER, or null. */
@@ -2036,12 +2008,10 @@ export interface JoinedRoom {
 }
 export interface OwnedRoomSummary { room: string; relayUrl: string; fileKey: string; kid: number; createdAt: number; links: IssuedLink[] }
 export interface JoinedRoomSummary { room: string; relayUrl: string; role: Role; joinedAt: number }
-export type RelayOwnerState = "unclaimed" | "yours" | "other" | "legacy"
+export type RelayOwnerState = "unclaimed" | "yours" | "other"
 export interface RelayOwnership {
   relayUrl: string
   state: RelayOwnerState
-  /** Unclaimed and KIMO_CREATE_SECRET set, and Kimo holds no stored value for it. */
-  needsSetupCode: boolean
   /** Only when `yours`. */
   devices: RelayDevice[] | null
 }
@@ -2088,17 +2058,15 @@ export interface ShareServiceDeps {
   deviceKeys?: DeviceKeyStore
   /** Default device name (§16.9). */
   deviceName?: () => string
-  /** The migration value for a relay (the relay setup store's stored secret), deleted after a claim. */
-  legacySecret?: { get(relayUrl: string): Promise<string | null>; delete(relayUrl: string): Promise<void> }
   now?: () => number
 }
 export interface ShareService {
   probeRelay(relayUrl: string): Promise<RelayInfo>
-  /** Claims the relay first when it is unclaimed (§16.9). No createSecret any more. */
+  /** Claims the relay first when it is unclaimed (§16.9). */
   startSharing(target: ShareTarget, options: { relayUrl: string }): Promise<OwnedRoomSummary>
   devicePublicKey(): Promise<string>
   relayOwnership(relayUrl: string): Promise<RelayOwnership>
-  claimRelay(relayUrl: string, options?: { claimSecret?: string; name?: string }): Promise<RelayDevice[]>
+  claimRelay(relayUrl: string, options?: { name?: string }): Promise<RelayDevice[]>
   listDevices(relayUrl: string): Promise<RelayDevice[]>
   removeDevice(relayUrl: string, pub: string): Promise<RelayDevice[]>
   createPairingLink(relayUrl: string, options?: { ttlSeconds?: number }): Promise<IssuedPairingLink>
@@ -2172,8 +2140,7 @@ Every module runs `bunx biome check` on its files and `bun test` in its package.
   type decodes to null; an unknown client type and truncated frames throw `BAD_MESSAGE`; large
   `varUint` values up to `2^53 - 1`.
 - `http.test.ts`: against a `Bun.serve` stub: status and JSON error mapping to
-  `MultiplayerError`, `retry-after` to `retryAfterMs`, headers sent (`Authorization`,
-  `kimo-create-secret`), snapshot headers parsed, timeouts.
+  `MultiplayerError`, `retry-after` to `retryAfterMs`, headers sent (`Authorization`), snapshot headers parsed, timeouts.
 - `errors.test.ts`: `MP_ERRORS` covers every code; close code mapping both ways.
 - `owner.test.ts` (ADR 0017): owner commands sign, parse and verify for every op; a flipped bit,
   another `relayId` or another device key fails; body over 16 KiB, bad names (empty, over 64
@@ -2184,7 +2151,7 @@ Every module runs `bunx biome check` on its files and `bun test` in its package.
   link is not a pairing link and the reverse (`BAD_LINK`).
 - `vectors.test.ts` (extended): module A adds §19 vectors for one owner command (claim), one
   register owner proof and one pairing token, from the fixed keys and nonces of §19.
-- `http.test.ts` (extended): `probe` reads `ownership` (and null without it); `owner()` maps
+- `http.test.ts` (extended): `probe` reads `relayId` and `owner` (`NOT_A_RELAY` without them); `owner()` maps
   `201`, `200` and the new error codes.
 
 ### 18.B Network provider (`packages/sync/test/`)
@@ -2234,15 +2201,12 @@ does not verify signatures (that is module C's job) but enforces roles from a ta
 All with `createServer({ port: 0, config: { dataDir: ":memory:" or a temp dir } })` and real
 WebSockets from Bun, with tokens and admin commands made by module A.
 
-- `server.test.ts` (updated): `/healthz`, `/version` (protocol, limits, ownership fields,
-  deprecated `createSecretRequired`), 404, 405; `/sync` without upgrade is 400;
-  `/create-secret/check` reports `required` only while unclaimed with the secret set.
+- `server.test.ts` (updated): `/healthz`, `/version` (protocol, limits, `relayId`, `owner`), 404,
+  405; `/sync` without upgrade is 400; `/create-secret/check` is 404.
 - `admin.test.ts`: register (201, idempotent 200, `ROOM_ID_MISMATCH`, bad signature); owner
   proof: unclaimed `RELAY_UNCLAIMED`, a non-owner key or no `owner` `NOT_OWNER`, a proof for
   another room, nonce or relay `AUTH_INVALID`, a removed device `NOT_OWNER`; reopening a closed
-  room needs the proof; revoke, rotate and close still work after the creating device is removed.
-  Legacy register: accepted with the right header while unclaimed with the secret set,
-  `CREATE_FORBIDDEN` with a wrong one, `NOT_OWNER` once claimed. Revoke; rotate (`KEY_ID_INVALID`); close then
+  room needs the proof; revoke, rotate and close still work after the creating device is removed. Revoke; rotate (`KEY_ID_INVALID`); close then
   re-register; `STALE_REQUEST`; `NONCE_REPLAY`.
 - `auth.test.ts`: the §4 verification order (each failure code), on both WebSocket and HTTP.
 - `ws.test.ts`: `hello` timeout; first frame not `hello`; subprotocol required; `Origin` check;
@@ -2268,11 +2232,10 @@ WebSockets from Bun, with tokens and admin commands made by module A.
   blobs; schema `user_version = 1`.
 - `config.test.ts`: defaults; every variable parsed; invalid values throw naming the variable
   (including a malformed `KIMO_OWNER_KEY` entry).
-- `owners.test.ts` (ADR 0017): `/version` reports `ownership`, `relayId`, `owner` and
-  `claimSecretRequired` before and after a claim. Claim: `201`, the same device again `200` (name
-  updated), another device `409 RELAY_CLAIMED`; two concurrent claims give exactly one `201`;
-  with `KIMO_CREATE_SECRET`, a missing or wrong `claimSecret` is `403 CREATE_FORBIDDEN` and the
-  right one claims. Devices: owner gets the list, a stranger `NOT_OWNER`, unclaimed
+- `owners.test.ts` (ADR 0017): `/version` reports `relayId` and `owner` before and
+  after a claim. Claim: `201`, the same device again `200` (name
+  updated), another device `409 RELAY_CLAIMED`; two concurrent claims give exactly one `201`.
+  Devices: owner gets the list, a stranger `NOT_OWNER`, unclaimed
   `RELAY_UNCLAIMED`. Pair: a valid token adds the device (`via: "pair"`, `addedBy`); reuse
   `PAIRING_USED`; concurrent redemptions give one `201`; expired `PAIRING_EXPIRED` (fake clock);
   another relay's token, a removed issuer's token, a token from before the issuer was re-added,
@@ -2283,8 +2246,7 @@ WebSockets from Bun, with tokens and admin commands made by module A.
   `STALE_REQUEST`. Rate limit shared with admin.
 - `owners-boot.test.ts`: `KIMO_OWNER_KEY` seeds an empty set and is ignored once claimed;
   `KIMO_RESET_OWNER` clears owners and used pairings once, the same value on a second boot does
-  nothing, a new value clears again, rooms survive a reset; `relay_id` is stable across restarts;
-  a version 1 database migrates to version 2 unclaimed with its rooms intact.
+  nothing, a new value clears again, rooms survive a reset; `relay_id` is stable across restarts.
 - `blind.test.ts`: the relay never imports `yjs` or `@kimo/editor-state` (check the module graph
   of `src/index.ts`), and the stored log and blob bytes never contain a plaintext marker string
   that the test's clients encrypted.
@@ -2308,10 +2270,8 @@ WebSockets from Bun, with tokens and admin commands made by module A.
   view link yields a read-only store. (ADR 0017) `startSharing` on an unclaimed relay claims it
   with the device key, then registers; on a relay owned by another device it fails with
   `NOT_OWNER` before creating anything; on a relay started with `KIMO_OWNER_KEY` it registers
-  without a claim; with a stored legacy secret it claims a secret-gated relay and deletes the
-  stored value.
-- `multiplayer-ownership.test.ts`: `relayOwnership` gives `unclaimed`, `yours`, `other` and
-  `legacy` (an older relay stub); `createPairingLink` then `acceptPairingLink` from a second
+  without a claim.
+- `multiplayer-ownership.test.ts`: `relayOwnership` gives `unclaimed`, `yours` and `other`; `createPairingLink` then `acceptPairingLink` from a second
   service with its own memory device key adds it, and the second device can start sharing;
   expired, used and cancelled links surface their codes; `removeDevice` of this device turns the
   state to `other`; the last device cannot be removed.
@@ -2319,9 +2279,9 @@ WebSockets from Bun, with tokens and admin commands made by module A.
   pair across calls and create it once; the private key is non-extractable; the keychain store
   round trips the seed through a fake `invoke`.
 - `relay-setup` tests: the Docker command, Fly steps and local relay environment carry
-  `KIMO_OWNER_KEY=<device>` and no `KIMO_CREATE_SECRET`; the Railway link carries the prefilled
-  key when enabled; the Test's fourth check reports `claiming`, `yours`, `already yours`,
-  `belongs to another Kimo` and `needs a setup code`.
+  `KIMO_OWNER_KEY=<device>` and no secret; the Railway link carries the prefilled
+  key when enabled; the Test's fourth check reports `claiming`, `yours`, `already yours` and
+  `belongs to another Kimo`.
 - `multiplayer-assets.test.ts`: upload on connect only uploads what is missing; fetch on demand
   stores verified bytes through `putKey`; a corrupted blob (served by a stub) is rejected;
   `withRemoteAssets` triggers `ensure` on a miss and notifies subscribers; legacy entries

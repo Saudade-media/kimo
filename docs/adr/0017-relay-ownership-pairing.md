@@ -1,4 +1,4 @@
-# 0017. Relays belong to devices: claim on first use, add devices with pairing links, no create secret in the UI
+# 0017. Relays belong to devices: pre-claim or claim on first use, add devices with pairing links, remove the create secret
 
 - **Status:** Proposed
 - **Date:** 2026-10-21
@@ -37,23 +37,23 @@ Facts that shape the replacement:
   `|now - iat| > 5 min` and nonces it has seen.
 - Kimo's own setup paths control the relay's environment (local process env, the Docker command
   text, the Fly secrets). The Railway path does not: the template is deployed in Railway's UI.
-- Clients reject a `/version` whose `protocol` is not exactly `kimo-mp/1`, and an older client
-  reads an unknown error code by its HTTP status.
+- Multiplayer has not shipped: the branch is unmerged and no release contains it. There are no
+  deployed relays, stored secrets or older clients to stay compatible with.
 
 ## Decision
 
 **A relay has an owner set of device public keys. Only an owner device can create rooms. The
 first Kimo that reaches an unclaimed relay claims it; further devices join the set with a
 single-use pairing link from an owner device. Kimo's own setup paths pre-claim the relay with the
-device's public key, so there is no claim window and no secret anywhere in the UI.**
+device's public key, so they have no claim window. The create secret is removed.**
 
 1. **Device key.** One Ed25519 key pair per Kimo install, created on first need. Web: a
    non-extractable `CryptoKeyPair` in IndexedDB `kimo-multiplayer` (database version 2, store
    `device`), like the room keys. Desktop: the 32-byte private seed in the OS keychain (service
    `kimo`, account `relay.device-key`), imported as a non-extractable `CryptoKey` at startup. The
    desktop deliberately does not follow its room registry (plain JWK in `rooms.json`): the device
-   key is the one credential that outlives every room, and the keychain is already in use for the
-   relay secret it replaces. The public key travels as base64url (43 characters).
+   key is the one credential that outlives every room, and the keychain is already a dependency
+   (`keyring`). The public key travels as base64url (43 characters).
 2. **Owner set.** Stored in `relay.sqlite` in the data dir (`owners` table, schema version 2),
    with a display name and the time each device was added. Empty means **unclaimed**. An
    unclaimed relay refuses room registration (`RELAY_UNCLAIMED`); joining by capability link,
@@ -66,13 +66,10 @@ device's public key, so there is no claim window and no secret anywhere in the U
    is one round trip.
 4. **Claim.** Allowed only while the set is empty; the insert is one SQLite transaction, so of two
    racing claims the first wins and the other gets `409 RELAY_CLAIMED`. A claim by a device that
-   is already an owner answers `200` (idempotent). When `KIMO_CREATE_SECRET` is set, the claim must
-   carry it (`claimSecret`, compared in constant time, `403 CREATE_FORBIDDEN` otherwise). Kimo
-   claims in the wizard's Test step and, failing that, on the first Start sharing.
+   is already an owner answers `200` (idempotent). Kimo claims in the wizard's Test step and, failing that, on the first Start sharing.
 5. **Register.** Admin op 1 gains a required `owner` member: the device public key and its
    signature over the command's room, nonce, `iat` and root public key. Not an owner is
-   `403 NOT_OWNER`. The `kimo-create-secret` header no longer authorizes register (except the
-   legacy rule in 10). Revoke, rotate, close and sweep stay root-key only: a room keeps working
+   `403 NOT_OWNER`. Revoke, rotate, close and sweep stay root-key only: a room keeps working
    when the device that created it is later removed.
 6. **Pairing.** An owner device mints a pairing token locally (no round trip): `relayId`, a random
    `jti`, `iat` and `exp` (15 minutes, at most 60), signed by the issuing device. The link is
@@ -90,31 +87,25 @@ device's public key, so there is no claim window and no secret anywhere in the U
    the Railway deploy link if Railway prefills it (see 9). A public key is not a credential, so it
    can show in a command, a URL or a log, and these paths no longer generate or store any
    secret. The wizard's Test then finds the relay already yours.
-9. **Railway.** The template drops `KIMO_CREATE_SECRET`. Kimo appends this device's key to the
+9. **Railway.** The template has no secret variable. Kimo appends this device's key to the
    deploy link as a prefilled `KIMO_OWNER_KEY` variable when Railway honours it (to verify; a
    staff answer on Railway's forum says template links accept variable query parameters, the docs
    do not). Without prefill, the relay starts unclaimed and the wizard's Test claims it as soon as
-   the user pastes the domain. Either way the user copies nothing but the domain.
+   the user pastes the domain. Either way the user copies nothing but the domain. The spec keeps
+   both outcomes until the prefill is tested.
 10. **Recovery and other variables.** `KIMO_RESET_OWNER=<value>` clears the owner set at boot and
     logs a warning, **once per distinct value**: the relay stores a hash of the value it acted on
     and ignores the same value on later boots. So a forgotten variable does not re-open the relay
-    on every redeploy, and resetting again means changing the value. `KIMO_CREATE_SECRET` stays as
-    an optional operator setting that gates the claim. For migration only, while the relay is
-    unclaimed and the secret is set, a legacy register (header, no `owner`) with the right secret
-    is still accepted, so a not yet updated Kimo keeps working until a new Kimo claims the relay
-    with the stored secret.
-11. **Version and compatibility.** The protocol string stays `kimo-mp/1`: sync, tokens and
-    envelopes are unchanged, and bumping it would make every current client call an updated relay
-    "not a relay". `/version` gains `ownership: 1`, `owner: "unclaimed" | "claimed"`,
-    `claimSecretRequired` and `relayId`, and keeps `createSecretRequired` (deprecated, now equal
-    to `claimSecretRequired && owner == "unclaimed"`) and `POST /create-secret/check` for one minor
-    release. A new client on a relay without `ownership` uses the legacy path with the secret it
-    already stores, and otherwise shows "Relay needs an update".
-12. **UI.** The words "secret" and "create secret" leave the UI: the Settings row, the wizard's
-    secret block and the Share popover field go away. Settings › Multiplayer lists the relay's
-    devices (name, this device, when added) with Add device (pairing link) and Remove. The only
-    remaining input is "Setup code", shown when an operator set `KIMO_CREATE_SECRET` by hand and
-    the relay is still unclaimed.
+    on every redeploy, and resetting again means changing the value.
+11. **The create secret is removed.** `KIMO_CREATE_SECRET`, the `kimo-create-secret` header,
+    `POST /create-secret/check`, `createSecretRequired`, the client's secret store and every UI
+    for it go away. Pre-claim covers the paths Kimo controls, so the secret has no job left.
+12. **Version.** The protocol string stays `kimo-mp/1`: sync, tokens and envelopes are unchanged.
+    `/version` reports `relayId` and `owner: "unclaimed" | "claimed"` where it had
+    `createSecretRequired`. No compatibility rules: nothing has shipped.
+13. **UI.** The word "secret" leaves the UI: the Settings row, the wizard's secret blocks and the
+    Share popover field go away. Settings › Multiplayer lists the relay's devices (name, this
+    device, when added) with Add device (pairing link) and Remove.
 
 ## Threat note: the claim race
 
@@ -131,8 +122,8 @@ before its owner's Kimo does can claim it.
   data. The reset does not touch rooms; rooms the squatter created stay until room expiry
   (`KIMO_ROOM_TTL_DAYS`) or until the owner wipes the data dir, since only their root keys can
   close them.
-- **Where the window exists:** only on relays that start unclaimed with no `KIMO_OWNER_KEY` and no
-  `KIMO_CREATE_SECRET`: Railway without prefill, and relays an operator deploys by hand. This
+- **Where the window exists:** only on relays that start without `KIMO_OWNER_KEY`: Railway
+  without prefill, and relays an operator deploys by hand (who can set the variable themselves). This
   computer, Docker and Fly.io are pre-claimed and have no window. Quick tunnel names
   (trycloudflare.com) are random and also pre-claimed.
 - **Railway domains are guessable.** Generated domains follow `<service>-production[-xxxx].up.railway.app`
@@ -156,8 +147,6 @@ Other notes:
 - A lost only device (cleared browser data, a wiped machine) locks room creation until
   `KIMO_RESET_OWNER`. Existing rooms keep working for guests; their owner-side admin (revoke,
   rotate, close) was lost with the room keys anyway. Settings suggests adding a second device.
-- `KIMO_CREATE_SECRET` and the legacy register path keep the old bearer model alive only for
-  relays whose operator chose it, and only until the relay is claimed.
 
 ## Consequences
 
@@ -167,19 +156,15 @@ Other notes:
 - Adding a second device is explicit (pairing) instead of implicit (copying a secret). One extra
   step for multi-device owners, in exchange for per-device removal.
 - New relay surface: `POST /owner`, three tables, a `relayId`, two variables, six error codes.
-  Schema version 2 with an additive migration.
+  The tables join schema version 1 (nothing to migrate). Removed: one variable, one header, one
+  route, one error code (`CREATE_FORBIDDEN`).
 - New client surface: a device key store per platform, owner command signing, pairing link parse
   and format, a `/pair` route, the devices list in Settings, and claim in the wizard and Share.
-- `startSharing` no longer takes `createSecret`. The relay setup store keeps a stored secret only
-  for migration (legacy relays, and claiming a relay deployed with one) and deletes it after a
-  successful claim.
+- `startSharing` no longer takes `createSecret`. `relay-setup/secret.ts`, `RelaySecretSetting`,
+  the keychain secret commands and the Regenerate flows are deleted.
 - Desktop and web installs are separate devices; a user with both pairs them once.
-- Existing setups migrate without user action: a relay deployed with Kimo's secret is claimed
-  silently with that secret on the first Test or Start sharing after both sides update.
 - Follow-ups: the self-host, Fly.io and Railway guides swap the secret for `KIMO_OWNER_KEY` and
-  `KIMO_RESET_OWNER`; boards 41 and 42 are redesigned; the legacy paths (header register,
-  `createSecretRequired`, `/create-secret/check`, client fallback) are removed one minor release
-  later.
+  `KIMO_RESET_OWNER`; boards 41 and 42 are redesigned.
 
 ## Alternatives considered
 
@@ -188,17 +173,17 @@ Other notes:
 - **Set `KIMO_CREATE_SECRET` silently in Kimo's own paths and send it while claiming** (the lead's
   first proposal). It closes the claim window as well, but keeps a secret in the keychain, in the
   Docker command and in Fly secrets, and leaves the Railway gap. `KIMO_OWNER_KEY` closes the same
-  window with a public value. Kept only as the operator option and migration path.
+  window with a public value.
+- **Keep `KIMO_CREATE_SECRET` as an optional operator gate on the claim.** It would protect a
+  hand-deployed relay's claim window, but an operator who edits the environment can set
+  `KIMO_OWNER_KEY` instead, and keeping it brings back a "Setup code" field. Removed.
 - **Claim deadline.** See the threat note: no protection against a scanner, a real failure mode
   for slow users.
-- **Let a correct `KIMO_CREATE_SECRET` add a device to an already claimed relay.** Smoother for
-  multi-device users who shared one secret, but it keeps a permanent bearer credential that
-  defeats removal. Rejected; such users pair once.
 - **Mint pairing tokens on the relay.** Would let the relay list pending links, but costs a round
   trip and relay state for every link. Local minting plus a relay-side used list and an explicit
   cancel gives the same guarantees.
-- **Bump the protocol to `kimo-mp/2`.** Current clients would report an updated relay as "not a
-  relay" although sync is unchanged. A capability field (`ownership: 1`) is enough.
+- **Bump the protocol to `kimo-mp/2`.** Sync, tokens and envelopes are unchanged, and nothing has
+  shipped that would need to tell the two apart.
 - **Accounts or a hosted directory.** Out of scope by [0016](0016-multiplayer-transport-and-sessions.md):
   no accounts, no project services.
 

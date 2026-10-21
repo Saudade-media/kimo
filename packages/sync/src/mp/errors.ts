@@ -19,6 +19,8 @@ export type MpErrorCode =
   | "PAIRING_USED"
   | "RELAY_CLAIMED"
   | "LAST_DEVICE"
+  | "OWNER_EXTERNAL"
+  | "PLAN_REQUIRED"
   | "ROOM_NOT_FOUND"
   | "NOT_FOUND"
   | "HELLO_TIMEOUT"
@@ -38,6 +40,7 @@ export type MpErrorCode =
   | "RELAY_FULL"
   | "LOG_FULL"
   | "QUOTA_EXCEEDED"
+  | "ACCOUNT_QUOTA_EXCEEDED"
   | "DECRYPT_FAILED"
   | "BLOB_INTEGRITY"
   | "BAD_LINK"
@@ -71,6 +74,8 @@ export const MP_ERRORS: Readonly<Record<MpErrorCode, MpErrorInfo>> = Object.free
   PAIRING_USED: { http: 409, retry: false },
   RELAY_CLAIMED: { http: 409, retry: false },
   LAST_DEVICE: { http: 409, retry: false },
+  OWNER_EXTERNAL: { http: 403, retry: false },
+  PLAN_REQUIRED: { http: 402, retry: false },
   ROOM_NOT_FOUND: { http: 404, close: 4404, retry: false },
   NOT_FOUND: { http: 404, retry: false },
   HELLO_TIMEOUT: { close: 4408, retry: true },
@@ -90,6 +95,7 @@ export const MP_ERRORS: Readonly<Record<MpErrorCode, MpErrorInfo>> = Object.free
   RELAY_FULL: { http: 503, retry: false },
   LOG_FULL: { close: 4507, retry: true },
   QUOTA_EXCEEDED: { http: 507, retry: false },
+  ACCOUNT_QUOTA_EXCEEDED: { http: 507, retry: false },
   DECRYPT_FAILED: { retry: false },
   BLOB_INTEGRITY: { retry: false },
   BAD_LINK: { retry: false },

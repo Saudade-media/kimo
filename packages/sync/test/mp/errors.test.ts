@@ -25,6 +25,8 @@ const ALL_CODES: MpErrorCode[] = [
   "PAIRING_USED",
   "RELAY_CLAIMED",
   "LAST_DEVICE",
+  "OWNER_EXTERNAL",
+  "PLAN_REQUIRED",
   "ROOM_NOT_FOUND",
   "NOT_FOUND",
   "HELLO_TIMEOUT",
@@ -44,6 +46,7 @@ const ALL_CODES: MpErrorCode[] = [
   "RELAY_FULL",
   "LOG_FULL",
   "QUOTA_EXCEEDED",
+  "ACCOUNT_QUOTA_EXCEEDED",
   "DECRYPT_FAILED",
   "BLOB_INTEGRITY",
   "BAD_LINK",
@@ -76,6 +79,9 @@ describe("MP_ERRORS", () => {
     expect(MP_ERRORS.LOG_FULL).toEqual({ close: 4507, retry: true })
     expect(MP_ERRORS.RELAY_UNREACHABLE.retry).toBe(true)
     expect(MP_ERRORS.ROOM_FULL).toEqual({ http: 503, close: 4503, retry: true })
+    expect(MP_ERRORS.OWNER_EXTERNAL).toEqual({ http: 403, retry: false })
+    expect(MP_ERRORS.PLAN_REQUIRED).toEqual({ http: 402, retry: false })
+    expect(MP_ERRORS.ACCOUNT_QUOTA_EXCEEDED).toEqual({ http: 507, retry: false })
   })
 })
 

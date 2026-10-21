@@ -22,7 +22,8 @@ export interface RelayInfo {
   limits: RelayLimits
   /** 16 bytes (§14.11). */
   relayId: Uint8Array
-  owner: "unclaimed" | "claimed"
+  /** `external`: an owner policy module decides who may register (§14.12); owner ops answer `OWNER_EXTERNAL`. */
+  owner: "unclaimed" | "claimed" | "external"
 }
 
 /** A device of the relay's owner set, as `POST /owner` lists it (§6.1). */
@@ -88,6 +89,8 @@ function codeForStatus(status: number): MpErrorCode {
       return "BAD_REQUEST"
     case 401:
       return "AUTH_INVALID"
+    case 402:
+      return "PLAN_REQUIRED"
     case 403:
       return "ORIGIN_FORBIDDEN"
     case 404:
@@ -253,7 +256,8 @@ export class RelayHttpClient {
     if (!limits) throw notRelay("missing limits")
     const relayId = parseRelayId(info.relayId)
     if (!relayId) throw notRelay("missing relayId")
-    if (info.owner !== "unclaimed" && info.owner !== "claimed") throw notRelay("missing owner")
+    if (info.owner !== "unclaimed" && info.owner !== "claimed" && info.owner !== "external")
+      throw notRelay("missing owner")
     return {
       relayUrl: this.relayUrl,
       name: typeof info.name === "string" ? info.name : "",

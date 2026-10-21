@@ -440,7 +440,10 @@ export function createBlobSync(options: BlobSyncOptions): BlobSync {
           dropRest()
           if (error instanceof MultiplayerError && error.code === "TOO_LARGE")
             return skip(c, "too-large")
-          if (error instanceof MultiplayerError && error.code === "QUOTA_EXCEEDED")
+          if (
+            error instanceof MultiplayerError &&
+            (error.code === "QUOTA_EXCEEDED" || error.code === "ACCOUNT_QUOTA_EXCEEDED")
+          )
             return skip(c, "quota")
           if (error instanceof MultiplayerError && FATAL.has(error.code)) fatal = error
           result.failed++

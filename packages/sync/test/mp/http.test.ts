@@ -102,6 +102,11 @@ describe("RelayHttpClient", () => {
     expect(seen[0]?.headers.get("authorization")).toBeNull()
   })
 
+  test("probe accepts a relay whose owners are external (ADR 0018)", async () => {
+    route = () => json(200, { ...versionBody, owner: "external" })
+    expect((await client().probe()).owner).toBe("external")
+  })
+
   test("probe: NOT_A_RELAY for other servers, RELAY_UNREACHABLE when down", async () => {
     for (const respond of [
       () => new Response("<html>hi</html>", { status: 200 }),
@@ -163,6 +168,7 @@ describe("RelayHttpClient", () => {
       [409, "PAIRING_USED"],
       [409, "RELAY_CLAIMED"],
       [409, "LAST_DEVICE"],
+      [403, "OWNER_EXTERNAL"],
     ] as const) {
       route = () => json(status, { error: code, message: "x" })
       await expectCode(client().owner(new Uint8Array(1)), code)
@@ -197,6 +203,7 @@ describe("RelayHttpClient", () => {
     for (const [status, code] of [
       [400, "BAD_REQUEST"],
       [401, "AUTH_INVALID"],
+      [402, "PLAN_REQUIRED"],
       [413, "TOO_LARGE"],
       [429, "RATE_LIMITED"],
       [500, "INTERNAL"],

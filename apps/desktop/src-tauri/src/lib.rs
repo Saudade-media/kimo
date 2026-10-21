@@ -139,7 +139,7 @@ pub fn run() {
                 mcp::shim_path(),
             )));
 
-            // Board 42: the relay setup's processes and the create secret in the keychain.
+            // Board 42: the relay setup's processes; ADR 0017: the device key in the keychain.
             app.manage(Arc::new(relay_host::RelayHost::new(
                 relay_host::RelayHostConfig {
                     home: app.path().home_dir().unwrap_or_else(|_| home.clone()),
@@ -336,9 +336,8 @@ pub fn run() {
             ai_commands::kimo_cli_write,
             ai_commands::kimo_cli_close_stdin,
             ai_commands::kimo_cli_kill,
-            relay_commands::kimo_relay_secret_get,
-            relay_commands::kimo_relay_secret_set,
-            relay_commands::kimo_relay_secret_delete,
+            relay_commands::kimo_device_key_get,
+            relay_commands::kimo_device_key_set,
             relay_commands::kimo_relay_find_tool,
             relay_commands::kimo_relay_port_free,
             relay_commands::kimo_relay_lan_address,
@@ -748,7 +747,16 @@ mod tests {
     #[test]
     fn relay_command_surface_matches_platform_ts() {
         let ts = ts_list("relay-host.ts", "TAURI_RELAY_COMMANDS");
-        assert_eq!(ts.len(), 12);
+        assert_eq!(ts.len(), 9);
+        let device = ts_list("relay-host.ts", "TAURI_DEVICE_KEY_COMMANDS");
+        let own_device: Vec<String> = super::command_list_relay::DEVICE_KEY_COMMANDS
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            own_device, device,
+            "command_list_relay.rs must mirror TAURI_DEVICE_KEY_COMMANDS"
+        );
         let own: Vec<String> = super::command_list_relay::RELAY_COMMANDS
             .iter()
             .map(|s| s.to_string())
@@ -775,7 +783,10 @@ mod tests {
                     .map(String::from)
             })
             .collect();
-        assert_eq!(registered, ts.iter().cloned().collect::<BTreeSet<_>>());
+        assert_eq!(
+            registered,
+            ts.iter().chain(&device).cloned().collect::<BTreeSet<_>>()
+        );
         let perm = |c: &str| format!("allow-{}", c.replace('_', "-"));
         let expected: BTreeSet<String> = ts.iter().map(|c| perm(c)).collect();
         let (windows, perms) = capability("relay-setup");
@@ -790,11 +801,39 @@ mod tests {
             );
         }
         assert!(expected.is_subset(&perms));
-        for other in ["default", "mcp-host", "mcp-ui", "ai-agent", "ai-settings"] {
+        for other in [
+            "default",
+            "mcp-host",
+            "mcp-ui",
+            "ai-agent",
+            "ai-settings",
+            "device-key",
+        ] {
             let (_, perms) = capability(other);
             assert!(
                 perms.is_disjoint(&expected),
                 "{other} grants relay setup commands"
+            );
+        }
+        // The device key: every window that shares or manages devices, the document host too.
+        let device_perms: BTreeSet<String> = device.iter().map(|c| perm(c)).collect();
+        let (key_windows, key_perms) = capability("device-key");
+        for w in ["main", "editor-*", "settings", "document-host"] {
+            assert!(key_windows.contains(w), "device-key misses {w}");
+        }
+        assert_eq!(key_perms, device_perms);
+        for other in [
+            "default",
+            "mcp-host",
+            "mcp-ui",
+            "ai-agent",
+            "ai-settings",
+            "relay-setup",
+        ] {
+            let (_, perms) = capability(other);
+            assert!(
+                perms.is_disjoint(&device_perms),
+                "{other} grants device key commands"
             );
         }
         assert_eq!(

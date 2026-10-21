@@ -67,9 +67,10 @@ export function parseDeepLink(url: string): DeepLink | null {
 }
 
 /**
- * The join link in `kimo://join#<relay>/<room>/<token>/<key>` (or `kimo:join#...`): the whole
- * URL, for the app's join route to parse (it validates the parts). Null for any other URL or an
- * empty fragment. The key stays in the fragment.
+ * The join link in `kimo://join#<relay>/<room>/<token>/<key>` (or `kimo:join#...`), or the
+ * pairing link in `kimo://pair#<relay>/<token>` (ADR 0017): the whole URL, for the app's join or
+ * pairing route to parse (it validates the parts). Null for any other URL or an empty fragment.
+ * The key or token stays in the fragment.
  */
 export function parseJoinDeepLink(url: string): string | null {
   let u: URL
@@ -80,7 +81,7 @@ export function parseJoinDeepLink(url: string): string | null {
   }
   if (u.protocol !== `${DEEP_LINK_SCHEME}:`) return null
   const action = u.host || u.pathname.replace(/^\/+/, "")
-  if (action !== "join" || u.hash.length < 2) return null
+  if ((action !== "join" && action !== "pair") || u.hash.length < 2) return null
   return url.trim()
 }
 

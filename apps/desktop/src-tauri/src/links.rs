@@ -21,14 +21,15 @@ pub struct OpenRequest {
     pub node: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<String>,
-    /// Board 41 section 5: a multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`),
-    /// whole. `refs` is empty; the web app parses and validates it.
+    /// Board 41 section 5: a multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`)
+    /// or pairing link (`kimo://pair#<relay>/<token>`, ADR 0017), whole. `refs` is empty; the web
+    /// app tells them apart, parses and validates them.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub join: Option<String>,
 }
 
-/// `parseJoinDeepLink` in `packages/platform/src/links.ts`: the whole `kimo://join#...` (or
-/// `kimo:join#...`) link, or None for any other URL or an empty fragment.
+/// `parseJoinDeepLink` in `packages/platform/src/links.ts`: the whole `kimo://join#...` or
+/// `kimo://pair#...` (or `kimo:join#...`) link, or None for any other URL or an empty fragment.
 pub fn parse_join_link(raw: &str) -> Option<String> {
     let u = url::Url::parse(raw).ok()?;
     if u.scheme() != "kimo" {
@@ -40,7 +41,7 @@ pub fn parse_join_link(raw: &str) -> Option<String> {
     } else {
         u.path().trim_start_matches('/').to_string()
     };
-    if action != "join" || u.fragment().map_or(true, |f| f.is_empty()) {
+    if (action != "join" && action != "pair") || u.fragment().map_or(true, |f| f.is_empty()) {
         return None;
     }
     Some(raw.trim().to_string())
@@ -297,7 +298,11 @@ mod tests {
     #[test]
     fn join_links() {
         let frag = "https://relay.maya.studio/room1/token/key";
-        for form in [format!("kimo://join#{frag}"), format!("kimo:join#{frag}")] {
+        for form in [
+            format!("kimo://join#{frag}"),
+            format!("kimo:join#{frag}"),
+            "kimo://pair#https://relay.maya.studio/token".to_string(),
+        ] {
             assert_eq!(parse_join_link(&form), Some(form.clone()), "{form}");
             // Not a file deep link.
             assert_eq!(parse_deep_link(&form), None);
@@ -305,6 +310,7 @@ mod tests {
         for bad in [
             "kimo://join",
             "kimo://join#",
+            "kimo://pair",
             "kimo://open?path=%2Fa.kimo",
             "https://kimo.app/join#x",
             "not a url",

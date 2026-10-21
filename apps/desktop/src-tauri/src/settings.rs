@@ -237,7 +237,7 @@ mod tests {
         );
         s.set(
             "multiplayer.relaySetup",
-            json!({ "path": "local", "secretMode": "auto" }),
+            json!({ "path": "local", "extraOrigins": [] }),
         )
         .unwrap();
         assert_eq!(

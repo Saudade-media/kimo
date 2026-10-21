@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "device-key",
+  "description": "ADR 0017: this install's device key in the OS keychain (service kimo, account relay.device-key). Editor windows and Settings manage devices and start sharing with it; the hidden document host signs the register owner proof when it shares a file.",
+  "windows": ["main", "editor-*", "settings", "document-host"],
+  "permissions": ["allow-kimo-device-key-get", "allow-kimo-device-key-set"]
+}

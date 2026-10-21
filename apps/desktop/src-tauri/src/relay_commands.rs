@@ -34,22 +34,19 @@ impl<Rt: Runtime> crate::ai::EventSink for BroadcastSink<Rt> {
     }
 }
 
+/// ADR 0017: the device key's PKCS#8 (base64url), or None before the first use. Every window
+/// and the document host read it; the web app imports it as a non-extractable key.
 #[tauri::command]
-pub async fn kimo_relay_secret_get(app: AppHandle) -> R<Option<String>> {
+pub async fn kimo_device_key_get(app: AppHandle) -> R<Option<String>> {
     let h = host(&app)?;
-    blocking(move || h.secret_get()).await
+    blocking(move || h.device_key_get()).await
 }
 
+/// Stores the device key made on first use; a key already stored is kept.
 #[tauri::command]
-pub async fn kimo_relay_secret_set(app: AppHandle, value: String) -> R<()> {
+pub async fn kimo_device_key_set(app: AppHandle, value: String) -> R<()> {
     let h = host(&app)?;
-    blocking(move || h.secret_set(&value)).await
-}
-
-#[tauri::command]
-pub async fn kimo_relay_secret_delete(app: AppHandle) -> R<()> {
-    let h = host(&app)?;
-    blocking(move || h.secret_delete()).await
+    blocking(move || h.device_key_set(&value)).await
 }
 
 #[tauri::command]

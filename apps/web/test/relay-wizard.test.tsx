@@ -5,6 +5,7 @@
  * e2e/board42-relay-setup.e2e.ts.
  */
 import { describe, expect, test } from "bun:test"
+import { parseJoinDeepLink } from "@kimo/platform"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { type MpErrorCode, MultiplayerError } from "@kimo/sync/mp"
 import { createElement as h } from "react"
@@ -31,7 +32,9 @@ import {
   fakeProbe,
   issuedLink,
 } from "../src/multiplayer/ui/testing"
+import { isPairDeepLink, pairLinkFromLocation, pairPath } from "../src/pair/link"
 import { outcomeCard, pairErrorOutcome, pairMeta } from "../src/pair/PairRoute"
+import { parseRoute } from "../src/router"
 
 const ownership = createOwnershipClient({
   deviceKeys: createMemoryDeviceKeyStore(),
@@ -229,6 +232,17 @@ describe("Pairing link landing (board 41 section 5 H to N)", () => {
     expect(pairErrorOutcome(code("RELAY_UNREACHABLE"))).toBe("unreachable")
     expect(pairErrorOutcome(code("NOT_A_RELAY"))).toBe("not-a-relay")
     expect(pairMeta(1_792_000_720, 1_792_000_000_000)).toBe("Works once · 12 min left")
+  })
+
+  test("the routes: /pair#... on web, #/pair/<link> in the app, kimo://pair#... on desktop", () => {
+    const link = "https://getkimo.design/pair#https://relay.maya.studio/token"
+    expect(pairLinkFromLocation({ pathname: "/pair", hash: "#x", href: link })).toBe(link)
+    expect(pairLinkFromLocation({ pathname: "/join", hash: "#x", href: link })).toBeNull()
+    expect(parseRoute(`#${pairPath(link)}`)).toEqual({ name: "pair", link })
+    const deep = "kimo://pair#https://relay.maya.studio/token"
+    expect(parseJoinDeepLink(deep)).toBe(deep)
+    expect(isPairDeepLink(deep)).toBe(true)
+    expect(isPairDeepLink("kimo://join#https://r/room/token/key")).toBe(false)
   })
 
   test("stop relay copy names who disconnects", () => {

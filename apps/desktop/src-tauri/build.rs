@@ -15,6 +15,7 @@ fn main() {
         .chain(CLI_COMMANDS)
         .chain(SKILLS_COMMANDS)
         .chain(RELAY_COMMANDS)
+        .chain(DEVICE_KEY_COMMANDS)
         .copied()
         .collect();
     let _ = (MCP_HOST_ONLY_COMMANDS, AI_SETTINGS_EXCLUDED);

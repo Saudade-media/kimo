@@ -6,11 +6,13 @@
 //!   wizard's confirm; the person's `cloudflared` for a quick or named tunnel.
 //! - **Fly.io**: the person's `flyctl` for login, apps create, secrets import, volumes create
 //!   and deploy with the fly.toml Kimo writes.
-//! - **The create secret** in the OS keychain: service `kimo`, account `relay.secret`.
+//! - **The device key** (ADR 0017) in the OS keychain: service `kimo`, account
+//!   `relay.device-key`, the install's Ed25519 private key as PKCS#8 (base64url). Its public half is
+//!   what Kimo's setup paths pass as `KIMO_OWNER_KEY`.
 //!
 //! Rust is the gate: only those four programs run, each with arguments checked here (the
-//! relay's environment takes four names; secrets go through stdin or the environment, never
-//! argv), in their own process group, output streamed as `kimo://relay-output` lines (never
+//! relay's environment takes four names; variables for flyctl go through stdin, never argv), in
+//! their own process group, output streamed as `kimo://relay-output` lines (never
 //! logged) and `kimo://relay-exit`. Every process stops when Kimo quits.
 
 use crate::ai::cli::{
@@ -33,8 +35,11 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 pub const EV_RELAY_OUTPUT: &str = "kimo://relay-output";
 pub const EV_RELAY_EXIT: &str = "kimo://relay-exit";
 
-/// Keychain account of the create secret (service [`SERVICE`] = `kimo`).
-pub const SECRET_ACCOUNT: &str = "relay.secret";
+/// Keychain account of the device key (service [`SERVICE`] = `kimo`).
+pub const DEVICE_KEY_ACCOUNT: &str = "relay.device-key";
+
+/// Longest stored device key: an Ed25519 PKCS#8 is 48 bytes (64 base64url characters).
+const MAX_DEVICE_KEY: usize = 256;
 
 /// The official installer (board 42 E shows exactly this before it runs).
 pub const BUN_INSTALL_UNIX: &str = "curl -fsSL https://bun.sh/install | bash";
@@ -42,7 +47,7 @@ pub const BUN_INSTALL_WINDOWS: &str = "irm bun.sh/install.ps1 | iex";
 
 /// The relay's environment names Kimo may set (apps/server/src/config.ts); `KIMO_DATA_DIR` is
 /// always Kimo's own directory.
-pub const RELAY_ENV: &[&str] = &["PORT", "HOST", "KIMO_CREATE_SECRET", "KIMO_ALLOWED_ORIGINS"];
+pub const RELAY_ENV: &[&str] = &["PORT", "HOST", "KIMO_OWNER_KEY", "KIMO_ALLOWED_ORIGINS"];
 
 const TAIL_LINES: usize = 50;
 const MAX_LINE: usize = 4096;
@@ -318,26 +323,30 @@ impl RelayHost {
         self.cfg.dir.join("data")
     }
 
-    // Secret ------------------------------------------------------------------------------------
+    // Device key -------------------------------------------------------------------------------
 
-    pub fn secret_get(&self) -> R<Option<String>> {
+    pub fn device_key_get(&self) -> R<Option<String>> {
         Ok(self
             .secrets
-            .get(SECRET_ACCOUNT)?
+            .get(DEVICE_KEY_ACCOUNT)?
             .map(|s| s.expose().to_string()))
     }
 
-    pub fn secret_set(&self, value: &str) -> R<()> {
-        if value.is_empty() || value.len() > 4096 || value.contains('\n') || value.contains('\0') {
-            return Err(invalid(
-                "A create secret is one line of up to 4096 characters",
-            ));
+    /// Stores the device key once: a second window that made its own key keeps the first one
+    /// (the caller reads it back), so every window signs as the same device.
+    pub fn device_key_set(&self, value: &str) -> R<()> {
+        let ok = !value.is_empty()
+            && value.len() <= MAX_DEVICE_KEY
+            && value
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+        if !ok {
+            return Err(invalid("A device key is base64url of up to 256 characters"));
         }
-        self.secrets.set(SECRET_ACCOUNT, value)
-    }
-
-    pub fn secret_delete(&self) -> R<()> {
-        self.secrets.delete(SECRET_ACCOUNT).map(|_| ())
+        if self.secrets.get(DEVICE_KEY_ACCOUNT)?.is_some() {
+            return Ok(());
+        }
+        self.secrets.set(DEVICE_KEY_ACCOUNT, value)
     }
 
     // Tools ---------------------------------------------------------------------------------------
@@ -939,7 +948,7 @@ mod tests {
             s(&[
                 "secrets",
                 "set",
-                "KIMO_CREATE_SECRET=x",
+                "KIMO_OWNER_KEY=x",
                 "--app",
                 "kimo-relay-maya",
             ]),
@@ -976,8 +985,11 @@ mod tests {
     fn relay_env_takes_four_names() {
         let mut env = HashMap::new();
         env.insert("PORT".to_string(), "8787".to_string());
-        env.insert("KIMO_CREATE_SECRET".to_string(), "kimo_cs_x".to_string());
+        env.insert("KIMO_OWNER_KEY".to_string(), "3eO8zsfzpmoRF".to_string());
         assert!(check_relay_env(&env).is_ok());
+        let mut old = HashMap::new();
+        old.insert("KIMO_CREATE_SECRET".to_string(), "x".to_string());
+        assert_eq!(check_relay_env(&old).unwrap_err().code, "PERMISSION");
         env.insert("KIMO_DATA_DIR".to_string(), "/".to_string());
         assert_eq!(check_relay_env(&env).unwrap_err().code, "PERMISSION");
         let mut nl = HashMap::new();
@@ -1010,14 +1022,22 @@ mod tests {
     }
 
     #[test]
-    fn secret_in_the_store_and_fly_config() {
+    fn device_key_in_the_store_and_fly_config() {
         let f = fixture(None);
-        assert_eq!(f.host.secret_get().unwrap(), None);
-        f.host.secret_set("kimo_cs_abc").unwrap();
-        assert_eq!(f.host.secret_get().unwrap().as_deref(), Some("kimo_cs_abc"));
-        assert_eq!(f.host.secret_set("a\nb").unwrap_err().code, "INVALID");
-        f.host.secret_delete().unwrap();
-        assert_eq!(f.host.secret_get().unwrap(), None);
+        assert_eq!(f.host.device_key_get().unwrap(), None);
+        f.host.device_key_set("MC4CAQAwBQYDK2VwBCIEIA").unwrap();
+        assert_eq!(
+            f.host.device_key_get().unwrap().as_deref(),
+            Some("MC4CAQAwBQYDK2VwBCIEIA")
+        );
+        // The first key stays: a second window's key does not replace it.
+        f.host.device_key_set("other").unwrap();
+        assert_eq!(
+            f.host.device_key_get().unwrap().as_deref(),
+            Some("MC4CAQAwBQYDK2VwBCIEIA")
+        );
+        assert_eq!(f.host.device_key_set("a\nb").unwrap_err().code, "INVALID");
+        assert_eq!(f.host.device_key_set("").unwrap_err().code, "INVALID");
         let p = f.host.write_fly_config("app = \"x\"\n").unwrap();
         assert!(p.ends_with("fly.toml"));
         assert_eq!(
@@ -1068,11 +1088,11 @@ mod tests {
             &f.bin,
             "bun",
             "echo \"@kimo/server listening on http://0.0.0.0:$PORT/ (data: $KIMO_DATA_DIR)\"; \
-             echo \"entry=$1 secret=${KIMO_CREATE_SECRET:+set}\"",
+             echo \"entry=$1 owner=${KIMO_OWNER_KEY:+set}\"",
         );
         let mut env = HashMap::new();
         env.insert("PORT".to_string(), "8799".to_string());
-        env.insert("KIMO_CREATE_SECRET".to_string(), "kimo_cs_x".to_string());
+        env.insert("KIMO_OWNER_KEY".to_string(), "kimo_owner_x".to_string());
         let (sink, rx) = ChannelSink::pair();
         let id = f
             .host
@@ -1082,8 +1102,8 @@ mod tests {
         let lines: Vec<&str> = events.iter().filter_map(|e| e["line"].as_str()).collect();
         assert!(lines[0].starts_with("@kimo/server listening on http://0.0.0.0:8799/"));
         assert!(lines[0].contains("/relay/data"), "{lines:?}");
-        assert!(lines[1].ends_with("kimo-relay.js secret=set"), "{lines:?}");
-        assert!(!lines.iter().any(|l| l.contains("kimo_cs_x")));
+        assert!(lines[1].ends_with("kimo-relay.js owner=set"), "{lines:?}");
+        assert!(!lines.iter().any(|l| l.contains("kimo_owner_x")));
         assert_eq!(events.last().unwrap()["code"], 0);
         assert!(f.host.running().is_empty());
         // Arguments and other env names are refused.
@@ -1114,13 +1134,13 @@ mod tests {
                 ProcKind::Flyctl,
                 &s(&["secrets", "import", "--app", "kimo-relay-maya", "--stage"]),
                 &HashMap::new(),
-                Some("KIMO_CREATE_SECRET=kimo_cs_x\n"),
+                Some("KIMO_OWNER_KEY=kimo_owner_x\n"),
                 sink,
             )
             .unwrap();
         let events = until_exit(rx, &id).await;
         let lines: Vec<&str> = events.iter().filter_map(|e| e["line"].as_str()).collect();
-        assert_eq!(lines, vec!["got KIMO_CREATE_SECRET"]);
+        assert_eq!(lines, vec!["got KIMO_OWNER_KEY"]);
 
         let (sink, mut rx) = ChannelSink::pair();
         let id = f

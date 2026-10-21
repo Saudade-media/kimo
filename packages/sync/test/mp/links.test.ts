@@ -3,13 +3,16 @@ import {
   deriveRoomId,
   exportPublicKey,
   formatJoinLink,
+  formatPairingLink,
   generateRoomKey,
   generateSigningKeyPair,
   httpUrlFor,
   type JoinLink,
+  mintPairingToken,
   mintToken,
   normalizeRelayUrl,
   parseJoinLink,
+  parsePairingLink,
   randomBytes,
   syncUrlFor,
   toBase64Url,
@@ -239,5 +242,76 @@ describe("join links", () => {
     await expectCode(() => formatJoinLink({ ...link, token: other.token }), "BAD_LINK")
     await expectCode(() => formatJoinLink({ ...link, roomKey: new Uint8Array(31) }), "BAD_LINK")
     await expectCode(() => formatJoinLink({ ...link, room: "x" }), "BAD_LINK")
+  })
+})
+
+async function pairingToken() {
+  const issuer = await generateSigningKeyPair()
+  return mintPairingToken(issuer, {
+    iat: 1_800_000_000,
+    exp: 1_800_000_900,
+    jti: randomBytes(16),
+    relayId: randomBytes(16),
+  })
+}
+
+describe("pairing links", () => {
+  test("format and parse round trip, with a relay path prefix", async () => {
+    const token = await pairingToken()
+    for (const [webOrigin, relayUrl, prefix] of [
+      [
+        "https://app.kimo.design",
+        "https://relay.example.com/kimo",
+        "https://app.kimo.design/pair#",
+      ],
+      ["kimo:", "http://localhost:8787", "kimo://pair#"],
+      ["", "wss://relay.example.com/", "#"],
+    ] as const) {
+      const text = formatPairingLink({ webOrigin, relayUrl, token })
+      expect(text.startsWith(prefix)).toBe(true)
+      const parsed = parsePairingLink(text)
+      expect(parsed.relayUrl).toBe(normalizeRelayUrl(relayUrl))
+      expect(parsed.token).toBe(token)
+      expect(parsed.webOrigin).toBe(webOrigin)
+    }
+    const wrapped = formatPairingLink({
+      webOrigin: "https://app.kimo.design",
+      relayUrl: "https://relay.example.com",
+      token,
+    })
+    expect(parsePairingLink(`  ${wrapped.slice(0, 40)}\n${wrapped.slice(40)}/ `).token).toBe(token)
+    expect(parsePairingLink(encodeURIComponent(wrapped)).token).toBe(token)
+  })
+
+  test("a join link is not a pairing link, and the reverse", async () => {
+    const join = formatJoinLink(await sample())
+    await expectCode(() => parsePairingLink(join), "BAD_LINK")
+    const pair = formatPairingLink({
+      webOrigin: "https://app.kimo.design",
+      relayUrl: "https://relay.example.com",
+      token: await pairingToken(),
+    })
+    await expectCode(() => parseJoinLink(pair), "BAD_LINK")
+  })
+
+  test("bad parts are BAD_LINK", async () => {
+    const token = await pairingToken()
+    const { token: capability } = await roomToken()
+    await expectCode(
+      () => formatPairingLink({ webOrigin: "", relayUrl: "ftp://x", token }),
+      "BAD_LINK",
+    )
+    await expectCode(
+      () => formatPairingLink({ webOrigin: "", relayUrl: "https://r.example", token: capability }),
+      "BAD_LINK",
+    )
+    for (const text of [
+      "https://app.kimo.design/pair#",
+      `https://app.kimo.design/pair#${token}`,
+      `https://app.kimo.design/pair#http://example.com/${token}`,
+      `https://app.kimo.design/pair#https://u@r.example/${token}`,
+      `https://app.kimo.design/pair#https://r.example/${token.slice(1)}`,
+    ])
+      await expectCode(() => parsePairingLink(text), "BAD_LINK")
   })
 })

@@ -1,5 +1,6 @@
 /**
- * Capability tokens (docs/spec/multiplayer.md §4) and root-signed admin commands (§6).
+ * Capability tokens (docs/spec/multiplayer.md §4) and root-signed admin commands (§6). The
+ * register owner proof, owner commands and pairing tokens are in `./owner`.
  *
  * A token is `base64url(payload || Ed25519 signature)` signed by the room's link key; it names the
  * room, role, link key id, expiry, a random `jti` and the author origin the relay stamps on every
@@ -204,7 +205,7 @@ export async function verifyTokenSignature(
 export type AdminOp = "register" | "revoke" | "rotate" | "close" | "sweep"
 
 export type AdminBody =
-  | { op: "register"; rootPub: string; cert: string }
+  | { op: "register"; rootPub: string; cert: string; owner: { pub: string; sig: string } }
   | { op: "revoke"; jti: string; exp: number }
   | { op: "rotate"; cert: string }
   | { op: "close" }
@@ -248,6 +249,14 @@ export function adminBodyError(op: AdminOp, body: Record<string, unknown>): stri
     case "register":
       if (!isB64(body.rootPub)) return "rootPub must be base64url"
       if (!isB64(body.cert)) return "cert must be base64url"
+      // A missing owner proof parses: the relay answers NOT_OWNER (§6).
+      if (body.owner !== undefined) {
+        const owner = body.owner as Record<string, unknown> | null
+        if (typeof owner !== "object" || owner === null || Array.isArray(owner))
+          return "owner must be an object"
+        if (!isB64(owner.pub) || !isB64(owner.sig))
+          return "owner.pub and owner.sig must be base64url"
+      }
       return null
     case "revoke":
       if (typeof body.jti !== "string" || !/^[0-9a-f]{32}$/.test(body.jti))

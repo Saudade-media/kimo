@@ -13,7 +13,12 @@ export type MpErrorCode =
   | "VIEW_ONLY"
   | "ROLE_UNSUPPORTED"
   | "ORIGIN_FORBIDDEN"
-  | "CREATE_FORBIDDEN"
+  | "RELAY_UNCLAIMED"
+  | "NOT_OWNER"
+  | "PAIRING_EXPIRED"
+  | "PAIRING_USED"
+  | "RELAY_CLAIMED"
+  | "LAST_DEVICE"
   | "ROOM_NOT_FOUND"
   | "NOT_FOUND"
   | "HELLO_TIMEOUT"
@@ -60,7 +65,12 @@ export const MP_ERRORS: Readonly<Record<MpErrorCode, MpErrorInfo>> = Object.free
   VIEW_ONLY: { http: 403, retry: false },
   ROLE_UNSUPPORTED: { http: 403, close: 4405, retry: false },
   ORIGIN_FORBIDDEN: { http: 403, retry: false },
-  CREATE_FORBIDDEN: { http: 403, retry: false },
+  RELAY_UNCLAIMED: { http: 403, retry: false },
+  NOT_OWNER: { http: 403, retry: false },
+  PAIRING_EXPIRED: { http: 401, retry: false },
+  PAIRING_USED: { http: 409, retry: false },
+  RELAY_CLAIMED: { http: 409, retry: false },
+  LAST_DEVICE: { http: 409, retry: false },
   ROOM_NOT_FOUND: { http: 404, close: 4404, retry: false },
   NOT_FOUND: { http: 404, retry: false },
   HELLO_TIMEOUT: { close: 4408, retry: true },

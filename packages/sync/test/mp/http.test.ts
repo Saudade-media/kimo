@@ -2,9 +2,11 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import {
   DEFAULT_LIMITS,
   MultiplayerError,
+  type OwnerDevice,
   PROTOCOL,
   parseRetryAfter,
   RelayHttpClient,
+  toBase64Url,
 } from "../../src/mp"
 import { expectCode } from "./helpers"
 
@@ -65,7 +67,17 @@ const versionBody = {
   version: "2.0.0",
   protocol: PROTOCOL,
   limits: DEFAULT_LIMITS,
-  createSecretRequired: true,
+  relayId: toBase64Url(new Uint8Array(16).fill(7)),
+  owner: "claimed",
+}
+
+const DEVICE = toBase64Url(new Uint8Array(32).fill(1))
+const device: OwnerDevice = {
+  pub: DEVICE,
+  name: "Mac",
+  addedAt: 1_792_000_000_000,
+  addedBy: null,
+  via: "env",
 }
 
 describe("RelayHttpClient", () => {
@@ -79,7 +91,13 @@ describe("RelayHttpClient", () => {
   test("probe reads /version", async () => {
     route = () => json(200, versionBody)
     const info = await client().probe()
-    expect(info).toEqual({ relayUrl, ...versionBody, protocol: "kimo-mp/1" })
+    expect(info).toEqual({
+      relayUrl,
+      ...versionBody,
+      protocol: "kimo-mp/1",
+      relayId: new Uint8Array(16).fill(7),
+      owner: "claimed",
+    })
     expect(seen[0]).toMatchObject({ method: "GET", path: "/version" })
     expect(seen[0]?.headers.get("authorization")).toBeNull()
   })
@@ -89,6 +107,10 @@ describe("RelayHttpClient", () => {
       () => new Response("<html>hi</html>", { status: 200 }),
       () => json(200, { ...versionBody, protocol: "kimo-mp/2" }),
       () => json(200, { ...versionBody, limits: { maxEntryBytes: 1 } }),
+      () => json(200, { ...versionBody, relayId: undefined }),
+      () => json(200, { ...versionBody, relayId: toBase64Url(new Uint8Array(15)) }),
+      () => json(200, { ...versionBody, owner: undefined }),
+      () => json(200, { ...versionBody, owner: "yours" }),
       () => json(200, [1, 2]),
       () => new Response("nope", { status: 404 }),
       () => json(400, { error: "BAD_REQUEST", message: "?" }),
@@ -107,33 +129,44 @@ describe("RelayHttpClient", () => {
     )
   })
 
-  test("checkCreateSecret sends the secret and reads the answer", async () => {
-    route = () => json(200, { required: true, accepted: true })
-    expect(await client().checkCreateSecret("s3cret")).toEqual({ required: true, accepted: true })
-    expect(seen[0]).toMatchObject({ method: "POST", path: "/create-secret/check" })
-    expect(seen[0]?.headers.get("kimo-create-secret")).toBe("s3cret")
-    route = () => json(200, { required: false, accepted: true })
-    expect(await client().checkCreateSecret(null)).toEqual({ required: false, accepted: true })
-    expect(seen[0]?.headers.get("kimo-create-secret")).toBeNull()
-    route = () => json(403, { error: "CREATE_FORBIDDEN", message: "wrong" })
-    await expectCode(client().checkCreateSecret("nope"), "CREATE_FORBIDDEN")
-    // A relay from before the route: nothing to check against.
-    route = () => json(404, { error: "NOT_FOUND", message: "No route" })
-    expect(await client().checkCreateSecret("s3cret")).toBeNull()
-  })
-
-  test("admin posts the command bytes with the create secret", async () => {
+  test("admin posts the command bytes", async () => {
     route = () => json(201, { room: ROOM, kid: 1 })
     const c = client()
     const command = new Uint8Array([1, 3, 1, 0, 9, 9])
-    expect(await c.admin(ROOM, command, { createSecret: "s3cret" })).toEqual({ room: ROOM, kid: 1 })
+    expect(await c.admin(ROOM, command)).toEqual({ room: ROOM, kid: 1 })
     expect(seen[0]?.method).toBe("POST")
     expect(seen[0]?.path).toBe(`/room/${ROOM}/admin`)
-    expect(seen[0]?.headers.get("kimo-create-secret")).toBe("s3cret")
     expect(seen[0]?.headers.get("content-type")).toBe("application/octet-stream")
     expect(seen[0]?.body).toEqual(command)
-    await c.admin(ROOM, command)
-    expect(seen[1]?.headers.get("kimo-create-secret")).toBeNull()
+  })
+
+  test("owner posts the command bytes and reads 201, 200 and {}", async () => {
+    const command = new Uint8Array([1, 4, 1, 0, 9, 9])
+    route = () => json(201, { devices: [device] })
+    expect(await client().owner(command)).toEqual({ status: 201, devices: [device] })
+    expect(seen[0]).toMatchObject({ method: "POST", path: "/owner" })
+    expect(seen[0]?.headers.get("content-type")).toBe("application/octet-stream")
+    expect(seen[0]?.body).toEqual(command)
+    route = () => json(200, { devices: [device, { ...device, via: "pair", addedBy: DEVICE }] })
+    expect((await client().owner(command)).status).toBe(200)
+    route = () => json(200, {})
+    expect(await client().owner(command)).toEqual({ status: 200, devices: null })
+    route = () => json(200, { devices: [{ ...device, via: "secret" }] })
+    await expectCode(client().owner(command), "INTERNAL")
+  })
+
+  test("owner maps the ownership error codes", async () => {
+    for (const [status, code] of [
+      [403, "RELAY_UNCLAIMED"],
+      [403, "NOT_OWNER"],
+      [401, "PAIRING_EXPIRED"],
+      [409, "PAIRING_USED"],
+      [409, "RELAY_CLAIMED"],
+      [409, "LAST_DEVICE"],
+    ] as const) {
+      route = () => json(status, { error: code, message: "x" })
+      await expectCode(client().owner(new Uint8Array(1)), code)
+    }
   })
 
   test("JSON error bodies map to their code; retry-after to retryAfterMs", async () => {
@@ -150,7 +183,7 @@ describe("RelayHttpClient", () => {
     }
     for (const [status, code] of [
       [401, "TOKEN_EXPIRED"],
-      [403, "CREATE_FORBIDDEN"],
+      [403, "NOT_OWNER"],
       [409, "NONCE_REPLAY"],
       [422, "ROOM_ID_MISMATCH"],
       [503, "RELAY_FULL"],

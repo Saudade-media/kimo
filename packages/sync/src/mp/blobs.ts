@@ -124,7 +124,6 @@ const FATAL = new Set([
   "ROOM_NOT_FOUND",
   "ORIGIN_FORBIDDEN",
   "ROLE_UNSUPPORTED",
-  "CREATE_FORBIDDEN",
 ])
 
 function entriesOf(

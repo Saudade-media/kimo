@@ -6,11 +6,12 @@
  */
 
 import { isBlobId } from "./blob-crypto"
-import { asBytes } from "./bytes"
+import { asBytes, fromBase64Url } from "./bytes"
 import { ENVELOPE_OVERHEAD } from "./envelope"
 import { isMpErrorCode, type MpErrorCode, MultiplayerError } from "./errors"
 import { isRoomId } from "./identity"
 import { httpUrlFor, normalizeRelayUrl } from "./links"
+import { isDeviceName, isDevicePub, RELAY_ID_BYTES } from "./owner"
 import { DEFAULT_LIMITS, PROTOCOL, type RelayLimits, type SnapshotInfo } from "./protocol"
 
 export interface RelayInfo {
@@ -19,7 +20,21 @@ export interface RelayInfo {
   version: string
   protocol: typeof PROTOCOL
   limits: RelayLimits
-  createSecretRequired: boolean
+  /** 16 bytes (§14.11). */
+  relayId: Uint8Array
+  owner: "unclaimed" | "claimed"
+}
+
+/** A device of the relay's owner set, as `POST /owner` lists it (§6.1). */
+export interface OwnerDevice {
+  /** Base64url public key. */
+  pub: string
+  name: string
+  /** Unix ms. */
+  addedAt: number
+  /** The issuing device of a pairing; null otherwise. */
+  addedBy: string | null
+  via: "claim" | "pair" | "env"
 }
 
 export interface RoomInfo {
@@ -157,6 +172,25 @@ function parseLimits(value: unknown): RelayLimits | null {
   return limits
 }
 
+function parseRelayId(value: unknown): Uint8Array | null {
+  if (typeof value !== "string") return null
+  try {
+    const bytes = fromBase64Url(value)
+    return bytes.length === RELAY_ID_BYTES ? bytes : null
+  } catch {
+    return null
+  }
+}
+
+function parseOwnerDevice(value: unknown): OwnerDevice | null {
+  if (typeof value !== "object" || value === null) return null
+  const { pub, name, addedAt, addedBy, via } = value as Record<string, unknown>
+  if (!isDevicePub(pub) || !isDeviceName(name) || !isCount(addedAt)) return null
+  if (addedBy !== null && !isDevicePub(addedBy)) return null
+  if (via !== "claim" && via !== "pair" && via !== "env") return null
+  return { pub, name, addedAt, addedBy, via }
+}
+
 function parseSnapshotInfo(value: unknown): SnapshotInfo | null | undefined {
   if (value === null) return null
   if (typeof value !== "object") return undefined
@@ -217,51 +251,48 @@ export class RelayHttpClient {
     if (info.protocol !== PROTOCOL) throw notRelay(`protocol ${String(info.protocol)}`)
     const limits = parseLimits(info.limits)
     if (!limits) throw notRelay("missing limits")
+    const relayId = parseRelayId(info.relayId)
+    if (!relayId) throw notRelay("missing relayId")
+    if (info.owner !== "unclaimed" && info.owner !== "claimed") throw notRelay("missing owner")
     return {
       relayUrl: this.relayUrl,
       name: typeof info.name === "string" ? info.name : "",
       version: typeof info.version === "string" ? info.version : "",
       protocol: PROTOCOL,
       limits,
-      createSecretRequired: info.createSecretRequired === true,
+      relayId,
+      owner: info.owner,
     }
   }
 
-  /**
-   * `POST /create-secret/check`: whether `createSecret` (or none) would let this client create a
-   * room, without creating one. `CREATE_FORBIDDEN` when the relay refuses it; null when the relay
-   * predates the route (404), so the secret can only be checked by creating a room.
-   */
-  async checkCreateSecret(
-    createSecret: string | null,
-  ): Promise<{ required: boolean; accepted: boolean } | null> {
-    const headers: Record<string, string> = {}
-    if (createSecret) headers["kimo-create-secret"] = createSecret
-    return this.request(
-      "POST",
-      "/create-secret/check",
-      { headers },
-      async (response, kick) => {
-        const body = await jsonObject("create secret check")(response, kick)
-        return { required: body.required === true, accepted: body.accepted === true }
-      },
-      () => null,
-    )
-  }
-
   /** `POST /room/<room>/admin` with signed command bytes; the parsed JSON success body. */
-  async admin(
-    room: string,
-    command: Uint8Array,
-    options?: { createSecret?: string },
-  ): Promise<Record<string, unknown>> {
-    const headers: Record<string, string> = { "content-type": OCTETS }
-    if (options?.createSecret) headers["kimo-create-secret"] = options.createSecret
+  async admin(room: string, command: Uint8Array): Promise<Record<string, unknown>> {
     return this.request(
       "POST",
       `/room/${roomPath(room)}/admin`,
-      { headers, body: command },
+      { headers: { "content-type": OCTETS }, body: command },
       jsonObject("admin response"),
+    )
+  }
+
+  /**
+   * `POST /owner` with signed owner command bytes (§6.1): the status and the device list of the
+   * success body (null for `{}`, the answer to cancel pairing).
+   */
+  async owner(command: Uint8Array): Promise<{ status: 200 | 201; devices: OwnerDevice[] | null }> {
+    return this.request(
+      "POST",
+      "/owner",
+      { headers: { "content-type": OCTETS }, body: command },
+      async (response, kick) => {
+        const body = await jsonObject("owner response")(response, kick)
+        const status = response.status === 201 ? 201 : 200
+        if (body.devices === undefined) return { status, devices: null }
+        if (!Array.isArray(body.devices)) throw malformed("owner response")
+        const devices = body.devices.map(parseOwnerDevice)
+        if (devices.some((d) => d === null)) throw malformed("owner response")
+        return { status, devices: devices as OwnerDevice[] }
+      },
     )
   }
 

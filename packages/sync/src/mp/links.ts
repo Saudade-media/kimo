@@ -1,5 +1,5 @@
 /**
- * Join links and relay URLs (docs/spec/multiplayer.md §7).
+ * Join links, pairing links and relay URLs (docs/spec/multiplayer.md §7, §7.1).
  *
  * `<web-origin>/join#<relay-url>/<room>/<token>/<room-key>`: everything a guest needs is in the
  * fragment, which browsers never send to a server, so neither the web host nor the relay sees the
@@ -9,6 +9,7 @@ import { fromBase64Url, toBase64Url } from "./bytes"
 import { MultiplayerError } from "./errors"
 import { isRoomId } from "./identity"
 import { ROOM_KEY_BYTES } from "./keys"
+import { parsePairingToken } from "./owner"
 import { parseToken } from "./tokens"
 
 export interface JoinLink {
@@ -83,13 +84,16 @@ export function httpUrlFor(relayUrl: string, path: string): string {
 
 /** Builds a join link (§7). Throws `BAD_LINK` when a part is invalid. */
 export function formatJoinLink(link: JoinLink): string {
-  const fragment = joinFragment(link)
-  const origin = link.webOrigin.trim()
+  return withOrigin(link.webOrigin, "join", joinFragment(link))
+}
+
+/** `<origin>/<route>#<fragment>`; a bare scheme (`kimo:`) becomes `kimo://<route>#...`. */
+function withOrigin(webOrigin: string, route: string, fragment: string): string {
+  const origin = webOrigin.trim()
   if (origin === "") return `#${fragment}`
-  // A bare scheme (`kimo:`) becomes `kimo://join#...`; a web origin gets `/join`.
   const prefix = /^[a-z][a-z0-9+.-]*:$/i.test(origin)
-    ? `${origin}//join`
-    : `${origin.replace(/\/+$/, "")}/join`
+    ? `${origin}//${route}`
+    : `${origin.replace(/\/+$/, "")}/${route}`
   return `${prefix}#${fragment}`
 }
 
@@ -125,15 +129,19 @@ function checkParts(room: string, token: string, roomKey: Uint8Array): void {
  */
 export function parseJoinLink(text: string): JoinLink {
   if (typeof text !== "string") throw new MultiplayerError("BAD_LINK", "not a link")
-  return parseCompact(text.replace(/\s+/g, ""), true)
+  return parseCompact(text.replace(/\s+/g, ""), true, parseFragment)
 }
 
-function parseCompact(compact: string, mayDecode: boolean): JoinLink {
+function parseCompact<T>(
+  compact: string,
+  mayDecode: boolean,
+  parse: (fragment: string) => T,
+): T & { webOrigin: string } {
   const hash = compact.indexOf("#")
   const before = hash >= 0 ? compact.slice(0, hash) : ""
   const fragment = hash >= 0 ? compact.slice(hash + 1) : compact
   try {
-    return { webOrigin: webOriginOf(before), ...parseFragment(fragment) }
+    return { webOrigin: webOriginOf(before), ...parse(fragment) }
   } catch (error) {
     if (!mayDecode || !/%[0-9a-f]{2}/i.test(compact)) throw error
     let decoded: string
@@ -144,7 +152,7 @@ function parseCompact(compact: string, mayDecode: boolean): JoinLink {
     }
     // The whole link may have been encoded (a redirector or a URL parameter): parse it again
     // from the top, '#' split included, but decode only once.
-    return parseCompact(decoded, false)
+    return parseCompact(decoded, false, parse)
   }
 }
 
@@ -159,23 +167,27 @@ function webOriginOf(prefix: string): string {
   }
 }
 
+/** The relay URL of a link fragment's leading segments (`BAD_LINK` when it does not normalize). */
+function relayOfSegments(segments: readonly string[]): string {
+  const relaySegment = segments.join("/")
+  // normalizeRelayUrl drops a query, fragment and credentials; here they mean a malformed or
+  // wrapped link that would resolve to another host, so they are refused instead.
+  if (/[?#@]/.test(relaySegment))
+    throw new MultiplayerError("BAD_LINK", "the relay URL has a query, fragment or credentials")
+  try {
+    return normalizeRelayUrl(relaySegment)
+  } catch (cause) {
+    throw new MultiplayerError("BAD_LINK", "invalid relay URL", { cause })
+  }
+}
+
 function parseFragment(fragment: string): Omit<JoinLink, "webOrigin"> {
   const segments = fragment.replace(/\/+$/, "").split("/")
   if (segments.length < 4) throw new MultiplayerError("BAD_LINK", "missing link segments")
   const key = segments.pop() as string
   const token = segments.pop() as string
   const room = segments.pop() as string
-  const relaySegment = segments.join("/")
-  // normalizeRelayUrl drops a query, fragment and credentials; here they mean a malformed or
-  // wrapped link that would resolve to another host, so they are refused instead.
-  if (/[?#@]/.test(relaySegment))
-    throw new MultiplayerError("BAD_LINK", "the relay URL has a query, fragment or credentials")
-  let relayUrl: string
-  try {
-    relayUrl = normalizeRelayUrl(relaySegment)
-  } catch (cause) {
-    throw new MultiplayerError("BAD_LINK", "invalid relay URL", { cause })
-  }
+  const relayUrl = relayOfSegments(segments)
   let roomKey: Uint8Array
   try {
     roomKey = fromBase64Url(key)
@@ -184,4 +196,51 @@ function parseFragment(fragment: string): Omit<JoinLink, "webOrigin"> {
   }
   checkParts(room, token, roomKey)
   return { relayUrl, room, token, roomKey }
+}
+
+// Pairing links (§7.1) -------------------------------------------------------------------------
+
+export interface PairingLink {
+  /** e.g. `https://app.kimo.design` or `kimo:`; empty when parsed from a bare fragment. */
+  webOrigin: string
+  /** Normalized relay base URL. */
+  relayUrl: string
+  /** Base64url pairing token (§6.2). */
+  token: string
+}
+
+/** Builds a pairing link, `<webOrigin>/pair#<relay>/<token>`. Throws `BAD_LINK`. */
+export function formatPairingLink(link: PairingLink): string {
+  let relayUrl: string
+  try {
+    relayUrl = normalizeRelayUrl(link.relayUrl)
+  } catch (cause) {
+    throw new MultiplayerError("BAD_LINK", "invalid relay URL", { cause })
+  }
+  checkPairingToken(link.token)
+  return withOrigin(link.webOrigin, "pair", `${relayUrl}/${link.token}`)
+}
+
+/**
+ * Parses a pairing link: a full URL (`https://app/pair#...`, `kimo://pair#...`) or a bare
+ * fragment, with the same tolerance as {@link parseJoinLink}. A join link is not a pairing link.
+ * Throws `BAD_LINK`.
+ */
+export function parsePairingLink(text: string): PairingLink {
+  if (typeof text !== "string") throw new MultiplayerError("BAD_LINK", "not a link")
+  return parseCompact(text.replace(/\s+/g, ""), true, (fragment) => {
+    const segments = fragment.replace(/\/+$/, "").split("/")
+    if (segments.length < 4) throw new MultiplayerError("BAD_LINK", "missing link segments")
+    const token = segments.pop() as string
+    checkPairingToken(token)
+    return { relayUrl: relayOfSegments(segments), token }
+  })
+}
+
+function checkPairingToken(token: string): void {
+  try {
+    parsePairingToken(token)
+  } catch (cause) {
+    throw new MultiplayerError("BAD_LINK", "invalid pairing token", { cause })
+  }
 }

@@ -2363,6 +2363,25 @@ signature (hex)
 28d79e827f1b52b26317a4570826451cfa390028329dba81619b7acf238d37ae053730c3f6ebab91391d0e07d52d963b66ba8a41907ac58b3e2e06eca396d604
 ```
 
+**Ownership** (ADR 0017): device private seed `seq(32, 0xc0)` (public key
+`dde3bccec7f3a66a1115f45d720f4dc135c3ae7c4e22dca38fdb1efd6a495ff8`), `relayId = seq(16, 0xe0)`.
+
+Owner command op 1 claim, `iat = 1792000000000`, nonce `seq(16, 0x60)`, body exactly
+`{"name":"Mac"}`:
+
+```
+01040100000001a13b860000606162636465666768696a6b6c6d6e6fe0e1e2e3e4e5e6e7e8e9eaebecedeeefdde3bccec7f3a66a1115f45d720f4dc135c3ae7c4e22dca38fdb1efd6a495ff80000000e7b226e616d65223a224d6163227de96303decb5d245b08bc8a76196b2165a85d1f805d93c4b5ec7a816fdd09e1b400b1a6c3994c4ef2a77533b42180886b36b20b447e596b7055091d134998ed09
+```
+
+Register owner proof for the admin register above (its room, nonce and `iat`, the root public
+key): `{"pub":"3eO8zsfzpmoRFfRdcg9NwTXDrnxOItyjj9se_WpJX_g","sig":"l6uxZCXm7kr2Po0Rkj9YygKpwND-MjuGob9_o649rUiUj90_wstuYS1TZ24lgRdJUy5P1yuAHGlrTdqxpxy0BA"}`.
+
+Pairing token, `iat = 1792000000`, `exp = 1792000900`, `jti = seq(16, 0x40)`:
+
+```
+AQUAAAAAAABqz8AAAAAAAGrPw4RAQUJDREVGR0hJSktMTU5P4OHi4-Tl5ufo6err7O3u793jvM7H86ZqERX0XXIPTcE1w658TiLco4_bHv1qSV_4teO_2ZJmO-2e-ZjZ2dip9B-J4mam7vccU3HsOTYmEkgKxRBCL3Rj73AZeaYUL6MJouAqR6JVJ8TyYOR4bCokBw
+```
+
 **Key derivation** (room key `seq(32, 0x80)`, base64url
 `gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp8`, salt `roomIdRaw`):
 

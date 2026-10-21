@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  type AdminBody,
   blobIdFor,
   deriveKeyBits,
   deriveRoomId,
@@ -8,6 +9,7 @@ import {
   fromHex,
   fromUtf8,
   HKDF_INFO,
+  mintPairingToken,
   mintToken,
   openAwareness,
   openBlob,
@@ -15,6 +17,8 @@ import {
   openUpdate,
   parseAdminCommand,
   parseLinkCert,
+  parseOwnerCommand,
+  parsePairingToken,
   parseToken,
   sealAwareness,
   sealBlob,
@@ -23,11 +27,16 @@ import {
   sha256,
   signAdminCommand,
   signLinkCert,
+  signOwnerCommand,
+  signRegisterOwner,
   toBase64Url,
   toHex,
   utf8,
   verifyAdminCommand,
   verifyLinkCert,
+  verifyOwnerCommand,
+  verifyPairingToken,
+  verifyRegisterOwner,
   verifyTokenSignature,
 } from "../../src/mp"
 import { keyPairFromSeed, seq } from "./helpers"
@@ -98,7 +107,8 @@ describe("§19 vectors", () => {
     const bytes = await signAdminCommand(
       root.privateKey,
       room,
-      { op: "register", rootPub: body.rootPub, cert: body.cert },
+      // The vector predates the owner proof (ADR 0017); the signature covers this body only.
+      { op: "register", rootPub: body.rootPub, cert: body.cert } as AdminBody,
       { iat: v.iat, nonce: seq(16, 0x60) },
     )
     expect(toHex(bytes.subarray(bytes.length - 64))).toBe(v.signature)
@@ -107,6 +117,44 @@ describe("§19 vectors", () => {
     expect(command.iat).toBe(v.iat)
     expect(fromUtf8(command.payload.subarray(52))).toBe(v.body)
     expect(await verifyAdminCommand(command, root.publicRaw)).toBe(true)
+  })
+
+  test("owner command (claim), register owner proof and pairing token", async () => {
+    const { root, room } = await fixtures()
+    const device = await keyPairFromSeed(seq(32, 0xc0))
+    const relayId = seq(16, 0xe0)
+    const v = vectors.owner
+    expect(toHex(device.publicRaw)).toBe(v.devicePublicKey)
+
+    const claim = await signOwnerCommand(
+      device,
+      relayId,
+      { op: "claim", name: "Mac" },
+      { iat: v.claim.iat, nonce: seq(16, 0x60) },
+    )
+    expect(toHex(claim)).toBe(v.claim.command)
+    const command = parseOwnerCommand(claim)
+    expect(fromUtf8(command.payload.subarray(80))).toBe(v.claim.body)
+    expect(await verifyOwnerCommand(command)).toBe(true)
+
+    const input = {
+      relayId,
+      room,
+      nonce: seq(16, 0x60),
+      iat: vectors.adminRegister.iat,
+      rootPub: root.publicRaw,
+    }
+    expect(await signRegisterOwner(device, input)).toEqual(v.registerOwner)
+    expect(await verifyRegisterOwner(v.registerOwner, input)).toBe(true)
+
+    const token = await mintPairingToken(device, {
+      iat: v.pairing.iat,
+      exp: v.pairing.exp,
+      jti: seq(16, 0x40),
+      relayId,
+    })
+    expect(token).toBe(v.pairing.token)
+    expect(await verifyPairingToken(parsePairingToken(token))).toBe(true)
   })
 
   test("HKDF outputs", async () => {

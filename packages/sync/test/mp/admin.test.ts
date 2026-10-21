@@ -37,7 +37,12 @@ describe("admin commands", () => {
   test("every op signs and parses back its body", async () => {
     const { root, rootPub, room, cert } = await setup()
     const bodies: AdminBody[] = [
-      { op: "register", rootPub: toBase64Url(rootPub), cert },
+      {
+        op: "register",
+        rootPub: toBase64Url(rootPub),
+        cert,
+        owner: { pub: toBase64Url(new Uint8Array(32)), sig: toBase64Url(new Uint8Array(64)) },
+      },
       { op: "revoke", jti: "00".repeat(16), exp: 0 },
       { op: "rotate", cert },
       { op: "close" },
@@ -160,6 +165,8 @@ describe("admin commands", () => {
     const bad = [
       { op: "register", rootPub: "", cert: "x" },
       { op: "register", rootPub: "a=", cert: "x" },
+      { op: "register", rootPub: "a", cert: "x", owner: "me" },
+      { op: "register", rootPub: "a", cert: "x", owner: { pub: "a", sig: "!" } },
       { op: "revoke", jti: "AB".repeat(16), exp: 0 },
       { op: "revoke", jti: "00".repeat(16), exp: -1 },
       { op: "rotate" },

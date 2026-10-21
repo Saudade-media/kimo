@@ -24,6 +24,8 @@ export interface RoomRow {
   snapshot_bytes: number
   blob_bytes: number
   quota_bytes: number | null
+  /** The account an `external` owner policy gave the room (§14.12); null under `devices`. */
+  account: string | null
 }
 
 export interface LogRow {
@@ -68,6 +70,8 @@ export interface NewRoom {
   linkPub: Uint8Array
   cert: Uint8Array
   at: number
+  /** Account from an `external` owner policy; omitted or null under `devices`. */
+  account?: string | null
 }
 
 const SCHEMA = `
@@ -85,8 +89,11 @@ CREATE TABLE IF NOT EXISTS rooms (
   log_bytes      INTEGER NOT NULL DEFAULT 0,
   snapshot_bytes INTEGER NOT NULL DEFAULT 0,
   blob_bytes     INTEGER NOT NULL DEFAULT 0,
-  quota_bytes    INTEGER
+  quota_bytes    INTEGER,
+  account        TEXT
 ) STRICT;
+
+CREATE INDEX IF NOT EXISTS rooms_account ON rooms(account) WHERE account IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS log (
   room   TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -176,6 +183,13 @@ export class RelayDb {
       )
     // Every statement is CREATE IF NOT EXISTS: the ownership tables joined version 1 before
     // multiplayer shipped (ADR 0017), so a development database from before them gains them here.
+    // `rooms.account` joined version 1 the same way (ADR 0018); a development table made before it
+    // gains the column first, since the index below names it.
+    const rooms = this.sqlite
+      .query<{ name: string }, []>("SELECT name FROM pragma_table_info('rooms')")
+      .all()
+    if (rooms.length > 0 && !rooms.some((column) => column.name === "account"))
+      this.sqlite.run("ALTER TABLE rooms ADD COLUMN account TEXT")
     this.sqlite.run(SCHEMA)
     if (version < SCHEMA_VERSION) this.sqlite.run(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   }
@@ -204,21 +218,43 @@ export class RelayDb {
   insertRoom(room: NewRoom): void {
     this.sqlite
       .query(
-        `INSERT INTO rooms (id, root_pub, link_kid, link_pub, link_cert, created_at, active_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO rooms
+           (id, root_pub, link_kid, link_pub, link_cert, created_at, active_at, account)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(room.id, room.rootPub, room.kid, room.linkPub, room.cert, room.at, room.at)
+      .run(
+        room.id,
+        room.rootPub,
+        room.kid,
+        room.linkPub,
+        room.cert,
+        room.at,
+        room.at,
+        room.account ?? null,
+      )
   }
 
-  /** Reopens a closed room under a newer link key, with empty storage. */
+  /** Reopens a closed room under a newer link key, with empty storage and the new account. */
   reopenRoom(room: NewRoom): void {
     this.sqlite
       .query(
         `UPDATE rooms SET link_kid = ?, link_pub = ?, link_cert = ?, active_at = ?,
-           closed_at = NULL, head = 0, base = 0, log_bytes = 0, snapshot_bytes = 0, blob_bytes = 0
+           closed_at = NULL, head = 0, base = 0, log_bytes = 0, snapshot_bytes = 0, blob_bytes = 0,
+           account = ?
          WHERE id = ?`,
       )
-      .run(room.kid, room.linkPub, room.cert, room.at, room.id)
+      .run(room.kid, room.linkPub, room.cert, room.at, room.account ?? null, room.id)
+  }
+
+  /** Stored bytes (log, snapshots and blobs) of an account's open rooms (§14.12). */
+  accountBytes(account: string): number {
+    const row = this.sqlite
+      .query<{ n: number }, [string]>(
+        `SELECT COALESCE(SUM(log_bytes + snapshot_bytes + blob_bytes), 0) AS n FROM rooms
+         WHERE account = ? AND closed_at IS NULL`,
+      )
+      .get(account)
+    return row?.n ?? 0
   }
 
   setLinkKey(id: string, kid: number, linkPub: Uint8Array, cert: Uint8Array): void {

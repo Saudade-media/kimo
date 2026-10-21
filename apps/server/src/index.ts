@@ -9,10 +9,19 @@ import { DEFAULT_LIMITS, PROTOCOL, type RelayLimits, toBase64Url } from "@kimo/s
 import pkg from "../package.json" with { type: "json" }
 import { loadConfig, type RelayConfig } from "./config"
 import { createFetchHandler, errorResponse } from "./http"
+import type { OwnerPolicyModule } from "./policy"
 import { Relay, type SocketData } from "./rooms"
 import { websocketHandlers } from "./ws"
 
 export { loadConfig, type RelayConfig } from "./config"
+export {
+  loadOwnerPolicy,
+  type OwnerPolicyModule,
+  type RegisterDecision,
+  type RegisterRequest,
+  type WriteDecision,
+  type WriteRequest,
+} from "./policy"
 export { Relay, type SocketData } from "./rooms"
 
 /** Path prefix of the sync WebSocket endpoint: `/sync/<room>`. */
@@ -32,6 +41,11 @@ export interface ServerOptions {
   log?: (line: string) => void
   /** How often timed rules run, in ms. Default 1000. Tests call `relayOf(server).tick()` instead. */
   tickMs?: number
+  /**
+   * The external owner policy (§14.12), as `loadOwnerPolicy` returns it. Selects `external` mode;
+   * required when `config.ownerPolicyModule` is set. Default: the `devices` owner set.
+   */
+  ownerPolicy?: OwnerPolicyModule
 }
 
 /** Body of `GET /version`. */
@@ -42,7 +56,8 @@ export interface VersionInfo {
   limits: RelayLimits
   /** Base64url of the relay's 16-byte id (§14.11). */
   relayId: string
-  owner: "unclaimed" | "claimed"
+  /** `external` under an external owner policy (§14.12). */
+  owner: "unclaimed" | "claimed" | "external"
 }
 
 /**
@@ -104,7 +119,7 @@ export function createServer(options: ServerOptions): Bun.Server<SocketData> {
     port: options.port,
     hostname: options.hostname ?? options.config?.hostname ?? "127.0.0.1",
   }
-  const relay = new Relay(config, options.now, options.log)
+  const relay = new Relay(config, options.now, options.log, options.ownerPolicy)
   const handle = createFetchHandler(relay)
   const slack = 1 << 20
   const server = Bun.serve<SocketData>({

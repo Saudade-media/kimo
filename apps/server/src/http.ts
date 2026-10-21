@@ -21,7 +21,6 @@ import type { Server } from "bun"
 import pkg from "../package.json" with { type: "json" }
 import { runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
-import { runOwner } from "./owners"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
 import { initialSocketData } from "./ws"
@@ -42,7 +41,8 @@ export interface VersionBody {
   limits: Relay["limits"]
   /** Base64url of the 16-byte relay id (§14.11). */
   relayId: string
-  owner: "unclaimed" | "claimed"
+  /** `external` under an external owner policy (§14.12). */
+  owner: "unclaimed" | "claimed" | "external"
 }
 
 export function versionBody(relay: Relay): VersionBody {
@@ -52,7 +52,7 @@ export function versionBody(relay: Relay): VersionBody {
     protocol: PROTOCOL,
     limits: relay.limits,
     relayId: toBase64Url(relay.relayId),
-    owner: relay.db.countOwners() === 0 ? "unclaimed" : "claimed",
+    owner: relay.owner.status(),
   }
 }
 
@@ -236,7 +236,7 @@ export function createFetchHandler(relay: Relay) {
     const wait = relay.adminLimiter.take(clientIp(relay, req, server), relay.now())
     if (wait > 0) fail("RATE_LIMITED", "too many admin requests", wait)
     const body = await readBody(req, MAX_OWNER_COMMAND_BYTES)
-    const result = await runOwner(relay, body)
+    const result = await relay.owner.owner(body)
     return json(result.body, result.status)
   }
 
@@ -313,6 +313,13 @@ export function createFetchHandler(relay: Relay) {
       fail("BAD_REQUEST", "not a blob envelope")
     const bytesWait = relay.blobBytesLimiter.take(roomId, relay.now(), body.length)
     if (bytesWait > 0) fail("RATE_LIMITED", "too many upload bytes", bytesWait)
+    // A room with an account asks the owner policy for that account's limit (§14.12).
+    const before = db.getRoom(roomId)
+    const account = before?.account ?? null
+    const limit =
+      before && account !== null
+        ? await relay.owner.write({ ...before, account }, body.length)
+        : null
     // The room may have been closed, or the link revoked or reset, while the body was uploading.
     const fresh = recheckToken(db, verified, Math.floor(relay.now() / 1000))
     if (
@@ -320,6 +327,7 @@ export function createFetchHandler(relay: Relay) {
       relay.quotaFor(fresh)
     )
       fail("QUOTA_EXCEEDED", "room storage quota exceeded")
+    relay.checkAccountStorage({ account: fresh.account, storageLimitBytes: limit }, body.length)
     relay.blobs.put(roomId, id, body)
     try {
       if (db.getBlob(roomId, id)) db.clearUnref(roomId, id)

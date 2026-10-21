@@ -2,7 +2,7 @@
  * Owner-signed room administration (docs/spec/multiplayer.md §6, §14.7): register, revoke,
  * rotate, close and sweep. Every command is signed by the room's root key, which the relay learns
  * only from the register command and checks against the room id. Register also carries the proof
- * that an owner device of this relay asked for the room (`./owners`).
+ * that an owner device of this relay asked for the room, checked by the owner policy (`./policy`).
  */
 import {
   type AdminCommand,
@@ -18,7 +18,7 @@ import {
   verifyAdminCommand,
   verifyLinkCert,
 } from "@kimo/sync/mp"
-import { checkRegisterOwner } from "./owners"
+import type { RoomGrant } from "./policy"
 import type { Relay } from "./rooms"
 
 const MAX_SKEW_MS = 300_000
@@ -58,6 +58,7 @@ export async function runAdmin(
   let row = db.getRoom(roomId)
   let rootPub: Uint8Array
   let registerCert: LinkCert | null = null
+  let grant: RoomGrant = { account: null, storageLimitBytes: null }
 
   if (command.op === "register") {
     rootPub = fromBase64Url(stringField(command.body, "rootPub"))
@@ -75,7 +76,7 @@ export async function runAdmin(
   if (Math.abs(now - command.iat) > MAX_SKEW_MS)
     throw new MultiplayerError("STALE_REQUEST", "admin command is too old or too new")
   if (command.op === "register") {
-    await checkRegisterOwner(relay, command, rootPub)
+    grant = await relay.owner.register(command, rootPub, row)
     registerCert = await checkCert(stringField(command.body, "cert"), roomId, rootPub)
   }
   if (!db.consumeNonce(roomId, command.nonce, command.iat + NONCE_TTL_MS))
@@ -95,10 +96,12 @@ export async function runAdmin(
         linkPub: cert.linkPub,
         cert: cert.bytes,
         at: now,
+        account: grant.account,
       }
       if (!row) {
         if (config.maxRooms > 0 && db.countOpenRooms() >= config.maxRooms)
           throw new MultiplayerError("RELAY_FULL", "this relay hosts as many rooms as it allows")
+        relay.checkAccountStorage(grant, 0)
         db.insertRoom(fresh)
         return { status: 201, body: { room: roomId, kid: cert.kid } }
       }
@@ -111,6 +114,7 @@ export async function runAdmin(
         throw new MultiplayerError("KEY_ID_INVALID", "reopening needs a newer link key id")
       if (config.maxRooms > 0 && db.countOpenRooms() >= config.maxRooms)
         throw new MultiplayerError("RELAY_FULL", "this relay hosts as many rooms as it allows")
+      relay.checkAccountStorage(grant, 0)
       db.reopenRoom(fresh)
       relay.unload(roomId)
       return { status: 201, body: { room: roomId, kid: cert.kid } }

@@ -12,6 +12,7 @@ import {
   MAX_ENTRIES_PER_FRAME,
   type MpErrorCode,
   type MpOrigin,
+  MultiplayerError,
   type PeerInfo,
   type RelayLimits,
   type RelayMessage,
@@ -22,7 +23,14 @@ import type { VerifiedToken } from "./auth"
 import { type BlobStore, createBlobStore } from "./blobs"
 import type { RelayConfig } from "./config"
 import { type LogRow, RelayDb, type RoomRow } from "./db"
-import { bootOwnership } from "./owners"
+import { bootOwnership, bootRelayId } from "./owners"
+import {
+  devicesPolicy,
+  externalPolicy,
+  type OwnerPolicy,
+  type OwnerPolicyModule,
+  type RoomGrant,
+} from "./policy"
 import { KeyedLimiter, type TokenBucket } from "./rate-limit"
 
 export const HELLO_TIMEOUT_MS = 10_000
@@ -95,19 +103,39 @@ export class Relay {
   readonly blobBytesLimiter: KeyedLimiter
   /** 16 random bytes made at first boot; owner commands and pairing tokens name it (§14.11). */
   readonly relayId: Uint8Array
+  /** Who may register rooms and run owner commands (§14.12). */
+  readonly owner: OwnerPolicy
   /** Request log sink (method, path, status, duration only). */
   log?: (line: string) => void
   private lastMinute: number
   private lastHour: number
 
+  /**
+   * `policy` is the loaded `KIMO_OWNER_POLICY_MODULE` and selects the `external` owner policy;
+   * without it the relay uses `devices`. A config naming a module needs it loaded (`main.ts`).
+   */
   constructor(
     readonly config: RelayConfig,
     readonly now: () => number = Date.now,
     log?: (line: string) => void,
+    policy?: OwnerPolicyModule,
   ) {
+    if (config.ownerPolicyModule && !policy)
+      throw new Error("KIMO_OWNER_POLICY=external: load KIMO_OWNER_POLICY_MODULE before starting")
     this.db = new RelayDb(config.dataDir)
     if (log) this.log = log
-    this.relayId = bootOwnership(this.db, config, now(), log)
+    if (policy) {
+      this.relayId = bootRelayId(this.db)
+      if (config.ownerKeys.length > 0 || config.resetOwner !== null)
+        log?.(
+          "warn: KIMO_OWNER_KEY and KIMO_RESET_OWNER do nothing with KIMO_OWNER_POLICY=external.",
+        )
+      log?.("owner: external policy")
+      this.owner = externalPolicy(this, policy)
+    } else {
+      this.relayId = bootOwnership(this.db, config, now(), log)
+      this.owner = devicesPolicy(this)
+    }
     this.blobs = createBlobStore(config.dataDir)
     this.connectLimiter = new KeyedLimiter(
       config.connectRatePerMin,
@@ -133,6 +161,18 @@ export class Relay {
 
   quotaFor(room: RoomRow): number {
     return room.quota_bytes ?? this.config.roomQuotaBytes
+  }
+
+  /**
+   * Throws `ACCOUNT_QUOTA_EXCEEDED` when `adding` more bytes would take the account past its limit
+   * (§14.12). A new room adds nothing yet, so it is refused only once the account is full.
+   */
+  checkAccountStorage(grant: RoomGrant, adding: number): void {
+    const { account, storageLimitBytes: limit } = grant
+    if (account === null || limit === null) return
+    const used = this.db.accountBytes(account)
+    if (adding === 0 ? used >= limit : used + adding > limit)
+      throw new MultiplayerError("ACCOUNT_QUOTA_EXCEEDED", "account storage quota exceeded")
   }
 
   // Live rooms -------------------------------------------------------------------------------

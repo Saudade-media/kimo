@@ -37,6 +37,16 @@ export interface OwnerResult {
   body: Record<string, unknown>
 }
 
+/** The relay id from `relay_meta`, made on first boot (§14.11 step 1). */
+export function bootRelayId(db: RelayDb): Uint8Array {
+  let relayId = db.getMeta("relay_id")
+  if (!relayId || relayId.length !== RELAY_ID_BYTES) {
+    relayId = randomBytes(RELAY_ID_BYTES)
+    db.setMeta("relay_id", relayId)
+  }
+  return relayId
+}
+
 /**
  * Boot (§14.11), before the server listens: the relay id, `KIMO_RESET_OWNER` once per distinct
  * value, then `KIMO_OWNER_KEY` on an empty set. Returns the relay id.
@@ -47,11 +57,7 @@ export function bootOwnership(
   now: number,
   log?: (line: string) => void,
 ): Uint8Array {
-  let relayId = db.getMeta("relay_id")
-  if (!relayId || relayId.length !== RELAY_ID_BYTES) {
-    relayId = randomBytes(RELAY_ID_BYTES)
-    db.setMeta("relay_id", relayId)
-  }
+  const relayId = bootRelayId(db)
   if (config.resetOwner !== null) {
     const hash = new Uint8Array(createHash("sha256").update(config.resetOwner).digest())
     const applied = db.getMeta("reset_applied")

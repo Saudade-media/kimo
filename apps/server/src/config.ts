@@ -18,6 +18,11 @@ export interface RelayConfig {
   ownerKeys: readonly Uint8Array[]
   /** KIMO_RESET_OWNER, or null: clears the owner set once per distinct value. */
   resetOwner: string | null
+  /**
+   * KIMO_OWNER_POLICY_MODULE, set only with KIMO_OWNER_POLICY=external (§14.12): the module
+   * `main.ts` imports before the server starts. Absent under the default `devices` policy.
+   */
+  ownerPolicyModule?: string
   maxRooms: number
   maxPeers: number
   roomQuotaBytes: number
@@ -105,11 +110,26 @@ function ownerKeys(env: Env): Uint8Array[] {
   return keys
 }
 
+/** KIMO_OWNER_POLICY and KIMO_OWNER_POLICY_MODULE: the module path in `external` mode, else undefined. */
+function ownerPolicyModule(env: Env): string | undefined {
+  const raw = env.KIMO_OWNER_POLICY
+  const mode = raw?.trim().toLowerCase() || "devices"
+  const module = env.KIMO_OWNER_POLICY_MODULE?.trim() || undefined
+  if (mode !== "devices" && mode !== "external")
+    return fail("KIMO_OWNER_POLICY", raw ?? "", "devices or external")
+  if (mode === "external" && !module)
+    return fail("KIMO_OWNER_POLICY_MODULE", "", "a module path with KIMO_OWNER_POLICY=external")
+  if (mode === "devices" && module)
+    return fail("KIMO_OWNER_POLICY", raw ?? "", "external when KIMO_OWNER_POLICY_MODULE is set")
+  return module
+}
+
 /** Throws an Error naming the variable on an invalid value. */
 export function loadConfig(env: Env): RelayConfig {
   const host = env.HOST?.trim()
   const dataDir = env.KIMO_DATA_DIR?.trim()
   const reset = env.KIMO_RESET_OWNER?.trim()
+  const policyModule = ownerPolicyModule(env)
   return {
     port: integer(env, "PORT", 8787, 0, 65535),
     hostname: host || "127.0.0.1",
@@ -117,6 +137,7 @@ export function loadConfig(env: Env): RelayConfig {
     allowedOrigins: origins(env),
     ownerKeys: ownerKeys(env),
     resetOwner: reset ? reset : null,
+    ...(policyModule ? { ownerPolicyModule: policyModule } : {}),
     maxRooms: integer(env, "KIMO_MAX_ROOMS", 0, 0),
     maxPeers: integer(env, "KIMO_MAX_PEERS", 32, 1),
     roomQuotaBytes: integer(env, "KIMO_ROOM_QUOTA_MB", 500, 1, 1 << 20) * MiB,

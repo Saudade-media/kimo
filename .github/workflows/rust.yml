@@ -40,7 +40,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Linux system libraries (WebKitGTK 4.1, libsoup 3, appindicator)
         if: runner.os == 'Linux'
         working-directory: .

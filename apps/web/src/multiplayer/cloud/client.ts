@@ -1,6 +1,7 @@
 /**
  * The Kimo Cloud HTTP client (kimo-cloud docs/api.md): one signed request per call, stateless
- * apart from the clock offset a `422 STALE_REQUEST` teaches it. Errors are {@link CloudError}s
+ * apart from the clock offset a `422 STALE_REQUEST` teaches it (the sign-in and checkout deadlines
+ * it returns are moved onto this device's clock by that offset). Errors are {@link CloudError}s
  * with the service's code; no answer at all (network down, timeout) is `OFFLINE`, which the app
  * shows as "Can't reach Kimo Cloud" and never as a plan error (board 43 6E).
  */
@@ -64,6 +65,8 @@ export function createCloudClient(deps: CloudClientDeps): CloudClient {
   const timeoutMs = deps.timeoutMs ?? DEFAULT_TIMEOUT_MS
   /** Server time minus ours, learned from a stale-request answer. */
   let skew = 0
+  /** A deadline the service gave (its clock) on this device's clock, where the store checks it. */
+  const local = (serverTime: number) => serverTime - skew
 
   const send = async (
     method: "GET" | "POST",
@@ -170,16 +173,23 @@ export function createCloudClient(deps: CloudClientDeps): CloudClient {
           client: input.client,
         },
         parseAuthStarted,
-      )
+      ).then((a) => ({ ...a, expiresAt: local(a.expiresAt), resendAfter: local(a.resendAfter) }))
     },
-    authPoll: (requestId) => post("/v1/auth/poll", { requestId }, parseAuthPoll),
+    authPoll: (requestId) =>
+      post("/v1/auth/poll", { requestId }, parseAuthPoll).then((a) =>
+        a.status === "pending" && a.expiresAt ? { ...a, expiresAt: local(a.expiresAt) } : a,
+      ),
     signOut: async () => {
       await post("/v1/auth/sign-out", {}, () => undefined)
     },
     account: () => get("/v1/account", parseAccount),
     renameDevice: (pub, name) => post("/v1/devices/rename", { pub, name }, parseDevicesAnswer),
     signOutDevice: (pub) => post("/v1/devices/sign-out", { pub }, parseDevicesAnswer),
-    checkout: (interval) => post("/v1/checkout", { interval }, parseCheckout),
+    checkout: (interval) =>
+      post("/v1/checkout", { interval }, parseCheckout).then((c) => ({
+        ...c,
+        expiresAt: local(c.expiresAt),
+      })),
     checkoutStatus: (checkoutId) =>
       get(`/v1/checkout/${encodeURIComponent(checkoutId)}`, parseCheckoutStatus),
     billingPortal: () => post("/v1/billing/portal", {}, parsePortal),

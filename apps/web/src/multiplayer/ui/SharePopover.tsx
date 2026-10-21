@@ -177,7 +177,10 @@ function SetupBody({
   const settings = useMultiplayerSettings(model)
   const test = useRelayTest(model)
   const share = useShareState(model, docKey)
-  const [url, setUrl] = useState(settings.relayUrl ?? "")
+  // Kimo Cloud's relay is not a self-hosted one: the Host your own field starts empty (6 A).
+  const [url, setUrl] = useState(
+    cloud !== null && setup?.path === "cloud" ? "" : (settings.relayUrl ?? ""),
+  )
   const fieldId = useId()
   const checked = useRef<string | null>(
     settings.relayUrl && relayReady(test, settings.relayUrl) ? settings.relayUrl : null,
@@ -205,7 +208,7 @@ function SetupBody({
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
     // Prices are public; the account is asked only once this device chose Kimo Cloud (the
-    // wizard asks when it opens), so a self-hosting install never sends its key to Kimo Cloud.
+    // wizard asks when Kimo Cloud is picked), so a self-hosting install never sends its key to it.
     if (cloud) {
       void cloud.loadPlans()
       if (setup?.path === "cloud") void cloud.refresh()

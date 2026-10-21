@@ -107,8 +107,9 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
   const cloud = relaySetup?.cloud ?? null
   const cloudState = useCloudState(cloud)
   const setup = useRelaySetupStateOrNull(relaySetup?.store ?? null)
-  const cloudRelay =
-    cloud !== null && cloudState !== null && setup?.path === "cloud" && settings.relayUrl !== null
+  // Kimo Cloud is the chosen relay. Signing this device out keeps the choice and clears the URL,
+  // so Relay reads Not set up (board 43 5 B, nVGsb) until Change picks another.
+  const cloudRelay = cloud !== null && cloudState !== null && setup?.path === "cloud"
   // A change from elsewhere (the Share popover) shows here.
   useEffect(() => setUrl(settings.relayUrl ?? ""), [settings.relayUrl])
   useEffect(() => setName(settings.displayName), [settings.displayName])
@@ -172,28 +173,8 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
     />
   )
   const rows = <PersonalRows model={model} name={name} setName={setName} />
-
-  if (cloudRelay && cloud && cloudState)
-    return (
-      <>
-        <PaneTitle>Multiplayer</PaneTitle>
-        <CloudSettings
-          cloud={cloud}
-          state={cloudState}
-          onChange={() => setWizard(true)}
-          onSignedOut={async () => {
-            await model.settings.setRelayUrl(null)
-            await relaySetup?.store.update({ path: null })
-          }}
-        />
-        {wizardSheet}
-        {rows}
-      </>
-    )
-
-  return (
+  const selfHost = (
     <>
-      <PaneTitle>Multiplayer</PaneTitle>
       <div className="mp-relay-box" data-pen="tMoaA">
         <span className="mp-relay-box__icon" aria-hidden="true">
           <Icon name="server" size={16} />
@@ -326,6 +307,26 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
           host={hostOf(test.kind === "ok" ? test.url : url)}
           onClose={() => setAddThisDevice(false)}
         />
+      )}
+    </>
+  )
+
+  // One tree for both bodies, so the open wizard keeps its place (and its step) when saving a
+  // relay switches between them.
+  return (
+    <>
+      <PaneTitle>Multiplayer</PaneTitle>
+      {cloudRelay && cloud && cloudState ? (
+        <CloudSettings
+          cloud={cloud}
+          state={cloudState}
+          onChange={() => setWizard(true)}
+          onSignedOut={async () => {
+            await model.settings.setRelayUrl(null)
+          }}
+        />
+      ) : (
+        selfHost
       )}
       {wizardSheet}
       {rows}

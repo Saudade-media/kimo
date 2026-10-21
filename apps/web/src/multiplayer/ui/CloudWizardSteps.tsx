@@ -257,7 +257,7 @@ function Billing({
           >
             <span className="rw-text">
               <span className="rw-option__title">{INTERVAL_LABEL[value]}</span>
-              <span className="rw-option__desc">{price ? priceLine(price) : ""}</span>
+              <span className="rw-option__desc rw-price">{price ? priceLine(price) : ""}</span>
             </span>
             {value === "year" && saving && <Badge className="rw-badge">{saving}</Badge>}
           </RadioRow>

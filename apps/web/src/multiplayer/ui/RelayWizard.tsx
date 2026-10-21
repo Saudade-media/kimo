@@ -469,11 +469,18 @@ export function RelayWizard(props: RelayWizardProps) {
   }
 
   // --- Kimo Cloud (board 43) ---------------------------------------------------------------------
-  // The account and prices when the wizard opens; Subscribe and Renew start at 3 A or 3 B.
+  // Prices when the wizard opens (public). The account only on a device that chose Kimo Cloud: it
+  // is the saved relay, or the wizard opened at one of its steps (Use Kimo Cloud, Subscribe, Renew).
+  // A self-hosting install never sends its key to Kimo Cloud just by opening the wizard; Choose ›
+  // Kimo Cloud › Continue asks then. Subscribe and Renew start at 3 A or 3 B.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
     if (!cloud) return
     void cloud.loadPlans()
+    const chose = setup.path === "cloud" || (props.start !== undefined && props.start !== "choose")
+    if (props.start === "subscribe" || props.start === "renew") cloud.backToChoose()
+    if (props.start === "renew") void cloud.startCheckout()
+    if (!chose) return
     void cloud.refresh().then((s) => {
       if (s.session !== "signed-in" && cloud.getState().signIn.phase === "signed-in")
         cloud.changeEmail()
@@ -486,8 +493,6 @@ export function RelayWizard(props: RelayWizardProps) {
         }
       }
     })
-    if (props.start === "subscribe" || props.start === "renew") cloud.backToChoose()
-    if (props.start === "renew") void cloud.startCheckout()
   }, [])
 
   const savingCloud = useRef(false)
@@ -513,18 +518,29 @@ export function RelayWizard(props: RelayWizardProps) {
   }, [cloud, props.saveRelayUrl, store, toast])
 
   // 2 C → 3 C when the plan already allows sharing; 3 B → 3 C once the payment went through.
+  // The store's state now, not this render's: on the first commit the mount effect has just reset
+  // a checkout left "ready" by an earlier one (Renew after a lapse), which this render still shows.
   const signInPhase = cloudState?.signIn.phase
   const checkoutPhase = cloudState?.checkout.phase
   const canShare = cloudState?.account?.plan.canShare === true
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-checks the store when its phases change
   useEffect(() => {
-    if (step === "sign-in" && signInPhase === "signed-in" && canShare) void saveCloud()
-    if (step === "subscribe" && checkoutPhase === "ready") void saveCloud()
-  }, [step, signInPhase, checkoutPhase, canShare, saveCloud])
+    const now = cloud?.getState()
+    if (!now) return
+    if (
+      step === "sign-in" &&
+      now.signIn.phase === "signed-in" &&
+      now.account?.plan.canShare === true
+    )
+      void saveCloud()
+    if (step === "subscribe" && now.checkout.phase === "ready") void saveCloud()
+  }, [cloud, step, signInPhase, checkoutPhase, canShare, saveCloud])
 
   /** Choose › Continue on Kimo Cloud: signed in with a plan saves it; else Sign in or Subscribe. */
-  const continueCloud = () => {
+  const continueCloud = async () => {
     if (!cloud) return
-    const s = cloud.getState()
+    // The first time this device asks for its account (the wizard did not on open).
+    const s = cloud.getState().session === "unknown" ? await cloud.refresh() : cloud.getState()
     if (s.session === "signed-in" && s.account?.plan.canShare) return void saveCloud()
     if (s.session === "signed-in") {
       cloud.backToChoose()
@@ -734,7 +750,7 @@ export function RelayWizard(props: RelayWizardProps) {
             value="cloud"
             checked={cloudChosen}
             onSelect={() => setCloudChosen(true)}
-            onActivate={continueCloud}
+            onActivate={() => void continueCloud()}
           >
             <span className="rw-option__icon" aria-hidden="true">
               <Icon name="cloud" size={16} />
@@ -796,7 +812,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 name: "use-cloud",
                 disabled: saving,
               })
-            : primary("Continue", () => (cloudChosen ? continueCloud() : goSetup()), {
+            : primary("Continue", () => (cloudChosen ? void continueCloud() : goSetup()), {
                 icon: "arrow-right",
                 name: "continue",
               })}

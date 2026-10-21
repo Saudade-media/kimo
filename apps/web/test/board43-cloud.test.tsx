@@ -205,6 +205,39 @@ describe("Share popover (section 4, 6 A)", () => {
     expect(lapsed).toContain("Guests are not affected")
   })
 
+  test("6 A with Kimo Cloud as the saved relay still offers Host your own, closed and empty", async () => {
+    const { store } = await signedIn("grace")
+    const { platform, services: s } = services(store, "web")
+    await platform.settings.set("multiplayer.relayUrl", "https://relay.cloud.test")
+    await platform.settings.set("multiplayer.relaySetup", { path: "cloud", extraOrigins: [] })
+    const fake = createFakeShareBackend()
+    const model = createMultiplayerModel({
+      backend: fake.backend,
+      settings: platform.settings,
+      platformKind: "browser",
+    })
+    const render = () =>
+      renderToString(
+        h(
+          RelaySetupContext.Provider,
+          { value: s },
+          h(SharePopover, {
+            model,
+            docKey: "/Users/maya/home.kimo",
+            anchor: null,
+            onClose: () => {},
+            onResetAll: () => {},
+            onSetUpRelay: () => {},
+          }),
+        ),
+      )
+    const lapsed = render()
+    expect(lapsed).toContain("Your Kimo Cloud plan has ended")
+    expect(lapsed).toContain("Host your own, free")
+    expect(lapsed).toContain('aria-expanded="false"')
+    expect(lapsed).not.toContain("relay.cloud.test")
+  })
+
   test("without Kimo Cloud the popover is board 41 / 42", () => {
     const html = popover(null)
     expect(html).toContain("Share through your own relay")
@@ -231,6 +264,20 @@ describe("Settings › Multiplayer (section 5) and the fragments (6 D to F)", ()
     expect(html).toContain("Devices signed in to your account.")
     expect(html).toContain("To add a device, sign in on it with the same email.")
     expect(html).not.toContain("What a relay is")
+  })
+
+  test("B: signed out with Kimo Cloud chosen, Relay reads Not set up", async () => {
+    const { store } = cloudFor()
+    await store.refresh()
+    const { platform, services: s } = services(store)
+    await platform.settings.set("multiplayer.relaySetup", { path: "cloud", extraOrigins: [] })
+    const html = renderToString(
+      h(RelaySetupContext.Provider, { value: s }, h(MultiplayerPane, { platform })),
+    )
+    expect(html).toContain("Not set up")
+    expect(html).toContain("Change")
+    expect(html).not.toContain("You pay for Kimo Cloud here.")
+    expect(html).not.toContain('data-pen="tMoaA"')
   })
 
   test("fragments and dialogs", async () => {

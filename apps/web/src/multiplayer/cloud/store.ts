@@ -298,6 +298,9 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
             ? { ...now, busy: false, error: code }
             : { phase: "email", email, busy: false, error: code },
       })
+      // A Resend that failed: the earlier link is still good, so keep waiting for it (and for its
+      // expiry) as before.
+      if (now.phase === "sent") pollSignIn(now.requestId)
     }
   }
 

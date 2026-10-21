@@ -291,7 +291,7 @@ async function chooseSignedIn(ctx: E2EContext, theme: Theme) {
   c.box("Icon Wrap (Mygze)", m.icon, { w: 40, h: 40, bg: t["--kimo-success-soft"] })
   c.box("Meta (nYrmf)", m.meta, { fs: 11, color: t["--kimo-text-tertiary"] })
   c.box("Actions (uFLph)", m.actions, { gap: 8, align: "center" })
-  c.box("Close (jzkFr)", m.close, { h: 30, pad: "0 12 0 12", color: t["--kimo-text-primary"] })
+  c.box("Close (jzkFr)", m.close, { h: 30, pad: "0 12 0 12", color: t["--kimo-text-secondary"] })
   c.box("Start sharing (SRxeR)", m.start, { h: 30, pad: "0 12 0 12", bg: t["--kimo-accent"] })
   c.flush()
   const meta = await page.locator(".rw-saved .rw-mono").innerText()
@@ -433,6 +433,18 @@ async function signInAndSubscribe(ctx: E2EContext, theme: Theme) {
       shadowHas: `${t["--kimo-border"]} 0px 0px 0px 1px inset`,
     })
     c.box("Price (M7g4Zm)", m.price, { fs: 11, color: t["--kimo-text-secondary"] })
+    // M7g4Zm has no lineHeight: normal, not the option description's 1.45.
+    expect(
+      (await page.evaluate(
+        () =>
+          getComputedStyle(
+            document.querySelector(
+              '.rw-billing .rw-option[data-value="month"] .rw-option__desc',
+            ) as Element,
+          ).lineHeight,
+      )) === "normal",
+      "3 A price line height",
+    )
     c.box("Includes (J8NxK)", m.includes, { gap: 8, dir: "column" })
     c.box("Item (FTYnH)", m.item, { gap: 8, align: "center" })
     c.box("Check (QWlfr)", m.check, { color: t["--kimo-success"] })
@@ -726,11 +738,16 @@ async function settings(ctx: E2EContext, theme: Theme) {
   await page.locator('.mp-cloud-sign-out[data-device="other"]').waitFor()
   await page.click('.mp-cloud-sign-out [class*="primary"]')
   await page.waitForFunction(() => document.querySelectorAll(".mp-device").length === 1)
-  // 5 B: sign this device out; Relay reads Not set up (back to the board 41 pane).
+  // 5 B: sign this device out; Relay reads Not set up (nVGsb).
   await page.click(".mp-sign-out")
   await page.locator('.mp-cloud-sign-out[data-device="self"]').waitFor()
   await page.click('.mp-cloud-sign-out [class*="primary"]')
-  await page.locator('[data-pen="tMoaA"]').waitFor()
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-setting="relay"] .mp-cloud-relay__value')?.textContent ===
+      "Not set up",
+  )
+  expect((await page.locator('[data-setting="account"]').count()) === 0, "5 B no account")
 }
 
 async function dialogs(ctx: E2EContext, theme: Theme) {

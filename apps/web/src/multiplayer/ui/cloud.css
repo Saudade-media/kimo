@@ -226,9 +226,12 @@
   gap: 8px;
 }
 
-/* Close (jzkFr): Button/Ghost h 30, padding [0, 12], label text-primary (sqJv4). */
-.rw-shell .rw-ready-close.kimo-button--ghost {
-  color: var(--kimo-text-primary);
+/* Close (jzkFr): Button/Ghost h 30, padding [0, 12]; label and icon keep the component's
+   text-secondary (sqJv4), from `.rw-shell .kimo-button--ghost`. */
+
+/* Price (M7g4Zm, d0ibz): sans 11 text-secondary, line height normal (no lineHeight on the node). */
+.rw-billing .rw-option__desc.rw-price {
+  line-height: normal;
 }
 
 /* The service's line under a step that stays on screen (rate limited, provider down). */

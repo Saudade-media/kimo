@@ -91,12 +91,20 @@ export function createRelaySetupServices(
         : null
   const clock = overrides.clock ?? realClock
   const info = { os: platform.os, arch: platform.arch ?? "aarch64" }
-  // Desktop: the system browser through the opener plugin; web: a new tab.
+  // Desktop: the system browser through the opener plugin; web: a new tab. Checkout and the billing
+  // portal open after a network answer, when a strict popup blocker (Safari) may refuse the tab, so
+  // the tab is opened without "noopener" (which always returns null) to see a refusal, and its
+  // opener is cut before the page loads.
   const openUrl =
     overrides.openUrl ??
     ((url: string) => {
       if (platform.kind === "desktop") return platform.files.openExternalUrl(url)
-      window.open(url, "_blank", "noopener")
+      const tab = window.open(url, "_blank")
+      if (!tab)
+        return Promise.reject(
+          new Error("The browser blocked the new tab. Allow pop-ups for Kimo and try again."),
+        )
+      tab.opener = null
       return Promise.resolve()
     })
   return {

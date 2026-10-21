@@ -302,6 +302,50 @@ describe("store · sign in (section 2)", () => {
     store.dispose()
   })
 
+  test("a failed Resend keeps waiting for the earlier link", async () => {
+    const { store, cloud, clock } = storeSetup()
+    await store.startSignIn("maya@studio.design")
+    await tick(clock, 60_000)
+    cloud.state.failNext.set("POST /v1/auth/start", { status: 429, code: "RATE_LIMITED" })
+    await store.resend()
+    expect(store.getState().signIn).toMatchObject({ phase: "sent", error: "RATE_LIMITED" })
+    expect(clock.pending()).toBe(1)
+    cloud.verifyLink()
+    await tick(clock, SIGN_IN_POLL_MS)
+    expect(store.getState().signIn).toEqual({ phase: "signed-in", email: "maya@studio.design" })
+    expect(clock.pending()).toBe(0)
+    store.dispose()
+  })
+
+  test("a device clock that runs fast still gets the link's 15 minutes", async () => {
+    const server = fakeClock()
+    const device = fakeClock(server.now() + 20 * 60_000)
+    const cloud = createFakeCloud({ now: server.now })
+    const client = createCloudClient({
+      apiUrl: cloud.apiUrl,
+      deviceKeys: createMemoryDeviceKeyStore(),
+      fetch: cloud.fetch,
+      now: device.now,
+    })
+    const store = createCloudStore({
+      client,
+      deviceName: () => "Mac",
+      clientKind: "desktop",
+      openUrl: async () => {},
+      clock: device,
+      onFocus: () => () => {},
+    })
+    await store.startSignIn("maya@studio.design")
+    const sent = store.getState().signIn
+    expect(sent.phase).toBe("sent")
+    if (sent.phase !== "sent") return
+    expect(sent.expiresAt - device.now()).toBe(15 * 60_000)
+    expect(sent.resendAfter - device.now()).toBe(60_000)
+    await tick(device, SIGN_IN_POLL_MS)
+    expect(store.getState().signIn.phase).toBe("sent")
+    store.dispose()
+  })
+
   test("errors keep the step and say why; an already signed-in device skips ahead", async () => {
     const { store, cloud, keys } = storeSetup()
     cloud.state.failNext.set("POST /v1/auth/start", { status: 503, code: "EMAIL_UNAVAILABLE" })

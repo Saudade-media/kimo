@@ -49,8 +49,9 @@ export function CloudShareBody(props: CloudShareBodyProps) {
   const [hostOpen, setHostOpen] = useState(props.hostOpenInitially)
   const [refused, setRefused] = useState<CloudNoticeKind | null>(null)
   const stage = cloudShareStage(state)
-  // Kimo Cloud is the saved relay: its bodies only (no Host your own; Settings changes it).
-  const showHost = !props.cloudRelay && stage !== "ready"
+  // Kimo Cloud is the saved relay: its bodies only (Settings changes it), apart from 6 A, where a
+  // lapsed plan still offers Host your own (Xh490 › czqWI).
+  const showHost = stage !== "ready" && (!props.cloudRelay || stage === "lapsed")
 
   useEffect(() => {
     if (props.canStartSelf) setHostOpen(true)

@@ -65,6 +65,12 @@ import {
 } from "../lib/assets"
 import { type AssetSync, createAssetSync, withRemoteAssets } from "./asset-sync"
 import {
+  createIndexedDbDeviceKeyStore,
+  createMemoryDeviceKeyStore,
+  type DeviceKeyStore,
+} from "./device-key"
+import { createOwnershipClient, type OwnershipClient } from "./ownership"
+import {
   createMemoryRegistry,
   createRegistry,
   type IssuedLink,
@@ -192,6 +198,13 @@ export interface ShareServiceDeps {
    * not fetched on its own (an explicit `assetSync.ensure` still is). Default always.
    */
   autoFetchAssets?: () => boolean
+  /**
+   * This install's device key (§16.9): it claims relays and proves ownership on register.
+   * Default: IndexedDB where it exists, else memory. The desktop passes the keychain store.
+   */
+  deviceKeys?: DeviceKeyStore
+  /** Default device name (§16.9), sent on claim and pair. Default "Kimo". */
+  deviceName?: () => string
 }
 
 /** The timer functions the share service schedules with. */
@@ -200,12 +213,13 @@ export interface ShareTimers {
   clearTimeout(handle: unknown): void
 }
 
-export interface ShareService {
+export interface ShareService extends Omit<OwnershipClient, "registerBody" | "probe"> {
   probeRelay(relayUrl: string): Promise<RelayInfo>
-  startSharing(
-    target: ShareTarget,
-    options: { relayUrl: string; createSecret?: string },
-  ): Promise<OwnedRoomSummary>
+  /**
+   * Shares a file through `relayUrl`: claims the relay first when it is unclaimed, and fails with
+   * `NOT_OWNER` before anything changes when another device owns it (§16.1, §16.9).
+   */
+  startSharing(target: ShareTarget, options: { relayUrl: string }): Promise<OwnedRoomSummary>
   roomForFile(fileKey: string): Promise<OwnedRoomSummary | null>
   connect(target: ShareTarget, room: string): Promise<SharedSession>
   /**
@@ -421,6 +435,17 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
 
   const client = (relayUrl: string) =>
     new RelayHttpClient({ relayUrl, ...(deps.fetch ? { fetch: deps.fetch } : {}) })
+  const ownership = createOwnershipClient({
+    deviceKeys:
+      deps.deviceKeys ??
+      (typeof indexedDB === "undefined"
+        ? createMemoryDeviceKeyStore()
+        : createIndexedDbDeviceKeyStore()),
+    deviceName: deps.deviceName ?? (() => "Kimo"),
+    webOrigin: deps.webOrigin,
+    now,
+    ...(deps.fetch ? { fetch: deps.fetch } : {}),
+  })
 
   const replicaFor = (room: string, binding: string): SyncProvider | null => {
     if (deps.replica) return deps.replica(room, binding)
@@ -533,13 +558,23 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     return tokenOf(link)
   }
 
-  async function admin(
-    owned: OwnedRoom,
-    body: Parameters<typeof signAdminCommand>[2],
-    createSecret?: string,
-  ) {
+  async function admin(owned: OwnedRoom, body: Parameters<typeof signAdminCommand>[2]) {
     const command = await signAdminCommand(owned.rootKeys.privateKey, parseRoomId(owned.room), body)
-    return client(owned.relayUrl).admin(owned.room, command, createSecret ? { createSecret } : {})
+    return client(owned.relayUrl).admin(owned.room, command)
+  }
+
+  /** Register (admin op 1) with this device's owner proof over the command's nonce and iat. */
+  async function registerRoom(owned: OwnedRoom, rootPub: Uint8Array, cert: Uint8Array) {
+    const room = parseRoomId(owned.room)
+    const nonce = randomBytes(16)
+    const iat = now()
+    const body = await ownership.registerBody(
+      owned.relayUrl,
+      { room, rootPub, cert: toBase64Url(cert) },
+      { nonce, iat },
+    )
+    const command = await signAdminCommand(owned.rootKeys.privateKey, room, body, { nonce, iat })
+    return client(owned.relayUrl).admin(owned.room, command)
   }
 
   // Document preparation (§16.1 step 3) ------------------------------------------------------
@@ -1068,6 +1103,15 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
 
   return {
     probeRelay: (relayUrl) => client(normalizeRelayUrl(relayUrl)).probe(),
+    devicePublicKey: () => ownership.devicePublicKey(),
+    relayOwnership: (relayUrl) => ownership.relayOwnership(relayUrl),
+    claimRelay: (relayUrl, options) => ownership.claimRelay(relayUrl, options),
+    listDevices: (relayUrl) => ownership.listDevices(relayUrl),
+    removeDevice: (relayUrl, pub) => ownership.removeDevice(relayUrl, pub),
+    renameDevice: (relayUrl, pub, name) => ownership.renameDevice(relayUrl, pub, name),
+    createPairingLink: (relayUrl, options) => ownership.createPairingLink(relayUrl, options),
+    cancelPairingLink: (relayUrl, link) => ownership.cancelPairingLink(relayUrl, link),
+    acceptPairingLink: (link, options) => ownership.acceptPairingLink(link, options),
 
     startSharing(target, options) {
       // One sharing run per file: a double click finds the room the first call made.
@@ -1075,7 +1119,10 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
         const existing = await registry.ownedForFile(target.fileKey)
         if (existing) return summarize(existing)
         const relayUrl = normalizeRelayUrl(options.relayUrl)
-        await client(relayUrl).probe()
+        // Ownership before anything changes: claim an unclaimed relay, refuse another's (§16.9).
+        const info = await ownership.probe(relayUrl)
+        if (info.owner === "unclaimed") await ownership.claimRelay(relayUrl)
+        else await ownership.listDevices(relayUrl)
 
         // Non-extractable wherever the registry can store CryptoKeys (script in the app origin
         // can then use the keys through the registry but never copy them out).
@@ -1106,11 +1153,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
         // next save writes out. Reopening without a save then finds the file equal to this.
         const fileState = target.store.encodeStateAsUpdate()
         await prepareDocument(target, owned.room)
-        await admin(
-          owned,
-          { op: "register", rootPub: toBase64Url(rootPub), cert: toBase64Url(cert.bytes) },
-          options.createSecret,
-        )
+        await registerRoom(owned, rootPub, cert.bytes)
         // Not persisted yet: the room is recorded only once it is fully seeded, so a failed
         // attempt never leaves a registered room without its saved state.
         const token = await selfToken(owned, false)

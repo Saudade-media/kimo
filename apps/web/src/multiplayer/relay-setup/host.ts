@@ -45,7 +45,7 @@ export interface SpawnInput {
   kind: ProcKind
   /** cloudflared and flyctl arguments; the relay and the installer take none. */
   args?: string[]
-  /** The relay's environment (PORT, HOST, KIMO_CREATE_SECRET, KIMO_ALLOWED_ORIGINS only). */
+  /** The relay's environment (PORT, HOST, KIMO_OWNER_KEY, KIMO_ALLOWED_ORIGINS only). */
   env?: Record<string, string>
   /** Written to stdin, then stdin closes (flyctl secrets import). */
   stdin?: string

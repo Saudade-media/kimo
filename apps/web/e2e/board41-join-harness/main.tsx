@@ -115,7 +115,8 @@ const relayInfo: RelayInfo = {
   version: "1.2.0",
   protocol: "kimo-mp/1",
   limits: {} as RelayInfo["limits"],
-  createSecretRequired: false,
+  relayId: new Uint8Array(16),
+  owner: "claimed",
 }
 
 type Behavior = {

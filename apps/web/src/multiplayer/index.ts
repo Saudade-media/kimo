@@ -12,6 +12,21 @@ export {
 } from "./agent-pause"
 export { type AssetSync, createAssetSync, withRemoteAssets } from "./asset-sync"
 export {
+  createIndexedDbDeviceKeyStore,
+  createKeychainDeviceKeyStore,
+  createMemoryDeviceKeyStore,
+  type DeviceKeyStore,
+  defaultDeviceName,
+} from "./device-key"
+export {
+  createOwnershipClient,
+  type IssuedPairingLink,
+  type OwnershipClient,
+  type RelayDevice,
+  type RelayOwnerState,
+  type RelayOwnership,
+} from "./ownership"
+export {
   isPresenceColor,
   JoinOrder,
   PRESENCE_COLORS,

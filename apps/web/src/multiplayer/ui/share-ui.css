@@ -722,3 +722,368 @@
 .mp-sync-status[data-moving] .kimo-save-status__icon {
   animation: none;
 }
+
+/* --- Relay ownership (ADR 0017, section 4 rows 2 to 4) ------------------------------------------ */
+
+/* Result (J0QyKj, dXh4T) when the relay is not claimed yet or not yours: column, gap 8 › Status
+   Row (row, gap 8, center) · Message · Actions. */
+.mp-result-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* List (YC312): column, 1px border, radius-md, clipped. */
+.mp-device-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border-radius: var(--kimo-radius-md);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+}
+
+/* Device (ITYAY): row, gap 10, padding [8, 8, 8, 10], center, bottom stroke between rows; hover
+   (Wxnda) bg-subtle. */
+.mp-device {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 8px 8px 10px;
+}
+
+.mp-device + .mp-device {
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}
+
+.mp-device:hover,
+.mp-device:focus-within,
+.mp-device[data-renaming] {
+  background: var(--kimo-bg-subtle);
+}
+
+/* Icon Wrap (v9o91): 28, bg-muted, pill › icon 14 text-secondary. */
+.mp-device__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+/* Text (WhoV4): column, gap 2, fill › Name Row (row, gap 6, center) · Meta sans 11 tertiary. */
+.mp-device__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mp-device__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Name (zIRtS): sans 12 / 500 primary. */
+.mp-device__name {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mp-device__self.kimo-badge {
+  flex: none;
+}
+
+.mp-device__meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Name Field (QgcKp): 160 × 24, padding [0, 6], bg-muted, 1px accent stroke, radius-sm › Value sans
+   12 / 500 primary. */
+.mp-device__name-field {
+  box-sizing: border-box;
+  flex: none;
+  width: 160px;
+  height: 24px;
+  margin: 0;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--kimo-radius-sm);
+  outline: none;
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+/* Rename (n574Fn) and Remove (sIXnT): IconButton 24, transparent, on hover; pencil text-secondary,
+   trash-2 danger; Remove on the last device (kqzgD) 0.4 with a text-tertiary icon. */
+.mp-device__actions {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  visibility: hidden;
+}
+
+.mp-device:hover .mp-device__actions,
+.mp-device:focus-within .mp-device__actions {
+  visibility: visible;
+}
+
+.mp-device__actions .kimo-icon-button {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+}
+
+.mp-device__rename.kimo-icon-button {
+  color: var(--kimo-text-secondary);
+}
+
+.mp-device__remove.kimo-icon-button {
+  color: var(--kimo-danger);
+}
+
+.mp-device__remove.kimo-icon-button:disabled {
+  opacity: 0.4;
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-device__remove-wrap {
+  display: inline-flex;
+}
+
+/* Hint · one device (PdZQM): row, gap 6 › info 12 tertiary · text sans 11 tertiary, 1.45. */
+.mp-device-hint {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  width: 100%;
+}
+
+.mp-device-hint__icon {
+  display: inline-flex;
+  flex: none;
+  padding-top: 2px;
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-device-hint__text {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Footer (TpdGV): row, gap 8, center › Add device (Button/Secondary 28, padding [0, 12], icon 14,
+   label sans 12) · Hint. */
+.mp-devices__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-add-device.kimo-button {
+  height: 28px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+/* --- Add device sheet (sgnIX, a4X5zv, ttfhE) --------------------------------------------------- */
+
+/* 464, column, gap 14, padding 20, bg-overlay, 1px border, radius-xl, shadow 0 16 48 strong. */
+.mp-sheet {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 464px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-overlay);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 16px 48px 0 var(--kimo-shadow-strong);
+}
+
+/* Head (W8JU4F): row, gap 12 › Icon Wrap 32 bg-muted pill (icon 16 primary) · Text (column, gap 4:
+   Title sans 14 / 600 primary, Desc sans 12 secondary 1.45). */
+.mp-sheet__head {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: 100%;
+}
+
+.mp-sheet__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.mp-sheet__icon--success {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
+.mp-sheet__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mp-sheet__title {
+  margin: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-md);
+  font-weight: var(--kimo-font-weight-semibold);
+  line-height: normal;
+}
+
+.mp-sheet__desc {
+  margin: 0;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: 1.45;
+}
+
+/* Link (HWe4n): column, gap 8 › Link Row (row, gap 8, center) · Status. */
+.mp-sheet__link {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-sheet__link-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Field (Zf48v): 32 high, row, gap 8, padding [0, 10], center, bg-muted, 1px border, radius-md ›
+   link 14 tertiary · URL mono 11 primary. Expired (o99xQ): 0.5. */
+.mp-sheet__field {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-tertiary);
+}
+
+.mp-sheet__field[data-expired="true"] {
+  opacity: 0.5;
+}
+
+.mp-sheet__field > svg {
+  flex: none;
+}
+
+.mp-sheet__url {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Copy (I92WY): Button/Secondary 32, padding [0, 12], icon 14, label sans 12. */
+.mp-sheet__copy.kimo-button {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+/* Status (GbN9C): row, gap 6, center › icon 12 tertiary · mono 11 tertiary. */
+.mp-sheet__status {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+}
+
+/* Footer (kyK4z): row, gap 8, center › Spacer · Cancel link (Ghost 30, [0, 12]) · Done (Primary
+   30, [0, 14]); labels sans 12. */
+.mp-sheet__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-sheet__cancel.kimo-button {
+  height: 30px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+}
+
+.mp-sheet__done.kimo-button {
+  height: 30px;
+  padding: 0 14px;
+  font-size: var(--kimo-text-sm);
+}

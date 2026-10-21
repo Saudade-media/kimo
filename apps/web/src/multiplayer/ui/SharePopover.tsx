@@ -2,21 +2,25 @@
  * Board 41 section 3: the Share popover (360 wide, under Share, right edge on the button's).
  *
  * - A `first-run` (MN5Yp, board 42 section 1 A): no relay yet. Intro, Set up a relay (Primary,
- *   full width: the relay setup wizard over the editor), "or use one you have", Relay URL and
- *   Create secret; Start sharing stays disabled (0.4) until the URL answers as a Kimo relay and,
- *   when the relay asks for one, a secret is entered.
- * - B `ready` (iCSXL): the relay answered. Relay URL (mono), the check (StatusPill + time), what
- *   starting does; Change in Settings · Start sharing. The check runs on blur and on paste, and
- *   a passing URL is kept in Settings › Multiplayer.
+ *   full width: the relay setup wizard over the editor), "or use one you have", Relay URL; Start
+ *   sharing stays disabled (0.4) until the URL answers as a Kimo relay that is yours or not
+ *   claimed yet.
+ * - B `ready` (iCSXL): the relay answered. Relay URL (mono), the check (ownership StatusPill and
+ *   "Kimo relay 1.2 · 84 ms"), what starting does; Change in Settings · Start sharing. The check
+ *   runs on blur and on paste, and a passing URL is kept in Settings › Multiplayer.
+ * - G (nGLDi): a relay nobody claimed yet ("Not set up yet"): Start sharing claims it for this
+ *   device first (ADR 0017). H (vy9jb): another Kimo's relay ("Not yours"): the Fix with Add this
+ *   device (I, the steps) and Reset ownership (the guide); Start sharing disabled.
  * - C `live` (c6fdt): Live pill, encryption and connection, a new link (role, expiry, Create link
  *   copies it at once), active links (Copy, Revoke on hover), the E2E note; Reset all links ·
  *   Stop sharing.
  *
  * Revoke is final on the relay, so its toast has no Undo (the board's "Undo" is left out).
  * On a quick tunnel (board 42 section 3 I) every link row says it stops working when the relay
- * restarts. Start sharing sends the create secret kept for the relay (keychain or browser).
+ * restarts.
  */
 import type { Role } from "@kimo/sync/mp"
+import { MultiplayerError } from "@kimo/sync/mp"
 import {
   Button,
   IconButton,
@@ -47,18 +51,20 @@ import {
   type MultiplayerModel,
 } from "../model"
 import { isQuickTunnelUrl } from "../relay-setup/local"
-import { useRelaySetupServices } from "../relay-setup/services"
 import {
   connectionMeta,
   EXPIRY_LABEL,
   linkCopiedText,
   linkMeta,
   linkRevokedText,
+  ownerPill,
   ROLE_LABEL,
   relayReady,
   relayResultView,
   sharePopoverStage,
 } from "./copy"
+import { AddThisDeviceDialog, NOT_YOURS_SHORT, NotYoursFix, RESET_OWNERSHIP_URL } from "./ownership"
+import { Pill } from "./relay-parts"
 import { copyText, GuideLink, openRelayGuide, useShareToast } from "./shared"
 import "./share-ui.css"
 
@@ -150,9 +156,7 @@ function SetupBody({
 }) {
   const runtime = useOptionalRuntime()
   const platform = runtime?.platform ?? null
-  const relaySetup = useRelaySetupServices(platform)
-  const [secret, setSecret] = useState("")
-  const secretId = useId()
+  const [addThisDevice, setAddThisDevice] = useState(false)
   const openSettings = useOpenSettings()
   const toast = useShareToast()
   const settings = useMultiplayerSettings(model)
@@ -184,28 +188,20 @@ function SetupBody({
     if (settings.relayUrl && !relayReady(test, settings.relayUrl)) void check(settings.relayUrl)
   }, [])
 
-  // Start sharing needs a Kimo relay for what the field says now (checked on blur and paste) and,
-  // on first run, a secret when the relay asks for one.
-  const needsSecret = firstRun && test.kind === "ok" && test.createSecretRequired === true
+  // Start sharing needs a Kimo relay for what the field says now (checked on blur and paste) that
+  // is not another Kimo's: an unclaimed one is claimed first, by the share service (§16.9).
+  const notYours = test.kind === "ok" && test.owner === "other"
   const canStart =
-    test.kind === "ok" &&
-    url.trim() === checked.current &&
-    share.status !== "starting" &&
-    (!needsSecret || secret.trim() !== "")
+    test.kind === "ok" && !notYours && url.trim() === checked.current && share.status !== "starting"
   const start = async () => {
     if (test.kind !== "ok") return
     try {
-      let createSecret: string | null = null
-      if (firstRun && secret.trim()) {
-        // Typed by hand: kept as the Custom secret ("Saved to Settings").
-        await relaySetup?.store.setCustomSecret(secret)
-        createSecret = secret.trim()
-      } else createSecret = (await relaySetup?.store.sendSecret()) ?? null
-      await model
-        .document(docKey)
-        .startSharing({ relayUrl: test.url, ...(createSecret ? { createSecret } : {}) })
+      await model.document(docKey).startSharing({ relayUrl: test.url })
     } catch (e) {
-      toast({ tone: "danger", text: failureText("start sharing", e) })
+      // Claimed by another Kimo since the check: test again, so the Fix shows in place.
+      if (e instanceof MultiplayerError && (e.code === "NOT_OWNER" || e.code === "RELAY_CLAIMED"))
+        await model.relayTest.test(test.url)
+      else toast({ tone: "danger", text: failureText("start sharing", e) })
     }
   }
   const result = relayResultView(test)
@@ -241,8 +237,10 @@ function SetupBody({
     <div className="mp-result" data-result={result.kind} role="status">
       {result.kind === "ok" ? (
         <>
-          <StatusPill status="linked" label={result.pill} />
-          <span className="mp-meta-mono">{result.time}</span>
+          <Pill {...ownerPill(result.owner, "popover", result.relay)} />
+          <span className="mp-meta-mono">
+            {result.relay} · {result.ms} ms
+          </span>
         </>
       ) : result.kind === "testing" ? (
         <>
@@ -273,8 +271,8 @@ function SetupBody({
             <div className="mp-text">
               <p className="mp-title">Share through your own relay</p>
               <p className="mp-desc">
-                Kimo runs no server. A relay you host passes end-to-end encrypted edits and never
-                sees the design.
+                Kimo runs no server. Edits travel end-to-end encrypted through a relay you host, and
+                the relay never sees the design.
               </p>
             </div>
           </div>
@@ -298,25 +296,24 @@ function SetupBody({
         )}
         {field}
         {resultRow}
-        {firstRun ? (
-          onSetUpRelay ? (
-            <div className="mp-field" data-pen="x0O8mK">
-              <label className="mp-field-label" htmlFor={secretId}>
-                Create secret
-              </label>
-              <Input
-                id={secretId}
-                type="password"
-                frameProps={{ className: "mp-relay-input" }}
-                icon={<Icon name="key-round" size={16} />}
-                placeholder="Paste the relay's secret"
-                spellCheck={false}
-                autoComplete="off"
-                value={secret}
-                onChange={(e) => setSecret(e.currentTarget.value)}
-              />
-            </div>
-          ) : (
+        {test.kind === "ok" && test.owner === "other" ? (
+          <NotYoursFix
+            desc={NOT_YOURS_SHORT}
+            iconSize={14}
+            onAddThisDevice={() => setAddThisDevice(true)}
+            onResetOwnership={() =>
+              void (platform
+                ? platform.files.openExternalUrl(RESET_OWNERSHIP_URL)
+                : window.open(RESET_OWNERSHIP_URL, "_blank", "noopener"))
+            }
+          />
+        ) : test.kind === "ok" && test.owner === "unclaimed" ? (
+          <p className="mp-desc">
+            Kimo will claim it when you start sharing, so only your devices can share on it. Nothing
+            leaves this device until you create a link.
+          </p>
+        ) : firstRun ? (
+          !onSetUpRelay && (
             <GuideLink
               label="How to host a relay, about 5 minutes"
               leadingIcon
@@ -330,11 +327,15 @@ function SetupBody({
           </p>
         )}
       </div>
+      {addThisDevice && (
+        <AddThisDeviceDialog
+          host={hostOfUrl(test.kind === "ok" ? test.url : url)}
+          onClose={() => setAddThisDevice(false)}
+        />
+      )}
       <div className="mp-footer">
         {firstRun ? (
-          <span className="mp-footnote">
-            {onSetUpRelay ? "Saved to Settings" : "Set once, kept in Settings"}
-          </span>
+          <span className="mp-footnote">Set once, kept in Settings</span>
         ) : (
           <Button
             variant="ghost"
@@ -544,4 +545,12 @@ function LiveBody({
       </div>
     </>
   )
+}
+
+const hostOfUrl = (url: string) => {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
 }

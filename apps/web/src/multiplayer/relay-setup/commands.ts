@@ -1,12 +1,13 @@
 /**
  * Board 42 sections 4-6 and rules "Allowed origins", "Fly.io", "Railway", "Relay image": the text
- * Kimo hands out for relays it does not run itself. Each builder takes the real secret and a
- * `masked` flag: the screen shows bullets, Copy puts the real value on the clipboard.
+ * Kimo hands out for relays it does not run itself. Each builder takes this device's public key
+ * (`KIMO_OWNER_KEY`, ADR 0017: it makes the relay this device's from the start) and a `masked`
+ * flag: the screen shows the key shortened, Copy puts the whole value on the clipboard. The key is
+ * public, so nothing here is a secret.
  *
  * Environment names are the relay's own (apps/server/src/config.ts): `PORT`, `HOST`,
- * `KIMO_DATA_DIR`, `KIMO_CREATE_SECRET`, `KIMO_ALLOWED_ORIGINS`.
+ * `KIMO_DATA_DIR`, `KIMO_OWNER_KEY`, `KIMO_ALLOWED_ORIGINS`.
  */
-import { MASK } from "./secret"
 
 /** The published relay image (CI builds apps/server/Dockerfile). */
 export const RELAY_IMAGE = "ghcr.io/saudade-media/kimo-relay"
@@ -19,6 +20,22 @@ export const FLY_CONFIG_PATH = "apps/server/deploy/fly.toml"
 
 /** Deploy on Railway: the Kimo Relay template (the published relay image, a volume at /data). */
 export const RAILWAY_TEMPLATE_URL = "https://railway.com/deploy/Q_WYo8"
+
+/**
+ * Whether Railway prefills template variables from the deploy link's query (ADR 0017 point 9: a
+ * staff answer says it does, the docs do not). Off until it is tested: then the relay starts
+ * unclaimed and the wizard's Test claims it.
+ */
+export const RAILWAY_PREFILLS_VARIABLES = false
+
+/** The Deploy on Railway link, with `KIMO_OWNER_KEY` prefilled when Railway honours it. */
+export function railwayDeployUrl(
+  ownerKey: string | null,
+  prefill: boolean = RAILWAY_PREFILLS_VARIABLES,
+): string {
+  if (!prefill || !ownerKey) return RAILWAY_TEMPLATE_URL
+  return `${RAILWAY_TEMPLATE_URL}?KIMO_OWNER_KEY=${encodeURIComponent(ownerKey)}`
+}
 
 /** The official Bun installer, shown in full before Kimo runs it (and for Install it myself). */
 export const BUN_INSTALL_COMMAND = "curl -fsSL https://bun.sh/install | bash"
@@ -64,13 +81,20 @@ export function shellWord(value: string): string {
 }
 
 export interface RelayEnvInput {
-  secret: string | null
+  /** This device's public key (base64url), or null while it loads. */
+  ownerKey: string | null
   origins: readonly string[]
 }
 
-const secretText = (secret: string, masked: boolean) => (masked ? MASK : shellWord(secret))
+/** Characters of the key the screen shows before the ellipsis. */
+const SHOWN_KEY_CHARS = 13
 
-/** Section 4: `docker run` for the published image, the secret and origins filled in. */
+/** The key as shown on screen (`ed25519:Hq7mK2vX9pLw4…`) or, unmasked, as copied. */
+export function ownerKeyText(key: string, masked: boolean): string {
+  return masked ? `ed25519:${key.slice(0, SHOWN_KEY_CHARS)}…` : key
+}
+
+/** Section 4: `docker run` for the published image, the owner key and origins filled in. */
 export function dockerRunCommand(
   input: RelayEnvInput & { port?: number },
   opts: { masked: boolean },
@@ -80,8 +104,8 @@ export function dockerRunCommand(
     "docker run -d --name kimo-relay --restart unless-stopped \\",
     `  -p ${port}:8787 -v kimo-relay:/data \\`,
   ]
-  if (input.secret)
-    lines.push(`  -e KIMO_CREATE_SECRET=${secretText(input.secret, opts.masked)} \\`)
+  if (input.ownerKey)
+    lines.push(`  -e KIMO_OWNER_KEY=${ownerKeyText(input.ownerKey, opts.masked)} \\`)
   const origins = originsValue(input.origins)
   if (origins) lines.push(`  -e KIMO_ALLOWED_ORIGINS=${shellWord(origins)} \\`)
   lines.push(`  ${RELAY_IMAGE}`)
@@ -94,7 +118,7 @@ export function flyManualCommands(
   opts: { masked: boolean },
 ): { launch: string; secrets: string; deploy: string } {
   const vars: string[] = []
-  if (input.secret) vars.push(`KIMO_CREATE_SECRET=${secretText(input.secret, opts.masked)}`)
+  if (input.ownerKey) vars.push(`KIMO_OWNER_KEY=${ownerKeyText(input.ownerKey, opts.masked)}`)
   const origins = originsValue(input.origins)
   if (origins) vars.push(`KIMO_ALLOWED_ORIGINS=${shellWord(origins)}`)
   return {
@@ -104,20 +128,10 @@ export function flyManualCommands(
   }
 }
 
-/** Section 6: the variables block to paste into Railway. */
-export function railwayVariables(input: RelayEnvInput, opts: { masked: boolean }): string {
-  const lines: string[] = []
-  if (input.secret)
-    lines.push(`KIMO_CREATE_SECRET=${opts.masked ? MASK : input.secret.replace(/\n/g, "")}`)
-  const origins = originsValue(input.origins)
-  if (origins) lines.push(`KIMO_ALLOWED_ORIGINS=${origins}`)
-  return lines.join("\n")
-}
-
 /** The environment of the relay Kimo runs on this computer (section 3). */
 export function localRelayEnv(input: RelayEnvInput & { port: number }): Record<string, string> {
   const env: Record<string, string> = { PORT: String(input.port), HOST: "0.0.0.0" }
-  if (input.secret) env.KIMO_CREATE_SECRET = input.secret
+  if (input.ownerKey) env.KIMO_OWNER_KEY = input.ownerKey
   const origins = originsValue(input.origins)
   if (origins) env.KIMO_ALLOWED_ORIGINS = origins
   return env
@@ -153,13 +167,14 @@ export interface FlyStep {
   label: string
   /** flyctl arguments; null for the health check (Kimo polls the relay). */
   args: string[] | null
-  /** Written to flyctl's stdin (the secrets, so they never show in a process list). */
+  /** Written to flyctl's stdin (the variables, which `secrets import` reads). */
   stdin?: string
 }
 
 /**
- * Section 5 B: apps create, secrets set, volumes create, deploy with the Fly config, health
- * check. `config` is the path of the fly.toml Kimo wrote ({@link flyToml}).
+ * Section 5 B: apps create, secrets set (`KIMO_OWNER_KEY` and the origins), volumes create, deploy
+ * with the Fly config, health check. `config` is the path of the fly.toml Kimo wrote
+ * ({@link flyToml}).
  */
 export function flyDeploySteps(
   input: RelayEnvInput & { app: string; region: string; config: string },
@@ -167,7 +182,7 @@ export function flyDeploySteps(
   const { app, region, config } = input
   const origins = originsValue(input.origins)
   const vars: string[] = []
-  if (input.secret) vars.push(`KIMO_CREATE_SECRET=${input.secret}`)
+  if (input.ownerKey) vars.push(`KIMO_OWNER_KEY=${input.ownerKey}`)
   if (origins) vars.push(`KIMO_ALLOWED_ORIGINS=${origins}`)
   const names = vars.map((v) => v.slice(0, v.indexOf("=")))
   const steps: FlyStep[] = [
@@ -205,19 +220,6 @@ export function flyDeploySteps(
     { id: "health", label: "Wait for health check", args: null },
   )
   return steps
-}
-
-/** Regenerate on a relay Kimo deployed with flyctl: set the new secret, which redeploys it. */
-export function flySecretSteps(input: { app: string; secret: string }): FlyStep[] {
-  return [
-    {
-      id: "secrets",
-      label: "fly secrets set KIMO_CREATE_SECRET",
-      args: ["secrets", "import", "--app", input.app],
-      stdin: `KIMO_CREATE_SECRET=${input.secret}\n`,
-    },
-    { id: "health", label: "Wait for health check", args: null },
-  ]
 }
 
 /**

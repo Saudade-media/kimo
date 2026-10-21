@@ -9,13 +9,14 @@ import {
   dockerRunCommand,
   flyDeploySteps,
   flyManualCommands,
-  flySecretSteps,
   flyToml,
   localRelayEnv,
   originsValue,
+  ownerKeyText,
   parseFlyWhoami,
   parseVersion,
-  railwayVariables,
+  RAILWAY_TEMPLATE_URL,
+  railwayDeployUrl,
   shellWord,
   suggestFlyApp,
   validFlyApp,
@@ -46,19 +47,8 @@ import {
   stepTime,
 } from "../src/multiplayer/relay-setup/runner"
 import {
-  createMemorySecretStore,
-  createWebSecretStore,
-  FIELD_MASK,
-  generateSecret,
-  MASK,
-  SECRET_REVEAL_MS,
-  SecretReveal,
-  WEB_RELAY_SECRET_KEY,
-} from "../src/multiplayer/relay-setup/secret"
-import {
   createRelaySetupStore,
   EMPTY_SETUP,
-  kimoRestarts,
   parseSetup,
   serializeSetup,
 } from "../src/multiplayer/relay-setup/store"
@@ -100,65 +90,10 @@ const flush = async (n = 20) => {
   for (let i = 0; i < n; i++) await Promise.resolve()
 }
 
-// --- Secret -----------------------------------------------------------------------------------------
-
-describe("secret", () => {
-  test("Automatic: kimo_cs_ and 32 random bytes in base64url", () => {
-    const a = generateSecret()
-    const b = generateSecret()
-    expect(a).toMatch(/^kimo_cs_[A-Za-z0-9_-]{43}$/)
-    expect(a).not.toBe(b)
-    const fixed = generateSecret((bytes) => bytes.fill(0xff))
-    expect(fixed).toBe(`kimo_cs_${"_".repeat(42)}8`)
-  })
-
-  test("masks match the board (13 in commands, 24 in the Custom field)", () => {
-    expect(MASK).toBe("•••••••••••••")
-    expect(FIELD_MASK.length).toBe(24)
-  })
-
-  test("Show reveals for 30 s; Show again restarts; Hide at once", () => {
-    const clock = fakeClock()
-    const reveal = new SecretReveal(clock)
-    let changes = 0
-    reveal.subscribe(() => changes++)
-    reveal.reveal()
-    expect(reveal.visible).toBe(true)
-    clock.advance(SECRET_REVEAL_MS - 1)
-    expect(reveal.visible).toBe(true)
-    reveal.reveal()
-    clock.advance(SECRET_REVEAL_MS - 1)
-    expect(reveal.visible).toBe(true)
-    clock.advance(1)
-    expect(reveal.visible).toBe(false)
-    reveal.reveal()
-    reveal.hide()
-    expect(reveal.visible).toBe(false)
-    expect(clock.pending()).toBe(0)
-    expect(changes).toBe(4)
-  })
-
-  test("web store keeps the secret under kimo.relay.secret only", async () => {
-    const m = new Map<string, string>()
-    const storage = {
-      getItem: (k: string) => m.get(k) ?? null,
-      setItem: (k: string, v: string) => void m.set(k, v),
-      removeItem: (k: string) => void m.delete(k),
-    }
-    const store = createWebSecretStore(storage)
-    expect(await store.get()).toBeNull()
-    await store.set("abc")
-    expect([...m.keys()]).toEqual([WEB_RELAY_SECRET_KEY])
-    expect(await store.get()).toBe("abc")
-    await store.delete()
-    expect(m.size).toBe(0)
-  })
-})
-
 // --- Commands ----------------------------------------------------------------------------------------
 
 describe("commands", () => {
-  const secret = "kimo_cs_abc"
+  const ownerKey = "3eO8zsfzpmoRFfRdcg9NwTXDrnxOItyjj9se_WpJX_g"
   test("allowed origins: the page's origin on web, none on desktop, extra deduplicated", () => {
     expect(autoOrigins("web", "https://design.maya.studio/editor?x=1")).toEqual([
       "https://design.maya.studio",
@@ -170,74 +105,76 @@ describe("commands", () => {
     ).toBe("https://a.example,http://b.local:3000")
   })
 
-  test("docker run: masked on screen, real on the clipboard, origins only when set", () => {
-    const web = { secret, origins: ["https://design.maya.studio"] }
+  test("the owner key shows shortened on screen and whole on the clipboard", () => {
+    expect(ownerKeyText(ownerKey, true)).toBe("ed25519:3eO8zsfzpmoRF…")
+    expect(ownerKeyText(ownerKey, false)).toBe(ownerKey)
+  })
+
+  test("docker run: this device's key, shortened on screen, whole on the clipboard; no secret", () => {
+    const web = { ownerKey, origins: ["https://design.maya.studio"] }
     expect(dockerRunCommand(web, { masked: true })).toBe(
       [
         "docker run -d --name kimo-relay --restart unless-stopped \\",
         "  -p 8787:8787 -v kimo-relay:/data \\",
-        "  -e KIMO_CREATE_SECRET=••••••••••••• \\",
+        "  -e KIMO_OWNER_KEY=ed25519:3eO8zsfzpmoRF… \\",
         "  -e KIMO_ALLOWED_ORIGINS=https://design.maya.studio \\",
         "  ghcr.io/saudade-media/kimo-relay",
       ].join("\n"),
     )
-    const desktop = dockerRunCommand({ secret, origins: [] }, { masked: false })
-    expect(desktop).toContain(`KIMO_CREATE_SECRET=${secret} \\`)
+    const desktop = dockerRunCommand({ ownerKey, origins: [] }, { masked: false })
+    expect(desktop).toContain(`KIMO_OWNER_KEY=${ownerKey} \\`)
     expect(desktop).not.toContain("KIMO_ALLOWED_ORIGINS")
-    expect(dockerRunCommand({ secret: "it's $x", origins: [] }, { masked: false })).toContain(
-      `KIMO_CREATE_SECRET='it'\\''s $x'`,
-    )
+    expect(desktop).not.toContain("SECRET")
     expect(shellWord("a b")).toBe("'a b'")
   })
 
-  test("Fly.io copy-paste and Railway variables", () => {
-    const fly = flyManualCommands({ secret, origins: ["https://x.example"] }, { masked: true })
+  test("Fly.io copy-paste carries the key; Railway needs no variables", () => {
+    const fly = flyManualCommands({ ownerKey, origins: ["https://x.example"] }, { masked: true })
     expect(fly.launch).toBe("fly launch --copy-config -c apps/server/deploy/fly.toml --no-deploy")
     expect(fly.secrets).toBe(
-      "fly secrets set KIMO_CREATE_SECRET=••••••••••••• KIMO_ALLOWED_ORIGINS=https://x.example",
+      "fly secrets set KIMO_OWNER_KEY=ed25519:3eO8zsfzpmoRF… KIMO_ALLOWED_ORIGINS=https://x.example",
     )
     expect(fly.deploy).toBe("fly deploy -c apps/server/deploy/fly.toml")
-    expect(flyManualCommands({ secret, origins: [] }, { masked: false }).secrets).toBe(
-      `fly secrets set KIMO_CREATE_SECRET=${secret}`,
+    expect(flyManualCommands({ ownerKey, origins: [] }, { masked: false }).secrets).toBe(
+      `fly secrets set KIMO_OWNER_KEY=${ownerKey}`,
     )
-    expect(railwayVariables({ secret, origins: [] }, { masked: true })).toBe(
-      "KIMO_CREATE_SECRET=•••••••••••••",
+    // Prefill stays off until Railway's template links are known to honour it (ADR 0017).
+    expect(railwayDeployUrl(ownerKey)).toBe(RAILWAY_TEMPLATE_URL)
+    expect(railwayDeployUrl(ownerKey, true)).toBe(
+      `${RAILWAY_TEMPLATE_URL}?KIMO_OWNER_KEY=${ownerKey}`,
     )
-    expect(railwayVariables({ secret, origins: ["https://x.example"] }, { masked: false })).toBe(
-      `KIMO_CREATE_SECRET=${secret}\nKIMO_ALLOWED_ORIGINS=https://x.example`,
-    )
+    expect(railwayDeployUrl(null, true)).toBe(RAILWAY_TEMPLATE_URL)
   })
 
-  test("the local relay's environment uses the relay's own names", () => {
-    expect(localRelayEnv({ port: 8788, secret, origins: [] })).toEqual({
+  test("the local relay's environment carries KIMO_OWNER_KEY and no secret", () => {
+    expect(localRelayEnv({ port: 8788, ownerKey, origins: [] })).toEqual({
       PORT: "8788",
       HOST: "0.0.0.0",
-      KIMO_CREATE_SECRET: secret,
+      KIMO_OWNER_KEY: ownerKey,
     })
-    expect(localRelayEnv({ port: 8787, secret: null, origins: ["https://a.b"] })).toEqual({
+    expect(localRelayEnv({ port: 8787, ownerKey: null, origins: ["https://a.b"] })).toEqual({
       PORT: "8787",
       HOST: "0.0.0.0",
       KIMO_ALLOWED_ORIGINS: "https://a.b",
     })
   })
 
-  test("flyctl deploy steps: the secret goes through stdin, never an argument", () => {
+  test("flyctl deploy steps: the key goes through stdin with the origins", () => {
     const steps = flyDeploySteps({
       app: "kimo-relay-maya",
       region: "ams",
       config: "/x/fly.toml",
-      secret,
+      ownerKey,
       origins: [],
     })
     expect(steps.map((s) => s.label)).toEqual([
       "fly apps create kimo-relay-maya",
-      "fly secrets set KIMO_CREATE_SECRET",
+      "fly secrets set KIMO_OWNER_KEY",
       "fly volumes create kimo_data --size 1",
       "fly deploy -c apps/server/deploy/fly.toml",
       "Wait for health check",
     ])
-    for (const s of steps) expect(s.args?.join(" ") ?? "").not.toContain(secret)
-    expect(steps[1]?.stdin).toBe(`KIMO_CREATE_SECRET=${secret}\n`)
+    expect(steps[1]?.stdin).toBe(`KIMO_OWNER_KEY=${ownerKey}\n`)
     expect(steps[2]?.args).toContain("ams")
     expect(steps[3]?.args).toEqual([
       "deploy",
@@ -248,7 +185,6 @@ describe("commands", () => {
       "--ha=false",
       "--yes",
     ])
-    expect(flySecretSteps({ app: "a-b-c", secret }).map((s) => s.id)).toEqual(["secrets", "health"])
   })
 
   test("the one-click fly.toml is apps/server/deploy/fly.toml with this app and region", () => {
@@ -341,98 +277,106 @@ describe("local relay pieces", () => {
 
 // --- Test and save -------------------------------------------------------------------------------------
 
-const info = (createSecretRequired: boolean): RelayInfo => ({
+const info = (owner: RelayInfo["owner"] = "unclaimed"): RelayInfo => ({
   relayUrl: "https://relay.maya.studio",
   name: "@kimo/server",
   version: "1.0.0",
   protocol: PROTOCOL,
   limits: DEFAULT_LIMITS,
-  createSecretRequired,
+  relayId: new Uint8Array(16),
+  owner,
 })
 
 function testDeps(
   clock: ReturnType<typeof fakeClock>,
   probe: RelayTestDeps["probe"],
-  checkSecret: RelayTestDeps["checkSecret"] = async () => ({ required: true }),
+  ownership: Partial<Pick<RelayTestDeps, "ownership" | "claim">> = {},
 ): RelayTestDeps {
-  return { probe, checkSecret, ...clock }
+  return {
+    probe,
+    ownership: ownership.ownership ?? (async () => "yours"),
+    claim: ownership.claim ?? (async () => {}),
+    ...clock,
+  }
 }
 
 describe("relay test", () => {
-  test("ok: each line ticks, latency and protocol kept", async () => {
+  test("ok: each line ticks; an unclaimed relay is claimed on the Ownership line", async () => {
     const clock = fakeClock()
     const seen: string[] = []
+    const claimed: string[] = []
     const result = await testRelaySetup(
       "wss://relay.maya.studio",
-      "kimo_cs_x",
-      testDeps(clock, async () => {
-        clock.advance(84)
-        return info(true)
-      }),
+      testDeps(
+        clock,
+        async () => {
+          clock.advance(84)
+          return info("unclaimed")
+        },
+        {
+          claim: async (url) => {
+            claimed.push(url)
+          },
+        },
+      ),
       (s) => seen.push(s.checks.map((c) => c.status[0]).join("")),
     )
     expect(result.outcome).toBe("ok")
+    expect(result.owned).toBe("claimed")
     expect(result.url).toBe("https://relay.maya.studio")
     expect(result.ms).toBe(84)
+    expect(claimed).toEqual(["https://relay.maya.studio"])
     expect(result.checks.map((c) => [c.id, c.status, c.meta])).toEqual([
       ["reach", "ok", "84 ms"],
       ["handshake", "ok", "ok"],
       ["protocol", "ok", "kimo-mp/1"],
-      ["secret", "ok", "accepted"],
+      ["ownership", "ok", "claimed by you"],
     ])
     expect(seen).toEqual(["rppp", "ooor", "oooo"])
     expect(clock.pending()).toBe(0)
   })
 
-  test("a relay without a secret, and one from before the check route", async () => {
+  test("already yours (KIMO_OWNER_KEY): nothing is claimed", async () => {
     const clock = fakeClock()
-    const open = await testRelaySetup(
-      "ws://192.168.1.40:8787",
-      null,
-      testDeps(
-        clock,
-        async () => info(false),
-        async () => ({ required: false }),
-      ),
-    )
-    expect(open.outcome).toBe("ok")
-    expect(open.createSecretRequired).toBe(false)
-    expect(open.checks[3]?.meta).toBe("not needed")
-    const old = await testRelaySetup(
-      "https://relay.maya.studio",
-      "x",
-      testDeps(
-        clock,
-        async () => info(true),
-        async () => null,
-      ),
-    )
-    expect(old.outcome).toBe("ok")
-    expect(old.checks[3]?.meta).toBe("not checked")
-  })
-
-  test("secret rejected", async () => {
-    const clock = fakeClock()
+    let claims = 0
     const r = await testRelaySetup(
       "https://relay.maya.studio",
-      "wrong",
-      testDeps(
-        clock,
-        async () => info(true),
-        async () => {
-          throw new MultiplayerError("CREATE_FORBIDDEN", "missing or wrong create secret")
+      testDeps(clock, async () => info("claimed"), {
+        claim: async () => {
+          claims++
         },
-      ),
+      }),
     )
-    expect(r.outcome).toBe("secret-rejected")
-    expect(r.checks[3]).toEqual({ id: "secret", status: "failed", meta: "rejected · 403" })
+    expect(r.outcome).toBe("ok")
+    expect(r.owned).toBe("already")
+    expect(r.checks[3]).toEqual({ id: "ownership", status: "ok", meta: "yours" })
+    expect(claims).toBe(0)
+  })
+
+  test("belongs to another Kimo, also when another claim won the race", async () => {
+    const clock = fakeClock()
+    const other = await testRelaySetup(
+      "https://relay.maya.studio",
+      testDeps(clock, async () => info("claimed"), { ownership: async () => "other" }),
+    )
+    expect(other.outcome).toBe("not-yours")
+    expect(other.checks[3]).toEqual({ id: "ownership", status: "warning", meta: "not yours" })
+    const raced = await testRelaySetup(
+      "https://relay.maya.studio",
+      testDeps(clock, async () => info("unclaimed"), {
+        claim: async () => {
+          throw new MultiplayerError("RELAY_CLAIMED", "this relay already has an owner")
+        },
+        ownership: async () => "other",
+      }),
+    )
+    expect(raced.outcome).toBe("not-yours")
   })
 
   test("unreachable within 5 s, not a relay, too old, invalid", async () => {
     const clock = fakeClock()
     const pending = testRelaySetup(
       "https://relay.maya.studio",
-      null,
       testDeps(clock, () => new Promise<RelayInfo>(() => {})),
     )
     await flush()
@@ -443,7 +387,6 @@ describe("relay test", () => {
 
     const notRelay = await testRelaySetup(
       "https://example.com",
-      null,
       testDeps(clock, async () => {
         throw new MultiplayerError(
           "NOT_A_RELAY",
@@ -456,7 +399,6 @@ describe("relay test", () => {
 
     const old = await testRelaySetup(
       "https://old.example",
-      null,
       testDeps(clock, async () => {
         throw new MultiplayerError(
           "NOT_A_RELAY",
@@ -473,8 +415,7 @@ describe("relay test", () => {
 
     const bad = await testRelaySetup(
       "ftp://x",
-      null,
-      testDeps(clock, async () => info(false)),
+      testDeps(clock, async () => info()),
     )
     expect(bad.outcome).toBe("invalid")
   })
@@ -487,19 +428,15 @@ describe("relay setup store", () => {
     expect(parseSetup(null)).toEqual(EMPTY_SETUP)
     const parsed = parseSetup({
       path: "local",
-      secretMode: "custom",
       extraOrigins: ["https://a.b", "" as string],
       local: { port: 8788, reach: "quick", hostname: null },
       fly: { app: "kimo-relay-maya", region: "ams", byKimo: true },
-      restartPending: true,
     })
     expect(parsed).toEqual({
       path: "local",
-      secretMode: "custom",
       extraOrigins: ["https://a.b"],
       local: { port: 8788, reach: "quick", hostname: null },
       fly: { app: "kimo-relay-maya", region: "ams", byKimo: true },
-      restartPending: true,
     })
     expect(parseSetup(serializeSetup(parsed))).toEqual(parsed)
     expect(
@@ -510,58 +447,21 @@ describe("relay setup store", () => {
     })
   })
 
-  test("Regenerate restarts only relays Kimo runs or deployed with flyctl", () => {
-    const local = { ...EMPTY_SETUP, path: "local" as const }
-    expect(kimoRestarts(local, { localRunning: true, flyctl: false })).toBe("local")
-    expect(kimoRestarts(local, { localRunning: false, flyctl: false })).toBeNull()
-    const fly = {
-      ...EMPTY_SETUP,
-      path: "fly" as const,
-      fly: { app: "a", region: "ams", byKimo: true },
-    }
-    expect(kimoRestarts(fly, { localRunning: false, flyctl: true })).toBe("fly")
-    expect(kimoRestarts(fly, { localRunning: false, flyctl: false })).toBeNull()
-    expect(
-      kimoRestarts(
-        { ...fly, fly: { ...fly.fly, byKimo: false } },
-        { localRunning: false, flyctl: true },
-      ),
-    ).toBeNull()
-    expect(
-      kimoRestarts({ ...EMPTY_SETUP, path: "docker" }, { localRunning: true, flyctl: true }),
-    ).toBeNull()
-  })
-
-  test("settings hold the choices, the secret store holds the secret", async () => {
+  test("settings hold the choices, and nothing else", async () => {
     const platform = createMemoryPlatform({ os: "macos" })
-    const secrets = createMemorySecretStore()
-    let n = 0
-    const store = createRelaySetupStore({
-      settings: platform.settings,
-      secrets,
-      generate: () => `kimo_cs_${++n}`,
-    })
+    const store = createRelaySetupStore({ settings: platform.settings })
     let changes = 0
     store.subscribe(() => changes++)
-    expect(await store.ensureAutoSecret()).toBe("kimo_cs_1")
-    expect(await store.ensureAutoSecret()).toBe("kimo_cs_1")
-    await store.save({
-      patch: { path: "docker", extraOrigins: ["https://x.example"] },
-      secretMode: "auto",
-      secret: "kimo_cs_1",
-    })
+    await store.save({ patch: { path: "docker", extraOrigins: ["https://x.example"] } })
     const saved = platform.settings.get("multiplayer.relaySetup")
-    expect(saved?.path).toBe("docker")
-    expect(JSON.stringify(saved)).not.toContain("kimo_cs_")
+    expect(saved).toEqual({
+      path: "docker",
+      extraOrigins: ["https://x.example"],
+      local: null,
+      fly: null,
+    })
     expect(store.getState().extraOrigins).toEqual(["https://x.example"])
     expect(changes).toBeGreaterThan(0)
-    await store.setCustomSecret(" theirs ")
-    expect(await secrets.get()).toBe("theirs")
-    expect(store.getState().secretMode).toBe("custom")
-    expect(await store.regenerate()).toBe("kimo_cs_2")
-    expect(store.getState().secretMode).toBe("auto")
-    await store.update({ secretMode: "none" })
-    expect(await store.sendSecret()).toBeNull()
   })
 })
 
@@ -583,7 +483,7 @@ describe("runners", () => {
     const relay = new LocalRelay(host, { os: "macos", arch: "aarch64" })
     const state = await relay.start({
       port: 8788,
-      secret: "kimo_cs_x",
+      ownerKey: "3eO8zsfzpmoRFfRdcg9NwTXDrnxOItyjj9se_WpJX_g",
       origins: [],
       reach: "quick",
       hostname: null,
@@ -593,7 +493,11 @@ describe("runners", () => {
     expect(state.publicUrl).toBe("wss://quiet-otter-lime.trycloudflare.com")
     expect(host.spawned[0]).toMatchObject({
       kind: "relay",
-      env: { PORT: "8788", HOST: "0.0.0.0", KIMO_CREATE_SECRET: "kimo_cs_x" },
+      env: {
+        PORT: "8788",
+        HOST: "0.0.0.0",
+        KIMO_OWNER_KEY: "3eO8zsfzpmoRFfRdcg9NwTXDrnxOItyjj9se_WpJX_g",
+      },
     })
     expect(host.spawned[1]?.args).toEqual(cloudflared.quick(8788))
     expect((await host.running()).length).toBe(2)
@@ -609,7 +513,7 @@ describe("runners", () => {
     const relay = new LocalRelay(host, { os: "macos", arch: "aarch64" })
     const state = await relay.start({
       port: 8787,
-      secret: null,
+      ownerKey: null,
       origins: [],
       reach: "lan",
       hostname: null,
@@ -652,7 +556,7 @@ describe("runners", () => {
       app: "kimo-relay-maya",
       region: "ams",
       config: "/c",
-      secret: "s",
+      ownerKey: "k",
       origins: [],
     })
     const updates: string[] = []
@@ -666,9 +570,7 @@ describe("runners", () => {
     expect(run.lines.map((l) => l.status)).toEqual(["done", "done", "failed", "pending", "pending"])
     expect(run.error).toBe("Error: region ams is out of capacity")
     expect(run.tail).toEqual(["Error: region ams is out of capacity"])
-    expect(host.spawned.find((s) => s.args?.[0] === "secrets")?.stdin).toBe(
-      "KIMO_CREATE_SECRET=s\n",
-    )
+    expect(host.spawned.find((s) => s.args?.[0] === "secrets")?.stdin).toBe("KIMO_OWNER_KEY=k\n")
     expect(updates[0]).toBe("rpppp")
   })
 

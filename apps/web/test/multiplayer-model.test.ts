@@ -529,7 +529,8 @@ const relayInfo: RelayInfo = {
   version: "1.2.0",
   protocol: "kimo-mp/1",
   limits: {} as RelayInfo["limits"],
-  createSecretRequired: false,
+  relayId: new Uint8Array(16),
+  owner: "claimed",
 }
 
 describe("relay test", () => {
@@ -567,6 +568,35 @@ describe("relay test", () => {
     expect(model.relayTest.getState().kind).toBe("testing")
     clock.advance(RELAY_TEST_TIMEOUT_MS)
     expect((await pending).kind).toBe("unreachable")
+  })
+
+  test("ownership: unclaimed from /version, yours or other from the device check, else null", async () => {
+    let info: RelayInfo = { ...relayInfo, owner: "unclaimed" }
+    let mine: "yours" | "other" = "yours"
+    const asked: string[] = []
+    const withCheck = createMultiplayerModel({
+      backend: fakeBackend().backend,
+      probe: async () => info,
+      ownership: async (url) => {
+        asked.push(url)
+        return mine
+      },
+    })
+    expect(await withCheck.relayTest.test("https://relay.test")).toMatchObject({
+      kind: "ok",
+      owner: "unclaimed",
+    })
+    // An unclaimed relay needs no device check.
+    expect(asked).toEqual([])
+    info = relayInfo
+    expect(await withCheck.relayTest.test("https://relay.test")).toMatchObject({ owner: "yours" })
+    mine = "other"
+    expect(await withCheck.relayTest.test("https://relay.test")).toMatchObject({ owner: "other" })
+    const without = createMultiplayerModel({
+      backend: fakeBackend().backend,
+      probe: async () => relayInfo,
+    })
+    expect(await without.relayTest.test("https://relay.test")).toMatchObject({ owner: null })
   })
 })
 

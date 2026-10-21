@@ -91,7 +91,6 @@ export function createHostMultiplayer(options: HostMultiplayerOptions): HostMult
     "mp.startSharing": async (args) => {
       await backend.start(str(args.ref), {
         ...(typeof args.relayUrl === "string" ? { relayUrl: args.relayUrl } : {}),
-        ...(typeof args.createSecret === "string" ? { createSecret: args.createSecret } : {}),
       })
       return backend.snapshot(str(args.ref))
     },

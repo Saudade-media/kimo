@@ -37,6 +37,7 @@ import {
   type ShareSnapshot,
   type StartOptions,
 } from "./backend"
+import type { RelayOwnerState } from "./ownership"
 import {
   isPresenceColor,
   JoinOrder,
@@ -278,8 +279,11 @@ export type RelayTestState =
       version: string
       protocol: string
       ms: number
-      /** Whether creating a room needs the relay's create secret. */
-      createSecretRequired?: boolean
+      /**
+       * Whose relay it is (§16.9): `unclaimed`, `yours` or `other`; null when the model has no
+       * ownership check or it failed (Start sharing finds out then).
+       */
+      owner: RelayOwnerState | null
     }
   | { kind: "not-a-relay"; url: string; message: string }
   | { kind: "unreachable"; url: string; message: string }
@@ -354,6 +358,8 @@ export interface MultiplayerModelDeps {
   platformKind?: KimoPlatform["kind"]
   /** Relay handshake. Default `RelayHttpClient.probe`. */
   probe?(relayUrl: string): Promise<RelayInfo>
+  /** Whose a claimed relay is, with this device's key (§16.9). Without it the test says null. */
+  ownership?(relayUrl: string): Promise<RelayOwnerState>
   /** Joins a room from a link (the window's share layer). */
   join?(link: string): Promise<SharedSession>
   timers?: ModelTimers
@@ -926,6 +932,7 @@ function probeProtocol(error: unknown): string | null {
 function createRelayTestModel(
   probe: (url: string) => Promise<RelayInfo>,
   timers: ModelTimers,
+  ownership?: (url: string) => Promise<RelayOwnerState>,
 ): RelayTestModel {
   const listeners = new Set<() => void>()
   let state: RelayTestState = { kind: "idle" }
@@ -972,14 +979,18 @@ function createRelayTestModel(
       let result: RelayTestState
       try {
         const info = await Promise.race([probe(url), timeout])
+        const ms = Math.max(0, timers.now() - started)
+        let owner: RelayOwnerState | null = info.owner === "unclaimed" ? "unclaimed" : null
+        if (info.owner === "claimed" && ownership)
+          owner = await Promise.race([ownership(url), timeout]).catch(() => null)
         result = {
           kind: "ok",
           url,
           name: info.name,
           version: info.version,
           protocol: info.protocol,
-          ms: Math.max(0, timers.now() - started),
-          createSecretRequired: info.createSecretRequired === true,
+          ms,
+          owner,
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -1188,7 +1199,7 @@ export function createMultiplayerModel(deps: MultiplayerModelDeps): MultiplayerM
       return d.model
     },
     settings,
-    relayTest: createRelayTestModel(probe, timers),
+    relayTest: createRelayTestModel(probe, timers, deps.ownership),
     join: createJoinModel({ ...(deps.join ? { join: deps.join } : {}), probe, timers }),
     dispose() {
       for (const d of docs.values()) d.dispose()

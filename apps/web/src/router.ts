@@ -7,6 +7,7 @@
  */
 import type { SettingsPane } from "@kimo/platform"
 import { parseJoinPath } from "./join/link"
+import { parsePairPath } from "./pair/link"
 import { parseSettingsHash } from "./settings/model"
 
 /** Board 37 rules (xKrpy) "Sections": what Home shows. */
@@ -27,6 +28,8 @@ export type Route =
   | { name: "gallery" }
   /** Board 41 section 5: a join link (`#/join/<encoded link>`; the web form is `/join#...`). */
   | { name: "join"; link: string }
+  /** ADR 0017: a pairing link (`#/pair/<encoded link>`; the web form is `/pair#...`). */
+  | { name: "pair"; link: string }
   | { name: "not-found"; path: string }
 
 const SIMPLE_SECTIONS: Record<string, "all" | "templates" | "libraries" | "trash"> = {
@@ -53,6 +56,8 @@ export function parseRoute(hash: string): Route {
   if (path === "/gallery") return { name: "gallery" }
   const joinLink = parseJoinPath(path)
   if (joinLink !== null) return { name: "join", link: joinLink }
+  const pairLink = parsePairPath(path)
+  if (pairLink !== null) return { name: "pair", link: pairLink }
   // Board 27 §1 "Copy link to page": `?page=<id>` (read by the pages strip).
   const m = /^\/file\/([A-Za-z0-9_-]+)\/?(?:\?page=[A-Za-z0-9]+)?$/.exec(path)
   if (m?.[1]) return { name: "file", id: m[1] }

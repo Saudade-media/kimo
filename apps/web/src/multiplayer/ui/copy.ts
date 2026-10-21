@@ -15,6 +15,7 @@ import type {
   RelayTestState,
   ShareState,
 } from "../model"
+import type { RelayOwnerState } from "../ownership"
 import type { PresenceColor } from "../presence"
 
 // --- Topbar sync status (section 2, rules row "Sync status") -------------------------------------
@@ -234,8 +235,18 @@ export function resetDescription(activeLinks: number, impactCopy: string): strin
 
 export type RelayResultView =
   | { kind: "testing"; text: string }
-  /** `time` alone in the popover check (B); "time · protocol" in Settings. */
-  | { kind: "ok"; pill: string; time: string; protocol: string }
+  /**
+   * `relay` ("Kimo relay 1.2") and `time` make the meta: "Kimo relay 1.2 · 84 ms" in the popover
+   * (B, G, H), "Kimo relay 1.2 · answered in 84 ms" in Settings. `owner` picks the pill (ADR 0017).
+   */
+  | {
+      kind: "ok"
+      relay: string
+      ms: number
+      time: string
+      protocol: string
+      owner: RelayOwnerState | null
+    }
   | { kind: "warning" | "danger"; icon: "triangle-alert" | "circle-x"; text: string }
 
 const hostOf = (url: string) => {
@@ -259,9 +270,11 @@ export function relayResultView(state: RelayTestState): RelayResultView | null {
     case "ok":
       return {
         kind: "ok",
-        pill: `Kimo relay ${state.version}`,
+        relay: `Kimo relay ${state.version}`,
+        ms: Math.round(state.ms),
         time: `answered in ${Math.round(state.ms)} ms`,
         protocol: `protocol ${protocolNumber(state.protocol)}`,
+        owner: state.owner,
       }
     case "not-a-relay":
       return {
@@ -287,6 +300,27 @@ export function relayResultView(state: RelayTestState): RelayResultView | null {
         icon: "circle-x",
         text: `That is not a relay URL. Use wss:// or https:// and the relay's host, like wss://relay.example.com.`,
       }
+  }
+}
+
+/**
+ * The ownership pill (board 41: section 3 B, G, H in the popover; section 4 in Settings): the tone
+ * and the label. Unknown ownership (no check) shows the relay version like before.
+ */
+export function ownerPill(
+  owner: RelayOwnerState | null,
+  where: "popover" | "settings",
+  relay: string,
+): { tone: "success" | "muted" | "warning"; label: string } {
+  switch (owner) {
+    case "yours":
+      return { tone: "success", label: where === "popover" ? "Your relay" : "Yours" }
+    case "unclaimed":
+      return { tone: "muted", label: where === "popover" ? "Not set up yet" : "Not claimed yet" }
+    case "other":
+      return { tone: "warning", label: "Not yours" }
+    default:
+      return { tone: "success", label: relay }
   }
 }
 

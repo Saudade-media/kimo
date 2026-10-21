@@ -19,9 +19,10 @@ import { StrictMode, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import { Icon } from "../../src/lib/icons"
 import { setTheme } from "../../src/lib/theme"
+import { createMemoryDeviceKeyStore } from "../../src/multiplayer/device-key"
 import { createMultiplayerModel } from "../../src/multiplayer/model"
+import { createOwnershipClient } from "../../src/multiplayer/ownership"
 import { createFakeRelayHost } from "../../src/multiplayer/relay-setup/host"
-import { createWebSecretStore } from "../../src/multiplayer/relay-setup/secret"
 import {
   createRelaySetupServices,
   RelaySetupContext,
@@ -36,14 +37,20 @@ const params = new URLSearchParams(location.search)
 const surface = params.get("surface") ?? "share"
 const theme = params.get("theme") === "dark" ? "dark" : "light"
 setTheme(theme)
-localStorage.removeItem("kimo.relay.secret")
 
 const platform = createMemoryPlatform({ os: "macos" })
 const fake = createFakeShareBackend()
+// This page's device key (memory: every load is a new device, so runs never share an owner).
+const ownership = createOwnershipClient({
+  deviceKeys: createMemoryDeviceKeyStore(),
+  deviceName: () => "Chrome on Mac",
+  webOrigin: location.origin,
+})
 const model = createMultiplayerModel({
   backend: fake.backend,
   settings: platform.settings,
   platformKind: "browser",
+  ownership: async (url) => (await ownership.relayOwnership(url)).state,
 })
 const desktop = surface === "desktop"
 const host = desktop
@@ -69,7 +76,7 @@ const services = createRelaySetupServices(platform, {
   kind: desktop ? "desktop" : "web",
   host,
   pageOrigin: desktop ? null : "https://design.maya.studio",
-  secrets: createWebSecretStore(localStorage),
+  ownership,
   copy: async (text) => {
     ;(window as unknown as { __clipboard: string }).__clipboard = text
   },
@@ -77,7 +84,9 @@ const services = createRelaySetupServices(platform, {
 
 const toasts: ShareToast[] = []
 let toastSeq = 0
-Object.assign(window, { __board42: { platform, model, fake, host, services, toasts } })
+Object.assign(window, {
+  __board42: { platform, model, fake, host, services, ownership, toasts },
+})
 
 const style = document.createElement("style")
 style.textContent = `
@@ -134,11 +143,8 @@ function ShareSurface() {
           from="share"
           saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
           onStartSharing={async (relayUrl) => {
-            const createSecret = await services.store.sendSecret()
-            await model
-              .document("/Users/maya/home.kimo")
-              .startSharing({ relayUrl, ...(createSecret ? { createSecret } : {}) })
-            Object.assign(window, { __started: { relayUrl, createSecret } })
+            await model.document("/Users/maya/home.kimo").startSharing({ relayUrl })
+            Object.assign(window, { __started: { relayUrl } })
             setOpen("share")
           }}
           onClose={() => setOpen((o) => (o === "relay" ? null : o))}

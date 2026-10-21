@@ -1,0 +1,73 @@
+/*
+ * Pairing link landing: desing.pen 41 Multiplayer, section 5 H to N (S1JZMv, f7xHq). The Pair Card
+ * is the Join Card (join.css): 360 wide, bg-app, radius-xl, 1px border, shadow 0 4 16. This file
+ * holds what only the pairing card has.
+ */
+
+/* VQHDH Desc: text-sm secondary, line-height 1.45. */
+.pair-card__desc {
+  margin: 0;
+  width: 100%;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* ttxWg Field · Device name: column, gap 6; Label text-xs 500 secondary. */
+.pair-card__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.pair-card__label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+}
+
+/* C2FgOF Actions: row, gap 8, centered, a spacer before the buttons. */
+.pair-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.pair-card__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+
+/* Buttons 30 high: Not now padding 0 12, Add device padding 0 14, labels text-sm. */
+.pair-card__actions .kimo-button {
+  height: 30px;
+  font-size: var(--kimo-text-sm);
+}
+
+.pair-card__not-now {
+  padding: 0 12px;
+}
+
+.pair-card__add {
+  padding: 0 14px;
+}
+
+/* Du4R1 Adding: opacity 0.6, the loader turns. */
+.pair-card__add[data-busy="true"] {
+  opacity: 0.6;
+}
+
+.pair-card__add[data-busy="true"] svg {
+  animation: join-spin 1s linear infinite;
+}
+
+/* J ZbDkf Icon Wrap: success-soft with a success icon. */
+.join-card__wrap--success {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}

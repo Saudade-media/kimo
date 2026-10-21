@@ -21,6 +21,7 @@ import {
   linkCopiedText,
   linkMeta,
   linkRevokedText,
+  ownerPill,
   personRole,
   relayReady,
   relayResultView,
@@ -221,13 +222,29 @@ describe("§4 relay test results", () => {
         version: "1.2",
         protocol: "kimo-mp/1",
         ms: 84,
+        owner: "yours",
       }),
     ).toEqual({
       kind: "ok",
-      pill: "Kimo relay 1.2",
+      relay: "Kimo relay 1.2",
+      ms: 84,
       time: "answered in 84 ms",
       protocol: "protocol 1",
+      owner: "yours",
     })
+    // The ownership pill (ADR 0017): the popover and Settings word it differently.
+    expect(ownerPill("yours", "popover", "Kimo relay 1.2")).toEqual({
+      tone: "success",
+      label: "Your relay",
+    })
+    expect(ownerPill("yours", "settings", "Kimo relay 1.2").label).toBe("Yours")
+    expect(ownerPill("unclaimed", "popover", "").label).toBe("Not set up yet")
+    expect(ownerPill("unclaimed", "settings", "")).toEqual({
+      tone: "muted",
+      label: "Not claimed yet",
+    })
+    expect(ownerPill("other", "popover", "")).toEqual({ tone: "warning", label: "Not yours" })
+    expect(ownerPill(null, "settings", "Kimo relay 1.2").label).toBe("Kimo relay 1.2")
     expect(view({ kind: "not-a-relay", url: "https://x.test", message: "" })).toMatchObject({
       kind: "warning",
       icon: "triangle-alert",
@@ -254,6 +271,7 @@ describe("§4 relay test results", () => {
       version: "1.2",
       protocol: "kimo-mp/1",
       ms: 1,
+      owner: "yours",
     }
     expect(relayReady(ok, "wss://a")).toBe(true)
     expect(relayReady(ok, "wss://b")).toBe(false)

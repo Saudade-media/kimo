@@ -31,6 +31,7 @@ import {
   type StopSharingResult,
   type SweepResult,
 } from "../multiplayer"
+import { deviceKeysFor, deviceNameFor } from "../multiplayer/device"
 import { libraryFileOfKey } from "../multiplayer/library"
 import { pickPresenceColor } from "../multiplayer/presence"
 
@@ -43,8 +44,6 @@ export interface ShareableSession {
 export interface ShareOptions {
   /** Seconds the first view and edit links stay valid; null (default) never expires. */
   ttlSeconds?: number | null
-  /** The relay's create secret, when it asks for one. */
-  createSecret?: string
   /** The asset store of this document. Default: the `assets/` folder beside the file. */
   assets?: AssetStore
 }
@@ -229,6 +228,8 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
         assets: createAssetStore(`room-${room}-${binding}`),
       }),
       autoFetchAssets: () => platform.settings.get("multiplayer.fetchAssets") !== false,
+      deviceKeys: deviceKeysFor(platform),
+      deviceName: () => deviceNameFor(platform),
       ...(registry ? { registry } : {}),
       ...deps.serviceDeps,
     })
@@ -389,10 +390,7 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
         )
       assertRelayReachable(platform, url)
       const target = targetFor(session, options.assets)
-      const summary = await service.startSharing(target, {
-        relayUrl: url,
-        ...(options.createSecret ? { createSecret: options.createSecret } : {}),
-      })
+      const summary = await service.startSharing(target, { relayUrl: url })
       // `startSharing` connected a session; the registry-backed `connect` returns the tracked one.
       const live =
         sessions.get(summary.room) ?? track(await service.connect(target, summary.room), true)

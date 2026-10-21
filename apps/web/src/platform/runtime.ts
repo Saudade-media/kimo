@@ -18,6 +18,7 @@ import { joinPath } from "../join/link"
 import type { LibraryShare } from "../multiplayer/library"
 import type { MultiplayerModel } from "../multiplayer/model"
 import { createWindowMultiplayer } from "../multiplayer/window"
+import { isPairDeepLink, pairPath } from "../pair/link"
 import { takeLastFiles } from "./last-files"
 import {
   createSessionManager,
@@ -171,9 +172,11 @@ function finishRuntime(
   // The desktop Settings window (`#/settings/<pane>`) edits settings only: it never opens files.
   if (settingsRoute()) return runtime
   manager.install(onOpened)
-  // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route.
+  // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route, and a
+  // `kimo://pair#...` link the pairing route (ADR 0017).
+  const linkRoute = (link: string) => (isPairDeepLink(link) ? pairPath(link) : joinPath(link))
   platform.launch.onOpenRequest((request) => {
-    if (request.join) location.hash = `#${joinPath(request.join)}`
+    if (request.join) location.hash = `#${linkRoute(request.join)}`
   })
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
@@ -191,7 +194,7 @@ function finishRuntime(
       requests.push({ source: "argv", refs: [last[0]] })
     for (const request of requests) {
       if (request.join) {
-        location.hash = `#${joinPath(request.join)}`
+        location.hash = `#${linkRoute(request.join)}`
         continue
       }
       await manager.handleOpenRequest(request).catch((e: unknown) => {

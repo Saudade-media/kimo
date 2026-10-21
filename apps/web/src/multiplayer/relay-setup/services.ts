@@ -1,23 +1,19 @@
 /**
- * What the relay setup UI (board 42) runs on, per window: the settings and secret store, the
- * desktop host (null on web), the relay on this computer, the relay test's network calls, the
- * clipboard and external links. Harnesses provide their own through {@link RelaySetupContext}.
+ * What the relay setup UI (board 42) runs on, per window: the settings store, this device's
+ * ownership client, the desktop host (null on web), the relay on this computer, the relay test's
+ * network calls, the clipboard and external links. Harnesses provide their own through {@link RelaySetupContext}.
  */
 import type { KimoPlatform } from "@kimo/platform"
 import { RelayHttpClient } from "@kimo/sync/mp"
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react"
 import { tauriBridge } from "../../host/bridge"
 import { inTauri } from "../../platform/runtime"
+import { ownershipFor } from "../device"
+import type { OwnershipClient } from "../ownership"
 import { copyText } from "../ui/shared"
 import { createTauriRelayHost, type RelayHostApi } from "./host"
 import type { RelayTestDeps } from "./relay-test"
 import { type Clock, LocalRelay, type LocalRelayState, realClock } from "./runner"
-import {
-  createKeychainSecretStore,
-  createWebSecretStore,
-  type KeyValue,
-  type RelaySecretStore,
-} from "./secret"
 import { createRelaySetupStore, type RelaySetupState, type RelaySetupStore } from "./store"
 
 export interface RelaySetupServices {
@@ -27,6 +23,8 @@ export interface RelaySetupServices {
   /** This page's origin on web (added to the allowed origins); null on desktop. */
   pageOrigin: string | null
   store: RelaySetupStore
+  /** This device against relays: its public key (`KIMO_OWNER_KEY`), claim, devices, pairing. */
+  ownership: OwnershipClient
   host: RelayHostApi | null
   local: LocalRelay | null
   test: RelayTestDeps
@@ -35,35 +33,28 @@ export interface RelaySetupServices {
   clock: Clock
 }
 
-function safeStorage(): KeyValue | null {
-  try {
-    return (globalThis as { localStorage?: Storage }).localStorage ?? null
-  } catch {
-    return null
-  }
-}
-
-/** The relay test over the network (the relay's `/version` and `/create-secret/check`). */
-export function networkTestDeps(clock: Clock = realClock): RelayTestDeps {
+/** The relay test over the network (the relay's `/version`, then ownership as this device). */
+export function networkTestDeps(
+  ownership: OwnershipClient,
+  clock: Clock = realClock,
+): RelayTestDeps {
   return {
     probe: (url) => new RelayHttpClient({ relayUrl: url, timeoutMs: 5000 }).probe(),
-    checkSecret: (url, secret) =>
-      new RelayHttpClient({ relayUrl: url, timeoutMs: 5000 }).checkCreateSecret(secret),
+    ownership: async (url) => (await ownership.relayOwnership(url)).state,
+    claim: async (url) => {
+      await ownership.claimRelay(url)
+    },
     ...clock,
   }
 }
 
 export function createRelaySetupServices(
   platform: KimoPlatform,
-  overrides: Partial<Omit<RelaySetupServices, "store">> & { secrets?: RelaySecretStore } = {},
+  overrides: Partial<Omit<RelaySetupServices, "store">> = {},
 ): RelaySetupServices {
   const desktop = platform.kind === "desktop" && inTauri()
   const bridge = desktop ? tauriBridge() : null
-  const secrets =
-    overrides.secrets ??
-    (bridge
-      ? createKeychainSecretStore((cmd, args) => bridge.invoke(cmd, args))
-      : createWebSecretStore(safeStorage()))
+  const ownership = overrides.ownership ?? ownershipFor(platform)
   const host =
     overrides.host !== undefined
       ? overrides.host
@@ -87,7 +78,8 @@ export function createRelaySetupServices(
           : typeof location === "object"
             ? location.origin
             : null,
-    store: createRelaySetupStore({ settings: platform.settings, secrets }),
+    store: createRelaySetupStore({ settings: platform.settings }),
+    ownership,
     host,
     local:
       overrides.local !== undefined
@@ -95,7 +87,7 @@ export function createRelaySetupServices(
         : host
           ? new LocalRelay(host, info, clock)
           : null,
-    test: overrides.test ?? networkTestDeps(clock),
+    test: overrides.test ?? networkTestDeps(ownership, clock),
     openUrl:
       overrides.openUrl ??
       ((url) => {

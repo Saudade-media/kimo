@@ -2,9 +2,9 @@
  * The processes behind board 42's one-click parts, over a {@link RelayHostApi}:
  *
  * - {@link LocalRelay}: the relay on this computer (section 3). Checks (Bun, port 8787 or the next
- *   free one, cloudflared), Install Bun with the installer's steps as lines, Start relay with the
- *   secret and origins in its environment, then the tunnel (quick: the trycloudflare.com address
- *   read from cloudflared; named: create, route DNS, run), Stop, and Restart for a new secret.
+ *   free one, cloudflared), Install Bun with the installer's steps as lines, Start relay with this
+ *   device's key (`KIMO_OWNER_KEY`) and the origins in its environment, then the tunnel (quick: the
+ *   trycloudflare.com address read from cloudflared; named: create, route DNS, run), and Stop.
  * - {@link runFlySteps}: the flyctl deploy log (section 5 B): each command one line that ticks
  *   with its time; an error stops the run with flyctl's last lines.
  */
@@ -96,13 +96,14 @@ export interface LocalChecks {
 
 export interface LocalRelayOptions {
   port: number
-  secret: string | null
+  /** This device's public key: the relay starts owned by it (ADR 0017). */
+  ownerKey: string | null
   origins: readonly string[]
   reach: Reach
   hostname: string | null
 }
 
-export type LocalStatus = "stopped" | "starting" | "running" | "restarting" | "failed"
+export type LocalStatus = "stopped" | "starting" | "running" | "failed"
 
 export interface LocalRelayState {
   status: LocalStatus
@@ -312,14 +313,6 @@ export class LocalRelay {
     this.set({ ...STOPPED })
   }
 
-  /** Regenerate: the same relay with a new secret (a second or two). */
-  async restart(secret: string): Promise<LocalRelayState> {
-    const options = this.state.options
-    if (!options) throw new Error("The relay on this computer is not running")
-    this.set({ status: "restarting" })
-    return this.start({ ...options, secret })
-  }
-
   /** Picks up a relay another window started (Settings, Share popover). */
   async adopt(saved?: { reach: Reach; hostname: string | null }): Promise<void> {
     if (this.relay) return
@@ -342,7 +335,7 @@ export class LocalRelay {
       lanUrl: port ? lanRelayUrl(lan ?? "127.0.0.1", port) : null,
       publicUrl: quick ?? (named ? `wss://${named}` : null),
       startedAt: relay.startedAt,
-      options: port ? { port, secret: null, origins: [], reach, hostname: named } : null,
+      options: port ? { port, ownerKey: null, origins: [], reach, hostname: named } : null,
     })
   }
 }

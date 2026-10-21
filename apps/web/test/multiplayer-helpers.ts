@@ -4,6 +4,7 @@ import { BaseProvider } from "@kimo/sync"
 import { createServer, relayOf } from "../../server/src/index"
 import { type AssetStore, contentDigest, createMemoryAssetStore } from "../src/lib/assets"
 import { createMemoryRegistry, type Registry } from "../src/multiplayer"
+import { createMemoryDeviceKeyStore } from "../src/multiplayer/device-key"
 import { createShareService, type ShareService, type ShareTarget } from "../src/multiplayer/share"
 
 export interface Relay {
@@ -13,8 +14,12 @@ export interface Relay {
 }
 
 /** A relay on a free port with in-memory storage and the rate limits lifted. */
-export function startRelay(config: Record<string, unknown> = {}): Relay {
+export function startRelay(
+  config: Record<string, unknown> = {},
+  options: { now?: () => number } = {},
+): Relay {
   const server = createServer({
+    ...(options.now ? { now: options.now } : {}),
     port: 0,
     config: {
       dataDir: ":memory:",
@@ -40,6 +45,12 @@ export interface Peer {
   guests: { store: DocStore; assets: AssetStore }[]
 }
 
+/**
+ * The device key every peer shares unless a test gives its own: one person's devices, so any of
+ * them may share on a relay the first one claimed (ADR 0017).
+ */
+export const sharedDeviceKeys = createMemoryDeviceKeyStore()
+
 /** A share service with its own registry (one per simulated device). */
 export function makePeer(overrides: Partial<Parameters<typeof createShareService>[0]> = {}): Peer {
   const registry = createMemoryRegistry()
@@ -47,6 +58,8 @@ export function makePeer(overrides: Partial<Parameters<typeof createShareService
   const service = createShareService({
     registry,
     webOrigin: "https://kimo.test",
+    deviceKeys: sharedDeviceKeys,
+    deviceName: () => "Mac",
     backoff: [5, 40],
     openGuestDocument: async () => {
       const guest = { store: new YjsDocStore(), assets: createMemoryAssetStore() }

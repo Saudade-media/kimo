@@ -13,6 +13,7 @@ import { onFileDeleted } from "../lib/file-events"
 import type { FileSessionManager } from "../platform/session"
 import { createPlatformShare, type PlatformShare } from "../platform/share"
 import { createLocalShareBackend, type ShareBackend, switchingShareBackend } from "./backend"
+import { ownershipFor } from "./device"
 import { createLibraryShare, type LibraryShare } from "./library"
 import { createMultiplayerModel, type MultiplayerModel } from "./model"
 import { relaySetupFor } from "./relay-setup/services"
@@ -74,6 +75,7 @@ export function createWindowMultiplayer(options: WindowMultiplayerOptions): Wind
     settings: platform.settings,
     platformKind: platform.kind,
     join: (link) => share.joinLink(link),
+    ownership: async (url) => (await ownershipFor(platform).relayOwnership(url)).state,
   })
   if (platform.kind === "desktop") guardLocalRelay(platform, manager, model)
   return { share, backend, model, library }

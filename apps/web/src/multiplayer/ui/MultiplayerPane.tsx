@@ -7,22 +7,35 @@
  * cursors · Fetch images and fonts (On demand / Never). Every control writes at once.
  *
  * Board 42 section 1 B: the explainer gets Set up a relay (Secondary, opens the relay setup
- * wizard over Settings) next to the guide, and Create secret sits under Relay URL
- * (`RelaySecretSetting`). A passing Test also checks the create secret.
+ * wizard over Settings) next to the guide.
+ *
+ * ADR 0017 (section 4 rows 2 to 4): the result says whose the relay is: Yours, Not claimed yet
+ * (claimed on the first Start sharing) or Not yours (Add this device · Reset ownership). When it
+ * is yours, Devices lists the devices that can start sharing (`DevicesSetting`). A saved relay is
+ * tested when the pane opens.
  */
 import type { KimoPlatform } from "@kimo/platform"
-import { Button, Input, Select, SettingRow, StatusPill, Toggle } from "@kimo/ui"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Button, Input, Select, SettingRow, Toggle } from "@kimo/ui"
+import { useEffect, useMemo, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { PaneTitle } from "../../settings/panes"
 import { emptySnapshot, type ShareBackend } from "../backend"
+import { ownershipFor } from "../device"
 import { useMultiplayer, useMultiplayerSettings, useRelayTest } from "../hooks"
 import { createMultiplayerModel, type MultiplayerModel } from "../model"
+import type { RelayDevice } from "../ownership"
 import { useRelaySetupServices } from "../relay-setup/services"
-import { refusedText, relayResultView } from "./copy"
-import { confirmSecret, RelaySecretSetting } from "./RelaySecretSetting"
+import { ownerPill, refusedText, relayResultView } from "./copy"
+import { DevicesSetting } from "./DevicesSetting"
+import {
+  AddThisDeviceDialog,
+  NOT_YOURS_DESC,
+  NotYoursActions,
+  RESET_OWNERSHIP_URL,
+} from "./ownership"
 import { RelayWizard } from "./RelayWizard"
-import { GuideLink, openRelayGuide } from "./shared"
+import { Pill } from "./relay-parts"
+import { copyText, GuideLink, openRelayGuide } from "./shared"
 import "./share-ui.css"
 
 const FETCH_OPTIONS = [
@@ -62,6 +75,7 @@ export function MultiplayerPane({ platform, model: given }: MultiplayerPaneProps
             backend: inertBackend,
             settings: platform.settings,
             platformKind: platform.kind,
+            ownership: async (url) => (await ownershipFor(platform).relayOwnership(url)).state,
           }),
     [given, runtime, platform],
   )
@@ -79,8 +93,9 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
   const [urlError, setUrlError] = useState<string | null>(null)
   const relaySetup = useRelaySetupServices(platform)
   const [wizard, setWizard] = useState(false)
-  const [secretRejected, setSecretRejected] = useState(false)
-  const customRef = useRef<HTMLInputElement>(null)
+  const [addThisDevice, setAddThisDevice] = useState(false)
+  const ownership = relaySetup?.ownership ?? ownershipFor(platform)
+  const [devices, setDevices] = useState<RelayDevice[] | null>(null)
   // A change from elsewhere (the Share popover) shows here.
   useEffect(() => setUrl(settings.relayUrl ?? ""), [settings.relayUrl])
   useEffect(() => setName(settings.displayName), [settings.displayName])
@@ -94,14 +109,33 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
       setUrlError(e instanceof Error ? e.message : String(e))
     }
   }
-  const runTest = async () => {
-    setSecretRejected(false)
-    const result = await model.relayTest.test(url)
+  const runTest = async (value = url) => {
+    const result = await model.relayTest.test(value)
     if (result.kind !== "ok") return
     await saveUrl(result.url)
-    if (relaySetup && (await confirmSecret(relaySetup, result.url)) === "rejected")
-      setSecretRejected(true)
   }
+
+  // A saved relay is tested when the pane opens, so its ownership and devices show.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
+  useEffect(() => {
+    if (settings.relayUrl && !(test.kind === "ok" && test.url === settings.relayUrl))
+      void model.relayTest.test(settings.relayUrl)
+  }, [])
+
+  // Devices: only when the tested relay is yours.
+  const yoursUrl = test.kind === "ok" && test.owner === "yours" ? test.url : null
+  useEffect(() => {
+    setDevices(null)
+    if (!yoursUrl) return
+    let live = true
+    void ownership.listDevices(yoursUrl).then(
+      (list) => live && setDevices(list),
+      () => undefined,
+    )
+    return () => {
+      live = false
+    }
+  }, [yoursUrl, ownership])
   const result =
     urlError !== null
       ? // A URL the app refuses (not ws/http, or plain http to a public host on desktop): say why.
@@ -180,61 +214,70 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
             Test
           </Button>
         </div>
-        {result && (
-          <div className="mp-result" data-result={result.kind} role="status">
-            {result.kind === "ok" ? (
-              <>
-                <StatusPill status="linked" label={result.pill} />
-                <span className="mp-meta-mono">
-                  {result.time} · {result.protocol}
-                </span>
-              </>
-            ) : result.kind === "testing" ? (
-              <>
-                <span className="mp-result__icon mp-result__icon--testing">
-                  <Icon name="loader-circle" size={14} />
-                </span>
-                <span className="mp-result__text mp-result__text--testing">{result.text}</span>
-              </>
-            ) : (
-              <>
-                <span className={`mp-result__icon mp-result__icon--${result.kind}`}>
-                  <Icon name={result.icon} size={14} />
-                </span>
-                <p className="mp-result__text">{result.text}</p>
-              </>
+        {result?.kind === "ok" && (result.owner === "unclaimed" || result.owner === "other") ? (
+          <div className="mp-result-group" data-result="ok" data-owner={result.owner}>
+            <div className="mp-result" role="status">
+              <Pill {...ownerPill(result.owner, "settings", result.relay)} />
+              <span className="mp-meta-mono">
+                {result.relay} · {result.time}
+              </span>
+            </div>
+            <p className="mp-desc">
+              {result.owner === "unclaimed"
+                ? "Kimo claims it for this device the first time you start sharing."
+                : NOT_YOURS_DESC}
+            </p>
+            {result.owner === "other" && (
+              <NotYoursActions
+                iconSize={14}
+                onAddThisDevice={() => setAddThisDevice(true)}
+                onResetOwnership={() => void platform.files.openExternalUrl(RESET_OWNERSHIP_URL)}
+              />
             )}
           </div>
-        )}
-        {secretRejected && (
-          <div className="mp-result" data-result="secret-rejected" role="status">
-            <span className="mp-result__icon mp-result__icon--danger">
-              <Icon name="circle-x" size={14} />
-            </span>
-            <p className="mp-result__text">
-              The relay rejected the create secret. It has a different KIMO_CREATE_SECRET.
-            </p>
-            <Button
-              variant="secondary"
-              className="rw-btn--26"
-              icon={<Icon name="key-round" size={16} />}
-              onClick={() => {
-                setSecretRejected(false)
-                void relaySetup?.store
-                  .update({ secretMode: "custom" })
-                  .then(() => requestAnimationFrame(() => customRef.current?.focus()))
-              }}
-            >
-              Enter the relay's secret
-            </Button>
-          </div>
+        ) : (
+          result && (
+            <div className="mp-result" data-result={result.kind} role="status">
+              {result.kind === "ok" ? (
+                <>
+                  <Pill {...ownerPill(result.owner, "settings", result.relay)} />
+                  <span className="mp-meta-mono">
+                    {result.relay} · {result.time}
+                  </span>
+                </>
+              ) : result.kind === "testing" ? (
+                <>
+                  <span className="mp-result__icon mp-result__icon--testing">
+                    <Icon name="loader-circle" size={14} />
+                  </span>
+                  <span className="mp-result__text mp-result__text--testing">{result.text}</span>
+                </>
+              ) : (
+                <>
+                  <span className={`mp-result__icon mp-result__icon--${result.kind}`}>
+                    <Icon name={result.icon} size={14} />
+                  </span>
+                  <p className="mp-result__text">{result.text}</p>
+                </>
+              )}
+            </div>
+          )
         )}
       </div>
-      {relaySetup && (
-        <RelaySecretSetting
-          services={relaySetup}
-          relayUrl={settings.relayUrl}
-          customRef={customRef}
+      {yoursUrl && devices && (
+        <DevicesSetting
+          ownership={ownership}
+          relayUrl={yoursUrl}
+          devices={devices}
+          onDevices={setDevices}
+          onRemovedSelf={() => void model.relayTest.test(yoursUrl)}
+          copy={(text) => copyText(platform, text)}
+        />
+      )}
+      {addThisDevice && (
+        <AddThisDeviceDialog
+          host={hostOf(test.kind === "ok" ? test.url : url)}
+          onClose={() => setAddThisDevice(false)}
         />
       )}
       {wizard && relaySetup && (
@@ -297,4 +340,12 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
       />
     </>
   )
+}
+
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
 }

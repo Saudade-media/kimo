@@ -32,11 +32,9 @@ export const RECENT_MODELS_MAX = 2
 /** `multiplayer.relaySetup` (read leniently by the web app's relay setup store). */
 export interface RelaySetupSetting {
   path?: "local" | "docker" | "fly" | "railway" | "existing" | null
-  secretMode?: "auto" | "custom" | "none"
   extraOrigins?: string[]
   local?: { port?: number; reach?: "lan" | "quick" | "named"; hostname?: string | null } | null
   fly?: { app?: string; region?: string; byKimo?: boolean } | null
-  restartPending?: boolean
 }
 
 export interface SettingsSchema {
@@ -79,9 +77,8 @@ export interface SettingsSchema {
   /** Multiplayer › Fetch images and fonts of shared files on demand. */
   "multiplayer.fetchAssets": boolean
   /**
-   * Multiplayer › Set up a relay (board 42 "What Kimo stores"): where the relay runs, the create
-   * secret's mode, extra allowed origins and, for This computer, port, tunnel and hostname. The
-   * secret itself is in the keychain (desktop) or browser storage (web), never here.
+   * Multiplayer › Set up a relay (board 42 "What Kimo stores"): where the relay runs, extra
+   * allowed origins and, for This computer, port, tunnel and hostname.
    */
   "multiplayer.relaySetup": RelaySetupSetting | null
   /** Fonts & privacy › Google Fonts (off while No third-party fetch is on). */

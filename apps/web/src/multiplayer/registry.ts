@@ -297,22 +297,30 @@ export function memoryRegistryBackend(options: { structured?: boolean } = {}): R
 export const REGISTRY_DB = "kimo-multiplayer"
 
 /**
- * IndexedDB backend: database `kimo-multiplayer` v1 with the three stores of §16.2. Records are
+ * Opens database `kimo-multiplayer` v2: the three registry stores of §16.2 and `device`, the
+ * install's device key (§16.9, `device-key.ts`). Every opener goes through here, so the version
+ * and its stores are declared once.
+ */
+export function openMultiplayerDb(name = REGISTRY_DB): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, 2)
+    req.onupgradeneeded = () => {
+      for (const store of ["owned", "joined", "cursors", "device"] as const)
+        if (!req.result.objectStoreNames.contains(store)) req.result.createObjectStore(store)
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+/**
+ * IndexedDB backend: database `kimo-multiplayer` with the three stores of §16.2. Records are
  * structured-cloned, so the owner's Ed25519 keys are stored as non-extractable CryptoKeys: script
  * running in the origin can use them through this database but never read the key bytes.
  */
 export function indexedDbRegistryBackend(name = REGISTRY_DB): RegistryBackend {
   let dbp: Promise<IDBDatabase> | null = null
-  const db = () =>
-    (dbp ??= new Promise((resolve, reject) => {
-      const req = indexedDB.open(name, 1)
-      req.onupgradeneeded = () => {
-        for (const store of ["owned", "joined", "cursors"] as const)
-          if (!req.result.objectStoreNames.contains(store)) req.result.createObjectStore(store)
-      }
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    }))
+  const db = () => (dbp ??= openMultiplayerDb(name))
   const run = <T>(
     store: RegistryStore,
     mode: IDBTransactionMode,

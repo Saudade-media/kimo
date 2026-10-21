@@ -98,7 +98,6 @@ export interface MintOptions {
 export interface StartOptions {
   /** Default: the `multiplayer.relayUrl` setting. */
   relayUrl?: string
-  createSecret?: string
 }
 
 /** The operations behind the Share UI, per document key. */
@@ -433,7 +432,6 @@ export function createLocalShareBackend(options: LocalShareBackendOptions): Shar
       notify(key)
       try {
         await share.shareSession(session, start.relayUrl, {
-          ...(start.createSecret ? { createSecret: start.createSecret } : {}),
           ...(session.assets ? { assets: session.assets } : {}),
         })
       } catch (error) {

@@ -166,10 +166,7 @@ function ShareCluster({
           displayName={model.settings.getState().displayName}
           saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
           onStartSharing={async (relayUrl) => {
-            const createSecret = await relaySetup.store.sendSecret()
-            await model
-              .document(docKey)
-              .startSharing({ relayUrl, ...(createSecret ? { createSecret } : {}) })
+            await model.document(docKey).startSharing({ relayUrl })
             setOpen("share")
           }}
           onClose={() => {

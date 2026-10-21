@@ -170,6 +170,8 @@ export function issuedLink(
 export interface FakeRelayAnswer {
   version?: string
   protocol?: string
+  /** Whose the relay is (ADR 0017). Default `claimed`. */
+  owner?: "unclaimed" | "claimed"
   code?: string
   message?: string
   pending?: boolean
@@ -194,6 +196,8 @@ export function fakeProbe(
       name: "kimo-relay",
       version: a.version ?? "1.2",
       protocol: a.protocol ?? "kimo-mp/1",
+      relayId: new Uint8Array(16),
+      owner: a.owner ?? "claimed",
     } as unknown as RelayInfo
   }
 }

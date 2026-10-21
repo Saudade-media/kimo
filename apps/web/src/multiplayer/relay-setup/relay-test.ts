@@ -1,20 +1,22 @@
 /**
- * Board 42 section 8 and rule "Test": reach, Kimo handshake, protocol, create secret, within 5 s
- * in all. Results: testing, ok (protocol and latency), unreachable, not a relay, too old (an older
- * protocol), secret rejected. Save and use needs `ok`.
+ * Board 42 section 8 and rule "Test": reach, Kimo handshake, protocol, ownership, within 5 s in
+ * all. Results: testing, ok (protocol and latency; the relay is this device's, claimed now or
+ * already), unreachable, not a relay, too old (an older protocol), belongs to another Kimo
+ * (ADR 0017). Save and use needs `ok`.
  */
 import { MultiplayerError, normalizeRelayUrl, PROTOCOL, type RelayInfo } from "@kimo/sync/mp"
+import type { RelayOwnerState } from "../ownership"
 
 /** The whole test times out after this long. */
 export const RELAY_SETUP_TEST_MS = 5000
 
-export type CheckId = "reach" | "handshake" | "protocol" | "secret"
+export type CheckId = "reach" | "handshake" | "protocol" | "ownership"
 export type CheckStatus = "pending" | "running" | "ok" | "failed" | "warning"
 
 export interface RelayCheck {
   id: CheckId
   status: CheckStatus
-  /** Mono meta at the row's end ("84 ms", "ok", "kimo-mp/1", "accepted", "rejected · 403"). */
+  /** Mono meta at the row's end ("84 ms", "ok", "kimo-mp/1", "claimed by you", "not yours"). */
   meta: string | null
 }
 
@@ -25,7 +27,10 @@ export type RelayTestOutcome =
   | "unreachable"
   | "not-a-relay"
   | "too-old"
-  | "secret-rejected"
+  | "not-yours"
+
+/** How the relay became this device's: claimed by this test, or already (pre-claimed). */
+export type RelayOwnedHow = "claimed" | "already"
 
 export interface RelaySetupTest {
   outcome: RelayTestOutcome
@@ -35,21 +40,23 @@ export interface RelaySetupTest {
   /** Round trip of the handshake. */
   ms: number | null
   protocol: string | null
-  /** What `/version` said; null until it answered. */
-  createSecretRequired: boolean | null
+  /** On `ok`: whether this test claimed the relay or it was this device's already. */
+  owned: RelayOwnedHow | null
   message: string | null
 }
 
 export interface RelayTestDeps {
   probe(url: string): Promise<RelayInfo>
-  /** `POST /create-secret/check`; null for a relay without the route. */
-  checkSecret(url: string, secret: string | null): Promise<{ required: boolean } | null>
+  /** Whose the relay is, with this device's key (§16.9). */
+  ownership(url: string): Promise<RelayOwnerState>
+  /** Claims an unclaimed relay for this device (owner op 1). */
+  claim(url: string): Promise<void>
   now(): number
   setTimeout(fn: () => void, ms: number): unknown
   clearTimeout(handle: unknown): void
 }
 
-const CHECK_IDS: CheckId[] = ["reach", "handshake", "protocol", "secret"]
+const CHECK_IDS: CheckId[] = ["reach", "handshake", "protocol", "ownership"]
 
 export function pendingChecks(): RelayCheck[] {
   return CHECK_IDS.map((id) => ({ id, status: "pending", meta: null }))
@@ -75,11 +82,10 @@ class Timeout extends Error {}
 
 /**
  * Runs the test, reporting each tick through `onUpdate`. Never throws: every failure is an
- * outcome. `secret` is what Kimo would send (null: no secret).
+ * outcome. An unclaimed relay is claimed for this device on the Ownership line.
  */
 export async function testRelaySetup(
   input: string,
-  secret: string | null,
   deps: RelayTestDeps,
   onUpdate: (state: RelaySetupTest) => void = () => {},
 ): Promise<RelaySetupTest> {
@@ -89,7 +95,7 @@ export async function testRelaySetup(
     checks: pendingChecks(),
     ms: null,
     protocol: null,
-    createSecretRequired: null,
+    owned: null,
     message: null,
   }
   const set = (
@@ -158,29 +164,50 @@ export async function testRelaySetup(
     }
     const ms = Math.max(0, deps.now() - started)
     set(
-      { ms, protocol: info.protocol, createSecretRequired: info.createSecretRequired },
+      { ms, protocol: info.protocol },
       {
         reach: { status: "ok", meta: `${ms} ms` },
         handshake: { status: "ok", meta: "ok" },
         protocol: { status: "ok", meta: info.protocol },
-        secret: { status: "running" },
+        ownership: { status: "running", meta: info.owner === "unclaimed" ? "claiming" : null },
       },
     )
     try {
-      const answer = await race(deps.checkSecret(url, secret))
-      const meta = answer === null ? "not checked" : answer.required ? "accepted" : "not needed"
-      return set({ outcome: "ok" }, { secret: { status: "ok", meta } })
+      if (info.owner === "unclaimed") {
+        try {
+          await race(deps.claim(url))
+          return set(
+            { outcome: "ok", owned: "claimed" },
+            { ownership: { status: "ok", meta: "claimed by you" } },
+          )
+        } catch (error) {
+          // Someone claimed it between the probe and the claim: see whose it is now.
+          if (!(error instanceof MultiplayerError && error.code === "RELAY_CLAIMED")) throw error
+        }
+      }
+      const state = await race(deps.ownership(url))
+      if (state === "yours")
+        return set(
+          { outcome: "ok", owned: "already" },
+          { ownership: { status: "ok", meta: "yours" } },
+        )
+      if (state === "other")
+        return set(
+          { outcome: "not-yours", message: "This relay belongs to another Kimo" },
+          { ownership: { status: "warning", meta: "not yours" } },
+        )
+      // Reset since the probe: claim it now.
+      await race(deps.claim(url))
+      return set(
+        { outcome: "ok", owned: "claimed" },
+        { ownership: { status: "ok", meta: "claimed by you" } },
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      if (error instanceof MultiplayerError && error.code === "CREATE_FORBIDDEN")
-        return set(
-          { outcome: "secret-rejected", createSecretRequired: true, message },
-          { secret: { status: "failed", meta: "rejected · 403" } },
-        )
       return set(
         { outcome: "unreachable", message },
         {
-          secret: {
+          ownership: {
             status: "failed",
             meta: error instanceof Timeout ? "no answer · 5 s" : "no answer",
           },

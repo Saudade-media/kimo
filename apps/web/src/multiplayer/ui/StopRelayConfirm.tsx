@@ -5,8 +5,13 @@
 import { Dialog, DialogScrim } from "@kimo/ui"
 import { createRoot } from "react-dom/client"
 import { Icon } from "../../lib/icons"
-import type { DisconnectImpact } from "./RelaySecretSetting"
 import "./relay-wizard.css"
+
+/** Who stopping the relay disconnects now: names (up to three), then "and n more". */
+export interface DisconnectImpact {
+  people: readonly string[]
+  more: number
+}
 
 export function stopRelayDescription(impact: DisconnectImpact): string {
   const count = impact.people.length + impact.more

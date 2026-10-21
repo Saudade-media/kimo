@@ -7,16 +7,19 @@
  *   server, Fly.io (one click with flyctl), Railway, I already have a relay. Web: This computer
  *   disabled with a note, Fly.io copy-paste only; Docker preselected. Arrow keys move, Enter
  *   continues.
- * - Set up (sections 3-7): per path. Kimo generates the create secret (Automatic) and puts it
- *   into the local relay, the flyctl deploy, the docker command or the Railway variables; the
- *   page's origin goes into allowed origins on web.
- * - Test (section 8): reach, handshake, protocol, create secret within 5 s; Save and use only
- *   after ok; then Saved (D): from the Share popover Start sharing, from Settings Close.
+ * - Set up (sections 3-7): per path. This device's public key goes into the local relay, the
+ *   flyctl deploy and the docker command as `KIMO_OWNER_KEY` (ADR 0017), so those relays start
+ *   yours; Railway and a relay you already have are claimed by the test. The page's origin goes
+ *   into allowed origins on web.
+ * - Test (section 8): reach, handshake, protocol, ownership within 5 s (an unclaimed relay is
+ *   claimed for this device; one another Kimo owns is "Not yours"); Save and use only after ok;
+ *   then Saved (D): from the Share popover Start sharing, from Settings Close.
  */
 import { Button, Dialog, DialogScrim, IconButton, Input, useFocusTrap } from "@kimo/ui"
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { Icon } from "../../lib/icons"
+import type { RelayOwnerState } from "../ownership"
 import {
   autoOrigins,
   BUN_INSTALL_COMMAND,
@@ -27,8 +30,7 @@ import {
   flyRelayUrl,
   flyToml,
   parseFlyWhoami,
-  RAILWAY_TEMPLATE_URL,
-  railwayVariables,
+  railwayDeployUrl,
   suggestFlyApp,
   validFlyApp,
 } from "../relay-setup/commands"
@@ -43,11 +45,10 @@ import {
 } from "../relay-setup/local"
 import { pendingChecks, type RelaySetupTest, testRelaySetup } from "../relay-setup/relay-test"
 import { type FlyRun, type LocalChecks, runFlySteps, stepTime } from "../relay-setup/runner"
-import { generateSecret, type SecretMode, SecretReveal } from "../relay-setup/secret"
 import { type RelaySetupServices, useLocalRelay, useRelaySetupState } from "../relay-setup/services"
 import type { RelayPath } from "../relay-setup/store"
+import { AddThisDeviceDialog, NOT_YOURS_DESC, NotYoursFix, RESET_OWNERSHIP_URL } from "./ownership"
 import {
-  AUTO_CUSTOM,
   Badge,
   CheckRow,
   CodeBlock,
@@ -60,8 +61,6 @@ import {
   RelayCheckRow,
   RelayUrlInput,
   radioKeys,
-  SecretBlock,
-  type SecretModeOption,
   SmallIconButton,
   Spacer,
   Track,
@@ -141,35 +140,25 @@ export function RelayWizard(props: RelayWizardProps) {
   const [path, setPath] = useState<RelayPath>(
     setup.path && !(web && setup.path === "local") ? setup.path : web ? "docker" : "local",
   )
-  const [secretMode, setSecretMode] = useState<SecretMode>("auto")
-  const [autoSecret, setAutoSecret] = useState<string | null>(null)
-  const [custom, setCustom] = useState("")
   const [extraOrigins, setExtraOrigins] = useState<string[]>(setup.extraOrigins)
   const [url, setUrl] = useState("")
-  const reveal = useMemo(() => new SecretReveal(services.clock), [services.clock])
-  useEffect(() => () => reveal.dispose(), [reveal])
-  const customRef = useRef<HTMLInputElement>(null)
+  const [addThisDevice, setAddThisDevice] = useState(false)
   const urlRef = useRef<HTMLInputElement>(null)
   const auto = autoOrigins(services.kind, services.pageOrigin)
   const origins = [...auto, ...extraOrigins]
 
-  // The Automatic secret: the one already in use (a relay may run with it), else a new one.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
+  // This device's public key (`KIMO_OWNER_KEY`): public, so it may show in commands and logs.
+  const [ownerKey, setOwnerKey] = useState<string | null>(null)
   useEffect(() => {
     let live = true
-    void store.secret().then((stored) => {
-      if (!live) return
-      if (stored && setup.secretMode === "auto") setAutoSecret(stored)
-      else setAutoSecret(generateSecret())
-      if (stored && setup.secretMode === "custom") setCustom(stored)
-    })
+    void services.ownership
+      .devicePublicKey()
+      .then((key) => live && setOwnerKey(key))
+      .catch(() => undefined)
     return () => {
       live = false
     }
-  }, [])
-
-  const secretToSend =
-    secretMode === "auto" ? autoSecret : secretMode === "custom" ? custom.trim() || null : null
+  }, [services.ownership])
 
   // --- This computer ----------------------------------------------------------------------------
   const [localView, setLocalView] = useState<LocalView>("checking")
@@ -227,7 +216,7 @@ export function RelayWizard(props: RelayWizardProps) {
     }
     const state = await local.start({
       port: checks.port,
-      secret: secretToSend,
+      ownerKey,
       origins,
       reach,
       hostname: reach === "named" ? hostname.trim().toLowerCase() : null,
@@ -312,15 +301,17 @@ export function RelayWizard(props: RelayWizardProps) {
     flyCancelled.current = false
     const region = flyRegion ?? "iad"
     const config = await host.writeFlyConfig(flyToml({ app: flyApp, region }))
-    const steps = flyDeploySteps({ app: flyApp, region, config, secret: secretToSend, origins })
+    const steps = flyDeploySteps({ app: flyApp, region, config, ownerKey, origins })
     setFlyView("deploying")
     await runFlySteps(
       host,
       steps,
       flyApp,
       async (u) =>
-        (await testRelaySetup(u, null, services.test).catch(() => null))?.checks[0]?.status ===
-        "ok",
+        await services.test.probe(u).then(
+          () => true,
+          () => false,
+        ),
       setFlyRun,
       services.clock,
       () => flyCancelled.current,
@@ -328,38 +319,35 @@ export function RelayWizard(props: RelayWizardProps) {
   }
 
   // --- I already have a relay -------------------------------------------------------------------------
-  const [probe, setProbe] = useState<RelaySetupTest | null>(null)
+  /** Section 7: on blur, whether the relay answers and whose it is (nothing is claimed yet). */
+  type Probe =
+    | { kind: "ok"; protocol: string; owner: RelayOwnerState | null }
+    | { kind: "too-old" | "not-a-relay" | "unreachable" }
+  const [probe, setProbe] = useState<Probe | null>(null)
   const probeUrl = async (value: string) => {
     if (!value.trim()) {
       setProbe(null)
       return
     }
-    const r = await testRelaySetup(value, null, {
+    const r = await testRelaySetup(value, {
       ...services.test,
-      // The probe only asks /version: the secret is checked by Test relay.
-      checkSecret: async () => null,
+      // The probe only asks /version: claiming waits for Test relay.
+      ownership: async () => "unclaimed",
+      claim: async () => {},
     })
-    setProbe(r)
-    if (r.createSecretRequired === true) setSecretMode("custom")
-    else if (r.createSecretRequired === false && secretMode !== "custom") setSecretMode("none")
+    if (r.outcome !== "ok") {
+      setProbe({
+        kind: r.outcome === "too-old" || r.outcome === "not-a-relay" ? r.outcome : "unreachable",
+      })
+      return
+    }
+    const owner = await services.test.ownership(r.url).catch(() => null)
+    setProbe({ kind: "ok", protocol: r.protocol ?? "kimo-mp/1", owner })
   }
-  const existingModes: SecretModeOption[] =
-    probe?.createSecretRequired === false
-      ? [
-          { value: "custom", label: "Custom" },
-          { value: "none", label: "No secret needed" },
-        ]
-      : [
-          { value: "auto", label: "Automatic", disabled: true },
-          { value: "custom", label: "Custom" },
-        ]
 
   // --- Steps ------------------------------------------------------------------------------------------
   const goSetup = (p: RelayPath = path) => {
     setStep("setup")
-    if (p === "existing") {
-      if (secretMode === "auto") setSecretMode("custom")
-    } else if (secretMode === "none") setSecretMode("auto")
     if (p === "local") void enterLocal()
     if (p === "fly") void enterFly()
   }
@@ -379,11 +367,11 @@ export function RelayWizard(props: RelayWizardProps) {
       checks: pendingChecks(),
       ms: null,
       protocol: null,
-      createSecretRequired: null,
+      owned: null,
       message: null,
     })
-    await testRelaySetup(testUrl, secretToSend, services.test, setTest)
-  }, [testUrl, secretToSend, services.test])
+    await testRelaySetup(testUrl, services.test, setTest)
+  }, [testUrl, services.test])
 
   const goTest = () => {
     setStep("test")
@@ -423,8 +411,6 @@ export function RelayWizard(props: RelayWizardProps) {
               }
             : {}),
         },
-        secretMode,
-        secret: secretToSend,
       })
       setSavedUrl(saved)
       setStep("saved")
@@ -436,13 +422,6 @@ export function RelayWizard(props: RelayWizardProps) {
     } finally {
       setSaving(false)
     }
-  }
-
-  const enterRelaySecret = () => {
-    setSecretMode("custom")
-    setStep("setup")
-    if (path === "local") void enterLocal()
-    requestAnimationFrame(() => customRef.current?.focus())
   }
 
   // --- Shell --------------------------------------------------------------------------------------
@@ -523,34 +502,6 @@ export function RelayWizard(props: RelayWizardProps) {
     </Button>
   )
 
-  const secretBlock = (autoDesc: string, modes: readonly SecretModeOption[] = AUTO_CUSTOM) => (
-    <SecretBlock
-      variant="wizard"
-      store={store.secrets.backend}
-      mode={secretMode}
-      modes={modes}
-      onMode={setSecretMode}
-      secret={autoSecret}
-      autoDesc={autoDesc}
-      reveal={reveal}
-      onCopy={(v) => void copy(v, "Secret copied")}
-      custom={custom}
-      onCustom={setCustom}
-      customHelp={
-        path === "existing"
-          ? `Ask whoever runs the relay. ${
-              store.secrets.backend === "browser" ? "Kept in this browser" : "Kept in the keychain"
-            }, never put in a link.`
-          : `Your own value, for a relay you configured yourself. ${
-              store.secrets.backend === "browser"
-                ? "Kept in this browser."
-                : "Kept in the keychain."
-            }`
-      }
-      customRef={customRef}
-    />
-  )
-
   const urlField = (help?: string, placeholder?: string) => (
     <Field label="Relay URL" {...(help ? { help } : {})}>
       {(id) => (
@@ -579,7 +530,7 @@ export function RelayWizard(props: RelayWizardProps) {
       },
       {
         value: "docker",
-        desc: "A ready docker run command with the secret and a volume filled in, origins added for you.",
+        desc: "A ready docker run command with a volume filled in, origins added for you.",
         badges: ["Always on"],
       },
       {
@@ -594,7 +545,7 @@ export function RelayWizard(props: RelayWizardProps) {
         desc: "Deploy on Railway from the Kimo template, paste the variables, then the URL.",
         badges: ["Free tier"],
       },
-      { value: "existing", desc: "Enter its URL and create secret.", badges: [] },
+      { value: "existing", desc: "Enter its URL.", badges: [] },
     ]
     body = (
       <>
@@ -1032,7 +983,6 @@ export function RelayWizard(props: RelayWizardProps) {
                 </RadioRow>
               ))}
             </div>
-            {secretBlock("Kimo starts the relay with it. Nothing to copy or type.")}
             <Note icon="power">
               Reachable only while this computer is on and Kimo is open. For always-on sharing pick
               Docker, Fly.io or Railway.
@@ -1048,11 +998,7 @@ export function RelayWizard(props: RelayWizardProps) {
               () => void startRelay(),
               {
                 icon: "play",
-                disabled:
-                  !checks?.bun ||
-                  !checks.port ||
-                  localState?.status === "starting" ||
-                  (secretMode === "custom" && !custom.trim()),
+                disabled: !checks?.bun || !checks.port || localState?.status === "starting",
                 name: "start-relay",
               },
             )}
@@ -1060,23 +1006,22 @@ export function RelayWizard(props: RelayWizardProps) {
         )
       }
     } else if (path === "docker") {
-      const input = { secret: secretToSend, origins }
+      const input = { ownerKey, origins }
       body = (
         <>
-          {secretBlock("Already in the command below.")}
           {web && (
             <OriginsGroup kind="web" auto={auto} extra={extraOrigins} onChange={setExtraOrigins} />
           )}
           <div className="rw-group" data-group="run">
             <span className="rw-label">Run on your server</span>
             <CodeBlock
-              text={dockerRunCommand(input, { masked: !revealVisible(reveal, secretMode) })}
+              text={dockerRunCommand(input, { masked: true })}
               label="docker run command"
               onCopy={() => void copy(dockerRunCommand(input, { masked: false }), "Command copied")}
             />
             <p className="rw-desc rw-desc--tertiary">
-              Copy puts the real secret on the clipboard. Put a TLS proxy (Caddy, nginx) in front
-              and use its wss:// address.
+              KIMO_OWNER_KEY is this device's public key, safe to share. It makes the relay yours
+              from the start. Put a TLS proxy (Caddy, nginx) in front and use its wss:// address.
             </p>
           </div>
           {urlField("The public address of the relay, wss:// from the internet or ws:// on a LAN.")}
@@ -1095,7 +1040,7 @@ export function RelayWizard(props: RelayWizardProps) {
       )
     } else if (path === "fly") {
       if (flyView === "manual" || flyView === "checking") {
-        const input = { secret: secretToSend, origins }
+        const input = { ownerKey, origins }
         const shown = flyManualCommands(input, { masked: true })
         const real = flyManualCommands(input, { masked: false })
         body = (
@@ -1121,7 +1066,7 @@ export function RelayWizard(props: RelayWizardProps) {
               {shown.secrets && (
                 <CodeBlock
                   text={shown.secrets}
-                  label="secrets command"
+                  label="owner key command"
                   onCopy={() => void copy(real.secrets, "Command copied")}
                 />
               )}
@@ -1190,7 +1135,6 @@ export function RelayWizard(props: RelayWizardProps) {
             >
               {(id) => <AppNameInput id={id} value={flyApp} onChange={setFlyApp} />}
             </Field>
-            {secretBlock("Set as a Fly secret during deploy.")}
           </>
         )
         footer = (
@@ -1199,7 +1143,7 @@ export function RelayWizard(props: RelayWizardProps) {
             <Spacer />
             {primary("Deploy", () => void deployFly(), {
               icon: "rocket",
-              disabled: !flyAccount || !appOk || (secretMode === "custom" && !custom.trim()),
+              disabled: !flyAccount || !appOk || !ownerKey,
               name: "deploy",
             })}
           </>
@@ -1280,44 +1224,26 @@ export function RelayWizard(props: RelayWizardProps) {
         )
       }
     } else if (path === "railway") {
-      const input = { secret: secretToSend, origins }
       body = (
         <>
           <div className="rw-group" data-group="template">
-            <span className="rw-label">1 · Open the template</span>
+            <span className="rw-label">1 · Deploy on Railway</span>
             <Button
               variant="secondary"
               className="rw-btn rw-railway"
               icon={<Icon name="external-link" size={16} />}
               style={{ alignSelf: "flex-start" }}
-              onClick={() => void services.openUrl(RAILWAY_TEMPLATE_URL)}
+              onClick={() => void services.openUrl(railwayDeployUrl(ownerKey))}
             >
               Deploy on Railway
             </Button>
             <p className="rw-desc rw-desc--tertiary">
-              Opens railway.com with the Kimo template from github.com/Saudade-media/kimo. Sign in
-              or create a free account there.
+              Opens railway.com with the Kimo template. Sign in or create a free account there, then
+              Deploy.
             </p>
           </div>
-          {secretBlock("Already in the variables below.")}
-          <div className="rw-group" data-group="variables">
-            <span className="rw-label">2 · Paste these variables when Railway asks</span>
-            <CodeBlock
-              text={railwayVariables(input, { masked: !revealVisible(reveal, secretMode) })}
-              label="variables"
-              onCopy={() =>
-                void copy(railwayVariables(input, { masked: false }), "Variables copied")
-              }
-            />
-          </div>
-          <OriginsGroup
-            kind={services.kind}
-            auto={auto}
-            extra={extraOrigins}
-            onChange={setExtraOrigins}
-          />
           <div className="rw-group" data-group="domain">
-            <span className="rw-label">3 · Paste the public domain Railway gives you</span>
+            <span className="rw-label">2 · Paste your service URL here</span>
             {urlField(undefined, "wss://kimo-relay-production.up.railway.app")}
           </div>
         </>
@@ -1339,25 +1265,47 @@ export function RelayWizard(props: RelayWizardProps) {
       body = (
         <>
           {urlField()}
-          {r && r.outcome !== "testing" && (
-            <div className="rw-probe" data-probe={r.outcome}>
-              {r.createSecretRequired !== null ? (
+          {r && (
+            <div className="rw-probe" data-probe={r.kind === "ok" ? (r.owner ?? "ok") : r.kind}>
+              {r.kind === "ok" ? (
                 <>
                   <Pill tone="success" label={`Kimo relay · ${r.protocol}`} />
-                  <span className="rw-mono">
-                    {r.createSecretRequired ? "needs a create secret" : "open to new rooms"}
-                  </span>
+                  {r.owner && (
+                    <span className="rw-mono">
+                      {r.owner === "unclaimed"
+                        ? "not claimed yet"
+                        : r.owner === "yours"
+                          ? "yours"
+                          : "not yours"}
+                    </span>
+                  )}
                 </>
-              ) : r.outcome === "too-old" ? (
+              ) : r.kind === "too-old" ? (
                 <Pill tone="warning" label="Older protocol" />
-              ) : r.outcome === "not-a-relay" ? (
+              ) : r.kind === "not-a-relay" ? (
                 <Pill tone="warning" label="Not a relay" />
               ) : (
                 <Pill tone="danger" label="Unreachable" />
               )}
             </div>
           )}
-          {secretBlock("", existingModes)}
+          {r?.kind === "ok" && r.owner === "unclaimed" && (
+            <div className="rw-none" data-claim="free">
+              <span className="rw-none__icon" aria-hidden="true">
+                <Icon name="circle-check" size={14} />
+              </span>
+              <p className="rw-desc">
+                Nobody has claimed this relay yet. The test makes it yours, nothing to enter.
+              </p>
+            </div>
+          )}
+          {r?.kind === "ok" && r.owner === "other" && (
+            <NotYoursFix
+              desc={NOT_YOURS_DESC}
+              onAddThisDevice={() => setAddThisDevice(true)}
+              onResetOwnership={() => void services.openUrl(RESET_OWNERSHIP_URL)}
+            />
+          )}
         </>
       )
       footer = (
@@ -1376,7 +1324,7 @@ export function RelayWizard(props: RelayWizardProps) {
     const t = test
     const outcome = t?.outcome ?? "testing"
     const rows =
-      !t || outcome === "testing" || outcome === "ok" || outcome === "secret-rejected"
+      !t || outcome === "testing" || outcome === "ok" || outcome === "not-yours"
         ? (t?.checks ?? pendingChecks())
         : outcome === "too-old"
           ? t.checks.slice(0, 3)
@@ -1386,8 +1334,8 @@ export function RelayWizard(props: RelayWizardProps) {
         <Pill tone="muted" label="Testing" />
       ) : outcome === "ok" ? (
         <Pill tone="success" label="Ready" />
-      ) : outcome === "secret-rejected" ? (
-        <Pill tone="danger" label="Secret rejected" />
+      ) : outcome === "not-yours" ? (
+        <Pill tone="warning" label="Not yours" />
       ) : outcome === "not-a-relay" ? (
         <Pill tone="warning" label="Not a relay" />
       ) : outcome === "too-old" ? (
@@ -1420,34 +1368,19 @@ export function RelayWizard(props: RelayWizardProps) {
             <RelayCheckRow key={c.id} check={c} server={outcome === "not-a-relay"} />
           ))}
         </div>
-        {outcome === "secret-rejected" && (
-          <div className="rw-fix">
-            <p className="rw-title">The relay has a different secret</p>
+        {outcome === "not-yours" && (
+          <NotYoursFix
+            desc={NOT_YOURS_DESC}
+            onAddThisDevice={() => setAddThisDevice(true)}
+            onResetOwnership={() => void services.openUrl(RESET_OWNERSHIP_URL)}
+          />
+        )}
+        {outcome === "ok" && t?.owned === "already" && (
+          <div className="rw-message" data-message="already-yours">
+            <p className="rw-title">Already yours</p>
             <p className="rw-desc">
-              It was probably started with its own KIMO_CREATE_SECRET. Enter that value, or restart
-              the relay with Kimo's secret.
+              Kimo set up this relay for this device, so it is already yours. Save and use as usual.
             </p>
-            <div className="rw-actions">
-              <Button
-                variant="secondary"
-                className="rw-btn--26"
-                icon={<Icon name="key-round" size={16} />}
-                data-action="enter-secret"
-                onClick={enterRelaySecret}
-              >
-                Enter the relay's secret
-              </Button>
-              {secretMode === "auto" && autoSecret && (
-                <Button
-                  variant="ghost"
-                  className="rw-btn--26"
-                  icon={<Icon name="copy" size={16} />}
-                  onClick={() => void copy(autoSecret, "Secret copied")}
-                >
-                  Copy Kimo's secret
-                </Button>
-              )}
-            </div>
           </div>
         )}
         {failure && (
@@ -1511,7 +1444,7 @@ export function RelayWizard(props: RelayWizardProps) {
           if (path === "local") void enterLocal()
         })}
         <Spacer />
-        {outcome === "secret-rejected" &&
+        {outcome === "not-yours" &&
           secondary("Test again", () => void runTest(), { icon: "refresh-cw", name: "test-again" })}
         {primary(saving ? "Saving…" : "Save and use", () => void save(), {
           disabled: outcome !== "ok" || saving,
@@ -1547,12 +1480,7 @@ export function RelayWizard(props: RelayWizardProps) {
           <div className="rw-saved__text">
             <h2 className="rw-head__title">Your relay is ready</h2>
             <p className="rw-saved__desc">
-              Saved to Settings › Multiplayer.{" "}
-              {secretMode === "none"
-                ? "It needs no create secret."
-                : store.secrets.backend === "browser"
-                  ? "The create secret is in this browser's storage."
-                  : "The create secret is in the keychain."}{" "}
+              Saved to Settings › Multiplayer. This relay is yours now.{" "}
               {from === "share"
                 ? "Start sharing this file now."
                 : "Start sharing from the Share button."}
@@ -1649,6 +1577,12 @@ export function RelayWizard(props: RelayWizardProps) {
           {body}
         </div>
         <div className="rw-footer">{footer}</div>
+        {addThisDevice && (
+          <AddThisDeviceDialog
+            host={hostOf(test?.url ?? url) ?? displayUrl(test?.url ?? url)}
+            onClose={() => setAddThisDevice(false)}
+          />
+        )}
         {confirmInstall && (
           <DialogScrim className="rw-scrim">
             <Dialog
@@ -1672,10 +1606,6 @@ export function RelayWizard(props: RelayWizardProps) {
 }
 
 // --- Bits ---------------------------------------------------------------------------------------------
-
-function revealVisible(reveal: SecretReveal, mode: SecretMode): boolean {
-  return mode === "auto" && reveal.visible
-}
 
 function hostOf(url: string): string | null {
   try {

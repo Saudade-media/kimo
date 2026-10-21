@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
+import { toBase64Url } from "@kimo/sync/mp"
 import { loadConfig } from "../src/config"
 
 const MiB = 1 << 20
+const KEY_A = toBase64Url(new Uint8Array(32).fill(1))
+const KEY_B = toBase64Url(new Uint8Array(32).fill(2))
 
 describe("loadConfig (section 14.9)", () => {
   test("defaults", () => {
@@ -10,7 +13,8 @@ describe("loadConfig (section 14.9)", () => {
       hostname: "127.0.0.1",
       dataDir: "./data",
       allowedOrigins: "*",
-      createSecret: null,
+      ownerKeys: [],
+      resetOwner: null,
       maxRooms: 0,
       maxPeers: 32,
       roomQuotaBytes: 500 * MiB,
@@ -37,7 +41,8 @@ describe("loadConfig (section 14.9)", () => {
       HOST: "0.0.0.0",
       KIMO_DATA_DIR: "/data",
       KIMO_ALLOWED_ORIGINS: "https://app.example, http://localhost:5173/",
-      KIMO_CREATE_SECRET: "hunter2",
+      KIMO_OWNER_KEY: ` ${KEY_A}, ${KEY_B},${KEY_A} `,
+      KIMO_RESET_OWNER: " 2026-10-21 ",
       KIMO_MAX_ROOMS: "10",
       KIMO_MAX_PEERS: "8",
       KIMO_ROOM_QUOTA_MB: "100",
@@ -61,7 +66,8 @@ describe("loadConfig (section 14.9)", () => {
       hostname: "0.0.0.0",
       dataDir: "/data",
       allowedOrigins: ["https://app.example", "http://localhost:5173"],
-      createSecret: "hunter2",
+      ownerKeys: [new Uint8Array(32).fill(1), new Uint8Array(32).fill(2)],
+      resetOwner: "2026-10-21",
       maxRooms: 10,
       maxPeers: 8,
       roomQuotaBytes: 100 * MiB,
@@ -83,8 +89,9 @@ describe("loadConfig (section 14.9)", () => {
   })
 
   test("empty values fall back to defaults", () => {
-    expect(loadConfig({ PORT: "", KIMO_CREATE_SECRET: "", KIMO_DATA_DIR: " " }).port).toBe(8787)
-    expect(loadConfig({ KIMO_CREATE_SECRET: "" }).createSecret).toBeNull()
+    expect(loadConfig({ PORT: "", KIMO_OWNER_KEY: "", KIMO_DATA_DIR: " " }).port).toBe(8787)
+    expect(loadConfig({ KIMO_OWNER_KEY: " " }).ownerKeys).toEqual([])
+    expect(loadConfig({ KIMO_RESET_OWNER: "  " }).resetOwner).toBeNull()
   })
 
   test.each([
@@ -95,6 +102,9 @@ describe("loadConfig (section 14.9)", () => {
     ["KIMO_ALLOWED_ORIGINS", "ftp://x.example"],
     // The desktop origins are admitted by the relay itself, never listed.
     ["KIMO_ALLOWED_ORIGINS", "tauri://localhost"],
+    ["KIMO_OWNER_KEY", "not-a-key"],
+    ["KIMO_OWNER_KEY", `${toBase64Url(new Uint8Array(32))},abc`],
+    ["KIMO_OWNER_KEY", toBase64Url(new Uint8Array(31))],
     ["KIMO_MAX_ROOMS", "-3"],
     ["KIMO_MAX_PEERS", "0"],
     ["KIMO_TRUST_PROXY_HOPS", "0"],

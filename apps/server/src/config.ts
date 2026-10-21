@@ -4,6 +4,8 @@
  * error that names the variable so `main.ts` can print it and exit.
  */
 
+import { equalBytes, fromBase64Url, isDevicePub } from "@kimo/sync/mp"
+
 const MiB = 1 << 20
 
 export interface RelayConfig {
@@ -12,7 +14,10 @@ export interface RelayConfig {
   /** Directory of `relay.sqlite` and `blobs/`; `":memory:"` keeps everything in memory. */
   dataDir: string
   allowedOrigins: "*" | readonly string[]
-  createSecret: string | null
+  /** KIMO_OWNER_KEY, decoded (32 bytes each): seeds an empty owner set at boot (§14.11). */
+  ownerKeys: readonly Uint8Array[]
+  /** KIMO_RESET_OWNER, or null: clears the owner set once per distinct value. */
+  resetOwner: string | null
   maxRooms: number
   maxPeers: number
   roomQuotaBytes: number
@@ -83,17 +88,35 @@ function origins(env: Env): "*" | readonly string[] {
   return list
 }
 
+/** KIMO_OWNER_KEY: comma-separated base64url Ed25519 public keys (43 characters each). */
+function ownerKeys(env: Env): Uint8Array[] {
+  const name = "KIMO_OWNER_KEY"
+  const raw = env[name]
+  if (raw === undefined || raw.trim() === "") return []
+  const keys: Uint8Array[] = []
+  for (const part of raw.split(",")) {
+    const text = part.trim()
+    if (!text) continue
+    if (!isDevicePub(text))
+      return fail(name, raw, "comma-separated device public keys of 43 base64url characters")
+    const bytes = fromBase64Url(text)
+    if (!keys.some((key) => equalBytes(key, bytes))) keys.push(bytes)
+  }
+  return keys
+}
+
 /** Throws an Error naming the variable on an invalid value. */
 export function loadConfig(env: Env): RelayConfig {
   const host = env.HOST?.trim()
   const dataDir = env.KIMO_DATA_DIR?.trim()
-  const secret = env.KIMO_CREATE_SECRET
+  const reset = env.KIMO_RESET_OWNER?.trim()
   return {
     port: integer(env, "PORT", 8787, 0, 65535),
     hostname: host || "127.0.0.1",
     dataDir: dataDir || "./data",
     allowedOrigins: origins(env),
-    createSecret: secret === undefined || secret === "" ? null : secret,
+    ownerKeys: ownerKeys(env),
+    resetOwner: reset ? reset : null,
     maxRooms: integer(env, "KIMO_MAX_ROOMS", 0, 0),
     maxPeers: integer(env, "KIMO_MAX_PEERS", 32, 1),
     roomQuotaBytes: integer(env, "KIMO_ROOM_QUOTA_MB", 500, 1, 1 << 20) * MiB,

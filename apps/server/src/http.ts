@@ -9,16 +9,19 @@ import {
   isBlobId,
   isRoomId,
   MAX_ADMIN_BODY_BYTES,
+  MAX_OWNER_COMMAND_BYTES,
   MP_ERRORS,
   type MpErrorCode,
   MultiplayerError,
   PROTOCOL,
   SUBPROTOCOL,
+  toBase64Url,
 } from "@kimo/sync/mp"
 import type { Server } from "bun"
 import pkg from "../package.json" with { type: "json" }
-import { constantTimeEqual, runAdmin } from "./admin"
+import { runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
+import { runOwner } from "./owners"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
 import { initialSocketData } from "./ws"
@@ -37,7 +40,9 @@ export interface VersionBody {
   version: string
   protocol: typeof PROTOCOL
   limits: Relay["limits"]
-  createSecretRequired: boolean
+  /** Base64url of the 16-byte relay id (§14.11). */
+  relayId: string
+  owner: "unclaimed" | "claimed"
 }
 
 export function versionBody(relay: Relay): VersionBody {
@@ -46,7 +51,8 @@ export function versionBody(relay: Relay): VersionBody {
     version: pkg.version,
     protocol: PROTOCOL,
     limits: relay.limits,
-    createSecretRequired: relay.config.createSecret !== null,
+    relayId: toBase64Url(relay.relayId),
+    owner: relay.db.countOwners() === 0 ? "unclaimed" : "claimed",
   }
 }
 
@@ -107,7 +113,7 @@ export const DESKTOP_ORIGINS: readonly string[] = [
 function corsHeaders(relay: Relay, req: Request): Record<string, string> {
   const allowed = relay.config.allowedOrigins
   const headers: Record<string, string> = {
-    "access-control-allow-headers": "authorization, content-type, kimo-create-secret",
+    "access-control-allow-headers": "authorization, content-type",
     "access-control-allow-methods": "GET, HEAD, PUT, POST, OPTIONS",
     "access-control-expose-headers": "kimo-up-to, kimo-gen, retry-after",
     "access-control-max-age": "600",
@@ -220,24 +226,18 @@ export function createFetchHandler(relay: Relay) {
     if (wait > 0) fail("RATE_LIMITED", "too many admin requests", wait)
     if (!isRoomId(roomId)) fail("ROOM_NOT_FOUND", "unknown room")
     const body = await readBody(req, MAX_ADMIN_BODY_BYTES + 52 + 64)
-    const result = await runAdmin(relay, roomId, body, req.headers.get("kimo-create-secret"))
+    const result = await runAdmin(relay, roomId, body)
     return json(result.body, result.status)
   }
 
-  /**
-   * `POST /create-secret/check`: whether the `kimo-create-secret` header would let this caller
-   * create a room, without creating one (the relay setup wizard's Test). Shares the admin rate
-   * limit, so it is no faster a way to guess the secret than registering rooms.
-   */
-  function checkCreateSecret(req: Request, server: Server<SocketData>): Response {
+  /** `POST /owner` (§6.1): one device-signed owner command; shares the admin rate limit. */
+  async function owner(req: Request, server: Server<SocketData>): Promise<Response> {
     if (req.method !== "POST") return methodNotAllowed("POST")
     const wait = relay.adminLimiter.take(clientIp(relay, req, server), relay.now())
     if (wait > 0) fail("RATE_LIMITED", "too many admin requests", wait)
-    if (config.createSecret === null) return json({ required: false, accepted: true })
-    const given = req.headers.get("kimo-create-secret")
-    if (given === null || !constantTimeEqual(given, config.createSecret))
-      fail("CREATE_FORBIDDEN", "missing or wrong create secret")
-    return json({ required: true, accepted: true })
+    const body = await readBody(req, MAX_OWNER_COMMAND_BYTES)
+    const result = await runOwner(relay, body)
+    return json(result.body, result.status)
   }
 
   async function roomInfo(req: Request, roomId: string): Promise<Response> {
@@ -375,7 +375,7 @@ export function createFetchHandler(relay: Relay) {
       if (req.method !== "GET" && req.method !== "HEAD") return methodNotAllowed("GET, HEAD")
       return json(url.pathname === "/healthz" ? { ok: true } : versionBody(relay))
     }
-    if (url.pathname === "/create-secret/check") return checkCreateSecret(req, server)
+    if (url.pathname === "/owner") return owner(req, server)
     if (head === "sync" && parts.length <= 2) {
       if (!roomId) fail("BAD_REQUEST", "expected /sync/<room>")
       return upgrade(req, server, roomId)

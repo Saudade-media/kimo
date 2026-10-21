@@ -22,6 +22,7 @@ import type { VerifiedToken } from "./auth"
 import { type BlobStore, createBlobStore } from "./blobs"
 import type { RelayConfig } from "./config"
 import { type LogRow, RelayDb, type RoomRow } from "./db"
+import { bootOwnership } from "./owners"
 import { KeyedLimiter, type TokenBucket } from "./rate-limit"
 
 export const HELLO_TIMEOUT_MS = 10_000
@@ -92,6 +93,8 @@ export class Relay {
   readonly adminLimiter: KeyedLimiter
   readonly blobLimiter: KeyedLimiter
   readonly blobBytesLimiter: KeyedLimiter
+  /** 16 random bytes made at first boot; owner commands and pairing tokens name it (§14.11). */
+  readonly relayId: Uint8Array
   /** Request log sink (method, path, status, duration only). */
   log?: (line: string) => void
   private lastMinute: number
@@ -100,8 +103,11 @@ export class Relay {
   constructor(
     readonly config: RelayConfig,
     readonly now: () => number = Date.now,
+    log?: (line: string) => void,
   ) {
     this.db = new RelayDb(config.dataDir)
+    if (log) this.log = log
+    this.relayId = bootOwnership(this.db, config, now(), log)
     this.blobs = createBlobStore(config.dataDir)
     this.connectLimiter = new KeyedLimiter(
       config.connectRatePerMin,
@@ -428,6 +434,7 @@ export class Relay {
 
   private everyHour(now: number): void {
     this.db.pruneRevocations(Math.floor(now / 1000))
+    this.db.prunePairings(Math.floor(now / 1000))
     if (this.config.roomTtlDays <= 0) return
     for (const id of this.db.idleRoomIds(now - this.config.roomTtlDays * DAY)) {
       if (this.rooms.get(id)?.sockets.size) continue

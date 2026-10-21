@@ -5,7 +5,7 @@
  * cannot read a document. Hosting is the operator's choice; Kimo ships no default relay.
  */
 
-import { DEFAULT_LIMITS, PROTOCOL, type RelayLimits } from "@kimo/sync/mp"
+import { DEFAULT_LIMITS, PROTOCOL, type RelayLimits, toBase64Url } from "@kimo/sync/mp"
 import pkg from "../package.json" with { type: "json" }
 import { loadConfig, type RelayConfig } from "./config"
 import { createFetchHandler, errorResponse } from "./http"
@@ -40,16 +40,22 @@ export interface VersionInfo {
   version: string
   protocol: typeof PROTOCOL
   limits: RelayLimits
-  createSecretRequired: boolean
+  /** Base64url of the relay's 16-byte id (§14.11). */
+  relayId: string
+  owner: "unclaimed" | "claimed"
 }
 
-/** Version payload with the default limits and no create secret. */
+/**
+ * Version payload with the default limits. `handleRequest` has no database, so it reports an
+ * unclaimed relay with an all-zero id.
+ */
 export const versionInfo: VersionInfo = {
   name: pkg.name,
   version: pkg.version,
   protocol: PROTOCOL,
   limits: DEFAULT_LIMITS,
-  createSecretRequired: false,
+  relayId: toBase64Url(new Uint8Array(16)),
+  owner: "unclaimed",
 }
 
 /** Pure handler for `/healthz` and `/version` only, kept so they can be tested without a socket. */
@@ -98,8 +104,7 @@ export function createServer(options: ServerOptions): Bun.Server<SocketData> {
     port: options.port,
     hostname: options.hostname ?? options.config?.hostname ?? "127.0.0.1",
   }
-  const relay = new Relay(config, options.now)
-  if (options.log) relay.log = options.log
+  const relay = new Relay(config, options.now, options.log)
   const handle = createFetchHandler(relay)
   const slack = 1 << 20
   const server = Bun.serve<SocketData>({

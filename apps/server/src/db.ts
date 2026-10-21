@@ -53,6 +53,14 @@ export interface BlobRow {
   unref_since: number | null
 }
 
+export interface OwnerRow {
+  pub: Uint8Array
+  name: string
+  added_at: number
+  added_by: Uint8Array | null
+  via: "claim" | "pair" | "env"
+}
+
 export interface NewRoom {
   id: string
   rootPub: Uint8Array
@@ -123,6 +131,24 @@ CREATE TABLE IF NOT EXISTS nonces (
   exp   INTEGER NOT NULL,
   PRIMARY KEY (room, nonce)
 ) STRICT, WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS relay_meta (
+  key   TEXT PRIMARY KEY,
+  value BLOB NOT NULL
+) STRICT, WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS owners (
+  pub      BLOB PRIMARY KEY,
+  name     TEXT NOT NULL,
+  added_at INTEGER NOT NULL,
+  added_by BLOB,
+  via      TEXT NOT NULL
+) STRICT, WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS pairings_used (
+  jti BLOB PRIMARY KEY,
+  exp INTEGER NOT NULL
+) STRICT, WITHOUT ROWID;
 `
 
 export class RelayDb {
@@ -148,10 +174,10 @@ export class RelayDb {
       throw new Error(
         `relay.sqlite has schema ${version}, this relay understands ${SCHEMA_VERSION}`,
       )
-    if (version < SCHEMA_VERSION) {
-      this.sqlite.run(SCHEMA)
-      this.sqlite.run(`PRAGMA user_version = ${SCHEMA_VERSION}`)
-    }
+    // Every statement is CREATE IF NOT EXISTS: the ownership tables joined version 1 before
+    // multiplayer shipped (ADR 0017), so a development database from before them gains them here.
+    this.sqlite.run(SCHEMA)
+    if (version < SCHEMA_VERSION) this.sqlite.run(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   }
 
   close(): void {
@@ -443,5 +469,80 @@ export class RelayDb {
         .query("UPDATE rooms SET blob_bytes = MAX(0, blob_bytes - ?) WHERE id = ?")
         .run(bytes, room)
     })
+  }
+
+  // Relay meta and owners (§14.11) -----------------------------------------------------------
+
+  getMeta(key: string): Uint8Array | null {
+    const row = this.sqlite
+      .query<{ value: Uint8Array }, [string]>("SELECT value FROM relay_meta WHERE key = ?")
+      .get(key)
+    return row?.value ?? null
+  }
+
+  setMeta(key: string, value: Uint8Array): void {
+    this.sqlite
+      .query("INSERT OR REPLACE INTO relay_meta (key, value) VALUES (?, ?)")
+      .run(key, value)
+  }
+
+  /** The owner set, oldest first. */
+  owners(): OwnerRow[] {
+    return this.sqlite
+      .query<OwnerRow, []>(
+        "SELECT pub, name, added_at, added_by, via FROM owners ORDER BY added_at, pub",
+      )
+      .all()
+  }
+
+  owner(pub: Uint8Array): OwnerRow | null {
+    return this.sqlite
+      .query<OwnerRow, [Uint8Array]>(
+        "SELECT pub, name, added_at, added_by, via FROM owners WHERE pub = ?",
+      )
+      .get(pub)
+  }
+
+  countOwners(): number {
+    return this.sqlite.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM owners").get()?.n ?? 0
+  }
+
+  insertOwner(row: OwnerRow): void {
+    this.sqlite
+      .query("INSERT INTO owners (pub, name, added_at, added_by, via) VALUES (?, ?, ?, ?, ?)")
+      .run(row.pub, row.name, row.added_at, row.added_by, row.via)
+  }
+
+  renameOwner(pub: Uint8Array, name: string): boolean {
+    return this.sqlite.query("UPDATE owners SET name = ? WHERE pub = ?").run(name, pub).changes > 0
+  }
+
+  deleteOwner(pub: Uint8Array): boolean {
+    return this.sqlite.query("DELETE FROM owners WHERE pub = ?").run(pub).changes > 0
+  }
+
+  /** Empties the owner set and the used pairings (`KIMO_RESET_OWNER`). */
+  clearOwners(): void {
+    this.tx(() => {
+      this.sqlite.run("DELETE FROM owners")
+      this.sqlite.run("DELETE FROM pairings_used")
+    })
+  }
+
+  pairingUsed(jti: Uint8Array): boolean {
+    return this.sqlite.query("SELECT 1 AS x FROM pairings_used WHERE jti = ?").get(jti) !== null
+  }
+
+  /** Burns a pairing `jti` until `exp` (unix seconds); false when it was already used. */
+  usePairing(jti: Uint8Array, exp: number): boolean {
+    return (
+      this.sqlite
+        .query("INSERT OR IGNORE INTO pairings_used (jti, exp) VALUES (?, ?)")
+        .run(jti, exp).changes > 0
+    )
+  }
+
+  prunePairings(nowSeconds: number): void {
+    this.sqlite.query("DELETE FROM pairings_used WHERE exp <= ?").run(nowSeconds)
   }
 }

@@ -1,7 +1,8 @@
 /**
  * Owner-signed room administration (docs/spec/multiplayer.md §6, §14.7): register, revoke,
  * rotate, close and sweep. Every command is signed by the room's root key, which the relay learns
- * only from the register command and checks against the room id.
+ * only from the register command and checks against the room id. Register also carries the proof
+ * that an owner device of this relay asked for the room (`./owners`).
  */
 import {
   type AdminCommand,
@@ -17,6 +18,7 @@ import {
   verifyAdminCommand,
   verifyLinkCert,
 } from "@kimo/sync/mp"
+import { checkRegisterOwner } from "./owners"
 import type { Relay } from "./rooms"
 
 const MAX_SKEW_MS = 300_000
@@ -26,17 +28,6 @@ const DAY_MS = 86_400_000
 export interface AdminResult {
   status: number
   body: Record<string, unknown>
-}
-
-export function constantTimeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder()
-  const left = enc.encode(a)
-  const right = enc.encode(b)
-  // Compare digests' worth of bytes without early exit; length mismatch is folded in.
-  let diff = left.length ^ right.length
-  const n = Math.max(left.length, right.length)
-  for (let i = 0; i < n; i++) diff |= (left[i] ?? 0) ^ (right[i] ?? 0)
-  return diff === 0
 }
 
 function stringField(body: Record<string, unknown>, key: string): string {
@@ -57,7 +48,6 @@ export async function runAdmin(
   relay: Relay,
   roomId: string,
   bytes: Uint8Array,
-  createSecret: string | null,
 ): Promise<AdminResult> {
   const { db, config } = relay
   const command: AdminCommand = parseAdminCommand(bytes)
@@ -70,10 +60,6 @@ export async function runAdmin(
   let registerCert: LinkCert | null = null
 
   if (command.op === "register") {
-    if (config.createSecret !== null) {
-      if (createSecret === null || !constantTimeEqual(createSecret, config.createSecret))
-        throw new MultiplayerError("CREATE_FORBIDDEN", "missing or wrong create secret")
-    }
     rootPub = fromBase64Url(stringField(command.body, "rootPub"))
     if (!(await roomMatchesRootKey(command.room, rootPub)))
       throw new MultiplayerError("ROOM_ID_MISMATCH", "room id does not derive from the root key")
@@ -88,8 +74,10 @@ export async function runAdmin(
   const now = relay.now()
   if (Math.abs(now - command.iat) > MAX_SKEW_MS)
     throw new MultiplayerError("STALE_REQUEST", "admin command is too old or too new")
-  if (command.op === "register")
+  if (command.op === "register") {
+    await checkRegisterOwner(relay, command, rootPub)
     registerCert = await checkCert(stringField(command.body, "cert"), roomId, rootPub)
+  }
   if (!db.consumeNonce(roomId, command.nonce, command.iat + NONCE_TTL_MS))
     throw new MultiplayerError("NONCE_REPLAY", "admin nonce already used")
 

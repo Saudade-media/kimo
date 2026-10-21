@@ -1,4 +1,8 @@
-/** Shared test fixtures: owners, tokens, admin calls and a frame-queue WebSocket client. */
+/**
+ * Shared test fixtures: owners, tokens, admin calls and a frame-queue WebSocket client. Every
+ * relay starts owned by {@link device} (`KIMO_OWNER_KEY`), and register carries its owner proof,
+ * unless a test says otherwise.
+ */
 import {
   type AdminBody,
   type ClientMessage,
@@ -12,6 +16,7 @@ import {
   type LinkCert,
   type MpOrigin,
   mintToken,
+  type OwnerBody,
   type RelayMessage,
   type RoomId,
   type RoomKeys,
@@ -21,10 +26,16 @@ import {
   sealUpdate,
   signAdminCommand,
   signLinkCert,
+  signOwnerCommand,
+  signRegisterOwner,
   type TokenRole,
   toBase64Url,
 } from "@kimo/sync/mp"
 import { createServer, type RelayConfig, relayOf } from "../src/index"
+
+/** The device that owns every test relay unless a test passes its own `ownerKeys`. */
+export const device = await generateSigningKeyPair()
+export const devicePub = await exportPublicKey(device.publicKey)
 
 export interface Owner {
   root: CryptoKeyPair
@@ -108,6 +119,7 @@ export function startRelay(
       connectRatePerMin: 1_000_000,
       adminRatePerMin: 1_000_000,
       blobRatePerMin: 1_000_000,
+      ownerKeys: [devicePub],
       ...config,
     },
     ...(options.realTime ? { tickMs: 250 } : { now: () => clock.now, tickMs: 3_600_000 }),
@@ -123,32 +135,77 @@ export function startRelay(
   }
 }
 
+/**
+ * Signs and posts an admin command. A register body without `owner` gets the proof of
+ * `options.device` (default {@link device}); `device: null` sends none.
+ */
 export async function admin(
   h: Harness,
   owner: Owner,
-  body: AdminBody,
-  options: { iat?: number; nonce?: Uint8Array; secret?: string; signer?: CryptoKey } = {},
+  body: AdminBody | Omit<Extract<AdminBody, { op: "register" }>, "owner">,
+  options: {
+    iat?: number
+    nonce?: Uint8Array
+    signer?: CryptoKey
+    device?: CryptoKeyPair | null
+    relayId?: Uint8Array
+  } = {},
 ): Promise<Response> {
-  const bytes = await signAdminCommand(options.signer ?? owner.root.privateKey, owner.room, body, {
-    iat: options.iat ?? h.clock.now,
-    ...(options.nonce ? { nonce: options.nonce } : {}),
+  const iat = options.iat ?? h.clock.now
+  const nonce = options.nonce ?? randomBytes(16)
+  let full = body as AdminBody
+  if (body.op === "register" && !("owner" in body) && options.device !== null)
+    full = {
+      ...body,
+      owner: await signRegisterOwner(options.device ?? device, {
+        relayId: options.relayId ?? h.relay.relayId,
+        room: owner.room,
+        nonce,
+        iat,
+        rootPub: owner.rootPub,
+      }),
+    }
+  const bytes = await signAdminCommand(options.signer ?? owner.root.privateKey, owner.room, full, {
+    iat,
+    nonce,
   })
-  const headers: Record<string, string> = { "content-type": "application/octet-stream" }
-  if (options.secret !== undefined) headers["kimo-create-secret"] = options.secret
   return fetch(`${h.base}/room/${owner.room.id}/admin`, {
     method: "POST",
-    headers,
+    headers: { "content-type": "application/octet-stream" },
     body: bytes as Uint8Array<ArrayBuffer>,
   })
 }
 
-export function register(h: Harness, owner: Owner, secret?: string): Promise<Response> {
+export function register(
+  h: Harness,
+  owner: Owner,
+  options: { device?: CryptoKeyPair | null } = {},
+): Promise<Response> {
   return admin(
     h,
     owner,
     { op: "register", rootPub: toBase64Url(owner.rootPub), cert: toBase64Url(owner.cert.bytes) },
-    secret === undefined ? {} : { secret },
+    options,
   )
+}
+
+/** Signs and posts an owner command (§6.1) for `keys` (default {@link device}). */
+export async function ownerCommand(
+  h: Harness,
+  body: OwnerBody,
+  options: { keys?: CryptoKeyPair; iat?: number; nonce?: Uint8Array; relayId?: Uint8Array } = {},
+): Promise<Response> {
+  const bytes = await signOwnerCommand(
+    options.keys ?? device,
+    options.relayId ?? h.relay.relayId,
+    body,
+    { iat: options.iat ?? h.clock.now, ...(options.nonce ? { nonce: options.nonce } : {}) },
+  )
+  return fetch(`${h.base}/owner`, {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: bytes as Uint8Array<ArrayBuffer>,
+  })
 }
 
 export async function registered(h: Harness, kid = 1): Promise<Owner> {

@@ -15,6 +15,12 @@ updates:
     groups:
       cargo-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # 2.6.2 does not compile against rust-ini 0.21.3; single-instance 2.5.4 requires it
+      - dependency-name: tauri-plugin-deep-link
+        versions: ["2.6.2"]
+      - dependency-name: tauri-plugin-single-instance
+        versions: ["2.5.4"]
 
   - package-ecosystem: github-actions
     directory: /

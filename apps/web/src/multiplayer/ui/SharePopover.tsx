@@ -15,6 +15,10 @@
  *   copies it at once), active links (Copy, Revoke on hover), the E2E note; Reset all links ·
  *   Stop sharing.
  *
+ * Board 43 (ADR 0018): with Kimo Cloud on, A puts Kimo Cloud first and the self-host field behind
+ * Host your own (`CloudShareBody`: 4 A, 4 B, 4 C, 6 A), and a file to share on Kimo Cloud shows
+ * its account instead of the relay URL.
+ *
  * Revoke is final on the relay, so its toast has no Undo (the board's "Undo" is left out).
  * On a quick tunnel (board 42 section 3 I) every link row says it stops working when the relay
  * restarts.
@@ -52,6 +56,12 @@ import {
 } from "../model"
 import { isQuickTunnelUrl } from "../relay-setup/local"
 import {
+  useCloudState,
+  useRelaySetupServices,
+  useRelaySetupStateOrNull,
+} from "../relay-setup/services"
+import { CloudShareBody } from "./CloudShare"
+import {
   connectionMeta,
   EXPIRY_LABEL,
   linkCopiedText,
@@ -64,6 +74,7 @@ import {
   sharePopoverStage,
 } from "./copy"
 import { AddThisDeviceDialog, NOT_YOURS_SHORT, NotYoursFix, RESET_OWNERSHIP_URL } from "./ownership"
+import type { WizardStart } from "./RelayWizard"
 import { Pill } from "./relay-parts"
 import { copyText, GuideLink, openRelayGuide, useShareToast } from "./shared"
 import "./share-ui.css"
@@ -88,8 +99,8 @@ export interface SharePopoverProps {
   onClose(): void
   /** Reset all links: the confirm dialog (it lives outside the popover). */
   onResetAll(): void
-  /** Set up a relay: the relay setup wizard (it lives outside the popover). */
-  onSetUpRelay?(): void
+  /** Set up a relay: the relay setup wizard (it lives outside the popover), at `start`. */
+  onSetUpRelay?(start?: WizardStart): void
 }
 
 export function SharePopover({
@@ -152,10 +163,14 @@ function SetupBody({
   model: MultiplayerModel
   docKey: string
   firstRun: boolean
-  onSetUpRelay?(): void
+  onSetUpRelay?(start?: WizardStart): void
 }) {
   const runtime = useOptionalRuntime()
   const platform = runtime?.platform ?? null
+  const relaySetup = useRelaySetupServices(platform)
+  const cloud = relaySetup?.cloud ?? null
+  const cloudState = useCloudState(cloud)
+  const setup = useRelaySetupStateOrNull(relaySetup?.store ?? null)
   const [addThisDevice, setAddThisDevice] = useState(false)
   const openSettings = useOpenSettings()
   const toast = useShareToast()
@@ -182,9 +197,18 @@ function SetupBody({
       await model.settings.setRelayUrl(result.url).catch(() => undefined)
   }
 
-  // B: a saved relay is checked when the popover opens.
+  // Board 43: Kimo Cloud is the saved relay, or there is none yet: its account picks the body.
+  const cloudRelay = cloud !== null && setup?.path === "cloud" && settings.relayUrl !== null
+  const cloudView = cloud !== null && cloudState !== null && (firstRun || cloudRelay)
+
+  // B: a saved relay is checked when the popover opens; Kimo Cloud's account is refreshed.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
+    if (cloud) {
+      void cloud.refresh()
+      void cloud.loadPlans()
+    }
+    if (cloudRelay) return
     if (settings.relayUrl && !relayReady(test, settings.relayUrl)) void check(settings.relayUrl)
   }, [])
 
@@ -260,6 +284,71 @@ function SetupBody({
     </div>
   )
 
+  if (cloudView && cloud && cloudState) {
+    const startCloud = async () => {
+      const relay = await cloud.relay()
+      let relayUrl = settings.relayUrl
+      if (!cloudRelay || !relayUrl) {
+        relayUrl = (await model.settings.setRelayUrl(relay.relayUrl)) ?? relay.relayUrl
+        await relaySetup?.store.save({ patch: { path: "cloud" } })
+      }
+      await model.document(docKey).startSharing({ relayUrl })
+    }
+    const fix =
+      test.kind === "ok" && test.owner === "other" ? (
+        <NotYoursFix
+          desc={NOT_YOURS_SHORT}
+          iconSize={14}
+          onAddThisDevice={() => setAddThisDevice(true)}
+          onResetOwnership={() =>
+            void (platform
+              ? platform.files.openExternalUrl(RESET_OWNERSHIP_URL)
+              : window.open(RESET_OWNERSHIP_URL, "_blank", "noopener"))
+          }
+        />
+      ) : null
+    return (
+      <>
+        <CloudShareBody
+          cloud={cloud}
+          state={cloudState}
+          cloudRelay={cloudRelay}
+          hostOpenInitially={url.trim() !== ""}
+          hostContent={
+            <>
+              {onSetUpRelay && (
+                <Button
+                  variant="secondary"
+                  className="mp-setup-relay mp-setup-relay--secondary"
+                  data-action="set-up-relay"
+                  icon={<Icon name="wand-sparkles" size={16} />}
+                  onClick={() => onSetUpRelay("choose")}
+                >
+                  Set up a relay
+                </Button>
+              )}
+              {field}
+              {resultRow}
+              {fix}
+            </>
+          }
+          canStartSelf={canStart}
+          startingSelf={share.status === "starting"}
+          onStartSelf={() => void start()}
+          onStartCloud={startCloud}
+          starting={share.status === "starting"}
+          onWizard={(start) => onSetUpRelay?.(start)}
+        />
+        {addThisDevice && (
+          <AddThisDeviceDialog
+            host={hostOfUrl(test.kind === "ok" ? test.url : url)}
+            onClose={() => setAddThisDevice(false)}
+          />
+        )}
+      </>
+    )
+  }
+
   return (
     <>
       <div className="mp-body">
@@ -283,7 +372,7 @@ function SetupBody({
               variant="primary"
               className="mp-setup-relay"
               icon={<Icon name="wand-sparkles" size={16} />}
-              onClick={onSetUpRelay}
+              onClick={() => onSetUpRelay()}
             >
               Set up a relay
             </Button>

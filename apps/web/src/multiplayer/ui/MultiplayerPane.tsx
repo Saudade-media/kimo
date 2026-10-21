@@ -13,6 +13,9 @@
  * (claimed on the first Start sharing) or Not yours (Add this device · Reset ownership). When it
  * is yours, Devices lists the devices that can start sharing (`DevicesSetting`). A saved relay is
  * tested when the pane opens.
+ *
+ * Board 43 section 5 (ADR 0018): when Kimo Cloud is the relay, Relay, Account and Devices replace
+ * the explainer and the Relay URL row (`CloudSettings`); the rows below stay.
  */
 import type { KimoPlatform } from "@kimo/platform"
 import { Button, Input, Select, SettingRow, Toggle } from "@kimo/ui"
@@ -24,7 +27,12 @@ import { ownershipFor } from "../device"
 import { useMultiplayer, useMultiplayerSettings, useRelayTest } from "../hooks"
 import { createMultiplayerModel, type MultiplayerModel } from "../model"
 import type { RelayDevice } from "../ownership"
-import { useRelaySetupServices } from "../relay-setup/services"
+import {
+  useCloudState,
+  useRelaySetupServices,
+  useRelaySetupStateOrNull,
+} from "../relay-setup/services"
+import { CloudSettings } from "./CloudSettings"
 import { ownerPill, refusedText, relayResultView } from "./copy"
 import { DevicesSetting } from "./DevicesSetting"
 import {
@@ -96,6 +104,11 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
   const [addThisDevice, setAddThisDevice] = useState(false)
   const ownership = relaySetup?.ownership ?? ownershipFor(platform)
   const [devices, setDevices] = useState<RelayDevice[] | null>(null)
+  const cloud = relaySetup?.cloud ?? null
+  const cloudState = useCloudState(cloud)
+  const setup = useRelaySetupStateOrNull(relaySetup?.store ?? null)
+  const cloudRelay =
+    cloud !== null && cloudState !== null && setup?.path === "cloud" && settings.relayUrl !== null
   // A change from elsewhere (the Share popover) shows here.
   useEffect(() => setUrl(settings.relayUrl ?? ""), [settings.relayUrl])
   useEffect(() => setName(settings.displayName), [settings.displayName])
@@ -115,9 +128,12 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
     await saveUrl(result.url)
   }
 
-  // A saved relay is tested when the pane opens, so its ownership and devices show.
+  // A saved relay is tested when the pane opens, so its ownership and devices show; Kimo Cloud's
+  // account is refreshed instead.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
+    if (cloud) void cloud.refresh()
+    if (cloudRelay) return
     if (settings.relayUrl && !(test.kind === "ok" && test.url === settings.relayUrl))
       void model.relayTest.test(settings.relayUrl)
   }, [])
@@ -143,6 +159,35 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
       : test.kind !== "idle" && "url" in test && test.url.trim() !== ""
         ? relayResultView(test)
         : null
+
+  const wizardSheet = wizard && relaySetup && (
+    <RelayWizard
+      services={relaySetup}
+      from="settings"
+      displayName={settings.displayName}
+      saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
+      onClose={() => setWizard(false)}
+    />
+  )
+  const rows = <PersonalRows model={model} name={name} setName={setName} />
+
+  if (cloudRelay && cloud && cloudState)
+    return (
+      <>
+        <PaneTitle>Multiplayer</PaneTitle>
+        <CloudSettings
+          cloud={cloud}
+          state={cloudState}
+          onChange={() => setWizard(true)}
+          onSignedOut={async () => {
+            await model.settings.setRelayUrl(null)
+            await relaySetup?.store.update({ path: null })
+          }}
+        />
+        {wizardSheet}
+        {rows}
+      </>
+    )
 
   return (
     <>
@@ -280,15 +325,25 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
           onClose={() => setAddThisDevice(false)}
         />
       )}
-      {wizard && relaySetup && (
-        <RelayWizard
-          services={relaySetup}
-          from="settings"
-          displayName={settings.displayName}
-          saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
-          onClose={() => setWizard(false)}
-        />
-      )}
+      {wizardSheet}
+      {rows}
+    </>
+  )
+}
+
+/** Your name · Show other cursors · Fetch images and fonts (board 41 section 4). */
+function PersonalRows({
+  model,
+  name,
+  setName,
+}: {
+  model: MultiplayerModel
+  name: string
+  setName(name: string): void
+}) {
+  const settings = useMultiplayerSettings(model)
+  return (
+    <>
       <SettingRow
         label="Your name"
         description="Shown on your cursor and in the list, kept on this device. Leave it empty to appear as Guest 1, Guest 2 and so on."

@@ -26,7 +26,7 @@ import type { MultiplayerModel } from "../model"
 import { useRelaySetupServices } from "../relay-setup/services"
 import { stackDimmed, stackOf, topbarSyncStatus } from "./copy"
 import { PeoplePopover } from "./PeoplePopover"
-import { RelayWizard } from "./RelayWizard"
+import { RelayWizard, type WizardStart } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
 import { PresenceAvatar } from "./shared"
@@ -100,6 +100,7 @@ function ShareCluster({
   const people = useCollaborators(model, docKey)
   const caps = useCapabilities(model, docKey)
   const [open, setOpen] = useState<"share" | "people" | "reset" | "relay" | null>(null)
+  const [wizardStart, setWizardStart] = useState<WizardStart>("choose")
   const runtime = useOptionalRuntime()
   const relaySetup = useRelaySetupServices(runtime?.platform ?? null)
   const shareButton = useRef<HTMLButtonElement>(null)
@@ -156,13 +157,21 @@ function ShareCluster({
             shareButton.current?.focus({ preventScroll: true })
           }}
           onResetAll={() => setOpen("reset")}
-          {...(relaySetup ? { onSetUpRelay: () => setOpen("relay") } : {})}
+          {...(relaySetup
+            ? {
+                onSetUpRelay: (start: WizardStart = "choose") => {
+                  setWizardStart(start)
+                  setOpen("relay")
+                },
+              }
+            : {})}
         />
       )}
       {open === "relay" && relaySetup && (
         <RelayWizard
           services={relaySetup}
           from="share"
+          start={wizardStart}
           displayName={model.settings.getState().displayName}
           saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
           onStartSharing={async (relayUrl) => {

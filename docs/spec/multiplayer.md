@@ -97,6 +97,7 @@ Pure, runtime-neutral (browser, Bun, worker). Formats, crypto, codec, links, HTT
 | `apps/server/src/blobs.ts` | Blob files on disk (§14.6) |
 | `apps/server/src/auth.ts` | Token, certificate and admin verification against a room |
 | `apps/server/src/owners.ts` | Owner set, `relayId`, owner commands, pairing redemption, boot seeding and reset (§14.11) |
+| `apps/server/src/policy.ts` | Owner policy interface, the `devices` and `external` policies, `loadOwnerPolicy` (§14.12) |
 | `apps/server/src/rooms.ts` | Live rooms: peers, fan-out, compaction scheduling, expiry and revocation closes |
 | `apps/server/src/ws.ts` | WebSocket handlers for `/sync/<room>` |
 | `apps/server/src/http.ts` | HTTP routes of §12, CORS |
@@ -271,6 +272,11 @@ Every register needs the proof, including the idempotent one and reopening a clo
 rotate, close and sweep stay root-key only, so a room keeps working after the device that created
 it is removed.
 
+Under the `external` owner policy (§14.12) there is no owner set: `owner` missing or `owner.pub`
+not a device key is `403 NOT_OWNER`, a proof that does not verify is `401 AUTH_INVALID`, and then
+the policy module decides (`403 NOT_OWNER`, `402 PLAN_REQUIRED`, or the room's account). Creating
+or reopening a room for an account already at its storage limit is `507 ACCOUNT_QUOTA_EXCEEDED`.
+
 ### 6.1 Owner commands
 
 Relay-wide administration is a request signed by a **device key** (§16.9): one Ed25519 key pair
@@ -312,6 +318,9 @@ A `name` is a device display name: trimmed, 1 to 64 UTF-8 bytes, no control char
 
 Two claims racing on an empty set: the transaction makes exactly one win; the other answers
 `409 RELAY_CLAIMED`. The response never says who the owner is.
+
+Under the `external` owner policy (§14.12) every owner command answers `403 OWNER_EXTERNAL`
+before it is parsed: devices belong to accounts outside the relay.
 
 ### 6.2 Pairing tokens
 
@@ -539,14 +548,14 @@ status from §13. `429` and `503` carry `retry-after` (seconds).
 | Method and path | Auth | Request | Responses |
 |---|---|---|---|
 | `GET /healthz` | none | | `200 {"ok":true}` |
-| `GET /version` | none | | `200 {"name":"@kimo/server","version":"x.y.z","protocol":"kimo-mp/1","limits":RelayLimits,"relayId":b64url(16 bytes),"owner":"unclaimed"\|"claimed"}` |
-| `POST /owner` | device signature (§6.1) | Body: owner command bytes | Per op (§6.1); also `413 TOO_LARGE`, `429` |
+| `GET /version` | none | | `200 {"name":"@kimo/server","version":"x.y.z","protocol":"kimo-mp/1","limits":RelayLimits,"relayId":b64url(16 bytes),"owner":"unclaimed"\|"claimed"\|"external"}` |
+| `POST /owner` | device signature (§6.1) | Body: owner command bytes | Per op (§6.1); also `413 TOO_LARGE`, `429`; `403 OWNER_EXTERNAL` under the `external` owner policy |
 | `OPTIONS *` | none | CORS preflight | `204` |
-| `POST /room/<room>/admin` | admin signature (§6), plus the owner proof for register | Body: admin command bytes | Per op (§6); `400 BAD_REQUEST`, `401 AUTH_INVALID` (signature or owner proof), `403 RELAY_UNCLAIMED`, `403 NOT_OWNER`, `404 ROOM_NOT_FOUND` (non-register on unknown room), `409 NONCE_REPLAY`, `410 ROOM_CLOSED` (non-register on closed room), `413 TOO_LARGE`, `422 ROOM_ID_MISMATCH`, `422 STALE_REQUEST`, `422 KEY_ID_INVALID` (rotate with a non-increasing kid), `429`, `503 RELAY_FULL` (room cap) |
+| `POST /room/<room>/admin` | admin signature (§6), plus the owner proof for register | Body: admin command bytes | Per op (§6); `400 BAD_REQUEST`, `401 AUTH_INVALID` (signature or owner proof), `403 RELAY_UNCLAIMED`, `403 NOT_OWNER`, `404 ROOM_NOT_FOUND` (non-register on unknown room), `409 NONCE_REPLAY`, `410 ROOM_CLOSED` (non-register on closed room), `413 TOO_LARGE`, `422 ROOM_ID_MISMATCH`, `422 STALE_REQUEST`, `422 KEY_ID_INVALID` (rotate with a non-increasing kid), `429`, `503 RELAY_FULL` (room cap); under the `external` owner policy also `402 PLAN_REQUIRED` and `507 ACCOUNT_QUOTA_EXCEEDED` (§14.12) |
 | `GET /room/<room>` | view or edit | | `200 {"room","kid","head","base","snapshot":{"upTo","gen","bytes"}|null,"usedBytes","quotaBytes","peers":n}` |
 | `GET /room/<room>/snapshot` | view or edit | | `200` `application/octet-stream` envelope with headers `kimo-up-to`, `kimo-gen`; `404 NOT_FOUND` when there is none |
 | `PUT /room/<room>/snapshot?upTo=<n>[&carries=1]` | edit | Body: snapshot envelope | `201 {"gen","upTo"}`; `400 BAD_REQUEST`; `409 SNAPSHOT_STALE`; `413 TOO_LARGE`; `422 SNAPSHOT_AHEAD`; `507 QUOTA_EXCEEDED` |
-| `PUT /blob/<room>/<id>` | edit | Body: blob envelope | `201` stored, `200` already present (body ignored, mark cleared); `400 BAD_REQUEST` (id grammar); `413 TOO_LARGE`; `429 RATE_LIMITED`; `507 QUOTA_EXCEEDED` |
+| `PUT /blob/<room>/<id>` | edit | Body: blob envelope | `201` stored, `200` already present (body ignored, mark cleared); `400 BAD_REQUEST` (id grammar); `413 TOO_LARGE`; `429 RATE_LIMITED`; `507 QUOTA_EXCEEDED`; for a room with an account (§14.12) also `402 PLAN_REQUIRED` and `507 ACCOUNT_QUOTA_EXCEEDED` |
 | `HEAD /blob/<room>/<id>` | view or edit | | `200` with `content-length`; `404` |
 | `GET /blob/<room>/<id>` | view or edit | | `200` `application/octet-stream`, `cache-control: private, max-age=31536000, immutable`; `404 NOT_FOUND` |
 | `POST /blob/<room>/missing` | view or edit | `{"ids": [blobId...]}` (at most 1000) | `200 {"missing": [blobId...]}` |
@@ -565,7 +574,9 @@ Tokens MUST NOT appear in access logs; the relay logs method, path, status and d
 
 The protocol string stays `kimo-mp/1`: ownership changes only who may register a room, and
 multiplayer has not shipped, so there is no older relay or client to stay compatible with.
-`probe` treats a `/version` without `relayId` and `owner` as `NOT_A_RELAY`.
+`probe` treats a `/version` without `relayId` and `owner` as `NOT_A_RELAY`. `owner: "external"`
+(§14.12) is a relay whose owners are accounts managed outside it; ADR 0018 added it the same way,
+before multiplayer shipped.
 
 ## 13. Error codes
 
@@ -588,6 +599,8 @@ relay closes with it.
 | `PAIRING_USED` | 409 | | no | Pairing token already redeemed or cancelled |
 | `RELAY_CLAIMED` | 409 | | no | Claim on a relay another device already owns |
 | `LAST_DEVICE` | 409 | | no | Removing the only owner device |
+| `OWNER_EXTERNAL` | 403 | | no | Owner op on a relay under the `external` owner policy (§14.12): its owners are accounts managed elsewhere |
+| `PLAN_REQUIRED` | 402 | | no | The `external` owner policy refused a register or blob write because the account has no active plan |
 | `ROOM_NOT_FOUND` | 404 | 4404 | no | Unknown room |
 | `NOT_FOUND` | 404 | | no | No such blob or snapshot |
 | `HELLO_TIMEOUT` | | 4408 | yes | No `hello` within 10 s |
@@ -607,6 +620,7 @@ relay closes with it.
 | `RELAY_FULL` | 503 | | no | Room cap reached on this relay |
 | `LOG_FULL` | | 4507 | yes | Retained log over its hard cap until a snapshot arrives |
 | `QUOTA_EXCEEDED` | 507 | | no | Room storage quota exceeded |
+| `ACCOUNT_QUOTA_EXCEEDED` | 507 | | no | The room's account is at the storage limit its owner policy gave (§14.12) |
 | `DECRYPT_FAILED` | | | no (fatal, client side) | An envelope failed to open: wrong key or tampering |
 | `BLOB_INTEGRITY` | | | no (client side) | Decrypted blob does not match its SHA-256 |
 | `BAD_LINK` | | | no (client side) | Join link does not parse |
@@ -632,7 +646,8 @@ Close codes `1001`, `1006` and `1012` map to `RELAY_UNREACHABLE` (retry). `1009`
 
 `PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;`
 `PRAGMA user_version = 1` marks this schema (multiplayer has not shipped, so the ownership
-tables join version 1 instead of a migration).
+tables and `rooms.account` join version 1 instead of a migration; a development database whose
+`rooms` table predates `account` gains the column at open).
 
 ```sql
 CREATE TABLE rooms (
@@ -649,8 +664,11 @@ CREATE TABLE rooms (
   log_bytes      INTEGER NOT NULL DEFAULT 0, -- envelope bytes of retained entries
   snapshot_bytes INTEGER NOT NULL DEFAULT 0, -- bytes of the stored snapshot generations
   blob_bytes     INTEGER NOT NULL DEFAULT 0,
-  quota_bytes    INTEGER                    -- NULL = KIMO_ROOM_QUOTA_MB
+  quota_bytes    INTEGER,                   -- NULL = KIMO_ROOM_QUOTA_MB
+  account        TEXT                       -- external owner policy account (§14.12); NULL under devices
 ) STRICT;
+
+CREATE INDEX rooms_account ON rooms(account) WHERE account IS NOT NULL;
 
 CREATE TABLE log (
   room   TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -799,6 +817,8 @@ Per-IP uses `server.requestIP(req)`, or the first `x-forwarded-for` address when
 | `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins allowed for CORS and WebSocket `Origin` (the desktop webview origins are always allowed) |
 | `KIMO_OWNER_KEY` | unset | Comma-separated device public keys (base64url, 43 characters each). At boot, when the owner set is empty, the relay adds them (`via: "env"`, name "Added at deploy"; the device renames itself on its first claim). Ignored once the relay has an owner. Public values: safe in commands, URLs and logs (§14.11) |
 | `KIMO_RESET_OWNER` | unset | Any non-empty value: at boot, clear the owner set and the used pairings and log a warning, once per distinct value (§14.11). Guides phrase it as "set it to any new value, for example today's date". Rooms are untouched |
+| `KIMO_OWNER_POLICY` | `devices` | `devices`: the owner set of §14.11. `external`: an owner policy module decides who registers rooms (§14.12) |
+| `KIMO_OWNER_POLICY_MODULE` | unset | With `KIMO_OWNER_POLICY=external` (required then, refused otherwise): path of the module, relative to the working directory, or a `file:` URL. `main.ts` imports it before listening; a missing file or a default export without `register` and `write` exits 1 naming the variable |
 | `KIMO_MAX_ROOMS` | `0` (unlimited) | Registered rooms cap (`RELAY_FULL`) |
 | `KIMO_MAX_PEERS` | `32` | Sockets per room |
 | `KIMO_ROOM_QUOTA_MB` | `500` | Default room quota |
@@ -865,6 +885,44 @@ neither names nor public keys.
 **Claim race (see ADR 0017).** A relay that starts unclaimed (no `KIMO_OWNER_KEY`) can be claimed by whoever reaches it first. That grants room creation
 (storage on the operator's bill), never access to a room's content. There is no claim deadline.
 Kimo's own setup paths pass `KIMO_OWNER_KEY`, so they start claimed.
+
+### 14.12 Owner policy (`policy.ts`, ADR 0018)
+
+Who may register rooms (§6) and run owner commands (§6.1) goes through one `OwnerPolicy`, chosen at
+startup by `KIMO_OWNER_POLICY`:
+
+- **`devices`** (default): the owner set of §14.11, unchanged. Rooms have no account (`account`
+  NULL) and no account limit. `/version` says `unclaimed` or `claimed`.
+- **`external`**: a module (`KIMO_OWNER_POLICY_MODULE`) decides. Boot makes the relay id only:
+  `KIMO_OWNER_KEY` and `KIMO_RESET_OWNER` do nothing (a warning says so) and the owner set is not
+  read. `/version` says `external`. Every `POST /owner` answers `403 OWNER_EXTERNAL`.
+
+The module default-exports an `OwnerPolicyModule` (§17.C) with two methods, each sync or async:
+
+| Call | When | Request | Answer |
+|---|---|---|---|
+| `register` | Every register, after the owner proof verifies (§6) | `{relayId, room, devicePub, state}`; `state` is `new`, `open` (an idempotent repeat) or `closed` (a reopen) | `{allow: true, account, storageLimitBytes?}` or `{allow: false, code: "NOT_OWNER" \| "PLAN_REQUIRED", message?}` |
+| `write` | Before storing a new blob in a room that has an account | `{relayId, room, account, bytes}` | `{allow: true, storageLimitBytes?}` or a denial as above |
+
+`relayId` and `devicePub` are base64url, `room` the room id. `account` is an opaque string of 1
+to 256 characters that the relay stores on the room (`rooms.account`, set on create and on
+reopen; an idempotent repeat keeps the stored one). `storageLimitBytes` is a non-negative integer,
+or null or absent for no limit. A denial answers its code; anything else (a malformed answer, a
+throw, no answer within 10 s) is `500 INTERNAL` and stores nothing.
+
+**Account storage.** An account's usage is the sum of `log_bytes + snapshot_bytes + blob_bytes`
+over its open rooms, the same counts the room quota uses, so closing a room frees its bytes. The
+relay checks it in the same synchronous step as the room quota:
+
+- Register that creates or reopens a room: refused with `507 ACCOUNT_QUOTA_EXCEEDED` when usage is
+  already at or over the limit (after `RELAY_FULL`).
+- Blob `PUT` that stores new bytes: refused with `507 ACCOUNT_QUOTA_EXCEEDED` when usage plus the
+  envelope would pass the limit (after the room quota). A blob already present asks nothing.
+
+Log appends and snapshots are held only by the room quota, so a room whose account lapsed or
+filled keeps syncing; ADR 0018 decision 8 (grace, then read-only) is the module's to apply through
+its answers. Rooms registered before a relay switched to `external` have no account and are
+never asked about.
 
 ## 15. Client provider behaviour
 
@@ -1372,6 +1430,10 @@ Setup paths and what they put into the relay (no secret in any of them):
 | Fly.io (one click or commands) | `KIMO_OWNER_KEY` as a Fly env value | `yours` |
 | Railway | The deploy link carries `KIMO_OWNER_KEY=<this device>` as a prefilled variable when Railway supports it (to verify, ADR 0017); otherwise the relay starts unclaimed | `yours`, or claimed by the Test |
 | I already have a relay | Nothing (its operator may set `KIMO_OWNER_KEY` themselves) | Claimed by the Test |
+
+A relay whose `/version` says `owner: "external"` (§14.12) has no owner set: owner commands answer
+`OWNER_EXTERNAL`. Kimo Cloud's sign-in replaces claim and pairing there (ADR 0018); its states
+and copy wait for their board.
 
 **Pairing.** On an owner device, `createPairingLink(relayUrl)` mints a token (§6.2, 15 minutes)
 and formats the link (§7.1) with this window's web origin (`kimo:` on desktop). Nothing is sent to
@@ -1932,6 +1994,8 @@ export interface RelayConfig {
   ownerKeys: readonly Uint8Array[]
   /** KIMO_RESET_OWNER, or null. */
   resetOwner: string | null
+  /** KIMO_OWNER_POLICY_MODULE; present only with KIMO_OWNER_POLICY=external (§14.12). */
+  ownerPolicyModule?: string
   maxRooms: number
   maxPeers: number
   roomQuotaBytes: number
@@ -1957,11 +2021,43 @@ export interface ServerOptions {
   config?: Partial<RelayConfig>
   /** Clock for tests. Default Date.now. */
   now?: () => number
+  /** The loaded external owner policy; selects `external` mode (required when config names a module). */
+  ownerPolicy?: OwnerPolicyModule
 }
 export const SYNC_PATH = "/sync"
 export function createServer(options: ServerOptions): Bun.Server<unknown> // stop() also closes the database
 export function handleRequest(req: Request): Response // /healthz, /version only (kept for tests)
 export const versionInfo: VersionInfo // protocol, limits, ownership; handleRequest has no database, so it reports owner "unclaimed"
+
+// policy.ts (§14.12), re-exported from index.ts
+export interface RegisterRequest {
+  relayId: string
+  room: string
+  devicePub: string
+  state: "new" | "open" | "closed"
+}
+export interface WriteRequest {
+  relayId: string
+  room: string
+  account: string
+  bytes: number
+}
+export interface PolicyDenial {
+  allow: false
+  code: "NOT_OWNER" | "PLAN_REQUIRED"
+  message?: string
+}
+export type RegisterDecision =
+  | { allow: true; account: string; storageLimitBytes?: number | null }
+  | PolicyDenial
+export type WriteDecision = { allow: true; storageLimitBytes?: number | null } | PolicyDenial
+/** What KIMO_OWNER_POLICY_MODULE default-exports. */
+export interface OwnerPolicyModule {
+  register(request: RegisterRequest): RegisterDecision | Promise<RegisterDecision>
+  write(request: WriteRequest): WriteDecision | Promise<WriteDecision>
+}
+/** Imports the module and checks its shape; throws an Error naming KIMO_OWNER_POLICY_MODULE. */
+export function loadOwnerPolicy(specifier: string): Promise<OwnerPolicyModule>
 ```
 
 ### 17.D `apps/web/src/multiplayer`
@@ -2258,6 +2354,18 @@ WebSockets from Bun, with tokens and admin commands made by module A.
 - `owners-boot.test.ts`: `KIMO_OWNER_KEY` seeds an empty set and is ignored once claimed;
   `KIMO_RESET_OWNER` clears owners and used pairings once, the same value on a second boot does
   nothing, a new value clears again, rooms survive a reset; `relay_id` is stable across restarts.
+- `owner-policy.test.ts` (ADR 0018): with an in-test module, `/version` says `external` and
+  `KIMO_OWNER_KEY` seeds nothing; register asks the policy (`state` new, open, closed) and records
+  the account; `NOT_OWNER` and `PLAN_REQUIRED` from the policy, while a missing proof
+  (`NOT_OWNER`) or a bad one (`AUTH_INVALID`) never reaches it; claim, devices and pair answer
+  `OWNER_EXTERNAL`; the account limit spans its rooms for blob writes and new rooms
+  (`ACCOUNT_QUOTA_EXCEEDED`) and another account is unaffected; a lapsed account's blob write is
+  `PLAN_REQUIRED`; close frees the account's bytes and reopen records the new account; malformed
+  answers and a throwing module are `INTERNAL`; `devices` stays the default with NULL accounts.
+  Config: `KIMO_OWNER_POLICY` values and its pairing with `KIMO_OWNER_POLICY_MODULE`; a relay
+  whose config names a module refuses to start without it; `loadOwnerPolicy` imports a default
+  export and rejects other shapes and missing files; a development database gains
+  `rooms.account`.
 - `blind.test.ts`: the relay never imports `yjs` or `@kimo/editor-state` (check the module graph
   of `src/index.ts`), and the stored log and blob bytes never contain a plaintext marker string
   that the test's clients encrypted.

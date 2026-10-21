@@ -78,6 +78,8 @@ when the relay is reachable directly.
 | `KIMO_ALLOWED_ORIGINS` | `*` | Comma-separated web origins allowed for CORS and WebSocket `Origin`, for example `https://app.example.com`. Clients without an `Origin` header (Bun, scripts) and the Kimo desktop app (`tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost`, which no web page can send) are always allowed |
 | `KIMO_OWNER_KEY` | unset | Comma-separated device public keys (base64url, 43 characters each). At boot, when the relay has no owner yet, these devices own it. Ignored once it has one. Public values, safe to show |
 | `KIMO_RESET_OWNER` | unset | Any value: at boot, clears the owner list and unused pairing links, once per distinct value (see [This relay belongs to another Kimo](#this-relay-belongs-to-another-kimo)). Rooms are untouched |
+| `KIMO_OWNER_POLICY` | `devices` | Who may create rooms. `devices`: the relay's owner list. `external`: a module you provide decides (see [Owner policy module](#owner-policy-module)) |
+| `KIMO_OWNER_POLICY_MODULE` | unset | With `KIMO_OWNER_POLICY=external`, and only then: path of that module (relative to the working directory) or a `file:` URL. The relay imports it at startup and exits if it is missing or malformed |
 | `KIMO_MAX_ROOMS` | `0` (unlimited) | Cap on open rooms |
 | `KIMO_MAX_PEERS` | `32` | Sockets per room |
 | `KIMO_ROOM_QUOTA_MB` | `500` | Default per-room storage quota (blobs + snapshots + log) |
@@ -100,8 +102,8 @@ when the relay is reachable directly.
 
 | Route | Auth | Purpose |
 |---|---|---|
-| `GET /healthz`, `GET /version` | none | Liveness; protocol (`kimo-mp/1`), version, limits, the relay id and whether it has an owner (`owner`: `unclaimed` or `claimed`) |
-| `POST /owner` | device signature | Claim, list devices, pair a device, remove, rename, cancel a pairing link |
+| `GET /healthz`, `GET /version` | none | Liveness; protocol (`kimo-mp/1`), version, limits, the relay id and whether it has an owner (`owner`: `unclaimed`, `claimed`, or `external` under an owner policy module) |
+| `POST /owner` | device signature | Claim, list devices, pair a device, remove, rename, cancel a pairing link (`OWNER_EXTERNAL` under an owner policy module) |
 | `WS /sync/<room>` | token in the first frame | Encrypted log, awareness and snapshot notices (subprotocol `kimo-mp.1`) |
 | `POST /room/<room>/admin` | room owner signature (register also an owner device's) | Register, revoke a link, reset all links, close, blob sweep |
 | `GET /room/<room>` | view or edit token | Head, snapshot and usage |
@@ -123,6 +125,41 @@ claim another. "Reset all links" rotates the signing key and closes every connec
 Blobs are stored under an id derived with a room-secret HMAC, so the relay can deduplicate within a
 room without learning content. The relay never deletes a blob when a document stops referencing
 it: only an owner-signed sweep marks unreferenced blobs and deletes them after a grace period.
+
+## Owner policy module
+
+By default the relay's owner list decides who may create rooms. A hosted or team relay can hand
+that decision to its own code instead: set `KIMO_OWNER_POLICY=external` and
+`KIMO_OWNER_POLICY_MODULE` to a module whose default export has two methods (sync or async). The
+types are exported from `@kimo/server` (`OwnerPolicyModule`).
+
+```ts
+// team-policy.ts: every device in the list may create rooms, under one account of 5 GB.
+import type { OwnerPolicyModule } from "@kimo/server"
+
+const TEAM = new Set(["<device public key>", "<another device public key>"])
+
+export default {
+  register({ devicePub }) {
+    if (!TEAM.has(devicePub)) return { allow: false, code: "NOT_OWNER" }
+    return { allow: true, account: "team", storageLimitBytes: 5 * 1024 ** 3 }
+  },
+  write: () => ({ allow: true, storageLimitBytes: 5 * 1024 ** 3 }),
+} satisfies OwnerPolicyModule
+```
+
+- `register({ relayId, room, devicePub, state })` runs on every room registration, after the relay
+  has checked that the device signed it. Answer `{ allow: true, account, storageLimitBytes }`, or
+  `{ allow: false, code: "NOT_OWNER" | "PLAN_REQUIRED", message }`. The relay stores the account on
+  the room.
+- `write({ relayId, room, account, bytes })` runs before a new blob is stored in a room that has an
+  account, with the same answers minus `account`.
+- `storageLimitBytes` caps the account's stored bytes over its open rooms (log, snapshots and
+  blobs, the same counts as the room quota); leave it out for no limit. Past it, new rooms and
+  blob uploads answer `ACCOUNT_QUOTA_EXCEEDED`; editing keeps working within each room's quota.
+- A throw, a malformed answer or no answer within 10 seconds fails the request with `INTERNAL`.
+- In this mode `/version` reports `owner: "external"`, every `POST /owner` answers
+  `OWNER_EXTERNAL`, and `KIMO_OWNER_KEY` and `KIMO_RESET_OWNER` do nothing.
 
 ## Data and backups
 

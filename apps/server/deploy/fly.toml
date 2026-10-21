@@ -3,7 +3,7 @@
 # wizard runs these same steps with flyctl; by hand, from the repository root:
 #   fly launch --copy-config -c apps/server/deploy/fly.toml --no-deploy
 #   fly volumes create kimo_data --size 1
-#   fly secrets set KIMO_CREATE_SECRET="$(openssl rand -hex 32)"
+#   fly secrets set KIMO_OWNER_KEY="<your device key>"   (Kimo's Fly.io commands fill it in)
 #   fly deploy -c apps/server/deploy/fly.toml
 # To build from source instead, delete [build] and add `--dockerfile apps/server/Dockerfile .` to
 # fly deploy. Keep exactly one machine: the relay stores rooms in a local SQLite file on the volume.

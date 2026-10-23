@@ -7,8 +7,9 @@
 # `workflow_dispatch` runs the same builds without a tag or a release (artifacts only), to test
 # packaging and signing on a branch.
 #
-# Secrets (repository → Settings → Secrets and variables → Actions). Every one is optional: a
-# missing secret skips that signing step and the build is unsigned, so forks and dry runs work.
+# Secrets live in the `release` environment (Settings → Environments), which only `v*` tags may
+# use; the desktop job enters it on tag pushes only. Every one is optional: a missing secret skips
+# that signing step and the build is unsigned, so forks and `workflow_dispatch` dry runs work.
 #
 #   macOS code signing (Developer ID Application certificate)
 #     APPLE_CERTIFICATE             base64 of the exported .p12
@@ -89,6 +90,8 @@ jobs:
   desktop:
     name: desktop (${{ matrix.name }})
     needs: prepare
+    # Signing secrets are scoped to the `release` environment, open to `v*` tags only.
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || '' }}
     permissions:
       contents: write
     strategy:

@@ -12,8 +12,11 @@ releases; see [Spec freeze](#2-spec-freeze-10-only) for the one time it does.
 
 ### Signing and notarization secrets
 
-Add these under *Settings → Secrets and variables → Actions*. Each is optional: without it the
-corresponding step is skipped and the build is unsigned (fine for test runs, not for a release).
+Add these as secrets of the `release` environment (*Settings → Environments → release*), whose
+deployment rule allows only `v*` tags, so branch workflows and fork PRs never see them. A tag
+ruleset on `refs/tags/v*` limits who can create release tags. Variables stay repository-wide. Each
+secret is optional: without it the corresponding step is skipped and the build is unsigned (fine
+for test runs, not for a release).
 
 | Secret / variable | Used for | How to get it |
 |---|---|---|

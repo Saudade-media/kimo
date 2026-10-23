@@ -297,6 +297,11 @@ export interface RelayTestModel {
   getState(): RelayTestState
   /** Runs the handshake (5 s at most). Start sharing needs `ok`. */
   test(url: string): Promise<RelayTestState>
+  /**
+   * Tests `url` again when the last result is about it (its ownership may have changed: the
+   * wizard or Start sharing claimed it); otherwise does nothing.
+   */
+  recheck(url: string): Promise<void>
   reset(): void
 }
 
@@ -474,6 +479,8 @@ function createDocumentModel(
   deps: Required<Pick<MultiplayerModelDeps, "backend">> & {
     timers: ModelTimers
     storage: ModelStorage
+    /** After Start sharing went through (it may have claimed the relay). */
+    started?(relayUrl: string | undefined): void
   },
 ): DocInternals {
   const { backend, timers, storage } = deps
@@ -794,6 +801,7 @@ function createDocumentModel(
     },
     async startSharing(options) {
       await backend.start(key, options)
+      deps.started?.(options?.relayUrl)
       await refreshLinks()
     },
     async stopSharing() {
@@ -942,7 +950,7 @@ function createRelayTestModel(
     state = next
     for (const l of [...listeners]) l()
   }
-  return {
+  const self: RelayTestModel = {
     subscribe(listener) {
       listeners.add(listener)
       return () => listeners.delete(listener)
@@ -1013,7 +1021,18 @@ function createRelayTestModel(
       run++
       set({ kind: "idle" })
     },
+    async recheck(input) {
+      let url: string
+      try {
+        url = normalizeRelayUrl(input)
+      } catch {
+        return
+      }
+      if (state.kind === "idle" || state.url !== url) return
+      await self.test(url)
+    },
   }
+  return self
 }
 
 // --- Join ----------------------------------------------------------------------------------------
@@ -1191,17 +1210,21 @@ export function createMultiplayerModel(deps: MultiplayerModelDeps): MultiplayerM
   const probe = deps.probe ?? ((relayUrl: string) => new RelayHttpClient({ relayUrl }).probe())
   const docs = new Map<string, DocInternals>()
   const settings = createSettingsModel(deps.settings, deps.platformKind)
+  const relayTest = createRelayTestModel(probe, timers, deps.ownership)
+  /** Start sharing may have claimed the relay: the check of it reads again (Settings, popover). */
+  const started = (relayUrl: string | undefined) =>
+    void relayTest.recheck(relayUrl ?? settings.getState().relayUrl ?? "").catch(() => undefined)
   return {
     document(key) {
       let d = docs.get(key)
       if (!d) {
-        d = createDocumentModel(key, { backend: deps.backend, timers, storage })
+        d = createDocumentModel(key, { backend: deps.backend, timers, storage, started })
         docs.set(key, d)
       }
       return d.model
     },
     settings,
-    relayTest: createRelayTestModel(probe, timers, deps.ownership),
+    relayTest,
     join: createJoinModel({ ...(deps.join ? { join: deps.join } : {}), probe, timers }),
     dispose() {
       for (const d of docs.values()) d.dispose()

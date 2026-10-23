@@ -598,6 +598,31 @@ describe("relay test", () => {
     })
     expect(await without.relayTest.test("https://relay.test")).toMatchObject({ owner: null })
   })
+
+  test("Start sharing reads the relay's ownership again (it claims an unclaimed relay)", async () => {
+    let info: RelayInfo = { ...relayInfo, owner: "unclaimed" }
+    let probes = 0
+    const model = createMultiplayerModel({
+      backend: fakeBackend().backend,
+      probe: async () => {
+        probes++
+        return info
+      },
+      ownership: async () => "yours",
+    })
+    expect(await model.relayTest.test("https://relay.test")).toMatchObject({ owner: "unclaimed" })
+    // The share service claims it while starting.
+    info = relayInfo
+    await model.document("/work/site.kimo").startSharing({ relayUrl: "https://relay.test" })
+    for (let i = 0; i < 50 && probes < 2; i++) await new Promise((r) => setTimeout(r, 5))
+    await new Promise((r) => setTimeout(r, 5))
+    expect(model.relayTest.getState()).toMatchObject({ kind: "ok", owner: "yours" })
+    // A check about another relay is left alone.
+    await model.relayTest.recheck("https://other.test")
+    expect(probes).toBe(2)
+    await model.relayTest.recheck("wss://relay.test/")
+    expect(probes).toBe(3)
+  })
 })
 
 // --- Join ----------------------------------------------------------------------------------------

@@ -19,7 +19,7 @@
  */
 import type { KimoPlatform } from "@kimo/platform"
 import { Button, Input, Select, SettingRow, Toggle } from "@kimo/ui"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { PaneTitle } from "../../settings/panes"
 import { emptySnapshot, type ShareBackend } from "../backend"
@@ -101,6 +101,8 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
   const [urlError, setUrlError] = useState<string | null>(null)
   const relaySetup = useRelaySetupServices(platform)
   const [wizard, setWizard] = useState(false)
+  /** The relay URL the open wizard saved, if any. */
+  const wizardSaved = useRef<string | null>(null)
   const [addThisDevice, setAddThisDevice] = useState(false)
   const ownership = relaySetup?.ownership ?? ownershipFor(platform)
   const [devices, setDevices] = useState<RelayDevice[] | null>(null)
@@ -168,8 +170,19 @@ function Pane({ platform, model }: { platform: KimoPlatform; model: MultiplayerM
       services={relaySetup}
       from="settings"
       displayName={settings.displayName}
-      saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
-      onClose={() => setWizard(false)}
+      saveRelayUrl={async (u) => {
+        const saved = await model.settings.setRelayUrl(u)
+        wizardSaved.current = saved ?? u
+        return saved
+      }}
+      onClose={() => {
+        setWizard(false)
+        // The wizard tested and may have claimed the relay it saved: read its ownership again, so
+        // Yours and Devices show without another Test (Kimo Cloud's relay shows its account).
+        const saved = wizardSaved.current
+        wizardSaved.current = null
+        if (saved && relaySetup.store.getState().path !== "cloud") void model.relayTest.test(saved)
+      }}
     />
   )
   const rows = <PersonalRows model={model} name={name} setName={setName} />

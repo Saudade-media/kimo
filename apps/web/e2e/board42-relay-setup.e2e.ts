@@ -996,6 +996,54 @@ async function fromSettings(ctx: E2EContext, theme: Theme) {
   }
 }
 
+// --- Settings after the wizard claimed the relay: Yours and Devices at once ----------------------------
+
+async function settingsAfterWizard(ctx: E2EContext, theme: Theme) {
+  const { page } = ctx
+  const relay = await startRelay()
+  try {
+    await open(ctx, "settings", theme)
+    // The saved relay is nobody's yet: the pane says Not claimed yet.
+    await page.evaluate(async (url) => {
+      const w = window as unknown as {
+        __board42: {
+          model: {
+            settings: { setRelayUrl(u: string): Promise<unknown> }
+            relayTest: { test(u: string): Promise<unknown> }
+          }
+        }
+      }
+      await w.__board42.model.settings.setRelayUrl(url)
+      await w.__board42.model.relayTest.test(url)
+    }, relay.url)
+    await page.locator('.mp-result-group[data-owner="unclaimed"]').waitFor({ timeout: 8000 })
+    // Set up a relay › I already have a relay › Test claims it › Save and use › Close.
+    await page.click(".mp-setup-relay-settings")
+    await page.click('.rw-option[data-value="existing"]')
+    await page.click('[data-action="continue"]')
+    const urlInput = page.locator(".rw-body .rw-field input").first()
+    await urlInput.fill(relay.url)
+    await page.click('[data-action="test-relay"]')
+    await page.locator('.rw-target [data-tone="success"]').waitFor({ timeout: 8000 })
+    await page.click('[data-action="save"]')
+    await page.locator('.rw-shell[data-step="saved"]').waitFor()
+    await page.click('.rw-shell [data-action="close"]')
+    await page.locator(".rw-shell").waitFor({ state: "detached" })
+    // No Test click: the pane reads Yours and lists this device.
+    await page.locator(".mp-devices .mp-device").first().waitFor({ timeout: 8000 })
+    expect(
+      (await page.locator(".mp-result [data-tone]").innerText()) === "Yours",
+      "the pane says Yours after the wizard",
+    )
+    expect(
+      (await page.locator('.mp-result-group[data-owner="unclaimed"]').count()) === 0,
+      "Not claimed yet is gone",
+    )
+  } finally {
+    await relay.stop()
+  }
+}
+
 // --- Section 5 H to N: the pairing link landing ------------------------------------------------------
 
 async function pairLanding(ctx: E2EContext, theme: Theme) {
@@ -1244,6 +1292,10 @@ export const scenarios: Scenario[] = [
     },
   },
   both("board42 relay setup: Settings › Multiplayer ownership and devices", fromSettings),
+  both(
+    "board42 relay setup: Settings shows Yours and Devices once the wizard claimed the relay",
+    settingsAfterWizard,
+  ),
   both("board41 pairing link landing: add this device, used, not valid", pairLanding),
   both("board42 relay setup: This computer on desktop with a quick tunnel", desktopLocal),
 ]

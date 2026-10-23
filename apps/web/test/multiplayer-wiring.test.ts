@@ -211,6 +211,19 @@ describe("claims in presence", () => {
         (s) => s.owner === true && s.cursor?.x === 5 && (s.claims?.length ?? 0) > 0,
       ),
     )
+    // Leaving a live text edit clears the caret for everyone else: the next publish has no
+    // `text`, and the field must not linger from the earlier state.
+    const caret = { node: "Rect000001", anchor: "a", focus: "b" }
+    guest.share.setLocalPresence({ selection: ["Rect000001"], text: caret })
+    /** The guest's presence as the owner sees it. */
+    const guestSeen = () =>
+      [...(owner.share.session()?.provider.awareness.getStates().values() ?? [])].find(
+        (s) => s.owner !== true,
+      )
+    await until(() => guestSeen()?.text?.node === "Rect000001")
+    guest.share.setLocalPresence({ selection: ["Rect000002"] })
+    await until(() => guestSeen()?.selection?.[0] === "Rect000002")
+    expect(guestSeen()?.text).toBeUndefined()
     await guest.share.leave()
     await owner.share.stopSharing()
   })

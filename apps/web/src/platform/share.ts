@@ -264,7 +264,8 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
       user,
       ...(owners.has(session.room) ? { owner: true } : {}),
     } as Omit<PresenceState, "origin">
-    for (const key of ["cursor", "selection", "page", "viewport"] as const)
+    // A field this publish leaves out is gone (the pointer left, the text edit ended).
+    for (const key of ["cursor", "selection", "page", "viewport", "text"] as const)
       if (!(key in entry.fields)) delete next[key]
     session.setPresence(next)
   }

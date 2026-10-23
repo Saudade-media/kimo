@@ -12,8 +12,11 @@ releases; see [Spec freeze](#2-spec-freeze-10-only) for the one time it does.
 
 ### Signing and notarization secrets
 
-Add these under *Settings → Secrets and variables → Actions*. Each is optional: without it the
-corresponding step is skipped and the build is unsigned (fine for test runs, not for a release).
+Add these as secrets of the `release` environment (*Settings → Environments → release*), whose
+deployment rule allows only `v*` tags, so branch workflows and fork PRs never see them. A tag
+ruleset on `refs/tags/v*` limits who can create release tags. Variables stay repository-wide. Each
+secret is optional: without it the corresponding step is skipped and the build is unsigned (fine
+for test runs, not for a release).
 
 | Secret / variable | Used for | How to get it |
 |---|---|---|
@@ -37,8 +40,8 @@ bunx tauri signer generate -w ~/.tauri/kimo-updater.key
   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep an offline backup: losing the key means installed
   apps can never update again (they only accept manifests signed by it).
 - Store the public key as the repository variable `TAURI_UPDATER_PUBKEY`. The release build
-  injects it over `UPDATER_PUBKEY_PLACEHOLDER` in `tauri.conf.json`; once the key is final,
-  commit it to `tauri.conf.json` as well so local release builds match.
+  injects it into the release config, and the same key is committed in `tauri.conf.json`
+  (since 1.0.0) so local release builds match.
 - The app's updater endpoint is
   `https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json`. The workflow
   uploads tauri-action's `latest.json` and, for non-prerelease tags, a copy named

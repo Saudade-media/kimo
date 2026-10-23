@@ -206,8 +206,8 @@ mod tests {
             .filter_map(|l| l.trim().strip_prefix('"')?.split('"').next())
             .collect();
         let d = defaults();
-        assert_eq!(keys.len(), 29);
-        assert_eq!(d.len(), 29);
+        assert_eq!(keys.len(), 30);
+        assert_eq!(d.len(), 30);
         for k in keys {
             assert!(d.contains_key(k), "{k}");
             assert_eq!(validate(k, &d[k]), Some(true), "{k}");

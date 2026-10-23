@@ -20,6 +20,8 @@ export * from "./bridge"
 export * from "./client"
 export * from "./document-host"
 export * from "./mcp-api"
+export * from "./multiplayer-host"
+export * from "./share-backend"
 
 /** True for the hidden document host's route. */
 export function isHostRoute(hash: string): boolean {

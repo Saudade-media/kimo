@@ -39,6 +39,11 @@ export interface SectionCursorView {
   flipY: boolean
   /** "builtin" (agent panel) or "mcp" (an external client). */
   kind: "builtin" | "mcp"
+  /**
+   * False when the agent's area claim draws its outline instead (board 41 › 7: one outline per
+   * agent). Default true.
+   */
+  outline?: boolean
 }
 
 export interface SectionFlashView {
@@ -63,7 +68,7 @@ export function cursorFlip(
 
 export function SectionOutline({ view }: { view: SectionCursorView }) {
   const b = view.section
-  if (!b) return null
+  if (!b || view.outline === false) return null
   return (
     <div
       className={`agent-section__outline agent-section--${view.persona}`}

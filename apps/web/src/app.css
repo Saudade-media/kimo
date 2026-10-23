@@ -1184,3 +1184,19 @@ a.home-nav--active:hover {
   color: var(--kimo-danger);
   font-size: var(--kimo-text-sm);
 }
+
+/* View only (board 41 section 9, PdEZA): Floating Toolbar (X2wngo) keeps Move live and puts the
+   other tools, the divider and Ask Kimo at opacity 0.35; the Design tab sections sit at 0.5 and
+   take no input (the inert wrapper). */
+.floating-toolbar--view-only > :not(:first-child) {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.design-tab__sections {
+  display: contents;
+}
+
+.editor--view-only .design-tab__sections .kimo-prop-section {
+  opacity: 0.5;
+}

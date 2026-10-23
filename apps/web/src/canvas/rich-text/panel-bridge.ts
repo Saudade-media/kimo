@@ -153,7 +153,8 @@ export function translateOps(
         // A paint a span can't hold: the node's fill, and no span keeps its own color.
         session.applyRanges([{ ranges: [[0, session.length]], patch: { fill: c.wholeFill.value } }])
       }
-      const style = paragraphStyle(nodeId, node, c.paragraph)
+      // A live edit wrote the range change already (it may move attributes onto the node).
+      const style = paragraphStyle(nodeId, getNode(nodeId) ?? node, c.paragraph)
       if (style) out.push(style)
       out.push(...c.other)
       continue

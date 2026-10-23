@@ -6,13 +6,14 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | Code | Cause | Fix |
 |---|---|---|
 | `DOCUMENT_NOT_OPEN` | Unknown or stale `docId` (the file was reloaded or closed) | Use `detail.currentDocId` if present, else `kimo_get_state` / `kimo_open` |
-| `DOCUMENT_LOCKED` | Another process holds the file's write lease (`detail.holder`) | Use the holder (e.g. connect through the Kimo app), or open with `readOnly: true` |
+| `DOCUMENT_LOCKED` | Another process holds the file's write lease (`detail.holder`) | Connect through the holder (the Kimo app), or open with `readOnly: true` |
 | `LOAD_FAILED` | The file is not valid `.kimo` (left untouched) | Don't retry. Tell the user |
 | `READ_ONLY` | Read-only open, newer format, library, or locked | Open writable, or edit the library file itself |
-| `REVISION_CONFLICT` | `baseRevision` is behind (`detail.current`, `detail.changed`) | Re-query the changed nodes, rebuild the ops, retry with the new revision |
+| `REVISION_CONFLICT` | `baseRevision` is behind (`detail.changed`), or a person edited your area (`human-edit`) | Re-query the changed nodes, retry. Keep their edits |
+| `AREA_BUSY` | Another agent works there (`detail.holderLabel`) | Work elsewhere, or wait |
 | `NODE_EXISTS` | An insert reused an existing id | Use `key`; Kimo mints ids |
 | `NODE_NOT_FOUND` | An id or `@key` does not exist (`nodeId`, `path` = op index) | Check the id. A `@key` only works within the call that created it |
-| `INVALID_PROPERTY` | A field is unknown for the node type or has a bad value | Compare with `schema` / `kimo://schema/1.0` |
+| `INVALID_PROPERTY` | Unknown field for the node type, or a bad value | Compare with `schema` / `kimo://schema/1.0` |
 | `INVALID_INPUT` | The tool input failed its schema (`path` points at it) | Fix the named field. Check spelling and types |
 | `SCHEMA_VIOLATION` | The resulting document would be invalid (`detail` has the validator issue) | Apply `suggestion` (a one-line fix for unknown fields such as `unset`, `padding`, `fontSize`), else read the issue code (`VARIABLE_MISSING`, `INSTANCE_VISUAL_FIELD`, …) and change the op |
 | `INSTANCE_STRUCTURE` | Tried to add/delete/move children inside an instance | Use `set_override` (`visible:false`, `slot`, `replace`), or `detach` |
@@ -22,13 +23,13 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | `PERMISSION_DENIED` | Policy level, allow-list, grant, or the user said no / didn't answer | Don't loop. Ask the user (Kimo › Settings › Agents), or take a non-destructive path |
 | `ASSET_NOT_FOUND` | Image/font/file path missing | `kimo_assets {action:"import"}` first |
 | `FILE_EXISTS` | `kimo_create` / `kimo_export` target exists | Choose another path, or `overwrite:true` for exports |
-| `FILE_NOT_FOUND` | Path does not exist | Check the absolute path |
+| `FILE_NOT_FOUND` | No such path | Check the absolute path |
 | `TIMEOUT` | Too slow, or the app restarted mid-call | Retryable: re-read, retry once |
 | `RATE_LIMITED` | Too many calls too fast | Retryable after a short wait |
 | `APP_NOT_RUNNING` | The relay cannot reach the Kimo app | Retryable: ask the user to start Kimo, or use `kimo mcp` (headless) |
 | `PROTOCOL_MISMATCH` | Relay and app versions differ | Update Kimo or the CLI |
-| `UNSUPPORTED` | Not available in this host (raster render without CanvasKit, headless SVG import, asset generation) | Use the alternative in `suggestion` |
-| `INTERNAL` | Bug | Report it with the input. Re-read state before continuing |
+| `UNSUPPORTED` | Not available in this host (raster render without CanvasKit, headless SVG import) | Use the alternative in `suggestion` |
+| `INTERNAL` | Bug | Report it with the input. Re-read state first |
 
 ## Common validator issues inside SCHEMA_VIOLATION
 

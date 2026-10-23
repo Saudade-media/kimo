@@ -50,6 +50,7 @@ export const ISSUE_CODES = {
   LIBRARY_NOT_LOADED: "References into a library were not checked because it was not supplied.",
   ASSET_MISSING: "An asset reference is not in the asset manifest / asset folder.",
   ASSET_UNUSED: "An asset manifest entry is not referenced.",
+  ASSET_HASH_MISMATCH: "An asset key's 16-hex hash is not the prefix of its entry's `sha256`.",
   MESH_SIZE: "A mesh paint's `colors` / `points` length is not `cols * rows`.",
   // Merge conflicts (feature "merge/conflicts", spec §21)
   MERGE_WITHOUT_CONFLICTS: "`merge` labels are present but there is no `conflicts` table.",
@@ -112,6 +113,7 @@ export const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
  */
 export const DOCUMENT_LEVEL_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "ASSET_UNUSED",
+  "ASSET_HASH_MISMATCH",
   "VARIABLE_UNUSED",
   "MERGE_WITHOUT_CONFLICTS",
   "CONFLICT_PATH_INVALID",

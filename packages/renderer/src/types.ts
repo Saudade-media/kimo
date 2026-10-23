@@ -1039,6 +1039,33 @@ export class RendererError extends Error {
   }
 }
 
+/** One character of a laid-out text: its advance and the box of its line (world units). */
+export interface TextCharBox {
+  /** Left and right edge of the character's advance. */
+  x0: number
+  x1: number
+  /** Top and height of the line box the character sits on. */
+  top: number
+  height: number
+  /** Font size of the character's run. */
+  fontSize: number
+  /** Line number (0: the first line). */
+  line: number
+}
+
+/** A text node's laid-out characters (see {@link Renderer.textGeometry}). */
+export interface TextGeometry {
+  /** The text the offsets index (UTF-16). */
+  readonly text: string
+  /** Character `i`, or null when it is not laid out (a newline, an index past the end). */
+  char(i: number): TextCharBox | null
+  /**
+   * The start of line `line` (an empty line after a newline, or the first line of an empty
+   * text), with the alignment's x; null past the last line.
+   */
+  lineStart(line: number): TextCharBox | null
+}
+
 /**
  * The renderer. Lifecycle: `init` → (`attach`)? → `setDocument` → `setLayout` → frames →
  * `dispose`. All `set*` calls are cheap and only mark state; drawing happens in `render()`
@@ -1106,6 +1133,12 @@ export interface Renderer {
 
   /** Paragraph-backed measurer for the layout engine (same engine draws the text). */
   textMeasurer(): TextMeasurer
+  /**
+   * Live text: where a text node's characters are laid out on the canvas, in world units (remote
+   * carets and ranges of people editing a layer you are not). Null when the node is not a laid-out
+   * text layer. Optional for fakes.
+   */
+  textGeometry?(nodeId: string): TextGeometry | null
   readonly fonts: FontProvider
   /** Icon glyph source (M2; optional so M1 fakes keep compiling). */
   readonly icons?: IconProvider

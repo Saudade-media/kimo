@@ -343,6 +343,8 @@ export class AgentCanvasModel {
       const g = this.glides.get(c.origin)
       const section = this.sections.get(c.origin)
       if (!g || !section) continue
+      // Board 41 › 7: a paused agent hides its cursor (its claim outline turns warning).
+      if (p?.hiddenOrigins?.has(c.origin)) continue
       const stack = perSection.get(section) ?? 0
       perSection.set(section, stack + 1)
       const info = p?.agent(c.origin)
@@ -359,6 +361,8 @@ export class AgentCanvasModel {
         tip,
         stack,
         ...cursorFlip(tip, size),
+        // Board 41 › 7: the claim outline replaces the section outline.
+        ...(p?.claimedOrigins?.has(c.origin) ? { outline: false } : {}),
       })
     }
 

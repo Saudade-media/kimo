@@ -1,0 +1,84 @@
+/* Board 41 › 7 C AreaBusyCard (WfdMv): bg-subtle, radius-lg, 1 px border, column gap 8, [10, 12]. */
+.area-busy-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-subtle);
+}
+/* Head (rpvhu): row, gap 8, center, fill. */
+.area-busy-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+/* Title (A5H6S): sans text-sm 600 text-primary. */
+.area-busy-card__title {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 600;
+  line-height: 15px;
+  color: var(--kimo-text-primary);
+}
+/* Desc (jJA1L): sans text-xs, line height 1.45, text-secondary, fill. */
+.area-busy-card__desc {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--kimo-text-secondary);
+}
+/* Actions (k8Iev): row, gap 6, center, fill. */
+.area-busy-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+/* fgTR5 / hDMH5: Button/Secondary and Button/Ghost, height 26, padding [0, 10], label text-base
+ * (no label override on the instances; CompactButton defaults to text-sm). */
+.kimo-button.kimo-compact-button.area-busy-card__button {
+  font-size: var(--kimo-text-base);
+}
+.kimo-button.kimo-compact-button.area-busy-card__button .kimo-button__label {
+  line-height: 16px;
+}
+.area-busy-card__spacer {
+  flex: 1 1 0;
+  height: 1px;
+}
+/* Code (FTM2g): mono text-xs text-tertiary. */
+.area-busy-card__code {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: 13px;
+  color: var(--kimo-text-tertiary);
+}
+
+/* Resolved line (veTuB / n1VCvQ): row, gap 8, center, fill › icon 14 · label text-sm 500. */
+.area-busy-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.area-busy-line__icon {
+  display: inline-flex;
+  color: var(--kimo-text-secondary);
+}
+.area-busy-line__icon--success {
+  color: var(--kimo-success);
+}
+.area-busy-line__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 500;
+  line-height: 15px;
+  color: var(--kimo-text-primary);
+}

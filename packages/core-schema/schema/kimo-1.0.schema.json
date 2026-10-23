@@ -121,6 +121,11 @@
         "name": {
           "type": "string",
           "description": "Original file name (informative)."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Full lowercase hex SHA-256 of the file; written by writers that share or sync assets."
         }
       },
       "additionalProperties": false

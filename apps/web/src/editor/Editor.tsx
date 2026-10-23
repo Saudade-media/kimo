@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { CleanUpAssetsHost, indexedDbAssetFolder, platformAssetFolder } from "../assets-gc"
 import { CanvasHost } from "../canvas/CanvasHost"
 import {
+  type AgentCanvasProps,
   CANVAS_TOOLS,
   type CanvasHandle,
   type CanvasToolId,
@@ -51,6 +52,7 @@ import {
   MissingFontsHost,
 } from "../fonts"
 import { storeFontAsset, withFontManifest } from "../fonts/store-font-asset"
+import { joinedToast } from "../join/copy"
 import * as assetsModule from "../lib/assets"
 import { contentHash, createAssetStore, createFolderAssetStore, manifestEntry } from "../lib/assets"
 import * as filesModule from "../lib/files"
@@ -60,6 +62,12 @@ import { createBus, isTyping } from "../lib/hooks"
 import { Icon } from "../lib/icons"
 import { runTextEdit } from "../lib/native-menu"
 import { cssToken, useTheme } from "../lib/theme"
+import { roomKeyOf } from "../multiplayer/backend"
+import { useMultiplayer } from "../multiplayer/hooks"
+import { libraryKeyOf } from "../multiplayer/library"
+import type { Capabilities } from "../multiplayer/model"
+import type { SharedSession } from "../multiplayer/share"
+import { useEditorMultiplayer } from "../multiplayer-canvas/MultiplayerCanvas"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { exitSelection, PreviewOverlay, pickPreviewFrame, usePreviewTarget } from "../preview"
 import { diskPath, homeFolderPath, lastHomePath, navigate } from "../router"
@@ -93,9 +101,24 @@ import { VariablesDialog } from "./m3/VariablesDialog"
 import { PanelContext } from "./panel-context"
 import { IconPickerPopover } from "./popovers/IconPicker"
 import { RightPanel } from "./RightPanel"
-import { type FileSession, useDiskSession, useFileSession, useSyncStatus } from "./session"
+import {
+  createRoomSession,
+  type FileSession,
+  roomFileName,
+  useDiskSession,
+  useFileSession,
+  useSyncStatus,
+} from "./session"
 import { useSvgImport } from "./svg-drop"
 import { Topbar } from "./Topbar"
+import { ViewOnlyBanner } from "./ViewOnlyBanner"
+import {
+  fileMenuFor,
+  guardViewerTool,
+  ViewOnlyContext,
+  viewerKeyBlocked,
+  viewerToolAllowed,
+} from "./view-only"
 
 /** Overlay colors from the live `--kimo-*` tokens (board 03: handle fill is a #FFFFFF literal). */
 function useOverlayTheme(): OverlayTheme {
@@ -177,6 +200,38 @@ export function Editor({ fileId }: { fileId: string }) {
   )
 }
 
+const FILE_CAPABILITIES: Capabilities = {
+  canEdit: true,
+  canExport: true,
+  canDuplicate: true,
+  canShare: true,
+  viewOnly: false,
+}
+
+/** What this window may do in the room `key` (a file that was never shared: everything). */
+function useEditorCapabilities(key: string | null): Capabilities {
+  const model = useMultiplayer()
+  const doc = model && key ? model.document(key) : null
+  const subscribe = useCallback((l: () => void) => (doc ? doc.subscribe(l) : () => {}), [doc])
+  const get = useCallback(() => (doc ? doc.getState().capabilities : FILE_CAPABILITIES), [doc])
+  return useSyncExternalStore(subscribe, get, get)
+}
+
+/** Sessions whose "You joined" toast was shown (StrictMode runs effects twice). */
+const joinedToasts = new WeakSet<SharedSession>()
+
+/**
+ * A room joined from a link (board 41 sections 5 and 9): the editor over the room's guest
+ * document. A Toast says the role once; a View link adds the banner and the read-only chrome.
+ */
+export function RoomEditor({ shared }: { shared: SharedSession }) {
+  const session = useMemo(
+    () => createRoomSession(shared, roomFileName(shared.store) ?? "Shared file"),
+    [shared],
+  )
+  return <EditorShell key={session.id} session={session} joinedRole={shared.role} />
+}
+
 /** A `.kimo` on disk (`#/disk/<ref>`), opened through the window's session manager. */
 export function DiskEditor({ fileRef, node }: { fileRef: string; node?: string | null }) {
   const { manager } = useRuntime()
@@ -211,15 +266,22 @@ export function DiskEditor({ fileRef, node }: { fileRef: string; node?: string |
 function EditorShell({
   session,
   focusNode = null,
+  joinedRole = null,
 }: {
   session: FileSession
   focusNode?: string | null
+  /** A joined room: the role the "You joined" Toast names. */
+  joinedRole?: "edit" | "view" | null
 }) {
-  const { platform, manager, hostClient = null } = useRuntime()
+  const { platform, manager, hostClient = null, libraryShare = null } = useRuntime()
   const openSettings = useOpenSettings()
   const windowChrome = useWindowChrome(platform)
   /** The document session of a file on disk (null: browser library). */
   const doc = session.document
+  /** A room joined from a link (null: a file of this device). */
+  const room = session.shared ?? null
+  const caps = useEditorCapabilities(room ? roomKeyOf(room.room) : null)
+  const viewOnly = caps.viewOnly
   const [name, setName] = useState(session.meta.name)
   // Layout passes go to a bus, not React state: only panels that show a changed box re-render.
   const layout = useMemo(() => createBus<LayoutResult | null>(null), [])
@@ -235,10 +297,24 @@ function EditorShell({
   // Image fills and the Image tool store content-addressed assets per file: IndexedDB for the
   // browser library, `assets/` beside the file on disk.
   const assets = useMemo(
-    () => (doc ? createFolderAssetStore(platform, doc.ref) : createAssetStore(session.id)),
-    [doc, platform, session.id],
+    () =>
+      room
+        ? room.assets
+        : doc
+          ? createFolderAssetStore(platform, doc.ref)
+          : createAssetStore(session.id),
+    [doc, room, platform, session.id],
   )
-  useEffect(() => () => assets.dispose(), [assets])
+  // A room's asset store belongs to the room session.
+  useEffect(() => () => (room ? undefined : assets.dispose()), [assets, room])
+  /** The share key of this document: a joined room, a file on disk, a browser library file. */
+  const shareKey = room ? roomKeyOf(room.room) : doc ? doc.ref : libraryKeyOf(session.id)
+  // Board 41: a browser library file shares like a file on disk; one this device shared
+  // reconnects to its room while the editor shows it.
+  useEffect(() => {
+    if (room || doc || !libraryShare) return
+    return libraryShare.open({ fileId: session.id, store: session.store, assets })
+  }, [room, doc, libraryShare, session, assets])
   // Fonts (board 19): one font system per editor window, Document → Local → Pack → Cache →
   // Google. Board 28: a face fetched from Google is stored once in the file's assets/ (never a
   // document edit); writes list it in the `assets` manifest (`withFontManifest`).
@@ -481,9 +557,10 @@ function EditorShell({
   const rename = useCallback(
     (next: string) => {
       setName(next)
-      void patchFile(session.id, { name: next })
+      // A joined room has no file of this device to rename.
+      if (!room) void patchFile(session.id, { name: next })
     },
-    [session.id],
+    [session.id, room],
   )
   const download = useCallback(
     () =>
@@ -551,6 +628,8 @@ function EditorShell({
   const activate = useCallback(
     (id: CanvasToolId) => {
       const spec = CANVAS_TOOLS.find((t) => t.id === id)
+      // View only: Select is the one tool.
+      if (viewOnly && !(spec?.tool && viewerToolAllowed(spec.tool))) return
       // M3: the Component button is a one-shot action (⌥⌘K), not a mode.
       if (spec?.action === "createComponent") {
         createComponent(m3, session.ui.getState().selection, canvas.current?.layout() ?? null)
@@ -560,8 +639,55 @@ function EditorShell({
       if (canvas.current) canvas.current.activateTool(id)
       else if (spec.tool) session.ui.getState().setTool(spec.tool)
     },
-    [session.ui, m3],
+    [session.ui, m3, viewOnly],
   )
+
+  // View only (board 41 section 9): the tool stays Select, and the keys that write, duplicate or
+  // save a copy never reach the editor or the canvas (capture phase, before every other handler).
+  useEffect(() => {
+    if (!viewOnly) return
+    const offTool = guardViewerTool(session.ui)
+    const onKey = (e: KeyboardEvent) => {
+      if (isTyping(e.target) || !viewerKeyBlocked(e)) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+    }
+    window.addEventListener("keydown", onKey, true)
+    return () => {
+      offTool()
+      window.removeEventListener("keydown", onKey, true)
+    }
+  }, [viewOnly, session.ui])
+
+  // Joined: the editor opens on the owner's view when they published one (board 41 B); else the
+  // page framed as any file opens. Runs after the framing (same frame, registered later).
+  useEffect(() => {
+    if (!room) return
+    let raf = 0
+    let tries = 0
+    const go = () => {
+      if (!canvas.current?.layout()) {
+        if (++tries < 600) raf = requestAnimationFrame(go)
+        return
+      }
+      const owner = [...(room.presence?.().values() ?? [])].find((p) => p.owner && p.viewport)
+      const v = owner?.viewport
+      if (v) session.ui.getState().setViewport({ x: v.x, y: v.y, zoom: v.zoom })
+    }
+    raf = requestAnimationFrame(go)
+    return () => cancelAnimationFrame(raf)
+  }, [room, session.ui])
+
+  // Joined: a Toast names the role once (board 41 B).
+  useEffect(() => {
+    if (!room || joinedRole === null || joinedToasts.has(room)) return
+    joinedToasts.add(room)
+    m3.toast(
+      joinedRole === "edit"
+        ? { tone: "success", icon: "users", text: joinedToast("edit", name) }
+        : { tone: "component", icon: "eye", text: joinedToast("view", name) },
+    )
+  }, [room, joinedRole, m3, name])
 
   // ⌘Z / ⇧⌘Z and Edit › Undo / Redo (E5): a canvas gesture owns the stack until it ends (its
   // steps collapse into one entry); the pen's points are not in the document yet (⌘Z removes the
@@ -746,6 +872,28 @@ function EditorShell({
   const openAgent = useMemo(() => createBus(0), [])
   const openAgentTab = useCallback(() => openAgent.set(openAgent.get() + 1), [openAgent])
   askRef.current = openAgentTab
+  // Board 41: presence, agent claims and asset sync on the canvas; name-only fonts banner.
+  const agentPersona = useRef<AgentCanvasProps | undefined>(undefined)
+  const personaOf = useCallback(
+    (origin: string) => agentPersona.current?.agent(origin)?.persona,
+    [],
+  )
+  const [fontsRequest, setFontsRequest] = useState(0)
+  const textGeometry = useCallback(
+    (node: string) => canvas.current?.renderer?.textGeometry?.(node) ?? null,
+    [],
+  )
+  const multiplayer = useEditorMultiplayer({
+    session,
+    shareKey,
+    layout,
+    assets,
+    container: canvasEl,
+    personaOf,
+    fonts,
+    onOpenFonts: () => setFontsRequest((n) => n + 1),
+    textGeometry,
+  })
   const agentPanel = useEditorAgentPanel({
     platform,
     hostClient,
@@ -758,18 +906,25 @@ function EditorShell({
       pane === "usage" ? openSettings("ai-providers", "usage") : openSettings(pane),
     openAgentTab,
     onError: (text) => m3.toast({ tone: "danger", text }),
+    areaBusy: multiplayer.areaBusy,
   })
+  agentPersona.current = agentPanel.canvas
+  const { claimedOrigins, hiddenOrigins } = multiplayer
   // Connected MCP clients count as live agents on the canvas (their placeholders read "building").
-  const agentCanvas = useMemo(
-    () =>
+  // Board 41 › 7: agents with a claim outline lose board 36's section outline; paused agents
+  // hide their cursor.
+  const agentCanvas = useMemo(() => {
+    const base =
       agentPanel.canvas && mcpOrigins.size
         ? {
             ...agentPanel.canvas,
             liveOrigins: new Set([...agentPanel.canvas.liveOrigins, ...mcpOrigins]),
           }
-        : agentPanel.canvas,
-    [agentPanel.canvas, mcpOrigins],
-  )
+        : agentPanel.canvas
+    return base && (claimedOrigins.size || hiddenOrigins.size)
+      ? { ...base, claimedOrigins, hiddenOrigins }
+      : base
+  }, [agentPanel.canvas, mcpOrigins, claimedOrigins, hiddenOrigins])
   // An agent flag never outlives its agent: release stale ones on open, on MCP disconnect, on
   // window close (after stopping the turn) and on unmount.
   useReleaseStalePlaceholders({
@@ -795,6 +950,7 @@ function EditorShell({
     controller: agentPanel.controller,
     runPrompt: agentPanel.runPrompt,
     openAgentTab,
+    viewOnly,
   })
   // Board 20 / 24 (m): window title ("<Agent> editing" while the built-in agent works); the
   // browser library's tab title.
@@ -842,332 +998,347 @@ function EditorShell({
     return off
   }, [platform])
 
-  const fileMenu: FileMenuActions = {
-    // Board 37 Xq4V0 (E3): "Back to files" leads the File menu.
-    onHome: () => goHome(),
-    onNewFile: () => void newFile(),
-    onOpenFile: () => void openFile(),
-    onOpenRecent: (ref) => navigate(diskPath(ref)),
-    onSave: save,
-    onSaveAs: () => void saveAs(),
-    // Desktop only (web cPHVm omits it); an untitled document has nothing on disk to reveal.
-    ...(doc && !doc.untitled && platform.capabilities.reveal
-      ? {
-          onReveal: () =>
-            void platform.files
-              .reveal(doc.ref)
-              .catch((e: unknown) =>
-                m3.toast({ tone: "danger", text: failureText(`reveal ${doc.fileName}`, e) }),
-              ),
-        }
-      : {}),
-    onExportDialog: openExport,
-    onCopyPng: copyPng,
-    onCleanUpAssets: () => setGcOpen(true),
-    onSettings: () => openSettings("general"),
-  }
+  const fileMenu: FileMenuActions = fileMenuFor(
+    {
+      // Board 37 Xq4V0 (E3): "Back to files" leads the File menu.
+      onHome: () => goHome(),
+      onNewFile: () => void newFile(),
+      onOpenFile: () => void openFile(),
+      onOpenRecent: (ref) => navigate(diskPath(ref)),
+      onSave: save,
+      onSaveAs: () => void saveAs(),
+      // Desktop only (web cPHVm omits it); an untitled document has nothing on disk to reveal.
+      ...(doc && !doc.untitled && platform.capabilities.reveal
+        ? {
+            onReveal: () =>
+              void platform.files
+                .reveal(doc.ref)
+                .catch((e: unknown) =>
+                  m3.toast({ tone: "danger", text: failureText(`reveal ${doc.fileName}`, e) }),
+                ),
+          }
+        : {}),
+      onExportDialog: openExport,
+      onCopyPng: copyPng,
+      // A joined room's assets belong to the room, not to this device's folders.
+      ...(room ? {} : { onCleanUpAssets: () => setGcOpen(true) }),
+      onSettings: () => openSettings("general"),
+    },
+    caps,
+  )
 
   return (
     <M3Context.Provider value={m3}>
-      <div className="editor">
-        {doc ? (
-          <DiskTopbar
-            doc={doc}
-            pageName={pageName}
-            ui={session.ui}
-            canvas={() => canvas.current}
-            {...fileMenu}
-            onHome={() => goHome()}
-            onHomeFolder={(dir) => goHome(homeFolderPath(dir))}
-            onExport={() => {
-              setExportPreset(null)
-              setExportOpen(true)
-            }}
-            onPreview={openPreview}
-            previewTarget={previewTarget}
-            presence={agents.presence}
-          />
-        ) : (
-          <Topbar
-            fileName={name}
-            pageName={pageName}
-            syncStatus={syncStatus}
-            ui={session.ui}
-            canvas={() => canvas.current}
-            onRename={rename}
-            {...fileMenu}
-            onHome={() => goHome()}
-            onExport={() => {
-              setExportPreset(null)
-              setExportOpen(true)
-            }}
-            onPreview={openPreview}
-            previewTarget={previewTarget}
-          />
-        )}
-        {doc && (
-          <BannerHost
-            session={doc}
-            // Board 25 §6 (e) "Review changes": the merge's resolved nodes.
-            onReview={(ids) => {
-              const live = ids.filter((id) => session.store.getNode(id))
-              if (!live.length) return
-              session.ui.getState().select(live)
-              canvas.current?.zoomToFit(live, 96)
-            }}
-          />
-        )}
-        {agents.banner}
-        <div className="editor__body">
-          <LeftPanel
-            session={session}
-            m3={m3}
-            conflicts={conflicts}
-            agentNodes={agentNodes}
-            promptRun={agentPanel.promptRun}
-            onRunPrompt={agentPanel.runPrompt}
-          />
-          <main
-            ref={canvasEl}
-            className="editor__canvas"
-            aria-label="Canvas"
-            onDragOver={(e) => {
-              drop.handlers.onDragOver(e)
-              // Board 27 §3: raster files (overlay + target), then SVG files.
-              if (!e.defaultPrevented) raster.handlers.onDragOver(e)
-              if (!e.defaultPrevented) svg.handlers.onDragOver(e)
-            }}
-            onDragLeave={(e) => {
-              drop.handlers.onDragLeave(e)
-              raster.handlers.onDragLeave(e)
-            }}
-            onDrop={(e) => {
-              drop.handlers.onDrop(e)
-              if (!e.defaultPrevented) raster.handlers.onDrop(e)
-              if (!e.defaultPrevented) svg.handlers.onDrop(e)
-            }}
-          >
-            {doc && <FailedLoadView session={doc} />}
-            <CanvasHost
-              ref={canvas}
+      <ViewOnlyContext.Provider value={viewOnly}>
+        <div className={viewOnly ? "editor editor--view-only" : "editor"}>
+          {doc ? (
+            <DiskTopbar
+              doc={doc}
+              pageName={pageName}
+              ui={session.ui}
+              canvas={() => canvas.current}
+              {...fileMenu}
+              onHome={() => goHome()}
+              onHomeFolder={(dir) => goHome(homeFolderPath(dir))}
+              onExport={() => {
+                setExportPreset(null)
+                setExportOpen(true)
+              }}
+              onPreview={openPreview}
+              previewTarget={previewTarget}
+              presence={agents.presence}
+            />
+          ) : (
+            <Topbar
+              fileName={name}
+              pageName={pageName}
+              syncStatus={syncStatus}
+              ui={session.ui}
+              canvas={() => canvas.current}
+              onRename={rename}
+              {...fileMenu}
+              onHome={() => goHome()}
+              onExport={() => {
+                setExportPreset(null)
+                setExportOpen(true)
+              }}
+              onPreview={openPreview}
+              previewTarget={previewTarget}
+              // Board 41 §1/§2: sync status, avatar stack, people list and Share (a library
+              // file's Share, or a joined room's).
+              shareKey={shareKey}
+            />
+          )}
+          {viewOnly && <ViewOnlyBanner shared={room} />}
+          {doc && (
+            <BannerHost
+              session={doc}
+              // Board 25 §6 (e) "Review changes": the merge's resolved nodes.
+              onReview={(ids) => {
+                const live = ids.filter((id) => session.store.getNode(id))
+                if (!live.length) return
+                session.ui.getState().select(live)
+                canvas.current?.zoomToFit(live, 96)
+              }}
+            />
+          )}
+          {agents.banner}
+          {multiplayer.banner}
+          <div className="editor__body">
+            <LeftPanel
+              session={session}
+              m3={m3}
+              conflicts={conflicts}
+              agentNodes={agentNodes}
+              promptRun={agentPanel.promptRun}
+              onRunPrompt={agentPanel.runPrompt}
+            />
+            <main
+              ref={canvasEl}
+              className="editor__canvas"
+              aria-label="Canvas"
+              onDragOver={(e) => {
+                drop.handlers.onDragOver(e)
+                // Board 27 §3: raster files (overlay + target), then SVG files.
+                if (!e.defaultPrevented) raster.handlers.onDragOver(e)
+                if (!e.defaultPrevented) svg.handlers.onDragOver(e)
+              }}
+              onDragLeave={(e) => {
+                drop.handlers.onDragLeave(e)
+                raster.handlers.onDragLeave(e)
+              }}
+              onDrop={(e) => {
+                drop.handlers.onDrop(e)
+                if (!e.defaultPrevented) raster.handlers.onDrop(e)
+                if (!e.defaultPrevented) svg.handlers.onDrop(e)
+              }}
+            >
+              {doc && <FailedLoadView session={doc} />}
+              <CanvasHost
+                ref={canvas}
+                store={session.store}
+                uiStore={session.ui}
+                createRenderer={createRenderer}
+                createLayoutEngine={createLayoutEngine}
+                assets={assets.source}
+                icons={icons}
+                onImportImage={importImage}
+                onIconPicker={setIconRequest}
+                confirmBoundText={(_id, ref) =>
+                  // Board 27 §7 (uu8Qa): editing bound text asks "Detach copy/cta?" first.
+                  m3.confirm({
+                    title: `Detach ${refName(ref)}?`,
+                    desc: "This text is bound to a string variable. Editing it here replaces the binding with the current text.",
+                    icon: "unlink",
+                    tone: "component",
+                    items: [
+                      { icon: "type", accent: true, text: "The text keeps its current value" },
+                      { icon: "variable", text: `${refName(ref)} stays in the file, unchanged` },
+                    ],
+                    confirm: "Detach & edit",
+                  })
+                }
+                duplicateMainPref={() => m3.prefs?.duplicateMain() ?? "ask"}
+                askDuplicateMain={(main, ids) =>
+                  // Board 27 §8 (d): ⌥-drag of a main asks like ⌘D.
+                  new Promise((resolve) =>
+                    m3.componentDialog.set({ kind: "duplicateMain", ids, main, resolve }),
+                  )
+                }
+                fontSources={fonts.sources}
+                offlineFonts={offlineFonts}
+                overlayTheme={overlayTheme}
+                snapping={viewPrefs.snapToObjects}
+                snapToPixelGrid={viewPrefs.snapToPixelGrid}
+                pixelGrid={viewPrefs.pixelGrid}
+                rulers={viewPrefs.rulers}
+                layerNames={viewPrefs.layerNames}
+                nudge={viewPrefs.nudge}
+                wheelZoom={viewPrefs.wheelZoom}
+                onLayout={layout.set}
+                agentCanvas={agentCanvas}
+                noteAuthor={agentPanel.noteAuthor}
+                onContextMenu={canvasMenu.onContextMenu}
+                libraries={m3.libraries()}
+                route={(ops) => (session.route ? session.route(ops) : ops)}
+                onNotice={(n) => m3.toast({ tone: n.tone, text: n.text, action: n.action })}
+                onQuickInsert={({ slot, of, name }) => {
+                  // Board 12: a main's slot takes default children; an instance's slot `at` nodes.
+                  const loc = m3.view().locate(slot)
+                  const placement =
+                    loc?.instance && loc.path !== undefined
+                      ? { parent: loc.instance, at: loc.path, name }
+                      : { parent: slot, name }
+                  m3.run({ cmd: "createInstance", of, placement }, "Insert instance")
+                }}
+                onError={(e) => {
+                  if (e.kind === "command") {
+                    if (e.refused) m3.toastRefusal(e.refused)
+                    else m3.toastRejected(e.label, e.rejected ?? [{ message: e.error.message }])
+                    return
+                  }
+                  console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
+                }}
+              />
+              {agents.canvasLayer}
+              {multiplayer.canvasLayer}
+              {agentPanel.modeSummary}
+              {conflicts && (
+                <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />
+              )}
+              <FloatingToolbar
+                ui={session.ui}
+                onActivate={activate}
+                {...(agentPanel.controller ? { onAsk: openAgentTab } : {})}
+                viewOnly={viewOnly}
+              />
+              {drop.hint}
+              {raster.overlay}
+              <ToastStack m3={m3} />
+              {doc && <ToastHost session={doc} onReview={() => review.set(review.get() + 1)} />}
+              {svg.popover}
+              {canvasMenu.element}
+              {editorCommands.element}
+              {iconRequest && (
+                <CanvasIconPicker
+                  session={session}
+                  request={iconRequest}
+                  icons={icons}
+                  onPick={(set, name, weight) => {
+                    canvas.current?.insertIcon({ set, name, ...(weight ? { weight } : {}) })
+                    setIconRequest(null)
+                  }}
+                  onClose={() => setIconRequest(null)}
+                />
+              )}
+            </main>
+            <RightPanel
+              session={session}
+              layout={layout}
+              assets={assets}
+              icons={icons}
+              m3={m3}
+              conflicts={conflicts}
+              review={review}
+              fonts={fonts}
+              activity={agents.activity}
+              openActivity={agents.openActivity}
+              agent={agentPanel.panel}
+              openAgent={openAgent}
+              initialTab={agentPanel.initialAgentTab ? "agent" : "design"}
+              onOpenExport={(p) => {
+                setExportPreset(p)
+                setExportOpen(true)
+              }}
+            />
+          </div>
+          {panels.variables && (
+            <VariablesDialog
+              session={session}
+              m3={m3}
+              onClose={() => m3.openPanel({ variables: false })}
+            />
+          )}
+          <ComponentDialogs m3={m3} />
+          {panels.libraryManager && (
+            <LibraryManager m3={m3} onClose={() => m3.openPanel({ libraryManager: false })} />
+          )}
+          {panels.libraryChanges && (
+            <LibraryChanges
+              m3={m3}
+              alias={panels.libraryChanges}
+              onClose={() => m3.openPanel({ libraryChanges: null })}
+            />
+          )}
+          <ConfirmHost m3={m3} />
+          {doc && <MigrationDialog session={doc} />}
+          {exportOpen && (
+            <ExportDialog
+              platform={platform}
+              source={exportSource}
+              fileRef={doc && !doc.untitled ? doc.ref : null}
+              preset={exportPreset}
+              onClose={() => setExportOpen(false)}
+              onSelectNode={(id) => {
+                session.ui.getState().select([id])
+                canvas.current?.zoomToFit([id], 96)
+              }}
+              onExported={(o) => {
+                const t = exportToastOf(o)
+                const reveal = t.reveal
+                m3.toast({
+                  tone: t.tone,
+                  text: t.text,
+                  duration: t.duration,
+                  ...(reveal && platform.kind === "desktop"
+                    ? { action: { label: "Reveal", run: () => void platform.files.reveal(reveal) } }
+                    : {}),
+                })
+              }}
+            />
+          )}
+          {preview && (
+            <PreviewOverlay
+              lightsInset={platform.kind === "desktop" ? windowChrome.inset : 0}
               store={session.store}
-              uiStore={session.ui}
+              libraries={() => m3.libraries()}
+              frameId={preview.frame}
               createRenderer={createRenderer}
               createLayoutEngine={createLayoutEngine}
               assets={assets.source}
               icons={icons}
-              onImportImage={importImage}
-              onIconPicker={setIconRequest}
-              confirmBoundText={(_id, ref) =>
-                // Board 27 §7 (uu8Qa): editing bound text asks "Detach copy/cta?" first.
-                m3.confirm({
-                  title: `Detach ${refName(ref)}?`,
-                  desc: "This text is bound to a string variable. Editing it here replaces the binding with the current text.",
-                  icon: "unlink",
-                  tone: "component",
-                  items: [
-                    { icon: "type", accent: true, text: "The text keeps its current value" },
-                    { icon: "variable", text: `${refName(ref)} stays in the file, unchanged` },
-                  ],
-                  confirm: "Detach & edit",
-                })
-              }
-              duplicateMainPref={() => m3.prefs?.duplicateMain() ?? "ask"}
-              askDuplicateMain={(main, ids) =>
-                // Board 27 §8 (d): ⌥-drag of a main asks like ⌘D.
-                new Promise((resolve) =>
-                  m3.componentDialog.set({ kind: "duplicateMain", ids, main, resolve }),
-                )
-              }
               fontSources={fonts.sources}
               offlineFonts={offlineFonts}
-              overlayTheme={overlayTheme}
-              snapping={viewPrefs.snapToObjects}
-              snapToPixelGrid={viewPrefs.snapToPixelGrid}
-              pixelGrid={viewPrefs.pixelGrid}
-              rulers={viewPrefs.rulers}
-              layerNames={viewPrefs.layerNames}
-              nudge={viewPrefs.nudge}
-              wheelZoom={viewPrefs.wheelZoom}
-              onLayout={layout.set}
-              agentCanvas={agentCanvas}
-              noteAuthor={agentPanel.noteAuthor}
-              onContextMenu={canvasMenu.onContextMenu}
-              libraries={m3.libraries()}
-              route={(ops) => (session.route ? session.route(ops) : ops)}
-              onNotice={(n) => m3.toast({ tone: n.tone, text: n.text, action: n.action })}
-              onQuickInsert={({ slot, of, name }) => {
-                // Board 12: a main's slot takes default children; an instance's slot `at` nodes.
-                const loc = m3.view().locate(slot)
-                const placement =
-                  loc?.instance && loc.path !== undefined
-                    ? { parent: loc.instance, at: loc.path, name }
-                    : { parent: slot, name }
-                m3.run({ cmd: "createInstance", of, placement }, "Insert instance")
-              }}
-              onError={(e) => {
-                if (e.kind === "command") {
-                  if (e.refused) m3.toastRefusal(e.refused)
-                  else m3.toastRejected(e.label, e.rejected ?? [{ message: e.error.message }])
-                  return
-                }
-                console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
+              onExit={(last, navigated) => {
+                // Rule "Exit": viewport untouched; the last frame becomes selected after ‹ ›.
+                if (navigated)
+                  session.ui.getState().select(exitSelection(preview.selection, last, true))
+                setPreview(null)
+                requestAnimationFrame(() => canvas.current?.focus())
               }}
             />
-            {agents.canvasLayer}
-            {agentPanel.modeSummary}
-            {conflicts && (
-              <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />
-            )}
-            <FloatingToolbar
-              ui={session.ui}
-              onActivate={activate}
-              {...(agentPanel.controller ? { onAsk: openAgentTab } : {})}
-            />
-            {drop.hint}
-            {raster.overlay}
-            <ToastStack m3={m3} />
-            {doc && <ToastHost session={doc} onReview={() => review.set(review.get() + 1)} />}
-            {svg.popover}
-            {canvasMenu.element}
-            {editorCommands.element}
-            {iconRequest && (
-              <CanvasIconPicker
-                session={session}
-                request={iconRequest}
-                icons={icons}
-                onPick={(set, name, weight) => {
-                  canvas.current?.insertIcon({ set, name, ...(weight ? { weight } : {}) })
-                  setIconRequest(null)
-                }}
-                onClose={() => setIconRequest(null)}
-              />
-            )}
-          </main>
-          <RightPanel
-            session={session}
-            layout={layout}
-            assets={assets}
-            icons={icons}
-            m3={m3}
-            conflicts={conflicts}
-            review={review}
-            fonts={fonts}
-            activity={agents.activity}
-            openActivity={agents.openActivity}
-            agent={agentPanel.panel}
-            openAgent={openAgent}
-            initialTab={agentPanel.initialAgentTab ? "agent" : "design"}
-            onOpenExport={(p) => {
-              setExportPreset(p)
-              setExportOpen(true)
-            }}
-          />
-        </div>
-        {panels.variables && (
-          <VariablesDialog
-            session={session}
-            m3={m3}
-            onClose={() => m3.openPanel({ variables: false })}
-          />
-        )}
-        <ComponentDialogs m3={m3} />
-        {panels.libraryManager && (
-          <LibraryManager m3={m3} onClose={() => m3.openPanel({ libraryManager: false })} />
-        )}
-        {panels.libraryChanges && (
-          <LibraryChanges
-            m3={m3}
-            alias={panels.libraryChanges}
-            onClose={() => m3.openPanel({ libraryChanges: null })}
-          />
-        )}
-        <ConfirmHost m3={m3} />
-        {doc && <MigrationDialog session={doc} />}
-        {exportOpen && (
-          <ExportDialog
+          )}
+          <MissingFontsHost
             platform={platform}
-            source={exportSource}
-            fileRef={doc && !doc.untitled ? doc.ref : null}
-            preset={exportPreset}
-            onClose={() => setExportOpen(false)}
-            onSelectNode={(id) => {
-              session.ui.getState().select([id])
-              canvas.current?.zoomToFit([id], 96)
-            }}
-            onExported={(o) => {
-              const t = exportToastOf(o)
-              const reveal = t.reveal
-              m3.toast({
-                tone: t.tone,
-                text: t.text,
-                duration: t.duration,
-                ...(reveal && platform.kind === "desktop"
-                  ? { action: { label: "Reveal", run: () => void platform.files.reveal(reveal) } }
-                  : {}),
-              })
-            }}
-          />
-        )}
-        {preview && (
-          <PreviewOverlay
-            lightsInset={platform.kind === "desktop" ? windowChrome.inset : 0}
-            store={session.store}
-            libraries={() => m3.libraries()}
-            frameId={preview.frame}
-            createRenderer={createRenderer}
-            createLayoutEngine={createLayoutEngine}
-            assets={assets.source}
-            icons={icons}
-            fontSources={fonts.sources}
-            offlineFonts={offlineFonts}
-            onExit={(last, navigated) => {
-              // Rule "Exit": viewport untouched; the last frame becomes selected after ‹ ›.
-              if (navigated)
-                session.ui.getState().select(exitSelection(preview.selection, last, true))
-              setPreview(null)
-              requestAnimationFrame(() => canvas.current?.focus())
-            }}
-          />
-        )}
-        <MissingFontsHost
-          platform={platform}
-          system={fonts}
-          fileKey={session.id}
-          fileName={doc ? doc.fileName : name}
-          doc={() => session.store.toDocument()}
-          apply={(ops, label) => session.store.apply(ops, { origin: "user", label })}
-          openFontSettings={() => openSettings("fonts")}
-          addDocumentFont={async (f) => {
-            // "Choose font file…": a document asset (spec §12) + its manifest entry.
-            const key = `${await contentHash(f.bytes)}.${f.ext}`
-            await assets.putKey(key, f.bytes, { mime: f.mime, name: f.name })
-            const manifest = (session.store.toHeader().assets ?? {}) as Record<string, unknown>
-            if (!Object.hasOwn(manifest, key))
-              session.store.apply(
-                {
-                  op: "setHeader",
-                  set: {
-                    assets: {
-                      ...manifest,
-                      [key]: { mime: f.mime, bytes: f.bytes.byteLength, name: f.name },
+            system={fonts}
+            fileKey={session.id}
+            fileName={doc ? doc.fileName : name}
+            doc={() => session.store.toDocument()}
+            apply={(ops, label) => session.store.apply(ops, { origin: "user", label })}
+            openFontSettings={() => openSettings("fonts")}
+            nameOnly={multiplayer.nameOnlyFonts}
+            openRequest={fontsRequest}
+            addDocumentFont={async (f) => {
+              // "Choose font file…": a document asset (spec §12) + its manifest entry.
+              const key = `${await contentHash(f.bytes)}.${f.ext}`
+              await assets.putKey(key, f.bytes, { mime: f.mime, name: f.name })
+              const manifest = (session.store.toHeader().assets ?? {}) as Record<string, unknown>
+              if (!Object.hasOwn(manifest, key))
+                session.store.apply(
+                  {
+                    op: "setHeader",
+                    set: {
+                      assets: {
+                        ...manifest,
+                        [key]: { mime: f.mime, bytes: f.bytes.byteLength, name: f.name },
+                      },
                     },
                   },
-                },
-                { origin: "user", label: `Add font ${f.family}` },
-              )
-          }}
-        />
-        {gcOpen && (
-          <CleanUpAssetsHost
-            folder={gcFolder}
-            fileName={doc ? doc.fileName : name}
-            doc={() => session.store.toDocument() as unknown as Record<string, unknown>}
-            apply={(ops, label) => session.store.apply(ops, { origin: "user", label })}
-            onDone={() => setGcOpen(false)}
+                  { origin: "user", label: `Add font ${f.family}` },
+                )
+            }}
           />
-        )}
-      </div>
+          {gcOpen && (
+            <CleanUpAssetsHost
+              folder={gcFolder}
+              fileName={doc ? doc.fileName : name}
+              doc={() => session.store.toDocument() as unknown as Record<string, unknown>}
+              apply={(ops, label) => session.store.apply(ops, { origin: "user", label })}
+              onDone={() => setGcOpen(false)}
+            />
+          )}
+        </div>
+      </ViewOnlyContext.Provider>
     </M3Context.Provider>
   )
 }

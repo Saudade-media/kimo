@@ -29,6 +29,15 @@ export interface RecentModel {
 export const RECENT_MODELS_MAX = 2
 
 /** Every setting with its value type. */
+/** `multiplayer.relaySetup` (read leniently by the web app's relay setup store). */
+export interface RelaySetupSetting {
+  /** `cloud`: Kimo Cloud, the hosted relay (board 43, ADR 0018). */
+  path?: "cloud" | "local" | "docker" | "fly" | "railway" | "existing" | null
+  extraOrigins?: string[]
+  local?: { port?: number; reach?: "lan" | "quick" | "named"; hostname?: string | null } | null
+  fly?: { app?: string; region?: string; byKimo?: boolean } | null
+}
+
 export interface SettingsSchema {
   /** Files & autosave › Autosave. */
   "files.autosave": boolean
@@ -54,6 +63,30 @@ export interface SettingsSchema {
    * newest first. Not a SettingRow; kept here so every window shares it.
    */
   "ai.recentModels": RecentModel[]
+  /**
+   * Multiplayer › Relay URL: the user's own `kimo-mp/1` relay (self-hosted, Docker, Fly, Railway).
+   * There is no default relay: null until the user enters one (docs/adr/0016).
+   */
+  "multiplayer.relayUrl": string | null
+  /**
+   * Multiplayer › Display name: how this person shows to others in shared files, kept on the
+   * device. Empty: they show as "Guest N" (board 41, no prompt on join).
+   */
+  "multiplayer.displayName": string
+  /** Multiplayer › Show other people's cursors on the canvas. */
+  "multiplayer.showCursors": boolean
+  /** Multiplayer › Fetch images and fonts of shared files on demand. */
+  "multiplayer.fetchAssets": boolean
+  /**
+   * Multiplayer › Set up a relay (board 42 "What Kimo stores"): where the relay runs, extra
+   * allowed origins and, for This computer, port, tunnel and hostname.
+   */
+  "multiplayer.relaySetup": RelaySetupSetting | null
+  /**
+   * Multiplayer › Kimo Cloud API origin, for development (board 43): null uses the build's
+   * `VITE_KIMO_CLOUD_API_URL` (default `https://cloud.getkimo.design`).
+   */
+  "multiplayer.cloudApiUrl": string | null
   /** Fonts & privacy › Google Fonts (off while No third-party fetch is on). */
   "fonts.google": boolean
   /** Fonts & privacy › Extra font folders (absolute paths). */
@@ -104,6 +137,12 @@ export const SETTINGS_DEFAULTS: Readonly<Settings> = Object.freeze({
   "privacy.noThirdPartyFetch": false,
   "ai.webAccess": true,
   "ai.recentModels": [],
+  "multiplayer.relayUrl": null,
+  "multiplayer.displayName": "",
+  "multiplayer.showCursors": true,
+  "multiplayer.fetchAssets": true,
+  "multiplayer.relaySetup": null,
+  "multiplayer.cloudApiUrl": null,
   "fonts.google": true,
   "fonts.extraFolders": [],
   "fonts.embedInKimoz": true,
@@ -157,6 +196,15 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => v is SettingsSchema[K] } 
         (x as RecentModel).provider !== "" &&
         (x as RecentModel).model !== "",
     ),
+  "multiplayer.relayUrl": (v): v is string | null =>
+    v === null || (typeof v === "string" && v !== "" && v.length <= 2048),
+  "multiplayer.displayName": (v): v is string => typeof v === "string" && v.length <= 80,
+  "multiplayer.showCursors": (v): v is boolean => typeof v === "boolean",
+  "multiplayer.fetchAssets": (v): v is boolean => typeof v === "boolean",
+  "multiplayer.relaySetup": (v): v is RelaySetupSetting | null =>
+    v === null || (typeof v === "object" && !Array.isArray(v) && JSON.stringify(v).length <= 8192),
+  "multiplayer.cloudApiUrl": (v): v is string | null =>
+    v === null || (typeof v === "string" && v !== "" && v.length <= 2048),
   "fonts.google": (v): v is boolean => typeof v === "boolean",
   "fonts.extraFolders": (v): v is string[] =>
     Array.isArray(v) && v.every((x) => typeof x === "string" && x !== ""),

@@ -96,6 +96,7 @@ describe("route and copy", () => {
       "Fonts & privacy",
       "Agents & MCP",
       "AI providers",
+      "Multiplayer",
       "Updates",
       "About & licenses",
     ])

@@ -46,6 +46,7 @@ export const ERROR_CODES = [
   "LOAD_FAILED",
   "READ_ONLY",
   "REVISION_CONFLICT",
+  "AREA_BUSY",
   "NODE_NOT_FOUND",
   "NODE_EXISTS",
   "INVALID_PROPERTY",
@@ -68,11 +69,15 @@ export const ERROR_CODES = [
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
-/** Codes a client may retry unchanged after a short wait (ADR 0002 host restart, lease churn). */
+/**
+ * Codes a client may retry unchanged after a short wait (ADR 0002 host restart, lease churn;
+ * AREA_BUSY once the other agent's claim is released, ADR 0016 item 16).
+ */
 export const RETRYABLE_CODES: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
   "TIMEOUT",
   "RATE_LIMITED",
   "APP_NOT_RUNNING",
+  "AREA_BUSY",
 ])
 
 export const ToolErrorSchema = Obj({
@@ -87,7 +92,7 @@ export const ToolErrorSchema = Obj({
       { kind: Str({ description: "Detail discriminator (revision, lock, plan, schema)." }) },
       {
         description:
-          "Code-specific detail: REVISION_CONFLICT {current, changed[]}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}.",
+          "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}.",
       },
     ),
   ),

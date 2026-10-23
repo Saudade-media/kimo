@@ -1,0 +1,458 @@
+/*
+ * Board 41 "Multiplayer" (desing.pen kCAYr) on the canvas: presence (section 6), agent area
+ * claims (section 7) and asset sync placeholders (section 8). Values from the nodes named in
+ * each rule. Every layer is a DOM overlay over the canvas, pointer-events none except controls.
+ */
+
+.mp-assets,
+.mp-claims,
+.mp-presence {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mp-assets {
+  z-index: 4;
+}
+.mp-claims {
+  z-index: 5;
+}
+.mp-presence {
+  z-index: 6;
+}
+
+/* --- Human cursor (F6KWF9): column, gap 2 › Pointer 18 · Pill ----------------------------- */
+.mp-cursor {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  pointer-events: none;
+}
+/* QRUbc: idle at 0.5. */
+.mp-cursor--idle {
+  opacity: 0.5;
+}
+.mp-cursor__pointer {
+  display: inline-flex;
+  color: var(--mp-color);
+}
+/* Pill (ZCOeh): presence fill, radius 999, padding [4, 10], shadow 0 4 12 $shadow. */
+.mp-cursor__pill {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--mp-color);
+  box-shadow: 0 4px 12px var(--kimo-shadow);
+  white-space: nowrap;
+}
+/* Label (gcT2k): sans text-sm 500 on-accent. */
+.mp-cursor__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 500;
+  line-height: 15px;
+  color: var(--kimo-on-accent);
+}
+
+/* --- Remote selection (p4Yz5): 1.5 px in the person's color, no handles ------------------- */
+.mp-selection {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+/* Selection Tags (OAuo4): row, gap 2, on the outline's top-left corner. */
+.mp-selection-tags {
+  position: absolute;
+  display: flex;
+  gap: 2px;
+}
+/* Selection Tag (J5RJD9): presence fill, radius [3, 3, 3, 0], padding [1, 5]. */
+.mp-selection-tag {
+  box-sizing: border-box;
+  display: flex;
+  padding: 1px 5px;
+  border-radius: 3px 3px 3px 0;
+  white-space: nowrap;
+}
+/* A lone tag positions itself; tags of a shared layer sit in the row. */
+.mp-presence > .mp-selection-tag {
+  position: absolute;
+}
+/* Label (w2MP8): sans text-xs 500 on-accent; 16 px line so the tag sits flush (18 tall). */
+.mp-selection-tag__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--kimo-on-accent);
+}
+
+/* --- Off-screen pill (h065n): gap 4, padding [3, 8, 3, 6], radius 999 --------------------- */
+.mp-offscreen {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 3px 8px 3px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mp-color);
+  color: var(--kimo-on-accent);
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+}
+.mp-offscreen__arrow {
+  display: inline-flex;
+}
+.mp-offscreen__icon {
+  display: none;
+}
+.mp-offscreen[data-arrow="arrow-up"] .mp-offscreen__icon[data-arrow="arrow-up"],
+.mp-offscreen[data-arrow="arrow-down"] .mp-offscreen__icon[data-arrow="arrow-down"],
+.mp-offscreen[data-arrow="arrow-left"] .mp-offscreen__icon[data-arrow="arrow-left"],
+.mp-offscreen[data-arrow="arrow-right"] .mp-offscreen__icon[data-arrow="arrow-right"],
+.mp-offscreen[data-arrow="arrow-up-left"] .mp-offscreen__icon[data-arrow="arrow-up-left"],
+.mp-offscreen[data-arrow="arrow-up-right"] .mp-offscreen__icon[data-arrow="arrow-up-right"],
+.mp-offscreen[data-arrow="arrow-down-left"] .mp-offscreen__icon[data-arrow="arrow-down-left"],
+.mp-offscreen[data-arrow="arrow-down-right"] .mp-offscreen__icon[data-arrow="arrow-down-right"] {
+  display: inline-flex;
+}
+/* Label (i7c8u): sans text-xs 500 on-accent. */
+.mp-offscreen__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  line-height: 13px;
+  color: var(--kimo-on-accent);
+}
+
+/* --- Following (i9PNJ frame 2 px, Z48EHk chip) ------------------------------------------- */
+.mp-follow-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* Following Chip: presence fill, radius 999, shadow 0 4 12, gap 6, padding [4, 10, 4, 8]. */
+.mp-follow-chip {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px var(--kimo-shadow);
+  color: var(--kimo-on-accent);
+  white-space: nowrap;
+}
+.mp-follow-chip > svg {
+  flex: none;
+}
+.mp-follow-chip__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  line-height: 13px;
+}
+.mp-follow-chip__key {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: 13px;
+}
+
+/* --- Agent area claims (section 7) ------------------------------------------------------- */
+.mp-claim--agent {
+  --mp-hue: var(--kimo-agent, #0093a3);
+}
+.mp-claim--iris {
+  --mp-hue: var(--kimo-agent-iris, #4f5fe8);
+}
+.mp-claim--violet {
+  --mp-hue: var(--kimo-agent-violet, #8b47de);
+}
+.mp-claim--rose {
+  --mp-hue: var(--kimo-agent-rose, #d6457f);
+}
+.mp-claim--ember {
+  --mp-hue: var(--kimo-agent-ember, #e8652a);
+}
+.mp-claim--moss {
+  --mp-hue: var(--kimo-agent-moss, #5e8a2e);
+}
+/* Paused (c9cvS): warning, never the agent hue. */
+.mp-claim--warning {
+  --mp-hue: var(--kimo-warning);
+}
+/* Claim Outline (fUxlN): stroke 1 hue, inside. */
+.mp-claim__outline {
+  position: absolute;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1px var(--mp-hue);
+  pointer-events: none;
+}
+/* Claim Tag (bVPYz): hue fill, radius [0, 0, 6, 0], gap 5, padding [3, 8, 3, 4], center. */
+.mp-claim__tag {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 4px;
+  border-radius: 0 0 6px 0;
+  background: var(--mp-hue);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Label (GKEST): sans text-xs 500 on-accent. */
+.mp-claim__tag-label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  line-height: 13px;
+  color: var(--kimo-on-accent);
+}
+/* Paused Tag (Vt30y): warning-soft fill, label warning. */
+.mp-claim__tag--paused {
+  background: var(--kimo-warning-soft);
+}
+.mp-claim__tag--paused .mp-claim__tag-label {
+  color: var(--kimo-warning);
+}
+/* Paused note (gnEkC): 136 wide, warning-soft, radius-md, 1 px border, column gap 6, [8, 10]. */
+.mp-claim__note {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-warning-soft);
+  pointer-events: auto;
+}
+/* Head (AWLOA): row, gap 5, center. */
+.mp-claim__note-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+/* Title (Bc2y7): sans text-xs 600 text-primary. */
+.mp-claim__note-title {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 600;
+  line-height: 13px;
+  color: var(--kimo-text-primary);
+}
+/* Desc (ncMl2): sans text-xs, line height 1.45, text-secondary. */
+.mp-claim__note-desc {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--kimo-text-secondary);
+}
+/* Actions (BGz1g): row, gap 10, center › Resume now (text-primary) · Stop (text-secondary). */
+.mp-claim__note-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mp-claim__note-resume,
+.mp-claim__note-stop {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 600;
+  line-height: 13px;
+  cursor: pointer;
+}
+.mp-claim__note-resume {
+  color: var(--kimo-text-primary);
+}
+.mp-claim__note-stop {
+  color: var(--kimo-text-secondary);
+}
+
+/* --- Asset placeholders (section 8) ------------------------------------------------------ */
+.mp-asset {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  pointer-events: none;
+}
+/* rUsd3: bg-subtle with 16 px bg-muted cells, the first cell (0, 0) muted. */
+.mp-asset--fetching,
+.mp-asset--unavailable,
+.mp-asset--missing {
+  background-color: var(--kimo-bg-subtle);
+  background-image: conic-gradient(
+    transparent 0 25%,
+    var(--kimo-bg-muted) 0 50%,
+    transparent 0 75%,
+    var(--kimo-bg-muted) 0
+  );
+  background-size: 32px 32px;
+}
+/* Status (p43U1): bg-overlay, pill, 1 px border, gap 5, padding [3, 8, 3, 6]; x 10, 10 above the bar. */
+.mp-asset__status {
+  position: absolute;
+  left: 10px;
+  bottom: 13px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-overlay);
+  color: var(--kimo-text-secondary);
+  white-space: nowrap;
+}
+/* DYnAH: image-off and label text-tertiary. */
+.mp-asset__status--muted {
+  color: var(--kimo-text-tertiary);
+}
+.mp-asset__status > svg {
+  flex: none;
+}
+.mp-asset__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+  line-height: 13px;
+}
+.mp-asset__label--mono {
+  font-family: var(--kimo-font-mono);
+}
+/* Progress Track (lBwFc): 3 px on the bottom edge, bg-muted; Progress Bar (aV8Nw) text-secondary. */
+.mp-asset__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  overflow: hidden;
+  background: var(--kimo-bg-muted);
+}
+/* Indeterminate (no byte progress): the board's 112 / 320 bar slides along the track. */
+.mp-asset__bar {
+  width: 35%;
+  height: 100%;
+  background: var(--kimo-text-secondary);
+  animation: mp-asset-bar 1400ms ease-in-out infinite;
+}
+@keyframes mp-asset-bar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(286%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-asset__bar {
+    animation: none;
+  }
+}
+/* PFM80: on your own image, a white bar on a #FFFFFF66 track. */
+.mp-asset--uploading .mp-asset__track {
+  background: #ffffff66;
+}
+.mp-asset--uploading .mp-asset__bar {
+  background: #ffffff;
+}
+
+/* --- Live text (section 11, ExORz; rules pCwkf) ------------------------------------------ */
+.mp-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+/* Remote Range (d7UsO): the person's color at 0.24, full line height, per line. */
+.mp-text-range {
+  position: absolute;
+  inset: 0;
+}
+.mp-text-range__row {
+  position: absolute;
+  background: var(--mp-color);
+  opacity: 0.24;
+}
+/* Remote Caret (T12pYW): 2 wide, the line box tall, layout none. Idle (tTnQN): 0.5. */
+.mp-text-caret {
+  position: absolute;
+  width: 2px;
+}
+.mp-text-caret--idle {
+  opacity: 0.5;
+}
+/* Bar (qs7mU): 2 screen px, presence color (agents: persona hue). */
+.mp-text-caret__bar {
+  position: absolute;
+  left: 0;
+  width: 2px;
+}
+/* Flag (BkOUb): presence fill, gap 3, padding [1, 5], center; agents (gTDLB) [1, 5, 1, 2]. */
+.mp-text-flag {
+  position: absolute;
+  left: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  transition: opacity 150ms ease-out;
+}
+.mp-text-flag--agent {
+  padding: 1px 5px 1px 2px;
+}
+.mp-text-flag > svg {
+  flex: none;
+}
+/* Typing shows the flag at once; 3 s later it fades over 150 ms. */
+.mp-text-flag[data-state="shown"] {
+  transition: none;
+}
+.mp-text-flag[data-state="faded"] {
+  opacity: 0;
+}
+.mp-text-flag[data-state="hidden"],
+.mp-text-flag[data-state="tooltip"] {
+  display: none;
+}
+/* Label (DqtWi): sans text-xs 500 on-accent; a 13 px line makes the flag 15 tall. */
+.mp-text-flag__label {
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: 500;
+  line-height: 13px;
+  color: var(--kimo-on-accent);
+}
+/* Below 50 % zoom: the name as a Tooltip, 6 px above the caret. */
+.mp-text-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+}

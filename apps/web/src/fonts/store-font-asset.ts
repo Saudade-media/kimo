@@ -49,7 +49,7 @@ export async function storeFontAsset(
     name: fontAssetName(face.family, face.weight, face.style, ext),
   }
   const stored = await assets
-    .putKey(key, bytes, { mime: entry.mime, name: entry.name as string })
+    .putKey(key, bytes, { mime: entry.mime, name: entry.name as string, fontSource: "google" })
     .catch(() => null)
   return stored ? { key, family: face.family, entry } : null
 }

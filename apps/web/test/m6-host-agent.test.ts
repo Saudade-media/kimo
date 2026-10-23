@@ -198,13 +198,25 @@ describe("agentCall: in-app agents through the document host", () => {
     await until(() => !session.store.hasNode(cardId))
     expect(hostStore().hasNode(cardId)).toBe(false)
 
+    // The person edited Frame00001, inside the agent's area (it holds the card's frame): its
+    // next write is refused once so it re-reads first (ADR 0016 item 16), then goes through.
+    const rename = {
+      docId,
+      ops: [{ op: "update", id: "Frame00002", set: { name: "Agent rename" } }],
+    }
+    // Board 41: the agent paused when the person edited in its area (its calls wait in the host
+    // until 10 s pass without edits there); Resume now lets it go on.
+    const status = (await service.multiplayer?.rpc["mp.status"]?.({ ref: REF }, "editor-1")) as {
+      paused: { holder: string }[]
+    }
+    expect(status.paused.map((p) => p.holder)).toEqual([origin])
+    await service.multiplayer?.rpc["mp.resumeAgent"]?.({ ref: REF, holder: origin }, "editor-1")
+    const told = (await run(host, "kimo_apply_ops", rename)).result
+    expect(!told.ok && told.errors[0]?.code).toBe("REVISION_CONFLICT")
+    expect(!told.ok && told.errors[0]?.detail).toMatchObject({ kind: "human-edit", by: "local" })
+
     // agentUndo from the Activity tab reaches agent connections too.
-    const again = (
-      await run(host, "kimo_apply_ops", {
-        docId,
-        ops: [{ op: "update", id: "Frame00002", set: { name: "Agent rename" } }],
-      })
-    ).result
+    const again = (await run(host, "kimo_apply_ops", rename)).result
     if (!again.ok) throw new Error(again.summary)
     const r = await client.agentUndo(REF, origin, again.undoToken)
     expect(r.ok).toBe(true)
@@ -292,6 +304,9 @@ describe("agentCall: in-app agents through the document host", () => {
     // Never on the board 21 prompt queue (MCP clients' approvals).
     expect(service.runtime.approvals.pending()).toEqual([])
     expect(hostStore().getNode("Frame00002")?.name).toBe("Approved")
+    // Its turn ends: its area claim on Frame00002 goes (host RPC agentTurn).
+    await host.turn?.("start", "turn-1")
+    await host.turn?.("end", "turn-1")
 
     // Stop answers deny: PERMISSION_DENIED, nothing applied.
     const stopped = agent(tools, {

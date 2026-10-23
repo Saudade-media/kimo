@@ -115,10 +115,15 @@ pub async fn kimo_fs_write_text_atomic(
     path: String,
     text: String,
     mkdirs: bool,
+    owner_only: Option<bool>,
     st: St<'_>,
 ) -> R<AtomicWriteResult> {
     let p = st.scope.check(&path)?;
-    blocking(move || fs_ops::write_atomic(&p, text.as_bytes(), mkdirs)).await
+    if owner_only == Some(true) {
+        blocking(move || fs_ops::write_atomic_owner_only(&p, text.as_bytes(), mkdirs)).await
+    } else {
+        blocking(move || fs_ops::write_atomic(&p, text.as_bytes(), mkdirs)).await
+    }
 }
 
 #[tauri::command]

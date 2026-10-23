@@ -299,6 +299,7 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
     kind: "desktop",
     os,
     appVersion: info.version,
+    kimoHome: info.kimoHome,
     arch: info.arch,
     help: {
       onMenu: (l) => helpEvents.on(l),
@@ -347,7 +348,12 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       readText: (ref) => call("kimo_fs_read_text", { path: ref }),
       readBytes: async (ref) => toBytes(await call("kimo_fs_read_bytes", { path: ref })),
       writeTextAtomic: (ref, text, o) =>
-        call("kimo_fs_write_text_atomic", { path: ref, text, mkdirs: o?.mkdirs ?? false }),
+        call("kimo_fs_write_text_atomic", {
+          path: ref,
+          text,
+          mkdirs: o?.mkdirs ?? false,
+          ...(o?.ownerOnly ? { ownerOnly: true } : {}),
+        }),
       writeBytesAtomic,
       remove: async (ref) => {
         await call("kimo_fs_remove", { path: ref })

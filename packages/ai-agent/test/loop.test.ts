@@ -86,6 +86,32 @@ describe("agent loop", () => {
     ).toBe(true)
   })
 
+  test("the tool host hears the turn start and end (area claims), also when the turn fails", async () => {
+    const phases: string[] = []
+    const ok = fakeToolHost(() => applied("x", 0))
+    ok.turn = (phase, id) => {
+      phases.push(`${phase}:${id}`)
+    }
+    await runTurn(opts({ provider: scriptedProvider(() => textTurn("hi")), tools: ok }))
+    expect(phases).toEqual(["start:t1", "end:t1"])
+    phases.length = 0
+    const failing = fakeToolHost(() => applied("x", 0))
+    failing.turn = (phase) => {
+      phases.push(phase)
+      if (phase === "start") throw new Error("host gone")
+    }
+    const rec = await runTurn(
+      opts({
+        provider: scriptedProvider(
+          () => new ProviderError("auth", "bad key", { provider: "anthropic", status: 401 }),
+        ),
+        tools: failing,
+      }),
+    )
+    expect(rec.status).toBe("error")
+    expect(phases).toEqual(["start", "end"])
+  })
+
   test("the full loop works with the real Anthropic adapter over mocked fetch", async () => {
     const { fetch } = mockFetch([
       () => streamResponse(anthropicToolStream("toolu_1", "kimo_query", { docId: "d_1" })),

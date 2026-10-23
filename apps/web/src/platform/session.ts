@@ -144,6 +144,35 @@ export interface SessionManagerOptions {
    * Ignored when `createSession` is given.
    */
   sessionFactory?: Promise<SessionManagerOptions["createSession"]>
+  /** Multiplayer hooks (docs/spec/multiplayer.md §16.3). Settable later: `manager.shared`. */
+  shared?: SharedFileHooks | null
+}
+
+/**
+ * How the share layer (`../multiplayer/room-session.ts`) joins a file session's lifecycle
+ * (docs/spec/multiplayer.md §16.3, ADR 0016). Files that were never shared behave exactly as
+ * without hooks.
+ */
+export interface SharedFileHooks {
+  /**
+   * The file was read and parsed; the session's store is still empty. Resolves true when the
+   * file is shared and the hook loaded the store itself (the room state, then only what the file
+   * changed since the owner last saved it), false to load the file as usual.
+   */
+  open(session: FileDocumentSession, doc: KimoDocument): Promise<boolean>
+  /**
+   * `doc` is about to be written to the session's file (called synchronously). The function it
+   * returns runs once the file holds it.
+   */
+  writing(session: FileDocumentSession, doc: KimoDocument): (() => void) | undefined
+  /** The session closed (its room connection, if any, ends). */
+  closed(session: FileDocumentSession): void
+  /**
+   * Save As wrote the document to `to` and the session moves there from `from`: a shared
+   * document's room follows it, so the new file reopens shared. Awaited before the session
+   * reads `to`.
+   */
+  moved?(session: FileDocumentSession, from: FileRef, to: FileRef): Promise<void>
 }
 
 const READER_FORMAT = majorMinor(FORMAT_VERSION)
@@ -485,6 +514,12 @@ export class FileDocumentSession implements DocumentSession {
       name: this.fileName,
       ...(manager.saveRetryMs !== undefined ? { retryMs: manager.saveRetryMs } : {}),
       prepareWrite: (doc) => this.prepareWrite(doc as KimoDocument) as typeof doc,
+      // Multiplayer: a shared file reconnects to its room as it opens (spec §16.3).
+      openInto: async (doc) => {
+        const shared = manager.shared
+        return shared ? shared.open(this, doc as KimoDocument) : false
+      },
+      onFileWrite: (doc) => manager.shared?.writing(this, doc as KimoDocument),
     })
     this.provider = p
     this.providerUnsubs.push(
@@ -927,7 +962,6 @@ export class FileDocumentSession implements DocumentSession {
       }
     }
     // Board 27 §8 rule gPEqc: library imports stay relative to the file's new location.
-    let out = text
     if (!untitled) {
       const imports = (this.store.toDocument().imports ?? {}) as Record<string, string>
       const rebased = rebaseRelativeRefs(imports, this._ref, target)
@@ -939,13 +973,22 @@ export class FileDocumentSession implements DocumentSession {
             label: "Update library paths",
           },
         )
-        out = serialize(this.prepareWrite(this.store.toDocument()))
       }
     }
+    // The document as it is now (edits made while the dialog was open included).
+    const written = this.prepareWrite(this.store.toDocument())
+    const out = serialize(written)
+    const oldRef = this._ref
+    const shared = this.manager.shared
+    // Multiplayer: a shared document records the store state the new file holds (taken with the
+    // document being written), so reopening it there adds nothing the room already has.
+    const committed = shared?.writing(this, written)
     await platform.files.writeTextAtomic(target, out, { mkdirs: true })
+    committed?.()
+    // ...and its room follows the session to the new file before the session reads it.
+    await shared?.moved?.(this, oldRef, target).catch(() => undefined)
     this.manager.lastFolder = dirnameOf(target)
     const old = this.provider
-    const oldRef = this._ref
     if (old?.hasRecoveryCopy) await platform.recovery.discard(old.recoveryId).catch(() => {})
     if (untitled) {
       // From now on autosave writes the file; the recovery snapshot is no longer needed.
@@ -1241,6 +1284,7 @@ export class FileDocumentSession implements DocumentSession {
     for (const u of this.unsubs.splice(0)) u()
     if (this.savingTimer !== null) clearTimeout(this.savingTimer)
     await this.teardownProvider()
+    this.manager.shared?.closed(this)
     if (this.lease) await this.platform.leases.release(this.lease).catch(() => {})
     this.lease = null
     this.phase = "closed"
@@ -1284,6 +1328,8 @@ export class FileSessionManager implements SessionManager {
   private offOpen: Unsubscribe | null = null
   /** The folder of the last Save as / open (the untitled save panel starts there). */
   lastFolder: FileRef | null = null
+  /** Multiplayer hooks (set by the share layer once it exists). */
+  shared: SharedFileHooks | null
 
   constructor(options: SessionManagerOptions) {
     this.platform = options.platform
@@ -1307,6 +1353,7 @@ export class FileSessionManager implements SessionManager {
       )
     this.hideOwn = options.hideOwnRecovery ?? true
     this.saveRetryMs = options.saveRetryMs
+    this.shared = options.shared ?? null
   }
 
   /** Flush-before-close and launch requests (call once per window). */
@@ -1314,6 +1361,8 @@ export class FileSessionManager implements SessionManager {
     this.offClose = this.platform.window.onCloseRequested(async (info) => {
       // Board 24 (i): never-saved documents ask first; Cancel keeps the window open.
       if (!(await this.confirmCloseAll())) return false
+      for (const guard of [...this.closeGuards])
+        if (!(await guard({ quitting: info?.quitting === true }))) return false
       // Quit mid-turn: agents stop and release what they flagged before the clean save.
       await this.runCloseHooks()
       const ok = (await this.flushAll()).ok
@@ -1497,6 +1546,16 @@ export class FileSessionManager implements SessionManager {
   }
 
   private readonly closeHooks = new Set<() => void | Promise<void>>()
+  private readonly closeGuards = new Set<(info: { quitting: boolean }) => Promise<boolean>>()
+
+  /**
+   * Asks before the window closes, after "Save changes?": false keeps it open (board 42: quitting
+   * Kimo stops the relay on this computer, after a confirm when people are connected).
+   */
+  addCloseGuard(guard: (info: { quitting: boolean }) => Promise<boolean>): Unsubscribe {
+    this.closeGuards.add(guard)
+    return () => this.closeGuards.delete(guard)
+  }
 
   /**
    * Runs once the window is going to close (after "Save changes?" is confirmed) and before the

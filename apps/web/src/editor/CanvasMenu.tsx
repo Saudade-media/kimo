@@ -45,6 +45,8 @@ export interface CanvasMenuDeps {
   controller: AgentPanelControllerExt | null
   runPrompt(id: string): void
   openAgentTab(): void
+  /** Board 41 section 9: a View link; the menu only offers Copy. */
+  viewOnly?: boolean
 }
 
 interface Open {
@@ -83,6 +85,7 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
       kbd: (id) => shortcutLabel(id),
       structure: structureState(session),
       variables: variableState(session, m3),
+      viewOnly: deps.current.viewOnly === true,
     })
     const host = container.current?.getBoundingClientRect()
     if (model && host)
@@ -106,6 +109,7 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
           kbd: (id) => shortcutLabel(id),
           structure: structureState(session),
           variables: variableState(session, m3),
+          viewOnly: deps.current.viewOnly === true,
         })
         if (model) setOpen({ at: { x, y }, model })
       }),

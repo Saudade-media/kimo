@@ -9,6 +9,7 @@
  * (hidden webview) and once headless (`kimo mcp`); tool handlers once, over `DocumentHost`.
  */
 import type { DocStore } from "@kimo/editor-state"
+import { claimGate, landClaims } from "./claims"
 import {
   type DocRef,
   failure,
@@ -149,6 +150,8 @@ export interface ToolContext {
   stream?: ApplyStream
   /** The caller streams tool input (built-in agent, Claude Code via the window): the batch limit is STREAM_MAX_NEW_LAYERS. */
   streamed?: boolean
+  /** The agent's current turn (claims taken during it carry it; ADR 0016 item 16). */
+  turn?: string
 }
 
 export interface HandlerOutput<T = unknown> {
@@ -316,6 +319,7 @@ export const RETRIES = new RetryStore()
 const NOT_RETRYABLE = new Set([
   "PERMISSION_DENIED",
   "OUT_OF_SCOPE",
+  "AREA_BUSY",
   "READ_ONLY",
   "DOCUMENT_NOT_OPEN",
   "TIMEOUT",
@@ -433,17 +437,25 @@ async function authorizeAndRun(
 ): Promise<HandlerOutput> {
   const targets = await options.targets(authDef, authInput, ctx)
   const auth = authorize(authDef, authInput, ctx, targets)
-  if (auth.kind === "deny") {
+  const denied = (error: ToolError): HandlerOutput => {
     ctx.recordActivity({
       time: ctx.now(),
       origin: ctx.origin,
       actor: ctx.identity.label,
       kind: "denied",
       tool: name,
-      summary: auth.error.message,
-      code: auth.error.code,
+      summary: error.message,
+      code: error.code,
     })
-    return { result: failure(auth.error) }
+    return { result: failure(error) }
+  }
+  if (auth.kind === "deny") return denied(auth.error)
+  // Agent area claims (ADR 0016 item 16): refused before anyone is asked to approve.
+  const gate = claimGate(authDef, authInput, ctx)
+  const early = gate?.check()
+  if (gate && early) {
+    gate.told(early)
+    return denied(early)
   }
   if (auth.kind === "ask") {
     const now = ctx.now()
@@ -477,10 +489,15 @@ async function authorizeAndRun(
     if (!approvedOutcome(outcome)) return { result: failure(outcomeError(outcome)) }
     if (outcome === "session") rememberAllowance(ctx.allowances, auth.reason)
   }
+  // Another agent may have claimed the area while the approval waited: check and claim at once.
+  const late = gate?.take()
+  if (late) return denied(late)
 
   const handler = handlers[def.name as ToolName]
   try {
-    return await withTimeout(handler(input, ctx), def.timeoutMs, ctx.signal)
+    const out = await withTimeout(handler(input, ctx), def.timeoutMs, ctx.signal)
+    if (gate) landClaims(authDef, authInput, ctx, out.result)
+    return out
   } catch (e) {
     if (e instanceof TimeoutError)
       return {

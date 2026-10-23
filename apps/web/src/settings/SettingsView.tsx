@@ -23,10 +23,12 @@ import {
   Ruler,
   Settings as SettingsIcon,
   Shield,
+  Users,
 } from "lucide-react"
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AiProvidersPane } from "../ai-settings/AiProvidersPane"
 import { causeOf } from "../editor/errors"
+import { MultiplayerPane } from "../multiplayer/ui/MultiplayerPane"
 import { AboutPane } from "./AboutPane"
 import { AgentsPane } from "./AgentsPane"
 import { useSetSetting, useSettings } from "./hooks"
@@ -54,6 +56,7 @@ const ICONS = {
   info: Info,
   bot: Bot,
   "key-round": KeyRound,
+  users: Users,
 } as const
 
 export interface SettingsViewProps {
@@ -218,6 +221,7 @@ export function SettingsView({
                 {...(focus === "usage" ? { section: "usage" as const } : {})}
               />
             )}
+            {pane === "multiplayer" && <MultiplayerPane platform={platform} />}
             {pane === "updates" && <UpdatesPane {...props} />}
             {pane === "about" && <AboutPane platform={platform} />}
           </SettingsBannerContext.Provider>

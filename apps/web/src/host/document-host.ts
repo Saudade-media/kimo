@@ -53,6 +53,7 @@ import {
   type FileSessionManager,
 } from "../platform/session"
 import { HOST_EVENTS, HOST_LABEL, type HostBridge } from "./bridge"
+import { createHostMultiplayer, type HostMultiplayer } from "./multiplayer-host"
 
 /** Display names of the known agent hosts (generic labels; never logos). */
 const CLIENT_LABELS: Record<string, string> = {
@@ -79,6 +80,8 @@ export interface DocumentHostServiceOptions {
   /** Input validation for in-process calls (tests pass `validateInput`). */
   validate?: (def: never, input: unknown) => never[]
   approvalTimeoutMs?: number
+  /** Multiplayer: share, reconnect shared files and serve `mp.*` (default true). */
+  multiplayer?: boolean
 }
 
 /** A relayed MCP connection (socket or HTTP session). */
@@ -111,6 +114,8 @@ export interface DocumentHostService {
   readonly relays: ReadonlyMap<string, Relay>
   /** Labels of the windows showing `ref`. */
   viewers(ref: string): string[]
+  /** Multiplayer (null when turned off). */
+  readonly multiplayer: HostMultiplayer | null
   dispose(): Promise<void>
 }
 
@@ -717,6 +722,25 @@ export async function startDocumentHostService(
     return conn
   }
 
+  // --- Multiplayer (spec §16.8) -------------------------------------------------------------------
+  const multiplayer =
+    options.multiplayer === false
+      ? null
+      : createHostMultiplayer({
+          platform,
+          bridge,
+          manager,
+          viewers: (ref) => [...(viewers.get(ref) ?? [])],
+          // Stop on a paused agent: its turn ends here (claims go) and its window stops it.
+          stopAgent(origin) {
+            for (const a of agentConns.values())
+              if (a.conn.origin === origin) {
+                a.conn.setTurn(null)
+                void bridge.emitTo(a.from, HOST_EVENTS.agentStop, { origin }).catch(() => {})
+              }
+          },
+        })
+
   // --- Streamed edits (ADR 0013 §4.7) -------------------------------------------------------------
   const feedStream = async (conn: McpConnection, args: Record<string, unknown>) => {
     const s = conn.openStream(
@@ -773,6 +797,7 @@ export async function startDocumentHostService(
         viewers.set(ref, set)
       }
       set.add(from)
+      multiplayer?.watch(ref)
       return { state: s.state() }
     },
     async release(args, from) {
@@ -787,6 +812,7 @@ export async function startDocumentHostService(
         return id !== undefined && p.docs.includes(id)
       })
       if (s && (viewers.get(ref)?.size ?? 0) === 0 && !usedByAgent) await s.close()
+      multiplayer?.watch(ref)
       return { ok: true }
     },
     async command(args) {
@@ -842,6 +868,10 @@ export async function startDocumentHostService(
      */
     async agentCall(args, from) {
       const conn = agentConnection(args.spec as AgentCallSpec, from)
+      // A person edited inside this agent's claim: its edits wait until it resumes (board 41).
+      // Reads and its own undo go on.
+      if (args.name === "kimo_apply_ops" || args.name === "kimo_script")
+        await multiplayer?.waitForAgent(conn.origin)
       const out = await conn.call(
         String(args.name),
         args.input ?? {},
@@ -859,6 +889,7 @@ export async function startDocumentHostService(
      */
     async agentStream(args, from) {
       const conn = agentConnection(args.spec as AgentCallSpec, from)
+      await multiplayer?.waitForAgent(conn.origin)
       return { progress: await feedStream(conn, args) }
     },
     async agentStreamClose(args, from) {
@@ -897,6 +928,15 @@ export async function startDocumentHostService(
       const conn = cliConnection(String(args.workspace ?? ""))
       if (conn) recordWeb(conn, String(args.ref ?? ""), args.entry)
       return { ok: !!conn }
+    },
+    /**
+     * An in-app agent's turn starts or ends (ADR 0016 item 16): claims it takes carry the turn
+     * id, and the end releases them on every document.
+     */
+    async agentTurn(args, from) {
+      const conn = agentConnection(args.spec as AgentCallSpec, from)
+      conn.setTurn(args.phase === "start" ? String(args.turnId ?? "") || null : null)
+      return { ok: true }
     },
     /** The window's answer to a forwarded approval (Stop answers deny). */
     async agentApproval(args, from) {
@@ -943,6 +983,7 @@ export async function startDocumentHostService(
       return historyResult(out.result)
     },
   }
+  if (multiplayer) Object.assign(rpc, multiplayer.rpc)
   await listen<Rpc>(HOST_EVENTS.rpc, async ({ from, id, method, args }) => {
     try {
       const h = rpc[method]
@@ -982,7 +1023,9 @@ export async function startDocumentHostService(
     manager,
     relays,
     viewers: (ref) => [...(viewers.get(ref) ?? [])],
+    multiplayer,
     async dispose() {
+      multiplayer?.dispose()
       for (const key of [...agentConns.keys()]) closeAgent(key)
       for (const r of [...relays.values()]) await r.close()
       runtime.dispose()

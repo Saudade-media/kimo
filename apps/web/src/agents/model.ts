@@ -929,7 +929,8 @@ export interface ActivityGroupView {
 
 function toneOf(e: McpActivityEntry): ActivityRowView["tone"] {
   // Board 34: an auto-approved request reads in warning, like a conflict.
-  if (e.code === "REVISION_CONFLICT" || e.outcome === "auto") return "warning"
+  if (e.code === "REVISION_CONFLICT" || e.code === "AREA_BUSY" || e.outcome === "auto")
+    return "warning"
   if (e.kind === "denied" || e.code === "PERMISSION_DENIED" || e.code === "OUT_OF_SCOPE")
     return "danger"
   if (e.kind === "error") return "danger"

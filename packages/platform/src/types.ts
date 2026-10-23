@@ -44,6 +44,11 @@ export interface KimoPlatform {
   readonly os: HostOS
   /** The app's version (`0.4.2`), shown in Settings › Updates / About. */
   readonly appVersion: string
+  /**
+   * Desktop: the Kimo home (`~/.kimo`), inside the files API's scope. Multiplayer keeps the
+   * owner's room registry under `multiplayer/` there. Undefined on other hosts.
+   */
+  readonly kimoHome?: string
   /** What this host supports; the UI hides affordances for false entries. */
   readonly capabilities: AppliedCapabilities
   readonly files: FilesApi
@@ -237,7 +242,14 @@ export interface FilesApi {
   writeTextAtomic(
     ref: FileRef,
     text: string,
-    options?: { mkdirs?: boolean },
+    options?: {
+      mkdirs?: boolean
+      /**
+       * Secrets (the multiplayer room registry): desktop writes the file 0600 and its parent
+       * directory 0700 on Unix. Elsewhere it has no effect (the browser has no file modes).
+       */
+      ownerOnly?: boolean
+    },
   ): Promise<AtomicWriteResult>
   writeBytesAtomic(
     ref: FileRef,
@@ -731,6 +743,8 @@ export type SettingsPane =
   | "agents-mcp"
   /** M6 (board 23 g6AqH): API keys, local agent CLIs, usage & limits. */
   | "ai-providers"
+  /** Board 41 section 4: relay URL and Test, your name, other cursors, fetching assets. */
+  | "multiplayer"
   | "updates"
   | "about"
 
@@ -814,6 +828,11 @@ export interface OpenRequest {
   node?: string
   /** From a deep link's `page` (board 27 §1 "Copy link to page"). */
   page?: string
+  /**
+   * A multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`, board 41 section 5): the
+   * whole link. `refs` is empty; the app opens its join route.
+   */
+  join?: string
 }
 
 export interface LaunchApi {

@@ -14,6 +14,11 @@
  * cut). Typing, line breaks and paste go through the model so the typed attributes are the
  * caret's (Figma: the character before the caret), paste is plain text, and undo is the
  * session's (a typing burst, a deletion burst, a paste, a style change per step).
+ *
+ * Live text (ADR 0016 item 17): other people's changes re-render the DOM from the session with
+ * the caret moved through them; the DOM selection is read first so a caret move not yet reported
+ * is not lost. An IME composition is never re-rendered under the person: the session holds remote
+ * changes until `compositionend`.
  */
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { matches } from "../../shortcuts/shortcuts"
@@ -113,7 +118,11 @@ export function RichTextEditor({
       if (r) session.select(r)
     }
     document.addEventListener("selectionchange", onSel)
-    return () => document.removeEventListener("selectionchange", onSel)
+    session.setSelectionReader(onSel)
+    return () => {
+      document.removeEventListener("selectionchange", onSel)
+      session.setSelectionReader(null)
+    }
   }, [session])
 
   // Clear the unfocused highlight on unmount.
@@ -245,10 +254,17 @@ export function RichTextEditor({
         }}
         onCompositionStart={() => {
           composing.current = true
+          session.compositionStart()
         }}
         onCompositionEnd={() => {
           composing.current = false
-          readBack("type")
+          const el = ref.current
+          if (!el) return
+          const runs = readRuns(el, rendered.current, session.runs[0]?.attrs ?? {})
+          const sel = readDomSelection(el) ?? session.sel
+          const clean = isCanonical(el)
+          session.compositionEnd(runs, sel, !clean)
+          if (clean) rendered.current = spansAttrs(el, rendered.current)
         }}
         onPaste={(e) => {
           // Plain text only (rich HTML from other apps is not kept).

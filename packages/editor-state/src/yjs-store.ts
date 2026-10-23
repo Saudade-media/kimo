@@ -13,7 +13,15 @@
  * - `flags`: presence of empty `variables` / `themes` objects (exact round trips);
  * - `moves`: id → {@link MoveRecord} of the node's last reparenting, for cycle repair.
  *
- * Only this file imports Yjs; consumers see plain JSON and opaque binary updates.
+ * Live text (ADR 0016 item 17): a text node's `content` is a Y.Text whose characters carry the
+ * span attributes as formatting (`style.<key>`, `href`, `fill`, each a canonical JSON string), so
+ * two people typing in one text layer merge character by character. It reads back as the same
+ * plain content as before (a string, or spans; see `live-text.ts`), and only content that is
+ * exactly canonical is held this way: other shapes and bindings stay plain values. Content written
+ * by an older client (a plain value in the node map) becomes a Y.Text on its first edit.
+ *
+ * Only this file imports Yjs; consumers see plain JSON, opaque binary updates and opaque text
+ * positions.
  */
 import {
   compareSiblings,
@@ -31,6 +39,21 @@ import * as Y from "yjs"
 import { Draft, type DraftBase, OpFailure } from "./draft"
 import { randomToken } from "./ids"
 import { cloneJson, deepFreeze, setOwn } from "./json"
+import {
+  applyTextEdits,
+  changedRegion,
+  contentOf,
+  diffTextRuns,
+  liveRepresentable,
+  normalizeTextRuns,
+  type TextAttrs,
+  type TextDelta,
+  type TextEdit,
+  TextEditError,
+  type TextRun,
+  textOfRuns,
+  textRunsOf,
+} from "./live-text"
 import { flattenOps, type NodeData, type NormalizedOp, type Op } from "./ops"
 import { isLocalOrigin, type LocalOrigin, type Origin, type RemoteOrigin } from "./origin"
 import { type MoveRecord, planTreeRepairs, type TreeFields, type TreeRepair } from "./repair"
@@ -48,6 +71,9 @@ import {
   type Revision,
   type StoreChange,
   sameRevision,
+  type TextChangeEvent,
+  type TextEditHandle,
+  type TextEditOptions,
   type UndoResult,
 } from "./types"
 
@@ -86,6 +112,110 @@ function putField(y: Y.Map<unknown>, k: string, v: unknown, merged: ReadonlySet<
 /** Plain JSON of a stored value (nested Y types → JSON). */
 function plain(v: unknown): unknown {
   return v instanceof Y.AbstractType ? v.toJSON() : v
+}
+
+// --- Live text ------------------------------------------------------------------------------------
+
+/** JSON with object keys sorted, so equal attribute values are equal strings (Y.Text merges runs). */
+function stableJson(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stableJson).join(",")}]`
+  if (isRecord(v))
+    return `{${Object.keys(v)
+      .sort()
+      .filter((k) => v[k] !== undefined)
+      .map((k) => `${JSON.stringify(k)}:${stableJson(v[k])}`)
+      .join(",")}}`
+  return JSON.stringify(v)
+}
+
+/** Span attributes as Y.Text formatting (values JSON strings; `null` removes, for `format`). */
+function encodeAttrs(attrs: TextAttrs | undefined): Record<string, string | null> {
+  const out: Record<string, string | null> = {}
+  for (const [k, v] of Object.entries(attrs ?? {})) {
+    if (v === undefined) continue
+    out[k] = v === null ? null : stableJson(v)
+  }
+  return out
+}
+
+function decodeAttrs(attrs: Record<string, unknown> | undefined): TextAttrs {
+  const out: Record<string, unknown> = {}
+  if (!attrs) return out
+  for (const [k, v] of Object.entries(attrs)) {
+    if (typeof v !== "string") continue
+    try {
+      out[k] = JSON.parse(v)
+    } catch {
+      // A value another writer did not encode: ignore it.
+    }
+  }
+  return out
+}
+
+/** The runs of a Y.Text. */
+function runsOfText(t: Y.Text): TextRun[] {
+  const runs: TextRun[] = []
+  for (const d of t.toDelta() as { insert?: unknown; attributes?: Record<string, unknown> }[])
+    if (typeof d.insert === "string")
+      runs.push({ text: d.insert, attrs: decodeAttrs(d.attributes) })
+  return normalizeTextRuns(runs)
+}
+
+/** Applies edits to a Y.Text (inside a transaction). */
+function editYText(t: Y.Text, edits: readonly TextEdit[]): void {
+  for (const e of edits) {
+    if (e.op === "insert") t.insert(e.at, e.text, encodeAttrs(e.attrs))
+    else if (e.op === "delete") t.delete(e.at, e.length)
+    else t.format(e.at, e.length, encodeAttrs(e.attrs))
+  }
+}
+
+/** Fills an empty Y.Text with runs. */
+function fillYText(t: Y.Text, runs: readonly TextRun[]): void {
+  let at = 0
+  for (const r of runs) {
+    t.insert(at, r.text, encodeAttrs(r.attrs))
+    at += r.text.length
+  }
+}
+
+/** A Y.Text event delta as a {@link TextDelta} (format-only retains stay retains). */
+function textDeltaOf(delta: readonly { insert?: unknown; retain?: number; delete?: number }[]) {
+  const out: ({ retain: number } | { insert: string } | { delete: number })[] = []
+  for (const d of delta) {
+    if (typeof d.insert === "string") out.push({ insert: d.insert })
+    else if (d.insert !== undefined) out.push({ insert: "\ufffc" })
+    else if (typeof d.retain === "number") out.push({ retain: d.retain })
+    else if (typeof d.delete === "number") out.push({ delete: d.delete })
+  }
+  return out as TextDelta
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let s = ""
+  for (const b of bytes) s += String.fromCharCode(b)
+  return btoa(s)
+}
+
+function fromBase64(text: string): Uint8Array | null {
+  try {
+    const s = atob(text)
+    const out = new Uint8Array(s.length)
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i)
+    return out
+  } catch {
+    return null
+  }
+}
+
+/** A conversion of plain content into live text by this replica (see `rebaseConversion`). */
+interface Conversion {
+  text: Y.Text
+  /** The plain content's runs when it was converted. */
+  base: TextRun[]
+  /** The text's latest runs while it was in the node. */
+  ours: TextRun[]
+  origin: Origin
 }
 
 const issueKey = (i: ValidationIssue) => `${i.code}\u0000${i.path}`
@@ -306,6 +436,19 @@ export class YjsDocStore implements DocStore {
 
   /** Context of the transaction being run by this store (origin and cause). */
   private tx: { origin: Origin; cause: ChangeCause } | null = null
+  private readonly textListeners = new Set<(e: TextChangeEvent) => void>()
+  private readonly beforeListeners = new Set<() => void>()
+  private inBefore = false
+  /** Text changes of the running transaction, emitted after it. */
+  private pendingText: { id: string; delta: TextDelta | null }[] = []
+  /** Explicit text edits of the op group being committed ({@link editText}), by node id. */
+  private explicitText: ReadonlyMap<string, readonly TextEdit[]> | null = null
+  /** Plain contents this replica turned into live text, while a concurrent conversion may win. */
+  private readonly conversions = new Map<string, Conversion>()
+  /** Conversions that lost to another replica's in the running update (see `rebaseConversion`). */
+  private lostConversions: (Omit<Conversion, "text"> & { id: string })[] = []
+  /** Open live text edits (their own undo managers). */
+  private readonly textEdits = new Set<{ origin: LocalOrigin; um: Y.UndoManager }>()
   private pendingNodes = new Set<string>()
   private pendingHeader = false
   /** Issues of the committed state, kept current incrementally (null = recompute fully). */
@@ -348,6 +491,7 @@ export class YjsDocStore implements DocStore {
       autoRepair: options.autoRepair ?? true,
       validateOptions: options.validateOptions,
       random: options.random,
+      liveText: options.liveText ?? true,
     }
     this.ydoc = new Y.Doc()
     this.yHeader = this.ydoc.getMap("header")
@@ -363,7 +507,29 @@ export class YjsDocStore implements DocStore {
           for (const key of (e as Y.YMapEvent<unknown>).keysChanged) this.refresh(key)
         } else {
           const id = e.path[0]
-          if (typeof id === "string") this.refresh(id)
+          if (typeof id !== "string") continue
+          this.refresh(id)
+          if (e.target instanceof Y.Text && e.path.length === 2 && e.path[1] === "content") {
+            // Deltas must be read inside the observer.
+            this.pendingText.push({ id, delta: textDeltaOf((e as Y.YTextEvent).delta) })
+          } else if (
+            e.path.length === 1 &&
+            (e as Y.YMapEvent<unknown>).keysChanged?.has("content")
+          ) {
+            this.pendingText.push({ id, delta: null })
+            const conv = this.conversions.get(id)
+            const old = (e as Y.YMapEvent<unknown>).changes.keys.get("content")?.oldValue
+            if (conv && old === conv.text) {
+              this.conversions.delete(id)
+              if (!isLocalOrigin(this.tx?.origin) && this.tx?.cause === "update")
+                this.lostConversions.push({
+                  id,
+                  base: conv.base,
+                  ours: conv.ours,
+                  origin: conv.origin,
+                })
+            }
+          }
         }
       }
     })
@@ -454,10 +620,53 @@ export class YjsDocStore implements DocStore {
     return doc as unknown as Omit<KimoDocument, "nodes">
   }
 
+  textRuns(id: string): TextRun[] | null {
+    const n = this.mirror.get(id)
+    const runs = n ? textRunsOf(n.content) : null
+    return runs ? normalizeTextRuns(runs) : null
+  }
+
+  encodeTextPosition(id: string, offset: number, assoc = 0): string | null {
+    const n = this.mirror.get(id)
+    const runs = n ? textRunsOf(n.content) : null
+    if (!runs) return null
+    const at = Math.max(0, Math.min(Math.trunc(offset) || 0, textOfRuns(runs).length))
+    const t = this.yNodes.get(id)?.get("content")
+    if (t instanceof Y.Text) {
+      const rel = Y.createRelativePositionFromTypeIndex(t, at, assoc)
+      return `r${toBase64(Y.encodeRelativePosition(rel))}`
+    }
+    return `o${at}`
+  }
+
+  resolveTextPosition(id: string, position: string): number | null {
+    const n = this.mirror.get(id)
+    const runs = n ? textRunsOf(n.content) : null
+    if (!runs || typeof position !== "string") return null
+    const length = textOfRuns(runs).length
+    if (position.startsWith("o")) {
+      const at = Number(position.slice(1))
+      return Number.isInteger(at) && at >= 0 ? Math.min(at, length) : null
+    }
+    if (!position.startsWith("r")) return null
+    const t = this.yNodes.get(id)?.get("content")
+    const bytes = fromBase64(position.slice(1))
+    if (!(t instanceof Y.Text) || !bytes) return null
+    let abs: Y.AbsolutePosition | null = null
+    try {
+      abs = Y.createAbsolutePositionFromRelativePosition(Y.decodeRelativePosition(bytes), this.ydoc)
+    } catch {
+      return null
+    }
+    if (!abs || abs.type !== t) return null
+    return Math.min(abs.index, length)
+  }
+
   // --- Writing --------------------------------------------------------------------------------
 
   apply(ops: Op | readonly Op[], options: ApplyOptions): ApplyResult {
     this.assertAlive()
+    this.beforeChange()
     const fail = (errors: OpError[]): ApplyResult => ({
       ok: false,
       errors,
@@ -560,6 +769,7 @@ export class YjsDocStore implements DocStore {
 
   loadDocument(doc: KimoDocument, options: LoadOptions = {}): void {
     this.assertAlive()
+    this.beforeChange()
     if (options.validate !== false) {
       const status = formatStatus((doc as { format?: unknown }).format)
       if (status !== "current") {
@@ -584,7 +794,10 @@ export class YjsDocStore implements DocStore {
     const origin = options.origin ?? "file"
     this.transact(origin, "load", () => {
       // Header members.
-      for (const k of [...this.yHeader.keys()]) if (!Object.hasOwn(src, k)) this.yHeader.delete(k)
+      // Merged records are never deleted here (that would only be recreated empty below, a
+      // spurious update on every identical reload).
+      for (const k of [...this.yHeader.keys()])
+        if (!Object.hasOwn(src, k) && !MERGED_HEADER_KEYS.has(k)) this.yHeader.delete(k)
       for (const [k, v] of Object.entries(src)) {
         if (SPLIT_KEYS.has(k)) continue
         if (!jsonEqual(plain(this.yHeader.get(k)), v))
@@ -623,6 +836,14 @@ export class YjsDocStore implements DocStore {
     this.log_({ kind: "load", origin, revision: this.revision, time: this.options.now() })
   }
 
+  get autoRepair(): boolean {
+    return this.options.autoRepair
+  }
+
+  setAutoRepair(enabled: boolean): void {
+    this.options.autoRepair = enabled
+  }
+
   setReadOnly(reason: string | null): void {
     this.ro = reason === null ? null : Object.freeze({ reason })
   }
@@ -646,6 +867,7 @@ export class YjsDocStore implements DocStore {
     }
     const repairs = planTreeRepairs(nodes, moves)
     if (repairs.length === 0) return repairs
+    this.beforeChange()
     this.transact("system", "repair", () => {
       for (const r of repairs) {
         const y = this.yNodes.get(r.id)
@@ -659,6 +881,88 @@ export class YjsDocStore implements DocStore {
     })
     this.log_({ kind: "repair", revision: this.revision, time: this.options.now(), repairs })
     return repairs
+  }
+
+  editText(id: string, edits: readonly TextEdit[], options: TextEditOptions): ApplyResult {
+    this.assertAlive()
+    this.beforeChange()
+    const fail = (code: OpError["code"], message: string): ApplyResult => ({
+      ok: false,
+      errors: [{ code, message, nodeId: id }],
+      revision: this.revision,
+    })
+    if (!this.mirror.has(id)) return fail("NODE_NOT_FOUND", `Node ${id} not found`)
+    const runs = this.textRuns(id)
+    if (!runs) return fail("INVALID_OP", `Node ${id} has no editable text content`)
+    let next: TextRun[]
+    try {
+      next = applyTextEdits(runs, edits)
+    } catch (e) {
+      if (e instanceof TextEditError) return fail("INVALID_OP", e.message)
+      throw e
+    }
+    const { with: extra, ...applyOptions } = options
+    const ops: Op[] = [...(extra ?? []), { op: "update", id, set: { content: contentOf(next) } }]
+    const prev = this.explicitText
+    this.explicitText = new Map([[id, edits]])
+    try {
+      return this.apply(ops, applyOptions)
+    } finally {
+      this.explicitText = prev
+    }
+  }
+
+  beginTextEdit(id: string, origin: LocalOrigin): TextEditHandle {
+    this.assertAlive()
+    const main = this.managerFor(origin)
+    const closeGroup = this.groupUndo(origin)
+    const map = this.yNodes.get(id)
+    let entry: { origin: LocalOrigin; um: Y.UndoManager } | null = null
+    if (map) {
+      const um = new Y.UndoManager([map], {
+        trackedOrigins: new Set([origin]),
+        captureTimeout: Number.POSITIVE_INFINITY,
+      })
+      // The editor's own undo steps belong to the edit's one step on the origin's stack.
+      main.trackedOrigins.add(um)
+      entry = { origin, um }
+      this.textEdits.add(entry)
+    }
+    const replay = (kind: "undo" | "redo"): boolean => {
+      const um = entry?.um
+      if (!um || this.destroyed || this.ro) return false
+      this.beforeChange()
+      const prev = this.tx
+      this.tx = { origin, cause: kind }
+      let item: unknown
+      try {
+        item = kind === "undo" ? um.undo() : um.redo()
+      } finally {
+        this.tx = prev
+      }
+      if (item == null) return false
+      this.log_({ kind, origin, revision: this.revision, time: this.options.now() })
+      return true
+    }
+    return {
+      breakStep: () => entry?.um.stopCapturing(),
+      get canUndo() {
+        return entry?.um.canUndo() ?? false
+      },
+      get canRedo() {
+        return entry?.um.canRedo() ?? false
+      },
+      undo: () => replay("undo"),
+      redo: () => replay("redo"),
+      end: () => {
+        closeGroup()
+        if (!entry) return
+        main.trackedOrigins.delete(entry.um)
+        entry.um.destroy()
+        this.textEdits.delete(entry)
+        entry = null
+      },
+    }
   }
 
   // --- History --------------------------------------------------------------------------------
@@ -714,6 +1018,7 @@ export class YjsDocStore implements DocStore {
   clearHistory(origin?: LocalOrigin): void {
     if (origin !== undefined) this.managers.get(origin)?.clear()
     else for (const m of this.managers.values()) m.clear()
+    for (const e of this.textEdits) if (origin === undefined || e.origin === origin) e.um.clear()
   }
 
   log(): readonly OpLogEntry[] {
@@ -732,6 +1037,16 @@ export class YjsDocStore implements DocStore {
     return () => this.updateListeners.delete(listener)
   }
 
+  onTextChange(listener: (event: TextChangeEvent) => void): () => void {
+    this.textListeners.add(listener)
+    return () => this.textListeners.delete(listener)
+  }
+
+  onBeforeChange(listener: () => void): () => void {
+    this.beforeListeners.add(listener)
+    return () => this.beforeListeners.delete(listener)
+  }
+
   encodeStateVector(): Uint8Array {
     return Y.encodeStateVector(this.ydoc)
   }
@@ -742,6 +1057,7 @@ export class YjsDocStore implements DocStore {
 
   applyUpdate(update: Uint8Array, origin: RemoteOrigin = "remote"): void {
     this.assertAlive()
+    this.beforeChange()
     const prev = this.tx
     this.tx = { origin, cause: "update" }
     try {
@@ -749,16 +1065,21 @@ export class YjsDocStore implements DocStore {
     } finally {
       this.tx = prev
     }
+    if (prev === null) this.rebaseConversions()
     if (this.options.autoRepair && prev === null) this.repair()
   }
 
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    for (const e of this.textEdits) e.um.destroy()
+    this.textEdits.clear()
     for (const m of this.managers.values()) m.destroy()
     this.managers.clear()
     this.changeListeners.clear()
     this.updateListeners.clear()
+    this.textListeners.clear()
+    this.beforeListeners.clear()
     this.ydoc.destroy()
   }
 
@@ -766,6 +1087,61 @@ export class YjsDocStore implements DocStore {
 
   private assertAlive(): void {
     if (this.destroyed) throw new Error("DocStore has been destroyed")
+  }
+
+  /** Lets live editors write their batched local edits before any other change starts. */
+  private beforeChange(): void {
+    if (this.inBefore || this.tx !== null || this.beforeListeners.size === 0) return
+    this.inBefore = true
+    try {
+      for (const l of [...this.beforeListeners]) l()
+    } finally {
+      this.inBefore = false
+    }
+  }
+
+  /**
+   * Another replica turned the same plain content into live text at the same time and its text
+   * won the node's `content` key: what this replica typed into its own (now discarded) text is
+   * replayed onto the winner as one replaced region, so nobody's typing is lost or doubled.
+   */
+  private rebaseConversions(): void {
+    const lost = this.lostConversions
+    if (lost.length === 0) return
+    this.lostConversions = []
+    for (const c of lost) {
+      const t = this.yNodes.get(c.id)?.get("content")
+      if (!(t instanceof Y.Text)) continue
+      const base = textOfRuns(c.base)
+      const mine = textOfRuns(c.ours)
+      const ours = changedRegion(base, mine)
+      const theirs = changedRegion(base, t.toString())
+      const shift = t.length - base.length
+      const theirEnd = base.length - theirs.suffix
+      const mapStart = (p: number) =>
+        p <= theirs.prefix ? p : p >= theirEnd ? p + shift : t.length - theirs.suffix
+      const from = mapStart(ours.prefix)
+      const oldEnd = base.length - ours.suffix
+      const to = Math.max(
+        from,
+        oldEnd >= theirEnd ? oldEnd + shift : oldEnd <= theirs.prefix ? oldEnd : from,
+      )
+      const inserted = normalizeTextRuns(
+        applyTextEdits(c.ours, [
+          { op: "delete", at: mine.length - ours.suffix, length: ours.suffix },
+          { op: "delete", at: 0, length: ours.prefix },
+        ]),
+      )
+      if (to === from && inserted.length === 0) continue
+      const edits: TextEdit[] = []
+      if (to > from) edits.push({ op: "delete", at: from, length: to - from })
+      let at = from
+      for (const r of inserted) {
+        edits.push({ op: "insert", at, text: r.text, attrs: r.attrs })
+        at += r.text.length
+      }
+      this.transact(c.origin, isLocalOrigin(c.origin) ? "ops" : "update", () => editYText(t, edits))
+    }
   }
 
   private draftOptions() {
@@ -838,19 +1214,31 @@ export class YjsDocStore implements DocStore {
     if (draft.themesTouched) setFlag(this.yFlags, "themes", this.yThemes.size > 0)
   }
 
+  /** True when a node's `content` is held as live text (a canonical text layer content). */
+  private liveContent(n: Readonly<Record<string, unknown>>): boolean {
+    return this.options.liveText && n.type === "text" && liveRepresentable(n.content)
+  }
+
   /** Creates or diff-updates one node map. */
   private writeNode(id: string, n: Readonly<Record<string, unknown>>): void {
     const y = this.yNodes.get(id)
     if (!y) {
-      const entries = Object.keys(n).map(
-        (k) => [k, yValue(k, n[k], MERGED_NODE_FIELDS)] as [string, unknown],
-      )
+      const live = this.liveContent(n)
+      const entries = Object.keys(n)
+        .filter((k) => !(live && k === "content"))
+        .map((k) => [k, yValue(k, n[k], MERGED_NODE_FIELDS)] as [string, unknown])
       // An instance always holds its record fields as (possibly empty) nested maps, so the
       // first overrides written concurrently by two peers merge instead of racing to create
       // the map. An empty nested map reads as an absent field (see `refresh`).
       if (n.type === "instance")
         for (const k of MERGED_NODE_FIELDS) if (!Object.hasOwn(n, k)) entries.push([k, new Y.Map()])
-      this.yNodes.set(id, new Y.Map(entries))
+      const map = new Y.Map(entries)
+      this.yNodes.set(id, map)
+      if (live) {
+        const t = new Y.Text()
+        map.set("content", t)
+        fillYText(t, textRunsOf(n.content) ?? [])
+      }
       return
     }
     const old = this.mirror.get(id) ?? (y.toJSON() as Record<string, unknown>)
@@ -861,9 +1249,61 @@ export class YjsDocStore implements DocStore {
       else y.delete(k)
     }
     for (const k of Object.keys(n)) {
-      if (!Object.hasOwn(old, k) || !jsonEqual(old[k], n[k]))
-        putField(y, k, n[k], MERGED_NODE_FIELDS)
+      if (Object.hasOwn(old, k) && jsonEqual(old[k], n[k])) continue
+      if (k === "content") this.writeContent(id, y, old.content, n)
+      else putField(y, k, n[k], MERGED_NODE_FIELDS)
     }
+  }
+
+  /**
+   * Writes a changed `content`. Live text takes the change as character edits (the explicit
+   * edits of {@link editText}, else the minimal diff), so concurrent typing by others survives;
+   * plain content of a text layer becomes live text on its first change (first touch).
+   */
+  private writeContent(
+    id: string,
+    y: Y.Map<unknown>,
+    oldContent: unknown,
+    n: Readonly<Record<string, unknown>>,
+  ): void {
+    const v = n.content
+    const cur = y.get("content")
+    const runs = liveRepresentable(v) ? textRunsOf(v) : null
+    const explicit = this.explicitText?.get(id)
+    const finish = (t: Y.Text) => {
+      // The edits were planned on the content this store holds, so this is only a safety net.
+      const now = runsOfText(t)
+      if (runs && !jsonEqual(contentOf(now), v)) editYText(t, diffTextRuns(now, runs))
+    }
+    if (cur instanceof Y.Text) {
+      if (!runs) {
+        y.set("content", cloneJson(v))
+        return
+      }
+      editYText(cur, explicit ?? diffTextRuns(runsOfText(cur), runs))
+      finish(cur)
+      return
+    }
+    if (!runs || !this.liveContent(n)) {
+      y.set("content", cloneJson(v))
+      return
+    }
+    const oldRuns = textRunsOf(oldContent)
+    const base = normalizeTextRuns(oldRuns ?? [])
+    const t = new Y.Text()
+    y.set("content", t)
+    if (explicit && oldRuns) {
+      fillYText(t, base)
+      editYText(t, explicit)
+    } else fillYText(t, runs)
+    finish(t)
+    if (oldRuns)
+      this.conversions.set(id, {
+        text: t,
+        base,
+        ours: runsOfText(t),
+        origin: this.tx?.origin ?? "system",
+      })
   }
 
   /** Re-reads one node from the Y.Doc into the mirror and the parent index. */
@@ -879,6 +1319,13 @@ export class YjsDocStore implements DocStore {
       // Canonical member order: Yjs iterates map keys in an order that depends on the update
       // history, so the same node would otherwise read differently after a reload.
       const raw = y.toJSON() as Record<string, unknown>
+      const content = y.get("content")
+      if (content instanceof Y.Text) {
+        const runs = runsOfText(content)
+        raw.content = contentOf(runs)
+        const conv = this.conversions.get(id)
+        if (conv?.text === content) conv.ours = runs
+      }
       // Empty nested record maps (see `writeNode`) are absent fields.
       for (const k of MERGED_NODE_FIELDS)
         if (
@@ -1070,6 +1517,13 @@ export class YjsDocStore implements DocStore {
     }
     this.pendingNodes = new Set()
     this.pendingHeader = false
+    const texts = this.pendingText
+    this.pendingText = []
+    if (this.textListeners.size > 0)
+      for (const t of texts) {
+        const event: TextChangeEvent = { id: t.id, delta: t.delta, origin, cause: change.cause }
+        for (const l of [...this.textListeners]) l(event)
+      }
     for (const l of [...this.changeListeners]) l(change)
   }
 
@@ -1087,6 +1541,7 @@ export class YjsDocStore implements DocStore {
 
   private replay(origin: LocalOrigin, kind: "undo" | "redo"): UndoResult {
     this.assertAlive()
+    this.beforeChange()
     const m = this.managers.get(origin)
     const nothing: UndoResult = { ok: false, stale: false, revision: this.revision, repairs: [] }
     if (this.ro || !m) return nothing

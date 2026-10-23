@@ -21,6 +21,30 @@ pub struct OpenRequest {
     pub node: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<String>,
+    /// Board 41 section 5: a multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`)
+    /// or pairing link (`kimo://pair#<relay>/<token>`, ADR 0017), whole. `refs` is empty; the web
+    /// app tells them apart, parses and validates them.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub join: Option<String>,
+}
+
+/// `parseJoinDeepLink` in `packages/platform/src/links.ts`: the whole `kimo://join#...` or
+/// `kimo://pair#...` (or `kimo:join#...`) link, or None for any other URL or an empty fragment.
+pub fn parse_join_link(raw: &str) -> Option<String> {
+    let u = url::Url::parse(raw).ok()?;
+    if u.scheme() != "kimo" {
+        return None;
+    }
+    let host = u.host_str().unwrap_or("");
+    let action = if !host.is_empty() {
+        host.to_string()
+    } else {
+        u.path().trim_start_matches('/').to_string()
+    };
+    if (action != "join" && action != "pair") || u.fragment().map_or(true, |f| f.is_empty()) {
+        return None;
+    }
+    Some(raw.trim().to_string())
 }
 
 /// `isAbsolutePath`: POSIX absolute, Windows drive or UNC.
@@ -104,12 +128,23 @@ pub fn requests_from_args(
             continue;
         }
         if a.to_lowercase().starts_with("kimo:") {
+            if let Some(j) = parse_join_link(a) {
+                out.push(OpenRequest {
+                    source: "deep-link",
+                    refs: vec![],
+                    node: None,
+                    page: None,
+                    join: Some(j),
+                });
+                continue;
+            }
             if let Some(l) = parse_deep_link(a) {
                 out.push(OpenRequest {
                     source: "deep-link",
                     refs: vec![l.path],
                     node: l.node,
                     page: l.page,
+                    join: None,
                 });
             }
             continue;
@@ -135,6 +170,7 @@ pub fn requests_from_args(
                 refs: files,
                 node: None,
                 page: None,
+                join: None,
             },
         );
     }
@@ -243,7 +279,8 @@ mod tests {
                     "/work/design.PEN".into()
                 ],
                 node: None,
-                page: None
+                page: None,
+                join: None
             }
         );
         assert_eq!(
@@ -252,12 +289,48 @@ mod tests {
                 source: "deep-link",
                 refs: vec!["/c.kimo".into()],
                 node: Some("Abc123xyz9".into()),
-                page: None
+                page: None,
+                join: None
             }
         );
         assert_eq!(
             serde_json::to_value(link).unwrap(),
             serde_json::json!({"source":"deep-link","refs":["/c.kimo"],"node":"Abc123xyz9"})
+        );
+    }
+
+    #[test]
+    fn join_links() {
+        let frag = "https://relay.maya.studio/room1/token/key";
+        for form in [
+            format!("kimo://join#{frag}"),
+            format!("kimo:join#{frag}"),
+            "kimo://pair#https://relay.maya.studio/token".to_string(),
+        ] {
+            assert_eq!(parse_join_link(&form), Some(form.clone()), "{form}");
+            // Not a file deep link.
+            assert_eq!(parse_deep_link(&form), None);
+        }
+        for bad in [
+            "kimo://join",
+            "kimo://join#",
+            "kimo://pair",
+            "kimo://open?path=%2Fa.kimo",
+            "https://kimo.app/join#x",
+            "not a url",
+        ] {
+            assert_eq!(parse_join_link(bad), None, "{bad}");
+        }
+        let link = format!("kimo://join#{frag}");
+        let r = requests_from_args(
+            std::slice::from_ref(&link),
+            std::path::Path::new("/work"),
+            "argv",
+        );
+        assert_eq!(r.len(), 1);
+        assert_eq!(
+            serde_json::to_value(&r[0]).unwrap(),
+            serde_json::json!({"source":"deep-link","refs":[],"join":link})
         );
     }
 }

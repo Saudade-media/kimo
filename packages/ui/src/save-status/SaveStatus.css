@@ -37,6 +37,12 @@
   height: 14px;
 }
 
+.kimo-save-status__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .kimo-save-status__label {
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-sm);

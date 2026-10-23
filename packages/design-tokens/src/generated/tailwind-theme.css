@@ -86,6 +86,12 @@
   --color-agent-moss: var(--kimo-agent-moss);
   --color-agent-moss-2: var(--kimo-agent-moss-2);
   --color-agent-moss-soft: var(--kimo-agent-moss-soft);
+  --color-presence-slate: var(--kimo-presence-slate);
+  --color-presence-clay: var(--kimo-presence-clay);
+  --color-presence-ochre: var(--kimo-presence-ochre);
+  --color-presence-pine: var(--kimo-presence-pine);
+  --color-presence-plum: var(--kimo-presence-plum);
+  --color-presence-graphite: var(--kimo-presence-graphite);
   --text-display: var(--kimo-type-display-font-size);
   --text-display--font-weight: var(--kimo-type-display-font-weight);
   --text-display--letter-spacing: var(--kimo-type-display-letter-spacing);

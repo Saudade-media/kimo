@@ -11,12 +11,13 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
-    "build": "bun run build:shim && tauri build --config src-tauri/tauri.bundle.conf.json",
+    "build": "bun run build:shim && bun run build:relay && tauri build --config src-tauri/tauri.bundle.conf.json",
     "icons": "tauri icon src-tauri/icons/source.png -o src-tauri/icons",
     "check:rust": "cargo check --workspace --manifest-path src-tauri/Cargo.toml",
     "typecheck": "tsc -p tsconfig.json",
     "test:rust": "cargo test --workspace --manifest-path src-tauri/Cargo.toml",
     "build:shim": "bun scripts/build-shim.ts",
+    "build:relay": "bun scripts/build-relay.ts",
     "dock-frames": "bun scripts/dock-frames.ts",
     "check:generated": "bun scripts/dock-frames.ts --check"
   },

@@ -8,14 +8,16 @@
   "exports": {
     ".": "./src/index.ts",
     "./file": "./src/file.ts",
-    "./indexeddb": "./src/indexeddb.ts"
+    "./indexeddb": "./src/indexeddb.ts",
+    "./mp": "./src/mp/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "bun test test"
+    "test": "../../scripts/safe-test.sh test"
   },
   "dependencies": {
     "@kimo/editor-state": "workspace:*",
+    "lib0": "^0.2.119",
     "y-indexeddb": "^9.0.12",
     "yjs": "^13.6.33"
   },

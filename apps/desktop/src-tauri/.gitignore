@@ -5,3 +5,6 @@
 
 # kimo-mcp sidecar staged by scripts/build-shim.ts
 /binaries/
+
+# The relay bundle staged by scripts/build-relay.ts
+/resources/relay/

@@ -21,6 +21,9 @@ cites the sections of the [teardown](../teardown.md) (the plan of record) it imp
 | [0013](0013-m5-mcp-server.md) | M5 MCP server: one tool registry, typed ops, the `kimo-socket/1` protocol, attach vs headless, permissions and the host installer | Accepted (addendum: [0014](0014-m6-built-in-agent.md)) |
 | [0014](0014-m6-built-in-agent.md) | M6 built-in agent: provider interface and adapters, local agent CLIs, the in-process tool loop, modes with enforced scopes, sessions, skills, placeholders and prompt nodes | Accepted |
 | [0015](0015-m7-export.md) | M7 export: one IR, deterministic emitters (React+Tailwind v4, HTML/CSS, DTCG tokens, SVG, PDF, PNG via the renderer) and a browser box-diff harness | Accepted |
+| [0016](0016-multiplayer-transport-and-sessions.md) | Multiplayer v2: an end-to-end encrypted Bun relay on Yjs, self-hosted, joined with signed capability links | Proposed |
+| [0017](0017-relay-ownership-pairing.md) | Relays belong to devices: pre-claim or claim on first use, add devices with pairing links, remove the create secret | Proposed |
+| [0018](0018-kimo-cloud.md) | Kimo Cloud: a paid hosted relay, with billing outside the open repo and an owner policy hook in the relay | Proposed |
 
 ## Process
 

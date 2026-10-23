@@ -1,0 +1,43 @@
+# Fly.io config for a Kimo relay you run yourself. It deploys the published relay image
+# (ghcr.io/saudade-media/kimo-relay, built from apps/server/Dockerfile by CI). Kimo's relay setup
+# wizard runs these same steps with flyctl; by hand, from the repository root:
+#   fly launch --copy-config -c apps/server/deploy/fly.toml --no-deploy
+#   fly volumes create kimo_data --size 1
+#   fly secrets set KIMO_OWNER_KEY="<your device key>"   (Kimo's Fly.io commands fill it in)
+#   fly deploy -c apps/server/deploy/fly.toml
+# To build from source instead, delete [build] and add `--dockerfile apps/server/Dockerfile .` to
+# fly deploy. Keep exactly one machine: the relay stores rooms in a local SQLite file on the volume.
+app = "my-kimo-relay"
+primary_region = "iad"
+
+[build]
+  image = "ghcr.io/saudade-media/kimo-relay:latest"
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "8787"
+  KIMO_DATA_DIR = "/data"
+  KIMO_TRUST_PROXY = "1"
+
+[mounts]
+  source = "kimo_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  # WebSockets stay open for hours: never stop the machine on idle.
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    timeout = "3s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

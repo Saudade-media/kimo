@@ -15,6 +15,8 @@ export interface StatusPillProps extends Omit<ComponentPropsWithRef<"span">, "ch
   status: LibraryStatus
   /** Assets-panel size (board 13 `MayJf`): padding [1, 6, 1, 5], label 10. */
   compact?: boolean
+  /** Replaces the status's label (board 41: "Live", "Kimo relay 1.2" on the success look). */
+  label?: string
 }
 
 /**
@@ -23,7 +25,13 @@ export interface StatusPillProps extends Omit<ComponentPropsWithRef<"span">, "ch
  * 500. Linked: success-soft / success; Changed: warning-soft / warning; Missing: danger-soft /
  * danger. Status tokens only.
  */
-export function StatusPill({ status, compact = false, className, ...rest }: StatusPillProps) {
+export function StatusPill({
+  status,
+  compact = false,
+  label,
+  className,
+  ...rest
+}: StatusPillProps) {
   return (
     <span
       {...rest}
@@ -36,7 +44,7 @@ export function StatusPill({ status, compact = false, className, ...rest }: Stat
       )}
     >
       <span className="kimo-status-pill__dot" aria-hidden="true" />
-      <span className="kimo-status-pill__label">{LABEL[status]}</span>
+      <span className="kimo-status-pill__label">{label ?? LABEL[status]}</span>
     </span>
   )
 }

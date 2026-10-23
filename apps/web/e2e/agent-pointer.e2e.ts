@@ -249,7 +249,9 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
   expect(before.display !== "none" && before.height > 0, "cursor rendered")
 
   // The pointer is the badge (the last added layer); board 36: the cursor sits on the center of
-  // its section (the card, the page frame's direct child), the outline on the card's box.
+  // its section (the card, the page frame's direct child), the outline on the card's box. Board
+  // 41 › 7: the agent claims the card it edits, and its claim outline (with the "Kimo is editing
+  // Card" tab) replaces board 36's section outline: still exactly one outline, on the card.
   const badge = await page.evaluate((card) => {
     const w = window as unknown as W
     const canvas = w.__kimo.canvas()
@@ -260,9 +262,12 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
     const e = (
       document.querySelector('[data-testid="agent-cursor"]') as HTMLElement
     ).getBoundingClientRect()
-    const o = (
-      document.querySelector('[data-testid="agent-section-outline"]') as HTMLElement
-    ).getBoundingClientRect()
+    const outlines = document.querySelectorAll(
+      '[data-testid="agent-section-outline"], [data-testid="mp-claim-outline"]',
+    )
+    const o = (outlines[0] as HTMLElement).getBoundingClientRect()
+    const claimed = outlines[0]?.getAttribute("data-testid") === "mp-claim-outline"
+    const tab = document.querySelector('[data-testid="mp-claim-tag"]')?.textContent ?? null
     return {
       id,
       isCard: id === card,
@@ -270,7 +275,11 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
       dy: e.y + 3 - (host.y + (b.y + b.h / 2 - v.y) * v.zoom),
       ox: o.x - (host.x + (b.x - v.x) * v.zoom),
       ow: o.width - b.w * v.zoom,
-      outlines: document.querySelectorAll('[data-testid="agent-section-outline"]').length,
+      outlines: outlines.length,
+      claimed,
+      tab,
+      oh: o.height - b.h * v.zoom,
+      oy: o.y - (host.y + (b.y - v.y) * v.zoom),
     }
   }, CARD)
   log(`  pointer ${badge.id} offset ${badge.dx.toFixed(2)},${badge.dy.toFixed(2)}`)
@@ -280,8 +289,16 @@ async function scriptedEdit({ page, url, log }: E2EContext) {
     `cursor tip on the card section's center: ${JSON.stringify(badge)}`,
   )
   expect(
-    badge.outlines === 1 && Math.abs(badge.ox) <= 0.5 && Math.abs(badge.ow) <= 0.5,
+    badge.outlines === 1 &&
+      Math.abs(badge.ox) <= 0.5 &&
+      Math.abs(badge.ow) <= 0.5 &&
+      Math.abs(badge.oy) <= 0.5 &&
+      Math.abs(badge.oh) <= 0.5,
     `one outline, on the card: ${JSON.stringify(badge)}`,
+  )
+  expect(
+    !badge.claimed || badge.tab === "Kimo is editing Card",
+    `the claim tab names the agent and the card: ${JSON.stringify(badge)}`,
   )
 
   // Follow targets the layer the cursor points at.

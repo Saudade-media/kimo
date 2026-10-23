@@ -133,6 +133,13 @@ export const AssetEntry = Strict({
   width: opt(Type.Integer({ minimum: 0 })),
   height: opt(Type.Integer({ minimum: 0 })),
   name: opt(Type.String({ description: "Original file name (informative)." })),
+  sha256: opt(
+    Type.String({
+      pattern: "^[0-9a-f]{64}$",
+      description:
+        "Full lowercase hex SHA-256 of the file; written by writers that share or sync assets.",
+    }),
+  ),
 })
 export type AssetEntry = Static<typeof AssetEntry>
 

@@ -65,6 +65,7 @@ import {
 import { AutoApproveConfirm } from "../agents/AutoApproveConfirm"
 import type { AgentMessageView, AttachmentChipView } from "../platform/contract"
 import { inTauri } from "../platform/runtime"
+import { AreaBusyCard, type AreaBusyEnv, useAreaWaitStatus } from "./AreaBusyCard"
 import { type ApprovalOpIcon, approvalOps } from "./approval"
 import type { AgentPanelControllerExt, AgentPanelViewState } from "./controller"
 import { markOf } from "./controller"
@@ -103,6 +104,8 @@ export interface AgentPanelProps {
   platform?: "desktop" | "web"
   /** Board 31 Follow chip: zoom the canvas to these layers. Omitted: no chip. */
   onFollow?: (ids: string[]) => void
+  /** Board 41 › 7 C: AREA_BUSY steps show the Waiting card (omitted: they stay failed steps). */
+  areaBusy?: AreaBusyEnv
 }
 
 const OP_ICONS: Record<ApprovalOpIcon, typeof Trash2> = {
@@ -160,6 +163,7 @@ export function AgentPanel({
   parentNameOf,
   platform = inTauri() ? "desktop" : "web",
   onFollow,
+  areaBusy,
 }: AgentPanelProps) {
   const state = useAgentPanelState(controller)
   const thread = useRef<HTMLDivElement>(null)
@@ -311,6 +315,7 @@ export function AgentPanel({
                   nowMs={tick}
                   waiting={i === state.messages.length - 1 && state.approvals.length > 0}
                   {...(onFollow ? { onFollow } : {})}
+                  {...(areaBusy ? { areaBusy } : {})}
                   state={state}
                   controller={controller}
                   onCopy={copy}
@@ -607,6 +612,7 @@ function ThreadItem({
   nowMs,
   waiting,
   onFollow,
+  areaBusy,
   state,
   controller,
   onCopy,
@@ -616,12 +622,19 @@ function ThreadItem({
   nowMs: number
   waiting: boolean
   onFollow?: (ids: string[]) => void
+  areaBusy?: AreaBusyEnv
   state: AgentPanelViewState
   controller: AgentPanelControllerExt
   onCopy(text: string): void
   onEditRequest(turnId: string): void
 }) {
   const [stepsToggled, setStepsToggled] = useState<boolean | null>(null)
+  // Board 41 › 7 C: AREA_BUSY steps (their card) and the status while the agent waits for one.
+  const busyIds =
+    m.kind === "agent" && areaBusy
+      ? m.steps.filter((s) => s.errorCode === "AREA_BUSY").map((s) => s.callId)
+      : NO_BUSY
+  const areaStatus = useAreaWaitStatus(areaBusy, busyIds)
   if (m.kind === "user")
     return (
       <div className="agent-panel__user" data-testid="agent-user-message">
@@ -676,11 +689,13 @@ function ThreadItem({
   const running = m.steps.findLast((s) => s.state === "running")
   const status = waiting
     ? "Waiting for your approval"
-    : progress && progress.source !== "start"
-      ? progress.status
-      : running
-        ? running.label.replace(/…$/, "")
-        : (progress?.status ?? "Thinking…")
+    : areaStatus
+      ? areaStatus
+      : progress && progress.source !== "start"
+        ? progress.status
+        : running
+          ? running.label.replace(/…$/, "")
+          : (progress?.status ?? "Thinking…")
   return (
     <div
       className="agent-panel__agent"
@@ -688,6 +703,7 @@ function ThreadItem({
       data-turn={m.turnId}
       {...(m.streaming ? {} : { "data-meta-hover": "" })}
     >
+      {areaBusy && busyIds.length > 0 && <AreaBusyCards env={areaBusy} callIds={busyIds} />}
       {m.streaming ? (
         <AgentStatus
           data-testid="agent-status"
@@ -701,7 +717,7 @@ function ThreadItem({
             ? { steps: `${m.steps.length} step${m.steps.length === 1 ? "" : "s"}` }
             : {})}
           markState={
-            waiting
+            waiting || areaStatus
               ? "waiting"
               : state.composer.state === "paused"
                 ? "paused"
@@ -816,6 +832,21 @@ function ThreadItem({
       )}
     </div>
   )
+}
+
+const NO_BUSY: readonly string[] = []
+
+/**
+ * Board 41 › 7 C: one card per busy area (the latest AREA_BUSY call on each holder's area; an
+ * agent that retried shows one card, not one per try).
+ */
+function AreaBusyCards({ env, callIds }: { env: AreaBusyEnv; callIds: readonly string[] }) {
+  const latest = new Map<string, string>()
+  for (const id of callIds) {
+    const b = env.waits.busy(id)
+    if (b) latest.set(`${b.detail.holder}\n${b.detail.ids.join(",")}`, id)
+  }
+  return [...latest.values()].map((id) => <AreaBusyCard key={id} env={env} callId={id} />)
 }
 
 /**

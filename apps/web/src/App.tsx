@@ -12,8 +12,12 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { DiskEditor, Editor } from "./editor/Editor"
 import { RecoveryDialog, RestoredToasts } from "./files"
 import { Home } from "./home/Home"
+import { JoinRoute } from "./join/JoinRoute"
+import { useJoinRoute } from "./join/useJoinRoute"
 import { useHash } from "./lib/hooks"
 import { type ThemeMode, useTheme } from "./lib/theme"
+import { PairRoute } from "./pair/PairRoute"
+import { usePairRoute } from "./pair/usePairRoute"
 import { isUntitledRef } from "./platform/contract"
 import { noteWindowFile } from "./platform/last-files"
 import { SettingsOpenerContext, useRuntime } from "./platform/runtime"
@@ -40,14 +44,16 @@ const Gallery = GALLERY_ENABLED
 
 export function App() {
   const hash = useHash()
-  const route = parseRoute(hash)
+  const route = usePairRoute(useJoinRoute(parseRoute(hash), hash), hash)
   const theme = useTheme()
   const { platform, manager } = useRuntime()
   const [settingsPane, setSettingsPane] = useState<{
     pane: SettingsPane
     focus: string | null
   } | null>(null)
-  const [recovery, setRecovery] = useState(route.name !== "settings")
+  const [recovery, setRecovery] = useState(
+    route.name !== "settings" && route.name !== "join" && route.name !== "pair",
+  )
   const [restored, setRestored] = useState<FileDocumentSession[]>([])
   const showDialog = useCallback((pane: SettingsPane) => setSettingsPane({ pane, focus: null }), [])
   useSettingsShortcut(platform, showDialog)
@@ -134,6 +140,12 @@ function Routed({ route, theme }: { route: ReturnType<typeof parseRoute>; theme:
       return <Editor key={route.id} fileId={route.id} />
     case "disk":
       return <DiskEditor key={route.ref} fileRef={route.ref} node={route.node} />
+    case "join":
+      // Board 41 section 5: `key` restarts the join for another link.
+      return <JoinRoute key={route.link} link={route.link} />
+    case "pair":
+      // ADR 0017: another device's Add device link.
+      return <PairRoute key={route.link} link={route.link} />
     case "gallery":
       // Board 37 §4: the component gallery is for development only (no sidebar row).
       if (!Gallery) return <NotFound path="/gallery" />

@@ -93,6 +93,11 @@ export function createHostTools(o: HostToolsOptions): HostTools {
     const sends = new Map<string, { sent: () => Promise<void>; ran: () => void }>()
     const host: ToolHost = {
       tools: () => specs,
+      // Area claims (ADR 0016 item 16): the host stamps them with the turn and releases them
+      // when it ends. Losing this RPC only delays the release to disconnect or the claim TTL.
+      async turn(phase, turnId) {
+        await o.client.call("agentTurn", { spec: wire, phase, turnId }).catch(() => {})
+      },
       // Board 38: a web step the provider ran → one Activity row on the host.
       note(entry) {
         void o.client.call("agentWeb", { spec: wire, ref: o.ref, entry }).catch(() => {})

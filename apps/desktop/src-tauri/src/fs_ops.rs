@@ -49,6 +49,23 @@ pub fn write_atomic_with(
     mkdirs: bool,
     after_rename: impl FnOnce(&Path),
 ) -> R<AtomicWriteResult> {
+    write_atomic_opts(path, bytes, mkdirs, false, after_rename)
+}
+
+/// [`write_atomic`] for secrets (the multiplayer room registry holds owner keys as JWK): on Unix
+/// the file is created 0600 (never readable by others, not even the temp file) and its parent
+/// directory is set to 0700. An existing file's looser mode is tightened on the next write.
+pub fn write_atomic_owner_only(path: &Path, bytes: &[u8], mkdirs: bool) -> R<AtomicWriteResult> {
+    write_atomic_opts(path, bytes, mkdirs, true, |_| {})
+}
+
+fn write_atomic_opts(
+    path: &Path,
+    bytes: &[u8],
+    mkdirs: bool,
+    owner_only: bool,
+    after_rename: impl FnOnce(&Path),
+) -> R<AtomicWriteResult> {
     let what = path_str(path);
     let dir = path
         .parent()
@@ -78,12 +95,31 @@ pub fn write_atomic_with(
     }
     let hash = sha256_hex(bytes);
     let tmp = temp_path(dir, path);
+    // Owner-only permissions are a Unix mode; elsewhere the user profile already restricts access.
+    #[cfg(not(unix))]
+    let _ = owner_only;
+    #[cfg(unix)]
+    if owner_only {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700)).map_err(ctx(&path_str(dir)))?;
+    }
     let staged = (|| -> io::Result<()> {
-        let mut f = OpenOptions::new().write(true).create_new(true).open(&tmp)?;
+        let mut open = OpenOptions::new();
+        open.write(true).create_new(true);
+        #[cfg(unix)]
+        if owner_only {
+            use std::os::unix::fs::OpenOptionsExt;
+            open.mode(0o600);
+        }
+        let mut f = open.open(&tmp)?;
         f.write_all(bytes)?;
         f.sync_all()?;
         #[cfg(unix)]
-        if let Some(m) = &existing {
+        if owner_only {
+            use std::os::unix::fs::PermissionsExt;
+            // `mode` above is masked by the umask; set it explicitly as well.
+            fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))?;
+        } else if let Some(m) = &existing {
             fs::set_permissions(&tmp, m.permissions())?;
         }
         drop(f);
@@ -319,6 +355,32 @@ mod tests {
             .map(|e| e.unwrap().file_name())
             .collect();
         assert_eq!(names.len(), 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn owner_only_write_is_0600_in_a_0700_directory() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join("multiplayer");
+        let p = dir.join("rooms.json");
+        write_atomic_owner_only(&p, b"{}", true).unwrap();
+        let mode = |q: &Path| fs::metadata(q).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode(&p), 0o600);
+        assert_eq!(mode(&dir), 0o700);
+        // A file left world-readable by an older build is tightened on the next write.
+        fs::set_permissions(&p, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        write_atomic_owner_only(&p, b"{\"owned\":{}}", true).unwrap();
+        assert_eq!(mode(&p), 0o600);
+        assert_eq!(mode(&dir), 0o700);
+        assert_eq!(fs::read(&p).unwrap(), b"{\"owned\":{}}");
+        // A plain write keeps the existing mode (documents are not secrets).
+        let doc = root.path().join("doc.kimo");
+        fs::write(&doc, b"a").unwrap();
+        fs::set_permissions(&doc, fs::Permissions::from_mode(0o644)).unwrap();
+        write_atomic(&doc, b"b", false).unwrap();
+        assert_eq!(mode(&doc), 0o644);
     }
 
     #[test]

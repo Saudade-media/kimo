@@ -32,6 +32,7 @@ import {
   type ManifestEntry,
   sniffImage,
 } from "./assets"
+import { fileDeleted } from "./file-events"
 import { buildSampleDocument, newDocument } from "./sample"
 import { isZip, readZip, writeZip } from "./zip"
 
@@ -197,6 +198,8 @@ export async function deleteFile(id: string): Promise<void> {
   await deleteAssetDb(id)
   // Board 37 §9: its preview goes too.
   await libraryThumbnails.remove(id).catch(() => {})
+  // A shared file stops being shared (multiplayer listens).
+  fileDeleted(id)
 }
 
 /** Root-frame count of a store. */

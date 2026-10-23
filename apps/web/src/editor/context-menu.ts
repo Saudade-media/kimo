@@ -59,6 +59,11 @@ export interface CanvasMenuInput {
    * "Detach all variables" (the selection has bindings). Hidden when nothing applies.
    */
   variables?: VariableMenuState
+  /**
+   * Board 41 section 9: a View link. The menu keeps what only reads (Copy): no agent group, no
+   * Duplicate, structure, lock or Delete.
+   */
+  viewOnly?: boolean
 }
 
 /** What the board 27 §7 variable items can do for the current selection. */
@@ -240,6 +245,18 @@ function agentRows(i: CanvasMenuInput): CanvasMenuRow[] {
 
 /** The menu for the current selection, or null when nothing is selected. */
 export function canvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
+  const model = fullCanvasMenuModel(i)
+  if (!model || !i.viewOnly) return model
+  const kbd = i.kbd ?? ((id: string) => DEFAULT_KBD[id] ?? "")
+  return {
+    agent: [],
+    standard: [{ id: "copy", label: "Copy", meta: kbd("copy"), action: { kind: "copy" } }],
+    structure: [],
+    danger: [],
+  }
+}
+
+function fullCanvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
   const sel = i.selection.filter((id) => i.doc.getNode(id) || i.inInstance?.(id))
   if (sel.length === 0) return null
   const kbd = i.kbd ?? ((id: string) => DEFAULT_KBD[id] ?? "")

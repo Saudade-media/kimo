@@ -14,6 +14,11 @@ import { createContext, useContext } from "react"
 import webPackage from "../../package.json"
 import { conflictSessionFactory } from "../conflicts"
 import type { HostClient } from "../host/client"
+import { joinPath } from "../join/link"
+import type { LibraryShare } from "../multiplayer/library"
+import type { MultiplayerModel } from "../multiplayer/model"
+import { createWindowMultiplayer } from "../multiplayer/window"
+import { isPairDeepLink, pairPath } from "../pair/link"
 import { takeLastFiles } from "./last-files"
 import {
   createSessionManager,
@@ -31,6 +36,10 @@ export interface AppRuntime {
    * first open resolves, so the editor, which mounts on an open session, always sees it.
    */
   hostClient?: HostClient | null
+  /** Multiplayer view model (board 41): share state, people, links, join, settings. */
+  multiplayer?: MultiplayerModel
+  /** Sharing of browser library files (`#/file/:id`): the editor registers the open file. */
+  libraryShare?: LibraryShare
 }
 
 /** True inside the Tauri webview (same test as `@kimo/desktop` `isTauri`). */
@@ -88,8 +97,11 @@ export async function createAppRuntime(
   }
   // Desktop editor windows are clients of the document host when one answers; otherwise (an
   // older shell, the browser) sessions stay local to the window as in M4.
-  if (!inTauri())
-    return finishRuntime({ platform, manager: createAppSessionManager(platform) }, onOpened)
+  if (!inTauri()) {
+    const manager = createAppSessionManager(platform)
+    const { model, library } = createWindowMultiplayer({ platform, manager })
+    return finishRuntime({ platform, manager, multiplayer: model, libraryShare: library }, onOpened)
+  }
   const host = await import("../host")
   // M5: the window's `platform.mcp` (Rust relay + document host).
   const attach = async (client: HostClient | null) => {
@@ -106,7 +118,15 @@ export async function createAppRuntime(
   if (settingsRoute()) {
     const hostClient = await host.connectWindowToHost(undefined, 3000).catch(() => null)
     await attach(hostClient)
-    return { platform, manager: createAppSessionManager(platform), hostClient }
+    const manager = createAppSessionManager(platform)
+    // Settings › Multiplayer only reads settings and tests relays: no share backend is needed.
+    const { model } = createWindowMultiplayer({
+      platform,
+      manager,
+      hostBackend: async (local) =>
+        hostClient ? host.createHostShareBackend(hostClient, { local }) : null,
+    })
+    return { platform, manager, hostClient, multiplayer: model }
   }
   // Editor windows render right away (the host webview starts in parallel and may still be
   // loading). Opens wait for the host's answer, so files go to the host-backed session whenever
@@ -119,10 +139,22 @@ export async function createAppRuntime(
       await attach(client)
       return client ? host.hostedSessionFactory(client) : undefined
     })
+  const manager = createAppSessionManager(platform, undefined, factory)
+  const { model, library } = createWindowMultiplayer({
+    platform,
+    manager,
+    hostBackend: async (local) => {
+      await factory
+      const client = runtime.hostClient
+      return client ? host.createHostShareBackend(client, { local }) : null
+    },
+  })
   const runtime: AppRuntime = {
     platform,
-    manager: createAppSessionManager(platform, undefined, factory),
+    manager,
     hostClient: null,
+    multiplayer: model,
+    libraryShare: library,
   }
   return finishRuntime(runtime, onOpened)
 }
@@ -140,6 +172,12 @@ function finishRuntime(
   // The desktop Settings window (`#/settings/<pane>`) edits settings only: it never opens files.
   if (settingsRoute()) return runtime
   manager.install(onOpened)
+  // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route, and a
+  // `kimo://pair#...` link the pairing route (ADR 0017).
+  const linkRoute = (link: string) => (isPairDeepLink(link) ? pairPath(link) : joinPath(link))
+  platform.launch.onOpenRequest((request) => {
+    if (request.join) location.hash = `#${linkRoute(request.join)}`
+  })
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
     // General › On launch: with nothing else to open, the main window reopens the file that was
@@ -155,6 +193,10 @@ function finishRuntime(
     )
       requests.push({ source: "argv", refs: [last[0]] })
     for (const request of requests) {
+      if (request.join) {
+        location.hash = `#${linkRoute(request.join)}`
+        continue
+      }
       await manager.handleOpenRequest(request).catch((e: unknown) => {
         console.warn("Kimo: could not open", request.refs, e)
       })

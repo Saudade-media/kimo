@@ -208,6 +208,7 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
     estimateCost(o.provider.config.kind, o.model.model, usage, o.free ? { free: true } : {})
 
   o.onEvent({ type: "turn_start", turnId: o.turnId })
+  await turnHook(o.tools, "start", o.turnId)
 
   try {
     for (let step = 0; ; step++) {
@@ -430,6 +431,8 @@ export async function runTurn(o: RunTurnOptions): Promise<TurnRecord> {
     card = errorCard(err, { providerLabel: label, opsApplied })
   }
   abortLive("The turn ended.")
+  // Area claims end with the turn (before the placeholder clear, which claims never block).
+  await turnHook(o.tools, "end", o.turnId)
 
   // --- Turn end: clear owned placeholders (done, stopped, error alike) -------------------------
   for (const c of placeholders.clearingCalls()) {
@@ -512,4 +515,13 @@ function toProviderError(e: unknown, provider: string): ProviderError {
 
 async function pollOnline(online: () => boolean, signal: AbortSignal): Promise<void> {
   while (!online()) await sleep(2_000, signal)
+}
+
+/** Tells the tool host a turn started or ended; a failing host never fails the turn. */
+async function turnHook(tools: ToolHost, phase: "start" | "end", turnId: string): Promise<void> {
+  try {
+    await tools.turn?.(phase, turnId)
+  } catch {
+    // Claims still lapse on disconnect or after their TTL.
+  }
 }

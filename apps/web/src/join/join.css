@@ -1,0 +1,233 @@
+/*
+ * Join screen: desing.pen 41 Multiplayer, section 5 (HnFTO). Stage (jf2Li): bg-canvas, one
+ * centered card. Strokes are "inside" in the design: drawn as an inset ring so the padding box
+ * keeps the node's size. Tokens only, so dark (section 10, BFG09) follows the theme.
+ */
+.join-stage {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  height: 100vh;
+  padding: 24px;
+  background: var(--kimo-bg-canvas);
+}
+
+.join-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  max-width: 100%;
+  gap: 16px;
+  padding: 24px;
+  border-radius: var(--kimo-radius-xl);
+  background: var(--kimo-bg-app);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 4px 16px 0 var(--kimo-shadow);
+}
+
+.join-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  color: var(--kimo-text-primary);
+}
+
+.join-card__head > svg {
+  flex: none;
+}
+
+.join-card__text {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.join-card__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-md);
+  font-weight: 600;
+}
+
+.join-card__meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-xs);
+  font-weight: 400;
+}
+
+.join-card__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.join-card__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.join-card__step-icon {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--kimo-text-tertiary);
+}
+
+.join-card__step[data-status="done"] .join-card__step-icon {
+  color: var(--kimo-success);
+}
+
+.join-card__step[data-status="active"] .join-card__step-icon {
+  color: var(--kimo-text-secondary);
+}
+
+.join-card__step[data-status="active"] .join-card__step-icon > svg {
+  animation: join-spin 1s linear infinite;
+}
+
+.join-card__step-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+}
+
+.join-card__step[data-status="active"] .join-card__step-label {
+  color: var(--kimo-text-primary);
+}
+
+.join-card__step[data-status="pending"] .join-card__step-label {
+  color: var(--kimo-text-tertiary);
+}
+
+.join-card__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.join-card__track {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+}
+
+.join-card__bar {
+  height: 4px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+  transition: width 200ms ease-out;
+}
+
+/* progress === null: the bar slides across the track. */
+.join-card__bar--indeterminate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  animation: join-slide 1.2s ease-in-out infinite;
+}
+
+.join-card--error {
+  align-items: center;
+  gap: 14px;
+}
+
+.join-card__wrap {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.join-card__wrap--danger {
+  background: var(--kimo-danger-soft);
+  color: var(--kimo-danger);
+}
+
+.join-card__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.join-card__heading,
+.join-card__desc {
+  width: 100%;
+  line-height: 1.45;
+  text-align: center;
+  font-family: var(--kimo-font-sans);
+}
+
+.join-card__heading {
+  color: var(--kimo-text-primary);
+  font-size: var(--kimo-text-md);
+  font-weight: 600;
+}
+
+.join-card__desc {
+  color: var(--kimo-text-secondary);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+}
+
+.join-card__meta--code {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.join-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.join-card__actions .kimo-button:disabled {
+  opacity: 0.5;
+}
+
+@keyframes join-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes join-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .join-card__step[data-status="active"] .join-card__step-icon > svg,
+  .join-card__bar--indeterminate {
+    animation: none;
+  }
+}

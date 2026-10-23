@@ -1,9 +1,11 @@
 // The app manifest turns every `kimo_*` command into an `allow-kimo-…` permission, so the
 // capability files can grant exactly the command surface and nothing else (ADR 0012 §5,
-// ADR 0013 §11: the MCP commands live in their own list, ADR 0014: so do the M6 ones).
+// ADR 0013 §11: the MCP commands live in their own list, ADR 0014: so do the M6 ones, and
+// board 42: so do the relay setup ones).
 include!("src/command_list.rs");
 include!("src/command_list_mcp.rs");
 include!("src/command_list_ai.rs");
+include!("src/command_list_relay.rs");
 
 fn main() {
     let all: Vec<&'static str> = COMMANDS
@@ -12,6 +14,8 @@ fn main() {
         .chain(SECRETS_COMMANDS)
         .chain(CLI_COMMANDS)
         .chain(SKILLS_COMMANDS)
+        .chain(RELAY_COMMANDS)
+        .chain(DEVICE_KEY_COMMANDS)
         .copied()
         .collect();
     let _ = (MCP_HOST_ONLY_COMMANDS, AI_SETTINGS_EXCLUDED);

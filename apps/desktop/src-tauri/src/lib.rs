@@ -9,6 +9,7 @@ mod clipboard;
 pub mod command_list;
 pub mod command_list_ai;
 pub mod command_list_mcp;
+pub mod command_list_relay;
 mod commands;
 pub mod default_app;
 pub mod dock_activity;
@@ -27,6 +28,8 @@ mod mcp_commands;
 pub mod menu;
 pub mod recents;
 pub mod recovery;
+mod relay_commands;
+pub mod relay_host;
 pub mod scope;
 pub mod settings;
 pub mod skills;
@@ -51,6 +54,23 @@ fn kimo_home(app: &tauri::App) -> std::path::PathBuf {
         .home_dir()
         .map(|h| h.join(".kimo"))
         .unwrap_or_else(|_| std::env::temp_dir().join("kimo"))
+}
+
+/// Board 42: the relay the app runs with the person's Bun. Packaged builds carry it as the
+/// `relay/kimo-relay.js` resource (`bun run build:relay`); a dev build runs apps/server from the
+/// repository.
+fn relay_entry(app: &tauri::App) -> Option<std::path::PathBuf> {
+    let bundled = app
+        .path()
+        .resource_dir()
+        .ok()
+        .map(|d| d.join("relay").join("kimo-relay.js"))
+        .filter(|p| p.is_file());
+    if bundled.is_some() || !cfg!(debug_assertions) {
+        return bundled;
+    }
+    let dev = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../server/src/main.ts");
+    dev.is_file().then(|| dev.canonicalize().unwrap_or(dev))
 }
 
 /// Builds and runs the Tauri application.
@@ -119,6 +139,19 @@ pub fn run() {
                 mcp::shim_path(),
             )));
 
+            // Board 42: the relay setup's processes; ADR 0017: the device key in the keychain.
+            app.manage(Arc::new(relay_host::RelayHost::new(
+                relay_host::RelayHostConfig {
+                    home: app.path().home_dir().unwrap_or_else(|_| home.clone()),
+                    dir: data_dir.join("relay"),
+                    relay_entry: relay_entry(app),
+                    login_shell_env: true,
+                    search_process_path: true,
+                    extra_dirs: Vec::new(),
+                },
+                relay_host::default_secret_store(),
+            )));
+
             // M5 (ADR 0013 §7): socket/pipe + optional HTTP listeners, then the hidden
             // document host they relay to. `--background` (kimo-mcp --launch) skips the editor.
             let background = std::env::args().any(|a| a == mcp::BACKGROUND_FLAG);
@@ -147,7 +180,18 @@ pub fn run() {
             app.deep_link().on_open_url(move |event| {
                 let st = state::state(&h);
                 for url in event.urls() {
-                    if let Some(l) = links::parse_deep_link(url.as_str()) {
+                    if let Some(j) = links::parse_join_link(url.as_str()) {
+                        st.open_request(
+                            &h,
+                            links::OpenRequest {
+                                source: "deep-link",
+                                refs: vec![],
+                                node: None,
+                                page: None,
+                                join: Some(j),
+                            },
+                        );
+                    } else if let Some(l) = links::parse_deep_link(url.as_str()) {
                         st.open_request(
                             &h,
                             links::OpenRequest {
@@ -155,6 +199,7 @@ pub fn run() {
                                 refs: vec![l.path],
                                 node: l.node,
                                 page: l.page,
+                                join: None,
                             },
                         );
                     }
@@ -291,6 +336,17 @@ pub fn run() {
             ai_commands::kimo_cli_write,
             ai_commands::kimo_cli_close_stdin,
             ai_commands::kimo_cli_kill,
+            relay_commands::kimo_device_key_get,
+            relay_commands::kimo_device_key_set,
+            relay_commands::kimo_relay_find_tool,
+            relay_commands::kimo_relay_port_free,
+            relay_commands::kimo_relay_lan_address,
+            relay_commands::kimo_relay_fly_region,
+            relay_commands::kimo_relay_cloudflared_logged_in,
+            relay_commands::kimo_relay_write_fly_config,
+            relay_commands::kimo_relay_spawn,
+            relay_commands::kimo_relay_kill,
+            relay_commands::kimo_relay_running,
             ai_commands::kimo_skills_root,
             ai_commands::kimo_skills_list,
             ai_commands::kimo_skills_read,
@@ -321,6 +377,7 @@ pub fn run() {
                         refs,
                         node: None,
                         page: None,
+                        join: None,
                     },
                 );
             }
@@ -349,6 +406,10 @@ pub fn run() {
         RunEvent::Exit => {
             if let Some(a) = ai::services(app) {
                 a.shutdown();
+            }
+            // Board 42: the relay on this computer, its tunnel and any deploy stop with Kimo.
+            if let Some(r) = relay_commands::service(app) {
+                r.shutdown();
             }
             if let Some(m) = mcp::service(app) {
                 m.shutdown_blocking();
@@ -679,6 +740,109 @@ mod tests {
             let (_, perms) = capability(other);
             assert!(perms.is_disjoint(&expected), "{other} grants M6 commands");
         }
+    }
+
+    /// Board 42: the relay setup commands mirror `TAURI_RELAY_COMMANDS`, are all registered,
+    /// and only the relay-setup capability grants them (not the document host).
+    #[test]
+    fn relay_command_surface_matches_platform_ts() {
+        let ts = ts_list("relay-host.ts", "TAURI_RELAY_COMMANDS");
+        assert_eq!(ts.len(), 9);
+        let device = ts_list("relay-host.ts", "TAURI_DEVICE_KEY_COMMANDS");
+        let own_device: Vec<String> = super::command_list_relay::DEVICE_KEY_COMMANDS
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            own_device, device,
+            "command_list_relay.rs must mirror TAURI_DEVICE_KEY_COMMANDS"
+        );
+        let own: Vec<String> = super::command_list_relay::RELAY_COMMANDS
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            own, ts,
+            "command_list_relay.rs must mirror TAURI_RELAY_COMMANDS"
+        );
+        let lib =
+            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib.rs")).unwrap();
+        let handler = lib
+            .split("generate_handler![")
+            .nth(1)
+            .unwrap()
+            .split("])")
+            .next()
+            .unwrap();
+        let registered: BTreeSet<String> = handler
+            .lines()
+            .filter_map(|l| {
+                l.trim()
+                    .strip_prefix("relay_commands::")?
+                    .strip_suffix(',')
+                    .map(String::from)
+            })
+            .collect();
+        assert_eq!(
+            registered,
+            ts.iter().chain(&device).cloned().collect::<BTreeSet<_>>()
+        );
+        let perm = |c: &str| format!("allow-{}", c.replace('_', "-"));
+        let expected: BTreeSet<String> = ts.iter().map(|c| perm(c)).collect();
+        let (windows, perms) = capability("relay-setup");
+        assert!(!windows.contains("document-host"));
+        assert!(windows.contains("settings") && windows.contains("editor-*"));
+        for p in &perms {
+            assert!(
+                expected.contains(p)
+                    || ["core:event:allow-listen", "core:event:allow-unlisten"]
+                        .contains(&p.as_str()),
+                "unexpected permission {p}"
+            );
+        }
+        assert!(expected.is_subset(&perms));
+        for other in [
+            "default",
+            "mcp-host",
+            "mcp-ui",
+            "ai-agent",
+            "ai-settings",
+            "device-key",
+        ] {
+            let (_, perms) = capability(other);
+            assert!(
+                perms.is_disjoint(&expected),
+                "{other} grants relay setup commands"
+            );
+        }
+        // The device key: every window that shares or manages devices, the document host too.
+        let device_perms: BTreeSet<String> = device.iter().map(|c| perm(c)).collect();
+        let (key_windows, key_perms) = capability("device-key");
+        for w in ["main", "editor-*", "settings", "document-host"] {
+            assert!(key_windows.contains(w), "device-key misses {w}");
+        }
+        assert_eq!(key_perms, device_perms);
+        for other in [
+            "default",
+            "mcp-host",
+            "mcp-ui",
+            "ai-agent",
+            "ai-settings",
+            "relay-setup",
+        ] {
+            let (_, perms) = capability(other);
+            assert!(
+                perms.is_disjoint(&device_perms),
+                "{other} grants device key commands"
+            );
+        }
+        assert_eq!(
+            ts_list("relay-host.ts", "TAURI_RELAY_EVENTS"),
+            vec![
+                super::relay_host::EV_RELAY_OUTPUT.to_string(),
+                super::relay_host::EV_RELAY_EXIT.to_string()
+            ]
+        );
     }
 
     /// Event names and the shared constants match secrets.ts / cli-agents.ts.

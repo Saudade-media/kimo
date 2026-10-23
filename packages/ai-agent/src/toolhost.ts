@@ -12,6 +12,7 @@ import {
   failure,
   listTools,
   type PartialEvent,
+  releaseClaims,
   type StreamProgress,
   streamEngineOf,
   type ToolContext,
@@ -68,6 +69,11 @@ export interface ToolHost {
    * writes it to the Activity log under the agent's origin.
    */
   note?(entry: WebNote): void
+  /**
+   * Optional: a turn starts or ends (done, stopped, error alike). The host stamps the agent's
+   * area claims with the turn and releases them when it ends (ADR 0016 item 16).
+   */
+  turn?(phase: "start" | "end", turnId: string): void | Promise<void>
 }
 
 /** A tool implemented by the agent package itself (not in the M5 registry). */
@@ -119,14 +125,27 @@ export function createRegistryToolHost(opts: RegistryToolHostOptions): ToolHost 
   const engine = streamEngineOf(opts.handlers)
   const streams = new Map<string, ApplyStream>()
   let streamed = false
+  let turn: string | undefined
   return {
     tools: () => specs,
+    turn(phase, turnId) {
+      if (phase === "start") turn = turnId
+      else {
+        turn = undefined
+        releaseClaims(opts.context.origin)
+      }
+    },
     stream(call) {
       if (!allowed.has(call.name) || !engine?.streams(call.name)) return undefined
       streamed = true
       const s = engine.open({
         callId: call.id,
-        ctx: { ...opts.context, signal: new AbortController().signal, streamed: true },
+        ctx: {
+          ...opts.context,
+          signal: new AbortController().signal,
+          streamed: true,
+          ...(turn ? { turn } : {}),
+        },
         dispatch: opts.dispatch,
         tool: call.name,
       })
@@ -159,6 +178,7 @@ export function createRegistryToolHost(opts: RegistryToolHostOptions): ToolHost 
         signal: new AbortController().signal,
         ...(streamed ? { streamed: true } : {}),
         ...(stream ? { stream } : {}),
+        ...(turn ? { turn } : {}),
       }
       try {
         const out = await dispatch(call.name, call.input, ctx, opts.handlers, opts.dispatch)

@@ -25,6 +25,14 @@
     "apps/server": {
       "name": "@kimo/server",
       "version": "1.0.0",
+      "dependencies": {
+        "@kimo/sync": "workspace:*",
+      },
+      "devDependencies": {
+        "@kimo/core-schema": "workspace:*",
+        "@kimo/editor-state": "workspace:*",
+        "@kimo/mcp-server": "workspace:*",
+      },
     },
     "apps/web": {
       "name": "@kimo/web",
@@ -182,6 +190,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@kimo/editor-state": "workspace:*",
+        "lib0": "^0.2.119",
         "y-indexeddb": "^9.0.12",
         "yjs": "^13.6.33",
       },

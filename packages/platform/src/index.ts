@@ -26,6 +26,7 @@ export {
   isOpenableUrl,
   KIMO_EXTENSIONS,
   parseDeepLink,
+  parseJoinDeepLink,
   rebaseRelativeRefs,
   relativeRefBetween,
   resolveAgainstFile,
@@ -33,6 +34,7 @@ export {
 } from "./links"
 export * from "./mcp"
 export * from "./mcp-memory"
+export * from "./relay-host"
 export * from "./secrets"
 export {
   type Appearance,
@@ -45,6 +47,7 @@ export {
   nudgeSteps,
   RECENT_MODELS_MAX,
   type RecentModel,
+  type RelaySetupSetting,
   SETTING_CHOICES,
   SETTING_KEYS,
   SETTINGS_DEFAULTS,

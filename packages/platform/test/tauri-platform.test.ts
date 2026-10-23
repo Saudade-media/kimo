@@ -105,6 +105,16 @@ describe("createTauriPlatform", () => {
       text: "{}",
       mkdirs: false,
     })
+    await p.files.writeTextAtomic("/k/multiplayer/rooms.json", "{}", {
+      mkdirs: true,
+      ownerOnly: true,
+    })
+    expect(t.last("kimo_fs_write_text_atomic")).toEqual({
+      path: "/k/multiplayer/rooms.json",
+      text: "{}",
+      mkdirs: true,
+      ownerOnly: true,
+    })
     await p.files.writeBytesAtomic("/a/x.bin", new Uint8Array([104, 105]), { mkdirs: true })
     expect(t.last("kimo_fs_write_bytes_atomic")).toEqual({
       path: "/a/x.bin",

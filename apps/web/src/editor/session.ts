@@ -28,6 +28,7 @@ import {
   patchFile,
 } from "../lib/files"
 import { currentHeader } from "../lib/header"
+import type { SharedSession } from "../multiplayer/share"
 import type { FileDocumentSession, FileSessionManager } from "../platform/session"
 import { withActivePage } from "./pages/model"
 
@@ -56,6 +57,11 @@ export interface FileSession {
    * overrides, see `m3/route.ts`). Null refuses the edit (the router reports why).
    */
   route?: (ops: readonly Op[]) => readonly Op[] | null
+  /**
+   * A room joined from a link (board 41 section 5): the store is the room's guest document and
+   * nothing is written to the browser library or to a file.
+   */
+  shared?: SharedSession
 }
 
 export type SessionState =
@@ -134,6 +140,26 @@ function makeSession(
     },
   }
   return session
+}
+
+/** The editor session of a joined room: its guest store, named `name` (the owner's file name). */
+export function createRoomSession(shared: SharedSession, name: string): FileSession {
+  const now = Date.now()
+  const session = makeSession(shared.room, shared.store, null, {
+    id: shared.room,
+    name,
+    createdAt: now,
+    updatedAt: now,
+    frames: 0,
+  })
+  session.shared = shared
+  return session
+}
+
+/** The owner's file name of a joined room (`meta.name` of the document), or null. */
+export function roomFileName(store: DocStore): string | null {
+  const name = (store.toHeader() as { meta?: { name?: unknown } }).meta?.name
+  return typeof name === "string" && name.trim() ? name.trim() : null
 }
 
 /** Opens file `id` for the lifetime of the calling component. */

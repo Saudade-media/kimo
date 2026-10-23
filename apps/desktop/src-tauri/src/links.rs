@@ -318,7 +318,11 @@ mod tests {
             assert_eq!(parse_join_link(bad), None, "{bad}");
         }
         let link = format!("kimo://join#{frag}");
-        let r = requests_from_args(std::slice::from_ref(&link), std::path::Path::new("/work"), "argv");
+        let r = requests_from_args(
+            std::slice::from_ref(&link),
+            std::path::Path::new("/work"),
+            "argv",
+        );
         assert_eq!(r.len(), 1);
         assert_eq!(
             serde_json::to_value(&r[0]).unwrap(),

@@ -469,14 +469,13 @@ export function RelayWizard(props: RelayWizardProps) {
   }
 
   // --- Kimo Cloud (board 43) ---------------------------------------------------------------------
-  // Prices when the wizard opens (public). The account only on a device that chose Kimo Cloud: it
+  // The account only on a device that chose Kimo Cloud (prices load with Choose, below): it
   // is the saved relay, or the wizard opened at one of its steps (Use Kimo Cloud, Subscribe, Renew).
   // A self-hosting install never sends its key to Kimo Cloud just by opening the wizard; Choose ›
   // Kimo Cloud › Continue asks then. Subscribe and Renew start at 3 A or 3 B.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
     if (!cloud) return
-    void cloud.loadPlans()
     const chose = setup.path === "cloud" || (props.start !== undefined && props.start !== "choose")
     if (props.start === "subscribe" || props.start === "renew") cloud.backToChoose()
     if (props.start === "renew") void cloud.startCheckout()
@@ -494,6 +493,12 @@ export function RelayWizard(props: RelayWizardProps) {
       }
     })
   }, [])
+
+  // Prices only while Choose shows the Kimo Cloud card or a Kimo Cloud step is open (3 A); the
+  // store asks once and waits after a failure, so reopening the wizard does not ask again.
+  useEffect(() => {
+    if (cloud && (step === "choose" || step === "subscribe")) void cloud.loadPlans()
+  }, [cloud, step])
 
   const savingCloud = useRef(false)
   const saveCloud = useCallback(async () => {

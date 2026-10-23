@@ -100,7 +100,12 @@ export interface CloudStore {
   getState(): CloudState
   /** `GET /v1/account`: signed in or out, the plan, usage and devices; offline keeps the last. */
   refresh(): Promise<CloudState>
-  loadPlans(): Promise<void>
+  /**
+   * `GET /v1/plans` (public prices), asked only by a surface that shows Kimo Cloud. Once per store
+   * when it answers; after a failure (offline) not again for {@link PLANS_RETRY_MS} unless
+   * `force`. Never rejects.
+   */
+  loadPlans(options?: { force?: boolean }): Promise<void>
   /** Section 2. */
   setEmail(email: string): void
   startSignIn(email?: string): Promise<void>
@@ -121,6 +126,9 @@ export interface CloudStore {
   relay(): Promise<CloudRelay>
   dispose(): void
 }
+
+/** After a plans request that got no answer, surfaces opening again wait this long to ask. */
+export const PLANS_RETRY_MS = 60_000
 
 /** Email me a link is enabled once the field looks like an email (2A). */
 export function looksLikeEmail(text: string): boolean {
@@ -389,6 +397,33 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
     }
   }
 
+  // --- Plans (public prices) ---------------------------------------------------------------------------
+  let plansLoaded = false
+  let plansFailedAt: number | null = null
+  let plansLoading: Promise<void> | null = null
+  const loadPlans = (options?: { force?: boolean }): Promise<void> => {
+    if (plansLoading) return plansLoading
+    if (!options?.force) {
+      if (plansLoaded) return Promise.resolve()
+      if (plansFailedAt !== null && clock.now() - plansFailedAt < PLANS_RETRY_MS)
+        return Promise.resolve()
+    }
+    plansLoading = (async () => {
+      try {
+        set({ plans: await client.plans() })
+        plansLoaded = true
+        plansFailedAt = null
+        reached()
+      } catch (error) {
+        plansFailedAt = clock.now()
+        failed(error)
+      } finally {
+        plansLoading = null
+      }
+    })()
+    return plansLoading
+  }
+
   // --- Focus --------------------------------------------------------------------------------------------
   const offFocus = (deps.onFocus ?? defaultOnFocus)(() => {
     if (state.session === "signed-in") void refresh()
@@ -403,14 +438,7 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
     },
     getState: () => state,
     refresh,
-    async loadPlans() {
-      try {
-        set({ plans: await client.plans() })
-        reached()
-      } catch (error) {
-        failed(error)
-      }
-    },
+    loadPlans,
     setEmail(email) {
       const s = state.signIn
       if (s.phase === "email") set({ signIn: { ...s, email, error: null } })

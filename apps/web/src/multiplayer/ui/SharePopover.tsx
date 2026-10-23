@@ -207,9 +207,10 @@ function SetupBody({
   // B: a saved relay is checked when the popover opens; Kimo Cloud's account is refreshed.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
-    // Prices are public; the account is asked only once this device chose Kimo Cloud (the
-    // wizard asks when Kimo Cloud is picked), so a self-hosting install never sends its key to it.
-    if (cloud) {
+    // Kimo Cloud is asked only when this popover shows it: prices for the first run's Kimo Cloud
+    // body, the account once this device chose Kimo Cloud (the wizard asks when it is picked). A
+    // self-hosted relay's popover sends nothing to Kimo Cloud.
+    if (cloud && cloudView) {
       void cloud.loadPlans()
       if (setup?.path === "cloud") void cloud.refresh()
     }

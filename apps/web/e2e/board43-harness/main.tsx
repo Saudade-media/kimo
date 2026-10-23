@@ -5,7 +5,8 @@
  * page: `?surface=<name>&state=<name>&theme=light|dark`. Built by `e2e/board43-cloud.e2e.ts`;
  * driven through `window.__board43`.
  *
- * Surfaces: `wizard` (states: signed-out, active), `share` (signed-out, active, none, grace),
+ * Surfaces: `wizard` (states: signed-out, active), `share` (signed-out, active, none, grace,
+ * self-hosted: a Docker relay saved, offline: Kimo Cloud does not answer),
  * `settings` (active, past-due), `fragments` (6 D, E, F at 458), `banners` (6 B, C), `dialogs`
  * (5 B, C).
  */
@@ -59,8 +60,14 @@ const model = createMultiplayerModel({
 })
 const fake = createFakeCloud({ apiUrl: "https://cloud.test", relayUrl: "https://relay.cloud.test" })
 const opened: string[] = []
+/** Every request this page sent to Kimo Cloud, by path (a self-hosted relay sends none). */
+const cloudRequests: string[] = []
+const countedFetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  cloudRequests.push(new URL(String(input)).pathname)
+  return fake.fetch(input, init)
+}) as typeof fetch
 const cloud = createCloudStore({
-  client: createCloudClient({ apiUrl: fake.apiUrl, deviceKeys: keys, fetch: fake.fetch }),
+  client: createCloudClient({ apiUrl: fake.apiUrl, deviceKeys: keys, fetch: countedFetch }),
   deviceName: () => "Mac",
   clientKind: "desktop",
   openUrl: async (url) => {
@@ -79,11 +86,23 @@ const services = createRelaySetupServices(platform, {
 })
 const toasts: ShareToast[] = []
 
-Object.assign(window, { __board43: { platform, model, fake, cloud, services, opened, toasts } })
+Object.assign(window, {
+  __board43: { platform, model, fake, cloud, services, opened, toasts, cloudRequests },
+})
 
 /** Puts the account in `state` before the first render. */
 async function prepare() {
   const pub = await devicePubOf(await keys.get())
+  if (state === "self-hosted") {
+    // A self-hosted relay is saved: nothing here may ask Kimo Cloud.
+    await platform.settings.set("multiplayer.relayUrl", "https://relay.self.test")
+    await platform.settings.set("multiplayer.relaySetup", { path: "docker", extraOrigins: [] })
+    return
+  }
+  if (state === "offline") {
+    fake.state.offline = true
+    return
+  }
   if (state === "signed-out") return
   fake.signIn(pub, EMAIL, "Mac", Date.now() - 19 * 86_400_000)
   const other = await devicePubOf(await createMemoryDeviceKeyStore().get())

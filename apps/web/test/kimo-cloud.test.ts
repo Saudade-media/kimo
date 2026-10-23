@@ -18,6 +18,7 @@ import {
   CHECKOUT_POLL_MS,
   createCloudStore,
   looksLikeEmail,
+  PLANS_RETRY_MS,
   SIGN_IN_POLL_MS,
 } from "../src/multiplayer/cloud/store"
 import { CloudError } from "../src/multiplayer/cloud/types"
@@ -423,6 +424,48 @@ describe("store · account, devices, offline (sections 5 and 6)", () => {
     focus()
     await flush()
     expect(store.getState().account?.plan.status).toBe("active")
+    store.dispose()
+  })
+})
+
+describe("store · plans", () => {
+  test("asked once; after no answer, not again for a minute; failures never reject", async () => {
+    const clock = fakeClock()
+    const cloud = createFakeCloud({ now: clock.now })
+    let asked = 0
+    const client = createCloudClient({
+      apiUrl: cloud.apiUrl,
+      deviceKeys: createMemoryDeviceKeyStore(),
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith("/v1/plans")) asked++
+        return cloud.fetch(input, init)
+      }) as typeof fetch,
+      now: clock.now,
+    })
+    const store = createCloudStore({
+      client,
+      deviceName: () => "Mac",
+      clientKind: "web",
+      openUrl: async () => {},
+      clock,
+      onFocus: () => () => {},
+    })
+    cloud.state.offline = true
+    // The fake rejects the way a browser does (TypeError "Failed to fetch"): it becomes offline.
+    await Promise.all([store.loadPlans(), store.loadPlans()])
+    expect(asked).toBe(1)
+    expect(store.getState().offline).toBe(true)
+    await store.loadPlans()
+    expect(asked).toBe(1)
+    cloud.state.offline = false
+    clock.advance(PLANS_RETRY_MS)
+    await store.loadPlans()
+    expect(asked).toBe(2)
+    expect(store.getState().offline).toBe(false)
+    await store.loadPlans()
+    expect(asked).toBe(2)
+    await store.loadPlans({ force: true })
+    expect(asked).toBe(3)
     store.dispose()
   })
 })

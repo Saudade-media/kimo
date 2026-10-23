@@ -856,7 +856,57 @@ const both = (name: string, run: (ctx: E2EContext, theme: Theme) => Promise<void
   },
 })
 
+// --- No Kimo Cloud calls for a self-hosted relay; no answer is the offline state ----------------------
+
+async function selfHosted(ctx: E2EContext, theme: Theme) {
+  const { page } = ctx
+  const errors: string[] = []
+  const onError = (e: Error) => errors.push(e.message)
+  page.on("pageerror", onError)
+  try {
+    await open(ctx, "share", "self-hosted", theme)
+    await page.click(".b43-share")
+    await page.locator('.mp-popover[data-stage="ready"]').waitFor()
+    await page.waitForTimeout(300)
+    const asked = await page.evaluate(
+      () =>
+        (window as unknown as { __board43: { cloudRequests: string[] } }).__board43.cloudRequests,
+    )
+    expect(
+      asked.length === 0,
+      `a self-hosted popover asks Kimo Cloud nothing (${asked.join(", ")})`,
+    )
+    // Kimo Cloud not answering (first run shows it): the offline state, never an uncaught error.
+    await open(ctx, "share", "offline", theme)
+    await page.click(".b43-share")
+    await page.locator('.mp-popover[data-stage="first-run"]').waitFor()
+    await page.waitForFunction(
+      () =>
+        (
+          window as unknown as { __board43: { cloud: { getState(): { offline: boolean } } } }
+        ).__board43.cloud.getState().offline,
+    )
+    await page.click(".b43-share")
+    await page.click(".b43-share")
+    await page.locator('.mp-popover[data-stage="first-run"]').waitFor()
+    await page.waitForTimeout(300)
+    const plans = await page.evaluate(() =>
+      (
+        window as unknown as { __board43: { cloudRequests: string[] } }
+      ).__board43.cloudRequests.filter((p) => p === "/v1/plans"),
+    )
+    expect(plans.length === 1, `plans asked once across two opens (${plans.length})`)
+    expect(errors.length === 0, `no uncaught errors (${errors.join(" | ")})`)
+  } finally {
+    page.off("pageerror", onError)
+  }
+}
+
 export const scenarios: Scenario[] = [
+  both(
+    "board43 Kimo Cloud: a self-hosted relay asks Kimo Cloud nothing; offline is caught",
+    selfHosted,
+  ),
   both("board43 Kimo Cloud: Choose with Host your own collapsed and open", choose),
   both(
     "board43 Kimo Cloud: already signed in, Use Kimo Cloud, ready, start sharing",

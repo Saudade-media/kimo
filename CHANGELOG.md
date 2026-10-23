@@ -14,8 +14,25 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-23
+
+The first public release: release engineering, polish, the new mark and the format 1.0 freeze.
+
 ### Added
 
+- Multiplayer (ADR 0016, `docs/spec/multiplayer.md`): share a file with a link and edit it
+  together live. Content is end-to-end encrypted: the relay stores only ciphertext and the room key
+  lives in the link fragment. Edit and View links are signed capabilities with expiry and
+  revocation; guests need no account. Presence shows cursors, selections and avatars, canvas text
+  merges character by character with remote carets, and agents take soft area claims so they
+  pause around a human's edits.
+- The relay (`apps/server`, image `ghcr.io/saudade-media/kimo-relay`) is self-hosted: This
+  computer, Docker, Fly.io or the Railway template, set up from the relay wizard in the Share
+  popover or Settings › Multiplayer.
+- Relays belong to devices (ADR 0017): the first Kimo to use a fresh relay claims it, more
+  devices join with a single-use pairing link, and `KIMO_OWNER_KEY` / `KIMO_RESET_OWNER` cover
+  pre-claiming and recovery. An owner policy seam (ADR 0018) lets a hosted service decide who may
+  create rooms.
 - Kimo opens pen.dev `.pen` design files (plain JSON, schema 2.x): from Open file, Finder's
   Open With (registered as an alternate app, so pen.dev stays the default) or the command line.
   The first open converts the file into `<name>.kimo` beside it, with its images in `assets/`;
@@ -28,28 +45,6 @@ the dates are those of the milestone commits.
   Coons-patch mesh, GLSL ES 1.00 fragment shaders with `@resolution`/`@time` annotations,
   animated while visible, still under reduced motion). HTML/CSS/React approximate meshes with
   radial gradients, SVG/PDF use the mean color; shaders are reported as unsupported there.
-
-### Changed
-
-- `fill` sizes share the parent's main axis equally by weight, ignoring content size and
-  padding, as in pen.dev and Figma (CSS `flex: <weight> 1 0`): two fill texts in a row now get
-  the same width whatever their length, so text wraps as in pen.dev, and padded and unpadded
-  fill siblings end with equal outer sizes. A parent that hugs (`fit`) that axis or wraps keeps
-  the content size as the basis. The canvas layout and the HTML/CSS and React exports change
-  together (`flex-basis: 0`, or a px basis proportional to the weights when siblings are
-  padded); min/max clamps are resolved from the same basis.
-
-### Format
-
-- Spec §6.1 clarifies how `fill` shares main-axis space (zero basis; content basis in a hug or
-  wrapping parent), §20 row 34. No format version or feature change.
-
-## [1.0.0] - 2026-10-04
-
-The first public release: release engineering, polish, the new mark and the format 1.0 freeze.
-
-### Added
-
 - Composer bar and "…" menu for the built-in agent (board 40). The bar keeps Attach, the mode
   chip, a "…" button, the model chip and Send. **Skills** (with its count), **Auto-approve** and
   **Web access** moved into the "…" menu, which opens 232 px wide above the composer: Skills
@@ -296,6 +291,13 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Changed
 
+- `fill` sizes share the parent's main axis equally by weight, ignoring content size and
+  padding, as in pen.dev and Figma (CSS `flex: <weight> 1 0`): two fill texts in a row now get
+  the same width whatever their length, so text wraps as in pen.dev, and padded and unpadded
+  fill siblings end with equal outer sizes. A parent that hugs (`fit`) that axis or wraps keeps
+  the content size as the basis. The canvas layout and the HTML/CSS and React exports change
+  together (`flex-basis: 0`, or a px basis proportional to the weights when siblings are
+  padded); min/max clamps are resolved from the same basis.
 - ⇧⌘V is Paste in place; the Variables dialog moved to ⌥⇧⌘V.
 - Agent tab: no streamed text or live token counts while a turn runs; tokens, cost and time
   show when hovering a finished reply. Tokens are new tokens only ("21.1k new tokens": input not
@@ -398,6 +400,8 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Format
 
+- Spec §6.1 clarifies how `fill` shares main-axis space (zero basis; content basis in a hug or
+  wrapping parent), §20 row 34. No format version or feature change.
 - **`.kimo` format 1.0.0 (stable).** Format 1.0 is format 0.1 declared stable plus five additive
   fields; no existing field, default, node type or feature changed, every 0.1 document is a valid
   1.0 document, and it stays backward compatible within 1.x (spec §16.4).

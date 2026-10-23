@@ -37,8 +37,8 @@ bunx tauri signer generate -w ~/.tauri/kimo-updater.key
   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep an offline backup: losing the key means installed
   apps can never update again (they only accept manifests signed by it).
 - Store the public key as the repository variable `TAURI_UPDATER_PUBKEY`. The release build
-  injects it over `UPDATER_PUBKEY_PLACEHOLDER` in `tauri.conf.json`; once the key is final,
-  commit it to `tauri.conf.json` as well so local release builds match.
+  injects it into the release config, and the same key is committed in `tauri.conf.json`
+  (since 1.0.0) so local release builds match.
 - The app's updater endpoint is
   `https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json`. The workflow
   uploads tauri-action's `latest.json` and, for non-prerelease tags, a copy named

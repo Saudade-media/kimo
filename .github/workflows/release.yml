@@ -24,7 +24,7 @@
 #     TAURI_SIGNING_PRIVATE_KEY           the private key (content, not a path)
 #     TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
 #   Variables
-#     TAURI_UPDATER_PUBKEY          the matching public key; replaces UPDATER_PUBKEY_PLACEHOLDER
+#     TAURI_UPDATER_PUBKEY          the matching public key (also committed in tauri.conf.json)
 #                                   in tauri.conf.json at build time
 #     WINDOWS_TIMESTAMP_URL         optional, default http://timestamp.digicert.com
 name: release

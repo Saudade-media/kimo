@@ -95,6 +95,9 @@ fn write_atomic_opts(
     }
     let hash = sha256_hex(bytes);
     let tmp = temp_path(dir, path);
+    // Owner-only permissions are a Unix mode; elsewhere the user profile already restricts access.
+    #[cfg(not(unix))]
+    let _ = owner_only;
     #[cfg(unix)]
     if owner_only {
         use std::os::unix::fs::PermissionsExt;

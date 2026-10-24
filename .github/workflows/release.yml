@@ -1,8 +1,8 @@
 # Release: a `v*` tag builds the desktop installers on macOS, Windows and Linux (with the
-# kimo-mcp shim bundled as a sidecar), the static web app and a dry run of the CLI package, and
-# collects everything in a DRAFT GitHub release with GitHub's generated notes (categories in
-# .github/release.yml). Nothing is published: a maintainer reviews the draft and publishes it by
-# hand (docs/release.md).
+# kimo-mcp shim bundled as a sidecar and the multiplayer relay as a resource), the static web app
+# and a dry run of the CLI package, and collects everything in a DRAFT GitHub release with
+# GitHub's generated notes (categories in .github/release.yml). Nothing is published: a maintainer
+# reviews the draft and publishes it by hand (docs/release.md).
 #
 # `workflow_dispatch` runs the same builds without a tag or a release (artifacts only), to test
 # packaging and signing on a branch.
@@ -145,6 +145,8 @@ jobs:
       # bundled through tauri.bundle.conf.json `externalBin`.
       - name: build and stage the kimo-mcp shim
         run: bun apps/desktop/scripts/build-shim.ts --target ${{ matrix.target }}
+      - name: bundle the multiplayer relay
+        run: bun apps/desktop/scripts/build-relay.ts
 
       - name: signing environment (only the secrets that are set)
         env:

@@ -1,0 +1,348 @@
+/* Board 44 "Workspace v2" §1 / §4: the window's tab strip over the page (Home or the editor). */
+
+/* The window: Tab Strip (46) over the page, which fills the rest. */
+.workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.workspace__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tab Strip (6LTyzBnoUm): fill × 46, bg-muted, stroke bottom 1 border, row, gap 8,
+   padding [0, 8, 0, 16], center */
+.tab-strip {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 46px;
+  padding: 0 8px 0 16px;
+  background: var(--kimo-bg-muted);
+  box-shadow: inset 0 -1px 0 0 var(--kimo-border);
+  font-family: var(--kimo-font-sans);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Traffic Lights (i97skZcRK0): the native lights' inset; the strip's 16 padding is their
+   leading. */
+.tab-strip__lights.kimo-traffic-lights {
+  height: 46px;
+}
+
+/* Tab · Home (7o38QONY4h): 32 × 28, radius-sm, center; house 14 text-secondary. Active (UFyDU4pjFI):
+   bg-app + border, house text-primary. */
+.tab-strip__home,
+.tab-strip__new {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  cursor: default;
+}
+
+.tab-strip__home {
+  width: 32px;
+  color: var(--kimo-text-secondary);
+}
+
+/* New tab (u9DpLM36ww): 28 × 28, radius-sm, center; plus 14 text-tertiary. */
+.tab-strip__new {
+  width: 28px;
+  color: var(--kimo-text-tertiary);
+}
+
+.tab-strip__home:hover,
+.tab-strip__new:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.tab-strip__home--active,
+.tab-strip__home--active:hover {
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-primary);
+}
+
+.tab-strip__home svg,
+.tab-strip__new svg {
+  display: block;
+  flex: none;
+}
+
+/* Divider (NIyIRdwX63): 1 × 16, border-strong. */
+.tab-strip__divider {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  background: var(--kimo-border-strong);
+}
+
+/* §4 D: the file tabs scroll past their 120 minimum, with 80 wide edge fades. */
+.tab-strip__scroll {
+  position: relative;
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+.tab-strip__tabs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.tab-strip__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Edge fade (yPzKOnfMWB): 80 × 46, linear #F2F1EF00 → bg-muted. */
+.tab-strip__fade {
+  position: absolute;
+  top: 0;
+  width: 80px;
+  height: 46px;
+  pointer-events: none;
+}
+
+.tab-strip__fade--end {
+  right: 0;
+  background: linear-gradient(90deg, transparent, var(--kimo-bg-muted));
+}
+
+.tab-strip__fade--start {
+  left: 0;
+  background: linear-gradient(270deg, transparent, var(--kimo-bg-muted));
+}
+
+/* The free space after New tab drags the window. */
+.tab-strip__drag {
+  flex: 1 1 0;
+  align-self: stretch;
+  min-width: 0;
+}
+
+/* Tab (4yDGRrDlbH): h 28, hug, radius-sm, row, gap 6, padding [0, 6, 0, 10], center. §4 D: shrinks
+   to 120, the name ellipsizes. */
+.tab {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px 0 10px;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: default;
+  outline: none;
+}
+
+/* §4 D (ApaM9533Iq): out of room, tabs keep 120. */
+.tab-strip__tabs[data-tight] > .tab {
+  min-width: 120px;
+}
+
+.tab:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.tab:focus-visible {
+  box-shadow: 0 0 0 2px var(--kimo-accent);
+}
+
+/* Active (4yDGRrDlbH): bg-app + border; file icon and name text-primary. */
+.tab--active,
+.tab--active:hover {
+  background: var(--kimo-bg-app);
+  box-shadow: inset 0 0 0 1px var(--kimo-border);
+  color: var(--kimo-text-primary);
+}
+
+.tab--dragging {
+  z-index: 1;
+}
+
+/* File icon (olWYTUfxT5): 13, text-tertiary (active text-primary). */
+.tab__icon {
+  display: block;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.tab--active .tab__icon {
+  color: var(--kimo-text-primary);
+}
+
+/* Name (5sWgCI2Tu1): font-sans text-sm 500. */
+.tab__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--kimo-text-sm);
+  font-weight: 500;
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Unsaved dot (Jsw1h2KXuL): 6 × 6, text-secondary, before Close. */
+.tab__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kimo-text-secondary);
+}
+
+/* Close (2GG41Kzq4o): 16 × 16, radius-xs, center; x 12 text-tertiary. Hover (3fDqyOu0ns):
+   bg-muted, x text-primary. */
+.tab__close {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: var(--kimo-radius-xs);
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: default;
+}
+
+.tab__close:hover {
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-primary);
+}
+
+.tab__close svg {
+  display: block;
+}
+
+/* §4 C Slot · where the tab was (jdG3SlF02H): tab width × 28, radius-sm, stroke border-strong
+   dashed 3 / 3, center; Dot 4 × 4 border-strong. */
+.tab-slot {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+}
+
+.tab-slot__outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tab-slot__outline rect {
+  width: calc(100% - 1px);
+  height: calc(100% - 1px);
+  fill: none;
+  stroke: var(--kimo-border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.tab-slot__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--kimo-border-strong);
+}
+
+/* §4 C Drop area (93wxLtdvRP): column, gap 10; the ghost under the pointer over the hint. */
+.tab-drag {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+}
+
+/* Ghost tab (ginruhzAsv): bg-app, border, shadow 0 8 24 shadow-strong, rotation -2; name
+   text-primary, file icon text-tertiary. */
+.tab.tab--ghost {
+  min-width: 0;
+  background: var(--kimo-bg-app);
+  box-shadow:
+    inset 0 0 0 1px var(--kimo-border),
+    0 8px 24px 0 var(--kimo-shadow-strong);
+  color: var(--kimo-text-primary);
+  transform: rotate(-2deg);
+}
+
+/* Hint (cz3IpvUR6X): h 24, radius-pill, accent, row, gap 6, padding [0, 10], center;
+   app-window 12 + text-sm 500, on-accent. */
+.tab-drag__hint {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-accent);
+  color: var(--kimo-on-accent);
+  font-size: var(--kimo-text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tab-drag__hint svg {
+  display: block;
+  flex: none;
+}
+
+/* Board 44 §1: the strip hosts the traffic lights now, so the page under it drops its own inset
+   (the editor topbar until the panels work replaces it, and Home's sidebar). */
+.workspace .kimo-desktop-topbar > .kimo-traffic-lights,
+.workspace .home-sidebar--desktop > .kimo-traffic-lights {
+  display: none;
+}
+
+.workspace .kimo-desktop-topbar {
+  padding-left: 12px;
+}
+
+.workspace .home-sidebar--desktop {
+  padding-top: 16px;
+}

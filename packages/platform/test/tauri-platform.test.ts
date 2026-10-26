@@ -357,6 +357,9 @@ describe("createTauriPlatform", () => {
     expect(t.last("kimo_menu_set_context")).toEqual({ context: "editor" })
     await p.window.openNewWindow?.()
     expect(t.calls.some((c) => c.command === "kimo_window_new")).toBe(true)
+    // Board 44 §4 C: drag a tab out → a new window on that file.
+    await p.window.openFileInNewWindow?.("/a/home.kimo")
+    expect(t.last("kimo_window_open_file")).toEqual({ path: "/a/home.kimo" })
     const actions: string[] = []
     const off = p.menu?.onAction((a) => actions.push(a))
     t.emit("kimo://editor-menu", { action: "go-home" })

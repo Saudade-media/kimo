@@ -13,8 +13,10 @@
 
 use serde::Serialize;
 
-/// Height of the editor topbar and of the Settings sidebar's lights row (board 20, board 19).
+/// Height of the Settings sidebar's lights row (board 19; board 20's editor topbar before tabs).
 pub const TOPBAR_HEIGHT: f64 = 48.0;
+/// Board 44 §1 "Tab Strip" (6LTyzBnoUm): the editor window's tab strip hosts the lights, 46 pt.
+pub const TAB_STRIP_HEIGHT: f64 = 46.0;
 /// The close button's left edge, the design's padding-left (02d TrafficLights) and the `x` of
 /// `window::TRAFFIC_LIGHTS`.
 pub const LIGHTS_X: f64 = 16.0;
@@ -24,6 +26,16 @@ pub const TOLERANCE: f64 = 0.25;
 /// Vertical center of the lights, measured from the window's top edge.
 pub fn center_target() -> f64 {
     TOPBAR_HEIGHT / 2.0
+}
+
+/// The lights' center for window `label`: editor windows center them on the board 44 tab strip,
+/// Settings on its 48 pt lights row.
+pub fn center_target_for(label: &str) -> f64 {
+    if crate::window::is_editor_label(label) {
+        TAB_STRIP_HEIGHT / 2.0
+    } else {
+        center_target()
+    }
 }
 
 /// New `y` of a button inside its titlebar container (AppKit's y axis points up) that moves
@@ -130,15 +142,14 @@ mod mac {
 
     /// One pass on the main thread. Returns the remaining vertical error and the zoom
     /// button's right edge.
-    fn pass(win: &NSWindow) -> Option<(f64, f64)> {
+    fn pass(win: &NSWindow, target: f64) -> Option<(f64, f64)> {
         let b = buttons(win)?;
-        let err = center_from_top(&b.close, b.window_height) - center_target();
+        let err = center_from_top(&b.close, b.window_height) - target;
         let dx = LIGHTS_X - in_window(&b.close).origin.x;
         if err.abs() > TOLERANCE || dx.abs() > TOLERANCE {
             for btn in [&b.close, &b.mini, &b.zoom] {
                 let mut o = btn.frame().origin;
-                o.y =
-                    corrected_origin_y(o.y, center_from_top(btn, b.window_height), center_target());
+                o.y = corrected_origin_y(o.y, center_from_top(btn, b.window_height), target);
                 o.x += dx;
                 btn.setFrameOrigin(o);
             }
@@ -158,6 +169,7 @@ mod mac {
             return;
         }
         let w = w.clone();
+        let target = center_target_for(w.label());
         std::thread::spawn(move || {
             for delay_ms in [0u64, 60, 120, 250, 500] {
                 std::thread::sleep(Duration::from_millis(delay_ms));
@@ -167,7 +179,7 @@ mod mac {
                     // SAFETY: Tauri hands out the live NSWindow of this window and we are on
                     // the main thread; the reference does not outlive the closure.
                     let win: &NSWindow = unsafe { &*(ptr as *const NSWindow) };
-                    if let Some((_, edge)) = pass(win) {
+                    if let Some((_, edge)) = pass(win, target) {
                         let right = f64::from(topbar_inset(edge));
                         let changed = {
                             let mut g = lights().lock().unwrap();
@@ -232,6 +244,10 @@ mod tests {
     #[test]
     fn target_is_the_topbar_middle() {
         assert_eq!(center_target(), 24.0);
+        // Board 44 §1: editor windows center the lights on the 46 pt tab strip.
+        assert_eq!(center_target_for("main"), 23.0);
+        assert_eq!(center_target_for("editor-3"), 23.0);
+        assert_eq!(center_target_for("settings"), 24.0);
     }
 
     #[test]

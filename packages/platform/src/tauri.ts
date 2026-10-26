@@ -252,6 +252,8 @@ export interface TauriCommandMap {
   kimo_window_close: { args: Record<string, never>; result: null }
   /** File › New window (G4): another editor window (`editor-<n>`) on Home. */
   kimo_window_new: { args: Record<string, never>; result: null }
+  /** Board 44 §4 C: another editor window (`editor-<n>`) showing the file at `path`. */
+  kimo_window_open_file: { args: { path: string }; result: null }
 
   // --- settings (app config dir `settings.json`; Rust validates keys, broadcasts changes) ---
   kimo_settings_get_all: { args: Record<string, never>; result: Partial<Settings> }
@@ -373,6 +375,7 @@ export const TAURI_COMMANDS = [
   "kimo_window_confirm_close",
   "kimo_window_close",
   "kimo_window_new",
+  "kimo_window_open_file",
   "kimo_settings_get_all",
   "kimo_settings_set",
   "kimo_launch_take_initial",

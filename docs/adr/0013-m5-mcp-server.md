@@ -453,6 +453,9 @@ when a result has it.
 
 ## Addendum 5 (2026-10-05, board 34 "Auto-approve")
 
+> Superseded in part by Addendum 8: auto-approve is now the default, the confirm, the pill and
+> the warning tone are gone, and the switch reads "Ask before changes".
+
 - **Policy field** (`src/policy.ts`, `@kimo/platform` mirror, Rust `ClientPolicy`): additive
   `autoApprove?: boolean` (absent = false; Rust `#[serde(default)]`, not written when false, so
   older `policies.json` files read and write back unchanged). `autoApproves(policy)` is true only
@@ -720,6 +723,13 @@ clients; the policy model, the prompts and the limits below are unchanged.
 - **Built-in agent** (ADR 0014 Addendum 5): the per-session switch starts on in every new or
   reopened session, the composer's "…" row reads **Ask before changes**, and the chip and the
   warning dot are gone.
+- **Auto-approve never widens a deliberate limit** (`autoApproveRefusal`, `protectedPath`):
+  a Read only client's write calls are refused (`PERMISSION_DENIED`), and file access in a
+  system folder (`/etc`, `/usr`, `/System`, `/Library`, `C:/Windows`, ...) or inside a hidden
+  folder or file (`~/.ssh`, `~/.config`, `.env`; `~/.kimo` excepted) is refused instead of
+  approved. `kimo_export` writes only inside `outDir`, whatever a file's name says. Settings
+  shows a trusted client as "Full access" (or "Read only") and its Files scope only while it
+  asks first, because only then does the scope limit it.
 - **Still enforced** (not approvals): `BATCH_TOO_LARGE` (40 new layers, 150 streamed), path
   checks, `FILE_EXISTS` without `overwrite`, read-only and locked documents, paused clients,
   `onExceed: "deny"` policies (headless `kimo mcp`, spawned children), the connection token.

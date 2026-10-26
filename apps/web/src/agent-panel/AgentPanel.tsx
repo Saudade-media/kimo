@@ -171,7 +171,6 @@ export function AgentPanel({
   const moreButton = useRef<HTMLButtonElement | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [agentModelTarget, setAgentModelTarget] = useState<number | null>(null)
-  // Board 34: turning auto-approve on asks once (k0K1nN); turning it off never asks.
 
   // Keep the newest content in view while streaming.
   const last = state.messages[state.messages.length - 1]

@@ -24,6 +24,7 @@ import {
   kimoCreate,
   kimoExport,
   kimoSave,
+  protectedPath,
   type ToolContext,
   type WireOp,
 } from "../src/index"
@@ -63,7 +64,59 @@ describe("auto-approve policy", () => {
   test("connected clients are trusted by default; Ask before changes turns it off", () => {
     expect(autoApproves(DEFAULT_POLICY)).toBe(true)
     expect(autoApproves(ASK_POLICY)).toBe(false)
-    expect({ ...ASK_POLICY, autoApprove: true } as ClientPolicy).toEqual(DEFAULT_POLICY)
+  })
+
+  test("Read only and protected paths are refused, not auto-approved", async () => {
+    const cases: [ClientPolicy, string, Record<string, unknown>, string][] = [
+      [policy({ autoApprove: true, level: "read" }), "kimo_apply_ops", del, "Read only"],
+      [
+        policy({ autoApprove: true }),
+        "kimo_open",
+        { path: "/Users/me/.ssh/x.kimo" },
+        "system or hidden folder",
+      ],
+      [policy({ autoApprove: true }), "kimo_open", { path: "/etc/x.kimo" }, "system or hidden"],
+    ]
+    for (const [p, tool, input, says] of cases) {
+      const log: Omit<ActivityEntry, "seq">[] = []
+      const path = typeof input.path === "string" ? input.path : undefined
+      const out = await dispatch(tool, input, ctx(p, log), createStubHandlers(), {
+        validate: () => [],
+        targets: async () => (path ? { path } : {}),
+      })
+      expect(out.result.ok).toBe(false)
+      if (!out.result.ok) {
+        expect(out.result.errors[0]?.code).toBe("PERMISSION_DENIED")
+        expect(out.result.errors[0]?.message).toContain(says)
+      }
+      expect(log.some((e) => e.kind === "approval")).toBe(false)
+      expect(log.find((e) => e.kind === "denied")?.tool).toBe(tool)
+    }
+  })
+
+  test("protectedPath: system and hidden folders, not ~/.kimo or ordinary folders", () => {
+    for (const p of [
+      "/etc/hosts",
+      "/private/etc/x.kimo",
+      "/usr/local/x.kimo",
+      "/System/x.kimo",
+      "/Library/LaunchDaemons/x.kimo",
+      "/Users/me/.ssh/id",
+      "/Users/me/.config/x.kimo",
+      "/Users/me/repo/.env",
+      "C:/Windows/x.kimo",
+      "c:/Program Files/x.kimo",
+    ])
+      expect(protectedPath(p)).toBe(true)
+    for (const p of [
+      "/Users/me/repo/design/home.kimo",
+      "/Users/me/Library/Mobile Documents/x.kimo",
+      "/Users/me/.kimo/cli-workspaces/s1/x.kimo",
+      "/private/var/folders/ab/T/x.kimo",
+      "/tmp/out",
+      "C:/Users/me/Documents/x.kimo",
+    ])
+      expect(protectedPath(p)).toBe(false)
   })
 
   test("every reason kind that asks is approved without a prompt and logged as auto", async () => {
@@ -72,7 +125,7 @@ describe("auto-approve policy", () => {
       // destructive
       ["kimo_apply_ops", del, async () => ({})],
       // file outside the allow-list
-      ["kimo_open", { path: "/etc/x.kimo" }, async () => ({ path: "/etc/x.kimo" })],
+      ["kimo_open", { path: "/Users/me/x.kimo" }, async () => ({ path: "/Users/me/x.kimo" })],
       // node scope
       [
         "kimo_apply_ops",

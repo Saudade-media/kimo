@@ -145,7 +145,7 @@ export interface AgentsControllerExt extends AgentsController {
   undoSession(origin: string): Promise<{ undone: number; stale: number }>
   /** Redo an undone entry (board 24 h); null when the history cannot redo. */
   redoEntry: ((entry: McpActivityEntry) => Promise<McpHistoryResult>) | null
-  /** Pause: the client becomes read-only until Resume (policy level `read`). */
+  /** Pause: the client's calls wait until Resume (a host flag, before authorization). */
   pause(client: string): Promise<void>
   resume(client: string): Promise<void>
   /** Clears a READ_ONLY / DOCUMENT_LOCKED pause (Resume when the lock clears). */

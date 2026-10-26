@@ -194,6 +194,61 @@ export function autoApproves(policy: Pick<ClientPolicy, "autoApprove" | "onExcee
   return policy.autoApprove === true && policy.onExceed === "ask"
 }
 
+/** System folders an auto-approved agent never touches (ADR 0013 Addendum 8). */
+const SYSTEM_ROOTS = [
+  "/etc",
+  "/bin",
+  "/sbin",
+  "/usr",
+  "/dev",
+  "/proc",
+  "/boot",
+  "/System",
+  "/Library",
+]
+const WINDOWS_SYSTEM_ROOTS = ["windows", "program files", "program files (x86)", "programdata"]
+
+/**
+ * True for a path auto-approve refuses instead of approving: a system folder, or anything inside
+ * a hidden folder or named like a hidden file (`~/.ssh`, `~/.config`, `.env`), except Kimo's own
+ * `~/.kimo`. Expects a normalized absolute path.
+ */
+export function protectedPath(path: string): boolean {
+  const p = path.replace(/\\/g, "/").replace(/^\/private(?=\/etc(\/|$))/, "")
+  const win = /^[A-Za-z]:\//.exec(p)
+  const inRoot = win
+    ? WINDOWS_SYSTEM_ROOTS.some((r) => {
+        const rest = p.slice(3).toLowerCase()
+        return rest === r || rest.startsWith(`${r}/`)
+      })
+    : SYSTEM_ROOTS.some((r) => p === r || p.startsWith(`${r}/`))
+  if (inRoot) return true
+  return p
+    .split("/")
+    .some((seg) => seg.startsWith(".") && seg !== "." && seg !== ".." && seg !== ".kimo")
+}
+
+/**
+ * Auto-approve never widens a deliberate limit: Read only still refuses writes, and protected
+ * paths ({@link protectedPath}) are refused. Returns the refusal, or null to approve.
+ */
+export function autoApproveRefusal(
+  policy: Pick<ClientPolicy, "level">,
+  reason: ApprovalReason,
+): { code: "PERMISSION_DENIED"; message: string } | null {
+  if (policy.level === "read" && (reason.kind === "level" || reason.kind === "destructive"))
+    return {
+      code: "PERMISSION_DENIED",
+      message: "This client is Read only (Settings › Agents & MCP › Permissions).",
+    }
+  if (reason.kind === "file" && protectedPath(reason.path))
+    return {
+      code: "PERMISSION_DENIED",
+      message: `${reason.path} is in a system or hidden folder; agents can't ${reason.action} files there.`,
+    }
+  return null
+}
+
 /**
  * "Always for this session" covers op kinds (destructive / level) only, never file access or
  * node scope (lead decision): those are approved once per call.

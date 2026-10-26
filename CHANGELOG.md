@@ -14,7 +14,7 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-10-23
+## [1.0.0] - 2026-10-26
 
 The first public release: release engineering, polish, the new mark and the format 1.0 freeze.
 
@@ -85,7 +85,7 @@ The first public release: release engineering, polish, the new mark and the form
   "This model can't use the web". Each search and page read is a step and the status line
   ("Searching the web for “…”", "Reading example.com"), is saved in the session transcript
   (`TurnRecord.web`) and, on desktop, is an Activity row (kind `web`, tool `web_search` /
-  `web_fetch`, the query or URL, no Undo). No approval is asked; auto-approve is unaffected.
+  `web_fetch`, the query or URL, no Undo). No approval is asked, and Ask before changes doesn't change it.
   Providers: Claude Code gets `--tools "WebSearch,WebFetch"` and both in `--allowedTools` (file,
   shell and edit tools stay off); Codex `-c web_search="live"` (`"disabled"` when off, and its
   ChatGPT apps are now off in every turn, since they carry their own web tool); Gemini CLI stops

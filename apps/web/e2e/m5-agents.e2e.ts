@@ -1014,6 +1014,15 @@ export const scenarios: Scenario[] = [
       )
       const perms = page.locator("[data-testid=agents-permissions]")
       await perms.waitFor()
+      // Ask before changes on: the full Permissions panel (Files shows only while asking).
+      await page
+        .locator("[data-client=claude-code] [data-testid=agents-perms-auto] .kimo-toggle")
+        .click()
+      await page.waitForFunction(() =>
+        (window as unknown as Agents).__agents.host.calls.some((x) =>
+          x.includes('"autoApprove":false'),
+        ),
+      )
 
       const success = await token(page, "--kimo-success")
       const agent = await token(page, "--kimo-agent")
@@ -1149,7 +1158,7 @@ export const scenarios: Scenario[] = [
       )
       expect(
         (await page.locator(".kimo-agent-client-row__scope-label").first().innerText()) ===
-          "Edit + delete · any file",
+          "Edit + delete · any file · asks first",
         "badge follows",
       )
       // Codex is read only → grey badge.

@@ -147,7 +147,6 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
   const { host, server = {}, scope = "user", project, home, machine = "this computer" } = props
   const { data, setData, loadHosts } = usePaneData(host, scope, project)
   const [expanded, setExpanded] = useState<string | null>(props.expandedClient ?? null)
-  // Board 34: turning a client's auto-approve on asks once (k0K1nN).
   const [preview, setPreview] = useState<{
     host: McpHostId
     label: string
@@ -567,7 +566,9 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                 scope={
                   policy.autoApprove === false
                     ? `${scopeLabel(policy, c.cwd)} · asks first`
-                    : scopeLabel(policy, c.cwd)
+                    : policy.level === "read"
+                      ? "Read only"
+                      : "Full access"
                 }
                 writable={policy.level !== "read"}
                 expanded={open}
@@ -868,18 +869,22 @@ function Permissions({
           onChange={(level) => onPolicy({ ...policy, level })}
         />
       </div>
-      <div className="agents-perms__row">
-        <span className="agents-perms__label">Files</span>
-        <SegmentedText<FilesScope>
-          label="Files"
-          options={FILES_OPTIONS}
-          value={scope}
-          onChange={(s) => onPolicy({ ...policy, files: filesForScope(s, connection.cwd) })}
-        />
-        {connection.cwd && (
-          <span className="agents-perms__folder">{tildePath(connection.cwd)}/</span>
-        )}
-      </div>
+      {/* Files only limits a client that asks first; a trusted one reaches any file but system and
+          hidden folders (ADR 0013 Addendum 8). */}
+      {ask && (
+        <div className="agents-perms__row">
+          <span className="agents-perms__label">Files</span>
+          <SegmentedText<FilesScope>
+            label="Files"
+            options={FILES_OPTIONS}
+            value={scope}
+            onChange={(s) => onPolicy({ ...policy, files: filesForScope(s, connection.cwd) })}
+          />
+          {connection.cwd && (
+            <span className="agents-perms__folder">{tildePath(connection.cwd)}/</span>
+          )}
+        </div>
+      )}
       {/* Board 34 Perm row (YsgKV / P1NeQ), now "Ask before changes": Label · Toggle · Note. */}
       <div className="agents-perms__row" data-testid="agents-perms-auto">
         <span className="agents-perms__label">Ask first</span>

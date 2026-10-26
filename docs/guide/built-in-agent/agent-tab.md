@@ -98,6 +98,7 @@ Every new session, and an earlier one you reopen, starts with the switch off.
 
 Some limits are not approvals, so they apply either way:
 
+- agents never open, import, save or export files in system folders or hidden folders (such as `~/.ssh`), and exports stay inside their folder,
 - one edit adds at most 150 new layers (40 for agents whose edits do not stream),
 - file paths are checked (an absolute `.kimo` path for documents, `..` resolved, an existing file isn't overwritten unless the call says so),
 - read-only and locked documents stay read-only,

@@ -400,6 +400,9 @@ The first call alone went from ~27.8k to ~14k tokens (system prompt + tools).
 
 ## Addendum 3 (2026-10-05, board 34 "Auto-approve")
 
+> Superseded in part by Addendum 5: the switch starts on, reads "Ask before changes", and the
+> confirm and chip are gone.
+
 - **Per-session switch** (`AgentPanelControllerExt.setAutoApprove`, view state `autoApprove`).
   Off for every new session, a reopened session and a Home hand-off; held in the controller only
   and never written to the session file. The composer's shield (after the mode chip) asks once

@@ -47,18 +47,21 @@ function fileText() {
   return serialize(d)
 }
 
-async function startHost(files: Record<string, string> = {}, relay = false) {
+// "Ask before changes" on, so most tests see the approval prompts (ADR 0013 Addendum 8).
+const ASKING = { "claude-code": ASK_POLICY, codex: ASK_POLICY }
+
+async function startHost(
+  files: Record<string, string> = {},
+  relay = false,
+  policies: Record<string, unknown> = ASKING,
+) {
   const platform = createMemoryPlatform({ pid: 7000, files, settings: { "files.autosave": false } })
   const net = createMemoryBridgeNetwork()
   const sent: { connectionId: string; message: string }[] = []
   const ready: unknown[] = []
   net.commands.set("kimo_mcp_send", (a) => void sent.push(a as never))
   net.commands.set("kimo_mcp_host_ready", (a) => void ready.push(a))
-  // "Ask before changes" on, so these tests see the approval prompts (ADR 0013 Addendum 8).
-  net.commands.set("kimo_mcp_policies_get", () => ({
-    "claude-code": ASK_POLICY,
-    codex: ASK_POLICY,
-  }))
+  net.commands.set("kimo_mcp_policies_get", () => policies)
   const service = await startDocumentHostService({
     platform,
     bridge: net.bridge(HOST_LABEL),
@@ -441,6 +444,61 @@ describe("Rust relay contract (fake event bus)", () => {
     )
     await until(() => service.runtime.presence.list().length === 0)
     expect(platform.control.readFile(ref)).toBe(fileText())
+    await service.dispose()
+  })
+})
+
+describe("trusted by default (ADR 0013 Addendum 8)", () => {
+  test("a client without a stored policy opens another file with no prompt; Activity says auto", async () => {
+    const ref = "/Users/me/site/trusted.kimo"
+    const { net, service, sent } = await startHost({ [ref]: fileText() }, true, {})
+    const prompts: unknown[] = []
+    await net.bridge("editor-1").listen("kimo://mcp-approval-request", (r) => void prompts.push(r))
+    net.rustEmit(
+      "kimo://mcp-connection",
+      {
+        connectionId: "c_t7q2m1",
+        state: "open",
+        transport: "socket",
+        hello: { client: "claude-code", pid: 1, ppid: 2 },
+      },
+      HOST_LABEL,
+    )
+    const line = (o: unknown) =>
+      net.rustEmit(
+        "kimo://mcp-in",
+        { connectionId: "c_t7q2m1", message: JSON.stringify(o) },
+        HOST_LABEL,
+      )
+    line({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "x" } },
+    })
+    line({ jsonrpc: "2.0", method: "notifications/initialized" })
+    line({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: { name: "kimo_open", arguments: { path: ref } },
+    })
+    await until(() => sent.some((s) => JSON.parse(s.message).id === 2))
+    const r2 = JSON.parse(sent.find((s) => JSON.parse(s.message).id === 2)?.message as string)
+    expect(r2.result.structuredContent.ok).toBe(true)
+    expect(prompts).toHaveLength(0)
+    // A hidden folder is refused, not approved.
+    line({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "kimo_open", arguments: { path: "/Users/me/.ssh/x.kimo" } },
+    })
+    await until(() => sent.some((s) => JSON.parse(s.message).id === 3))
+    const r3 = JSON.parse(sent.find((s) => JSON.parse(s.message).id === 3)?.message as string)
+    expect(r3.result.structuredContent.ok).toBe(false)
+    expect(r3.result.structuredContent.errors[0].code).toBe("PERMISSION_DENIED")
+    expect(prompts).toHaveLength(0)
     await service.dispose()
   })
 })

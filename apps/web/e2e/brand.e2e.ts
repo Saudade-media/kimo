@@ -85,20 +85,24 @@ export const scenarios: Scenario[] = [
 
         await page.getByRole("button", { name: "New file" }).first().click()
         await page.waitForURL(/#\/file\/[A-Za-z0-9]+$/)
-        await page.locator(".topbar__logo .kimo-logo").first().waitFor()
+        await page.locator(".card-header__file .kimo-logo").first().waitFor()
         await applyTheme()
-        const top = checker(ctx, `Editor topbar (${theme})`)
+        // Board 44: the logo leads the left card header's File Menu (GdMuPj2aQw › KimoLogo 20).
+        const top = checker(ctx, `Editor card header (${theme})`)
         const m = await measure(page, {
-          topbar: ".topbar",
-          logo: ".topbar > .topbar__logo",
-          mark: ".topbar > .topbar__logo .kimo-logo",
+          header: ".card-header--left",
+          mark: ".card-header__file .kimo-logo",
         })
         const b = (k: string) => m[k] as Box
-        top.box("Logo HOU7D (button)", b("logo"), { w: 28, h: 28, bg: "rgba(0, 0, 0, 0)" })
-        top.box("KimoLogo bm1JR", b("mark"), { w: 28, h: 28, color: primary })
-        top.check("KimoLogo bm1JR", "left = topbar padding 12", b("mark").x - b("topbar").x, 12)
-        top.check("KimoLogo bm1JR", "centered in 48", b("mark").y - b("topbar").y, 10)
-        const ts = await svgOf(page, ".topbar > .topbar__logo .kimo-logo")
+        top.box("KimoLogo bm1JR", b("mark"), { w: 20, h: 20, color: primary })
+        top.check(
+          "KimoLogo bm1JR",
+          "left = header padding 10 + File Menu padding 4",
+          b("mark").x - b("header").x,
+          14,
+        )
+        top.check("KimoLogo bm1JR", "centered in 44", b("mark").y - b("header").y, 12)
+        const ts = await svgOf(page, ".card-header__file .kimo-logo")
         top.check("Mark HTfes", "fill", ts.fill ?? "", primary)
         top.check("Mark HTfes", "fill-rule", ts.rule ?? "", "evenodd")
         expect(ts.d === KIMO_LOGO_PATH, "topbar mark uses the KimoLogo (bm1JR) geometry")

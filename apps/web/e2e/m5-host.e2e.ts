@@ -207,7 +207,7 @@ export const scenarios: Scenario[] = [
       expect(await replicaHas(page, cardId), "the agent's card survives the MCP client's undo")
 
       // ⌘Z in the editor: undoes the user's rename only.
-      await page.locator(".canvas-host").click({ position: { x: 20, y: 20 } })
+      await page.locator(".canvas-host").click({ position: { x: 5, y: 5 } })
       await page.keyboard.press("Meta+z")
       await layerRow(page, "Home").first().waitFor({ timeout: 10_000 })
       expect(await replicaHas(page, cardId), "the agent's card survives the user's undo")
@@ -304,7 +304,7 @@ export const scenarios: Scenario[] = [
       await layerRow(page, "Agent card").first().waitFor({ timeout: 10_000 })
 
       // ⌘Z in the editor: undoes the user's rename only.
-      await page.locator(".canvas-host").click({ position: { x: 20, y: 20 } })
+      await page.locator(".canvas-host").click({ position: { x: 5, y: 5 } })
       await page.keyboard.press("Meta+z")
       await layerRow(page, "Home").first().waitFor({ timeout: 10_000 })
       expect(await replicaHas(page, cardId), "the agent's card survives the user's undo")
@@ -374,8 +374,8 @@ export const scenarios: Scenario[] = [
       expect(applied.ok, `kimo_apply_ops: ${applied.summary}`)
       const cardId = applied.created?.[0]?.id as string
 
-      // Presence chip in the desktop topbar's drag region, before Save Status.
-      const chip = page.locator(".kimo-desktop-topbar__drag [data-testid=agent-presence]")
+      // Board 44: the presence chip leads the right card header's People group.
+      const chip = page.locator(".card-header__people [data-testid=agent-presence]")
       await chip.waitFor({ timeout: 10_000 })
       expect(
         ((await chip.textContent()) ?? "").includes("Claude Code"),

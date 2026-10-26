@@ -21,7 +21,7 @@ declare const window: K & Window
 async function editor(ctx: E2EContext) {
   await ctx.page.setViewportSize({ width: 1440, height: 900 })
   await ctx.page.goto(`${await harnessUrl(ctx)}${disk(`${SITE}/home.kimo`)}`)
-  await ctx.page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+  await ctx.page.locator(".card-header--left").waitFor({ timeout: 15_000 })
   await ctx.page.waitForFunction(() => !!(window as unknown as K).__kimo?.session)
   await ctx.page.evaluate(() =>
     (window as unknown as K).__kimo?.session.ui.getState().select(["Headline01"]),

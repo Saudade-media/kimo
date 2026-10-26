@@ -212,7 +212,7 @@ export const scenarios: Scenario[] = [
           linkLabel: ".code-tab__open-export-label",
         })
         const c = checker(ctx, "Code tab (a) React + Tailwind hc6wk")
-        c.box("Right Panel · Code hc6wk", m.panel, { w: 360, bg: t["--kimo-bg-app"] })
+        c.box("Right Panel · Code hc6wk", m.panel, { w: 280, bg: t["--kimo-bg-app"] })
         c.box("Selection CChLA", m.selection, { pad: "8 12 12 12", gap: 8 })
         c.box("Framework Bar WLqjf", m.bar, { h: 46, pad: "10 12 8 12", gap: 8, align: "center" })
         c.box("Framework Switch ebO2s", m.seg, { h: 28, pad: "2 2 2 2", bg: t["--kimo-bg-muted"] })

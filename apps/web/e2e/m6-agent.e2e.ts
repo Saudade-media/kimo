@@ -170,14 +170,14 @@ export const scenarios: Scenario[] = [
         modelLabel: ".kimo-composer-agent__model-label",
         send: ".kimo-composer-agent__send",
       })
-      c.box("Right Panel", m.panel, { w: 360, h: 800 })
+      c.box("Right Panel", m.panel, { w: 280 })
       c.box("Thread Header (w1BjvW)", m.header, { h: 44, gap: 8, pad: [0, 8, 0, 12] })
       c.check("Thread Header", "y = Tabs bottom", (m.header?.y ?? 0) - (m.panel?.y ?? 0), 37)
       c.box("Thread Title (fZQQo)", m.title, { fs: 12, fw: "600", lh: 15 })
       c.box("Session Cost (gPIkj)", m.cost, { h: 20, pad: [0, 7, 0, 7], radius: 999, bg: bgMuted })
       c.box("Session Cost › Label (OqgR2)", m.costLabel, { fs: 11, ff: "JetBrains Mono" })
       c.box("History (sVOXG)", m.hist, { w: 28, h: 28 })
-      c.box("Thread (aCRfC)", m.thread, { gap: 12, pad: [16, 16, 16, 16], w: 360 })
+      c.box("Thread (aCRfC)", m.thread, { gap: 12, pad: [16, 16, 16, 16], w: 280 })
       c.check("Thread", "y", (m.thread?.y ?? 0) - (m.panel?.y ?? 0), 81)
       c.box("Message/User › Bubble (s9lNfk)", m.userBubble, {
         w: 260,
@@ -189,7 +189,7 @@ export const scenarios: Scenario[] = [
         "Message/User",
         "right = thread right − 16",
         (m.userBubble?.x ?? 0) + (m.userBubble?.w ?? 0),
-        (m.thread?.x ?? 0) + 360 - 16,
+        (m.thread?.x ?? 0) + 280 - 16,
       )
       c.box("Message/User › Text (U0ugt)", m.userText, { fs: 13, lh: 19 })
       c.box("Agent Turn (O6NIQe)", m.turn, { gap: 8, w: 328 })
@@ -306,7 +306,7 @@ export const scenarios: Scenario[] = [
         ),
         "Follow zooms to the landed layer",
       )
-      c.box("Composer Wrap (mt5k9)", m.wrap, { pad: [0, 12, 12, 12], w: 360 })
+      c.box("Composer Wrap (mt5k9)", m.wrap, { pad: [0, 12, 12, 12], w: 280 })
       c.check(
         "Composer Wrap",
         "bottom = panel bottom",
@@ -314,13 +314,13 @@ export const scenarios: Scenario[] = [
         (m.panel?.y ?? 0) + 800,
       )
       c.box("Composer/Agent (Bry8p)", m.comp, {
-        w: 336,
+        w: 256,
         gap: 10,
         pad: [12, 12, 10, 16],
         radius: 24,
       })
       c.box("Input (Jfb3E)", m.input, { fs: 13, lh: 16 })
-      c.box("Bar (IYc3u)", m.bar, { gap: 4, w: 308 })
+      c.box("Bar (IYc3u)", m.bar, { gap: 4, w: 228 })
       c.box("Attach (x4agy)", m.attach, { w: 24, h: 24, radius: 6 })
       c.box("Mode (SzC72)", m.mode, { h: 24, gap: 4, pad: [0, 8, 0, 6], bg: bgMuted })
       c.box("More (board 40 PPCXx)", m.more, { w: 24, h: 24, radius: 6 })
@@ -400,7 +400,7 @@ export const scenarios: Scenario[] = [
       })
       expect((await page.locator(".agent-panel__title").innerText()) === "Sessions", "title")
       c.box("History (EMuFX IconButton/Active)", m.active, { w: 28, h: 28 })
-      c.box("Session List (zJTW2)", m.list, { gap: 2, pad: [4, 8, 8, 8], w: 360 })
+      c.box("Session List (zJTW2)", m.list, { gap: 2, pad: [4, 8, 8, 8], w: 280 })
       c.check(
         "Session List",
         "bottom = panel bottom",
@@ -408,7 +408,7 @@ export const scenarios: Scenario[] = [
         (m.panel?.y ?? 0) + 800,
       )
       c.box("Search Wrap (yO7ir)", m.search, { pad: [0, 4, 8, 4], w: 344 })
-      c.box("Search (iSaHq Input)", m.input, { h: 32, w: 336 })
+      c.box("Search (iSaHq Input)", m.input, { h: 32, w: 256 })
       c.box("Group (EnXFb)", m.group, { fs: 11, fw: "500", lh: 13, color: tertiary })
       c.box("SessionRow current (uCPJ5)", m.row, {
         gap: 2,
@@ -541,7 +541,7 @@ export const scenarios: Scenario[] = [
         chip: ".kimo-attach-chip",
         chipLabel: ".kimo-attach-chip__label",
       })
-      c.box("Skills Menu (e2cwq)", m.menu, { w: 336, gap: 1, pad: [4, 4, 4, 4], radius: 16 })
+      c.box("Skills Menu (e2cwq)", m.menu, { w: 256, gap: 1, pad: [4, 4, 4, 4], radius: 16 })
       c.check("Skills Menu", "x = panel x + 12", (m.menu?.x ?? 0) - (m.panel?.x ?? 0), 12)
       c.check(
         "Skills Menu",
@@ -695,7 +695,7 @@ export const scenarios: Scenario[] = [
         select: ".agent-menu__select",
         chip: ".kimo-mode-chip",
       })
-      c.box("Mode Menu", m.menu, { gap: 1, pad: [4, 4, 4, 4], radius: 16, w: 336 })
+      c.box("Mode Menu", m.menu, { gap: 1, pad: [4, 4, 4, 4], radius: 16, w: 256 })
       c.check(
         "Mode Menu",
         "bottom = composer wrap top − 6",

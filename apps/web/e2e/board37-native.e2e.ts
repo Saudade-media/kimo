@@ -47,7 +47,7 @@ export const scenarios: Scenario[] = [
 
       // File › New file on Home: an untitled document opens right away.
       await menu(page, "new-file")
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       expect((await hash(page)).startsWith("#/disk/"), `untitled opened: ${await hash(page)}`)
       await page.waitForFunction(() =>
         (window as unknown as AppWindow).__kimoApp.control.calls.includes("menuContext editor"),
@@ -76,7 +76,7 @@ export const scenarios: Scenario[] = [
         ),
       )
       await page.keyboard.press("Meta+n")
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       expect((await hash(page)).startsWith("#/disk/"), "⌘N opened an untitled document")
     },
   },
@@ -113,7 +113,7 @@ export const scenarios: Scenario[] = [
       await open(ctx, disk(`${SITE}/home.kimo`))
       await page.locator(".canvas-host canvas").first().waitFor({ timeout: 15_000 })
       await page.waitForFunction(() => !!(window as unknown as AppWindow).__kimo?.session)
-      await page.locator(".canvas-host").click({ position: { x: 20, y: 20 } })
+      await page.locator(".canvas-host").click({ position: { x: 5, y: 5 } })
       await menu(page, "select-all")
       const selected = await page.evaluate(
         () => (window as unknown as AppWindow).__kimo?.session.ui.getState().selection ?? [],

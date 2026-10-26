@@ -69,19 +69,15 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await open(ctx, disk(`${SITE}/home.kimo`))
-      const topbar = page.locator(".kimo-desktop-topbar")
-      await topbar.waitFor({ timeout: 15_000 })
-      expect((await page.locator(".topbar").count()) === 0, "board 03 topbar is not shown")
+      // Board 44: the left card header replaces the desktop topbar (file name + File menu).
+      const header = page.locator(".card-header--left")
+      await header.waitFor({ timeout: 15_000 })
+      expect((await page.locator(".kimo-desktop-topbar").count()) === 0, "no desktop topbar")
       await page.locator(".canvas-host canvas").first().waitFor({ timeout: 15_000 })
-      const crumb = (await page.locator(".kimo-desktop-breadcrumb").innerText()).replace(
-        /\s+/g,
-        " ",
-      )
-      expect(crumb.includes("design") && crumb.includes("home.kimo"), `breadcrumb: ${crumb}`)
-      expect(await page.locator(".kimo-branch-chip").isVisible(), "branch chip in a repo")
-      const status = page.locator(".kimo-save-status")
-      expect((await status.getAttribute("data-status")) === "saved", "Saved to disk on open")
-      expect((await page.locator(".kimo-traffic-lights").count()) > 0, "traffic-light inset")
+      const file = (await header.locator(".topbar__file-name").innerText()).trim()
+      expect(file === "home.kimo", `file name: ${file}`)
+      expect((await header.getAttribute("data-save-status")) === "saved", "Saved to disk on open")
+      expect((await page.locator(".kimo-save-status").count()) === 0, "quiet while saved")
 
       // An edit, then ⌘S writes the file (atomic write through platform.files).
       const before = await readFile(page, `${SITE}/home.kimo`)
@@ -91,12 +87,16 @@ export const scenarios: Scenario[] = [
         k.session.apply({ op: "update", id: "Frame00001", set: { name: "Renamed" } })
       })
       await page.waitForFunction(
-        () => document.querySelector(".kimo-save-status")?.getAttribute("data-status") !== "saved",
+        () =>
+          document.querySelector(".card-header--left")?.getAttribute("data-save-status") !==
+          "saved",
       )
-      await page.locator(".canvas-host").click({ position: { x: 20, y: 20 } })
+      await page.locator(".canvas-host").click({ position: { x: 5, y: 5 } })
       await page.keyboard.press("Meta+s")
       await page.waitForFunction(
-        () => document.querySelector(".kimo-save-status")?.getAttribute("data-status") === "saved",
+        () =>
+          document.querySelector(".card-header--left")?.getAttribute("data-save-status") ===
+          "saved",
         undefined,
         { timeout: 10_000 },
       )
@@ -109,7 +109,7 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await open(ctx, disk(`${LOOM}/marketing.kimo`))
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       const banner = page.locator(".kimo-banner")
       await banner.waitFor({ timeout: 10_000 })
       const bannerText = await banner.innerText()
@@ -122,7 +122,7 @@ export const scenarios: Scenario[] = [
         "LayerRow/Conflict rows",
       )
       await page.locator(".kimo-canvas-conflict-marker").first().waitFor({ timeout: 15_000 })
-      const status = await page.locator(".kimo-save-status").getAttribute("data-status")
+      const status = await page.locator(".card-header--left").getAttribute("data-save-status")
       expect(status === "paused", `autosave paused while conflicts are open (${status})`)
       // ⌘' selects the next conflicting node.
       await page.locator(".canvas-host").click({ position: { x: 5, y: 5 } })
@@ -143,7 +143,7 @@ export const scenarios: Scenario[] = [
       const { page } = ctx
       // Open (and leave) a file so it is a recent file.
       await open(ctx, disk(`${SITE}/home.kimo`))
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.evaluate(() => {
         location.hash = "#/"
       })
@@ -152,7 +152,7 @@ export const scenarios: Scenario[] = [
       await page.locator(".kimo-files-recent-header").waitFor()
       await page.locator('[data-file$="home.kimo"]').waitFor({ timeout: 10_000 })
       await page.locator('[data-file$="home.kimo"]').click()
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
     },
   },
   {
@@ -194,7 +194,7 @@ export const scenarios: Scenario[] = [
         a.platform.dialogs.saveFile = async () => "/Users/me/Work/kimo-site/design/saved.kimo"
       })
       await page.getByRole("button", { name: "Save as…" }).click()
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       expect((await readFile(page, `${SITE}/saved.kimo`)) !== null, "file written")
       expect((await entries()).length === 0, "entry dropped after Save as")
 
@@ -226,7 +226,7 @@ export const scenarios: Scenario[] = [
       // Restore all reopens the never-saved document (and the file entry) in the editor.
       await boot("mixed")
       await page.getByRole("button", { name: "Restore all" }).click()
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.waitForFunction(() => !document.querySelector(".kimo-files-recovery"))
       const open_ = await page.evaluate(() =>
         (
@@ -246,7 +246,7 @@ export const scenarios: Scenario[] = [
       // Open; Open routes to that document and its toast leaves.
       await boot("mixed3")
       await page.getByRole("button", { name: "Restore all" }).click()
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       const restored = page.locator('[data-toast="restored"]')
       await page.waitForFunction(
         () => document.querySelectorAll('[data-toast="restored"]').length === 2,

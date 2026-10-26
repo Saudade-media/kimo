@@ -155,7 +155,7 @@ export const scenarios: Scenario[] = [
       const { page } = ctx
       const ref = `${SITE}/home.kimo`
       await open(ctx, disk(ref))
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.locator(".canvas-host canvas").first().waitFor({ timeout: 15_000 })
       const info = () =>
         page.evaluate((r) => (window as unknown as W).__kimoApp.platform.thumbnails.info(r), ref)
@@ -166,10 +166,12 @@ export const scenarios: Scenario[] = [
 
       // An edit + ⌘S: a new content hash → a new preview.
       expect(await paintRed(page, "Frame00001"), "edit applied")
-      await page.locator(".canvas-host").click({ position: { x: 20, y: 20 } })
+      await page.locator(".canvas-host").click({ position: { x: 5, y: 5 } })
       await page.keyboard.press("Meta+s")
       await page.waitForFunction(
-        () => document.querySelector(".kimo-save-status")?.getAttribute("data-status") === "saved",
+        () =>
+          document.querySelector(".card-header--left")?.getAttribute("data-save-status") ===
+          "saved",
         undefined,
         { timeout: 10_000 },
       )

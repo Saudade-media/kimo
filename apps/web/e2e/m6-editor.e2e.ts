@@ -33,7 +33,7 @@ async function editor(ctx: E2EContext, hash = disk(`${SITE}/home.kimo`), os?: "w
   await ctx.page.goto(`${await harnessUrl(ctx)}${os ? `?os=${os}` : ""}${hash}`)
   await ctx.page.waitForFunction(() => !!(window as unknown as Kimo).__kimoApp)
   if (hash === "#/") return
-  await ctx.page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+  await ctx.page.locator(".card-header--left").waitFor({ timeout: 15_000 })
   // The canvas takes tool keys once its renderer drew the first frame (onReady).
   await ctx.page.waitForFunction(
     () => !!window.__kimo?.session && !!window.__kimo.canvas()?.renderer,
@@ -165,11 +165,11 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "m7 editor: topbar Export opens the board 07 dialog; Esc closes it",
+    name: "m7 editor: the Page card's Export + opens the board 07 dialog; Esc closes it",
     async run(ctx) {
       const { page } = ctx
       await editor(ctx)
-      await page.getByRole("button", { name: "Export", exact: true }).click()
+      await page.getByRole("button", { name: "Export…", exact: true }).click()
       const dialog = page.locator('[role="dialog"][aria-labelledby="export-title"]')
       await dialog.waitFor({ timeout: 10_000 })
       await page.keyboard.press("Escape")
@@ -183,7 +183,7 @@ export const scenarios: Scenario[] = [
       // Windows / Linux topbar: the KimoLogo is the way Home (board 20 KcXQz).
       await editor(ctx, "#/", "windows")
       await page.getByRole("button", { name: "New file" }).first().click()
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.waitForFunction(() => !!window.__kimo?.canvas()?.renderer, undefined, {
         timeout: 15_000,
       })

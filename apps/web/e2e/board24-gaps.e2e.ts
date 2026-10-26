@@ -51,7 +51,7 @@ export async function openApp(ctx: E2EContext, hash: string, query = ""): Promis
 
 export async function editor(ctx: E2EContext, ref = `${SITE}/home.kimo`, query = "") {
   await openApp(ctx, disk(ref), query)
-  await ctx.page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+  await ctx.page.locator(".card-header--left").waitFor({ timeout: 15_000 })
   await ctx.page.waitForFunction(() => !!(window as unknown as App).__kimo?.session)
   await ctx.page.evaluate(() => document.fonts.ready)
 }
@@ -345,7 +345,7 @@ export const scenarios: Scenario[] = [
       await page.evaluate((r) => {
         location.hash = `#/disk/${encodeURIComponent(r)}`
       }, ref)
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.waitForFunction(() => !!(window as unknown as App).__kimo?.session)
       await page.evaluate(() => {
         const s = (window as unknown as App).__kimo?.session
@@ -595,7 +595,7 @@ export const scenarios: Scenario[] = [
         },
         disk(`${SITE}/home.kimo`),
       )
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.waitForFunction(() => !!(window as unknown as App).__kimo?.session)
       await page.evaluate(() =>
         (window as unknown as App).__kimo?.session.store.apply(

@@ -67,7 +67,7 @@ async function home(ctx: E2EContext, h = "#/") {
 async function seedRecent(ctx: E2EContext) {
   const { page } = ctx
   await open(ctx, disk(`${SITE}/home.kimo`))
-  await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+  await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
   await page.evaluate(() => {
     location.hash = "#/all"
   })
@@ -358,7 +358,7 @@ export const scenarios: Scenario[] = [
         .locator('[data-template="saas-marketing"]')
         .getByRole("button", { name: /Use the/ })
         .click()
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       expect(
         (await hash(page)) === disk(`${NEW_DIR}/saas-marketing.kimo`),
         `opened ${await hash(page)}`,

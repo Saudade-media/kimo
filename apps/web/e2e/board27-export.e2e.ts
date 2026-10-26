@@ -333,9 +333,9 @@ export const scenarios: Scenario[] = [
       const { page } = ctx
       await page.setViewportSize({ width: 1440, height: 900 })
       await page.goto(`${await appUrl(ctx)}${disk(`${SITE}/home.kimo`)}`)
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.waitForFunction(() => !!(window as unknown as { __kimo?: unknown }).__kimo)
-      await page.locator(".kimo-desktop-breadcrumb__file").click()
+      await page.locator(".card-header__file").click()
       const menu = page.getByTestId("file-menu")
       await menu.waitFor()
       const rows = await menu

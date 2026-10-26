@@ -548,7 +548,6 @@ export const scenarios: Scenario[] = [
 
         // Banner (p5lo7 / R6VHG).
         const m = await measure(page, {
-          topbar: ".topbar",
           banner: "[data-testid=view-only-banner]",
           icon: "[data-testid=view-only-banner] .kimo-banner__icon",
           message: "[data-testid=view-only-banner] .kimo-banner__message",
@@ -578,8 +577,9 @@ export const scenarios: Scenario[] = [
         expect(m.dismiss === null, "no Dismiss (enabled: false)")
         c.check(
           "Banner",
-          "sits under the topbar",
-          (m.banner?.y ?? 0) - ((m.topbar?.y ?? 0) + (m.topbar?.h ?? 0)),
+          // Board 44: no topbar; the banner tops the editor, over the stage.
+          "sits at the top of the editor",
+          m.banner?.y ?? -1,
           0,
           1,
         )

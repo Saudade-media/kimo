@@ -104,6 +104,7 @@ import type {
   CanvasPointerInfo,
   ComponentDomOverlay,
   ComponentDropTarget,
+  FitInsets,
   IconPickerRequest,
   IconSpec,
   ImagePlacement,
@@ -308,6 +309,8 @@ export interface ControllerOptions {
    * ⌘ + scroll; "mouse" zooms on a plain scroll and pans on ⇧ + scroll.
    */
   wheelZoom?: () => "trackpad" | "mouse"
+  /** Board 44: screen px the floating cards cover; zoom-to-fit frames the visible rest. */
+  fitInsets?: () => FitInsets | undefined
   onHint?: (hint: CanvasHint | null) => void
   /** Pixel grid visibility/zoom changed (host shows the zoom badge). */
   onPixelGrid?: (visible: boolean) => void
@@ -1643,9 +1646,23 @@ export class CanvasController {
       ? unionRects(ids.map((id) => layout.nodes.get(id)?.world).filter((b): b is Rect => !!b))
       : layout.bounds
     if (!bounds) return
+    // Board 44: frame inside the area the floating cards leave visible (when it is usable).
+    const i = this.opts.fitInsets?.()
+    const w = this.size.w - (i ? i.left + i.right : 0)
+    const h = this.size.h - (i ? i.top + i.bottom : 0)
+    const inset = i && w > 2 * padding && h > 2 * padding
+    const v = fitViewport(
+      bounds,
+      inset ? w : this.size.w,
+      inset ? h : this.size.h,
+      padding,
+      ids?.length ? 256 : 1,
+    )
     this.ui
       .getState()
-      .setViewport(fitViewport(bounds, this.size.w, this.size.h, padding, ids?.length ? 256 : 1))
+      .setViewport(
+        inset && i ? { zoom: v.zoom, x: v.x - i.left / v.zoom, y: v.y - i.top / v.zoom } : v,
+      )
   }
 
   // --- hit testing --------------------------------------------------------------------------

@@ -110,7 +110,8 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page, url } = ctx
       await openNewFile(page, url)
-      expect(await page.getByText("Nothing selected").isVisible(), "empty selection state")
+      // Board 44 §2: nothing selected, the Design tab is the Page card.
+      expect(await page.getByTestId("page-card").isVisible(), "empty selection: Page card")
       await row(page, "Hero").click()
       await page.getByTestId("selection-name").filter({ hasText: "Hero" }).waitFor()
       expect((await row(page, "Hero").getAttribute("aria-selected")) === "true", "row selected")
@@ -226,22 +227,19 @@ export const scenarios: Scenario[] = [
       await page.getByRole("button", { name: "Zoom" }).click()
       await page.getByRole("menuitem", { name: "Zoom in" }).click()
       await page.locator(".topbar__zoom-value", { hasText: "200%" }).waitFor()
-      await page.getByRole("button", { name: "Toggle theme" }).click()
-      expect(
-        (await page.evaluate(() => document.documentElement.dataset.theme)) === "dark",
-        "dark mode",
-      )
-      await row(page, "Hero").click()
-      await shot(ctx, "editor-dark")
-      await page.getByRole("button", { name: "Toggle theme" }).click()
-      expect(
-        (await page.evaluate(() => document.documentElement.dataset.theme)) === "light",
-        "light mode",
-      )
+      // Board 44 §5 rule "Collapse": the header button collapses one card, ⌘\ both.
+      await page.getByRole("button", { name: "Hide left panel" }).click()
+      await page.locator(".ws-card--left.ws-card--collapsed").waitFor()
+      await page.locator(".canvas-host").click({ position: { x: 600, y: 600 } })
+      await page.keyboard.press("Meta+\\")
+      await page.locator(".ws-card--right.ws-card--collapsed").waitFor()
+      await shot(ctx, "editor-collapsed")
+      await page.keyboard.press("Meta+\\")
+      expect((await page.locator(".ws-card--collapsed").count()) === 0, "both cards open again")
     },
   },
   {
-    name: "measured layout matches board 03",
+    name: "measured layout matches boards 03 and 44",
     async run(ctx) {
       const { page, url } = ctx
       await openNewFile(page, url)
@@ -263,7 +261,7 @@ export const scenarios: Scenario[] = [
           }
         }
         return {
-          topbar: box(".topbar"),
+          header: box(".card-header--left"),
           left: box(".left-panel"),
           right: box(".right-panel"),
           canvas: box(".editor__canvas"),
@@ -275,24 +273,28 @@ export const scenarios: Scenario[] = [
           propField: box(".kimo-prop-field"),
           tabs: box(".right-panel .kimo-tabs"),
           selection: box(".selection-header"),
-          logo: box(".topbar__logo"),
+          logo: box(".card-header__file .kimo-logo"),
           body: getComputedStyle(document.body).fontFamily,
         }
       })
       ctx.log(JSON.stringify(m))
       const near = (a: number | undefined, b: number, what: string) =>
         expect(a !== undefined && Math.abs(a - b) < 0.6, `${what}: ${a} ≠ ${b}`)
-      near(m.topbar?.h, 48, "topbar height")
-      near(m.left?.w, 256, "left panel width")
-      near(m.right?.w, 280, "right panel width")
-      near(m.canvas?.w, 1440 - 256 - 280, "canvas width")
+      // Board 44: cards 8 from the stage edges over a full-bleed canvas; headers 44.
+      near(m.header?.h, 44, "card header height")
+      near(m.left?.w, 256, "left card width")
+      near(m.left?.x, 8, "left card x")
+      near(m.left?.y, 8, "left card y")
+      near(m.right?.w, 280, "right card width")
+      near(m.canvas?.w, 1440, "canvas width (full-bleed)")
+      if (m.right && m.canvas) near(m.canvas.w - (m.right.x + m.right.w), 8, "right card inset")
       near(m.toolbar?.h, 48, "toolbar height")
       near(m.tool?.w, 36, "tool button")
       near(m.ask?.h, 36, "ask kimo height")
       near(m.layerRow?.h, 28, "layer row height")
       near(m.search?.h, 30, "search input height")
       near(m.propField?.h, 28, "prop field height")
-      near(m.logo?.w, 28, "logo")
+      near(m.logo?.w, 20, "logo")
       if (m.toolbar && m.canvas) {
         near(m.canvas.y + m.canvas.h - (m.toolbar.y + m.toolbar.h), 24, "toolbar bottom inset")
         near(m.toolbar.x + m.toolbar.w / 2, m.canvas.x + m.canvas.w / 2, "toolbar centered")

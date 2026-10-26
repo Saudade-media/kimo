@@ -6,9 +6,14 @@
  *
  * Window-wide M4 hosts live here: the launch recovery dialog (board 17), the web Settings dialog
  * and ⌘, (board 19), and the updater toasts (board 19, desktop only).
+ *
+ * Board 44 "Workspace v2" §1 / §5: Home and the editor sit under the window's Tab Strip (one tab
+ * per open file, the Home tab pinned first). The route stays the source of truth for what shows;
+ * only the active tab's page is mounted, and the other tabs keep their file sessions open.
  */
 import type { SettingsPane } from "@kimo/platform"
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { EditorChromeContext } from "./editor/CardHeaders"
 import { DiskEditor, Editor } from "./editor/Editor"
 import { RecoveryDialog, RestoredToasts } from "./files"
 import { Home } from "./home/Home"
@@ -19,8 +24,6 @@ import { useHash } from "./lib/hooks"
 import { type ThemeMode, useTheme } from "./lib/theme"
 import { PairRoute } from "./pair/PairRoute"
 import { usePairRoute } from "./pair/usePairRoute"
-import { isUntitledRef } from "./platform/contract"
-import { noteWindowFile } from "./platform/last-files"
 import { SettingsOpenerContext, useRuntime } from "./platform/runtime"
 import type { FileDocumentSession } from "./platform/session"
 import { diskPath, navigate, parseRoute } from "./router"
@@ -32,6 +35,7 @@ import {
   useSettingsShortcut,
 } from "./settings"
 import { ShortcutsSheetHost } from "./shortcuts"
+import { routeTarget, TabStrip, useWindowTabs, windowTabs } from "./tabs"
 import { createUpdaterController, UpdateToastHost } from "./updater"
 import { serveFlushRequests } from "./updater/restart-broadcast"
 
@@ -87,18 +91,27 @@ export function App() {
     return serveFlushRequests(platform.window.label, () => manager.flushAll())
   }, [platform, manager, settingsWindow])
 
-  // General › On launch: remember the file this desktop window shows (reopened after a quit).
-  const shownRef = route.name === "disk" && !isUntitledRef(route.ref) ? route.ref : null
-  useEffect(() => {
-    if (platform.kind === "browser" || settingsWindow) return
-    noteWindowFile(platform.window.label, shownRef)
-  }, [platform, shownRef, settingsWindow])
+  // Board 44 §5: this window's tabs follow the route; General › On launch remembers them.
+  const tabs = windowTabs()
+  useWindowTabs({ tabs, route, manager, platform, enabled: !settingsWindow })
 
   if (route.name === "settings") return <SettingsRoute platform={platform} hash={hash} />
 
   return (
     <SettingsOpenerContext.Provider value={opener}>
-      <Routed route={route} theme={theme} />
+      {routeTarget(route) !== undefined ? (
+        <div className="workspace">
+          <TabStrip tabs={tabs} manager={manager} platform={platform} />
+          <div className="workspace__body">
+            {/* Board 44: the strip owns the traffic lights and the window drag region. */}
+            <EditorChromeContext.Provider value={false}>
+              <Routed route={route} theme={theme} />
+            </EditorChromeContext.Provider>
+          </div>
+        </div>
+      ) : (
+        <Routed route={route} theme={theme} />
+      )}
       {recovery && (
         <RecoveryDialog
           manager={manager}

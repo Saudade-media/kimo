@@ -292,6 +292,7 @@ pub fn run() {
             commands::kimo_window_confirm_close,
             commands::kimo_window_close,
             commands::kimo_window_new,
+            commands::kimo_window_open_file,
             commands::kimo_settings_get_all,
             commands::kimo_settings_set,
             commands::kimo_launch_take_initial,
@@ -454,7 +455,7 @@ mod tests {
     #[test]
     fn command_surface_matches_tauri_ts() {
         let ts = ts_commands();
-        assert_eq!(ts.len(), 83);
+        assert_eq!(ts.len(), 84);
         let rust: Vec<String> = super::command_list::COMMANDS
             .iter()
             .map(|s| s.to_string())

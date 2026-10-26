@@ -1,5 +1,5 @@
 /**
- * Board 40 "Composer bar and “…” menu" (desing.pen d5ZDH): §1 the bar at the 360 panel (the
+ * Board 40 "Composer bar and “…” menu" (desing.pen d5ZDH): §1 the bar at the 280 panel (board 44) (the
  * only width) with typical and longest content, §2 the "…" menu's rows and states, §3 the dot,
  * plus keyboard (menu roles, Escape returns focus). One measured getComputedStyle /
  * getBoundingClientRect pass per surface against the node values.
@@ -98,7 +98,7 @@ const BAR = {
 
 export const scenarios: Scenario[] = [
   {
-    name: "board40: bar at the 360 panel — typical and longest content, model name never cut + measured",
+    name: "board40: bar at the 280 panel (board 44): typical and longest content, model name never cut + measured",
     async run(ctx) {
       const { page } = ctx
       await openPanel(ctx)
@@ -108,9 +108,9 @@ export const scenarios: Scenario[] = [
       // A · typical: Single, Sonnet 5.5.
       let m = await measure(page, BAR)
       let c = checker(ctx, "Board 40 §1 A · typical (l7ePQ)")
-      c.box("Right Panel", m.panel, { w: 360 })
-      c.box("Composer/Agent (QUDbw)", m.comp, { w: 336, pad: [12, 12, 10, 16] })
-      c.box("Bar (zxfJw)", m.bar, { w: 308, gap: 4 })
+      c.box("Right Panel", m.panel, { w: 280 })
+      c.box("Composer/Agent (QUDbw)", m.comp, { w: 256, pad: [12, 12, 10, 16] })
+      c.box("Bar (zxfJw)", m.bar, { w: 228, gap: 4 })
       c.box("Attach (n2MGl)", m.attach, { w: 24, h: 24, radius: 6 })
       c.box("Mode (k2blfg)", m.mode, { w: 79, h: 24, pad: [0, 8, 0, 6] })
       c.box("IconButton · More (univs)", m.more, {
@@ -149,7 +149,7 @@ export const scenarios: Scenario[] = [
       m = await measure(page, BAR)
       o = await overflow(page)
       c = checker(ctx, "Board 40 §1 B · longest (qdOOP)")
-      c.box("Bar (kJGh0)", m.bar, { w: 308 })
+      c.box("Bar (kJGh0)", m.bar, { w: 228 })
       c.box("IconButton · More (b6klYf)", m.more, { w: 24, h: 24 })
       c.box("Send (bayb3)", m.send, { w: 28, h: 28 })
       c.check("Model › Label", "overflow", o.model, 0)

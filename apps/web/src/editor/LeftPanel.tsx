@@ -3,6 +3,9 @@
  * Children in node order: Tabs (Layers / Assets / Variables), Search (padding [4, 8, 8, 8],
  * Input 30 high), Layer Tree (vertical, gap 1, padding [0, 6]), Spacer, Footer
  * (top border, gap 8, padding [10, 12]: files icon, "N pages", spacer, Kbd ⌘P).
+ *
+ * Board 44 §1: the panel is the floating "Left Card" (VQw3DeBw2I) led by its Card Header;
+ * collapsed (§3) only the header shows, as a pill.
  */
 import type { DocStore, NodeData, Op } from "@kimo/editor-state"
 import {
@@ -17,7 +20,16 @@ import {
   Tabs,
   TooltipContent,
 } from "@kimo/ui"
-import { type KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type KeyboardEvent,
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import type { UiStore } from "../canvas/contract"
 import { type EditorConflictSession, useOpenConflictNodes } from "../conflicts"
 import { useNode, useTreeRevision, useUi } from "../lib/hooks"
@@ -52,8 +64,14 @@ export function LeftPanel({
   agentNodes = NO_AGENT_NODES,
   promptRun,
   onRunPrompt,
+  header = null,
+  collapsed = false,
 }: {
   session: FileSession
+  /** Board 44 Left Card › Card Header (wNJcXZthFH), first child of the card. */
+  header?: ReactNode
+  /** Board 44 §3: only the header shows, as a pill. */
+  collapsed?: boolean
   m3: M3Controller
   /** Board 18: nodes owning an open conflict show LayerRow/Conflict (VpvIr). */
   conflicts?: EditorConflictSession | null
@@ -67,8 +85,19 @@ export function LeftPanel({
   const [tab, setTab] = useState<LeftTab>("layers")
   const conflictNodes = useOpenConflictNodes(conflicts)
   const [query, setQuery] = useState("")
+  // Board 44 §3: collapsed, the card is its header as a pill (the tab and query stay).
+  if (collapsed)
+    return (
+      <aside
+        className="left-panel ws-card ws-card--left ws-card--collapsed"
+        aria-label="Layers panel"
+      >
+        {header}
+      </aside>
+    )
   return (
-    <aside className="left-panel" aria-label="Layers panel">
+    <aside className="left-panel ws-card ws-card--left" aria-label="Layers panel">
+      {header}
       <Tabs label="Left panel" items={TABS} value={tab} onChange={setTab} />
       {tab === "layers" && (
         <>

@@ -26,6 +26,10 @@
 //! clipboard events the editor already handles. Each editor window reports whether it shows Home
 //! or a document (`kimo_menu_set_context`); the document items (Back to files, Export…, Copy
 //! selection as PNG, Preview) are disabled while the focused window shows Home or Settings.
+//!
+//! Board 44 §5 (tabs): File › New tab ⌘T and Close tab ⌘W go to the focused editor window
+//! (`new-tab` / `close-tab`); Close tab in Settings closes that window. Close window moves to
+//! ⇧⌘W (File) and Window › Close window, so ⌘W reaches the tab strip instead of the window.
 
 use tauri::{AppHandle, Runtime};
 
@@ -46,6 +50,10 @@ pub const FILE_HOME: &str = "kimo-file-home";
 pub const FILE_NEW: &str = "kimo-file-new";
 pub const FILE_OPEN: &str = "kimo-file-open";
 pub const FILE_NEW_WINDOW: &str = "kimo-file-new-window";
+pub const FILE_NEW_TAB: &str = "kimo-file-new-tab";
+pub const FILE_CLOSE_TAB: &str = "kimo-file-close-tab";
+pub const FILE_CLOSE_WINDOW: &str = "kimo-file-close-window";
+pub const WINDOW_CLOSE: &str = "kimo-window-close";
 pub const EDIT_UNDO: &str = "kimo-edit-undo";
 pub const EDIT_REDO: &str = "kimo-edit-redo";
 pub const EDIT_SELECT_ALL: &str = "kimo-edit-select-all";
@@ -63,6 +71,8 @@ pub fn editor_action_for(id: &str) -> Option<&'static str> {
         EDIT_UNDO => Some("undo"),
         EDIT_REDO => Some("redo"),
         EDIT_SELECT_ALL => Some("select-all"),
+        FILE_NEW_TAB => Some("new-tab"),
+        FILE_CLOSE_TAB => Some("close-tab"),
         _ => None,
     }
 }
@@ -184,6 +194,18 @@ pub fn open_new_window<Rt: Runtime>(app: &AppHandle<Rt>) -> crate::error::R<()> 
     Ok(())
 }
 
+/// Board 44 §4 C: a tab dragged out of a window opens in another editor window on `path` (an
+/// absolute path the caller already checked against the scope).
+pub fn open_file_window<Rt: Runtime>(app: &AppHandle<Rt>, path: &str) -> crate::error::R<()> {
+    use tauri::Manager;
+    let taken: Vec<String> = app.webview_windows().into_keys().collect();
+    let label = next_editor_label(&taken);
+    let route = crate::window::disk_route(path);
+    let w = crate::window::create_editor_window_at(app, &label, Some(&route))?;
+    let _ = w.set_focus();
+    Ok(())
+}
+
 /// The `kimo://help-menu` event's `action` for each Help item the web handles (`None` = not
 /// one; Show logs runs in Rust).
 pub fn help_action_for(id: &str) -> Option<&'static str> {
@@ -240,6 +262,7 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
             // window reports a document (`apply_context`).
             &MenuItem::with_id(app, FILE_HOME, "Back to files", false, None::<&str>)?,
             &sep()?,
+            &MenuItem::with_id(app, FILE_NEW_TAB, "New tab", true, Some("CmdOrCtrl+T"))?,
             &MenuItem::with_id(app, FILE_NEW, "New file", true, Some("CmdOrCtrl+N"))?,
             &MenuItem::with_id(app, FILE_OPEN, "Open…", true, Some("CmdOrCtrl+O"))?,
             &MenuItem::with_id(
@@ -259,7 +282,14 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
                 None::<&str>,
             )?,
             &sep()?,
-            &PredefinedMenuItem::close_window(app, None)?,
+            &MenuItem::with_id(app, FILE_CLOSE_TAB, "Close tab", true, Some("CmdOrCtrl+W"))?,
+            &MenuItem::with_id(
+                app,
+                FILE_CLOSE_WINDOW,
+                "Close window",
+                true,
+                Some("CmdOrCtrl+Shift+W"),
+            )?,
         ],
     )?;
     let edit = Submenu::with_items(
@@ -300,7 +330,7 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
             &PredefinedMenuItem::minimize(app, None)?,
             &PredefinedMenuItem::maximize(app, None)?,
             &sep()?,
-            &PredefinedMenuItem::close_window(app, None)?,
+            &MenuItem::with_id(app, WINDOW_CLOSE, "Close window", true, None::<&str>)?,
         ],
     )?;
     let version = app.package_info().version.to_string();
@@ -353,6 +383,30 @@ pub fn on_menu_event<Rt: Runtime>(app: &AppHandle<Rt>, id: &str) {
     }
     if let Some(action) = help_action_for(id) {
         emit_help(app, action);
+        return;
+    }
+    if id == FILE_CLOSE_WINDOW || id == WINDOW_CLOSE {
+        if let Some(w) = focused_window(app) {
+            let _ = w.close();
+        }
+        return;
+    }
+    if id == FILE_CLOSE_TAB {
+        // Never reopens a window: ⌘W with nothing focused does nothing.
+        match focused_window(app) {
+            Some(w) if crate::window::is_editor_label(w.label()) => {
+                use tauri::Emitter;
+                let _ = app.emit_to(
+                    w.label(),
+                    "kimo://editor-menu",
+                    serde_json::json!({ "action": "close-tab" }),
+                );
+            }
+            Some(w) => {
+                let _ = w.close();
+            }
+            None => {}
+        }
         return;
     }
     if id == FILE_NEW_WINDOW {
@@ -564,6 +618,11 @@ mod tests {
     #[test]
     fn file_and_edit_items_map_to_page_actions() {
         assert_eq!(editor_action_for(FILE_HOME), Some("go-home"));
+        // Board 44 §5: the tab items go to the page; Close window runs in Rust.
+        assert_eq!(editor_action_for(FILE_NEW_TAB), Some("new-tab"));
+        assert_eq!(editor_action_for(FILE_CLOSE_TAB), Some("close-tab"));
+        assert_eq!(editor_action_for(FILE_CLOSE_WINDOW), None);
+        assert_eq!(editor_action_for(WINDOW_CLOSE), None);
         assert_eq!(editor_action_for(FILE_NEW), Some("new-file"));
         assert_eq!(editor_action_for(FILE_OPEN), Some("open-file"));
         assert_eq!(editor_action_for(EDIT_UNDO), Some("undo"));
@@ -604,6 +663,8 @@ mod tests {
             EDIT_UNDO,
             EDIT_REDO,
             EDIT_SELECT_ALL,
+            FILE_NEW_TAB,
+            FILE_CLOSE_TAB,
         ];
         let rust: Vec<&str> = ids.iter().filter_map(|i| editor_action_for(i)).collect();
         assert_eq!(rust.len(), ids.len());

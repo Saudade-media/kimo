@@ -41,7 +41,7 @@ const HOME = `${SITE}/home.kimo`
 async function editor(ctx: E2EContext, query = ""): Promise<Page> {
   await open(ctx, `${query}${disk(HOME)}`)
   const { page } = ctx
-  await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+  await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
   await page.locator(".canvas-host canvas").first().waitFor({ timeout: 15_000 })
   await page.waitForFunction(() => !!window.__kimo?.canvas()?.layout())
   return page
@@ -83,10 +83,10 @@ const disabled = (page: Page, name: string) =>
 
 export const scenarios: Scenario[] = [
   {
-    name: "editor-gaps E1: the breadcrumb's page crumb names the active page (rename, switch)",
+    name: "editor-gaps E1: the Page card names the active page (rename, switch)",
     async run(ctx) {
       const page = await editor(ctx)
-      const crumb = page.locator(".kimo-desktop-breadcrumb__page")
+      const crumb = page.locator(".page-card__page-name")
       expect((await crumb.innerText()) === "Page 1", `implicit page: ${await crumb.innerText()}`)
       await page.locator(".pages-strip__add").click()
       const input = page.locator(".pages-strip input")
@@ -94,17 +94,17 @@ export const scenarios: Scenario[] = [
       await input.fill("Pricing")
       await input.press("Enter")
       await page.waitForFunction(
-        () => document.querySelector(".kimo-desktop-breadcrumb__page")?.textContent === "Pricing",
+        () => document.querySelector(".page-card__page-name")?.textContent === "Pricing",
       )
-      // Switching back renames the crumb too.
+      // Switching back renames it too.
       await page.locator(".pages-strip [data-page-id]").first().click()
       await page.waitForFunction(
-        () => document.querySelector(".kimo-desktop-breadcrumb__page")?.textContent !== "Pricing",
+        () => document.querySelector(".page-card__page-name")?.textContent !== "Pricing",
       )
     },
   },
   {
-    name: "editor-gaps E3: Back to files (File menu, native menu) and the folder crumb go Home",
+    name: "editor-gaps E3: Back to files (File menu, native menu) goes Home",
     async run(ctx) {
       const page = await editor(ctx)
       expect(
@@ -112,12 +112,12 @@ export const scenarios: Scenario[] = [
         "the native menu knows an editor is shown",
       )
       // File menu › Back to files (first item, then a divider).
-      await page.locator(".kimo-desktop-breadcrumb__file").click()
+      await page.locator(".card-header__file").click()
       const first = page.locator('[data-testid="file-menu"] [role="menuitem"]').first()
       expect((await first.innerText()).includes("Back to files"), "Back to files leads the menu")
       await first.click()
       await page.waitForFunction(() => location.hash === "#/" || location.hash === "")
-      await page.locator(".kimo-desktop-topbar").waitFor({ state: "detached", timeout: 10_000 })
+      await page.locator(".card-header--left").waitFor({ state: "detached", timeout: 10_000 })
       expect(
         (await page.evaluate(() => window.__kimoApp.control.calls)).includes("menuContext home"),
         "the native menu knows Home is shown",
@@ -127,38 +127,6 @@ export const scenarios: Scenario[] = [
       await editor(ctx)
       await page.evaluate(() => window.__kimoApp.control.editorMenu("go-home"))
       await page.waitForFunction(() => location.hash === "#/" || location.hash === "")
-
-      // The folder crumb opens Home on that folder's section.
-      await editor(ctx)
-      const folder = page.locator(".kimo-desktop-breadcrumb__folder--button")
-      expect(
-        /^Show .+ in Home$/.test((await folder.getAttribute("aria-label")) ?? ""),
-        "folder crumb tooltip",
-      )
-      // Board 37 QsDq7: hover fill $bg-hover, radius $radius-sm (measured).
-      await folder.hover()
-      await page.waitForTimeout(200)
-      const look = await folder.evaluate((el) => {
-        const probe = document.createElement("div")
-        probe.style.background = "var(--kimo-bg-hover)"
-        probe.style.borderRadius = "var(--kimo-radius-sm)"
-        document.body.append(probe)
-        const want = getComputedStyle(probe)
-        const got = getComputedStyle(el)
-        const r = {
-          bg: got.backgroundColor === want.backgroundColor,
-          radius: got.borderTopLeftRadius === want.borderTopLeftRadius,
-          got: [got.backgroundColor, got.borderTopLeftRadius],
-          want: [want.backgroundColor, want.borderTopLeftRadius],
-        }
-        probe.remove()
-        return r
-      })
-      expect(look.bg && look.radius, `folder crumb hover ${JSON.stringify(look)}`)
-      await folder.click()
-      await page.waitForFunction(() => location.hash.startsWith("#/folder/"))
-      const hash = await page.evaluate(() => decodeURIComponent(location.hash))
-      expect(hash.includes("kimo-site"), `folder route: ${hash}`)
     },
   },
   {
@@ -407,7 +375,7 @@ export const scenarios: Scenario[] = [
           throw new Error("Permission denied")
         }
       })
-      await page.locator(".kimo-desktop-breadcrumb__file").click()
+      await page.locator(".card-header__file").click()
       await page.getByRole("menuitem", { name: "Reveal in Finder" }).click()
       await waitToast(page, /Couldn't reveal home\.kimo\. Permission denied\./, "reveal toast")
     },
@@ -417,7 +385,7 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await open(ctx, disk(`${LOOM}/marketing.kimo`))
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.getByRole("button", { name: "Take all ours" }).click()
       const mark = page.locator(".conflicts-panel__mark")
       await page.waitForFunction(
@@ -623,7 +591,7 @@ export const scenarios: Scenario[] = [
         window.__kimoApp.control.failNextWrite("PERMISSION", "EACCES", ref)
       }, copy)
       const before = await page.evaluate(() => location.hash)
-      await page.locator(".kimo-desktop-breadcrumb__file").click()
+      await page.locator(".card-header__file").click()
       await page.getByRole("menuitem", { name: "Save as…" }).click()
       await waitToast(page, /Couldn't save home\.kimo\./, "save as failure toast")
       expect((await page.evaluate(() => location.hash)) === before, "route unchanged")

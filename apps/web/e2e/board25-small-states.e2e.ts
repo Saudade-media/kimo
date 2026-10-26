@@ -37,7 +37,7 @@ export const scenarios: Scenario[] = [
       await page.evaluate((r) => {
         location.hash = `#/disk/${encodeURIComponent(r)}`
       }, ref)
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       await page.waitForFunction(() => !!(window as unknown as App).__kimo?.session)
       await page.evaluate(() =>
         (window as unknown as App).__kimo?.session.store.apply(

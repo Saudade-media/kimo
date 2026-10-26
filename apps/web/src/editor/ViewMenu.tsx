@@ -5,7 +5,10 @@
  *
  *   Zoom in ⌘+ · Zoom out ⌘− · Zoom to 100 % ⌘0 · Zoom to fit ⇧1 · Zoom to selection ⇧2 · ─ ·
  *   ✓ Pixel grid ⇧' · ✓ Snap to pixel grid · ✓ Snap to objects · Rulers ⇧R · ─ ·
- *   ✓ Show layer names on canvas · Preview ⇧Space
+ *   ✓ Show left panel · ✓ Show right panel · ─ · ✓ Show layer names on canvas · Preview ⇧Space
+ *
+ * Board 44 §5 rule "Collapse": Show left panel / Show right panel toggle the floating cards
+ * (checked while the card is expanded); ⌘\ toggles both, so neither row carries a Meta.
  *
  * Toggling writes the same `canvas.*` preference as Settings › Canvas (rule Dos9n). Not as
  * designed: Snap to pixel grid has no Meta — the design's ⇧⌘' is Previous conflict (board 18 /
@@ -34,6 +37,13 @@ export interface ViewMenuProps {
   onPreview(): void
   /** E10: the frame Preview would open (`usePreviewTarget`); null disables Preview (no frames). */
   previewTarget?: string | null
+  /** Board 44: the floating cards' collapsed state and their toggles (omitted: no rows). */
+  panels?: {
+    leftCollapsed: boolean
+    rightCollapsed: boolean
+    toggleLeft(): void
+    toggleRight(): void
+  }
   onClose(): void
 }
 
@@ -97,6 +107,21 @@ export function ViewMenu(props: ViewMenuProps) {
         onSelect={toggle("canvas.rulers")}
       />
       <MenuDivider />
+      {props.panels && (
+        <>
+          <MenuItemDense
+            label="Show left panel"
+            toggled={!props.panels.leftCollapsed}
+            onSelect={run(props.panels.toggleLeft)}
+          />
+          <MenuItemDense
+            label="Show right panel"
+            toggled={!props.panels.rightCollapsed}
+            onSelect={run(props.panels.toggleRight)}
+          />
+          <MenuDivider />
+        </>
+      )}
       <MenuItemDense
         label="Show layer names on canvas"
         toggled={prefs.layerNames}

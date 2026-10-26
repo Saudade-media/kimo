@@ -39,7 +39,7 @@ async function openApp(ctx: E2EContext, hash: string, os?: "windows" | "linux"):
 
 async function editor(ctx: E2EContext, ref = `${SITE}/home.kimo`, os?: "windows" | "linux") {
   await openApp(ctx, disk(ref), os)
-  await ctx.page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+  await ctx.page.locator(".card-header--left").waitFor({ timeout: 15_000 })
   await ctx.page.waitForFunction(() => !!(window as unknown as App).__kimo?.session)
 }
 
@@ -148,7 +148,7 @@ export const scenarios: Scenario[] = [
         (ref) => window.__kimoApp.platform.recents.noteOpened(ref),
         `${LOOM}/marketing.kimo`,
       )
-      const trigger = page.locator(".kimo-desktop-breadcrumb__file")
+      const trigger = page.locator(".card-header__file")
       await trigger.click()
       const menu = page.getByTestId("file-menu")
       await menu.waitFor()
@@ -181,7 +181,7 @@ export const scenarios: Scenario[] = [
       expect(subLabels.includes("home.kimo"), `recents: ${subLabels.join("|")}`)
       expect(subLabels[subLabels.length - 1] === "Clear recent", "Clear recent last")
       const m = await measure(page, {
-        trigger: ".kimo-desktop-breadcrumb__file",
+        trigger: ".card-header__file",
         menu: '[data-testid="file-menu"]',
         items: '[data-testid="file-menu"] > .kimo-menu-dense__items',
         item: '[data-testid="file-menu"] .kimo-menu-item-dense',
@@ -194,7 +194,7 @@ export const scenarios: Scenario[] = [
         divider: '[data-testid="file-menu"] .kimo-menu-divider',
         sub: '[data-testid="file-menu-recent"]',
         subMeta: '[data-testid="file-menu-recent"] .kimo-menu-item-dense__meta',
-        chevronIcon: ".kimo-desktop-breadcrumb__file .kimo-desktop-breadcrumb__chevron",
+        chevronIcon: ".card-header__file .topbar__file-icon",
       })
       const { check, flush } = checker(ctx)
       const g = (k: string) => m[k] as Box
@@ -254,7 +254,7 @@ export const scenarios: Scenario[] = [
       check(
         "Chevron X2kNTm",
         "flips up",
-        (await page.locator(".kimo-desktop-breadcrumb__file svg.lucide-chevron-up").count()) === 1
+        (await page.locator(".card-header__file svg.lucide-chevron-up").count()) === 1
           ? "up"
           : "down",
         "up",
@@ -453,18 +453,15 @@ export const scenarios: Scenario[] = [
       const { page } = ctx
       await openApp(ctx, "#/")
       await page.getByRole("button", { name: "New file" }).first().click()
-      await page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+      await page.locator(".card-header--left").waitFor({ timeout: 15_000 })
       expect(
         decodeURIComponent(await page.evaluate(() => location.hash)).includes("untitled:"),
         "untitled route",
       )
-      const crumb = (await page.locator(".kimo-desktop-breadcrumb").innerText())
-        .replace(/\s+/g, " ")
-        .trim()
-      expect(crumb === "Untitled / Page 1", `breadcrumb: ${crumb}`)
-      expect((await page.locator(".kimo-desktop-breadcrumb__folder").count()) === 0, "no folder")
-      expect((await page.locator(".kimo-branch-chip").count()) === 0, "no branch")
-      const status = page.locator(".kimo-save-status")
+      // Board 44: the left card header names the file; its status shows while it needs attention.
+      const name = (await page.locator(".card-header--left .topbar__file-name").innerText()).trim()
+      expect(name === "Untitled", `file name: ${name}`)
+      const status = page.locator(".card-header--left .kimo-save-status")
       expect((await status.getAttribute("data-status")) === "unsaved", "unsaved pill")
       expect((await status.innerText()).trim() === "Not saved", `pill: ${await status.innerText()}`)
       await page.waitForFunction(() =>
@@ -487,14 +484,14 @@ export const scenarios: Scenario[] = [
           "Untitled.kimo",
       )
       await page.waitForFunction(
-        () => document.querySelector(".kimo-save-status")?.getAttribute("data-status") === "saved",
+        () =>
+          document.querySelector(".card-header--left")?.getAttribute("data-save-status") ===
+          "saved",
         undefined,
         { timeout: 10_000 },
       )
-      const crumb2 = (await page.locator(".kimo-desktop-breadcrumb").innerText())
-        .replace(/\s+/g, " ")
-        .trim()
-      expect(crumb2 === "loom / landing.kimo / Page 1", `breadcrumb after save: ${crumb2}`)
+      const name2 = (await page.locator(".card-header--left .topbar__file-name").innerText()).trim()
+      expect(name2 === "landing.kimo", `file name after save: ${name2}`)
       expect(!!(await readFile(page, `${LOOM}/landing.kimo`)), "written to disk")
       await page.waitForFunction(() =>
         window.__kimoApp.control.calls.includes("setTitle landing.kimo — loom"),
@@ -502,15 +499,12 @@ export const scenarios: Scenario[] = [
     },
   },
   {
-    name: "board20: Windows topbar (KimoLogo, padding 12, no lights) + title rule (measured)",
+    name: "board20: Windows card header (File Menu, no lights) + title rule (measured)",
     async run(ctx) {
       const { page } = ctx
       await editor(ctx, `${SITE}/home.kimo`, "windows")
-      const topbar = page.locator(".kimo-desktop-topbar")
-      expect(
-        await topbar.evaluate((e) => e.classList.contains("kimo-desktop-topbar--native")),
-        "native variant",
-      )
+      // Board 44: no topbar; the left card header leads with the File Menu (no lights off macOS).
+      expect((await page.locator(".kimo-desktop-topbar").count()) === 0, "no desktop topbar")
       expect((await page.locator(".kimo-traffic-lights").count()) === 0, "no traffic lights")
       await page.waitForFunction(() =>
         window.__kimoApp.control.calls.includes("setTitle home.kimo — kimo-site - Kimo"),
@@ -522,31 +516,32 @@ export const scenarios: Scenario[] = [
         window.__kimoApp.control.calls.includes("setTitle ● home.kimo — kimo-site - Kimo"),
       )
       const m = await measure(page, {
-        topbar: ".kimo-desktop-topbar",
-        logo: ".kimo-desktop-topbar > .topbar__logo",
-        mark: ".kimo-desktop-topbar > .topbar__logo .kimo-logo",
-        crumb: ".kimo-desktop-breadcrumb",
+        header: ".card-header--left",
+        file: ".card-header--left .card-header__file",
+        mark: ".card-header--left .card-header__file .kimo-logo",
       })
       const { check, flush } = checker(ctx)
       const g = (k: string) => m[k] as Box
-      check("Topbar N1mtd", "height", g("topbar").h, 48)
-      check("Topbar N1mtd", "padding", `${g("topbar").pad[1]} ${g("topbar").pad[3]}`, "12 12")
-      check("Topbar N1mtd", "gap", g("topbar").gap, 8)
-      check("Logo uE2vu", "size", `${g("logo").w}×${g("logo").h}`, "28×28")
-      check("Logo uE2vu", "left = padding 12", g("logo").x - g("topbar").x, 12)
-      // Board 26 §4 KlpS9: KimoLogo 28 (bm1JR), no plate, fill $text-primary.
-      check("Logo uE2vu", "no plate", g("logo").bg, "rgba(0, 0, 0, 0)")
-      check("KimoLogo bm1JR", "size", `${g("mark").w}×${g("mark").h}`, "28×28")
+      check("Card Header wNJcXZthFH", "height", g("header").h, 44)
+      check(
+        "Card Header wNJcXZthFH",
+        "padding",
+        `${g("header").pad[1]} ${g("header").pad[3]}`,
+        "8 10",
+      )
+      check("File Menu GdMuPj2aQw", "height", g("file").h, 28)
+      check("File Menu GdMuPj2aQw", "left = padding 10", g("file").x - g("header").x, 10)
+      check("File Menu GdMuPj2aQw", "gap", g("file").gap, 6)
+      check("KimoLogo bm1JR", "size", `${g("mark").w}×${g("mark").h}`, "20×20")
       check(
         "KimoLogo bm1JR",
         "fill $text-primary",
         g("mark").color,
         await token(page, "--kimo-text-primary"),
       )
-      check("Breadcrumb", "after logo + gap 8", g("crumb").x - (g("logo").x + g("logo").w), 8)
       flush()
       // File menu: "Show in Explorer", Ctrl shortcuts.
-      await page.locator(".kimo-desktop-breadcrumb__file").click()
+      await page.locator(".card-header__file").click()
       const menu = page.getByTestId("file-menu")
       await menu.getByRole("menuitem", { name: "Show in Explorer" }).waitFor()
       expect(
@@ -588,7 +583,7 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await editor(ctx)
-      await page.locator(".kimo-desktop-breadcrumb__file").click()
+      await page.locator(".card-header__file").click()
       await page
         .getByTestId("file-menu")
         .getByRole("menuitem", { name: "Clean up assets…" })

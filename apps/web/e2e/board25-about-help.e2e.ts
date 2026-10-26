@@ -39,7 +39,7 @@ async function openApp(ctx: E2EContext, hash: string, query = "", size = { w: 14
 
 async function editor(ctx: E2EContext, query = "") {
   await openApp(ctx, disk(`${SITE}/home.kimo`), query)
-  await ctx.page.locator(".kimo-desktop-topbar").waitFor({ timeout: 15_000 })
+  await ctx.page.locator(".card-header--left").waitFor({ timeout: 15_000 })
   await ctx.page.waitForFunction(() => !!(window as unknown as App).__kimo)
 }
 
@@ -372,7 +372,7 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await editor(ctx, "?os=windows")
-      const trigger = page.locator(".kimo-desktop-breadcrumb__file")
+      const trigger = page.locator(".card-header__file")
       await trigger.click()
       const menu = page.getByTestId("file-menu")
       await menu.getByRole("menuitem", { name: "Help" }).hover()
@@ -460,7 +460,7 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await editor(ctx)
-      await page.locator(".kimo-desktop-breadcrumb__file").click()
+      await page.locator(".card-header__file").click()
       const labels = await page
         .getByTestId("file-menu")
         .locator(".kimo-menu-item-dense__label")

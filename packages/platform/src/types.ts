@@ -140,6 +140,10 @@ export type EditorMenuAction =
   | "undo"
   | "redo"
   | "select-all"
+  /** Board 44 §5: File › New tab ⌘T (Home in a new tab). */
+  | "new-tab"
+  /** Board 44 §5: File › Close tab ⌘W (the pinned Home tab closes the window instead). */
+  | "close-tab"
 
 /** What an editor window shows; the native menu enables the document items for `"editor"`. */
 export type MenuContext = "home" | "editor"
@@ -781,6 +785,11 @@ export interface WindowApi {
    * opens a new window itself).
    */
   openNewWindow?(): Promise<void>
+  /**
+   * Board 44 §4 C: a tab dragged below the strip opens in a new editor window on `ref` (a file
+   * on disk). Desktop only; the web reorders tabs only.
+   */
+  openFileInNewWindow?(ref: FileRef): Promise<void>
   /**
    * Runs before the window closes (and before quit). Resolve false to keep it open (e.g. a
    * save failed); the handler should flush sessions first. One handler per window. `quitting`

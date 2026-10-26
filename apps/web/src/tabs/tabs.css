@@ -332,15 +332,9 @@
   flex: none;
 }
 
-/* Board 44 §1: the strip hosts the traffic lights now, so the page under it drops its own inset
-   (the editor topbar until the panels work replaces it, and Home's sidebar). */
-.workspace .kimo-desktop-topbar > .kimo-traffic-lights,
+/* Board 44 §1: the strip hosts the traffic lights, so Home's sidebar under it drops its own. */
 .workspace .home-sidebar--desktop > .kimo-traffic-lights {
   display: none;
-}
-
-.workspace .kimo-desktop-topbar {
-  padding-left: 12px;
 }
 
 .workspace .home-sidebar--desktop {

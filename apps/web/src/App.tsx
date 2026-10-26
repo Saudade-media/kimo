@@ -13,6 +13,7 @@
  */
 import type { SettingsPane } from "@kimo/platform"
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { EditorChromeContext } from "./editor/CardHeaders"
 import { DiskEditor, Editor } from "./editor/Editor"
 import { RecoveryDialog, RestoredToasts } from "./files"
 import { Home } from "./home/Home"
@@ -101,7 +102,10 @@ export function App() {
         <div className="workspace">
           <TabStrip tabs={tabs} manager={manager} platform={platform} />
           <div className="workspace__body">
-            <Routed route={route} theme={theme} />
+            {/* Board 44: the strip owns the traffic lights and the window drag region. */}
+            <EditorChromeContext.Provider value={false}>
+              <Routed route={route} theme={theme} />
+            </EditorChromeContext.Provider>
           </div>
         </div>
       ) : (

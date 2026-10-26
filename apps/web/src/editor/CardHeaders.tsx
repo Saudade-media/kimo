@@ -181,15 +181,11 @@ export function LeftCardHeader({
 }: LeftCardHeaderProps) {
   const [renaming, setRenaming] = useState(false)
   const fileMenu = useFileMenu(actions)
-  // The macOS lights sit over the header's leading edge (the header itself is a drag region):
+  // Without a tab strip (EditorChromeContext true) the macOS lights sit over the header's leading edge:
   // the File Menu starts where the old topbar's breadcrumb did, 8 after the inset.
   const lights = lightsInset >= 68 ? lightsInset - HEADER_CONTENT_X + LIGHTS_GAP : 0
   return (
-    <header
-      className="card-header card-header--left"
-      data-tauri-drag-region=""
-      data-save-status={saveStatus}
-    >
+    <header className="card-header card-header--left" data-save-status={saveStatus}>
       {renaming ? (
         <input
           className="topbar__file-input"
@@ -288,10 +284,8 @@ export function RightCardHeader({
         ? `Preview “${previewTarget}”`
         : "Preview"
   return (
-    <header className="card-header card-header--right" data-tauri-drag-region="">
-      <div className="card-header__people" data-tauri-drag-region="">
-        {people}
-      </div>
+    <header className="card-header card-header--right">
+      <div className="card-header__people">{people}</div>
       <div className="card-header__view">
         <button
           type="button"

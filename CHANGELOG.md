@@ -14,20 +14,6 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
-### Changed
-
-- Agents work without asking. Claude Code, Codex and other agents connected over MCP, and the
-  built-in agent, no longer stop for approvals: deletes, other files, save and export run at once,
-  each logged in Activity and undoable on the canvas, like Pen.dev. The agent host's own tool
-  approvals stay. **Ask before changes** (Settings › Agents & MCP › Permissions, and the
-  composer's **…** menu for the built-in agent) brings the prompts back. Policies saved before
-  this turn trusted. The batch limit, path checks and read-only documents still apply
-  (ADR 0013 Addendum 8).
-
-### Fixed
-
-- Changing an MCP client's permissions in Settings no longer drops its save and export grants.
-
 ## [1.0.0] - 2026-10-23
 
 The first public release: release engineering, polish, the new mark and the format 1.0 freeze.
@@ -60,12 +46,11 @@ The first public release: release engineering, polish, the new mark and the form
   animated while visible, still under reduced motion). HTML/CSS/React approximate meshes with
   radial gradients, SVG/PDF use the mean color; shaders are reported as unsupported there.
 - Composer bar and "…" menu for the built-in agent (board 40). The bar keeps Attach, the mode
-  chip, a "…" button, the model chip and Send. **Skills** (with its count), **Auto-approve** and
-  **Web access** moved into the "…" menu, which opens 232 px wide above the composer: Skills
-  opens the skills menu, Auto-approve still asks first before it turns on, and Web access
-  switches at once; a blocked Web access row is disabled with the reason under it. A 6 px dot on
-  "…" shows a switch away from its default (warning while auto-approve is on, grey while web
-  access is off), and the "Auto-approve is on" chip stays. The menu has menu roles: opening
+  chip, a "…" button, the model chip and Send. **Skills** (with its count), **Ask before
+  changes** and **Web access** moved into the "…" menu, which opens 232 px wide above the
+  composer: Skills opens the skills menu, the two switches turn at once, and a blocked Web access
+  row is disabled with the reason under it. A 6 px grey dot on "…" shows that web access is off.
+  The menu has menu roles: opening
   focuses the first row, `↑`/`↓`/`Home`/`End` move, `Enter`/`Space` act, `Esc` closes and
   returns focus to "…". At the 360 px Agent panel the model name is never cut: the mode chip
   label shrinks first, and only a custom Local model id past 120 px gets an ellipsis (full name
@@ -167,17 +152,18 @@ The first public release: release engineering, polish, the new mark and the form
   renderer draws the motion only: the document, exports, `kimo_render`, thumbnails and hit
   testing use the final state. Your own edits, undo / redo and collaborators stay instant, and
   with reduced motion nothing moves (the landing flash stays).
-- Auto-approve (board 34). A switch in the built-in agent's composer "…" menu (board 40) turns
-  on auto-approve for the current session, after one confirm. While it is on, every approval is
-  given at once (opening, creating, saving and exporting files, edits outside the agent's area,
-  document-wide changes), cards already waiting included. Each one leaves a line in the thread
-  ("Approved automatically: saved landing.kimo") and, on desktop, an Activity row; the chip
-  "Auto-approve is on" above the composer turns it off. Every new or reopened session starts
-  off. MCP clients get the same option per client in Settings › Agents & MCP › Permissions,
-  saved in the client's policy (`autoApprove`), which also covers the export, save and
-  files.create grants; the presence chip shows an Auto-approve pill. Limits that are not
-  approvals still apply: the new-layer limit per edit, path and read-only checks, the frames of
-  agents started by side by side or split, and clients set to deny.
+- Agents work without asking (board 34, ADR 0013 Addendum 8). Claude Code, Codex and other
+  agents connected over MCP, and the built-in agent, don't stop for approvals: opening,
+  creating, saving and exporting files, deletes, edits outside the agent's area and
+  document-wide changes run at once, like Pen.dev; the agent host's own tool approvals stay.
+  Each one leaves a line in the thread ("Approved automatically: saved landing.kimo") and, on
+  desktop, an Activity row, and canvas edits stay undoable. **Ask before changes** brings the
+  prompts back: per session in the built-in agent's composer "…" menu (board 40), per client in
+  Settings › Agents & MCP › Permissions (saved in the client's policy as `autoApprove: false`;
+  the client row shows "· asks first"). Turning it off again approves the cards already
+  waiting. Limits that are not approvals still apply: the new-layer limit per edit, path and
+  read-only checks, the frames of agents started by side by side or split, and clients set to
+  deny.
 - The approval prompt stays on screen with many changes: its height is capped at 70 % of the
   window (less when the space below the agent chip is smaller), the change list scrolls inside
   it, and more than 8 changes are grouped by kind with the first 3 of each, "and N more" and

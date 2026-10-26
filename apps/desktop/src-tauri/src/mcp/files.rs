@@ -246,13 +246,14 @@ pub struct ClientPolicy {
     pub grants: Vec<Grant>,
     pub on_exceed: OnExceed,
     pub confirm_destructive: bool,
-    /// Board 34 auto-approve (additive; absent = false, and false is not written back).
-    #[serde(default, skip_serializing_if = "is_false")]
+    /// Board 34 auto-approve. Absent = true (ADR 0013 Addendum 8: connected clients are trusted
+    /// unless Settings › "Ask before changes" is on), so it is always written back.
+    #[serde(default = "auto_approve_default")]
     pub auto_approve: bool,
 }
 
-fn is_false(b: &bool) -> bool {
-    !*b
+fn auto_approve_default() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -297,9 +298,13 @@ pub fn check_client(client: &str) -> R<()> {
 
 pub fn read_policies(paths: &KimoPaths) -> Map<String, Value> {
     let raw: Map<String, Value> = read_json_or_default(&paths.policies());
-    // Drop entries that are not valid policies (hand edits), like settings normalization.
+    // Drop entries that are not valid policies (hand edits), like settings normalization, and
+    // read the rest back normalized, so a policy stored without autoApprove reads as trusted.
     raw.into_iter()
-        .filter(|(_, v)| serde_json::from_value::<ClientPolicy>(v.clone()).is_ok())
+        .filter_map(|(k, v)| {
+            let p = serde_json::from_value::<ClientPolicy>(v).ok()?;
+            Some((k, serde_json::to_value(p).ok()?))
+        })
         .collect()
 }
 
@@ -519,7 +524,10 @@ mod tests {
         let (_d, p) = paths();
         let pol = json!({"level":"edit+delete","files":["/repo/**"],"nodes":[],"grants":["save","files.create"],"onExceed":"ask","confirmDestructive":true});
         set_policy(&p, "claude-code", Some(pol.clone())).unwrap();
-        assert_eq!(read_policies(&p)["claude-code"], pol);
+        // Policies stored before Addendum 8 have no autoApprove: they read back trusted.
+        let mut trusted = pol.clone();
+        trusted["autoApprove"] = json!(true);
+        assert_eq!(read_policies(&p)["claude-code"], trusted);
         assert!(set_policy(&p, "x", Some(json!({"level":"admin"}))).is_err());
         set_policy(&p, "claude-code", None).unwrap();
         assert!(read_policies(&p).is_empty());
@@ -531,10 +539,10 @@ mod tests {
         let on = json!({"level":"edit","files":[],"nodes":[],"grants":["export"],"onExceed":"ask","confirmDestructive":true,"autoApprove":true});
         set_policy(&p, "codex", Some(on.clone())).unwrap();
         assert_eq!(read_policies(&p)["codex"], on);
-        // false is the default: it reads back without the field (older files stay identical).
+        // "Ask before changes" stores false explicitly, since absent means true.
         let off = json!({"level":"edit","files":[],"nodes":[],"grants":[],"onExceed":"ask","confirmDestructive":true,"autoApprove":false});
-        set_policy(&p, "codex", Some(off)).unwrap();
-        assert!(read_policies(&p)["codex"].get("autoApprove").is_none());
+        set_policy(&p, "codex", Some(off.clone())).unwrap();
+        assert_eq!(read_policies(&p)["codex"], off);
         assert!(set_policy(&p, "codex", Some(json!({"level":"edit","files":[],"nodes":[],"grants":[],"onExceed":"ask","confirmDestructive":true,"autoApprove":"yes"}))).is_err());
     }
 

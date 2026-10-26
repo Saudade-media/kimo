@@ -3,7 +3,7 @@
 Agents export through the `kimo_export` MCP tool: the same deterministic exporters as the [Export dialog](export-dialog.md), callable from a coding agent connected over MCP (see [Agents & MCP](../../agents/index.md)) or from the [built-in agent](../built-in-agent/providers.md).
 
 > [!IMPORTANT]
-> **Needs the export grant.** `kimo_export` writes files, so the app asks you to approve it (an **Export** approval) unless you granted it. With auto-approve on, the approval is given at once and logged in Activity: for an MCP client in **Settings › Agents & MCP** (its **Permissions**, **Auto-approve**), for the built-in agent with the shield in the composer ([Auto-approve](../built-in-agent/agent-tab.md#auto-approve)). It is a desktop tool: it isn't available in the browser, and agents spawned by another agent never get it.
+> **Logged in Activity.** `kimo_export` writes files. Agents export without asking, and each export is logged in Activity. With **Ask before changes** on, the app asks you to approve it first (an **Export** approval): for an MCP client in **Settings › Agents & MCP** (its **Permissions**), for the built-in agent in the composer's **…** menu ([Ask before changes](../built-in-agent/agent-tab.md#ask-before-changes)). It is a desktop tool: it isn't available in the browser, and agents spawned by another agent never get it.
 
 ## Targets
 

@@ -1,7 +1,7 @@
 /**
- * Board 34 "Auto-approve" (desing.pen aHEIi): §1 the built-in agent's per-session switch, confirm
- * and chip; §2 the thread line and the Activity row; §3 an MCP client's Permissions option and
- * the presence pill; §4 the approval prompt with 200 changes inside the viewport at 1280 × 800,
+ * Board 34 "Auto-approve" (desing.pen aHEIi), now "Ask before changes" (ADR 0013 Addendum 8: trusted
+ * by default): §1 the built-in agent's per-session switch; §2 the thread line and the Activity
+ * row; §3 an MCP client's Permissions option; §4 the approval prompt with 200 changes inside the viewport at 1280 × 800,
  * the minimum window (800 × 560) and 200 % UI zoom (640 × 400 CSS px). One measured
  * getComputedStyle / getBoundingClientRect pass per surface against the node values.
  */
@@ -61,22 +61,24 @@ const POLICY = {
   confirmDestructive: true,
 }
 
-/** Board 40: Auto-approve is a switch row in the composer's "…" menu. */
+/** Board 40: Ask before changes is a switch row in the composer's "…" menu. */
 const MORE = "[data-testid=agent-more]"
 const T = "[data-testid=agent-more-auto]"
 
-/** Opens the "…" menu (if closed) and returns the Auto-approve row's aria-checked. */
-async function autoChecked(page: Page): Promise<string | null> {
+/** Opens the "…" menu (if closed) and returns the Ask before changes row's aria-checked. */
+async function askChecked(page: Page): Promise<string | null> {
   if ((await page.locator(T).count()) === 0) await page.locator(MORE).click()
   const v = await page.locator(T).getAttribute("aria-checked")
   await page.keyboard.press("Escape")
   return v
 }
 
-/** Clicks the Auto-approve row through the "…" menu. */
-async function clickAuto(page: Page) {
+/** Clicks the Ask before changes row through the "…" menu. */
+async function clickAsk(page: Page) {
   if ((await page.locator(T).count()) === 0) await page.locator(MORE).click()
   await page.locator(T).click()
+  // The menu stays open after a switch; close it so the composer takes the next message.
+  await page.keyboard.press("Escape")
 }
 
 async function openPanel(ctx: E2EContext) {
@@ -186,73 +188,18 @@ async function promptFits(ctx: E2EContext, label: string) {
 
 export const scenarios: Scenario[] = [
   {
-    name: "board34: built-in agent auto-approve — switch, confirm, chip, thread line + measured",
+    name: "board34: built-in agent Ask before changes: trusted by default, switch, thread line + measured",
     async run(ctx) {
       const { page } = ctx
       await openPanel(ctx)
-      expect((await autoChecked(page)) === "false", "off by default")
+      expect((await askChecked(page)) === "false", "Ask before changes is off by default")
 
-      // Off: an out-of-area edit asks with a card.
+      // Trusted (ADR 0013 Addendum 8): an out-of-area edit runs without a card.
       await send(page, "Tidy the navbar")
-      await page.locator("[data-testid=agent-approval]").waitFor()
-      const secondary = await token(page, "--kimo-text-secondary")
-      const warning = await token(page, "--kimo-warning")
-      const warningSoft = await token(page, "--kimo-warning-soft")
-      const tertiary = await token(page, "--kimo-text-tertiary")
-      await page.locator(MORE).click()
-      let m = await measure(page, {
-        toggle: T,
-        icon: `${T} .kimo-menu-item-dense__check svg`,
-        knob: `${T} .kimo-toggle`,
-      })
-      const c = checker(ctx, "Board 34 §1 → board 40 “…” menu · Auto-approve off (u0Zdm5)")
-      c.box("Item · Auto-approve", m.toggle, { h: 28, gap: 8, pad: [0, 8, 0, 8], radius: 6 })
-      c.box("Icon shield", m.icon, { w: 14, h: 14, color: secondary })
-      c.box("Toggle/Off (CSYQj)", m.knob, { w: 28, h: 16 })
-      c.flush()
-
-      // On asks once; Cancel keeps it off.
-      await page.locator(T).click()
-      const D = "[data-testid=auto-approve-confirm]"
-      await page.locator(D).waitFor()
-      const cd = await measure(page, {
-        dialog: D,
-        wrap: `${D} .kimo-confirm-dialog__icon-wrap`,
-        title: `${D} .kimo-confirm-dialog__title`,
-        desc: `${D} .kimo-confirm-dialog__desc`,
-        impact: `${D} .kimo-confirm-dialog__impact`,
-        item: `${D} .kimo-confirm-dialog__item`,
-        text: `${D} .kimo-confirm-dialog__item-text`,
-        confirm: `${D} .kimo-confirm-dialog__confirm`,
-        scrim: "[data-testid=auto-approve-scrim]",
-      })
-      const cc = checker(ctx, "Board 34 §1 Auto-approve Confirm (k0K1nN)")
-      cc.box("Confirm (k0K1nN)", cd.dialog, { w: 440, pad: [20, 20, 20, 20], gap: 14, radius: 24 })
-      cc.box("Icon Wrap (zodGu)", cd.wrap, { w: 32, h: 32, bg: warningSoft, color: warning })
-      cc.box("Title (scx8n)", cd.title, { fs: 14, fw: "600" })
-      cc.box("Desc (bLTzr)", cd.desc, { fs: 12, lh: 17, color: secondary })
-      cc.box("Impact (MLHLi)", cd.impact, { pad: [10, 12, 10, 12], gap: 6, radius: 10 })
-      cc.box("Item (JSOgw)", cd.item, { gap: 8 })
-      cc.box("Text (IRLaU)", cd.text, { fs: 11, lh: 16, color: secondary })
-      cc.box("Confirm (WYG7C)", cd.confirm, { h: 30, pad: [0, 14, 0, 14] })
-      cc.box("Scrim", cd.scrim, {})
-      cc.flush()
-      const items = await page.locator(`${D} .kimo-confirm-dialog__item-text`).allInnerTexts()
-      expect(items.length === 4, "4 impact lines")
-      expect(items[2]?.includes("can't undo a file it wrote") ?? false, "files can't be undone")
-      expect(items[3]?.includes("40 new layers per edit") ?? false, "hard limits listed")
-      await page.locator(`${D} .kimo-confirm-dialog__cancel`).click()
-      expect((await page.locator(D).count()) === 0, "Cancel closes the confirm")
-      expect((await autoChecked(page)) === "false", "still off")
-
-      // Turn on: the waiting card is approved at once and the run continues.
-      await clickAuto(page)
-      await page.locator(`${D} .kimo-confirm-dialog__confirm`).click()
-      await page.locator("[data-testid=agent-auto-approve-chip]").waitFor()
       await idle(page)
       expect(
         (await page.locator("[data-testid=agent-approval]").count()) === 0,
-        "the pending card was approved",
+        "no approval card by default",
       )
       const lines = page.locator("[data-testid=agent-auto-approved]")
       expect((await lines.count()) === 1, "one thread line")
@@ -261,73 +208,63 @@ export const scenarios: Scenario[] = [
           "Approved automatically: edited 1 layer outside its area",
         `line text: ${await lines.first().innerText()}`,
       )
+      expect((await page.locator("[data-testid=agent-more-dot]").count()) === 0, "no dot")
+      expect((await page.locator("[data-testid=agent-auto-approve-chip]").count()) === 0, "no chip")
 
-      // A second request never shows a card.
-      await send(page, "Tidy the navbar again")
-      await idle(page)
-      expect((await lines.count()) === 2, "a line per approved request")
-
-      const CH = "[data-testid=agent-auto-approve-chip]"
-      m = await measure(page, {
-        dot: "[data-testid=agent-more-dot]",
-        chip: CH,
-        chipIcon: `${CH} .agent-panel__auto-chip-icon`,
-        chipLabel: `${CH} .agent-panel__auto-chip-label`,
-        chipOff: `${CH} .agent-panel__auto-chip-off`,
-        chipOffIcon: `${CH} .agent-panel__auto-chip-off svg`,
-        composer: "[data-testid=agent-composer]",
+      const secondary = await token(page, "--kimo-text-secondary")
+      const warning = await token(page, "--kimo-warning")
+      await page.locator(MORE).click()
+      const m = await measure(page, {
+        toggle: T,
+        icon: `${T} .kimo-menu-item-dense__check svg`,
+        knob: `${T} .kimo-toggle`,
         line: "[data-testid=agent-auto-approved]",
         lineIcon: "[data-testid=agent-auto-approved] .agent-panel__auto-line-icon",
         lineText: "[data-testid=agent-auto-approved] .agent-panel__auto-line-text",
       })
-      const on = checker(ctx, "Board 34 §1–2 On: switch, chip, thread line")
-      on.box("“…” Dot (board 40 YB49L)", m.dot, { w: 6, h: 6, bg: warning })
-      on.box("Auto-approve Chip (PWfak)", m.chip, {
-        h: 24,
-        pad: [0, 4, 0, 8],
-        gap: 4,
-        radius: 999,
-        bg: warningSoft,
-        color: warning,
-      })
-      on.box("Icon (vl2dS)", m.chipIcon, { w: 12, h: 12 })
-      on.box("Label (EK49Y)", m.chipLabel, { fs: 11, fw: "500", color: warning })
-      on.box("Turn Off (mCuKF)", m.chipOff, { w: 16, h: 16 })
-      on.box("Icon x (ekCI2)", m.chipOffIcon, { w: 12, h: 12 })
-      if (m.chip && m.composer)
-        on.check("Composer Wrap", "Chip → Composer gap", m.composer.y - (m.chip.y + m.chip.h), 8)
-      on.box("Auto-approved Line (ZbBuI)", m.line, { pad: [0, 0, 0, 34], gap: 6 })
-      on.box("Icon (ZP3vA)", m.lineIcon, { w: 12, h: 12, color: warning })
-      on.box("Text (wG0k1)", m.lineText, { fs: 11, lh: 13, color: secondary })
-      on.flush()
-      expect(tertiary.length > 0, "tokens resolved")
-      if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "board34-panel-on.png") })
+      const c = checker(ctx, "Board 34 §1–2 → “…” menu · Ask before changes off, thread line")
+      c.box("Item · Ask before changes", m.toggle, { h: 28, gap: 8, pad: [0, 8, 0, 8], radius: 6 })
+      c.box("Icon shield", m.icon, { w: 14, h: 14, color: secondary })
+      c.box("Toggle/Off (CSYQj)", m.knob, { w: 28, h: 16 })
+      c.box("Auto-approved Line (ZbBuI)", m.line, { pad: [0, 0, 0, 34], gap: 6 })
+      c.box("Icon (ZP3vA)", m.lineIcon, { w: 12, h: 12, color: warning })
+      c.box("Text (wG0k1)", m.lineText, { fs: 11, lh: 13, color: secondary })
+      c.flush()
+      await page.keyboard.press("Escape")
+      if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "board34-panel-trusted.png") })
 
-      // One click on the chip turns it off; the next out-of-area edit asks again.
-      await page.locator(CH).click()
-      expect((await page.locator(CH).count()) === 0, "chip gone")
-      expect((await autoChecked(page)) === "false", "off again")
-      expect((await page.locator("[data-testid=agent-more-dot]").count()) === 0, "no dot")
-      await send(page, "Tidy the navbar once more")
+      // On: the next out-of-area edit asks with a card; deny it.
+      await clickAsk(page)
+      expect((await askChecked(page)) === "true", "Ask before changes on")
+      await send(page, "Tidy the navbar again")
       await page.locator("[data-testid=agent-approval]").waitFor()
       await page.locator("[data-testid=agent-approval] [data-choice=deny]").click()
       await idle(page)
+      expect((await lines.count()) === 1, "a denied request adds no line")
 
-      // A new session starts off.
-      await clickAuto(page)
-      await page.locator(`${D} .kimo-confirm-dialog__confirm`).click()
-      await page.locator(CH).waitFor()
-      await page.getByRole("button", { name: "New session" }).click()
-      expect((await page.locator(CH).count()) === 0, "new session: no chip")
+      // Turning it off while a card waits approves it at once; the run continues.
+      await send(page, "Tidy the navbar once more")
+      await page.locator("[data-testid=agent-approval]").waitFor()
+      await clickAsk(page)
+      await idle(page)
       expect(
-        !(await page.evaluate(() => (window as unknown as M6).__m6.controller.state.autoApprove)),
-        "new session: off",
+        (await page.locator("[data-testid=agent-approval]").count()) === 0,
+        "the pending card was approved",
+      )
+      expect((await lines.count()) === 2, "a line per approved request")
+
+      // A new session starts trusted again.
+      await clickAsk(page)
+      await page.getByRole("button", { name: "New session" }).click()
+      expect(
+        await page.evaluate(() => (window as unknown as M6).__m6.controller.state.autoApprove),
+        "new session: trusted",
       )
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "board34-panel.png") })
     },
   },
   {
-    name: "board34: MCP client auto-approve — Permissions, badge, presence pill, Activity + measured",
+    name: "board34: MCP client Ask before changes: Permissions, badge, no pill, Activity + measured",
     async run(ctx) {
       const { page } = ctx
       await openAgents(ctx, "settings-running")
@@ -336,55 +273,47 @@ export const scenarios: Scenario[] = [
       const tertiary = await token(page, "--kimo-text-tertiary")
       const secondary = await token(page, "--kimo-text-secondary")
       const warning = await token(page, "--kimo-warning")
-      const warningSoft = await token(page, "--kimo-warning-soft")
-      let m = await measure(page, {
+      const m = await measure(page, {
         row: R,
         label: `${R} .agents-perms__label`,
         toggle: `${R} .kimo-toggle`,
         note: `${R} .agents-perms__auto-note`,
       })
-      const c = checker(ctx, "Board 34 §3 Perm · Auto-approve off (YsgKV)")
-      c.box("Perm · Auto-approve (YsgKV)", m.row, { gap: 12 })
+      const c = checker(ctx, "Board 34 §3 Perm · Ask first off (YsgKV)")
+      c.box("Perm · Ask first (YsgKV)", m.row, { gap: 12 })
       c.box("Label (mlOmw)", m.label, { w: 88, fs: 12, color: secondary })
       c.box("Toggle (rfs4e)", m.toggle, { w: 28, h: 16 })
       c.box("Note (SZIRG)", m.note, { fs: 11, color: tertiary })
       c.flush()
+      const note = () => page.locator(`${R} .agents-perms__auto-note`).innerText()
+      const badge = () =>
+        page.locator("[data-client=claude-code] .kimo-agent-client-row__scope").innerText()
+      expect((await page.locator(`${R} .agents-perms__label`).innerText()) === "Ask first", "label")
+      expect((await note()) === "Off: every request runs without asking", `note: ${await note()}`)
+      expect(!(await badge()).includes("asks first"), `badge: ${await badge()}`)
+
+      // On applies at once, no confirm; the badge says so.
       await page.locator(`${R} .kimo-toggle`).click()
-      const D = "[data-testid=auto-approve-confirm]"
-      await page.locator(D).waitFor()
-      expect(
-        (await page.locator(`${D} .kimo-confirm-dialog__title`).innerText()) ===
-          "Turn on auto-approve for Claude Code?",
-        "the confirm names the client",
-      )
-      await page.locator(`${D} .kimo-confirm-dialog__confirm`).click()
-      await page.waitForFunction(
-        () =>
-          (window as unknown as Agents).__agents.host.control.policies["claude-code"]
-            ?.autoApprove === true,
-      )
-      m = await measure(page, {
-        note: `${R} .agents-perms__auto-note`,
-        badge: "[data-client=claude-code] .kimo-agent-client-row__scope",
-      })
-      const on = checker(ctx, "Board 34 §3 On: note + client badge (KiaGF, I09xw)")
-      on.box("Note (KiaGF)", m.note, { fs: 11, color: warning })
-      on.box("Scope badge (H8RP2y)", m.badge, { bg: warningSoft, color: warning })
-      on.flush()
-      const badge = await page
-        .locator("[data-client=claude-code] .kimo-agent-client-row__scope")
-        .innerText()
-      expect(badge.endsWith("· auto-approve"), `badge reads auto-approve: ${badge}`)
-      // Off applies at once, no confirm.
-      await page.locator(`${R} .kimo-toggle`).click()
-      expect((await page.locator(D).count()) === 0, "turning off never asks")
       await page.waitForFunction(
         () =>
           (window as unknown as Agents).__agents.host.control.policies["claude-code"]
             ?.autoApprove === false,
       )
+      expect((await page.locator("[data-testid=auto-approve-confirm]").count()) === 0, "no confirm")
+      expect((await badge()).endsWith("· asks first"), `badge reads asks first: ${await badge()}`)
+      expect(
+        (await note()) === "On: anything outside its permissions asks first",
+        `note: ${await note()}`,
+      )
+      // Off again: trusted.
+      await page.locator(`${R} .kimo-toggle`).click()
+      await page.waitForFunction(
+        () =>
+          (window as unknown as Agents).__agents.host.control.policies["claude-code"]
+            ?.autoApprove === true,
+      )
 
-      // Editor: a waiting prompt is approved when the option turns on; the pill shows it.
+      // Editor: a waiting prompt is approved when asking turns off; no pill in the topbar.
       await openAgents(ctx, "editor")
       await page.evaluate(() => {
         const a = (window as unknown as Agents).__agents
@@ -404,30 +333,12 @@ export const scenarios: Scenario[] = [
         () => (window as unknown as Agents).__agents.host.approvals.pending().length === 0,
       )
       await page.locator("[data-testid=agent-approval]").waitFor({ state: "detached" })
-      const PILL = "[data-testid=agent-auto-approve-pill]"
-      await page.locator(PILL).waitFor()
-      m = await measure(page, {
-        chip: "[data-testid=agent-presence] .kimo-agent-chip",
-        pill: PILL,
-        icon: `${PILL} .agents-auto-pill__icon`,
-        label: `${PILL} .agents-auto-pill__label`,
-      })
-      const pc = checker(ctx, "Board 34 §3 Auto-approve Pill (XYAmZ)")
-      pc.box("Auto-approve Pill (XYAmZ)", m.pill, {
-        h: 24,
-        pad: [0, 8, 0, 6],
-        gap: 4,
-        radius: 999,
-        bg: warningSoft,
-        color: warning,
-      })
-      pc.box("Icon (B1X41i)", m.icon, { w: 12, h: 12 })
-      pc.box("Label (nw9q6)", m.label, { fs: 11, fw: "500" })
-      if (m.chip && m.pill)
-        pc.check("Topbar Presence", "Chip → Pill gap", m.pill.x - (m.chip.x + m.chip.w), 6)
-      pc.flush()
+      expect(
+        (await page.locator("[data-testid=agent-auto-approve-pill]").count()) === 0,
+        "no auto-approve pill",
+      )
 
-      // Activity: the approval row reads "approved automatically" in warning.
+      // Activity: the approval row reads "approved automatically", in the plain tone.
       await page.evaluate(() =>
         (window as unknown as Agents).__agents.entry({
           kind: "approval",
@@ -446,9 +357,7 @@ export const scenarios: Scenario[] = [
         `tool line: ${await tool.innerText()}`,
       )
       const color = await tool.evaluate((e) => getComputedStyle(e).color)
-      const ac = checker(ctx, "Board 34 §2 Activity row (X3swX)")
-      ac.check("Tool (PPms1)", "color", color, warning)
-      ac.flush()
+      expect(color !== warning, `Activity row is not in warning: ${color}`)
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "board34-mcp.png") })
     },
   },

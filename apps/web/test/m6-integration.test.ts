@@ -167,6 +167,7 @@ describe("prompt node runs (board 22 cf2sC, ADR 0014 §9)", () => {
     })
     holder.docId = docId
     await c.refresh()
+    c.setAutoApprove(false) // "Ask before changes" on
     // Out of scope → an in-app approval (it waits until answered): deny it.
     let asked = false
     const off = c.subscribe((st) => {

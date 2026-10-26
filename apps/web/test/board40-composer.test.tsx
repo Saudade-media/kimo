@@ -22,7 +22,7 @@ function menu(o: {
   skills?: string[]
 }): string {
   const state = {
-    autoApprove: o.auto ?? false,
+    autoApprove: o.auto ?? true,
     webAccess: { on: o.web ?? true, disabled: o.blocked ?? null },
     skills: { enabled: o.skills ?? ["kimo-design", "kimo-layout", "kimo-tokens"] },
   } as unknown as AgentPanelViewState
@@ -75,7 +75,7 @@ describe("dot on “…”", () => {
 })
 
 describe("“…” menu items reflect the session", () => {
-  test("defaults: Skills with its count, auto-approve off, web access on", () => {
+  test("defaults: Skills with its count, Ask before changes off, web access on", () => {
     const html = menu({})
     expect(html).toContain('role="menu"')
     expect(html).toContain('aria-label="More options"')
@@ -85,6 +85,7 @@ describe("“…” menu items reflect the session", () => {
     expect(skills).toContain(">3<")
     const auto = row(html, "agent-more-auto")
     expect(auto).toContain('role="menuitemcheckbox"')
+    expect(auto).toContain(">Ask before changes<")
     expect(auto).toContain('aria-checked="false"')
     expect(auto).toContain("kimo-toggle--off")
     expect(auto).toContain('lucide lucide-shield"')
@@ -96,10 +97,9 @@ describe("“…” menu items reflect the session", () => {
     expect(html).not.toContain("agent-more-reason")
   })
 
-  test("auto-approve on: checked, shield-check in warning", () => {
-    const auto = row(menu({ auto: true }), "agent-more-auto")
+  test("Ask before changes on: checked, shield-check", () => {
+    const auto = row(menu({ auto: false }), "agent-more-auto")
     expect(auto).toContain('aria-checked="true"')
-    expect(auto).toContain("agent-more__auto--on")
     expect(auto).toContain("lucide-shield-check")
     expect(auto).toContain("kimo-toggle--on")
   })

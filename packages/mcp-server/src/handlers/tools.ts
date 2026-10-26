@@ -1717,7 +1717,14 @@ export function createToolHandlerMap(
     for (const p of planned) {
       const b = await p.bytes()
       if (!(b instanceof Uint8Array)) return fail(b)
-      const path = joinPath(dir, p.name)
+      // Every file stays inside outDir, whatever its name says (`..`, absolute names).
+      const path = normalizePath(joinPath(dir, p.name))
+      if (!path.startsWith(`${dir.replace(/\/+$/, "")}/`))
+        return fail({
+          code: "INVALID_INPUT",
+          message: `${p.name} would be written outside ${dir}; nothing was written.`,
+          path: "outDir",
+        })
       const existing = await ctx.host.readFile(path)
       const same = existing.ok && sha256Hex(existing.value) === sha256Hex(b)
       if (existing.ok && !same && !overwrite)

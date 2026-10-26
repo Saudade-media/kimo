@@ -81,7 +81,12 @@ import {
   webSupported,
   ZERO_USAGE,
 } from "@kimo/ai-agent"
-import { type ApprovalOutcome, type ApprovalRequest, callTargets } from "@kimo/mcp-server"
+import {
+  type ApprovalOutcome,
+  type ApprovalRequest,
+  callTargets,
+  protectedPath,
+} from "@kimo/mcp-server"
 import type { McpApprovalChoice } from "@kimo/platform"
 import { type AgentMarkState, type Persona, PersonaAllocator } from "@kimo/ui"
 import { workAreaIds } from "../canvas/agent-area"
@@ -197,7 +202,7 @@ export interface CanvasAgentState {
   landed: { key: string; origin: string; ids: string[] }[]
 }
 
-/** The composer menu that is open. `more` is board 40's "…" menu (Skills, Auto-approve, Web access). */
+/** The composer menu that is open. `more` is board 40's "…" menu (Skills, Ask before changes, Web access). */
 export type PanelMenu = "model" | "skills" | "mode" | "more" | null
 
 export interface AgentPanelViewState extends AgentPanelState {
@@ -320,8 +325,9 @@ export interface AgentPanelControllerExt extends AgentPanelController {
   /** Refusal "Edit request": the turn's prompt back in the composer. */
   editRequest(turnId: string): void
   /**
-   * Board 34 auto-approve for this session. Turning it on approves the pending cards at once
-   * (the UI asks first); a new or reopened session starts off.
+   * Board 34 auto-approve for this session, shown inverted as "Ask before changes". On by default
+   * (ADR 0013 Addendum 8): a new or reopened session starts on, and turning it on approves the
+   * pending cards at once.
    */
   setAutoApprove(on: boolean): void
   /**
@@ -545,7 +551,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let sessionQuery = ""
   let sessionList: SessionMeta[] = []
   let approvalQueue: (ApprovalPromptView & { resolve(o: ApprovalOutcome): void })[] = []
-  let autoApprove = false
+  // Trusted by default (ADR 0013 Addendum 8); "Ask before changes" turns it off.
+  let autoApprove = true
   /** Board 38: the session's own choice (null: follow Allow web access). Never saved. */
   let webOverride: boolean | null = null
   let connect: { connecting: boolean; error: string | null } = { connecting: false, error: null }
@@ -880,7 +887,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   // --- Approvals (in-app: wait indefinitely; Stop answers deny) ----------------------------------
 
   function requestApproval(req: ApprovalRequest): Promise<ApprovalOutcome> {
-    if (autoApprove) {
+    // System and hidden folders are never auto-approved: they show the card (ADR 0013 Addendum 8).
+    const guarded = req.reason.kind === "file" && protectedPath(req.reason.path)
+    if (autoApprove && !guarded) {
       noteAutoApproved(req)
       emit()
       return Promise.resolve("auto")
@@ -2642,7 +2651,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     newSession() {
       if (composerState !== "idle") controller.stop()
       session = null
-      autoApprove = false
+      autoApprove = true
       webOverride = null
       messages = []
       modeRun = null
@@ -2668,7 +2677,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         return
       }
       session = s
-      autoApprove = false
+      autoApprove = true
       webOverride = null
       model = s.model
       // Sessions saved before board 39 carry Off / Auto / Max.
@@ -2753,7 +2762,9 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       autoApprove = on
       // Cards already waiting are approved now, oldest first.
       if (on)
-        for (const a of [...approvalQueue]) {
+        for (const a of approvalQueue.filter(
+          (q) => !(q.request.reason.kind === "file" && protectedPath(q.request.reason.path)),
+        )) {
           noteAutoApproved(a.request as unknown as ApprovalRequest)
           settleApproval("auto", a.request.id)
         }
@@ -2921,7 +2932,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       pendingFromHome = true
       model = h.model
       session = null
-      autoApprove = false
+      autoApprove = true
       webOverride = null
       messages = []
       mode = { ...DEFAULT_MODE }

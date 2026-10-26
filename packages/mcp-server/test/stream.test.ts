@@ -7,9 +7,9 @@ import { createMemoryPlatform } from "@kimo/platform/memory"
 import {
   AGENT_MAX_NEW_LAYERS,
   type ApprovalOutcome,
+  ASK_POLICY,
   type ClientPolicy,
   createMemoryDocumentHost,
-  DEFAULT_POLICY,
   type McpConnection,
   RETRIES,
   type ToolResult,
@@ -24,9 +24,9 @@ function setup(policy: Partial<ClientPolicy> = {}, approve: ApprovalOutcome = "d
     { client: "claude-code", label: "Claude Code", transport: "in-process" },
     {
       policy: {
-        ...DEFAULT_POLICY,
+        ...ASK_POLICY,
         files: ["**"],
-        grants: [...DEFAULT_POLICY.grants, "files.create"],
+        grants: [...ASK_POLICY.grants, "files.create"],
         level: "edit+delete",
         confirmDestructive: false,
         ...policy,

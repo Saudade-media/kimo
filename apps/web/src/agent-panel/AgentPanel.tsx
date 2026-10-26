@@ -62,7 +62,6 @@ import {
   useRef,
   useState,
 } from "react"
-import { AutoApproveConfirm } from "../agents/AutoApproveConfirm"
 import type { AgentMessageView, AttachmentChipView } from "../platform/contract"
 import { inTauri } from "../platform/runtime"
 import { AreaBusyCard, type AreaBusyEnv, useAreaWaitStatus } from "./AreaBusyCard"
@@ -172,8 +171,6 @@ export function AgentPanel({
   const moreButton = useRef<HTMLButtonElement | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [agentModelTarget, setAgentModelTarget] = useState<number | null>(null)
-  // Board 34: turning auto-approve on asks once (k0K1nN); turning it off never asks.
-  const [confirmAuto, setConfirmAuto] = useState(false)
 
   // Keep the newest content in view while streaming.
   const last = state.messages[state.messages.length - 1]
@@ -414,14 +411,7 @@ export function AgentPanel({
                 controller.openMenu("skills")
                 moreButton.current?.focus()
               }}
-              onAutoApprove={() => {
-                if (state.autoApprove) controller.setAutoApprove(false)
-                else {
-                  // Board 34: turning it on asks first; the menu gives way to the confirm.
-                  controller.openMenu(null)
-                  setConfirmAuto(true)
-                }
-              }}
+              onAutoApprove={() => controller.setAutoApprove(!state.autoApprove)}
               onWebAccess={(on) => controller.setWebAccess(on)}
               onClose={() => controller.openMenu(null)}
               onEscape={() => {
@@ -456,23 +446,6 @@ export function AgentPanel({
               }}
               onSettings={() => controller.openCostSettings()}
             />
-          )}
-          {state.autoApprove && !state.composerDisabled && (
-            // Board 34 Auto-approve Chip (PWfak): one click turns it off.
-            <button
-              type="button"
-              className="agent-panel__auto-chip"
-              data-testid="agent-auto-approve-chip"
-              data-pen="PWfak"
-              title="Turn off auto-approve"
-              onClick={() => controller.setAutoApprove(false)}
-            >
-              <ShieldCheck className="agent-panel__auto-chip-icon" aria-hidden="true" />
-              <span className="agent-panel__auto-chip-label">Auto-approve is on</span>
-              <span className="agent-panel__auto-chip-off" aria-hidden="true">
-                <X />
-              </span>
-            </button>
           )}
           <ComposerAgent
             data-testid="agent-composer"
@@ -538,7 +511,8 @@ export function AgentPanel({
             more={{
               open: state.menu === "more" || state.menu === "skills",
               dot: composerMoreDot({
-                autoApprove: state.autoApprove,
+                // Trusted is the default (ADR 0013 Addendum 8), so it carries no warning dot.
+                autoApprove: false,
                 webAccessOn: state.webAccess.on,
                 webAccessBlocked: state.webAccess.disabled !== null,
               }),
@@ -580,15 +554,6 @@ export function AgentPanel({
             onSend={() => void controller.send(state.composer.text)}
             onStop={() => controller.stop()}
           />
-          {confirmAuto && (
-            <AutoApproveConfirm
-              onConfirm={() => {
-                setConfirmAuto(false)
-                controller.setAutoApprove(true)
-              }}
-              onCancel={() => setConfirmAuto(false)}
-            />
-          )}
           <input
             ref={fileInput}
             type="file"

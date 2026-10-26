@@ -521,7 +521,7 @@ const MORE_ITEMS =
 
 /**
  * Board 40 "…" menu (More Menu c79jYX): Menu/Dense 232 › Item · Skills (book-open, meta count) ·
- * Divider · Item · Auto-approve (shield / shield-check warning, Toggle) · Item · Web access
+ * Divider · Item · Ask before changes (shield / shield-check, Toggle) · Item · Web access
  * (globe / globe-x / globe-lock, Toggle) · Reason when blocked. Opening focuses the first row;
  * ↑ ↓ Home End move, Enter and Space act, Escape closes and hands focus back to "…".
  */
@@ -585,10 +585,9 @@ export function MoreMenu({
       />
       <MenuDivider />
       <MenuItemDense
-        label="Auto-approve"
-        icon={state.autoApprove ? <ShieldCheck /> : <Shield />}
-        switchOn={state.autoApprove}
-        className={state.autoApprove ? "agent-more__auto--on" : undefined}
+        label="Ask before changes"
+        icon={state.autoApprove ? <Shield /> : <ShieldCheck />}
+        switchOn={!state.autoApprove}
         data-testid="agent-more-auto"
         onSelect={onAutoApprove}
       />

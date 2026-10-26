@@ -121,14 +121,18 @@ export function filesForScope(scope: FilesScope, cwd?: string): string[] {
   return []
 }
 
-/** ADR 0013 §6 defaults for clients without a stored policy. */
+/**
+ * Clients without a stored policy: the host's default (@kimo/mcp-server DEFAULT_POLICY, ADR 0013
+ * Addendum 8). Trusted: every request runs without asking until "Ask before changes" is on.
+ */
 export const DEFAULT_POLICY: McpClientPolicy = {
   level: "edit",
   files: [],
   nodes: [],
-  grants: [],
+  grants: ["globals", "components", "save", "export"],
   onExceed: "ask",
   confirmDestructive: true,
+  autoApprove: true,
 }
 
 /** "Edit · this folder", "Read only · current file" (AgentClientRow Scope badge). */
@@ -928,9 +932,8 @@ export interface ActivityGroupView {
 }
 
 function toneOf(e: McpActivityEntry): ActivityRowView["tone"] {
-  // Board 34: an auto-approved request reads in warning, like a conflict.
-  if (e.code === "REVISION_CONFLICT" || e.code === "AREA_BUSY" || e.outcome === "auto")
-    return "warning"
+  // Auto-approved requests are the default (ADR 0013 Addendum 8) and read plain.
+  if (e.code === "REVISION_CONFLICT" || e.code === "AREA_BUSY") return "warning"
   if (e.kind === "denied" || e.code === "PERMISSION_DENIED" || e.code === "OUT_OF_SCOPE")
     return "danger"
   if (e.kind === "error") return "danger"

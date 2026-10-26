@@ -11,7 +11,6 @@ import { createMemoryMcpHost, type McpApprovalRequest } from "@kimo/platform"
 import { createAgentPanelController, createInWindowTools } from "../src/agent-panel"
 import { autoApprovalLine } from "../src/agent-panel/approval"
 import { createTestRuntime, type Script } from "../src/agent-panel/testing"
-import { autoApproveCopy } from "../src/agents/AutoApproveConfirm"
 import {
   APPROVAL_FLAT_MAX,
   APPROVAL_PER_KIND,
@@ -86,12 +85,13 @@ const outOfScope =
 const card = [{ id: "Card000001", name: "Card", type: "frame" }]
 
 describe("built-in agent: per-session auto-approve", () => {
-  test("off by default; an out-of-area edit asks", async () => {
+  test("on by default; with Ask before changes an out-of-area edit asks", async () => {
     const holder = { docId: "" }
     const { c, docId } = setup(outOfScope(holder))
     holder.docId = docId
     await c.refresh()
-    expect(c.state.autoApprove).toBe(false)
+    expect(c.state.autoApprove).toBe(true)
+    c.setAutoApprove(false)
     c.setSelection(card)
     const sending = c.send("Rename the navbar")
     await until(() => c.state.approvals.length === 1)
@@ -115,10 +115,10 @@ describe("built-in agent: per-session auto-approve", () => {
     expect(a.autoApproved).toEqual(["Approved automatically: edited 1 layer outside its area"])
     const row = activity.find((e) => e.kind === "approval")
     expect(row?.outcome).toBe("auto")
-    // The Activity tab reads it in warning: "<tool> · approved automatically".
+    // The Activity tab reads it plain: "<tool> · approved automatically".
     const view = activityRowView({ ...(row as Omit<ActivityEntry, "seq">), seq: 1 }, (id) => id)
     expect(view.tool).toBe("kimo_apply_ops · approved automatically")
-    expect(view.tone).toBe("warning")
+    expect(view.tone).toBe("default")
   })
 
   test("turning it on approves the pending cards; the run continues", async () => {
@@ -126,6 +126,7 @@ describe("built-in agent: per-session auto-approve", () => {
     const { c, store, docId } = setup(outOfScope(holder))
     holder.docId = docId
     await c.refresh()
+    c.setAutoApprove(false)
     c.setSelection(card)
     const sending = c.send("Rename the navbar")
     await until(() => c.state.approvals.length === 1)
@@ -138,7 +139,7 @@ describe("built-in agent: per-session auto-approve", () => {
     expect(a.autoApproved).toHaveLength(1)
   })
 
-  test("a new session starts off; a reopened one too, with its lines kept", async () => {
+  test("a new session starts trusted; a reopened one too, with its lines kept", async () => {
     const holder = { docId: "" }
     const { c, docId } = setup(outOfScope(holder))
     holder.docId = docId
@@ -148,10 +149,10 @@ describe("built-in agent: per-session auto-approve", () => {
     await c.send("Rename the navbar")
     const id = c.state.session?.id as string
     c.newSession()
-    expect(c.state.autoApprove).toBe(false)
-    c.setAutoApprove(true)
+    expect(c.state.autoApprove).toBe(true)
+    c.setAutoApprove(false)
     await c.openSession(id)
-    expect(c.state.autoApprove).toBe(false)
+    expect(c.state.autoApprove).toBe(true)
     const a = c.state.messages.find((m) => m.kind === "agent")
     if (a?.kind !== "agent") throw new Error()
     expect(a.autoApproved).toEqual(["Approved automatically: edited 1 layer outside its area"])
@@ -230,18 +231,6 @@ describe("thread line per request kind", () => {
   })
 })
 
-describe("confirm copy (k0K1nN)", () => {
-  test("says what it covers, what stays undoable and what is still enforced", () => {
-    const own = autoApproveCopy()
-    expect(own.title).toBe("Turn on auto-approve?")
-    expect(own.impact).toHaveLength(4)
-    expect(own.impact.join(" ")).toContain("Kimo can't undo a file it wrote")
-    expect(own.impact[3]).toContain("40 new layers per edit")
-    const mcp = autoApproveCopy("Codex")
-    expect(mcp.title).toBe("Turn on auto-approve for Codex?")
-  })
-})
-
 describe("MCP client option over the scripted host", () => {
   const req = (id: string, client: string): McpApprovalRequest => ({
     id,
@@ -259,6 +248,7 @@ describe("MCP client option over the scripted host", () => {
     grants: [],
     onExceed: "ask" as const,
     confirmDestructive: true,
+    autoApprove: false,
   }
 
   test("autoApprove persists in the policy and approves waiting prompts of that client", async () => {

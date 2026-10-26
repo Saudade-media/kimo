@@ -99,42 +99,6 @@
   -webkit-app-region: no-drag;
 }
 
-/*
- * Board 34 Auto-approve Pill (XYAmZ), after the presence chip (Topbar Presence gap 6): h 24,
- * padding [0, 8, 0, 6], gap 4, center, warning-soft, radius-pill › shield-check 12 warning ·
- * Label sans 11 / 500 warning.
- */
-.agents-auto-pill {
-  box-sizing: border-box;
-  display: inline-flex;
-  flex: none;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  margin: 0 0 0 6px;
-  padding: 0 8px 0 6px;
-  border: 0;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-warning-soft);
-  color: var(--kimo-warning);
-  cursor: pointer;
-  appearance: none;
-}
-.agents-auto-pill__icon {
-  display: block;
-  flex: none;
-  width: 12px;
-  height: 12px;
-}
-.agents-auto-pill__label {
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 13px;
-  white-space: nowrap;
-}
-
 /* ---------------------------------------------------------------------------------------------
  * Session Popover (hIfmx): column, w 380, bg-overlay, stroke 1 border, radius-lg,
  * shadow 0 8 24 shadow-strong, clip.
@@ -958,7 +922,7 @@
   line-height: 15px;
   white-space: nowrap;
 }
-/* Board 34 Perm · Auto-approve Note (SZIRG / KiaGF): sans 11, fill; text-tertiary off, warning on. */
+/* Board 34 Perm · Ask first Note (SZIRG / KiaGF): sans 11, fill, text-tertiary. */
 .agents-perms__auto-note {
   flex: 1 1 0;
   min-width: 0;
@@ -966,9 +930,6 @@
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-xs);
   line-height: 13px;
-}
-.agents-perms__auto-note--on {
-  color: var(--kimo-warning);
 }
 /* Footer (Zu8bi): row, gap 8, padding [2, 0, 0, 0], center. */
 .agents-perms__footer {

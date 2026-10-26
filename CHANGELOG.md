@@ -320,6 +320,10 @@ The first public release: release engineering, polish, the new mark and the form
 
 ### Fixed
 
+- Files saved before the move to getkimo.design open again. Their `$schema` names the old
+  `kimo.design` host, which failed validation ("This file isn't valid"); reading a file now
+  heals that URL, so the file opens and its next save writes the new one.
+
 - Settings: every saved setting takes effect. **On launch › Last files** reopens the file that
   was open when you quit (desktop). **When a file changes on disk › Ask first** asks with a banner
   (**Merge** / **Keep mine**) and writes nothing until you choose. **Canvas zoom › Mouse** zooms

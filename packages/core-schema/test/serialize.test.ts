@@ -7,6 +7,7 @@ import {
   parse,
   parseJson,
   serialize,
+  validate,
 } from "../src/index"
 import { doc, readFixture } from "./helpers"
 
@@ -286,5 +287,28 @@ describe("parse", () => {
     expect(isCanonical(text)).toBe(true)
     expect(isCanonical(text.replace("\n}\n", "}\n"))).toBe(false)
     expect(isCanonical("not json")).toBe(false)
+  })
+})
+
+describe("legacy $schema host (files written before the getkimo.design move)", () => {
+  test("parse heals kimo.design to getkimo.design; the file validates and saves the new URL", () => {
+    const fresh = serialize(doc({}))
+    const legacy = fresh.replace(
+      "https://getkimo.design/schema/kimo-1.0.json",
+      "https://kimo.design/schema/kimo-1.0.json",
+    )
+    expect(legacy).not.toBe(fresh)
+    const d = parse(legacy)
+    expect(d.$schema).toBe("https://getkimo.design/schema/kimo-1.0.json")
+    expect(validate(d).errors).toEqual([])
+    expect(serialize(d)).toBe(fresh)
+  })
+
+  test("other hosts are left as they are", () => {
+    const other = serialize(doc({})).replace(
+      "https://getkimo.design/schema/kimo-1.0.json",
+      "https://example.com/schema/kimo-1.0.json",
+    )
+    expect(parse(other).$schema).toBe("https://example.com/schema/kimo-1.0.json")
   })
 })

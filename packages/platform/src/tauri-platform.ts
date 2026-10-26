@@ -567,6 +567,9 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       openNewWindow: async () => {
         await call("kimo_window_new", none)
       },
+      openFileInNewWindow: async (path) => {
+        await call("kimo_window_open_file", { path })
+      },
       onCloseRequested(handler) {
         closeHandler = handler
         return () => {

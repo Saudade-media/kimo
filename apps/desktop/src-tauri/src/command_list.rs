@@ -76,6 +76,7 @@ pub const COMMANDS: &[&str] = &[
     "kimo_window_confirm_close",
     "kimo_window_close",
     "kimo_window_new",
+    "kimo_window_open_file",
     "kimo_settings_get_all",
     "kimo_settings_set",
     "kimo_launch_take_initial",

@@ -82,6 +82,7 @@
     "allow-kimo-window-confirm-close",
     "allow-kimo-window-close",
     "allow-kimo-window-new",
+    "allow-kimo-window-open-file",
     "allow-kimo-settings-get-all",
     "allow-kimo-settings-set",
     "allow-kimo-launch-take-initial",

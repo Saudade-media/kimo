@@ -937,6 +937,13 @@ pub async fn kimo_window_new(app: AppHandle) -> R<()> {
     crate::menu::open_new_window(&app)
 }
 
+/// Board 44 §4 C: a tab dragged below the strip opens in a new editor window on `path`.
+#[tauri::command]
+pub async fn kimo_window_open_file(app: AppHandle, path: String, st: St<'_>) -> R<()> {
+    let p = st.scope.check(&path)?;
+    crate::menu::open_file_window(&app, &path_str(&p))
+}
+
 /// Board 37 (A6 / G2): this editor window shows Home or a document.
 #[tauri::command]
 pub async fn kimo_menu_set_context(

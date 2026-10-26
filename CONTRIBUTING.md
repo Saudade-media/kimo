@@ -64,7 +64,10 @@ Typecheck one package with `bunx tsc -p packages/<name>/tsconfig.json`.
 Browser end-to-end and perf runs are separate from `check`: `bun run --filter @kimo/web e2e` and
 `bun run --filter @kimo/web e2e:perf` (`bun run --filter @kimo/web e2e "<name filter>"` runs the
 scenarios whose name matches). CI runs the e2e suite on macOS, because the scenarios measure the
-app against the design boards, which are drawn for macOS. **Exception to bun-only:** these two scripts run their
+app against the design boards, which are drawn for macOS. It runs on pushes to main, nightly and on
+demand (Actions > check > Run workflow on your branch), in four time-balanced shards, not on pull
+requests: run the scenarios your change touches locally before you open one. Refresh
+`apps/web/e2e/timings.json` from a CI log when the shards drift apart. **Exception to bun-only:** these two scripts run their
 Playwright driver under Node through `tsx` (an `apps/web` devDependency), because under Bun 1.3.5
 the pipe to Chromium is intermittently closed mid-session and the scenario hangs until its timeout
 (details in `apps/web/e2e/run.ts`). Bun remains the package manager and the script runner, and

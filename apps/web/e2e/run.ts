@@ -12,6 +12,7 @@
  *   KIMO_E2E_SHOTS=dir bun run e2e   # also write screenshots to dir
  *   KIMO_E2E_DEV=1 bun run e2e       # against the Vite dev server instead (slower, for HMR debugging)
  *   KIMO_E2E_RETRIES=0 bun run e2e   # retries per failing scenario (default 1; 0 = none)
+ *   KIMO_E2E_SHARD=2/4 bun run e2e   # the 2nd of 4 time-balanced slices (CI runs 4 in parallel)
  *
  * The Playwright driver runs under Node (via tsx), not Bun: under Bun 1.3.5 the pipe to
  * Chromium (child fds 3/4) is intermittently closed mid-session, Chromium exits cleanly and
@@ -19,7 +20,7 @@
  * package manager and script runner. A lost transport is detected by {@link watchTransport}
  * and reported as "[infra]".
  */
-import { readdirSync, realpathSync } from "node:fs"
+import { readdirSync, readFileSync, realpathSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import {
@@ -70,6 +71,37 @@ export async function newE2EContext(
   const context = await browser.newContext(options)
   await context.addInitScript({ content: "globalThis.__name ??= (fn) => fn" })
   return context
+}
+
+/**
+ * `KIMO_E2E_SHARD="k/n"`: the k-th of n slices of the scenario files, so n CI jobs together run
+ * every file once. Files are dealt longest first to the slice with the least time so far, using
+ * `timings.json` (seconds per file, from a CI log); a file missing there counts as the median.
+ * Unset: all files. Throws on a malformed value.
+ */
+export function shardOf(
+  files: readonly string[],
+  spec: string | undefined,
+  timings: Readonly<Record<string, number>> = {},
+): string[] {
+  if (!spec) return [...files]
+  const m = /^(\d+)\/(\d+)$/.exec(spec.trim())
+  const k = Number(m?.[1])
+  const n = Number(m?.[2])
+  if (!m || n < 1 || k < 1 || k > n) throw new Error(`KIMO_E2E_SHARD must be k/n, got "${spec}"`)
+  const known = Object.values(timings).sort((a, b) => a - b)
+  const median = known.length ? (known[Math.floor(known.length / 2)] as number) : 1
+  const cost = (f: string) => timings[f] ?? median
+  const load = new Array<number>(n).fill(0)
+  const mine: string[] = []
+  const order = [...files].sort((a, b) => cost(b) - cost(a) || a.localeCompare(b))
+  for (const f of order) {
+    let slot = 0
+    for (let i = 1; i < n; i++) if ((load[i] as number) < (load[slot] as number)) slot = i
+    load[slot] = (load[slot] as number) + cost(f)
+    if (slot === k - 1) mine.push(f)
+  }
+  return files.filter((f) => mine.includes(f))
 }
 
 export function expect(cond: unknown, message: string): asserts cond {
@@ -235,8 +267,14 @@ async function main() {
   try {
     // KIMO_E2E_FILES="canvas,m4-merge": only these *.e2e.ts files (by basename prefix).
     const only_files = process.env.KIMO_E2E_FILES?.split(",").filter(Boolean)
-    const files = readdirSync(here).filter(
-      (f) => f.endsWith(".e2e.ts") && (!only_files || only_files.some((p) => f.startsWith(p))),
+    const files = shardOf(
+      readdirSync(here)
+        .filter(
+          (f) => f.endsWith(".e2e.ts") && (!only_files || only_files.some((p) => f.startsWith(p))),
+        )
+        .sort(),
+      process.env.KIMO_E2E_SHARD,
+      JSON.parse(readFileSync(join(here, "timings.json"), "utf8")) as Record<string, number>,
     )
     const only = process.argv[2]
     for (const file of files) {

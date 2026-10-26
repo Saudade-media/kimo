@@ -33,6 +33,7 @@ import {
   ThemeSection,
 } from "./m3/sections"
 import { KindPill } from "./m3/ui"
+import { PageCard } from "./PageCard"
 import { PanelContext, type Sel } from "./panel-context"
 import { kindLabel, MIXED, nodeName, shared, typeIcon } from "./props"
 import { ViewOnlyContext } from "./view-only"
@@ -90,6 +91,12 @@ export interface RightPanelProps {
    * selection and framework preselected.
    */
   onOpenExport?: (preset: CodeExportPreset) => void
+  /** Board 44 §2: the Page card's Export + (the Export dialog, no preset). */
+  onExport?: () => void
+  /** Board 44 Right Card › Card Header (LKu07Q787a), first child of the card. */
+  header?: ReactNode
+  /** Board 44 §3: only the header shows, as a pill. */
+  collapsed?: boolean
 }
 
 export function RightPanel({
@@ -107,6 +114,9 @@ export function RightPanel({
   openAgent,
   initialTab = "design",
   onOpenExport,
+  onExport,
+  header = null,
+  collapsed = false,
 }: RightPanelProps) {
   const [tab, setTab] = useState<RightTab>(initialTab)
   const agentRev = useBusValue(openAgent ?? NO_REV)
@@ -155,19 +165,26 @@ export function RightPanel({
       base.push({ value: "conflicts", label: conflictsTabLabel(counts.open) })
     return base
   }, [conflicts, counts, hasActivity])
+  const nothingSelected = useUi(session.ui, (s) => s.selection.length === 0)
+  // Board 44 §3: collapsed, the card is its header as a pill (the tab stays).
+  if (collapsed)
+    return (
+      <aside
+        className="right-panel ws-card ws-card--right ws-card--collapsed"
+        aria-label="Properties panel"
+      >
+        {header}
+      </aside>
+    )
+  // Board 44 rule "Floating cards": 280 on every tab (boards 05 / 25 widened Agent and Code to
+  // 360); §2: the Design tab with nothing selected shrinks to the Page card (256, hug).
+  const page = tab === "design" && nothingSelected
   return (
-    // Board 05 (EHux2): the panel widens to 360 while the Agent tab is open; board 25: and
-    // while the Code tab is open.
     <aside
-      className={
-        tab === "agent"
-          ? "right-panel right-panel--agent"
-          : tab === "code"
-            ? "right-panel right-panel--code"
-            : "right-panel"
-      }
+      className={`right-panel ws-card ws-card--right right-panel--${tab}${page ? " ws-card--page" : ""}`}
       aria-label="Properties panel"
     >
+      {header}
       <Tabs label="Right panel" items={items} value={tab} onChange={setTab} />
       {tab === "activity" && activity}
       {tab === "conflicts" && conflicts && (
@@ -181,6 +198,7 @@ export function RightPanel({
           icons={icons}
           m3={m3}
           fonts={fonts}
+          onExport={onExport}
         />
       )}
       {tab === "code" && (
@@ -259,6 +277,7 @@ function DesignTab({
   icons,
   m3,
   fonts,
+  onExport,
 }: {
   session: FileSession
   layout: Bus<LayoutResult | null>
@@ -266,6 +285,7 @@ function DesignTab({
   icons: IconProvider | null
   m3: M3Controller
   fonts: FontSystem | null
+  onExport: (() => void) | undefined
 }) {
   // View only (board 41 section 9): the sections read, dimmed to 50 %, and take no input.
   const viewOnly = useContext(ViewOnlyContext)
@@ -292,16 +312,8 @@ function DesignTab({
   // Board 27 §6 (d): the Image section while the selected layer is in crop mode.
   const crop = useCropSession(session.ui)
 
-  if (sel.length === 0)
-    return (
-      <div className="right-panel__empty">
-        <EmptyState
-          icon={<Icon name="mouse-pointer-2" size={18} />}
-          title="Nothing selected"
-          description="Select a layer on the canvas or in the layers panel to edit it."
-        />
-      </div>
-    )
+  // Board 44 §2: nothing selected, the Design tab is the Page card (page, export, hint).
+  if (sel.length === 0) return <PageCard session={session} {...(onExport ? { onExport } : {})} />
 
   const nodes = sel.map((s) => s.node)
   const first = sel[0] as Sel

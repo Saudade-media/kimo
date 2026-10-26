@@ -231,6 +231,14 @@ export function activeToolId(tool: Tool, placement: ImagePlacement | null): Canv
 }
 
 /** M2: an image chosen with the Image tool, waiting to be placed on the canvas. */
+/** Screen px covered along each canvas edge (board 44 floating cards). */
+export interface FitInsets {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
 export interface ImagePlacement {
   kind: "image"
   /** `./assets/<hash>.<ext>` returned by `onImportImage`. */
@@ -565,6 +573,11 @@ export interface CanvasHostProps {
   nudge?: { step: number; big: number }
   /** Settings › General › Canvas zoom: "mouse" zooms on a plain scroll. Default "trackpad". */
   wheelZoom?: "trackpad" | "mouse"
+  /**
+   * Board 44: screen px covered along each edge (the floating cards); Zoom to fit / selection
+   * frames content in the area left visible. Default none.
+   */
+  fitInsets?: FitInsets
   /** Icon glyph source passed to the renderer (default: the renderer's lazy provider). */
   icons?: IconProvider
   /** An armed placement changed (toolbar shows Image active while armed). */

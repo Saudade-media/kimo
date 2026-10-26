@@ -515,6 +515,14 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     group: "view",
     combos: [{ codes: ["Space"], mod: false, alt: false, shift: true, label: "Space" }],
   },
+  {
+    // Board 44 §5 rule "Collapse": ⌘\ collapses both floating cards (or opens both again).
+    id: "togglePanels",
+    label: "Show / hide panels",
+    scope: "global",
+    group: "view",
+    combos: [{ codes: ["Backslash"], mod: true, alt: false, shift: false, label: "\\" }],
+  },
 
   // --- Agent & text ------------------------------------------------------------------------------
   {

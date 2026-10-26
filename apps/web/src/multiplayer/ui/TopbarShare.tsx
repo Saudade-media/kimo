@@ -38,28 +38,53 @@ export interface TopbarSyncStatusProps {
   /** What shows while the file is not shared (the Save Status pill). */
   fallback: ReactNode
   model?: MultiplayerModel | null
+  /**
+   * Board 44 card header: a shared file that is Synced with no images moving shows `fallback`
+   * instead (the header only carries a status that needs attention).
+   */
+  quietWhenSynced?: boolean
 }
 
-export function TopbarSyncStatus({ docKey, fallback, model: given }: TopbarSyncStatusProps) {
+export function TopbarSyncStatus({
+  docKey,
+  fallback,
+  model: given,
+  quietWhenSynced = false,
+}: TopbarSyncStatusProps) {
   const runtime = useMultiplayer()
   const model = given ?? runtime
   if (!model) return <>{fallback}</>
-  return <SyncStatusFor model={model} docKey={docKey} fallback={fallback} />
+  return (
+    <SyncStatusFor
+      model={model}
+      docKey={docKey}
+      fallback={fallback}
+      quietWhenSynced={quietWhenSynced}
+    />
+  )
 }
 
 function SyncStatusFor({
   model,
   docKey,
   fallback,
+  quietWhenSynced,
 }: {
   model: MultiplayerModel
   docKey: string
   fallback: ReactNode
+  quietWhenSynced: boolean
 }) {
   const share = useShareState(model, docKey)
   const transfers = useAssetTransfers(model, docKey)
   if (share.relay === null) return <>{fallback}</>
   const view = topbarSyncStatus(share.relay, transfers)
+  if (
+    quietWhenSynced &&
+    view.moving === null &&
+    (share.relay === "synced" || share.relay === "saving")
+  )
+    return <>{fallback}</>
   return (
     <Tooltip label={view.tooltip}>
       <SaveStatus
@@ -81,6 +106,11 @@ export interface TopbarShareProps {
   nodeName?: (id: string) => string | null
   /** An agent row's eye: shows the layers it claims. */
   onRevealNodes?: (ids: readonly string[]) => void
+  /**
+   * Board 44 Right Card header (People): the idle Share is the accent "Share" without an icon
+   * (1NtIQbmrdA); live sharing keeps Button/Soft "Sharing" with radio (board 41).
+   */
+  card?: boolean
 }
 
 export function TopbarShare({ docKey, model: given, ...rest }: TopbarShareProps) {
@@ -95,6 +125,7 @@ function ShareCluster({
   docKey,
   nodeName,
   onRevealNodes,
+  card = false,
 }: TopbarShareProps & { model: MultiplayerModel }) {
   const share = useShareState(model, docKey)
   const people = useCollaborators(model, docKey)
@@ -136,9 +167,9 @@ function ShareCluster({
       {caps.canShare && (
         <Button
           ref={shareButton}
-          variant={live ? "soft" : "secondary"}
-          className="mp-share-button"
-          icon={<Icon name={live ? "radio" : "users"} size={16} />}
+          variant={live ? "soft" : card ? "primary" : "secondary"}
+          className={card ? "mp-share-button mp-share-button--card" : "mp-share-button"}
+          {...(live || !card ? { icon: <Icon name={live ? "radio" : "users"} size={16} /> } : {})}
           aria-haspopup="dialog"
           aria-expanded={open === "share"}
           data-shared={live || undefined}

@@ -1,0 +1,345 @@
+/*
+ * Board 44 "Workspace v2 · floating panels" (cGrsTxG4c8). Values are the nodes' own:
+ *
+ * Left Card (VQw3DeBw2I) / Right Card (EW0cZ56fjr): x / y 8 from the Stage edges, 256 / 280
+ * wide, full Stage height (844 of 860), radius-lg, clip, fill bg-app, stroke 1 border, effects
+ * shadow 0 4 16 $shadow and 0 1 2 $shadow, column. The Kimo stroke is inside: an outline at
+ * offset -1 draws it over the card's children like the design (an inset box-shadow would sit
+ * under the header's and the tabs' own fills).
+ */
+
+.ws-card {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  bottom: 8px;
+  border-radius: var(--kimo-radius-lg);
+  background: var(--kimo-bg-app);
+  outline: 1px solid var(--kimo-border);
+  outline-offset: -1px;
+  box-shadow:
+    0 4px 16px 0 var(--kimo-shadow),
+    0 1px 2px 0 var(--kimo-shadow);
+}
+
+.ws-card--left {
+  left: 8px;
+  width: 256px;
+  overflow: hidden;
+}
+
+.ws-card--right {
+  right: 8px;
+  width: 280px;
+}
+
+/* §2 "Right Card · Page" (0a6xPwPNg3): 256 wide, height hugs its content. */
+.ws-card.ws-card--page {
+  bottom: auto;
+  width: 256px;
+  max-height: calc(100% - 16px);
+}
+
+/* §3 Left Pill (gBzSMyPbtm) / Right Pill (wEWDcQUIZ9): the header alone, hug × hug. */
+.ws-card.ws-card--collapsed {
+  bottom: auto;
+  width: auto;
+  overflow: hidden;
+}
+
+/* Card Header (wNJcXZthFH / LKu07Q787a): fill × 44, bottom stroke 1 border, row, padding
+   [0, 8, 0, 10], space-between, center. */
+.card-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 44px;
+  padding: 0 8px 0 10px;
+  border-bottom: 1px solid var(--kimo-border);
+}
+
+/* Collapsed header (SOGylzbGrC / eWwNzMIgXj): hug, row gap 8, no stroke, no justify. */
+.ws-card--collapsed > .card-header {
+  justify-content: flex-start;
+  gap: 8px;
+  width: auto;
+  border-bottom: 0;
+}
+
+.card-header svg {
+  display: block;
+}
+
+/* File Menu (GdMuPj2aQw): h 28, radius-sm, row gap 6, padding [0, 6, 0, 4], center; KimoLogo
+   20 (bm1JR0), File Name text-base 600 text-primary, chevron-down 12 text-tertiary. */
+.topbar__file.card-header__file {
+  flex: 0 1 auto;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px 0 4px;
+  border-radius: var(--kimo-radius-sm);
+  color: var(--kimo-text-primary);
+}
+
+.card-header__file .kimo-logo {
+  flex: none;
+}
+
+.card-header__file .topbar__file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-header__file .topbar__file-icon {
+  flex: none;
+}
+
+/* The save / sync status while it needs attention (not in board 44): next to Collapse. */
+.card-header__status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+.card-header__status:empty {
+  display: none;
+}
+
+/* Collapse (41brCkpWwF) and Play (oZPvEbm1Us): 28 × 28, radius-sm, no fill, center; icon 16
+   text-secondary. */
+.card-header__icon-button {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-sm);
+  background: transparent;
+  color: var(--kimo-text-secondary);
+  cursor: pointer;
+  appearance: none;
+}
+
+.card-header__icon-button:hover {
+  background: var(--kimo-bg-hover);
+}
+
+.card-header__icon-button:focus-visible,
+.card-header__file:focus-visible,
+.card-header__zoom:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+/* People (nF856tRgIb): row gap 8, center. */
+.card-header__people {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-header__people:empty {
+  display: none;
+}
+
+/* Presence (y1yBt6VlGj): row gap -6 (each avatar overlaps the previous one by 6), no padding. */
+.card-header .mp-stack {
+  padding: 0;
+}
+
+.card-header .mp-stack > * + * {
+  margin-left: -6px;
+}
+
+/* Share (1NtIQbmrdA): h 28, radius-sm, fill accent, row gap 6, padding [0, 10], center; label
+   text-sm 500 on-accent. Live sharing keeps Button/Soft (board 41) at the same size. */
+.kimo-button.mp-share-button--card {
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--kimo-radius-sm);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.kimo-button.mp-share-button--card .kimo-button__icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* View (iXGvkzDzGN): row gap 2, center. */
+.card-header__view {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Zoom (KIAUDyHv4Z): h 28, radius-sm, row gap 4, padding [0, 6], center; "100%" mono text-sm
+   400 text-secondary; chevron-down 12 text-tertiary. */
+.topbar__zoom.card-header__zoom {
+  gap: 4px;
+  padding: 0 6px;
+}
+
+.card-header__zoom .topbar__zoom-value {
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+  font-weight: 400;
+}
+
+/* --- §2 Page card ------------------------------------------------------------------------- */
+
+.page-card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Page (TSALRA0KWs): fill, top stroke 1, column gap 8, padding 12. */
+.page-card__page {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border-top: 1px solid var(--kimo-border);
+}
+
+/* Page Header (PfL0A8bbl4): fill, row, space-between, center. */
+.page-card__page-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* "Page" / "Export": sans text-sm 600 text-primary. */
+.page-card__title {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-semibold);
+}
+
+/* Page name (DQhB0PPMNt): sans text-sm 400 text-tertiary. */
+.page-card__page-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-size: var(--kimo-text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Background (cgc88Wl0bR): fill × 28, radius-sm, bg-muted, row gap 8, padding [0, 8], center. */
+.page-card__background {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--kimo-radius-sm);
+  background: var(--kimo-bg-muted);
+}
+
+/* Swatch (beZjmSu25N): 14 × 14, radius-2xs, the page background, stroke 1 border-strong. */
+.page-card__swatch {
+  box-sizing: border-box;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--kimo-border-strong);
+  border-radius: var(--kimo-radius-2xs);
+  background: var(--kimo-bg-canvas);
+}
+
+/* Hex (NIkVJzj31l): mono text-sm 400 text-primary. */
+.page-card__hex {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-mono);
+  font-size: var(--kimo-text-sm);
+}
+
+/* Export (r6wbtEA8uy): fill, top stroke 1, row, padding 12, space-between, center. */
+.page-card__export {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border-top: 1px solid var(--kimo-border);
+}
+
+/* Icon plus (H8fjPe2Drx): 14, text-tertiary. The button is the hit target only. */
+.page-card__add {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kimo-radius-2xs);
+  background: transparent;
+  color: var(--kimo-text-tertiary);
+  cursor: pointer;
+}
+
+.page-card__add:hover {
+  color: var(--kimo-text-primary);
+}
+
+.page-card__add:focus-visible {
+  outline: 2px solid var(--kimo-accent);
+  outline-offset: 2px;
+}
+
+.page-card svg {
+  display: block;
+}
+
+/* Hint (3ihRPUDkhc): fill, top stroke 1, row gap 6, padding [10, 12, 12, 12], center;
+   mouse-pointer-2 12 and the label (sans text-sm 400), both text-tertiary. */
+.page-card__hint {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px 12px 12px;
+  border-top: 1px solid var(--kimo-border);
+  color: var(--kimo-text-tertiary);
+}
+
+.page-card__hint-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.page-card__hint-label {
+  font-size: var(--kimo-text-sm);
+}

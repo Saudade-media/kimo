@@ -198,6 +198,25 @@ function parseFragment(fragment: string): Omit<JoinLink, "webOrigin"> {
   return { relayUrl, room, token, roomKey }
 }
 
+/**
+ * The browser form of a join or pairing link: the same fragment under the link's own relay, which
+ * serves `/join` and `/pair` (`https://<relay>/join#<relay>/...`). Links of older versions
+ * (`kimo://join#...`, another web origin) are rewritten; anything else is returned unchanged.
+ */
+export function relayLink(text: string): string {
+  try {
+    const link = parseJoinLink(text)
+    return formatJoinLink({ ...link, webOrigin: link.relayUrl })
+  } catch {
+    try {
+      const link = parsePairingLink(text)
+      return formatPairingLink({ ...link, webOrigin: link.relayUrl })
+    } catch {
+      return text
+    }
+  }
+}
+
 // Pairing links (§7.1) -------------------------------------------------------------------------
 
 export interface PairingLink {

@@ -48,6 +48,7 @@ import {
   type RelayInfo,
   type Role,
   randomBytes,
+  relayLink,
   sealSnapshot,
   shippedFontSource,
   signAdminCommand,
@@ -165,8 +166,11 @@ export interface ShareServiceDeps {
   registry?: Registry
   fetch?: typeof fetch
   WebSocket?: NetworkProviderOptions["WebSocket"]
-  /** Base for join links. Default `location.origin` on web, `kimo:` on desktop. */
-  webOrigin: string
+  /**
+   * Base for join and pairing links. Default: each room's relay, which serves `/join` (board 45),
+   * so one browser link opens in Kimo or in any browser.
+   */
+  webOrigin?: string
   /**
    * Creates the store and asset store a guest room lives in. `binding` ties them to the relay
    * and room key they were joined with (see {@link roomBinding}): name the asset store with it.
@@ -442,7 +446,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
         ? createMemoryDeviceKeyStore()
         : createIndexedDbDeviceKeyStore()),
     deviceName: deps.deviceName ?? (() => "Kimo"),
-    webOrigin: deps.webOrigin,
+    ...(deps.webOrigin !== undefined ? { webOrigin: deps.webOrigin } : {}),
     now,
     ...(deps.fetch ? { fetch: deps.fetch } : {}),
   })
@@ -530,7 +534,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       ...(options.label !== undefined ? { label: options.label } : {}),
       ...(options.self ? { self: true } : {}),
       link: formatJoinLink({
-        webOrigin: deps.webOrigin,
+        webOrigin: deps.webOrigin ?? owned.relayUrl,
         relayUrl: owned.relayUrl,
         room: owned.room,
         token,
@@ -1226,7 +1230,10 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
 
     async listLinks(room) {
       const owned = await requireOwned(room)
-      return owned.links.filter((l) => !l.self).map((l) => ({ ...l }))
+      // Links minted before board 45 carry `kimo:` or another origin: show the relay's.
+      return owned.links
+        .filter((l) => !l.self)
+        .map((l) => ({ ...l, link: deps.webOrigin === undefined ? relayLink(l.link) : l.link }))
     },
 
     async revokeLink(room, jti) {

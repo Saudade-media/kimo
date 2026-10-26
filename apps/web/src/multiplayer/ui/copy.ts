@@ -160,13 +160,6 @@ export function sharePopoverStage(
   return relayUrl ? "ready" : "first-run"
 }
 
-/** Connection meta: "relay.maya.studio · 5 people here". */
-export function connectionMeta(relayHost: string | null, othersOnline: number): string {
-  const here =
-    othersOnline === 0 ? "nobody else here" : `${plural(othersOnline, "person", "people")} here`
-  return relayHost ? `${relayHost} · ${here}` : here
-}
-
 export const EXPIRY_LABEL: Record<ExpiryChoice, string> = {
   "1d": "1 day",
   "7d": "7 days",

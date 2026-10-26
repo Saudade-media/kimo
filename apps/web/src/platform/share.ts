@@ -213,16 +213,12 @@ export interface PlatformShare {
 
 export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
   const { platform } = deps
-  const origin =
-    deps.serviceDeps?.webOrigin ??
-    (platform.kind === "desktop" ? "kimo:" : typeof location === "object" ? location.origin : "")
   const registry =
     deps.serviceDeps?.registry ??
     (deps.registry === "indexeddb" ? undefined : (deps.registry ?? registryFor(platform)))
   const service =
     deps.service ??
     createShareService({
-      webOrigin: origin,
       openGuestDocument: async (room, binding) => ({
         store: createDocStore(),
         assets: createAssetStore(`room-${room}-${binding}`),

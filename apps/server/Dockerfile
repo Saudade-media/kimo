@@ -1,7 +1,7 @@
 # Kimo relay image. Build from the repository root:
 #   docker build -f apps/server/Dockerfile -t kimo-relay .
 #   docker run -p 8787:8787 -v kimo-relay-data:/data kimo-relay
-FROM oven/bun:1.3-alpine
+FROM oven/bun:1.4.4-alpine
 
 WORKDIR /app
 COPY . .

@@ -44,11 +44,6 @@ export function deviceNameFor(platform: Pick<KimoPlatform, "kind" | "os">): stri
   })
 }
 
-/** Base for pairing and join links: `kimo:` on desktop, this page's origin on web. */
-export function webOriginFor(platform: Pick<KimoPlatform, "kind">): string {
-  return platform.kind === "desktop" ? "kimo:" : typeof location === "object" ? location.origin : ""
-}
-
 /** The ownership client of `platform` (one per window). */
 export function ownershipFor(platform: KimoPlatform): OwnershipClient {
   let client = ownershipByPlatform.get(platform)
@@ -56,7 +51,6 @@ export function ownershipFor(platform: KimoPlatform): OwnershipClient {
     client = createOwnershipClient({
       deviceKeys: deviceKeysFor(platform),
       deviceName: () => deviceNameFor(platform),
-      webOrigin: webOriginFor(platform),
     })
     ownershipByPlatform.set(platform, client)
   }

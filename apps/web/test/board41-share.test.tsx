@@ -16,7 +16,6 @@ import {
   agentLabel,
   agentMeta,
   agentPersona,
-  connectionMeta,
   initialsOf,
   linkCopiedText,
   linkMeta,
@@ -164,12 +163,6 @@ describe("§3 Share popover copy", () => {
     expect(sharePopoverStage({ status: "not-shared", owner: false }, "wss://r")).toBe("ready")
     expect(sharePopoverStage({ status: "error", owner: false }, "wss://r")).toBe("ready")
     expect(sharePopoverStage({ status: "live", owner: true }, null)).toBe("live")
-  })
-
-  test("connection meta counts the others here", () => {
-    expect(connectionMeta("relay.maya.studio", 5)).toBe("relay.maya.studio · 5 people here")
-    expect(connectionMeta("relay.maya.studio", 1)).toBe("relay.maya.studio · 1 person here")
-    expect(connectionMeta("relay.maya.studio", 0)).toBe("relay.maya.studio · nobody else here")
   })
 
   test("link rows and toasts", () => {
@@ -380,7 +373,8 @@ describe("rendered states", () => {
     expect(c).toContain('data-stage="live"')
     expect(c).toContain(">Live<")
     expect(c).toContain("End-to-end encrypted")
-    expect(c).toContain("relay.maya.studio · 5 people here")
+    expect(c).toContain(">relay.maya.studio<")
+    expect(c).not.toContain("people here")
     expect(c).toContain("Active links · <!-- -->2")
     expect(c).toContain("Reset all links")
     expect(c).toContain("Stop sharing")

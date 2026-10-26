@@ -132,6 +132,40 @@ describe("connection rules", () => {
     await strict.stop()
   })
 
+  test("an allow list admits the relay's own origin (board 45: the web app it serves)", async () => {
+    const strict = startRelay({ allowedOrigins: ["https://app.example"] })
+    const owner = await registered(strict)
+    const own = new URL(strict.base).origin
+    const opened = await new Promise<boolean>((resolve) => {
+      const ws = new WebSocket(`${strict.wsBase}/sync/${owner.room.id}`, {
+        protocols: ["kimo-mp.1"],
+        headers: { origin: own },
+      } as unknown as string[])
+      const t = setTimeout(() => {
+        ws.close()
+        resolve(false)
+      }, 3000)
+      ws.onopen = () => {
+        clearTimeout(t)
+        ws.close()
+        resolve(true)
+      }
+      ws.onerror = () => {
+        clearTimeout(t)
+        resolve(false)
+      }
+    })
+    expect(opened).toBe(true)
+    // Another port on the same host is another origin.
+    const otherPort = new URL(strict.base)
+    otherPort.port = String(Number(otherPort.port) + 1)
+    const refused = await fetch(`${strict.base}/sync/${owner.room.id}`, {
+      headers: upgradeHeaders("kimo-mp.1", { origin: otherPort.origin }),
+    })
+    expect(refused.status).toBe(403)
+    await strict.stop()
+  })
+
   test("the per-IP connect rate limit is 429 with retry-after", async () => {
     const limited = startRelay({ connectRatePerMin: 2 })
     const owner = await registered(limited)

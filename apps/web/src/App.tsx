@@ -12,6 +12,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { DiskEditor, Editor } from "./editor/Editor"
 import { RecoveryDialog, RestoredToasts } from "./files"
 import { Home } from "./home/Home"
+import { HandoffGate } from "./join/Handoff"
 import { JoinRoute } from "./join/JoinRoute"
 import { useJoinRoute } from "./join/useJoinRoute"
 import { useHash } from "./lib/hooks"
@@ -141,11 +142,20 @@ function Routed({ route, theme }: { route: ReturnType<typeof parseRoute>; theme:
     case "disk":
       return <DiskEditor key={route.ref} fileRef={route.ref} node={route.node} />
     case "join":
-      // Board 41 section 5: `key` restarts the join for another link.
-      return <JoinRoute key={route.link} link={route.link} />
+      // Board 41 section 5: `key` restarts the join for another link. Board 45: a browser
+      // opened at the link offers it to the Kimo app first.
+      return (
+        <HandoffGate>
+          <JoinRoute key={route.link} link={route.link} />
+        </HandoffGate>
+      )
     case "pair":
-      // ADR 0017: another device's Add device link.
-      return <PairRoute key={route.link} link={route.link} />
+      // ADR 0017: another device's Add device link (board 45 hand-off first, as for joins).
+      return (
+        <HandoffGate>
+          <PairRoute key={route.link} link={route.link} />
+        </HandoffGate>
+      )
     case "gallery":
       // Board 37 §4: the component gallery is for development only (no sidebar row).
       if (!Gallery) return <NotFound path="/gallery" />

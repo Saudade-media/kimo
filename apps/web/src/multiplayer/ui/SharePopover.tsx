@@ -62,7 +62,6 @@ import {
 } from "../relay-setup/services"
 import { CloudShareBody } from "./CloudShare"
 import {
-  connectionMeta,
   EXPIRY_LABEL,
   linkCopiedText,
   linkMeta,
@@ -537,9 +536,7 @@ function LiveBody({
           </span>
           <div className="mp-text mp-text--2">
             <p className="mp-label-strong">End-to-end encrypted</p>
-            <span className="mp-meta-mono">
-              {connectionMeta(share.relayHost, share.othersOnline)}
-            </span>
+            {share.relayHost && <span className="mp-meta-mono">{share.relayHost}</span>}
           </div>
         </div>
         <div className="mp-field" data-pen="r8JQX">
@@ -619,8 +616,8 @@ function LiveBody({
             <Icon name="key-round" size={14} />
           </span>
           <p className="mp-desc mp-note__text">
-            The key rides after the # in each link and never reaches the relay. Anyone with a link
-            can join until it expires or you revoke it.
+            Links open in any browser, or in Kimo when it's installed. The key rides after the # and
+            never reaches the relay.
           </p>
         </div>
       </div>

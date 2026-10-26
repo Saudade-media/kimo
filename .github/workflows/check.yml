@@ -1,12 +1,15 @@
 # Every push to main and every pull request: the same gate as `bun run check`, plus the example
-# documents, the browser e2e suite (four shards, one retry, flaky scenarios reported) and the exporters'
-# box-diff harness. Rust lives in rust.yml.
+# documents, the exporters' box-diff harness and, outside pull requests, the browser e2e suite (four
+# shards, one retry, flaky scenarios reported; on main, nightly and on demand). Rust lives in rust.yml.
 name: check
 
 on:
   push:
     branches: [main]
   pull_request:
+  # Nightly on main (04:00 UTC): the e2e suite runs here and on pushes to main, not on PRs.
+  schedule:
+    - cron: "0 4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -51,8 +54,12 @@ jobs:
   # pixel or two off, so dozens of measured checks would need a second set of expectations.
   # The suite runs serially within a job (one browser, SwiftShader); four shards in parallel cut
   # the wall clock about fourfold. `e2e (Chromium)` below is the required check and gathers them.
+  # Pull requests skip it to keep the loop fast: it runs on pushes to main, nightly, and on demand
+  # (Actions > check > Run workflow on a branch). Run the scenarios you touched locally:
+  # `bun run e2e <name filter>` or `KIMO_E2E_FILES=<file prefix> bun run e2e`.
   e2e-shard:
     name: e2e shard ${{ matrix.shard }}/4
+    if: github.event_name != 'pull_request'
     runs-on: macos-latest
     timeout-minutes: 30
     strategy:
@@ -135,8 +142,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # On a pull request the shards are skipped and this passes, so the required check stays.
       - name: every shard passed
-        run: test "${{ needs.e2e-shard.result }}" = success
+        run: |
+          result="${{ needs.e2e-shard.result }}"
+          if [ "${{ github.event_name }}" = pull_request ] && [ "$result" = skipped ]; then
+            echo "e2e runs on main, nightly and on demand, not on pull requests"
+            exit 0
+          fi
+          test "$result" = success
 
   exporters-boxdiff:
     name: exporters box-diff

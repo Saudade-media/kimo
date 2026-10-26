@@ -37,6 +37,12 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Export… | `⇧⌘E` | `Ctrl+Shift+E` |
 | Copy selection as PNG | `⇧⌘C` | `Ctrl+Shift+C` |
 | Settings | `⌘,` | `Ctrl+,` |
+| New tab | `⌘T` | `Ctrl+T` |
+| Close tab | `⌘W` | `Ctrl+W` |
+| Next tab | `⇧⌘]` | `Ctrl+Shift+]` |
+| Previous tab | `⇧⌘[` | `Ctrl+Shift+[` |
+| Go to tab 1 to 8 | `⌘1…8` | `Ctrl+1…8` |
+| Last tab | `⌘9` | `Ctrl+9` |
 
 ## Edit
 
@@ -101,6 +107,7 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Rulers | `⇧R` | `Shift+R` |
 | Pan | `Space drag` | `Space drag` |
 | Preview | `⇧Space` | `Shift+Space` |
+| Show / hide panels | `⌘\` | `Ctrl+\` |
 
 ## Agent & text
 

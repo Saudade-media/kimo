@@ -19,7 +19,8 @@ import type { LibraryShare } from "../multiplayer/library"
 import type { MultiplayerModel } from "../multiplayer/model"
 import { createWindowMultiplayer } from "../multiplayer/window"
 import { isPairDeepLink, pairPath } from "../pair/link"
-import { takeLastFiles } from "./last-files"
+import { windowTabs } from "../tabs/controller"
+import { takeLastWindow } from "./last-files"
 import {
   createSessionManager,
   type FileDocumentSession,
@@ -180,18 +181,22 @@ function finishRuntime(
   })
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
-    // General › On launch: with nothing else to open, the main window reopens the file that was
-    // open when Kimo quit (desktop; the web keeps the open file in the URL).
+    // General › On launch: with nothing else to open, the main window reopens the tabs that were
+    // open when Kimo quit, in order, the focused one in front (board 44 §5 "Restore"; desktop,
+    // the web keeps the open file in the URL). Only the focused file opens now; the others open
+    // when their tab is shown.
     const last =
-      platform.kind !== "browser" && platform.window.label === "main" ? takeLastFiles() : []
+      platform.kind !== "browser" && platform.window.label === "main" ? takeLastWindow() : null
     if (
       !requests.length &&
       platform.window.label === "main" &&
       platform.settings.get("general.onLaunch") === "last-files" &&
-      last[0] &&
+      last &&
       /^#?\/?$/.test(location.hash)
-    )
-      requests.push({ source: "argv", refs: [last[0]] })
+    ) {
+      windowTabs().seed(last.tabs)
+      if (last.active) requests.push({ source: "argv", refs: [last.active] })
+    }
     for (const request of requests) {
       if (request.join) {
         location.hash = `#${linkRoute(request.join)}`

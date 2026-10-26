@@ -81,6 +81,8 @@ describe("SHORTCUTS table", () => {
       "src/settings/SettingsDialog.tsx",
       "src/shortcuts/ShortcutsSheetHost.tsx",
       "src/editor/clipboard/useEditorCommands.ts",
+      // Board 44 §5: the tab strip's keys.
+      "src/tabs/model.ts",
     ]
       .map((f) => readFileSync(join(import.meta.dir, "..", f), "utf8"))
       .join("\n")

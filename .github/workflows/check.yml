@@ -1,5 +1,5 @@
 # Every push to main and every pull request: the same gate as `bun run check`, plus the example
-# documents, the browser e2e suite (one retry, flaky scenarios reported) and the exporters'
+# documents, the browser e2e suite (four shards, one retry, flaky scenarios reported) and the exporters'
 # box-diff harness. Rust lives in rust.yml.
 name: check
 
@@ -49,10 +49,16 @@ jobs:
   # macOS: the scenarios measure the app against the design boards, which are drawn for macOS
   # (⌘ / ⇧ menu glyphs, Mac text metrics); on Linux the menus read Ctrl+… and text measures a
   # pixel or two off, so dozens of measured checks would need a second set of expectations.
-  e2e:
-    name: e2e (Chromium)
+  # The suite runs serially within a job (one browser, SwiftShader); four shards in parallel cut
+  # the wall clock about fourfold. `e2e (Chromium)` below is the required check and gathers them.
+  e2e-shard:
+    name: e2e shard ${{ matrix.shard }}/4
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -80,6 +86,7 @@ jobs:
         working-directory: apps/web
         env:
           KIMO_E2E_RETRIES: "1"
+          KIMO_E2E_SHARD: ${{ matrix.shard }}/4
           KIMO_E2E_SHOTS: ${{ runner.temp }}/e2e-shots
         run: |
           mkdir -p "$KIMO_E2E_SHOTS"
@@ -91,7 +98,7 @@ jobs:
           log="$RUNNER_TEMP/e2e.log"
           [ -f "$log" ] || exit 0
           {
-            echo "## e2e"
+            echo "## e2e shard ${{ matrix.shard }}/4"
             echo
             grep -E '^(all scenarios passed|[0-9]+ scenario\(s\) failed)' "$log" || echo "no summary line (runner crashed?)"
             echo
@@ -114,12 +121,22 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: e2e-report
+          name: e2e-report-${{ matrix.shard }}
           path: |
             ${{ runner.temp }}/e2e.log
             ${{ runner.temp }}/e2e-shots
           if-no-files-found: ignore
           retention-days: 14
+
+  e2e:
+    name: e2e (Chromium)
+    needs: e2e-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: every shard passed
+        run: test "${{ needs.e2e-shard.result }}" = success
 
   exporters-boxdiff:
     name: exporters box-diff

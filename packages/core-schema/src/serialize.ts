@@ -369,7 +369,23 @@ export function parse(text: string): KimoDocument {
   const v = parseJson(text)
   if (!isObject(v))
     throw new KimoParseError("NOT_AN_OBJECT", "A .kimo document must be a JSON object", "")
+  healSchemaUrl(v)
   return v as unknown as KimoDocument
+}
+
+/** `$schema` host of files written before the getkimo.design move (October 2026). */
+const LEGACY_SCHEMA_URL =
+  /^https:\/\/kimo\.design\/schema\/(kimo-(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.json)$/
+
+/**
+ * Self-heal: a document that names the legacy kimo.design `$schema` host reads as if it named
+ * getkimo.design, so it validates, and its next save writes the new URL. Nothing else changes.
+ */
+function healSchemaUrl(doc: Record<string, unknown>): void {
+  const url = doc.$schema
+  if (typeof url !== "string") return
+  const m = LEGACY_SCHEMA_URL.exec(url)
+  if (m) doc.$schema = `https://getkimo.design/schema/${m[1]}`
 }
 
 /** True when `text` is exactly the canonical serialization of its own content. */

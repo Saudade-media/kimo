@@ -14,6 +14,7 @@ import {
   parseJoinLink,
   parsePairingLink,
   randomBytes,
+  relayLink,
   syncUrlFor,
   toBase64Url,
 } from "../../src/mp"
@@ -313,5 +314,27 @@ describe("pairing links", () => {
       `https://app.kimo.design/pair#https://r.example/${token.slice(1)}`,
     ])
       await expectCode(() => parsePairingLink(text), "BAD_LINK")
+  })
+})
+
+describe("relayLink (board 45)", () => {
+  test("rewrites a join link to its relay's /join, keeping the fragment", async () => {
+    const link = await sample("https://relay.example.com/kimo")
+    for (const webOrigin of ["kimo:", "https://app.kimo.design", ""]) {
+      const text = formatJoinLink({ ...link, webOrigin })
+      const out = relayLink(text)
+      expect(out.startsWith("https://relay.example.com/kimo/join#")).toBe(true)
+      expect(out.slice(out.indexOf("#"))).toBe(text.slice(text.indexOf("#")))
+    }
+  })
+
+  test("rewrites a pairing link to its relay's /pair", async () => {
+    const token = await pairingToken()
+    const text = formatPairingLink({ webOrigin: "kimo:", relayUrl: "http://localhost:8787", token })
+    expect(relayLink(text)).toBe(`http://localhost:8787/pair#http://localhost:8787/${token}`)
+  })
+
+  test("leaves anything else unchanged", () => {
+    expect(relayLink("not a link")).toBe("not a link")
   })
 })

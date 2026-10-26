@@ -56,8 +56,8 @@ export interface OwnershipDeps {
   deviceKeys: DeviceKeyStore
   /** Default device name (§16.9): the platform only. */
   deviceName(): string
-  /** Base for pairing links: `location.origin` on web, `kimo:` on desktop. */
-  webOrigin: string
+  /** Base for pairing links. Default: the relay itself, which serves `/pair` (board 45). */
+  webOrigin?: string
   fetch?: typeof fetch
   now?: () => number
   /** Request timeout (ms). Default the client's 30 s. */
@@ -193,7 +193,7 @@ export function createOwnershipClient(deps: OwnershipDeps): OwnershipClient {
         relayId: await relayIdOf(url),
       })
       return {
-        link: formatPairingLink({ webOrigin: deps.webOrigin, relayUrl: url, token }),
+        link: formatPairingLink({ webOrigin: deps.webOrigin ?? url, relayUrl: url, token }),
         jti: toHex(jti),
         iat,
         exp: iat + ttl,

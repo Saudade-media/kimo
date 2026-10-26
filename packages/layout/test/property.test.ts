@@ -55,7 +55,9 @@ describe("layout properties", () => {
             const b = r.nodes.get(id)?.local
             if (!b) throw new Error(`missing ${id}`)
             const start = row ? b.x : b.y
-            expect(start).toBeGreaterThanOrEqual(end - 1e-3)
+            // Yoga computes in float32: far from the origin a step is many px (32 px near 4.6e8),
+            // so the tolerance grows with the magnitude.
+            expect(start).toBeGreaterThanOrEqual(end - Math.max(1e-3, Math.abs(end) * 2 ** -20))
             end = start + (row ? b.w : b.h)
           }
         }

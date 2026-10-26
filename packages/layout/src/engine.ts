@@ -1644,6 +1644,13 @@ export function createLayoutEngine(options: LayoutEngineOptions = {}): LayoutEng
       }
     }
 
+    // The source's top-level list can change with no node added, removed or moved (a page
+    // switch filters the roots, an empty page has none): re-sync the roots when it differs.
+    if (!resync.has(null)) {
+      const now = rootIds()
+      if (now.length !== roots.length || now.some((id, i) => roots[i]?.id !== id)) resync.add(null)
+    }
+
     // Re-sync child lists: detach every affected Yoga child first, then rebuild and attach.
     const removed: Entry[] = []
     for (const p of resync) if (p) detach(p)

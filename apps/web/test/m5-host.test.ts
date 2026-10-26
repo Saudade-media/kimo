@@ -9,6 +9,7 @@ import { ASK_POLICY } from "@kimo/mcp-server"
 import { validateInput } from "@kimo/mcp-server/server"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { describeHostConformance } from "../../../packages/mcp-server/test/conformance"
+import { activePageId, activeRoots } from "../src/editor/pages/model"
 import {
   createDesktopMcpHost,
   createMemoryBridgeNetwork,
@@ -267,6 +268,55 @@ describe("editor window ↔ document host", () => {
     expect("hosted" in session).toBe(false)
     expect(session.state().phase).toBe("ready")
     await windowManager.dispose()
+  })
+})
+
+describe("pages from an agent reach the window (desing.kimo bug)", () => {
+  test("a page added and a root moved onto it by MCP show in the window's store and page filter", async () => {
+    const ref = "/Users/me/site/pages.kimo"
+    const { platform, net, service } = await startHost({ [ref]: fileText() })
+    const client = await HostClient.connect(net.bridge("editor-1"), 1000)
+    if (!client) throw new Error("no host")
+    const windowManager = createSessionManager({
+      platform,
+      createSession: hostedSessionFactory(client),
+    })
+    const session = (await windowManager.open(ref)) as HostedDocumentSession
+    const conn = service.runtime.connect({
+      client: "claude-code",
+      label: "Claude Code",
+      transport: "socket",
+    })
+    const opened = (await conn.call("kimo_open", { path: ref })).result
+    if (!opened.ok) throw new Error(opened.summary)
+    const docId = (opened.data as { doc: { id: string } }).doc.id
+    const added = (
+      await conn.call("kimo_apply_ops", {
+        docId,
+        ops: [{ op: "page", action: "add", name: "Second", key: "p2" }],
+      })
+    ).result
+    if (!added.ok) throw new Error(added.summary)
+    const second = added.created?.[0]?.id as string
+    // As desing.kimo: one script renames the first page and moves roots with x / y.
+    const firstId = (
+      service.host.get(docId) as { value: { store: { getNode(id: string): { page?: string } } } }
+    ).value.store.getNode("Frame00001").page as string
+    const moved = (
+      await conn.call("kimo_script", {
+        docId,
+        code: `Op({op: "page", action: "rename", id: ${JSON.stringify(firstId)}, name: "First"})\nUpdate("Frame00001", {page: ${JSON.stringify(second)}, x: 0, y: 0})`,
+      })
+    ).result
+    if (!moved.ok) throw new Error(moved.summary)
+    await until(() => session.store.getNode("Frame00001")?.page === second)
+    expect(activeRoots(session.store, second)).toContain("Frame00001")
+    const first = activePageId(session.store, null)
+    expect(first).not.toBe(second)
+    expect(activeRoots(session.store, first)).not.toContain("Frame00001")
+    conn.close()
+    client.dispose()
+    await service.dispose()
   })
 })
 

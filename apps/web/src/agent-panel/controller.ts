@@ -545,7 +545,8 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   let sessionQuery = ""
   let sessionList: SessionMeta[] = []
   let approvalQueue: (ApprovalPromptView & { resolve(o: ApprovalOutcome): void })[] = []
-  let autoApprove = false
+  // Trusted by default (ADR 0013 Addendum 8); "Ask before changes" turns it off.
+  let autoApprove = true
   /** Board 38: the session's own choice (null: follow Allow web access). Never saved. */
   let webOverride: boolean | null = null
   let connect: { connecting: boolean; error: string | null } = { connecting: false, error: null }
@@ -2642,7 +2643,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
     newSession() {
       if (composerState !== "idle") controller.stop()
       session = null
-      autoApprove = false
+      autoApprove = true
       webOverride = null
       messages = []
       modeRun = null
@@ -2668,7 +2669,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
         return
       }
       session = s
-      autoApprove = false
+      autoApprove = true
       webOverride = null
       model = s.model
       // Sessions saved before board 39 carry Off / Auto / Max.
@@ -2921,7 +2922,7 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
       pendingFromHome = true
       model = h.model
       session = null
-      autoApprove = false
+      autoApprove = true
       webOverride = null
       messages = []
       mode = { ...DEFAULT_MODE }

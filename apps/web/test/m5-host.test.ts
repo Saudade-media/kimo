@@ -5,6 +5,7 @@
  */
 import { describe, expect, test } from "bun:test"
 import { createEmptyDocument, serialize } from "@kimo/editor-state"
+import { ASK_POLICY } from "@kimo/mcp-server"
 import { validateInput } from "@kimo/mcp-server/server"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { describeHostConformance } from "../../../packages/mcp-server/test/conformance"
@@ -53,7 +54,11 @@ async function startHost(files: Record<string, string> = {}, relay = false) {
   const ready: unknown[] = []
   net.commands.set("kimo_mcp_send", (a) => void sent.push(a as never))
   net.commands.set("kimo_mcp_host_ready", (a) => void ready.push(a))
-  net.commands.set("kimo_mcp_policies_get", () => ({}))
+  // "Ask before changes" on, so these tests see the approval prompts (ADR 0013 Addendum 8).
+  net.commands.set("kimo_mcp_policies_get", () => ({
+    "claude-code": ASK_POLICY,
+    codex: ASK_POLICY,
+  }))
   const service = await startDocumentHostService({
     platform,
     bridge: net.bridge(HOST_LABEL),

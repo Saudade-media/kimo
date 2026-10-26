@@ -585,10 +585,9 @@ export function MoreMenu({
       />
       <MenuDivider />
       <MenuItemDense
-        label="Auto-approve"
-        icon={state.autoApprove ? <ShieldCheck /> : <Shield />}
-        switchOn={state.autoApprove}
-        className={state.autoApprove ? "agent-more__auto--on" : undefined}
+        label="Ask before changes"
+        icon={state.autoApprove ? <Shield /> : <ShieldCheck />}
+        switchOn={!state.autoApprove}
         data-testid="agent-more-auto"
         onSelect={onAutoApprove}
       />

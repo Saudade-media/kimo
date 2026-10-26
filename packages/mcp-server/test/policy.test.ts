@@ -5,11 +5,11 @@ import {
   type ActivityEntry,
   APPROVAL_TIMEOUT_MS,
   type ApprovalOutcome,
+  ASK_POLICY,
   authorize,
   type ClientPolicy,
   clientSlug,
   createStubHandlers,
-  DEFAULT_POLICY,
   type DocumentHost,
   dispatch,
   emptyAllowances,
@@ -25,7 +25,7 @@ import {
 } from "../src/index"
 import { validateInput } from "../src/server"
 
-const policy = (p: Partial<ClientPolicy> = {}): ClientPolicy => ({ ...DEFAULT_POLICY, ...p })
+const policy = (p: Partial<ClientPolicy> = {}): ClientPolicy => ({ ...ASK_POLICY, ...p })
 const del = { docId: "d_abc_k9", ops: [{ op: "delete", id: "Abcdef1234" }] }
 const upd = { docId: "d_abc_k9", ops: [{ op: "update", id: "Abcdef1234", set: { name: "x" } }] }
 

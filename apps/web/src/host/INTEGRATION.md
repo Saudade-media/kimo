@@ -68,8 +68,9 @@ prompt with `emitTo("document-host", "kimo://mcp-approval-answer", {id, choice})
 gets no answer within 2 minutes, the call fails with PERMISSION_DENIED. "Allow for this session"
 remembers op kinds only; a `session` answer to a file or scope prompt counts as `once`.
 Settings broadcasts `kimo://mcp-policy-changed` (`{client, policy}`) after `policies.set`: the host
-applies it to that client's live connections and, with `autoApprove` on (board 34), resolves its
-pending prompts as `auto`; other windows update their presence pill (`policies.onChange`).
+applies it to that client's live connections and, with `autoApprove` on (board 34; the default
+since ADR 0013 Addendum 8), resolves its pending prompts as `auto`; other windows update their
+policy view (`policies.onChange`).
 
 Optional cleanup: `main.tsx` could branch on `isHostRoute(location.hash)` before rendering. This
 is not required, because `createAppRuntime` never resolves for `#/host`.

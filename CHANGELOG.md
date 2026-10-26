@@ -14,6 +14,20 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+### Changed
+
+- Agents work without asking. Claude Code, Codex and other agents connected over MCP, and the
+  built-in agent, no longer stop for approvals: deletes, other files, save and export run at once,
+  each logged in Activity and undoable on the canvas, like Pen.dev. The agent host's own tool
+  approvals stay. **Ask before changes** (Settings › Agents & MCP › Permissions, and the
+  composer's **…** menu for the built-in agent) brings the prompts back. Policies saved before
+  this turn trusted. The batch limit, path checks and read-only documents still apply
+  (ADR 0013 Addendum 8).
+
+### Fixed
+
+- Changing an MCP client's permissions in Settings no longer drops its save and export grants.
+
 ## [1.0.0] - 2026-10-23
 
 The first public release: release engineering, polish, the new mark and the format 1.0 freeze.

@@ -94,7 +94,7 @@ export const scenarios: Scenario[] = [
       c.box("Icon globe", m.icon, { w: 14, h: 14, color: secondary })
       c.box("Toggle/On (y893S)", m.toggle, { w: 28, h: 16 })
       if (m.auto && m.web)
-        c.check("Items", "Auto-approve → Web access gap", m.web.y - (m.auto.y + m.auto.h), 1)
+        c.check("Items", "Ask before changes → Web access gap", m.web.y - (m.auto.y + m.auto.h), 1)
       c.flush()
       expect(
         (await page.locator("[data-testid=agent-more-dot]").count()) === 0,

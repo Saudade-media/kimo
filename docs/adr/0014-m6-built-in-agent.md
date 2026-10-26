@@ -443,3 +443,12 @@ ADR 0013 addendum 6 describes the engine. The agent side:
   ceiling), `render: true` on the call that finishes a section instead of a separate
   `kimo_render`, and `{docId, retryId, edits}` to fix a failed call. Agents whose input does not
   stream (Codex, Gemini CLI, Claude Code without a document host) get the 40-layer text.
+
+## Addendum 5 (2026-10-26): trusted by default
+
+ADR 0013 Addendum 8 applies to the built-in agent too. The per-session switch
+(`setAutoApprove`, view state `autoApprove`) starts **on** in every new or reopened session and is
+labelled **Ask before changes** in the composer's "…" menu (checked = asking, the inverse of
+`autoApprove`). Turning asking off approves the waiting cards at once, with no confirm. The
+"Auto-approve is on" chip and the "…" warning dot are removed; the thread's "Approved
+automatically" lines stay. Turns scoped to a selection or a prompt node follow the same switch.

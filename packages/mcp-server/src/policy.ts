@@ -95,12 +95,18 @@ export interface ClientPolicy {
    * Auto-approve (board 34): every approval this policy would ask for (`onExceed: "ask"`) is
    * approved at once with outcome `auto` and recorded in the activity log. Hard limits that are
    * errors, not prompts (batch size, path checks, read-only, `onExceed: "deny"`), still apply.
-   * Additive; absent = false.
+   * Additive; absent = false here, but connected clients start from {@link DEFAULT_POLICY}, which
+   * turns it on (ADR 0013 Addendum 8), and Settings stores `false` when asking is turned on.
    */
   autoApprove?: boolean
 }
 
-/** Unknown clients: can edit open documents, destructive ops and other files ask. */
+/**
+ * Connected clients without a stored policy (ADR 0013 Addendum 8): full trust. Every approval is
+ * auto-approved and logged, like Pen.dev; the agent host's own tool approvals are the check.
+ * Turning on Settings › "Ask before changes" stores this policy with `autoApprove: false`, which
+ * brings back the prompts: destructive ops, other files, save and export ask.
+ */
 export const DEFAULT_POLICY: ClientPolicy = {
   level: "edit",
   files: [],
@@ -108,7 +114,11 @@ export const DEFAULT_POLICY: ClientPolicy = {
   grants: ["globals", "components", "save", "export"],
   onExceed: "ask",
   confirmDestructive: true,
+  autoApprove: true,
 }
+
+/** {@link DEFAULT_POLICY} with Settings › "Ask before changes" on: the approval prompts are back. */
+export const ASK_POLICY: ClientPolicy = { ...DEFAULT_POLICY, autoApprove: false }
 
 /** Headless `kimo mcp` defaults (no UI to ask): explicit files only, destructive allowed. */
 export const HEADLESS_POLICY: ClientPolicy = {

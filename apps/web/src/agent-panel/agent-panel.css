@@ -199,66 +199,6 @@
 }
 
 /*
- * Board 34 Auto-approve Chip (PWfak), above the composer (Composer Wrap gap 8): h 24, padding
- * [0, 4, 0, 8], gap 4, center, warning-soft, radius-pill › Icon shield-check 12 warning · Label
- * sans 11 / 500 warning · Turn Off (mCuKF) 16 × 16 pill › x 12 warning. The whole chip turns
- * auto-approve off.
- */
-.agent-panel__auto-chip {
-  box-sizing: border-box;
-  display: inline-flex;
-  flex: none;
-  flex-direction: row;
-  align-self: flex-start;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  margin: 0 0 8px;
-  padding: 0 4px 0 8px;
-  border: 0;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-warning-soft);
-  color: var(--kimo-warning);
-  cursor: pointer;
-  appearance: none;
-}
-
-.agent-panel__auto-chip:hover {
-  filter: brightness(0.97);
-}
-
-.agent-panel__auto-chip-icon {
-  display: block;
-  flex: none;
-  width: 12px;
-  height: 12px;
-}
-
-.agent-panel__auto-chip-label {
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
-  white-space: nowrap;
-}
-
-.agent-panel__auto-chip-off {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--kimo-radius-pill);
-}
-
-.agent-panel__auto-chip-off > svg {
-  display: block;
-  width: 12px;
-  height: 12px;
-}
-
-/*
  * Board 34 Auto-approved Line (ZbBuI): row, gap 6, padding [0, 0, 0, 34], center › Icon
  * shield-check 12 warning · Text sans 11 text-secondary, fill.
  */
@@ -596,11 +536,6 @@
   left: 12px;
   bottom: calc(100% + 4px);
   width: 232px;
-}
-
-/* Item · Auto-approve on (u0Zdm5): shield-check 14 in warning. */
-.agent-more__auto--on .kimo-menu-item-dense__check--icon {
-  color: var(--kimo-warning);
 }
 
 /* Reason (board 40 F / G): padding [0, 8, 6, 30] › sans 11 text-tertiary, line-height 1.45. */

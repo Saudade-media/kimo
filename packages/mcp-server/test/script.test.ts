@@ -7,9 +7,9 @@ import { createMemoryPlatform } from "@kimo/platform/memory"
 import {
   type ApprovalOutcome,
   type ApprovalRequest,
+  ASK_POLICY,
   type ClientPolicy,
   createMemoryDocumentHost,
-  DEFAULT_POLICY,
   type McpConnection,
   readGuide,
   type ToolResult,
@@ -39,9 +39,9 @@ function setup(
     { client: "claude-code", label: "Claude Code", transport: "in-process" },
     {
       policy: {
-        ...DEFAULT_POLICY,
+        ...ASK_POLICY,
         files: ["**"],
-        grants: [...DEFAULT_POLICY.grants, "files.create"],
+        grants: [...ASK_POLICY.grants, "files.create"],
         level: "edit+delete",
         confirmDestructive: false,
         ...policy,
@@ -421,7 +421,7 @@ describe("kimo_script through the runtime", () => {
     const docId = await newDoc(t.conn)
     const reader = t.host.runtime.connect(
       { client: "reader", label: "Reader", transport: "in-process" },
-      { policy: { ...DEFAULT_POLICY, files: ["**"], level: "read", onExceed: "deny" } },
+      { policy: { ...ASK_POLICY, files: ["**"], level: "read", onExceed: "deny" } },
     )
     const r = failed(await call(reader, "kimo_script", { docId, code: "while (true) {}" }))
     expect(r.errors[0]?.code).toBe("PERMISSION_DENIED")
@@ -439,7 +439,7 @@ describe("kimo_script through the runtime", () => {
       { client: "child", label: "Child", transport: "in-process" },
       {
         policy: {
-          ...DEFAULT_POLICY,
+          ...ASK_POLICY,
           files: ["**"],
           level: "edit",
           nodes: [plans],

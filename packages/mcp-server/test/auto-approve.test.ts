@@ -10,6 +10,7 @@ import {
   AGENT_MAX_NEW_LAYERS,
   ApprovalBroker,
   type ApprovalRequest,
+  ASK_POLICY,
   approvedOutcome,
   authorize,
   autoApproves,
@@ -28,7 +29,7 @@ import {
 } from "../src/index"
 import { validateInput } from "../src/server"
 
-const policy = (p: Partial<ClientPolicy> = {}): ClientPolicy => ({ ...DEFAULT_POLICY, ...p })
+const policy = (p: Partial<ClientPolicy> = {}): ClientPolicy => ({ ...ASK_POLICY, ...p })
 const del = { docId: "d_abc_k9", ops: [{ op: "delete", id: "Abcdef1234" }] }
 
 function ctx(p: ClientPolicy, log: Omit<ActivityEntry, "seq">[]): ToolContext {
@@ -57,6 +58,12 @@ describe("auto-approve policy", () => {
     expect(approvedOutcome("once")).toBe(true)
     expect(approvedOutcome("deny")).toBe(false)
     expect(approvedOutcome("timeout")).toBe(false)
+  })
+
+  test("connected clients are trusted by default; Ask before changes turns it off", () => {
+    expect(autoApproves(DEFAULT_POLICY)).toBe(true)
+    expect(autoApproves(ASK_POLICY)).toBe(false)
+    expect({ ...ASK_POLICY, autoApprove: true } as ClientPolicy).toEqual(DEFAULT_POLICY)
   })
 
   test("every reason kind that asks is approved without a prompt and logged as auto", async () => {

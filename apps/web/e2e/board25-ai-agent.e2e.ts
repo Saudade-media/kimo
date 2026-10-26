@@ -400,11 +400,17 @@ export const scenarios: Scenario[] = [
     async run(ctx) {
       const { page } = ctx
       await open(ctx, "m6-agent-harness", "scene=panel")
-      await page.evaluate(() =>
-        (
-          window as unknown as { __m6: { controller: { setSelection(x: unknown[]): void } } }
-        ).__m6.controller.setSelection([{ id: "Hero000001", name: "Hero" }]),
-      )
+      await page.evaluate(() => {
+        const c = (
+          window as unknown as {
+            __m6: {
+              controller: { setSelection(x: unknown[]): void; setAutoApprove(on: boolean): void }
+            }
+          }
+        ).__m6.controller
+        c.setSelection([{ id: "Hero000001", name: "Hero" }])
+        c.setAutoApprove(false) // "Ask before changes" on: the card shows
+      })
       const ta = page.locator("[data-testid=agent-composer] textarea")
       await ta.fill("Clean up the legacy cards")
       await ta.press("Enter")

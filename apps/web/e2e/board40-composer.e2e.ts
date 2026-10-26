@@ -201,7 +201,6 @@ export const scenarios: Scenario[] = [
       const primary = await token(page, "--kimo-text-primary")
       const secondary = await token(page, "--kimo-text-secondary")
       const tertiary = await token(page, "--kimo-text-tertiary")
-      const warning = await token(page, "--kimo-warning")
       const bgMuted = await token(page, "--kimo-bg-muted")
       expect((await page.locator(DOT).count()) === 0, "defaults: no dot")
       expect((await page.locator(MORE).getAttribute("aria-expanded")) === "false", "closed")
@@ -243,8 +242,8 @@ export const scenarios: Scenario[] = [
       c.box("Skills › Label", m.skillsLabel, { fs: 12, color: primary })
       c.box("Skills › Meta", m.skillsMeta, { fs: 11, ff: "JetBrains Mono", color: tertiary })
       c.box("Divider", m.divider, { h: 9, pad: [4, 8, 4, 8] })
-      c.box("Item · Auto-approve", m.auto, { h: 28, gap: 8, pad: [0, 8, 0, 8] })
-      c.box("Auto-approve › shield", m.autoIcon, { w: 14, h: 14, color: secondary })
+      c.box("Item · Ask before changes", m.auto, { h: 28, gap: 8, pad: [0, 8, 0, 8] })
+      c.box("Ask before changes › shield", m.autoIcon, { w: 14, h: 14, color: secondary })
       c.box("Toggle/Off (CSYQj)", m.autoToggle, { w: 28, h: 16 })
       c.box("Item · Web access", m.web, { h: 28 })
       c.box("Toggle/On (y893S)", m.webToggle, { w: 28, h: 16 })
@@ -274,7 +273,7 @@ export const scenarios: Scenario[] = [
 
       // ↑ ↓ Home End move through the enabled rows and wrap.
       await page.keyboard.press("ArrowDown")
-      expect((await activeTestId(page)) === "agent-more-auto", "↓ → Auto-approve")
+      expect((await activeTestId(page)) === "agent-more-auto", "↓ → Ask before changes")
       await page.keyboard.press("ArrowDown")
       expect((await activeTestId(page)) === "agent-more-web", "↓ → Web access")
       await page.keyboard.press("ArrowDown")
@@ -323,34 +322,27 @@ export const scenarios: Scenario[] = [
       expect((await page.locator(MENU).count()) === 0, "Escape closes")
       expect((await activeTestId(page)) === "agent-more", "focus returns to “…”")
 
-      // D · Auto-approve on goes through the board 34 confirm, then a warning dot.
+      // D · Ask before changes on is immediate, the menu stays and it carries no dot.
       await page.locator(MORE).click()
       await page.locator(AUTO).click()
-      expect((await page.locator(MENU).count()) === 0, "the menu gives way to the confirm")
-      await page.locator("[data-testid=auto-approve-confirm] .kimo-confirm-dialog__confirm").click()
-      await page.locator("[data-testid=agent-auto-approve-chip]").waitFor()
-      await page.locator(MORE).click()
-      d = await measure(page, { dot: DOT, icon: `${AUTO} .kimo-menu-item-dense__check svg` })
-      c = checker(ctx, "Board 40 §2 D · auto-approve on (u0Zdm5)")
-      c.box("Dot (YB49L)", d.dot, { w: 6, h: 6, bg: warning })
-      c.box("Auto-approve › shield-check", d.icon, { w: 14, h: 14, color: warning })
+      await page.waitForFunction(() => !(window as unknown as M6).__m6.controller.state.autoApprove)
+      expect((await page.locator(MENU).count()) === 1, "on: the menu stays open")
+      d = await measure(page, { icon: `${AUTO} .kimo-menu-item-dense__check svg` })
+      c = checker(ctx, "Board 40 §2 D · Ask before changes on (u0Zdm5)")
+      c.box("Ask before changes › shield-check", d.icon, { w: 14, h: 14, color: secondary })
       c.flush()
-      expect((await page.locator(AUTO).getAttribute("aria-checked")) === "true", "auto on")
-      // Web off too: the warning dot wins.
+      expect((await page.locator(AUTO).getAttribute("aria-checked")) === "true", "asking on")
+      expect((await page.locator(DOT).count()) === 0, "no dot while asking")
+      // Web off: the secondary dot.
       await page.locator(WEB).click()
       await page.waitForFunction(
         () => !(window as unknown as M6).__m6.controller.state.webAccess.on,
       )
-      expect((await page.locator(DOT).getAttribute("data-dot")) === "warning", "warning wins")
+      expect((await page.locator(DOT).getAttribute("data-dot")) === "secondary", "web off dot")
       if (ctx.shots) await page.screenshot({ path: join(ctx.shots, "board40-menu-d.png") })
-      // Turning auto-approve off is immediate and the menu stays.
+      // Off again: trusted.
       await page.locator(AUTO).click()
-      await page.waitForFunction(() => !(window as unknown as M6).__m6.controller.state.autoApprove)
-      expect((await page.locator(MENU).count()) === 1, "off: the menu stays open")
-      expect(
-        (await page.locator(DOT).getAttribute("data-dot")) === "secondary",
-        "back to secondary",
-      )
+      await page.waitForFunction(() => (window as unknown as M6).__m6.controller.state.autoApprove)
       await page.locator(WEB).click()
       await page.waitForFunction(() => (window as unknown as M6).__m6.controller.state.webAccess.on)
 

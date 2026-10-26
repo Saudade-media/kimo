@@ -211,6 +211,7 @@ describe("scope, errors and stop (board 22 E)", () => {
     expect(c.state.composer.attachments).toEqual([
       { id: "sel:Card000001", kind: "selection", label: "Card", nodeIds: ["Card000001"] },
     ])
+    c.setAutoApprove(false) // "Ask before changes" on
     const sending = c.send("Rename things")
     // Single mode: leaving the scope asks (in-app approvals wait until answered).
     await until(() => c.state.approval !== null)

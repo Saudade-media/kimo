@@ -693,3 +693,36 @@ description, tool descriptions stay under 420); the whole `tools/list` budget we
 
 The wasm heap of the worker (or the CLI process) grows to the largest script's use and is not
 returned; a run cannot exceed the 64 MB limit.
+
+## Addendum 8 (2026-10-26): connected agents are trusted by default
+
+Agents connected over MCP (Claude Code, Codex, Gemini CLI, Cursor) asked in the app for almost
+every call: deletes and `replace` at the default `edit` level, every file outside the open ones
+(never remembered), save and export. "Always for this session" lasted one socket connection, so a
+new agent session started over. The agent host already asks before it calls a tool, so Kimo asked
+the same question a second time. Pen.dev's MCP never prompts. Decision: **trust the connected
+agent, and keep asking as an opt-in.** This replaces §6's least-privilege default for connected
+clients; the policy model, the prompts and the limits below are unchanged.
+
+- **Default** (`DEFAULT_POLICY`, `src/policy.ts`, and the web mirror in `apps/web/src/agents/
+  model.ts`): `autoApprove: true` with the same level, files and grants as before, so every
+  request that would ask is approved at once (outcome `auto`) and logged in Activity. The web
+  mirror now grants `globals, components, save, export` like the host (it had none, so the first
+  Settings change stripped save and export).
+- **Stored policies** (Rust `ClientPolicy`): `autoApprove` absent now reads as `true` and is
+  always written, so policies saved before this addendum turn trusted and "Ask before changes"
+  stores `false`. `read_policies` returns normalized policies.
+- **Ask before changes** (Settings › Agents & MCP › Permissions, the Board 34 row): on stores
+  `autoApprove: false` and brings back every prompt; off applies at once, without the k0K1nN
+  confirm (removed). The client row's scope badge adds "· asks first" while it is on. The
+  presence pill and the warning tone of auto rows in Activity are gone: trusted is the normal
+  state.
+- **Built-in agent** (ADR 0014 Addendum 5): the per-session switch starts on in every new or
+  reopened session, the composer's "…" row reads **Ask before changes**, and the chip and the
+  warning dot are gone.
+- **Still enforced** (not approvals): `BATCH_TOO_LARGE` (40 new layers, 150 streamed), path
+  checks, `FILE_EXISTS` without `overwrite`, read-only and locked documents, paused clients,
+  `onExceed: "deny"` policies (headless `kimo mcp`, spawned children), the connection token.
+  Undo per origin and the Activity log are unchanged.
+- **Unchanged fakes**: `createMemoryMcpHost` (`@kimo/platform`) still auto-approves only with a
+  stored `autoApprove: true`, so harnesses and e2e scenarios keep showing prompts.

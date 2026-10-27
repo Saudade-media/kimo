@@ -170,6 +170,20 @@
    "text": "a5329ce3cfe0"
   },
   {
+   "name": "fflate",
+   "version": "0.8.3",
+   "license": "MIT",
+   "source": "npm",
+   "text": "465f3218d020"
+  },
+  {
+   "name": "fzstd",
+   "version": "0.1.1",
+   "license": "MIT",
+   "source": "npm",
+   "text": "3831cdc79ebf"
+  },
+  {
    "name": "hono",
    "version": "4.13.12",
    "license": "MIT",
@@ -513,6 +527,13 @@
    "text": "227b9862322c"
   },
   {
+   "name": "block-buffer",
+   "version": "0.12.1",
+   "license": "MIT OR Apache-2.0",
+   "source": "cargo",
+   "text": "a526556d9014"
+  },
+  {
    "name": "block-padding",
    "version": "0.3.3",
    "license": "MIT OR Apache-2.0",
@@ -646,6 +667,13 @@
    "text": "f9fff0746d44"
   },
   {
+   "name": "const-oid",
+   "version": "0.10.2",
+   "license": "Apache-2.0 OR MIT",
+   "source": "cargo",
+   "text": "4096b01d5917"
+  },
+  {
    "name": "const-random",
    "version": "0.1.18",
    "license": "MIT OR Apache-2.0",
@@ -665,13 +693,6 @@
    "license": "MIT OR Apache-2.0",
    "source": "cargo",
    "text": "a9c2e77e470b"
-  },
-  {
-   "name": "core_maths",
-   "version": "0.1.1",
-   "license": "MIT",
-   "source": "cargo",
-   "text": "ee47ab7d4488"
   },
   {
    "name": "core-foundation",
@@ -716,6 +737,13 @@
    "text": "7dc3e3233d81"
   },
   {
+   "name": "cpufeatures",
+   "version": "0.3.1",
+   "license": "MIT OR Apache-2.0",
+   "source": "cargo",
+   "text": "4096b01d5917"
+  },
+  {
    "name": "crc32fast",
    "version": "1.5.2",
    "license": "MIT OR Apache-2.0",
@@ -749,6 +777,13 @@
    "license": "MIT OR Apache-2.0",
    "source": "cargo",
    "text": "9cc1ea9f45e8"
+  },
+  {
+   "name": "crypto-common",
+   "version": "0.2.2",
+   "license": "MIT OR Apache-2.0",
+   "source": "cargo",
+   "text": "a0f69d083472"
   },
   {
    "name": "cssparser",
@@ -854,6 +889,13 @@
    "license": "MIT OR Apache-2.0",
    "source": "cargo",
    "text": "6239c757b5ac"
+  },
+  {
+   "name": "digest",
+   "version": "0.11.3",
+   "license": "MIT OR Apache-2.0",
+   "source": "cargo",
+   "text": "99604a1b20ee"
   },
   {
    "name": "dirs",
@@ -1074,7 +1116,7 @@
   },
   {
    "name": "fontdb",
-   "version": "0.23.0",
+   "version": "0.24.0",
    "license": "MIT",
    "source": "cargo",
    "text": "42fce1812dd1"
@@ -1430,8 +1472,15 @@
    "text": "21a2ad580783"
   },
   {
+   "name": "hybrid-array",
+   "version": "0.4.15",
+   "license": "MIT OR Apache-2.0",
+   "source": "cargo",
+   "text": "6296f5812335"
+  },
+  {
    "name": "hyper",
-   "version": "1.11.1",
+   "version": "1.12.0",
    "license": "MIT",
    "source": "cargo",
    "text": "b37e6300be84"
@@ -1690,7 +1739,7 @@
   },
   {
    "name": "libc",
-   "version": "0.2.189",
+   "version": "0.2.191",
    "license": "MIT OR Apache-2.0",
    "source": "cargo",
    "text": "8cd1283df4ed"
@@ -1708,13 +1757,6 @@
    "license": "ISC",
    "source": "cargo",
    "text": "121aea2578cd"
-  },
-  {
-   "name": "libm",
-   "version": "0.2.16",
-   "license": "MIT",
-   "source": "cargo",
-   "text": "34dc73ea39b1"
   },
   {
    "name": "linux-raw-sys",
@@ -1781,7 +1823,7 @@
   },
   {
    "name": "minisign-verify",
-   "version": "0.2.5",
+   "version": "0.3.0",
    "license": "MIT",
    "source": "cargo",
    "text": "c97378b001dd"
@@ -1837,7 +1879,7 @@
   },
   {
    "name": "notify-debouncer-full",
-   "version": "0.5.0",
+   "version": "0.7.0",
    "license": "MIT OR Apache-2.0",
    "source": "cargo",
    "text": "95432bb8e171"
@@ -1907,7 +1949,7 @@
   },
   {
    "name": "objc2",
-   "version": "0.6.4",
+   "version": "0.6.5",
    "license": "MIT",
    "source": "cargo",
    "text": null
@@ -2341,7 +2383,7 @@
   },
   {
    "name": "rustls",
-   "version": "0.23.45",
+   "version": "0.23.46",
    "license": "Apache-2.0 OR ISC OR MIT",
    "source": "cargo",
    "text": "a22de7bd1301"
@@ -2488,7 +2530,7 @@
   },
   {
    "name": "serde_json",
-   "version": "1.0.151",
+   "version": "1.0.154",
    "license": "MIT OR Apache-2.0",
    "source": "cargo",
    "text": "819e51915a9c"
@@ -2569,6 +2611,13 @@
    "license": "MIT OR Apache-2.0",
    "source": "cargo",
    "text": "0d74cbf1b53d"
+  },
+  {
+   "name": "sha2",
+   "version": "0.11.1",
+   "license": "MIT OR Apache-2.0",
+   "source": "cargo",
+   "text": "8379045eed21"
   },
   {
    "name": "signal-hook-registry",
@@ -2747,7 +2796,7 @@
   },
   {
    "name": "tauri",
-   "version": "2.12.1",
+   "version": "2.12.2",
    "license": "Apache-2.0 OR MIT",
    "source": "cargo",
    "text": "a13cece88b89"
@@ -2775,21 +2824,21 @@
   },
   {
    "name": "tauri-plugin-dialog",
-   "version": "2.8.1",
+   "version": "2.8.3",
    "license": "Apache-2.0 OR MIT",
    "source": "cargo",
    "text": "0f1ca1eb7660"
   },
   {
    "name": "tauri-plugin-fs",
-   "version": "2.6.0",
+   "version": "2.7.1",
    "license": "Apache-2.0 OR MIT",
    "source": "cargo",
    "text": "0f1ca1eb7660"
   },
   {
    "name": "tauri-plugin-opener",
-   "version": "2.7.0",
+   "version": "2.7.2",
    "license": "Apache-2.0 OR MIT",
    "source": "cargo",
    "text": "0f1ca1eb7660"
@@ -2803,7 +2852,7 @@
   },
   {
    "name": "tauri-plugin-updater",
-   "version": "2.13.1",
+   "version": "2.14.0",
    "license": "Apache-2.0 OR MIT",
    "source": "cargo",
    "text": "0f1ca1eb7660"
@@ -2915,7 +2964,7 @@
   },
   {
    "name": "tokio",
-   "version": "1.53.1",
+   "version": "1.53.3",
    "license": "MIT",
    "source": "cargo",
    "text": "1635eef3e98d"
@@ -3132,7 +3181,7 @@
   },
   {
    "name": "uuid",
-   "version": "1.26.1",
+   "version": "1.28.0",
    "license": "Apache-2.0 OR MIT",
    "source": "cargo",
    "text": "0e67c4b00df0"
@@ -3146,7 +3195,7 @@
   },
   {
    "name": "want",
-   "version": "0.3.1",
+   "version": "0.3.2",
    "license": "MIT",
    "source": "cargo",
    "text": "d3ed37e884e9"

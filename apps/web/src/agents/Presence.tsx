@@ -11,6 +11,7 @@ import {
   assignPersonas,
   Button,
   CompactButton,
+  floating,
   IconButton,
   type Persona,
   useAnchoredPosition,
@@ -185,7 +186,7 @@ function AgentsPopoverFrame({
   const root = useRef<HTMLDivElement>(null)
   const pos = useAnchoredPosition(root, anchor, { side: "bottom", align: "end", offset: 8 })
   useDismiss(root, onClose, anchor, true)
-  return (
+  return floating(
     <div
       ref={root}
       role="dialog"
@@ -225,7 +226,8 @@ function AgentsPopoverFrame({
         />
       </div>
       {children}
-    </div>
+    </div>,
+    anchor,
   )
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { isCanonical, parse, serialize } from "@kimo/core-schema"
+import { isCanonical, parse, serialize, validate } from "@kimo/core-schema"
 import { createEmptyDocument, YjsDocStore } from "@kimo/editor-state"
 import {
   atomicWrite,
@@ -75,14 +75,10 @@ describe("FileProvider: load", () => {
     expect(readFileSync(path, "utf8")).toBe('{"format": "1.0.0", oops')
   })
 
-  test("newer format / unknown feature / invalid: read-only, content viewable, never saved", async () => {
+  test("newer format / unknown feature: read-only, content viewable, never saved", async () => {
     const cases: [string, string][] = [
       ["newer-minor", fixtureText(FORWARD_FIXTURES, "newer-minor.kimo")],
       ["unknown-feature", fixtureText(FORWARD_FIXTURES, "unknown-feature.kimo")],
-      [
-        "invalid",
-        fixtureText(join(VALID_FIXTURES, "../invalid"), "PARENT_MISSING--dangling-parent.kimo"),
-      ],
     ]
     for (const [name, text] of cases) {
       const { path, provider, store, fs } = setup(text)
@@ -98,6 +94,24 @@ describe("FileProvider: load", () => {
       expect(fs.writes).toEqual([]) // …the provider never writes
       expect(readFileSync(path, "utf8")).toBe(text)
     }
+  })
+
+  test("invalid: opens editable, repaired in memory, written only by the next save", async () => {
+    const text = fixtureText(
+      join(VALID_FIXTURES, "../invalid"),
+      "PARENT_MISSING--dangling-parent.kimo",
+    )
+    const { path, provider, store, fs } = setup(text)
+    await provider.attach(store)
+    expect(provider.status).toBe("synced")
+    expect(provider.loadError).toBeNull()
+    expect(provider.openResult?.repairs.map((r) => r.code)).toContain("PARENT_MISSING")
+    await sleep(60)
+    expect(fs.writes).toEqual([]) // opening never writes
+    insert(store, "Edited0001")
+    expect((await provider.writePending())?.target).toBe("file")
+    expect(validate(parse(readFileSync(path, "utf8"))).errors).toEqual([])
+    await provider.detach()
   })
 
   test("missing file: failed load by default, or created on request", async () => {

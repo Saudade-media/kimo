@@ -134,6 +134,7 @@ export {
   rootsByPage,
 } from "./pages"
 export * from "./pen/index"
+export { REPAIRABLE_CODES, type Repair, repairDocument } from "./repair"
 export {
   defaultTextFill,
   defaultTheme,

@@ -50,10 +50,12 @@ describe("setHeader op", () => {
     const F1 = ok(s.apply({ op: "insert", parent: null, node: frame("F1") }, { origin: "user" }))
       .created[0] as string
     const src = "./assets/fedcba9876543210.png"
-    const missing = failed(
-      s.apply({ op: "update", id: F1, set: { fill: { kind: "image", src } } }, { origin: "user" }),
+    // An unlisted image is a warning (it renders as missing), never a refused edit.
+    const missing = s.apply(
+      { op: "update", id: F1, set: { fill: { kind: "image", src } } },
+      { origin: "user", dryRun: true },
     )
-    expect(missing.errors[0]?.issue?.code).toBe("ASSET_MISSING")
+    expect(missing.ok && missing.warnings.map((w) => w.code)).toEqual(["ASSET_MISSING"])
     ok(
       s.apply(
         [

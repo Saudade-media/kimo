@@ -79,10 +79,11 @@ describe("kimo validate", () => {
 
   test("libraries are loaded relative to the file; assets/ is listed", async () => {
     const c = capture()
-    expect(await run(["validate", join(FIXTURES, "valid/example-10-5.kimo")], c.io)).toBe(1)
+    expect(await run(["validate", join(FIXTURES, "valid/example-10-5.kimo")], c.io)).toBe(0)
     expect(c.out()).not.toContain("LIBRARY_NOT_LOADED")
-    // The fixture folder has no assets/: the referenced image is reported missing (spec §12).
-    expect(c.out()).toContain("ASSET_MISSING")
+    // The fixture folder has no assets/: the referenced image is reported missing (spec §12), as
+    // a warning (it renders as a placeholder).
+    expect(c.out()).toContain("warning ASSET_MISSING")
   })
 
   test("usage errors exit 64", async () => {

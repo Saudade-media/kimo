@@ -121,6 +121,7 @@ export async function convertPenFile(
 
   const assets = createFolderAssetStore(platform, target)
   const images = new Map<string, string>()
+  const manifest: Record<string, Record<string, unknown>> = {}
   try {
     for (const url of penImageUrls(pen)) {
       const bytes = await loadImage(platform, penRef, url)
@@ -131,6 +132,10 @@ export async function convertPenFile(
         if (name) blob.name = name
         const info = await assets.put(blob)
         images.set(url, info.src)
+        const { mime, bytes: size, width, height, name: original, sha256 } = info
+        manifest[info.src.replace(/^\.\/assets\//, "")] = JSON.parse(
+          JSON.stringify({ mime, bytes: size, width, height, name: original, sha256 }),
+        )
       } catch {
         // Unsupported or oversized image: it stays a missing asset (checkerboard).
       }
@@ -142,6 +147,8 @@ export async function convertPenFile(
   const result = importPen(pen, { name: stem, images })
   const doc = result.doc as unknown as Record<string, unknown>
   doc.meta = { ...(doc.meta as object), [SOURCE_KEY]: { file, sha256: hash } }
+  // List the stored images, so a manifest added later (a font) never reads them as missing.
+  if (Object.keys(manifest).length) doc.assets = { ...(doc.assets as object), ...manifest }
   await platform.files.writeTextAtomic(target, serialize(result.doc))
   return { ref: target, created: true, warnings: result.warnings }
 }

@@ -736,6 +736,12 @@ export class FileDocumentProvider extends BaseProvider implements FileSessionPro
   private applyOpened(text: string, result: OpenResult, adopted = false): void {
     const store = this._store as DocStore
     this.openResult = result
+    if (result.repairs.length)
+      console.warn(
+        `Kimo: ${this.path}: repaired on open (written on the next save): ${result.repairs
+          .map((r) => r.message)
+          .join("; ")}`,
+      )
     if (this.madeReadOnly) {
       store.setReadOnly(null)
       this.madeReadOnly = false

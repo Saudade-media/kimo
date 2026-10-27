@@ -138,13 +138,9 @@ describe("openDocument", () => {
     expect(r.needsUpgradeConsent).toBe(true)
     expect(r.sourceFormat).toBe("0.0.4")
     expect(r.doc.format).toBe("1.0.0")
-    // vendorThing / future are unknown in 1.0: preserved, but the document is invalid → read-only.
-    expect(r.readOnly).toBe(true)
-    expect(r.readOnlyReasons.map((x) => x.code)).toEqual(["INVALID"])
-  })
-  test("allowInvalid opens invalid documents for editing", () => {
-    const r = openDocument(serialize(old as never), { migrations: history, allowInvalid: true })
+    // vendorThing / future are unknown in 1.0: preserved and reported, but the file stays editable.
     expect(r.readOnly).toBe(false)
+    expect(r.readOnlyReasons).toEqual([])
     expect(r.validation?.ok).toBe(false)
   })
   test("current valid documents open writable", () => {

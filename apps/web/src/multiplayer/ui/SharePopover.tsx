@@ -302,7 +302,7 @@ function SetupBody({
     const startCloud = async () => {
       const relay = await cloud.relay()
       let relayUrl = settings.relayUrl
-      if (cloudRelayChanged(cloudRelay ? relayUrl : null, relay.relayUrl))
+      if (relayUrl === null || cloudRelayChanged(cloudRelay ? relayUrl : null, relay.relayUrl))
         relayUrl = (await model.settings.setRelayUrl(relay.relayUrl)) ?? relay.relayUrl
       if (!cloudRelay) await relaySetup?.store.save({ patch: { path: "cloud" } })
       await model.document(docKey).startSharing({ relayUrl })

@@ -14,6 +14,19 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-28
+
+### Fixed
+
+- Image placeholders on a shared canvas (fetching, waiting, sharing) stay inside the layer they
+  cover: clipping frames cut them like the image, and the status chip shrinks on small images
+  and hides on tiny ones instead of spilling out.
+- The canvas overlays (image placeholders, cursors, claims, agent markers) no longer draw over
+  the left and right cards.
+- The model chooser and the other composer menus are no longer cut off by the right card.
+- Starting to share creates one view link and one edit link. Starting again, or clicking Start
+  sharing several times while it works, reuses them instead of creating a new pair each time.
+
 ## [1.1.0] - 2026-10-28
 
 ### Added

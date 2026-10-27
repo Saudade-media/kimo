@@ -177,6 +177,24 @@
 
 , "warning-soft": {"type":"color","value":[{"value":"#B26A0024","when":{"mode":"light"}},{"value":"#3A2B12","when":{"mode":"dark"}}]}
 },
+"assets": {
+"0694ac3cf56de231.jpg": {"mime":"image/jpeg","bytes":782689,"sha256":"0694ac3cf56de231f1e711d6c7caa48dd06cbd70b8df8a27fe6f6c4ac8885fc4"},
+"2c6e11467e49288d.png": {"name":"preview.png","mime":"image/png","bytes":106667,"sha256":"2c6e11467e49288d1c4a7510d2aac7fd8fefc23bc0d953b8af93316f970b0b81"},
+"35f8f8bc6737b6c5.png": {"name":"cover.png","mime":"image/png","bytes":33042,"sha256":"35f8f8bc6737b6c5176495721ac04164356daf0f18389e355162aff1adcf4e0b"},
+"3cdb75a41f70a68d.png": {"name":"frame-56.png","mime":"image/png","bytes":37592,"sha256":"3cdb75a41f70a68d54e7e2180cc1565c17aa8e20a4b74220734173ada88695b4"},
+"3f7c65b027220113.png": {"name":"preview.png","mime":"image/png","bytes":56540,"sha256":"3f7c65b0272201130ce4bbf84b21fa8b1ea89e9ba79254c281ec5488b5bb7999"},
+"4f2a24f3c514ed70.jpg": {"mime":"image/jpeg","bytes":128449,"sha256":"4f2a24f3c514ed702fdd3bc0f744a5ba2eef41fbe225e540dcbc37d4d97ef536"},
+"54489c3b66c16c02.png": {"name":"preview.png","mime":"image/png","bytes":113347,"sha256":"54489c3b66c16c02079cada517ab70475765176942dee7e9aa088759e2fbccbd"},
+"62f6356e8cd19b6a.png": {"name":"preview.png","mime":"image/png","bytes":192736,"sha256":"62f6356e8cd19b6a3526b73687eb51d2373890a44c4484abe745f01f76a73cb2"},
+"84c5587e1ead867f.png": {"name":"frame-31.png","mime":"image/png","bytes":37852,"sha256":"84c5587e1ead867f773d6d49209dd7fe2d73d37462eea6d49cc37e5d24968947"},
+"899c9558a0ed4b32.png": {"name":"frame-00.png","mime":"image/png","bytes":30996,"sha256":"899c9558a0ed4b32f0286e5e250b562cf6170dccfeae02aad441f478290e0129"},
+"89f5f60bd00ff267.png": {"name":"flat-00.png","mime":"image/png","bytes":7101,"sha256":"89f5f60bd00ff267bdc906d823131c00fa7478c1f4510c7283636c2d295917dc"},
+"8b893a5f990b16dd.png": {"name":"frame-21.png","mime":"image/png","bytes":38547,"sha256":"8b893a5f990b16dda71006181f76e48fbd1bc51f6a4317f576fdedc26dd43dec"},
+"bd52c4e2f23f985e.png": {"name":"cover.png","mime":"image/png","bytes":43388,"sha256":"bd52c4e2f23f985eb7676910594af3353218d9c5f96cb76a55877bd887af3e48"},
+"c6f239359e98be77.png": {"name":"preview.png","mime":"image/png","bytes":148321,"sha256":"c6f239359e98be77e4da8fce37735649f1386ae8b6024292a71dcdc16c9f46fc"},
+"ecb2f9ec6324888d.png": {"name":"frame-10.png","mime":"image/png","bytes":37633,"sha256":"ecb2f9ec6324888de9968f4651dac92877cf277037e6a9155703af46c5035f66"},
+"88e17be075f1be50.woff2": {"name":"Fraunces-SemiBold.woff2","mime":"font/woff2","bytes":36560,"sha256":"88e17be075f1be50ab67b057b99e3701b828f44ed28f9452df6c02645bb0cba9"}
+},
 "pages": {"5YtHfAJBGk":{"order":"a2PdI","name":"Home & Files"},"BUnCATFup7":{"order":"a4rPI","name":"Multiplayer & Cloud"},"RbNT774icZ":{"order":"a0v7M","name":"Foundations & Components"},"WkW8tsxqdz":{"order":"a1Uu1","name":"Editor"},"bmCYyHeZs4":{"order":"a53Ie","name":"v1 Polish"},"d4KrD5MAEa":{"order":"a3lDg","name":"Agents"},"jxRIcL44Ur":{"order":"a7Qkv","name":"Next · Workspace v2"},"zkhK0rq5LI":{"order":"a64jx","name":"Explorations"}},
 "nodes": {
 "01WChpwuFr": {"type":"frame","parent":"EzyMD7ni7V","order":"a2tnK","name":"Close","w":16,"h":16,"radius":{"$ref":"radius-xs"},"layout":{"dir":"row","justify":"center","align":"center"}}
@@ -1261,7 +1279,7 @@
 
 , "As6bh0": {"type":"text","parent":"dKURn0","order":"a0","name":"Section Title","content":"3 · Step by step on the canvas","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xl"},"weight":600},"fill":{"$ref":"text-primary"}}
 
-, "AsAAi0": {"type":"frame","parent":"SJrXQ0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/f9a2fdeac531ff44.png","fit":"stretch"}}
+, "AsAAi0": {"type":"frame","parent":"SJrXQ0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/899c9558a0ed4b32.png","fit":"stretch"}}
 
 , "AsO2h0": {"type":"frame","parent":null,"order":"a6","name":"07 Export Dialog","x":1640,"y":0,"w":1440,"h":900,"theme":{"mode":"light"},"clip":true,"fill":{"$ref":"bg-canvas"},"layout":{"dir":"column"},"page":"5YtHfAJBGk"}
 
@@ -5393,7 +5411,7 @@
 
 , "FDcEi0": {"type":"rect","parent":"bOaeM0","order":"aj","name":"H19","x":0,"y":304,"w":448,"h":1,"fill":"#0000000F"}
 
-, "FDo1f0": {"type":"frame","parent":"ZAHkg0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/edcacb660ca8915a.png","fit":"stretch"}}
+, "FDo1f0": {"type":"frame","parent":"ZAHkg0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/89f5f60bd00ff267.png","fit":"stretch"}}
 
 , "FDo5s0": {"type":"frame","parent":"OeHjX0","order":"a0","name":"Section Header","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"border"},"width":{"b":1}},"layout":{"dir":"column","gap":4,"pad":[0,0,12,0]}}
 
@@ -5417,7 +5435,7 @@
 
 , "FFd1x0": {"type":"frame","parent":"WjgjH0","order":"a1","name":"Mark","w":64,"layout":{"dir":"row","gap":6,"align":"center"}}
 
-, "FFfh50": {"type":"frame","parent":"Dsump0","order":"a0","name":"App Icon 64","w":64,"h":64,"fill":{"kind":"image","src":"./assets/f9a2fdeac531ff44.png","fit":"stretch"}}
+, "FFfh50": {"type":"frame","parent":"Dsump0","order":"a0","name":"App Icon 64","w":64,"h":64,"fill":{"kind":"image","src":"./assets/899c9558a0ed4b32.png","fit":"stretch"}}
 
 , "FFgQPuxg6u": {"type":"text","parent":"9D9iP5D7we","order":"a0yq6","name":"Section Title","content":"3 · Panels collapsed","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xl"},"weight":600},"fill":{"$ref":"text-primary"}}
 
@@ -6389,7 +6407,7 @@
 
 , "GKINs0": {"type":"frame","parent":"l3qIXf","order":"a5","name":"Rule · Missing","w":{"mode":"fill"},"layout":{"dir":"row","gap":12}}
 
-, "GKMGw0": {"type":"instance","parent":"lugWn0","order":"a2","name":"Dashboard","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Dashboard"}},"h1X020":{"set":{"content":"Variants, 2 themes"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/421410b314a92499.png"}]}}}}
+, "GKMGw0": {"type":"instance","parent":"lugWn0","order":"a2","name":"Dashboard","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Dashboard"}},"h1X020":{"set":{"content":"Variants, 2 themes"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/54489c3b66c16c02.png"}]}}}}
 
 , "GKMcf0": {"type":"text","parent":"NnJ7j0","order":"a2","name":"Prop","w":220,"content":"prompt.target","grow":"fixed-width","style":{"font":{"$ref":"font-mono"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
@@ -7119,7 +7137,7 @@
 
 , "H3Grs0": {"type":"instance","parent":"oKPpq0","order":"a2","name":"Solid","of":"xYqbE0","overrides":{"FFtaO0":{"set":{"props":{"w":24,"h":24,"opacity":1,"fill":"#00000000"}}},"chrvk0":{"set":{"props":{"fill":{"$ref":"bg-hover"},"stroke":{"paint":{"$ref":"border-strong"}}}}}}}
 
-, "H3QI1g": {"type":"frame","parent":"c5IbsD","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/ba98d19f9ce0d8fb.png","fit":"stretch"}}
+, "H3QI1g": {"type":"frame","parent":"c5IbsD","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/8b893a5f990b16dd.png","fit":"stretch"}}
 
 , "H3SUf0": {"type":"frame","parent":"ivydM0","order":"a1","name":"Scope enforcement","w":{"mode":"fill"},"layout":{"dir":"column","gap":12}}
 
@@ -7283,7 +7301,7 @@
 
 , "H8mn20": {"type":"text","parent":"jhvCQ0","order":"a5","name":"Token","content":"=","style":{"font":{"$ref":"font-mono"},"size":{"$ref":"text-xs"},"weight":400},"fill":{"$ref":"text-tertiary"}}
 
-, "H8n0wI": {"type":"instance","parent":"lugWn0","order":"a1","name":"Habit tracker","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Habit tracker"}},"h1X020":{"set":{"content":"3 mobile screens"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/839f51ad8e184685.png"}]}}}}
+, "H8n0wI": {"type":"instance","parent":"lugWn0","order":"a1","name":"Habit tracker","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Habit tracker"}},"h1X020":{"set":{"content":"3 mobile screens"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/62f6356e8cd19b6a.png"}]}}}}
 
 , "H95Su0": {"type":"rect","parent":"X2wngo","order":"a8","name":"Divider","w":1,"h":20,"opacity":0.35,"fill":{"$ref":"border"}}
 
@@ -13187,7 +13205,7 @@
 
 , "NSv5y0": {"type":"frame","parent":"r5wZe0","order":"a5","name":"Footer","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"border"},"width":{"t":1}},"layout":{"dir":"row","gap":8,"pad":[10,12],"align":"center"}}
 
-, "NSxzb0": {"type":"frame","parent":"b7DxOW","order":"a0","name":"App Icon 32","w":32,"h":32,"fill":{"kind":"image","src":"./assets/ba98d19f9ce0d8fb.png","fit":"stretch"}}
+, "NSxzb0": {"type":"frame","parent":"b7DxOW","order":"a0","name":"App Icon 32","w":32,"h":32,"fill":{"kind":"image","src":"./assets/8b893a5f990b16dd.png","fit":"stretch"}}
 
 , "NT08W0": {"type":"frame","parent":"qNrfY0","order":"a2","name":"2 · States","w":{"mode":"fill"},"layout":{"dir":"column","gap":20}}
 
@@ -14065,7 +14083,7 @@
 
 , "OIr3K0": {"type":"text","parent":"lsCUZ0","order":"a3","name":"Token","content":"className","style":{"font":{"$ref":"font-mono"},"size":{"$ref":"text-sm"},"weight":400},"fill":{"$ref":"warning"}}
 
-, "OJ6xZ0": {"type":"frame","parent":"xdNWE0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/f9a2fdeac531ff44.png","fit":"stretch"}}
+, "OJ6xZ0": {"type":"frame","parent":"xdNWE0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/899c9558a0ed4b32.png","fit":"stretch"}}
 
 , "OJ8AK0": {"type":"text","parent":"WCoZX0","order":"a0","name":"Amount","content":"$0","style":{"font":"Fraunces","size":28,"weight":600,"letterSpacing":-0.5},"fill":"#2A1E14"}
 
@@ -14687,7 +14705,7 @@
 
 , "P0sW0X": {"type":"frame","parent":"VhJwA0","order":"a3","name":"Connector","w":24,"h":1,"fill":{"$ref":"border-strong"},"layout":{"dir":"row"}}
 
-, "P0u0K0": {"type":"frame","parent":"yR8hp0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/9eff9002b73b573a.png","fit":"stretch"}}
+, "P0u0K0": {"type":"frame","parent":"yR8hp0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/84c5587e1ead867f.png","fit":"stretch"}}
 
 , "P0uQA0": {"type":"frame","parent":"kEx2x0","order":"a0","name":"Vignette · C · AREA_BUSY in the thread","w":360,"layout":{"dir":"column","gap":8}}
 
@@ -15237,7 +15255,7 @@
 
 , "PYFNTIKKRW": {"type":"text","parent":"Lv9MQLMpbk","order":"a1WSB","w":{"mode":"fill"},"content":"Left: logo, file name and its menu, collapse. Right: presence, Share, zoom, play, collapse. They replace the topbar.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-sm"},"weight":400},"fill":{"$ref":"text-secondary"}}
 
-, "PYPOK0": {"type":"frame","parent":"TrVOX0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/ba98d19f9ce0d8fb.png","fit":"stretch"}}
+, "PYPOK0": {"type":"frame","parent":"TrVOX0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/8b893a5f990b16dd.png","fit":"stretch"}}
 
 , "PYThH0": {"type":"instance","parent":"MOQOQ0","order":"a3","name":"Row · blog.kimo","of":"KuHqA0","overrides":{"k6Daof":{"set":{"content":"Yesterday"}},"mau7W0":{"set":{"content":"blog.kimo"}}}}
 
@@ -18651,7 +18669,7 @@
 
 , "T7sfpX8dAm": {"type":"instance","parent":"b0t3j29xKa","order":"a1","name":"H","of":"A9DDs0","overrides":{"jXquz0":{"set":{"content":"H"}},"vpMpD0":{"set":{"content":"Hug"}}}}
 
-, "T7vHU0": {"type":"frame","parent":"oVoBK0","order":"a0","name":"App Icon 32","w":32,"h":32,"fill":{"kind":"image","src":"./assets/f9a2fdeac531ff44.png","fit":"stretch"}}
+, "T7vHU0": {"type":"frame","parent":"oVoBK0","order":"a0","name":"App Icon 32","w":32,"h":32,"fill":{"kind":"image","src":"./assets/899c9558a0ed4b32.png","fit":"stretch"}}
 
 , "T7wjjA": {"type":"text","parent":"wHkgl0","order":"a0","name":"Thread Title","content":"Warm up the hero","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-base"},"weight":600},"fill":{"$ref":"text-primary"}}
 
@@ -23353,7 +23371,7 @@
 
 , "Y7avHj": {"type":"text","parent":"yzuIE0","order":"a2","name":"Note","w":{"mode":"fill"},"content":"For an account that never subscribed or cancelled before its first share. Subscribe opens the wizard at step 3 (3A).","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
-, "Y7eif0": {"type":"frame","parent":"IJRmX0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/f9a2fdeac531ff44.png","fit":"stretch"}}
+, "Y7eif0": {"type":"frame","parent":"IJRmX0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/899c9558a0ed4b32.png","fit":"stretch"}}
 
 , "Y7iYc0": {"type":"icon","parent":"dv7fV0","order":"a0","name":"Icon","w":14,"h":14,"set":"lucide","icon":"triangle-alert","color":{"$ref":"warning"}}
 
@@ -24827,7 +24845,7 @@
 
 , "ZhLgV0": {"type":"frame","parent":"d5ZDH0","order":"a1","name":"1 · Bar","w":{"mode":"fill"},"layout":{"dir":"column","gap":20}}
 
-, "ZhQJH0": {"type":"frame","parent":"m10uAK","order":"a0","name":"App Icon 64","w":64,"h":64,"fill":{"kind":"image","src":"./assets/ba98d19f9ce0d8fb.png","fit":"stretch"}}
+, "ZhQJH0": {"type":"frame","parent":"m10uAK","order":"a0","name":"App Icon 64","w":64,"h":64,"fill":{"kind":"image","src":"./assets/8b893a5f990b16dd.png","fit":"stretch"}}
 
 , "Zhdih0": {"type":"frame","parent":"n5I3Q0","order":"a0","name":"Dark Row 1","w":{"mode":"fill"},"layout":{"dir":"row","gap":32}}
 
@@ -26677,7 +26695,7 @@
 
 , "bf4BP0": {"type":"text","parent":"c96cT0","order":"a1","name":"Desc","w":{"mode":"fill"},"content":"Saved to Settings › Multiplayer. This relay is yours now. Start sharing from the Share button.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-sm"},"weight":400,"lineHeight":1.45,"align":"center"},"fill":{"$ref":"text-secondary"}}
 
-, "bf8ER0": {"type":"frame","parent":"Z9ZjBG","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/2e23db03d5252ead.png","fit":"stretch"}}
+, "bf8ER0": {"type":"frame","parent":"Z9ZjBG","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/ecb2f9ec6324888d.png","fit":"stretch"}}
 
 , "bf8wGrJbwy": {"type":"frame","parent":"mAbPcREhTg","order":"a31hv","name":"Close","w":16,"h":16,"radius":{"$ref":"radius-xs"},"fill":[],"layout":{"dir":"row","justify":"center","align":"center"}}
 
@@ -31085,7 +31103,7 @@
 
 , "g6aOn0": {"type":"frame","parent":"L888zt","order":"a0","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":2}}
 
-, "g6aUV7": {"type":"frame","parent":"oah9H0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/4c7ffe7933ec23a7.png","fit":"stretch"}}
+, "g6aUV7": {"type":"frame","parent":"oah9H0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/3cdb75a41f70a68d.png","fit":"stretch"}}
 
 , "g6f3J0": {"type":"frame","parent":"cJBVT0","order":"a0","name":"Selection","w":{"mode":"fill"},"stroke":{"paint":{"$ref":"border"},"width":{"b":1}},"layout":{"dir":"row","gap":8,"pad":[10,12],"align":"center"}}
 
@@ -31367,7 +31385,7 @@
 
 , "gL5Bd0": {"type":"frame","parent":"A63cq0","order":"a0","name":"Signed-out dot","w":6,"h":6,"radius":{"$ref":"radius-pill"},"fill":{"$ref":"warning"},"layout":{"dir":"row"}}
 
-, "gL7Iy0": {"type":"instance","parent":"FT5BP0","order":"a1","name":"Card · template cover","of":"byua10","overrides":{"PJMqM0":{"set":{"content":"saas-marketing.kimo"}},"cnqrK0":{"set":{"clip":true,"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/5b8e5621591ad727.png"}],"layout":{"dir":"column","justify":"center","align":"center"}}},"fBMds0":{"set":{"visible":false}},"upTZI0":{"set":{"content":"Kimo · Just now"}}}}
+, "gL7Iy0": {"type":"instance","parent":"FT5BP0","order":"a1","name":"Card · template cover","of":"byua10","overrides":{"PJMqM0":{"set":{"content":"saas-marketing.kimo"}},"cnqrK0":{"set":{"clip":true,"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/bd52c4e2f23f985e.png"}],"layout":{"dir":"column","justify":"center","align":"center"}}},"fBMds0":{"set":{"visible":false}},"upTZI0":{"set":{"content":"Kimo · Just now"}}}}
 
 , "gLCtL0": {"type":"instance","parent":"S1FCSx","order":"a1","name":"Letter spacing","of":"A9DDs0","overrides":{"jXquz0":{"replace":true},"vpMpD0":{"set":{"content":"-2%"}}}}
 
@@ -31451,7 +31469,7 @@
 
 , "gRvEC0": {"type":"frame","parent":"kEx2x0","order":"a1","name":"Vignette · D · how the card resolves","w":{"mode":"fill"},"layout":{"dir":"column","gap":8}}
 
-, "gS2Wh0": {"type":"frame","parent":"yaYNk0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/f9a2fdeac531ff44.png","fit":"stretch"}}
+, "gS2Wh0": {"type":"frame","parent":"yaYNk0","order":"a0","name":"App Icon 128","w":128,"h":128,"fill":{"kind":"image","src":"./assets/899c9558a0ed4b32.png","fit":"stretch"}}
 
 , "gS76l0": {"type":"frame","parent":"cUqX80","order":"a5","name":"Saved","layout":{"dir":"row","gap":6,"pad":[0,8],"align":"center"}}
 
@@ -32443,7 +32461,7 @@
 
 , "hViOo0": {"type":"text","parent":"UlxaI0","order":"a0","name":"Title","content":"Providers","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-base"},"weight":600},"fill":{"$ref":"text-primary"}}
 
-, "hVoFQ0": {"type":"instance","parent":"FT5BP0","order":"a0","name":"Card · preview","of":"byua10","overrides":{"PJMqM0":{"set":{"content":"dashboard.kimo"}},"cnqrK0":{"set":{"clip":true,"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/c38c98fa77520e96.png"}],"layout":{"dir":"column","justify":"center","align":"center"}}},"fBMds0":{"set":{"visible":false}},"upTZI0":{"set":{"content":"atlas-app · main · 2 min ago"}}}}
+, "hVoFQ0": {"type":"instance","parent":"FT5BP0","order":"a0","name":"Card · preview","of":"byua10","overrides":{"PJMqM0":{"set":{"content":"dashboard.kimo"}},"cnqrK0":{"set":{"clip":true,"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/35f8f8bc6737b6c5.png"}],"layout":{"dir":"column","justify":"center","align":"center"}}},"fBMds0":{"set":{"visible":false}},"upTZI0":{"set":{"content":"atlas-app · main · 2 min ago"}}}}
 
 , "hW0Pc0": {"type":"text","parent":"azA7J0","order":"a2","name":"Desc","w":{"mode":"fill"},"content":"speed 0.6 · glance up","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-secondary"}}
 
@@ -35429,7 +35447,7 @@
 
 , "kXKXZ0": {"type":"frame","parent":"BIeEW0","order":"a1","name":"Op Chip","h":16,"radius":{"$ref":"radius-xs"},"fill":{"$ref":"danger-soft"},"layout":{"dir":"row","pad":[0,5],"align":"center"}}
 
-, "kXMF80": {"type":"instance","parent":"lugWn0","order":"a3","name":"Design system","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Design system"}},"h1X020":{"set":{"content":"Library to import"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/b297885358035f73.png"}]}}}}
+, "kXMF80": {"type":"instance","parent":"lugWn0","order":"a3","name":"Design system","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Design system"}},"h1X020":{"set":{"content":"Library to import"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/3f7c65b027220113.png"}]}}}}
 
 , "kXOUA0": {"type":"instance","parent":"mgCWT0","order":"a2","name":"Set Headline font to Fraunces 600","of":"lNM1U0","overrides":{"Q2pb20":{"set":{"content":"Set Headline font to Fraunces 600"}}}}
 
@@ -43185,7 +43203,7 @@
 
 , "sjXhK0": {"type":"icon","parent":"h3ee0N","order":"a0","name":"Check","w":12,"h":12,"set":"lucide","icon":"check","color":"#E2683A"}
 
-, "sjXhS0": {"type":"instance","parent":"pHwZ90","order":"a0","name":"Settings page","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Settings page"}},"h1X020":{"set":{"content":"Imports the library"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/c2ce3ef35688ad89.png"}]}}}}
+, "sjXhS0": {"type":"instance","parent":"pHwZ90","order":"a0","name":"Settings page","of":"MeoEq0","props":{"w":{"mode":"fill"}},"overrides":{"QgWel0":{"set":{"content":"Settings page"}},"h1X020":{"set":{"content":"Imports the library"}},"wlebL0":{"set":{"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/2c6e11467e49288d.png"}]}}}}
 
 , "sja1B0": {"type":"text","parent":"T9f5d0","order":"a1","name":"Spec","w":{"mode":"fill"},"content":"Exactly one local CLI can be Default; it wins over every API key while signed in. Picking an API model in a session overrides it for that session only.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-secondary"}}
 
@@ -46971,7 +46989,7 @@
 
 , "wlcAB0": {"type":"icon","parent":"O3haZ0","order":"a0","name":"Icon","w":14,"h":14,"set":"lucide","icon":"circle-dot","color":{"$ref":"component"}}
 
-, "wlebL0": {"type":"frame","parent":"MeoEq0","order":"a0","name":"Thumbnail","w":{"mode":"fill"},"h":164,"radius":{"$ref":"radius-xl"},"clip":true,"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/ba607db850e829f8.png"}],"stroke":{"paint":{"$ref":"border"}},"layout":{"dir":"row"}}
+, "wlebL0": {"type":"frame","parent":"MeoEq0","order":"a0","name":"Thumbnail","w":{"mode":"fill"},"h":164,"radius":{"$ref":"radius-xl"},"clip":true,"fill":[{"$ref":"bg-muted"},{"kind":"image","src":"./assets/c6f239359e98be77.png"}],"stroke":{"paint":{"$ref":"border"}},"layout":{"dir":"row"}}
 
 , "wllgi0": {"type":"frame","parent":"cjNpC0","order":"a1","name":"Text","w":{"mode":"fill"},"layout":{"dir":"column","gap":4}}
 

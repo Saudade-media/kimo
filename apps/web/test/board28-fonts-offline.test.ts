@@ -157,6 +157,17 @@ describe("§1 store on first use (spec §12 rule 3)", () => {
     expect(Object.keys(known.assets ?? {}).sort()).toEqual([img, f.key].sort())
     expect(validate(parse(JSON.stringify(known))).errors).toEqual([])
     expect(withFontManifest(doc, [f], () => null)).toBe(doc)
+    // An empty manifest is no manifest: the font alone would leave the image unlisted.
+    const empty = { ...doc, assets: {} }
+    expect(withFontManifest(empty, [f], () => null)).toBe(empty)
+    // A manifest that misses a reference gets its known entry with the font.
+    const partial = { ...doc, assets: { "0000000000000000.png": { mime: "image/png" } } }
+    const filled = withFontManifest(partial, [f], (k) =>
+      k === img ? { mime: "image/png", bytes: 10 } : null,
+    )
+    expect(Object.keys(filled.assets ?? {}).sort()).toEqual(
+      ["0000000000000000.png", img, f.key].sort(),
+    )
   })
 
   test("over 20 MB, not a font, or a bundled family: skipped", async () => {

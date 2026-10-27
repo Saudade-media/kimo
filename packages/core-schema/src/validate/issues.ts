@@ -95,6 +95,8 @@ export const WARNING_CODES: ReadonlySet<IssueCode> = new Set<IssueCode>([
   "FEATURE_UNKNOWN",
   "ORDER_DUPLICATE",
   "LIBRARY_NOT_LOADED",
+  // A missing image renders as a placeholder; it never makes a document invalid.
+  "ASSET_MISSING",
   "ASSET_UNUSED",
   "THEME_NO_MATCH",
   "TEXT_INVISIBLE",

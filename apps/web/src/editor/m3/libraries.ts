@@ -126,9 +126,12 @@ export async function readLibraryBytes(bytes: Uint8Array, fileName: string): Pro
  */
 export function parseLibrary(text: string): KimoDocument {
   if (text.length > MAX_LIBRARY_BYTES) throw new Error("The library file is too large")
-  const r = openDocument(text)
+  // Untrusted text: no repairs, and validation errors refuse it (an open file never refuses them).
+  const r = openDocument(text, { repair: false })
   if (r.readOnly)
     throw new Error(r.readOnlyReasons.map((x) => x.message).join("; ") || "unreadable library")
+  if (r.validation && !r.validation.ok)
+    throw new Error(`${r.validation.errors.length} validation error(s)`)
   return r.doc
 }
 

@@ -13,7 +13,7 @@
  */
 import { MultiplayerError } from "@kimo/sync/mp"
 import { Button } from "@kimo/ui"
-import { type ReactNode, useEffect, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { failureText } from "../../editor/errors"
 import { Icon } from "../../lib/icons"
 import type { CloudState, CloudStore } from "../cloud/store"
@@ -57,7 +57,12 @@ export function CloudShareBody(props: CloudShareBodyProps) {
     if (props.canStartSelf) setHostOpen(true)
   }, [props.canStartSelf])
 
+  // One start at a time: the share status turns "starting" only after the relay lookup, so a
+  // second click before then would start (and mint links) again.
+  const inFlight = useRef(false)
   const startCloud = async () => {
+    if (inFlight.current) return
+    inFlight.current = true
     setRefused(null)
     try {
       await props.onStartCloud()
@@ -71,6 +76,8 @@ export function CloudShareBody(props: CloudShareBodyProps) {
       }
       if (isUnreachable(e)) return setRefused("offline")
       toast({ tone: "danger", text: failureText("start sharing", e) })
+    } finally {
+      inFlight.current = false
     }
   }
 

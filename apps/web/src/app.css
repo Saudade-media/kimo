@@ -332,6 +332,16 @@ button {
   background: var(--kimo-bg-canvas);
 }
 
+/* Canvas DOM overlays (agents, multiplayer cursors, claims, image placeholders): one stacking
+   context below the side cards (.ws-card, z-index 4) and above the canvas chrome (z-index 3). */
+.editor__canvas-layers {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  isolation: isolate;
+  pointer-events: none;
+}
+
 /* Board 17 failed load (z6LzR) replaces the canvas: it covers the (empty) canvas host, which
    is absolutely positioned and would otherwise take the card's clicks (Reveal, Open as text). */
 .editor__canvas > .kimo-files-failed {

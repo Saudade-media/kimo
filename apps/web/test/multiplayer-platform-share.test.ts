@@ -57,6 +57,25 @@ describe("platform share", () => {
     await share.stopSharing()
   })
 
+  test("starting several times at once mints one view and one edit link", async () => {
+    const { share } = device()
+    const { store } = makeTarget(FILE)
+    const runs = await Promise.all(
+      Array.from({ length: 5 }, () => share.shareSession({ ref: FILE, store }, relay.url)),
+    )
+    expect(new Set(runs.map((r) => r.room)).size).toBe(1)
+    expect(new Set(runs.map((r) => r.view.jti)).size).toBe(1)
+    expect(new Set(runs.map((r) => r.edit.jti)).size).toBe(1)
+    const links = await share.links(runs[0]?.room)
+    expect(links.filter((l) => l.role === "view")).toHaveLength(1)
+    expect(links.filter((l) => l.role === "edit")).toHaveLength(1)
+    // A later start reuses them too.
+    const again = await share.shareSession({ ref: FILE, store }, relay.url)
+    expect(again.view.jti).toBe(runs[0]?.view.jti)
+    expect((await share.links(again.room)).length).toBe(2)
+    await share.stopSharing()
+  })
+
   test("share, join, presence, status, invites, revoke, reset and stop", async () => {
     const owner = device()
     const guest = device()

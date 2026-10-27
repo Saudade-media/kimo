@@ -1237,8 +1237,12 @@ function EditorShell({
                   console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
                 }}
               />
-              {agents.canvasLayer}
-              {multiplayer.canvasLayer}
+              {/* One stacking context under the side cards: the layers' own z-indexes order them
+                  among themselves, never above the cards. */}
+              <div className="editor__canvas-layers">
+                {agents.canvasLayer}
+                {multiplayer.canvasLayer}
+              </div>
               {agentPanel.modeSummary}
               {conflicts && (
                 <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />

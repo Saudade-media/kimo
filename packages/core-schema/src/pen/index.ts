@@ -5,6 +5,7 @@ export {
   type PenImportResult,
   type PenImportWarning,
   penFileUrls,
+  penImagePlaceholder,
   penImageUrls,
   penOrderKey,
 } from "./import"

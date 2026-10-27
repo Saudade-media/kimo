@@ -2,7 +2,7 @@
  * Opening a pen.dev `.pen` file on desktop: converted once into a `.kimo` beside it, which is
  * what the session opens; the `.pen` is never written and existing files are never replaced.
  */
-import { describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { parse, validate } from "@kimo/core-schema"
 import { convertPenFile, isPenPath } from "../src/platform/pen"
 import { docText, setup } from "./m4-helpers"
@@ -121,6 +121,63 @@ describe("opening .pen files", () => {
     const { platform } = await setup({ [PEN]: withImage, [`${DIR}/100%.png`]: "not a png" })
     const c = await convertPenFile(platform, PEN)
     expect(validate(parse((await platform.files.readText(c.ref)).text)).errors).toEqual([])
+  })
+
+  describe("image paths", () => {
+    // A 1×1 PNG; the test runtime has no image decoder, so createImageBitmap is stubbed.
+    const PNG = Uint8Array.from(
+      atob(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      ),
+      (c) => c.charCodeAt(0),
+    )
+    const g = globalThis as { createImageBitmap?: unknown }
+    const original = g.createImageBitmap
+    beforeAll(() => {
+      g.createImageBitmap = async () => ({ width: 1, height: 1, close() {} })
+    })
+    afterAll(() => {
+      g.createImageBitmap = original
+    })
+    const withImage = (url: string) =>
+      JSON.stringify({
+        version: "2.20",
+        children: [
+          {
+            type: "rectangle",
+            id: "Img01",
+            width: 10,
+            height: 10,
+            fill: { type: "image", url, mode: "cover" },
+          },
+        ],
+      })
+    const srcOf = (text: string) => /"src":"([^"]+)"/.exec(text)?.[1]
+
+    test("a bare relative image path (images/a b.png, as pen.dev writes it) is stored", async () => {
+      const { platform } = await setup({ [PEN]: withImage("images/a%20b.png") })
+      await platform.files.writeBytesAtomic(`${DIR}/images/a b.png`, PNG, { mkdirs: true })
+      const c = await convertPenFile(platform, PEN)
+      expect(c.warnings).toEqual([])
+      const src = srcOf((await platform.files.readText(c.ref)).text)
+      expect(src).toMatch(/^\.\/assets\/[0-9a-f]{16}\.png$/)
+      expect(await platform.files.stat(`${DIR}/${src?.slice(2)}`)).toBeTruthy()
+    })
+
+    test("reopening a conversion stores the images it could not load before", async () => {
+      const { platform } = await setup({ [PEN]: withImage("images/a.png") })
+      const first = await convertPenFile(platform, PEN)
+      const before = srcOf((await platform.files.readText(first.ref)).text)
+      expect(first.warnings.map((w) => w.code)).toEqual(["IMAGE_MISSING"])
+      await platform.files.writeBytesAtomic(`${DIR}/images/a.png`, PNG, { mkdirs: true })
+      const again = await convertPenFile(platform, PEN)
+      expect(again).toMatchObject({ ref: first.ref, created: false })
+      const text = (await platform.files.readText(again.ref)).text
+      const after = srcOf(text)
+      expect(after).not.toBe(before)
+      expect(await platform.files.stat(`${DIR}/${after?.slice(2)}`)).toBeTruthy()
+      expect(validate(parse(text)).errors).toEqual([])
+    })
   })
 
   test("reopening a .pen edited on disk in the same window opens its new conversion", async () => {

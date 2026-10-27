@@ -15,6 +15,7 @@ import type { M3Controller } from "../m3/controller"
 import { activePageId, activeRoots } from "../pages/model"
 import { nodeName } from "../props"
 import type { FileSession } from "../session"
+import { figmaPaste, figmaWarningText, isFigmaClipboard } from "./figma"
 import {
   buildPayload,
   type ClipboardPayload,
@@ -321,6 +322,7 @@ export class EditorCommands {
         }
       const payload = decodePayload((t) => (t === "text/html" ? html : ""))
       if (payload) return void (await this.paste(payload, mode))
+      if (isFigmaClipboard(html)) return void (await this.pasteFigma(html, mode))
       if (blobs.length) {
         const { session, m3, canvas } = this.d
         await importRasterFiles({ session, m3, canvas }, blobs, { kind: "paste" })
@@ -334,6 +336,36 @@ export class EditorCommands {
       // Unavailable or denied: fall through to the in-window copy.
     }
     if (lastCopy) await this.paste(lastCopy, mode)
+  }
+
+  /** A Figma copy (`text/html` with Figma's data): converted, its images downloaded, pasted. */
+  async pasteFigma(html: string, mode: PasteMode): Promise<string[]> {
+    const { m3 } = this.d
+    let r: Awaited<ReturnType<typeof figmaPaste>>
+    try {
+      r = await figmaPaste(html, this.d.assets(), (n) =>
+        m3.toast({
+          tone: "component",
+          icon: "arrow-down-to-line",
+          text: n === 1 ? "Downloading 1 image from Figma…" : `Downloading ${n} images from Figma…`,
+        }),
+      )
+    } catch (e) {
+      m3.toast({
+        tone: "warning",
+        text: `Couldn't paste from Figma: ${e instanceof Error ? e.message : String(e)}`,
+      })
+      return []
+    }
+    if (!r) return []
+    if (!r.payload.roots.length) {
+      m3.toast({ tone: "warning", text: "Nothing in this Figma copy can be pasted into Kimo" })
+      return []
+    }
+    const roots = await this.paste(r.payload, mode)
+    const note = roots.length ? figmaWarningText(r) : null
+    if (note) m3.toast({ tone: "warning", text: note })
+    return roots
   }
 
   /** Plain text (no Kimo payload, no image): a new text layer at the paste target. */

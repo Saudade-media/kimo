@@ -25,6 +25,7 @@
     "@kimo/ai-agent": "workspace:*",
     "@kimo/core-schema": "workspace:*",
     "@kimo/design-tokens": "workspace:*",
+    "@kimo/figma": "workspace:*",
     "@kimo/desktop": "workspace:*",
     "@kimo/editor-state": "workspace:*",
     "@kimo/exporters": "workspace:*",

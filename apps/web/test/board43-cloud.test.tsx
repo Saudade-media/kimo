@@ -22,7 +22,7 @@ import { CloudPlanBanner } from "../src/multiplayer/ui/CloudPlanBanner"
 import { CloudNotice, CloudSignOutDialog } from "../src/multiplayer/ui/cloud-parts"
 import { MultiplayerPane } from "../src/multiplayer/ui/MultiplayerPane"
 import { RelayWizard, type WizardStart } from "../src/multiplayer/ui/RelayWizard"
-import { SharePopover } from "../src/multiplayer/ui/SharePopover"
+import { cloudRelayChanged, SharePopover } from "../src/multiplayer/ui/SharePopover"
 import { createFakeShareBackend } from "../src/multiplayer/ui/testing"
 
 const keys = createMemoryDeviceKeyStore()
@@ -236,6 +236,13 @@ describe("Share popover (section 4, 6 A)", () => {
     expect(lapsed).toContain("Host your own, free")
     expect(lapsed).toContain('aria-expanded="false"')
     expect(lapsed).not.toContain("relay.cloud.test")
+  })
+
+  test("a Kimo Cloud share saves Kimo Cloud's current relay over a stale saved one", () => {
+    const now = "https://relay.getkimo.design"
+    expect(cloudRelayChanged(null, now)).toBe(true)
+    expect(cloudRelayChanged("https://relay-production-1a2b.up.railway.app", now)).toBe(true)
+    expect(cloudRelayChanged(now, `${now}/`)).toBe(false)
   })
 
   test("without Kimo Cloud the popover is board 41 / 42", () => {

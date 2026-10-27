@@ -1,6 +1,6 @@
 {
   "name": "@kimo/layout",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "LayoutEngine interface + Yoga implementation (flex auto-layout for .kimo nodes)",
   "license": "MIT",

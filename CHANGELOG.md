@@ -14,6 +14,22 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-28
+
+### Added
+
+- Paste from Figma: copy layers in Figma and paste them into Kimo as editable layers, on the
+  desktop app and the web. Frames, auto layout (direction, gap, padding, alignment, hug and fill
+  sizing), shapes, vectors, text with mixed styles and lists, fills, gradients, strokes, corner
+  radii, shadows and blurs carry over. Component instances paste as frames. The copy's images are
+  downloaded from Figma and stored in the file; anything Kimo can't carry over is listed in a toast.
+
+### Fixed
+
+- Opening a `.pen` file whose images use plain relative paths (`images/photo.jpg`) loads the
+  images instead of showing placeholders. Reopening a `.pen` converted before this fix relinks
+  the images it missed.
+
 ## [1.0.1] - 2026-10-27
 
 ### Fixed

@@ -8,7 +8,12 @@ import {
 } from "react"
 import { cx, mergeRefs } from "../internal/util"
 import type { PlacementOptions } from "../popover/position"
-import { type PopoverAnchor, useAnchoredPosition, useDismiss } from "../popover/usePopover"
+import {
+  floating,
+  type PopoverAnchor,
+  useAnchoredPosition,
+  useDismiss,
+} from "../popover/usePopover"
 
 const ITEM_SELECTOR =
   '[role="menuitem"]:not([aria-disabled="true"]), [role="menuitemradio"]:not([aria-disabled="true"]), [role="menuitemcheckbox"]:not([aria-disabled="true"])'
@@ -106,7 +111,7 @@ export function MenuDense({
     }
   }
 
-  return (
+  return floating(
     <div
       {...rest}
       ref={mergeRefs(root, ref)}
@@ -129,7 +134,8 @@ export function MenuDense({
       onKeyDown={handleKeyDown}
     >
       <div className="kimo-menu-dense__items">{children}</div>
-    </div>
+    </div>,
+    anchor,
   )
 }
 

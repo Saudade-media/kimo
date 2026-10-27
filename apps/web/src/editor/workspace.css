@@ -33,10 +33,10 @@
   width: 280px;
 }
 
-/* §2 "Right Card · Page" (0a6xPwPNg3): 256 wide, height hugs its content. */
+/* §2 "Right Card · Page" (0a6xPwPNg3): height hugs its content. The width stays the Right
+   Card's 280 on every tab, so switching tabs never resizes the card or squeezes its header. */
 .ws-card.ws-card--page {
   bottom: auto;
-  width: 256px;
   max-height: calc(100% - 16px);
 }
 
@@ -159,8 +159,19 @@
 }
 
 /* Presence (y1yBt6VlGj): row gap -6 (each avatar overlaps the previous one by 6), no padding. */
+/* Three avatars, Sharing and View fill the 262 inside the header exactly; with less room the
+   stack gives way (its last avatars are cut) instead of running under Share and Zoom. */
 .card-header .mp-stack {
+  flex: 0 1 auto;
+  min-width: 0;
   padding: 0;
+  overflow: clip;
+  overflow-clip-margin: 2px;
+}
+
+.card-header .mp-stack > *,
+.card-header .mp-share-button {
+  flex: none;
 }
 
 .card-header .mp-stack > * + * {

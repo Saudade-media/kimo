@@ -3,7 +3,7 @@
  * blocks until Deny / Always for this session / Allow once, or the 2-minute timeout denies it.
  * Prompts queue oldest first (rule "Approval"); Esc = Deny.
  */
-import { AgentMark, AgentOpRow, Button, useAnchoredPosition } from "@kimo/ui"
+import { AgentMark, AgentOpRow, Button, floating, useAnchoredPosition } from "@kimo/ui"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { AgentsControllerExt } from "./controller"
@@ -82,7 +82,7 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
   // Board 34 §4: height capped at min(70vh, the space below the anchor − 16).
   const top = anchor ? anchor.getBoundingClientRect().bottom + 18 : FALLBACK.y + 8
   const answer = (choice: "deny" | "session" | "once") => void controller.answer(r.id, choice)
-  return (
+  return floating(
     <div
       ref={root}
       role="alertdialog"
@@ -213,6 +213,7 @@ export function ApprovalPrompt({ controller, anchor }: ApprovalPromptProps) {
       <span className="agents-approval__footnote" data-testid="agent-approval-footnote">
         {approvalFootnote(r, remaining, prompt.queued)}
       </span>
-    </div>
+    </div>,
+    anchor,
   )
 }

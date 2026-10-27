@@ -233,6 +233,7 @@ export {
   type Side,
 } from "./popover/position"
 export {
+  floating,
   focusables,
   type PopoverAnchor,
   useAnchoredPosition,

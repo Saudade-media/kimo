@@ -1,4 +1,5 @@
-import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { type ReactNode, type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { anchoredPosition, type PlacementOptions, type Rect } from "./position"
 
 /** What a floating surface is anchored to: a live element (preferred) or a fixed rect. */
@@ -10,6 +11,25 @@ const isElement = (a: PopoverAnchor): a is HTMLElement =>
 const rectOf = (a: HTMLElement | DOMRect | Rect): Rect => {
   const r = isElement(a) ? a.getBoundingClientRect() : a
   return { x: r.x, y: r.y, width: r.width, height: r.height }
+}
+
+/**
+ * Surfaces a floating one stays inside: a dialog, popover, menu or tooltip already floats above
+ * the page, and a nested element with its own `data-theme` (the gallery) keeps its theme.
+ */
+const LAYER =
+  '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [role="tooltip"], :not(html)[data-theme]'
+
+/**
+ * Renders an anchored surface where nothing can cover it: in `document.body` when its anchor
+ * element sits outside every {@link LAYER}, since a panel's stacking context (Workspace v2's
+ * cards are `z-index: 3` siblings) traps a `position: fixed` child under the other panel. In
+ * place inside a layer (it stacks above its parent there, and stays in its DOM for outside
+ * clicks), for a rect anchor, and without an anchor.
+ */
+export function floating(node: ReactNode, anchor: PopoverAnchor): ReactNode {
+  if (!isElement(anchor) || anchor.closest(LAYER)) return node
+  return createPortal(node, anchor.ownerDocument.body)
 }
 
 /**

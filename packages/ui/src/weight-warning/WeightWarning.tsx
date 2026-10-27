@@ -1,7 +1,7 @@
 import { type ComponentPropsWithRef, useRef } from "react"
 import { cx, mergeRefs } from "../internal/util"
 import type { PlacementOptions } from "../popover/position"
-import { type PopoverAnchor, useAnchoredPosition } from "../popover/usePopover"
+import { floating, type PopoverAnchor, useAnchoredPosition } from "../popover/usePopover"
 
 /**
  * Board 24 (k) "Warning dot" (HWYvD): a 6 × 6 `$warning` ellipse on the weight field, between
@@ -44,7 +44,7 @@ export function MissingWeightTooltip({
     offset: 6,
     ...placement,
   })
-  return (
+  return floating(
     <div
       role="tooltip"
       {...rest}
@@ -64,6 +64,7 @@ export function MissingWeightTooltip({
     >
       <span className="kimo-weight-tooltip__title">{title}</span>
       <span className="kimo-weight-tooltip__body">{body}</span>
-    </div>
+    </div>,
+    anchor,
   )
 }

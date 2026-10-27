@@ -14,6 +14,17 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-27
+
+### Fixed
+
+- Share links from Kimo Cloud use the relay Kimo Cloud names today (`relay.getkimo.design`)
+  instead of a relay URL saved before it moved, which put the old host in every link.
+- Popovers, menus and tooltips opened from the side cards (Share, sync status, lock details,
+  agent presence and approval) float above both cards instead of slipping under the other one.
+- The right card keeps the same 280 width on every tab, so its header (avatars, Sharing, Zoom)
+  no longer squeezes together on the Page card.
+
 ## [1.0.0] - 2026-10-26
 
 The first public release: release engineering, polish, the new mark and the format 1.0 freeze.

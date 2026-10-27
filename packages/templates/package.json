@@ -1,6 +1,6 @@
 {
   "name": "@kimo/templates",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Bundled starter templates: .kimo documents, cover and screen previews, and a loader",
   "license": "MIT",

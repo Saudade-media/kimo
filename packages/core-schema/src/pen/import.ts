@@ -561,7 +561,7 @@ class PenImporter {
         let src = typeof mapped === "string" ? mapped : undefined
         if (!src) {
           this.warn("IMAGE_MISSING", `Image "${url}" could not be loaded`, node.id)
-          src = `./assets/${placeholderHash(url)}.png`
+          src = penImagePlaceholder(url)
         }
         let fit = f.mode === "contain" || f.mode === "stretch" ? f.mode : undefined
         let crop: number[] | undefined
@@ -1228,7 +1228,14 @@ function relativePath(url: unknown): string | null {
   return /\s/.test(rel) || rel.endsWith("/") ? null : rel.replace(/\/{2,}/g, "/")
 }
 
-/** A stand-in asset name for an image that could not be stored (renders as missing). */
+/**
+ * The stand-in asset reference an image fill gets when its URL could not be stored (it renders
+ * as missing). A host that can load the image later swaps it for the stored asset.
+ */
+export function penImagePlaceholder(url: string): string {
+  return `./assets/${placeholderHash(url)}.png`
+}
+
 function placeholderHash(s: string): string {
   let h1 = 0x811c9dc5
   let h2 = 0x01000193

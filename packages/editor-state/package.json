@@ -15,7 +15,7 @@
   "dependencies": {
     "@kimo/core-schema": "workspace:*",
     "yjs": "^13.6.33",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "fast-check": "^4.10.2"

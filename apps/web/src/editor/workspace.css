@@ -10,7 +10,8 @@
 
 .ws-card {
   position: absolute;
-  z-index: 3;
+  /* Above the canvas overlays (.editor__canvas-layers, 3). */
+  z-index: 4;
   top: 8px;
   bottom: 8px;
   border-radius: var(--kimo-radius-lg);

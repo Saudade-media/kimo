@@ -40,6 +40,7 @@ import {
   type ReactNode,
   type RefObject,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -56,6 +57,62 @@ import {
 } from "./model-chooser"
 
 /** The shared floating frame (Menu/Dense geometry: bg-overlay, radius-lg, shadow 0 8 24). */
+/**
+ * Where each menu sits against the composer wrap (the CSS values of board 39 / 40 / 22 D):
+ * `edge` is the side it aligns to 12 px inside the wrap ("both" spans it), `gap` the space above.
+ */
+const PLACE: Record<string, { edge: "left" | "right" | "both"; gap: number }> = {
+  "agent-menu--model": { edge: "right", gap: 4 },
+  "agent-menu--skills": { edge: "both", gap: 4 },
+  "agent-menu--more": { edge: "left", gap: 4 },
+  "agent-menu--mode": { edge: "both", gap: 6 },
+}
+const INSET = 12
+/** Smallest space kept between a menu and the window edge. */
+const MARGIN = 8
+
+/**
+ * Fixed coordinates for a composer menu, measured from the composer wrap. The menus are wider
+ * than the Right Card can hold (the model chooser is 304 in a 280 card) and taller than the
+ * space above a short composer, so `position: absolute` let the card's clipping cut them off;
+ * fixed, they escape it (the card has no transform) and stay in the panel's DOM.
+ */
+function usePlacement(
+  marker: RefObject<HTMLSpanElement | null>,
+  className: string,
+): CSSProperties | null {
+  const [style, setStyle] = useState<CSSProperties | null>(null)
+  const place = PLACE[className.split(" ")[0] ?? ""]
+  useLayoutEffect(() => {
+    const wrap = marker.current?.parentElement?.closest(".agent-panel__composer-wrap")
+    if (!place || !wrap) return
+    const update = () => {
+      const r = wrap.getBoundingClientRect()
+      const vw = window.innerWidth
+      const next: CSSProperties = {
+        position: "fixed",
+        top: "auto",
+        bottom: window.innerHeight - r.top + place.gap,
+        maxHeight: `min(560px, 70vh, ${Math.max(0, r.top - place.gap - MARGIN)}px)`,
+        left: place.edge === "right" ? "auto" : Math.max(MARGIN, r.left + INSET),
+        right: place.edge === "left" ? "auto" : Math.max(MARGIN, vw - r.right + INSET),
+      }
+      setStyle((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+    }
+    update()
+    window.addEventListener("resize", update)
+    window.addEventListener("scroll", update, true)
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : undefined
+    ro?.observe(wrap)
+    return () => {
+      window.removeEventListener("resize", update)
+      window.removeEventListener("scroll", update, true)
+      ro?.disconnect()
+    }
+  }, [marker, place])
+  return place ? style : null
+}
+
 function MenuFrame({
   className,
   label,
@@ -90,7 +147,9 @@ function MenuFrame({
     document.addEventListener("pointerdown", onDown, true)
     return () => document.removeEventListener("pointerdown", onDown, true)
   }, [onClose])
-  return (
+  const marker = useRef<HTMLSpanElement>(null)
+  const placed = usePlacement(marker, className)
+  const menu = (
     <div
       {...data}
       ref={root}
@@ -99,7 +158,7 @@ function MenuFrame({
       tabIndex={-1}
       data-testid={testId}
       className={`agent-menu ${className}`}
-      style={style}
+      style={placed ? { ...placed, ...style } : style}
       onKeyDown={(e) => {
         onKeyDown?.(e)
         if (e.defaultPrevented) return
@@ -111,6 +170,13 @@ function MenuFrame({
     >
       {children}
     </div>
+  )
+  // Absolute (the CSS) until measured, and wherever there is no composer wrap (the gallery).
+  return (
+    <>
+      <span ref={marker} hidden />
+      {menu}
+    </>
   )
 }
 

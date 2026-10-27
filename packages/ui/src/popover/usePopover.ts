@@ -23,7 +23,7 @@ const LAYER =
 /**
  * Renders an anchored surface where nothing can cover it: in `document.body` when its anchor
  * element sits outside every {@link LAYER}, since a panel's stacking context (Workspace v2's
- * cards are `z-index: 3` siblings) traps a `position: fixed` child under the other panel. In
+ * cards are `z-index: 4` siblings) traps a `position: fixed` child under the other panel. In
  * place inside a layer (it stacks above its parent there, and stays in its DOM for outside
  * clicks), for a rect anchor, and without an anchor.
  */

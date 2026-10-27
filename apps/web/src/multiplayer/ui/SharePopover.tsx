@@ -24,7 +24,7 @@
  * restarts.
  */
 import type { Role } from "@kimo/sync/mp"
-import { MultiplayerError } from "@kimo/sync/mp"
+import { MultiplayerError, normalizeRelayUrl } from "@kimo/sync/mp"
 import {
   Button,
   IconButton,
@@ -79,6 +79,15 @@ import { copyText, GuideLink, openRelayGuide, useShareToast } from "./shared"
 import "./share-ui.css"
 
 const selectExpiry = (v: DocumentShareView) => v.expiry
+
+/**
+ * Whether a Kimo Cloud share must save Kimo Cloud's relay URL over `saved` (the saved URL when
+ * Kimo Cloud is the chosen relay, else null). Its answer always wins: the hosted relay can move
+ * (a custom domain replacing the provider's), and a stale URL puts the old host in every link.
+ */
+export function cloudRelayChanged(saved: string | null, answer: string): boolean {
+  return saved === null || saved !== normalizeRelayUrl(answer)
+}
 
 const ROLE_OPTIONS = [
   { value: "view" as const, label: ROLE_LABEL.view },
@@ -293,10 +302,9 @@ function SetupBody({
     const startCloud = async () => {
       const relay = await cloud.relay()
       let relayUrl = settings.relayUrl
-      if (!cloudRelay || !relayUrl) {
+      if (relayUrl === null || cloudRelayChanged(cloudRelay ? relayUrl : null, relay.relayUrl))
         relayUrl = (await model.settings.setRelayUrl(relay.relayUrl)) ?? relay.relayUrl
-        await relaySetup?.store.save({ patch: { path: "cloud" } })
-      }
+      if (!cloudRelay) await relaySetup?.store.save({ patch: { path: "cloud" } })
       await model.document(docKey).startSharing({ relayUrl })
     }
     const fix =

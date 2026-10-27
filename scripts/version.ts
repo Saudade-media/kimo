@@ -6,6 +6,7 @@
  *   - `apps/desktop/src-tauri/Cargo.toml` and `kimo-mcp/Cargo.toml` (`[package] version`)
  *   - their two entries in `apps/desktop/src-tauri/Cargo.lock` (so `cargo build --locked` holds)
  *   - the CLI's hard-coded version strings (`kimo version`, the headless MCP server info)
+ *   - `@kimo/sync`'s `CLIENT_VERSION` (the multiplayer client version sent in `hello`)
  *
  * Dry run by default: prints every change and writes nothing. Pass --write to apply.
  *
@@ -115,6 +116,11 @@ export function sites(): Site[] {
       join(ROOT, "packages/cli/src/mcp/headless.ts"),
       "headless MCP server version",
       /CLI_VERSION = "([^"]+)"/,
+    ),
+    literal(
+      join(ROOT, "packages/sync/src/network-provider.ts"),
+      "multiplayer client version (sent in hello)",
+      /CLIENT_VERSION = "([^"]+)"/,
     ),
   ]
 }

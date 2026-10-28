@@ -1,0 +1,82 @@
+# Update feeds: when a release is published, its updater manifest (tauri-action's `latest.json`)
+# becomes the feed the app checks. The app reads
+# https://github.com/Saudade-media/kimo/releases/download/updater/latest-<channel>.json
+# (UPDATE_FEED_PLACEHOLDER in updater.rs and @kimo/platform). Both files live on the `updater`
+# release, which exists only to hold them and is a prerelease, so it never becomes the
+# repository's "Latest" release:
+#
+#   latest-beta.json    every published release, stable or prerelease (beta gets whichever is newer)
+#   latest-stable.json  stable releases only
+#
+# A feed never moves backwards: publishing a release older than what a feed already offers (a
+# backported patch, say) leaves that feed alone. This runs on publish rather than in release.yml
+# because a draft's download links only work once it is published.
+#
+# `workflow_dispatch` points the feeds at an already published tag, to seed them or re-run.
+name: updater-feed
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag (vX.Y.Z or vX.Y.Z-beta.N)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: updater-feed
+  cancel-in-progress: false
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      FEED: updater
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: point the channel feeds at this release
+        run: |
+          set -euo pipefail
+          read -r draft pre < <(gh release view "$TAG" --json isDraft,isPrerelease --jq '"\(.isDraft) \(.isPrerelease)"')
+          if [ "$draft" = "true" ]; then
+            echo "::error::$TAG is still a draft: its download links don't work until it is published"
+            exit 1
+          fi
+          if ! gh release download "$TAG" -p latest.json; then
+            echo "::warning::$TAG has no latest.json (updater signing not configured): feeds unchanged"
+            exit 0
+          fi
+          version="$(jq -r .version latest.json)"
+
+          if ! gh release view "$FEED" > /dev/null 2>&1; then
+            gh release create "$FEED" --prerelease --target main --title "Update feeds" \
+              --notes "Update manifests read by the in-app updater (latest-stable.json, latest-beta.json), written by .github/workflows/updater-feed.yml when a release is published. Don't delete this release or its tag: installed apps check here for updates."
+          fi
+
+          channels="beta"
+          [ "$pre" = "true" ] || channels="beta stable"
+          for ch in $channels; do
+            file="latest-$ch.json"
+            current=""
+            if gh release download "$FEED" -p "$file" -O current.json --clobber 2> /dev/null; then
+              current="$(jq -r .version current.json)"
+            fi
+            if [ -n "$current" ] \
+              && bun -e 'process.exit(Bun.semver.order(process.argv[1], process.argv[2]) > 0 ? 0 : 1)' "$current" "$version"; then
+              echo "$file stays at $current (newer than $version)" | tee -a "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            cp latest.json "$file"
+            gh release upload "$FEED" "$file" --clobber
+            echo "$file: ${current:-none} → $version" | tee -a "$GITHUB_STEP_SUMMARY"
+          done

@@ -328,9 +328,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      # tauri-action uploads `latest.json`; the app's updater endpoint (tauri.conf.json) reads
-      # `latest-stable.json`, so the stable channel gets a copy. Prereleases keep latest.json only.
-      - name: latest.json → latest-stable.json
+      # tauri-action uploads `latest.json`. The channel feeds the app reads are written on publish
+      # by updater-feed.yml. Installs of 1.2.0 and earlier still read
+      # releases/latest/download/latest-<channel>.json, which only ever resolves to the newest
+      # stable release, so stable tags also get copies under both channel names: installs on
+      # either channel then update to the next stable release, which reads the new feeds.
+      - name: latest.json → latest-stable.json, latest-beta.json (installs of 1.2.0 and earlier)
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
@@ -346,10 +349,12 @@ jobs:
           done
           if [ "$PRERELEASE" = "false" ]; then
             cp latest.json latest-stable.json
-            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" latest-stable.json --clobber
+            cp latest.json latest-beta.json
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" latest-stable.json latest-beta.json --clobber
           fi
           {
             echo "## Draft release $TAG"
             echo
             echo "Review the assets, run the smoke tests in docs/release.md, then publish the draft."
+            echo "Publishing it updates the channel feeds (updater-feed.yml)."
           } >> "$GITHUB_STEP_SUMMARY"

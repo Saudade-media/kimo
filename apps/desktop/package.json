@@ -1,6 +1,6 @@
 {
   "name": "@kimo/desktop",
-  "version": "1.2.1-beta.0",
+  "version": "1.2.1-beta.1",
   "private": true,
   "description": "Kimo desktop shell (Tauri v2)",
   "license": "MIT",

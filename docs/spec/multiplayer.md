@@ -849,7 +849,7 @@ Invalid values make `main.ts` print the variable and exit 1.
 ### 14.10 Packaging
 
 - `apps/server/Dockerfile`: build context is the repo root
-  (`docker build -f apps/server/Dockerfile .`); base `oven/bun:1.3-alpine`; copies the workspace
+  (`docker build -f apps/server/Dockerfile .`); base `oven/bun:1.4.4-alpine`; copies the workspace
   manifests and `packages/sync`, `apps/server`; `bun install --production --frozen-lockfile`;
   `ENV HOST=0.0.0.0 KIMO_DATA_DIR=/data`; `VOLUME /data`; `EXPOSE 8787`; runs as the `bun` user;
   `HEALTHCHECK` on `/healthz`; `CMD ["bun", "apps/server/src/main.ts"]`. CI

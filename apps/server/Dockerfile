@@ -4,14 +4,14 @@
 #
 # Board 45: share links are https://<relay>/join#..., so the image also serves the Kimo web app.
 # The first stage builds it; the relay stage carries only its static files.
-FROM oven/bun:1.3-alpine AS web
+FROM oven/bun:1.4.4-alpine AS web
 
 WORKDIR /app
 COPY . .
 RUN bun install --frozen-lockfile --filter @kimo/web \
   && cd apps/web && bun run build
 
-FROM oven/bun:1.3-alpine
+FROM oven/bun:1.4.4-alpine
 
 WORKDIR /app
 COPY . .

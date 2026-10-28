@@ -14,8 +14,14 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1-beta.0] - 2026-10-28
+
+The first beta: the fixes below, for installs on the Beta channel.
+
 ### Fixed
 
+- A guest opening a share link sees the shared images right away. Before, they kept showing
+  placeholders until the guest reloaded the page.
 - The Beta update channel works. Its update feed was never published, so checking for updates
   on Beta failed. Installs of 1.2.0 or earlier set to Beta update to the next stable release
   and get betas from then on.

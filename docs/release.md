@@ -110,7 +110,8 @@ A beta is the same release with a prerelease version, such as `1.3.0-beta.0`
 (`bun scripts/version.ts 1.3.0-beta.0 --write`, then `prerelease --preid beta --write` for
 `1.3.0-beta.1` and so on). The workflow marks its draft as a prerelease, and publishing it
 updates only the beta feed. Beta installs get whichever is newer, the latest beta or the latest
-stable release; stable installs never see a beta.
+stable release; stable installs never see a beta. The Windows MSI can't carry `-beta.N`, so
+`release.yml` builds it as version `X.Y.Z.N`.
 
 - [ ] Move the `Unreleased` section of `CHANGELOG.md` under `## [X.Y.Z] - YYYY-MM-DD`.
 - [ ] `bun run check` passes.

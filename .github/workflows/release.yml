@@ -208,9 +208,11 @@ jobs:
           "thumbprint=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
 
       # Build-time config merged after tauri.conf.json and tauri.bundle.conf.json: the updater
-      # public key, signed updater artifacts (only with a signing key), Windows signing.
+      # public key, signed updater artifacts (only with a signing key), Windows signing, and the
+      # MSI version of a prerelease.
       - name: release config
         env:
+          VERSION: ${{ needs.prepare.outputs.version }}
           UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
           HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
           WIN_THUMBPRINT: ${{ steps.wincert.outputs.thumbprint }}
@@ -231,6 +233,15 @@ jobs:
                 digestAlgorithm: "sha256",
                 timestampUrl: e.WIN_TIMESTAMP || "http://timestamp.digicert.com",
               }
+            // MSI (WiX) takes numeric versions only, so a prerelease such as 1.3.0-beta.2 builds
+            // as MSI 1.3.0.2. Windows Installer ignores the fourth field when it compares
+            // versions, and Tauri MSIs replace whatever version is installed, so the stable 1.3.0
+            // still installs over the beta.
+            const dash = e.VERSION.indexOf("-")
+            if (dash > 0) {
+              const n = Math.min(Number(/(\d+)$/.exec(e.VERSION)?.[1] ?? 0), 65535)
+              conf.bundle.windows = { ...conf.bundle.windows, wix: { version: `${e.VERSION.slice(0, dash)}.${n}` } }
+            }
             require("node:fs").writeFileSync(e.OUT, JSON.stringify(conf, null, 2))
             console.log(JSON.stringify({ ...conf, plugins: updater ? "(pubkey set)" : undefined }, null, 2))
           '

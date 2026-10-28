@@ -70,12 +70,15 @@ export function parseSettingsHash(hash: string): SettingsPane | null {
   return isSettingsPane(pane) ? pane : DEFAULT_PANE
 }
 
-/** `#/settings/<pane>/<focus>`: an MCP client to expand, or `usage`; null when absent. */
+/**
+ * `#/settings/<pane>/<focus>`: an MCP client to expand, `usage`, or a workspace id (board 46);
+ * null when absent.
+ */
 export function parseSettingsFocus(hash: string): string | null {
   return SETTINGS_ROUTE.exec(hash.replace(/^#/, ""))?.[2] ?? null
 }
 
-const SETTINGS_ROUTE = /^\/settings(?:\/([a-z-]*))?(?:\/([a-z0-9._-]{1,64}))?\/?$/
+const SETTINGS_ROUTE = /^\/settings(?:\/([a-z-]*))?(?:\/([A-Za-z0-9._-]{1,64}))?\/?$/
 
 export function settingsHash(pane: SettingsPane, focus?: string | null): string {
   return focus ? `#/settings/${pane}/${focus}` : `#/settings/${pane}`

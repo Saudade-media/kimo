@@ -73,10 +73,12 @@ export function useCloudShareKind(model: MultiplayerModel, docKey: string): Clou
   const cloudState = useCloudState(cloud)
   const signedIn = cloudState?.session === "signed-in"
   const knowsRelay = !!cloudState?.relay
-  // Which relay is Kimo Cloud's (asked once per window, signed in).
+  // Which relay is Kimo Cloud's (asked once per window, signed in), only for a room opened from a
+  // view link: a room of your own relay never asks Kimo Cloud.
+  const maybeGuest = !!share.room && !share.owner && share.role === "view"
   useEffect(() => {
-    if (cloud && signedIn && !knowsRelay && share.room) void cloud.relay().catch(() => undefined)
-  }, [cloud, signedIn, knowsRelay, share.room])
+    if (cloud && signedIn && !knowsRelay && maybeGuest) void cloud.relay().catch(() => undefined)
+  }, [cloud, signedIn, knowsRelay, maybeGuest])
   const room = share.room
   if (!room || !state) return null
   const workspaceId = state.open[room]?.workspaceId ?? fileOf(state, room)?.workspaceId

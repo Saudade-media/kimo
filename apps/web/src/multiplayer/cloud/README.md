@@ -112,6 +112,25 @@ is safe to repeat: `state.migration` says how far it got (`left > 0`: it resumes
 sign-in). `migrate()` runs it again. A pre-workspace room that is already closed and was never
 uploaded is left as it is (its file stays a local file of this device).
 
+## The board 46 UI
+
+| File | What it shows |
+|---|---|
+| `../ui/WorkspaceShare.tsx` | Share popover 1A to 1E (`useCloudShareKind` routes a room to 1C or 1D/1E) |
+| `../ui/WorkspacePane.tsx` | Settings › Workspace (2A): plan, members, invites, edit requests, ownership |
+| `../ui/WorkspaceDialogs.tsx` | 2B invite, 2C remove (toast 2D), 6A transfer, 6B accept, 6D delete, 6F leave |
+| `../ui/WorkspaceHost.tsx` | Mounted once per window: 6B, toasts 6C, 3B, 3C, the start refresh |
+| `../ui/WorkspaceBanner.tsx` | Editor banners 5A to 5D and 6E, with Save a copy |
+| `../ui/workspace-parts.tsx` | Store hooks, member avatar, 28-tall buttons, the toast stack outside an editor |
+| `workspace-view.ts` | Copy and picks (names from emails, footnotes, prices, banner kind) |
+| `../../home/WorkspaceHome.tsx` | Home 4A: KIMO CLOUD group, `#/workspace/<id>`, and the web `#/cloud/<room>` route |
+
+1F is the relay wizard's Subscribe step (`../ui/CloudWizardSteps.tsx`): it names the first workspace,
+and `CloudStore.startCheckout({ workspaceName })` creates it before the workspace checkout.
+
+Names: Kimo Cloud knows people by email only, so names and initials come from the email's local
+part (`personName`).
+
 ## Not done yet
 
 - The desktop document host (`host/`, `mp.*` RPC) owns shared files on desktop: bound files and the
@@ -119,4 +138,3 @@ uploaded is left as it is (its file stays a local file of this device).
   needs the same `setCloudFiles` hooks and the migration over its `rooms.json` registry.
 - After sign-out, a deleted workspace's copy opens editable until its account signs in again
   (bindings are per account).
-- No UI: board 46 screens are for the UI work.

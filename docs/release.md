@@ -42,10 +42,18 @@ bunx tauri signer generate -w ~/.tauri/kimo-updater.key
 - Store the public key as the repository variable `TAURI_UPDATER_PUBKEY`. The release build
   injects it into the release config, and the same key is committed in `tauri.conf.json`
   (since 1.0.0) so local release builds match.
-- The app's updater endpoint is
-  `https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json`. The workflow
-  uploads tauri-action's `latest.json` and, for non-prerelease tags, a copy named
-  `latest-stable.json`. Check that the repository slug in the endpoint is the real one.
+- The app checks
+  `https://github.com/Saudade-media/kimo/releases/download/updater/latest-<channel>.json`, where
+  the channel (`stable` or `beta`) is the one picked in Settings. Both files live on the
+  `updater` release, a prerelease that only holds them; don't delete it or its tag.
+  `.github/workflows/updater-feed.yml` creates it on first use and, whenever a release is
+  published, copies that release's `latest.json` there: to `latest-beta.json` for every release
+  and to `latest-stable.json` for stable ones, never moving a feed back to an older version.
+  Check that the repository slug in the endpoint is the real one.
+- Installs of 1.2.0 and earlier read `releases/latest/download/latest-<channel>.json` instead,
+  so `release.yml` also attaches `latest-stable.json` and `latest-beta.json` to each stable
+  release. They update to the next stable release on either channel and use the new feeds from
+  then on.
 
 ### Social preview image
 
@@ -98,6 +106,12 @@ cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml --workspace --lock
 strings and `@kimo/sync`'s `CLIENT_VERSION`. It accepts `major`, `minor`, `patch` and
 `prerelease [--preid rc]` too.
 
+A beta is the same release with a prerelease version, such as `1.3.0-beta.0`
+(`bun scripts/version.ts 1.3.0-beta.0 --write`, then `prerelease --preid beta --write` for
+`1.3.0-beta.1` and so on). The workflow marks its draft as a prerelease, and publishing it
+updates only the beta feed. Beta installs get whichever is newer, the latest beta or the latest
+stable release; stable installs never see a beta.
+
 - [ ] Move the `Unreleased` section of `CHANGELOG.md` under `## [X.Y.Z] - YYYY-MM-DD`.
 - [ ] `bun run check` passes.
 - [ ] Commit (`Release vX.Y.Z`), open a PR, merge it.
@@ -119,7 +133,7 @@ The workflow checks that the tag matches `tauri.conf.json` and that no version d
 | desktop · Linux | `.AppImage` (+ `.sig`) and `.deb` |
 | web | `kimo-web-X.Y.Z.tar.gz`: the static web app for any static host |
 | cli | `bun publish --dry-run` of `@kimo/cli` (nothing uploaded) |
-| updater manifest | `latest.json` and, for stable tags, `latest-stable.json` |
+| updater manifest | `latest.json` and, for stable tags, `latest-stable.json` and `latest-beta.json` (for installs of 1.2.0 and earlier) |
 
 Every desktop bundle bundles `kimo-mcp` next to the app binary (`tauri.bundle.conf.json`
 `externalBin`, staged by `apps/desktop/scripts/build-shim.ts`).
@@ -163,7 +177,8 @@ Windows 11, Ubuntu 22.04 or later).
       the signature, installs and relaunches (Windows: passive installer). For the first
       release there is no previous one: check instead that *Check for updates* reports no
       update, and run this check on the second release.
-- [ ] A prerelease tag is not offered to stable installs.
+- [ ] A prerelease tag is not offered to stable installs, and is offered to installs on the
+      beta channel (Settings → Updates).
 
 **Agents (real, not scripted)**
 
@@ -184,9 +199,10 @@ Windows 11, Ubuntu 22.04 or later).
       `CHANGELOG.md` above them and mark prereleases as such. The first release has no previous
       tag, so its generated notes list every merged pull request: replace them with the
       `CHANGELOG.md` entry.
-- [ ] Publish the draft. Then
-      `curl -L https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json`
-      returns this version.
+- [ ] Publish the draft. When the `updater-feed` run finishes,
+      `curl -L https://github.com/Saudade-media/kimo/releases/download/updater/latest-beta.json`
+      returns this version, and so does `latest-stable.json` for a stable release. If the run
+      failed, rerun it from `Actions → updater-feed → Run workflow` with the tag.
 - [ ] Deploy `kimo-web-X.Y.Z.tar.gz` to the static host.
 - [ ] CLI: `@kimo/cli` is still `private`, because it imports unpublished workspace packages
       (`@kimo/core-schema`, `@kimo/editor-state`, `@kimo/mcp-server`, `@kimo/platform`) and ships

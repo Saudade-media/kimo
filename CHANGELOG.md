@@ -14,6 +14,12 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Beta update channel works. Its update feed was never published, so checking for updates
+  on Beta failed. Installs of 1.2.0 or earlier set to Beta update to the next stable release
+  and get betas from then on.
+
 ## [1.2.0] - 2026-10-28
 
 ### Fixed

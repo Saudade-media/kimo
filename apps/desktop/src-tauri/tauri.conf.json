@@ -61,7 +61,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIzRjlFMUEzQThEMkMwODAKUldTQXdOS29vK0g1SXpTTHFCc0VwNjg1M1VQU2lJR3o3S3VvYnRFbTRsUUxTeDl4bUlFcUtESUUK",
       "endpoints": [
-        "https://github.com/Saudade-media/kimo/releases/latest/download/latest-stable.json"
+        "https://github.com/Saudade-media/kimo/releases/download/updater/latest-stable.json"
       ],
       "windows": {
         "installMode": "passive"

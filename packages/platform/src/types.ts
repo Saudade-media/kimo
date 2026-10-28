@@ -730,7 +730,7 @@ export interface UpdaterApi {
 
 /** Placeholders until the release infrastructure exists (ADR 0012). */
 export const UPDATE_FEED_PLACEHOLDER =
-  "https://github.com/Saudade-media/kimo/releases/latest/download/latest-{channel}.json"
+  "https://github.com/Saudade-media/kimo/releases/download/updater/latest-{channel}.json"
 export const REPO_URL_PLACEHOLDER = "https://github.com/Saudade-media/kimo"
 
 // ===============================================================================================

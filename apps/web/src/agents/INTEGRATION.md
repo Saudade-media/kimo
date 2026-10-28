@@ -154,8 +154,8 @@ The pane renders inside `.settings-content` (it relies on its `[0, 32, 24, 32]` 
 - `McpConnectionInfo.call {tool, label, startedAt}`, `focus`, `paused`;
   `McpActivityEntry.label`, `opCount`, `revisionBefore`; `McpApprovalRequest.preview.kinds`
   (op kind per node from a quiet dry run in the host runtime).
-- Wired in `editor/agents.tsx` (`useEditorAgents`) → `Editor.tsx`, `disk.tsx` /
-  `FileTopbar` (`presence` slot in the desktop drag region), `LeftPanel.tsx` (`agentNodes`),
+- Wired in `editor/agents.tsx` (`useEditorAgents`) → `Editor.tsx`, `disk.tsx`,
+  `LeftPanel.tsx` (`agentNodes`),
   `RightPanel.tsx` (`activity` tab + `openActivity` bus) and `settings/AgentsPane.tsx`.
 
 Not done: the session popover's "client settings" deep link opens the pane but does not expand

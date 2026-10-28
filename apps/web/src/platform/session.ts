@@ -179,7 +179,7 @@ const READER_FORMAT = majorMinor(FORMAT_VERSION)
 const MARKER_RE = /^(<{7}|>{7}|={7})(\s|$)/m
 
 /** Lines changed between two texts (added + removed), the consent dialog's "about N lines". */
-export function approxChangedLines(before: string, after: string): number {
+function approxChangedLines(before: string, after: string): number {
   const count = new Map<string, number>()
   for (const l of before.split("\n")) count.set(l, (count.get(l) ?? 0) + 1)
   let added = 0
@@ -196,10 +196,7 @@ export function approxChangedLines(before: string, after: string): number {
 const truncate = (s: string, n = 52) => (s.length > n ? `${s.slice(0, n)}…` : s)
 
 /** Board 17 "Failed load" card content for a load error. */
-export function failedLoadDetail(
-  error: FileLoadError | null,
-  text: string | null,
-): FailedLoadDetail {
+function failedLoadDetail(error: FileLoadError | null, text: string | null): FailedLoadDetail {
   const markers = text !== null && MARKER_RE.test(text)
   const cause = (error as { cause?: unknown } | null)?.cause
   let headline = "Couldn't read this file"
@@ -1612,7 +1609,7 @@ export class FileSessionManager implements SessionManager {
 }
 
 /** Board 17 RecoveryItem copy for an entry. */
-export function recoveryCandidate(entry: RecoveryEntry): RecoveryCandidate {
+function recoveryCandidate(entry: RecoveryEntry): RecoveryCandidate {
   const untitled = entry.sourceRef === null
   const badge = untitled ? "never saved" : `${entry.edits} edit${entry.edits === 1 ? "" : "s"}`
   let detail: string

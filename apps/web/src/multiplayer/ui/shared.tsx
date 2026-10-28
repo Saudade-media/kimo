@@ -11,10 +11,10 @@ import { REPO_URL } from "../../settings/help"
 import type { PresenceColor } from "../presence"
 import { initialsOf, presenceVar } from "./copy"
 
-export type ShareToast = Omit<ToastItem, "id" | "duration"> & { duration?: number }
+type ShareToast = Omit<ToastItem, "id" | "duration"> & { duration?: number }
 
 /** Where share toasts go outside an editor (harnesses, Settings). */
-export const ShareToastContext = createContext<((t: ShareToast) => void) | null>(null)
+const ShareToastContext = createContext<((t: ShareToast) => void) | null>(null)
 
 /** Toast/Danger for failures, Toast for one-shot actions (board 41 section 3 F, board 37 A5). */
 export function useShareToast(): (t: ShareToast) => void {

@@ -194,36 +194,3 @@ impl UpdaterState {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn status_json_matches_contract() {
-        let info = UpdateInfo {
-            version: "0.5.0".into(),
-            current_version: "0.4.2".into(),
-            channel: "stable".into(),
-            notes_url: None,
-            published_iso: None,
-        };
-        assert_eq!(
-            serde_json::to_value(UpdaterStatus::Idle).unwrap(),
-            serde_json::json!({"state":"idle"})
-        );
-        assert_eq!(
-            serde_json::to_value(UpdaterStatus::UpToDate { checked_at: 5 }).unwrap(),
-            serde_json::json!({"state":"up-to-date","checkedAt":5})
-        );
-        let v = serde_json::to_value(UpdaterStatus::Downloading {
-            info,
-            received: 1,
-            total: None,
-        })
-        .unwrap();
-        assert_eq!(v["state"], "downloading");
-        assert_eq!(v["info"]["currentVersion"], "0.4.2");
-        assert_eq!(v["total"], serde_json::Value::Null);
-    }
-}

@@ -12,7 +12,7 @@ import { CanvasAgentMark } from "./agent-mark"
 import type { CanvasAgentMarkState, CanvasAgentPersona } from "./contract"
 import "./agent-section.css"
 
-export interface SectionBox {
+interface SectionBox {
   x: number
   y: number
   w: number
@@ -66,7 +66,7 @@ export function cursorFlip(
   }
 }
 
-export function SectionOutline({ view }: { view: SectionCursorView }) {
+function SectionOutline({ view }: { view: SectionCursorView }) {
   const b = view.section
   if (!b || view.outline === false) return null
   return (
@@ -105,7 +105,7 @@ export function SectionCursor({ view }: { view: SectionCursorView }) {
   )
 }
 
-export function SectionFlash({ flash }: { flash: SectionFlashView }) {
+function SectionFlash({ flash }: { flash: SectionFlashView }) {
   const b = flash.box
   return (
     <div

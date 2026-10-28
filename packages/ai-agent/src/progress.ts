@@ -34,7 +34,7 @@ const isRef = (v: unknown): v is string => typeof v === "string" && v.startsWith
 const ADD_OPS = new Set(["insert", "copy", "instantiate"])
 
 /** "Adding 12 layers in Pricing", "Editing 6 layers in Hero", "Copying Home", "Deleting 2 layers". */
-export function describeOps(ops: readonly Op[], names: StepNames = {}): string | null {
+function describeOps(ops: readonly Op[], names: StepNames = {}): string | null {
   if (!ops.length) return null
   const nameOf = (id: unknown) =>
     typeof id === "string" && !isRef(id) ? names.name?.(id) : undefined
@@ -148,7 +148,7 @@ export function stepLabel(call: ToolCallRequest, names: StepNames = {}): string 
 }
 
 /** The note in a stretch of streamed text: its last non-empty line, plain, ≤ {@link STATUS_MAX}. */
-export function noteOf(text: string): string {
+function noteOf(text: string): string {
   const lines = text
     .split("\n")
     .map((l) =>

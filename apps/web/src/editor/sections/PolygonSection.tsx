@@ -22,8 +22,8 @@ import { MIXED, setOps, shared } from "../props"
 import "./polygon.css"
 
 /** Hint copy (ABpsC / JiLWg). */
-export const POLYGON_HINT = "Ratio only applies to stars."
-export const STAR_HINT = "Ratio = inner ÷ outer radius (1–99 %). Drag the inner handle on canvas."
+const POLYGON_HINT = "Ratio only applies to stars."
+const STAR_HINT = "Ratio = inner ÷ outer radius (1–99 %). Drag the inner handle on canvas."
 
 const starOf = (n: Sel["node"]) =>
   typeof n.star === "object" && n.star !== null ? (n.star as { ratio?: unknown }) : null

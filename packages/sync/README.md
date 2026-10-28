@@ -7,7 +7,7 @@ themselves: every edit still goes through the `editor-state` op layer, with an o
 
 | Entry | Provider | Runtime |
 |---|---|---|
-| `@kimo/sync` | `SyncProvider`, `BaseProvider`, `MemoryHub` + `MemoryProvider`, network provider types | anywhere |
+| `@kimo/sync` | `SyncProvider`, `BaseProvider`, network provider types | anywhere |
 | `@kimo/sync/file` | `FileProvider` | Bun, Node |
 | `@kimo/sync/indexeddb` | `IndexedDbProvider` (y-indexeddb) | browser, worker |
 
@@ -67,11 +67,6 @@ await new IndexedDbProvider("kimo:doc:<id>").attach(store)
 The provider keeps a private bridge `Y.Doc` that `y-indexeddb` persists, and relays updates
 between it and the store. The provider therefore only uses the `DocStore` API. `attach` rejects
 where `indexedDB` is missing. Tests are skipped under Bun, which has no IndexedDB.
-
-## MemoryProvider
-
-`MemoryProvider` is an in-process relay for tests and same-process replicas. `hub.pause()` and
-`hub.resume()` simulate offline, concurrent edits.
 
 ## Network provider (multiplayer, not implemented in v1)
 

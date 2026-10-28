@@ -64,6 +64,16 @@ export function compareGolden(
   return { ok, message: `${diff} px differ (${(ratio * 100).toFixed(3)}%)`, diffRatio: ratio }
 }
 
+/** A decoded PNG with an RGBA accessor, for tests that probe many pixels of one image. */
+export function pixelsOf(ck: CanvasKit, png: Uint8Array) {
+  const { w, h, px } = decode(ck, png)
+  const at = (x: number, y: number): [number, number, number, number] => {
+    const i = (y * w + x) * 4
+    return [px[i] ?? 0, px[i + 1] ?? 0, px[i + 2] ?? 0, px[i + 3] ?? 0]
+  }
+  return { w, h, at }
+}
+
 /** RGBA of one pixel of a PNG. */
 export function pixelAt(
   ck: CanvasKit,
@@ -71,7 +81,13 @@ export function pixelAt(
   x: number,
   y: number,
 ): [number, number, number, number] {
-  const { w, px } = decode(ck, png)
-  const i = (y * w + x) * 4
-  return [px[i] ?? 0, px[i + 1] ?? 0, px[i + 2] ?? 0, px[i + 3] ?? 0]
+  return pixelsOf(ck, png).at(x, y)
+}
+
+/** True when every channel of `c` is within `tol` of the `#RRGGBB` color `hex`. */
+export function near(c: readonly number[], hex: string, tol = 24): boolean {
+  const n = Number.parseInt(hex.slice(1, 7), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255].every(
+    (v, i) => Math.abs(v - (c[i] ?? 0)) <= tol,
+  )
 }

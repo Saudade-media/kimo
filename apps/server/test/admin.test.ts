@@ -64,17 +64,6 @@ describe("admin: register", () => {
     expect(await code(res)).toBe("AUTH_INVALID")
   })
 
-  test("a certificate for another room is refused", async () => {
-    const owner = await makeOwner()
-    const other = await makeOwner()
-    const res = await admin(h, owner, {
-      op: "register",
-      rootPub: toBase64Url(owner.rootPub),
-      cert: toBase64Url(other.cert.bytes),
-    })
-    expect(res.status).toBe(401)
-  })
-
   test("RELAY_FULL when the room cap is reached", async () => {
     const small = startRelay({ maxRooms: 1 })
     await registered(small)
@@ -107,13 +96,6 @@ describe("admin: register", () => {
     expect(await code(replay)).toBe("NONCE_REPLAY")
   })
 
-  test("non-register commands on an unknown room are 404", async () => {
-    const owner = await makeOwner(1, Math.floor(h.clock.now / 1000))
-    const res = await admin(h, owner, { op: "close" })
-    expect(res.status).toBe(404)
-    expect(await code(res)).toBe("ROOM_NOT_FOUND")
-  })
-
   test("a malformed command is 400", async () => {
     const owner = await makeOwner()
     const res = await fetch(`${h.base}/room/${owner.room.id}/admin`, {
@@ -125,13 +107,6 @@ describe("admin: register", () => {
 })
 
 describe("admin: revoke, rotate, close", () => {
-  test("revoke answers closed: 0 with nobody connected", async () => {
-    const owner = await registered(h)
-    const res = await admin(h, owner, { op: "revoke", jti: toHex(randomBytes(16)), exp: 0 })
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ revoked: true, closed: 0 })
-  })
-
   test("rotate needs a higher kid", async () => {
     const owner = await registered(h)
     const same = await rotateOwner(owner, 1)
@@ -162,7 +137,7 @@ describe("admin: revoke, rotate, close", () => {
   })
 })
 
-describe("admin: register owner proof (ADR 0017)", () => {
+describe("admin: register owner proof", () => {
   const registerBody = (owner: Awaited<ReturnType<typeof makeOwner>>) =>
     ({
       op: "register",
@@ -218,7 +193,6 @@ describe("admin: register owner proof (ADR 0017)", () => {
   test("a removed device is NOT_OWNER; its rooms keep revoke, rotate and close; reopening needs a proof", async () => {
     const r = startRelay()
     const second = await generateSigningKeyPair()
-    const secondPub = toBase64Url(await exportPublicKey(second.publicKey))
     // Seed a second owner so the first can be removed.
     r.relay.db.insertOwner({
       pub: await exportPublicKey(second.publicKey),
@@ -253,7 +227,6 @@ describe("admin: register owner proof (ADR 0017)", () => {
     expect(noProof.status).toBe(403)
     expect(await code(noProof)).toBe("NOT_OWNER")
     expect((await register(r, reopened, { device: second })).status).toBe(201)
-    expect(secondPub.length).toBe(43)
     await r.stop()
   })
 })

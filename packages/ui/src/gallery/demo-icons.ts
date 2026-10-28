@@ -98,7 +98,7 @@ type Attrs = Record<string, string | number | undefined>
 const n = (v: string | number | undefined) => Number(v ?? 0)
 
 /** One SVG element of a lucide icon node as path data. */
-export function elementToPath(tag: string, a: Attrs): string | null {
+function elementToPath(tag: string, a: Attrs): string | null {
   switch (tag) {
     case "path":
       return String(a.d ?? "")

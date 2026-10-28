@@ -9,7 +9,7 @@
  * CanvasHost renders the DOM.
  */
 import { promptFooter } from "@kimo/ai-agent"
-import { type LayoutResult, PROMPT_CHROME, type Rect } from "@kimo/layout"
+import type { LayoutResult, Rect } from "@kimo/layout"
 import { OVERLAY_SPEC_M6, type Overlay, type Viewport } from "@kimo/renderer"
 import type { SectionCursorView, SectionFlashView } from "./AgentSectionCursor"
 import { cursorFlip } from "./AgentSectionCursor"
@@ -22,7 +22,7 @@ import {
   retarget,
   SECTION_FLASH_MS,
 } from "./agent-area"
-import type { AgentCanvasProps, CanvasAgentPersona, CanvasPromptRun } from "./contract"
+import type { AgentCanvasProps, CanvasAgentPersona } from "./contract"
 
 /** Minimal node reader (DocStore / NodeSource). */
 export interface AgentNodeReader {
@@ -32,23 +32,9 @@ export interface AgentNodeReader {
 }
 
 /** Board 36 section flash: 1.2 s. */
-export const FLASH_MS = SECTION_FLASH_MS
+const FLASH_MS = SECTION_FLASH_MS
 /** Rejected-op pill and target flash (house value: the design gives no duration). */
-export const REJECT_MS = 3000
-
-/** Board 24 GmEAl: Lead = Teal, then Iris → Violet → Rose → Ember → Moss (repeating). */
-export const PERSONA_ORDER: readonly CanvasAgentPersona[] = [
-  "iris",
-  "violet",
-  "rose",
-  "ember",
-  "moss",
-]
-
-/** Persona of agent number `n` (lead 0 = `agent`). */
-export function personaFor(n: number): CanvasAgentPersona {
-  return n <= 0 ? "agent" : (PERSONA_ORDER[(n - 1) % PERSONA_ORDER.length] as CanvasAgentPersona)
-}
+const REJECT_MS = 3000
 
 const nameOf = (n: Record<string, unknown> | undefined, fallback: string): string =>
   typeof n?.name === "string" && n.name ? n.name : fallback
@@ -58,14 +44,14 @@ const isPlaceholder = (v: unknown): boolean => v !== undefined && v !== null && 
 // --- DOM projection types ------------------------------------------------------------------
 
 /** Iterate Pass Chip (h6oHb `NCElh`): 7 below the outset outline, left-aligned with it. */
-export interface PassChipView {
+interface PassChipView {
   key: string
   left: number
   top: number
   text: string
 }
 
-export interface RejectedPillView {
+interface RejectedPillView {
   key: string
   /** Pill center x, top y. */
   cx: number
@@ -104,7 +90,7 @@ export const EMPTY_DOM: AgentDomState = {
 }
 
 /** Default footer formatters ("Ran 4m ago · 18 ops · $0.06"). */
-export function defaultAgo(t: number, now = Date.now()): string {
+function defaultAgo(t: number, now = Date.now()): string {
   const s = Math.max(0, Math.round((now - t) / 1000))
   if (s < 60) return "just now"
   const m = Math.round(s / 60)
@@ -114,7 +100,7 @@ export function defaultAgo(t: number, now = Date.now()): string {
   return `${Math.round(h / 24)}d ago`
 }
 
-export function defaultUsd(v: number | null): string {
+function defaultUsd(v: number | null): string {
   return v === null ? "—" : `$${v.toFixed(2)}`
 }
 
@@ -417,11 +403,6 @@ export class AgentCanvasModel {
     return { cursors, flashes, passes, rejected, prompts }
   }
 }
-
-/** Prompt footer height in world units (DOM footer = 42 × zoom). */
-export const PROMPT_FOOTER_H = PROMPT_CHROME.footerHeight
-
-export type { CanvasPromptRun }
 
 // --- Side by side placement (modes ZFOQf `agblr`, ADR 0014 §8) ----------------------------------
 

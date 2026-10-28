@@ -12,7 +12,7 @@ export interface StoreOutlineOptions {
   box?: (id: string) => OutlineBox | null | undefined
 }
 
-export function storeOutlineSource(
+function storeOutlineSource(
   store: Pick<DocStore, "toHeader" | "children" | "getNode">,
   o: StoreOutlineOptions = {},
 ): OutlineSource {

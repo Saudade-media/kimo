@@ -26,9 +26,6 @@ const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !
 
 const HEX = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
-/** Short label of a merge side: the last path segment ("feat/pricing-v2" → "pricing-v2"). */
-export const shortLabel = (label: string) => label.split("/").filter(Boolean).pop() ?? label
-
 /** "main ← feat/pricing-v2 · base 4e1a9c2" (board 18 Summary › Source); null without labels. */
 export function sourceLine(info: MergeInfo | null): string | null {
   if (!info) return null
@@ -51,7 +48,7 @@ export function displayName(node: Obj | undefined, src: ConflictSource, depth = 
 }
 
 /** A parent placement as a path: "Hero › CTA Row" (the top-level frame is left out). */
-export function placementLabel(p: Placement, src: ConflictSource): string {
+function placementLabel(p: Placement, src: ConflictSource): string {
   if (p.parent === null) return "Page"
   const chain: string[] = []
   const seen = new Set<string>()
@@ -67,7 +64,7 @@ export function placementLabel(p: Placement, src: ConflictSource): string {
 }
 
 /** A JSON value as one short line ("#E8590C", "12", "$brand", "Linear", "3 items"). */
-export function formatValue(v: unknown): string {
+function formatValue(v: unknown): string {
   if (typeof v === "string") return v
   if (typeof v === "number" || typeof v === "boolean") return String(v)
   if (v === null) return "null"
@@ -110,7 +107,7 @@ function nodeBaseLabel(node: Obj, src: ConflictSource): string {
 }
 
 /** The ConflictChoice data of one side. */
-export function sideView(c: Conflict, side: ConflictSide, src: ConflictSource): ConflictSideView {
+function sideView(c: Conflict, side: ConflictSide, src: ConflictSource): ConflictSideView {
   const v = sideValue(c, side)
   const base: ConflictSideView = {
     side,
@@ -170,7 +167,7 @@ const APPLIED_VERB = {
  * ConflictRow/Resolved and the Resolved list's "Choice": "kept ours · 12", "took theirs",
  * "took theirs · deleted". The applied value follows when it is a number or the side is absent.
  */
-export function resolvedLabel(c: Conflict): string {
+function resolvedLabel(c: Conflict): string {
   const verb = APPLIED_VERB[c.applied]
   if (c.applied === "edited") return verb
   const v = sideValue(c, c.applied)
@@ -198,8 +195,8 @@ function nodeData(c: Conflict, src: ConflictSource): Obj | undefined {
 }
 
 /** Group header labels of variable and header conflicts (board 20 zBg7u / Isy2f). */
-export const VARIABLES_GROUP = "Variables"
-export const DOCUMENT_GROUP = "Document"
+const VARIABLES_GROUP = "Variables"
+const DOCUMENT_GROUP = "Document"
 
 function groupLabel(c: Conflict, src: ConflictSource): string {
   if (c.kind === "variable") return VARIABLES_GROUP

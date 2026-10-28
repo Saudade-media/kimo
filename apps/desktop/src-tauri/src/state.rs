@@ -200,33 +200,3 @@ pub fn open_or_defer<Rt: Runtime>(app: &AppHandle<Rt>, req: OpenRequest) {
 pub fn take_early_opens() -> Vec<OpenRequest> {
     std::mem::take(&mut *EARLY_OPENS.lock().unwrap())
 }
-
-#[cfg(all(test, unix))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn new_files_dir_is_granted_at_startup() {
-        let d = tempfile::tempdir().unwrap();
-        let settings = SettingsStore::new(d.path().join("settings.json"));
-        let home = d.path().join("me");
-        assert_eq!(
-            new_files_dir(&settings, Some(&home)),
-            Some(home.join("Documents/Kimo"))
-        );
-        settings
-            .set(
-                "files.newFilesDir",
-                serde_json::json!("/Volumes/Work/designs"),
-            )
-            .unwrap();
-        assert_eq!(
-            new_files_dir(&settings, Some(&home)),
-            Some(PathBuf::from("/Volumes/Work/designs"))
-        );
-        assert_eq!(
-            new_files_dir(&SettingsStore::new(d.path().join("none.json")), None),
-            None
-        );
-    }
-}

@@ -10,7 +10,7 @@ import type { LayoutResult, Rect } from "@kimo/layout"
 import type { MotionFrame, NodeMotion } from "@kimo/renderer"
 
 /** Board 35 values (rules table x9R37b, keyframes mvNij, timeline HfsF5). */
-export const BUILD_MOTION = {
+const BUILD_MOTION = {
   /** Entrance and reflow duration. */
   durationMs: 200,
   /** cubic-bezier(0.2, 0, 0, 1). */
@@ -54,10 +54,10 @@ export function cubicBezier(x1: number, y1: number, x2: number, y2: number): (x:
   }
 }
 
-export const buildEase = cubicBezier(...BUILD_MOTION.ease)
+const buildEase = cubicBezier(...BUILD_MOTION.ease)
 
 /** Stagger between the layers of an `n`-layer batch (board 35: min(16, 400 / (n − 1))). */
-export function staggerFor(n: number): number {
+function staggerFor(n: number): number {
   if (n <= 1) return 0
   const room = BUILD_MOTION.batchMs - BUILD_MOTION.durationMs
   return Math.min(BUILD_MOTION.staggerMs, room / (n - 1))
@@ -68,7 +68,7 @@ export function staggerFor(n: number): number {
  * (`mcp:*`), also when relayed by the document host (`remote:agent:*`, `remote:mcp:*`). Never
  * undo / redo, loads or repairs; never the user, collaborators, files or the system.
  */
-export function animatesChange(origin: string, cause: string): boolean {
+function animatesChange(origin: string, cause: string): boolean {
   if (cause !== "ops" && cause !== "update") return false
   const o = origin.startsWith("remote:") ? origin.slice(7) : origin
   return o.startsWith("agent:") || o.startsWith("mcp:")

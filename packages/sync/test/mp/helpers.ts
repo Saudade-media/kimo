@@ -1,6 +1,6 @@
 import { concatBytes, fromHex } from "../../src/mp"
 
-/** `seq(n, s)`: the `n` bytes `s, s+1, ...` (mod 256), as in spec §19. */
+/** `seq(n, s)`: the `n` bytes `s, s+1, ...` (mod 256), as in the protocol test vectors. */
 export function seq(n: number, start: number): Uint8Array {
   return Uint8Array.from({ length: n }, (_, i) => (start + i) & 0xff)
 }

@@ -116,7 +116,7 @@ const add = (a: Vec, b: Vec): Vec => [a[0] + b[0], a[1] + b[1]]
  * colors blended with smoothstep weights (a cubic Hermite with zero tangents at the vertices),
  * in sRGB. Fitted to pen.dev's `mesh_gradient` output (mean error ≈ 1.5/255 on a regular grid).
  */
-export function meshColorAt(
+function meshColorAt(
   cols: number,
   rows: number,
   colors: readonly RGBA[],

@@ -25,7 +25,7 @@ export type ShortcutScope =
   | "crop" // board 27 image crop mode
   | "gesture" // mid-drag
 
-export type ShortcutGroup =
+type ShortcutGroup =
   | "tools"
   | "file"
   | "edit"
@@ -805,14 +805,14 @@ export const SHORTCUT_GROUPS: readonly { id: ShortcutGroup; title: string; colum
   { id: "help", title: "Help", column: 3 },
 ]
 
-export interface SheetRow {
+interface SheetRow {
   id: string
   label: string
   combos: string[]
   isNew: boolean
 }
 
-export interface SheetGroup {
+interface SheetGroup {
   id: ShortcutGroup
   title: string
   column: 1 | 2 | 3

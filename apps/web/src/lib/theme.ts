@@ -44,8 +44,6 @@ export function setTheme(next: ThemeMode): void {
   for (const l of listeners) l()
 }
 
-export const toggleTheme = () => setTheme(mode === "light" ? "dark" : "light")
-
 export function useTheme(): ThemeMode {
   return useSyncExternalStore(
     (cb) => {

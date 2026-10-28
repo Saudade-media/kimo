@@ -7,7 +7,7 @@ import type { Appearance, SettingsApi } from "@kimo/platform"
 export type ThemeSetter = (mode: "light" | "dark") => void
 
 /** The concrete mode for an appearance setting. */
-export function resolveAppearance(a: Appearance, prefersDark: boolean): "light" | "dark" {
+function resolveAppearance(a: Appearance, prefersDark: boolean): "light" | "dark" {
   return a === "system" ? (prefersDark ? "dark" : "light") : a
 }
 

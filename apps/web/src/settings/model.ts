@@ -52,7 +52,7 @@ export const SETTINGS_PANES: readonly PaneInfo[] = [
 
 export const DEFAULT_PANE: SettingsPane = "general"
 
-export function isSettingsPane(v: string): v is SettingsPane {
+function isSettingsPane(v: string): v is SettingsPane {
   return SETTINGS_PANES.some((p) => p.id === v)
 }
 
@@ -80,13 +80,13 @@ export function settingsHash(pane: SettingsPane, focus?: string | null): string 
 
 // --- Select choices (labels as designed) ------------------------------------------------------
 
-export interface Choice<V> {
+interface Choice<V> {
   value: V
   label: string
 }
 
 /** The settings edited through a Select, with every choice it offers. */
-export const CHOICES = {
+const CHOICES = {
   "files.autosaveIntervalMs": [
     { value: 1000, label: "1 second" },
     { value: 2000, label: "2 seconds" },
@@ -305,7 +305,7 @@ export function mergeDriverDescription(configured: number, total: number): strin
 }
 
 /** Updates › "Kimo 0.4.2" row description from the updater status. */
-export function updaterDescription(s: UpdaterStatus, formatTime: (ms: number) => string): string {
+function updaterDescription(s: UpdaterStatus, formatTime: (ms: number) => string): string {
   switch (s.state) {
     case "idle":
       return "Not checked yet"

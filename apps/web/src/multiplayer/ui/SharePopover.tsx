@@ -85,7 +85,7 @@ const selectExpiry = (v: DocumentShareView) => v.expiry
  * Kimo Cloud is the chosen relay, else null). Its answer always wins: the hosted relay can move
  * (a custom domain replacing the provider's), and a stale URL puts the old host in every link.
  */
-export function cloudRelayChanged(saved: string | null, answer: string): boolean {
+function cloudRelayChanged(saved: string | null, answer: string): boolean {
   return saved === null || saved !== normalizeRelayUrl(answer)
 }
 

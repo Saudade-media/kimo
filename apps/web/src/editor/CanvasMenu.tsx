@@ -36,7 +36,7 @@ import type { M3Controller } from "./m3/controller"
 import type { FileSession } from "./session"
 import "./canvas-menu.css"
 
-export interface CanvasMenuDeps {
+interface CanvasMenuDeps {
   session: FileSession
   m3: M3Controller
   canvas: { current: CanvasHandle | null }
@@ -314,7 +314,7 @@ function toItem(r: CanvasMenuRow, run: (a: CanvasMenuAction) => void): CanvasCon
  * The deepest visible frame under world point `p` (paint order breaks ties: the later sibling
  * is on top), never `exclude` itself.
  */
-export function frameAt(
+function frameAt(
   layout: LayoutResult,
   doc: FileSession["store"],
   p: { x: number; y: number },

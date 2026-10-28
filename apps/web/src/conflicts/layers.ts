@@ -20,9 +20,3 @@ export function useOpenConflictNodes(
     session ? session.openByNode : empty,
   )
 }
-
-/** True when `nodeId` owns an open conflict (render `LayerRowConflict` for its row). */
-export const hasOpenConflict = (
-  map: ReadonlyMap<string, readonly ConflictRowView[]>,
-  nodeId: string,
-): boolean => map.has(nodeId)

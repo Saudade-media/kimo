@@ -86,14 +86,14 @@ export interface Registry {
  * Reopening diffs the file against `state` and applies only that delta, so collaborators' edits
  * made since are never reverted by an older file (spec §16.3).
  */
-export interface SavedState {
+interface SavedState {
   /** `encodeStateAsUpdate()` of the owner's store when the file was written. */
   state: Uint8Array
   /** Hash of the document that was written; null until the first save after sharing began. */
   fileHash: string | null
 }
 
-export interface SaveStore {
+interface SaveStore {
   load(room: string): Promise<SavedState | null>
   save(room: string, saved: SavedState): Promise<void>
   clear(room: string): Promise<void>

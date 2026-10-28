@@ -7,7 +7,7 @@
 
 /** Affine `[a, b, c, d, e, f]`: x' = a x + c y + e, y' = b x + d y + f. */
 export type Matrix = [number, number, number, number, number, number]
-export const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
+const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
 
 export type Seg =
   | { c: "M"; x: number; y: number }
@@ -16,7 +16,7 @@ export type Seg =
   | { c: "Q"; x1: number; y1: number; x: number; y: number }
   | { c: "Z" }
 
-export const MAX_PATH_SEGMENTS = 200_000
+const MAX_PATH_SEGMENTS = 200_000
 
 export function multiply(m: Matrix, n: Matrix): Matrix {
   return [

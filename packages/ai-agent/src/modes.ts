@@ -45,7 +45,7 @@ export const DEFAULT_MODE: ModeConfig = {
   passes: 3,
 }
 
-export function clampAgents(n: number, cap = MAX_AGENTS): number {
+function clampAgents(n: number, cap = MAX_AGENTS): number {
   return Math.max(1, Math.min(Math.min(cap, MAX_AGENTS), Math.floor(n)))
 }
 

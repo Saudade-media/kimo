@@ -20,7 +20,7 @@ type Obj = Record<string, unknown>
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v)
 
 /** TextStyle keys a span may carry (spec §8.2 minus paragraph fields). */
-export const SPAN_STYLE_KEYS = [
+const SPAN_STYLE_KEYS = [
   "font",
   "size",
   "weight",
@@ -31,10 +31,9 @@ export const SPAN_STYLE_KEYS = [
   "case",
   "features",
 ] as const
-export type SpanStyleKey = (typeof SPAN_STYLE_KEYS)[number]
 /** Every attribute of a run: span style keys, the span's own color and its link. */
-export const ATTR_KEYS = [...SPAN_STYLE_KEYS, "fill", "href"] as const
-export type AttrKey = (typeof ATTR_KEYS)[number]
+const ATTR_KEYS = [...SPAN_STYLE_KEYS, "fill", "href"] as const
+type AttrKey = (typeof ATTR_KEYS)[number]
 
 /** Effective attributes of a run (absent / undefined = the reader default). */
 export type Attrs = Partial<Record<AttrKey, unknown>>
@@ -67,7 +66,7 @@ export function same(a: unknown, b: unknown): boolean {
   return ka.length === kb.length && ka.every((k) => same((a as Obj)[k], (b as Obj)[k]))
 }
 
-export function sameAttrs(a: Attrs, b: Attrs): boolean {
+function sameAttrs(a: Attrs, b: Attrs): boolean {
   return ATTR_KEYS.every((k) => same(a[k], b[k]))
 }
 
@@ -81,7 +80,7 @@ export function cleanAttrs(a: Attrs): Attrs {
 // --- Node → runs ----------------------------------------------------------------------------
 
 /** The node's own (inherited) attributes: style keys, `fill`, `style.href`. */
-export function nodeAttrs(n: TextNodeLike): Attrs {
+function nodeAttrs(n: TextNodeLike): Attrs {
   const node = fields(n)
   const style = isObj(node.style) ? node.style : {}
   const out: Attrs = {}
@@ -124,7 +123,7 @@ export const lengthOf = (runs: readonly Run[]): number =>
  * Merges adjacent runs with equal attributes and drops empty runs. An empty text keeps one
  * empty run (its attributes are the typing style), `fallback` when there is none.
  */
-export function normalize(runs: readonly Run[], fallback: Attrs = {}): Run[] {
+function normalize(runs: readonly Run[], fallback: Attrs = {}): Run[] {
   const out: Run[] = []
   for (const r of runs) {
     if (!r.text) continue
@@ -252,15 +251,10 @@ export function replaceText(
   return normalize(out, fallback ?? runs[0]?.attrs)
 }
 
-/** The text in [a, b). */
-export function sliceText(runs: readonly Run[], a: number, b: number): string {
-  return plainText(runs).slice(a, b)
-}
-
 // --- Runs → node ----------------------------------------------------------------------------------
 
 /** Solid colors (and color bindings) are the only values a span `fill` can hold. */
-export function isColorValue(v: unknown): boolean {
+function isColorValue(v: unknown): boolean {
   if (typeof v === "string") return true
   if (!isObj(v)) return false
   if (typeof v.$ref === "string") return true

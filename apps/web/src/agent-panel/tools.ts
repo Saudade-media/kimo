@@ -10,7 +10,6 @@
  */
 import {
   type AgentTool,
-  CHILD_EXCLUDED_TOOLS,
   checkScope,
   createRegistryToolHost,
   type ScopeTree,
@@ -36,7 +35,7 @@ import {
 } from "@kimo/mcp-server"
 
 /** What one agent (lead or child) needs from the document. */
-export interface ToolHostSpec {
+interface ToolHostSpec {
   /** `agent:kimo.<session>.<n>`. */
   origin: `agent:${string}`
   /** "Kimo", "Agent 2" (activity actor). */
@@ -77,7 +76,7 @@ const noFiles: HostFiles = {
 }
 
 /** A single-document `DocumentHost` over the window's store. */
-export function createWindowDocumentHost(o: InWindowToolsOptions): CoreDocumentHost {
+function createWindowDocumentHost(o: InWindowToolsOptions): CoreDocumentHost {
   const doc: BackendDocument = {
     path: o.path,
     store: o.store,
@@ -114,7 +113,7 @@ export function createWindowDocumentHost(o: InWindowToolsOptions): CoreDocumentH
 }
 
 /** ScopeTree over a DocStore (parent links). */
-export function storeScopeTree(store: DocStore): ScopeTree {
+function storeScopeTree(store: DocStore): ScopeTree {
   return {
     exists: (id) => store.hasNode(id),
     parentOf: (id) => {
@@ -142,7 +141,7 @@ export function scopeViolations(
 }
 
 /** The `targets` resolver: path of the doc + per-op scope check for scoped policies. */
-export function scopedTargets(
+function scopedTargets(
   host: CoreDocumentHost,
   store: DocStore,
   policy: ClientPolicy,
@@ -207,5 +206,3 @@ export function createInWindowTools(o: InWindowToolsOptions): {
     docId: () => host.list()[0]?.ref.id ?? "",
   }
 }
-
-export { CHILD_EXCLUDED_TOOLS }

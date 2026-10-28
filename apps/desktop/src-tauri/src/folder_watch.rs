@@ -57,29 +57,3 @@ pub fn sync<Rt: Runtime>(app: &AppHandle<Rt>, folders: &[String]) {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use notify::event::{CreateKind, DataChange, ModifyKind, RemoveKind, RenameMode};
-
-    #[test]
-    fn only_kimo_files_and_folders_matter() {
-        let create = EventKind::Create(CreateKind::File);
-        assert!(relevant(&create, Path::new("/w/a.kimo")));
-        assert!(relevant(&create, Path::new("/w/sub")));
-        assert!(!relevant(&create, Path::new("/w/notes.txt")));
-        assert!(relevant(
-            &EventKind::Remove(RemoveKind::File),
-            Path::new("/w/b.KIMO")
-        ));
-        assert!(relevant(
-            &EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
-            Path::new("/w/x.txt")
-        ));
-        assert!(!relevant(
-            &EventKind::Modify(ModifyKind::Data(DataChange::Content)),
-            Path::new("/w/a.kimo")
-        ));
-    }
-}

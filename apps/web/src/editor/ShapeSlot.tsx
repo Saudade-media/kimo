@@ -18,7 +18,7 @@ import { toolHint } from "./kbd"
 import "./shape-slot.css"
 
 /** Long-press delay before the flyout opens (house value; the design names no duration). */
-export const LONG_PRESS_MS = 400
+const LONG_PRESS_MS = 400
 
 /** Flyout bottom → toolbar top (MBxVC y 12 + h 181 = 193; Floating Toolbar kG342 y 201). */
 const FLYOUT_GAP = 8

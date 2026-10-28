@@ -17,7 +17,6 @@
  */
 import {
   ALIAS_PATTERN,
-  instancesOf,
   type KimoDocument,
   type Libraries,
   localComponents,
@@ -25,10 +24,10 @@ import {
 } from "@kimo/core-schema"
 import { isZip, readZip } from "../../lib/zip"
 
-export type LibraryStatus = "loading" | "linked" | "changed" | "missing"
+type LibraryStatus = "loading" | "linked" | "changed" | "missing"
 
 /** One change of a library since the snapshot (board 13 Library Changes rows). */
-export interface LibraryChange {
+interface LibraryChange {
   kind: "component" | "variable"
   /** Component id or variable name inside the library. */
   id: string
@@ -36,7 +35,7 @@ export interface LibraryChange {
   change: "modified" | "added" | "removed"
 }
 
-export interface LibraryEntry {
+interface LibraryEntry {
   alias: string
   /** `imports[alias]` (relative path). */
   path: string
@@ -99,7 +98,7 @@ const keyOf = (fileId: string, alias: string) => `${fileId}\u0000${alias}`
  * Library files are untrusted input (picked by the user, possibly from anywhere): their size,
  * a package's entry count and its decompressed document size are capped.
  */
-export const MAX_LIBRARY_BYTES = 50 * 1024 * 1024
+const MAX_LIBRARY_BYTES = 50 * 1024 * 1024
 const MAX_ZIP_ENTRIES = 10_000
 
 /** Parses `.kimo` text or a `.kimoz` package (its top-level document). Throws on bad input. */
@@ -229,17 +228,12 @@ function stable(v: unknown): string {
   return JSON.stringify(v) ?? "null"
 }
 
-/** Number of consumer instances using a library component (`ui:btn` → 9). */
-export function usageCount(doc: Pick<KimoDocument, "nodes">, qid: string): number {
-  return instancesOf(doc, qid).length
-}
-
 interface PickerWindow {
   showOpenFilePicker?(o: unknown): Promise<FileSystemFileHandleLike[]>
 }
 
 /** A picked library file (with its handle when the File System Access API is available). */
-export interface PickedLibrary {
+interface PickedLibrary {
   name: string
   text: string
   handle?: FileSystemFileHandleLike

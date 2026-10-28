@@ -37,7 +37,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * (loader-circle), Sharing N images (arrow-up, section 8 E), Reconnecting… (Paused, refresh-cw),
  * Offline · edits kept (ReadOnly, wifi-off), View only (ReadOnly, eye).
  */
-export function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusView {
+function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusView {
   switch (relay) {
     case "synced":
       return {

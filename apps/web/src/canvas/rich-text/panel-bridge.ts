@@ -39,12 +39,12 @@ export interface SelLike {
 
 const SEP = "~"
 
-export function virtualId(nodeId: string, ranges: readonly [number, number][]): string {
+function virtualId(nodeId: string, ranges: readonly [number, number][]): string {
   return `${nodeId}${SEP}${ranges.map(([a, b]) => `${a}-${b}`).join(",")}`
 }
 
 /** The real node id and ranges of a virtual id (null for a plain id). */
-export function parseVirtualId(id: string): { nodeId: string; ranges: [number, number][] } | null {
+function parseVirtualId(id: string): { nodeId: string; ranges: [number, number][] } | null {
   const i = id.lastIndexOf(SEP)
   if (i < 0) return null
   const ranges = id

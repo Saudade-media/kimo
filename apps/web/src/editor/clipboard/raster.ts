@@ -36,18 +36,18 @@ export interface RasterContext {
   isVirtual?: (id: string) => boolean
 }
 
-export type RasterPlacement = { kind: "paste" } | { kind: "drop"; clientX: number; clientY: number }
+type RasterPlacement = { kind: "paste" } | { kind: "drop"; clientX: number; clientY: number }
 
 /** Raster formats the importer accepts (N77cg "Formats"). */
-export const RASTER_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const
+const RASTER_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const
 /** Pill meta / warning copy (vgvYj "Meta", L2qTa warning toast). */
 export const RASTER_FORMATS_LABEL = "PNG · JPEG · WebP · GIF"
 /** Gap between several imported images laid out as a row (rules "Placement"). */
-export const RASTER_ROW_GAP = 16
+const RASTER_ROW_GAP = 16
 /** Share of the viewport an image may cover on empty canvas (rules "Size"). */
-export const VIEWPORT_SHARE = 0.8
+const VIEWPORT_SHARE = 0.8
 /** Name of an image pasted as clipboard data (rules "Node"). */
-export const PASTED_IMAGE_NAME = "Pasted image"
+const PASTED_IMAGE_NAME = "Pasted image"
 
 const MB = 1024 * 1024
 
@@ -70,14 +70,14 @@ export function isRasterType(type: string): boolean {
 }
 
 /** The file name without its extension ("team.jpg" → "team"); "" for none. */
-export function baseName(name: string | undefined): string {
+function baseName(name: string | undefined): string {
   const n = (name ?? "").replace(/^.*[\\/]/, "")
   const dot = n.lastIndexOf(".")
   return dot > 0 ? n.slice(0, dot) : n
 }
 
 /** Pixel density from an `@2x` / `@3x` file-name suffix (1 otherwise). */
-export function densityOf(name: string | undefined): number {
+function densityOf(name: string | undefined): number {
   const m = /@([1-9])x$/i.exec(baseName(name))
   const d = m ? Number(m[1]) : 1
   return d >= 1 ? d : 1
@@ -87,7 +87,7 @@ export function densityOf(name: string | undefined): number {
  * The placed size: natural px divided by the density, then scaled down (ratio kept) so the
  * width fits `maxW` and the height `maxH` (when given). Never scaled up. Rounded to 0.01.
  */
-export function fitSize(
+function fitSize(
   natural: { width: number; height: number },
   density: number,
   maxW: number | null,
@@ -103,7 +103,7 @@ export function fitSize(
 }
 
 /** x offsets of `widths` laid out as a row with `gap`, and the row's total width. */
-export function rowOffsets(
+function rowOffsets(
   widths: readonly number[],
   gap = RASTER_ROW_GAP,
 ): { xs: number[]; total: number } {
@@ -117,13 +117,13 @@ export function rowOffsets(
 }
 
 /** "2.1 MB" (one decimal; at least 0.1 MB for any non-empty size). */
-export function formatMb(bytes: number): string {
+function formatMb(bytes: number): string {
   const mb = bytes / MB
   return `${(bytes > 0 && mb < 0.1 ? 0.1 : Math.round(mb * 10) / 10).toFixed(1)} MB`
 }
 
 /** Warning copy for a file the importer rejects (L2qTa u7ZFT / mXBqS). */
-export function rejectionText(
+function rejectionText(
   name: string,
   reason: "unsupported" | "too-large" | "undecodable",
   bytes = 0,
@@ -234,7 +234,7 @@ export function dropFrameAt(
 }
 
 /** Canvas-local point of a client point (the canvas element's box). */
-export function clientToCanvas(clientX: number, clientY: number): Point {
+function clientToCanvas(clientX: number, clientY: number): Point {
   const el = document.querySelector<HTMLElement>(".canvas-host__canvas")
   const r = el?.getBoundingClientRect()
   return r ? { x: clientX - r.left, y: clientY - r.top } : { x: clientX, y: clientY }

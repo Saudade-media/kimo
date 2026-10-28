@@ -29,7 +29,6 @@ tokenValue("bg-app", "dark")    // "#0A0A0A"
 | `src/generated/editor.css` | `--kimo-*` properties. Exported as `@kimo/design-tokens/editor.css`. |
 | `src/generated/tokens.ts` | Typed map: name → css var, path, source `.pen` variable, declared and resolved value per mode. |
 | `src/generated/tailwind-theme.css` | Tailwind v4 `@theme inline` block pointing at the `--kimo-*` properties. |
-| `test/fixtures/pen-variables.json` | Snapshot of `GetVariables()` from `desing.pen`, used by the tests. |
 
 Scripts: `build:tokens`, `check:generated` (part of the root `bun run check`), `test`, `typecheck`.
 
@@ -102,16 +101,14 @@ default palette (`--color-*: initial`), so only Kimo's color tokens exist as uti
 
 ## Tests
 
-`bun test ./packages/design-tokens` checks that:
+`scripts/safe-test.sh ./packages/design-tokens` checks that:
 
-- every variable in the `.pen` snapshot exists with an identical value in both modes and the same name;
-- text-primary and text-secondary reach at least 4.5:1 on bg-app and bg-subtle, and on-accent on
-  accent, in both modes;
-- the component and typography values match the `.pen` nodes;
-- the generated files are up to date and theme blocks redeclare every mode-dependent alias.
+- the generated files are up to date and every token resolves in both modes;
+- the dark theme blocks redeclare every mode-dependent alias;
+- the build rejects unknown aliases and duplicate names;
+- body text and on-accent text keep at least 4.5:1 contrast in both modes.
 
 ## Updating from the design
 
-1. Read the variables (read-only) through the Pencil MCP: `Print(GetVariables())` on `desing.pen`.
-2. Replace `test/fixtures/pen-variables.json` with the output and update `src/tokens.json` to match.
-3. Run `bun run build:tokens`, then `bun test ./packages/design-tokens`.
+1. Read the variables from the design file and update `src/tokens.json` to match.
+2. Run `bun run build:tokens`, then `scripts/safe-test.sh ./packages/design-tokens`.

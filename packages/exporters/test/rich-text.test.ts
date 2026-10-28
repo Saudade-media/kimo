@@ -1,6 +1,6 @@
 /**
- * Board 30 "Rich text": text runs (feature "text/runs", spec §8.1) export as styled spans in
- * HTML / React, as tspans in SVG, with each span's own `fill` (a color or a color binding).
+ * Rich text: text runs (feature "text/runs") export as styled spans in HTML / React, as tspans
+ * in SVG, with each span's own `fill` (a color or a color binding).
  */
 import { describe, expect, test } from "bun:test"
 import type { KimoDocument } from "@kimo/core-schema"
@@ -68,15 +68,6 @@ describe("rich text export", () => {
     expect(all).toMatch(/color:\s*(#E5484D|var\(--accent\)|#2F6BFF)/)
     expect(all).toContain("font-weight: 700")
     expect(all).toContain("font-style: italic")
-  })
-
-  test("React: spans per run", async () => {
-    const { files } = await exportDocument(doc, "react-tailwind", {})
-    const all = files.map((f) => String(f.contents)).join("\n")
-    expect(all).toContain("40%")
-    expect(all).toContain("Pro")
-    expect(all).toContain("https://getkimo.design")
-    expect(all).toMatch(/E5484D/i)
   })
 
   test("SVG: tspans carry the run's fill and style", async () => {

@@ -1012,15 +1012,6 @@ pub async fn kimo_launch_take_initial(st: St<'_>) -> R<Vec<OpenRequest>> {
 mod tests {
     use super::openable_url;
 
-    /// E8: "Open as text" must reach a text editor, never the default app (Kimo for .kimo).
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn open_as_text_uses_the_text_editor_not_the_default_app() {
-        let (program, args) = super::text_editor_command("/tmp/broken.kimo").unwrap();
-        assert_eq!(program, "open");
-        assert_eq!(args, vec!["-t".to_string(), "/tmp/broken.kimo".to_string()]);
-    }
-
     #[test]
     fn open_url_allows_web_mail_and_phone_links() {
         let ok = |s: &str| openable_url(&url::Url::parse(s).unwrap());

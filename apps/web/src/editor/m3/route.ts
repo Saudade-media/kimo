@@ -1,5 +1,5 @@
 /**
- * Edit routing for instances (spec §9.3–9.5, ADR 0011; canvas contract `EditTarget`). Panels and
+ * Edit routing for instances (spec §9.3–9.5, ADR 0011). Panels and
  * the layers tree produce plain ops on the ids they show; ids inside an instance are composite
  * view ids (`<instance>/<IdPath>`) that do not exist in the store. Before an op group reaches
  * `store.apply` it is rewritten here, so every existing section edits instances correctly:
@@ -19,28 +19,28 @@ import { InstanceNode } from "@kimo/core-schema"
 import type { Op } from "@kimo/editor-state"
 
 /** What routing reads (an `ExpandedView` satisfies it). */
-export interface RouteView {
+interface RouteView {
   getNode(id: string): Readonly<Record<string, unknown>> | undefined
   isVirtual(id: string): boolean
   locate(id: string): { real: string; instance?: string; path?: string } | null
 }
 
 /** Real node data (the store). */
-export type RealLookup = (id: string) => Readonly<Record<string, unknown>> | undefined
+type RealLookup = (id: string) => Readonly<Record<string, unknown>> | undefined
 
-export interface RouteNotice {
+interface RouteNotice {
   code: "HIDDEN_INSTEAD"
   /** Display name of the hidden layer. */
   name: string
   id: string
 }
 
-export type RouteResult =
+type RouteResult =
   | { ok: true; ops: Op[]; notices: RouteNotice[]; routed: boolean }
   | { ok: false; code: "INSTANCE_CONTENT" | "OVERRIDE_KIND"; message: string }
 
 /** Keys an instance node holds itself (placement + identity); the rest are root visuals. */
-export const INSTANCE_OWN_KEYS: ReadonlySet<string> = new Set(
+const INSTANCE_OWN_KEYS: ReadonlySet<string> = new Set(
   Object.keys((InstanceNode as unknown as { properties: Record<string, unknown> }).properties),
 )
 
@@ -55,7 +55,7 @@ interface Pending {
 }
 
 /** True when `ops` touch a composite id or an instance root (routing needed). */
-export function needsRouting(view: RouteView, real: RealLookup, ops: readonly Op[]): boolean {
+function needsRouting(view: RouteView, real: RealLookup, ops: readonly Op[]): boolean {
   for (const op of ops) {
     if (op.op === "update" || op.op === "delete" || op.op === "move") {
       if (view.isVirtual(op.id)) return true

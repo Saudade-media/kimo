@@ -46,7 +46,7 @@ async function expectCode(tokenText: string, code: MpErrorCode) {
   expect(closed.reason).toBe(code)
 }
 
-describe("token verification order (section 4)", () => {
+describe("token verification order", () => {
   test("a valid token passes on both transports", async () => {
     const t = await token(owner, "view", { iat: nowSec() })
     expect((await viaHttp(t)).status).toBe(200)

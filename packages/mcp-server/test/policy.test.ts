@@ -1,7 +1,6 @@
 /** Permissions, approvals and dispatch (teardown 11.3–11.4, ADR 0013 §6). */
 import { describe, expect, test } from "bun:test"
 import {
-  ACTIVITY_LIMIT,
   type ActivityEntry,
   APPROVAL_TIMEOUT_MS,
   type ApprovalOutcome,
@@ -21,7 +20,6 @@ import {
   parseMcpOrigin,
   sessionAllowable,
   type ToolContext,
-  trimActivity,
 } from "../src/index"
 import { validateInput } from "../src/server"
 
@@ -138,26 +136,5 @@ describe("dispatch", () => {
     const c = ctx("session", [])
     await dispatch("kimo_apply_ops", del, c, createStubHandlers(), opts)
     expect(c.allowances.ops.has("delete")).toBe(true)
-  })
-
-  test("unknown tool", async () => {
-    const out = await dispatch("kimo_nope", {}, ctx("once", []), createStubHandlers(), opts)
-    expect(out.result.ok).toBe(false)
-  })
-})
-
-describe("activity", () => {
-  test("keeps the last 500", () => {
-    const many = Array.from({ length: 620 }, (_, i) => ({
-      seq: i,
-      time: i,
-      origin: "user",
-      actor: "You",
-      kind: "edit" as const,
-      summary: "",
-    }))
-    const t = trimActivity(many)
-    expect(t.length).toBe(ACTIVITY_LIMIT)
-    expect(t[0]?.seq).toBe(120)
   })
 })

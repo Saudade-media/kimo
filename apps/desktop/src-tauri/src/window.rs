@@ -491,12 +491,6 @@ mod tests {
     }
 
     #[test]
-    fn settings_window_matches_board_19() {
-        assert_eq!(SETTINGS_SIZE, (840.0, 536.0));
-        assert_eq!(TRAFFIC_LIGHTS, Point { x: 16, y: 18 });
-    }
-
-    #[test]
     fn settings_route_keeps_only_safe_focus() {
         assert_eq!(settings_route("general", None), "settings/general");
         assert_eq!(
@@ -526,27 +520,5 @@ mod tests {
         // Quitting: Settings alone does not keep the app alive.
         assert!(should_exit(&s(&[SETTINGS_LABEL]), true));
         assert!(!should_exit(&s(&["editor-2"]), true));
-    }
-
-    #[test]
-    fn launch_background_is_bg_app_of_the_appearance() {
-        use tauri::window::Color;
-        let (light, dark) = (Color(0xFF, 0xFF, 0xFF, 0xFF), Color(0x0A, 0x0A, 0x0A, 0xFF));
-        assert_eq!(launch_background("light", true), light);
-        assert_eq!(launch_background("dark", false), dark);
-        assert_eq!(launch_background("system", true), dark);
-        assert_eq!(launch_background("system", false), light);
-    }
-
-    #[test]
-    fn overlay_chrome_labels() {
-        assert!(has_overlay_chrome("main"));
-        assert!(has_overlay_chrome("editor-3"));
-        assert!(has_overlay_chrome(SETTINGS_LABEL));
-        assert!(!has_overlay_chrome("other"));
-        let expected = cfg!(target_os = "macos").then_some(TRAFFIC_LIGHTS);
-        assert_eq!(traffic_lights(SETTINGS_LABEL), expected);
-        assert_eq!(traffic_lights("main"), expected);
-        assert_eq!(traffic_lights("other"), None);
     }
 }

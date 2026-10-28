@@ -4,7 +4,7 @@
  */
 import { createGoogleFontsSource } from "./fonts"
 import { CanvasKitRenderer } from "./renderer"
-import type { CreateRendererOptions, FontSource, Point, Rect, Renderer, Viewport } from "./types"
+import type { CreateRendererOptions, FontSource, Renderer } from "./types"
 
 /** CanvasKit types for app code that runs on the shared instance (SVG import outliner). */
 export type { CanvasKit, Path as CkPath } from "canvaskit-wasm"
@@ -66,31 +66,4 @@ export function createRenderer(options: CreateRendererOptions = {}): Renderer {
  */
 export function googleFontsSource(options: { fetch?: typeof fetch } = {}): FontSource {
   return createGoogleFontsSource(options)
-}
-
-// --- Viewport math (pure; same convention as @kimo/editor-state `Viewport`) ---------------
-
-/** `world = screen / zoom + {x, y}` */
-export function screenToWorld(v: Viewport, p: Point): Point {
-  return { x: p.x / v.zoom + v.x, y: p.y / v.zoom + v.y }
-}
-
-/** `screen = (world - {x, y}) * zoom` */
-export function worldToScreen(v: Viewport, p: Point): Point {
-  return { x: (p.x - v.x) * v.zoom, y: (p.y - v.y) * v.zoom }
-}
-
-/** Maps a world rect to screen space. */
-export function worldRectToScreen(v: Viewport, r: Rect): Rect {
-  return { x: (r.x - v.x) * v.zoom, y: (r.y - v.y) * v.zoom, w: r.w * v.zoom, h: r.h * v.zoom }
-}
-
-/** Maps a screen rect to world space. */
-export function screenRectToWorld(v: Viewport, r: Rect): Rect {
-  return { x: r.x / v.zoom + v.x, y: r.y / v.zoom + v.y, w: r.w / v.zoom, h: r.h / v.zoom }
-}
-
-/** World rect currently visible in a `width × height` CSS-px canvas (for culling). */
-export function visibleWorldRect(v: Viewport, width: number, height: number): Rect {
-  return { x: v.x, y: v.y, w: width / v.zoom, h: height / v.zoom }
 }

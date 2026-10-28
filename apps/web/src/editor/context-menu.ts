@@ -20,18 +20,18 @@
  */
 import { isOrphanPlaceholder, placeholderOwner } from "@kimo/ai-agent"
 
-export interface MenuNodeReader {
+interface MenuNodeReader {
   getNode(id: string): Readonly<Record<string, unknown>> | undefined
 }
 
 /** Who owns an orphaned placeholder (null: not a Kimo session, e.g. an MCP client). */
-export interface MenuOwnerSession {
+interface MenuOwnerSession {
   sessionId: string
   /** "session N"; null when the session no longer exists. */
   ordinal: number | null
 }
 
-export interface CanvasMenuInput {
+interface CanvasMenuInput {
   doc: MenuNodeReader
   /** The selection the menu acts on (the shell selects the clicked node first). */
   selection: readonly string[]

@@ -20,7 +20,7 @@ import { FontReplaceSelect, type ReplaceChoice } from "./ReplaceWithMenu"
 import { suggestReplacement } from "./replace-fonts"
 import "./fonts.css"
 
-export interface MissingFontsDialogProps {
+interface MissingFontsDialogProps {
   fileName: string
   fonts: readonly MissingFont[]
   /** Families offered by "Replace with…" (document, local, cached and bundled). */
@@ -58,24 +58,23 @@ export interface MissingFontsDialogProps {
 }
 
 /** Board 28 (c) banner copy (zzcpD). */
-export const BLOCKED_BANNER_TITLE = "Google Fonts are blocked"
-export const BLOCKED_BANNER_BODY =
-  "No third-party fetch is on. Install them or use the offline font pack."
-export const GOOGLE_OFF_BANNER_TITLE = "Google Fonts are off"
-export const GOOGLE_OFF_BANNER_BODY =
+const BLOCKED_BANNER_TITLE = "Google Fonts are blocked"
+const BLOCKED_BANNER_BODY = "No third-party fetch is on. Install them or use the offline font pack."
+const GOOGLE_OFF_BANNER_TITLE = "Google Fonts are off"
+const GOOGLE_OFF_BANNER_BODY =
   "Turn them on in Settings, install them or use the offline font pack."
 
 /** "3 fonts aren't available" / "1 font isn't available". */
-export function missingFontsTitle(n: number): string {
+function missingFontsTitle(n: number): string {
   return n === 1 ? "1 font isn't available" : `${n} fonts aren't available`
 }
 
-export function missingFontsDescription(fileName: string): string {
+function missingFontsDescription(fileName: string): string {
   return `${fileName} uses fonts that aren't installed or embedded. Affected layers render in Inter until you replace or install them. The file keeps the original names.`
 }
 
 /** "Replace 2 fonts" / "Replace 1 font". */
-export function replaceLabel(n: number): string {
+function replaceLabel(n: number): string {
   return `Replace ${n} font${n === 1 ? "" : "s"}`
 }
 

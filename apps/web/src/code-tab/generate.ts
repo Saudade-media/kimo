@@ -11,7 +11,7 @@ import type { ExportFile, IconLoader, IRDocument, IRVariable } from "@kimo/expor
 import { DEFAULT_TAILWIND, type ExportToggles, type TailwindChoices } from "../export/model"
 import { type Framework, type LineRange, sourceMapOf } from "./model"
 
-export interface CodeSource {
+interface CodeSource {
   document(): KimoDocument
   libraries?(): Libraries | undefined
   icons?: IconLoader | null

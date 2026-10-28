@@ -85,13 +85,13 @@ Pure, runtime-neutral (browser, Bun, worker). Formats, crypto, codec, links, HTT
 | `packages/sync/src/index.ts` | Export the above (keep existing exports; `network.ts` types change as in §17.B) |
 | `packages/editor-state/src/types.ts`, `yjs-store.ts` | `DocStore.autoRepair` getter and `setAutoRepair(enabled)` (§15.8) |
 | `packages/sync/test/network*.test.ts`, `packages/sync/test/mp/fake-relay.ts` | Tests and an in-memory fake relay speaking §11 (§18.B) |
-| `packages/editor-state/test/auto-repair.test.ts` | Tests for the switch |
+| `packages/editor-state/test/repair.test.ts` | Tests for the switch |
 
 ### Module C: relay (`apps/server/`)
 
 | File | Contents |
 |---|---|
-| `apps/server/src/index.ts` | `createServer`, `handleRequest` kept for `/healthz` and `/version`, re-exports |
+| `apps/server/src/index.ts` | `createServer`, re-exports |
 | `apps/server/src/config.ts` | `RelayConfig`, `loadConfig(env)` (§14.9) |
 | `apps/server/src/db.ts` | `bun:sqlite` schema (§14.2), migrations, queries |
 | `apps/server/src/blobs.ts` | Blob files on disk (§14.6) |
@@ -128,14 +128,14 @@ Pure, runtime-neutral (browser, Bun, worker). Formats, crypto, codec, links, HTT
 | `packages/core-schema/src/schema/document.ts` and its validator | `AssetEntry.sha256`, rule `ASSET_HASH_MISMATCH` (§16.7) |
 | `docs/spec/kimo-format-1.0.md` | §12 rule 2 and the key list gain `sha256` |
 | `apps/desktop/src-tauri/tauri.conf.json` | CSP `connect-src` adds `https: wss: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*` |
-| `apps/web/test/multiplayer-*.test.ts`, `packages/core-schema/test/asset-sha256.test.ts` | Tests (§18.D) |
+| `apps/web/test/collab/*.test.ts`, `packages/core-schema/test/assets.test.ts` | Tests (§18.D) |
 
 ### Build order and the integration test
 
 All four MAY start at once. Modules B, C and D import `@kimo/sync/mp` by the names in §17.A; their
 tests run once module A has landed. If the orchestrator can sequence, land A first (it is the
 smallest and fully pinned by §19). After all four land, run the cross-module test
-`apps/server/test/e2e-multiplayer.test.ts` (owned by module C, written against §17 from the
+`apps/server/test/e2e.test.ts` (owned by module C, written against §17 from the
 start, marked `test.skipIf` until `@kimo/sync` exports `createNetworkProvider`).
 
 ## 2. Encodings
@@ -2056,8 +2056,6 @@ export interface ServerOptions {
 }
 export const SYNC_PATH = "/sync"
 export function createServer(options: ServerOptions): Bun.Server<unknown> // stop() also closes the database
-export function handleRequest(req: Request): Response // /healthz, /version only (kept for tests)
-export const versionInfo: VersionInfo // protocol, limits, ownership; handleRequest has no database, so it reports owner "unclaimed"
 
 // policy.ts (§14.12), re-exported from index.ts
 export interface RegisterRequest {
@@ -2249,6 +2247,11 @@ export function embedShaders(
 
 ## 18. Test plan
 
+This was the plan the modules were built against. The suites were trimmed in October 2026 (see
+"What to test" in `CLAUDE.md`): files are now named by feature, several are merged, and cases that
+restated the implementation were cut. The directories below still hold them; the file names in the
+lists are the original plan, not the current layout.
+
 Every module runs `bunx biome check` on its files and `bun test` in its package. Tests use only
 `bun:test`. No test talks to the network beyond `127.0.0.1` on an ephemeral port.
 
@@ -2413,7 +2416,7 @@ WebSockets from Bun, with tokens and admin commands made by module A.
 - Docker (manual, documented in the README): `docker build -f apps/server/Dockerfile .` and a
   `/healthz` probe.
 
-### 18.D Web integration (`apps/web/test/`, `packages/core-schema/test/`)
+### 18.D Web integration (`apps/web/test/collab/`, `packages/core-schema/test/`)
 
 - `multiplayer-registry.test.ts`: in-memory backend: owned, joined and cursor round trips;
   `RoomStateStore` contract.

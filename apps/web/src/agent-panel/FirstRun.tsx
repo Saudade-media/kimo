@@ -39,7 +39,7 @@ const PLAN: Record<string, string> = {
 }
 
 /** `/Users/me/.local/bin/claude` → `~/.local/bin/claude`. */
-export function tildePath(path: string | undefined): string {
+function tildePath(path: string | undefined): string {
   if (!path) return ""
   return path.replace(/^(\/Users|\/home)\/[^/]+/, "~").replace(/^[A-Z]:\\Users\\[^\\]+/i, "~")
 }

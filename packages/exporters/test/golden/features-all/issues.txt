@@ -1,7 +1,0 @@
-EFFECT_APPROXIMATED Grid000001 effects are not exported to PDF
-FONT_MISSING - no font file for Inter 400; Helvetica used
-FONT_MISSING - no font file for Inter 700; Helvetica used
-GRADIENT_APPROXIMATED Cell000001 PDF mesh gradients use the mean vertex color
-GRADIENT_APPROXIMATED Cell000001 SVG has no mesh gradient; the mesh's mean vertex color is used
-GRADIENT_APPROXIMATED Cell000001 mesh gradient approximated with radial gradients from its vertex colors
-PAINT_UNSUPPORTED Cell000002 shader ./shaders/noise.glsl is not exported (the canvas and PNG export render it)

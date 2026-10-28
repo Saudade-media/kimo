@@ -23,7 +23,7 @@ export interface DiffRow {
 }
 
 /** Line diff (LCS) with `context` unchanged lines around each change; "…" marks gaps. */
-export function diffRows(before: string | null, after: string | null, context = 2): DiffRow[] {
+function diffRows(before: string | null, after: string | null, context = 2): DiffRow[] {
   const a = (before ?? "").split("\n")
   const b = (after ?? "").split("\n")
   if (before === null) return b.map((text) => ({ sign: "+", text }))
@@ -62,12 +62,12 @@ export function diffRows(before: string | null, after: string | null, context = 
   return out
 }
 
-export function unifiedDiffText(rows: readonly DiffRow[]): string {
+function unifiedDiffText(rows: readonly DiffRow[]): string {
   return rows.map((r) => `${r.sign} ${r.text}`).join("\n")
 }
 
 /** "~/.claude.json.kimo-2026-10-04.bak". */
-export function backupPath(path: string, now: Date): string {
+function backupPath(path: string, now: Date): string {
   return `${path}.kimo-${now.toISOString().slice(0, 10)}.bak`
 }
 

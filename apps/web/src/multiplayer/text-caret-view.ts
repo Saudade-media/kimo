@@ -27,16 +27,12 @@ export const CARET_BAR_EM = 1.2
 export const FLAG_H = 15
 /** `t2btnL`: stacked flags sit 2 apart (y -13, -30). */
 export const FLAG_STACK_GAP = 2
-/** Flags fade this long after the person's last keystroke... */
-export const FLAG_FADE_AFTER_MS = 3000
-/** ...over this long. */
-export const FLAG_FADE_MS = 150
+/** Flags fade this long after the person's last keystroke. */
+const FLAG_FADE_AFTER_MS = 3000
 /** `G52454`: below 50 % zoom flags hide (the caret and range stay). */
 export const FLAG_MIN_ZOOM = 0.5
 /** An agent's caret stays this long after its write. */
 export const AGENT_CARET_MS = 3000
-/** `d7UsO` Remote Range: the presence color at 0.24. */
-export const REMOTE_RANGE_OPACITY = 0.24
 
 /** A caret's place in a text (world units). */
 export interface CaretSpot {

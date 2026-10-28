@@ -62,7 +62,7 @@ export function readToken(kimoHome: string): string | null {
 
 export type HelloFailure = { code: number; message: string; data?: unknown }
 
-export interface Connection {
+interface Connection {
   socket: Socket
   result: HelloResult
   decoder: FrameDecoder

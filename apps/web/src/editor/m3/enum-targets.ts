@@ -14,10 +14,10 @@ import { isNodeType, isRef, nodeKeys } from "@kimo/core-schema"
 type Rec = Record<string, unknown>
 const isObj = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v)
 
-export type PropertyKind = "number" | "pad" | "color" | "boolean" | "string" | "radius"
+type PropertyKind = "number" | "pad" | "color" | "boolean" | "string" | "radius"
 
 /** A Property of the target picker (rule FZirR: "filtered to what that layer supports"). */
-export interface TargetProperty {
+interface TargetProperty {
   key: string
   label: string
   /** Stored fields (`<property>` or `<property>/<key>`); one row writes all of them. */
@@ -57,7 +57,7 @@ export const TARGET_PROPERTIES: readonly TargetProperty[] = [
 const INSTANCE_PROPERTIES = new Set(["w", "h", "radius", "opacity", "fill", "visible"])
 
 /** The stored field of property field `f` on a layer of `type` (instances: `props/<f>`). */
-export function storedField(type: string, f: string): string {
+function storedField(type: string, f: string): string {
   return type === "instance" ? `props/${f}` : f
 }
 
@@ -74,7 +74,7 @@ export function propertiesFor(type: string): TargetProperty[] {
 }
 
 /** One stored target. */
-export interface StoredTarget {
+interface StoredTarget {
   target: string
   field: string
   value: unknown
@@ -176,7 +176,7 @@ export function withOptionTargets(def: Rec, option: string, list: readonly Store
 }
 
 /** Rewrites `def` in targets form with `all` (option → targets; option order = keys of `all`). */
-export function targetsForm(def: Rec, all: Record<string, readonly StoredTarget[]>): Rec {
+function targetsForm(def: Rec, all: Record<string, readonly StoredTarget[]>): Rec {
   const next: Rec = { ...def }
   delete next.target
   delete next.field
@@ -272,7 +272,7 @@ export function kindOf(property: string): PropertyKind | null {
 }
 
 /** The current value of `field` on node data (`<property>/<key>` reads into the struct). */
-export function readField(node: Rec | undefined, field: string): unknown {
+function readField(node: Rec | undefined, field: string): unknown {
   if (!node) return undefined
   const [top, sub] = field.split("/") as [string, string | undefined]
   const v =

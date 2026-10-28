@@ -28,7 +28,7 @@ export interface SvgImportChoice {
   options: SvgImportOptions
 }
 
-export interface SvgImportPopoverProps {
+interface SvgImportPopoverProps {
   fileName: string
   /** "Editable paths in a frame. 14 paths · 3 groups · …" (describeStats). */
   vectorDescription: string
@@ -140,7 +140,7 @@ export function SvgImportPopover({
  * Sub line of Outline strokes (G3tQz): "6 stroked paths become filled shapes, so they scale
  * without changing weight. Dashes are kept as segments.", or "No strokes in this file".
  */
-export function outlineStrokesSub(stroked: number): string {
+function outlineStrokesSub(stroked: number): string {
   if (stroked < 1) return "No strokes in this file"
   return stroked === 1
     ? "1 stroked path becomes a filled shape, so it scales without changing weight. Dashes are kept as segments."

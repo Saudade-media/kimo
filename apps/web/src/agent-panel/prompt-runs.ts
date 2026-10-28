@@ -14,7 +14,7 @@ export interface PromptRunStore {
   save(fileId: string, nodeId: string, state: PromptRunState | null): void
 }
 
-export const PROMPT_RUNS_KEY = "kimo.prompt-runs"
+const PROMPT_RUNS_KEY = "kimo.prompt-runs"
 /** Oldest entries are dropped past this many (a file's deleted prompt nodes leave rows behind). */
 const MAX_ENTRIES = 500
 
@@ -26,7 +26,7 @@ interface KeyValue {
 type Stored = Record<string, PromptRunState>
 
 /** Only what a finished run needs: no live counters, no in-flight status. */
-export function persistable(state: PromptRunState): PromptRunState | null {
+function persistable(state: PromptRunState): PromptRunState | null {
   if (state.status === "running") return null
   const out: PromptRunState = { status: state.status }
   if (state.lastRun) out.lastRun = { ...state.lastRun }

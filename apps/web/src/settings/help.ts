@@ -42,7 +42,7 @@ export function helpItems(o: {
 }
 
 /** "Show logs in Finder" (macOS) / "… in Explorer" (Windows) / "… in folder" (Linux). */
-export function logsLabel(os: KimoPlatform["os"]): string {
+function logsLabel(os: KimoPlatform["os"]): string {
   return os === "windows"
     ? "Show logs in Explorer"
     : os === "linux"

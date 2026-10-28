@@ -30,7 +30,7 @@ export interface SessionToastViewProps {
 }
 
 /** One session toast (stateless). */
-export function SessionToastView({ toast, onAction }: SessionToastViewProps) {
+function SessionToastView({ toast, onAction }: SessionToastViewProps) {
   const copy = toastCopy(toast)
   const view = VIEW[toast.kind]
   return (

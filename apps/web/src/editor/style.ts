@@ -7,7 +7,6 @@
  * spec default so the canonical file stays minimal.
  */
 import type { NodeData } from "@kimo/editor-state"
-import { colorAt as gradientColorAt, parseHex, toHex } from "@kimo/ui"
 import { formatNumber, paintColor, refLabel, splitHex, titleCase } from "./props"
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
@@ -16,7 +15,7 @@ const isRef = (v: unknown): v is { $ref: string } => isObj(v) && typeof v.$ref =
 
 // --- Layer --------------------------------------------------------------------------------
 
-export type LayerBlend =
+type LayerBlend =
   | "normal"
   | "pass-through"
   | "darken"
@@ -46,7 +45,7 @@ export const blendValue = (b: LayerBlend) => (b === "normal" ? undefined : b)
 
 // --- Sizing -------------------------------------------------------------------------------
 
-export type SizeMode = "fixed" | "fit" | "fill"
+type SizeMode = "fixed" | "fit" | "fill"
 
 /** Sizing mode of a node axis as stored (absent: the type's default). */
 export function sizeModeOf(n: NodeData, axis: "w" | "h"): SizeMode {
@@ -133,19 +132,9 @@ export function padSides(pad: unknown): [number, number, number, number] {
   return [0, 0, 0, 0]
 }
 
-/** Shortest stored padding for sides (4 equal → number, t=b & r=l → [v, h]). */
-export function padValue(
-  [t, r, b, l]: readonly [number, number, number, number],
-  individual: boolean,
-): unknown {
-  if (individual) return [t, r, b, l]
-  if (t === r && r === b && b === l) return t === 0 ? undefined : t
-  return [t, r]
-}
-
 // --- Paints -------------------------------------------------------------------------------
 
-export type PaintKind = "solid" | "linear" | "radial" | "angular" | "image" | "other"
+type PaintKind = "solid" | "linear" | "radial" | "angular" | "image" | "other"
 
 export function paintKind(p: unknown): PaintKind {
   if (typeof p === "string" || isRef(p)) return "solid"
@@ -262,26 +251,6 @@ export function paintAlpha(p: unknown): number {
   return 1
 }
 
-/** A paint with its opacity changed (solid hex: the alpha digits; others: `opacity`). */
-export function withPaintAlpha(p: unknown, alpha: number): unknown {
-  const a = Math.min(1, Math.max(0, alpha))
-  const c = paintColor(p)
-  if (typeof c === "string") {
-    const rgba = parseHex(c)
-    const hex = rgba ? toHex({ ...rgba, a }) : c
-    return isObj(p) && p.kind === "solid" ? { ...p, color: hex } : hex
-  }
-  if (isObj(p) && (p.kind === "linear" || p.kind === "radial" || p.kind === "angular")) {
-    const { opacity: _, ...rest } = p
-    return a === 1 ? rest : { ...rest, opacity: a }
-  }
-  if (isObj(p) && p.kind === "image") {
-    const { opacity: _, ...rest } = p
-    return a === 1 ? rest : { ...rest, opacity: a }
-  }
-  return p
-}
-
 /** A solid paint with a new color (hex or `{ $ref }`), keeping a wrapper's `visible`/`blend`. */
 export function withSolid(p: unknown, color: string | { $ref: string }): unknown {
   if (isObj(p) && p.kind === "solid") return { ...p, color }
@@ -346,7 +315,7 @@ export function gradientFrom(p: unknown): Record<string, unknown> {
 
 // --- Gradients ----------------------------------------------------------------------------
 
-export interface Stop {
+interface Stop {
   color: unknown
   at: number
 }
@@ -361,15 +330,6 @@ export function sortedStops(p: unknown): { stop: Stop; index: number }[] {
   return stopsOf(p)
     .map((stop, index) => ({ stop, index }))
     .sort((a, b) => a.stop.at - b.stop.at || a.index - b.index)
-}
-
-/** Linear interpolation of the gradient's color at `at` (hex stops; same math as the editor). */
-export function colorAt(p: unknown, at: number): string {
-  const stops = stopsOf(p).map((s) => ({
-    color: typeof s.color === "string" && parseHex(s.color) ? s.color : "#000000",
-    at: s.at,
-  }))
-  return gradientColorAt(stops, at)
 }
 
 const round4 = (n: number) => Math.round(n * 10000) / 10000
@@ -528,14 +488,7 @@ export function withDash(s: unknown, dash: readonly [number, number] | null) {
 
 // --- Effects ------------------------------------------------------------------------------
 
-export type EffectKind = "drop-shadow" | "inner-shadow" | "layer-blur" | "background-blur"
-
-export const EFFECT_KINDS: readonly { value: EffectKind; label: string }[] = [
-  { value: "drop-shadow", label: "Drop shadow" },
-  { value: "inner-shadow", label: "Inner shadow" },
-  { value: "layer-blur", label: "Layer blur" },
-  { value: "background-blur", label: "Background blur" },
-]
+type EffectKind = "drop-shadow" | "inner-shadow" | "layer-blur" | "background-blur"
 
 export function effectKind(e: unknown): EffectKind {
   if (isObj(e) && e.kind === "blur") return "layer-blur"
@@ -597,9 +550,7 @@ export const numText = (v: number | { $ref: string }) =>
 
 // --- Icons --------------------------------------------------------------------------------
 
-export type IconLibraryId = "lucide" | "phosphor" | "material" | "feather"
-export type MaterialStyle = "outlined" | "rounded" | "sharp"
-
+type IconLibraryId = "lucide" | "phosphor" | "material" | "feather"
 /** Library of an icon node's `set` (`material-rounded` → material). */
 export function iconLibrary(set: unknown): IconLibraryId {
   const s = String(set)
@@ -607,15 +558,6 @@ export function iconLibrary(set: unknown): IconLibraryId {
   if (s === "phosphor" || s === "feather") return s
   return "lucide"
 }
-
-export const materialStyle = (set: unknown): MaterialStyle => {
-  const s = String(set)
-  return s.endsWith("-rounded") ? "rounded" : s.endsWith("-sharp") ? "sharp" : "outlined"
-}
-
-/** `.kimo` icon `set` for a library (+ Material style). */
-export const iconSet = (lib: IconLibraryId, style: MaterialStyle = "outlined") =>
-  lib === "material" ? `material-${style}` : lib
 
 /** Stroke libraries show "Stroke" (`strokeWidth`), the others "Weight" (`weight`). */
 export const isStrokeLibrary = (lib: IconLibraryId) => lib === "lucide" || lib === "feather"
@@ -625,14 +567,6 @@ export const LIBRARY_LABEL: Record<IconLibraryId, string> = {
   phosphor: "Phosphor",
   material: "Material",
   feather: "Feather",
-}
-
-/** Icon picker footer license (board 09 `jKClR` Footer). */
-export const LIBRARY_LICENSE: Record<IconLibraryId, string> = {
-  lucide: "lucide · ISC",
-  phosphor: "phosphor · MIT",
-  material: "material · Apache-2.0",
-  feather: "feather · MIT",
 }
 
 /** Native defaults: stroke 2 (lucide/feather), weight 400. */

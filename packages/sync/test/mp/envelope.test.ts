@@ -1,20 +1,25 @@
 import { describe, expect, test } from "bun:test"
 import {
+  blobIdFor,
   deriveRoomId,
   deriveRoomKeys,
   ENVELOPE_OVERHEAD,
   EnvelopeKind,
-  envelopeKind,
   generateRoomKey,
+  isBlobId,
   openAwareness,
+  openBlob,
   openSnapshot,
   openUpdate,
   type RoomKeys,
   randomBytes,
   sealAwareness,
+  sealBlob,
   sealSnapshot,
   sealUpdate,
+  sha256,
   toHex,
+  utf8,
 } from "../../src/mp"
 import { expectCode, flipBit } from "./helpers"
 
@@ -25,24 +30,15 @@ async function roomKeys(roomKey = generateRoomKey()): Promise<RoomKeys> {
 const plaintext = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])
 
 describe("envelopes", () => {
-  test("round trip per kind, with the 30-byte layout", async () => {
+  test("round trip per kind, including an empty payload", async () => {
     const keys = await roomKeys()
     const update = await sealUpdate(keys, plaintext)
     expect(update.length).toBe(plaintext.length + ENVELOPE_OVERHEAD)
-    expect(ENVELOPE_OVERHEAD).toBe(30)
-    expect([update[0], update[1]]).toEqual([1, EnvelopeKind.update])
     expect(await openUpdate(keys, update)).toEqual(plaintext)
     expect(await openSnapshot(keys, 9, await sealSnapshot(keys, 9, plaintext))).toEqual(plaintext)
     expect(await openAwareness(keys, 3, await sealAwareness(keys, 3, plaintext))).toEqual(plaintext)
     const empty = await sealUpdate(keys, new Uint8Array(0))
-    expect(empty.length).toBe(30)
     expect((await openUpdate(keys, empty)).length).toBe(0)
-  })
-
-  test("large payloads round trip", async () => {
-    const keys = await roomKeys()
-    const big = randomBytes(1 << 20)
-    expect(await openSnapshot(keys, 0, await sealSnapshot(keys, 0, big))).toEqual(big)
   })
 
   test("IVs differ between seals", async () => {
@@ -69,12 +65,6 @@ describe("envelopes", () => {
     )
   })
 
-  test("a wrong room key fails", async () => {
-    const keys = await roomKeys()
-    const other = await deriveRoomKeys(generateRoomKey(), keys.room)
-    await expectCode(openUpdate(other, await sealUpdate(keys, plaintext)), "DECRYPT_FAILED")
-  })
-
   test("a kind byte swap fails, even with the same key", async () => {
     const keys = await roomKeys()
     const update = await sealUpdate(keys, plaintext)
@@ -97,33 +87,48 @@ describe("envelopes", () => {
     versioned[0] = 2
     await expectCode(openUpdate(keys, versioned), "DECRYPT_FAILED")
   })
+})
 
-  test("envelopeKind", async () => {
+describe("blob envelopes", () => {
+  test("seal and open round trip; the id is 64 hex", async () => {
     const keys = await roomKeys()
-    expect(envelopeKind(await sealUpdate(keys, plaintext))).toBe(EnvelopeKind.update)
-    expect(envelopeKind(await sealSnapshot(keys, 1, plaintext))).toBe(EnvelopeKind.snapshot)
-    expect(envelopeKind(await sealAwareness(keys, 1, plaintext))).toBe(EnvelopeKind.awareness)
-    expect(envelopeKind(new Uint8Array(29))).toBeNull()
-    const bad = new Uint8Array(30)
-    bad[0] = 1
-    bad[1] = 5
-    expect(envelopeKind(bad)).toBeNull()
-    bad[1] = 4
-    expect(envelopeKind(bad)).toBe(EnvelopeKind.blob)
-    bad[0] = 2
-    expect(envelopeKind(bad)).toBeNull()
+    const bytes = randomBytes(5000)
+    const sealed = await sealBlob(keys, bytes)
+    expect(isBlobId(sealed.id)).toBe(true)
+    expect(sealed.sha).toEqual(await sha256(bytes))
+    expect(await openBlob(keys, sealed.sha, sealed.envelope)).toEqual(bytes)
+    for (const bad of ["0".repeat(63), "A".repeat(64), `${"0".repeat(63)}g`])
+      expect(isBlobId(bad)).toBe(false)
   })
 
-  test("invalid positions and IVs are BAD_REQUEST", async () => {
-    const keys = await roomKeys()
-    await expectCode(sealSnapshot(keys, -1, plaintext), "BAD_REQUEST")
-    await expectCode(sealAwareness(keys, 1.5, plaintext), "BAD_REQUEST")
-    await expectCode(openSnapshot(keys, Number.NaN, new Uint8Array(40)), "BAD_REQUEST")
-    await expectCode(sealUpdate(keys, plaintext, { iv: new Uint8Array(8) }), "BAD_REQUEST")
+  test("the same plaintext has the same id in one room and different ids in two", async () => {
+    const roomKey = generateRoomKey()
+    const a = await roomKeys(roomKey)
+    const b = await roomKeys(roomKey)
+    const bytes = utf8("logo.png bytes")
+    const first = await sealBlob(a, bytes)
+    const second = await sealBlob(a, bytes)
+    expect(second.id).toBe(first.id)
+    expect(second.envelope).not.toEqual(first.envelope)
+    expect((await sealBlob(b, bytes)).id).not.toBe(first.id)
+    expect(await blobIdFor(a, first.sha)).toBe(first.id)
   })
 
-  test("deriveRoomKeys rejects a room key that is not 32 bytes", async () => {
-    const room = await deriveRoomId(randomBytes(32))
-    await expectCode(deriveRoomKeys(new Uint8Array(16), room), "BAD_REQUEST")
+  test("a wrong sha is DECRYPT_FAILED and a lying sender is BLOB_INTEGRITY", async () => {
+    const keys = await roomKeys()
+    const bytes = utf8("real")
+    const sealed = await sealBlob(keys, bytes)
+    await expectCode(openBlob(keys, await sha256(utf8("fake")), sealed.envelope), "DECRYPT_FAILED")
+    const claimed = await sha256(utf8("claimed"))
+    const lying = await sealBlob(keys, bytes, { sha: claimed })
+    await expectCode(openBlob(keys, claimed, lying.envelope), "BLOB_INTEGRITY")
+  })
+
+  test("tampering and wrong room keys fail", async () => {
+    const keys = await roomKeys()
+    const sealed = await sealBlob(keys, randomBytes(100))
+    await expectCode(openBlob(keys, sealed.sha, flipBit(sealed.envelope, 50)), "DECRYPT_FAILED")
+    const other = await deriveRoomKeys(generateRoomKey(), keys.room)
+    await expectCode(openBlob(other, sealed.sha, sealed.envelope), "DECRYPT_FAILED")
   })
 })

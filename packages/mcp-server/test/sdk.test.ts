@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { createConnectionServer, RelayTransport, validateInput } from "../src/handlers/sdk"
-import { createMemoryDocumentHost, HEADLESS_POLICY } from "../src/index"
+import { createMemoryDocumentHost, HEADLESS_POLICY, listTools } from "../src/index"
 
 test("a relayed connection serves initialize, tools/call and resources/read", async () => {
   const platform = createMemoryPlatform()
@@ -46,7 +46,9 @@ test("a relayed connection serves initialize, tools/call and resources/read", as
   transport.receive({ jsonrpc: "2.0", method: "notifications/initialized" } as never)
   transport.receive({ jsonrpc: "2.0", id: 2, method: "tools/list" } as never)
   const list = await next(2)
-  expect((list.result?.tools as unknown[] | undefined)?.length).toBe(20)
+  expect((list.result?.tools as unknown[] | undefined)?.length).toBe(
+    listTools({ host: "desktop" }).length,
+  )
   transport.receive({
     jsonrpc: "2.0",
     id: 3,

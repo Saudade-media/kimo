@@ -16,7 +16,6 @@ export {
 export {
   applySetEntry,
   argEffect,
-  argEffects,
   baseRoot,
   COMPONENT_DESCRIPTION_META_KEY,
   type ComponentScope,
@@ -96,7 +95,6 @@ export {
   conflictTargetKey,
   conflictTargetsOverlap,
   finishMerge,
-  hasConflicts,
   listConflicts,
   MERGE_FEATURE,
   markConflictEdited,

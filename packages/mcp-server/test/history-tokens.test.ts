@@ -1,5 +1,5 @@
 /**
- * kimo_history undo tokens survive undo / redo (board 37 F3, F6, F11): a group's token follows
+ * kimo_history undo tokens survive undo / redo: a group's token follows
  * it to the redo stack and back, so the same token undoes it again after a redo, and a token
  * redo replays exactly that group (or refuses when another one is on top).
  */

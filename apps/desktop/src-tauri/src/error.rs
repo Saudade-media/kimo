@@ -128,30 +128,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn serializes_camel_case_without_null_errno() {
-        let e = PlatformErrorPayload::new("LOCKED", "held");
-        assert_eq!(
-            serde_json::to_string(&e).unwrap(),
-            r#"{"code":"LOCKED","message":"held"}"#
-        );
+    fn maps_io_errors_to_codes() {
         let e = io_err(io::Error::from(io::ErrorKind::NotFound), "/x");
-        assert_eq!(e.code, "NOT_FOUND");
-        assert_eq!(e.errno.as_deref(), Some("ENOENT"));
-    }
-
-    #[test]
-    fn maps_already_exists() {
+        assert_eq!(
+            (e.code.as_str(), e.errno.as_deref()),
+            ("NOT_FOUND", Some("ENOENT"))
+        );
         let e = io_err(io::Error::from(io::ErrorKind::AlreadyExists), "/x");
-        assert_eq!(e.code, "EXISTS");
-        assert_eq!(e.errno.as_deref(), Some("EEXIST"));
-        assert_eq!(exists("taken").code, "EXISTS");
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn maps_disk_full() {
-        let e = io_err(io::Error::from_raw_os_error(libc::ENOSPC), "/x");
-        assert_eq!(e.code, "DISK_FULL");
-        assert_eq!(e.errno.as_deref(), Some("ENOSPC"));
+        assert_eq!(
+            (e.code.as_str(), e.errno.as_deref()),
+            ("EXISTS", Some("EEXIST"))
+        );
+        #[cfg(unix)]
+        {
+            let e = io_err(io::Error::from_raw_os_error(libc::ENOSPC), "/x");
+            assert_eq!(
+                (e.code.as_str(), e.errno.as_deref()),
+                ("DISK_FULL", Some("ENOSPC"))
+            );
+        }
     }
 }

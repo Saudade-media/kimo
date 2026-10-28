@@ -17,7 +17,7 @@
 import { PlatformError } from "./errors"
 
 /** Keychain service name (lead decision). */
-export const SECRET_SERVICE = "kimo"
+const SECRET_SERVICE = "kimo"
 
 /** Keychain account for a provider id: `provider.anthropic`, `provider.custom:ollama`. */
 export function providerAccount(providerId: string): string {

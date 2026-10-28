@@ -900,7 +900,7 @@ type Features = Readonly<Record<string, FeatureValue>>
 const DEFAULT_ON = new Set(["liga", "calt"])
 
 /** The OpenType rows of the menu (ndO4D), in board order. */
-export const FEATURE_ITEMS: readonly { tag: string; label: string }[] = [
+const FEATURE_ITEMS: readonly { tag: string; label: string }[] = [
   { tag: "liga", label: "Standard ligatures" },
   { tag: "calt", label: "Contextual alternates" },
   { tag: "tnum", label: "Tabular numbers" },
@@ -910,10 +910,7 @@ export const FEATURE_ITEMS: readonly { tag: string; label: string }[] = [
 ]
 
 /** ss01 … ss20. */
-export const STYLISTIC_SETS = Array.from(
-  { length: 20 },
-  (_, i) => `ss${String(i + 1).padStart(2, "0")}`,
-)
+const STYLISTIC_SETS = Array.from({ length: 20 }, (_, i) => `ss${String(i + 1).padStart(2, "0")}`)
 
 function featuresOf(node: Sel["node"] | null): Features {
   const f = node ? styleOf(node).features : undefined
@@ -932,11 +929,11 @@ export function featureOn(features: Features, tag: string): boolean {
 }
 
 /** Tags that differ from the font defaults (Features row chips), in insertion order. */
-export function activeFeatures(features: Features): [string, FeatureValue][] {
+function activeFeatures(features: Features): [string, FeatureValue][] {
   return Object.entries(features).filter(([tag, v]) => !(DEFAULT_ON.has(tag) && v === true))
 }
 
-export function featureChipLabel(tag: string, v: FeatureValue): string {
+function featureChipLabel(tag: string, v: FeatureValue): string {
   if (v === false) return `${tag} off`
   if (typeof v === "number") return `${tag} = ${v}`
   return tag
@@ -953,7 +950,7 @@ export function toggledFeature(features: Features, tag: string): FeatureValue | 
  * Board 25 §6 (d): active tags the menu has no row for (custom tags, stylistic sets that are
  * on), in insertion order — each gets an {@link OpenTypeFeatureRow}.
  */
-export function customFeatures(features: Features): string[] {
+function customFeatures(features: Features): string[] {
   const rows = new Set(FEATURE_ITEMS.map((f) => f.tag))
   return Object.entries(features)
     .filter(([tag, v]) => !rows.has(tag) && v !== false && v !== 0)
@@ -986,15 +983,8 @@ function useFontFeatures(
 }
 
 /** Board 24 (b): a custom tag's value; 1 (the default) is stored as plain "on". */
-export function customFeatureValue(value: number): FeatureValue {
+function customFeatureValue(value: number): FeatureValue {
   return value === 1 ? true : value
-}
-
-/** "salt = 2" / "salt" → [tag, value]; null when invalid (4-char OpenType tag). */
-export function parseCustomTag(input: string): [string, FeatureValue] | null {
-  const m = /^\s*([A-Za-z0-9]{4})\s*(?:=\s*(\d{1,5}))?\s*$/.exec(input)
-  if (!m?.[1]) return null
-  return [m[1], m[2] !== undefined ? Number(m[2]) : true]
 }
 
 function featureOps(sel: readonly Sel[], tag: string, value: FeatureValue | undefined) {

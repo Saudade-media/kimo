@@ -32,16 +32,12 @@ function seeded() {
   return s
 }
 
-describe("page ops (spec §5.6)", () => {
-  test("a document without pages has one implicit page holding every root", () => {
+describe("page ops", () => {
+  test("adding the first page materializes the implicit Page 1 and stamps the existing roots", () => {
     const s = seeded()
+    // A document without pages has one implicit page holding every root.
     expect(pagesOf(s)).toEqual([{ id: null, name: "Page 1", order: "" }])
     expect(pageRoots(s, null)).toEqual(["FrameA0001", "FrameB0001"])
-    expect(pageOfNode(s, "ChildA0001")).toBeNull()
-  })
-
-  test("adding the first page materializes Page 1 and stamps the existing roots", () => {
-    const s = seeded()
     const { ops, pageId } = addPageOps(s)
     const r = s.apply(ops, { origin: "user", label: "Add page" })
     expect(r.ok).toBe(true)

@@ -13,7 +13,7 @@ export interface DisconnectImpact {
   more: number
 }
 
-export function stopRelayDescription(impact: DisconnectImpact): string {
+function stopRelayDescription(impact: DisconnectImpact): string {
   const count = impact.people.length + impact.more
   const names =
     impact.more > 0

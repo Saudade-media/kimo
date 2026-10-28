@@ -7,7 +7,6 @@
 import type { InsertOp, Op } from "@kimo/editor-state"
 import {
   type Bounds,
-  IDENTITY,
   type Matrix,
   matrixScale,
   multiply,
@@ -82,7 +81,7 @@ export interface ConvertContext {
   parent?: string | null
 }
 
-export interface ConvertResult {
+interface ConvertResult {
   ops: Op[]
   rootId: string
   stats: SvgStats
@@ -121,7 +120,7 @@ const hex2 = (n: number) =>
     .toUpperCase()
 
 /** `#RRGGBB` / `#RRGGBBAA` for a CSS color, or null (`none`, unknown). */
-export function parseSvgColor(v: string | undefined, alpha = 1): string | null {
+function parseSvgColor(v: string | undefined, alpha = 1): string | null {
   if (!v) return null
   const s = v.trim().toLowerCase()
   if (s === "none" || s === "transparent") return null
@@ -659,5 +658,3 @@ export function importSvgAsVectors(
 export function analyzeSvg(svg: SanitizedSvg): SvgStats {
   return walk(svg, svg.report).stats
 }
-
-export { IDENTITY }

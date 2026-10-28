@@ -18,7 +18,7 @@ export const FRAMEWORKS: readonly { value: Framework; label: string }[] = [
   { value: "tokens", label: "Tokens" },
 ]
 
-export const DEFAULT_FRAMEWORK: Framework = "react"
+const DEFAULT_FRAMEWORK: Framework = "react"
 
 /** Rule "Truncate": render cap per file (`CODE_TAB_MAX_LINES`). */
 export const CODE_TAB_MAX_LINES = 400
@@ -53,7 +53,7 @@ export function writeFramework(
 // --- Copy -------------------------------------------------------------------------------------
 
 /** "2,318" (en-US grouping, as on the board). */
-export const formatCount = (n: number) => n.toLocaleString("en-US")
+const formatCount = (n: number) => n.toLocaleString("en-US")
 
 /** File Tabs › Meta (x2C0GA): "19 lines". */
 export const linesMeta = (n: number) => `${formatCount(n)} ${n === 1 ? "line" : "lines"}`
@@ -104,7 +104,7 @@ export function skippedComment(path: string, kind: string, name: string): string
 
 // --- Which nodes the tab generates for -----------------------------------------------------
 
-export interface CodeTarget {
+interface CodeTarget {
   /** Nodes the code is generated for (the root component first). */
   roots: string[]
   /** Selected nodes inside a root: their line ranges are highlighted. */
@@ -229,7 +229,7 @@ export function nodeAtLine(
 
 // --- Ink tokenizer ("Ink" code theme) -------------------------------------------------------
 
-export type InkLang = "jsx" | "css" | "json" | "text"
+type InkLang = "jsx" | "css" | "json" | "text"
 
 export function langOf(path: string): InkLang {
   const ext = path.slice(path.lastIndexOf(".") + 1).toLowerCase()
@@ -273,7 +273,7 @@ function push(out: InkToken[], kind: InkKind, text: string) {
 }
 
 /** Block-comment state carried between lines (`/* …` or `<!-- …` left open). */
-export type InkState = { comment: null | "*/" | "-->" }
+type InkState = { comment: null | "*/" | "-->" }
 
 const JSX_RE =
   /(\{\/\*)|(\/\*)|(<!--)|(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(<\/?)([A-Za-z][\w.:-]*)|([A-Za-z_][\w:.-]*)(?=\s*=(?!=))|\b([A-Za-z_$][\w$]*)\b|([<>/={}();,[\]])/g
@@ -289,7 +289,7 @@ const isTextContent = (line: string) => !/[<>{}()=;]/.test(line) && line.trim() 
  * property names / `$` keys `attr`, punctuation `punct`, comments `comment`, the rest `plain`.
  * `state` carries block comments across lines.
  */
-export function tokenizeInk(line: string, lang: InkLang, state: InkState = { comment: null }) {
+function tokenizeInk(line: string, lang: InkLang, state: InkState = { comment: null }) {
   const out: InkToken[] = []
   let at = 0
   // Inside a block comment from a previous line.

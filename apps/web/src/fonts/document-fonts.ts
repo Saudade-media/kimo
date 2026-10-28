@@ -26,9 +26,6 @@ export function isFontAsset(key: string, mime?: string): boolean {
   return ext !== undefined && ext in FONT_MIME
 }
 
-/** Family / weight / style from a font file name (shared with headless render). */
-export { parseFontFileName }
-
 /** A document font face plus its asset file (board 28: listed in the manifest on save). */
 export interface DocumentFontAsset extends DocumentFontFace {
   /** `<hash>.<ext>` in `assets/`. */

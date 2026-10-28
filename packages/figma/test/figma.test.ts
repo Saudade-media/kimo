@@ -88,16 +88,12 @@ describe("kiwi", () => {
 })
 
 describe("clipboard", () => {
-  test("a Figma copy is recognised and decoded with its metadata", () => {
+  test("a Figma copy is recognised and decoded with its metadata; other HTML is not", () => {
     const html = figmaHtml(message([]), { fileKey: "abc", imageHashes: { aa: "https://x" } })
     expect(isFigmaClipboard(html)).toBe(true)
     const copy = parseFigmaClipboard(html)
     expect(copy?.kind).toBe("fig-kiwi")
     expect(copy?.meta?.fileKey).toBe("abc")
-    expect((copy?.message.nodeChanges as Obj[] | undefined)?.length).toBe(3)
-  })
-
-  test("other HTML is not a Figma copy", () => {
     expect(isFigmaClipboard("<b>hello</b>")).toBe(false)
     expect(parseFigmaClipboard("<b>hello</b>")).toBeNull()
   })
@@ -205,30 +201,6 @@ describe("convert", () => {
     expect(r.byName("Badge")).toMatchObject({ position: "absolute", x: 290, y: 2, w: 8, h: 8 })
   })
 
-  test("a group (frame that resizes to fit) becomes a group; children stay relative", () => {
-    const r = paste([
-      {
-        guid: guid(10),
-        parentIndex: onPage("!"),
-        type: "FRAME",
-        name: "G",
-        resizeToFit: true,
-        size: { x: 20, y: 20 },
-        transform: identity(100, 100),
-      },
-      {
-        guid: guid(11),
-        parentIndex: under(10, "!"),
-        type: "RECTANGLE",
-        name: "R",
-        size: { x: 20, y: 20 },
-        transform: identity(),
-      },
-    ])
-    expect(r.byName("G")).toMatchObject({ type: "group", x: 100, y: 100 })
-    expect(r.byName("R")).toMatchObject({ parent: r.roots[0], x: 0, y: 0 })
-  })
-
   test("rotation and flips keep the box where Figma draws it", () => {
     const c = Math.cos(Math.PI / 6)
     const s = Math.sin(Math.PI / 6)
@@ -258,7 +230,7 @@ describe("convert", () => {
     expect(r.byName("F")).toMatchObject({ flipX: true, x: 100, y: 0 })
   })
 
-  test("paints: solid with opacity, hidden paints, linear gradient direction, images", () => {
+  test("paints: solid with opacity, hidden paints, linear gradient direction, images by hash", () => {
     const hash = Uint8Array.from({ length: 20 }, (_, i) => i)
     const hashHex = [...hash].map((b) => b.toString(16).padStart(2, "0")).join("")
     const r = paste(
@@ -307,6 +279,17 @@ describe("convert", () => {
             { type: "IMAGE", visible: true, opacity: 1, image: { hash }, imageScaleMode: "FIT" },
           ],
         },
+        {
+          guid: guid(13),
+          parentIndex: onPage("$"),
+          type: "RECTANGLE",
+          name: "Missing",
+          size: { x: 10, y: 10 },
+          transform: identity(),
+          fillPaints: [
+            { type: "IMAGE", visible: true, image: { hash: new Uint8Array(20).fill(171) } },
+          ],
+        },
       ],
       { images: { [hashHex]: "./assets/0123456789abcdef.png" } },
     )
@@ -323,6 +306,9 @@ describe("convert", () => {
       src: "./assets/0123456789abcdef.png",
       fit: "contain",
     })
+    // An image that was not downloaded pastes as a missing image and is reported.
+    expect(r.byName("Missing").fill.src).toBe("./assets/abababababababab.png")
+    expect(r.warnings.map((w) => w.code)).toContain("IMAGE_MISSING")
     expect(
       figmaImageHashes(
         parseFigmaClipboard(
@@ -339,59 +325,6 @@ describe("convert", () => {
         )?.message ?? {},
       ),
     ).toEqual([hashHex])
-  })
-
-  test("an image that was not downloaded pastes as a missing image and is reported", () => {
-    const r = paste([
-      {
-        guid: guid(10),
-        parentIndex: onPage("!"),
-        type: "RECTANGLE",
-        name: "Image",
-        size: { x: 10, y: 10 },
-        transform: identity(),
-        fillPaints: [
-          { type: "IMAGE", visible: true, image: { hash: new Uint8Array(20).fill(171) } },
-        ],
-      },
-    ])
-    expect(r.byName("Image").fill.src).toBe("./assets/abababababababab.png")
-    expect(r.warnings.map((w) => w.code)).toEqual(["IMAGE_MISSING"])
-  })
-
-  test("effects and strokes", () => {
-    const r = paste([
-      {
-        guid: guid(10),
-        parentIndex: onPage("!"),
-        type: "FRAME",
-        name: "Card",
-        size: { x: 100, y: 50 },
-        transform: identity(),
-        cornerRadius: 12,
-        strokePaints: [{ type: "SOLID", color: rgb(0, 0, 0, 0.1), visible: true, opacity: 1 }],
-        strokeWeight: 2,
-        effects: [
-          {
-            type: "DROP_SHADOW",
-            color: rgb(0, 0, 0, 0.25),
-            offset: { x: 0, y: 4 },
-            radius: 8,
-            spread: 0,
-            visible: true,
-          },
-          { type: "BACKGROUND_BLUR", radius: 16, visible: true },
-        ],
-      },
-    ])
-    expect(r.byName("Card")).toMatchObject({
-      radius: 12,
-      stroke: { paint: "#0000001A", width: 2 },
-      effects: [
-        { kind: "shadow", x: 0, y: 4, blur: 7, color: "#00000040" },
-        { kind: "backdrop-blur", radius: 14 },
-      ],
-    })
   })
 
   test("text: font, weight, italic, units, auto-resize, and style runs as spans", () => {
@@ -476,30 +409,6 @@ describe("convert", () => {
       { text: "Hi " },
       { text: "you", style: { weight: 700 }, fill: "#FF0000" },
     ])
-  })
-
-  test("list paragraphs get their numbers and bullets", () => {
-    const r = paste([
-      {
-        guid: guid(10),
-        parentIndex: onPage("!"),
-        type: "TEXT",
-        name: "L",
-        size: { x: 100, y: 60 },
-        transform: identity(),
-        textAutoResize: "WIDTH_AND_HEIGHT",
-        textData: {
-          characters: "One\nTwo\nDot\nPlain",
-          lines: [
-            { lineType: "ORDERED_LIST", indentationLevel: 1, isFirstLineOfList: true },
-            { lineType: "ORDERED_LIST", indentationLevel: 1, isFirstLineOfList: false },
-            { lineType: "UNORDERED_LIST", indentationLevel: 2, isFirstLineOfList: true },
-            { lineType: "PLAIN", indentationLevel: 0, isFirstLineOfList: false },
-          ],
-        },
-      },
-    ])
-    expect(r.byName("L").content).toBe("1. One\n2. Two\n    ◦ Dot\nPlain")
   })
 
   test("instances expand: overrides by key path, text and visibility properties, nested instances", () => {

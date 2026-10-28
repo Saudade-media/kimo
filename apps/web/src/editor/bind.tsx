@@ -69,7 +69,7 @@ const noop = () => () => {}
 const empty = () => NO_LIBS
 
 /** Libraries of the file (re-renders when one loads) and a per-node theme reader. */
-export function useBindingEnv() {
+function useBindingEnv() {
   const { header, m3, theme } = usePanel()
   const libs = useSyncExternalStore(
     m3 ? m3.libs.subscribe : noop,
@@ -265,7 +265,7 @@ export function StaticField({ value, bind }: { value: string; bind: BindSlot }) 
 // --- "Bind … to variable" requests (layer context menu → Design tab) ----------------------------
 
 /** Fields without a panel control of their own: their bound row shows only on request. */
-export type BindRequestField = "visible" | "content"
+type BindRequestField = "visible" | "content"
 
 let request: BindRequestField | null = null
 const requestListeners = new Set<() => void>()

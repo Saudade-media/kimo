@@ -16,7 +16,7 @@ const hasHandle = (a: PathAnchorPoint, side: "in" | "out") => {
 }
 
 /** Sharp = no handles; Smooth = at least one handle. */
-export function anchorKindOf(a: PathAnchorPoint): AnchorKind {
+function anchorKindOf(a: PathAnchorPoint): AnchorKind {
   return hasHandle(a, "in") || hasHandle(a, "out") ? "smooth" : "sharp"
 }
 
@@ -216,7 +216,7 @@ export function bendSegment(
 // --- Board 27 §5 (b): star / polygon handles ------------------------------------------------
 
 /** Star point → radius handle distance at radius 0 (ICb89: top point y 50, handle center 63). */
-export const RADIUS_HANDLE_INSET = 13
+const RADIUS_HANDLE_INSET = 13
 
 /** The two star handles in the node's LOCAL box (`w` × `h`): ratio (hollow) and radius (filled). */
 export function starHandles(

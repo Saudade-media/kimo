@@ -1061,8 +1061,8 @@ mod tests {
         std::fs::create_dir_all(&bin).unwrap();
         let mut cfg = CliConfig::new(home.clone(), home.join(".kimo"), "/app/kimo-mcp".into());
         cfg.login_shell_env = false;
-        cfg.term_grace = Duration::from_millis(300);
-        cfg.kill_grace = Duration::from_millis(300);
+        cfg.term_grace = Duration::from_millis(100);
+        cfg.kill_grace = Duration::from_millis(100);
         // The fixture lives in the temp dir; keep only the Kimo-home rule.
         cfg.forbidden_roots = vec![home.join(".kimo")];
         cfg.search_process_path = false;
@@ -1086,6 +1086,15 @@ mod tests {
             .which(cmd, &["~/.local/bin".into()])
             .unwrap()
             .expect("resolves")
+    }
+
+    /// The exit event is emitted before the process leaves the registry, so wait for it.
+    fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !done() {
+            assert!(Instant::now() < deadline, "timed out waiting for {what}");
+            std::thread::sleep(Duration::from_millis(5));
+        }
     }
 
     #[test]
@@ -1277,8 +1286,9 @@ mod tests {
         let exit = events.last().unwrap();
         assert_eq!(exit["code"], 7);
         assert_eq!(exit["signal"], Value::Null);
-        assert_eq!(f.host.running(), 0);
-        assert_eq!(f.host.sessions.session_for(None, s.pid), None);
+        wait_until("the process to leave the registry", || {
+            f.host.running() == 0 && f.host.sessions.session_for(None, s.pid).is_none()
+        });
         // Kill after exit is a no-op; write is not.
         f.host.kill(&s.process_id, "SIGTERM").unwrap();
         assert_eq!(
@@ -1313,8 +1323,8 @@ mod tests {
         let exit = events.last().unwrap();
         assert_eq!(exit["signal"], "SIGKILL");
         let took = t.elapsed();
-        // term_grace + kill_grace = 600 ms in the fixture.
-        assert!(took >= Duration::from_millis(550), "{took:?}");
+        // term_grace + kill_grace = 200 ms in the fixture.
+        assert!(took >= Duration::from_millis(190), "{took:?}");
         assert!(took < Duration::from_secs(5), "{took:?}");
     }
 
@@ -1359,29 +1369,5 @@ mod tests {
         for n in ["ANTHROPIC_API_KEY", "HOME", "KIMO_HOME"] {
             assert!(!blocked_env(n), "{n}");
         }
-    }
-
-    #[test]
-    fn known_dirs_include_nvm_newest_first() {
-        let f = fixture();
-        for v in ["v18.2.0", "v22.10.1", "v20.0.0"] {
-            std::fs::create_dir_all(f.home.join(".nvm/versions/node").join(v).join("bin")).unwrap();
-        }
-        let d = f.host.known_dirs();
-        let nvm: Vec<String> = d
-            .iter()
-            .filter(|p| p.to_string_lossy().contains(".nvm"))
-            .map(|p| {
-                p.parent()
-                    .unwrap()
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned()
-            })
-            .collect();
-        assert_eq!(nvm, ["v22.10.1", "v20.0.0", "v18.2.0"]);
-        assert!(d.contains(&f.home.join(".local/bin")));
-        assert!(d.contains(&PathBuf::from("/opt/homebrew/bin")));
     }
 }

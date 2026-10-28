@@ -25,7 +25,7 @@ import {
 } from "./logic"
 import "./assets-gc.css"
 
-export interface CleanUpAssetsDialogProps {
+interface CleanUpAssetsDialogProps {
   fileName: string
   unused: readonly AssetFile[]
   onCancel: () => void
@@ -88,7 +88,7 @@ export function CleanUpAssetsDialog({
   )
 }
 
-export interface CleanUpNothingDialogProps {
+interface CleanUpNothingDialogProps {
   fileName: string
   /** Files in `assets/` and their total size (Summary "12 assets · 31.4 MB"). */
   count: number

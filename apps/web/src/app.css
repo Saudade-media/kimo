@@ -93,31 +93,6 @@ button {
 /* Board 44: the board 03 Topbar (fYEz3) is gone; its pieces live in the floating cards' headers
    (editor/workspace.css). The `.topbar__*` rules below style those moved pieces. */
 
-/* Logo (HOU7D → KimoLogo 28, board 26 §4 KlpS9): a 28 × 28 KimoLogo (bm1JR), fill
-   $text-primary (near-white in dark); no plate. The button is the hit target only. */
-.topbar__logo {
-  display: flex;
-  flex: none;
-  justify-content: center;
-  align-items: center;
-  width: 28px;
-  height: 28px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--kimo-radius-pill);
-  background: transparent;
-  color: var(--kimo-text-primary);
-  cursor: pointer;
-}
-
-/* The mark is one 384-vertex path: keep it on its own compositor layer so the topbar repaints
-   while zooming (the zoom badge changes every frame) don't re-rasterize it (perf gate: zoom
-   p95 33 → 16.7 ms under SwiftShader). */
-.topbar__logo .kimo-logo {
-  will-change: transform;
-}
-
 /* File (wb5ft): gap 6, padding [0, 6], center; name 13 / 600 primary; chevron-down 14 tertiary */
 /* Board 37 Xq4V0: File menu "Back to files" (house) reads weight 500. */
 .file-menu__home .kimo-menu-item-dense__label {

@@ -20,7 +20,7 @@ afterAll(() => h.stop())
 
 const nowSec = () => Math.floor(h.clock.now / 1000)
 
-describe("closing live connections (section 14.4)", () => {
+describe("closing live connections", () => {
   test("revoke closes only the sockets of that jti", async () => {
     const owner = await registered(h)
     const jti = randomBytes(16)

@@ -61,7 +61,7 @@ export interface FileMenuActions {
 }
 
 /** File › Help (board 25 §7 (b)): shown off macOS desktop, where the native Help menu has it. */
-export interface FileMenuHelp {
+interface FileMenuHelp {
   version: string
   /** "Show logs" (desktop only). */
   logs: boolean
@@ -69,7 +69,7 @@ export interface FileMenuHelp {
 }
 
 /** Help submenu width (A0qRF). */
-export const HELP_MENU_WIDTH = 256
+const HELP_MENU_WIDTH = 256
 
 /**
  * True when menus show the design's macOS glyphs: the macOS desktop app, or the web build in a
@@ -94,26 +94,26 @@ export function newWindowAction(
 }
 
 /** Menu shortcut text per OS (board 20 note VJFSo: "Ctrl/Shift+Ctrl off macOS"). */
-export function menuShortcut(os: HostOS, key: string, shift = false): string {
+function menuShortcut(os: HostOS, key: string, shift = false): string {
   if (usesMacGlyphs(os)) return `${shift ? "⇧" : ""}⌘${key}`
   return `${shift ? "Shift+" : ""}Ctrl+${key}`
 }
 
 /** Hover delay before "Open recent" opens its submenu (note VJFSo). */
-export const SUBMENU_DELAY_MS = 120
+const SUBMENU_DELAY_MS = 120
 /** Menu widths: A1jsC / cPHVm 256, Aw9t8 232. */
-export const FILE_MENU_WIDTH = 256
-export const RECENT_MENU_WIDTH = 232
+const FILE_MENU_WIDTH = 256
+const RECENT_MENU_WIDTH = 232
 /** The menu's top sits 12px below the trigger (note VJFSo, y 44 under a file row at 16–32). */
-export const FILE_MENU_OFFSET = 12
+const FILE_MENU_OFFSET = 12
 /** The submenu overlaps the menu by 4px (x 431 = 179 + 256 − 4). */
-export const SUBMENU_OVERLAP = 4
+const SUBMENU_OVERLAP = 4
 /** Aw9t8 sits 10px above its item (y 96 vs Open recent at 106). */
-export const SUBMENU_RAISE = 10
+const SUBMENU_RAISE = 10
 /** Recent files listed in the submenu (Aw9t8 shows three). Not designed beyond that. */
 export const RECENT_LIMIT = 8
 
-export interface FileMenuProps extends FileMenuActions {
+interface FileMenuProps extends FileMenuActions {
   /** The trigger (breadcrumb file name / topbar file name). */
   anchor: HTMLElement
   os: HostOS

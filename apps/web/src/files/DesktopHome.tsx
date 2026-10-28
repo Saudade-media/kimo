@@ -9,7 +9,6 @@
  */
 import {
   basenameOf,
-  dirnameOf,
   type KimoPlatform,
   type RecentFile,
   type ThumbnailsApi,
@@ -29,7 +28,7 @@ import { displayDir, modifiedLabel } from "../platform/format"
 import { PreviewFileCard } from "../thumbnails/PreviewFileCard"
 
 /** GIT column label and dot tone (board 16 rows). */
-export function gitColumn(file: RecentFile): { label: string; tone: FileRowGitTone } {
+function gitColumn(file: RecentFile): { label: string; tone: FileRowGitTone } {
   const g = file.git
   if (!g) return { label: "not a repo", tone: "none" }
   const where = g.operation === "merge" ? "merge" : (g.branch ?? "detached")
@@ -43,11 +42,7 @@ export function gitColumn(file: RecentFile): { label: string; tone: FileRowGitTo
 }
 
 /** Grid FileCard info line: "loom/design-system · feat/onboarding · 40 min ago". */
-export function gridInfo(
-  file: RecentFile,
-  folders: readonly WatchedFolder[],
-  now: number | null,
-): string {
+function gridInfo(file: RecentFile, folders: readonly WatchedFolder[], now: number | null): string {
   const dir = file.folder
   const root = folders
     .filter((f) => dir === f.ref || dir.startsWith(`${f.ref}/`))
@@ -340,6 +335,3 @@ export async function addWatchedFolder(platform: KimoPlatform): Promise<string |
   if (ref) await platform.recents.addFolder(ref)
   return ref
 }
-
-/** Label of the folder containing a file (breadcrumb "loom"). */
-export const folderLabel = (ref: string) => basenameOf(dirnameOf(ref))

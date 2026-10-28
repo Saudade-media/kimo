@@ -60,8 +60,7 @@ export interface Resolver {
 export interface LayoutInput {
   /**
    * The node table. M3: when {@link LayoutInput.expanded} is absent the engine wraps `nodes`
-   * in its own `createExpandedView` (today's `expandInstances` is the M1/M2 equivalent and is
-   * replaced by it); when present, `nodes` is ignored for reading instances.
+   * in its own `createExpandedView`; when present, `nodes` is ignored for reading instances.
    */
   nodes: NodeSource
   /** Root ids to lay out (defaults to `nodes.children(null)`). */

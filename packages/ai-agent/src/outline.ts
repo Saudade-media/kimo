@@ -88,7 +88,7 @@ function paintOf(p: unknown): string | null {
 }
 
 /** One node's line (without indentation or the elided-children count). */
-export function outlineLine(id: string, src: OutlineSource, selected: boolean): string {
+function outlineLine(id: string, src: OutlineSource, selected: boolean): string {
   const n = src.node(id) ?? {}
   const parts = [id, String(n.type ?? "?")]
   if (typeof n.name === "string" && n.name) parts.push(JSON.stringify(clip(n.name, NAME_MAX)))

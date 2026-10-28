@@ -34,10 +34,8 @@ import { useFailureToast } from "./failure-toast"
 import { togglePanel, usePanels } from "./panels"
 import { ViewMenu } from "./ViewMenu"
 
-export type { FileMenuActions } from "./FileMenu"
-
 /** Recent files for the File menu's "Open recent", loaded while `active`. */
-export function useRecentFiles(active: boolean): readonly RecentFile[] | null {
+function useRecentFiles(active: boolean): readonly RecentFile[] | null {
   const { platform } = useRuntime()
   const [files, setFiles] = useState<readonly RecentFile[] | null>(null)
   useEffect(() => {
@@ -62,7 +60,7 @@ export function useRecentFiles(active: boolean): readonly RecentFile[] | null {
  * The File menu bound to a trigger element: open state, recents, "Clear recent". Render
  * `menu` next to the trigger; `toggle(el)` opens or closes it.
  */
-export function useFileMenu(actions: FileMenuActions) {
+function useFileMenu(actions: FileMenuActions) {
   const { platform } = useRuntime()
   const fail = useFailureToast()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
@@ -243,7 +241,7 @@ export function LeftCardHeader({
   )
 }
 
-export interface RightCardHeaderProps {
+interface RightCardHeaderProps {
   ui: UiStore
   canvas: () => CanvasHandle | null
   onPreview(): void

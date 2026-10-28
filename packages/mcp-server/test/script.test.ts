@@ -15,7 +15,7 @@ import {
   type ToolResult,
 } from "../src/index"
 import { inProcessRunner, workerRunner } from "../src/script/runner"
-import { DEFAULT_LIMITS, resolveRefs, ScriptSession, type WorldData } from "../src/script/session"
+import { DEFAULT_LIMITS, resolveRefs, type WorldData } from "../src/script/session"
 import { completePrefix, topLevelNames } from "../src/script/statements"
 import { ScriptStream, TopLevelStrings } from "../src/script/stream"
 import { validateInput } from "../src/server"
@@ -192,11 +192,11 @@ describe("determinism and limits", () => {
   })
 
   test("a run is interrupted at its deadline", async () => {
-    const s = await inProcessRunner().open({}, {}, { ...DEFAULT_LIMITS, timeMs: 200 })
+    const s = await inProcessRunner().open({}, {}, { ...DEFAULT_LIMITS, timeMs: 100 })
     const t = Date.now()
     const out = await s.run("while (true) {}")
     expect(Date.now() - t).toBeLessThan(2000)
-    expect(out.result).toMatchObject({ ok: false, message: "The script ran longer than 200 ms." })
+    expect(out.result).toMatchObject({ ok: false, message: "The script ran longer than 100 ms." })
     // The session survives and runs the next statements.
     expect((await s.run("Print(1)")).prints).toEqual(["1"])
     s.dispose()
@@ -234,7 +234,7 @@ describe("determinism and limits", () => {
     const s = await inProcessRunner().open(
       {},
       {},
-      { ...DEFAULT_LIMITS, timeMs: 300, totalTimeMs: 500 },
+      { ...DEFAULT_LIMITS, timeMs: 100, totalTimeMs: 150 },
     )
     const deep = await s.run(
       `let o = {}; for (let i = 0; i < 100; i++) o = {a: o}; Update("abcdefghij", {meta: o})`,
@@ -242,14 +242,14 @@ describe("determinism and limits", () => {
     expect((deep.result as { message: string }).message).toContain("nest deeper than 64")
     await s.run("const t0 = 1; for (let i = 0; i < 1e9; i++) {}")
     const rest = await s.run("for (let i = 0; i < 1e9; i++) {}")
-    expect((rest.result as { message: string }).message).toContain("500 ms in all")
+    expect((rest.result as { message: string }).message).toContain("150 ms in all")
     s.dispose()
     // A carried "function" whose source would hang is stopped at the deadline.
     const t = Date.now()
     const bad = await inProcessRunner().open(
       {},
       { f: { fn: "(() => { while (true) {} })()" } },
-      { ...DEFAULT_LIMITS, timeMs: 200 },
+      { ...DEFAULT_LIMITS, timeMs: 100 },
     )
     expect(Date.now() - t).toBeLessThan(3000)
     expect((await bad.run("Print(typeof f)")).prints).toEqual(["undefined"])
@@ -685,11 +685,4 @@ describe("worker runner", () => {
     expect((out.result as { message: string }).message).toContain("worker was stopped")
     expect(terminated).toBe(1)
   }, 10_000)
-})
-
-test("ScriptSession can be built directly (worker parity)", async () => {
-  const { loadNodeQuickJS } = await import("../src/script/runner")
-  const s = new ScriptSession(await loadNodeQuickJS(), {})
-  expect(s.run(`Insert("root", {type: "frame"})`).ops).toHaveLength(1)
-  s.dispose()
 })

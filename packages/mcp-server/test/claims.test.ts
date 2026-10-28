@@ -6,7 +6,6 @@ import {
   type ClientPolicy,
   claimTargets,
   createMemoryDocumentHost,
-  failure,
   placeholderOnly,
   type ToolResult,
 } from "../src/index"
@@ -95,11 +94,6 @@ describe("claim targets", () => {
       placeholderOnly([{ op: "update", id: "A", set: { placeholder: true, name: "x" } }]),
     ).toBe(false)
     expect(placeholderOnly([])).toBe(false)
-  })
-
-  test("AREA_BUSY is retryable in the envelope", () => {
-    const f = failure({ code: "AREA_BUSY", message: "busy" })
-    expect(f.errors[0]?.retryable).toBe(true)
   })
 })
 

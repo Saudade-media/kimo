@@ -22,9 +22,9 @@ import { usesMacGlyphs } from "./FileMenu"
 import { useFailureToast } from "./failure-toast"
 
 /** F5DXf `width: 244`. */
-export const VIEW_MENU_WIDTH = 244
+const VIEW_MENU_WIDTH = 244
 
-export interface ViewMenuProps {
+interface ViewMenuProps {
   anchor: PopoverAnchor
   os: HostOS
   prefs: CanvasViewPrefs
@@ -48,7 +48,7 @@ export interface ViewMenuProps {
 }
 
 /** The design's macOS glyphs; off macOS ⌘ reads Ctrl+ and ⇧ reads Shift+ (board 20 VJFSo). */
-export function viewMeta(os: HostOS, mac: string): string {
+function viewMeta(os: HostOS, mac: string): string {
   if (usesMacGlyphs(os)) return mac
   return mac.replace("⇧", "Shift+").replace("⌘", "Ctrl+")
 }

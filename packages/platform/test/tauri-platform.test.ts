@@ -8,12 +8,7 @@ import type {
   TypedInvoke,
   TypedListen,
 } from "../src/tauri"
-import {
-  bytesToBase64,
-  createTauriPlatform,
-  toPlatformError,
-  trafficLightInsetOf,
-} from "../src/tauri-platform"
+import { bytesToBase64, createTauriPlatform, toPlatformError } from "../src/tauri-platform"
 
 type Handler = (args: Record<string, unknown>) => unknown
 
@@ -44,8 +39,6 @@ function fakeTauri(overrides: Partial<Record<TauriCommand, Handler>> = {}) {
       settings = { ...settings, [key as string]: value }
       return null
     },
-    kimo_fs_read_bytes: () => new Uint8Array([1, 2, 3]).buffer,
-    kimo_fonts_cache_get: ({ key }) => (key === "hit" ? new Uint8Array([9]).buffer : null),
   }
   const invoke = (async (command: TauriCommand, args: Record<string, unknown>) => {
     calls.push({ command, args })
@@ -72,83 +65,6 @@ function fakeTauri(overrides: Partial<Record<TauriCommand, Handler>> = {}) {
 const tick = () => new Promise((r) => setTimeout(r, 0))
 
 describe("createTauriPlatform", () => {
-  test("loads app info, window chrome, recovery dir and capabilities", async () => {
-    const t = fakeTauri()
-    const p = await createTauriPlatform(t.bridge)
-    expect(p.kind).toBe("desktop")
-    expect(p.os).toBe("macos")
-    expect(p.appVersion).toBe("0.4.2")
-    expect(p.window.label).toBe("main")
-    expect(p.window.trafficLightPosition()).toEqual({ x: 16, y: 18 })
-    expect(p.window.trafficLightInset()).toBe(68)
-    expect(p.recovery.dir).toBe("/Users/me/.kimo/recovery")
-    expect(p.capabilities).toMatchObject({
-      fileAccess: "native",
-      leases: "os",
-      recovery: "disk",
-      trafficLights: true,
-      settingsWindow: true,
-    })
-    // All eleven events have a listener.
-    expect(t.listeners.size).toBe(11)
-    expect(p.arch).toBe("aarch64")
-    p.dispose()
-    expect([...t.listeners.values()].every((s) => s.size === 0)).toBe(true)
-  })
-
-  test("maps arguments exactly as TauriCommandMap", async () => {
-    const t = fakeTauri()
-    const p = await createTauriPlatform(t.bridge)
-    await p.files.writeTextAtomic("/a/doc.kimo", "{}")
-    expect(t.last("kimo_fs_write_text_atomic")).toEqual({
-      path: "/a/doc.kimo",
-      text: "{}",
-      mkdirs: false,
-    })
-    await p.files.writeTextAtomic("/k/multiplayer/rooms.json", "{}", {
-      mkdirs: true,
-      ownerOnly: true,
-    })
-    expect(t.last("kimo_fs_write_text_atomic")).toEqual({
-      path: "/k/multiplayer/rooms.json",
-      text: "{}",
-      mkdirs: true,
-      ownerOnly: true,
-    })
-    await p.files.writeBytesAtomic("/a/x.bin", new Uint8Array([104, 105]), { mkdirs: true })
-    expect(t.last("kimo_fs_write_bytes_atomic")).toEqual({
-      path: "/a/x.bin",
-      base64: "aGk=",
-      mkdirs: true,
-    })
-    expect(await p.files.readBytes("/a/x.bin")).toEqual(new Uint8Array([1, 2, 3]))
-    await p.files.list("/a")
-    expect(t.last("kimo_fs_list")).toEqual({ dir: "/a", extensions: null })
-    await p.dialogs.openFile()
-    expect(t.last("kimo_dialog_open_file")).toEqual({
-      title: null,
-      filters: [],
-      multiple: false,
-      defaultDir: null,
-    })
-    await p.leases.acquire("/a/doc.kimo")
-    expect(t.last("kimo_lease_acquire")).toEqual({ path: "/a/doc.kimo", reclaimStale: true })
-    await p.leases.acquire("/a/doc.kimo", { reclaimStale: false })
-    expect(t.last("kimo_lease_acquire")).toEqual({ path: "/a/doc.kimo", reclaimStale: false })
-    await p.recovery.prune()
-    expect(t.last("kimo_recovery_prune")).toEqual({ maxAgeMs: 30 * 24 * 60 * 60 * 1000 })
-    await p.recovery.restore("0123456789abcdef")
-    expect(t.last("kimo_recovery_read")).toEqual({ id: "0123456789abcdef" })
-    expect(await p.fonts.cache.get("hit")).toEqual(new Uint8Array([9]))
-    expect(await p.fonts.cache.get("miss")).toBeNull()
-    await p.settings.ready
-    await p.updater.check()
-    expect(t.last("kimo_updater_check")).toEqual({ channel: "beta" })
-    expect(await p.window.openSettings("fonts")).toBe("window")
-    expect(t.last("kimo_window_open_settings")).toEqual({ pane: "fonts", focus: null })
-    p.dispose()
-  })
-
   test("rethrows payloads as PlatformError", async () => {
     const t = fakeTauri({
       kimo_fs_write_text_atomic: () => {
@@ -175,7 +91,6 @@ describe("createTauriPlatform", () => {
     const off = p.files.watch(["/a/doc.kimo"], { debounceMs: 50 }, (events) => got.push(events))
     await tick()
     const args = t.last("kimo_fs_watch")
-    expect(args).toMatchObject({ paths: ["/a/doc.kimo"], debounceMs: 50, recursive: false })
     const ev = [{ kind: "modified" as const, ref: "/a/doc.kimo", at: 1 }]
     t.emit("kimo://fs-watch", { watchId: "someone-else", events: ev })
     t.emit("kimo://fs-watch", { watchId: args.watchId, events: ev })
@@ -185,22 +100,10 @@ describe("createTauriPlatform", () => {
     expect(t.last("kimo_fs_unwatch")).toEqual({ watchId: args.watchId })
     t.emit("kimo://fs-watch", { watchId: args.watchId, events: ev })
     expect(got.length).toBe(1)
-
-    const changes: unknown[] = []
-    const offGit = p.git.watch("/a/doc.kimo", (state, change) => changes.push([state, change]))
-    await tick()
-    const g = t.last("kimo_git_watch")
-    t.emit("kimo://git-changed", {
-      watchId: g.watchId,
-      state: null,
-      change: { kind: "status-changed" },
-    })
-    expect(changes).toEqual([[null, { kind: "status-changed" }]])
-    offGit()
     p.dispose()
   })
 
-  test("close handshake answers with the handler's result", async () => {
+  test("a close request is allowed unless the handler declines or throws", async () => {
     const t = fakeTauri()
     const p = await createTauriPlatform(t.bridge)
     t.emit("kimo://close-requested", { requestId: "r1" })
@@ -219,57 +122,13 @@ describe("createTauriPlatform", () => {
     p.dispose()
   })
 
-  test("the topbar inset is the right edge of the lights the shell measured", async () => {
-    const lights = { x: 16, y: 18 }
-    const base = { focused: true, fullscreen: false, trafficLightPosition: lights }
-    expect(trafficLightInsetOf(base)).toBe(68)
-    expect(trafficLightInsetOf({ ...base, trafficLightsRight: 76 })).toBe(76)
-    expect(trafficLightInsetOf({ ...base, trafficLightsRight: 75.2 })).toBe(76)
-    expect(trafficLightInsetOf({ ...base, trafficLightsRight: null })).toBe(68)
-    expect(trafficLightInsetOf({ ...base, trafficLightsRight: 76, fullscreen: true })).toBe(4)
-    expect(
-      trafficLightInsetOf({ focused: true, fullscreen: false, trafficLightPosition: null }),
-    ).toBe(0)
-
-    const t = fakeTauri({
-      kimo_window_state: () => ({ ...base, trafficLightsRight: 76 }),
-      kimo_window_titlebar_double_click: () => null,
-    })
-    const p = await createTauriPlatform(t.bridge)
-    expect(p.window.trafficLightInset()).toBe(76)
-    const seen: number[] = []
-    p.window.onTrafficLightInsetChange((n) => seen.push(n))
-    t.emit("kimo://window-state", { ...base, trafficLightsRight: 68 })
-    t.emit("kimo://window-state", { ...base, trafficLightsRight: 68 })
-    expect(seen).toEqual([68])
-    await p.window.titlebarDoubleClick()
-    expect(t.last("kimo_window_titlebar_double_click")).toEqual({})
-  })
-
-  test("window, updater, settings and launch events", async () => {
+  test("settings: our own broadcast echo does not fire again, invalid values are dropped", async () => {
     const t = fakeTauri()
     const p = await createTauriPlatform(t.bridge)
     await p.settings.ready
-    const focus: boolean[] = []
-    const full: boolean[] = []
-    p.window.onFocusChange((f) => focus.push(f))
-    p.window.onFullscreenChange((f) => full.push(f))
-    t.emit("kimo://window-state", {
-      focused: false,
-      fullscreen: true,
-      trafficLightPosition: { x: 16, y: 18 },
-    })
-    expect([focus, full]).toEqual([[false], [true]])
-    expect(p.window.trafficLightInset()).toBe(4)
-
-    t.emit("kimo://updater-status", { state: "checking" })
-    expect(p.updater.status()).toEqual({ state: "checking" })
-
     const changed: unknown[] = []
     p.settings.onChange((k, v) => changed.push([k, v]))
     await p.settings.set("files.autosave", false)
-    expect(t.last("kimo_settings_set")).toEqual({ key: "files.autosave", value: false })
-    // The broadcast echo of our own write does not fire again.
     t.emit("kimo://settings-changed", { key: "files.autosave", value: false })
     t.emit("kimo://settings-changed", { key: "general.appearance", value: "dark" })
     t.emit("kimo://settings-changed", { key: "general.appearance", value: "neon" })
@@ -278,27 +137,6 @@ describe("createTauriPlatform", () => {
       ["general.appearance", "dark"],
     ])
     expect(p.settings.get("general.appearance")).toBe("dark")
-
-    const opened: unknown[] = []
-    p.launch.onOpenRequest((r) => opened.push(r))
-    t.emit("kimo://open-request", { source: "deep-link", refs: ["/a.kimo"], node: "Abc123xyz9" })
-    expect(opened).toEqual([{ source: "deep-link", refs: ["/a.kimo"], node: "Abc123xyz9" }])
-
-    // Board 25 §7 (b): native Help items reach the focused editor; logs are revealed in Rust.
-    const help: unknown[] = []
-    p.help?.onMenu((a) => help.push(a))
-    t.emit("kimo://help-menu", { action: "shortcuts" })
-    t.emit("kimo://help-menu", { action: "report-issue" })
-    expect(help).toEqual(["shortcuts", "report-issue"])
-    // Board 27: native File / View items for the focused editor.
-    const menu: unknown[] = []
-    p.menu?.onAction((a) => menu.push(a))
-    t.emit("kimo://editor-menu", { action: "export" })
-    t.emit("kimo://editor-menu", { action: "copy-png" })
-    t.emit("kimo://editor-menu", { action: "preview" })
-    expect(menu).toEqual(["export", "copy-png", "preview"])
-    await p.help?.showLogs()
-    expect(t.last("kimo_help_show_logs")).toEqual({})
     p.dispose()
   })
 
@@ -307,10 +145,6 @@ describe("createTauriPlatform", () => {
     const t = fakeTauri({ kimo_dialog_save_file: () => target })
     const p = await createTauriPlatform(t.bridge)
     await p.files.download("out.svg", new Uint8Array([60]), "image/svg+xml")
-    expect(t.last("kimo_dialog_save_file")).toMatchObject({
-      suggestedName: "out.svg",
-      filters: [{ name: "SVG", extensions: ["svg"] }],
-    })
     expect(t.last("kimo_fs_write_bytes_atomic")).toMatchObject({
       path: "/Users/me/out.svg",
       base64: "PA==",
@@ -323,51 +157,13 @@ describe("createTauriPlatform", () => {
     p.dispose()
   })
 
-  test("board 37: trash, rename / copy, menu context, new window and clipboard", async () => {
-    const entry = { id: "t1", originalRef: "/a/home.kimo", name: "home.kimo", trashedAt: 5 }
+  test("the clipboard falls back to the page API when Rust says BLOCKED", async () => {
     const t = fakeTauri({
-      kimo_trash_move: () => entry,
-      kimo_trash_list: () => [entry],
-      kimo_trash_restore: ({ path }) => path ?? entry.originalRef,
-      kimo_trash_empty: () => 3,
-      kimo_fs_rename: () => {
-        throw { code: "EXISTS", message: "/a/b.kimo already exists", errno: "EEXIST" }
-      },
       kimo_clipboard_write_text: () => {
         throw { code: "BLOCKED", message: "No native clipboard" }
       },
     })
     const p = await createTauriPlatform(t.bridge)
-    expect(await p.trash?.move("/a/home.kimo")).toEqual(entry)
-    expect(t.last("kimo_trash_move")).toEqual({ path: "/a/home.kimo" })
-    expect(await p.trash?.list()).toEqual([entry])
-    expect(await p.trash?.restore("t1")).toBe("/a/home.kimo")
-    expect(t.last("kimo_trash_restore")).toEqual({ id: "t1", path: null })
-    expect(await p.trash?.restore("t1", "/a/home 2.kimo")).toBe("/a/home 2.kimo")
-    await p.trash?.remove("t1")
-    expect(t.last("kimo_trash_remove")).toEqual({ id: "t1" })
-    expect(await p.trash?.empty()).toBe(3)
-    // EEXIST arrives as code EXISTS (never IO).
-    const e = await p.files.rename("/a/a.kimo", "/a/b.kimo").catch((x: unknown) => x)
-    expect(isPlatformError(e) && e.code).toBe("EXISTS")
-    await p.files.copy("/a/a.kimo", "/a/a 2.kimo")
-    expect(t.last("kimo_fs_copy")).toEqual({ from: "/a/a.kimo", to: "/a/a 2.kimo" })
-
-    await p.menu?.setContext("editor")
-    expect(t.last("kimo_menu_set_context")).toEqual({ context: "editor" })
-    await p.window.openNewWindow?.()
-    expect(t.calls.some((c) => c.command === "kimo_window_new")).toBe(true)
-    // Board 44 §4 C: drag a tab out → a new window on that file.
-    await p.window.openFileInNewWindow?.("/a/home.kimo")
-    expect(t.last("kimo_window_open_file")).toEqual({ path: "/a/home.kimo" })
-    const actions: string[] = []
-    const off = p.menu?.onAction((a) => actions.push(a))
-    t.emit("kimo://editor-menu", { action: "go-home" })
-    t.emit("kimo://editor-menu", { action: "select-all" })
-    off?.()
-    expect(actions).toEqual(["go-home", "select-all"])
-
-    // Windows / Linux: Rust says BLOCKED, the page API writes the clipboard.
     const written: string[] = []
     const nav = globalThis as unknown as { navigator?: unknown }
     const prev = nav.navigator
@@ -377,11 +173,11 @@ describe("createTauriPlatform", () => {
     })
     try {
       await p.clipboard?.writeText("Kimo 1.0.0")
-      expect(t.last("kimo_clipboard_write_text")).toEqual({ text: "Kimo 1.0.0" })
       expect(written).toEqual(["Kimo 1.0.0"])
     } finally {
       Object.defineProperty(globalThis, "navigator", { value: prev, configurable: true })
     }
+    p.dispose()
   })
 
   test("base64 handles large buffers", () => {

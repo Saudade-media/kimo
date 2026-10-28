@@ -12,7 +12,7 @@ import { useEffect, useState } from "react"
 import type { SvgRejectedError } from "./flow"
 import "./svg-import.css"
 
-export interface SvgRejectionToastProps {
+interface SvgRejectionToastProps {
   error: SvgRejectedError
   onImport: () => void
   onDismiss: () => void

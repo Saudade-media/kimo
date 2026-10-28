@@ -358,30 +358,6 @@ export function declaredProps(scope: ComponentScope, c: LocatedNode): DeclaredPr
 }
 
 /**
- * Every effect of an instance arg (§9.6; board 27 §8 a): the legacy single target first, then
- * the option's `targets`, each as (path, set). A `set` key `<property>/<key>` sets one key of a
- * struct property (see {@link applySetEntry}). Empty when the value does not fit.
- */
-export function argEffects(
-  prop: DeclaredProp,
-  value: unknown,
-): { path: string; set: Record<string, unknown> }[] {
-  const def = prop.def as unknown as Record<string, unknown>
-  if (def.type !== "enum") {
-    const one = argEffect(prop, value)
-    return one ? [one] : []
-  }
-  const options = def.options
-  if (typeof value !== "string" || !isObject(options) || !Object.hasOwn(options, value)) return []
-  const out: { path: string; set: Record<string, unknown> }[] = []
-  if (typeof def.field === "string" && typeof def.target === "string")
-    out.push({ path: prop.path, set: { [def.field]: options[value] } })
-  for (const t of prop.targets?.[value] ?? [])
-    out.push({ path: t.path, set: { [t.field]: t.value } })
-  return out
-}
-
-/**
  * Applies one `set` entry to node data in place: a plain key replaces the property; a
  * `<property>/<key>` key (enum targets, board 27 §8 a) replaces one key of a struct property,
  * keeping its other keys.

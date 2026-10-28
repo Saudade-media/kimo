@@ -79,7 +79,7 @@ while kill -0 "$child" 2>/dev/null; do
     child=""
     exit 124
   fi
-  sleep 0.5
+  sleep 0.1
 done
 
 wait "$child"

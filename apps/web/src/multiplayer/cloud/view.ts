@@ -67,7 +67,7 @@ export function readyMeta(email: string, plan: CloudPlan | null): string {
 }
 
 /** Decimal units like the cap ("10 GB" is 10^10 bytes): "1.2 GB", "340 MB", "0 MB". */
-export function bytesText(bytes: number): string {
+function bytesText(bytes: number): string {
   const b = Math.max(0, bytes)
   if (b >= 1e9) return `${trim(b / 1e9)} GB`
   if (b >= 1e6) return `${Math.round(b / 1e6)} MB`
@@ -118,8 +118,6 @@ export function planPill(plan: CloudPlan): {
  * 4B ready (a plan that allows sharing), 4C subscribe (never subscribed), 6A lapsed (renew), or 6E
  * offline when nothing is known yet. Offline with a known plan keeps that plan's body.
  */
-export type CloudShareStage = "sign-in" | "ready" | "subscribe" | "lapsed" | "offline"
-
 export function cloudShareStage(state: Pick<CloudState, "session" | "account" | "offline">) {
   if (state.session === "signed-in" && state.account) {
     const plan = state.account.plan

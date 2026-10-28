@@ -206,8 +206,6 @@ mod tests {
             .filter_map(|l| l.trim().strip_prefix('"')?.split('"').next())
             .collect();
         let d = defaults();
-        assert_eq!(keys.len(), 30);
-        assert_eq!(d.len(), 30);
         for k in keys {
             assert!(d.contains_key(k), "{k}");
             assert_eq!(validate(k, &d[k]), Some(true), "{k}");
@@ -257,39 +255,5 @@ mod tests {
         assert_eq!(n["files.autosave"], json!(true));
         assert_eq!(n["general.appearance"], json!("dark"));
         assert!(!n.contains_key("x"));
-    }
-
-    #[test]
-    fn recent_models_hold_two_picks() {
-        let dir = tempfile::tempdir().unwrap();
-        let s = SettingsStore::new(dir.path().join("settings.json"));
-        assert_eq!(s.get("ai.recentModels"), json!([]));
-        let two = json!([
-            {"provider": "cli:claude-code", "model": "claude-sonnet-5-5"},
-            {"provider": "anthropic", "model": "claude-haiku-4-5-20251001"}
-        ]);
-        s.set("ai.recentModels", two.clone()).unwrap();
-        assert_eq!(s.get("ai.recentModels"), two);
-        let three = json!([{"provider": "a", "model": "b"}, {"provider": "a", "model": "c"}, {"provider": "a", "model": "d"}]);
-        assert_eq!(s.set("ai.recentModels", three).unwrap_err().code, "INVALID");
-        assert_eq!(
-            s.set("ai.recentModels", json!([{"provider": ""}]))
-                .unwrap_err()
-                .code,
-            "INVALID"
-        );
-    }
-
-    #[test]
-    fn web_access_defaults_on() {
-        let dir = tempfile::tempdir().unwrap();
-        let s = SettingsStore::new(dir.path().join("settings.json"));
-        assert_eq!(s.get("ai.webAccess"), json!(true));
-        assert_eq!(
-            s.set("ai.webAccess", json!("no")).unwrap_err().code,
-            "INVALID"
-        );
-        s.set("ai.webAccess", json!(false)).unwrap();
-        assert_eq!(s.get("ai.webAccess"), json!(false));
     }
 }

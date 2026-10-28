@@ -2,5 +2,4 @@
 
 export { usePreviewTarget } from "./hooks"
 export * from "./model"
-export { PreviewOverlay, type PreviewOverlayProps } from "./PreviewOverlay"
-export { PREVIEW_STAGE, PreviewRender, type PreviewRenderDeps, previewSource } from "./render"
+export { PreviewOverlay } from "./PreviewOverlay"

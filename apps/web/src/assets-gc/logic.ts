@@ -7,11 +7,8 @@ import type { AssetFile } from "@kimo/core-schema"
 export {
   type AssetFile,
   type AssetGcPlan as GcPlan,
-  isContentAddressed,
   planAssetGc,
   prunedManifest,
-  referencedAssets,
-  usedFontFamilies,
 } from "@kimo/core-schema"
 
 // --- Copy (board 19 Vqeu7) ---------------------------------------------------------------------

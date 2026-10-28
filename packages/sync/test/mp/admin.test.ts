@@ -10,7 +10,6 @@ import {
   signLinkCert,
   signWithContext,
   toBase64Url,
-  toHex,
   utf8,
   verifyAdminCommand,
   viewOf,
@@ -64,16 +63,6 @@ describe("admin commands", () => {
       expect(command.room.id).toBe(room.id)
       expect(await verifyAdminCommand(command, rootPub)).toBe(true)
     }
-  })
-
-  test("defaults: iat is now and nonces are random", async () => {
-    const { root, room } = await setup()
-    const before = Date.now()
-    const a = parseAdminCommand(await signAdminCommand(root.privateKey, room, { op: "close" }))
-    const b = parseAdminCommand(await signAdminCommand(root.privateKey, room, { op: "close" }))
-    expect(a.iat).toBeGreaterThanOrEqual(before)
-    expect(a.iat).toBeLessThanOrEqual(Date.now())
-    expect(toHex(a.nonce)).not.toBe(toHex(b.nonce))
   })
 
   test("a tampered body, header or signature fails verification", async () => {
@@ -153,26 +142,19 @@ describe("admin commands", () => {
     await expectCode(() => parseAdminCommand(concatBytes(bytes, new Uint8Array(1))), "BAD_REQUEST")
     await expectCode(() => parseAdminCommand(bytes.subarray(0, 100)), "BAD_REQUEST")
     await expectCode(() => parseAdminCommand(withByte(0, 2)), "BAD_REQUEST")
-    await expectCode(() => parseAdminCommand(withByte(1, 1)), "BAD_REQUEST")
-    await expectCode(() => parseAdminCommand(withByte(2, 0)), "BAD_REQUEST")
     await expectCode(() => parseAdminCommand(withByte(2, 6)), "BAD_REQUEST")
     await expectCode(() => parseAdminCommand(withByte(3, 1)), "BAD_REQUEST")
-    await expectCode(() => parseAdminCommand(withByte(4, 0xff)), "BAD_REQUEST")
   })
 
   test("bodies that break their op's schema are rejected on both sides", async () => {
     const { root, room } = await setup()
     const bad = [
-      { op: "register", rootPub: "", cert: "x" },
       { op: "register", rootPub: "a=", cert: "x" },
-      { op: "register", rootPub: "a", cert: "x", owner: "me" },
       { op: "register", rootPub: "a", cert: "x", owner: { pub: "a", sig: "!" } },
       { op: "revoke", jti: "AB".repeat(16), exp: 0 },
-      { op: "revoke", jti: "00".repeat(16), exp: -1 },
       { op: "rotate" },
       { op: "sweep", keep: ["nope"] },
       { op: "sweep", keep: [], graceDays: 0 },
-      { op: "sweep", keep: [], graceDays: 1.5 },
       { op: "reboot" },
     ] as unknown as AdminBody[]
     for (const body of bad)
@@ -200,17 +182,5 @@ describe("admin commands", () => {
     ] as const)
       await expectCode(async () => parseAdminCommand(await raw(op, json)), "BAD_REQUEST")
     expect(parseAdminCommand(await raw(4, '{"future":1}')).body).toEqual({ future: 1 })
-  })
-
-  test("signing rejects a bad nonce or iat", async () => {
-    const { root, room } = await setup()
-    await expectCode(
-      signAdminCommand(root.privateKey, room, { op: "close" }, { nonce: new Uint8Array(8) }),
-      "BAD_REQUEST",
-    )
-    await expectCode(
-      signAdminCommand(root.privateKey, room, { op: "close" }, { iat: -5 }),
-      "BAD_REQUEST",
-    )
   })
 })

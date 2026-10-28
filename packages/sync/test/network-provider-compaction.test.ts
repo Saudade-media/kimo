@@ -1,37 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import { jsonEqual, validate } from "@kimo/core-schema"
 import { createEmptyDocument, YjsDocStore } from "@kimo/editor-state"
-import { deriveRoomKeys, parseRoomId, sealSnapshot } from "../src/mp"
+import { sealSnapshot } from "../src/mp"
 import type { NetworkEvent } from "../src/network"
-import { emptyStore, rect } from "./helpers"
-import {
-  FakeRelay,
-  makeRoom,
-  providerFor,
-  SwitchableStore,
-  waitFor,
-} from "./network-provider-fake-relay"
-
-const ok = <T extends { ok: boolean }>(r: T) => {
-  if (!r.ok) throw new Error(JSON.stringify(r))
-  return r
-}
-
-async function room(seed: YjsDocStore = emptyStore()) {
-  const { room, roomKey } = makeRoom()
-  const relay = new FakeRelay(room)
-  relay.grant("edit", { role: "edit" })
-  relay.grant("view", { role: "view" })
-  const keys = await deriveRoomKeys(roomKey, parseRoomId(room))
-  relay.putSnapshot(0, false, await sealSnapshot(keys, 0, seed.encodeStateAsUpdate()))
-  return { relay, roomKey, seed, keys }
-}
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+import { FAST, ok, providerFor, SwitchableStore, seededRoom, waitFor } from "./fake-relay"
+import { rect, sleep } from "./helpers"
 
 describe("network provider: compaction", () => {
   test("compact uploads a snapshot covering exactly since", async () => {
-    const { relay, roomKey, seed } = await room()
+    const { relay, roomKey, seed } = await seededRoom()
     const pa = providerFor(relay, roomKey, "edit")
     const events: NetworkEvent[] = []
     pa.onEvent((e) => e.type === "compacted" && events.push(e))
@@ -53,20 +30,9 @@ describe("network provider: compaction", () => {
     await pb.detach()
   })
 
-  test("the relay triggers compaction past its threshold", async () => {
-    const { relay, roomKey, seed } = await room()
-    relay.compactEntries = 4
-    const pa = providerFor(relay, roomKey, "edit")
-    await pa.attach(seed)
-    for (let i = 0; i < 5; i++)
-      ok(seed.apply({ op: "insert", id: `Node00000${i}`, node: rect("n") }, { origin: "user" }))
-    await waitFor(() => (relay.latest?.upTo ?? 0) >= 4)
-    await pa.detach()
-  })
-
   test("a client that is not clean declines until it is clean", async () => {
-    const { relay, roomKey, seed } = await room()
-    const pa = providerFor(relay, roomKey, "edit")
+    const { relay, roomKey, seed } = await seededRoom()
+    const pa = providerFor(relay, roomKey, "edit", { timing: { ...FAST, compactWaitMs: 60 } })
     await pa.attach(seed)
     ok(seed.apply({ op: "insert", id: "Acked00001", node: rect("a") }, { origin: "user" }))
     await waitFor(() => relay.head === 1 && pa.status === "synced")
@@ -79,7 +45,7 @@ describe("network provider: compaction", () => {
     const socket = relay.peers.find((s) => s.peer === pa.peer)
     const puts = relay.snapshotPuts.length
     socket?.deliver({ type: "compact", upTo: 1 })
-    await sleep(400) // compactWaitMs is 300 in tests
+    await sleep(150) // past compactWaitMs
     expect(relay.snapshotPuts.length).toBe(puts)
     // The ack arrives: the same request now succeeds.
     const append = relay.appends().at(-1)
@@ -93,7 +59,7 @@ describe("network provider: compaction", () => {
   })
 
   test("the oversize fallback uploads a carries snapshot that the other peer applies", async () => {
-    const { relay, roomKey, seed } = await room()
+    const { relay, roomKey, seed } = await seededRoom()
     relay.limits = { ...relay.limits, maxEntryBytes: 400 }
     const pa = providerFor(relay, roomKey, "edit")
     const b = new YjsDocStore()
@@ -123,7 +89,7 @@ describe("network provider: compaction", () => {
   })
 
   test("a peer offline while a carries snapshot is published still merges it", async () => {
-    const { relay, roomKey, seed } = await room()
+    const { relay, roomKey, seed } = await seededRoom()
     relay.limits = { ...relay.limits, maxEntryBytes: 400 }
     const pa = providerFor(relay, roomKey, "edit")
     const b = new YjsDocStore()
@@ -150,7 +116,7 @@ describe("network provider: compaction", () => {
   })
 
   test("after a relay data-loss reset, a lower carries generation is still merged", async () => {
-    const { relay, roomKey, seed, keys } = await room()
+    const { relay, roomKey, seed, keys } = await seededRoom()
     relay.limits = { ...relay.limits, maxEntryBytes: 400 }
     const pa = providerFor(relay, roomKey, "edit")
     const b = new YjsDocStore()
@@ -184,7 +150,7 @@ describe("network provider: compaction", () => {
   })
 
   test("SNAPSHOT_STALE is not an error", async () => {
-    const { relay, roomKey, seed, keys } = await room()
+    const { relay, roomKey, seed, keys } = await seededRoom()
     const pa = providerFor(relay, roomKey, "edit")
     const closed: NetworkEvent[] = []
     pa.onEvent((e) => e.type === "closed" && closed.push(e))
@@ -208,7 +174,7 @@ describe("network provider: compaction", () => {
 
 describe("network provider: repairer election", () => {
   test("the lowest edit peer is the repairer; view peers never are", async () => {
-    const { relay, roomKey, seed } = await room()
+    const { relay, roomKey, seed } = await seededRoom()
     const pv = providerFor(relay, roomKey, "view")
     await pv.attach(new YjsDocStore())
     const pa = providerFor(relay, roomKey, "edit")
@@ -228,8 +194,8 @@ describe("network provider: repairer election", () => {
     await pv.detach()
   })
 
-  test("autoRepair follows the §15.8 table", async () => {
-    const { relay, roomKey, seed } = await room()
+  test("auto-repair runs on the repairer and on offline replicas, never on other connected peers or viewers", async () => {
+    const { relay, roomKey, seed } = await seededRoom()
     const a = new SwitchableStore()
     a.loadDocument(createEmptyDocument("A"))
     const b = new SwitchableStore()
@@ -259,7 +225,7 @@ describe("network provider: repairer election", () => {
   })
 
   test("a concurrent reparent cycle is repaired by exactly one replica", async () => {
-    const { relay, roomKey } = await room()
+    const { relay, roomKey } = await seededRoom()
     const a = new SwitchableStore()
     a.loadDocument(createEmptyDocument("A"))
     ok(

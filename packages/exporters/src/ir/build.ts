@@ -1485,7 +1485,7 @@ export function findNode(root: IRNode, id: string): IRNode | null {
 }
 
 /** Axis-aligned bounds of a box at x/y under rotation (CCW about top-left) and flips. */
-export function bounds(
+function bounds(
   x: number,
   y: number,
   w: number,

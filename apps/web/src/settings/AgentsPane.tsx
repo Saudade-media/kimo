@@ -15,7 +15,7 @@ import { SettingsBannerContext, SettingsFailContext } from "./panes"
 export const HTTP_TOKEN_CLIENT = "http"
 
 /** `~/.kimo/mcp/server.log` → `~/.kimo/activity`. */
-export function activityDirOf(serverLog: string): string | null {
+function activityDirOf(serverLog: string): string | null {
   const sep = serverLog.includes("\\") && !serverLog.includes("/") ? "\\" : "/"
   const parts = serverLog.split(sep)
   if (parts.length < 3) return null

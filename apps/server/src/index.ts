@@ -5,8 +5,7 @@
  * cannot read a document. Hosting is the operator's choice; Kimo ships no default relay.
  */
 
-import { DEFAULT_LIMITS, PROTOCOL, type RelayLimits, toBase64Url } from "@kimo/sync/mp"
-import pkg from "../package.json" with { type: "json" }
+import type { PROTOCOL, RelayLimits } from "@kimo/sync/mp"
 import { loadConfig, type RelayConfig } from "./config"
 import { createFetchHandler, errorResponse } from "./http"
 import type { OwnerPolicyModule } from "./policy"
@@ -58,41 +57,6 @@ export interface VersionInfo {
   relayId: string
   /** `external` under an external owner policy (§14.12). */
   owner: "unclaimed" | "claimed" | "external"
-}
-
-/**
- * Version payload with the default limits. `handleRequest` has no database, so it reports an
- * unclaimed relay with an all-zero id.
- */
-export const versionInfo: VersionInfo = {
-  name: pkg.name,
-  version: pkg.version,
-  protocol: PROTOCOL,
-  limits: DEFAULT_LIMITS,
-  relayId: toBase64Url(new Uint8Array(16)),
-  owner: "unclaimed",
-}
-
-/** Pure handler for `/healthz` and `/version` only, kept so they can be tested without a socket. */
-export function handleRequest(req: Request): Response {
-  const { pathname } = new URL(req.url)
-  const headers = { "content-type": "application/json; charset=utf-8" }
-  if (pathname !== "/healthz" && pathname !== "/version")
-    return new Response(
-      JSON.stringify({ error: "NOT_FOUND", message: `No route for ${pathname}` }),
-      {
-        status: 404,
-        headers,
-      },
-    )
-  if (req.method !== "GET" && req.method !== "HEAD")
-    return new Response(JSON.stringify({ error: "METHOD_NOT_ALLOWED" }), {
-      status: 405,
-      headers: { ...headers, allow: "GET, HEAD" },
-    })
-  return new Response(JSON.stringify(pathname === "/healthz" ? { ok: true } : versionInfo), {
-    headers,
-  })
 }
 
 const relays = new WeakMap<object, Relay>()

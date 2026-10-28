@@ -33,7 +33,7 @@ import {
 } from "./model"
 
 /** How long drag out waits for the file to close (lease released) before the new window opens. */
-export const DRAG_OUT_CLOSE_MS = 3000
+const DRAG_OUT_CLOSE_MS = 3000
 
 export interface TabsDeps {
   /** Goes to a route path (`/disk/<ref>`, `/`). */

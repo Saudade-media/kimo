@@ -17,7 +17,7 @@
       screen at first paint, before the app bundle loads. launch.js is a same-origin classic script
       (the desktop CSP allows script-src 'self', not inline scripts): it copies the stored theme onto
       <html data-theme> and turns the loader off in the hidden document host. The mark's path is
-      KIMO_LOGO_PATH (packages/ui/src/kimo-logo/paths.ts), kept equal by test/launch-loader.test.ts.
+      KIMO_LOGO_PATH (packages/ui/src/kimo-logo/paths.ts); keep the two equal.
       apps/web/src/launch-loader.ts sets the status line and fades the layer out after mount.
     -->
     <script src="/launch.js"></script>

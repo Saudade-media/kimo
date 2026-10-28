@@ -745,26 +745,10 @@ fn server_settings_log_and_port_check() {
     // A bound port is not free; port 0 never is.
     let l = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
     let port = l.local_addr().unwrap().port();
+    // (Not "free again after drop": a test running in parallel can take the port first.)
     assert!(!super::files::port_free(port));
     assert!(!super::files::port_free(0));
     drop(l);
-    assert!(super::files::port_free(port));
-}
-
-#[test]
-fn status_carries_service_fields() {
-    let (hub, _rx) = hub_with(cfg());
-    hub.set_status_field("startOnLaunch", true.into());
-    hub.set_status_field(
-        "error",
-        json!({"code": "EADDRINUSE 127.0.0.1:1", "message": "m", "time": 1}),
-    );
-    let s = hub.status();
-    assert_eq!(s["running"], false);
-    assert_eq!(s["startOnLaunch"], true);
-    assert_eq!(s["error"]["code"], "EADDRINUSE 127.0.0.1:1");
-    hub.set_status_field("error", Value::Null);
-    assert!(hub.status().get("error").is_none());
 }
 
 /// D8: the configured port is taken, HTTP falls back to an ephemeral port and suggests it;

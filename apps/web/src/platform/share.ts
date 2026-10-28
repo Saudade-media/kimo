@@ -93,7 +93,7 @@ export function desktopRegistryPath(kimoHome: string): string {
  * host owns the shared files there, and only it writes this file); elsewhere undefined, so the
  * share service keeps it in IndexedDB.
  */
-export function registryFor(platform: Pick<KimoPlatform, "kind" | "kimoHome" | "files">) {
+function registryFor(platform: Pick<KimoPlatform, "kind" | "kimoHome" | "files">) {
   if (platform.kind !== "desktop" || !platform.kimoHome) return undefined
   return createRegistry(fileRegistryBackend(platform.files, desktopRegistryPath(platform.kimoHome)))
 }
@@ -122,7 +122,7 @@ function deviceUserId(): string {
   }
 }
 
-export interface PlatformShareDeps {
+interface PlatformShareDeps {
   platform: KimoPlatform
   /** Test seam: the underlying service. Default: built from `platform`. */
   service?: ShareService

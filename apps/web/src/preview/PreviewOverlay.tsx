@@ -49,7 +49,7 @@ import {
 import { PreviewRender, type PreviewRenderDeps } from "./render"
 import "./preview.css"
 
-export interface PreviewOverlayProps extends PreviewRenderDeps {
+interface PreviewOverlayProps extends PreviewRenderDeps {
   store: DocStore
   libraries: () => Libraries
   /** The frame Preview opened on. */

@@ -368,7 +368,8 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
   let madeWorkspace: string | null = null
   const startCheckout = async (options: { workspaceName?: string; workspaceId?: string } = {}) => {
     const c = state.checkout
-    if (c.phase === "waiting" || c.phase === "ready") return
+    // One checkout at a time: a second press while one is being opened does nothing.
+    if (c.phase === "waiting" || c.phase === "ready" || c.busy) return
     const interval = c.interval
     set({ checkout: { ...c, busy: true, error: null } })
     try {

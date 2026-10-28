@@ -3,10 +3,10 @@
  * editor-state / core-schema planners, ids, hashing and path utilities. Runtime-neutral (Bun,
  * Node, browsers, workers): no Node or DOM imports.
  */
-import type { NodeData, OpError, Revision } from "@kimo/editor-state"
+import type { OpError, Revision } from "@kimo/editor-state"
 import { sha256Sync } from "@kimo/sync"
-import type { DocRef, ErrorCode, RevisionToken, ToolError, ToolWarning } from "../envelope"
-import type { HostDocument, HostResult } from "../runtime"
+import type { ErrorCode, RevisionToken, ToolError, ToolWarning } from "../envelope"
+import type { HostResult } from "../runtime"
 
 /** `{ok:true, value}`. */
 export const ok = <T>(value: T): HostResult<T> => ({ ok: true, value })
@@ -79,11 +79,6 @@ export function basename(path: string): string {
 
 export function joinPath(dir: string, name: string): string {
   return `${dir.replace(/\/+$/, "")}/${name}`
-}
-
-/** The envelope's DocRef of a host document. */
-export function docRefOf(d: HostDocument): DocRef {
-  return d.ref
 }
 
 /** editor-state `OpErrorCode` → envelope code (1:1; INVALID_OP/INVALID_ID → INVALID_INPUT). */
@@ -204,12 +199,6 @@ export function toWarnings(
 export function nodeIdOfPointer(path: string | undefined): string | undefined {
   const m = path ? /^\/nodes\/([^/]+)/.exec(path) : null
   return m ? (m[1] as string).replace(/~1/g, "/").replace(/~0/g, "~") : undefined
-}
-
-/** Node data without tree fields (an insert/replace-ready body). */
-export function bodyOf(n: NodeData): Record<string, unknown> {
-  const { parent: _p, order: _o, at: _a, ...rest } = n as Record<string, unknown>
-  return rest
 }
 
 /** Parses `[{axis, value}]` into a theme record. */

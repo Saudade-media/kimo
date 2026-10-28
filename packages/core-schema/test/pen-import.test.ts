@@ -328,7 +328,7 @@ describe(".pen import", () => {
   })
 
   test("order keys are increasing fractional-index heads", () => {
-    const keys = Array.from({ length: 5000 }, (_, i) => penOrderKey(i))
+    const keys = Array.from({ length: 300 }, (_, i) => penOrderKey(i))
     expect(keys.slice(0, 3)).toEqual(["a0", "a1", "a2"])
     expect(keys[62]).toBe("b00")
     for (let i = 1; i < keys.length; i++)

@@ -29,7 +29,7 @@ import { fontFeatureTags } from "./font-features"
 import { fontPackController } from "./font-pack"
 
 /** Settings that change what fonts resolve to. */
-export const FONT_SETTING_KEYS: readonly SettingKey[] = [
+const FONT_SETTING_KEYS: readonly SettingKey[] = [
   "privacy.noThirdPartyFetch",
   "fonts.google",
   "fonts.extraFolders",
@@ -52,7 +52,7 @@ export function announceFontCacheCleared(): void {
   }
 }
 
-export interface FontSystemOptions {
+interface FontSystemOptions {
   platform: KimoPlatform
   /** Document font assets (read on every lookup). */
   documentFaces?: () => readonly DocumentFontFace[]

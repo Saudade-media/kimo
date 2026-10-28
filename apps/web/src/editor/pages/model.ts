@@ -31,7 +31,7 @@ export function hasPages(store: Pick<DocStore, "toHeader">): boolean {
 }
 
 /** True when root node `n` is on page `pageId` (already resolved with {@link activePageId}). */
-export function rootOnPage(doc: PageDoc, n: NodeData | undefined, pageId: string | null): boolean {
+function rootOnPage(doc: PageDoc, n: NodeData | undefined, pageId: string | null): boolean {
   if (!n) return false
   return pageOfRoot(doc, n) === pageId
 }

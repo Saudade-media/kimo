@@ -39,7 +39,7 @@ export function timeLeft(ms: number): string {
 }
 
 /** The text of step 2: `Link is valid · Edit · expires in 6 days`. */
-export function linkStepLabel(state: Pick<JoinState, "role" | "expiresAt">, now: number): string {
+function linkStepLabel(state: Pick<JoinState, "role" | "expiresAt">, now: number): string {
   const role = state.role === "edit" ? "Edit" : state.role === "view" ? "View" : null
   const expiry =
     state.expiresAt === null

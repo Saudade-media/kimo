@@ -14,7 +14,7 @@ import { useEffect } from "react"
 export const DOCK_HEARTBEAT_MS = 5000
 
 /** The part of an Agent tab controller this needs (`AgentPanelControllerExt`). */
-export interface DockAgentSource {
+interface DockAgentSource {
   readonly state: { composer: { state: string } }
   subscribe(listener: (state: { composer: { state: string } }) => void): () => void
 }
@@ -50,7 +50,7 @@ export function createDockReporter(
 }
 
 /** Reports `controller`'s turns until the returned cleanup runs. */
-export function bindDockActivity(
+function bindDockActivity(
   platform: Pick<KimoPlatform, "dock">,
   controller: DockAgentSource,
   timers?: Pick<typeof globalThis, "setInterval" | "clearInterval">,

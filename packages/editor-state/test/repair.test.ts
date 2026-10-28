@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { jsonEqual, validate } from "@kimo/core-schema"
 import fc from "fast-check"
-import { type MoveRecord, planTreeRepairs, type TreeFields } from "../src/index"
+import { type MoveRecord, planTreeRepairs, type TreeFields, type YjsDocStore } from "../src/index"
 import { emptyStore, frame, ok, rect, rng, syncPair } from "./helpers"
 
 const RUNS = Number(process.env.KIMO_PROPERTY_RUNS ?? 200)
@@ -21,7 +21,7 @@ function hasCycle(nodes: Map<string, TreeFields>): boolean {
 }
 
 describe("planTreeRepairs", () => {
-  test("no repairs for a forest", () => {
+  test("a forest needs no repairs; orphans go to the root", () => {
     expect(
       planTreeRepairs(
         tree([
@@ -31,9 +31,6 @@ describe("planTreeRepairs", () => {
         ]),
       ),
     ).toEqual([])
-  })
-
-  test("orphans go to the root", () => {
     expect(planTreeRepairs(tree([["a", "gone"]]))).toEqual([
       { id: "a", kind: "orphan", parent: null, order: "a0" },
     ])
@@ -54,43 +51,28 @@ describe("planTreeRepairs", () => {
     ])
   })
 
-  test("a previous parent of null (root) restores the previous root position", () => {
-    const nodes = new Map<string, TreeFields>([
-      ["x", { parent: "y", order: "a0aoA" }],
-      ["y", { parent: "x", order: "a0aoB" }],
-    ])
-    const moves = new Map<string, MoveRecord>([
-      ["x", { t: 1, prevParent: null, prevOrder: "a0" }],
-      ["y", { t: 2, prevParent: null, prevOrder: "a1hWP" }],
-    ])
-    expect(planTreeRepairs(nodes, moves)).toEqual([
-      { id: "y", kind: "cycle", parent: null, order: "a1hWP" },
-    ])
-  })
-
-  test("ties break by larger id; previous parent in the cycle ⇒ root", () => {
-    const nodes = tree([
+  test("ties break by larger id; a previous parent inside or below the cycle falls back to the root", () => {
+    const tied = tree([
       ["x", "y"],
       ["y", "x"],
     ])
-    const moves = new Map<string, MoveRecord>([
+    const tiedMoves = new Map<string, MoveRecord>([
       ["x", { t: 5, prevParent: null, prevOrder: "a0" }],
       ["y", { t: 5, prevParent: "x", prevOrder: "a0" }],
     ])
-    expect(planTreeRepairs(nodes, moves)).toEqual([
+    expect(planTreeRepairs(tied, tiedMoves)).toEqual([
       { id: "y", kind: "cycle", parent: null, order: "a0" },
     ])
-  })
-
-  test("previous parent hanging below the cycle ⇒ root", () => {
     // z hangs off the cycle x <-> y; y's previous parent was z.
-    const nodes = tree([
+    const below = tree([
       ["x", "y"],
       ["y", "x"],
       ["z", "x"],
     ])
-    const moves = new Map<string, MoveRecord>([["y", { t: 9, prevParent: "z", prevOrder: "a0" }]])
-    expect(planTreeRepairs(nodes, moves)).toEqual([
+    const belowMoves = new Map<string, MoveRecord>([
+      ["y", { t: 9, prevParent: "z", prevOrder: "a0" }],
+    ])
+    expect(planTreeRepairs(below, belowMoves)).toEqual([
       { id: "y", kind: "cycle", parent: null, order: "a0" },
     ])
   })
@@ -139,10 +121,10 @@ describe("planTreeRepairs", () => {
 })
 
 describe("post-merge repair on Yjs", () => {
-  function setup() {
+  function setup(autoRepair: [boolean, boolean] = [true, true]) {
     let t = 0
-    const a = emptyStore({ now: () => (t += 10), random: rng(1) })
-    const b = emptyStore({ now: () => (t += 10), random: rng(2) })
+    const a = emptyStore({ now: () => (t += 10), random: rng(1), autoRepair: autoRepair[0] })
+    const b = emptyStore({ now: () => (t += 10), random: rng(2), autoRepair: autoRepair[1] })
     ok(
       a.apply(
         [
@@ -157,10 +139,15 @@ describe("post-merge repair on Yjs", () => {
     return { a, b }
   }
 
+  /** X under Y on `a` (earlier), Y under X on `b` (later): together a cycle. */
+  const crossMove = (a: YjsDocStore, b: YjsDocStore) => {
+    ok(a.apply({ op: "move", id: "Xxxxxxxxx1", parent: "Yyyyyyyyy1" }, { origin: "user" }))
+    ok(b.apply({ op: "move", id: "Yyyyyyyyy1", parent: "Xxxxxxxxx1" }, { origin: "user" }))
+  }
+
   test("concurrent cross-moves converge to an acyclic, valid tree", () => {
     const { a, b } = setup()
-    ok(a.apply({ op: "move", id: "Xxxxxxxxx1", parent: "Yyyyyyyyy1" }, { origin: "user" })) // t earlier
-    ok(b.apply({ op: "move", id: "Yyyyyyyyy1", parent: "Xxxxxxxxx1" }, { origin: "user" })) // t later
+    crossMove(a, b)
     syncPair(a, b)
     syncPair(a, b)
     expect(jsonEqual(a.toDocument(), b.toDocument())).toBe(true)
@@ -214,5 +201,29 @@ describe("post-merge repair on Yjs", () => {
     syncPair(a, b)
     expect(a.getNode("InsA000001")?.order).not.toBe(a.getNode("InsB000001")?.order)
     expect(a.children("Root000001")).toEqual(b.children("Root000001"))
+  })
+
+  describe("auto-repair switch", () => {
+    const repairs = (s: YjsDocStore) => s.log().filter((e) => e.kind === "repair").length
+
+    test("a replica with repair off merges the cycle but leaves repair to the other", () => {
+      const { a, b } = setup([true, false])
+      crossMove(a, b)
+      syncPair(a, b)
+      syncPair(a, b)
+      expect(repairs(a)).toBeGreaterThan(0)
+      expect(repairs(b)).toBe(0)
+      expect(jsonEqual(a.toDocument(), b.toDocument())).toBe(true)
+    })
+
+    test("with both off the cycle stays until repair() is called", () => {
+      const { a, b } = setup([false, false])
+      crossMove(a, b)
+      syncPair(a, b)
+      expect(repairs(a) + repairs(b)).toBe(0)
+      expect(a.repair().length).toBeGreaterThan(0)
+      syncPair(a, b)
+      expect(jsonEqual(a.toDocument(), b.toDocument())).toBe(true)
+    })
   })
 })

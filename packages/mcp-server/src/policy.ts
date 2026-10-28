@@ -392,13 +392,6 @@ export interface ActivityEntry {
   detail?: string
 }
 
-/** Keeps the newest {@link ACTIVITY_LIMIT} entries. */
-export function trimActivity(entries: readonly ActivityEntry[]): ActivityEntry[] {
-  return entries.length > ACTIVITY_LIMIT
-    ? entries.slice(entries.length - ACTIVITY_LIMIT)
-    : [...entries]
-}
-
 // --- Presence ----------------------------------------------------------------------------------
 
 /** One connected client as the editor shows it (agent chip + optional canvas cursor). */

@@ -29,7 +29,7 @@ import {
 } from "./help"
 import { versionInfo } from "./version-info"
 
-export function diagnosticsFor(platform: KimoPlatform): string {
+function diagnosticsFor(platform: KimoPlatform): string {
   return diagnosticsBlock(versionInfo(platform), {
     host: platform.kind,
     renderer: rendererLabel(),

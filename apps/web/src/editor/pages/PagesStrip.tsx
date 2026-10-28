@@ -379,7 +379,7 @@ export function PagesStrip({ session, m3 }: { session: FileSession; m3: M3Contro
  * `page=<id>`. Opening either activates the page. Null when the file has no shareable link
  * (a never-saved file on the desktop).
  */
-export function pageLink(session: FileSession, id: string): string | null {
+function pageLink(session: FileSession, id: string): string | null {
   const doc = session.document
   if (doc?.manager.platform.capabilities.deepLinks) {
     if (isUntitledRef(doc.ref)) return null

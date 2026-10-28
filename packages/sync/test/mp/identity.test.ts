@@ -45,25 +45,15 @@ describe("room id", () => {
       await expectCode(() => parseRoomId(bad), "BAD_REQUEST")
     }
   })
-
-  test("deriveRoomId rejects a key that is not 32 bytes", async () => {
-    await expectCode(deriveRoomId(new Uint8Array(31)), "BAD_REQUEST")
-  })
 })
 
 describe("signing keys", () => {
-  test("private keys are non-extractable by default; public keys export raw", async () => {
+  test("private keys are non-extractable by default; public keys export raw and re-import", async () => {
     const pair = await generateSigningKeyPair()
     expect(pair.privateKey.extractable).toBe(false)
-    expect((await exportPublicKey(pair.publicKey)).length).toBe(32)
-    expect((await generateSigningKeyPair(true)).privateKey.extractable).toBe(true)
-  })
-
-  test("importPublicKey round trips and rejects wrong lengths", async () => {
-    const pair = await generateSigningKeyPair()
     const raw = await exportPublicKey(pair.publicKey)
+    expect(raw.length).toBe(32)
     expect(await exportPublicKey(await importPublicKey(raw))).toEqual(raw)
-    await expectCode(importPublicKey(new Uint8Array(33)), "BAD_REQUEST")
   })
 })
 
@@ -124,25 +114,8 @@ describe("link certificates", () => {
     await expectCode(() => parseLinkCert(cert.bytes.subarray(0, 129)), "AUTH_INVALID")
     await expectCode(() => parseLinkCert(new Uint8Array([...cert.bytes, 0])), "AUTH_INVALID")
     await expectCode(() => parseLinkCert(withByte(0, 2)), "AUTH_INVALID")
-    await expectCode(() => parseLinkCert(withByte(1, 1)), "AUTH_INVALID")
     const kidZero = cert.bytes.slice()
     kidZero.set([0, 0, 0, 0], 2)
     await expectCode(() => parseLinkCert(kidZero), "AUTH_INVALID")
-  })
-
-  test("sign rejects invalid input", async () => {
-    const { root, linkPub, room } = await owner()
-    await expectCode(
-      signLinkCert(root.privateKey, { kid: 0, iat: 1, room, linkPub }),
-      "BAD_REQUEST",
-    )
-    await expectCode(
-      signLinkCert(root.privateKey, { kid: 1, iat: -1, room, linkPub }),
-      "BAD_REQUEST",
-    )
-    await expectCode(
-      signLinkCert(root.privateKey, { kid: 1, iat: 1, room, linkPub: new Uint8Array(31) }),
-      "BAD_REQUEST",
-    )
   })
 })

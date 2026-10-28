@@ -56,7 +56,7 @@ export function multiply(m: Matrix, n: Matrix): Matrix {
   ]
 }
 
-export function invert(m: Matrix): Matrix | null {
+function invert(m: Matrix): Matrix | null {
   const det = m[0] * m[3] - m[1] * m[2]
   if (Math.abs(det) < 1e-12) return null
   const a = m[3] / det

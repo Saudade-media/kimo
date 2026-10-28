@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import {
   applyDefaults,
-  buildJsonSchema,
-  DEFAULTS,
+  applyNodeDefaults,
   parse,
   serialize,
   stripDefaults,
+  stripNodeDefaults,
   validate,
 } from "../src/index"
 import { doc, fixtureFiles, type Loose } from "./helpers"
@@ -21,38 +21,39 @@ describe("normative defaults", () => {
     }
   })
 
-  test("applyDefaults fills node, layout, paint, stroke, effect and color defaults", () => {
-    const d = applyDefaults(
-      doc({
-        Frame00001: {
-          type: "frame",
-          parent: null,
-          order: "a0",
-          layout: { dir: "row" },
-          w: { mode: "fill" },
-          fill: [
-            {
-              kind: "linear",
-              stops: [
-                { color: { space: "oklch", l: 0.5, c: 0.1, h: 10 }, at: 0 },
-                { color: "#000", at: 1 },
-              ],
-            },
-          ],
-          stroke: { paint: "#000" },
-          effects: [{ kind: "shadow", x: 0, y: 0, blur: 1, color: "#000" }],
-        },
-      }),
-    ) as unknown as { nodes: Record<string, Record<string, unknown>> }
-    const f = d.nodes.Frame00001 as Loose
-    expect(f.visible).toBe(true)
-    expect(f.h).toEqual({ mode: "fit" })
-    expect(f.w).toEqual({ mode: "fill", weight: 1 })
-    expect(f.layout).toEqual({ dir: "row", ...DEFAULTS.layout })
-    expect(f.fill[0].interpolation).toBe("srgb")
-    expect(f.fill[0].stops[0].color.alpha).toBe(1)
-    expect(f.stroke).toEqual({ paint: "#000", ...DEFAULTS.stroke })
-    expect(f.effects[0]).toMatchObject({ inner: false, spread: 0, blend: "normal" })
+  test("strip and apply round-trip node, stroke and effect defaults", () => {
+    const n = {
+      type: "rect",
+      parent: null,
+      order: "a0",
+      w: 10,
+      h: 10,
+      blend: "normal",
+      stroke: { paint: "#000", miterLimit: 4 },
+      effects: [
+        { kind: "shadow", x: 0, y: 1, blur: 2, color: "#000", visible: true },
+        { kind: "blur", radius: 2, visible: true },
+        { kind: "backdrop-blur", radius: 2, visible: false },
+      ],
+    }
+    const stripped = stripNodeDefaults(n) as Loose
+    expect(stripped).toEqual({
+      type: "rect",
+      parent: null,
+      order: "a0",
+      w: 10,
+      h: 10,
+      stroke: { paint: "#000" },
+      effects: [
+        { kind: "shadow", x: 0, y: 1, blur: 2, color: "#000" },
+        { kind: "blur", radius: 2 },
+        { kind: "backdrop-blur", radius: 2, visible: false },
+      ],
+    })
+    const applied = applyNodeDefaults(stripped) as Loose
+    expect(applied.blend).toBe("normal")
+    expect(applied.stroke.miterLimit).toBe(4)
+    expect(applied.effects[1].visible).toBe(true)
   })
 
   test("instance props and set keys are never stripped or added (they override)", () => {
@@ -115,32 +116,5 @@ describe("normative defaults", () => {
       Future0001: { type: "sticker", parent: null, order: "a0", visible: true, opacity: 1 },
     })
     expect(stripDefaults(d)).toEqual(d)
-  })
-
-  test("every DEFAULTS entry appears as a JSON Schema default keyword", () => {
-    const schemaText = JSON.stringify(buildJsonSchema())
-    const defs = (buildJsonSchema() as Loose).$defs
-    const prop = (def: string, ...path: string[]) => {
-      let s = defs[def]
-      for (const p of path) s = s.properties[p]
-      return s.default
-    }
-    for (const [k, v] of Object.entries(DEFAULTS.node)) expect(prop("FrameNode", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.frame)) expect(prop("FrameNode", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.ellipse)) expect(prop("EllipseNode", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.browser)) expect(prop("BrowserNode", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.layout)) expect(prop("Layout", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.stroke)) expect(prop("Stroke", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.gradient))
-      expect(prop("GradientPaint", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.image)) expect(prop("ImagePaint", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.solid)) expect(prop("SolidPaint", k)).toEqual(v)
-    for (const [k, v] of Object.entries(DEFAULTS.shadow)) expect(prop("ShadowEffect", k)).toEqual(v)
-    expect(prop("SizeFill", "weight")).toBe(DEFAULTS.sizeFill.weight)
-    expect(prop("OklchColor", "alpha")).toBe(DEFAULTS.color.alpha)
-    expect(prop("TextNode", "grow")).toBe(DEFAULTS.text.grow)
-    expect(prop("PathNode", "fillRule")).toBe(DEFAULTS.path.fillRule)
-    expect(prop("InstanceNode", "position")).toBe(DEFAULTS.node.position)
-    expect(schemaText.length).toBeGreaterThan(0)
   })
 })

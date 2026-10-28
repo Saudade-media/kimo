@@ -4,13 +4,8 @@ import {
   agentOrigin,
   type ChildSpec,
   childPolicy,
-  clampAgents,
   createSpawnTool,
-  exploreBrief,
   leadPolicy,
-  MAX_AGENTS,
-  parseAgentOrigin,
-  planSideBySide,
   revertCalls,
   runChildren,
 } from "../src/modes"
@@ -82,7 +77,7 @@ describe("scope enforcement (per op)", () => {
     )
   })
 
-  test("M5 authorize turns out-of-scope ids into OUT_OF_SCOPE for a child (deny, no prompt)", () => {
+  test("authorize turns out-of-scope ids into OUT_OF_SCOPE for a child (deny, no prompt)", () => {
     const def = toolByName("kimo_apply_ops")
     if (!def) throw new Error()
     const input = { docId: "d_1", ops: [{ op: "update", id: "Navbar0001", set: { name: "x" } }] }
@@ -122,32 +117,6 @@ describe("scope enforcement (per op)", () => {
 })
 
 describe("modes", () => {
-  test("origins and caps", () => {
-    expect(agentOrigin("abc123", 2)).toBe("agent:kimo.abc123.2")
-    expect(parseAgentOrigin("agent:kimo.abc123.2")).toEqual({ session: "abc123", n: 2 })
-    expect(clampAgents(9)).toBe(MAX_AGENTS)
-    expect(clampAgents(0)).toBe(1)
-    expect(() => childPolicy([])).toThrow()
-  })
-
-  test("side by side: N placeholder frames to the right, each owned by its child", () => {
-    const ops = planSideBySide(
-      { id: "P", name: "Pricing", x: 0, y: 0, w: 1200, h: 800 },
-      3,
-      ["agent:kimo.s.1", "agent:kimo.s.2", "agent:kimo.s.3"],
-      { now: new Date(0) },
-    )
-    expect(ops).toHaveLength(3)
-    const second = ops[1] as unknown as {
-      key: string
-      node: { x: number; placeholder: { by: string } }
-    }
-    expect(second.key).toBe("v2")
-    expect(second.node.x).toBe(2 * 1280)
-    expect(second.node.placeholder.by).toBe("agent:kimo.s.2")
-    expect(exploreBrief("layout", 0, 3)).toContain("LAYOUT")
-  })
-
   test("runChildren runs in parallel, enforces the cap, and reports failures per child", async () => {
     const spec = (i: number): ChildSpec => ({
       index: i,

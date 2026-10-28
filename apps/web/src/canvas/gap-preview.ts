@@ -54,7 +54,7 @@ export function gapPreviewStore(ui: UiStore): GapPreviewStore {
  * item (design: Row gap mark x 34 = item 10…58). Column layouts swap the axes. Labels are the
  * measured distances (world units, `fmtUnits`); zero / negative gaps are skipped.
  */
-export function gapMeasurements(
+function gapMeasurements(
   boxes: readonly Rect[],
   dir: "row" | "column",
   kind: "main" | "cross",

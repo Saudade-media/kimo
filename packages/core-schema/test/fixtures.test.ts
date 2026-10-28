@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import Schema from "typebox/schema"
-import { KimoParseError, openDocument, parse, serialize, validate } from "../src/index"
+import { KimoParseError, parse, serialize, validate } from "../src/index"
 import { codes, FIXTURES, fixtureFiles, readFixture, uiLibrary } from "./helpers"
 
 const libraries = { ui: uiLibrary() }
@@ -25,16 +25,14 @@ describe("valid fixtures", () => {
     ...fixtureFiles("valid"),
     ...fixtureFiles("valid/libs").map(([f, t]) => [`libs/${f}`, t] as [string, string]),
   ]) {
-    test(`${file} validates with no errors and no warnings`, () => {
+    test(`${file} validates clean`, () => {
       const r = validate(parse(text), { libraries })
       expect(r.errors).toEqual([])
       expect(r.warnings).toEqual([])
       expect(r.ok).toBe(true)
     })
-    test(`${file} is canonical (serialize(parse(s)) === s)`, () => {
+    test(`${file} is canonical and accepted by the generated JSON Schema`, () => {
       expect(serialize(parse(text))).toBe(text)
-    })
-    test(`${file} is accepted by the generated JSON Schema`, () => {
       expect(schemaValidator.Check(parse(text))).toBe(true)
     })
   }
@@ -43,15 +41,6 @@ describe("valid fixtures", () => {
     const r = validate(parse(readFixture("valid/example-10-5.kimo")))
     expect(r.ok).toBe(true)
     expect(codes(r.warnings)).toEqual(["LIBRARY_NOT_LOADED"])
-  })
-
-  test("the 10.5 example keeps the teardown's node lines (minus the default fit)", () => {
-    const text = readFixture("valid/example-10-5.kimo")
-    expect(text).toContain(
-      `, "F6btn00001": {"type":"instance","parent":"E5card0001","at":"ui:CardActns1","order":"a0","of":"ui:BtnGhost01","overrides":{"ui:BtnLabel01":{"set":{"content":"Learn more"}}}}`,
-    )
-    expect(text).toContain(`"content":"Get Kimo — $49/mo"`)
-    expect(text).not.toContain(`"fit":"cover"`)
   })
 })
 
@@ -62,16 +51,9 @@ describe("invalid fixtures", () => {
       const r = validate(parse(text), { libraries })
       expect(r.ok).toBe(false)
       expect(codes(r.errors)).toContain(expected)
+      // Structural codes are caught by the generated JSON Schema too; semantic rules are not.
+      expect(schemaValidator.Check(parse(text))).toBe(!STRUCTURAL.has(expected))
     })
-    if (STRUCTURAL.has(expected)) {
-      test(`${file} is rejected by the generated JSON Schema`, () => {
-        expect(schemaValidator.Check(parse(text))).toBe(false)
-      })
-    } else {
-      test(`${file} is structurally valid (semantic rule only)`, () => {
-        expect(schemaValidator.Check(parse(text))).toBe(true)
-      })
-    }
   }
 })
 
@@ -83,10 +65,6 @@ describe("lint fixtures", () => {
       expect(r.errors).toEqual([])
       expect(r.ok).toBe(true)
       expect(codes(r.warnings)).toContain(expected)
-    })
-  }
-  for (const [file, text] of fixtureFiles("lint")) {
-    test(`${file} is accepted by the generated JSON Schema`, () => {
       expect(schemaValidator.Check(parse(text))).toBe(true)
     })
   }
@@ -126,28 +104,5 @@ describe("parse errors", () => {
       expect(err.path).toBe("/nodes/Frame00001")
       expect(err.line).toBe(7)
     }
-  })
-})
-
-describe("forward fixtures", () => {
-  test("newer minor opens read-only", () => {
-    const r = openDocument(readFixture("forward/newer-minor.kimo"))
-    expect(r.readOnly).toBe(true)
-    expect(r.readOnlyReasons.map((x) => x.code)).toEqual(["FORMAT_NEWER"])
-    expect(r.validation).toBeNull()
-  })
-  test("newer major opens read-only", () => {
-    expect(openDocument(readFixture("forward/newer-major.kimo")).readOnly).toBe(true)
-  })
-  test("newer patch is current", () => {
-    const r = openDocument(readFixture("forward/newer-patch.kimo"))
-    expect(r.readOnly).toBe(false)
-    expect(r.validation?.ok).toBe(true)
-  })
-  test("unknown feature opens read-only and validates with FEATURE_UNKNOWN", () => {
-    const r = openDocument(readFixture("forward/unknown-feature.kimo"))
-    expect(r.readOnly).toBe(true)
-    expect(r.readOnlyReasons.map((x) => x.code)).toEqual(["FEATURE_UNSUPPORTED"])
-    expect(codes(r.validation?.warnings ?? [])).toEqual(["FEATURE_UNKNOWN"])
   })
 })

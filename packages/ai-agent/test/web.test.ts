@@ -1,7 +1,7 @@
 /**
- * Board 38 "Web access": CLI flags on/off, CLI stream parsing of web steps, the Anthropic
- * server tools (request, streamed blocks, per-search cost), OpenAI Responses web_search, and
- * the loop's web steps (status labels, transcript, Activity note).
+ * Web access: CLI flags on/off, CLI stream parsing of web steps, the Anthropic server tools
+ * (request, streamed blocks, per-search cost), OpenAI Responses web_search, and the loop's web
+ * steps (transcript, Activity note).
  */
 import { describe, expect, test } from "bun:test"
 import {
@@ -17,12 +17,10 @@ import type { CliDetection, CliProcess, CliProcessHost, CliTurnInput } from "../
 import { type AgentEvent, runTurn } from "../src/loop"
 import { MODEL_CATALOG } from "../src/models"
 import { estimateCost } from "../src/pricing"
-import { stepLabel } from "../src/progress"
-import { buildSystemPrompt } from "../src/prompt"
 import { AnthropicProvider, buildAnthropicParams } from "../src/providers/anthropic"
 import { buildResponsesBody, OpenAICompatibleProvider } from "../src/providers/openai"
 import type { ProviderRequest, StreamEvent } from "../src/types"
-import { anthropicWebTools, type WebNote, webLabel, webSupported } from "../src/web"
+import { anthropicWebTools, type WebNote, webSupported } from "../src/web"
 import {
   anthropicConfig,
   fakeToolHost,
@@ -49,7 +47,7 @@ const input = (extra: Partial<CliTurnInput> = {}): CliTurnInput => ({
 const flag = (args: string[], f: string) => args[args.indexOf(f) + 1]
 
 describe("CLI flags", () => {
-  test("Claude Code: off keeps every built-in tool off; on adds only WebSearch and WebFetch", () => {
+  test("web is off by default for every CLI and turns on only the web tools", () => {
     const off = claudeInvocation(input()).args
     expect(flag(off, "--tools")).toBe("")
     expect(flag(off, "--allowedTools")).toBe("mcp__kimo")
@@ -59,78 +57,34 @@ describe("CLI flags", () => {
     // The rest of the lockdown stays.
     expect(on).toContain("--strict-mcp-config")
     expect(flag(on, "--permission-mode")).toBe("dontAsk")
-    expect(on).toContain("--disable-slash-commands")
-  })
 
-  test("Codex: live web search when on, explicitly disabled when off (its default is cached)", () => {
+    // Codex' default is cached search, so it is disabled explicitly while off.
     expect(codexInvocation(input({ webAccess: true })).args).toContain('web_search="live"')
     expect(codexInvocation(input()).args).toContain('web_search="disabled"')
-    // ChatGPT apps carry their own web tool: off in every turn.
-    const args = codexInvocation(input({ webAccess: true })).args
-    expect(args[args.indexOf("--disable") + 1]).toBe("apps")
-  })
 
-  test("Gemini CLI: web_fetch and google_web_search excluded only while off", () => {
-    const settings = (i: CliTurnInput) =>
-      JSON.parse(
-        geminiInvocation(i).workspaceFiles?.find((f) => f.path === ".gemini/settings.json")?.text ??
-          "{}",
-      ) as { tools: { exclude: string[] } }
-    expect(settings(input()).tools.exclude).toEqual([
-      "write_file",
-      "replace",
-      "run_shell_command",
-      "web_fetch",
-      "google_web_search",
-    ])
-    expect(settings(input({ webAccess: true })).tools.exclude).toEqual([
-      "write_file",
-      "replace",
-      "run_shell_command",
-    ])
-  })
-})
-
-describe("labels", () => {
-  test("running and done labels name the query or the host", () => {
-    expect(webLabel("web_search", { query: "tailwind v4 fonts" }, "running")).toBe(
-      "Searching the web for “tailwind v4 fonts”",
+    const exclude = (i: CliTurnInput) =>
+      (
+        JSON.parse(
+          geminiInvocation(i).workspaceFiles?.find((f) => f.path === ".gemini/settings.json")
+            ?.text ?? "{}",
+        ) as { tools: { exclude: string[] } }
+      ).tools.exclude
+    expect(exclude(input())).toEqual(
+      expect.arrayContaining(["web_fetch", "google_web_search", "run_shell_command"]),
     )
-    expect(webLabel("web_search", { query: "tailwind v4 fonts" }, "done")).toBe(
-      "Searched the web for “tailwind v4 fonts”",
-    )
-    expect(webLabel("web_fetch", { url: "https://www.tailwindcss.com/docs/x" }, "running")).toBe(
-      "Reading tailwindcss.com",
-    )
-    expect(webLabel("web_fetch", { url: "https://tailwindcss.com/docs/x" }, "done")).toBe(
-      "Read tailwindcss.com",
-    )
-    // Gemini CLI's web_fetch takes a prompt with the URL in it.
-    expect(
-      webLabel("web_fetch", { prompt: "Summarize https://example.com/a please" }, "done"),
-    ).toBe("Read example.com")
-    // CLI spellings go through stepLabel.
-    expect(stepLabel({ id: "1", name: "WebSearch", input: { query: "q" } })).toBe(
-      "Searching the web for “q”",
-    )
-    expect(stepLabel({ id: "1", name: "google_web_search", input: { query: "q" } })).toBe(
-      "Searching the web for “q”",
-    )
+    expect(exclude(input({ webAccess: true }))).not.toContain("web_fetch")
+    expect(exclude(input({ webAccess: true }))).toContain("run_shell_command")
   })
 
   test("which models can use the web", () => {
     const opus = { provider: "anthropic", model: "claude-opus-5-5" }
     expect(webSupported(opus, { kind: "anthropic" })).toBe(true)
     expect(webSupported(opus, { kind: "anthropic", baseURL: "https://proxy.example" })).toBe(false)
-    expect(webSupported({ provider: "bedrock", model: "x" }, { kind: "bedrock" })).toBe(false)
-    expect(webSupported({ provider: "vertex", model: "x" }, { kind: "vertex" })).toBe(true)
     expect(webSupported({ provider: "openai", model: "o3" }, { kind: "openai" })).toBe(false)
     expect(
       webSupported({ provider: "openai", model: "o3" }, { kind: "openai", api: "responses" }),
     ).toBe(true)
-    expect(webSupported({ provider: "gemini", model: "g" }, { kind: "gemini" })).toBe(false)
     expect(webSupported({ provider: "cli:claude-code", model: "default" })).toBe(true)
-    expect(webSupported({ provider: "cli:my-cli", model: "default" })).toBe(false)
   })
 })
 
@@ -236,7 +190,7 @@ const CLAUDE_WEB = [
 ].map((j) => JSON.stringify(j))
 
 describe("CLI web steps", () => {
-  test("Claude Code: WebSearch / WebFetch become labelled steps, transcript and Activity notes", async () => {
+  test("Claude Code: WebSearch / WebFetch become steps, transcript entries and Activity notes", async () => {
     const events: AgentEvent[] = []
     const notes: (WebNote & { workspace: string })[] = []
     const rec = await runCliTurn({
@@ -256,16 +210,9 @@ describe("CLI web steps", () => {
       webNote: (n) => notes.push(n),
     })
     expect(rec.status).toBe("done")
-    const starts = events.flatMap((e) => (e.type === "step_start" ? [e.label] : []))
-    expect(starts).toEqual([
-      "Searching the web for “Tailwind v4 default sans font stack”",
-      "Reading tailwindcss.com",
-    ])
-    const ends = events.flatMap((e) => (e.type === "step_end" ? [[e.tool, e.summary]] : []))
-    expect(ends).toEqual([
-      ["web_search", "Searched the web for “Tailwind v4 default sans font stack”"],
-      ["web_fetch", "Read tailwindcss.com"],
-    ])
+    expect(events.filter((e) => e.type === "step_start")).toHaveLength(2)
+    const ends = events.flatMap((e) => (e.type === "step_end" ? [e.tool] : []))
+    expect(ends).toEqual(["web_search", "web_fetch"])
     expect(rec.web?.map((w) => [w.tool, w.detail, w.ok])).toEqual([
       ["web_search", "Tailwind v4 default sans font stack", true],
       ["web_fetch", "https://tailwindcss.com/docs/font-family", true],
@@ -455,7 +402,7 @@ const anthropicWebStream = () =>
   ])
 
 describe("Anthropic web tools", () => {
-  test("request: server tools only when web access is on, versions per model and platform", () => {
+  test("request: server tools only when web access is on; none on Bedrock", () => {
     const opus = MODEL_CATALOG.anthropic[0] as (typeof MODEL_CATALOG.anthropic)[number]
     const none = buildAnthropicParams(req(), opus, "anthropic", { fallback: false })
     expect(none.tools).toBeUndefined()
@@ -463,17 +410,10 @@ describe("Anthropic web tools", () => {
       fallback: false,
       web: anthropicWebTools("anthropic", "claude-opus-5-5", true),
     })
-    expect(p.tools).toEqual([
-      { type: "web_search_20260209", name: "web_search", max_uses: 5 },
-      { type: "web_fetch_20260209", name: "web_fetch", max_uses: 5, max_content_tokens: 20_000 },
-    ] as never)
-    expect(anthropicWebTools("anthropic", "claude-haiku-4-5", true)).toEqual({
-      search: "web_search_20250305",
-      fetch: "web_fetch_20250910",
-    })
-    expect(anthropicWebTools("vertex", "claude-opus-5-5", false)).toEqual({
-      search: "web_search_20250305",
-    })
+    expect((p.tools as unknown as { name: string }[]).map((t) => t.name)).toEqual([
+      "web_search",
+      "web_fetch",
+    ])
     expect(anthropicWebTools("bedrock", "claude-opus-5-5", false)).toEqual({})
     expect(anthropicWebTools("anthropic", "claude-opus-5-5", false)).toEqual({})
   })
@@ -625,28 +565,13 @@ describe("loop", () => {
     expect(events.find((e) => e.type === "step_start")).toMatchObject({
       callId: "s1",
       tool: "web_search",
-      label: "Searching the web for “tailwind v4 fonts”",
     })
-    expect(events.find((e) => e.type === "step_end")).toMatchObject({
-      ok: true,
-      summary: "Searched the web for “tailwind v4 fonts”",
-    })
-    expect(rec.web).toEqual([
-      {
-        callId: "s1",
-        tool: "web_search",
-        label: "Searched the web for “tailwind v4 fonts”",
-        detail: "tailwind v4 fonts",
-        ok: true,
-      },
+    expect(events.find((e) => e.type === "step_end")).toMatchObject({ ok: true })
+    expect(rec.web?.map((w) => [w.tool, w.detail, w.ok])).toEqual([
+      ["web_search", "tailwind v4 fonts", true],
     ])
-    expect(notes).toEqual([
-      {
-        tool: "web_search",
-        summary: "Searched the web for “tailwind v4 fonts”",
-        detail: "tailwind v4 fonts",
-        ok: true,
-      },
+    expect(notes.map((n) => [n.tool, n.detail, n.ok])).toEqual([
+      ["web_search", "tailwind v4 fonts", true],
     ])
     expect(rec.usage.webSearches).toBe(1)
     // A turn without web access sends no flag.
@@ -666,12 +591,5 @@ describe("loop", () => {
       onEvent: () => {},
     })
     expect(quiet.requests[0]?.webAccess).toBeUndefined()
-  })
-
-  test("prompt guidance only when web access is on", () => {
-    const on = buildSystemPrompt({ mode: "single", skills: [], webAccess: true })
-    const off = buildSystemPrompt({ mode: "single", skills: [] })
-    expect(on.stable).toContain("End your reply with “Sources:”")
-    expect(off.stable).not.toContain("Sources:")
   })
 })

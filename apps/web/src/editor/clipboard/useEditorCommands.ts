@@ -27,7 +27,7 @@ export function commandsFor(session: FileSession): EditorCommands | null {
 /** How long a key press waits for its clipboard event before the API fallback runs. */
 const CLIPBOARD_EVENT_WAIT_MS = 120
 
-export interface EditorCommandDeps {
+interface EditorCommandDeps {
   session: FileSession
   m3: M3Controller
   canvas: { current: CanvasHandle | null }

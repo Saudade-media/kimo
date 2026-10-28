@@ -155,13 +155,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn manifest_is_embedded() {
-        assert!(tools().len() >= 19);
-        assert_eq!(socket_protocol(), crate::protocol::SOCKET_PROTOCOL);
-        assert!(tools().iter().any(|t| t["name"] == "kimo_get_state"));
-    }
-
-    #[test]
     fn instructions_match_server_ts() {
         let ts = include_str!("../../../../../packages/mcp-server/src/server.ts");
         let flat: String = ts.split_whitespace().collect::<Vec<_>>().join(" ");

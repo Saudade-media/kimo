@@ -21,7 +21,7 @@ interface ReleaseTarget {
 export type LiveOwner = (owner: string | undefined) => boolean
 
 /** Frames in `store` that carry a flag no live owner holds. */
-export function stalePlaceholdersIn(store: DocStore, isLive: LiveOwner): string[] {
+function stalePlaceholdersIn(store: DocStore, isLive: LiveOwner): string[] {
   const ids = store.nodeIds()
   return stalePlaceholderIds(
     ids.map((id) => [id, store.getNode(id) as { placeholder?: unknown } | undefined] as const),

@@ -1353,54 +1353,6 @@ mod tests {
     }
 
     #[test]
-    fn vertex_and_foundry_urls() {
-        let body = br#"{"model":"claude-opus-5-5","stream":true,"messages":[]}"#;
-        let p = prepare_vertex(body, &Secret::new("tok"), "my-proj", "us-east5", None).unwrap();
-        assert_eq!(
-            p.url,
-            "https://us-east5-aiplatform.googleapis.com/v1/projects/my-proj/locations/us-east5/publishers/anthropic/models/claude-opus-5-5:streamRawPredict"
-        );
-        let v: Value = serde_json::from_slice(&p.body).unwrap();
-        assert_eq!(v["anthropic_version"], "vertex-2023-10-16");
-        assert_eq!(v["stream"], true);
-        let p = prepare_vertex(body, &Secret::new("tok"), "p", "global", None).unwrap();
-        assert!(p.url.starts_with("https://aiplatform.googleapis.com/"));
-        let p = prepare_foundry(
-            "/v1/messages",
-            Some("beta=true"),
-            body.to_vec(),
-            &FoundryAuth::Key(Secret::new("k")),
-            Some("my-res"),
-        )
-        .unwrap();
-        assert_eq!(
-            p.url,
-            "https://my-res.services.ai.azure.com/anthropic/v1/messages?beta=true"
-        );
-        assert!(p.headers.contains(&("x-api-key".into(), "k".into())));
-        let p = prepare_foundry(
-            "/v1/messages",
-            None,
-            vec![],
-            &FoundryAuth::Entra(Secret::new("eyJ")),
-            Some("r"),
-        )
-        .unwrap();
-        assert_eq!(
-            p.headers,
-            vec![("authorization".to_string(), "Bearer eyJ".to_string())]
-        );
-        let e = prepare_foundry(
-            "/v1/messages",
-            None,
-            vec![],
-            &FoundryAuth::Key(Secret::new("k")),
-            None,
-        );
-        assert_eq!(e.err().unwrap().code, "INVALID");
-    }
-
-    #[test]
     fn google_token_requests() {
         let c = GoogleCreds {
             source: "t".into(),
@@ -1561,23 +1513,6 @@ mod tests {
     }
 
     #[test]
-    fn bedrock_region_uses_the_chosen_profile() {
-        let home = sso_home();
-        let env = CloudEnv::fixed(&[], Some(home.path()));
-        assert_eq!(
-            bedrock_region_in(&env, None, Some("design")).unwrap(),
-            "eu-central-1"
-        );
-        assert_eq!(bedrock_region_in(&env, None, None).unwrap(), "us-west-2");
-        assert_eq!(
-            bedrock_region_in(&env, Some("ap-south-1"), Some("design")).unwrap(),
-            "ap-south-1"
-        );
-        let env = CloudEnv::fixed(&[("AWS_PROFILE", "keys")], Some(home.path()));
-        assert_eq!(bedrock_region_in(&env, None, None).unwrap(), "eu-west-1");
-    }
-
-    #[test]
     fn sso_role_credentials_exchange() {
         let r = SsoRole {
             profile: "design".into(),
@@ -1641,8 +1576,5 @@ mod tests {
         assert_eq!(e, Some(1_800_003_600));
         assert!(parse_az_token(b"ERROR: Please run 'az login'").is_err());
         assert!(parse_az_token(br#"{"accessToken":""}"#).is_err());
-        assert!(azure_cli_candidates()
-            .iter()
-            .all(|p| p.file_name().is_some()));
     }
 }

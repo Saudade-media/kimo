@@ -27,21 +27,21 @@ import {
 } from "@kimo/ai-agent"
 
 /** System prompt + tool definitions sent with every request (tokens). */
-export const SYSTEM_TOKENS = 6_000
+const SYSTEM_TOKENS = 6_000
 /** One attached image (≈ 1.15k × 1.15k at Anthropic's 750 px²/token). */
-export const IMAGE_TOKENS = 1_600
+const IMAGE_TOKENS = 1_600
 /** One selected frame: its node tree as read by `kimo_get_state` (average). */
-export const FRAME_TOKENS = 1_500
+const FRAME_TOKENS = 1_500
 /** Output cap of one request when the adapter is not told otherwise (anthropic.ts: 32k). */
-export const TURN_OUTPUT_CAP = 32_000
+const TURN_OUTPUT_CAP = 32_000
 /**
  * Expected output of one turn (tokens): a typical design turn's reply — a short answer plus the
  * tool-call JSON of a few edits. Used instead of the cap so the warning tracks a realistic cost.
  */
-export const TURN_OUTPUT_TYPICAL = 4_096
+const TURN_OUTPUT_TYPICAL = 4_096
 
 /** ~4 characters per token (English prose + JSON). */
-export const tokensOfText = (s: string): number => Math.ceil(s.length / 4)
+const tokensOfText = (s: string): number => Math.ceil(s.length / 4)
 
 export interface TurnEstimateInput {
   /** Provider family of the selected model (`anthropic`, `openai`, …). */
@@ -115,7 +115,7 @@ export interface CostWarningView {
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`
 
 /** "14 frames + 3 images in context" / "a long thread in context". */
-export function contextPhrase(e: Pick<TurnEstimate, "frames" | "images">): string {
+function contextPhrase(e: Pick<TurnEstimate, "frames" | "images">): string {
   const parts = [
     ...(e.frames > 0 ? [plural(e.frames, "frame")] : []),
     ...(e.images > 0 ? [plural(e.images, "image")] : []),

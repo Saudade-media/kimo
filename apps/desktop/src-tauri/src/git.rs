@@ -597,13 +597,6 @@ mod tests {
     }
 
     #[test]
-    fn no_repo_is_none() {
-        let d = tempfile::tempdir().unwrap();
-        fs::write(d.path().join("a.kimo"), "{}").unwrap();
-        assert!(state(&d.path().join("a.kimo")).is_none());
-    }
-
-    #[test]
     fn detects_operations_from_marker_files() {
         if !have_git() {
             return;
@@ -824,14 +817,6 @@ mod tests {
             String::from_utf8_lossy(&out.stdout).trim(),
             MERGE_DRIVER_COMMAND
         );
-    }
-
-    #[test]
-    fn stored_conflict_count() {
-        let d = tempfile::tempdir().unwrap();
-        let p = d.path().join("a.kimo");
-        fs::write(&p, r#"{"conflicts":{"c1":{"kind":"prop"},"c2":{"resolved":true},"c3":{"resolved":false}}}"#).unwrap();
-        assert_eq!(stored_conflicts(&p), 2);
     }
 
     #[test]

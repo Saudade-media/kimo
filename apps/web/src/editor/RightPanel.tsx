@@ -48,7 +48,7 @@ import { RichTextScope } from "./sections/RichTextScope"
 import { TextSection } from "./sections/TextSection"
 import type { FileSession } from "./session"
 
-export type RightTab = "design" | "code" | "agent" | "activity" | "conflicts"
+type RightTab = "design" | "code" | "agent" | "activity" | "conflicts"
 const NO_REV = createBus(0)
 
 const TABS = [
@@ -57,7 +57,7 @@ const TABS = [
   { value: "agent", label: "Agent" },
 ] as const
 
-export interface RightPanelProps {
+interface RightPanelProps {
   session: FileSession
   /** The canvas's latest layout; sections select only the boxes they show from it. */
   layout: Bus<LayoutResult | null>
@@ -246,16 +246,8 @@ function useConflictCounts(
 }
 
 /** Node types with `fill` / `stroke` (graphics fields) and `radius`. */
-export const HAS_FILL = new Set(["frame", "rect", "ellipse", "polygon", "path", "text"])
-export const HAS_STROKE = new Set([
-  "frame",
-  "rect",
-  "ellipse",
-  "polygon",
-  "path",
-  "text",
-  "browser",
-])
+const HAS_FILL = new Set(["frame", "rect", "ellipse", "polygon", "path", "text"])
+const HAS_STROKE = new Set(["frame", "rect", "ellipse", "polygon", "path", "text", "browser"])
 
 /**
  * View only: the sections go inert in a `display: contents` wrapper. Everyone else gets the

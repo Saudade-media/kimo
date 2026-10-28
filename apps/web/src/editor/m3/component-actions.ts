@@ -18,7 +18,7 @@ const num = (v: unknown): number | undefined =>
   typeof v === "number" && Number.isFinite(v) ? v : undefined
 
 /** A main component (a node with `component`, incl. a derived component). */
-export function isMain(n: NodeData | Readonly<Rec> | undefined): boolean {
+function isMain(n: NodeData | Readonly<Rec> | undefined): boolean {
   return !!n && n.component !== undefined && n.component !== false
 }
 
@@ -30,7 +30,7 @@ export function selectedMain(doc: DocReader, ids: readonly string[]): string | n
 export type DuplicateMainMode = "instance" | "component"
 
 /** "<name> 2" (or the next free number among `taken`). */
-export function copyName(name: string, taken: ReadonlySet<string>): string {
+function copyName(name: string, taken: ReadonlySet<string>): string {
   const base = name.replace(/\s+\d+$/, "")
   for (let i = 2; ; i++) if (!taken.has(`${base} ${i}`)) return `${base} ${i}`
 }
@@ -180,7 +180,7 @@ export function duplicateMainOps(
 export type DuplicateMainPref = "ask" | DuplicateMainMode
 
 /** The copies an ⌥-drag moves: the clone ops, original → copy ids, and the ask alternative. */
-export interface AltDragClone {
+interface AltDragClone {
   ops: Op[]
   pairs: Map<string, string>
   /** The first selected main (the one the dialog names). */

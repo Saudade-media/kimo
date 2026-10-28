@@ -1,4 +1,4 @@
-import { ArrowRight, Crosshair, Lock, Minus, Plus, RotateCcw } from "lucide-react"
+import { Crosshair, Lock, Minus, RotateCcw } from "lucide-react"
 import type { ComponentPropsWithRef, HTMLAttributes, ReactNode } from "react"
 import { IconButton } from "../icon-button/IconButton"
 import { DraftInput } from "../internal/DraftInput"
@@ -156,96 +156,6 @@ export function PropDefRow({
         </div>
       )}
       {children}
-    </div>
-  )
-}
-
-/** One enum option: its name and the value it applies to the target ("8 16"). */
-export interface PropOption {
-  name: string
-  value: string
-}
-
-/** Props for {@link PropOptions}. Remaining `<div>` props go to the block. */
-export interface PropOptionsProps extends Omit<ComponentPropsWithRef<"div">, "children"> {
-  /** Target field shown in the title and as each value's prefix ("pad"). */
-  field: string
-  options: readonly PropOption[]
-  /** Change one option; `null` removes it. */
-  onOptionChange?: (index: number, option: PropOption | null) => void
-  onAddOption?: () => void
-  readOnly?: boolean
-}
-
-/**
- * Enum options block under an enum PropDefRow. Mirrors board 12 `ClRT2`: fill_container,
- * column, gap 4, padding [0, 0, 8, 24], stroke bottom 1 border. Options Header (Njt1D) h 20,
- * row, gap 6, center: Title "Options → <field>" sans 11 / 600 text-tertiary · Spacer · Hint "no
- * arg → as authored" sans 11 text-tertiary · Add option (IconButton 20, `plus` 12). Option rows
- * (MRqYG) h 28, row, gap 6, center: Name Field (56 × 28, bg-subtle, radius-sm, padding [0, 8];
- * mono 11) · Arrow `arrow-right` 12 text-tertiary · Value (PropField fill, prefix = field, value
- * mono 11) · Remove (IconButton 24, `minus` 14).
- */
-export function PropOptions({
-  field,
-  options,
-  onOptionChange,
-  onAddOption,
-  readOnly = false,
-  className,
-  ...rest
-}: PropOptionsProps) {
-  return (
-    <div {...rest} className={cx("kimo-prop-options", className)}>
-      <div className="kimo-prop-options__header">
-        <span className="kimo-prop-options__title">{`Options → ${field}`}</span>
-        <span className="kimo-prop-options__spacer" aria-hidden="true" />
-        <span className="kimo-prop-options__hint">no arg → as authored</span>
-        <IconButton
-          className="kimo-prop-options__add"
-          tone="quiet"
-          label="Add option"
-          icon={<Plus />}
-          disabled={readOnly}
-          onClick={onAddOption}
-        />
-      </div>
-      {options.map((o, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: options are positional (renaming must keep focus).
-        <div className="kimo-prop-options__option" key={i}>
-          {/* biome-ignore lint/a11y/noLabelWithoutControl: DraftInput renders the <input>. */}
-          <label className="kimo-prop-options__name-field">
-            <DraftInput
-              className="kimo-prop-options__name"
-              aria-label={`Option ${i + 1} name`}
-              value={o.name}
-              disabled={readOnly}
-              onCommit={(name) => onOptionChange?.(i, { ...o, name })}
-            />
-          </label>
-          <ArrowRight className="kimo-prop-options__arrow" aria-hidden="true" />
-          <PropTextField
-            className="kimo-prop-options__value"
-            prefix={field}
-            inputLabel={`Option ${o.name} value`}
-            value={o.value}
-            disabled={readOnly}
-            onCommit={(value) => {
-              onOptionChange?.(i, { ...o, value })
-              return undefined
-            }}
-          />
-          <IconButton
-            className="kimo-prop-options__remove"
-            size="sm"
-            tone="quiet"
-            label={`Remove option ${o.name}`}
-            icon={<Minus />}
-            disabled={readOnly}
-            onClick={() => onOptionChange?.(i, null)}
-          />
-        </div>
-      ))}
     </div>
   )
 }

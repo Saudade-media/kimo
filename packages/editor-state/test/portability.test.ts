@@ -1,10 +1,10 @@
-import { describe, expect, test } from "bun:test"
+import { expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
 /**
- * Server-readiness rule (teardown 9.1): this package must run in Bun, Node, browsers and
- * workers, so its sources may not import platform modules or touch platform globals.
+ * This package must run in Bun, Node, browsers and workers, so its sources may not import
+ * platform modules or touch platform globals.
  */
 const SRC = join(import.meta.dir, "../src")
 const FORBIDDEN: [RegExp, string][] = [
@@ -17,15 +17,14 @@ const FORBIDDEN: [RegExp, string][] = [
   [/from\s+["']react/, "React import"],
 ]
 
-describe("portability", () => {
+test("sources use no platform-specific APIs", () => {
+  const hits: string[] = []
   for (const f of readdirSync(SRC).filter((f) => f.endsWith(".ts"))) {
-    test(`${f} uses no platform-specific APIs`, () => {
-      // Strip comments: prose may mention "the document." etc.
-      const text = readFileSync(join(SRC, f), "utf8")
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .replace(/^\s*\/\/.*$/gm, "")
-      for (const [re, what] of FORBIDDEN)
-        expect({ file: f, what, hit: re.test(text) }).toEqual({ file: f, what, hit: false })
-    })
+    // Strip comments: prose may mention "the document." etc.
+    const text = readFileSync(join(SRC, f), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "")
+    for (const [re, what] of FORBIDDEN) if (re.test(text)) hits.push(`${f}: ${what}`)
   }
+  expect(hits).toEqual([])
 })

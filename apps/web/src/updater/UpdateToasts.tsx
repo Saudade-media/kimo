@@ -10,14 +10,14 @@ import { toastCopy } from "../platform/contract"
 import type { UpdaterController, UpdateToast } from "./controller"
 import "./updater.css"
 
-export interface UpdateToastViewProps {
+interface UpdateToastViewProps {
   toast: UpdateToast
   onAction: () => void
   className?: string
 }
 
 /** One update toast. */
-export function UpdateToastView({ toast, onAction, className }: UpdateToastViewProps) {
+function UpdateToastView({ toast, onAction, className }: UpdateToastViewProps) {
   const copy = toastCopy(toast)
   return (
     <Toast

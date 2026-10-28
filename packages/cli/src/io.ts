@@ -35,7 +35,7 @@ export const processIO: CliIO = {
 export const resolveIn = (io: CliIO, p: string) => resolve(io.cwd ?? process.cwd(), p)
 
 /** `~/.kimo`, or `$KIMO_HOME`. */
-export function kimoHome(io: CliIO): string {
+function kimoHome(io: CliIO): string {
   const env = io.env ?? process.env
   return env.KIMO_HOME && env.KIMO_HOME.length > 0 ? env.KIMO_HOME : join(homedir(), ".kimo")
 }

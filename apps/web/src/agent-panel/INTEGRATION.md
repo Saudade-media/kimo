@@ -92,7 +92,8 @@ useHomeHandoff(agentPanel, handoffPath, () => setTab("agent"))
 ## 4. Canvas (Editor canvas host)
 
 ```tsx
-import { agentCanvasProps, useAgentPanelState } from "../agent-panel"
+import { agentCanvasProps } from "../agent-panel"
+import { useAgentPanelState } from "../agent-panel/hooks"
 const agentState = useAgentPanelState(agentPanel)
 <Canvas agentCanvas={agentCanvasProps(agentState, {
   onRunPrompt: (id) => runPrompt(id),
@@ -103,9 +104,7 @@ Live origins, persona + label per origin, enforced scopes (side by side / split 
 cursors, landed edits and rejected-op flashes come from the panel; the canvas draws them per
 board 36 (one cursor + a section outline per agent, a ring per landed edit on its section).
 `ModeSummaryOverlay` mounts the Mode Summary (jDKaM, with Stop all) over the canvas, bottom left,
-while a mode run is live (`useEditorAgentPanel().modeSummary`). For other canvas-side pieces the
-panel exports `ModeSummaryPill` (jDKaM), `VariantActions`
-(avr2x), `PassChip` (NCElh), `AgentCursorPill` (GmEAl) and `RejectedOpPill` (O2Whh).
+while a mode run is live (`useEditorAgentPanel().modeSummary`).
 
 ## 5. AgentMark (`@kimo/ui`)
 

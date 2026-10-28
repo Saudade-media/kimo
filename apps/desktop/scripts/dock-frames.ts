@@ -123,26 +123,6 @@ export function rotate(p: Pt[], deg: number, cx = 50, cy = 50): Pt[] {
   })
 }
 
-/** Distance from a point to a closed polygon's outline. */
-export function distanceToOutline([px, py]: Pt, poly: Pt[]): number {
-  let m = Number.POSITIVE_INFINITY
-  for (let k = 0; k < poly.length; k++) {
-    const [ax, ay] = poly[k] as Pt
-    const [bx, by] = poly[(k + 1) % poly.length] as Pt
-    const dx = bx - ax
-    const dy = by - ay
-    const len = dx * dx + dy * dy
-    const t = len ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len)) : 0
-    m = Math.min(m, Math.hypot(ax + t * dx - px, ay + t * dy - py))
-  }
-  return m
-}
-
-/** Max distance from `a`'s vertices to `b`'s outline (one-sided Hausdorff). */
-export function deviation(a: Pt[], b: Pt[]): number {
-  return Math.max(...a.map((p) => distanceToOutline(p, b)))
-}
-
 // --- Timing -------------------------------------------------------------------------------------
 
 /** CSS cubic-bezier(x1, y1, x2, y2) at progress u (x solved by bisection). */

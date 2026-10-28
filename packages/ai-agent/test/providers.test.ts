@@ -79,29 +79,6 @@ describe("Anthropic adapter", () => {
     expect(msgs.at(-1)?.content.at(-1)?.cache_control).toEqual({ type: "ephemeral" })
   })
 
-  test("thinking Off/Max on Opus 5.5 maps to effort low/max; Haiku uses budget tokens", () => {
-    const opus = MODEL_CATALOG.anthropic[0] as (typeof MODEL_CATALOG.anthropic)[number]
-    const haiku = MODEL_CATALOG.anthropic.find((m) => m.id === "claude-haiku-4-5-20251001")
-    if (!haiku) throw new Error()
-    const off = buildAnthropicParams(req({ thinking: "low" }), opus, "a", {
-      fallback: false,
-    }) as unknown as Record<string, unknown>
-    expect(off.output_config).toEqual({ effort: "low" })
-    const max = buildAnthropicParams(req({ thinking: "max" }), opus, "a", {
-      fallback: false,
-    }) as unknown as Record<string, unknown>
-    expect(max.output_config).toEqual({ effort: "max" })
-    const h = buildAnthropicParams(req({ model: haiku.id, thinking: "max" }), haiku, "a", {
-      fallback: false,
-    }) as unknown as Record<string, unknown>
-    expect(h.thinking).toEqual({ type: "enabled", budget_tokens: 16000 })
-    expect(h.max_tokens as number).toBeGreaterThan(16000)
-    const hoff = buildAnthropicParams(req({ model: haiku.id, thinking: "low" }), haiku, "a", {
-      fallback: false,
-    }) as unknown as Record<string, unknown>
-    expect(hoff.thinking).toBeUndefined()
-  })
-
   test("streams a tool call", async () => {
     const { fetch } = mockFetch([
       () => streamResponse(anthropicToolStream("toolu_1", "kimo_query", { docId: "d_1" })),
@@ -290,27 +267,6 @@ describe("OpenAI-compatible adapter", () => {
     expect((calls[0]?.body as { instructions?: string } | undefined)?.instructions).toContain(
       "You are Kimo.",
     )
-  })
-
-  test("OpenRouter and Ollama defaults", () => {
-    const or = new OpenAICompatibleProvider(
-      { ...cfg, id: "openrouter", kind: "openrouter" },
-      runtime(fetch),
-    )
-    expect(or.baseURL).toBe("https://openrouter.ai/api/v1")
-    expect(or.headers()["X-Title"]).toBe("Kimo")
-    const ollama = new OpenAICompatibleProvider(
-      {
-        id: "custom:ollama",
-        kind: "custom",
-        label: "Ollama",
-        models: { agent: "llama3.3:70b", fast: "llama3.3:70b" },
-        free: true,
-      },
-      runtime(fetch),
-    )
-    expect(ollama.baseURL).toBe("http://localhost:11434/v1")
-    expect(ollama.headers().authorization).toBeUndefined()
   })
 
   test("network failure on web while online → cors; offline → offline", async () => {

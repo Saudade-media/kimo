@@ -7,7 +7,7 @@
 import type { Decl } from "./style"
 
 /** Encodes an arbitrary value: spaces → `_`, `_` → `\_`, double quotes → single. */
-export function arb(v: string): string {
+function arb(v: string): string {
   return v.replace(/_/g, "\\_").replace(/"/g, "'").replace(/\s+/g, "_")
 }
 

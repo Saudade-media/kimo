@@ -29,7 +29,7 @@ export interface MigrationDialogViewProps {
 }
 
 /** The consent dialog for a request (stateless). */
-export function MigrationDialogView({
+function MigrationDialogView({
   request: r,
   os,
   onUpgrade,

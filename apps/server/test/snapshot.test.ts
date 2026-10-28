@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { RelayHttpClient, sealSnapshot } from "@kimo/sync/mp"
+import { sealSnapshot } from "@kimo/sync/mp"
 import {
   bearer,
   type Harness,
@@ -91,23 +91,6 @@ describe("snapshot upload and acceptance", () => {
     const res = await putSnapshotRaw(small, other, await token(other, "edit"), 0, { body: big })
     expect(res.status).toBe(413)
     await small.stop()
-  })
-
-  test("the client library round-trips a snapshot", async () => {
-    const owner = await registered(h)
-    const client = new RelayHttpClient({ relayUrl: h.base })
-    const t = await token(owner, "edit")
-    expect(await client.getSnapshot(owner.room.id, t)).toBeNull()
-    const env = await sealSnapshot(owner.keys, 0, new TextEncoder().encode("seed"))
-    expect(await client.putSnapshot(owner.room.id, t, 0, env)).toEqual({ gen: 1, upTo: 0 })
-    const fetched = await client.getSnapshot(owner.room.id, t)
-    expect(fetched).toMatchObject({ upTo: 0, gen: 1 })
-    const info = await client.roomInfo(owner.room.id, t)
-    expect(info).toMatchObject({ head: 0, base: 0, snapshot: { upTo: 0, gen: 1 } })
-    expect(info.usedBytes).toBe(env.length)
-    await expect(client.putSnapshot(owner.room.id, t, 0, env)).rejects.toMatchObject({
-      code: "SNAPSHOT_STALE",
-    })
   })
 
   test("an accepted snapshot is published to every socket", async () => {

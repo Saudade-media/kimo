@@ -255,18 +255,14 @@ export function createTestRuntime(o: {
   now?: () => number
   /** Board 38: Allow web access / No third-party fetch (default: on, not blocked). */
   webAccess?: AgentPanelRuntime["webAccess"]
-  /** Board 39 Recent: the saved picks (in memory; `recentSaved` reads them back). */
-  recentModels?: ModelSelection[]
 }): AgentPanelRuntime & {
   providersMade: ReturnType<typeof createMockProvider>[]
-  recentSaved(): ModelSelection[]
 } {
   const providers = o.providers ?? [MOCK_ANTHROPIC]
   const made: ReturnType<typeof createMockProvider>[] = []
-  let recent = [...(o.recentModels ?? [])]
+  let recent: ModelSelection[] = []
   return {
     providersMade: made,
-    recentSaved: () => recent,
     recentModels: () => recent,
     saveRecentModels: (list) => {
       recent = [...list]

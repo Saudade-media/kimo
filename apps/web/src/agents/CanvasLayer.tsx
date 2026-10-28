@@ -28,7 +28,7 @@ import { useAgentsState } from "./hooks"
 import { builtInCliSession, type GhostKind } from "./model"
 
 /** A node's box in the layer's coordinate space (screen px), with its corner radius. */
-export interface ProjectedBox {
+interface ProjectedBox {
   x: number
   y: number
   w: number
@@ -60,7 +60,7 @@ export interface AgentCanvasLayerProps {
  * (`agent:kimo.<session>.<n>` through the document host) or a CLI engine's MCP relay from its
  * session workspace. The agent panel's cursor stands for it, so this layer draws nothing.
  */
-export const isBuiltInConnection = (chip: AgentChipView): boolean =>
+const isBuiltInConnection = (chip: AgentChipView): boolean =>
   chip.origin.startsWith("agent:") || builtInCliSession(chip.connection.cwd) !== null
 
 export function AgentCanvasLayer({
@@ -238,7 +238,7 @@ function Ghost({ kind, name, box }: { kind: GhostKind; name: string; box: Projec
  * (Button/Ghost h 24, padding [0, 8], 11) · Apply (Button/Primary h 24, padding [0, 10], 11).
  * Apply = ⌘↩, Discard = Esc. It replaces the presence chip while active.
  */
-export function DryRunBar({ controller }: { controller: AgentsControllerExt }) {
+function DryRunBar({ controller }: { controller: AgentsControllerExt }) {
   const state = useAgentsState(controller)
   const dry = state.dryRun
   const approval = dry?.source === "approval" ? state.queue[0] : undefined

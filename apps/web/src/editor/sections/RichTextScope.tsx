@@ -15,7 +15,7 @@ import type { Editor } from "../fields"
 import { PanelContext, type Sel, usePanel } from "../panel-context"
 
 /** The live text edit of this file's canvas (null when not editing). */
-export function useTextSession(): RichTextSession | null {
+function useTextSession(): RichTextSession | null {
   const { session } = usePanel()
   const ui = session.ui
   const live = useSyncExternalStore(

@@ -5,9 +5,24 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { TextMeasurer } from "@kimo/layout"
+import { HARNESS_FIXTURES, loadFixture } from "../harness/verify"
 import type { IconLookup } from "../src"
 
-export { HARNESS_FIXTURES as FIXTURES, loadFixture } from "../harness/verify"
+export { loadFixture }
+/** Every fixture the box-diff harness checks; look one up by name. */
+export const FIXTURES = HARNESS_FIXTURES
+
+/** The fixtures with committed goldens: one per distinct output path. */
+export const GOLDEN_FIXTURES = FIXTURES.filter((f) =>
+  [
+    "layout-matrix",
+    "components-m3",
+    "example-10-5",
+    "paints-effects",
+    "text-styles",
+    "unicode-and-escapes",
+  ].includes(f.name),
+)
 
 export const GOLDEN_DIR = join(import.meta.dir, "golden")
 

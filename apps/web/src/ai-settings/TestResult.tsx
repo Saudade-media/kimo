@@ -37,7 +37,7 @@ const ICONS: Record<TestStrip["icon"], typeof CircleX> = {
 }
 
 /** The four Details lines (board 25 bWSl9): request, status + latency, body, auth (masked). */
-export function traceLines(t: StoredTest): string[] {
+function traceLines(t: StoredTest): string[] {
   const tr = t.trace
   if (!tr) return [t.detail]
   return [tr.request, tr.response, tr.body, tr.auth].filter((l) => l.trim() !== "")

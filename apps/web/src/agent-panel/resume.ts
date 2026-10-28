@@ -37,12 +37,12 @@ export function placeholderSession(
 }
 
 /** The continuation sent to a resumed session. */
-export function resumeMessage(frameName: string): string {
+function resumeMessage(frameName: string): string {
   return `Continue building ${frameName}. The previous run stopped before it finished.`
 }
 
 /** The composer text of "Ask Kimo to finish". */
-export function finishMessage(frameName: string): string {
+function finishMessage(frameName: string): string {
   return `Finish building ${frameName}.`
 }
 

@@ -6,18 +6,18 @@
  */
 
 /** Structurally `@kimo/exporters` `RasterSource` (the renderer). */
-export interface PngRaster {
+interface PngRaster {
   exportRaster(nodeId: string, options?: { scale?: number }): Promise<Uint8Array>
 }
 
-export const COPY_PNG_SCALE = 2
+const COPY_PNG_SCALE = 2
 
-export type CopyPngResult =
+type CopyPngResult =
   | { ok: true; nodeId: string }
   | { ok: false; reason: "empty" | "renderer" | "failed"; message: string }
 
 /** Writes a PNG blob to the system clipboard (`navigator.clipboard.write` + `ClipboardItem`). */
-export async function writePngToClipboard(blob: Blob): Promise<void> {
+async function writePngToClipboard(blob: Blob): Promise<void> {
   const clip = globalThis.navigator?.clipboard
   const Item = (globalThis as { ClipboardItem?: typeof ClipboardItem }).ClipboardItem
   if (!clip?.write || !Item) throw new Error("This browser can't put images on the clipboard")

@@ -103,8 +103,8 @@ const empty = { kind: "empty" } as const
 /**
  * Board "02c Components — Systems (M3)" (SD9TU) and the M3 composites of boards 13–15
  * (Variables dialog EIkIk, Library manager KBZKl, Swap popover jFlfP, Confirms). Every design
- * instance carries `data-pen` for the measured pass (`scripts/measure-gallery.ts`). Canvas labels
- * and outlines are drawn by @kimo/renderer and are not part of this page.
+ * instance carries its design id in `data-pen`. Canvas labels and outlines are drawn by
+ * @kimo/renderer and are not part of this page.
  */
 export function GalleryM3({ theme }: { theme?: "light" | "dark" }) {
   const [log, setLog] = useState("")

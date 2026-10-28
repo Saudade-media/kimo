@@ -21,7 +21,7 @@ export interface Sel {
   node: NodeData
 }
 
-export interface PanelContextValue {
+interface PanelContextValue {
   session: FileSession
   editor: Editor
   header: DocHeader

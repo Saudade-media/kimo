@@ -7,21 +7,9 @@ import type { DocStore, NodeData, UiState } from "@kimo/editor-state"
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import type { UiStore } from "../canvas/contract"
 
-/** Re-renders on every committed change; returns a token that changes with the revision. */
-export function useDocRevision(store: DocStore): string {
-  const subscribe = useCallback((cb: () => void) => store.onChange(cb), [store])
-  return useSyncExternalStore(subscribe, () => `${store.revision.epoch}:${store.revision.seq}`)
-}
-
 /** Selects a slice of UI state. `select` must return a stable value for unchanged state. */
 export function useUi<T>(ui: UiStore, select: (s: UiState) => T): T {
   return useSyncExternalStore(ui.subscribe, () => select(ui.getState()))
-}
-
-/** Undo/redo availability for an origin, kept current. */
-export function useHistory(store: DocStore) {
-  useDocRevision(store)
-  return { canUndo: store.canUndo("user"), canRedo: store.canRedo("user") }
 }
 
 /** Current `location.hash` route. */

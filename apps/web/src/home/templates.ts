@@ -23,7 +23,7 @@ import { templateHash } from "../thumbnails/model"
 import { diskThumbnails, libraryThumbnails } from "../thumbnails/store"
 import { joinPath, numberedName } from "./model"
 
-export interface TemplateLibrary {
+interface TemplateLibrary {
   alias: string
   /** Example folder and file of the library. */
   dir: string
@@ -62,7 +62,7 @@ export const previewUrl = (dir: string): string | undefined => getTemplate(dir)?
  * Board 37 §9: a file made from a template shows the template's cover until its first save
  * renders a real preview. Best effort: a missing cover leaves the placeholder.
  */
-export async function seedTemplateCover(
+async function seedTemplateCover(
   store: ThumbnailsApi | null,
   key: string,
   slug: string,
@@ -80,12 +80,12 @@ export async function seedTemplateCover(
 }
 
 /** Text of a bundled template (`dir` is its slug). */
-export async function loadExample(dir: string, _file: string): Promise<string> {
+async function loadExample(dir: string, _file: string): Promise<string> {
   return loadTemplate(dir)
 }
 
 /** A consumer document with `imports[alias]` pointed at `path`, in canonical form. */
-export function relinkImport(text: string, alias: string, path: string): string {
+function relinkImport(text: string, alias: string, path: string): string {
   const doc = JSON.parse(text) as KimoDocument
   doc.imports = { ...(doc.imports ?? {}), [alias]: path }
   return serialize(doc)

@@ -27,11 +27,11 @@ export const HOME_PRESETS = {
 } as const
 export type HomePreset = keyof typeof HOME_PRESETS
 
-export const UNTITLED = "Untitled"
+const UNTITLED = "Untitled"
 export const FIRST_FRAME_ID = "HomeFrame1"
 
 /** Owner origin of the session's placeholder (ADR 0014 §5 / §11). */
-export function ownerOrigin(model: ModelSelection, sessionId: string): string {
+function ownerOrigin(model: ModelSelection, sessionId: string): string {
   return isCliProvider(model.provider)
     ? `mcp:${cliIdOf(model.provider)}.${sessionId}`
     : `agent:kimo.${sessionId}.0`
@@ -61,14 +61,11 @@ export function homeDocument(opts: {
   return d
 }
 
-/** `files.newFilesDir`, else `~/Documents/Kimo` (board 19 "New files go to"). */
-export { defaultNewFilesDir }
-
 const join = (dir: string, name: string) =>
   `${dir.replace(/[\\/]+$/, "")}${dir.includes("\\") && !dir.includes("/") ? "\\" : "/"}${name}`
 
 /** "Pricing page", "Pricing page 2", … — the first name `exists` says is free. */
-export async function uniqueName(
+async function uniqueName(
   title: string,
   exists: (name: string) => Promise<boolean>,
 ): Promise<string> {

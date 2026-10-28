@@ -294,11 +294,6 @@ export async function importKimoFile(
   return { id, missingAssets }
 }
 
-/** {@link importKimoFile} returning only the new file id. */
-export async function importKimo(text: string, fileName: string): Promise<string> {
-  return (await importKimoFile(text, fileName)).id
-}
-
 /**
  * Imports a pen.dev `.pen` (plain JSON) as a new local file: converted to `.kimo`, with the
  * images it links by http(s) URL fetched into the file's assets. Images it links by relative
@@ -390,13 +385,6 @@ async function copyAssets(
     for (const o of others) o.dispose()
   }
   return missing
-}
-
-/** Canonical `.kimo` text of a store, with `meta.name` set to the file name. */
-export function exportKimo(store: DocStore, name: string): string {
-  const doc: KimoDocument = store.toDocument()
-  doc.meta = { ...doc.meta, name }
-  return serialize(doc)
 }
 
 /** A file ready to save: `.kimo` text, or a `.kimoz` package when the design has images. */
@@ -543,15 +531,6 @@ export async function pickKimoFile(): Promise<File | null> {
     document.body.append(input)
     input.click()
     window.addEventListener("focus", onFocus, { once: true })
-  })
-}
-
-/** Saves `text` as `<name>.kimo` (save picker, or a download). */
-export async function saveKimoFile(text: string, name: string): Promise<void> {
-  await saveFile({
-    fileName: `${safeName(name)}.kimo`,
-    data: new Blob([text], { type: "application/json" }),
-    missingAssets: [],
   })
 }
 

@@ -22,7 +22,7 @@ import "./polish.css"
 
 type CloudKind = "bedrock" | "vertex" | "foundry"
 
-export const BEDROCK_REGIONS = [
+const BEDROCK_REGIONS = [
   { value: "us-east-1", label: "us-east-1 · N. Virginia" },
   { value: "us-east-2", label: "us-east-2 · Ohio" },
   { value: "us-west-2", label: "us-west-2 · Oregon" },
@@ -33,7 +33,7 @@ export const BEDROCK_REGIONS = [
   { value: "ap-southeast-2", label: "ap-southeast-2 · Sydney" },
 ]
 
-export const VERTEX_REGIONS = [
+const VERTEX_REGIONS = [
   "us-east5",
   "us-central1",
   "europe-west1",

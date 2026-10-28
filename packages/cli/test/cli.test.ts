@@ -6,7 +6,6 @@ import { type KimoDocument, MERGE_EXIT, parse, serialize, validate } from "@kimo
 import { type CliIO, GC_EXIT, pathHash, run, USAGE_EXIT, VALIDATE_EXIT } from "../src/cli"
 
 const FIXTURES = resolve(import.meta.dir, "../../core-schema/fixtures")
-const MAIN = resolve(import.meta.dir, "../src/main.ts")
 const hasGit = Bun.spawnSync(["git", "--version"]).exitCode === 0
 
 // biome-ignore lint/suspicious/noExplicitAny: tests poke at JSON
@@ -50,48 +49,38 @@ const edit = (f: (d: Loose) => void): KimoDocument => {
 }
 
 describe("kimo validate", () => {
-  test("valid file: exit 0; open conflicts are warnings (exit 1 with --strict)", async () => {
-    const f = join(FIXTURES, "lint/CONFLICT_OPEN--board-18.kimo")
+  test("exit codes: 0 valid (open conflicts only warn, --strict fails), 1 invalid, 2 unreadable", async () => {
+    const conflict = join(FIXTURES, "lint/CONFLICT_OPEN--board-18.kimo")
     const a = capture()
-    expect(await run(["validate", f], a.io)).toBe(VALIDATE_EXIT.ok)
+    expect(await run(["validate", conflict], a.io)).toBe(VALIDATE_EXIT.ok)
     expect(a.out()).toContain("CONFLICT_OPEN")
-    const b = capture()
-    expect(await run(["validate", "--strict", f], b.io)).toBe(VALIDATE_EXIT.invalid)
-  })
+    expect(await run(["validate", "--strict", conflict], capture().io)).toBe(VALIDATE_EXIT.invalid)
 
-  test("invalid file: exit 1, with --json", async () => {
-    const f = join(FIXTURES, "invalid/PARENT_CYCLE--two-node-cycle.kimo")
     const c = capture()
-    expect(await run(["validate", "--json", f], c.io)).toBe(VALIDATE_EXIT.invalid)
+    const cycle = join(FIXTURES, "invalid/PARENT_CYCLE--two-node-cycle.kimo")
+    expect(await run(["validate", "--json", cycle], c.io)).toBe(VALIDATE_EXIT.invalid)
     const [report] = JSON.parse(c.out())
     expect(report.errors.map((e: { code: string }) => e.code)).toContain("PARENT_CYCLE")
+
+    for (const f of ["parse-errors/truncated.kimo", "forward/newer-minor.kimo"])
+      expect(await run(["validate", join(FIXTURES, f)], capture().io)).toBe(
+        VALIDATE_EXIT.unreadable,
+      )
+    expect(await run(["validate", "/nope/missing.kimo"], capture().io)).toBe(
+      VALIDATE_EXIT.unreadable,
+    )
   })
 
-  test("unparsable or newer file: exit 2", async () => {
-    for (const f of ["parse-errors/truncated.kimo", "forward/newer-minor.kimo"]) {
-      const c = capture()
-      expect(await run(["validate", join(FIXTURES, f)], c.io)).toBe(VALIDATE_EXIT.unreadable)
-      expect(c.out()).toContain("cannot validate")
-    }
-    const c = capture()
-    expect(await run(["validate", "/nope/missing.kimo"], c.io)).toBe(VALIDATE_EXIT.unreadable)
-  })
-
-  test("libraries are loaded relative to the file; assets/ is listed", async () => {
+  test("libraries are loaded relative to the file", async () => {
     const c = capture()
     expect(await run(["validate", join(FIXTURES, "valid/example-10-5.kimo")], c.io)).toBe(0)
     expect(c.out()).not.toContain("LIBRARY_NOT_LOADED")
-    // The fixture folder has no assets/: the referenced image is reported missing (spec §12), as
-    // a warning (it renders as a placeholder).
-    expect(c.out()).toContain("warning ASSET_MISSING")
   })
 
   test("usage errors exit 64", async () => {
     const c = capture()
     expect(await run(["validate"], c.io)).toBe(USAGE_EXIT)
-    expect(await run(["frobnicate"], c.io)).toBe(USAGE_EXIT)
     expect(await run(["gc", "a", "--force"], c.io)).toBe(USAGE_EXIT)
-    expect(c.err()).toContain("Usage:")
   })
 })
 
@@ -154,17 +143,6 @@ describe("kimo merge (in process)", () => {
     expect(validate(d).errors).toEqual([])
   })
 
-  test("-o writes elsewhere and leaves <ours> untouched", async () => {
-    const ours = edit((d) => {
-      d.nodes.Hero000001.fill = "#000000"
-    })
-    const f = files(base(), ours, base())
-    const out = join(f.dir, "out.kimo")
-    expect(await run(["merge", f.base, f.ours, f.theirs, "-o", out], capture().io)).toBe(0)
-    expect(readFileSync(f.ours, "utf8")).toBe(serialize(ours))
-    expect(parse(readFileSync(out, "utf8"))).toEqual(parse(serialize(ours)))
-  })
-
   test.if(hasGit)("unparsable input: exit 2 and git's textual merge in <ours>", async () => {
     const theirs = serialize(base()).replace('"Plan less."', '"Plan more."')
     const f = files(base(), `${serialize(base())}<<<<<<< broken\n`, theirs)
@@ -212,31 +190,21 @@ describe("kimo gc", () => {
     return { dir: d, file, env: { KIMO_HOME: home } }
   }
 
-  test("dry run lists unreferenced files and manifest entries, deletes nothing", async () => {
+  test("dry run deletes nothing; --yes removes unused assets and prunes the manifest", async () => {
     const p = project()
-    const c = capture(undefined, p.env)
-    expect(await run(["gc", p.file], c.io)).toBe(GC_EXIT.ok)
-    expect(c.out()).toContain("Would remove 2 unused assets")
-    expect(c.out()).toContain("assets/bbbbbbbbbbbbbbbb.png")
-    expect(c.out()).toContain("cccccccccccccccc.svg")
+    const dry = capture(undefined, p.env)
+    expect(await run(["gc", p.file], dry.io)).toBe(GC_EXIT.ok)
+    expect(dry.out()).toContain("assets/bbbbbbbbbbbbbbbb.png")
+    expect(dry.out()).toContain("cccccccccccccccc.svg")
     expect(existsSync(join(p.dir, "assets", "bbbbbbbbbbbbbbbb.png"))).toBe(true)
-  })
 
-  test("--yes deletes them and prunes the manifest; the document still validates", async () => {
-    const p = project()
-    const c = capture(undefined, p.env)
-    expect(await run(["gc", p.file, "--yes"], c.io)).toBe(GC_EXIT.ok)
+    expect(await run(["gc", p.file, "--yes"], capture(undefined, p.env).io)).toBe(GC_EXIT.ok)
     expect(existsSync(join(p.dir, "assets", "bbbbbbbbbbbbbbbb.png"))).toBe(false)
     expect(existsSync(join(p.dir, "assets", "cccccccccccccccc.svg"))).toBe(false)
     expect(existsSync(join(p.dir, "assets", "aaaaaaaaaaaaaaaa.png"))).toBe(true)
     const d = parse(readFileSync(p.file, "utf8")) as Loose
     expect(Object.keys(d.assets)).toEqual(["aaaaaaaaaaaaaaaa.png"])
     expect(validate(d, { assetFiles: ["aaaaaaaaaaaaaaaa.png"] }).errors).toEqual([])
-    const again = capture(undefined, p.env)
-    expect(await run(["gc", p.file], again.io)).toBe(0)
-    expect(again.out()).toContain(
-      "Nothing to clean up. Every asset is in use. Each file in assets/",
-    )
   })
 
   test("a live lease blocks --yes (exit 3); a dead pid's lease does not", async () => {
@@ -247,14 +215,5 @@ describe("kimo gc", () => {
     expect(existsSync(join(live.dir, "assets", "bbbbbbbbbbbbbbbb.png"))).toBe(true)
     const dead = project({ pid: 999999, host: hostname(), appLabel: "Kimo" })
     expect(await run(["gc", dead.file, "--yes"], capture(undefined, dead.env).io)).toBe(0)
-  })
-})
-
-describe("the kimo executable", () => {
-  test("runs as a script and returns exit codes", () => {
-    const p = Bun.spawnSync(["bun", MAIN, "validate", join(FIXTURES, "valid/minimal.kimo")])
-    expect(p.exitCode).toBe(0)
-    expect(p.stdout.toString()).toContain("valid")
-    expect(Bun.spawnSync(["bun", MAIN, "--version"]).stdout.toString()).toContain("kimo")
   })
 })

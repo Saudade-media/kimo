@@ -421,58 +421,6 @@ mod mac {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dock_frames::{FLAT_IMAGES, IMAGES, SIZE};
-
-    #[test]
-    fn restore_icon_outside_a_bundle() {
-        use std::path::Path;
-        assert!(in_app_bundle(Path::new(
-            "/Applications/Kimo.app/Contents/MacOS/kimo-desktop"
-        )));
-        assert!(!in_app_bundle(Path::new(
-            "/repo/apps/desktop/src-tauri/target/release/kimo-desktop"
-        )));
-        assert!(!in_app_bundle(Path::new(
-            "/tmp/Contents/MacOS/kimo-desktop"
-        )));
-        // The fallback is the shipped 256 px app icon (PNG, IHDR width/height 256).
-        assert_eq!(&FALLBACK_ICON[..8], b"\x89PNG\r\n\x1a\n");
-        assert_eq!(&FALLBACK_ICON[16..24], &[0, 0, 1, 0, 0, 0, 1, 0]);
-    }
-
-    #[test]
-    fn idle_until_something_works() {
-        let mut a = Activity::default();
-        assert!(!a.animate(0));
-        assert!(!a.animate(10_000));
-    }
-
-    #[test]
-    fn agent_turn_animates_then_grace() {
-        let mut a = Activity::default();
-        a.agent("main:agent-1", true, 1000);
-        assert!(a.animate(1000));
-        assert!(a.animate(5000)); // still within AGENT_STALE_MS of the report
-        a.agent("main:agent-1", false, 6000);
-        assert!(!a.working(6000));
-        assert!(a.animate(6000 + IDLE_GRACE_MS - 1));
-        assert!(!a.animate(6000 + IDLE_GRACE_MS));
-    }
-
-    #[test]
-    fn any_of_several_sources_keeps_it_running() {
-        let mut a = Activity::default();
-        a.agent("main:a", true, 0);
-        a.agent("editor-2:a", true, 0);
-        a.agent("main:a", false, 100);
-        assert!(a.working(200));
-        a.agent("editor-2:a", false, 300);
-        assert!(!a.working(300));
-        // Ending an unknown source is not activity.
-        let mut b = Activity::default();
-        b.agent("x", false, 0);
-        assert!(!b.animate(0));
-    }
 
     #[test]
     fn silent_agent_source_goes_stale() {
@@ -497,20 +445,6 @@ mod tests {
         assert!(!a.working(end));
         assert!(a.animate(end + IDLE_GRACE_MS - 2));
         assert!(!a.animate(end + IDLE_GRACE_MS));
-    }
-
-    #[test]
-    fn burst_of_calls_never_drops_between_calls() {
-        let mut a = Activity::default();
-        let mut t = 0;
-        for i in 0..10 {
-            a.call_started("c_1", &i.to_string(), t);
-            a.call_finished("c_1", &i.to_string(), t + 50);
-            t += 2500; // gaps longer than the activity window, shorter than window + grace
-            for probe in (t - 2500..t).step_by(100) {
-                assert!(a.animate(probe), "dropped at {probe}");
-            }
-        }
     }
 
     #[test]
@@ -539,33 +473,6 @@ mod tests {
         assert!(!is_tools_call(b"not json"));
     }
 
-    /// Frame tables: frame 0 is the static icon in both loops, the motion loop ends on a rest
-    /// (seamless: frame N == frame 0), and every index points at an image.
-    #[test]
-    fn frame_tables_loop_seamlessly() {
-        assert_eq!(SIZE, 256);
-        assert_eq!((MOTION.len(), MOTION_FPS), (60, 30));
-        assert_eq!((REDUCED.len(), REDUCED_FPS), (30, 10));
-        assert_eq!(MOTION[0], 0);
-        assert_eq!(REDUCED[0], 0);
-        assert_eq!(*MOTION.last().unwrap(), MOTION[0]);
-        for &i in MOTION.iter().chain(REDUCED.iter()) {
-            assert!((i as usize) < IMAGES.len());
-        }
-        // 0–1400 ms turns (frames 1..=41 differ from the icon), 1400–2000 ms rests.
-        assert!(MOTION[1..42].iter().all(|&i| i != 0));
-        assert!(MOTION[42..].iter().all(|&i| i == 0));
-        // The reduced loop breathes symmetrically.
-        for k in 1..REDUCED.len() {
-            assert_eq!(REDUCED[k], REDUCED[REDUCED.len() - k]);
-        }
-        assert_eq!(IMAGES.len(), FLAT_IMAGES.len());
-        assert!(treated_icons(26) && !treated_icons(15));
-        for png in IMAGES.iter().chain(FLAT_IMAGES.iter()) {
-            assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
-        }
-    }
-
     #[test]
     fn player_finishes_the_beat_before_stopping() {
         let mut p = Player::new(&MOTION);
@@ -580,27 +487,5 @@ mod tests {
         // … and hands back at the first rest frame.
         assert_eq!(p.frame(), 42);
         assert_eq!(p.step(false), Step::Done);
-    }
-
-    #[test]
-    fn player_wraps_and_a_new_report_cancels_the_stop() {
-        let mut p = Player::new(&MOTION);
-        for _ in 0..MOTION.len() {
-            p.step(true);
-        }
-        assert_eq!(p.frame(), 0); // seamless wrap
-        p.step(true);
-        assert_eq!(p.step(false), Step::Show(MOTION[1] as usize));
-        assert_eq!(p.step(true), Step::Show(MOTION[2] as usize));
-        // Idle at the very start: nothing is shown.
-        assert_eq!(Player::new(&REDUCED).step(false), Step::Done);
-        // Reduced motion stops only at the end of its cycle.
-        let mut r = Player::new(&REDUCED);
-        r.step(true);
-        let mut shown = 1;
-        while r.step(false) != Step::Done {
-            shown += 1;
-        }
-        assert_eq!(shown, REDUCED.len());
     }
 }

@@ -82,7 +82,7 @@ export function useCanvasDrop(m3: M3Controller) {
 }
 
 /** Runs the drop (one undo step). */
-export function dropComponent(
+function dropComponent(
   m3: M3Controller,
   drag: { of: string; name: string },
   t: ComponentDropTarget | null,

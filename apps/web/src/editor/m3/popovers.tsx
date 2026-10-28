@@ -246,7 +246,7 @@ async function pickFromHost(m3: M3Controller) {
  * Board 27 §8 rule gPEqc: the `imports` path relative to the open file (`../icons/icons.kimo`);
  * `./<name>` only when the file's location is unknown (browser library).
  */
-export function libraryPath(m3: M3Controller, name: string, ref: string | null): string {
+function libraryPath(m3: M3Controller, name: string, ref: string | null): string {
   const at = m3.fileHost?.docRef()
   return (at && ref ? relativeRefBetween(at, ref) : null) ?? relativePath(name)
 }

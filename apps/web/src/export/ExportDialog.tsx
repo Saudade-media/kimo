@@ -88,7 +88,7 @@ import {
 } from "./model"
 
 /** What an export did (for the host's toast — see `exportToastOf`). */
-export type ExportOutcome =
+type ExportOutcome =
   | ({ kind: "folder"; cancelled?: { total: number } } & WriteResult)
   | { kind: "zip"; name: string; files: number }
   | { kind: "file"; name: string }
@@ -100,7 +100,7 @@ export interface ExportPreset {
   ids?: readonly string[]
 }
 
-export interface ExportDialogProps {
+interface ExportDialogProps {
   platform: Pick<KimoPlatform, "kind" | "files" | "dialogs">
   source: ExportSource
   /** Desktop: the open `.kimo` (default output folder = its directory; remembered per file). */

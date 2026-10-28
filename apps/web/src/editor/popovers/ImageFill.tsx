@@ -18,7 +18,7 @@ type Fit = "cover" | "contain" | "stretch" | "tile" | "crop"
 const MODES: readonly Fit[] = ["cover", "contain", "stretch"]
 
 /** The mode a paint shows: fit "crop", or any `crop` affine (it wins over the fit when drawn). */
-export function imageFit(paint: Record<string, unknown>): Fit {
+function imageFit(paint: Record<string, unknown>): Fit {
   if (paint.fit === "crop" || Array.isArray(paint.crop)) return "crop"
   return (typeof paint.fit === "string" ? paint.fit : "cover") as Fit
 }

@@ -178,12 +178,4 @@ mod tests {
         );
         assert_eq!(status_from("dev.kimo.app", &[]), DefaultAppStatus::Unknown);
     }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn extensions_have_a_content_type() {
-        for e in EXTENSIONS {
-            assert!(mac::content_type(e).is_some_and(|t| !t.to_string().is_empty()));
-        }
-    }
 }

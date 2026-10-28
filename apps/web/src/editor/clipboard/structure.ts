@@ -29,13 +29,6 @@ const TREE_KEYS = new Set(["parent", "order", "at"])
 const bodyOf = (n: NodeData): Record<string, unknown> =>
   Object.fromEntries(Object.entries(n).filter(([k]) => !TREE_KEYS.has(k)))
 
-/** True for a main component (or a node inside one) or an instance (structure items disabled). */
-export function isMainOrInstance(doc: DocReader, id: string): boolean {
-  const n = doc.getNode(id)
-  if (!n) return false
-  return n.type === "instance" || (n.component !== undefined && n.component !== false)
-}
-
 /** True when `id` sits inside an instance (instance-owned or below one). */
 export function insideInstance(doc: DocReader, id: string): boolean {
   return pathOf(doc, id)
@@ -215,7 +208,7 @@ export function wrapInFrameOps(
 const PAINT_KEYS = ["fill", "stroke", "effects"] as const
 
 /** A frame Ungroup accepts: no fill, stroke, effects, clip or layout; not a main / instance. */
-export function isPlainFrame(n: NodeData | undefined): boolean {
+function isPlainFrame(n: NodeData | undefined): boolean {
   if (n?.type !== "frame") return false
   if (n.component !== undefined && n.component !== false) return false
   if (n.layout !== undefined || (n.clip !== undefined && n.clip !== false)) return false

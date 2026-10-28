@@ -64,7 +64,7 @@ export interface FileSession {
   shared?: SharedSession
 }
 
-export type SessionState =
+type SessionState =
   | { status: "loading" }
   | { status: "missing" }
   | { status: "error"; message: string }
@@ -235,7 +235,7 @@ export function useSyncStatus(provider: IndexedDbProvider | null): SyncStatus {
   return status
 }
 
-export type DiskSessionState =
+type DiskSessionState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; session: FileSession }

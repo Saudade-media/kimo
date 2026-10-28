@@ -16,7 +16,7 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
  * order (instance keys it adds count across calls), so a streamed call's ops, mapped one by one
  * as they arrive, equal the whole call mapped at once.
  */
-export function pageDefaulter(pageId: string): (raw: unknown) => unknown[] {
+function pageDefaulter(pageId: string): (raw: unknown) => unknown[] {
   let n = 0
   return (raw) => {
     if (!isObj(raw)) return [raw]

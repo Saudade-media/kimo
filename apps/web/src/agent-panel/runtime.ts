@@ -37,7 +37,7 @@ import { createPromptRunStore, type PromptRunStore } from "./prompt-runs"
 import type { ToolHostFactory } from "./tools"
 
 /** A provider row that is not usable yet (picker "Add a key to use Gemini…"). */
-export interface UnavailableProvider {
+interface UnavailableProvider {
   id: string
   label: string
   /** "no key", "not signed in", "desktop only". */
@@ -292,7 +292,7 @@ const metaOf = ({ turns: _t, cliSessionId: _c, ...m }: Session): SessionMeta => 
  * Web (and desktop webview) session store: IndexedDB `kimo-sessions`, store `sessions` (key id,
  * index fileId). Falls back to memory when IndexedDB is unavailable (private mode, tests).
  */
-export function createIndexedDbSessionStore(): SessionStore {
+function createIndexedDbSessionStore(): SessionStore {
   if (typeof indexedDB === "undefined") return createMemorySessionStore()
   let db: Promise<IDBDatabase> | null = null
   const get = () => {

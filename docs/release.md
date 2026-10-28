@@ -59,7 +59,7 @@ without letterboxing.
 
 - [ ] `main` is green: `check` (lint, typecheck, generated files, unit tests, examples, e2e,
       box-diff) and `rust` (macOS, Windows, Linux).
-- [ ] The e2e job summary lists no flaky scenarios (`↻`), or each one has an issue.
+- [ ] The `e2e (Chromium)` job shows no flaky-scenario warnings, or each one has an issue.
 - [ ] `bun run check:examples` passes; rebuild thumbnails with `bun run build:examples` if the
       renderer changed and commit them.
 - [ ] `docs/scope-checklist.md` and the ADRs reflect what ships.

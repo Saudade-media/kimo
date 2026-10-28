@@ -70,7 +70,7 @@ export interface CloudPlanBannerProps {
   now?: number
 }
 
-export function CloudPlanBanner({
+function CloudPlanBanner({
   cloud,
   state,
   docKey,

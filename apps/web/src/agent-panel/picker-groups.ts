@@ -51,10 +51,10 @@ const KIND_CHIP: Readonly<Record<ProviderKind, string | null>> = {
 }
 
 /** The chooser's short model name: "Claude Opus 5.5" → "Opus 5.5". */
-export const shortModelLabel = (label: string): string => label.replace(/^Claude /, "")
+const shortModelLabel = (label: string): string => label.replace(/^Claude /, "")
 
 /** Board 39 chip text for an API provider. */
-export function providerChip(p: Pick<ProviderConfig, "kind" | "label" | "free">): string {
+function providerChip(p: Pick<ProviderConfig, "kind" | "label" | "free">): string {
   if (p.free) return "Local"
   return KIND_CHIP[p.kind] ?? p.label
 }

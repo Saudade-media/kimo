@@ -54,10 +54,6 @@ export function containsRect(outer: Rect, inner: Rect): boolean {
   )
 }
 
-export function containsPoint(r: Rect, p: Point): boolean {
-  return p.x >= r.x && p.y >= r.y && p.x <= r.x + r.w && p.y <= r.y + r.h
-}
-
 /** Rounds document values to 1/100 (pointer math at fractional zoom). */
 export const round2 = (v: number) => Math.round(v * 100) / 100
 
@@ -65,7 +61,6 @@ export const round2 = (v: number) => Math.round(v * 100) / 100
 
 /** The 8 resize handles: 4 drawn corners (board 03) + 4 edge zones. */
 export type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w"
-export const HANDLES: readonly Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"]
 
 /** Direction of a handle: -1 = left/top edge, 1 = right/bottom edge, 0 = unaffected. */
 export function handleDir(h: Handle): { fx: -1 | 0 | 1; fy: -1 | 0 | 1 } {

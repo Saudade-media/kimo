@@ -13,8 +13,6 @@
 import { useEffect } from "react"
 
 export const LAUNCH_LOADER_ID = "kimo-launch"
-/** The exit transition (index.html `#kimo-launch` transition: opacity 180ms ease-out). */
-export const LAUNCH_EXIT_MS = 180
 /** Removal fallback when `transitionend` never fires (hidden window, display none). */
 const REMOVE_FALLBACK_MS = 400
 
@@ -30,7 +28,7 @@ export function setLaunchStatus(text: string): void {
 }
 
 /** Fades the loader out and removes it. Resolves once it is out of the DOM. */
-export function hideLaunchLoader(): Promise<void> {
+function hideLaunchLoader(): Promise<void> {
   const el = loader()
   if (!el) return Promise.resolve()
   if (el.classList.contains("is-leaving")) return leaving ?? Promise.resolve()

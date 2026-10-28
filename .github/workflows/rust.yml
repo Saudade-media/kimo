@@ -1,5 +1,6 @@
-# The Tauri app and the kimo-mcp shim (one Cargo workspace) on all three desktop platforms:
-# rustfmt, clippy with warnings denied, and the test suites.
+# The Tauri app and the kimo-mcp shim (one Cargo workspace): rustfmt, clippy with warnings denied,
+# and the test suites. Pull requests and main run on Linux only; a `v*` tag (and a manual run)
+# adds macOS and Windows, next to the release builds that compile every platform anyway.
 name: rust
 
 on:
@@ -8,6 +9,8 @@ on:
     paths:
       - apps/desktop/src-tauri/**
       - .github/workflows/rust.yml
+    # Path filters don't apply to tag pushes: every release tag runs the full matrix.
+    tags: ["v*"]
   pull_request:
     paths:
       - apps/desktop/src-tauri/**
@@ -36,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ fromJSON((github.ref_type == 'tag' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:

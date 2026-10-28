@@ -361,8 +361,7 @@ editor may use the composite popovers directly or compose its own from the leave
 | `Popover` | `anchor` (element or rect) → `position: fixed`, 4px below / left-aligned with flip + shift (`anchoredPosition`, pure); focus trap, Escape, outside pointerdown; `initialFocus`. |
 | `PropField` / `PropTextField` | `prefix` also accepts a 12 × 12 icon (board 08 Opacity `blend`, Rotation `rotate-cw`, Radius `square-dashed`, padding `arrow-left-right` / `arrow-up-down`). |
 
-Measured pass: `bun run --filter @kimo/ui measure:gallery` compares the Gallery's M2 boards
-(`GalleryM2`, `data-pen` ids) with `test/fixtures/pen-components-m2.json` (read from the nodes):
+Measured pass of the Gallery's M2 boards (`GalleryM2`, `data-pen` ids) against the design nodes:
 0 drift; 8 accepted deviations are data-driven (ColorArea base is the pure hue; ring/alpha
 thumb follow the value — the nodes are not self-consistent). Design copy deviation: the OKLCH
 meta of #F4A261 is `0.78 0.13 58` (exact OKLab hue 57.7°), the node reads `… 55`.

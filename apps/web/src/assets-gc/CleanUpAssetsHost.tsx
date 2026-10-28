@@ -39,7 +39,7 @@ export async function applyAssetGc(
   return manifest ? [{ op: "setHeader", set: { assets: manifest } }] : []
 }
 
-export interface CleanUpAssetsHostProps {
+interface CleanUpAssetsHostProps {
   folder: AssetFolder
   fileName: string
   doc: () => Readonly<Record<string, unknown>>

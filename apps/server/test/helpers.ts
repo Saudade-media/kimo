@@ -190,7 +190,7 @@ export function register(
   )
 }
 
-/** Signs and posts an owner command (§6.1) for `keys` (default {@link device}). */
+/** Signs and posts an owner command for `keys` (default {@link device}). */
 export async function ownerCommand(
   h: Harness,
   body: OwnerBody,
@@ -296,7 +296,7 @@ export class Client {
   }
 
   /** Lets queued frames arrive, then returns the buffered messages of `type`. */
-  async drain(type: RelayMessage["type"], waitMs = 150): Promise<RelayMessage[]> {
+  async drain(type: RelayMessage["type"], waitMs = 80): Promise<RelayMessage[]> {
     await new Promise((resolve) => setTimeout(resolve, waitMs))
     const taken = this.messages.filter((m) => m.type === type)
     for (const m of taken) this.messages.splice(this.messages.indexOf(m), 1)

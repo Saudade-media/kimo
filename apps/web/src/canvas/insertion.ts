@@ -12,9 +12,9 @@
  */
 import type { Rect } from "@kimo/layout"
 
-export type FlowDir = "row" | "column"
+type FlowDir = "row" | "column"
 
-export interface FlowChild {
+interface FlowChild {
   id: string
   /** World box. */
   box: Rect

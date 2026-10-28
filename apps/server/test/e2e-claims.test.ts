@@ -1,5 +1,5 @@
 /**
- * Agent area claims across two clients on the real in-process relay (ADR 0016 item 16): each
+ * Agent area claims across two clients on the real in-process relay: each
  * client has its own store, network provider, claim registry bound to presence and MCP host
  * runtime with one in-app agent. The relay stays blind; claims travel in sealed presence.
  */

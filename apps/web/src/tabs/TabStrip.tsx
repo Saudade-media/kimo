@@ -45,7 +45,7 @@ import "./tabs.css"
 const DRAG_SLOP = 4
 
 /** A file name as the tab shows it ("Landing", no extension). */
-export function tabName(fileName: string): string {
+function tabName(fileName: string): string {
   return fileName.replace(/\.(kimo|kimoz|pen)$/i, "") || fileName
 }
 

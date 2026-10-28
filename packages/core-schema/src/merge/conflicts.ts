@@ -53,12 +53,6 @@ type Obj = Record<string, unknown>
 
 const clone = <T>(v: T): T => (v === undefined ? v : (JSON.parse(JSON.stringify(v)) as T))
 
-/** True when the document stores at least one conflict. */
-export function hasConflicts(doc: KimoDocument | Doc): boolean {
-  const c = (doc as Doc).conflicts
-  return isObject(c) && Object.keys(c).length > 0
-}
-
 /** All stored conflicts, sorted by id (code unit). */
 export function listConflicts(doc: KimoDocument | Doc): ConflictEntry[] {
   const c = (doc as Doc).conflicts

@@ -11,7 +11,7 @@ import { Button, Popover, type PopoverProps } from "@kimo/ui"
 import { displayPath, formatClock } from "../platform/format"
 
 /** "Today 10:31:07" / "Yesterday 18:02:11" / "Sep 28 09:00:00". */
-export function sinceLabel(iso: string, now = Date.now()): string {
+function sinceLabel(iso: string, now = Date.now()): string {
   const t = Date.parse(iso)
   const d = new Date(t)
   const today = new Date(now)

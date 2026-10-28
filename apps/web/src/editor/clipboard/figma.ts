@@ -24,7 +24,7 @@ export { isFigmaClipboard }
 const CONCURRENCY = 6
 const DOWNLOAD_TIMEOUT_MS = 30_000
 
-export interface FigmaPaste {
+interface FigmaPaste {
   payload: ClipboardPayload
   warnings: FigmaImportWarning[]
   /** Images that could not be downloaded or stored. */

@@ -12,7 +12,7 @@
 import { isObject, isRef, selectThemedValue, type Theme } from "@kimo/core-schema"
 import { quoteFamily } from "../css/style"
 import { cssColor, fmt, parseColor } from "../ir/color"
-import { axisAttr, cssVarName, kebab } from "../ir/names"
+import { axisAttr, cssVarName } from "../ir/names"
 import type { IRAxis, IRDocument, IRVariable } from "../ir/types"
 
 /** Marker attribute of themed elements. */
@@ -349,9 +349,4 @@ export function emitDtcg(ir: IRDocument): string {
     else group[last] = token
   }
   return `${JSON.stringify(root, null, 2)}\n`
-}
-
-/** File-name-safe stem of the document name. */
-export function stem(ir: IRDocument): string {
-  return kebab(ir.name, "export")
 }

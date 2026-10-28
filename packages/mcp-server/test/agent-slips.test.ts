@@ -1,9 +1,9 @@
 /**
- * Board 31 token pass: an agent edit that fails costs a whole model round trip, so
- * kimo_apply_ops (1) declares every feature a value it writes needs (spec §13), (2) accepts the
- * two common `update` slips as what they mean, (3) answers unknown fields with a one-line fix,
- * (4) addresses nodes inside a fresh copy (`@key/<id>`, `created[]`), and (5) keeps the
- * model-facing JSON free of the normalized ops it would otherwise echo back.
+ * An agent edit that fails costs a whole model round trip, so kimo_apply_ops (1) declares every
+ * feature a value it writes needs (spec §13), (2) accepts the common slips as what they mean,
+ * (3) answers unknown fields with a one-line fix, (4) addresses nodes inside a fresh copy
+ * (`@key/<id>`, `created[]`), and (5) keeps the model-facing JSON free of the normalized ops it
+ * would otherwise echo back.
  */
 import { describe, expect, test } from "bun:test"
 import { createMemoryPlatform } from "@kimo/platform/memory"
@@ -99,6 +99,40 @@ describe("feature auto-declare", () => {
     expect((doc.nodes[idOf(r, "row")]?.layout as { align?: string } | undefined)?.align).toBe(
       "stretch",
     )
+  })
+  test("text runs declare text/runs in the same edit; plain strings do not", async () => {
+    const s = setup()
+    const path = "/w/runs.kimo"
+    const docId = await newDoc(s, path)
+    const runs = [
+      { text: "Save " },
+      { text: "40%", style: { weight: 700 }, fill: "#E5484D" },
+      { text: " today", href: "https://getkimo.design" },
+    ]
+    const r = expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [
+          {
+            op: "insert",
+            key: "t",
+            parent: "DesktopFrm1",
+            node: { type: "text", content: "plain" },
+          },
+        ],
+      }),
+    )
+    const id = idOf(r, "t")
+    expect((await saved(s, docId, path)).features ?? []).not.toContain("text/runs")
+    expectOk(
+      await s.c.call("kimo_apply_ops", {
+        docId,
+        ops: [{ op: "update", id, set: { content: runs } }],
+      }),
+    )
+    const doc = await saved(s, docId, path)
+    expect(doc.features).toContain("text/runs")
+    expect(doc.nodes[id]?.content).toEqual(runs)
   })
 })
 
@@ -388,18 +422,6 @@ describe("model-facing results", () => {
     expect(dry.ops).toHaveLength(1)
     expect(dry.inverse).toBeUndefined()
     expect(modelText(r).length).toBeLessThan(JSON.stringify(r).length)
-  })
-
-  test("apply_ops results carry opCount", async () => {
-    const s = setup()
-    const docId = await newDoc(s, "/w/count.kimo")
-    const r = expectOk(
-      await s.c.call("kimo_apply_ops", {
-        docId,
-        ops: [{ op: "insert", parent: "DesktopFrm1", node: { type: "frame" } }],
-      }),
-    ) as unknown as { opCount: number; ops: unknown[] }
-    expect(r.opCount).toBe(r.ops.length)
   })
 })
 

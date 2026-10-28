@@ -5,8 +5,8 @@
  * - `hero.png`: `examples/dashboard/dashboard.kimo` with the layers panel, the canvas and the
  *   properties panel, a stat card selected;
  * - `agent.png`: the built-in agent mid-task on `examples/landing-page/landing.kimo`. The
- *   Anthropic Messages endpoint is routed to a scripted reply (as in `e2e/agent-pointer.e2e.ts`),
- *   so no API key or network is used; the last model call is held so the turn stays live;
+ *   Anthropic Messages endpoint is routed to a scripted reply, so no API key or network is used;
+ *   the last model call is held so the turn stays live;
  * - `dark.png`: `examples/mobile-app/streak.kimo` in the dark theme.
  *
  *   bun run screenshots:readme    # writes docs/assets/readme/{hero,agent,dark}.png
@@ -457,9 +457,9 @@ async function newPage(browser: Browser, scheme: "light" | "dark") {
   await context.addInitScript({ content: "globalThis.__name ??= (fn) => fn" })
   const page = await context.newPage()
   page.on("pageerror", (e) => console.error(`  page error: ${e.message}`))
-  // File-chooser interception on before any trigger (see armFileChooser in e2e/qa-helpers.ts).
+  // File-chooser interception on before any trigger (see armFileChooser in e2e/helpers.ts).
   page.on("filechooser", () => {})
-  // The <input type=file> path of the web picker (see noPickers in e2e/qa-m2-helpers.ts).
+  // The <input type=file> path of the web picker (see noPickers in e2e/helpers.ts).
   await page.addInitScript(() => {
     const w = window as unknown as Record<string, unknown>
     delete w.showSaveFilePicker

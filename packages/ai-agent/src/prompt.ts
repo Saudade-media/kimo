@@ -14,7 +14,7 @@ import { WEB_PROMPT } from "./web"
  * API providers, Claude Code in the app), so each call may hold a whole section of up to
  * STREAM_MAX_NEW_LAYERS new layers; otherwise AGENT_MAX_NEW_LAYERS.
  */
-export function basePrompt(o: { streamed?: boolean } = {}): string {
+function basePrompt(o: { streamed?: boolean } = {}): string {
   const size = o.streamed
     ? `Layers appear while you write the call, so one whole section per call is right; ${STREAM_MAX_NEW_LAYERS} new layers per call is a ceiling, not a target.`
     : `Size each call to its section (often 8 to 25 new layers); ${AGENT_MAX_NEW_LAYERS} new layers per call is a ceiling, not a target.`
@@ -32,7 +32,7 @@ If a tool returns an error, read its code and suggestion and fix the call. Never
 }
 
 /** The base prompt for agents whose tool input does not stream (Codex, Gemini CLI). */
-export const BASE_SYSTEM_PROMPT = basePrompt()
+const BASE_SYSTEM_PROMPT = basePrompt()
 
 const MODE_BRIEF: Record<Mode, string> = {
   single: "",

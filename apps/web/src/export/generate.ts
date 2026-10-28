@@ -68,7 +68,7 @@ export function pdfFontsFrom(
 }
 
 /** Per-format choices beyond board 07's three toggles (board 25 § 2). */
-export interface ExportChoices {
+interface ExportChoices {
   /** SVG / PNG row: what the preview bar's toggle selects (default svg). */
   image?: ImageKind
   /** PNG scale (default 2×). */

@@ -127,7 +127,7 @@ export async function refreshThumbnail(deps: RefreshDeps): Promise<RefreshResult
 }
 
 /** Timers and idle callbacks (injectable for tests). */
-export interface SchedulerClock {
+interface SchedulerClock {
   now(): number
   setTimeout(fn: () => void, ms: number): unknown
   clearTimeout(handle: unknown): void

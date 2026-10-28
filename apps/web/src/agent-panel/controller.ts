@@ -114,7 +114,7 @@ import { type AgentPanelRuntime, providerFor } from "./runtime"
 // --- View types (contract + what the board draws beyond it) ---------------------------------------
 
 /** A canvas selection item (auto attachment chip). */
-export interface SelectionItem {
+interface SelectionItem {
   id: string
   name: string
   type?: string
@@ -179,7 +179,7 @@ export interface ModeRunView {
   }
 }
 
-export interface CanvasAgentState {
+interface CanvasAgentState {
   live: string[]
   info: Record<string, { label: string; persona: Persona; ops: number; paused: boolean }>
   scopes: {
@@ -203,7 +203,7 @@ export interface CanvasAgentState {
 }
 
 /** The composer menu that is open. `more` is board 40's "…" menu (Skills, Ask before changes, Web access). */
-export type PanelMenu = "model" | "skills" | "mode" | "more" | null
+type PanelMenu = "model" | "skills" | "mode" | "more" | null
 
 export interface AgentPanelViewState extends AgentPanelState {
   menu: PanelMenu
@@ -263,7 +263,7 @@ export interface AgentPanelViewState extends AgentPanelState {
 }
 
 /** Board 38 composer globe: on / off, or disabled with a reason. */
-export interface WebAccessView {
+interface WebAccessView {
   on: boolean
   disabled: "privacy" | "model" | null
 }
@@ -277,7 +277,7 @@ export type OnboardingView =
 const CLI_ORDER = ["claude-code", "codex", "gemini-cli"]
 
 /** What a prompt-node run needs from the document (board 22 cf2sC, ADR 0014 §9). */
-export interface PromptRunInput {
+interface PromptRunInput {
   prompt: PromptNodeView
   /** A frame by id (the prompt's `target`), null when it is not a frame. */
   frame(
@@ -409,7 +409,7 @@ const ROTATE_LABEL: Record<Exclude<ModeConfig["mode"], "single">, string> = {
   iterate: "Iterate",
 }
 
-export function modeChipLabel(m: ModeConfig): string {
+function modeChipLabel(m: ModeConfig): string {
   if (m.mode === "single") return "Single"
   return `${ROTATE_LABEL[m.mode]} · ${m.mode === "iterate" ? m.passes : m.agents}`
 }
@@ -434,7 +434,7 @@ const textOf = (m: ChatMessage): string =>
         .join("")
 
 /** Re-creates the thread view of finished turns (opening a session). */
-export function messagesFromTurns(
+function messagesFromTurns(
   turns: readonly TurnRecord[],
   meta: (t: TurnRecord, last: boolean) => MessageMetaView,
 ): AgentMessageView[] {
@@ -500,7 +500,7 @@ export function messagesFromTurns(
 }
 
 /** One finished turn's MessageMeta. */
-export function turnMeta(t: TurnRecord, canRegenerate: boolean): MessageMetaView {
+function turnMeta(t: TurnRecord, canRegenerate: boolean): MessageMetaView {
   return {
     // Board 31: new tokens only; cached re-reads go to the tooltip.
     tokensIn: t.usage.inputTokens + t.usage.cacheWriteTokens,
@@ -512,9 +512,6 @@ export function turnMeta(t: TurnRecord, canRegenerate: boolean): MessageMetaView
     canRegenerate,
   }
 }
-
-/** Model chooser groups (board 39): see `picker-groups.ts`. */
-export { pickerGroups }
 
 let turnSeq = 0
 const turnId = () => `t${Date.now().toString(36)}${(++turnSeq).toString(36)}`
@@ -3242,5 +3239,5 @@ export function createAgentPanelController(o: AgentPanelOptions): AgentPanelCont
   return controller
 }
 
-/** The live streaming meta for the current message (exported for the view). */
-export type LiveMeta = { tokensIn: number; tokensOut: number; costUsd: number | null }
+/** The live streaming meta for the current message. */
+type LiveMeta = { tokensIn: number; tokensOut: number; costUsd: number | null }

@@ -37,12 +37,6 @@ export function resolveFolder(
   )
 }
 
-/** Same section? (sidebar `aria-current`). */
-export function sameSection(a: HomeSection, b: HomeSection): boolean {
-  if (a.kind !== b.kind) return false
-  return a.kind !== "folder" || (b.kind === "folder" && a.ref === b.ref)
-}
-
 /** All files (desktop): recents plus every watched folder's scan, deduped by path, newest first. */
 export function mergeFiles(...lists: readonly (readonly RecentFile[])[]): RecentFile[] {
   const byRef = new Map<string, RecentFile>()
@@ -77,7 +71,7 @@ export function filesNote(section: HomeSection["kind"], folderCount: number): st
 /** `home.kimo` → `home` (`.kimo` / `.kimoz`). */
 export const stemOf = (name: string) => name.replace(/\.kimoz?$/i, "")
 /** `home.kimo` → `.kimo`. */
-export const extOf = (name: string) => /\.kimoz?$/i.exec(name)?.[0] ?? ""
+const extOf = (name: string) => /\.kimoz?$/i.exec(name)?.[0] ?? ""
 
 /** `landing.kimo`, then `landing 2.kimo`, `landing 3.kimo`… (board 37 §2 "a taken name"). */
 export function numberedName(name: string, taken: (name: string) => boolean): string {
@@ -102,7 +96,7 @@ export function joinPath(dir: string, name: string): string {
 }
 
 /** Resolves an `imports` path (relative to the importing file) to an absolute ref. */
-export function resolveImport(fromRef: string, path: string): string {
+function resolveImport(fromRef: string, path: string): string {
   if (/^([A-Za-z]:)?[\\/]/.test(path)) return path
   const parts = dirnameOf(fromRef).split(/[\\/]/)
   for (const seg of path.split(/[\\/]/)) {

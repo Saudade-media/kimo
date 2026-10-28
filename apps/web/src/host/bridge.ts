@@ -99,7 +99,7 @@ export function tauriBridge(): HostBridge {
 }
 
 /** Commands answered in-page by a memory network (stands in for Rust in tests). */
-export type CommandHandler = (args: Record<string, unknown>, from: string) => unknown
+type CommandHandler = (args: Record<string, unknown>, from: string) => unknown
 
 /**
  * An in-memory IPC network: one bridge per label, events delivered asynchronously
@@ -148,5 +148,3 @@ export function createMemoryBridgeNetwork() {
     },
   }
 }
-
-export type MemoryBridgeNetwork = ReturnType<typeof createMemoryBridgeNetwork>

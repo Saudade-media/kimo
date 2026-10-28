@@ -276,7 +276,7 @@ export function preprocess(source: string): string {
 // --- Uniform annotations --------------------------------------------------------------------
 
 /** A `@default` text → number(s), `#hex` color or boolean. */
-export function parseDefault(text: string): UniformDecl["default"] {
+function parseDefault(text: string): UniformDecl["default"] {
   const t = text.trim()
   if (!t) return null
   if (/^#[0-9a-f]{3,8}$/i.test(t)) return t

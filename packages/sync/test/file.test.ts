@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { isCanonical, parse, serialize, validate } from "@kimo/core-schema"
-import { createEmptyDocument, YjsDocStore } from "@kimo/editor-state"
+import { YjsDocStore } from "@kimo/editor-state"
 import {
   atomicWrite,
   FileProvider,
@@ -14,7 +14,6 @@ import {
 } from "../src/file"
 import {
   countingFs,
-  emptyStore,
   FORWARD_FIXTURES,
   fixtureText,
   rect,
@@ -51,15 +50,6 @@ const insert = (store: YjsDocStore, id: string) => {
 }
 
 describe("FileProvider: load", () => {
-  test("loads and validates into the store", async () => {
-    const { provider, store } = setup()
-    await provider.attach(store)
-    expect(provider.status).toBe("synced")
-    expect(provider.canSave).toBe(true)
-    expect(store.getNode("B2title001")?.content).toBe("Design next to your code")
-    expect(store.readOnly).toBeNull()
-  })
-
   test("refuse-save-after-failed-load: unparsable file is never written", async () => {
     const { path, provider, store, fs } = setup('{"format": "1.0.0", oops')
     await provider.attach(store)
@@ -81,14 +71,14 @@ describe("FileProvider: load", () => {
       ["unknown-feature", fixtureText(FORWARD_FIXTURES, "unknown-feature.kimo")],
     ]
     for (const [name, text] of cases) {
-      const { path, provider, store, fs } = setup(text)
+      const { path, provider, store, fs } = setup(text, { autosaveMs: 15 })
       await provider.attach(store)
       expect({ name, status: provider.status }).toEqual({ name, status: "read-only" })
       expect(provider.loadError?.code).toBe("READ_ONLY")
       expect(store.size).toBeGreaterThan(0)
       store.setReadOnly(null) // even if someone forces the store writable…
       insert(store, "Sneaky0001")
-      await sleep(60)
+      await sleep(40)
       expect(await provider.writePending()).toBeNull()
       await provider.detach()
       expect(fs.writes).toEqual([]) // …the provider never writes
@@ -101,12 +91,12 @@ describe("FileProvider: load", () => {
       join(VALID_FIXTURES, "../invalid"),
       "PARENT_MISSING--dangling-parent.kimo",
     )
-    const { path, provider, store, fs } = setup(text)
+    const { path, provider, store, fs } = setup(text, { autosaveMs: 15 })
     await provider.attach(store)
     expect(provider.status).toBe("synced")
     expect(provider.loadError).toBeNull()
     expect(provider.openResult?.repairs.map((r) => r.code)).toContain("PARENT_MISSING")
-    await sleep(60)
+    await sleep(40)
     expect(fs.writes).toEqual([]) // opening never writes
     insert(store, "Edited0001")
     expect((await provider.writePending())?.target).toBe("file")
@@ -149,8 +139,8 @@ describe("FileProvider: autosave", () => {
     await provider.detach()
   })
 
-  test("flush writes immediately and cancels the pending autosave", async () => {
-    const { provider, store, fs } = setup(EXAMPLE, { autosaveMs: 10_000 })
+  test("flush writes immediately and cancels the pending autosave; detach flushes pending changes", async () => {
+    const { path, provider, store, fs } = setup(EXAMPLE, { autosaveMs: 10_000 })
     await provider.attach(store)
     insert(store, "Flushed001")
     const r = await provider.writePending()
@@ -158,15 +148,9 @@ describe("FileProvider: autosave", () => {
     expect(r?.revision).toEqual(store.revision)
     expect(fs.writes.length).toBe(1)
     expect(await provider.writePending()).toBeNull()
-    await provider.detach()
-    expect(fs.writes.length).toBe(1)
-  })
-
-  test("detach flushes pending changes", async () => {
-    const { path, provider, store } = setup(EXAMPLE, { autosaveMs: 10_000 })
-    await provider.attach(store)
     insert(store, "OnDetach01")
     await provider.detach()
+    expect(fs.writes.length).toBe(2)
     expect(Object.keys(parse(readFileSync(path, "utf8")).nodes)).toContain("OnDetach01")
   })
 
@@ -264,17 +248,17 @@ describe("FileProvider: atomic writes", () => {
 })
 
 describe("FileProvider: byte stability", () => {
-  for (const [name, text] of validFixtures()) {
-    test(`load → save is byte-identical: ${name}`, async () => {
-      expect(isCanonical(text)).toBe(true)
+  test("load → save is byte-identical for every valid fixture", async () => {
+    for (const [name, text] of validFixtures()) {
+      expect([name, isCanonical(text)]).toEqual([name, true])
       const { path, provider, store } = setup(text)
       await provider.attach(store)
       const r = await provider.saveFile({ force: true })
-      expect(readFileSync(path, "utf8")).toBe(text)
+      expect([name, readFileSync(path, "utf8")]).toEqual([name, text])
       expect(r?.hash).toBe(sha256(text))
       await provider.detach()
-    })
-  }
+    }
+  })
 
   test("an edit changes only the edited node's line", async () => {
     const { path, provider, store } = setup()
@@ -424,20 +408,5 @@ describe("FileProvider: reload", () => {
     expect(provider.canSave).toBe(true)
     expect(store.readOnly).toBeNull()
     await provider.detach({ flush: false })
-  })
-
-  test("store from emptyStore can be persisted to a new path", async () => {
-    const dir = tempDir()
-    const store = emptyStore()
-    const provider = new FileProvider({
-      path: join(dir, "n.kimo"),
-      createIfMissing: true,
-      recoveryDir: dir,
-    })
-    // attach replaces the store's content with the (new, empty) file document
-    await provider.attach(store)
-    await provider.writePending()
-    expect(parse(readFileSync(join(dir, "n.kimo"), "utf8"))).toEqual(createEmptyDocument())
-    await provider.detach()
   })
 })

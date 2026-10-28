@@ -1,15 +1,12 @@
 # Every push to main and every pull request: the same gate as `bun run check`, plus the example
-# documents, the exporters' box-diff harness and, outside pull requests, the browser e2e suite (four
-# shards, one retry, flaky scenarios reported; on main, nightly and on demand). Rust lives in rust.yml.
+# documents, the exporters' box-diff harness and the browser e2e smoke set (core flows only, on
+# Linux). Rust lives in rust.yml.
 name: check
 
 on:
   push:
     branches: [main]
   pull_request:
-  # Nightly on main (04:00 UTC): the e2e suite runs here and on pushes to main, not on PRs.
-  schedule:
-    - cron: "0 4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -49,23 +46,14 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # macOS: the scenarios measure the app against the design boards, which are drawn for macOS
-  # (⌘ / ⇧ menu glyphs, Mac text metrics); on Linux the menus read Ctrl+… and text measures a
-  # pixel or two off, so dozens of measured checks would need a second set of expectations.
-  # The suite runs serially within a job (one browser, SwiftShader); four shards in parallel cut
-  # the wall clock about fourfold. `e2e (Chromium)` below is the required check and gathers them.
-  # Pull requests skip it to keep the loop fast: it runs on pushes to main, nightly, and on demand
-  # (Actions > check > Run workflow on a branch). Run the scenarios you touched locally:
-  # `bun run e2e <name filter>` or `KIMO_E2E_FILES=<file prefix> bun run e2e`.
-  e2e-shard:
-    name: e2e shard ${{ matrix.shard }}/4
-    if: github.event_name != 'pull_request'
-    runs-on: macos-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
+  # The browser smoke set (apps/web/e2e): canvas, text and pen, and share and join against a real
+  # local relay, in headless Chromium. The scenarios assert document state, not pixels, so they
+  # run on Linux. One retry; a scenario that passes on retry is reported as a warning. Locally:
+  # `bun run --filter @kimo/web e2e [name filter]`.
+  e2e:
+    name: e2e (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -86,92 +74,69 @@ jobs:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
       - name: install Chromium
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        working-directory: apps/web
-        run: bunx playwright install chromium
-      - name: run scenarios (one retry; a pass on retry is reported as flaky)
         working-directory: apps/web
         env:
-          KIMO_E2E_RETRIES: "1"
-          KIMO_E2E_SHARD: ${{ matrix.shard }}/4
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then
+            bunx playwright install-deps chromium
+          else
+            bunx playwright install --with-deps chromium
+          fi
+      - name: smoke scenarios
+        working-directory: apps/web
+        env:
           KIMO_E2E_SHOTS: ${{ runner.temp }}/e2e-shots
-        run: |
-          mkdir -p "$KIMO_E2E_SHOTS"
-          set -o pipefail
-          bun run e2e 2>&1 | tee "$RUNNER_TEMP/e2e.log"
-      - name: flaky / infra report
-        if: always()
-        run: |
-          log="$RUNNER_TEMP/e2e.log"
-          [ -f "$log" ] || exit 0
-          {
-            echo "## e2e shard ${{ matrix.shard }}/4"
-            echo
-            grep -E '^(all scenarios passed|[0-9]+ scenario\(s\) failed)' "$log" || echo "no summary line (runner crashed?)"
-            echo
-            if grep -q '↻' "$log"; then
-              echo "### Passed on retry (flaky or infra)"
-              echo
-              grep '↻' "$log" | sed 's/^ *↻ /- /'
-              echo
-            fi
-            if grep -q '✗' "$log"; then
-              echo "### Failed"
-              echo
-              grep -A1 '✗' "$log" | sed 's/^ *✗ /- /'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          # Annotate flaky scenarios so they show on the PR without failing it.
-          grep '↻' "$log" | sed 's/^ *↻ //' | while IFS= read -r line; do
-            echo "::warning title=flaky e2e scenario::${line}"
-          done
+        run: bun run e2e
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: failure()
         with:
-          name: e2e-report-${{ matrix.shard }}
-          path: |
-            ${{ runner.temp }}/e2e.log
-            ${{ runner.temp }}/e2e-shots
+          name: e2e-failures
+          path: ${{ runner.temp }}/e2e-shots
           if-no-files-found: ignore
           retention-days: 14
 
-  e2e:
-    name: e2e (Chromium)
-    needs: e2e-shard
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      # On a pull request the shards are skipped and this passes, so the required check stays.
-      - name: every shard passed
-        run: |
-          result="${{ needs.e2e-shard.result }}"
-          if [ "${{ github.event_name }}" = pull_request ] && [ "$result" = skipped ]; then
-            echo "e2e runs on main, nightly and on demand, not on pull requests"
-            exit 0
-          fi
-          test "$result" = success
-
+  # Pull requests that touch nothing the exported HTML depends on skip the harness; the job still
+  # reports success, so it stays a required check.
   exporters-boxdiff:
     name: exporters box-diff
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      - name: changed paths
+        id: changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE"
+          if git diff --name-only "$BASE" HEAD |
+            grep -qE '^(packages/(exporters|layout|renderer|core-schema)/|bun\.lock$|package\.json$|\.github/workflows/check\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No change to the export pipeline: box diff skipped."
+          fi
       - uses: oven-sh/setup-bun@v2
+        if: steps.changes.outputs.run != 'false'
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
+        if: steps.changes.outputs.run != 'false'
       - name: playwright version
+        if: steps.changes.outputs.run != 'false'
         id: pw
         working-directory: packages/exporters
         run: echo "version=$(bun -e "console.log(require('playwright/package.json').version)")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v6
+        if: steps.changes.outputs.run != 'false'
         id: pw-cache
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
       - name: install Chromium
+        if: steps.changes.outputs.run != 'false'
         working-directory: packages/exporters
         env:
           CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
@@ -182,9 +147,10 @@ jobs:
             bunx playwright install --with-deps chromium
           fi
       - name: box diff (exported HTML vs layout, every fixture)
+        if: steps.changes.outputs.run != 'false'
         run: bun run --filter @kimo/exporters verify
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && steps.changes.outputs.run != 'false'
         with:
           name: exporters-boxdiff
           path: packages/exporters/harness/out

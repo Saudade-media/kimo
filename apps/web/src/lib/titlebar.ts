@@ -36,7 +36,7 @@ function isClickable(el: HTMLElement): boolean {
  * region counts only for clicks on itself, `deep` for its whole subtree, and buttons, inputs and
  * other interactive children never count.
  */
-export function isDragRegionPath(path: readonly EventTarget[]): boolean {
+function isDragRegionPath(path: readonly EventTarget[]): boolean {
   for (const el of path) {
     if (!(el instanceof HTMLElement)) continue
     // Dialogs, menus and popovers are never window chrome, even when they render inside a

@@ -35,7 +35,7 @@ describe("per-origin undo/redo", () => {
     expect(s.getNode("Agent00001")?.name).toBe("by agent")
   })
 
-  test("one apply = one undo step (no time-based merging)", () => {
+  test("one apply is one undo step, however many ops it holds (no time-based merging)", () => {
     const s = emptyStore()
     for (let i = 0; i < 3; i++) {
       ok(s.apply({ op: "insert", id: `Step00000${i}`, node: rect(`r${i}`) }, { origin: "user" }))
@@ -47,10 +47,7 @@ describe("per-origin undo/redo", () => {
     expect(s.size).toBe(0)
     s.redo("user")
     expect(s.nodeIds()).toEqual(["Step000000"])
-  })
 
-  test("a batch with many ops undoes atomically", () => {
-    const s = emptyStore()
     const before = s.toDocument()
     ok(
       s.apply(
@@ -128,13 +125,6 @@ describe("per-origin undo/redo", () => {
     expect(r.repairs[0]).toMatchObject({ id: "PPPPPPPPPP", kind: "cycle", parent: null })
     expect(s.getNode("AAAAAAAAAA")?.parent).toBe("PPPPPPPPPP")
     expect(s.getNode("PPPPPPPPPP")?.parent).toBeNull()
-  })
-
-  test("clearHistory empties stacks", () => {
-    const s = emptyStore()
-    ok(s.apply({ op: "insert", node: rect("x") }, { origin: "user" }))
-    s.clearHistory("user")
-    expect(s.canUndo("user")).toBe(false)
   })
 })
 

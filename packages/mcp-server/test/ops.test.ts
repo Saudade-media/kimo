@@ -1,4 +1,4 @@
-/** Wire op → editor-state op / M3 command mapping (ADR 0013 §5). */
+/** Wire op → editor-state op / command mapping (ADR 0013 §5). */
 import { describe, expect, test } from "bun:test"
 import { createEmptyDocument, importDocument, planCommand } from "@kimo/editor-state"
 import { isDestructive, toCommand, toStoreOp, WIRE_OP_COMPILE, WIRE_OP_KINDS } from "../src/index"
@@ -35,32 +35,7 @@ describe("wire ops", () => {
     expect(store.apply(del, { origin: "mcp:claude-code.abc123", dryRun: true }).ok).toBe(true)
   })
 
-  test("set_variables / set_theme_axes entries become maps", () => {
-    expect(
-      toStoreOp(
-        { op: "set_theme_axes", set: [{ axis: "mode", values: ["light", "dark"] }] },
-        resolve,
-        newId,
-      ),
-    ).toEqual({ op: "setThemes", set: { mode: ["light", "dark"] } })
-    expect(
-      toStoreOp(
-        {
-          op: "set_variables",
-          set: [{ name: "brand", variable: { type: "color", value: "#ff0000" } }],
-          unset: ["old"],
-        },
-        resolve,
-        newId,
-      ),
-    ).toEqual({
-      op: "setVariables",
-      set: { brand: { type: "color", value: "#ff0000" } },
-      unset: ["old"],
-    })
-  })
-
-  test("commands map to M3 commands that plan", () => {
+  test("commands map to editor-state commands that plan", () => {
     const doc = createEmptyDocument()
     const cmd = toCommand(
       { op: "theme_axis", action: "create", axis: "mode", values: ["light", "dark"] },
@@ -69,31 +44,6 @@ describe("wire ops", () => {
     )
     expect(cmd).toEqual({ cmd: "createAxis", axis: "mode", values: ["light", "dark"] })
     expect(planCommand(doc, cmd).ok).toBe(true)
-    expect(
-      toCommand(
-        { op: "set_theme_pin", node: "Abcdef1234", axis: "mode", inherit: true },
-        resolve,
-        newId,
-      ),
-    ).toEqual({
-      cmd: "setThemePin",
-      node: "Abcdef1234",
-      axis: "mode",
-      value: null,
-    })
-    expect(
-      toCommand({ op: "reset_override", instance: "Abcdef1234", all: true }, resolve, newId),
-    ).toEqual({
-      cmd: "resetAllOverrides",
-      instance: "Abcdef1234",
-    })
-    expect(
-      toCommand(
-        { op: "set_args", instance: "Abcdef1234", args: [{ name: "label", value: "Buy" }] },
-        resolve,
-        newId,
-      ),
-    ).toEqual({ cmd: "setArgs", instance: "Abcdef1234", args: { label: "Buy" } })
   })
 
   test("destructive classification", () => {

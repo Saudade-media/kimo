@@ -17,7 +17,7 @@ export interface ReplaceChoice {
   meta: string
 }
 
-export interface ReplaceWithMenuProps {
+interface ReplaceWithMenuProps {
   /** The missing family ("Install Söhne…"). */
   family: string
   choices: readonly ReplaceChoice[]
@@ -32,7 +32,7 @@ export interface ReplaceWithMenuProps {
   autoFocus?: boolean
 }
 
-export function ReplaceWithMenu({
+function ReplaceWithMenu({
   family,
   choices,
   value,
@@ -68,7 +68,7 @@ export function ReplaceWithMenu({
   )
 }
 
-export interface FontReplaceSelectProps
+interface FontReplaceSelectProps
   extends Omit<ReplaceWithMenuProps, "anchor" | "onClose" | "autoFocus"> {
   /** Trigger width: 148 in the Missing fonts dialog (JoOkA). */
   width?: number

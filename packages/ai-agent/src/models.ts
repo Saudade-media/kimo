@@ -399,7 +399,7 @@ export function supportsThinkingControl(info: ModelInfo): boolean {
 }
 
 /** "1M", "200K", "128K", "65K" (board 39 detail line). */
-export function compactTokens(n: number): string {
+function compactTokens(n: number): string {
   if (n >= 1_000_000) return `${Math.floor(n / 100_000) / 10}M`
   return `${Math.floor(n / 1000)}K`
 }

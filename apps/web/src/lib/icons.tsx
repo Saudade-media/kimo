@@ -481,6 +481,3 @@ export function Icon({ name, size = 16, className }: IconProps) {
   }
   return <C size={size} className={className} aria-hidden="true" />
 }
-
-/** True when `name` is registered. */
-export const hasIcon = (name: string) => Object.hasOwn(ICONS, name)

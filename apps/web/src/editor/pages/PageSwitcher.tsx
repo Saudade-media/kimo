@@ -37,7 +37,7 @@ export function pageSwitcherBus(session: FileSession) {
 }
 
 /** Subsequence score: lower is better; null = no match. */
-export function fuzzyScore(name: string, query: string): number | null {
+function fuzzyScore(name: string, query: string): number | null {
   const n = name.toLowerCase()
   const q = query.trim().toLowerCase()
   if (!q) return 0

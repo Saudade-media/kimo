@@ -50,8 +50,8 @@ import type { SharedSession } from "./share"
 
 export const SYNCING_DELAY_MS = 600
 export const OFFLINE_AFTER_MS = 30_000
-export const IDLE_AFTER_MS = 60_000
-export const JOIN_CARD_DELAY_MS = 400
+const IDLE_AFTER_MS = 60_000
+const JOIN_CARD_DELAY_MS = 400
 export const RELAY_TEST_TIMEOUT_MS = 5_000
 
 // --- Types ---------------------------------------------------------------------------------------

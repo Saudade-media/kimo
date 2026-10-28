@@ -27,7 +27,7 @@ pub const SKILLS_DIR: &str = "skills";
 pub const SKILL_FILE: &str = "SKILL.md";
 /// Largest SKILL.md handed out (`USER_SKILL_MAX_BYTES`).
 pub const MAX_SKILL_BYTES: u64 = 256 * 1024;
-/// Event to the window that started a watch (`TAURI_SKILLS_EVENTS`).
+/// Event to the window that started a watch (`TauriSkillsEventMap`).
 pub const EV_SKILLS_CHANGED: &str = "kimo://skills-changed";
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -212,14 +212,6 @@ mod tests {
     fn write(p: &Path, text: &str) {
         std::fs::create_dir_all(p.parent().unwrap()).unwrap();
         std::fs::write(p, text).unwrap();
-    }
-
-    #[test]
-    fn missing_root_lists_empty_and_reads_none() {
-        let t = tempfile::tempdir().unwrap();
-        let root = t.path().join("nope");
-        assert_eq!(list(&root).unwrap(), vec![]);
-        assert_eq!(read(&root, "brand").unwrap(), None);
     }
 
     #[test]

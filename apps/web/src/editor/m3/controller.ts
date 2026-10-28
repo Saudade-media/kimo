@@ -2,7 +2,7 @@
  * M3 editor state for one open file (ADR 0011): linked libraries, the shared expanded view
  * (instances expanded with composite ids), the command runner (one `store.apply` / undo step
  * per gesture), toasts (board 15 placement and timing), confirm dialogs and the dialog/popover
- * switches of boards 11–15. Panels read it through {@link useM3}.
+ * switches of boards 11–15. Panels read it through `M3Context`.
  */
 import {
   brokenOverrides,
@@ -17,7 +17,7 @@ import {
   type Theme,
 } from "@kimo/core-schema"
 import { applyCommand, type M3Command, type Op, planCommand } from "@kimo/editor-state"
-import { createContext, useContext, useSyncExternalStore } from "react"
+import { createContext, useSyncExternalStore } from "react"
 import type { CanvasHandle } from "../../canvas/contract"
 import { M3_TOAST_COPY } from "../../canvas/contract"
 import { currentHeader } from "../../lib/header"
@@ -40,7 +40,7 @@ export interface ToastItem {
 }
 
 /** Confirm dialogs (board 15 `i8PfIC`, `ysXyK`, `fmB2B`). */
-export interface ConfirmSpec {
+interface ConfirmSpec {
   title: string
   desc: string
   icon: string
@@ -57,7 +57,7 @@ interface ConfirmState {
 }
 
 /** Board 27 §8: the component dialog that is open (Replace main · Fix broken overrides · ⌘D). */
-export type ComponentDialogState =
+type ComponentDialogState =
   | { kind: "replaceMain"; main: string; source: string }
   | { kind: "fixOverrides"; component: string }
   /** Library Changes › Fix broken overrides: every instance of the library's components. */
@@ -71,7 +71,7 @@ export type ComponentDialogState =
     }
 
 /** Open dialogs / popovers of the shell (not document state). */
-export interface M3Panels {
+interface M3Panels {
   variables: boolean
   libraryManager: boolean
   /** Alias whose "changed since last open" review is open. */
@@ -79,7 +79,7 @@ export interface M3Panels {
 }
 
 /** Result of {@link M3Controller.run} (refusals and rejections are already toasted). */
-export type M3RunResult =
+type M3RunResult =
   | { ok: true; notes: readonly PlanNote[]; select?: string[] }
   | { ok: false; refused?: PlanError; rejected?: readonly { message: string }[] }
 
@@ -114,7 +114,7 @@ type RowNode = Readonly<Record<string, unknown>>
  * strings and numbers compare by value, so a deep comparison runs only for object fields that
  * were re-read (no stringify on the gesture path).
  */
-export function sameRow(a: RowNode | undefined, b: RowNode | undefined): boolean {
+function sameRow(a: RowNode | undefined, b: RowNode | undefined): boolean {
   if (a === b) return true
   if (!a || !b) return false
   for (const k of ROW_FIELDS) {
@@ -583,18 +583,6 @@ function commandName(m3: M3Controller, command?: M3Command): string {
 }
 
 export const M3Context = createContext<M3Controller | null>(null)
-
-export function useM3(): M3Controller {
-  const m = useContext(M3Context)
-  if (!m) throw new Error("useM3 outside the editor")
-  return m
-}
-
-/** Re-renders when the expanded view may have changed; returns the view. */
-export function useView(m3: M3Controller): ExpandedView {
-  useSyncExternalStore(m3.rev.subscribe, m3.rev.get)
-  return m3.view()
-}
 
 export function useBusValue<T>(bus: Bus<T>): T {
   return useSyncExternalStore(bus.subscribe, bus.get)

@@ -152,19 +152,6 @@ pub fn write_json<T: Serialize>(path: &Path, value: &T) -> R<()> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn iso_matches_js() {
-        assert_eq!(iso_from_ms(1_759_487_467_000), "2025-10-03T10:31:07.000Z");
-        assert_eq!(iso_from_ms(5), "1970-01-01T00:00:00.005Z");
-    }
-
-    #[test]
-    fn path_id_is_16_hex() {
-        let id = path_id("/Users/me/loom/marketing.kimo");
-        assert_eq!(id.len(), 16);
-        assert_eq!(id, sha256_hex(b"/Users/me/loom/marketing.kimo")[..16]);
-    }
-
     #[cfg(unix)]
     #[test]
     fn clean_abs_rules() {
@@ -175,11 +162,5 @@ mod tests {
             clean_abs("/a/./b.kimo").unwrap(),
             PathBuf::from("/a/b.kimo")
         );
-    }
-
-    #[test]
-    fn own_pid_alive() {
-        assert!(pid_alive(std::process::id()));
-        assert!(!pid_alive(0));
     }
 }

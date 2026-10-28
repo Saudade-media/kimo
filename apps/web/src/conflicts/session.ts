@@ -22,7 +22,7 @@ import { diffOps } from "./ops"
 import { conflictNode, conflictRows, displayName } from "./rows"
 
 /** What a conflict session needs from its document session and the editor. */
-export interface ConflictHost {
+interface ConflictHost {
   store: DocStore
   /** Undo stack of the picks. Default `"user"`. */
   origin?: LocalOrigin
@@ -40,7 +40,7 @@ export interface ConflictHost {
 }
 
 /** Editor hooks bound once the canvas is mounted ({@link EditorConflictSession.bindView}). */
-export interface ConflictView {
+interface ConflictView {
   /** Selects the node (UI store). */
   select(nodeId: string): void
   /** Scrolls / zooms the canvas so the node is visible. */
@@ -69,7 +69,7 @@ type Obj = Record<string, unknown>
  * `doc` with conflict `id` open again (`resolved` back to its default, false). The body keeps
  * the applied side, so the row reopens on what the canvas shows.
  */
-export function reopenConflict(doc: KimoDocument, id: string): KimoDocument {
+function reopenConflict(doc: KimoDocument, id: string): KimoDocument {
   const d = doc as unknown as Obj
   const table = isObject(d.conflicts) ? (d.conflicts as Record<string, Conflict>) : undefined
   const c = table?.[id]

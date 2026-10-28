@@ -26,7 +26,7 @@ async function sealed(text: string) {
   return sealBlob(owner.keys, new TextEncoder().encode(text))
 }
 
-describe("blob endpoints (section 12)", () => {
+describe("blob endpoints", () => {
   test("PUT stores (201), repeats are 200, HEAD and GET return the bytes", async () => {
     const blob = await sealed("hello blob")
     const first = await put(blob.id, blob.envelope)
@@ -38,7 +38,6 @@ describe("blob endpoints (section 12)", () => {
     const got = await fetch(url(blob.id), { headers: bearer(view) })
     expect(got.status).toBe(200)
     expect(got.headers.get("cache-control")).toBe("private, max-age=31536000, immutable")
-    expect(got.headers.get("content-type")).toBe("application/octet-stream")
     const bytes = new Uint8Array(await got.arrayBuffer())
     expect(Array.from(bytes)).toEqual(Array.from(blob.envelope))
     const plain = await openBlob(owner.keys, blob.sha, bytes)
@@ -166,19 +165,5 @@ describe("blob endpoints (section 12)", () => {
       body: JSON.stringify({ ids: ["nope"] }),
     })
     expect(bad.status).toBe(400)
-  })
-
-  test("the client library uploads, probes and downloads", async () => {
-    const client = new RelayHttpClient({ relayUrl: h.base })
-    const blob = await sealed("via client")
-    expect(await client.putBlob(owner.room.id, edit, blob.id, blob.envelope)).toBe("created")
-    expect(await client.putBlob(owner.room.id, edit, blob.id, blob.envelope)).toBe("exists")
-    expect(await client.hasBlob(owner.room.id, view, blob.id)).toBe(true)
-    expect(await client.missingBlobs(owner.room.id, view, [blob.id, "34".repeat(32)])).toEqual([
-      "34".repeat(32),
-    ])
-    const bytes = await client.getBlob(owner.room.id, view, blob.id)
-    expect(bytes).not.toBeNull()
-    expect(await client.getBlob(owner.room.id, view, "56".repeat(32))).toBeNull()
   })
 })

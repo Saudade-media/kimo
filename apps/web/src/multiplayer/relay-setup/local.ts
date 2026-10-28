@@ -56,7 +56,7 @@ export function validHostname(name: string): boolean {
 }
 
 /** The named tunnel Kimo creates: one per hostname. */
-export const tunnelName = (hostname: string) =>
+const tunnelName = (hostname: string) =>
   `kimo-relay-${hostname
     .trim()
     .toLowerCase()

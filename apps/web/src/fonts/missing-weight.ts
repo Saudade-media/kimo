@@ -16,7 +16,7 @@ export function renderedWeight(wanted: number, available: Iterable<number>): num
   return best
 }
 
-export interface MissingWeight {
+interface MissingWeight {
   /** "Inter Bold (700) isn't installed". */
   title: string
   /** "Showing Semibold 600. Install the weight or pick another." */

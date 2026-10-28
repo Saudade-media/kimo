@@ -35,29 +35,13 @@ export function workAreaIds(
   return [...set].filter((id) => !covering.has(id))
 }
 
-/** Union of the boxes that exist (null when none does). */
-export function unionBox(boxes: readonly (AreaBox | null | undefined)[]): AreaBox | null {
-  let x0 = Infinity
-  let y0 = Infinity
-  let x1 = -Infinity
-  let y1 = -Infinity
-  for (const b of boxes) {
-    if (!b) continue
-    x0 = Math.min(x0, b.x)
-    y0 = Math.min(y0, b.y)
-    x1 = Math.max(x1, b.x + b.w)
-    y1 = Math.max(y1, b.y + b.h)
-  }
-  return x0 === Infinity ? null : { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
-}
-
 /**
  * Board 36 "Agent on canvas" (desing.pen XDVdg): the section an edit belongs to is the direct
  * child of the top-level frame that holds it. A layer inside an instance (`<instance>/<path>`
  * view id) resolves through the instance's real ancestors. A top-level layer is its own section
  * (an edit to the page frame itself, or a top-level frame with no children).
  */
-export function sectionOf(id: string, parentOf: (id: string) => string | null | undefined): string {
+function sectionOf(id: string, parentOf: (id: string) => string | null | undefined): string {
   let cur = id.split("/")[0] as string
   for (let guard = 0; guard < 256; guard++) {
     const p = parentOf(cur) ?? null
@@ -95,14 +79,10 @@ export function pickSection(
 export const CURSOR_GLIDE_MS = 600
 
 /** Ease-in-out cubic. */
-export const glideEase = (t: number): number => {
+const glideEase = (t: number): number => {
   const x = Math.min(1, Math.max(0, t))
   return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2
 }
-
-/** Board 36 › Float: the cursor bobs 3 px up and back every 2.4 s (CSS, screen space). */
-export const CURSOR_FLOAT_MS = 2400
-export const CURSOR_FLOAT_PX = 3
 
 /** Board 36 › Cursor: the pointer tip sits at (3, 3) inside the cursor box. */
 export const CURSOR_TIP = 3

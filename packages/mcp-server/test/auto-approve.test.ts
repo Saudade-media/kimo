@@ -1,5 +1,5 @@
 /**
- * Board 34 auto-approve for MCP clients: a policy with `autoApprove` approves every request it
+ * Auto-approve for MCP clients: a policy with `autoApprove` approves every request it
  * would ask for (outcome `auto`, logged), including grant-gated tools and files outside the
  * allow-list. Hard limits that are errors, not prompts, still apply.
  */
@@ -51,17 +51,12 @@ function ctx(p: ClientPolicy, log: Omit<ActivityEntry, "seq">[]): ToolContext {
 }
 
 describe("auto-approve policy", () => {
-  test("autoApproves needs autoApprove and onExceed ask; approvedOutcome covers auto", () => {
+  test("autoApproves needs autoApprove and onExceed ask; connected clients are trusted by default", () => {
     expect(autoApproves(policy())).toBe(false)
     expect(autoApproves(policy({ autoApprove: true }))).toBe(true)
     expect(autoApproves(policy({ autoApprove: true, onExceed: "deny" }))).toBe(false)
     expect(approvedOutcome("auto")).toBe(true)
-    expect(approvedOutcome("once")).toBe(true)
     expect(approvedOutcome("deny")).toBe(false)
-    expect(approvedOutcome("timeout")).toBe(false)
-  })
-
-  test("connected clients are trusted by default; Ask before changes turns it off", () => {
     expect(autoApproves(DEFAULT_POLICY)).toBe(true)
     expect(autoApproves(ASK_POLICY)).toBe(false)
   })

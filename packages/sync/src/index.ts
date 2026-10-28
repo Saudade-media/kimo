@@ -4,8 +4,8 @@
  *
  * Entry points (platform-specific providers live in their own files so that importing this
  * package in a browser never pulls `node:fs`):
- * - `@kimo/sync`: the interface, {@link MemoryProvider} and the end-to-end encrypted network
- *   provider (`createNetworkProvider`, `kimo-mp/1`);
+ * - `@kimo/sync`: the interface and the end-to-end encrypted network provider
+ *   (`createNetworkProvider`, `kimo-mp/1`);
  * - `@kimo/sync`: also `FileDocumentProvider`, the runtime-neutral M4 file provider over an
  *   `AtomicFileStore` (`@kimo/platform` files);
  * - `@kimo/sync/file`: `FileProvider` (Bun/Node file system);
@@ -39,7 +39,6 @@ export {
   WindowSyncProvider,
   type WindowSyncProviderOptions,
 } from "./host-sync"
-export { MemoryHub, MemoryProvider } from "./memory"
 export {
   type Awareness,
   type CreateNetworkProvider,

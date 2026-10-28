@@ -24,23 +24,23 @@ import {
   type Theme,
 } from "@kimo/core-schema"
 import type { DocHeader } from "../lib/header"
-import { formatNumber, MIXED, type Mixed } from "./props"
+import { formatNumber } from "./props"
 
 export type BindType = "number" | "string" | "boolean"
 
 /** Variable types a field of each kind accepts (schema REF_TYPES: numbers take dimensions). */
-export const ACCEPTS: Readonly<Record<BindType, readonly string[]>> = {
+const ACCEPTS: Readonly<Record<BindType, readonly string[]>> = {
   number: ["number", "dimension"],
   string: ["string"],
   boolean: ["boolean"],
 }
 
-export type Ref = { $ref: string }
+type Ref = { $ref: string }
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v)
 
-export const isRef = (v: unknown): v is Ref =>
+const isRef = (v: unknown): v is Ref =>
   isObj(v) && typeof v.$ref === "string" && Object.keys(v).length === 1
 
 /** The binding shared by every value, or null (literals, Mixed, or different bindings). */
@@ -59,14 +59,14 @@ export function refName(ref: string): string {
 }
 
 /** A dimension variable's px value, a number as-is; anything else null. */
-export function numberOf(v: unknown): number | null {
+function numberOf(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v
   if (isObj(v) && typeof v.value === "number" && v.unit === "px") return v.value
   return null
 }
 
 /** Coerces a resolved variable value to the field's literal type (null when it can't). */
-export function literalOf(type: BindType, v: unknown): number | string | boolean | null {
+function literalOf(type: BindType, v: unknown): number | string | boolean | null {
   if (type === "number") return numberOf(v)
   if (type === "string") return typeof v === "string" ? v : null
   return typeof v === "boolean" ? v : null
@@ -80,7 +80,7 @@ export function valueText(type: BindType, v: unknown): string {
   return String(lit)
 }
 
-export interface Resolved {
+interface Resolved {
   ok: boolean
   /** The literal for the field's type (null when unresolved / wrong type). */
   value: number | string | boolean | null
@@ -120,14 +120,14 @@ export function clearResolvedCache(): void {
   lastResolved.clear()
 }
 
-export interface PickerItem {
+interface PickerItem {
   ref: string
   name: string
   value: string
   alias?: boolean
 }
 
-export interface PickerGroup {
+interface PickerGroup {
   key: string
   title: string
   meta: string
@@ -226,19 +226,6 @@ export function newVariable(type: BindType, value: number | string | boolean) {
   return { type, value }
 }
 
-/** The field-level value of a selection: a shared literal, a shared binding, or Mixed. */
-export function fieldState<T>(
-  values: readonly unknown[],
-): { kind: "bound"; ref: string } | { kind: "value"; value: T | Mixed } {
-  const ref = sharedRef(values)
-  if (ref !== null) return { kind: "bound", ref }
-  if (values.length === 0) return { kind: "value", value: undefined as T }
-  const key = JSON.stringify(values[0] ?? null)
-  for (const v of values)
-    if (JSON.stringify(v ?? null) !== key) return { kind: "value", value: MIXED }
-  return { kind: "value", value: values[0] as T }
-}
-
 // --- Composite fields: padding sides, stroke sides, radius corners ------------------------------
 
 /** Raw `[t, r, b, l]` of a `layout.pad` value, bindings kept (absent / invalid = 0). */
@@ -262,17 +249,13 @@ export function padValueRaw(
   return [t, r, b, l]
 }
 
-/** Number value of a raw side for arithmetic (a binding counts as its resolved value or 0). */
-export const sideNumber = (v: unknown, resolve?: (ref: string) => number | null): number =>
-  typeof v === "number" ? v : isRef(v) ? (resolve?.(v.$ref) ?? 0) : 0
-
 // --- Detach all (layer context menu, rule RAez2) ------------------------------------------------
 
 /** Keys never rewritten by "Detach all variables" (identity / tree / nested override maps). */
 const DETACH_SKIP = new Set(["type", "parent", "at", "order", "component", "overrides", "page"])
 
 /** True when `v` holds a binding at any depth. */
-export function hasBinding(v: unknown, depth = 0): boolean {
+function hasBinding(v: unknown, depth = 0): boolean {
   if (depth > 32 || v === null || typeof v !== "object") return false
   if (isRef(v)) return true
   if (Array.isArray(v)) return v.some((x) => hasBinding(x, depth + 1))

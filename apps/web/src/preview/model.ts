@@ -8,7 +8,7 @@ import type { KimoDocument, Libraries, Theme } from "@kimo/core-schema"
 import { effectiveTheme } from "@kimo/core-schema"
 
 /** The node reads the preview needs (a `DocStore` satisfies it). */
-export interface PreviewDoc {
+interface PreviewDoc {
   getNode(id: string): { type?: unknown; parent?: unknown; name?: unknown } | undefined
   children(parent: string | null): readonly string[]
 }
@@ -22,11 +22,7 @@ export function topLevelFrames(doc: PreviewDoc, roots?: readonly string[]): stri
 }
 
 /** The top-level frame that holds `id` (itself when it is one), or null. */
-export function topLevelFrameOf(
-  doc: PreviewDoc,
-  id: string,
-  frames: readonly string[],
-): string | null {
+function topLevelFrameOf(doc: PreviewDoc, id: string, frames: readonly string[]): string | null {
   const set = new Set(frames)
   const seen = new Set<string>()
   let cur: unknown = id
@@ -77,7 +73,7 @@ export function countLabel(frames: readonly string[], current: string): string {
 
 // --- Theme (rule "Theme") ---------------------------------------------------------------------
 
-export type ThemeAxes = Readonly<Record<string, readonly string[]>>
+type ThemeAxes = Readonly<Record<string, readonly string[]>>
 
 /** The file's theme axes (`themes` header: axis → values; the first value is the default). */
 export function themeAxes(themes: unknown): ThemeAxes {
@@ -155,9 +151,9 @@ export type ZoomPreset = "fit" | 0.5 | 1 | 2
 export const ZOOM_PRESETS: readonly ZoomPreset[] = ["fit", 0.5, 1, 2]
 
 /** Stage margin around the fitted frame (decision Co3jD: "zoomed to fit with 24 px margin"). */
-export const FIT_MARGIN = 24
-export const MIN_ZOOM = 0.02
-export const MAX_ZOOM = 64
+const FIT_MARGIN = 24
+const MIN_ZOOM = 0.02
+const MAX_ZOOM = 64
 
 export interface Box {
   x: number
@@ -211,7 +207,7 @@ export function presetLabel(p: ZoomPreset): string {
 
 // --- Keys (rules "Navigate" / "Theme" / "Zoom" / "Exit") ----------------------------------------
 
-export type PreviewKeyAction =
+type PreviewKeyAction =
   | { kind: "exit" }
   | { kind: "step"; delta: -1 | 1 }
   | { kind: "zoom"; preset: ZoomPreset }

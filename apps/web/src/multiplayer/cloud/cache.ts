@@ -52,6 +52,8 @@ export interface CloudBinding {
   name: string
   boundAt: number
   ended: BindingEnd | null
+  /** The account that bound it; another account signed in here leaves it alone. */
+  accountId?: string
 }
 
 /** One room re-shared from before workspaces (architecture.md §3 "Re-share"). */
@@ -118,6 +120,7 @@ function parseBinding(v: unknown): CloudBinding | null {
     name: typeof b.name === "string" ? b.name : "",
     boundAt: typeof b.boundAt === "number" ? b.boundAt : 0,
     ended,
+    ...(typeof b.accountId === "string" ? { accountId: b.accountId } : {}),
   }
 }
 

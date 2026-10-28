@@ -25,6 +25,8 @@ pub const SETTINGS_PANES: &[&str] = &[
     "ai-providers",
     // Board 41 section 4: right after AI providers.
     "multiplayer",
+    // Board 46 2A: Settings › Workspace, right after Multiplayer.
+    "workspace",
     "updates",
     "about",
 ];

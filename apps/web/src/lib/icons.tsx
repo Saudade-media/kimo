@@ -66,6 +66,7 @@ import {
   CornerLeftUp,
   CreditCard,
   Crosshair,
+  Crown,
   createLucideIcon,
   Diamond,
   Download,
@@ -160,6 +161,7 @@ import {
   Power,
   Presentation,
   Radio,
+  Receipt,
   RectangleHorizontal,
   Redo2,
   RefreshCw,
@@ -214,6 +216,8 @@ import {
   Unplug,
   Upload,
   User,
+  UserMinus,
+  UserPlus,
   Users,
   Variable,
   WandSparkles,
@@ -460,6 +464,10 @@ const ICONS: Record<string, LucideIcon> = {
   "mail-x": MailX,
   send: Send,
   user: User,
+  "user-minus": UserMinus,
+  "user-plus": UserPlus,
+  crown: Crown,
+  receipt: Receipt,
 }
 
 export interface IconProps {

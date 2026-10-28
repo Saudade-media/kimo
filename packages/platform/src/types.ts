@@ -749,6 +749,8 @@ export type SettingsPane =
   | "ai-providers"
   /** Board 41 section 4: relay URL and Test, your name, other cursors, fetching assets. */
   | "multiplayer"
+  /** Board 46 2A: a Kimo Cloud workspace's plan, members, edit requests and ownership. */
+  | "workspace"
   | "updates"
   | "about"
 

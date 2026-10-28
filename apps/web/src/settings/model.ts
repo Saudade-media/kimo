@@ -46,6 +46,9 @@ export const SETTINGS_PANES: readonly PaneInfo[] = [
   // Board 41 section 4 shows the pane, not its nav item: placed after AI providers, with the
   // Share button's lucide `users` (house choice).
   { id: "multiplayer", label: "Multiplayer", icon: "users" },
+  // Board 46 2A shows the pane, not its nav item: right after Multiplayer, with the workspace
+  // rows' lucide `users` (house choice). Listed only while Kimo Cloud is on.
+  { id: "workspace", label: "Workspace", icon: "users" },
   { id: "updates", label: "Updates", icon: "refresh-cw" },
   { id: "about", label: "About & licenses", icon: "info" },
 ]

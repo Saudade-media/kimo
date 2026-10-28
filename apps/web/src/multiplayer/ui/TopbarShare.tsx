@@ -30,6 +30,7 @@ import { RelayWizard, type WizardStart } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
 import { PresenceAvatar } from "./shared"
+import { useCloudShareKind } from "./WorkspaceShare"
 import "./share-ui.css"
 
 export interface TopbarSyncStatusProps {
@@ -138,7 +139,10 @@ function ShareCluster({
   const stackButton = useRef<HTMLButtonElement>(null)
   const others = people.filter((p) => !p.isYou)
   const shared = share.room !== null
-  const live = shared && share.status !== "error"
+  // Board 46: a workspace file's members and a view link's guest on Kimo Cloud get Share too.
+  const cloudKind = useCloudShareKind(model, docKey)
+  const canShare = caps.canShare || cloudKind !== null
+  const live = shared && share.status !== "error" && (caps.canShare || cloudKind?.kind === "member")
   const { shown, more } = stackOf(others)
   const close = () => setOpen(null)
   return (
@@ -164,7 +168,7 @@ function ShareCluster({
           )}
         </button>
       )}
-      {caps.canShare && (
+      {canShare && (
         <Button
           ref={shareButton}
           variant={live ? "soft" : card ? "primary" : "secondary"}
@@ -178,7 +182,7 @@ function ShareCluster({
           {live ? "Sharing" : "Share"}
         </Button>
       )}
-      {open === "share" && caps.canShare && (
+      {open === "share" && canShare && (
         <SharePopover
           model={model}
           docKey={docKey}

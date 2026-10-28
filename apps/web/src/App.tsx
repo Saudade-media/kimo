@@ -22,6 +22,8 @@ import { JoinRoute } from "./join/JoinRoute"
 import { useJoinRoute } from "./join/useJoinRoute"
 import { useHash } from "./lib/hooks"
 import { type ThemeMode, useTheme } from "./lib/theme"
+import { WorkspaceHost } from "./multiplayer/ui/WorkspaceHost"
+import { WsToastStack } from "./multiplayer/ui/workspace-parts"
 import { PairRoute } from "./pair/PairRoute"
 import { usePairRoute } from "./pair/usePairRoute"
 import { SettingsOpenerContext, useRuntime } from "./platform/runtime"
@@ -95,7 +97,13 @@ export function App() {
   const tabs = windowTabs()
   useWindowTabs({ tabs, route, manager, platform, enabled: !settingsWindow })
 
-  if (route.name === "settings") return <SettingsRoute platform={platform} hash={hash} />
+  if (route.name === "settings")
+    return (
+      <>
+        <SettingsRoute platform={platform} hash={hash} />
+        <WsToastStack />
+      </>
+    )
 
   return (
     <SettingsOpenerContext.Provider value={opener}>
@@ -142,6 +150,8 @@ export function App() {
       {updater && <UpdateToastHost controller={updater} />}
       <ShortcutsSheetHost />
       <HelpHost platform={platform} />
+      {/* Board 46: transfers (6B, 6C), invites (3B), approved requests (3C) and their toasts. */}
+      <WorkspaceHost />
     </SettingsOpenerContext.Provider>
   )
 }

@@ -844,7 +844,12 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
         const code = codeOf(error)
         if (code === "WORKSPACE_DELETED") session.store.setReadOnly(CLOUD_DELETED_REASON)
         if (code === "NOT_MEMBER") session.store.setReadOnly(CLOUD_REMOVED_REASON)
-        return null
+        if (endOf(code) !== "closed") return null
+        // Closed while this file was not open: follow a re-share, else it is a local file now.
+        await refreshWorkspace(b.workspaceId).catch(() => undefined)
+        const next = replacedOf(b.room)
+        await roomClosed(b.room, next)
+        return next ? openFile(next, { session, file }).catch(() => null) : null
       }
     },
     async moved(from, to) {
@@ -1132,6 +1137,10 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
 
     async shareFile(session, options = {}) {
       await hydrated
+      // A file this device shares through a relay of its own (or on Kimo Cloud from before
+      // workspaces, which the re-share moves) reopens in that room: it cannot join a workspace too.
+      if (await share.service.roomForFile(session.ref))
+        throw new CloudError("BAD_REQUEST", "this file is already shared through another room")
       const existing = bindingForFile(state, session.ref)
       if (existing && existing.ended === null) {
         const { workspaceId, file } = await fileFor(existing.room)

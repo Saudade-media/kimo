@@ -322,6 +322,7 @@ jobs:
           # `bun publish` refuses to start without a token even with --dry-run; a dry run
           # uploads nothing, so a placeholder is enough (no real token in this job).
           NPM_CONFIG_TOKEN: dry-run-placeholder
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
         run: |
           bun -e '
             const fs = require("node:fs")
@@ -329,7 +330,12 @@ jobs:
             delete p.private
             fs.writeFileSync("package.json", JSON.stringify(p, null, 2) + "\n")
           '
-          bun publish --dry-run
+          # `bun publish` won't make a prerelease `latest`: it goes to the `beta` dist-tag.
+          if [ "$PRERELEASE" = "true" ]; then
+            bun publish --dry-run --tag beta
+          else
+            bun publish --dry-run
+          fi
 
   finalize:
     name: updater manifest

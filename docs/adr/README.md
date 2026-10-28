@@ -24,6 +24,7 @@ cites the sections of the [teardown](../teardown.md) (the plan of record) it imp
 | [0016](0016-multiplayer-transport-and-sessions.md) | Multiplayer v2: an end-to-end encrypted Bun relay on Yjs, self-hosted, joined with signed capability links | Proposed |
 | [0017](0017-relay-ownership-pairing.md) | Relays belong to devices: pre-claim or claim on first use, add devices with pairing links, remove the create secret | Proposed |
 | [0018](0018-kimo-cloud.md) | Kimo Cloud: a paid hosted relay, with billing outside the open repo and an owner policy hook in the relay | Proposed |
+| [0019](0019-kimo-cloud-workspaces.md) | Kimo Cloud workspaces: a subscription belongs to a workspace, editors take paid seats, Kimo Cloud holds the keys | Proposed |
 
 ## Process
 

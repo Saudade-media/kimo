@@ -7,11 +7,15 @@
  * SHA-256), so opening the same unchanged `.pen` again reopens the same `.kimo` with its edits.
  * When `<name>.kimo` belongs to something else (another file, or an older version of this
  * `.pen`), the next free name is used (`<name> 2.kimo`, …): an existing file is never replaced.
+ * Reopening an earlier conversion stores any image it could not load then (a placeholder whose
+ * file is missing) when the image loads now, keeping every edit made since.
  */
 import {
   importPen,
   isPenDocument,
+  type PenDocument,
   type PenImportWarning,
+  penImagePlaceholder,
   penImageUrls,
   serialize,
 } from "@kimo/core-schema"
@@ -21,7 +25,7 @@ import {
   type FileRef,
   isAbsolutePath,
   type KimoPlatform,
-  resolveRelativeRef,
+  resolveAgainstFile,
 } from "@kimo/platform"
 import { createFolderAssetStore } from "../lib/assets"
 
@@ -57,15 +61,20 @@ async function sourceOf(
   }
 }
 
-/** The file name an image URL ends in, decoded when it is valid percent-encoding. */
-function assetName(url: string): string | undefined {
-  const last = url.split(/[?#]/)[0]?.split("/").pop() ?? ""
+/** `url` without its query and fragment, decoded when it is valid percent-encoding. */
+function urlPath(url: string): string {
+  const path = url.split(/[?#]/)[0] ?? ""
   try {
-    return decodeURIComponent(last) || undefined
+    return decodeURIComponent(path)
   } catch {
-    // A stray "%" (e.g. "100%.png") is not an escape: keep the name as written.
-    return last || undefined
+    // A stray "%" (e.g. "100%.png") is not an escape: keep the path as written.
+    return path
   }
+}
+
+/** The file name an image URL ends in. */
+function assetName(url: string): string | undefined {
+  return urlPath(url).split("/").pop() || undefined
 }
 
 /** Bytes of an image a `.pen` references: relative to the `.pen`, or an http(s) URL. */
@@ -80,7 +89,11 @@ async function loadImage(
       return res.ok ? new Uint8Array(await res.arrayBuffer()) : null
     }
     if (/^[a-z][a-z0-9+.-]*:/i.test(url) || isAbsolutePath(url)) return null
-    return await platform.files.readBytes(resolveRelativeRef(penRef, url))
+    // pen.dev writes bare relative paths (`images/a.jpg`) as well as `./images/a.jpg`.
+    const path = urlPath(url)
+    return await platform.files.readBytes(
+      resolveAgainstFile(penRef, /^\.{1,2}\//.test(path) ? path : `./${path}`),
+    )
   } catch {
     return null
   }
@@ -115,14 +128,40 @@ export async function convertPenFile(
       break
     }
     const src = await sourceOf(platform, candidate)
-    if (src?.file === file && src.sha256 === hash)
+    if (src?.file === file && src.sha256 === hash) {
+      await relinkImages(platform, penRef, candidate, pen)
       return { ref: candidate, created: false, warnings: [] }
+    }
   }
 
-  const assets = createFolderAssetStore(platform, target)
+  const { images, manifest } = await storeImages(platform, penRef, target, penImageUrls(pen))
+  const result = importPen(pen, { name: stem, images })
+  const doc = result.doc as unknown as Record<string, unknown>
+  doc.meta = { ...(doc.meta as object), [SOURCE_KEY]: { file, sha256: hash } }
+  // List the stored images, so a manifest added later (a font) never reads them as missing.
+  if (Object.keys(manifest).length) doc.assets = { ...(doc.assets as object), ...manifest }
+  await platform.files.writeTextAtomic(target, serialize(result.doc))
+  return { ref: target, created: true, warnings: result.warnings }
+}
+
+/** Image manifest entries (`assets`), keyed like the document's `assets` map. */
+type Manifest = Record<string, Record<string, unknown>>
+
+/**
+ * Stores each image of `urls` that loads in the `assets/` folder of `kimoRef`. Returns the
+ * asset reference of each stored URL and their manifest entries.
+ */
+async function storeImages(
+  platform: KimoPlatform,
+  penRef: FileRef,
+  kimoRef: FileRef,
+  urls: Iterable<string>,
+): Promise<{ images: Map<string, string>; manifest: Manifest }> {
+  const assets = createFolderAssetStore(platform, kimoRef)
   const images = new Map<string, string>()
+  const manifest: Manifest = {}
   try {
-    for (const url of penImageUrls(pen)) {
+    for (const url of urls) {
       const bytes = await loadImage(platform, penRef, url)
       if (!bytes) continue
       const name = assetName(url)
@@ -131,6 +170,10 @@ export async function convertPenFile(
         if (name) blob.name = name
         const info = await assets.put(blob)
         images.set(url, info.src)
+        const { mime, bytes: size, width, height, name: original, sha256 } = info
+        manifest[info.src.replace(/^\.\/assets\//, "")] = JSON.parse(
+          JSON.stringify({ mime, bytes: size, width, height, name: original, sha256 }),
+        )
       } catch {
         // Unsupported or oversized image: it stays a missing asset (checkerboard).
       }
@@ -138,10 +181,40 @@ export async function convertPenFile(
   } finally {
     assets.dispose()
   }
+  return { images, manifest }
+}
 
-  const result = importPen(pen, { name: stem, images })
-  const doc = result.doc as unknown as Record<string, unknown>
-  doc.meta = { ...(doc.meta as object), [SOURCE_KEY]: { file, sha256: hash } }
-  await platform.files.writeTextAtomic(target, serialize(result.doc))
-  return { ref: target, created: true, warnings: result.warnings }
+/**
+ * Swaps the placeholders an earlier conversion at `kimoRef` left for images it could not load
+ * for the stored images, when they load now. Only `src` values change, so edits are kept. Best
+ * effort: on any failure the file stays as it is.
+ */
+async function relinkImages(
+  platform: KimoPlatform,
+  penRef: FileRef,
+  kimoRef: FileRef,
+  pen: PenDocument,
+): Promise<void> {
+  try {
+    const { text } = await platform.files.readText(kimoRef)
+    const dir = dirnameOf(kimoRef).replace(/[\\/]+$/, "")
+    const missing: string[] = []
+    for (const url of penImageUrls(pen)) {
+      const placeholder = penImagePlaceholder(url)
+      if (!text.includes(JSON.stringify(placeholder))) continue
+      if (await platform.files.stat(`${dir}/${placeholder.slice(2)}`)) continue
+      missing.push(url)
+    }
+    if (missing.length === 0) return
+    const { images, manifest } = await storeImages(platform, penRef, kimoRef, missing)
+    if (images.size === 0) return
+    let next = text
+    for (const [url, src] of images)
+      next = next.split(JSON.stringify(penImagePlaceholder(url))).join(JSON.stringify(src))
+    const doc = JSON.parse(next) as Record<string, unknown>
+    doc.assets = { ...(doc.assets as object), ...manifest }
+    await platform.files.writeTextAtomic(kimoRef, serialize(doc as never))
+  } catch {
+    // Unreadable or not writable: it opens with its placeholders.
+  }
 }

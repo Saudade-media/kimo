@@ -60,7 +60,7 @@ export function gestureProps(editor: Editor) {
   }
 }
 
-export interface NumberFieldProps {
+interface NumberFieldProps {
   /** Text prefix (`X`, `Gap`), or use `icon`. */
   prefix?: string
   /** Lucide icon prefix (12, text-tertiary), e.g. `rotate-cw`. */

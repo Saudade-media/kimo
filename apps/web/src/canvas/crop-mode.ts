@@ -28,7 +28,7 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v)
 
 /** Screen px around the box edges that grab a handle (brackets are 3 px outside the box). */
-export const CROP_HANDLE_TOLERANCE = 6
+const CROP_HANDLE_TOLERANCE = 6
 
 /** `m · n` (apply `n` first). */
 function mul(m: Matrix, n: Matrix): Matrix {

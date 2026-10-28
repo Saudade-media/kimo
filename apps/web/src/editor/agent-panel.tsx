@@ -57,7 +57,7 @@ type Box = { x: number; y: number; w: number; h: number }
 
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined)
 
-export interface EditorAgentPanel {
+interface EditorAgentPanel {
   controller: AgentPanelControllerExt | null
   /** The Agent tab body (null: no AI controller). */
   panel: React.ReactNode

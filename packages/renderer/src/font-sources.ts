@@ -15,7 +15,7 @@
  */
 import { fontFamilyKey } from "./font-info"
 import { BUNDLED_FAMILIES, type NetworkFontSource, nearestFace, parseFontFaceCss } from "./fonts"
-import type { FontFaceKey, FontSource, FontStyle } from "./types"
+import type { FontFaceKey, FontStyle } from "./types"
 
 // --- Host contract (structural subset of @kimo/platform FontsApi) ----------------------------
 
@@ -412,5 +412,3 @@ export async function detectMissingFonts(
   }
   return out
 }
-
-export type { FontSource }

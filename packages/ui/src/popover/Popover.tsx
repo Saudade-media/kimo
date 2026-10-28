@@ -11,7 +11,13 @@ import {
 import { IconButton } from "../icon-button/IconButton"
 import { cx, mergeRefs } from "../internal/util"
 import type { PlacementOptions } from "./position"
-import { type PopoverAnchor, useAnchoredPosition, useDismiss, useFocusTrap } from "./usePopover"
+import {
+  floating,
+  type PopoverAnchor,
+  useAnchoredPosition,
+  useDismiss,
+  useFocusTrap,
+} from "./usePopover"
 
 /** Props for {@link Popover}. Remaining `<div>` props go to the frame. */
 export interface PopoverProps extends Omit<ComponentPropsWithRef<"div">, "title" | "children"> {
@@ -91,7 +97,7 @@ export function Popover({
     trap(e)
   }
 
-  return (
+  return floating(
     <div
       {...rest}
       ref={mergeRefs(root, ref)}
@@ -136,6 +142,7 @@ export function Popover({
       <div {...bodyProps} className={cx("kimo-popover__body", bodyProps?.className)}>
         {children}
       </div>
-    </div>
+    </div>,
+    anchor,
   )
 }

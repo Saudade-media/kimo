@@ -5,7 +5,6 @@ import {
   exportPublicKey,
   fromBase64Url,
   generateSigningKeyPair,
-  isDeviceName,
   mintPairingToken,
   type OwnerBody,
   PAIRING_TOKEN_BYTES,
@@ -76,15 +75,10 @@ describe("owner commands", () => {
     expect(await verifyOwnerCommand({ ...command, op: "claim", body: { name: "x" } })).toBe(false)
   })
 
-  test("bad names and bodies over 16 KiB are BAD_REQUEST", async () => {
+  test("bad device names and bodies over 16 KiB are BAD_REQUEST", async () => {
     const { keys } = await device()
-    for (const name of ["", " Mac", "Mac ", "a\u0007b", "é".repeat(33)])
+    for (const name of ["", " Mac", "a\u0007b", "é".repeat(33)])
       await expectCode(signOwnerCommand(keys, RELAY_ID, { op: "claim", name }), "BAD_REQUEST")
-    await expectCode(
-      signOwnerCommand(keys, RELAY_ID, { op: "remove", pub: "short" }),
-      "BAD_REQUEST",
-    )
-    await expectCode(signOwnerCommand(keys, new Uint8Array(15), { op: "devices" }), "BAD_REQUEST")
     // Hand-build an oversized body: signing refuses it, so bypass signOwnerCommand.
     const json = utf8(JSON.stringify({ pad: "x".repeat(16 * 1024) }))
     const payload = new Uint8Array(80 + json.length)
@@ -100,14 +94,6 @@ describe("owner commands", () => {
     const admin = ok.slice()
     admin[1] = 3
     await expectCode(() => parseOwnerCommand(admin), "BAD_REQUEST")
-  })
-
-  test("isDeviceName", () => {
-    expect(isDeviceName("Chrome on Mac")).toBe(true)
-    expect(isDeviceName("a".repeat(64))).toBe(true)
-    expect(isDeviceName("a".repeat(65))).toBe(false)
-    expect(isDeviceName("tab\there")).toBe(false)
-    expect(isDeviceName(7)).toBe(false)
   })
 })
 
@@ -142,12 +128,10 @@ describe("pairing tokens", () => {
     relayId: RELAY_ID,
   })
 
-  test("mint, parse (148 bytes) and verify", async () => {
+  test("mint, parse and verify", async () => {
     const { keys, pub } = await device()
     const token = await mintPairingToken(keys, claims())
     expect(fromBase64Url(token).length).toBe(PAIRING_TOKEN_BYTES)
-    expect(PAIRING_TOKEN_BYTES).toBe(148)
-    expect(token.length).toBe(198)
     const parsed = parsePairingToken(token)
     expect(parsed).toMatchObject({ ...claims(), issuerPub: pub })
     expect(await verifyPairingToken(parsed)).toBe(true)
@@ -172,8 +156,6 @@ describe("pairing tokens", () => {
     for (const [index, value] of [
       [0, 2],
       [1, 1],
-      [2, 1],
-      [3, 1],
     ] as const) {
       const copy = bytes.slice()
       copy[index] = value

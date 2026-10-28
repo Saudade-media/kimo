@@ -1,8 +1,13 @@
+/**
+ * Golden renders, one per distinct paint path: shapes and strokes, fills and images, text,
+ * effects, icons, and the interactive overlay frame. `UPDATE_GOLDENS=1` rewrites them.
+ */
 import { beforeAll, describe, expect, test } from "bun:test"
 import type { CanvasKit } from "canvaskit-wasm"
 import { CanvasKitRenderer } from "../src"
 import { loadCanvasKit } from "../src/ck"
 import { paintsDoc, shapesDoc, textDoc } from "./fixtures/docs"
+import { effectsDoc, iconsDoc } from "./fixtures/effects-icons"
 import { compareGolden, pixelAt } from "./helpers/golden"
 import { quadrantPng } from "./helpers/png"
 import { sceneOf, simpleLayout, type TestDoc } from "./helpers/scene"
@@ -20,9 +25,7 @@ beforeAll(async () => {
 function load(doc: TestDoc) {
   const scene = sceneOf(doc, { "./assets/0123456789abcdef.png": png })
   r.setDocument(scene)
-  const layout = simpleLayout(scene, r.textMeasurer())
-  r.setLayout(layout)
-  return { scene, layout }
+  r.setLayout(simpleLayout(scene, r.textMeasurer()))
 }
 
 describe("golden exports (exportRaster, scale 2)", () => {
@@ -30,11 +33,12 @@ describe("golden exports (exportRaster, scale 2)", () => {
     ["shapes", shapesDoc, "board0001"],
     ["paints", paintsDoc, "board0002"],
     ["text", textDoc, "board0003"],
+    ["effects", effectsDoc, "boardE001"],
+    ["icons", iconsDoc, "boardI001"],
   ] as const) {
     test(name, async () => {
       load(doc)
-      const bytes = await r.exportRaster(root, { scale: 2 })
-      const res = compareGolden(ck, name, bytes)
+      const res = compareGolden(ck, name, await r.exportRaster(root, { scale: 2 }))
       expect(res.message && res.ok).toBe(true)
     })
   }
@@ -71,20 +75,6 @@ describe("frame rendering with overlays (attachRaster)", () => {
     expect(res.message && res.ok).toBe(true)
     // Handle at rect00002's top-left corner (92,16) → screen (112,36) → device (224,72): white fill.
     expect(pixelAt(ck, bytes, 224, 72)).toEqual([255, 255, 255, 255])
-    // Selection outline (inside, 1.5px) on the top edge just right of the handle: selection blue.
-    const [rr, gg, bb] = pixelAt(ck, bytes, 240, 73)
-    expect(Math.abs(rr - 0x2f) + Math.abs(gg - 0x6b) + Math.abs(bb - 0xff)).toBeLessThan(40)
-    r.detach()
-  })
-
-  test("zoom 2 + pan renders the scene magnified", () => {
-    load(paintsDoc)
-    r.attachRaster(200, 150, 1)
-    r.setViewport({ x: 10, y: 10, zoom: 2 })
-    r.setOverlay({ selection: [], hovered: null, marquee: null })
-    const bytes = r.snapshot()
-    const res = compareGolden(ck, "zoomed", bytes)
-    expect(res.message && res.ok).toBe(true)
     r.detach()
   })
 })

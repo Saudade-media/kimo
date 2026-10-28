@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { LayoutNodeData, NodeSource } from "@kimo/layout"
 import { createResolver } from "@kimo/layout"
+import type { ImageFilter } from "canvaskit-wasm"
 import { CanvasKitRenderer, createRenderer, RendererError, type RenderScene } from "../src"
 import { loadCanvasKit } from "../src/ck"
+import { ImageCache } from "../src/paint"
 import { pixelAt } from "./helpers/golden"
 import { quadrantPng } from "./helpers/png"
 import { simpleLayout } from "./helpers/scene"
@@ -126,6 +128,42 @@ describe("frames, caching, culling", () => {
     r.dispose()
   })
 
+  test("a root holding a background blur still culls (its picture stays bounded)", async () => {
+    const r = new CanvasKitRenderer()
+    await r.init({ offlineFonts: true })
+    const nodes: Record<string, Record<string, unknown>> = {}
+    for (let i = 0; i < 4; i++) {
+      nodes[`screen${i}00`] = {
+        type: "frame",
+        parent: null,
+        order: `a${i}`,
+        x: i * 600,
+        y: 0,
+        w: 400,
+        h: 400,
+        fill: "#F4F2EE",
+      }
+      nodes[`glass${i}00`] = {
+        type: "rect",
+        parent: `screen${i}00`,
+        order: "a",
+        x: 20,
+        y: 20,
+        w: 200,
+        h: 80,
+        fill: "#FFFFFF80",
+        effects: [{ kind: "backdrop-blur", radius: 16 }],
+      }
+    }
+    setup(r, nodes)
+    r.attachRaster(600, 400)
+    r.setViewport({ x: -100, y: 0, zoom: 1 })
+    r.render()
+    // Only screen 0 (and its child) intersects the viewport.
+    expect(r.stats()).toMatchObject({ nodesDrawn: 2, nodesCulled: 6 })
+    r.dispose()
+  })
+
   test("requestFrame coalesces into one frame", async () => {
     const r = new CanvasKitRenderer()
     await r.init({ offlineFonts: true })
@@ -189,24 +227,113 @@ describe("frames, caching, culling", () => {
     r.dispose()
   })
 
-  test("hidden nodes don't paint", async () => {
+  test("an image missing at first draw appears after retryAssets once its bytes arrive", async () => {
+    // A guest opening a share link: the canvas draws before the relay fetch stores the image.
     const ck = await loadCanvasKit()
     const r = new CanvasKitRenderer()
     await r.init({ offlineFonts: true })
-    setup(r, {
-      root000001: { type: "frame", parent: null, order: "a", w: 20, h: 20, fill: "#fff" },
-      hidden0001: {
-        type: "rect",
-        parent: "root000001",
-        order: "a",
-        w: 20,
-        h: 20,
-        fill: "#000",
-        visible: false,
+    const src = "./assets/0123456789abcdef.png"
+    const assets: Record<string, Uint8Array> = {}
+    setup(
+      r,
+      {
+        img0000001: {
+          type: "rect",
+          parent: null,
+          order: "a",
+          w: 40,
+          h: 20,
+          fill: { kind: "image", src, fit: "stretch" },
+        },
       },
-    })
-    r.attachRaster(20, 20)
-    expect(pixelAt(ck, r.snapshot(), 10, 10)).toEqual([255, 255, 255, 255])
+      assets,
+    )
+    r.attachRaster(40, 20)
+    r.snapshot()
+    await tick()
+    expect(pixelAt(ck, r.snapshot(), 5, 5)[1]).toBeGreaterThan(150) // gray checkerboard
+    assets[src] = quadrantPng(ck)
+    r.retryAssets()
+    await tick()
+    const [red, green] = pixelAt(ck, r.snapshot(), 5, 5)
+    expect(red).toBeGreaterThan(200)
+    expect(green).toBeLessThan(100)
     r.dispose()
+  })
+})
+
+describe("wasm handles and lifecycle races", () => {
+  test("chained layer filters (blur + two layer shadows) free every JS handle", async () => {
+    const ck = await loadCanvasKit()
+    const F = ck.ImageFilter
+    const live = new Set<ImageFilter>()
+    const origShadow = F.MakeDropShadow
+    const origBlur = F.MakeBlur
+    const track = (f: ImageFilter) => {
+      live.add(f)
+      const del = f.delete.bind(f)
+      f.delete = () => {
+        live.delete(f)
+        del()
+      }
+      return f
+    }
+    F.MakeDropShadow = ((...a: Parameters<typeof origShadow>) =>
+      track(origShadow(...a))) as typeof origShadow
+    F.MakeBlur = ((...a: Parameters<typeof origBlur>) => track(origBlur(...a))) as typeof origBlur
+    try {
+      const r = new CanvasKitRenderer()
+      await r.init({ offlineFonts: true })
+      setup(r, {
+        // An unfilled frame: layer (not geometric) shadows on a blurred layer.
+        root000001: {
+          type: "frame",
+          parent: null,
+          order: "a",
+          w: 40,
+          h: 40,
+          effects: [
+            { kind: "blur", radius: 4 },
+            { kind: "shadow", x: 0, y: 2, blur: 4, color: "#00000040" },
+            { kind: "shadow", x: 0, y: 8, blur: 16, color: "#00000020" },
+          ],
+        },
+        child00001: { type: "rect", parent: "root000001", order: "a", w: 10, h: 10, fill: "#000" },
+      })
+      r.attachRaster(60, 60)
+      r.render()
+      r.invalidate()
+      r.render()
+      expect(live.size).toBe(0)
+      r.dispose()
+    } finally {
+      F.MakeDropShadow = origShadow
+      F.MakeBlur = origBlur
+    }
+  })
+
+  test("dispose() while init is pending: init rejects and nothing is adopted", async () => {
+    const r = new CanvasKitRenderer()
+    const p = r.init({ offlineFonts: true })
+    r.dispose()
+    await expect(p).rejects.toBeInstanceOf(RendererError)
+    expect(() => r.textMeasurer()).toThrow(RendererError)
+    // A fresh init after that works.
+    await r.init({ offlineFonts: true })
+    expect(r.textMeasurer()).toBeDefined()
+    r.dispose()
+  })
+
+  test("an image load that finishes after clear() is dropped, not cached", async () => {
+    const ck = await loadCanvasKit()
+    let release: (b: Uint8Array | null) => void = () => {}
+    const cache = new ImageCache(ck, () => {})
+    cache.assets = { load: () => new Promise((res) => (release = res)) }
+    const pending = cache.load("./assets/0123456789abcdef.png")
+    cache.clear()
+    release(null)
+    await pending
+    // A new `get` starts a fresh load instead of returning a stale entry.
+    expect(cache.get("./assets/0123456789abcdef.png").status).toBe("loading")
   })
 })

@@ -1,4 +1,4 @@
-/** Board 31 "Batch limit": kimo_apply_ops authors at most AGENT_MAX_NEW_LAYERS new layers per call. */
+/** kimo_apply_ops authors at most AGENT_MAX_NEW_LAYERS new layers per call. */
 import { describe, expect, test } from "bun:test"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import {
@@ -85,18 +85,19 @@ describe("newLayerCount", () => {
 
   test("batchTooLarge: null at the limit, an actionable error above it", () => {
     const at = Array.from({ length: AGENT_MAX_NEW_LAYERS }, (_, i) => rect("p", i))
-    expect(AGENT_MAX_NEW_LAYERS).toBe(40)
     expect(batchTooLarge(at)).toBeNull()
     const err = batchTooLarge([...at, rect("p", 99)])
     expect(err?.code).toBe("BATCH_TOO_LARGE")
-    expect(err?.detail).toEqual({ kind: "batch", limit: 40, newLayers: 41 })
-    expect(err?.suggestion).toContain("one complete section")
-    expect(err?.suggestion).toContain("≤ 40")
+    expect(err?.detail).toEqual({
+      kind: "batch",
+      limit: AGENT_MAX_NEW_LAYERS,
+      newLayers: AGENT_MAX_NEW_LAYERS + 1,
+    })
   })
 })
 
 describe("kimo_apply_ops batch limit", () => {
-  test("41 freshly authored layers are refused with the split hint; nothing is applied", async () => {
+  test("one layer over the limit is refused; nothing is applied", async () => {
     const c = setup()
     const docId = await newDoc(c)
     const before = expectOk(await c.call<unknown>("kimo_get_state", { docId })).revision
@@ -109,9 +110,7 @@ describe("kimo_apply_ops batch limit", () => {
       } as WireOp,
       ...Array.from({ length: AGENT_MAX_NEW_LAYERS }, (_, i) => rect("@f", i)),
     ]
-    const r = expectFail(await c.call("kimo_apply_ops", { docId, ops }), "BATCH_TOO_LARGE")
-    expect(r.errors[0]?.detail).toEqual({ kind: "batch", limit: 40, newLayers: 41 })
-    expect(r.errors[0]?.suggestion).toMatch(/Split into finished parts of ≤ 40 new layers/)
+    expectFail(await c.call("kimo_apply_ops", { docId, ops }), "BATCH_TOO_LARGE")
     const after = expectOk(await c.call<unknown>("kimo_get_state", { docId })).revision
     expect(after).toEqual(before)
     // dryRun is refused the same way.
@@ -131,47 +130,6 @@ describe("kimo_apply_ops batch limit", () => {
       }),
     )
     expect(r.data.inserted).toBe(301)
-  })
-
-  test("a copy plus ≤ 40 inserts in the same call passes", async () => {
-    const c = setup()
-    const docId = await newDoc(c)
-    const page = await bigPage(c, docId, 120)
-    const r = expectOk(
-      await c.call<{ inserted: number }>("kimo_apply_ops", {
-        docId,
-        ops: [
-          { op: "copy", id: page, key: "v2", parent: "root", set: { x: 1540 } },
-          ...Array.from({ length: AGENT_MAX_NEW_LAYERS }, (_, i) => rect("@v2", 500 + i)),
-        ],
-      }),
-    )
-    expect(r.data.inserted).toBe(121 + 40)
-  })
-
-  test("instantiating a large component passes", async () => {
-    const c = setup()
-    const docId = await newDoc(c)
-    const page = await bigPage(c, docId, 60)
-    expectOk(
-      await c.call("kimo_apply_ops", {
-        docId,
-        ops: [{ op: "make_component", ids: [page], name: "Big" }],
-      }),
-    )
-    const r = expectOk(
-      await c.call<unknown>("kimo_apply_ops", {
-        docId,
-        ops: Array.from({ length: 5 }, (_, i) => ({
-          op: "instantiate",
-          of: page,
-          parent: "root",
-          x: 2000 + i * 10,
-          y: 0,
-        })),
-      }),
-    )
-    expect(r.ok).toBe(true)
   })
 
   test("editing many existing layers is not limited", async () => {

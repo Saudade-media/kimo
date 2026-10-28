@@ -2,7 +2,7 @@
  * Color conversion for exporters (spec §3 "Colors"). CSS emitters write the original value
  * (`#hex`, `oklch()`, `color(display-p3 …)`); SVG and PDF need sRGB, gamut-mapped with the
  * CSS Color 4 algorithm. The math is the renderer's (`@kimo/renderer` `color.ts`), copied so
- * this package stays free of the CanvasKit runtime; `test/color.test.ts` keeps both equal.
+ * this package stays free of the CanvasKit runtime.
  */
 import { isObject } from "@kimo/core-schema"
 
@@ -14,7 +14,7 @@ const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v)
 const HEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/
 
 /** Parses `#RGB`, `#RRGGBB`, `#RRGGBBAA`. */
-export function parseHex(hex: string): RGBA | null {
+function parseHex(hex: string): RGBA | null {
   const m = HEX.exec(hex)
   if (!m) return null
   let h = m[1] as string
@@ -43,11 +43,6 @@ export function parseColor(value: unknown): RGBA | null {
   return null
 }
 
-/** Multiplies the alpha channel. */
-export function withAlpha(c: RGBA, alpha: number): RGBA {
-  return [c[0], c[1], c[2], c[3] * clamp01(alpha)]
-}
-
 /** `#RRGGBBAA` (lowercase) — handy for tests and debugging. */
 export function toHex(c: RGBA): string {
   const h = (v: number) =>
@@ -73,7 +68,7 @@ const toGamma = (v: number) => {
 type Vec3 = [number, number, number]
 
 /** OKLab → linear sRGB. */
-export function oklabToLinearSrgb(L: number, a: number, b: number): Vec3 {
+function oklabToLinearSrgb(L: number, a: number, b: number): Vec3 {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
   const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3
@@ -85,7 +80,7 @@ export function oklabToLinearSrgb(L: number, a: number, b: number): Vec3 {
 }
 
 /** Linear sRGB → OKLab. */
-export function linearSrgbToOklab(r: number, g: number, b: number): Vec3 {
+function linearSrgbToOklab(r: number, g: number, b: number): Vec3 {
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
@@ -96,13 +91,8 @@ export function linearSrgbToOklab(r: number, g: number, b: number): Vec3 {
   ]
 }
 
-/** sRGB (gamma) → OKLab, for gradient interpolation. */
-export function srgbToOklab(c: RGBA): Vec3 {
-  return linearSrgbToOklab(toLinear(c[0]), toLinear(c[1]), toLinear(c[2]))
-}
-
 /** OKLab → gamma sRGB, gamut-mapped. */
-export function oklabToSrgb(L: number, a: number, b: number): Vec3 {
+function oklabToSrgb(L: number, a: number, b: number): Vec3 {
   const C = Math.hypot(a, b)
   const h = (Math.atan2(b, a) * 180) / Math.PI
   return oklchToSrgb(L, C, h)
@@ -113,7 +103,7 @@ const inGamut = (v: Vec3) => v.every((x) => x >= -1e-6 && x <= 1 + 1e-6)
 const deltaEOK = (x: Vec3, y: Vec3) => Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2])
 
 /** OKLCH → gamma sRGB with CSS Color 4 gamut mapping. */
-export function oklchToSrgb(L: number, C: number, hDeg: number): Vec3 {
+function oklchToSrgb(L: number, C: number, hDeg: number): Vec3 {
   if (L >= 1) return [1, 1, 1]
   if (L <= 0) return [0, 0, 0]
   const hr = (hDeg * Math.PI) / 180
@@ -150,7 +140,7 @@ export function oklchToSrgb(L: number, C: number, hDeg: number): Vec3 {
 }
 
 /** Display-P3 (gamma) → gamut-mapped sRGB. */
-export function p3ToSrgb(r: number, g: number, b: number): Vec3 {
+function p3ToSrgb(r: number, g: number, b: number): Vec3 {
   const R = toLinear(r)
   const G = toLinear(g)
   const B = toLinear(b)

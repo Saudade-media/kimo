@@ -21,7 +21,7 @@ import type { AgentPillTone } from "@kimo/ui"
 // --- Formatting ----------------------------------------------------------------------------------
 
 /** "10:47" (local time, 24 h). */
-export function clock(time: number): string {
+function clock(time: number): string {
   const d = new Date(time)
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
@@ -51,7 +51,7 @@ function guessHome(path: string): string | null {
 }
 
 /** "Card 2 +3". */
-export function namesSummary(names: readonly string[]): string {
+function namesSummary(names: readonly string[]): string {
   if (names.length === 0) return ""
   const [first] = names
   return names.length === 1 ? (first ?? "") : `${first} +${names.length - 1}`
@@ -66,7 +66,7 @@ export function clientOf(origin: string): string {
 
 // --- Permission levels ---------------------------------------------------------------------------
 
-export const LEVEL_LABEL: Record<McpPermissionLevel, string> = {
+const LEVEL_LABEL: Record<McpPermissionLevel, string> = {
   read: "Read only",
   edit: "Edit",
   "edit+delete": "Edit + delete",
@@ -121,14 +121,18 @@ export function filesForScope(scope: FilesScope, cwd?: string): string[] {
   return []
 }
 
-/** ADR 0013 §6 defaults for clients without a stored policy. */
+/**
+ * Clients without a stored policy: the host's default (@kimo/mcp-server DEFAULT_POLICY, ADR 0013
+ * Addendum 8). Trusted: every request runs without asking until "Ask before changes" is on.
+ */
 export const DEFAULT_POLICY: McpClientPolicy = {
   level: "edit",
   files: [],
   nodes: [],
-  grants: [],
+  grants: ["globals", "components", "save", "export"],
   onExceed: "ask",
   confirmDestructive: true,
+  autoApprove: true,
 }
 
 /** "Edit · this folder", "Read only · current file" (AgentClientRow Scope badge). */
@@ -214,7 +218,7 @@ export function serverPill(
 
 // --- Host rows (rule "Host rows") ------------------------------------------------------------------
 
-export type HostRowState = "installed" | "outdated" | "not-installed" | "not-found"
+type HostRowState = "installed" | "outdated" | "not-installed" | "not-found"
 
 const HOST_KEY: Record<McpHostId, string> = {
   "claude-code": "mcpServers.kimo",
@@ -225,7 +229,7 @@ const HOST_KEY: Record<McpHostId, string> = {
 }
 
 /** Lucide icon per host (generic, board 21 instances). */
-export const HOST_ICON: Record<McpHostId, string> = {
+const HOST_ICON: Record<McpHostId, string> = {
   "claude-code": "square-terminal",
   codex: "terminal",
   "gemini-cli": "sparkle",
@@ -236,7 +240,7 @@ export const HOST_ICON: Record<McpHostId, string> = {
 /** Display order of the five hosts on the board. */
 export const HOST_ORDER: McpHostId[] = ["claude-code", "codex", "gemini-cli", "cursor", "vscode"]
 
-export function hostRowState(h: McpHostConfigStatus): HostRowState {
+function hostRowState(h: McpHostConfigStatus): HostRowState {
   if (h.installed) return h.current ? "installed" : "outdated"
   return h.configExists ? "not-installed" : "not-found"
 }
@@ -334,7 +338,7 @@ const WIRE: Record<string, string> = {
 }
 
 /** Short value for op details: `#F4F1EC`, `20`, `2 paints`, `{…}`. */
-export function shortValue(v: unknown): string {
+function shortValue(v: unknown): string {
   if (v === undefined) return "none"
   if (v === null) return "null"
   if (typeof v === "string") return v.length > 28 ? `${v.slice(0, 27)}…` : v
@@ -371,7 +375,7 @@ export function storeNames(
 }
 
 /** Rows for one op group (forward ops + informational inverse). */
-export function opRows(
+function opRows(
   ops: readonly NormalizedOp[],
   inverse: readonly NormalizedOp[],
   nameOf: NameOf,
@@ -779,9 +783,9 @@ function countDescendants(store: DocStore, id: string): number {
 }
 
 /** Board 34 §4: up to this many target rows show as a flat list; more are grouped by kind. */
-export const APPROVAL_FLAT_MAX = 8
+const APPROVAL_FLAT_MAX = 8
 /** Board 34 §4: rows shown per kind before "and N more". */
-export const APPROVAL_PER_KIND = 3
+const APPROVAL_PER_KIND = 3
 
 export interface ApprovalTargetGroup {
   kind: "delete" | "insert" | "update"
@@ -826,7 +830,7 @@ export function approvalMeta(r: McpApprovalRequest): string {
 }
 
 /** Denial code shown in the footnote (rule: Deny → PERMISSION_DENIED / OUT_OF_SCOPE). */
-export function denialCode(r: McpApprovalRequest): "PERMISSION_DENIED" | "OUT_OF_SCOPE" {
+function denialCode(r: McpApprovalRequest): "PERMISSION_DENIED" | "OUT_OF_SCOPE" {
   return r.reason.kind === "file" || r.reason.kind === "scope"
     ? "OUT_OF_SCOPE"
     : "PERMISSION_DENIED"
@@ -891,7 +895,7 @@ const WRITE_KINDS = new Set<McpActivityKind>([
 ])
 const ERROR_KINDS = new Set<McpActivityKind>(["denied", "error"])
 
-export function matchesKind(kind: McpActivityKind, f: KindFilter): boolean {
+function matchesKind(kind: McpActivityKind, f: KindFilter): boolean {
   if (f === "all") return true
   if (f === "writes") return WRITE_KINDS.has(kind)
   if (f === "errors") return ERROR_KINDS.has(kind)
@@ -901,7 +905,7 @@ export function matchesKind(kind: McpActivityKind, f: KindFilter): boolean {
 
 const UNDOABLE = new Set<McpActivityKind>(["edit", "undo", "redo"])
 
-export interface ActivityRowView {
+interface ActivityRowView {
   key: string
   entry: McpActivityEntry | null
   request: McpApprovalRequest | null
@@ -928,9 +932,8 @@ export interface ActivityGroupView {
 }
 
 function toneOf(e: McpActivityEntry): ActivityRowView["tone"] {
-  // Board 34: an auto-approved request reads in warning, like a conflict.
-  if (e.code === "REVISION_CONFLICT" || e.code === "AREA_BUSY" || e.outcome === "auto")
-    return "warning"
+  // Auto-approved requests are the default (ADR 0013 Addendum 8) and read plain.
+  if (e.code === "REVISION_CONFLICT" || e.code === "AREA_BUSY") return "warning"
   if (e.kind === "denied" || e.code === "PERMISSION_DENIED" || e.code === "OUT_OF_SCOPE")
     return "danger"
   if (e.kind === "error") return "danger"
@@ -957,7 +960,7 @@ function outcomeText(e: McpActivityEntry): string {
 }
 
 /** One ActivityRow from a log entry. */
-export function activityRowView(
+function activityRowView(
   e: McpActivityEntry,
   nameOf: NameOf,
   flags: { stale?: boolean; undone?: boolean; undoneAt?: number } = {},
@@ -1014,7 +1017,7 @@ export function activityRowView(
 }
 
 /** The pending-approval row (agent-soft, teal tool line). */
-export function pendingRowView(r: McpApprovalRequest): ActivityRowView {
+function pendingRowView(r: McpApprovalRequest): ActivityRowView {
   const p = r.preview
   const count = p ? p.inserted + p.updated + p.deleted : 0
   return {
@@ -1161,14 +1164,13 @@ export function nowCopy(c: McpConnectionInfo): { label: string; tool: string } |
 }
 
 /** Fallback Now-row copy per connection state (hosts without `McpConnectionInfo.call`). */
-export const NOW_COPY: Record<McpConnectionInfo["state"], { label: string; tool: string } | null> =
-  {
-    idle: null,
-    reading: { label: "Reading the document", tool: "kimo_query" },
-    editing: { label: "Applying ops", tool: "kimo_apply_ops" },
-    rendering: { label: "Rendering", tool: "kimo_render" },
-    "waiting-approval": { label: "Waiting for your approval", tool: "kimo_apply_ops" },
-  }
+const NOW_COPY: Record<McpConnectionInfo["state"], { label: string; tool: string } | null> = {
+  idle: null,
+  reading: { label: "Reading the document", tool: "kimo_query" },
+  editing: { label: "Applying ops", tool: "kimo_apply_ops" },
+  rendering: { label: "Rendering", tool: "kimo_render" },
+  "waiting-approval": { label: "Waiting for your approval", tool: "kimo_apply_ops" },
+}
 
 // --- Copy config -----------------------------------------------------------------------------------
 

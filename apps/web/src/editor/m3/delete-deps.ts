@@ -15,7 +15,7 @@ type Node = {
   name?: string
 }
 
-export interface DeleteDeps {
+interface DeleteDeps {
   /** Instances outside the deleted subtrees whose main component is being deleted. */
   instances: string[]
   /** Names of the components going away (for the toast). */

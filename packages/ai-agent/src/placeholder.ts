@@ -36,16 +36,6 @@ export function isOrphanPlaceholder(value: unknown, liveOrigins: ReadonlySet<str
   return by === undefined ? liveOrigins.size === 0 : !liveOrigins.has(by)
 }
 
-/** Canvas tag copy: "<agent> · building <name>" or "Interrupted". */
-export function placeholderTag(
-  value: unknown,
-  ctx: { name: string; agentLabel: string; liveOrigins: ReadonlySet<string> },
-): { text: string; state: "building" | "interrupted" } {
-  return isOrphanPlaceholder(value, ctx.liveOrigins)
-    ? { text: "Interrupted", state: "interrupted" }
-    : { text: `${ctx.agentLabel} · building ${ctx.name}`, state: "building" }
-}
-
 /** True when the node value carries a placeholder flag (`true` or `{by, since}`). */
 export function hasPlaceholder(value: unknown): boolean {
   return value !== undefined && value !== null && value !== false

@@ -39,7 +39,7 @@ interface OutcomeCard {
 }
 
 /** The result cards J to N, and the join route's E and F for the relay itself. */
-export function outcomeCard(outcome: PairOutcome, host: string): OutcomeCard {
+function outcomeCard(outcome: PairOutcome, host: string): OutcomeCard {
   switch (outcome) {
     case "added":
       return {
@@ -101,7 +101,7 @@ export function outcomeCard(outcome: PairOutcome, host: string): OutcomeCard {
 }
 
 /** The outcome of a failed Add device. */
-export function pairErrorOutcome(error: unknown): PairOutcome {
+function pairErrorOutcome(error: unknown): PairOutcome {
   const code = error instanceof MultiplayerError ? error.code : null
   switch (code) {
     case "PAIRING_EXPIRED":
@@ -119,7 +119,7 @@ export function pairErrorOutcome(error: unknown): PairOutcome {
 }
 
 /** "Works once · 12 min left" (whole minutes, rounded up). */
-export function pairMeta(exp: number, nowMs: number): string {
+function pairMeta(exp: number, nowMs: number): string {
   const minutes = Math.max(1, Math.ceil((exp * 1000 - nowMs) / 60_000))
   return `Works once · ${minutes} min left`
 }

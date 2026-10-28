@@ -1,6 +1,7 @@
 /**
  * The editor shell — boards "03 Editor — Light" / "05 Editor — Agent — Dark" (ewttY / EHux2):
- * vertical, bg-canvas; Topbar (48) over Body (Left Panel 256 · Canvas fill · Right Panel 280).
+ * vertical, bg-canvas. Board 44 "Workspace v2": the Body is a Stage where the canvas runs
+ * full-bleed under two floating cards (Left 256, Right 280) whose headers replace the topbar.
  * Owns the file session and the global shortcuts; the canvas is mounted through the
  * CanvasHost contract (CanvasKit renderer + Yoga layout, ADR 0009).
  *
@@ -16,7 +17,15 @@ import { KIMO_OPEN_FILTER } from "@kimo/platform"
 import type { DocumentFontFace, FontFaceKey, OverlayTheme } from "@kimo/renderer"
 import { browserIconProvider, createRenderer } from "@kimo/renderer/browser"
 import { EmptyState } from "@kimo/ui"
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react"
 import { CleanUpAssetsHost, indexedDbAssetFolder, platformAssetFolder } from "../assets-gc"
 import { CanvasHost } from "../canvas/CanvasHost"
 import {
@@ -67,17 +76,24 @@ import { useMultiplayer } from "../multiplayer/hooks"
 import { libraryKeyOf } from "../multiplayer/library"
 import type { Capabilities } from "../multiplayer/model"
 import type { SharedSession } from "../multiplayer/share"
+import { TopbarShare, TopbarSyncStatus } from "../multiplayer/ui/TopbarShare"
 import { useEditorMultiplayer } from "../multiplayer-canvas/MultiplayerCanvas"
 import { useOpenSettings, useRuntime } from "../platform/runtime"
 import { exitSelection, PreviewOverlay, pickPreviewFrame, usePreviewTarget } from "../preview"
-import { diskPath, homeFolderPath, lastHomePath, navigate } from "../router"
+import { diskPath, lastHomePath, navigate } from "../router"
 import { useEditorAgentPanel } from "./agent-panel"
 import { useAgentTouched, useConnectedOrigins, useEditorAgents } from "./agents"
 import { refName } from "./bindings"
 import { useCanvasMenu } from "./CanvasMenu"
+import {
+  EditorChromeContext,
+  LeftCardHeader,
+  LibrarySaveStatus,
+  RightCardHeader,
+} from "./CardHeaders"
 import { useRasterDrop } from "./clipboard/RasterDrop"
 import { useEditorCommands } from "./clipboard/useEditorCommands"
-import { DiskTopbar, useConflicts, useFocusNode, useWindowTitle } from "./disk"
+import { DiskLeftCardHeader, useConflicts, useFocusNode, useWindowTitle } from "./disk"
 import { failureText } from "./errors"
 import type { FileMenuActions } from "./FileMenu"
 import { FloatingToolbar } from "./FloatingToolbar"
@@ -88,17 +104,18 @@ import { useCanvasDrop } from "./m3/CanvasDrop"
 import { M3Context, M3Controller, useBusValue, useLibraries } from "./m3/controller"
 import { ConfirmHost, ToastStack } from "./m3/feedback"
 import { activeRoots } from "./pages/model"
-import { useActivePageName } from "./pages/PagesStrip"
 import { useReleaseStalePlaceholders } from "./placeholder-release"
 import "./m3/m3.css"
 import "./m3/m3-panels.css"
 import "./m3/component-dialogs.css"
+import "./workspace.css"
 import { type Combo, matchCombo, matches, SHORTCUTS, shortcut } from "../shortcuts/shortcuts"
 import { useThumbnailWriter } from "../thumbnails/writer"
 import { ComponentDialogs } from "./m3/ComponentDialogs"
 import { LibraryChanges, LibraryManager } from "./m3/popovers"
 import { VariablesDialog } from "./m3/VariablesDialog"
 import { PanelContext } from "./panel-context"
+import { toggleBothPanels, usePanels } from "./panels"
 import { IconPickerPopover } from "./popovers/IconPicker"
 import { RightPanel } from "./RightPanel"
 import {
@@ -110,7 +127,6 @@ import {
   useSyncStatus,
 } from "./session"
 import { useSvgImport } from "./svg-drop"
-import { Topbar } from "./Topbar"
 import { ViewOnlyBanner } from "./ViewOnlyBanner"
 import {
   fileMenuFor,
@@ -276,6 +292,15 @@ function EditorShell({
   const { platform, manager, hostClient = null, libraryShare = null } = useRuntime()
   const openSettings = useOpenSettings()
   const windowChrome = useWindowChrome(platform)
+  /** Board 44: this window's collapsed cards (header button, ⌘\, View menu). */
+  const cards = usePanels()
+  /** Board 44: zoom to fit frames content beside the expanded cards (8 + 256, 280 + 8). */
+  const fitInsets = useMemo(
+    () => ({ left: cards.left ? 0 : 264, right: cards.right ? 0 : 288, top: 0, bottom: 0 }),
+    [cards.left, cards.right],
+  )
+  /** False once a tab strip above the editor owns the traffic lights and the drag region. */
+  const ownsChrome = useContext(EditorChromeContext)
   /** The document session of a file on disk (null: browser library). */
   const doc = session.document
   /** A room joined from a link (null: a file of this device). */
@@ -350,6 +375,9 @@ function EditorShell({
   // Fonts that resolve differently now (document fonts loaded, the offline pack downloaded):
   // families the canvas gave up on are asked again.
   useEffect(() => fonts.subscribe(() => canvas.current?.renderer?.retryFonts?.()), [fonts])
+  // Assets stored after the canvas drew them as missing (a shared file's images fetched from the
+  // relay as a guest opens it): the canvas asks again instead of keeping the placeholder.
+  useEffect(() => assets.subscribe(() => canvas.current?.renderer?.retryAssets?.()), [assets])
   const offlineFonts = useSyncExternalStore(fonts.subscribe, fonts.offline)
   useEffect(() => {
     let live = true
@@ -453,8 +481,6 @@ function EditorShell({
     else m3.toast({ tone: "warning", text: "Nothing to preview. Add a frame to this page." })
   }, [session, m3])
   const previewTarget = usePreviewTarget(session.store, session.ui)
-  // The topbar breadcrumb's page crumb (board 16 GGcf5): the active page's name.
-  const pageName = useActivePageName(session)
   // Desktop menu bar View › Preview (`kimo://editor-menu` {action: "preview"}).
   useEffect(
     () => platform.menu?.onAction((a) => (a === "preview" ? openPreview() : undefined)),
@@ -805,6 +831,12 @@ function EditorShell({
         openPreview()
         return
       }
+      // Board 44 §5 rule "Collapse": ⌘\ collapses both floating cards, or opens both again.
+      if (matches("togglePanels", e)) {
+        e.preventDefault()
+        toggleBothPanels()
+        return
+      }
       // Board 27 §4 View menu: ⇧' pixel grid, ⇧R rulers (the same keys as Settings › Canvas).
       if (matches("view.pixelGrid", e)) {
         e.preventDefault()
@@ -1027,48 +1059,73 @@ function EditorShell({
     caps,
   )
 
+  // Board 44: the card headers replace the topbar (boards 03 / 16). Left: File Menu (logo, file
+  // name, File menu) and Collapse; right: People (agent presence, avatar stack, Share), Zoom
+  // (View menu), Play and Collapse.
+  // macOS overlay title bar: the lights sit over the left card header until the tab strip owns
+  // the window chrome (`EditorChromeContext` false).
+  const lightsInset = ownsChrome && platform.capabilities.trafficLights ? windowChrome.inset : 0
+  const leftHeader = doc ? (
+    <DiskLeftCardHeader
+      doc={doc}
+      {...fileMenu}
+      onHome={() => goHome()}
+      lightsInset={lightsInset}
+      collapsed={cards.left}
+    />
+  ) : (
+    <LeftCardHeader
+      fileName={name}
+      onRename={rename}
+      {...fileMenu}
+      onHome={() => goHome()}
+      saveStatus={syncStatus}
+      // Board 41 §2: a shared file's sync status, else the library status (attention only).
+      status={
+        <TopbarSyncStatus
+          docKey={shareKey}
+          quietWhenSynced
+          fallback={<LibrarySaveStatus status={syncStatus} />}
+        />
+      }
+      lightsInset={lightsInset}
+      collapsed={cards.left}
+    />
+  )
+  const rightHeader = (
+    <RightCardHeader
+      ui={session.ui}
+      canvas={() => canvas.current}
+      onPreview={openPreview}
+      previewTarget={previewTarget}
+      collapsed={cards.right}
+      people={
+        <>
+          {agents.presence}
+          {/* Board 41 §1: avatar stack, people list and Share (a file's, or a joined room's). */}
+          <TopbarShare
+            docKey={shareKey}
+            card
+            nodeName={(id) => {
+              const n = session.store.getNode(id)?.name
+              return typeof n === "string" ? n : null
+            }}
+            onRevealNodes={(ids) => {
+              const live = ids.filter((id) => session.store.getNode(id))
+              if (!live.length) return
+              session.ui.getState().select(live)
+              canvas.current?.zoomToFit(live, 96)
+            }}
+          />
+        </>
+      }
+    />
+  )
+
   return (
     <M3Context.Provider value={m3}>
       <ViewOnlyContext.Provider value={viewOnly}>
         <div className={viewOnly ? "editor editor--view-only" : "editor"}>
-          {doc ? (
-            <DiskTopbar
-              doc={doc}
-              pageName={pageName}
-              ui={session.ui}
-              canvas={() => canvas.current}
-              {...fileMenu}
-              onHome={() => goHome()}
-              onHomeFolder={(dir) => goHome(homeFolderPath(dir))}
-              onExport={() => {
-                setExportPreset(null)
-                setExportOpen(true)
-              }}
-              onPreview={openPreview}
-              previewTarget={previewTarget}
-              presence={agents.presence}
-            />
-          ) : (
-            <Topbar
-              fileName={name}
-              pageName={pageName}
-              syncStatus={syncStatus}
-              ui={session.ui}
-              canvas={() => canvas.current}
-              onRename={rename}
-              {...fileMenu}
-              onHome={() => goHome()}
-              onExport={() => {
-                setExportPreset(null)
-                setExportOpen(true)
-              }}
-              onPreview={openPreview}
-              previewTarget={previewTarget}
-              // Board 41 §1/§2: sync status, avatar stack, people list and Share (a library
-              // file's Share, or a joined room's).
-              shareKey={shareKey}
-            />
-          )}
           {viewOnly && <ViewOnlyBanner shared={room} />}
           {doc && (
             <BannerHost
@@ -1086,6 +1143,8 @@ function EditorShell({
           {multiplayer.banner}
           <div className="editor__body">
             <LeftPanel
+              header={leftHeader}
+              collapsed={cards.left}
               session={session}
               m3={m3}
               conflicts={conflicts}
@@ -1155,6 +1214,7 @@ function EditorShell({
                 layerNames={viewPrefs.layerNames}
                 nudge={viewPrefs.nudge}
                 wheelZoom={viewPrefs.wheelZoom}
+                fitInsets={fitInsets}
                 onLayout={layout.set}
                 agentCanvas={agentCanvas}
                 noteAuthor={agentPanel.noteAuthor}
@@ -1180,8 +1240,12 @@ function EditorShell({
                   console.warn("Kimo canvas:", e.kind === "op" ? e.message : e.error.message)
                 }}
               />
-              {agents.canvasLayer}
-              {multiplayer.canvasLayer}
+              {/* One stacking context under the side cards: the layers' own z-indexes order them
+                  among themselves, never above the cards. */}
+              <div className="editor__canvas-layers">
+                {agents.canvasLayer}
+                {multiplayer.canvasLayer}
+              </div>
               {agentPanel.modeSummary}
               {conflicts && (
                 <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />
@@ -1213,6 +1277,9 @@ function EditorShell({
               )}
             </main>
             <RightPanel
+              header={rightHeader}
+              collapsed={cards.right}
+              {...(caps.canExport ? { onExport: openExport } : {})}
               session={session}
               layout={layout}
               assets={assets}

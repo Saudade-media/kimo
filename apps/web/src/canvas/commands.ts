@@ -96,7 +96,7 @@ export function moveOps(
 
 // --- Resize -------------------------------------------------------------------------------
 
-export interface ResizeItem {
+interface ResizeItem {
   id: string
   /** World box at gesture start. */
   world: Rect
@@ -204,7 +204,7 @@ const SHAPE_NAME: Record<NameKind, string> = {
  * Default fills (the design specifies none for new shapes): frames are white artboards, shapes
  * a neutral grey that reads on both canvas modes.
  */
-export const SHAPE_FILL: Record<ShapeKind, string> = {
+const SHAPE_FILL: Record<ShapeKind, string> = {
   frame: "#FFFFFF",
   rect: "#D9D9D9",
   ellipse: "#D9D9D9",

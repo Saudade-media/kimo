@@ -29,11 +29,6 @@
  * (e) Unsupported Body SQJFF: column fill, gap 12, padding 12 — Notice xHvmD (NoticeCard)
  */
 
-/* Board 25: the panel widens with the Code tab like with the Agent tab (code needs width). */
-.right-panel.right-panel--code {
-  width: 360px;
-}
-
 .right-panel:has(> .code-tab) {
   overflow: hidden;
 }

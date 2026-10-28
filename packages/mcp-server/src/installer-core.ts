@@ -197,7 +197,6 @@ export function jsonEntry(host: HostId, launcher: Launcher): Record<string, unkn
  * explicit opt-in (`kimo mcp install --auto-approve`), so the user's interactive Codex keeps its
  * own prompts by default.
  */
-export const CODEX_TOOLS_APPROVAL_MODE = "approve"
 export const CODEX_APPROVAL_MODES = ["auto", "prompt", "writes", "approve"] as const
 export type CodexApprovalMode = (typeof CODEX_APPROVAL_MODES)[number]
 

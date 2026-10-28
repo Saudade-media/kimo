@@ -26,6 +26,7 @@ import {
   type ApprovalReason,
   type ApprovalRequest,
   approvedOutcome,
+  autoApproveRefusal,
   autoApproves,
   type ClientIdentity,
   type ClientPolicy,
@@ -459,8 +460,11 @@ async function authorizeAndRun(
   }
   if (auth.kind === "ask") {
     const now = ctx.now()
-    // Auto-approve (board 34): no prompt, no dry run; the approval is still logged.
+    // Auto-approve (board 34): no prompt, no dry run; the approval is still logged. It never
+    // widens Read only or reaches system and hidden folders (ADR 0013 Addendum 8).
     const auto = autoApproves(ctx.policy)
+    const refusal = auto ? autoApproveRefusal(ctx.policy, auth.reason) : null
+    if (refusal) return denied(refusal)
     const preview =
       options.preview && !auto
         ? await options.preview(authDef, authInput, ctx).catch(() => undefined)

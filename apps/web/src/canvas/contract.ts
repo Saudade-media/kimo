@@ -40,7 +40,7 @@ export type UiStore = ReturnType<typeof createUiStore>
 // --- Tools (board 03 "Floating Toolbar", left to right) -----------------------------------
 
 /** Toolbar tool ids, in toolbar order. */
-export const CANVAS_TOOL_IDS = [
+const CANVAS_TOOL_IDS = [
   "move",
   "frame",
   "rectangle",
@@ -217,7 +217,7 @@ export const SHAPE_SLOT_TOOLS: readonly CanvasToolSpec[] = CANVAS_TOOLS.filter(
 )
 
 /** Toolbar id for the current UI-store tool (`hand` and unmapped tools → null: none active). */
-export function toolIdFor(tool: Tool): CanvasToolId | null {
+function toolIdFor(tool: Tool): CanvasToolId | null {
   return CANVAS_TOOLS.find((t) => t.tool === tool)?.id ?? null
 }
 
@@ -231,6 +231,14 @@ export function activeToolId(tool: Tool, placement: ImagePlacement | null): Canv
 }
 
 /** M2: an image chosen with the Image tool, waiting to be placed on the canvas. */
+/** Screen px covered along each canvas edge (board 44 floating cards). */
+export interface FitInsets {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
 export interface ImagePlacement {
   kind: "image"
   /** `./assets/<hash>.<ext>` returned by `onImportImage`. */
@@ -293,7 +301,7 @@ export interface SnapBox {
 }
 
 /** Which edges of the moving box follow the pointer: all (move) or the dragged ones (resize). */
-export interface SnapEdges {
+interface SnapEdges {
   left: boolean
   right: boolean
   top: boolean
@@ -302,10 +310,9 @@ export interface SnapEdges {
 
 /**
  * Input of one snap query. Candidates are the selection's siblings (same parent, visible, not
- * selected) plus the parent box itself; the host collects them from `LayoutResult`
- * ({@link collectSnapCandidates}). Snapping considers left/center/right and top/middle/bottom
- * of the moving box against the same lines of every candidate, and equal spacing between
- * siblings in a row/column.
+ * selected) plus the parent box itself; the host collects them from `LayoutResult`. Snapping
+ * considers left/center/right and top/middle/bottom of the moving box against the same lines of
+ * every candidate, and equal spacing between siblings in a row/column.
  */
 export interface SnapQuery {
   /** World AABB of the moving selection at the raw (unsnapped) pointer position. */
@@ -331,17 +338,6 @@ export interface SnapResult {
   spacing: readonly SpacingIndicator[]
 }
 
-/** Pure snapping function (implemented in `apps/web/src/canvas/snapping.ts`; fast-check tested). */
-export type SnapFn = (query: SnapQuery) => SnapResult
-
-/** Collects snap candidates for a selection from a layout (siblings + parent; excludes the selection and hidden nodes). */
-export type CollectSnapCandidates = (
-  layout: LayoutResult,
-  selection: readonly string[],
-  parentOf: (id: string) => string | null,
-  childrenOf: (id: string | null) => readonly string[],
-) => { candidates: SnapBox[]; parent: SnapBox | null }
-
 /**
  * ⌥ measurement query (board 10 #3a/#3b). With a hovered sibling `target`: only the gap(s)
  * between `selection` and `target`, lines on the overlap's center (or the selection's center
@@ -366,7 +362,7 @@ export type MeasureFn = (query: MeasureQuery) => MeasureResult
 // --- Host ---------------------------------------------------------------------------------
 
 /** Factory for the layout engine (injected so tests can fake it). */
-export type LayoutEngineFactory = (options?: LayoutEngineOptions) => LayoutEngine
+type LayoutEngineFactory = (options?: LayoutEngineOptions) => LayoutEngine
 
 /** Errors surfaced to the shell (it shows a Toast / the WebGL fallback banner). */
 export type CanvasError =
@@ -393,7 +389,7 @@ export type CanvasError =
  * bottom-center 12 px above the floating toolbar, newest at the bottom, at most 3; danger 6 s,
  * warning 4 s, hover pauses.
  */
-export interface CanvasNotice {
+interface CanvasNotice {
   tone: "danger" | "warning"
   text: string
   action?: { label: string; run: () => void }
@@ -412,36 +408,8 @@ export const M3_TOAST_COPY = {
 
 // --- M3: instances on the canvas (boards 11, 12, 13) ------------------------------------------
 
-/**
- * Where an edit of a selected view id lands. Selection MAY hold composite ids
- * (`<instance>/<IdPath>`, `@kimo/core-schema` §9.8): property edits on them become
- * `setOverride` commands on the top instance, deletes become `hideInInstance`, moves are
- * refused unless the node is real slot content. Pure: `routeEdit(view, id)`.
- */
-export type EditTarget =
-  /** A real node: edit it directly (update/move/delete ops). */
-  | { kind: "node"; id: string }
-  /** A descendant inside an instance: `setOverride(instance, path, …)`. */
-  | { kind: "override"; instance: string; path: string }
-  /** The root of an instance: `setOverride(instance, "", { kind: "set" })` (writes `props`). */
-  | { kind: "instance-root"; instance: string }
-
-/** Pure edit routing (implemented in `apps/web/src/canvas/instances.ts`, canvas builder). */
-export type RouteEdit = (view: ExpandedView, id: string) => EditTarget | null
-
-/**
- * Click policy on instances (board 11): a click selects the top-level instance (its view id is
- * its real id); double-click or ⌘-click enters it and selects the deepest composite id under
- * the pointer, like groups. Layers rows of an instance's expanded children select composite ids.
- */
-export type InstanceHitPolicy = (
-  view: ExpandedView,
-  hits: readonly string[],
-  deep: boolean,
-) => string | null
-
 /** A component being dragged from Assets (board 13) or chosen in the quick insert. */
-export interface ComponentDrag {
+interface ComponentDrag {
   /** `of`: a local component id or `alias:id`. */
   of: string
   /** Name shown in the drag chip (`a0Jl0`: `component` glyph + name). */
@@ -459,17 +427,6 @@ export type ComponentDropTarget =
   | { kind: "slot"; instance: string; path: string; index: number; label: string }
   /** Replace an instance descendant (`orZ62`: "Replace Title in Card · Pro", icon `replace`). */
   | { kind: "replace"; instance: string; path: string; label: string }
-
-/** Pure drop-target resolution (canvas builder; tested headless). */
-export type ResolveComponentDrop = (query: {
-  view: ExpandedView
-  layout: LayoutResult
-  /** View ids under the pointer, top-most first. */
-  hits: readonly string[]
-  world: Point
-  drag: ComponentDrag
-  alt: boolean
-}) => ComponentDropTarget | null
 
 /**
  * DOM overlays the CanvasHost renders on top of the canvas for M3 (like artboard labels):
@@ -565,6 +522,11 @@ export interface CanvasHostProps {
   nudge?: { step: number; big: number }
   /** Settings › General › Canvas zoom: "mouse" zooms on a plain scroll. Default "trackpad". */
   wheelZoom?: "trackpad" | "mouse"
+  /**
+   * Board 44: screen px covered along each edge (the floating cards); Zoom to fit / selection
+   * frames content in the area left visible. Default none.
+   */
+  fitInsets?: FitInsets
   /** Icon glyph source passed to the renderer (default: the renderer's lazy provider). */
   icons?: IconProvider
   /** An armed placement changed (toolbar shows Image active while armed). */
@@ -641,7 +603,7 @@ export type CanvasAgentPersona = "agent" | "iris" | "violet" | "rose" | "ember" 
 export type CanvasAgentMarkState = "idle" | "listening" | "thinking" | "working" | "done" | "error"
 
 /** What the canvas knows about a running agent origin (`agent:kimo.<session>.<n>`). */
-export interface CanvasAgentInfo {
+interface CanvasAgentInfo {
   /** "Kimo", "Agent 2". */
   label: string
   persona: CanvasAgentPersona
@@ -651,7 +613,7 @@ export interface CanvasAgentInfo {
 }
 
 /** One enforced scope (modes ZFOQf). */
-export interface CanvasAgentScope {
+interface CanvasAgentScope {
   origin: string
   /** Scope root node ids. */
   roots: readonly string[]
@@ -662,7 +624,7 @@ export interface CanvasAgentScope {
 }
 
 /** Where an agent is working (board 36: one cursor + an outline on the section it works in). */
-export interface CanvasAgentCursor {
+interface CanvasAgentCursor {
   origin: string
   /** Node the current op targets. */
   nodeId: string
@@ -684,7 +646,7 @@ export interface CanvasAgentCursor {
 }
 
 /** A rejected op (OUT_OF_SCOPE / PERMISSION_DENIED): danger pill + target flash. */
-export interface CanvasAgentRejection {
+interface CanvasAgentRejection {
   /** Unique per rejection (re-flashes when a new key arrives). */
   key: string
   origin: string
@@ -697,14 +659,14 @@ export interface CanvasAgentRejection {
  * Board 31 "Landing flash": the top-most layers one successful agent edit changed. Board 36:
  * each new key rings their section once (3 px persona-soft, 1.2 s); the viewport never moves.
  */
-export interface CanvasAgentLanded {
+interface CanvasAgentLanded {
   key: string
   origin: string
   ids: readonly string[]
 }
 
 /** Prompt-node run state as the footer shows it (ADR 0014 §9, `@kimo/ai-agent` PromptRunState). */
-export type CanvasPromptRun = import("@kimo/ai-agent").PromptRunState
+type CanvasPromptRun = import("@kimo/ai-agent").PromptRunState
 
 export interface AgentCanvasProps {
   /** Origins that are running. */

@@ -28,7 +28,6 @@ import {
 } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useState } from "react"
 import { causeOf } from "../editor/errors"
-import { AutoApproveConfirm } from "./AutoApproveConfirm"
 import { ConfigDiffDialog } from "./ConfigDiffDialog"
 import { AgentIcon } from "./icons"
 import {
@@ -148,8 +147,6 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
   const { host, server = {}, scope = "user", project, home, machine = "this computer" } = props
   const { data, setData, loadHosts } = usePaneData(host, scope, project)
   const [expanded, setExpanded] = useState<string | null>(props.expandedClient ?? null)
-  // Board 34: turning a client's auto-approve on asks once (k0K1nN).
-  const [confirmAuto, setConfirmAuto] = useState<{ client: string; label: string } | null>(null)
   const [preview, setPreview] = useState<{
     host: McpHostId
     label: string
@@ -508,7 +505,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         {server.askBeforeDestructive && (
           <SettingRow
             label="Ask before destructive or out-of-scope ops"
-            description="Deletes of 2+ frames, edits outside a client’s files, and global changes (variables, themes) wait for approval."
+            description="For clients with Ask before changes on: deletes of 2+ frames, edits outside a client’s files, and global changes (variables, themes) wait for approval."
             control={
               <Toggle
                 checked={server.askBeforeDestructive.value}
@@ -566,9 +563,14 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                 name={c.identity.label}
                 version={c.identity.version}
                 meta={clientMeta(c, status)}
-                scope={scopeLabel(policy, c.cwd)}
+                scope={
+                  policy.autoApprove === false
+                    ? `${scopeLabel(policy, c.cwd)} · asks first`
+                    : policy.level === "read"
+                      ? "Read only"
+                      : "Full access"
+                }
                 writable={policy.level !== "read"}
-                autoApprove={policy.autoApprove === true}
                 expanded={open}
                 onClick={() => setExpanded(open ? null : c.connectionId)}
               />
@@ -578,10 +580,9 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
                   policy={policy}
                   token={server.token?.value}
                   onPolicy={(p) => void setPolicy(c.identity.client, p)}
-                  onAutoApprove={(on) => {
-                    if (on) setConfirmAuto({ client: c.identity.client, label: c.identity.label })
-                    else void setPolicy(c.identity.client, { ...policy, autoApprove: false })
-                  }}
+                  onAsk={(ask) =>
+                    void setPolicy(c.identity.client, { ...policy, autoApprove: !ask })
+                  }
                   onDisconnect={() =>
                     void host
                       .disconnect(c.connectionId)
@@ -612,17 +613,6 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         </div>
       </div>
       {dialog}
-      {confirmAuto && (
-        <AutoApproveConfirm
-          client={confirmAuto.label}
-          onConfirm={() => {
-            const policy = data.policies[confirmAuto.client] ?? DEFAULT_POLICY
-            void setPolicy(confirmAuto.client, { ...policy, autoApprove: true })
-            setConfirmAuto(null)
-          }}
-          onCancel={() => setConfirmAuto(null)}
-        />
-      )}
     </div>
   )
 }
@@ -848,18 +838,18 @@ function Permissions({
   policy,
   token,
   onPolicy,
-  onAutoApprove,
+  onAsk,
   onDisconnect,
 }: {
   connection: McpConnectionInfo
   policy: McpClientPolicy
   token?: string
   onPolicy: (p: McpClientPolicy) => void
-  /** Board 34: on asks first (the pane's confirm); off applies at once. */
-  onAutoApprove: (on: boolean) => void
+  /** "Ask before changes" (ADR 0013 Addendum 8): on brings back the approval prompts. */
+  onAsk: (ask: boolean) => void
   onDisconnect: () => void
 }) {
-  const auto = policy.autoApprove === true
+  const ask = policy.autoApprove === false
   const scope = filesScopeOf(policy, connection.cwd)
   const pid = connection.identity.pid
   const note = [
@@ -879,26 +869,30 @@ function Permissions({
           onChange={(level) => onPolicy({ ...policy, level })}
         />
       </div>
-      <div className="agents-perms__row">
-        <span className="agents-perms__label">Files</span>
-        <SegmentedText<FilesScope>
-          label="Files"
-          options={FILES_OPTIONS}
-          value={scope}
-          onChange={(s) => onPolicy({ ...policy, files: filesForScope(s, connection.cwd) })}
-        />
-        {connection.cwd && (
-          <span className="agents-perms__folder">{tildePath(connection.cwd)}/</span>
-        )}
-      </div>
-      {/* Board 34 Perm · Auto-approve (YsgKV / P1NeQ): Label · Toggle · Note. */}
+      {/* Files only limits a client that asks first; a trusted one reaches any file but system and
+          hidden folders (ADR 0013 Addendum 8). */}
+      {ask && (
+        <div className="agents-perms__row">
+          <span className="agents-perms__label">Files</span>
+          <SegmentedText<FilesScope>
+            label="Files"
+            options={FILES_OPTIONS}
+            value={scope}
+            onChange={(s) => onPolicy({ ...policy, files: filesForScope(s, connection.cwd) })}
+          />
+          {connection.cwd && (
+            <span className="agents-perms__folder">{tildePath(connection.cwd)}/</span>
+          )}
+        </div>
+      )}
+      {/* Board 34 Perm row (YsgKV / P1NeQ), now "Ask before changes": Label · Toggle · Note. */}
       <div className="agents-perms__row" data-testid="agents-perms-auto">
-        <span className="agents-perms__label">Auto-approve</span>
-        <Toggle checked={auto} label="Auto-approve" onChange={(on) => onAutoApprove(on)} />
-        <span className={`agents-perms__auto-note${auto ? " agents-perms__auto-note--on" : ""}`}>
-          {auto
-            ? "On: every request is approved without asking"
-            : "Off: anything outside its permissions asks first"}
+        <span className="agents-perms__label">Ask first</span>
+        <Toggle checked={ask} label="Ask before changes" onChange={(on) => onAsk(on)} />
+        <span className="agents-perms__auto-note">
+          {ask
+            ? "On: anything outside its permissions asks first"
+            : "Off: every request runs without asking"}
         </span>
       </div>
       <div className="agents-perms__footer">
@@ -916,16 +910,4 @@ function Permissions({
       </div>
     </div>
   )
-}
-
-/** Minimal line diff for the preview (removed "- ", added "+ "). */
-export function diffLines(before: string | null, after: string | null): string {
-  const a = (before ?? "").split("\n")
-  const b = (after ?? "").split("\n")
-  const out: string[] = []
-  const inA = new Set(a)
-  const inB = new Set(b)
-  for (const line of a) if (!inB.has(line) && line) out.push(`- ${line}`)
-  for (const line of b) out.push(`${inA.has(line) ? "  " : "+ "}${line}`)
-  return out.join("\n").trimEnd()
 }

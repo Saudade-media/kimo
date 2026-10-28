@@ -37,7 +37,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * (loader-circle), Sharing N images (arrow-up, section 8 E), Reconnecting… (Paused, refresh-cw),
  * Offline · edits kept (ReadOnly, wifi-off), View only (ReadOnly, eye).
  */
-export function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusView {
+function syncStatusView(relay: RelayStatus, uploading = 0): SyncStatusView {
   switch (relay) {
     case "synced":
       return {
@@ -158,13 +158,6 @@ export function sharePopoverStage(
 ): SharePopoverStage {
   if (share.status === "live" && share.owner) return "live"
   return relayUrl ? "ready" : "first-run"
-}
-
-/** Connection meta: "relay.maya.studio · 5 people here". */
-export function connectionMeta(relayHost: string | null, othersOnline: number): string {
-  const here =
-    othersOnline === 0 ? "nobody else here" : `${plural(othersOnline, "person", "people")} here`
-  return relayHost ? `${relayHost} · ${here}` : here
 }
 
 export const EXPIRY_LABEL: Record<ExpiryChoice, string> = {

@@ -48,6 +48,7 @@ import {
   type RelayInfo,
   type Role,
   randomBytes,
+  relayLink,
   sealSnapshot,
   shippedFontSource,
   signAdminCommand,
@@ -79,9 +80,6 @@ import {
   type OwnedRoom,
   type Registry,
 } from "./registry"
-
-export type { AssetSync, AssetSyncState } from "./asset-sync"
-export type { IssuedLink, JoinedRoom, OwnedRoom } from "./registry"
 
 export interface ShareTarget {
   /** Stable local key of the document: the file path on desktop, the file id on web. */
@@ -131,7 +129,7 @@ export interface SweepResult {
 }
 
 /** What preparing the document for a room changed (spec §16.1 step 3). */
-export interface PrepareResult {
+interface PrepareResult {
   /** Manifest entries that gained a `sha256`. */
   hashed: number
   /** Shader sources rewritten to hash-named assets. */
@@ -165,8 +163,11 @@ export interface ShareServiceDeps {
   registry?: Registry
   fetch?: typeof fetch
   WebSocket?: NetworkProviderOptions["WebSocket"]
-  /** Base for join links. Default `location.origin` on web, `kimo:` on desktop. */
-  webOrigin: string
+  /**
+   * Base for join and pairing links. Default: each room's relay, which serves `/join` (board 45),
+   * so one browser link opens in Kimo or in any browser.
+   */
+  webOrigin?: string
   /**
    * Creates the store and asset store a guest room lives in. `binding` ties them to the relay
    * and room key they were joined with (see {@link roomBinding}): name the asset store with it.
@@ -208,7 +209,7 @@ export interface ShareServiceDeps {
 }
 
 /** The timer functions the share service schedules with. */
-export interface ShareTimers {
+interface ShareTimers {
   setTimeout(fn: () => void, ms: number): unknown
   clearTimeout(handle: unknown): void
 }
@@ -347,7 +348,7 @@ function fontFamilies(doc: KimoDocument): string[] {
  * cursor and a guest's asset store are named with it, so a link that carries the same room id
  * with another relay or key can never read or push a replica that belongs to the real room.
  */
-export async function roomBinding(relayUrl: string, roomKey: Uint8Array): Promise<string> {
+async function roomBinding(relayUrl: string, roomKey: Uint8Array): Promise<string> {
   const text = new TextEncoder().encode(`${relayUrl}\0`)
   const joined = new Uint8Array(text.length + roomKey.length)
   joined.set(text)
@@ -357,7 +358,7 @@ export async function roomBinding(relayUrl: string, roomKey: Uint8Array): Promis
 }
 
 /** The sync-cursor key of a room under a binding. */
-export const cursorKey = (room: string, binding: string) => `${room}.${binding}`
+const cursorKey = (room: string, binding: string) => `${room}.${binding}`
 
 /** `JSON.stringify` with object keys sorted, so equal documents hash equally. */
 function stableJson(value: unknown): string {
@@ -373,7 +374,7 @@ function stableJson(value: unknown): string {
 }
 
 /** Hash of a document's content, for telling whether the file changed since it was saved. */
-export async function documentHash(doc: KimoDocument): Promise<string> {
+async function documentHash(doc: KimoDocument): Promise<string> {
   const bytes = new TextEncoder().encode(stableJson(doc))
   return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)))
 }
@@ -442,7 +443,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
         ? createMemoryDeviceKeyStore()
         : createIndexedDbDeviceKeyStore()),
     deviceName: deps.deviceName ?? (() => "Kimo"),
-    webOrigin: deps.webOrigin,
+    ...(deps.webOrigin !== undefined ? { webOrigin: deps.webOrigin } : {}),
     now,
     ...(deps.fetch ? { fetch: deps.fetch } : {}),
   })
@@ -530,7 +531,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       ...(options.label !== undefined ? { label: options.label } : {}),
       ...(options.self ? { self: true } : {}),
       link: formatJoinLink({
-        webOrigin: deps.webOrigin,
+        webOrigin: deps.webOrigin ?? owned.relayUrl,
         relayUrl: owned.relayUrl,
         room: owned.room,
         token,
@@ -1226,7 +1227,10 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
 
     async listLinks(room) {
       const owned = await requireOwned(room)
-      return owned.links.filter((l) => !l.self).map((l) => ({ ...l }))
+      // Links minted before board 45 carry `kimo:` or another origin: show the relay's.
+      return owned.links
+        .filter((l) => !l.self)
+        .map((l) => ({ ...l, link: deps.webOrigin === undefined ? relayLink(l.link) : l.link }))
     },
 
     async revokeLink(room, jti) {

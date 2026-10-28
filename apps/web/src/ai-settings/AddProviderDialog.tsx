@@ -33,7 +33,7 @@ import "./polish.css"
 
 type ProviderType = AddProviderInput["type"]
 
-export const ADD_PROVIDER_TYPES: { value: ProviderType; label: string }[] = [
+const ADD_PROVIDER_TYPES: { value: ProviderType; label: string }[] = [
   { value: "custom", label: "Custom endpoint (OpenAI-compatible)" },
   { value: "openai", label: "OpenAI" },
   { value: "gemini", label: "Google Gemini" },
@@ -62,7 +62,7 @@ const DESC: Record<ProviderType, string> = {
 }
 
 /** Local runtimes need no key (Ollama, LM Studio on localhost). */
-export function isLocalUrl(url: string): boolean {
+function isLocalUrl(url: string): boolean {
   try {
     const h = new URL(url).hostname
     return h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "::1"
@@ -72,7 +72,7 @@ export function isLocalUrl(url: string): boolean {
 }
 
 /** Add is enabled once Name + Base URL + key are valid (board 25 vwFWh). */
-export function addProviderValid(d: {
+function addProviderValid(d: {
   type: ProviderType
   label: string
   baseURL: string
@@ -412,7 +412,7 @@ export function AddProviderDialog({ ctl, backend, os, onAdded, onCancel }: AddPr
 }
 
 /** "Saved to macOS Keychain · kimo/provider.custom:acme-gateway" (F1hbeP xawMn). */
-export function savedTo(
+function savedTo(
   providerId: string,
   backend: "keychain" | "localStorage" | "memory",
   os: string,

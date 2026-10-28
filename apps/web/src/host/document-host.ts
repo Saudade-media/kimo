@@ -95,7 +95,7 @@ interface Relay {
 }
 
 /** What a window sends with `agentCall`: the agent's identity and policy (ADR 0014 §5). */
-export interface AgentCallSpec {
+interface AgentCallSpec {
   /** `agent:kimo.<session>.<n>`. */
   origin: `agent:${string}`
   /** "Kimo", "Agent 2". */
@@ -124,7 +124,7 @@ export interface DocumentHostService {
  * kimo_history undo / redo result → the activity log's answer. REVISION_CONFLICT: the group is
  * not on top of the agent's stack (newer edits first), which is not a lost connection.
  */
-export function historyResult(r: {
+function historyResult(r: {
   ok: boolean
   data?: unknown
   errors?: readonly { code: string; message?: string }[]
@@ -150,7 +150,7 @@ function readOnlyReasonOf(s: FileDocumentSession): string | null {
 }
 
 /** Activity store over the Tauri commands, falling back to memory (browser, tests). */
-export function bridgeActivityStore(bridge: HostBridge): ActivityStore {
+function bridgeActivityStore(bridge: HostBridge): ActivityStore {
   const mem = createMemoryActivityStore()
   let tauri = true
   return {

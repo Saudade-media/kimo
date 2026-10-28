@@ -1,20 +1,19 @@
 /**
  * Editor pieces for a `.kimo` on disk (ADR 0012 §4, boards 16–18): the document session's
- * conflict session, the desktop topbar (Topbar/Desktop XDqrb) with the File menu under the
- * breadcrumb's file name, and the deep-link node focus.
+ * conflict session, the save status of the left card header (board 44, replacing board 16's
+ * desktop topbar), and the deep-link node focus.
  */
 import { basenameOf, dirnameOf } from "@kimo/platform"
-import { type ReactNode, useCallback, useEffect, useRef, useSyncExternalStore } from "react"
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react"
 import type { CanvasHandle, UiStore } from "../canvas/contract"
 import type { EditorConflictSession } from "../conflicts"
-import { FileTopbar } from "../files"
+import { useSessionState } from "../files/hooks"
 import { SaveStatusPill } from "../files/SaveStatusPill"
-import { TopbarShare, TopbarSyncStatus } from "../multiplayer/ui/TopbarShare"
+import { TopbarSyncStatus } from "../multiplayer/ui/TopbarShare"
 import { hasUnsavedChanges, isEdited, type SessionState, windowTitle } from "../platform/contract"
 import type { FileDocumentSession } from "../platform/session"
-import type { FileMenuActions } from "./FileMenu"
+import { LeftCardHeader, type LeftCardHeaderProps } from "./CardHeaders"
 import { fitPage } from "./fit"
-import { TopbarTrailing, useFileMenu } from "./Topbar"
 
 const NO_SUBSCRIBE = () => () => {}
 
@@ -33,79 +32,47 @@ export function useConflicts(doc: FileDocumentSession | null): EditorConflictSes
   )
 }
 
-export interface DiskTopbarProps extends FileMenuActions {
-  doc: FileDocumentSession
-  pageName: string
-  ui: UiStore
-  canvas: () => CanvasHandle | null
-  onExport(): void
-  onPreview(): void
-  /** Board 27 §9 (b): see `TopbarProps.previewTarget`. */
-  previewTarget?: string | null
-  onHome(): void
-  /** Board 37 (E3): the folder crumb opens Home on that folder's section. */
-  onHomeFolder?: (dir: string) => void
-  /** Board 21 Agent Presence (drag region, before Save Status). */
-  presence?: ReactNode
+/** The file name and save status kind of `doc` (the left card header's). */
+function useDiskHeaderState(doc: FileDocumentSession): {
+  fileName: string
+  saveStatus: string
+} {
+  const state = useSessionState(doc)
+  return { fileName: state.fileName, saveStatus: state.saveStatus.kind }
 }
 
 /**
- * Board 16 f6gZ3 topbar: inset (or the KimoLogo off macOS) · breadcrumb · branch · drag region ·
- * SaveStatus · trailing. The breadcrumb's file name opens the board 20 File menu (A1jsC).
+ * Board 44: the Save Status pill (XDqrb > Oxn3z, with its tooltip and Locked popover) in the
+ * left card header, only while it needs attention: nothing while the file is saved to disk.
  */
-export function DiskTopbar({
+function DiskSaveStatus({ doc }: { doc: FileDocumentSession }) {
+  const { saveStatus } = useDiskHeaderState(doc)
+  return saveStatus === "saved" ? null : <SaveStatusPill session={doc} />
+}
+
+/**
+ * Board 44 Left Card header for a file on disk: its file name and, in the status slot, the
+ * shared file's sync status (board 41 §2) or else the Save Status pill, each only while it
+ * needs attention.
+ */
+export function DiskLeftCardHeader({
   doc,
-  pageName,
-  ui,
-  canvas,
-  onExport,
-  onPreview,
-  previewTarget,
-  onHome,
-  onHomeFolder,
-  presence,
-  ...menu
-}: DiskTopbarProps) {
-  const fileMenu = useFileMenu({ ...menu, onHome })
+  ...props
+}: Omit<LeftCardHeaderProps, "fileName" | "saveStatus" | "status"> & { doc: FileDocumentSession }) {
+  const { fileName, saveStatus } = useDiskHeaderState(doc)
   return (
-    <>
-      <FileTopbar
-        session={doc}
-        page={pageName}
-        fileOpen={fileMenu.open}
-        onHome={onHome}
-        {...(onHomeFolder ? { onFolderClick: onHomeFolder } : {})}
-        onFileClick={(e) => fileMenu.toggle(e.currentTarget)}
-        presence={presence}
-        // Board 41 §1/§2: sync status in the Save Status slot while shared, Share after Theme.
-        status={<TopbarSyncStatus docKey={doc.ref} fallback={<SaveStatusPill session={doc} />} />}
-        trailing={
-          <TopbarTrailing
-            ui={ui}
-            canvas={canvas}
-            onPreview={onPreview}
-            onExport={onExport}
-            previewTarget={previewTarget}
-            share={
-              <TopbarShare
-                docKey={doc.ref}
-                nodeName={(id) => {
-                  const name = doc.store.getNode(id)?.name
-                  return typeof name === "string" ? name : null
-                }}
-                onRevealNodes={(ids) => {
-                  const live = ids.filter((id) => doc.store.getNode(id))
-                  if (!live.length) return
-                  ui.getState().select(live)
-                  canvas()?.zoomToFit(live, 96)
-                }}
-              />
-            }
-          />
-        }
-      />
-      {fileMenu.menu}
-    </>
+    <LeftCardHeader
+      {...props}
+      fileName={fileName}
+      saveStatus={saveStatus}
+      status={
+        <TopbarSyncStatus
+          docKey={doc.ref}
+          quietWhenSynced
+          fallback={<DiskSaveStatus doc={doc} />}
+        />
+      }
+    />
   )
 }
 
@@ -144,7 +111,7 @@ export function useFocusNode(
 }
 
 /** The folder named in the window title: the repository's, else the containing folder's. */
-export function titleFolder(state: SessionState): string {
+function titleFolder(state: SessionState): string {
   return state.git?.repoRoot ? basenameOf(state.git.repoRoot) : basenameOf(dirnameOf(state.ref))
 }
 

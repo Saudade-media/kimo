@@ -12,7 +12,7 @@ import { useSessionState } from "./hooks"
 import { LockDetailsPopover } from "./LockDetailsPopover"
 
 /** Tooltip text per status (saved: time + path; failed: the error). */
-export function statusTooltip(s: Status, ref: string): string {
+function statusTooltip(s: Status, ref: string): string {
   if (s.kind === "saved") return savedTooltip(formatClock(s.savedAt), displayPath(s.ref || ref))
   if (s.kind === "failed") return s.failure.message
   if (s.kind === "unsaved" && s.target === "recovery") return "Autosave goes to a recovery file"

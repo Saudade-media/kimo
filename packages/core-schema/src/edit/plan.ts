@@ -210,11 +210,6 @@ export function mapJson(
   return fn(v, key)
 }
 
-/** Deep JSON equality. */
-export function same(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b)
-}
-
 /** Node table as plain records. */
 export function nodeTable(doc: KimoDocument): Record<string, Record<string, unknown>> {
   return doc.nodes as unknown as Record<string, Record<string, unknown>>

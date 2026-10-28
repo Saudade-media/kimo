@@ -37,7 +37,7 @@ import { pathHash } from "../io"
 import { createFallbackHandlers, createFallbackHost } from "./fallback"
 import { canonical, createNodePlatform } from "./node-platform"
 
-export const CLI_VERSION = "1.0.0"
+export const CLI_VERSION = "1.2.0"
 
 export interface HeadlessOptions {
   kimoHome: string

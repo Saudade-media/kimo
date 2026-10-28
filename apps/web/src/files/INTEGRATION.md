@@ -30,10 +30,7 @@ Mount in `editor/Editor.tsx`, top to bottom:
 
 | Piece | Mount | Notes |
 |---|---|---|
-| `<FileTopbar session page={pageName} trailing={…} />` | replaces the topbar row on desktop (`platform.kind === "desktop"`), or compose the pieces below into `editor/Topbar.tsx` | trailing = existing Zoom, Theme, Preview, Export |
-| `<TrafficLightInset session />` | first child of `editor/Topbar.tsx` if the existing topbar is kept | width from `platform.window.trafficLightInset()` (68 / 4 / 0); lights drawn only off-desktop |
-| `<FileBreadcrumb session page onFileClick />` | `editor/Topbar.tsx`, replacing the logo + file name on desktop | file weight 500 while unfocused |
-| `<FileBranchChip session />` | right after the breadcrumb | renders nothing outside a repo |
+| `<TrafficLightInset session />` | first child of `editor/Topbar.tsx` | width from `platform.window.trafficLightInset()` (68 / 4 / 0); lights drawn only off-desktop |
 | `<SaveStatusPill session />` | `editor/Topbar.tsx`, where the IndexedDB `CloudCheck` status sits today | tooltip "Saved 10:42:18 · ~/…" + ⌘S; Locked opens `LockDetailsPopover` |
 | `<BannerHost session />` | directly under the topbar, full width, above the 3-column body | one banner, `pickBanner` priority |
 | `<FailedLoadView session />` | in place of the canvas when `state.phase === "failed-load"` (it renders null otherwise); hide panels' editing affordances | terminal: no save / autosave / recovery |
@@ -64,8 +61,8 @@ start (Home or the first editor window). It renders nothing when no crashed entr
 | `<RecentFilesHeader folderCount view onViewChange />` | replaces `.home-files-header` for on-disk files |
 | `<RecentFilesList files now onOpen onMenu />` / `<RecentFilesGrid files folders now onOpen />` | the list / grid body |
 
-Data: `const { files, folders } = useRecents(platform)`; `const now = useNow()`. Opening a row:
-`manager.open(file.ref, { source: "home" })`.
+Data: `platform.recents.listFiles()` / `listFolders()`, refreshed on `recents.onChange`;
+`const now = useNow()`. Opening a row: `manager.open(file.ref, { source: "home" })`.
 
 ## 5. Styles
 
@@ -80,7 +77,5 @@ is mounted in `packages/ui/src/gallery/Gallery.tsx` after `GalleryM3`.
 
 ## 7. Tests
 
-- `apps/web/test/m4-session.test.ts` (memory platform: every board 17 path).
-- `packages/ui/test/m4-files.test.ts`, `packages/sync/test/sha256.test.ts`.
-- `apps/web/e2e/m4-files.e2e.ts`: builds `src/files/harness` (its own Vite input, output in the
-  OS temp dir) and runs 12 scenarios + the measured pass. `bun run --filter @kimo/web e2e m4-files`.
+- `apps/web/test/files/` (session layer on the memory platform: opening, autosave, recovery,
+  external edits, merge conflicts), `packages/sync/test/sha256.test.ts`.

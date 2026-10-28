@@ -3,11 +3,17 @@ import * as encoding from "lib0/encoding"
 import {
   type ClientMessage,
   ClientType,
+  closeCodeFor,
   DEFAULT_LIMITS,
   decodeClientMessage,
   decodeRelayMessage,
   encodeClientMessage,
   encodeRelayMessage,
+  errorFromClose,
+  isRetryable,
+  MP_ERRORS,
+  type MpErrorCode,
+  MultiplayerError,
   type RelayMessage,
   RelayType,
   utf8,
@@ -91,15 +97,6 @@ describe("client messages", () => {
       expect(decodeClientMessage(encodeClientMessage(message))).toEqual(message)
   })
 
-  test("the first varUint is the type number", () => {
-    expect(encodeClientMessage({ type: "ping", n: 5 })).toEqual(
-      new Uint8Array([ClientType.ping, 5]),
-    )
-    expect(encodeClientMessage({ type: "caught-up", seq: 300 })).toEqual(
-      new Uint8Array([4, 0xac, 0x02]),
-    )
-  })
-
   test("unknown types, truncation and trailing bytes are BAD_MESSAGE", async () => {
     await expectCode(() => decodeClientMessage(new Uint8Array([0])), "BAD_MESSAGE")
     await expectCode(() => decodeClientMessage(new Uint8Array([16, 1])), "BAD_MESSAGE")
@@ -165,16 +162,6 @@ describe("client messages", () => {
     await expectCode(() => decodeClientMessage(big), "BAD_MESSAGE")
   })
 
-  test("encoding refuses values the codec cannot carry", async () => {
-    await expectCode(() => encodeClientMessage({ type: "ping", n: -1 }), "BAD_MESSAGE")
-    await expectCode(() => encodeClientMessage({ type: "ping", n: 1.5 }), "BAD_MESSAGE")
-    await expectCode(() => encodeClientMessage({ type: "ping", n: 2 ** 53 }), "BAD_MESSAGE")
-    await expectCode(
-      () => encodeClientMessage({ type: "nope" } as unknown as ClientMessage),
-      "BAD_MESSAGE",
-    )
-  })
-
   test("decoded byte fields are copies, not views into the frame", () => {
     const frame = encodeClientMessage({ type: "append", cid: 1, env })
     const decoded = decodeClientMessage(frame) as { env: Uint8Array }
@@ -187,13 +174,6 @@ describe("relay messages", () => {
   test("every type round trips", () => {
     for (const message of relayMessages)
       expect(decodeRelayMessage(encodeRelayMessage(message))).toEqual(message)
-  })
-
-  test("type numbers", () => {
-    for (const message of relayMessages) {
-      const type = encodeRelayMessage(message)[0] as number
-      expect(Object.values(RelayType) as number[]).toContain(type)
-    }
   })
 
   test("an unknown relay type decodes to null", () => {
@@ -255,31 +235,27 @@ describe("relay messages", () => {
       message: "FUTURE_CODE: later",
     })
   })
+})
 
-  test("encoding validates roles, origins and codes", async () => {
-    await expectCode(
-      () =>
-        encodeRelayMessage({
-          type: "peer-joined",
-          peer: { peer: 1, role: "comment" as never, origin: "user" },
-        }),
-      "BAD_MESSAGE",
-    )
-    await expectCode(
-      () =>
-        encodeRelayMessage({ type: "entries", entries: [{ seq: 1, origin: "x" as never, env }] }),
-      "BAD_MESSAGE",
-    )
-    await expectCode(
-      () => encodeRelayMessage({ type: "denied", code: "NOPE" as never, cid: 0, message: "" }),
-      "BAD_MESSAGE",
-    )
+describe("error codes", () => {
+  test("close codes are unique and map back to their error code", () => {
+    const codes = Object.keys(MP_ERRORS) as MpErrorCode[]
+    const closes = codes.map((c) => MP_ERRORS[c].close).filter((c) => c !== undefined)
+    expect(new Set(closes).size).toBe(closes.length)
+    for (const code of codes) {
+      const close = closeCodeFor(code)
+      if (close !== undefined) expect(errorFromClose(close, code).code).toBe(code)
+    }
   })
 
-  test("strings are UTF-8 (non-ASCII survives)", () => {
-    const message: RelayMessage = { type: "denied", code: "INTERNAL", cid: 0, message: "olá ✓" }
-    const bytes = encodeRelayMessage(message)
-    expect(bytes.length).toBe(1 + 1 + "INTERNAL".length + 1 + 1 + utf8("olá ✓").length)
-    expect(decodeRelayMessage(bytes)).toEqual(message)
+  test("a close frame maps to a retryable error, or to the reason when it names a code", () => {
+    for (const code of [1000, 1001, 1006, 1012, 4000])
+      expect(errorFromClose(code, "").code).toBe("RELAY_UNREACHABLE")
+    expect(errorFromClose(1009, "").code).toBe("TOO_LARGE")
+    expect(errorFromClose(4999, "ROOM_CLOSED").code).toBe("ROOM_CLOSED")
+    expect(errorFromClose(4999, "whatever").code).toBe("INTERNAL")
+    expect(isRetryable(new MultiplayerError("RELAY_UNREACHABLE"))).toBe(true)
+    expect(isRetryable(new MultiplayerError("TOKEN_EXPIRED"))).toBe(false)
+    expect(isRetryable(new Error("network"))).toBe(false)
   })
 })

@@ -93,7 +93,7 @@ export function desktopRegistryPath(kimoHome: string): string {
  * host owns the shared files there, and only it writes this file); elsewhere undefined, so the
  * share service keeps it in IndexedDB.
  */
-export function registryFor(platform: Pick<KimoPlatform, "kind" | "kimoHome" | "files">) {
+function registryFor(platform: Pick<KimoPlatform, "kind" | "kimoHome" | "files">) {
   if (platform.kind !== "desktop" || !platform.kimoHome) return undefined
   return createRegistry(fileRegistryBackend(platform.files, desktopRegistryPath(platform.kimoHome)))
 }
@@ -122,7 +122,7 @@ function deviceUserId(): string {
   }
 }
 
-export interface PlatformShareDeps {
+interface PlatformShareDeps {
   platform: KimoPlatform
   /** Test seam: the underlying service. Default: built from `platform`. */
   service?: ShareService
@@ -213,16 +213,12 @@ export interface PlatformShare {
 
 export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
   const { platform } = deps
-  const origin =
-    deps.serviceDeps?.webOrigin ??
-    (platform.kind === "desktop" ? "kimo:" : typeof location === "object" ? location.origin : "")
   const registry =
     deps.serviceDeps?.registry ??
     (deps.registry === "indexeddb" ? undefined : (deps.registry ?? registryFor(platform)))
   const service =
     deps.service ??
     createShareService({
-      webOrigin: origin,
       openGuestDocument: async (room, binding) => ({
         store: createDocStore(),
         assets: createAssetStore(`room-${room}-${binding}`),
@@ -274,6 +270,8 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
   /** Rooms this device owns (their presence says so: the people list puts the owner first). */
   const owners = new Set<string>()
   const targets = new Map<string, ShareableSession>()
+  /** One `shareSession` run per file at a time (see there). */
+  const sharing = new Map<string, Promise<unknown>>()
   const presenceListeners = new Set<(room: string, change: PresenceChange) => void>()
   const statusListeners = new Set<(room: string, event: SyncStatusEvent) => void>()
   const sessionListeners = new Set<() => void>()
@@ -370,6 +368,39 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
     }
   }
 
+  const shareOnce: PlatformShare["shareSession"] = async (session, relayUrl, options = {}) => {
+    const url = relayUrl ?? self.relayUrl()
+    if (!url)
+      throw new MultiplayerError(
+        "BAD_RELAY_URL",
+        "set a relay URL first: Kimo has no default relay",
+      )
+    assertRelayReachable(platform, url)
+    const target = targetFor(session, options.assets)
+    const summary = await service.startSharing(target, { relayUrl: url })
+    // `startSharing` connected a session; the registry-backed `connect` returns the tracked one.
+    const live =
+      sessions.get(summary.room) ?? track(await service.connect(target, summary.room), true)
+    targets.set(live.room, session)
+    const ttl = options.ttlSeconds ?? null
+    // Reuse only links the relay still takes: this key generation and not expired.
+    const nowS = Math.floor(Date.now() / 1000)
+    const existing = summary.links.filter(
+      (l) =>
+        !l.self &&
+        !l.revoked &&
+        l.kid === summary.kid &&
+        (l.exp === 0 || l.exp > nowS + REUSE_MARGIN_S),
+    )
+    const view =
+      existing.find((l) => l.role === "view") ??
+      (await service.mintLink(summary.room, { role: "view", ttlSeconds: ttl }))
+    const edit =
+      existing.find((l) => l.role === "edit") ??
+      (await service.mintLink(summary.room, { role: "edit", ttlSeconds: ttl }))
+    return { room: summary.room, relayUrl: summary.relayUrl, view, edit }
+  }
+
   const self: PlatformShare = {
     service,
 
@@ -382,37 +413,21 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
       return next
     },
 
-    async shareSession(session, relayUrl, options = {}) {
-      const url = relayUrl ?? self.relayUrl()
-      if (!url)
-        throw new MultiplayerError(
-          "BAD_RELAY_URL",
-          "set a relay URL first: Kimo has no default relay",
-        )
-      assertRelayReachable(platform, url)
-      const target = targetFor(session, options.assets)
-      const summary = await service.startSharing(target, { relayUrl: url })
-      // `startSharing` connected a session; the registry-backed `connect` returns the tracked one.
-      const live =
-        sessions.get(summary.room) ?? track(await service.connect(target, summary.room), true)
-      targets.set(live.room, session)
-      const ttl = options.ttlSeconds ?? null
-      // Reuse only links the relay still takes: this key generation and not expired.
-      const nowS = Math.floor(Date.now() / 1000)
-      const existing = summary.links.filter(
-        (l) =>
-          !l.self &&
-          !l.revoked &&
-          l.kid === summary.kid &&
-          (l.exp === 0 || l.exp > nowS + REUSE_MARGIN_S),
+    shareSession(session, relayUrl, options = {}) {
+      // Serialized per file, links included: a second Start sharing (a double click, or the
+      // popover and the wizard both starting) reuses the first run's view and edit links instead
+      // of each run finding none yet and minting its own pair.
+      const prev = sharing.get(session.ref) ?? Promise.resolve()
+      const run = prev.then(
+        () => shareOnce(session, relayUrl, options),
+        () => shareOnce(session, relayUrl, options),
       )
-      const view =
-        existing.find((l) => l.role === "view") ??
-        (await service.mintLink(summary.room, { role: "view", ttlSeconds: ttl }))
-      const edit =
-        existing.find((l) => l.role === "edit") ??
-        (await service.mintLink(summary.room, { role: "edit", ttlSeconds: ttl }))
-      return { room: summary.room, relayUrl: summary.relayUrl, view, edit }
+      const tail = run.catch(() => undefined)
+      sharing.set(session.ref, tail)
+      void tail.then(() => {
+        if (sharing.get(session.ref) === tail) sharing.delete(session.ref)
+      })
+      return run
     },
 
     noteSaved: (session, doc) =>

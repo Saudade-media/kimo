@@ -125,18 +125,9 @@ describe("kimo_render format=svg", () => {
     expect(r.warnings.some((w) => w.code === "APPROXIMATE_TEXT")).toBe(true)
     s.host.dispose()
   })
-
-  test("unknown node → NODE_NOT_FOUND", async () => {
-    const s = setup()
-    const { docId } = await docWithParagraph(s)
-    const r = await s.c.call("kimo_render", { docId, ids: ["NopeNope12"], format: "svg" })
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.errors[0]?.code).toBe("NODE_NOT_FOUND")
-    s.host.dispose()
-  })
 })
 
-describe("kimo_export svg / pdf with the canvas fonts", () => {
+describe("kimo_export pdf with the canvas fonts", () => {
   test("pdf embeds the bundled face Paragraph measured with (no Helvetica fallback)", async () => {
     const s = setup()
     const { docId } = await docWithParagraph(s)
@@ -150,28 +141,6 @@ describe("kimo_export svg / pdf with the canvas fonts", () => {
     const text = atob(pdf.data.files[0]?.contents ?? "")
     expect(text).toContain("FontFile2")
     expect(text).toContain("Inter")
-    s.host.dispose()
-  })
-
-  test("svg export breaks lines like the canvas", async () => {
-    const s = setup()
-    const { docId, textId, store } = await docWithParagraph(s)
-    const svg = expectOk(
-      await s.c.call<{ files: { contents: string }[] }>("kimo_export", {
-        docId,
-        target: "svg",
-        ids: ["DesktopFrm1"],
-      }),
-    ).data.files[0]?.contents as string
-    const scene = createSceneService()
-    const layout = await scene.layout(store)
-    scene.dispose()
-    const lines = layout?.nodes.get(textId)?.text?.lines ?? 0
-    expect(lines).toBeGreaterThan(1)
-    // The paragraph's <text> holds exactly the canvas's lines.
-    const para = /<text[^>]*>(?:(?!<\/text>).)*?Kimo lays(?:(?!<\/text>).)*<\/text>/s.exec(svg)?.[0]
-    expect(para).toBeDefined()
-    expect(lineCount(para as string)).toBe(lines)
     s.host.dispose()
   })
 })

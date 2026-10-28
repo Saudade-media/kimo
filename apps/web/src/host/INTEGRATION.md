@@ -34,14 +34,12 @@ editor window ◀─kimo://host-session-state / host-focus───────�
 - Undo per origin: user edits carry `origin: "user"` on the window's replica, and agent edits
   arrive there as `remote:mcp:<client>.<session>`. The window's ⌘Z therefore only undoes the
   user's edits, and an agent's `kimo_history undo` only undoes that agent's own edits. The
-  e2e `m5-host` and `test/m5-host.test.ts` prove both.
+  `test/agent/host.test.ts` proves both.
 
 ## Mount points for the editor and the Agents UI (builder 4 / lead)
 
 ```ts
-import { getHostClient } from "../host"   // null in the browser and in tests
-
-const host = getHostClient()
+const host = runtime.hostClient   // set by createAppRuntime (connectWindowToHost); null in the browser and in tests
 
 // kimo_focus: select and/or zoom the requested nodes in the window that shows `ref`.
 useEffect(() => host?.onFocus(({ ref, ids, select, zoom }) => {
@@ -68,11 +66,9 @@ prompt with `emitTo("document-host", "kimo://mcp-approval-answer", {id, choice})
 gets no answer within 2 minutes, the call fails with PERMISSION_DENIED. "Allow for this session"
 remembers op kinds only; a `session` answer to a file or scope prompt counts as `once`.
 Settings broadcasts `kimo://mcp-policy-changed` (`{client, policy}`) after `policies.set`: the host
-applies it to that client's live connections and, with `autoApprove` on (board 34), resolves its
-pending prompts as `auto`; other windows update their presence pill (`policies.onChange`).
-
-Optional cleanup: `main.tsx` could branch on `isHostRoute(location.hash)` before rendering. This
-is not required, because `createAppRuntime` never resolves for `#/host`.
+applies it to that client's live connections and, with `autoApprove` on (board 34; the default
+since ADR 0013 Addendum 8), resolves its pending prompts as `auto`; other windows update their
+policy view (`policies.onChange`).
 
 ## Rust contract used (builder 1)
 
@@ -115,17 +111,12 @@ activity log, `kimo_get_state.agents`, pause and `agentUndo`; its edits reach th
 
 ## Tests
 
-- `test/m5-host.test.ts`:
+- `test/agent/host.test.ts`:
   - the host conformance suite against this host (memory platform);
   - a window ↔ host round trip covering replica sync, the user's ⌘Z versus the agent's undo,
     focus, selection, a ⌘S save through the host, and release on close;
   - two windows sharing one host document under one lease;
   - the Rust relay contract against a fake event bus.
-- `e2e/m5-host.e2e.ts` (harness `e2e/m5-host-harness`): the real editor as a host client. An MCP
-  edit shows up in the layers panel; ⌘Z undoes only the user's rename; the agent's undo removes
-  its card from the editor. An in-app agent through `agentCall` (`__kimoHost.agentCall`): its
-  edit shows in the layers panel, presence and the Activity tab; the MCP client sees it in
-  `kimo_get_state.agents` and cannot undo it; ⌘Z keeps it; a scoped child gets OUT_OF_SCOPE.
-- `test/m6-host-agent.test.ts`: `agentCall` origins, presence, activity, per-origin undo,
+- `test/agent/host-agent.test.ts`: `agentCall` origins, presence, activity, per-origin undo,
   `checkScope` in the host, forwarded approvals (no MCP timeout; Stop / release answer deny) and
   the host / in-window tool host choice.

@@ -764,6 +764,9 @@ export function createMemoryPlatform(options: MemoryPlatformOptions = {}): Memor
       async openNewWindow() {
         calls.push("openNewWindow")
       },
+      async openFileInNewWindow(ref) {
+        calls.push(`openFileInNewWindow ${ref}`)
+      },
       onCloseRequested(handler) {
         closeHandler = handler
         return () => {

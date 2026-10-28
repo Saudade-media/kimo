@@ -1,6 +1,6 @@
 {
   "name": "@kimo/web",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Kimo editor web app",
   "license": "MIT",
@@ -14,7 +14,6 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "e2e": "tsx e2e/run.ts",
-    "e2e:perf": "tsx e2e/perf/run.ts",
     "test": "../../scripts/safe-test.sh ./test",
     "gen:notices": "bun scripts/gen-notices.ts",
     "gen:shortcuts": "bun scripts/gen-shortcuts.ts",
@@ -25,6 +24,7 @@
     "@kimo/ai-agent": "workspace:*",
     "@kimo/core-schema": "workspace:*",
     "@kimo/design-tokens": "workspace:*",
+    "@kimo/figma": "workspace:*",
     "@kimo/desktop": "workspace:*",
     "@kimo/editor-state": "workspace:*",
     "@kimo/exporters": "workspace:*",

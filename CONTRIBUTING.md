@@ -61,20 +61,37 @@ run through a guard:
 
 Typecheck one package with `bunx tsc -p packages/<name>/tsconfig.json`.
 
-Browser end-to-end and perf runs are separate from `check`: `bun run --filter @kimo/web e2e` and
-`bun run --filter @kimo/web e2e:perf` (`bun run --filter @kimo/web e2e "<name filter>"` runs the
-scenarios whose name matches). CI runs the e2e suite on macOS, because the scenarios measure the
-app against the design boards, which are drawn for macOS. **Exception to bun-only:** these two scripts run their
-Playwright driver under Node through `tsx` (an `apps/web` devDependency), because under Bun 1.3.5
-the pipe to Chromium is intermittently closed mid-session and the scenario hangs until its timeout
-(details in `apps/web/e2e/run.ts`). Bun remains the package manager and the script runner, and
-nothing that ships runs under Node. Perf numbers from before this switch (Bun-driven) are not
-comparable with Node-driven ones: compare baseline and candidate with the same driver, interleaved,
-and record `uptime` load averages with every run.
+Browser end-to-end runs are separate from the unit tests: `bun run --filter @kimo/web e2e`
+(`bun run --filter @kimo/web e2e "<name filter>"` runs the scenarios whose name matches). It is a
+small smoke set of the core flows (canvas, text and pen, share and join) that asserts document
+state, never pixels or design values, so it runs the same on macOS and Linux. CI runs it on every
+pull request as the `e2e (Chromium)` job (headless Chromium on Ubuntu, about two minutes, one retry).
+The share scenario starts a real relay from `apps/server`, so `bun` must be on your `PATH`.
+Extend the set only for a core flow. **Exception to bun-only:** the script runs its Playwright
+driver under Node through `tsx` (an `apps/web` devDependency), because under Bun 1.3.5 the pipe to
+Chromium is intermittently closed mid-session and the scenario hangs until its timeout (details in
+`apps/web/e2e/run.ts`). Bun remains the package manager and the script runner, and nothing that
+ships runs under Node.
 
-Code expectations: well-typed TypeScript, JSDoc on public APIs, tests next to the behaviour they
-cover (property tests with fast-check where an invariant exists), and comments that explain *why*
+Code expectations: well-typed TypeScript, JSDoc on public APIs, and comments that explain *why*
 rather than restating code.
+
+### What to test
+
+Tests cost time on every run and make code harder to change, so add one only when it guards
+something a person using the app would not notice breaking:
+
+- **Data integrity**: file formats and round trips, schema validation, merge and CRDT convergence,
+  undo grouping, migrations, anything that can corrupt or lose a file.
+- **Security and protocol**: relay encryption, capability links, owner policy, auth, the wire
+  protocol, input validation at trust boundaries.
+- **A real bug**: write the test that reproduces it first, see it fail, then fix.
+
+Don't test design values (pixels, CSS, class names, colors, icon names, copy), static markup,
+constants, or calls into mocks that mirror the implementation. Prefer one case per branch over
+tables, and extend the existing test file for a feature (files are named by feature, like
+`clipboard.test.ts`) instead of adding a new one. Use property tests (fast-check) where an
+invariant exists.
 
 ## Commits and pull requests
 
@@ -120,14 +137,10 @@ The editor's design system is defined in [`desing.pen`](desing.pen)
 1. Change the design in `desing.pen` first. Until Kimo can open its own design, this means
    editing it with pen.dev/Pencil; tooling reads it only through the Pencil MCP.
 2. Update the tokens (`packages/design-tokens`) and commit them with the design change:
-   1. refresh the snapshot `packages/design-tokens/test/fixtures/pen-variables.json` through the
-      Pencil MCP (`Print(JSON.stringify(GetVariables()))` on `desing.pen`);
-   2. transcribe the changes into `packages/design-tokens/src/tokens.json`;
-   3. run `bun run --filter @kimo/design-tokens build:tokens`.
-
-   The tests compare `tokens.json` with the snapshot. Changes to `desing.pen` are not detected
-   automatically: if the snapshot is not refreshed, CI cannot see them. Never hand-edit the
-   generated files under `src/generated/`; `check:generated` will fail.
+   transcribe the changes into `packages/design-tokens/src/tokens.json`, then run
+   `bun run --filter @kimo/design-tokens build:tokens`. Changes to the design file are not
+   detected automatically. Never hand-edit the generated files under `src/generated/`;
+   `check:generated` will fail.
 3. Update `packages/ui` components to consume the new tokens. Color stays reserved for selection,
    agent activity and status.
 

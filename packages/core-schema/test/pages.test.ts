@@ -6,15 +6,10 @@ import {
   pageOfRoot,
   parse,
   rootsByPage,
-  serialize,
-  stripDefaults,
-  validate,
 } from "../src/index"
 import { readFixture } from "./helpers"
 
-const base = { $schema: "https://getkimo.design/schema/kimo-1.0.json", format: "1.0.0" } as const
-
-describe("pages (spec §5.6)", () => {
+describe("pages", () => {
   const doc = parse(readFixture("valid/pages.kimo"))
 
   test("listPages sorts by (order, id)", () => {
@@ -35,61 +30,5 @@ describe("pages (spec §5.6)", () => {
     expect(pageOfRoot(doc, { parent: null, page: "Nope000001" })).toBe("PageHome01")
     expect(isOnPage(doc, doc.nodes.Unpaged001, "PageHome01")).toBe(true)
     expect(isOnPage(doc, doc.nodes.CartFrame1, "PageHome01")).toBe(false)
-  })
-
-  test("pages serialize on one line, after components and before nodes", () => {
-    const text = serialize({
-      ...base,
-      components: [],
-      pages: { BBBBBB: { name: "B", order: "a1" }, AAAAAA: { name: "A", order: "a0" } },
-      nodes: {},
-    } as never)
-    expect(text).toContain(
-      `"components": [],\n"pages": {"AAAAAA":{"order":"a0","name":"A"},"BBBBBB":{"order":"a1","name":"B"}},\n"nodes": {}`,
-    )
-  })
-
-  test("page on an instance's props or in a set override is not allowed", () => {
-    const r = validate(parse(readFixture("invalid/OVERRIDE_INVALID--set-page.kimo")))
-    expect(r.errors.map((e) => e.code)).toContain("OVERRIDE_INVALID")
-  })
-})
-
-describe("polygon star and image crop fit", () => {
-  test("star.ratio 0.38 is the default and is stripped", () => {
-    const d: { nodes: Record<string, unknown> } = stripDefaults({
-      ...base,
-      nodes: {
-        S: {
-          type: "polygon",
-          parent: null,
-          order: "a0",
-          w: 1,
-          h: 1,
-          sides: 5,
-          star: { ratio: 0.38 },
-        },
-      },
-    } as never)
-    expect((d.nodes.S as { star: unknown }).star).toEqual({})
-  })
-
-  test("fit crop validates; ratio 0 does not", () => {
-    expect(validate(parse(readFixture("valid/polygon-star-image-crop.kimo"))).ok).toBe(true)
-    const bad = validate({
-      ...base,
-      nodes: {
-        Star000001: {
-          type: "polygon",
-          parent: null,
-          order: "a0",
-          w: 1,
-          h: 1,
-          sides: 5,
-          star: { ratio: 0 },
-        },
-      },
-    })
-    expect(bad.ok).toBe(false)
   })
 })

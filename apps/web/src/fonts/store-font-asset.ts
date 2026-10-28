@@ -24,7 +24,7 @@ import { type AssetStore, contentHash, MAX_ASSET_BYTES, type ManifestEntry } fro
 import { FONT_MIME } from "./document-fonts"
 
 /** A font file of the asset store with the face it holds. */
-export interface FontAssetFile {
+interface FontAssetFile {
   /** `<hash>.<ext>` in `assets/`. */
   key: string
   family: string
@@ -87,9 +87,10 @@ function usedFamilies(doc: Readonly<Record<string, unknown>>): Set<string> {
 
 /**
  * The document as written: its `assets` manifest also lists the font files of `fonts` whose
- * family the text uses (spec §12 rule 3). Without a manifest, one is added only when every
- * asset the document references has a known entry (`entryOf`), so `ASSET_MISSING` never flags
- * a reference that was fine before. Pure and idempotent; returns `doc` itself when nothing is
+ * family the text uses (spec §12 rule 3), plus the known entries (`entryOf`) of referenced
+ * assets it does not list yet. Without a manifest (or with an empty one), one is added only when
+ * every asset the document references has a known entry, so `ASSET_MISSING` never flags a
+ * reference that was fine before. Pure and idempotent; returns `doc` itself when nothing is
  * added.
  */
 export function withFontManifest<D extends object>(
@@ -106,12 +107,14 @@ export function withFontManifest<D extends object>(
     if (used.has(fontFamilyKey(f.family)) && !(have && Object.hasOwn(have, f.key)))
       add[f.key] = f.entry
   if (!Object.keys(add).length) return doc
-  if (have) return { ...d, assets: { ...have, ...add } } as D
+  // An empty manifest is no manifest: listing only the font would leave every image unlisted.
+  const listed = have && Object.keys(have).length ? have : null
   const refs: Record<string, ManifestEntry> = {}
   for (const ref of referencedAssets(d)) {
+    if (listed && Object.hasOwn(listed, ref)) continue
     const e = entryOf(ref)
-    if (!e) return doc
-    refs[ref] = e
+    if (e) refs[ref] = e
+    else if (!listed) return doc
   }
-  return { ...d, assets: { ...refs, ...add } } as D
+  return { ...d, assets: { ...listed, ...refs, ...add } } as D
 }

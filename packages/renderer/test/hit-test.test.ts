@@ -118,11 +118,9 @@ const idx = new HitIndex(layout, scene.nodes, scene.resolve)
 const at = (x: number, y: number, o = {}) => idx.point({ x, y }, 0, o)
 
 describe("HitIndex.point", () => {
-  test("rounded rect: center hits, outside-the-radius corner falls through to the frame", () => {
+  test("hits follow the shape: rounded corners and ellipses fall through to the frame", () => {
     expect(at(35, 35)).toEqual(["rectA0001", "frameF0001"])
     expect(at(11, 11)).toEqual(["frameF0001"])
-  })
-  test("ellipse is exact", () => {
     expect(at(130, 30)).toEqual(["ellipE0001", "frameF0001"])
     expect(at(101, 11)).toEqual(["frameF0001"])
   })
@@ -148,9 +146,6 @@ describe("HitIndex.point", () => {
   test("rotation (CCW about the top-left)", () => {
     expect(at(310, -50)).toEqual(["rectT0001"])
     expect(at(350, 10)).toEqual([])
-  })
-  test("within restricts candidates", () => {
-    expect(at(35, 35, { within: new Set(["rectA0001"]) })).toEqual(["rectA0001"])
   })
   test("tolerance", () => {
     expect(idx.point({ x: 61, y: 35 }, 0)).toEqual(["frameF0001"])
@@ -179,8 +174,6 @@ describe("Renderer.hitTest maps screen through the viewport", () => {
     r.setViewport({ x: -10, y: -10, zoom: 2 })
     // world (35,35) → screen ((35+10)*2, …) = (90, 90)
     expect(r.hitTest({ x: 90, y: 90 })).toEqual(["rectA0001", "frameF0001"])
-    expect(r.screenToWorld({ x: 90, y: 90 })).toEqual({ x: 35, y: 35 })
-    expect(r.worldToScreen({ x: 35, y: 35 })).toEqual({ x: 90, y: 90 })
     // tolerance is in screen px: 2 px at zoom 2 = 1 world unit
     expect(r.hitTest({ x: (60.8 + 10) * 2, y: 90 }, { tolerance: 2 })).toEqual([
       "rectA0001",

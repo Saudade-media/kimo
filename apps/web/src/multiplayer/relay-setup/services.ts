@@ -73,7 +73,7 @@ export function createPlatformCloud(
   })
 }
 
-export function createRelaySetupServices(
+function createRelaySetupServices(
   platform: KimoPlatform,
   overrides: Partial<Omit<RelaySetupServices, "store">> = {},
 ): RelaySetupServices {
@@ -152,7 +152,7 @@ export function relaySetupFor(platform: KimoPlatform): RelaySetupServices {
 }
 
 /** Harnesses and tests: services to use instead of the platform's. */
-export const RelaySetupContext = createContext<RelaySetupServices | null>(null)
+const RelaySetupContext = createContext<RelaySetupServices | null>(null)
 
 export function useRelaySetupServices(platform: KimoPlatform | null): RelaySetupServices | null {
   const provided = useContext(RelaySetupContext)

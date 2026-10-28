@@ -77,11 +77,7 @@ export function cliModelEfforts(def: CliAgentDef, model: string): readonly Effor
 }
 
 /** The effort flag value for this turn, or undefined when the model takes none. */
-export function cliEffort(
-  def: CliAgentDef,
-  model: string,
-  wanted: unknown,
-): EffortLevel | undefined {
+function cliEffort(def: CliAgentDef, model: string, wanted: unknown): EffortLevel | undefined {
   return clampEffort(cliModelEfforts(def, model), wanted)
 }
 

@@ -59,7 +59,7 @@ without letterboxing.
 
 - [ ] `main` is green: `check` (lint, typecheck, generated files, unit tests, examples, e2e,
       box-diff) and `rust` (macOS, Windows, Linux).
-- [ ] The e2e job summary lists no flaky scenarios (`↻`), or each one has an issue.
+- [ ] The `e2e (Chromium)` job shows no flaky-scenario warnings, or each one has an issue.
 - [ ] `bun run check:examples` passes; rebuild thumbnails with `bun run build:examples` if the
       renderer changed and commit them.
 - [ ] `docs/scope-checklist.md` and the ADRs reflect what ships.
@@ -94,8 +94,9 @@ cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml --workspace --lock
 ```
 
 `scripts/version.ts` updates every workspace `package.json`, `tauri.conf.json`, the
-`kimo-desktop` and `kimo-mcp` crates (and their `Cargo.lock` entries) and the CLI's version
-strings. It accepts `major`, `minor`, `patch` and `prerelease [--preid rc]` too.
+`kimo-desktop` and `kimo-mcp` crates (and their `Cargo.lock` entries), the CLI's version
+strings and `@kimo/sync`'s `CLIENT_VERSION`. It accepts `major`, `minor`, `patch` and
+`prerelease [--preid rc]` too.
 
 - [ ] Move the `Unreleased` section of `CHANGELOG.md` under `## [X.Y.Z] - YYYY-MM-DD`.
 - [ ] `bun run check` passes.

@@ -14,6 +14,7 @@ import type { M3Controller } from "../m3/controller"
 import { PageSwitcher, pageSwitcherBus } from "../pages/PageSwitcher"
 import type { FileSession } from "../session"
 import { EditorCommands, type PasteMode } from "./commands"
+import { isFigmaClipboard } from "./figma"
 import { isRasterType } from "./raster"
 
 const registry = new WeakMap<FileSession, EditorCommands>()
@@ -26,7 +27,7 @@ export function commandsFor(session: FileSession): EditorCommands | null {
 /** How long a key press waits for its clipboard event before the API fallback runs. */
 const CLIPBOARD_EVENT_WAIT_MS = 120
 
-export interface EditorCommandDeps {
+interface EditorCommandDeps {
   session: FileSession
   m3: M3Controller
   canvas: { current: CanvasHandle | null }
@@ -157,6 +158,12 @@ export function useEditorCommands(d: EditorCommandDeps): {
       if (payload) {
         e.preventDefault()
         void commands.paste(payload, mode)
+        return
+      }
+      const html = data?.getData("text/html") ?? ""
+      if (isFigmaClipboard(html)) {
+        e.preventDefault()
+        void commands.pasteFigma(html, mode)
         return
       }
       // Image data / files: the raster import (board 27 §3) handles them.

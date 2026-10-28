@@ -5,8 +5,6 @@
  * - `KIMO_LOGO_PATH` = KimoLogo (bm1JR) › Mark (HTfes), the ≥ 25 px cut.
  * - `KIMO_LOGO_SMALL_PATH` = KimoLogo/Small (cGzzf) › Mark (r8A1fF), the ≤ 24 px cut: same
  *   outline, the opening widened 25% so it stays open at 16 px.
- *
- * `test/kimo-logo.test.ts` checks both against Pencil's own absolute-coordinate export.
  */
 
 export const KIMO_LOGO_VIEWBOX = "0 0 100 100"

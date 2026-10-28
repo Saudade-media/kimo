@@ -11,10 +11,10 @@ Open the **Agent** tab in the right panel, or press `⌘K` (`Ctrl+K`) for **Ask 
 - **Model.** The chip at the right of the composer shows the model's full name. Click it to pick a provider, a model and an effort level. See [The model chooser](providers.md#the-model-chooser).
 - **More options.** The **…** button after the mode chip opens a menu with three items:
   - **Skills** (with the number turned on) opens the [skills](skills.md) menu. Typing `/` opens it too.
-  - **Auto-approve** turns on [auto-approve](#auto-approve) for this session.
+  - **Ask before changes** makes the agent [ask first](#ask-before-changes) in this session.
   - **Web access** lets the agent search the web and read pages in this session. It starts from **Settings › AI providers › Allow web access** (on by default). While **No third-party fetch** is on, or when the model has no web tools, the row is disabled and the reason shows under it. See [Web access](providers.md#web-access).
 
-  A dot on **…** shows that a switch is away from its default: orange while auto-approve is on, grey while web access is off. In the menu, `↑` and `↓` move, `↵` or `Space` turns a switch, and `Esc` closes it.
+  A grey dot on **…** shows that web access is off. In the menu, `↑` and `↓` move, `↵` or `Space` turns a switch, and `Esc` closes it.
 
 ## While the agent works
 
@@ -82,26 +82,23 @@ An agent's scope is the part of the page it may change: the selection in Single 
 
 ## Approvals
 
-Edits inside the scope apply directly, and each is undoable. Kimo asks first, in a card in the thread (**Kimo wants to …**), before the agent:
+The agent works without stopping to ask. Every edit is undoable, turn by turn, and each request that would have needed your OK is written down: a line in the agent's turn (**Approved automatically: saved landing.kimo**) and, in the desktop app, a row in the Activity tab (**approved automatically**). A file Kimo saved or exported can't be undone by Kimo.
 
-- edits layers outside its area (Single mode),
+### Ask before changes
+
+Turn on **Ask before changes** in the composer's **…** menu to review the agent's work for this session. Kimo then asks first, in a card in the thread (**Kimo wants to …**), before the agent:
+
+- edits layers outside its area (Single mode, or a prompt node's target),
 - opens, creates, saves or exports a file,
 - changes document-wide things such as variables or components, when the mode doesn't allow them (Iterate).
 
-Answer with **Allow once**, **Always this session** or **Deny**. **Always this session** never covers file access or edits outside the area; those ask every time. The card waits as long as you need, the header shows **N waiting**, and **Stop** denies everything pending.
+Answer with **Allow once**, **Always this session** or **Deny**. **Always this session** never covers file access or edits outside the area; those ask every time. The card waits as long as you need, the header shows **N waiting**, and **Stop** denies everything pending. Turning the switch off again approves the cards already waiting, and the turn carries on.
 
-### Auto-approve
+Every new session, and an earlier one you reopen, starts with the switch off.
 
-**Auto-approve** in the composer's **…** menu turns it on for the current session. Kimo asks once before it turns on. While it is on, every request above is approved at once: opening, creating, saving and exporting files, edits outside the agent's area and document-wide changes. Cards already waiting are approved too, and the turn carries on.
+Some limits are not approvals, so they apply either way:
 
-Each approval is still written down: a line in the agent's turn (**Approved automatically: saved landing.kimo**) and, in the desktop app, a row in the Activity tab (**approved automatically**). The chip **Auto-approve is on** above the composer turns it off with one click.
-
-Canvas edits stay undoable, turn by turn. A file Kimo saved or exported can't be undone by Kimo.
-
-Auto-approve is off in every new session, and when you reopen an earlier one. It is never saved.
-
-Some limits are not approvals, so auto-approve doesn't lift them:
-
+- agents never open, import, save or export files in system folders or hidden folders (such as `~/.ssh`), and exports stay inside their folder,
 - one edit adds at most 150 new layers (40 for agents whose edits do not stream),
 - file paths are checked (an absolute `.kimo` path for documents, `..` resolved, an existing file isn't overwritten unless the call says so),
 - read-only and locked documents stay read-only,

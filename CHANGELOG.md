@@ -14,7 +14,47 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-10-23
+## [1.2.0] - 2026-10-28
+
+### Fixed
+
+- Image placeholders on a shared canvas (fetching, waiting, sharing) stay inside the layer they
+  cover: clipping frames cut them like the image, and the status chip shrinks on small images
+  and hides on tiny ones instead of spilling out.
+- The canvas overlays (image placeholders, cursors, claims, agent markers) no longer draw over
+  the left and right cards.
+- The model chooser and the other composer menus are no longer cut off by the right card.
+- Starting to share creates one view link and one edit link. Starting again, or clicking Start
+  sharing several times while it works, reuses them instead of creating a new pair each time.
+
+## [1.1.0] - 2026-10-28
+
+### Added
+
+- Paste from Figma: copy layers in Figma and paste them into Kimo as editable layers, on the
+  desktop app and the web. Frames, auto layout (direction, gap, padding, alignment, hug and fill
+  sizing), shapes, vectors, text with mixed styles and lists, fills, gradients, strokes, corner
+  radii, shadows and blurs carry over. Component instances paste as frames. The copy's images are
+  downloaded from Figma and stored in the file; anything Kimo can't carry over is listed in a toast.
+
+### Fixed
+
+- Opening a `.pen` file whose images use plain relative paths (`images/photo.jpg`) loads the
+  images instead of showing placeholders. Reopening a `.pen` converted before this fix relinks
+  the images it missed.
+
+## [1.0.1] - 2026-10-27
+
+### Fixed
+
+- Share links from Kimo Cloud use the relay Kimo Cloud names today (`relay.getkimo.design`)
+  instead of a relay URL saved before it moved, which put the old host in every link.
+- Popovers, menus and tooltips opened from the side cards (Share, sync status, lock details,
+  agent presence and approval) float above both cards instead of slipping under the other one.
+- The right card keeps the same 280 width on every tab, so its header (avatars, Sharing, Zoom)
+  no longer squeezes together on the Page card.
+
+## [1.0.0] - 2026-10-26
 
 The first public release: release engineering, polish, the new mark and the format 1.0 freeze.
 
@@ -46,12 +86,11 @@ The first public release: release engineering, polish, the new mark and the form
   animated while visible, still under reduced motion). HTML/CSS/React approximate meshes with
   radial gradients, SVG/PDF use the mean color; shaders are reported as unsupported there.
 - Composer bar and "…" menu for the built-in agent (board 40). The bar keeps Attach, the mode
-  chip, a "…" button, the model chip and Send. **Skills** (with its count), **Auto-approve** and
-  **Web access** moved into the "…" menu, which opens 232 px wide above the composer: Skills
-  opens the skills menu, Auto-approve still asks first before it turns on, and Web access
-  switches at once; a blocked Web access row is disabled with the reason under it. A 6 px dot on
-  "…" shows a switch away from its default (warning while auto-approve is on, grey while web
-  access is off), and the "Auto-approve is on" chip stays. The menu has menu roles: opening
+  chip, a "…" button, the model chip and Send. **Skills** (with its count), **Ask before
+  changes** and **Web access** moved into the "…" menu, which opens 232 px wide above the
+  composer: Skills opens the skills menu, the two switches turn at once, and a blocked Web access
+  row is disabled with the reason under it. A 6 px grey dot on "…" shows that web access is off.
+  The menu has menu roles: opening
   focuses the first row, `↑`/`↓`/`Home`/`End` move, `Enter`/`Space` act, `Esc` closes and
   returns focus to "…". At the 360 px Agent panel the model name is never cut: the mode chip
   label shrinks first, and only a custom Local model id past 120 px gets an ellipsis (full name
@@ -86,7 +125,7 @@ The first public release: release engineering, polish, the new mark and the form
   "This model can't use the web". Each search and page read is a step and the status line
   ("Searching the web for “…”", "Reading example.com"), is saved in the session transcript
   (`TurnRecord.web`) and, on desktop, is an Activity row (kind `web`, tool `web_search` /
-  `web_fetch`, the query or URL, no Undo). No approval is asked; auto-approve is unaffected.
+  `web_fetch`, the query or URL, no Undo). No approval is asked, and Ask before changes doesn't change it.
   Providers: Claude Code gets `--tools "WebSearch,WebFetch"` and both in `--allowedTools` (file,
   shell and edit tools stay off); Codex `-c web_search="live"` (`"disabled"` when off, and its
   ChatGPT apps are now off in every turn, since they carry their own web tool); Gemini CLI stops
@@ -153,17 +192,18 @@ The first public release: release engineering, polish, the new mark and the form
   renderer draws the motion only: the document, exports, `kimo_render`, thumbnails and hit
   testing use the final state. Your own edits, undo / redo and collaborators stay instant, and
   with reduced motion nothing moves (the landing flash stays).
-- Auto-approve (board 34). A switch in the built-in agent's composer "…" menu (board 40) turns
-  on auto-approve for the current session, after one confirm. While it is on, every approval is
-  given at once (opening, creating, saving and exporting files, edits outside the agent's area,
-  document-wide changes), cards already waiting included. Each one leaves a line in the thread
-  ("Approved automatically: saved landing.kimo") and, on desktop, an Activity row; the chip
-  "Auto-approve is on" above the composer turns it off. Every new or reopened session starts
-  off. MCP clients get the same option per client in Settings › Agents & MCP › Permissions,
-  saved in the client's policy (`autoApprove`), which also covers the export, save and
-  files.create grants; the presence chip shows an Auto-approve pill. Limits that are not
-  approvals still apply: the new-layer limit per edit, path and read-only checks, the frames of
-  agents started by side by side or split, and clients set to deny.
+- Agents work without asking (board 34, ADR 0013 Addendum 8). Claude Code, Codex and other
+  agents connected over MCP, and the built-in agent, don't stop for approvals: opening,
+  creating, saving and exporting files, deletes, edits outside the agent's area and
+  document-wide changes run at once, like Pen.dev; the agent host's own tool approvals stay.
+  Each one leaves a line in the thread ("Approved automatically: saved landing.kimo") and, on
+  desktop, an Activity row, and canvas edits stay undoable. **Ask before changes** brings the
+  prompts back: per session in the built-in agent's composer "…" menu (board 40), per client in
+  Settings › Agents & MCP › Permissions (saved in the client's policy as `autoApprove: false`;
+  the client row shows "· asks first"). Turning it off again approves the cards already
+  waiting. Limits that are not approvals still apply: the new-layer limit per edit, path and
+  read-only checks, the frames of agents started by side by side or split, and clients set to
+  deny.
 - The approval prompt stays on screen with many changes: its height is capped at 70 % of the
   window (less when the space below the agent chip is smaller), the change list scrolls inside
   it, and more than 8 changes are grouped by kind with the first 3 of each, "and N more" and
@@ -319,6 +359,10 @@ The first public release: release engineering, polish, the new mark and the form
   - ADR 0014: agent sessions are stored in IndexedDB on every platform.
 
 ### Fixed
+
+- Files saved before the move to getkimo.design open again. Their `$schema` names the old
+  `kimo.design` host, which failed validation ("This file isn't valid"); reading a file now
+  heals that URL, so the file opens and its next save writes the new one.
 
 - Settings: every saved setting takes effect. **On launch › Last files** reopens the file that
   was open when you quit (desktop). **When a file changes on disk › Ask first** asks with a banner

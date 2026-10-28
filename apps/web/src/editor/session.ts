@@ -64,7 +64,7 @@ export interface FileSession {
   shared?: SharedSession
 }
 
-export type SessionState =
+type SessionState =
   | { status: "loading" }
   | { status: "missing" }
   | { status: "error"; message: string }
@@ -87,6 +87,7 @@ function makeSession(
   provider: IndexedDbProvider | null,
   meta: FileMeta,
   document: FileDocumentSession | null = null,
+  ui: UiStore = createUiStore(),
 ) {
   const reject = (message: string) => {
     console.warn("Kimo: edit rejected", message)
@@ -118,7 +119,7 @@ function makeSession(
   const session: FileSession = {
     id,
     store,
-    ui: createUiStore(),
+    ui,
     provider,
     document,
     meta,
@@ -234,7 +235,7 @@ export function useSyncStatus(provider: IndexedDbProvider | null): SyncStatus {
   return status
 }
 
-export type DiskSessionState =
+type DiskSessionState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; session: FileSession }
@@ -264,7 +265,7 @@ export function useDiskSession(manager: FileSessionManager, ref: string): DiskSe
           updatedAt: now,
           frames: 0,
         }
-        const session = makeSession(doc.ref, doc.store, null, meta, doc)
+        const session = makeSession(doc.ref, doc.store, null, meta, doc, uiOf(doc))
         cleanups.push(bindUiToDocument(session.ui, doc.store))
         setState({ status: "ready", session })
       } catch (e) {
@@ -277,21 +278,54 @@ export function useDiskSession(manager: FileSessionManager, ref: string): DiskSe
       for (const c of cleanups) c()
       // Flush and release the lease (the store belongs to the document session). Deferred so a
       // remount of the same file (StrictMode, route re-entry) keeps the session open.
-      const left = (retained.get(ref) ?? 1) - 1
-      if (left > 0) retained.set(ref, left)
-      else retained.delete(ref)
-      const closing = doc
-      setTimeout(() => {
-        if (retained.has(ref)) return
-        const s = closing ?? manager.get(ref)
-        // Save as (and an untitled document's first save) moves the session to a new ref that
-        // the next editor already holds: keep it open.
-        if (s && !retained.has(s.ref)) void s.close().catch(() => undefined)
-      }, 0)
+      release(manager, ref, doc)
     }
   }, [manager, ref])
   return state
 }
 
-/** Editors currently showing each file on disk (see {@link useDiskSession}). */
+/**
+ * Editors and tabs currently holding each file on disk (see {@link useDiskSession} and
+ * {@link retainDiskFile}). A file closes once nothing holds it.
+ */
 const retained = new Map<string, number>()
+
+function release(manager: FileSessionManager, ref: string, doc: FileDocumentSession | null): void {
+  const left = (retained.get(ref) ?? 1) - 1
+  if (left > 0) retained.set(ref, left)
+  else retained.delete(ref)
+  setTimeout(() => {
+    if (retained.has(ref)) return
+    const s = doc ?? manager.get(ref)
+    // Save as (and an untitled document's first save) moves the session to a new ref that
+    // the next editor already holds: keep it open.
+    if (s && !retained.has(s.ref)) void s.close().catch(() => undefined)
+  }, 0)
+}
+
+/**
+ * Board 44 §5 "Tabs": an open tab keeps its file's session (lease, store, undo, selection) while
+ * another tab shows, so switching tabs only remounts the editor. The returned function lets go;
+ * the file closes when no editor or tab holds it anymore.
+ */
+export function retainDiskFile(manager: FileSessionManager, ref: string): () => void {
+  retained.set(ref, (retained.get(ref) ?? 0) + 1)
+  let held = true
+  return () => {
+    if (!held) return
+    held = false
+    release(manager, ref, null)
+  }
+}
+
+/** Board 44 §5: one UI store per document session, so selection and page survive a tab switch. */
+const uiStores = new WeakMap<FileDocumentSession, UiStore>()
+
+function uiOf(doc: FileDocumentSession): UiStore {
+  let ui = uiStores.get(doc)
+  if (!ui) {
+    ui = createUiStore()
+    uiStores.set(doc, ui)
+  }
+  return ui
+}

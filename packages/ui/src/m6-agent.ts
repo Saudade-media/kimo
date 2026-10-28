@@ -47,7 +47,6 @@ export {
   invalidateAll as invalidateAgentMarks,
   type MarkColors,
   meshPixels,
-  parseColor as parseMarkColor,
 } from "./agent-mark/renderer"
 export { AGENT_LIQUID_GLSL } from "./agent-mark/shader"
 export { AgentStatus, type AgentStatusProps } from "./agent-status/AgentStatus"

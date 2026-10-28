@@ -32,7 +32,7 @@ export interface FailedLoadCardProps {
 }
 
 /** The error card (stateless). */
-export function FailedLoadCard({
+function FailedLoadCard({
   detail,
   path,
   os,

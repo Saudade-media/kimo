@@ -59,7 +59,7 @@ export function parseAreaBusy(input: unknown): AreaBusyDetail | null {
 }
 
 /** "just now", "2 min ago", "3 h ago" (the card's "claimed Hero 2 min ago"). */
-export function agoText(since: number, now: number): string {
+function agoText(since: number, now: number): string {
   const s = Math.max(0, Math.round((now - since) / 1000))
   if (s < 60) return "just now"
   const m = Math.round(s / 60)

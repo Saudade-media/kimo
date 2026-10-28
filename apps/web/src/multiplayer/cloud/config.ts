@@ -5,10 +5,10 @@
  * (`http://localhost:8790`). The relay URL is never configured: `GET /v1/relay` answers it.
  */
 
-export const DEFAULT_CLOUD_API_URL = "https://cloud.getkimo.design"
+const DEFAULT_CLOUD_API_URL = "https://cloud.getkimo.design"
 
 /** `https://cloud.getkimo.design/` → `https://cloud.getkimo.design`; null when not http(s). */
-export function cloudOrigin(raw: string | null | undefined): string | null {
+function cloudOrigin(raw: string | null | undefined): string | null {
   const text = raw?.trim()
   if (!text) return null
   try {
@@ -21,7 +21,7 @@ export function cloudOrigin(raw: string | null | undefined): string | null {
 }
 
 /** The build's choice: undefined uses the default, an empty value hides Kimo Cloud. */
-export function buildCloudApiUrl(env: string | undefined = readEnv()): string | null {
+function buildCloudApiUrl(env: string | undefined = readEnv()): string | null {
   if (env === undefined) return DEFAULT_CLOUD_API_URL
   return cloudOrigin(env)
 }

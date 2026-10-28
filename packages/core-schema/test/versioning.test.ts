@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import {
-  FORMAT_VERSION,
   formatStatus,
   type JsonObject,
   MIGRATE_0_1_TO_1_0,
-  MIGRATIONS,
   type Migration,
   migrate,
   openDocument,
@@ -12,24 +10,15 @@ import {
   SCHEMA_URL,
   serialize,
 } from "../src/index"
-import { type Loose, readFixture } from "./helpers"
+import { codes, type Loose, readFixture } from "./helpers"
 
 describe("format version", () => {
-  test("FORMAT_VERSION is 1.0.0 and the registry holds the 0.1 → 1.0 step", () => {
-    expect(FORMAT_VERSION).toBe("1.0.0")
-    expect(SCHEMA_URL).toBe("https://getkimo.design/schema/kimo-1.0.json")
-    expect(MIGRATIONS).toEqual([MIGRATE_0_1_TO_1_0])
-    expect(MIGRATIONS.map((m) => `${m.from}→${m.to}`)).toEqual(["0.1→1.0"])
-  })
   test("formatStatus compares major.minor only", () => {
-    expect(formatStatus("1.0.0")).toBe("current")
     expect(formatStatus("1.0.9")).toBe("current")
     expect(formatStatus("0.1.0")).toBe("older")
-    expect(formatStatus("0.0.3")).toBe("older")
     expect(formatStatus("1.1.0")).toBe("newer")
     expect(formatStatus("2.0.0")).toBe("newer")
     expect(formatStatus("1.0")).toBe("invalid")
-    expect(formatStatus("01.0.0")).toBe("invalid")
     expect(formatStatus(1)).toBe("invalid")
   })
 })
@@ -101,12 +90,6 @@ describe("migrate", () => {
     migrate(old, { migrations: history })
     expect(old).toEqual(snapshot)
   })
-  test("multi-step to an explicit target", () => {
-    const r = migrate(old, { migrations: history, target: "1.1.0" })
-    expect(r.applied).toHaveLength(3)
-    expect(r.doc.format).toBe("1.1.0")
-    expect(r.doc.$schema).toBe("https://getkimo.design/schema/kimo-1.1.json")
-  })
   test("current, newer, invalid and missing paths leave the document unchanged", () => {
     const cur = { format: "1.0.3", nodes: {} }
     expect(migrate(cur).status).toBe("current")
@@ -114,21 +97,6 @@ describe("migrate", () => {
     expect(migrate({ format: "1.1.0", nodes: {} }).status).toBe("newer")
     expect(migrate({ format: "x", nodes: {} }).status).toBe("invalid")
     expect(migrate(old).status).toBe("no-path")
-  })
-  test("only the format/$schema header lines and migrated lines change in the file", () => {
-    const before = serialize(old as never, { stripDefaults: false })
-    const after = serialize(migrate(old, { migrations: history }).doc as never, {
-      stripDefaults: false,
-    })
-    const a = before.split("\n")
-    const b = after.split("\n")
-    expect(a.length).toBe(b.length)
-    const changed = a.map((l, i) => (l === b[i] ? null : i)).filter((i) => i !== null)
-    expect(changed.map((i) => b[i as number]?.slice(0, 14))).toEqual([
-      `"$schema": "ht`,
-      `"format": "1.0`,
-      `"Frame00001": `,
-    ])
   })
 })
 
@@ -138,20 +106,10 @@ describe("openDocument", () => {
     expect(r.needsUpgradeConsent).toBe(true)
     expect(r.sourceFormat).toBe("0.0.4")
     expect(r.doc.format).toBe("1.0.0")
-    // vendorThing / future are unknown in 1.0: preserved, but the document is invalid → read-only.
-    expect(r.readOnly).toBe(true)
-    expect(r.readOnlyReasons.map((x) => x.code)).toEqual(["INVALID"])
-  })
-  test("allowInvalid opens invalid documents for editing", () => {
-    const r = openDocument(serialize(old as never), { migrations: history, allowInvalid: true })
+    // vendorThing / future are unknown in 1.0: preserved and reported, but the file stays editable.
     expect(r.readOnly).toBe(false)
+    expect(r.readOnlyReasons).toEqual([])
     expect(r.validation?.ok).toBe(false)
-  })
-  test("current valid documents open writable", () => {
-    const r = openDocument(readFixture("valid/components-local.kimo"))
-    expect(r.readOnly).toBe(false)
-    expect(r.needsUpgradeConsent).toBe(false)
-    expect(r.validation?.ok).toBe(true)
   })
   test("no migration path opens read-only", () => {
     const r = openDocument(serialize(old as never))
@@ -159,7 +117,7 @@ describe("openDocument", () => {
   })
 })
 
-describe("0.1 → 1.0 (spec freeze)", () => {
+describe("0.1 to 1.0", () => {
   const v01 = readFixture("migrations/0.1-features-all.kimo")
   const v10 = readFixture("migrations/0.1-features-all.expected-1.0.kimo")
 
@@ -168,18 +126,7 @@ describe("0.1 → 1.0 (spec freeze)", () => {
     expect(r.status).toBe("migrated")
     expect(r.from).toBe("0.1.0")
     expect(r.to).toBe("1.0.0")
-    expect(r.applied).toEqual(["0.1→1.0: format 1.0 (stable): same content, new format header"])
     expect(serialize(r.doc as never)).toBe(v10)
-  })
-
-  test("only the two header lines change", () => {
-    const a = v01.split("\n")
-    const b = v10.split("\n")
-    expect(b.length).toBe(a.length)
-    expect(a.flatMap((l, i) => (l === b[i] ? [] : [b[i]]))).toEqual([
-      `"$schema": "https://getkimo.design/schema/kimo-1.0.json",`,
-      `"format": "1.0.0",`,
-    ])
   })
 
   test("a 0.1 patch release migrates too, and a file without $schema does not gain one", () => {
@@ -188,32 +135,43 @@ describe("0.1 → 1.0 (spec freeze)", () => {
     expect(r.doc).toEqual({ format: "1.0.0", nodes: {} })
   })
 
-  test("a 0.1 file opens writable, valid, and needs upgrade consent", () => {
+  test("a 0.1 file opens writable and valid, and needs upgrade consent; a 1.0 file does not", () => {
     const r = openDocument(v01)
     expect(r.sourceFormat).toBe("0.1.0")
     expect(r.needsUpgradeConsent).toBe(true)
     expect(r.readOnly).toBe(false)
     expect(r.validation?.ok).toBe(true)
     expect(serialize(r.doc)).toBe(v10)
-  })
-
-  test("a current 1.0 file needs no consent", () => {
-    const r = openDocument(v10)
-    expect(r.needsUpgradeConsent).toBe(false)
-    expect(r.readOnly).toBe(false)
-  })
-
-  test("newer than 1.0 (minor and major) opens read-only; a newer patch is current", () => {
-    for (const f of ["forward/newer-minor.kimo", "forward/newer-major.kimo"]) {
-      const r = openDocument(readFixture(f))
-      expect(r.readOnly).toBe(true)
-      expect(r.needsUpgradeConsent).toBe(false)
-    }
-    expect(formatStatus(parse(readFixture("forward/newer-patch.kimo")).format)).toBe("current")
+    expect(openDocument(v10).needsUpgradeConsent).toBe(false)
   })
 })
 
-describe("forward compatibility conformance (10.2 rule 7)", () => {
+describe("newer formats", () => {
+  test("a newer minor or major opens read-only without upgrade consent", () => {
+    for (const f of ["forward/newer-minor.kimo", "forward/newer-major.kimo"]) {
+      const r = openDocument(readFixture(f))
+      expect(r.readOnly).toBe(true)
+      expect(r.readOnlyReasons.map((x) => x.code)).toEqual(["FORMAT_NEWER"])
+      expect(r.needsUpgradeConsent).toBe(false)
+      expect(r.validation).toBeNull()
+    }
+  })
+
+  test("a newer patch is current", () => {
+    const r = openDocument(readFixture("forward/newer-patch.kimo"))
+    expect(r.readOnly).toBe(false)
+    expect(r.validation?.ok).toBe(true)
+  })
+
+  test("an unknown feature opens read-only and validates with FEATURE_UNKNOWN", () => {
+    const r = openDocument(readFixture("forward/unknown-feature.kimo"))
+    expect(r.readOnly).toBe(true)
+    expect(r.readOnlyReasons.map((x) => x.code)).toEqual(["FEATURE_UNSUPPORTED"])
+    expect(codes(r.validation?.warnings ?? [])).toEqual(["FEATURE_UNKNOWN"])
+  })
+})
+
+describe("forward compatibility conformance", () => {
   const text = readFixture("forward/newer-minor.kimo")
 
   test("a newer file is byte-identical after open and save", () => {

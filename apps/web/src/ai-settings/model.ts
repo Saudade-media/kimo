@@ -5,7 +5,6 @@
  */
 import {
   type CliDetection,
-  type ConnectionTest,
   cliIdOf,
   cliProviderId,
   cliUsable,
@@ -144,7 +143,7 @@ export interface AiConfig {
 /** localStorage key of the non-secret AI config (both hosts; keys live in `SecretsApi`). */
 export const AI_CONFIG_KEY = "kimo.ai"
 
-export function emptyConfig(): AiConfig {
+function emptyConfig(): AiConfig {
   return {
     version: 1,
     providers: {},
@@ -183,10 +182,10 @@ export function parseConfig(raw: string | null): AiConfig {
 
 // --- Built-in rows ------------------------------------------------------------------------------
 
-export const ANTHROPIC_URL = "https://api.anthropic.com"
-export const OPENAI_URL = "https://api.openai.com/v1"
-export const GEMINI_URL = "https://generativelanguage.googleapis.com"
-export const OPENROUTER_URL = "https://openrouter.ai/api/v1"
+const ANTHROPIC_URL = "https://api.anthropic.com"
+const OPENAI_URL = "https://api.openai.com/v1"
+const GEMINI_URL = "https://generativelanguage.googleapis.com"
+const OPENROUTER_URL = "https://openrouter.ai/api/v1"
 export const OLLAMA_URL = "http://localhost:11434/v1"
 export const OLLAMA_ID = "custom:ollama"
 
@@ -227,18 +226,6 @@ export const BUILTIN_PROVIDERS: readonly StoredProvider[] = [
     models: DEFAULT_MODELS.bedrock ?? { agent: "", fast: "" },
   },
 ]
-
-/** Lucide icon names per row (board 23 V2yoe overrides). */
-export const PROVIDER_ICON: Record<ProviderKind, string> = {
-  anthropic: "sparkle",
-  openai: "braces",
-  gemini: "gem",
-  openrouter: "route",
-  custom: "server",
-  bedrock: "cloud",
-  vertex: "cloud",
-  foundry: "cloud",
-}
 
 export const isCloud = (k: ProviderKind): k is "bedrock" | "vertex" | "foundry" =>
   k === "bedrock" || k === "vertex" || k === "foundry"
@@ -371,14 +358,6 @@ export function keyPlaceholder(p: Pick<StoredProvider, "kind" | "label">): strin
   }
 }
 
-/** "Get a key at console.anthropic.com ↗" (board 22 op3mJ). */
-export const KEY_PAGES: Partial<Record<ProviderKind, string>> = {
-  anthropic: "https://console.anthropic.com/settings/keys",
-  openai: "https://platform.openai.com/api-keys",
-  gemini: "https://aistudio.google.com/apikey",
-  openrouter: "https://openrouter.ai/keys",
-}
-
 export function storageLabel(
   providerId: string,
   backend: "keychain" | "localStorage" | "memory",
@@ -392,30 +371,6 @@ export function storageLabel(
         ? "Secret Service"
         : "macOS Keychain"
   return `Stored in ${store} · service kimo, account provider.${providerId}`
-}
-
-export function testDetail(t: Pick<ConnectionTest, "ok" | "latencyMs" | "detail">): string {
-  return t.ok ? `${t.latencyMs} ms · ${t.detail}` : t.detail
-}
-
-/** Inline test result label (board 22 "Test" rule: OK · 401 · 429 · network / CORS). */
-export function testLabel(t: { ok: boolean; errorKind?: string }): string {
-  if (t.ok) return "Connection OK"
-  switch (t.errorKind) {
-    case "auth":
-      return "Invalid key (401)"
-    case "rate_limit":
-      return "Rate limited (429)"
-    case "cors":
-      return "Blocked by CORS"
-    case "network":
-    case "offline":
-      return "Network error"
-    case "unsupported_platform":
-      return "Not available here"
-    default:
-      return "Connection failed"
-  }
 }
 
 /** Board 25 failed-test strip (c7lVl): tone, lucide icon name, label, mono detail. */
@@ -494,12 +449,6 @@ export function maskForTrace(key: string | null): string {
 
 // --- Local agents ------------------------------------------------------------------------------
 
-export const CLI_ICON: Record<string, string> = {
-  "claude-code": "square-terminal",
-  codex: "terminal",
-  "gemini-cli": "square-chevron-right",
-}
-
 /** "Sign in in terminal: run “codex login”" — the exact command per CLI. */
 export const CLI_SIGN_IN: Record<string, string> = {
   "claude-code": "claude auth login",
@@ -548,7 +497,7 @@ const PLAN_LABEL: Record<string, string> = {
 }
 
 /** `/Users/me/.local/bin/claude` → `~/.local/bin/claude`. */
-export function tildify(path: string, home: string | null): string {
+function tildify(path: string, home: string | null): string {
   if (home && (path === home || path.startsWith(`${home}/`))) return `~${path.slice(home.length)}`
   const m = /^\/(?:Users|home)\/[^/]+(\/.*)?$/.exec(path)
   return m ? `~${m[1] ?? ""}` : path
@@ -636,14 +585,11 @@ export function shortModelLabel(sel: ModelSelection | null, clis: readonly CliDe
   return sel.model
 }
 
-export const usableCliSelection = (d: CliDetection): ModelSelection | null =>
-  cliUsable(d) ? { provider: cliProviderId(d.id), model: "default" } : null
-
 // --- Usage -----------------------------------------------------------------------------------
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-export function monthBounds(now: number): { start: number; end: number; label: string } {
+function monthBounds(now: number): { start: number; end: number; label: string } {
   const d = new Date(now)
   const start = new Date(d.getFullYear(), d.getMonth(), 1)
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 1)

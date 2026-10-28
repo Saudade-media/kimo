@@ -25,7 +25,7 @@ export type ShortcutScope =
   | "crop" // board 27 image crop mode
   | "gesture" // mid-drag
 
-export type ShortcutGroup =
+type ShortcutGroup =
   | "tools"
   | "file"
   | "edit"
@@ -171,6 +171,58 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     scope: "global",
     group: "file",
     combos: [{ keys: [","], mod: true, shift: false, alt: false, label: "," }],
+  },
+  // Board 44 §5 "Home tab" / "Close" / "Switch" (tabs/model.ts `tabCommandFor`). Codes, not
+  // keys: ⇧ turns ] into }. ⌘] / ⌘[ (Bring forward / Send backward) need no ⇧.
+  {
+    id: "newTab",
+    label: "New tab",
+    scope: "global",
+    group: "file",
+    combos: [{ keys: ["t"], codes: ["KeyT"], mod: true, shift: false, alt: false, label: "T" }],
+  },
+  {
+    id: "closeTab",
+    label: "Close tab",
+    scope: "global",
+    group: "file",
+    combos: [{ keys: ["w"], codes: ["KeyW"], mod: true, shift: false, alt: false, label: "W" }],
+  },
+  {
+    id: "nextTab",
+    label: "Next tab",
+    scope: "global",
+    group: "file",
+    combos: [{ codes: ["BracketRight"], mod: true, shift: true, alt: false, label: "]" }],
+  },
+  {
+    id: "previousTab",
+    label: "Previous tab",
+    scope: "global",
+    group: "file",
+    combos: [{ codes: ["BracketLeft"], mod: true, shift: true, alt: false, label: "[" }],
+  },
+  {
+    id: "goToTab",
+    label: "Go to tab 1 to 8",
+    scope: "global",
+    group: "file",
+    combos: [
+      {
+        codes: ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8"],
+        mod: true,
+        shift: false,
+        alt: false,
+        label: "1…8",
+      },
+    ],
+  },
+  {
+    id: "lastTab",
+    label: "Last tab",
+    scope: "global",
+    group: "file",
+    combos: [{ codes: ["Digit9"], mod: true, shift: false, alt: false, label: "9" }],
   },
 
   // --- Edit -----------------------------------------------------------------------------------
@@ -515,6 +567,14 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     group: "view",
     combos: [{ codes: ["Space"], mod: false, alt: false, shift: true, label: "Space" }],
   },
+  {
+    // Board 44 §5 rule "Collapse": ⌘\ collapses both floating cards (or opens both again).
+    id: "togglePanels",
+    label: "Show / hide panels",
+    scope: "global",
+    group: "view",
+    combos: [{ codes: ["Backslash"], mod: true, alt: false, shift: false, label: "\\" }],
+  },
 
   // --- Agent & text ------------------------------------------------------------------------------
   {
@@ -745,14 +805,14 @@ export const SHORTCUT_GROUPS: readonly { id: ShortcutGroup; title: string; colum
   { id: "help", title: "Help", column: 3 },
 ]
 
-export interface SheetRow {
+interface SheetRow {
   id: string
   label: string
   combos: string[]
   isNew: boolean
 }
 
-export interface SheetGroup {
+interface SheetGroup {
   id: ShortcutGroup
   title: string
   column: 1 | 2 | 3

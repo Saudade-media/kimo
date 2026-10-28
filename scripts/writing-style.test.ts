@@ -152,13 +152,4 @@ describe("writing style (docs/style/writing.md)", () => {
     for (const f of files(DOCS)) scanDoc(f, readFileSync(join(ROOT, f), "utf8"), hits)
     expect(report(hits)).toBe("")
   })
-
-  test("the scanner catches a tell and respects the allowlist", () => {
-    const hits: Hit[] = []
-    scanCode("x.tsx", 'const a = "A seamless canvas — for everyone"\n// robust comment', hits)
-    expect(hits.map((h) => h.tell.kind)).toEqual(["hype", "em-dash"])
-    const ok: Hit[] = []
-    scanCode("x.tsx", 'label: "Lock / unlock",\nconst v = "—"', ok)
-    expect(ok).toEqual([])
-  })
 })

@@ -95,12 +95,18 @@ export interface ClientPolicy {
    * Auto-approve (board 34): every approval this policy would ask for (`onExceed: "ask"`) is
    * approved at once with outcome `auto` and recorded in the activity log. Hard limits that are
    * errors, not prompts (batch size, path checks, read-only, `onExceed: "deny"`), still apply.
-   * Additive; absent = false.
+   * Additive; absent = false here, but connected clients start from {@link DEFAULT_POLICY}, which
+   * turns it on (ADR 0013 Addendum 8), and Settings stores `false` when asking is turned on.
    */
   autoApprove?: boolean
 }
 
-/** Unknown clients: can edit open documents, destructive ops and other files ask. */
+/**
+ * Connected clients without a stored policy (ADR 0013 Addendum 8): full trust. Every approval is
+ * auto-approved and logged, like Pen.dev; the agent host's own tool approvals are the check.
+ * Turning on Settings › "Ask before changes" stores this policy with `autoApprove: false`, which
+ * brings back the prompts: destructive ops, other files, save and export ask.
+ */
 export const DEFAULT_POLICY: ClientPolicy = {
   level: "edit",
   files: [],
@@ -108,7 +114,11 @@ export const DEFAULT_POLICY: ClientPolicy = {
   grants: ["globals", "components", "save", "export"],
   onExceed: "ask",
   confirmDestructive: true,
+  autoApprove: true,
 }
+
+/** {@link DEFAULT_POLICY} with Settings › "Ask before changes" on: the approval prompts are back. */
+export const ASK_POLICY: ClientPolicy = { ...DEFAULT_POLICY, autoApprove: false }
 
 /** Headless `kimo mcp` defaults (no UI to ask): explicit files only, destructive allowed. */
 export const HEADLESS_POLICY: ClientPolicy = {
@@ -182,6 +192,61 @@ export function approvedOutcome(o: ApprovalOutcome): o is "once" | "session" | "
 /** True when a policy turns its approval prompts into automatic approvals. */
 export function autoApproves(policy: Pick<ClientPolicy, "autoApprove" | "onExceed">): boolean {
   return policy.autoApprove === true && policy.onExceed === "ask"
+}
+
+/** System folders an auto-approved agent never touches (ADR 0013 Addendum 8). */
+const SYSTEM_ROOTS = [
+  "/etc",
+  "/bin",
+  "/sbin",
+  "/usr",
+  "/dev",
+  "/proc",
+  "/boot",
+  "/System",
+  "/Library",
+]
+const WINDOWS_SYSTEM_ROOTS = ["windows", "program files", "program files (x86)", "programdata"]
+
+/**
+ * True for a path auto-approve refuses instead of approving: a system folder, or anything inside
+ * a hidden folder or named like a hidden file (`~/.ssh`, `~/.config`, `.env`), except Kimo's own
+ * `~/.kimo`. Expects a normalized absolute path.
+ */
+export function protectedPath(path: string): boolean {
+  const p = path.replace(/\\/g, "/").replace(/^\/private(?=\/etc(\/|$))/, "")
+  const win = /^[A-Za-z]:\//.exec(p)
+  const inRoot = win
+    ? WINDOWS_SYSTEM_ROOTS.some((r) => {
+        const rest = p.slice(3).toLowerCase()
+        return rest === r || rest.startsWith(`${r}/`)
+      })
+    : SYSTEM_ROOTS.some((r) => p === r || p.startsWith(`${r}/`))
+  if (inRoot) return true
+  return p
+    .split("/")
+    .some((seg) => seg.startsWith(".") && seg !== "." && seg !== ".." && seg !== ".kimo")
+}
+
+/**
+ * Auto-approve never widens a deliberate limit: Read only still refuses writes, and protected
+ * paths ({@link protectedPath}) are refused. Returns the refusal, or null to approve.
+ */
+export function autoApproveRefusal(
+  policy: Pick<ClientPolicy, "level">,
+  reason: ApprovalReason,
+): { code: "PERMISSION_DENIED"; message: string } | null {
+  if (policy.level === "read" && (reason.kind === "level" || reason.kind === "destructive"))
+    return {
+      code: "PERMISSION_DENIED",
+      message: "This client is Read only (Settings › Agents & MCP › Permissions).",
+    }
+  if (reason.kind === "file" && protectedPath(reason.path))
+    return {
+      code: "PERMISSION_DENIED",
+      message: `${reason.path} is in a system or hidden folder; agents can't ${reason.action} files there.`,
+    }
+  return null
 }
 
 /**
@@ -325,13 +390,6 @@ export interface ActivityEntry {
   revisionBefore?: { epoch: string; seq: number }
   /** Board 38 `web`: the query or the URL (the row's target line). */
   detail?: string
-}
-
-/** Keeps the newest {@link ACTIVITY_LIMIT} entries. */
-export function trimActivity(entries: readonly ActivityEntry[]): ActivityEntry[] {
-  return entries.length > ACTIVITY_LIMIT
-    ? entries.slice(entries.length - ACTIVITY_LIMIT)
-    : [...entries]
 }
 
 // --- Presence ----------------------------------------------------------------------------------

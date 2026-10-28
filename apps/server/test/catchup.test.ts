@@ -22,7 +22,7 @@ function entrySeqs(client: Client): number[] {
   return client.messages.flatMap((m) => (m.type === "entries" ? m.entries.map((e) => e.seq) : []))
 }
 
-describe("catch-up (section 11.4)", () => {
+describe("catch-up", () => {
   test("without a snapshot: since 0 replays everything, since n resumes after n", async () => {
     const owner = await registered(h)
     seedLog(h, owner, 5)

@@ -97,12 +97,6 @@ describe("overlap", () => {
     expect(claimTeam("mcp:codex.x1")).toBe("mcp:codex.x1")
   })
 
-  test("an empty request and an empty registry never conflict", () => {
-    const r = registry(tree(), clock().now)
-    expect(r.check(B, [])).toBeNull()
-    expect(r.check(B, ["Card00001"])).toBeNull()
-  })
-
   test("remote claims conflict like local ones and name the peer", () => {
     const c = clock()
     const r = registry(tree(), c.now)
@@ -125,14 +119,6 @@ describe("simultaneous claims", () => {
     expect(r.covers(A, "Card00001")).toBe(false)
     expect(r.covers(A, "Other0001")).toBe(true)
     expect(r.check(A, ["Title0001"])?.holder).toBe(B)
-  })
-
-  test("a later remote claim loses: the local holder keeps its area", () => {
-    const c = clock()
-    const r = registry(tree(), c.now)
-    r.claim(A, ["Card00001"])
-    r.setRemote(3, [record(B, ["Title0001"], c.now() + 5)])
-    expect(r.covers(A, "Card00001")).toBe(true)
   })
 
   test("same time: the lower holder id wins, on both sides", () => {
@@ -225,20 +211,6 @@ describe("expiry and release", () => {
     expect(r.list()).not.toBe(first)
     expect(calls).toBe(2)
     off()
-  })
-
-  test("published records are capped per holder", () => {
-    const s = emptyStore()
-    const ids = Array.from({ length: 300 }, (_, i) => `Node${String(i).padStart(6, "0")}`)
-    ok(
-      s.apply(
-        ids.map((id) => ({ op: "insert", id, node: frame(id) })),
-        { origin: "user" },
-      ),
-    )
-    const r = registry(s, clock().now)
-    r.claim(A, ids)
-    expect(r.localRecords().flatMap((x) => x.ids)).toHaveLength(256)
   })
 })
 

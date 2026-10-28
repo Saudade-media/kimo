@@ -1,5 +1,5 @@
 /**
- * Golden output tests (teardown §12 M7 exit criterion): every target for every fixture is
+ * Golden output tests: every target for the golden fixtures (one per distinct output path) is
  * compared byte for byte with `test/golden/<fixture>/<target>/…`. `UPDATE_GOLDENS=1 bun test`
  * rewrites them. SVG/PDF use a deterministic fake text measurer.
  */
@@ -17,9 +17,11 @@ import {
   layoutDocument,
   paintIssues,
 } from "../src"
-import { FIXTURES, fakeIcons, fakeMeasurer, golden, loadFixture } from "./helpers"
+import { fakeIcons, fakeMeasurer, GOLDEN_FIXTURES, golden, loadFixture } from "./helpers"
 
-async function outputs(f: (typeof FIXTURES)[number]): Promise<Record<string, string | Uint8Array>> {
+async function outputs(
+  f: (typeof GOLDEN_FIXTURES)[number],
+): Promise<Record<string, string | Uint8Array>> {
   const { doc, libraries } = loadFixture(f)
   const out: Record<string, string | Uint8Array> = {}
   const html = buildIR(doc, { libraries })
@@ -49,7 +51,7 @@ async function outputs(f: (typeof FIXTURES)[number]): Promise<Record<string, str
 }
 
 describe("golden outputs", () => {
-  for (const f of FIXTURES) {
+  for (const f of GOLDEN_FIXTURES) {
     test(f.name, async () => {
       const out = await outputs(f)
       const diffs: string[] = []
@@ -64,7 +66,7 @@ describe("golden outputs", () => {
 
 describe("determinism", () => {
   test("two runs give identical bytes for every target", async () => {
-    for (const f of FIXTURES.slice(0, 6)) {
+    for (const f of GOLDEN_FIXTURES) {
       const a = await outputs(f)
       const b = await outputs(f)
       expect(Object.keys(a)).toEqual(Object.keys(b))

@@ -26,10 +26,10 @@ type Doc = Parameters<FontSystem["usage"]>[0]
 const BUNDLED = ["Inter", "JetBrains Mono"]
 
 /** Most families offered by "Replace with…" (the picker lists everything). */
-export const REPLACE_CHOICES_MAX = 12
+const REPLACE_CHOICES_MAX = 12
 
 /** "Replace with…" candidates: bundled, local, then cached Google families. */
-export async function replaceChoices(
+async function replaceChoices(
   platform: KimoPlatform,
   max = REPLACE_CHOICES_MAX,
 ): Promise<ReplaceChoice[]> {
@@ -51,7 +51,7 @@ export async function replaceChoices(
 }
 
 /** Board 28 (c): which setting blocks Google (null: allowed — offline is not a block). */
-export function blockedBy(platform: KimoPlatform): "ntpf" | "google-off" | null {
+function blockedBy(platform: KimoPlatform): "ntpf" | "google-off" | null {
   const s = platform.settings.all()
   if (s["privacy.noThirdPartyFetch"]) return "ntpf"
   if (!s["fonts.google"]) return "google-off"
@@ -59,7 +59,7 @@ export function blockedBy(platform: KimoPlatform): "ntpf" | "google-off" | null 
 }
 
 /** The picker's Google state: blocked by "No third-party fetch", Google Fonts off, offline. */
-export function googleState(platform: KimoPlatform, system: FontSystem): GoogleFontsState {
+function googleState(platform: KimoPlatform, system: FontSystem): GoogleFontsState {
   const s = platform.settings.all()
   if (s["privacy.noThirdPartyFetch"]) return "blocked"
   if (!s["fonts.google"] || !platform.capabilities.remoteFonts) return "off"
@@ -67,7 +67,7 @@ export function googleState(platform: KimoPlatform, system: FontSystem): GoogleF
 }
 
 /** Picker entries: IN THIS DOCUMENT (with style counts), ON THIS MAC, GOOGLE FONTS (cached). */
-export async function fontPickerEntries(
+async function fontPickerEntries(
   platform: KimoPlatform,
   system: FontSystem,
   doc: Doc,
@@ -141,7 +141,7 @@ export function useFontPickerEntries(
 }
 
 /** A font file the user picked, with what its tables say. */
-export interface PickedFont {
+interface PickedFont {
   bytes: Uint8Array
   name: string
   family: string
@@ -152,7 +152,7 @@ export interface PickedFont {
 }
 
 /** Opens the native/browser picker for one font file; null when cancelled or unreadable. */
-export async function pickFontFile(platform: KimoPlatform): Promise<PickedFont | null> {
+async function pickFontFile(platform: KimoPlatform): Promise<PickedFont | null> {
   const [ref] = await platform.dialogs.openFile({
     title: "Choose font file",
     filters: [{ name: "Fonts", extensions: Object.keys(FONT_MIME) }],
@@ -174,7 +174,7 @@ export async function pickFontFile(platform: KimoPlatform): Promise<PickedFont |
   }
 }
 
-export interface MissingFontsHostProps {
+interface MissingFontsHostProps {
   platform: KimoPlatform
   system: FontSystem
   /** Once-per-session key: the file ref (desktop) or file id (web). */

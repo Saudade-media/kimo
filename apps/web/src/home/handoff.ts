@@ -26,8 +26,8 @@ export interface HomeHandoffRecord extends HomeAgentHandoff {
   createdAt: number
 }
 
-export const HANDOFF_KEY = "kimo.home.handoff"
-export const HANDOFF_TTL_MS = 5 * 60_000
+const HANDOFF_KEY = "kimo.home.handoff"
+const HANDOFF_TTL_MS = 5 * 60_000
 
 const memory = new Map<string, HomeHandoffRecord>()
 

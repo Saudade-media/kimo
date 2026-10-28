@@ -1,17 +1,21 @@
 /**
- * `openDocument`: parse → version check → migrate → validate, returning the flags an editor
- * needs to decide whether it may save (teardown 10.2 rules 6–7, 9.4 "failed loads are terminal").
+ * `openDocument`: parse → version check → migrate → repair → validate, returning the flags an
+ * editor needs to decide whether it may save (teardown 10.2 rules 6–7, 9.4 "failed loads are
+ * terminal"). Only a file this reader cannot understand opens read-only (a newer or unknown
+ * format, an unsupported feature); validation errors never lock a file: the lossless ones are
+ * repaired in memory and the rest are reported.
  */
 import { isKnownFeature, KNOWN_FEATURES } from "./features"
 import type { JsonObject } from "./json"
 import { type Migration, migrate } from "./migrate"
+import { type Repair, repairDocument } from "./repair"
 import type { KimoDocument } from "./schema/document"
 import { parse } from "./serialize"
 import { type ValidateOptions, type ValidationResult, validate } from "./validate/index"
 
 /** Why a document opened read-only. */
 export interface ReadOnlyReason {
-  code: "FORMAT_NEWER" | "FORMAT_INVALID" | "NO_MIGRATION_PATH" | "FEATURE_UNSUPPORTED" | "INVALID"
+  code: "FORMAT_NEWER" | "FORMAT_INVALID" | "NO_MIGRATION_PATH" | "FEATURE_UNSUPPORTED"
   message: string
 }
 
@@ -31,15 +35,22 @@ export interface OpenResult {
   needsUpgradeConsent: boolean
   /** Descriptions of the migration steps applied. */
   appliedMigrations: string[]
-  /** Validation of the (migrated) document; null when it could not be validated (newer/invalid format). */
+  /** Validation of the (migrated, repaired) document; null when it could not be validated (newer/invalid format). */
   validation: ValidationResult | null
+  /**
+   * Fixes applied in memory ({@link repairDocument}). The file itself changes only when the
+   * document is next saved, so opening never writes.
+   */
+  repairs: Repair[]
 }
 
 /** Options for {@link openDocument}. */
 export interface OpenOptions extends ValidateOptions {
   /** Migration registry (default: the built-in one). */
   migrations?: readonly Migration[]
-  /** Open documents with validation errors for editing anyway (default false: read-only). */
+  /** Repair lossless validation errors in memory (default true). `kimo validate` reports the file as written. */
+  repair?: boolean
+  /** @deprecated Validation errors never make a document read-only; ignored. */
   allowInvalid?: boolean
 }
 
@@ -70,19 +81,20 @@ export function openDocument(text: string, options: OpenOptions = {}): OpenResul
     }
   }
   let validation: ValidationResult | null = null
+  let doc = m.doc
+  let repairs: Repair[] = []
   if (reasons.length === 0 || reasons.every((r) => r.code === "FEATURE_UNSUPPORTED")) {
-    validation = validate(m.doc, options)
-    if (!validation.ok && !options.allowInvalid) {
-      reasons.push({ code: "INVALID", message: `${validation.errors.length} validation error(s)` })
-    }
+    if (options.repair !== false) ({ doc, repairs } = repairDocument(doc, options))
+    validation = validate(doc, options)
   }
   return {
-    doc: m.doc as unknown as KimoDocument,
+    doc: doc as unknown as KimoDocument,
     readOnly: reasons.length > 0,
     readOnlyReasons: reasons,
     sourceFormat,
     needsUpgradeConsent: m.status === "migrated",
     appliedMigrations: m.applied,
     validation,
+    repairs,
   }
 }

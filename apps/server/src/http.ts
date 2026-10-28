@@ -23,6 +23,7 @@ import { runAdmin } from "./admin"
 import { bearerToken, recheckToken, type VerifiedToken, verifyToken } from "./auth"
 import { retryAfterSeconds } from "./rate-limit"
 import type { Relay, SocketData } from "./rooms"
+import { webResponse } from "./web"
 import { initialSocketData } from "./ws"
 
 const ENVELOPE_OVERHEAD = 30
@@ -45,7 +46,7 @@ export interface VersionBody {
   owner: "unclaimed" | "claimed" | "external"
 }
 
-export function versionBody(relay: Relay): VersionBody {
+function versionBody(relay: Relay): VersionBody {
   return {
     name: pkg.name,
     version: pkg.version,
@@ -129,6 +130,24 @@ function corsHeaders(relay: Relay, req: Request): Record<string, string> {
   return headers
 }
 
+/**
+ * Whether `origin` is the relay's own: the web app it serves (board 45) connects from there.
+ * Browsers set both headers, so another site's page never matches.
+ */
+function sameOrigin(relay: Relay, req: Request, origin: string): boolean {
+  let host: string
+  try {
+    host = new URL(origin).host
+  } catch {
+    return false
+  }
+  const forwarded = relay.config.trustProxy
+    ? req.headers.get("x-forwarded-host")?.split(",")[0]?.trim()
+    : undefined
+  const own = forwarded || req.headers.get("host")
+  return own !== null && host === own.toLowerCase()
+}
+
 function originAllowed(relay: Relay, req: Request): boolean {
   const allowed = relay.config.allowedOrigins
   const origin = req.headers.get("origin")
@@ -136,7 +155,8 @@ function originAllowed(relay: Relay, req: Request): boolean {
     allowed === "*" ||
     origin === null ||
     DESKTOP_ORIGINS.includes(origin) ||
-    allowed.includes(origin)
+    allowed.includes(origin) ||
+    sameOrigin(relay, req, origin)
   )
 }
 
@@ -392,6 +412,8 @@ export function createFetchHandler(relay: Relay) {
       if (!isRoomId(roomId)) fail("ROOM_NOT_FOUND", "unknown room")
       return tail === "missing" ? missing(req, roomId) : blob(req, roomId, tail)
     }
+    const web = webResponse(req, url, relay.config.webDir ?? null)
+    if (web) return web
     return json({ error: "NOT_FOUND", message: `No route for ${url.pathname}` }, 404)
   }
 

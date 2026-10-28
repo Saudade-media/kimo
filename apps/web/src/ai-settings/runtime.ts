@@ -67,7 +67,7 @@ export function relayAuthFor(p: StoredProvider): AiRelayRequest["auth"] {
 }
 
 /** `localStorage` that never throws (private windows, blocked storage). */
-export function safeLocalStorage(): KeyValueStorage {
+function safeLocalStorage(): KeyValueStorage {
   const mem = new Map<string, string>()
   const ls = (): Storage | null => {
     try {
@@ -103,7 +103,7 @@ export function safeLocalStorage(): KeyValueStorage {
 }
 
 /** Builds the controller for this window's platform. */
-export function createAiSettingsForPlatform(platform: KimoPlatform): AiSettingsController {
+function createAiSettingsForPlatform(platform: KimoPlatform): AiSettingsController {
   const storage = safeLocalStorage()
   const onExternalChange = (listener: () => void) => {
     const on = (e: StorageEvent) => {
@@ -158,7 +158,7 @@ export function createAiSettingsForPlatform(platform: KimoPlatform): AiSettingsC
 const byPlatform = new WeakMap<KimoPlatform, AiSettingsController>()
 
 /** One controller per window (per platform object). */
-export function getAiProviders(platform: KimoPlatform): AiSettingsController {
+function getAiProviders(platform: KimoPlatform): AiSettingsController {
   let c = byPlatform.get(platform)
   if (!c) {
     c = createAiSettingsForPlatform(platform)
@@ -168,7 +168,7 @@ export function getAiProviders(platform: KimoPlatform): AiSettingsController {
 }
 
 /** Harnesses/tests: an explicit controller wins over the platform one. */
-export const AiSettingsContext = createContext<AiSettingsController | null>(null)
+const AiSettingsContext = createContext<AiSettingsController | null>(null)
 
 /** The window's controller (context first, then the platform's). */
 export function useAiProviders(platform: KimoPlatform | null): AiSettingsController | null {

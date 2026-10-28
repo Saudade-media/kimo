@@ -26,7 +26,7 @@ const exportSource = useMemo<ExportSource>(() => ({
   fonts: pdfFontsFrom(() => …renderer.fonts.faceBytes), // PDF "Embed fonts"
 }), [doc, name, session, m3, icons])
 
-// Opened by: the topbar Export button (Topbar / DiskTopbar `onExport`), File › Export… and
+// Opened by: the Page card's Export + (board 44, `RightPanel onExport`), File › Export… and
 // ⇧⌘E (`openExport`), the native File menu on desktop, and the Code tab's "Open export…"
 // (`onOpenExport(preset)` → format + node ids).
 {exportOpen && (

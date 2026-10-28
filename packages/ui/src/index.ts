@@ -233,6 +233,7 @@ export {
   type Side,
 } from "./popover/position"
 export {
+  floating,
   focusables,
   type PopoverAnchor,
   useAnchoredPosition,
@@ -243,9 +244,6 @@ export {
   PROP_TYPE_OPTIONS,
   PropDefRow,
   type PropDefRowProps,
-  type PropOption,
-  PropOptions,
-  type PropOptionsProps,
   type PropType,
 } from "./prop-def-row/PropDefRow"
 export { PropField, type PropFieldProps } from "./prop-field/PropField"

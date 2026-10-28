@@ -1,8 +1,8 @@
 /**
- * React bindings for the M4 session layer: session state, the session list, window chrome
- * (traffic-light inset, focus, fullscreen) and Home's recents / watched folders.
+ * React bindings for the M4 session layer: session state, the session list and window chrome
+ * (traffic-light inset, focus, fullscreen).
  */
-import type { KimoPlatform, RecentFile, WatchedFolder } from "@kimo/platform"
+import type { KimoPlatform } from "@kimo/platform"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { type SessionState, type TabTitleInput, tabTitle } from "../platform/contract"
 import type { FileDocumentSession, FileSessionManager } from "../platform/session"
@@ -52,36 +52,6 @@ export function useWindowChrome(platform: KimoPlatform): WindowChromeState {
   const fullscreen = useSyncExternalStore(subscribe, () => platform.window.isFullscreen())
   const inset = useSyncExternalStore(subscribe, () => platform.window.trafficLightInset())
   return { inset, focused, fullscreen, drawLights: platform.kind !== "desktop" }
-}
-
-/** Recent files and watched folders (Home, board 16), refreshed on `recents.onChange`. */
-export function useRecents(
-  platform: KimoPlatform,
-  limit = 50,
-): { files: RecentFile[] | null; folders: WatchedFolder[] | null; error: string | null } {
-  const [files, setFiles] = useState<RecentFile[] | null>(null)
-  const [folders, setFolders] = useState<WatchedFolder[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    let live = true
-    const load = () => {
-      Promise.all([platform.recents.listFiles({ limit }), platform.recents.listFolders()])
-        .then(([f, d]) => {
-          if (!live) return
-          setFiles(f)
-          setFolders(d)
-          setError(null)
-        })
-        .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)))
-    }
-    load()
-    const off = platform.recents.onChange(load)
-    return () => {
-      live = false
-      off()
-    }
-  }, [platform, limit])
-  return { files, folders, error }
 }
 
 /** A clock that re-renders every `ms` (relative "12 min ago" labels). */

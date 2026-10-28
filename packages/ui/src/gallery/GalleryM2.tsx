@@ -120,8 +120,7 @@ const DEMO_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(
 
 /**
  * Board "02b Components — Styling (M2)" (mj1CX) and the composite popovers of board
- * "09 Popovers (M2)" (h3BVP0). Every design instance carries `data-pen` for the measured pass
- * (`scripts/measure-gallery.ts`).
+ * "09 Popovers (M2)" (h3BVP0). Every design instance carries its design id in `data-pen`.
  */
 export function GalleryM2({ theme }: { theme?: "light" | "dark" }) {
   const [slider, setSlider] = useState(127 / 210)

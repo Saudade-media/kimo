@@ -15,7 +15,7 @@ import {
   type ToolContext,
   type ToolHandlers,
 } from "../src/index"
-import { type ClientPolicy, DEFAULT_POLICY, emptyAllowances, HEADLESS_POLICY } from "../src/policy"
+import { ASK_POLICY, type ClientPolicy, emptyAllowances, HEADLESS_POLICY } from "../src/policy"
 import { TOOLS } from "../src/registry"
 import { validateInput } from "../src/server"
 
@@ -90,7 +90,7 @@ export function testClient(
 ): TestClient {
   const client = opts.client ?? "claude-code"
   const session = `s${(++sessionSeq).toString(36).padStart(5, "0")}`
-  const base = opts.headless ? HEADLESS_POLICY : DEFAULT_POLICY
+  const base = opts.headless ? HEADLESS_POLICY : ASK_POLICY
   const ctx: ToolContext = {
     identity: { client, label: client, session, transport: "in-process" },
     origin: `mcp:${client}.${session}`,

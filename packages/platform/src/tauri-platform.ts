@@ -105,7 +105,7 @@ const newWatchId = () =>
  * 14 pt buttons: 76; older systems 12 pt: 68), so the inset is the reported right edge of the
  * zoom button; 68 until the first measurement arrives. Fullscreen hides them.
  */
-export function trafficLightInsetOf(s: WindowState): number {
+function trafficLightInsetOf(s: WindowState): number {
   if (s.trafficLightPosition === null) return 0
   if (s.fullscreen) return MACOS_CHROME.fullscreenInset
   const right = s.trafficLightsRight
@@ -566,6 +566,9 @@ export async function createTauriPlatform(bridge: TauriBridge): Promise<KimoPlat
       },
       openNewWindow: async () => {
         await call("kimo_window_new", none)
+      },
+      openFileInNewWindow: async (path) => {
+        await call("kimo_window_open_file", { path })
       },
       onCloseRequested(handler) {
         closeHandler = handler

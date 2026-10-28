@@ -1,6 +1,6 @@
 /**
  * Pure snapping (board 10 #1 "Snapping while moving" O68JG1, #2 "Equal spacing" V6rSVv;
- * contract `SnapFn` / `CollectSnapCandidates` in `./contract`, ADR 0010).
+ * the `SnapQuery` / `SnapResult` contract in `./contract`, ADR 0010).
  *
  * Per axis, the moving box's lines (left/center/right, or only the dragged edges when
  * resizing) snap to the same lines of every candidate (siblings + parent) within
@@ -11,13 +11,7 @@
  */
 import type { LayoutResult, Rect } from "@kimo/layout"
 import type { Point, SnapLine, SpacingIndicator } from "@kimo/renderer"
-import {
-  type CollectSnapCandidates,
-  SNAP_THRESHOLD_PX,
-  type SnapBox,
-  type SnapQuery,
-  type SnapResult,
-} from "./contract"
+import { SNAP_THRESHOLD_PX, type SnapBox, type SnapQuery, type SnapResult } from "./contract"
 
 /** Number label for overlays: world units, 2 decimals, trailing zeros dropped. */
 export const fmtUnits = (v: number): string => {
@@ -297,19 +291,6 @@ export function snapPoint(
   const r = snap(q)
   // A point has no spacing slot of its own.
   return { ...r, spacing: [] }
-}
-
-/** {@link CollectSnapCandidates}: siblings of the first selected node + its parent box. */
-export const collectSnapCandidates: CollectSnapCandidates = (
-  layout,
-  selection,
-  parentOf,
-  childrenOf,
-) => {
-  const first = selection[0]
-  if (first === undefined) return { candidates: [], parent: null }
-  const parentId = parentOf(first)
-  return candidatesIn(layout, parentId, selection, childrenOf)
 }
 
 /** Candidates inside a given parent (pen / draw tools: the drop parent). */

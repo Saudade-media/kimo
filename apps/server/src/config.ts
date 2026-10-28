@@ -14,6 +14,11 @@ export interface RelayConfig {
   /** Directory of `relay.sqlite` and `blobs/`; `":memory:"` keeps everything in memory. */
   dataDir: string
   allowedOrigins: "*" | readonly string[]
+  /**
+   * The Kimo web build served at `/`, `/join` and `/pair` (board 45), or null: then `/join` and
+   * `/pair` hand the link to the app. Resolved by main.ts (`KIMO_WEB_DIR`, else next to the relay).
+   */
+  webDir?: string | null
   /** KIMO_OWNER_KEY, decoded (32 bytes each): seeds an empty owner set at boot (§14.11). */
   ownerKeys: readonly Uint8Array[]
   /** KIMO_RESET_OWNER, or null: clears the owner set once per distinct value. */

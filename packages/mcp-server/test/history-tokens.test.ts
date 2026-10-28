@@ -1,14 +1,14 @@
 /**
- * kimo_history undo tokens survive undo / redo (board 37 F3, F6, F11): a group's token follows
+ * kimo_history undo tokens survive undo / redo: a group's token follows
  * it to the redo stack and back, so the same token undoes it again after a redo, and a token
  * redo replays exactly that group (or refuses when another one is on top).
  */
 import { describe, expect, test } from "bun:test"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import {
+  ASK_POLICY,
   type ClientPolicy,
   createMemoryDocumentHost,
-  DEFAULT_POLICY,
   type McpConnection,
   type ToolResult,
 } from "../src/index"
@@ -18,9 +18,9 @@ function setup() {
   const platform = createMemoryPlatform({ pid: 3301, files: {} })
   const host = createMemoryDocumentHost({ platform, autosaveMs: 0, validate: validateInput })
   const policy: ClientPolicy = {
-    ...DEFAULT_POLICY,
+    ...ASK_POLICY,
     files: ["**"],
-    grants: [...DEFAULT_POLICY.grants, "files.create"],
+    grants: [...ASK_POLICY.grants, "files.create"],
     level: "edit+delete",
     confirmDestructive: false,
   }

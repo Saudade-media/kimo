@@ -199,66 +199,6 @@
 }
 
 /*
- * Board 34 Auto-approve Chip (PWfak), above the composer (Composer Wrap gap 8): h 24, padding
- * [0, 4, 0, 8], gap 4, center, warning-soft, radius-pill › Icon shield-check 12 warning · Label
- * sans 11 / 500 warning · Turn Off (mCuKF) 16 × 16 pill › x 12 warning. The whole chip turns
- * auto-approve off.
- */
-.agent-panel__auto-chip {
-  box-sizing: border-box;
-  display: inline-flex;
-  flex: none;
-  flex-direction: row;
-  align-self: flex-start;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  margin: 0 0 8px;
-  padding: 0 4px 0 8px;
-  border: 0;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-warning-soft);
-  color: var(--kimo-warning);
-  cursor: pointer;
-  appearance: none;
-}
-
-.agent-panel__auto-chip:hover {
-  filter: brightness(0.97);
-}
-
-.agent-panel__auto-chip-icon {
-  display: block;
-  flex: none;
-  width: 12px;
-  height: 12px;
-}
-
-.agent-panel__auto-chip-label {
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
-  white-space: nowrap;
-}
-
-.agent-panel__auto-chip-off {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--kimo-radius-pill);
-}
-
-.agent-panel__auto-chip-off > svg {
-  display: block;
-  width: 12px;
-  height: 12px;
-}
-
-/*
  * Board 34 Auto-approved Line (ZbBuI): row, gap 6, padding [0, 0, 0, 34], center › Icon
  * shield-check 12 warning · Text sans 11 text-secondary, fill.
  */
@@ -596,11 +536,6 @@
   left: 12px;
   bottom: calc(100% + 4px);
   width: 232px;
-}
-
-/* Item · Auto-approve on (u0Zdm5): shield-check 14 in warning. */
-.agent-more__auto--on .kimo-menu-item-dense__check--icon {
-  color: var(--kimo-warning);
 }
 
 /* Reason (board 40 F / G): padding [0, 8, 6, 30] › sans 11 text-tertiary, line-height 1.45. */
@@ -1471,99 +1406,6 @@
   font-weight: var(--kimo-font-weight-medium);
   line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
   cursor: pointer;
-}
-
-/* Pass Chip (NCElh): h 22, gap 5, padding [0, 8, 0, 6], bg-app, 1 px agent, pill. */
-.agent-pass-chip {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 8px 0 6px;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-bg-app);
-  box-shadow: inset 0 0 0 1px var(--kimo-agent);
-  color: var(--kimo-agent);
-}
-
-.agent-pass-chip__icon {
-  display: block;
-  width: 12px;
-  height: 12px;
-}
-
-.agent-pass-chip__label {
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 13px; /* Pencil text box: round(11 × 1.21) for Inter */
-  white-space: nowrap;
-}
-
-/* Agent cursor (GmEAl H6ncRy): column, gap 2 › Pointer 18 · Pill gap 6, padding [4, 10, 4, 4]. */
-.agent-cursor {
-  --agent-persona: var(--kimo-agent);
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  pointer-events: none;
-}
-
-.agent-cursor__pointer {
-  display: block;
-  width: 18px;
-  height: 18px;
-  color: var(--agent-persona);
-}
-
-.agent-cursor__pill {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 4px;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--agent-persona);
-  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
-}
-
-.agent-cursor__label {
-  color: var(--kimo-on-accent);
-  font-family: var(--kimo-font-sans);
-  font-size: var(--kimo-text-sm);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 15px; /* Pencil text box: round(12 × 1.21) for Inter */
-  white-space: nowrap;
-}
-
-/* Rejected Op (O2Whh): h 24, gap 6, padding [0, 10, 0, 8], danger, pill, shadow 0 4 12. */
-.agent-rejected {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 24px;
-  padding: 0 10px 0 8px;
-  border-radius: var(--kimo-radius-pill);
-  background: var(--kimo-danger);
-  box-shadow: 0 4px 12px 0 var(--kimo-shadow);
-  color: #ffffff; /* pen-literal: O2Whh icon + label #FFFFFF */
-}
-
-.agent-rejected__icon {
-  display: block;
-  width: 12px;
-  height: 12px;
-}
-
-.agent-rejected__label {
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
-  font-weight: var(--kimo-font-weight-medium);
-  line-height: 15px; /* Pencil text box: round(11 × 1.32) for JetBrains Mono */
-  white-space: nowrap;
 }
 
 /*

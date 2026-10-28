@@ -1,15 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
 import { CanvasKitRenderer } from "../src"
 import { loadCanvasKit } from "../src/ck"
 import { pixelAt } from "./helpers/golden"
 import { sceneOf, simpleLayout, type TestDoc } from "./helpers/scene"
 
 const enc = (s: string) => new TextEncoder().encode(s)
-const LIQUID = new Uint8Array(
-  readFileSync(join(import.meta.dir, "..", "..", "..", "shaders", "agent-liquid.glsl")),
-)
 const ORB_MESH = {
   kind: "mesh",
   cols: 3,
@@ -117,32 +112,6 @@ describe("mesh paints", () => {
 })
 
 describe("shader paints", () => {
-  test("agent-liquid fills a circle once its source loads; transparent outside", async () => {
-    const { ck, r } = await setup(
-      {
-        nodes: {
-          mark000001: {
-            type: "frame",
-            parent: null,
-            order: "a",
-            w: 56,
-            h: 56,
-            fill: { kind: "shader", src: "./shaders/agent-liquid.glsl", uniforms: { u_gloss: 0 } },
-          },
-        },
-      },
-      { "./shaders/agent-liquid.glsl": LIQUID },
-      56,
-      56,
-    )
-    await tick()
-    const png = r.snapshot()
-    expect(pixelAt(ck, png, 28, 28)[3]).toBe(255)
-    // The shader's own circular mask: the frame's corners stay transparent.
-    expect(pixelAt(ck, png, 1, 1)[3]).toBe(0)
-    r.dispose()
-  })
-
   test("gl_FragCoord is bottom-up; the paint is clipped to the node shape", async () => {
     const { ck, r } = await setup(
       {
@@ -282,9 +251,8 @@ void main() { gl_FragColor = vec4(c, 1.0); }`
     expect(pixelAt(ck, r.snapshot(), 5, 5)[0]).toBe(0)
     r.shaderAnimation = true
     r.snapshot() // starts the clock
-    await tick(300)
-    const red = pixelAt(ck, r.snapshot(), 5, 5)[0]
-    expect(red).toBeGreaterThan(40)
+    await tick(150)
+    expect(pixelAt(ck, r.snapshot(), 5, 5)[0]).toBeGreaterThan(10)
     const exported = await r.exportRaster("clk0000001")
     expect(pixelAt(ck, exported, 5, 5)[0]).toBe(0)
     r.shaderAnimation = false

@@ -5,11 +5,12 @@ import { join } from "node:path"
 import {
   claudeCodeAdapter,
   claudeInvocation,
+  cliModelEfforts,
   codexAdapter,
   codexInvocation,
+  GEMINI_CLI,
   geminiInvocation,
   geminiParser,
-  genericAdapter,
 } from "../src/cli/adapters"
 import { detectClis, pickDefaultSelection } from "../src/cli/detect"
 import { parseEnvelope, runCliTurn, shimLaunch } from "../src/cli/engine"
@@ -388,26 +389,6 @@ describe("invocations", () => {
     })
   })
 
-  test("Claude Code: Kimo's prompt replaces Claude Code's; context leads the user message", () => {
-    const { args, stdin, env } = claudeInvocation(
-      input({ context: "Document: docId d_1_2\nPage outline …" }),
-    )
-    const at = (flag: string) => args[args.indexOf(flag) + 1]
-    expect(at("--system-prompt")).toBe("You are Kimo.")
-    expect(args).not.toContain("--append-system-prompt")
-    expect(args).toContain("--disable-slash-commands")
-    expect(env).toEqual({
-      CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1",
-      CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
-    })
-    const text = JSON.parse(stdin.trim()).message.content.at(-1).text as string
-    expect(text).toBe(
-      "<kimo-context>\nDocument: docId d_1_2\nPage outline …\n</kimo-context>\n\nAdd a waitlist form",
-    )
-    // The system prompt never carries the volatile context (Claude Code records it once).
-    expect(at("--system-prompt")).not.toContain("docId")
-  })
-
   test("Codex: exec --json, read-only sandbox, MCP via -c, resume", () => {
     const { args } = codexInvocation(
       input({ cliSessionId: "thr-1", mcp: shimLaunch("/k", "codex") }),
@@ -419,23 +400,6 @@ describe("invocations", () => {
     expect(args).toContain('mcp_servers.kimo.args=["--client","codex"]')
     expect(args).toContain('mcp_servers.kimo.default_tools_approval_mode="approve"')
     expect(args.at(-1)).toBe("-")
-  })
-
-  test("Codex: Kimo's prompt is the base instructions file, on new and resumed turns", () => {
-    for (const cliSessionId of [undefined, "thr-1"]) {
-      const inv = codexInvocation(
-        input({
-          ...(cliSessionId ? { cliSessionId } : {}),
-          context: "ctx",
-          mcp: shimLaunch("/k", "codex"),
-        }),
-      )
-      expect(inv.args).toContain('model_instructions_file="/w/.kimo/instructions.md"')
-      expect(inv.workspaceFiles).toEqual([
-        { path: ".kimo/instructions.md", text: "You are Kimo.\n" },
-      ])
-      expect(inv.stdin).toBe("<kimo-context>\nctx\n</kimo-context>\n\nAdd a waitlist form")
-    }
   })
 
   test("Gemini CLI: stream-json, workspace settings add Kimo MCP and exclude write/shell tools", () => {
@@ -458,22 +422,17 @@ describe("invocations", () => {
     expect(events[0]).toMatchObject({ type: "step_start", tool: "kimo_apply_ops" })
   })
 
-  test("generic adapter fills the args template", () => {
-    const a = genericAdapter({
-      id: "my-cli",
-      label: "My CLI",
-      command: "mycli",
-      args: ["run", "--json", "--model", "{model}", "--mcp", "{mcpConfigJson}", "{prompt}"],
-      output: "claude-stream-json",
-    })
-    const { args } = a.invocation(input())
-    expect(args).toEqual([
-      "run",
-      "--json",
-      "--mcp",
-      expect.stringContaining('"kimo"'),
-      "Add a waitlist form",
-    ])
+  test("effort flags: Haiku takes none, Codex gets the level, Gemini CLI has no effort control", () => {
+    const at = (args: string[], flag: string) => args[args.indexOf(flag) + 1]
+    const claude = claudeInvocation(input({ model: "claude-sonnet-5-5", thinking: "low" }))
+    expect(at(claude.args, "--effort")).toBe("low")
+    const haiku = claudeInvocation(input({ model: "claude-haiku-4-5-20251001", thinking: "max" }))
+    expect(haiku.args).not.toContain("--effort")
+    const codex = codexInvocation(
+      input({ model: "gpt-5.6-luna", thinking: "max", mcp: shimLaunch("/k", "codex") }),
+    )
+    expect(codex.args).toContain('model_reasoning_effort="max"')
+    expect(cliModelEfforts(GEMINI_CLI, "gemini-2.5-pro")).toEqual([])
   })
 
   test("envelope extraction from MCP tool result text", () => {
@@ -528,7 +487,7 @@ describe("running a turn through a fake CLI", () => {
         .map((e) => (e as { text: string }).text)
         .join(""),
     ).toBe("Adding the form. Done.")
-    // Board 31: the note before the tool call is status; the reply is the text after it.
+    // The note before the tool call is status; the reply is the text after it.
     expect(replyOf(rec.messages)).toBe("Done.")
     const step = events.find((e) => e.type === "step_end")
     expect(step).toMatchObject({
@@ -536,7 +495,7 @@ describe("running a turn through a fake CLI", () => {
       tool: "kimo_apply_ops",
       ok: true,
       undoToken: "u-cli-1",
-      // Board 31 "Agent cursor": the pointer target travels with the step.
+      // The pointer target travels with the step.
       pointer: "Submit0001",
       summary: envelope.summary,
     })

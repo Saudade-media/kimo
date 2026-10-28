@@ -210,6 +210,35 @@
   opacity: 0.5;
 }
 
+/* Board 45: the browser hand-off cards (success C, warning D, spinning A, the download foot). */
+.join-card__wrap--success {
+  background: var(--kimo-success-soft);
+  color: var(--kimo-success);
+}
+
+.join-card__wrap--warning {
+  background: var(--kimo-warning-soft);
+  color: var(--kimo-warning);
+}
+
+.join-card__spinner {
+  display: flex;
+  animation: join-spin 1s linear infinite;
+}
+
+.join-card__foot {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  line-height: 1.45;
+}
+
+.join-card__foot a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 @keyframes join-spin {
   to {
     transform: rotate(360deg);
@@ -227,6 +256,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .join-card__step[data-status="active"] .join-card__step-icon > svg,
+  .join-card__spinner,
   .join-card__bar--indeterminate {
     animation: none;
   }

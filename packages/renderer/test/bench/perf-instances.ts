@@ -12,7 +12,7 @@ import {
   nodeSourceFromDocument,
 } from "@kimo/layout"
 import { CanvasKitRenderer } from "../../src"
-import { instancesDoc } from "../fixtures/m3"
+import { instancesDoc } from "../fixtures/instances"
 
 const COUNT = Number(process.env.KIMO_INSTANCES ?? 1000)
 const doc = instancesDoc(COUNT)

@@ -3,8 +3,6 @@
 Everything here is exported from `apps/web/src/conflicts` (`index.ts`). This module never edits
 the shared shell files. The mount points below are the only changes the owners of
 `platform/session.ts`, `editor/Editor.tsx`, `LeftPanel.tsx` and `RightPanel.tsx` need to make.
-`src/conflicts/harness` (used by `e2e/m4-merge.e2e.ts`) wires all of them the same way and can
-serve as a reference.
 
 ## 1. Document session → conflict session (`platform/session.ts` owner)
 
@@ -51,7 +49,7 @@ useEffect(() => {
   return () => conflicts?.bindView(null)
 }, [conflicts, session])
 
-useNextConflictShortcut(conflicts) // ⌘' (⇧⌘' = previous), NEXT_CONFLICT_SHORTCUT
+useNextConflictShortcut(conflicts) // ⌘' (⇧⌘' = previous)
 
 // inside <main className="editor__canvas">, right after <CanvasHost …/>:
 {conflicts && <CanvasConflictOverlay session={conflicts} ui={session.ui} layout={layout} />}

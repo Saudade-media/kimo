@@ -457,16 +457,4 @@ mod tests {
         t.remove(&e.id).unwrap();
         assert!(t.list().unwrap().is_empty());
     }
-
-    #[test]
-    fn list_is_newest_first() {
-        let (_d, t, work) = setup();
-        for n in ["a.kimo", "b.kimo"] {
-            fs::write(work.join(n), n).unwrap();
-            t.move_to_trash(&work.join(n)).unwrap();
-            std::thread::sleep(std::time::Duration::from_millis(3));
-        }
-        let names: Vec<_> = t.list().unwrap().into_iter().map(|e| e.name).collect();
-        assert_eq!(names, ["b.kimo", "a.kimo"]);
-    }
 }

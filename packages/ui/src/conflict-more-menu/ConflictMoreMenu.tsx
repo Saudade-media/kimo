@@ -3,7 +3,12 @@ import { type ComponentPropsWithRef, type KeyboardEvent, useEffect, useMemo, use
 import { middleTruncate } from "../file-row/middle-truncate"
 import { cx, mergeRefs } from "../internal/util"
 import type { PlacementOptions } from "../popover/position"
-import { type PopoverAnchor, useAnchoredPosition, useDismiss } from "../popover/usePopover"
+import {
+  floating,
+  type PopoverAnchor,
+  useAnchoredPosition,
+  useDismiss,
+} from "../popover/usePopover"
 
 /** One hidden conflict in the "+N" menu. */
 export interface ConflictMoreItem {
@@ -152,7 +157,7 @@ export function ConflictMoreMenu({
       onClose()
     }
   }
-  return (
+  return floating(
     <div
       role="menu"
       aria-label={`${items.length} more conflicts`}
@@ -196,6 +201,7 @@ export function ConflictMoreMenu({
           <span className="kimo-conflict-more-menu__meta">{r.meta}</span>
         </button>
       ))}
-    </div>
+    </div>,
+    anchor,
   )
 }

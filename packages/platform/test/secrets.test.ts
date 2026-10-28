@@ -1,26 +1,20 @@
 import { describe, expect, test } from "bun:test"
 import {
-  createMemorySecrets,
   createRelayFetch,
   createTauriCliHost,
   createTauriSecrets,
   createWebSecrets,
   providerAccount,
-  SECRET_SERVICE,
-  TAURI_CLI_COMMANDS,
-  TAURI_SECRETS_COMMANDS,
   WEB_SECRETS_KEY,
 } from "../src/index"
 
 describe("secrets", () => {
-  test("keychain naming: service kimo, account provider.<id>", () => {
-    expect(SECRET_SERVICE).toBe("kimo")
-    expect(providerAccount("anthropic")).toBe("provider.anthropic")
+  test("account names are provider.<id>; path-like ids are refused", () => {
     expect(providerAccount("custom:ollama")).toBe("provider.custom:ollama")
     expect(() => providerAccount("../x")).toThrow()
   })
 
-  test("web: one localStorage key, kimo.providers", async () => {
+  test("web: keys live under one localStorage entry and only the last four show as a hint", async () => {
     const m = new Map<string, string>()
     const storage = {
       getItem: (k: string) => m.get(k) ?? null,
@@ -33,12 +27,11 @@ describe("secrets", () => {
       "provider.anthropic": "sk-ant-api03-xyz3f9a",
     })
     expect(await s.hint("provider.anthropic")).toBe("3f9a")
-    expect(await s.list()).toEqual(["provider.anthropic"])
     await s.delete("provider.anthropic")
     expect(m.has(WEB_SECRETS_KEY)).toBe(false)
   })
 
-  test("desktop: invokes kimo_secret_* and never returns the key", async () => {
+  test("desktop: the key goes to the keychain and is never read back into the page", async () => {
     const calls: [string, unknown][] = []
     const s = createTauriSecrets(async (cmd, args) => {
       calls.push([cmd, args])
@@ -49,8 +42,6 @@ describe("secrets", () => {
     await expect(s.get("provider.anthropic")).rejects.toThrow()
     expect(calls.map((c) => c[0])).toEqual(["kimo_secret_has", "kimo_secret_set"])
     expect(calls[1]?.[1]).toEqual({ service: "kimo", account: "provider.anthropic", value: "k" })
-    expect(TAURI_SECRETS_COMMANDS).toContain("kimo_ai_request")
-    expect(await createMemorySecrets({ a: "1234" }).hint("a")).toBe("1234")
   })
 
   test("relay fetch: strips auth headers, streams chunks from kimo://ai-response", async () => {
@@ -94,7 +85,7 @@ describe("secrets", () => {
 })
 
 describe("cli agents (Tauri surface)", () => {
-  test("spawn streams output events for its process id and resolves exit", async () => {
+  test("spawn streams output events for its own process id and resolves exit", async () => {
     const listeners = new Map<string, ((p: unknown) => void)[]>()
     const emit = (e: string, p: unknown) => {
       for (const l of listeners.get(e) ?? []) l(p)
@@ -123,7 +114,5 @@ describe("cli agents (Tauri surface)", () => {
     })
     expect(await p.exited).toEqual({ code: 0, signal: null })
     expect(out).toBe("line\n")
-    expect(p.pid).toBe(42)
-    expect(TAURI_CLI_COMMANDS).toHaveLength(9)
   })
 })

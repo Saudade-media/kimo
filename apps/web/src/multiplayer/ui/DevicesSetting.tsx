@@ -27,7 +27,7 @@ const COPIED_MS = 2000
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 /** "Added Oct 2" (the year only when it is not this one). */
-export function addedText(addedAt: number, now: number = Date.now()): string {
+function addedText(addedAt: number, now: number = Date.now()): string {
   const d = new Date(addedAt)
   const year = d.getFullYear() === new Date(now).getFullYear() ? "" : ` ${d.getFullYear()}`
   return `Added ${MONTHS[d.getMonth()]} ${d.getDate()}${year}`
@@ -37,7 +37,7 @@ export function addedText(addedAt: number, now: number = Date.now()): string {
 export const deviceIcon = (name: string) => (/ on /.test(name) ? "globe" : "laptop")
 
 /** "Waiting for the other device · 14:58 left". */
-export function countdownText(exp: number, now: number): string {
+function countdownText(exp: number, now: number): string {
   const left = Math.max(0, Math.ceil(exp - now / 1000))
   const m = Math.floor(left / 60)
   const s = String(left % 60).padStart(2, "0")
@@ -51,7 +51,7 @@ export function expiredText(exp: number): string {
 }
 
 /** The link as the sheet shows it: no scheme, the token cut short (`getkimo.design/pair#Q7mK2vX9…`). */
-export function shownPairingLink(link: string): string {
+function shownPairingLink(link: string): string {
   const hash = link.indexOf("#")
   if (hash < 0) return link
   const head = link.slice(0, hash).replace(/^https?:\/\//, "")
@@ -258,7 +258,7 @@ function RenameField({
 }
 
 /** Remove (BwiGq, CbSGE): Dialog with the danger icon wrap and a danger confirm. */
-export function RemoveDeviceDialog({
+function RemoveDeviceDialog({
   device,
   onCancel,
   onConfirm,
@@ -304,7 +304,7 @@ type SheetState =
  * Link (Field 32 bg-muted with link icon and the link in mono 11 · Copy) · Status (timer 12 ·
  * mono 11 tertiary) · Footer (spacer · Cancel link · Done).
  */
-export function AddDeviceSheet({
+function AddDeviceSheet({
   ownership,
   relayUrl,
   known,

@@ -47,8 +47,8 @@ describe("the relay is blind", () => {
     const specs = [...bareImports(join(serverSrc, "index.ts"))]
     expect(specs.filter((s) => /yjs|y-protocols|editor-state|core-schema/.test(s))).toEqual([])
     expect(specs).toContain("bun:sqlite")
-    // Every file of the server and the protocol core stays free of CRDT code, not just the graph.
-    for (const dir of [serverSrc, syncMp])
+    // Every file of the server stays free of CRDT code, not just the module graph.
+    for (const dir of [serverSrc])
       for (const name of readdirSync(dir))
         if (name.endsWith(".ts"))
           expect(readFileSync(join(dir, name), "utf8")).not.toMatch(

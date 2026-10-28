@@ -1,0 +1,20 @@
+{
+  "name": "@kimo/figma",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Figma clipboard import: decodes a Figma copy (fig-kiwi) and converts it to Kimo nodes",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "../../scripts/safe-test.sh ./test"
+  },
+  "dependencies": {
+    "@kimo/core-schema": "workspace:*",
+    "fflate": "^0.8.2",
+    "fzstd": "^0.1.1"
+  }
+}

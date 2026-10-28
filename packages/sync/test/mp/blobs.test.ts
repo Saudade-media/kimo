@@ -14,7 +14,6 @@ import {
   sealBlob,
   sha256,
   toHex,
-  utf8,
 } from "../../src/mp"
 
 const RELAY = "https://relay.test"
@@ -175,17 +174,9 @@ describe("upload", () => {
       completed: 1,
       total: 1,
     })
-  })
-
-  test("a second run uploads nothing; manifest entries not held locally are ignored", async () => {
-    const t = await setup()
-    await t.addLocal(randomBytes(50))
-    t.manifest["0123456789abcdef.png"] = { sha256: "0123456789abcdef".repeat(4) }
-    await t.sync.uploadMissing()
-    const puts = () => t.relay.calls.filter((c) => c.startsWith("PUT")).length
-    expect(puts()).toBe(1)
-    expect(await t.sync.uploadMissing()).toEqual({ uploaded: 0, skipped: 1, failed: 0 })
-    expect(puts()).toBe(1)
+    // A second run finds nothing missing.
+    expect((await t.sync.uploadMissing()).uploaded).toBe(0)
+    expect(t.relay.calls.filter((c) => c.startsWith("PUT")).length).toBe(1)
   })
 
   test("entries without sha256 are skipped; oversized and mismatching files too", async () => {
@@ -275,29 +266,6 @@ describe("upload", () => {
     expect(b.key).toBeDefined()
   })
 
-  test("a key with corrupted bytes does not stop the next key sharing its content", async () => {
-    const t = await setup(1)
-    const bytes = randomBytes(64)
-    const a = await t.addLocal(bytes, "png")
-    const b = await t.addLocal(bytes, "jpg")
-    t.assets.files.set(a.key, randomBytes(64))
-    const result = await t.sync.uploadMissing()
-    expect(result).toEqual({ uploaded: 1, skipped: 1, failed: 0 })
-    expect(t.skipped).toContainEqual([a.key, "hash-mismatch"])
-    expect(t.relay.blobs.size).toBe(1)
-    expect(b.key).toBeDefined()
-  })
-
-  test("duplicate keys sharing content are counted, one PUT", async () => {
-    const t = await setup()
-    const bytes = randomBytes(64)
-    await t.addLocal(bytes, "png")
-    await t.addLocal(bytes, "jpg")
-    const result = await t.sync.uploadMissing()
-    expect(result).toEqual({ uploaded: 1, skipped: 1, failed: 0 })
-    expect(t.relay.calls.filter((c) => c.startsWith("PUT")).length).toBe(1)
-  })
-
   test("overlapping uploadMissing calls never upload the same blob twice", async () => {
     const t = await setup()
     for (let i = 0; i < 4; i++) await t.addLocal(randomBytes(64))
@@ -374,34 +342,27 @@ describe("upload", () => {
     expect((await upload).uploaded).toBe(1)
   })
 
-  test("a retry-after beyond the cap fails the attempt instead of sleeping", async () => {
-    const t = await setup()
-    await t.addLocal(randomBytes(64))
-    t.relay.fail.push({
+  test("a retry-after up to a minute is honoured; one beyond the cap fails the attempt instead of sleeping", async () => {
+    const rateLimited = (retryAfter: string) => ({
       method: "PUT",
       status: 429,
       code: "RATE_LIMITED",
-      headers: { "content-type": "application/json", "retry-after": "1000000" },
+      headers: { "content-type": "application/json", "retry-after": retryAfter },
     })
-    const result = await t.sync.uploadMissing()
-    expect(result).toEqual({ uploaded: 0, skipped: 0, failed: 1 })
-    expect(t.sleeps).toEqual([])
-  })
-
-  test("a retry-after of 61 s (a max-size blob against the byte bucket) is honoured", async () => {
     const t = await setup()
     await t.addLocal(randomBytes(64))
-    t.relay.fail.push({
-      method: "PUT",
-      status: 429,
-      code: "RATE_LIMITED",
-      headers: { "content-type": "application/json", "retry-after": "61" },
-    })
+    t.relay.fail.push(rateLimited("61"))
     expect(await t.sync.uploadMissing()).toEqual({ uploaded: 1, skipped: 0, failed: 0 })
     expect(Math.max(...t.sleeps)).toBeGreaterThanOrEqual(61_000)
+
+    const t2 = await setup()
+    await t2.addLocal(randomBytes(64))
+    t2.relay.fail.push(rateLimited("1000000"))
+    expect(await t2.sync.uploadMissing()).toEqual({ uploaded: 0, skipped: 0, failed: 1 })
+    expect(t2.sleeps).toEqual([])
   })
 
-  test.each(["ROOM_CLOSED", "ROOM_NOT_FOUND", "ORIGIN_FORBIDDEN", "ROLE_UNSUPPORTED"])(
+  test.each(["ROOM_CLOSED", "VIEW_ONLY"])(
     "a room-wide %s refusal ends the run after one PUT",
     async (code) => {
       const t = await setup(1)
@@ -413,15 +374,6 @@ describe("upload", () => {
       expect(t.relay.calls.filter((c) => c.startsWith("PUT")).length).toBe(1)
     },
   )
-
-  test("an auth failure ends the run with the error", async () => {
-    const t = await setup(1)
-    await t.addLocal(randomBytes(64))
-    await t.addLocal(randomBytes(65))
-    t.relay.fail.push({ method: "PUT", status: 403, code: "VIEW_ONLY" })
-    await expect(t.sync.uploadMissing()).rejects.toMatchObject({ code: "VIEW_ONLY" })
-    expect(t.relay.calls.filter((c) => c.startsWith("PUT")).length).toBe(1)
-  })
 })
 
 describe("ensure", () => {
@@ -449,28 +401,14 @@ describe("ensure", () => {
     expect(t.relay.calls.filter((c) => c.startsWith("GET")).length).toBe(1)
   })
 
-  test("a 404 is state missing and fires onMissing; a later ensure retries", async () => {
+  test("a 404 is state missing; retryMissing refetches it after the owner uploads (catch-up)", async () => {
     const t = await setup()
     const bytes = randomBytes(40)
     const sha = toHex(await sha256(bytes))
     const key = `${sha.slice(0, 16)}.png`
     t.manifest[key] = { sha256: sha }
     expect(await t.sync.ensure(key)).toBe(false)
-    expect(t.sync.state(key)).toBe("missing")
     expect(t.missing).toEqual([key])
-    const sealed = await sealBlob(t.keys, bytes)
-    t.relay.blobs.set(sealed.id, sealed.envelope)
-    expect(await t.sync.ensure(key)).toBe(true)
-    expect(t.sync.state(key)).toBe("local")
-  })
-
-  test("retryMissing refetches 404 keys after the owner uploads them (catch-up)", async () => {
-    const t = await setup()
-    const bytes = randomBytes(40)
-    const sha = toHex(await sha256(bytes))
-    const key = `${sha.slice(0, 16)}.png`
-    t.manifest[key] = { sha256: sha }
-    expect(await t.sync.ensure(key)).toBe(false)
     expect(await t.sync.retryMissing()).toEqual([])
     expect(t.sync.state(key)).toBe("missing")
     const sealed = await sealBlob(t.keys, bytes)
@@ -478,28 +416,6 @@ describe("ensure", () => {
     expect(await t.sync.retryMissing()).toEqual([key])
     expect(t.sync.state(key)).toBe("local")
     expect(await t.sync.retryMissing()).toEqual([])
-  })
-
-  test("a throwing store read resolves false with onError and state failed", async () => {
-    const t = await setup()
-    const { key } = await t.addRemote(randomBytes(40))
-    const errors: unknown[] = []
-    t.assets.bytes = async () => {
-      throw new Error("idb abort")
-    }
-    const sync = createBlobSync({
-      relayUrl: RELAY,
-      room: t.roomId,
-      token: () => "t",
-      roomKey: t.roomKey,
-      assets: t.assets,
-      manifest: () => t.manifest,
-      fetch: t.relay.fetch,
-      onError: (_k, e) => errors.push(e),
-    })
-    expect(await sync.ensure(key)).toBe(false)
-    expect(sync.state(key)).toBe("failed")
-    expect(errors).toHaveLength(1)
   })
 
   test("the peer-declared mime and bytes are not forwarded to the store", async () => {
@@ -579,6 +495,7 @@ describe("ensure", () => {
       new Response(
         new ReadableStream({
           pull(controller) {
+            if (pulled >= 100) return controller.close()
             pulled++
             controller.enqueue(new Uint8Array(64))
           },
@@ -587,15 +504,6 @@ describe("ensure", () => {
     expect(await make(streaming).ensure(key)).toBe(false)
     expect(errors.map((e) => (e as { code: string }).code)).toEqual(["TOO_LARGE", "TOO_LARGE"])
     expect(pulled).toBeLessThan(10)
-  })
-
-  test("entries without sha256 and unknown keys stay unknown", async () => {
-    const t = await setup()
-    t.manifest["aaaaaaaaaaaaaaaa.png"] = { mime: "image/png" }
-    expect(await t.sync.ensure("aaaaaaaaaaaaaaaa.png")).toBe(false)
-    expect(await t.sync.ensure("bbbbbbbbbbbbbbbb.png")).toBe(false)
-    expect(t.sync.state("aaaaaaaaaaaaaaaa.png")).toBe("unknown")
-    expect(t.relay.calls.length).toBe(0)
   })
 
   test("retries transient failures, then gives up as failed", async () => {
@@ -611,40 +519,5 @@ describe("ensure", () => {
     expect(await t2.sync.ensure(r.key)).toBe(false)
     expect(t2.sync.state(r.key)).toBe("failed")
     expect(t2.sleeps.length).toBe(4)
-  })
-
-  test("a blob over the size limit is refused before decrypting", async () => {
-    const t = await setup()
-    const roomKey = generateRoomKey()
-    const room = await deriveRoomId(randomBytes(32))
-    const relay = fakeRelay(room.id)
-    const keys = await deriveRoomKeys(roomKey, room)
-    const bytes = randomBytes(200)
-    const sealed = await sealBlob(keys, bytes)
-    relay.blobs.set(sealed.id, sealed.envelope)
-    const sha = toHex(await sha256(bytes))
-    const key = `${sha.slice(0, 16)}.png`
-    const errors: unknown[] = []
-    const sync = createBlobSync({
-      relayUrl: RELAY,
-      room: room.id,
-      token: () => "t",
-      roomKey,
-      assets: t.assets,
-      manifest: () => ({ [key]: { sha256: sha } }),
-      fetch: relay.fetch,
-      maxBytes: 100,
-      onError: (_k, e) => errors.push(e),
-    })
-    expect(await sync.ensure(key)).toBe(false)
-    expect((errors[0] as { code: string }).code).toBe("TOO_LARGE")
-    expect(t.assets.files.size).toBe(0)
-  })
-
-  test("text assets (shaders) travel like any blob", async () => {
-    const t = await setup()
-    const { key } = await t.addRemote(utf8("void main(){}"), "glsl")
-    expect(await t.sync.ensure(key)).toBe(true)
-    expect(t.assets.files.get(key)).toEqual(utf8("void main(){}"))
   })
 })

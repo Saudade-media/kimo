@@ -5,19 +5,10 @@
  *   Status pill) › Log of op rows tinted by persona (rejections in danger). Side by side uses the
  *   same card ("Side by side · 3 agents") with Keep / Discard per finished variant (avr2x).
  * - {@link ReviewCard}: iterate "Review Card" (Vacqa) with passes, changes, steer field.
- * - Canvas pieces exported for the canvas mount: {@link ModeSummaryPill} (jDKaM),
- *   {@link VariantActions} (avr2x), {@link PassChip} (NCElh), {@link AgentCursorPill} (GmEAl
- *   cursors / joR0E), {@link RejectedOpPill} (O2Whh).
+ * - Canvas piece for the canvas mount: {@link ModeSummaryOverlay} (the Mode Summary pill, jDKaM).
  */
-import {
-  AgentMark,
-  type AgentMarkState,
-  CompactButton,
-  type Persona,
-  personaVar,
-  SegmentedText,
-} from "@kimo/ui"
-import { Ban, Check, LayoutGrid, Lock, MousePointer2, Repeat, Square, Undo2 } from "lucide-react"
+import { AgentMark, CompactButton, type Persona, personaVar, SegmentedText } from "@kimo/ui"
+import { Check, LayoutGrid, Lock, Repeat, Square, Undo2 } from "lucide-react"
 import { type CSSProperties, useState } from "react"
 import type { AgentPanelControllerExt, ModeAgentRow, ModeRunView, PlanLogRow } from "./controller"
 import { costLabel } from "./format"
@@ -59,7 +50,7 @@ function StatusDot({ label, tone }: { label: string; tone: "done" | "neutral" | 
 }
 
 /** One Log row (R9Q8AS / B6L1P): gap 8, padding [5, 12]; Op chip 52 × 18 in the persona hue. */
-export function OpLogRow({ row, onRevert }: { row: PlanLogRow; onRevert?: () => void }) {
+function OpLogRow({ row, onRevert }: { row: PlanLogRow; onRevert?: () => void }) {
   return (
     <div
       className={`agent-op-log${row.op === "reject" ? " agent-op-log--reject" : ""}${row.reverted ? " agent-op-log--reverted" : ""}`}
@@ -180,7 +171,7 @@ export function PlanCard({
  * Variant Actions (avr2x): row 280, gap 6, center › Done pill "Done · $0.14" (StatusPill) ·
  * Spacer · Discard (Button/Ghost h 26) · Keep (Button/Primary h 26, check 14).
  */
-export function VariantActions({
+function VariantActions({
   cost,
   onKeep,
   onDiscard,
@@ -340,7 +331,7 @@ export function ReviewCard({
  * "Iterate · pass 2 of 3" for iterate (with " · review" while a pass waits, as on the Pass Chip
  * e9gVXI). One agent reads "1 agent".
  */
-export function modeSummaryLabel(run: ModeRunView): string {
+function modeSummaryLabel(run: ModeRunView): string {
   const it = run.iterate
   if (run.mode === "iterate" && it)
     return `Iterate · pass ${it.pass} of ${it.of}${it.reviewing ? " · review" : ""}`
@@ -351,7 +342,7 @@ export function modeSummaryLabel(run: ModeRunView): string {
 }
 
 /** Mode Summary (jDKaM): h 28, gap 8, padding [0, 10, 0, 6], bg-app, 1 px border, pill. */
-export function ModeSummaryPill({
+function ModeSummaryPill({
   run,
   onStopAll,
   showCost = true,
@@ -404,61 +395,5 @@ export function ModeSummaryOverlay({ controller }: { controller: AgentPanelContr
     <div className="agent-mode-summary-host" data-testid="agent-mode-summary-host">
       <ModeSummaryPill run={run} showCost={state.showCost} onStopAll={() => controller.stopAll()} />
     </div>
-  )
-}
-
-/** Pass Chip (NCElh): h 22, gap 5, padding [0, 8, 0, 6], bg-app, 1 px agent, pill. */
-export function PassChip({
-  pass,
-  of,
-  reviewing,
-}: {
-  pass: number
-  of: number
-  reviewing: boolean
-}) {
-  return (
-    <span className="agent-pass-chip">
-      <Repeat className="agent-pass-chip__icon" aria-hidden="true" />
-      <span className="agent-pass-chip__label">
-        Iterate · pass {pass} of {of}
-        {reviewing ? " · review" : ""}
-      </span>
-    </span>
-  )
-}
-
-/**
- * Agent cursor (board 24 GmEAl H6ncRy, joR0E VhAoz): column gap 2 › Pointer mouse-pointer-2 18
- * in the persona › Pill gap 6, padding [4, 10, 4, 4], persona fill, pill, shadow 0 4 12 ›
- * AgentMark 12 (state) · Label sans 12 / 500 on-accent.
- */
-export function AgentCursorPill({
-  label,
-  persona,
-  state,
-}: {
-  label: string
-  persona: Persona
-  state: AgentMarkState
-}) {
-  return (
-    <span className="agent-cursor" style={tint(persona)} data-persona={persona}>
-      <MousePointer2 className="agent-cursor__pointer" aria-hidden="true" />
-      <span className="agent-cursor__pill">
-        <AgentMark size={12} state={state} persona={persona} />
-        <span className="agent-cursor__label">{label}</span>
-      </span>
-    </span>
-  )
-}
-
-/** Rejected Op (O2Whh): h 24, gap 6, padding [0, 10, 0, 8], danger, pill › ban 12 · mono 11 / 500. */
-export function RejectedOpPill({ text }: { text: string }) {
-  return (
-    <span className="agent-rejected" role="status">
-      <Ban className="agent-rejected__icon" aria-hidden="true" />
-      <span className="agent-rejected__label">{text}</span>
-    </span>
   )
 }

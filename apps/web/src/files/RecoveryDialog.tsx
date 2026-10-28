@@ -23,7 +23,7 @@ export interface RecoveryDialogViewProps {
 }
 
 /** The dialog for a list of candidates (stateless). */
-export function RecoveryDialogView({
+function RecoveryDialogView({
   candidates,
   dir,
   onChoose,

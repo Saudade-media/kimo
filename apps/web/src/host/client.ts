@@ -32,7 +32,7 @@ export interface HostFocusRequest {
 let rpcSeq = 0
 
 /** {@link HostClient.connect} re-pings this often until the host answers. */
-export const PING_RETRY_MS = 150
+const PING_RETRY_MS = 150
 
 export class HostClient {
   private readonly pending = new Map<

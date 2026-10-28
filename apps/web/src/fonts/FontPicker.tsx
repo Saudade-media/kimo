@@ -17,7 +17,7 @@ import { Search, Shield, WifiOff } from "lucide-react"
 import { type CSSProperties, type KeyboardEvent, useMemo, useRef, useState } from "react"
 import "./fonts.css"
 
-export type FontSourceGroup = "document" | "local" | "google"
+type FontSourceGroup = "document" | "local" | "google"
 
 export interface FontPickerEntry {
   family: string
@@ -31,7 +31,7 @@ export interface FontPickerEntry {
 /** Google Fonts state for the picker notes. */
 export type GoogleFontsState = "online" | "offline" | "blocked" | "off"
 
-export interface FontPickerProps {
+interface FontPickerProps {
   value: string | null
   entries: readonly FontPickerEntry[]
   google: GoogleFontsState
@@ -53,22 +53,22 @@ const GROUPS: { id: FontSourceGroup; label: string; tab: string }[] = [
 type Filter = "all" | FontSourceGroup
 
 /** Search placeholder: "Search 1,642 fonts". */
-export function searchPlaceholder(n: number): string {
+function searchPlaceholder(n: number): string {
   return `Search ${n.toLocaleString("en-US")} font${n === 1 ? "" : "s"}`
 }
 
 /** The offline note (wYmyJ) copy. */
-export function offlineNote(cachedGoogle: number): string {
+function offlineNote(cachedGoogle: number): string {
   return `You're offline. Google shows the ${cachedGoogle} font${cachedGoogle === 1 ? "" : "s"} already cached. Others download when you're back online.`
 }
 
-export const BLOCKED_NOTE =
+const BLOCKED_NOTE =
   "Google fonts are off (No third-party fetch). Cached fonts still work. Change in Settings › Fonts & privacy."
-export const GOOGLE_OFF_NOTE =
+const GOOGLE_OFF_NOTE =
   "Google fonts are off. Cached fonts still work. Change in Settings › Fonts & privacy."
 
 /** Entries filtered by tab and query; offers the typed family from Google when allowed. */
-export function filterFontEntries(
+function filterFontEntries(
   entries: readonly FontPickerEntry[],
   filter: Filter,
   query: string,

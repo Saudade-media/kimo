@@ -8,7 +8,7 @@ import type { StrokeGeometry } from "../stroke"
 import type { IconGlyph, IconProvider } from "../types"
 import { dataWeight, materialOffset, materialWeight } from "./sets"
 
-export type IconLookup =
+type IconLookup =
   | { status: "loading" }
   | { status: "missing" }
   | { status: "ready"; glyph: IconGlyph; paths: readonly Path[] }

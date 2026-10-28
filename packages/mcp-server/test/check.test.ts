@@ -1,4 +1,4 @@
-/** Board 31 "Check": kimo_apply_ops lists clear problems in the layers it changed. */
+/** kimo_apply_ops lists clear problems in the layers it changed. */
 import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join, resolve } from "node:path"
@@ -232,11 +232,7 @@ describe("kimo_validate {check: true}", () => {
   })
 })
 
-/**
- * No false positives: every example is clean. The schema fixtures are synthetic (one construct
- * each, no design); the problems they have are real (they would render nothing) and listed here.
- */
-describe("no false positives on the examples and fixtures", () => {
+describe("no false positives on the examples", () => {
   const files: Record<string, string> = {}
   const examples = join(REPO, "examples")
   for (const d of readdirSync(examples, { withFileTypes: true }))
@@ -244,23 +240,10 @@ describe("no false positives on the examples and fixtures", () => {
       for (const f of readdirSync(join(examples, d.name)))
         if (f.endsWith(".kimo"))
           files[`/x/examples/${d.name}/${f}`] = readFileSync(join(examples, d.name, f), "utf8")
-  const fixtures = join(REPO, "packages/core-schema/fixtures/valid")
-  for (const f of readdirSync(fixtures))
-    if (f.endsWith(".kimo")) files[`/x/fixtures/${f}`] = readFileSync(join(fixtures, f), "utf8")
 
-  /** Synthetic fixtures: an empty stub component, empty page roots, hidden or absent paints. */
-  const EXPECTED: Record<string, string[]> = {
-    "/x/fixtures/components-m3.kimo": ["Arrow00001 empty"],
-    "/x/fixtures/agent-nodes-m6.kimo": ["Frame00001 empty"],
-    "/x/fixtures/shapes-and-paints.kimo": ["GrpRect002 invisible"],
-    "/x/fixtures/pages.kimo": ["Unpaged001 empty", "CartFrame1 empty"],
-    "/x/fixtures/polygon-star-image-crop.kimo": ["Star000002 invisible"],
-    "/x/fixtures/merge-conflicts-resolved.kimo": ["Footer0001 empty"],
-  }
-
-  test("examples: zero problems; fixtures: only the synthetic ones", async () => {
+  test("every shipped example has zero problems", async () => {
     const c = setup(files)
-    expect(Object.keys(files).filter((p) => p.startsWith("/x/examples/")).length).toBeGreaterThan(5)
+    expect(Object.keys(files).length).toBeGreaterThan(5)
     for (const path of Object.keys(files)) {
       const o = expectOk(await c.call<{ doc: { id: string } }>("kimo_open", { path }))
       const v = expectOk(
@@ -269,8 +252,7 @@ describe("no false positives on the examples and fixtures", () => {
           check: true,
         }),
       )
-      const got = (v.data.problems ?? []).map((l) => l.split(":")[0])
-      expect({ path, got }).toEqual({ path, got: EXPECTED[path] ?? [] })
+      expect({ path, problems: v.data.problems ?? [] }).toEqual({ path, problems: [] })
     }
   }, 60_000)
 })

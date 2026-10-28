@@ -9,7 +9,7 @@ import { OverrideDot } from "@kimo/ui"
 import { createContext, useContext } from "react"
 import type { M3Controller } from "./controller"
 
-export interface OverrideFields {
+interface OverrideFields {
   /** Overridden field names of the selected node (instance-owned layers: own override). */
   fields: ReadonlySet<string>
   reset(fields: readonly string[]): void

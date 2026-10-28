@@ -13,10 +13,10 @@ const ERROR_CODES = new Set([
   "ICON_MISSING",
 ])
 
-export type IssueLevel = "error" | "warning"
+type IssueLevel = "error" | "warning"
 
 /** `@kimo/exporters` `ExportIssue` (with the `file` `exportDocument` attributes). */
-export interface RawIssue {
+interface RawIssue {
   code: string
   message: string
   nodeId?: string
@@ -40,11 +40,10 @@ export interface IssueGroup {
 /** File name of issues that belong to no output file (a target that could not run). */
 export const EXPORT_GROUP = "Export"
 
-export const issueLevel = (code: string): IssueLevel =>
-  ERROR_CODES.has(code) ? "error" : "warning"
+const issueLevel = (code: string): IssueLevel => (ERROR_CODES.has(code) ? "error" : "warning")
 
 /** "Card › Glass": the node's parent and own layer names (just its name at a root). */
-export function nodePath(names: readonly string[] | null | undefined): string {
+function nodePath(names: readonly string[] | null | undefined): string {
   if (!names || names.length === 0) return "—"
   return names.slice(-2).join(" › ")
 }

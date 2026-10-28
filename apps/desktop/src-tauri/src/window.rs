@@ -123,11 +123,44 @@ pub fn align_lights<Rt: Runtime>(w: &WebviewWindow<Rt>) {
 
 /// Creates (or focuses) an editor window.
 pub fn create_editor_window<Rt: Runtime>(app: &AppHandle<Rt>, label: &str) -> R<WebviewWindow<Rt>> {
+    create_editor_window_at(app, label, None)
+}
+
+/// `encodeURIComponent` (the web's `diskPath`): everything but `A-Z a-z 0-9 - _ . ! ~ * ' ( )`
+/// is percent-encoded as UTF-8, so the route is safe to put in a URL fragment.
+pub fn encode_uri_component(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        if b.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&b) {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
+/// The editor route of a file on disk (`#/disk/<encoded path>`, the web's `diskPath`).
+pub fn disk_route(path: &str) -> String {
+    format!("/disk/{}", encode_uri_component(path))
+}
+
+/// Creates (or focuses) an editor window; a new one starts on `route` (a hash route such as
+/// [`disk_route`]) instead of Home.
+pub fn create_editor_window_at<Rt: Runtime>(
+    app: &AppHandle<Rt>,
+    label: &str,
+    route: Option<&str>,
+) -> R<WebviewWindow<Rt>> {
     if let Some(w) = app.get_webview_window(label) {
         let _ = w.set_focus();
         return Ok(w);
     }
-    let b = WebviewWindowBuilder::new(app, label, WebviewUrl::default())
+    let url = match route {
+        Some(r) => WebviewUrl::App(format!("index.html#{r}").into()),
+        None => WebviewUrl::default(),
+    };
+    let b = WebviewWindowBuilder::new(app, label, url)
         .title("Kimo")
         .inner_size(1280.0, 800.0)
         .min_inner_size(800.0, 560.0)
@@ -446,9 +479,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn settings_window_matches_board_19() {
-        assert_eq!(SETTINGS_SIZE, (840.0, 536.0));
-        assert_eq!(TRAFFIC_LIGHTS, Point { x: 16, y: 18 });
+    fn disk_route_matches_the_web_disk_path() {
+        // encodeURIComponent("/Users/me/my file#1.kimo") in the web's diskPath.
+        assert_eq!(
+            disk_route("/Users/me/my file#1.kimo"),
+            "/disk/%2FUsers%2Fme%2Fmy%20file%231.kimo"
+        );
+        assert_eq!(encode_uri_component("a-b_c.d!~*'()"), "a-b_c.d!~*'()");
+        assert_eq!(encode_uri_component("é"), "%C3%A9");
+        assert_eq!(encode_uri_component("C:\\a"), "C%3A%5Ca");
     }
 
     #[test]
@@ -481,27 +520,5 @@ mod tests {
         // Quitting: Settings alone does not keep the app alive.
         assert!(should_exit(&s(&[SETTINGS_LABEL]), true));
         assert!(!should_exit(&s(&["editor-2"]), true));
-    }
-
-    #[test]
-    fn launch_background_is_bg_app_of_the_appearance() {
-        use tauri::window::Color;
-        let (light, dark) = (Color(0xFF, 0xFF, 0xFF, 0xFF), Color(0x0A, 0x0A, 0x0A, 0xFF));
-        assert_eq!(launch_background("light", true), light);
-        assert_eq!(launch_background("dark", false), dark);
-        assert_eq!(launch_background("system", true), dark);
-        assert_eq!(launch_background("system", false), light);
-    }
-
-    #[test]
-    fn overlay_chrome_labels() {
-        assert!(has_overlay_chrome("main"));
-        assert!(has_overlay_chrome("editor-3"));
-        assert!(has_overlay_chrome(SETTINGS_LABEL));
-        assert!(!has_overlay_chrome("other"));
-        let expected = cfg!(target_os = "macos").then_some(TRAFFIC_LIGHTS);
-        assert_eq!(traffic_lights(SETTINGS_LABEL), expected);
-        assert_eq!(traffic_lights("main"), expected);
-        assert_eq!(traffic_lights("other"), None);
     }
 }

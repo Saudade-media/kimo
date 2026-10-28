@@ -10,8 +10,3 @@ export function claimMissingFontsDialog(fileKey: string): boolean {
   shown.add(fileKey)
   return true
 }
-
-/** Test helper. */
-export function resetMissingFontsSession(): void {
-  shown.clear()
-}

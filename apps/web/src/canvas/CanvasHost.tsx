@@ -419,6 +419,7 @@ export function CanvasHost(props: CanvasHostProps & { ref?: Ref<CanvasHandle> })
         rulers: () => cb.current.rulers ?? false,
         nudge: () => cb.current.nudge ?? DEFAULT_NUDGE,
         wheelZoom: () => cb.current.wheelZoom ?? "trackpad",
+        fitInsets: () => cb.current.fitInsets,
         onHint: (h) => {
           if (cb.current.onHint) cb.current.onHint(h)
           else setHint(h)

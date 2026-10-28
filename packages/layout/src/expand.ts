@@ -29,14 +29,13 @@ import {
   type NodeLookup,
   type NodeOrigin,
   type NodeRecord,
-  parseVirtualId,
   shapesExpansion,
   type Theme,
   type ViewLocation,
 } from "@kimo/core-schema"
 import type { NodeSource } from "./types"
 
-/** Options for {@link createInstanceView} / {@link expandInstances}. */
+/** Options for {@link createInstanceView}. */
 export interface ExpandOptions {
   /** Imported libraries by alias (for `alias:id` components). */
   libraries?: Libraries
@@ -76,15 +75,6 @@ export interface InstanceView extends ExpandedView {
    * ids outside every instance.
    */
   stamp(id: string): number
-}
-
-/**
- * Compatibility shape of the M1/M2 `expandInstances` result: an {@link InstanceView} plus
- * `isSynthetic` (= `isVirtual`).
- * @deprecated M3: use {@link createInstanceView} (or `createExpandedView`) and `isVirtual`.
- */
-export interface ExpandedNodeSource extends InstanceView {
-  isSynthetic(id: string): boolean
 }
 
 /** True when `v` is an {@link InstanceView}. */
@@ -424,17 +414,4 @@ export function createInstanceView(
     },
   }
   return view
-}
-
-/**
- * M1/M2 entry point, now backed by the core-schema expansion through {@link createInstanceView}.
- * @deprecated M3: use {@link createInstanceView}.
- */
-export function expandInstances(
-  base: NodeSource | NodeLookup,
-  options: ExpandOptions = {},
-): ExpandedNodeSource {
-  const v = createInstanceView(base, options) as ExpandedNodeSource
-  v.isSynthetic = (id) => parseVirtualId(id) !== null
-  return v
 }

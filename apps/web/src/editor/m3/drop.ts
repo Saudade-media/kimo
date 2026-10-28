@@ -9,7 +9,7 @@ import type { ComponentDropTarget } from "../../canvas/contract"
 
 type Rec = Readonly<Record<string, unknown>>
 
-export interface DropView {
+interface DropView {
   getNode(id: string): Rec | undefined
   isVirtual(id: string): boolean
   locate(id: string): { real: string; instance?: string; path?: string } | null

@@ -312,11 +312,21 @@
   );
   background-size: 32px 32px;
 }
-/* Status (p43U1): bg-overlay, pill, 1 px border, gap 5, padding [3, 8, 3, 6]; x 10, 10 above the bar. */
+/* The part of the box its clipping frames leave visible: the chip and the bar sit in it. */
+.mp-asset__view {
+  position: absolute;
+  inset: 0;
+}
+/* Status (p43U1): bg-overlay, pill, 1 px border, gap 5, padding [3, 8, 3, 6]; x 10, 10 above the bar.
+   Small boxes scale the chip down (--mp-asset-chip, from the box size) and cut a long label,
+   so it never spills out of the image it covers; tiny boxes hide it (.mp-asset--no-chip). */
 .mp-asset__status {
   position: absolute;
-  left: 10px;
-  bottom: 13px;
+  left: calc(10px * var(--mp-asset-chip, 1));
+  bottom: calc(13px * var(--mp-asset-chip, 1));
+  max-width: calc((100% - 20px * var(--mp-asset-chip, 1)) / var(--mp-asset-chip, 1));
+  transform: scale(var(--mp-asset-chip, 1));
+  transform-origin: left bottom;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -335,7 +345,13 @@
 .mp-asset__status > svg {
   flex: none;
 }
+.mp-asset--no-chip .mp-asset__status {
+  display: none;
+}
 .mp-asset__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-xs);
   font-weight: 400;

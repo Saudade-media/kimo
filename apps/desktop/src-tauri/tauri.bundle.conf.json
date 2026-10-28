@@ -3,7 +3,8 @@
   "bundle": {
     "externalBin": ["binaries/kimo-mcp"],
     "resources": {
-      "resources/relay/kimo-relay.js": "relay/kimo-relay.js"
+      "resources/relay/kimo-relay.js": "relay/kimo-relay.js",
+      "resources/relay/web": "relay/web"
     }
   }
 }

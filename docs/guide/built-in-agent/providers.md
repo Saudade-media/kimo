@@ -77,7 +77,7 @@ The agent can search the web and read pages when a task needs facts from outside
 - **Web access** in the composer's **…** menu turns it off (or back on) for the current session only. A new or reopened session starts from the setting again.
 - **Settings › Fonts & privacy › No third-party fetch** turns it off everywhere. The setting row and the menu row show as disabled and say why.
 
-Each search and each page read is a step in the thread ("Searching the web for “…”", "Reading example.com") and is saved with the session. On desktop it is also a row in **Activity**. The reply ends with **Sources:** and the links it used. Web access needs no approval, and auto-approve doesn't change it.
+Each search and each page read is a step in the thread ("Searching the web for “…”", "Reading example.com") and is saved with the session. On desktop it is also a row in **Activity**. The reply ends with **Sources:** and the links it used. Web access needs no approval, and Ask before changes doesn't change it.
 
 What each model uses:
 

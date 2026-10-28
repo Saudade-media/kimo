@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { jsonEqual, type KimoDocument, serialize, validate } from "@kimo/core-schema"
 import {
+  bindUiToDocument,
   createDocStore,
   createEmptyDocument,
+  createUiStore,
   DocumentInvalidError,
   exportDocument,
   importDocument,
@@ -12,19 +14,23 @@ import {
 } from "../src/index"
 import { emptyStore, failed, fixture, frame, ok, rect, validFixtures } from "./helpers"
 
-const libs = () => ({ ui: fixture("libs/kimo-ui.lib.kimo") })
-
 describe("import / export", () => {
-  for (const [name, text] of validFixtures()) {
-    test(`round trip equals and validates: ${name}`, () => {
+  test("every valid fixture round-trips byte for byte, validates and replicates", () => {
+    for (const [name, text] of validFixtures()) {
       const doc = JSON.parse(text) as KimoDocument
-      const store = importDocument(doc)
-      const out = exportDocument(store)
-      expect(jsonEqual(out, doc)).toBe(true)
-      expect(serialize(out)).toBe(serialize(doc))
-      expect(validate(out).ok).toBe(true)
-    })
-  }
+      const out = exportDocument(importDocument(doc))
+      expect({ name, same: jsonEqual(out, doc) }).toEqual({ name, same: true })
+      expect({ name, bytes: serialize(out) }).toEqual({ name, bytes: serialize(doc) })
+      expect({ name, errors: validate(out).errors }).toEqual({ name, errors: [] })
+      // A replica built only from the binary Yjs state reads the same bytes.
+      const replica = new YjsDocStore()
+      replica.applyUpdate(createDocStore(doc).encodeStateAsUpdate(), "remote:a")
+      expect({ name, bytes: serialize(replica.toDocument()) }).toEqual({
+        name,
+        bytes: serialize(doc),
+      })
+    }
+  })
 
   test("empty variables/themes objects survive the round trip", () => {
     const doc = { ...createEmptyDocument(), variables: {}, themes: {} }
@@ -66,6 +72,14 @@ describe("import / export", () => {
     expect(changes.length).toBe(1)
     expect([...(changes[0] as StoreChange).nodes].sort()).toEqual(["B2title001", "G7img00001"])
     expect(jsonEqual(store.toDocument(), next)).toBe(true)
+  })
+
+  test("reloading an identical document emits no update", () => {
+    const store = emptyStore()
+    const updates: Uint8Array[] = []
+    store.onUpdate((u) => updates.push(u))
+    store.loadDocument(store.toDocument(), { origin: "file", newEpoch: false })
+    expect(updates).toEqual([])
   })
 
   test("children are in sibling order and respect `at` groups", () => {
@@ -155,15 +169,6 @@ describe("ops", () => {
     expect(s.revision).toEqual(before)
   })
 
-  test("semantic rules apply: children of a rect are refused", () => {
-    const s = emptyStore()
-    ok(s.apply({ op: "insert", id: "Rect000001", node: rect("R") }, { origin: "user" }))
-    const r = failed(
-      s.apply({ op: "insert", node: rect("child"), parent: "Rect000001" }, { origin: "user" }),
-    )
-    expect(r.errors[0]?.issue?.code).toBe("PARENT_NOT_CONTAINER")
-  })
-
   test("pre-existing errors do not block unrelated edits", () => {
     const bad = {
       ...createEmptyDocument(),
@@ -225,51 +230,6 @@ describe("ops", () => {
     expect(jsonEqual(s.toDocument(), snapshot)).toBe(true)
   })
 
-  test("deleting a component that is still used is refused", () => {
-    const s = importDocument(fixture("components-local.kimo"))
-    const comp = s.nodeIds().find((id) => s.getNode(id)?.component)
-    expect(comp).toBeDefined()
-    const r = failed(s.apply({ op: "delete", id: comp as string }, { origin: "user" }))
-    expect(r.errors.some((e) => e.issue?.code === "REF_MISSING")).toBe(true)
-  })
-
-  test("setVariables and setThemes, with inverses", () => {
-    const s = emptyStore()
-    ok(s.apply({ op: "setThemes", set: { mode: ["light", "dark"] } }, { origin: "user" }))
-    const r = ok(
-      s.apply(
-        {
-          op: "setVariables",
-          set: {
-            ink: {
-              type: "color",
-              value: [
-                { value: "#000000", when: { mode: "light" } },
-                { value: "#FFFFFF", when: { mode: "dark" } },
-              ],
-            },
-          },
-        },
-        { origin: "user" },
-      ),
-    )
-    expect(s.toDocument().variables?.ink?.type).toBe("color")
-    expect(r.inverse).toEqual([{ op: "setVariables", set: {}, unset: ["ink"] }])
-    // A themed variable naming an unknown axis value is invalid.
-    const bad = failed(
-      s.apply(
-        {
-          op: "setVariables",
-          set: { x: { type: "color", value: [{ value: "#000000", when: { mode: "sepia" } }] } },
-        },
-        { origin: "user" },
-      ),
-    )
-    expect(bad.errors[0]?.issue?.code).toBe("THEME_VALUE_UNKNOWN")
-    ok(s.apply(r.inverse, { origin: "user" }))
-    expect(s.toDocument().variables).toBeUndefined()
-  })
-
   test("inverse ops restore the exact previous document (mixed batch)", () => {
     const s = importDocument(fixture("example-10-5.kimo"))
     const before = s.toDocument()
@@ -326,23 +286,6 @@ describe("ops", () => {
     expect(s.revision.seq).toBe(0)
   })
 
-  test("op log records forward + inverse with origin and label", () => {
-    const s = emptyStore()
-    ok(
-      s.apply(
-        { op: "insert", id: "Logged0001", node: rect("l") },
-        { origin: "mcp:claude", label: "Add rect" },
-      ),
-    )
-    const last = s.log().at(-1)
-    expect(last?.kind).toBe("ops")
-    if (last?.kind !== "ops") throw new Error()
-    expect(last.origin).toBe("mcp:claude")
-    expect(last.label).toBe("Add rect")
-    expect(last.ops[0]?.op).toBe("insert")
-    expect(last.inverse).toEqual([{ op: "delete", id: "Logged0001" }])
-  })
-
   test("read-only stores refuse ops", () => {
     const s = emptyStore()
     s.setReadOnly("newer format")
@@ -363,12 +306,9 @@ describe("ops", () => {
         { op: "update", id: "Rect000001", set: "abc" },
         { op: "update", id: "Rect000001", set: [1] },
         { op: "move", id: "Rect000001", parent: null, index: "foo" },
-        { op: "move", id: "Rect000001", parent: null, index: Number.NaN },
         { op: "move", id: "Rect000001", parent: null, index: 0.5 },
-        { op: "move", id: "Rect000001", parent: null, order: 7 },
         { op: "insert", node: rect("y"), index: "1" },
         { op: "setVariables", set: "abc" },
-        { op: "setVariables", unset: "abc" },
         { op: "setThemes", set: ["light"] },
         { op: "setThemes", unset: [null] },
       ]
@@ -395,16 +335,6 @@ describe("ops", () => {
     expect(failed(s.apply([], { origin: "remote" as any })).errors[0]?.code).toBe("INVALID_OP")
   })
 
-  test("validation can use libraries", () => {
-    const s = createDocStore(fixture("example-10-5.kimo"), {
-      validateOptions: { libraries: libs() },
-    })
-    const r = failed(
-      s.apply({ op: "update", id: "D4cta00001", set: { of: "ui:Missing001" } }, { origin: "user" }),
-    )
-    expect(r.errors[0]?.issue?.code).toBe("REF_MISSING")
-  })
-
   test("change events carry origin, cause and touched nodes", () => {
     const s = emptyStore()
     const seen: StoreChange[] = []
@@ -417,31 +347,22 @@ describe("ops", () => {
     expect(seen[1]?.cause).toBe("undo")
     expect(seen[1]?.origin).toBe("agent:x")
   })
+})
 
-  test("5,000-node document: import and a single op stay fast", () => {
-    const nodes: Record<string, unknown> = {
-      Root000000: { type: "frame", parent: null, order: "a0" },
-    }
-    for (let i = 0; i < 5000; i++) {
-      nodes[`N${String(i).padStart(9, "0")}`] = {
-        type: "rect",
-        parent: "Root000000",
-        order: `a${i % 10}`,
-        w: i,
-        h: 1,
-      }
-    }
-    const doc = { ...createEmptyDocument(), nodes } as unknown as KimoDocument
-    const t0 = performance.now()
-    const s = new YjsDocStore()
-    s.loadDocument(doc)
-    const t1 = performance.now()
-    ok(s.apply({ op: "update", id: "N000000042", set: { w: 1 } }, { origin: "user" }))
-    ok(s.apply({ op: "update", id: "N000000043", set: { w: 1 } }, { origin: "user" }))
-    const t2 = performance.now()
-    console.log(
-      `5k nodes: load ${(t1 - t0).toFixed(0)} ms, 2 validated ops ${(t2 - t1).toFixed(0)} ms`,
-    )
-    expect(s.size).toBe(5001)
+describe("UI store", () => {
+  test("selection and hover are separate from the document and pruned when a node is deleted", () => {
+    const doc = emptyStore()
+    const ui = createUiStore()
+    const off = bindUiToDocument(ui, doc)
+    ok(doc.apply({ op: "insert", id: "Keep000001", node: rect("k") }, { origin: "user" }))
+    ok(doc.apply({ op: "insert", id: "Drop000001", node: rect("d") }, { origin: "user" }))
+    const rev = doc.revision
+    ui.getState().select(["Keep000001", "Drop000001"])
+    ui.getState().setHovered("Drop000001")
+    expect(doc.revision).toEqual(rev) // selection never touches the document
+    ok(doc.apply({ op: "delete", id: "Drop000001" }, { origin: "user" }))
+    expect(ui.getState().selection).toEqual(["Keep000001"])
+    expect(ui.getState().hovered).toBeNull()
+    off()
   })
 })

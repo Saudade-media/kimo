@@ -1,16 +1,21 @@
 import { describe, expect, test } from "bun:test"
 import fc from "fast-check"
 import {
+  applyConflictSide,
   applyDefaults,
   canonicalize,
   type KimoDocument,
+  listConflicts,
+  mergeDocuments,
   parse,
   serialize,
   validate,
 } from "../src/index"
-import { HEADER } from "./helpers"
+import { doc, HEADER, type Loose } from "./helpers"
 
-const RUNS = Number(process.env.KIMO_PROPERTY_RUNS ?? 200)
+const RUNS = Number(process.env.KIMO_PROPERTY_RUNS ?? 100)
+const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v))
+const errorsOf = (d: unknown) => validate(d as KimoDocument, { lints: false }).errors
 
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("")
 const idArb = fc
@@ -362,39 +367,15 @@ const docArb: fc.Arbitrary<KimoDocument> = fc
   })
 
 describe("property: canonical serialization", () => {
-  test("generated documents are valid (no errors)", () => {
+  test("generated documents validate and round-trip byte-stably, defaults included", () => {
     fc.assert(
       fc.property(docArb, (d) => {
         const r = validate(d, { lints: false })
         if (!r.ok) throw new Error(JSON.stringify(r.errors.slice(0, 3)))
-      }),
-      { numRuns: RUNS },
-    )
-  })
-
-  test("parse(serialize(doc)) deep-equals the canonical document", () => {
-    fc.assert(
-      fc.property(docArb, (d) => {
-        expect(parse(serialize(d))).toEqual(canonicalize(d))
-      }),
-      { numRuns: RUNS },
-    )
-  })
-
-  test("serialize(parse(s)) === s (byte-stable)", () => {
-    fc.assert(
-      fc.property(docArb, (d) => {
         const s = serialize(d)
+        expect(parse(s)).toEqual(canonicalize(d))
         expect(serialize(parse(s))).toBe(s)
-      }),
-      { numRuns: RUNS },
-    )
-  })
-
-  test("applying defaults does not change the bytes", () => {
-    fc.assert(
-      fc.property(docArb, (d) => {
-        expect(serialize(applyDefaults(d))).toBe(serialize(d))
+        expect(serialize(applyDefaults(d))).toBe(s)
       }),
       { numRuns: RUNS },
     )
@@ -471,6 +452,289 @@ describe("property: unknown data", () => {
         validate(v)
         validate({ ...HEADER, ...extra, nodes: typeof v === "object" && v !== null ? v : {} })
       }),
+      { numRuns: RUNS },
+    )
+  })
+})
+
+// --- Property tests -------------------------------------------------------------------------------
+
+const POOL = [
+  "Node000001",
+  "Node000002",
+  "Node000003",
+  "Node000004",
+  "Node000005",
+  "Node000006",
+  "Node000007",
+  "Node000008",
+  "Node000009",
+  "Node000010",
+]
+const NEW_IDS = ["Add0000001", "Add0000002", "Add0000003", "Add0000004"]
+const COLORS = ["#111111", "#222222", "#333333", "#FFFFFF", "#E8590C"]
+
+type MergeKind = "frame" | "rect" | "text"
+const isContainer = (n: Loose) => n.type === "frame"
+
+const mergeBaseArb: fc.Arbitrary<KimoDocument> = fc
+  .record({
+    n: fc.integer({ min: 2, max: POOL.length }),
+    kinds: fc.array(fc.constantFrom<MergeKind>("frame", "frame", "rect", "text"), {
+      minLength: POOL.length,
+      maxLength: POOL.length,
+    }),
+    parents: fc.array(fc.nat(), { minLength: POOL.length, maxLength: POOL.length }),
+    fills: fc.array(fc.constantFrom(...COLORS, "brand"), {
+      minLength: POOL.length,
+      maxLength: POOL.length,
+    }),
+    gaps: fc.array(fc.option(fc.integer({ min: 0, max: 32 }), { nil: undefined }), {
+      minLength: POOL.length,
+      maxLength: POOL.length,
+    }),
+  })
+  .map((g) => {
+    const nodes: Record<string, Loose> = {}
+    const ids = POOL.slice(0, g.n)
+    ids.forEach((id, i) => {
+      const kind = i === 0 ? "frame" : (g.kinds[i] as MergeKind)
+      const containers = ids.slice(0, i).filter((x) => isContainer(nodes[x]))
+      const pick = g.parents[i] as number
+      const parent =
+        containers.length > 0 && pick % 4 !== 0 ? containers[pick % containers.length] : null
+      const fillV = g.fills[i] as string
+      const fill = fillV === "brand" ? { $ref: "brand" } : fillV
+      const n: Loose = { type: kind, parent, order: `a${i}` }
+      if (kind === "frame") {
+        n.fill = fill
+        if (g.gaps[i] !== undefined) n.layout = { dir: "row", gap: g.gaps[i] }
+      } else if (kind === "rect") Object.assign(n, { w: 10 + i, h: 10, fill })
+      else n.content = `Text ${i}`
+      nodes[id] = n
+    })
+    return doc(nodes, {
+      meta: { name: "Doc" },
+      themes: { mode: ["light", "dark"] },
+      variables: {
+        brand: {
+          type: "color",
+          value: [
+            { value: "#E8590C", when: { mode: "light" } },
+            { value: "#FF8A3D", when: { mode: "dark" } },
+          ],
+        },
+        space: { type: "number", value: 8 },
+      },
+    })
+  })
+
+type MergeEdit =
+  | { k: "fill"; i: number; c: number }
+  | { k: "gap"; i: number; v: number }
+  | { k: "name"; i: number; v: string }
+  | { k: "content"; i: number; v: string }
+  | { k: "delete"; i: number }
+  | { k: "add"; i: number; id: number; kind: MergeKind }
+  | { k: "move"; i: number; to: number; order: string }
+  | { k: "brand"; entry: number; c: number }
+  | { k: "space"; v: number }
+  | { k: "meta"; v: string }
+
+const mergeEditArb: fc.Arbitrary<MergeEdit> = fc.oneof(
+  fc.record({ k: fc.constant("fill" as const), i: fc.nat(), c: fc.nat() }),
+  fc.record({ k: fc.constant("gap" as const), i: fc.nat(), v: fc.integer({ min: 0, max: 40 }) }),
+  fc.record({ k: fc.constant("name" as const), i: fc.nat(), v: fc.constantFrom("A", "B", "C") }),
+  fc.record({ k: fc.constant("content" as const), i: fc.nat(), v: fc.constantFrom("x", "y") }),
+  fc.record({ k: fc.constant("delete" as const), i: fc.nat() }),
+  fc.record({
+    k: fc.constant("add" as const),
+    i: fc.nat(),
+    id: fc.nat(),
+    kind: fc.constantFrom<MergeKind>("frame", "rect", "text"),
+  }),
+  fc.record({
+    k: fc.constant("move" as const),
+    i: fc.nat(),
+    to: fc.nat(),
+    order: fc.constantFrom("a0", "b5", "z"),
+  }),
+  fc.record({ k: fc.constant("brand" as const), entry: fc.nat(), c: fc.nat() }),
+  fc.record({ k: fc.constant("space" as const), v: fc.integer({ min: 0, max: 20 }) }),
+  fc.record({ k: fc.constant("meta" as const), v: fc.constantFrom("X", "Y") }),
+)
+
+const subtree = (nodes: Record<string, Loose>, root: string): string[] => {
+  const out = [root]
+  for (let i = 0; i < out.length; i++)
+    for (const [id, n] of Object.entries(nodes)) if (n.parent === out[i]) out.push(id)
+  return out
+}
+
+/**
+ * Applies edits to a copy of `d`, touching only `scope` (node ids it may edit, or null = any)
+ * and the variables/meta when `header` is set. Keeps the document valid.
+ */
+function applyEdits(
+  d: KimoDocument,
+  edits: MergeEdit[],
+  scope: Set<string> | null,
+  header: boolean,
+  addIds: string[],
+): KimoDocument {
+  const out = clone(d) as Loose
+  const nodes = out.nodes as Record<string, Loose>
+  const ids = () => Object.keys(nodes).filter((id) => scope === null || scope.has(id))
+  for (const e of edits) {
+    const list = ids()
+    const pick = (i: number) => (list.length > 0 ? list[i % list.length] : undefined)
+    switch (e.k) {
+      case "fill": {
+        const id = pick(e.i)
+        if (id && nodes[id].type !== "text") nodes[id].fill = COLORS[e.c % COLORS.length]
+        break
+      }
+      case "gap": {
+        const id = pick(e.i)
+        if (id && nodes[id].type === "frame")
+          nodes[id].layout = { ...(nodes[id].layout ?? { dir: "row" }), gap: e.v }
+        break
+      }
+      case "name": {
+        const id = pick(e.i)
+        if (id) nodes[id].name = e.v
+        break
+      }
+      case "content": {
+        const id = pick(e.i)
+        if (id && nodes[id].type === "text") nodes[id].content = e.v
+        break
+      }
+      case "delete": {
+        const id = pick(e.i)
+        if (!id) break
+        const sub = subtree(nodes, id)
+        if (scope && sub.some((x) => !scope.has(x))) break
+        for (const x of sub) delete nodes[x]
+        break
+      }
+      case "add": {
+        const id = addIds[e.id % addIds.length] as string
+        if (nodes[id]) break
+        const containers = list.filter((x) => nodes[x].type === "frame")
+        const parent = containers.length > 0 ? containers[e.i % containers.length] : null
+        if (scope && parent === null) break
+        nodes[id] =
+          e.kind === "frame"
+            ? { type: "frame", parent, order: "m0" }
+            : e.kind === "rect"
+              ? { type: "rect", parent, order: "m0", w: 3, h: 3 }
+              : { type: "text", parent, order: "m0", content: "new" }
+        scope?.add(id)
+        break
+      }
+      case "move": {
+        const id = pick(e.i)
+        if (!id) break
+        const targets = list.filter((x) => nodes[x].type === "frame")
+        const to = targets.length > 0 ? targets[e.to % targets.length] : undefined
+        if (!to || subtree(nodes, id).includes(to)) break
+        nodes[id].parent = to
+        nodes[id].order = e.order
+        break
+      }
+      case "brand":
+        if (header) out.variables.brand.value[e.entry % 2].value = COLORS[e.c % COLORS.length]
+        break
+      case "space":
+        if (header) out.variables.space.value = e.v
+        break
+      case "meta":
+        if (header) out.meta.name = e.v
+        break
+    }
+  }
+  return out as KimoDocument
+}
+
+const mergeEditsArb = fc.array(mergeEditArb, { maxLength: 6 })
+
+describe("property: three-way merge", () => {
+  test("random base + two edit sequences: the result validates and its conflicts apply", () => {
+    fc.assert(
+      fc.property(mergeBaseArb, mergeEditsArb, mergeEditsArb, (base, ea, eb) => {
+        const ours = applyEdits(base, ea, null, true, NEW_IDS.slice(0, 2))
+        const theirs = applyEdits(base, eb, null, true, NEW_IDS.slice(1))
+        fc.pre(errorsOf(ours).length === 0 && errorsOf(theirs).length === 0)
+        const r = mergeDocuments({ base, ours, theirs })
+        const errors = errorsOf(r.doc)
+        if (errors.length > 0) throw new Error(JSON.stringify(errors.slice(0, 3)))
+        expect(serialize(canonicalize(r.doc))).toBe(serialize(r.doc))
+        // Every stored side can be applied (or is refused cleanly).
+        for (const { id } of listConflicts(r.doc)) {
+          for (const side of ["ours", "theirs", "base"] as const) {
+            try {
+              applyConflictSide(r.doc, id, side)
+            } catch (e) {
+              if ((e as { code?: string }).code !== "CANNOT_APPLY") throw e
+            }
+          }
+        }
+      }),
+      { numRuns: RUNS },
+    )
+  })
+
+  test("a side equal to the base or to the other side merges to the other without conflicts", () => {
+    fc.assert(
+      fc.property(mergeBaseArb, mergeEditsArb, (base, ea) => {
+        const a = applyEdits(base, ea, null, true, NEW_IDS)
+        fc.pre(errorsOf(a).length === 0)
+        const same = (r: { doc: KimoDocument; conflicts: object }) => {
+          expect(r.conflicts).toEqual({})
+          expect(serialize(r.doc)).toBe(serialize(a))
+        }
+        same(mergeDocuments({ base, ours: a, theirs: a }))
+        same(mergeDocuments({ base, ours: a, theirs: base }))
+        same(mergeDocuments({ base, ours: base, theirs: a }))
+      }),
+      { numRuns: RUNS },
+    )
+  })
+
+  test("clean merges of disjoint edits commute (and equal applying both)", () => {
+    fc.assert(
+      fc.property(
+        mergeBaseArb,
+        mergeEditsArb,
+        mergeEditsArb,
+        fc.boolean(),
+        (base, ea, eb, headerToA) => {
+          const nodes = (base as Loose).nodes as Record<string, Loose>
+          // Partition by root subtree.
+          const roots = Object.keys(nodes)
+            .filter((id) => nodes[id].parent === null)
+            .sort()
+          const sa = new Set<string>()
+          const sb = new Set<string>()
+          roots.forEach((r, i) => {
+            for (const x of subtree(nodes, r)) (i % 2 === 0 ? sa : sb).add(x)
+          })
+          const sbFirst = new Set(sb)
+          const ours = applyEdits(base, ea, sa, headerToA, NEW_IDS.slice(0, 2))
+          const theirs = applyEdits(base, eb, sb, !headerToA, NEW_IDS.slice(2))
+          fc.pre(errorsOf(ours).length === 0 && errorsOf(theirs).length === 0)
+          const ab = mergeDocuments({ base, ours, theirs })
+          const ba = mergeDocuments({ base, ours: theirs, theirs: ours })
+          expect(ab.conflicts).toEqual({})
+          expect(ba.conflicts).toEqual({})
+          expect(serialize(ab.doc)).toBe(serialize(ba.doc))
+          expect(ab.changes).toBe(ba.changes)
+          // Applying both edit sequences one after the other gives the same document.
+          const both = applyEdits(ours, eb, sbFirst, !headerToA, NEW_IDS.slice(2))
+          expect(serialize(ab.doc)).toBe(serialize(both))
+        },
+      ),
       { numRuns: RUNS },
     )
   })

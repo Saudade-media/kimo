@@ -18,9 +18,7 @@ export { createLayoutEngine } from "./engine"
 
 export {
   createInstanceView,
-  type ExpandedNodeSource,
   type ExpandOptions,
-  expandInstances,
   type InstanceView,
   isExpandedView,
   isInstanceView,

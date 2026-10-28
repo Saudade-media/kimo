@@ -18,7 +18,7 @@ const isRef = (v: unknown): v is { $ref: string } =>
   typeof v === "object" && v !== null && typeof (v as { $ref?: unknown }).$ref === "string"
 
 /** The 8 most used solid colors of the document (Document colors quick picks). */
-export function documentColors(store: DocStore, limit = 8): string[] {
+function documentColors(store: DocStore, limit = 8): string[] {
   const count = new Map<string, number>()
   const add = (c: unknown) => {
     if (typeof c !== "string") return
@@ -50,7 +50,7 @@ export function documentColors(store: DocStore, limit = 8): string[] {
 }
 
 /** Color variables grouped by path (`brand/sand` → group `brand`, row `sand`). */
-export function variableGroups(header: DocHeader): ColorVariableGroup[] {
+function variableGroups(header: DocHeader): ColorVariableGroup[] {
   const groups = new Map<string, ColorVariableGroup["variables"][number][]>()
   for (const v of colorVariables(header)) {
     const list = groups.get(v.group) ?? []

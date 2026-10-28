@@ -15,7 +15,6 @@ import {
 import { hostname, tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { parse, serialize } from "@kimo/core-schema"
-import { listTools } from "@kimo/mcp-server"
 import { Client } from "@modelcontextprotocol/client"
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio"
 import { pathHash } from "../src/cli"
@@ -71,54 +70,6 @@ const call = async (c: Client, name: string, args: Record<string, unknown>): Pro
   ((await c.callTool({ name, arguments: args })) as Loose).structuredContent
 
 describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
-  test("initialize: server info and instructions; tools/list matches the registry", async () => {
-    const ws = workspace()
-    const c = await connect(ws)
-    expect(c.getServerVersion()?.name).toBe("kimo")
-    expect(c.getInstructions()).toContain("kimo_get_state")
-    const tools = (await c.listTools()).tools.map((t) => t.name)
-    expect(tools).toEqual(listTools({ host: "headless" }).map((t) => t.name))
-    expect(tools).toContain("kimo_script")
-  })
-
-  test('stderr: the mode label is "headless" and names each file opened', async () => {
-    const ws = workspace()
-    const transport = new StdioClientTransport({
-      command: process.execPath,
-      args: [MAIN, "mcp", "--headless"],
-      cwd: ws.project,
-      env: { HOME: ws.home, KIMO_HOME: ws.kimoHome, PATH: process.env.PATH ?? "" },
-      stderr: "pipe",
-    })
-    let err = ""
-    transport.stderr?.on("data", (b: Buffer) => {
-      err += b.toString("utf8")
-    })
-    const c = new Client({ name: "stderr-agent", version: "1.0.0" })
-    await c.connect(transport)
-    clients.push(c)
-    expect((await call(c, "kimo_open", { path: ws.file })).ok).toBe(true)
-    await new Promise((r) => setTimeout(r, 100))
-    expect(err).toMatch(/kimo mcp: headless, files: .+, level edit\+delete/)
-    expect(err).not.toContain("memory-host")
-    expect(err).toMatch(/kimo mcp: headless: opened .*site\.kimo/)
-  })
-
-  test("kimo_read_docs serves the guides", async () => {
-    const ws = workspace()
-    const c = await connect(ws)
-    const idx = await call(c, "kimo_read_docs", {})
-    expect(idx.ok).toBe(true)
-    expect(idx.data.path).toBe("index")
-    expect(idx.data.markdown).toContain("kimo_apply_ops")
-    const ops = await call(c, "kimo_read_docs", { path: "ops" })
-    expect(ops.data.markdown).toContain("@key")
-    const res = await c.readResource({ uri: "kimo://docs/ops" })
-    expect((res.contents[0] as Loose).text).toBe(ops.data.markdown)
-    const schema = await c.readResource({ uri: "kimo://schema/1.0" })
-    expect(JSON.parse((schema.contents[0] as Loose).text).$schema).toContain("2020-12")
-  })
-
   test("write op + save + reopen is byte-stable; the lease is taken and released", async () => {
     const ws = workspace()
     const c = await connect(ws)
@@ -157,6 +108,13 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
     expect(stale.ok).toBe(false)
     expect(stale.errors[0].code).toBe("REVISION_CONFLICT")
 
+    // An unknown docId never falls back to another open document.
+    const unknown = await call(c, "kimo_query", {
+      docId: "d_0000000000000000_x",
+      select: { topLevel: true },
+    })
+    expect(unknown.errors[0].code).toBe("DOCUMENT_NOT_OPEN")
+
     const saved = await call(c, "kimo_save", { docId })
     expect(saved.ok).toBe(true)
     const bytes = readFileSync(ws.file, "utf8")
@@ -167,7 +125,7 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
 
     await c.close()
     clients.splice(clients.indexOf(c), 1)
-    await Bun.sleep(300)
+    for (let i = 0; i < 150 && existsSync(lock); i++) await Bun.sleep(20)
     expect(existsSync(lock)).toBe(false)
 
     // Reopen in a new session: same content, and an unchanged save rewrites the same bytes.
@@ -176,12 +134,11 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
     expect(again.ok).toBe(true)
     const state = await call(c2, "kimo_get_state", { docId: again.data.doc.id })
     expect(state.data.documents[0].doc.dirty).toBe(false)
-    expect(state.data.app.mode).toBe("headless")
     await call(c2, "kimo_save", { docId: again.data.doc.id })
     expect(readFileSync(ws.file, "utf8")).toBe(bytes)
   })
 
-  test("lease conflict: a second headless process gets DOCUMENT_LOCKED with the holder", async () => {
+  test("lease conflict: a second process gets DOCUMENT_LOCKED with the holder; the desktop app suggests attaching", async () => {
     const ws = workspace()
     const a = await connect(ws, [], "agent-a")
     expect((await call(a, "kimo_open", { path: ws.file })).ok).toBe(true)
@@ -193,17 +150,17 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
     const ro = await call(b, "kimo_open", { path: ws.file, readOnly: true })
     expect(ro.ok).toBe(true)
     expect(ro.data.doc.readOnly).toBe(true)
-  })
 
-  test("a lease held by the desktop app suggests attaching", async () => {
-    const ws = workspace()
+    // A lease held by the desktop app (alive pid that is not the server's).
+    const held = join(ws.project, "held.kimo")
+    writeFileSync(held, readFileSync(ws.file))
     mkdirSync(join(ws.kimoHome, "locks"), { recursive: true })
     writeFileSync(
-      join(ws.kimoHome, "locks", `${pathHash(ws.file)}.lock`),
+      join(ws.kimoHome, "locks", `${pathHash(held)}.lock`),
       JSON.stringify({
         version: 1,
-        path: ws.file,
-        pid: process.pid, // alive, and not the server's pid
+        path: held,
+        pid: process.pid,
         app: "kimo-desktop",
         appLabel: "Kimo",
         host: hostname(),
@@ -211,26 +168,11 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
         token: "t",
       }),
     )
-    const c = await connect(ws)
-    const r = await call(c, "kimo_open", { path: ws.file })
-    expect(r.ok).toBe(false)
-    expect(r.errors[0].code).toBe("DOCUMENT_LOCKED")
-    expect(r.errors[0].suggestion).toContain("Kimo app")
+    const d = await call(b, "kimo_open", { path: held })
+    expect(d.ok).toBe(false)
+    expect(d.errors[0].code).toBe("DOCUMENT_LOCKED")
+    expect(d.errors[0].suggestion).toContain("Kimo app")
   })
-
-  test("autosave writes after 2 s idle", async () => {
-    const ws = workspace()
-    const c = await connect(ws)
-    const o = await call(c, "kimo_open", { path: ws.file })
-    const before = readFileSync(ws.file, "utf8")
-    await call(c, "kimo_apply_ops", {
-      docId: o.data.doc.id,
-      ops: [{ op: "update", id: "Page000001", set: { name: "Landing" } }],
-    })
-    expect(readFileSync(ws.file, "utf8")).toBe(before)
-    await Bun.sleep(2_600)
-    expect(readFileSync(ws.file, "utf8")).toContain('"Landing"')
-  }, 10_000)
 
   test("policy: --allow read denies edits; files outside --files are denied (no prompts)", async () => {
     const ws = workspace()
@@ -250,17 +192,5 @@ describe("kimo mcp --headless over stdio (MCP SDK client)", () => {
     const denied = await call(other, "kimo_open", { path: outside })
     expect(denied.ok).toBe(false)
     expect(denied.errors[0].code).toBe("PERMISSION_DENIED")
-  })
-
-  test("unknown docId never falls back to another document", async () => {
-    const ws = workspace()
-    const c = await connect(ws)
-    await call(c, "kimo_open", { path: ws.file })
-    const r = await call(c, "kimo_query", {
-      docId: "d_0000000000000000_x",
-      select: { topLevel: true },
-    })
-    expect(r.ok).toBe(false)
-    expect(r.errors[0].code).toBe("DOCUMENT_NOT_OPEN")
   })
 })

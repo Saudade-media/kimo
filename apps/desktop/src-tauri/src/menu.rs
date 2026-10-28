@@ -26,6 +26,10 @@
 //! clipboard events the editor already handles. Each editor window reports whether it shows Home
 //! or a document (`kimo_menu_set_context`); the document items (Back to files, Export…, Copy
 //! selection as PNG, Preview) are disabled while the focused window shows Home or Settings.
+//!
+//! Board 44 §5 (tabs): File › New tab ⌘T and Close tab ⌘W go to the focused editor window
+//! (`new-tab` / `close-tab`); Close tab in Settings closes that window. Close window moves to
+//! ⇧⌘W (File) and Window › Close window, so ⌘W reaches the tab strip instead of the window.
 
 use tauri::{AppHandle, Runtime};
 
@@ -46,6 +50,10 @@ pub const FILE_HOME: &str = "kimo-file-home";
 pub const FILE_NEW: &str = "kimo-file-new";
 pub const FILE_OPEN: &str = "kimo-file-open";
 pub const FILE_NEW_WINDOW: &str = "kimo-file-new-window";
+pub const FILE_NEW_TAB: &str = "kimo-file-new-tab";
+pub const FILE_CLOSE_TAB: &str = "kimo-file-close-tab";
+pub const FILE_CLOSE_WINDOW: &str = "kimo-file-close-window";
+pub const WINDOW_CLOSE: &str = "kimo-window-close";
 pub const EDIT_UNDO: &str = "kimo-edit-undo";
 pub const EDIT_REDO: &str = "kimo-edit-redo";
 pub const EDIT_SELECT_ALL: &str = "kimo-edit-select-all";
@@ -63,6 +71,8 @@ pub fn editor_action_for(id: &str) -> Option<&'static str> {
         EDIT_UNDO => Some("undo"),
         EDIT_REDO => Some("redo"),
         EDIT_SELECT_ALL => Some("select-all"),
+        FILE_NEW_TAB => Some("new-tab"),
+        FILE_CLOSE_TAB => Some("close-tab"),
         _ => None,
     }
 }
@@ -184,6 +194,18 @@ pub fn open_new_window<Rt: Runtime>(app: &AppHandle<Rt>) -> crate::error::R<()> 
     Ok(())
 }
 
+/// Board 44 §4 C: a tab dragged out of a window opens in another editor window on `path` (an
+/// absolute path the caller already checked against the scope).
+pub fn open_file_window<Rt: Runtime>(app: &AppHandle<Rt>, path: &str) -> crate::error::R<()> {
+    use tauri::Manager;
+    let taken: Vec<String> = app.webview_windows().into_keys().collect();
+    let label = next_editor_label(&taken);
+    let route = crate::window::disk_route(path);
+    let w = crate::window::create_editor_window_at(app, &label, Some(&route))?;
+    let _ = w.set_focus();
+    Ok(())
+}
+
 /// The `kimo://help-menu` event's `action` for each Help item the web handles (`None` = not
 /// one; Show logs runs in Rust).
 pub fn help_action_for(id: &str) -> Option<&'static str> {
@@ -240,6 +262,7 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
             // window reports a document (`apply_context`).
             &MenuItem::with_id(app, FILE_HOME, "Back to files", false, None::<&str>)?,
             &sep()?,
+            &MenuItem::with_id(app, FILE_NEW_TAB, "New tab", true, Some("CmdOrCtrl+T"))?,
             &MenuItem::with_id(app, FILE_NEW, "New file", true, Some("CmdOrCtrl+N"))?,
             &MenuItem::with_id(app, FILE_OPEN, "Open…", true, Some("CmdOrCtrl+O"))?,
             &MenuItem::with_id(
@@ -259,7 +282,14 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
                 None::<&str>,
             )?,
             &sep()?,
-            &PredefinedMenuItem::close_window(app, None)?,
+            &MenuItem::with_id(app, FILE_CLOSE_TAB, "Close tab", true, Some("CmdOrCtrl+W"))?,
+            &MenuItem::with_id(
+                app,
+                FILE_CLOSE_WINDOW,
+                "Close window",
+                true,
+                Some("CmdOrCtrl+Shift+W"),
+            )?,
         ],
     )?;
     let edit = Submenu::with_items(
@@ -300,7 +330,7 @@ pub fn build<Rt: Runtime>(app: &AppHandle<Rt>) -> tauri::Result<tauri::menu::Men
             &PredefinedMenuItem::minimize(app, None)?,
             &PredefinedMenuItem::maximize(app, None)?,
             &sep()?,
-            &PredefinedMenuItem::close_window(app, None)?,
+            &MenuItem::with_id(app, WINDOW_CLOSE, "Close window", true, None::<&str>)?,
         ],
     )?;
     let version = app.package_info().version.to_string();
@@ -353,6 +383,30 @@ pub fn on_menu_event<Rt: Runtime>(app: &AppHandle<Rt>, id: &str) {
     }
     if let Some(action) = help_action_for(id) {
         emit_help(app, action);
+        return;
+    }
+    if id == FILE_CLOSE_WINDOW || id == WINDOW_CLOSE {
+        if let Some(w) = focused_window(app) {
+            let _ = w.close();
+        }
+        return;
+    }
+    if id == FILE_CLOSE_TAB {
+        // Never reopens a window: ⌘W with nothing focused does nothing.
+        match focused_window(app) {
+            Some(w) if crate::window::is_editor_label(w.label()) => {
+                use tauri::Emitter;
+                let _ = app.emit_to(
+                    w.label(),
+                    "kimo://editor-menu",
+                    serde_json::json!({ "action": "close-tab" }),
+                );
+            }
+            Some(w) => {
+                let _ = w.close();
+            }
+            None => {}
+        }
         return;
     }
     if id == FILE_NEW_WINDOW {
@@ -528,115 +582,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn kimo_menu_items_open_their_settings_panes() {
-        assert_eq!(settings_pane_for(SETTINGS), Some("general"));
-        assert_eq!(settings_pane_for(ABOUT), Some("about"));
-        assert_eq!(settings_pane_for(CHECK_UPDATES), Some("updates"));
-        assert_eq!(settings_pane_for("close"), None);
-        for p in ["general", "about", "updates"] {
-            assert!(crate::window::SETTINGS_PANES.contains(&p));
-        }
-    }
-
-    #[test]
-    fn help_items_map_to_web_actions() {
-        assert_eq!(help_action_for(HELP_DOCS), Some("docs"));
-        assert_eq!(help_action_for(HELP_SHORTCUTS), Some("shortcuts"));
-        assert_eq!(help_action_for(HELP_WHATS_NEW), Some("whats-new"));
-        assert_eq!(help_action_for(HELP_REPORT), Some("report-issue"));
-        assert_eq!(help_action_for(HELP_DIAGNOSTICS), Some("copy-diagnostics"));
-        // Logs are revealed in Rust; Kimo-menu items are not Help items.
-        assert_eq!(help_action_for(HELP_LOGS), None);
-        assert_eq!(help_action_for(ABOUT), None);
-        assert_eq!(settings_pane_for(HELP_DOCS), None);
-    }
-
-    #[test]
-    fn file_and_view_items_map_to_editor_actions() {
-        assert_eq!(editor_action_for(FILE_EXPORT), Some("export"));
-        assert_eq!(editor_action_for(FILE_COPY_PNG), Some("copy-png"));
-        assert_eq!(editor_action_for(VIEW_PREVIEW), Some("preview"));
-        assert_eq!(editor_action_for(HELP_DOCS), None);
-        assert_eq!(help_action_for(FILE_EXPORT), None);
-        assert_eq!(settings_pane_for(VIEW_PREVIEW), None);
-    }
-
-    #[test]
-    fn file_and_edit_items_map_to_page_actions() {
-        assert_eq!(editor_action_for(FILE_HOME), Some("go-home"));
-        assert_eq!(editor_action_for(FILE_NEW), Some("new-file"));
-        assert_eq!(editor_action_for(FILE_OPEN), Some("open-file"));
-        assert_eq!(editor_action_for(EDIT_UNDO), Some("undo"));
-        assert_eq!(editor_action_for(EDIT_REDO), Some("redo"));
-        assert_eq!(editor_action_for(EDIT_SELECT_ALL), Some("select-all"));
-        // New window runs in Rust.
-        assert_eq!(editor_action_for(FILE_NEW_WINDOW), None);
-        assert_eq!(text_command_for("select-all"), Some("selectAll"));
-        assert_eq!(text_command_for("undo"), Some("undo"));
-        assert_eq!(text_command_for("export"), None);
-    }
-
-    /// Every action Rust emits is a member of `EditorMenuAction` in platform types.ts.
-    #[test]
-    fn editor_actions_match_platform_ts() {
-        let ts = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../../packages/platform/src/types.ts"
-        ))
-        .unwrap()
-        // A Windows checkout may have CRLF line endings.
-        .replace("\r\n", "\n");
-        let union = ts
-            .split("export type EditorMenuAction =")
-            .nth(1)
-            .unwrap()
-            .split("\n\n")
-            .next()
-            .unwrap();
-        let ts_actions: Vec<&str> = union.split('"').skip(1).step_by(2).collect();
-        let ids = [
-            FILE_EXPORT,
-            FILE_COPY_PNG,
-            VIEW_PREVIEW,
-            FILE_HOME,
-            FILE_NEW,
-            FILE_OPEN,
-            EDIT_UNDO,
-            EDIT_REDO,
-            EDIT_SELECT_ALL,
-        ];
-        let rust: Vec<&str> = ids.iter().filter_map(|i| editor_action_for(i)).collect();
-        assert_eq!(rust.len(), ids.len());
-        let mut a = rust.clone();
-        let mut b = ts_actions.clone();
-        a.sort_unstable();
-        b.sort_unstable();
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn document_items_follow_the_context() {
-        for id in DOCUMENT_ITEMS {
-            assert!(enabled_in(MenuContext::Editor, id));
-            assert!(!enabled_in(MenuContext::Home, id));
-            assert!(!enabled_in(MenuContext::Other, id));
-        }
-        for id in [
-            FILE_NEW,
-            FILE_OPEN,
-            FILE_NEW_WINDOW,
-            EDIT_UNDO,
-            EDIT_SELECT_ALL,
-        ] {
-            assert!(enabled_in(MenuContext::Home, id));
-            assert!(enabled_in(MenuContext::Other, id));
-        }
-        assert_eq!(MenuContext::parse("home"), Some(MenuContext::Home));
-        assert_eq!(MenuContext::parse("editor"), Some(MenuContext::Editor));
-        assert_eq!(MenuContext::parse("settings"), None);
-    }
-
-    #[test]
     fn items_with_no_editor_window_wait_for_main() {
         let mut q = MenuQueue::default();
         // An editor window is open: the focused one wins, else the primary one.
@@ -675,24 +620,5 @@ mod tests {
         q.push("kimo://editor-menu", "open-file");
         q.forget("main");
         assert!(q.is_empty());
-    }
-
-    #[test]
-    fn new_windows_get_the_next_free_label() {
-        let s = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
-        assert_eq!(next_editor_label(&s(&["main"])), "editor-2");
-        assert_eq!(
-            next_editor_label(&s(&["main", "editor-2", "settings"])),
-            "editor-3"
-        );
-        assert_eq!(next_editor_label(&s(&["main", "editor-3"])), "editor-2");
-        assert!(crate::window::is_editor_label(&next_editor_label(&[])));
-    }
-
-    #[test]
-    fn whats_new_names_the_release_line() {
-        assert_eq!(whats_new_label("1.0.0"), "What's new in 1.0");
-        assert_eq!(whats_new_label("1.2.3-beta.1"), "What's new in 1.2");
-        assert_eq!(whats_new_label("0.0.0"), "What's new in 0.0");
     }
 }

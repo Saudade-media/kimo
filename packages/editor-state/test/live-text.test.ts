@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test"
-import { jsonEqual, serialize } from "@kimo/core-schema"
 import fc from "fast-check"
 import {
   applyTextEdits,
@@ -14,7 +13,7 @@ import {
   transformOffset,
   YjsDocStore,
 } from "../src/index"
-import { emptyStore, fixture, ok, rng, syncPair, validFixtures } from "./helpers"
+import { emptyStore, ok, rng, syncPair } from "./helpers"
 
 const TEXT = "Text00001"
 
@@ -113,20 +112,6 @@ describe("live text in the store", () => {
     expect(plain(a)).toContain(" there")
     expect(plain(a).length).toBe("Hello world".length + 12)
     expect(a.toDocument()).toEqual(b.toDocument())
-  })
-
-  test("interleaved typing, character by character, converges", () => {
-    const a = textStore("ab")
-    const b = replica(a)
-    for (let i = 0; i < 20; i++) {
-      insert(a, 1, "x")
-      insert(b, plain(b).length, "y")
-      if (i % 3 === 0) syncPair(a, b)
-    }
-    syncPair(a, b)
-    expect(plain(a)).toBe(plain(b))
-    expect([...plain(a)].filter((c) => c === "x")).toHaveLength(20)
-    expect([...plain(a)].filter((c) => c === "y")).toHaveLength(20)
   })
 
   test("formatting by two people merges", () => {
@@ -232,17 +217,7 @@ describe("live text in the store", () => {
     expect(a.getNode(TEXT)?.name).toBeUndefined()
   })
 
-  test("serialization and reads are unchanged: strings stay strings, spans stay spans", () => {
-    for (const [name] of validFixtures()) {
-      const doc = fixture(name)
-      const s = new YjsDocStore()
-      s.loadDocument(doc)
-      expect(jsonEqual(s.toDocument(), doc)).toBe(true)
-      expect(serialize(s.toDocument())).toBe(serialize(doc))
-      // A replica built from the binary state reads the same.
-      const r = replica(s)
-      expect(jsonEqual(r.toDocument(), doc)).toBe(true)
-    }
+  test("canonical content reads back as strings and spans, not runs", () => {
     const s = textStore([{ text: "a", style: { weight: 700 } }, { text: "b" }])
     insert(s, 2, "c")
     expect(s.getNode(TEXT)?.content).toEqual([

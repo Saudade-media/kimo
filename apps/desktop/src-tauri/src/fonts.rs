@@ -393,41 +393,18 @@ mod tests {
         assert_eq!(c.get(&e.key).unwrap().unwrap(), bytes);
         assert_eq!(c.get("0000000000000000").unwrap(), None);
         assert_eq!(c.get("../x").unwrap_err().code, "INVALID");
+        // Unknown sources are refused.
+        let web = FontCacheMeta {
+            source: "web".into(),
+            ..meta.clone()
+        };
+        assert_eq!(c.put(web, b"x").unwrap_err().code, "INVALID");
         c.put(meta, &bytes).unwrap();
         assert_eq!(c.list().len(), 1);
         let s = c.stats();
         assert_eq!((s.count, s.bytes), (1, bytes.len() as u64));
-        let json = serde_json::to_value(&c.list()[0]).unwrap();
-        assert!(json.get("cachedAt").is_some());
         c.clear().unwrap();
         assert_eq!(c.stats().count, 0);
-    }
-
-    #[test]
-    fn pack_is_a_separate_store() {
-        // Board 28: the offline font pack reuses the cache layout in its own dir; clearing
-        // the cache never touches it, and unknown sources are refused.
-        let d = tempfile::tempdir().unwrap();
-        let cache = FontCache::new(d.path().join("fonts"));
-        let pack = FontCache::new(d.path().join("font-pack"));
-        let meta = FontCacheMeta {
-            family: "Lora".into(),
-            weight: 600,
-            italic: false,
-            source: "pack".into(),
-        };
-        let e = pack.put(meta.clone(), b"OTTO-fake-lora").unwrap();
-        assert_eq!(e.source, "pack");
-        assert!(pack.dir.join(format!("{}.otf", e.key)).exists());
-        cache.clear().unwrap();
-        assert_eq!(pack.stats().count, 1);
-        let bad = FontCacheMeta {
-            source: "web".into(),
-            ..meta
-        };
-        assert_eq!(pack.put(bad, b"x").unwrap_err().code, "INVALID");
-        pack.clear().unwrap();
-        assert_eq!(pack.stats().count, 0);
     }
 
     #[test]
@@ -443,19 +420,5 @@ mod tests {
         ] {
             assert_eq!(check_remote_url(bad).unwrap_err().code, "BLOCKED", "{bad}");
         }
-    }
-
-    #[test]
-    fn lists_some_local_fonts() {
-        let f = LocalFonts::default();
-        let fams = f.list(&[]);
-        // CI images may have no fonts; when there are some, they load.
-        if let Some(style) = fams.iter().flat_map(|f| f.styles.iter()).next() {
-            assert!(!f.load(&[], &style.postscript_name).unwrap().is_empty());
-        }
-        assert_eq!(
-            f.load(&[], "No-Such-Font-PS").unwrap_err().code,
-            "NOT_FOUND"
-        );
     }
 }

@@ -11,12 +11,12 @@ import {
   assignPersonas,
   Button,
   CompactButton,
+  floating,
   IconButton,
   type Persona,
   useAnchoredPosition,
   useDismiss,
 } from "@kimo/ui"
-import { ShieldCheck } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { ApprovalPrompt } from "./ApprovalPrompt"
 import type { AgentChipView, AgentsControllerExt } from "./controller"
@@ -37,7 +37,7 @@ export interface AgentPresenceProps {
 }
 
 /** AgentMark state of a chip (board 24 mapping eqlcN; presence chip rule BXTD5). */
-export function chipMarkState(c: AgentChipView): AgentMarkState {
+function chipMarkState(c: AgentChipView): AgentMarkState {
   if (c.presence === "waiting") return "listening"
   if (c.presence === "paused") return "paused"
   switch (c.state) {
@@ -54,7 +54,7 @@ export function chipMarkState(c: AgentChipView): AgentMarkState {
 const PRESENCE_ORDER = { waiting: 0, editing: 1, paused: 2 } as const
 
 /** Sorted waiting → working → idle (board 24 yeF1Z rule), lead first among equals. */
-export function sortChips(chips: readonly AgentChipView[]): AgentChipView[] {
+function sortChips(chips: readonly AgentChipView[]): AgentChipView[] {
   const rank = (c: AgentChipView) =>
     PRESENCE_ORDER[c.presence] * 2 + (chipMarkState(c) === "working" ? 0 : 1)
   return [...chips].sort((a, b) => rank(a) - rank(b))
@@ -65,7 +65,7 @@ export function sortChips(chips: readonly AgentChipView[]): AgentChipView[] {
  * stay Teal outside Split mode; agents spawned inside a session (`agent:` origins) take the next
  * hue in order Iris → Moss.
  */
-export function chipPersonas(chips: readonly AgentChipView[]): Map<string, Persona> {
+function chipPersonas(chips: readonly AgentChipView[]): Map<string, Persona> {
   const slots = assignPersonas(
     chips.map((c, i) => ({
       id: c.origin,
@@ -120,13 +120,6 @@ export function AgentPresence({
   const chipState = queue > 0 ? "waiting" : lead.presence
   const label = queue > 0 && !many ? `${lead.label} is waiting` : lead.text
   const meta = many ? `+${chips.length - 1}` : lead.meta
-  const autoClients = sorted.filter(
-    (c, i, all) =>
-      c.origin.startsWith("mcp:") &&
-      c.policy.autoApprove === true &&
-      c.policy.onExceed === "ask" &&
-      all.findIndex((x) => x.client === c.client) === i,
-  )
   // The dry-run bar replaces the presence chip while active (board 24 g) — for an agent's dry-run
   // call. A dry run that previews an approval keeps the chip: the approval prompt hangs from it
   // (board 21 weJXw) and the bar's Apply / Discard answer the same request.
@@ -143,20 +136,6 @@ export function AgentPresence({
         open={open}
         onClick={() => setOpen((o) => !o)}
       />
-      {autoClients.length > 0 && (
-        // Board 34 Auto-approve Pill (XYAmZ): a connected client approves its own requests.
-        <button
-          type="button"
-          className="agents-auto-pill"
-          data-testid="agent-auto-approve-pill"
-          data-pen="XYAmZ"
-          title={`${autoClients.map((c) => c.label).join(", ")}: every request is approved without asking. Change it in Settings › Agents & MCP.`}
-          onClick={() => onOpenClientSettings?.((autoClients[0] as AgentChipView).client)}
-        >
-          <ShieldCheck className="agents-auto-pill__icon" aria-hidden="true" />
-          <span className="agents-auto-pill__label">Auto-approve</span>
-        </button>
-      )}
       {open && anchorEl && queue > 0 && (
         <QueuePopover controller={controller} anchor={anchorEl} onClose={() => setOpen(false)} />
       )}
@@ -207,7 +186,7 @@ function AgentsPopoverFrame({
   const root = useRef<HTMLDivElement>(null)
   const pos = useAnchoredPosition(root, anchor, { side: "bottom", align: "end", offset: 8 })
   useDismiss(root, onClose, anchor, true)
-  return (
+  return floating(
     <div
       ref={root}
       role="dialog"
@@ -247,7 +226,8 @@ function AgentsPopoverFrame({
         />
       </div>
       {children}
-    </div>
+    </div>,
+    anchor,
   )
 }
 
@@ -258,7 +238,7 @@ function AgentsPopoverFrame({
  * h 24) when waiting / Pause (Button/Ghost h 24) when working › Footer (PwFn6) gap 6, padding
  * [8, 12, 4, 12], top stroke: Agents & MCP… · Spacer · Stop all (≥ 2 active, danger label).
  */
-export function AgentsPopover({
+function AgentsPopover({
   controller,
   chips,
   personas,
@@ -392,7 +372,7 @@ export function AgentsPopover({
  * sans 12 / 500 · Detail sans 11 text-tertiary) · Deny (ghost h 24) · Approve (primary h 24).
  * Oldest first; ⌘↩ approves the top item.
  */
-export function QueuePopover({
+function QueuePopover({
   controller,
   anchor,
   onClose,
@@ -455,7 +435,7 @@ export function QueuePopover({
   )
 }
 
-export interface SessionPopoverProps {
+interface SessionPopoverProps {
   controller: AgentsControllerExt
   chips: AgentChipView[]
   /** Positioned under this element (fixed); omitted: in flow (gallery, harness). */
@@ -466,7 +446,7 @@ export interface SessionPopoverProps {
 }
 
 /** The session popover (hIfmx); one section per client when 2+ are active (not designed). */
-export function SessionPopover({
+function SessionPopover({
   controller,
   chips,
   anchor,

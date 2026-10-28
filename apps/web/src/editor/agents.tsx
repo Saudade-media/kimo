@@ -40,7 +40,7 @@ export function useFileId(path: string | null): string | null {
   return path && id?.path === path ? id.id : null
 }
 
-export interface EditorAgents {
+interface EditorAgents {
   controller: AgentsControllerExt | null
   /** Topbar drag region (before Save Status). */
   presence: ReactNode

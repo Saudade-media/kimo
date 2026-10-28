@@ -83,9 +83,10 @@ export function validateFile(io: CliIO, file: string, args: ValidateArgs): FileR
     libraries: loadLibraries(preview, dir),
     assetFiles: assetListing(dir),
     lints: args.lints !== false,
-    allowInvalid: true,
+    // Report the file as written: the editor's in-memory repairs are not the file.
+    repair: false,
   })
-  const blocking = r.readOnlyReasons.filter((x) => x.code !== "INVALID")
+  const blocking = r.readOnlyReasons
   if (blocking.length > 0 || !r.validation)
     return {
       ...report,

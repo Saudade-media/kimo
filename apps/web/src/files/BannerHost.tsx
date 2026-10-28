@@ -53,7 +53,7 @@ export interface SessionBannerViewProps {
 const ACTION_ICON = { check: <Check /> } as const
 
 /** A session banner as designed (stateless; used by {@link BannerHost} and the gallery). */
-export function SessionBannerView({
+function SessionBannerView({
   banner,
   os,
   canReveal = true,

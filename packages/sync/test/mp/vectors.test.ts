@@ -53,7 +53,7 @@ async function fixtures() {
   return { root, link, room, roomKey, keys }
 }
 
-describe("§19 vectors", () => {
+describe("protocol test vectors", () => {
   test("identity: public keys and room id", async () => {
     const { root, link, room } = await fixtures()
     expect(toHex(root.publicRaw)).toBe(vectors.identity.rootPublicKey)
@@ -107,7 +107,7 @@ describe("§19 vectors", () => {
     const bytes = await signAdminCommand(
       root.privateKey,
       room,
-      // The vector predates the owner proof (ADR 0017); the signature covers this body only.
+      // The vector predates the owner proof; the signature covers this body only.
       { op: "register", rootPub: body.rootPub, cert: body.cert } as AdminBody,
       { iat: v.iat, nonce: seq(16, 0x60) },
     )

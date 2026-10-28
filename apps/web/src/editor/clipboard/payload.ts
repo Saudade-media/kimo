@@ -54,7 +54,7 @@ export interface ClipboardPayload {
   text: string
 }
 
-export interface PayloadSource {
+interface PayloadSource {
   doc: KimoDocument
   docId: string
   page: string | null
@@ -79,7 +79,7 @@ function childGroups(
 }
 
 /** Every `$ref` binding name in a JSON value (meta subtrees skipped). */
-export function bindingNames(v: unknown, out = new Set<string>()): Set<string> {
+function bindingNames(v: unknown, out = new Set<string>()): Set<string> {
   if (Array.isArray(v)) for (const x of v) bindingNames(x, out)
   else if (isObj(v)) {
     const keys = Object.keys(v)
@@ -250,7 +250,7 @@ export function decodePayload(get: (type: string) => string): ClipboardPayload |
 
 // --- Paste ------------------------------------------------------------------------------------
 
-export interface PasteTargetDoc {
+interface PasteTargetDoc {
   getNode(id: string): NodeData | undefined
   children(id: string | null, at?: string | null): readonly string[]
   header: Omit<KimoDocument, "nodes">
@@ -265,7 +265,7 @@ export interface PasteTargetDoc {
   libraryAlias?(sourceDoc: string, id: string): string | null
 }
 
-export interface PastePlacement {
+interface PastePlacement {
   /** "smart": into `parent` (or the page root centred on `center`); "inPlace": source x/y. */
   mode: "smart" | "inPlace"
   parent: string | null
@@ -278,7 +278,7 @@ export interface PastePlacement {
   parentFlows?: boolean
 }
 
-export interface PasteResult {
+interface PasteResult {
   ops: Op[]
   /** New top-level ids (selected afterwards). */
   roots: string[]

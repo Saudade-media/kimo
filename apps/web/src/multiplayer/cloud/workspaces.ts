@@ -313,9 +313,14 @@ function endOf(code: string): BindingEnd | null {
   }
 }
 
-const baseName = (fileKey: string) => {
-  const last = fileKey.split(/[\\/]/).pop() ?? fileKey
-  return last.replace(/\.(kimo|kimoz|pen)$/i, "") || "Untitled"
+/** A file's name in the workspace: the document's own name, else the file's base name. */
+function fileNameOf(session: ShareableSession): string {
+  const meta = (session.store.toHeader() as { meta?: { name?: unknown } }).meta
+  if (typeof meta?.name === "string" && meta.name.trim()) return meta.name.trim().slice(0, 64)
+  // A browser library file's key is an id, never a name.
+  if (session.ref.startsWith("kimo-lib:")) return "Untitled"
+  const last = session.ref.split(/[\\/]/).pop() ?? session.ref
+  return (last.replace(/\.(kimo|kimoz|pen)$/i, "") || "Untitled").slice(0, 64)
 }
 
 const initialMigration: MigrationState = { phase: "idle", moved: 0, left: 0, error: null }
@@ -927,8 +932,16 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
   // --- Migration -----------------------------------------------------------------------------------
 
   let migrating: Promise<MigrationOutcome | null> | null = null
+  /** One window of this origin migrates at a time (Web Locks where the browser has them). */
+  const exclusively = <T>(fn: () => Promise<T>): Promise<T | null> => {
+    const locks = (globalThis.navigator as { locks?: LockManager } | undefined)?.locks
+    if (!locks) return fn()
+    return locks.request("kimo-cloud-migrate", { ifAvailable: true }, (lock) =>
+      lock ? fn() : null,
+    ) as Promise<T | null>
+  }
   const migrate = (): Promise<MigrationOutcome | null> => {
-    migrating ??= (async () => {
+    migrating ??= exclusively(async () => {
       await hydrated
       const accountId = state.accountId
       const owned = state.workspaces
@@ -965,10 +978,10 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
       } catch (error) {
         set({ migration: { ...state.migration, phase: "failed", error: codeOf(error) } })
         return null
-      } finally {
-        migrating = null
       }
-    })()
+    }).finally(() => {
+      migrating = null
+    })
     return migrating
   }
 
@@ -1157,7 +1170,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
       }
       const id = workspaceId
       const added = await workspaceAction(id, () =>
-        client.addFile(id, { name: options.name ?? baseName(session.ref), origin: "user" }),
+        client.addFile(id, { name: options.name ?? fileNameOf(session), origin: "user" }),
       )
       const { file, token } = added
       await share.service.seedRoom(share.targetOf(session), {

@@ -60,7 +60,9 @@ workspace store refreshes each workspace's members and files in the background, 
 already do.
 
 **Share a file** (Share popover on Kimo Cloud). `shareFile(session)` where `session` is the editor's
-`{ ref, store }`. It answers `{ status: "shared", file, workspaceId, session }`, or
+`{ ref, store }`; the file's name in the workspace is the document's name, else the file's base name
+(pass `{ name }` to choose it). A file this device already shares through a relay of its own is
+refused with `BAD_REQUEST`. It answers `{ status: "shared", file, workspaceId, session }`, or
 `{ status: "choose", workspaces }` when several workspaces can take it: show the picker and call
 again with `{ workspaceId }`. `PLAN_REQUIRED` when none can (4C or 6A). Do not use
 `PlatformShare.shareSession` for Kimo Cloud: that is the self-hosted relay path, and the hosted
@@ -105,13 +107,16 @@ sets `state.transfer` to `waiting`, then `done` (6C "You're now the Owner") or `
 **Delete and leave.** `deleteWorkspace(ws, typedName)` (6D; `NAME_MISMATCH` until it matches).
 `leave(ws)` (6F; Admins and Editors, `OWNER_CANNOT_LEAVE` for the Owner) resolves the ended links.
 
-**Migration.** Runs by itself after sign-in, once per window session, and is safe to repeat:
-`state.migration` says how far it got (`left > 0`: it resumes on the next sign-in). `migrate()` runs
-it again.
+**Migration.** Runs by itself after sign-in, in one window of the origin at a time (Web Locks), and
+is safe to repeat: `state.migration` says how far it got (`left > 0`: it resumes on the next
+sign-in). `migrate()` runs it again. A pre-workspace room that is already closed and was never
+uploaded is left as it is (its file stays a local file of this device).
 
 ## Not done yet
 
 - The desktop document host (`host/`, `mp.*` RPC) owns shared files on desktop: bound files and the
   re-share run in windows without a host (web, and desktop windows when no host answers). The host
   needs the same `setCloudFiles` hooks and the migration over its `rooms.json` registry.
+- After sign-out, a deleted workspace's copy opens editable until its account signs in again
+  (bindings are per account).
 - No UI: board 46 screens are for the UI work.

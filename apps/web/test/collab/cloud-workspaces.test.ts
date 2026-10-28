@@ -293,6 +293,41 @@ describe("re-sharing pre-workspace rooms (1.3.0 migration)", () => {
     expect(filePosts()).toHaveLength(2)
     expect(MIGRATED_PREFIX.length).toBeGreaterThan(0)
   }, 30_000)
+
+  test("a room closed before any upload is never bound to an empty new room", async () => {
+    const clock = fakeClock()
+    const relay = startRelay()
+    cleanups.push(() => relay.stop())
+    const keys = createMemoryDeviceKeyStore()
+    const cloud = createFakeCloud({
+      now: clock.now,
+      relayUrl: relay.url,
+      relay: relayRegistrar({ deviceKeys: keys }),
+    })
+    const ws = cloud.addWorkspace(EMAIL, "Workspace", "active")
+    const app = await makeApp(cloud, clock, { keys })
+    await app.cloudStore.refresh()
+    const target = makeTarget("/work/closed.kimo", ["Rect000001"])
+    const old = await app.share.service.startSharing(target, { relayUrl: relay.url })
+    expect(await app.share.service.closeOwnedRoom(old.room)).toBe("closed")
+
+    const cache = createCloudCache(app.registry.cloud)
+    const outcome = await migrateLegacyRooms({
+      client: app.client,
+      share: app.share,
+      registry: app.registry,
+      cache,
+      relayUrl: relay.url,
+      workspaceId: ws,
+      now: clock.now,
+      bind: async (binding) => cache.saveBinding(binding),
+    })
+    expect(outcome).toEqual({ moved: 0, left: 1, error: "ROOM_CLOSED" })
+    expect(cloud.files()).toHaveLength(0)
+    expect((await cache.load()).bindings).toEqual({})
+    // The file stays this device's, as it was.
+    expect((await app.registry.listOwned()).map((o) => o.fileKey)).toEqual([target.fileKey])
+  }, 20_000)
 })
 
 describe("the workspace cache", () => {

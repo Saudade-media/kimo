@@ -4,13 +4,14 @@
  * account owns. The old room's root key never left this device, so Kimo Cloud cannot move it; the
  * app does, once per room:
  *
- * 1. `POST /v1/workspaces/<ws>/files` with `replaces` = the old room: Kimo Cloud creates and
+ * 1. the old room's state is read (its replica, then the relay's catch-up; or the open editor's
+ *    store);
+ * 2. `POST /v1/workspaces/<ws>/files` with `replaces` = the old room: Kimo Cloud creates and
  *    registers the new room (a repeat answers the same new room with a fresh token);
- * 2. the old room's state (its replica, then the relay's catch-up; or the open editor's store) goes
- *    into the new room, then the blobs the file has locally, and the file's last recorded save
- *    carries over so a later reopen still adds only the file's own changes;
- * 3. the local file is bound to the new room, and the old room's record stops claiming the file;
- * 4. the old room is closed with its root key (admin op 4), which ends its links, and forgotten.
+ * 3. the state goes into the new room, then the blobs the file has locally, and the file's last
+ *    recorded save carries over so a later reopen still adds only the file's own changes;
+ * 4. the local file is bound to the new room, and the old room's record stops claiming the file;
+ * 5. the old room is closed with its root key (admin op 4), which ends its links, and forgotten.
  *
  * Every step is safe to repeat: an interrupted run resumes on the next sign-in. Nothing is closed
  * before the new room holds the state, and a relay that cannot be told keeps the old record (under
@@ -112,29 +113,14 @@ export async function migrateLegacyRooms(ctx: MigrationContext): Promise<Migrati
       const tombstoned = o.fileKey.startsWith(MIGRATED_PREFIX)
       if (!tombstoned) {
         const fileKey = o.fileKey
-        // 1. The new room (a repeat answers the one an earlier run made).
-        const { file, token } = await ctx.client.addFile(ctx.workspaceId, {
-          name: baseName(fileKey),
-          origin: "user",
-          replaces: o.room,
-        })
-        await ctx.step?.(o.room, "created")
-        const newRoom = {
-          room: file.room,
-          relayUrl: file.relayUrl,
-          roomKey: fromBase64Url(file.roomKey),
-          token: token.token,
-        }
-
-        // 2. The old room's state into the new one. An editor open here holds it already: its
-        // old connection stops first, so one store never feeds two rooms.
+        // 1. What the old room holds. An editor open here has it already; otherwise its replica
+        // and the relay's catch-up fill a scratch copy.
         const live = ctx.share.session(o.room)
         let target: ShareTarget
         let oldClosed = false
         if (live) {
           await settled(live, timeoutMs)
           target = { fileKey, store: live.store, assets: live.assets }
-          await ctx.share.leave(o.room).catch(() => undefined)
         } else {
           target = ctx.share.targetOf({ ref: fileKey, store: createDocStore() })
           let scratch: SharedSession | null = null
@@ -142,16 +128,43 @@ export async function migrateLegacyRooms(ctx: MigrationContext): Promise<Migrati
             scratch = await service.connect(target, o.room)
             await settled(scratch, timeoutMs)
           } catch (error) {
-            // Closed by an earlier run, after its upload: nothing more to bring over.
             if (!(error instanceof MultiplayerError && error.code === "ROOM_CLOSED")) throw error
             oldClosed = true
           } finally {
             await scratch?.leave().catch(() => undefined)
           }
         }
-        // A closed old room never seeds: what this device has of it may be less than the upload
-        // that preceded the close.
+        // A closed old room can be brought over only by the run that uploaded it before closing
+        // it: without that record, this device may hold less than the room did, so nothing moves.
+        if (oldClosed && !journal[o.room]) {
+          outcome.left++
+          outcome.error = "ROOM_CLOSED"
+          continue
+        }
+
+        // 2. The new room (a repeat answers the one an earlier run made).
+        const { file, token } = await ctx.client.addFile(ctx.workspaceId, {
+          name: baseName(fileKey),
+          origin: "user",
+          replaces: o.room,
+        })
+        await ctx.step?.(o.room, "created")
+        if (oldClosed && journal[o.room]?.newRoom !== file.room) {
+          outcome.left++
+          outcome.error = "ROOM_CLOSED"
+          continue
+        }
+        const newRoom = {
+          room: file.room,
+          relayUrl: file.relayUrl,
+          roomKey: fromBase64Url(file.roomKey),
+          token: token.token,
+        }
+
+        // 3. The state into the new room, then the blobs. An editor's old connection stops
+        // first, so one store never feeds two rooms.
         if (!oldClosed) {
+          if (live) await ctx.share.leave(o.room).catch(() => undefined)
           await service.seedRoom(target, newRoom, { recordSave: false })
           const into = await service.openWithToken({ ...newRoom, target })
           try {
@@ -178,7 +191,7 @@ export async function migrateLegacyRooms(ctx: MigrationContext): Promise<Migrati
         await ctx.cache.saveMigration(record)
         await ctx.step?.(o.room, "uploaded")
 
-        // 3. The file follows the new room; the old record stops claiming it.
+        // 4. The file follows the new room; the old record stops claiming it.
         await ctx.bind(
           {
             room: file.room,
@@ -197,8 +210,12 @@ export async function migrateLegacyRooms(ctx: MigrationContext): Promise<Migrati
         await ctx.step?.(o.room, "bound")
       }
 
-      // 4. Close the old room with its root key, then forget it.
-      const closed = await service.closeOwnedRoom(o.room)
+      // 5. Close the old room with its root key, then forget it.
+      const closed = await service.closeOwnedRoom(o.room).catch((error: unknown) => {
+        // Another window closed and forgot it meanwhile.
+        if (error instanceof MultiplayerError && error.code === "ROOM_NOT_FOUND") return "gone"
+        throw error
+      })
       if (closed === "unreachable") {
         outcome.left++
         outcome.error = "RELAY_UNREACHABLE"

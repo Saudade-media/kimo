@@ -21,9 +21,10 @@ pub struct OpenRequest {
     pub node: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<String>,
-    /// Board 41 section 5: a multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`)
-    /// or pairing link (`kimo://pair#<relay>/<token>`, ADR 0017), whole. `refs` is empty; the web
-    /// app tells them apart, parses and validates them.
+    /// Board 41 section 5: a multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`),
+    /// a pairing link (`kimo://pair#<relay>/<token>`, ADR 0017) or a Kimo Cloud link
+    /// (`kimo://cloud/invite#<token>`, `kimo://cloud/transfer`, `kimo://cloud/signed-in`), whole.
+    /// `refs` is empty; the web app tells them apart, parses and validates them.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub join: Option<String>,
 }

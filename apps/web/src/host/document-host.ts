@@ -46,6 +46,7 @@ import type {
 } from "@kimo/platform"
 import { HostSyncHub, type HostSyncMessage, type HostSyncTransport } from "@kimo/sync"
 import { scopeViolations } from "../agent-panel/tools"
+import type { CloudStore } from "../multiplayer/cloud/store"
 import { isUntitledRef, type SessionState } from "../platform/contract"
 import {
   createSessionManager,
@@ -82,6 +83,11 @@ export interface DocumentHostServiceOptions {
   approvalTimeoutMs?: number
   /** Multiplayer: share, reconnect shared files and serve `mp.*` (default true). */
   multiplayer?: boolean
+  /**
+   * Kimo Cloud for workspace files (`cloud-host.ts`): bound files reopen in their rooms here and
+   * the re-share runs over this host's registry. Null or absent: none (tests, Kimo Cloud hidden).
+   */
+  cloud?: CloudStore | null
 }
 
 /** A relayed MCP connection (socket or HTTP session). */
@@ -731,6 +737,11 @@ export async function startDocumentHostService(
           bridge,
           manager,
           viewers: (ref) => [...(viewers.get(ref) ?? [])],
+          cloud: options.cloud ?? null,
+          pushState(ref) {
+            const s = manager.get(ref)
+            if (s && !isUntitledRef(s.ref)) pushState(s, s.state())
+          },
           // Stop on a paused agent: its turn ends here (claims go) and its window stops it.
           stopAgent(origin) {
             for (const a of agentConns.values())

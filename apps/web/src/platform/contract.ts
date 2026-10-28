@@ -869,6 +869,12 @@ export interface SessionState {
   /** Edits newer than the last write (git banner "Your 6 unsaved edits"). */
   unsavedEdits: number
   /**
+   * Why the store refuses edits, null when it takes them: also a reason the phase does not show
+   * (a view-only room, a workspace copy after its workspace was deleted or its member removed).
+   * A desktop window's replica of a document host file takes it.
+   */
+  readOnlyReason?: string | null
+  /**
    * Board 24 (i): closing a never-saved document asks first (Save… / Don't save / Cancel).
    * Absent or null while no close is pending.
    */

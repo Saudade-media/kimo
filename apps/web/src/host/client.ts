@@ -344,7 +344,9 @@ export class HostedDocumentSession extends FileDocumentSession {
   private mirror(state: SessionState, emit = true): void {
     this.mirrored = state
     const ro = state.phase === "read-only" || state.phase === "failed-load"
-    this.store.setReadOnly(ro ? "Read-only" : null)
+    // The host's store may refuse edits for a reason its phase does not show (a view-only room,
+    // a workspace copy whose workspace was deleted): the replica refuses them too.
+    this.store.setReadOnly(ro ? "Read-only" : (state.readOnlyReason ?? null))
     const mgr = this.manager
     if (state.conflicts && !this.conflicts && mgr.createConflictSession)
       this.conflicts = mgr.createConflictSession(this)

@@ -157,7 +157,7 @@ describe("an open workspace file and its token", () => {
 
     const target = makeTarget("/work/landing.kimo", ["Rect000001"])
     const shared = await app.workspaces.shareFile({ ref: target.fileKey, store: target.store })
-    if (shared.status !== "shared") throw new Error("expected one workspace")
+    if (shared.status !== "shared" || !shared.session) throw new Error("expected one workspace")
     const session = shared.session
     const welcomes: string[] = []
     const closes: string[] = []

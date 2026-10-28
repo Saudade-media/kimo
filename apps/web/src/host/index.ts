@@ -9,6 +9,7 @@
 import type { KimoPlatform } from "@kimo/platform"
 import type { FontSource } from "@kimo/renderer"
 import { createFontSystem, type FontSystem } from "../fonts/font-system"
+import { createPlatformCloud } from "../multiplayer/relay-setup/services"
 import { DEFAULT_SVG_OPTIONS, importSvgAsVectors } from "../svg-import/convert"
 import { serveFlushRequests } from "../updater/restart-broadcast"
 import { type HostBridge, tauriBridge } from "./bridge"
@@ -17,6 +18,7 @@ import { type DocumentHostService, startDocumentHostService } from "./document-h
 
 export * from "./bridge"
 export * from "./client"
+export * from "./cloud-host"
 export * from "./document-host"
 export * from "./mcp-api"
 export * from "./multiplayer-host"
@@ -82,6 +84,8 @@ export async function startHostRoute(
     // document's font assets (scene), then the platform's local fonts and font cache (Google
     // is skipped: the host's renderer is offline).
     scene: { ...browserScene, fontSources: hostFontSources(platform) },
+    // Kimo Cloud workspace files open in their rooms here, like every other shared file.
+    cloud: createPlatformCloud(platform, (url) => platform.files.openExternalUrl(url)),
   })
   // Settings › Updates › Restart to update: documents open only in the host (an agent opened
   // them, no editor window shows them) are saved before the restart too.

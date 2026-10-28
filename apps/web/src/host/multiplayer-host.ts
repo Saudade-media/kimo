@@ -7,7 +7,9 @@
  *   opens and records what each save wrote (§16.3),
  * - serves the `mp.*` host RPC methods to editor windows, and pushes each document's share
  *   snapshot to the windows showing it (`kimo://host-share`),
- * - holds agents a person interrupted (paused agents) until they resume.
+ * - holds agents a person interrupted (paused agents) until they resume,
+ * - with Kimo Cloud, holds workspace files too (`cloud-host.ts`): bound files reopen in their
+ *   rooms here, and `mp.cloud.*` shares files into workspaces and runs the re-share.
  *
  * Editor windows keep receiving room changes through the existing window sync. Guests join in
  * the window (their documents have no file).
@@ -17,10 +19,12 @@ import type { KimoPlatform } from "@kimo/platform"
 import { normalizeRelayUrl, RelayHttpClient, type Role } from "@kimo/sync/mp"
 import { type AgentPausesOptions, pausesFor } from "../multiplayer/agent-pause"
 import { createLocalShareBackend, type ShareSnapshot } from "../multiplayer/backend"
+import type { CloudStore } from "../multiplayer/cloud/store"
 import { createSharedFileHooks } from "../multiplayer/room-session"
 import type { FileSessionManager } from "../platform/session"
 import { createPlatformShare, type LocalPresence, type PlatformShare } from "../platform/share"
 import { HOST_EVENTS, type HostBridge } from "./bridge"
+import { createHostWorkspaces, type HostWorkspaces } from "./cloud-host"
 
 export interface HostMultiplayerOptions {
   platform: KimoPlatform
@@ -32,10 +36,16 @@ export interface HostMultiplayerOptions {
   stopAgent(origin: string): void
   /** Test seam: the share layer. Default: one over `platform`. */
   share?: PlatformShare
+  /** Kimo Cloud for workspace files; null: none. */
+  cloud?: CloudStore | null
+  /** Sends `ref`'s session state to its windows again (its store's read-only reason changed). */
+  pushState?(ref: string): void
 }
 
 export interface HostMultiplayer {
   readonly share: PlatformShare
+  /** Kimo Cloud workspace files (null without Kimo Cloud). */
+  readonly workspaces: HostWorkspaces | null
   /** The `mp.*` RPC handlers (merged into the host's RPC table). */
   readonly rpc: Record<string, (args: Record<string, unknown>, from: string) => Promise<unknown>>
   /** Resolves once `origin` is not paused on any open document (agent calls wait here). */
@@ -84,7 +94,28 @@ export function createHostMultiplayer(options: HostMultiplayerOptions): HostMult
   }
   const offManager = manager.subscribe(() => backend.refresh())
 
+  const workspaces = options.cloud
+    ? createHostWorkspaces({ platform, bridge, manager, share, cloud: options.cloud })
+    : null
+  // A store's read-only reason is not a session state change: a room that went view-only, or a
+  // workspace copy whose workspace was deleted, is sent to its windows when it changes.
+  const reasons = new Map<string, string | null>()
+  const checkReadOnly = () => {
+    for (const s of manager.sessions()) {
+      const reason = s.store.readOnly?.reason ?? null
+      if ((reasons.get(s.ref) ?? null) === reason) continue
+      reasons.set(s.ref, reason)
+      options.pushState?.(s.ref)
+    }
+  }
+  const offReadOnly = [
+    share.onSessionsChange(checkReadOnly),
+    share.onStatus(checkReadOnly),
+    workspaces?.store.subscribe(checkReadOnly) ?? (() => {}),
+  ]
+
   const rpc: HostMultiplayer["rpc"] = {
+    ...workspaces?.rpc,
     "mp.probe": async (args) =>
       new RelayHttpClient({ relayUrl: normalizeRelayUrl(str(args.relayUrl)) }).probe(),
     "mp.status": async (args) => backend.snapshot(str(args.ref)),
@@ -139,6 +170,7 @@ export function createHostMultiplayer(options: HostMultiplayerOptions): HostMult
 
   return {
     share,
+    workspaces,
     rpc,
     async waitForAgent(origin) {
       for (const s of manager.sessions())
@@ -147,6 +179,8 @@ export function createHostMultiplayer(options: HostMultiplayerOptions): HostMult
     watch,
     dispose() {
       offManager()
+      for (const off of offReadOnly) off()
+      workspaces?.dispose()
       for (const off of watched.values()) off()
       watched.clear()
       backend.dispose()

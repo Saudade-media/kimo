@@ -14,6 +14,7 @@ board 46 "Cloud workspaces" in `desing.kimo`.
 | `workspaces.ts` | `WorkspaceStore`: workspaces, members, files, tokens, links, invites, transfers |
 | `cache.ts` | What the device keeps (registry `cloud` store): lists, tokens, file bindings |
 | `migrate.ts` | The 1.3.0 re-share of pre-workspace Cloud rooms |
+| `hosted.ts` | Desktop windows: the document host's workspace files shown in the window's store |
 | `links.ts` | `kimo://cloud/...` deep links and the web `/invite#<token>` route |
 | `managed.ts` | Desktop managed copies of files that are not on disk |
 | `fake.ts` | In-memory Kimo Cloud for tests and harnesses (real room tokens) |
@@ -110,8 +111,8 @@ sets `state.transfer` to `waiting`, then `done` (6C "You're now the Owner") or `
 **Delete and leave.** `deleteWorkspace(ws, typedName)` (6D; `NAME_MISMATCH` until it matches).
 `leave(ws)` (6F; Admins and Editors, `OWNER_CANNOT_LEAVE` for the Owner) resolves the ended links.
 
-**Migration.** Runs by itself after sign-in, in one window of the origin at a time (Web Locks), and
-is safe to repeat: `state.migration` says how far it got (`left > 0`: it resumes on the next
+**Migration.** Runs by itself after sign-in, in one window of the origin at a time (Web Locks; on
+desktop in the document host, over `rooms.json`), and is safe to repeat: `state.migration` says how far it got (`left > 0`: it resumes on the next
 sign-in). `migrate()` runs it again. Closing the old room deletes its blobs, so before the
 close every blob the old room holds for the document's manifest is copied relay to relay into the
 new room (blobs are fetched on demand, so this device may not hold them all); any failure leaves
@@ -141,10 +142,26 @@ step through `../ui/NewWorkspace.tsx`: `createWorkspace(name)` makes it (one sea
 Names: Kimo Cloud knows people by email only, so names and initials come from the email's local
 part (`personName`).
 
+## Desktop: the document host
+
+On desktop the hidden document host holds every file on disk and the owner's registry
+(`rooms.json`), so it holds workspace files too (`../../host/cloud-host.ts`). It runs a workspace
+store of its own over its share layer, cached in `rooms.json`: bound files reopen in their rooms
+as the host opens them, whichever window shows them, and their tokens are kept fresh there. The
+re-share runs there too, over the host's owned rooms.
+
+A window's store (`hosted.ts`) keeps the account, lists, members, invites, transfers, rooms joined
+from a view link and untitled files. It sends `shareFile` for a file the host holds and
+`localCopy` to the host (`mp.cloud.*`), and shows the host's `bindings`, `open` and `migration`,
+pushed on every change (`kimo://host-cloud`), merged into its state. Kimo Cloud answers each store
+separately: when the window's account changes (sign-in, sign-out, a workspace deleted or left, a
+plan change) the host asks again. A window with no host (an older shell) does all of it itself.
+
+The host's store keeps a copy's read-only reason (6E, 6F, a view-only plan) on its store; windows
+take it from the session state (`readOnlyReason`). Save a copy (Save As) leaves the binding with
+the read-only copy, and the new file is a plain local file.
+
 ## Not done yet
 
-- The desktop document host (`host/`, `mp.*` RPC) owns shared files on desktop: bound files and the
-  re-share run in windows without a host (web, and desktop windows when no host answers). The host
-  needs the same `setCloudFiles` hooks and the migration over its `rooms.json` registry.
 - After sign-out, a deleted workspace's copy opens editable until its account signs in again
   (bindings are per account).

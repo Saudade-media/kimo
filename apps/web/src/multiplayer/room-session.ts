@@ -9,13 +9,15 @@
  * - Write: each write of a shared file records the state it holds (`captureSaved`), so the next
  *   reopen diffs against it and never reverts collaborators' edits.
  * - Save As: the room follows the session to its new file (the registry's file key moves), so
- *   the new file reopens shared; the file it came from is no longer the shared one.
+ *   the new file reopens shared; the file it came from is no longer the shared one. A read-only
+ *   workspace copy (deleted workspace, removed member) saved elsewhere is a plain file: editable.
  * - Close: the room connection of the session ends with it.
  */
 import type { KimoDocument } from "@kimo/core-schema"
 import type { AssetStore } from "../lib/assets"
 import type { FileDocumentSession, SharedFileHooks } from "../platform/session"
 import type { PlatformShare } from "../platform/share"
+import { CLOUD_DELETED_REASON, CLOUD_REMOVED_REASON } from "./cloud/workspaces"
 
 export interface SharedFileHooksOptions {
   /** The asset store of a session. Default: the share layer's (`assets/` beside the file). */
@@ -53,12 +55,16 @@ export function createSharedFileHooks(
         void commit().catch(() => undefined)
       }
     },
-    async moved(_session, from, to) {
+    async moved(session, from, to) {
       try {
         await share.fileMoved(from, to)
       } catch (error) {
         options.onError?.(to, error)
       }
+      // Board 46 5D, 6E Save a copy: the copy is not bound to the workspace room.
+      const reason = session.store.readOnly?.reason
+      if (reason === CLOUD_DELETED_REASON || reason === CLOUD_REMOVED_REASON)
+        session.store.setReadOnly(null)
     },
     closed(session) {
       const room = rooms.get(session) ?? share.roomOfFile(session.ref)

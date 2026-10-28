@@ -131,7 +131,8 @@ export interface WorkspacesState {
 }
 
 export type ShareResult =
-  | { status: "shared"; file: CloudFile; workspaceId: string; session: SharedSession }
+  /** `session` is null when the desktop document host holds the file and its room (`./hosted.ts`). */
+  | { status: "shared"; file: CloudFile; workspaceId: string; session: SharedSession | null }
   /** Several workspaces can take the file: the caller picks one and calls again with it. */
   | { status: "choose"; workspaces: WorkspaceSummary[] }
 
@@ -160,8 +161,11 @@ export interface WorkspaceStoreDeps {
   managedCopies?: ManagedCopies | null
   /** Base of view links (default: each file's relay, which serves `/join`). */
   webOrigin?: string
-  /** Re-share this device's pre-workspace Cloud rooms after sign-in (default true). */
-  migrate?: boolean
+  /**
+   * Re-share this device's pre-workspace Cloud rooms after sign-in (default true). A promise
+   * decides later: a desktop window leaves it to the document host when one answers.
+   */
+  migrate?: boolean | Promise<boolean>
 }
 
 export interface WorkspaceStore {
@@ -461,7 +465,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     if (inv?.phase === "sign-in") void acceptInvite()
     if (deps.migrate !== false && !migrated) {
       migrated = true
-      void migrate()
+      void Promise.resolve(deps.migrate ?? true).then((run) => (run ? migrate() : null))
     }
   }
   const offCloud = cloud.subscribe(() => applyCloud(cloud.getState()))
@@ -908,8 +912,10 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     },
     async moved(from, to) {
       await hydrated
+      // Only a live binding follows Save As: a read-only copy saved elsewhere (board 46 5D, 6E
+      // Save a copy) is a plain local file, and the copy it came from stays read-only.
       const b = bindingForFile(state, from)
-      if (b && from !== to) await saveBinding({ ...b, fileKey: to })
+      if (b && b.ended === null && from !== to) await saveBinding({ ...b, fileKey: to })
     },
   }
   share.setCloudFiles(hooks)

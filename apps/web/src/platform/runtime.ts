@@ -133,13 +133,16 @@ export async function createAppRuntime(
     await attach(hostClient)
     const manager = createAppSessionManager(platform)
     // Settings › Multiplayer only reads settings and tests relays: no share backend is needed.
-    const { model } = createWindowMultiplayer({
+    // Settings › Workspace (board 46 2A) runs on the window's workspace store.
+    const { model, workspaces } = createWindowMultiplayer({
       platform,
       manager,
       hostBackend: async (local) =>
         hostClient ? host.createHostShareBackend(hostClient, { local }) : null,
+      hostWorkspaces: async () =>
+        hostClient ? host.createHostedWorkspaceFiles(hostClient, manager) : null,
     })
-    return { platform, manager, hostClient, multiplayer: model }
+    return { platform, manager, hostClient, multiplayer: model, workspaces }
   }
   // Editor windows render right away (the host webview starts in parallel and may still be
   // loading). Opens wait for the host's answer, so files go to the host-backed session whenever
@@ -160,6 +163,12 @@ export async function createAppRuntime(
       await factory
       const client = runtime.hostClient
       return client ? host.createHostShareBackend(client, { local }) : null
+    },
+    // Workspace files are files on disk: the host holds them and their rooms.
+    hostWorkspaces: async () => {
+      await factory
+      const client = runtime.hostClient
+      return client ? host.createHostedWorkspaceFiles(client, manager) : null
     },
   })
   const runtime: AppRuntime = {

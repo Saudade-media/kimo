@@ -4,8 +4,11 @@
  * - 6B: "Maya wants you to own Studio" while a workspace summary names this account for a
  *   transfer (`incomingTransfers`). Escape or a press outside hides it until the next refresh.
  * - 6C: Toast "You're now the Owner of Studio" once the transfer's checkout went through.
- * - 3B: Toast "You joined Studio" after an invite link (the link is the person's yes; an invite
- *   for an account that exists signs in first, as api.md §14.4 says).
+ * - 3A in the app: "Join Studio as leo@studio.design?" when an invite link opens. Join is the
+ *   person's yes (architecture §5.2 step 4): the link alone accepts nothing and starts no sign-in,
+ *   since it may be someone else's. An invite for an account that exists signs in first (api.md
+ *   §14.4), and is accepted once that sign-in is done.
+ * - 3B: Toast "You joined Studio" once joined.
  * - 3C: Toast "You can now edit Landing" when an edit request turns approved; an open view
  *   session of that room reopens with an edit token.
  * - The toast stack for workspace actions outside an editor.
@@ -18,8 +21,8 @@ import { takeReadyShares } from "../../home/WorkspaceHome"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { roomKeyOf } from "../backend"
 import { fileOf, incomingTransfers } from "../cloud/workspaces"
-import { useRelaySetupServices } from "../relay-setup/services"
-import { AcceptTransferDialog } from "./WorkspaceDialogs"
+import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
+import { AcceptTransferDialog, JoinWorkspaceDialog } from "./WorkspaceDialogs"
 import {
   rememberWorkspaceNames,
   useWorkspaceStore,
@@ -36,6 +39,7 @@ export function WorkspaceHost() {
   const state = useWorkspacesState(store)
   const runtime = useOptionalRuntime()
   const cloud = useRelaySetupServices(runtime?.platform ?? null)?.cloud ?? null
+  const cloudState = useCloudState(cloud)
   const toast = useWsToast()
   /** Transfers hidden with Escape, by transfer id (shown again on the next app start). */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
@@ -61,16 +65,13 @@ export function WorkspaceHost() {
     if (workspaces) rememberWorkspaceNames(workspaces)
   }, [workspaces])
 
-  // --- Invites (3B) -------------------------------------------------------------------------
+  // --- Invites (3A, 3B) ---------------------------------------------------------------------
+  // "ready" without an error is the Join dialog below; nothing here accepts on its own.
   const invite = state?.invite ?? null
   const accepting = useRef<string | null>(null)
   useEffect(() => {
     if (!store || !invite) return
-    if (invite.phase === "ready" && !invite.busy && invite.error === null) {
-      if (accepting.current === invite.token) return
-      accepting.current = invite.token
-      void store.acceptInvite().catch(() => undefined)
-    } else if (invite.phase === "ready" && invite.error !== null) {
+    if (invite.phase === "ready" && invite.error !== null) {
       toast({
         tone: "danger",
         text:
@@ -82,7 +83,8 @@ export function WorkspaceHost() {
     } else if (invite.phase === "sign-in") {
       if (accepting.current === `sign-in:${invite.token}`) return
       accepting.current = `sign-in:${invite.token}`
-      // The account exists: a sign-in link for the invite's email, accepted once it is verified.
+      // Only after Join: the account exists, so a sign-in link for the invite's email, accepted
+      // once it is verified.
       void cloud?.startSignIn(invite.peek.email).catch(() => undefined)
       toast({ tone: "component", icon: "mail", text: "Check your inbox" })
     } else if (invite.phase === "joined") {
@@ -181,8 +183,18 @@ export function WorkspaceHost() {
       : []
   const first = incoming[0] ?? null
 
+  const signedIn = cloudState?.session === "signed-in"
   return (
     <>
+      {store && invite?.phase === "ready" && invite.error === null && (
+        <JoinWorkspaceDialog
+          peek={invite.peek}
+          signedIn={signedIn}
+          busy={invite.busy}
+          onJoin={() => void store.acceptInvite().catch(() => undefined)}
+          onCancel={() => store.dismissInvite()}
+        />
+      )}
       {store && first?.transfer && (
         <AcceptTransferDialog
           key={first.transfer.id}

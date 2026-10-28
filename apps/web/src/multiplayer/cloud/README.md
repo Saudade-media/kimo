@@ -93,8 +93,10 @@ focus; once one is `approved`, `openFile(room)` upgrades the open view session t
 **Invites.** A link sets `state.invite` by itself (desktop `kimo://cloud/invite#<token>`, web
 `/invite#<token>`; see `platform/runtime.ts`). Phases:
 `checking` → `ready` ("Join <peek.workspaceName> as <peek.email>?", `acceptInvite()`) →
-`joined`. `sign-in`: that email has an account; run the Cloud store's sign-in for `peek.email`,
-and the invite is accepted when it completes. `failed` with `INVITE_EXPIRED` or `INVITE_USED`:
+`joined`. Only the person's Join calls `acceptInvite()`: the link may be someone else's, so
+opening it accepts nothing and starts no sign-in. `sign-in` (after Join): that email has an
+account; run the Cloud store's sign-in for `peek.email`, and the invite is accepted when it
+completes. `failed` with `INVITE_EXPIRED` or `INVITE_USED`:
 "This invite no longer works." `ready` with `error` `INVITE_EMAIL_MISMATCH`: "This invite is for
 <email>" with Sign out. `dismissInvite()` closes it.
 
@@ -109,7 +111,10 @@ sets `state.transfer` to `waiting`, then `done` (6C "You're now the Owner") or `
 
 **Migration.** Runs by itself after sign-in, in one window of the origin at a time (Web Locks), and
 is safe to repeat: `state.migration` says how far it got (`left > 0`: it resumes on the next
-sign-in). `migrate()` runs it again. A pre-workspace room that is already closed and was never
+sign-in). `migrate()` runs it again. Closing the old room deletes its blobs, so before the
+close every blob the old room holds for the document's manifest is copied relay to relay into the
+new room (blobs are fetched on demand, so this device may not hold them all); any failure leaves
+the old room open for the next run. A pre-workspace room that is already closed and was never
 uploaded is left as it is (its file stays a local file of this device).
 
 ## The board 46 UI
@@ -118,8 +123,8 @@ uploaded is left as it is (its file stays a local file of this device).
 |---|---|
 | `../ui/WorkspaceShare.tsx` | Share popover 1A to 1E (`useCloudShareKind` routes a room to 1C or 1D/1E) |
 | `../ui/WorkspacePane.tsx` | Settings › Workspace (2A): plan, members, invites, edit requests, ownership |
-| `../ui/WorkspaceDialogs.tsx` | 2B invite, 2C remove (toast 2D), 6A transfer, 6B accept, 6D delete, 6F leave |
-| `../ui/WorkspaceHost.tsx` | Mounted once per window: 6B, toasts 6C, 3B, 3C, the start refresh |
+| `../ui/WorkspaceDialogs.tsx` | 2B invite, 2C remove (toast 2D), Join (3A in the app), 6A transfer, 6B accept, 6D delete, 6F leave |
+| `../ui/WorkspaceHost.tsx` | Mounted once per window: Join, 6B, toasts 6C, 3B, 3C, the start refresh |
 | `../ui/WorkspaceBanner.tsx` | Editor banners 5A to 5D and 6E, with Save a copy |
 | `../ui/workspace-parts.tsx` | Store hooks, member avatar, 28-tall buttons, the toast stack outside an editor |
 | `workspace-view.ts` | Copy and picks (names from emails, footnotes, prices, banner kind) |

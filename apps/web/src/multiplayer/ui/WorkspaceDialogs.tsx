@@ -4,6 +4,8 @@
  * - 2B Invite (user-plus): Input · Email (mail), Row · Role (Select 140 × 28), Price (receipt,
  *   "+$4 a month once they join"); Cancel · Send invite.
  * - 2C Remove a member (user-minus): the view links they made, when there are any; Remove (danger).
+ * - Join (users), the app's side of 3A: "Join Studio as leo@studio.design?" before an invite link
+ *   is accepted. Board 46 draws only the browser page; this reuses its copy in the no-body shape.
  *   Done: Toast "Sam Kim removed" (2D).
  * - 6A Transfer (crown): Row · New owner with a Select (160 × 28) of the Admins; Send request.
  * - 6B Accept ownership (crown): no body; Decline · Subscribe (opens checkout, seats locked).
@@ -18,7 +20,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { failureText } from "../../editor/errors"
 import { Icon } from "../../lib/icons"
-import type { Member, MemberRole, PlanPrice, WorkspaceSummary } from "../cloud/types"
+import type { InvitePeek, Member, MemberRole, PlanPrice, WorkspaceSummary } from "../cloud/types"
 import {
   firstName,
   inviteCostLine,
@@ -114,6 +116,43 @@ export function InviteDialog({
         )}
       </div>
     </Dialog>,
+  )
+}
+
+// --- Join (3A in the app) -------------------------------------------------------------------------
+
+/**
+ * An invite link opened in the app (architecture §5.2 step 4, api.md §14.4). Nothing is accepted,
+ * and no sign-in starts, until Join: the link may be someone else's, and joining signs this device
+ * in as the invited email.
+ */
+export function JoinWorkspaceDialog({
+  peek,
+  signedIn,
+  busy,
+  onJoin,
+  onCancel,
+}: {
+  peek: InvitePeek
+  /** This device is signed in to Kimo Cloud already. */
+  signedIn: boolean
+  busy: boolean
+  onJoin(): void
+  onCancel(): void
+}) {
+  const invited = `${firstName(peek.invitedBy)} invited you to edit ${peek.workspaceName}'s files.`
+  return onBody(
+    <Dialog
+      className="ws-dialog"
+      data-dialog="join-workspace"
+      icon={<Icon name="users" size={16} />}
+      title={`Join ${peek.workspaceName} as ${peek.email}?`}
+      description={signedIn ? invited : `${invited} Joining signs this device in with this email.`}
+      confirmLabel="Join"
+      confirmDisabled={busy}
+      onCancel={onCancel}
+      onConfirm={onJoin}
+    />,
   )
 }
 

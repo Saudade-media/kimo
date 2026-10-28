@@ -110,7 +110,8 @@ function parseBinding(v: unknown): CloudBinding | null {
     typeof b.roomKey !== "string"
   )
     return null
-  const ended = b.ended === "closed" || b.ended === "deleted" || b.ended === "removed" ? b.ended : null
+  const ended =
+    b.ended === "closed" || b.ended === "deleted" || b.ended === "removed" ? b.ended : null
   return {
     room: b.room,
     workspaceId: b.workspaceId,

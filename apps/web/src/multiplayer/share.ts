@@ -294,9 +294,9 @@ export interface ShareService extends Omit<OwnershipClient, "registerBody" | "pr
    * as in {@link ShareService.reopenShared}. Without one it opens in a guest document (the
    * Kimo-managed replica of a file that is not on disk).
    */
-  openWithToken(options: TokenRoom & { target?: ShareTarget; file?: KimoDocument | null }): Promise<
-    SharedSession
-  >
+  openWithToken(
+    options: TokenRoom & { target?: ShareTarget; file?: KimoDocument | null },
+  ): Promise<SharedSession>
   /**
    * Hands the open session of `room` a new token. `refresh` presents it on the live connection
    * (spec §11.2: same role and origin); `reconnect` opens a new connection with it, for a token
@@ -1442,10 +1442,12 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     async swapToken(room, token, mode) {
       const entry = open_.get(room)
       if (!entry || entry.owned) return
-      if (!(await entry.promise.then(
-        () => true,
-        () => false,
-      )))
+      if (
+        !(await entry.promise.then(
+          () => true,
+          () => false,
+        ))
+      )
         return
       if (open_.get(room) !== entry) return
       const provider = entry.provider
@@ -1482,8 +1484,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
             await registry.cursors.save(cursorKey(room.room, binding), { ackedSv: sv })
           } catch (error) {
             // Another run seeded it first: the session's sync merges this state instead.
-            if (!(error instanceof MultiplayerError && error.code === "SNAPSHOT_STALE"))
-              throw error
+            if (!(error instanceof MultiplayerError && error.code === "SNAPSHOT_STALE")) throw error
           }
         }
         if (options?.recordSave !== false && !(await registry.saves.load(room.room)))

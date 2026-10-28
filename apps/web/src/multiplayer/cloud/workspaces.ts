@@ -474,7 +474,10 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
       set({ transfer: { phase: "done", workspaceId: t.workspaceId } })
     }
     for (const w of after)
-      if (w.deletedAt === null && clock.now() - (refreshedAt.get(w.id) ?? 0) >= WORKSPACE_REFRESH_MS)
+      if (
+        w.deletedAt === null &&
+        clock.now() - (refreshedAt.get(w.id) ?? 0) >= WORKSPACE_REFRESH_MS
+      )
         void refreshWorkspace(w.id).catch(() => undefined)
   }
 
@@ -760,7 +763,11 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
   }
 
   /** Stops a room here: its token upkeep and its session; `end` makes the copy read-only. */
-  const endRoom = async (o: OpenRoom, end: BindingEnd | null, opts: { keepSession?: boolean } = {}) => {
+  const endRoom = async (
+    o: OpenRoom,
+    end: BindingEnd | null,
+    opts: { keepSession?: boolean } = {},
+  ) => {
     if (opened.get(o.room) === o) opened.delete(o.room)
     if (o.timer !== null) clock.clearTimeout(o.timer)
     o.timer = null
@@ -774,7 +781,8 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
   const openFile: WorkspaceStore["openFile"] = async (room, options = {}) => {
     const { workspaceId, file } = await fileFor(room)
     const ws = state.workspaces.find((w) => w.id === workspaceId)
-    if (ws?.deletedAt != null) throw new CloudError("WORKSPACE_DELETED", "the workspace was deleted")
+    if (ws?.deletedAt != null)
+      throw new CloudError("WORKSPACE_DELETED", "the workspace was deleted")
     const cached = tokens[room]
     let token: CloudToken
     try {

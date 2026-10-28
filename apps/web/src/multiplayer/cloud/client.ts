@@ -365,14 +365,10 @@ export function createCloudClient(deps: CloudClientDeps): CloudClient {
     roomToken: (id, origin = "user") =>
       post(`${room(id)}/token`, { origin }, parseCloudToken).then(localToken),
     createLink: (id, input) =>
-      post(
-        `${room(id)}/links`,
-        { expiresAt: input.expiresAt, label: input.label },
-        (v) => {
-          const a = obj(v, "link answer")
-          return { link: parseLink(a.link), token: parseCloudToken(a.token) }
-        },
-      ),
+      post(`${room(id)}/links`, { expiresAt: input.expiresAt, label: input.label }, (v) => {
+        const a = obj(v, "link answer")
+        return { link: parseLink(a.link), token: parseCloudToken(a.token) }
+      }),
     links: (id) =>
       get(`${ws(id)}/links`, (v) => {
         const a = obj(v, "links")
@@ -471,9 +467,7 @@ export function parseAccount(v: unknown): CloudAccount {
     devices: parseDevices(a.devices),
     // Absent before workspaces (an older service): none yet.
     workspaces: Array.isArray(a.workspaces) ? a.workspaces.map(parseSummary) : [],
-    accessRequests: Array.isArray(a.accessRequests)
-      ? a.accessRequests.map(parseAccessRequest)
-      : [],
+    accessRequests: Array.isArray(a.accessRequests) ? a.accessRequests.map(parseAccessRequest) : [],
   }
 }
 

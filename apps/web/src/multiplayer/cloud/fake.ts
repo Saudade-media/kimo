@@ -209,11 +209,7 @@ export function planIn(
 
 /** The token role a workspace's plan allows (§17.1); null for `none`. */
 const tokenRoleFor = (status: PlanStatus): "edit" | "view" | null =>
-  status === "none"
-    ? null
-    : status === "read_only" || status === "expired"
-      ? "view"
-      : "edit"
+  status === "none" ? null : status === "read_only" || status === "expired" ? "view" : "edit"
 
 const ROLE_RANK: Record<WorkspaceRole, number> = { editor: 0, admin: 1, owner: 2 }
 
@@ -239,8 +235,7 @@ export function createFakeCloud(options: FakeCloudOptions = {}) {
   const tokens = new Map<string, FakeToken>()
   const nonces = new Set<string>()
   let seq = 0
-  const log: { method: string; path: string; signed: boolean; body: unknown; status: number }[] =
-    []
+  const log: { method: string; path: string; signed: boolean; body: unknown; status: number }[] = []
   const state = {
     offline: false,
     /** Answers to fail with, by `METHOD path` (once each). */
@@ -545,7 +540,7 @@ export function createFakeCloud(options: FakeCloudOptions = {}) {
   const inviteByToken = (token: unknown) =>
     [...invites.values()].find((i) => typeof token === "string" && i.token === token) ?? null
   const inviteError = (i: FakeInvite | null) => {
-    if (!i || i.status !== "pending") return error(410, "INVITE_USED")
+    if (i?.status !== "pending") return error(410, "INVITE_USED")
     if (i.expiresAt <= now()) return error(410, "INVITE_EXPIRED")
     return null
   }

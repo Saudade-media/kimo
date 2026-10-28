@@ -31,10 +31,10 @@ import {
   type StopSharingResult,
   type SweepResult,
 } from "../multiplayer"
-import type { ShareTarget, TokenRoom } from "../multiplayer/share"
 import { deviceKeysFor, deviceNameFor } from "../multiplayer/device"
 import { libraryFileOfKey } from "../multiplayer/library"
 import { pickPresenceColor } from "../multiplayer/presence"
+import type { ShareTarget, TokenRoom } from "../multiplayer/share"
 
 /** What sharing needs of an open document: the file it came from and its store. */
 export interface ShareableSession {

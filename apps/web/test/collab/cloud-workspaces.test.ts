@@ -2,7 +2,8 @@
  * Kimo Cloud workspaces in the app (ADR 0019): an open workspace file keeps its edit token fresh
  * on the live connection and reconnects when the plan changes the role (protocol); the 1.3.0
  * re-share of pre-workspace rooms is safe to interrupt and repeat (data integrity); the
- * workspace cache never drops what a local copy needs (data integrity).
+ * workspace cache never drops what a local copy needs (data integrity); the plan's seats catch up
+ * with a member who joined (a bug: Settings showed the seats from before the approval).
  */
 import { afterEach, describe, expect, test } from "bun:test"
 import { type DocStore, YjsDocStore } from "@kimo/editor-state"
@@ -512,5 +513,31 @@ describe("the workspace cache", () => {
       accessRequests: [],
     })
     expect((await cache.load()).tokens.room?.token).toBe("newer")
+  })
+})
+
+describe("plan seats", () => {
+  test("catch up with an approved member though Kimo Cloud bills the seat after its answer", async () => {
+    const clock = fakeClock()
+    const cloud = createFakeCloud({ now: clock.now })
+    const ws = cloud.addWorkspace(EMAIL, "Studio", "active")
+    cloud.addMember(ws, "sam@studio.design")
+    const owner = await makeApp(cloud, clock)
+    const { file } = await owner.client.addFile(ws, { name: "Landing" })
+    const guest = await makeApp(cloud, clock, { email: "jo@acme.co" })
+    await guest.client.requestAccess(file.room)
+    await owner.workspaces.refresh()
+    const plan = () => owner.workspaces.getState().workspaces.find((w) => w.id === ws)?.plan
+    expect(plan()?.seats).toBe(2)
+    const request = owner.workspaces.getState().details[ws]?.requests[0]
+    if (!request) throw new Error("expected the edit request")
+
+    cloud.state.seatSyncMs = 3000
+    await owner.workspaces.approveRequest(ws, request.id)
+    // The answer came before the seat sync: the account still bills 2 seats.
+    expect(plan()?.seats).toBe(2)
+    clock.advance(30_000)
+    await until(() => plan()?.seats === 3)
+    expect(plan()?.amountCents).toBe(1600)
   })
 })

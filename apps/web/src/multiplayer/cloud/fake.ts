@@ -5,6 +5,11 @@
  * lapse, go offline) and workspaces between board 46 states (members, plans, closed files, a
  * deleted workspace). Every answer is one small JSON body; nothing streams or loops.
  *
+ * Seats: as the service, a plan bills `seats` until its seat sync raises them to the member count
+ * (architecture.md §4), which the service sends after the answer that added the member;
+ * `state.seatSyncMs` is how long that takes here (0: by the next answer). Seats are never lowered
+ * here (the service lowers them at the period end).
+ *
  * Workspace files get real room keys and real capability tokens (minted with the file's link key,
  * as the service does), so a session can open them on a relay. Pass `relay` (for example
  * {@link relayRegistrar}) to register each new room on a real relay; without it rooms exist only
@@ -100,6 +105,8 @@ interface FakeWorkspace {
   /** Account id → membership. Insertion order is join order. */
   members: Map<string, { role: WorkspaceRole; joinedAt: number }>
   bytes: number
+  /** When the seat sync for a member who joined lands (null: none pending). */
+  seatSyncAt: number | null
 }
 
 interface FakeInvite {
@@ -179,6 +186,12 @@ export function emptyPlan(): CloudPlan {
   }
 }
 
+/** What `seats` cost per interval, before tax: the base plan plus each seat after the first. */
+const paidCents = (interval: BillingInterval, seats: number) => {
+  const extra = Math.max(0, seats - 1)
+  return interval === "month" ? 800 + 400 * extra : 8000 + 4000 * extra
+}
+
 /** A plan in `status` the way the service would report it at `now`. */
 export function planIn(
   status: PlanStatus,
@@ -186,13 +199,7 @@ export function planIn(
   interval: BillingInterval = "month",
   seats = 1,
 ) {
-  const extra = Math.max(0, seats - 1)
-  const paid = {
-    interval,
-    amountCents: interval === "month" ? 800 + 400 * extra : 8000 + 4000 * extra,
-    currency: "usd",
-    seats,
-  }
+  const paid = { interval, amountCents: paidCents(interval, seats), currency: "usd", seats }
   const plan: CloudPlan = { ...emptyPlan(), status }
   if (status === "none") return plan
   Object.assign(plan, paid)
@@ -242,6 +249,8 @@ export function createFakeCloud(options: FakeCloudOptions = {}) {
     failNext: new Map<string, { status: number; code: string }>(),
     /** Added to the server clock (stale-request tests). */
     skew: 0,
+    /** How long the seat sync takes to bill a member who joined (the service's outbox). */
+    seatSyncMs: 0,
     limitBytes: 10_000_000_000,
   }
 
@@ -300,9 +309,19 @@ export function createFakeCloud(options: FakeCloudOptions = {}) {
       expiresAt: t.expiresAt,
     }
   }
+  /** The seat sync once it is due: a running plan's seats rise to the member count. */
+  const syncSeats = (w: FakeWorkspace) => {
+    if (w.seatSyncAt === null || now() < w.seatSyncAt) return
+    w.seatSyncAt = null
+    const { status, interval, seats } = w.plan
+    const m = w.members.size
+    if ((status !== "active" && status !== "past_due") || !interval || (seats ?? 0) >= m) return
+    w.plan = { ...w.plan, seats: m, amountCents: paidCents(interval, m) }
+  }
   const summary = (w: FakeWorkspace, accountId: string): WorkspaceSummary => {
     const t = transferOf(w)
-    const plan = { ...w.plan, seats: w.plan.status === "none" ? null : w.members.size }
+    syncSeats(w)
+    const plan = { ...w.plan, seats: w.plan.status === "none" ? null : w.plan.seats }
     return {
       id: w.id,
       name: w.name,
@@ -377,12 +396,15 @@ export function createFakeCloud(options: FakeCloudOptions = {}) {
       deletedAt: null,
       members: new Map([[ownerId, { role: "owner", joinedAt: now() }]]),
       bytes: 0,
+      seatSyncAt: null,
     }
     workspaces.set(w.id, w)
     return w
   }
   const join = (w: FakeWorkspace, accountId: string, role: WorkspaceRole) => {
-    if (!w.members.has(accountId)) w.members.set(accountId, { role, joinedAt: now() })
+    if (w.members.has(accountId)) return
+    w.members.set(accountId, { role, joinedAt: now() })
+    w.seatSyncAt ??= now() + state.seatSyncMs
   }
   /** Ends a member's tokens (their edit tokens and the view links they made, §5.2 step 2). */
   const revokeMember = async (w: FakeWorkspace, accountId: string) => {

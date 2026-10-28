@@ -15,6 +15,9 @@
  *   replaced silently; a revoked one means removed, signed out, or the file is gone.
  * - **Local copies are never deleted here.** A closed file stays a plain local file; a deleted
  *   workspace or a removed member leaves read-only copies (board 46 6E, 6F).
+ * - **Seats catch up.** Kimo Cloud bills a member who joined a moment after its answer (its seat
+ *   sync runs after the request), so a running plan can list fewer seats than members for a few
+ *   seconds. While it does, the account is asked again after {@link SEAT_FOLLOW_MS}.
  */
 import type { KimoDocument } from "@kimo/core-schema"
 import { formatJoinLink, fromBase64Url, parseToken } from "@kimo/sync/mp"
@@ -63,6 +66,12 @@ export const TOKEN_RETRY_MS = 60_000
 export const TRANSFER_POLL_MS = 3000
 /** A workspace's members and files are refreshed in the background at most this often. */
 export const WORKSPACE_REFRESH_MS = 30_000
+/**
+ * While a running plan bills fewer seats than it has members (a member just joined and Kimo Cloud's
+ * seat sync has not run yet), the account is asked again after each of these waits, then no more
+ * until a refresh shows the seats caught up or another member is approved here.
+ */
+export const SEAT_FOLLOW_MS = [2000, 4000, 8000, 16_000] as const
 
 export type InviteFlow =
   /** Reading the invite (§14.3). */
@@ -276,6 +285,13 @@ export function bindingForFile(
   return found.find((b) => b.ended === null) ?? found[0] ?? null
 }
 
+/** A running plan that bills fewer seats than members: Kimo Cloud's seat sync is still to come. */
+export const seatsBehind = (w: Pick<WorkspaceSummary, "plan" | "members" | "deletedAt">) =>
+  w.deletedAt === null &&
+  (w.plan.status === "active" || w.plan.status === "past_due") &&
+  w.plan.seats !== null &&
+  w.plan.seats < w.members
+
 /** The token role a plan gives (§17.1): view once writes stop; null without a plan. */
 export const tokenRoleFor = (status: PlanStatus): TokenRole | null =>
   status === "none" ? null : status === "read_only" || status === "expired" ? "view" : "edit"
@@ -479,6 +495,44 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
         clock.now() - (refreshedAt.get(w.id) ?? 0) >= WORKSPACE_REFRESH_MS
       )
         void refreshWorkspace(w.id).catch(() => undefined)
+    followSeats(after)
+  }
+
+  // --- Seats -------------------------------------------------------------------------------------
+
+  /** Workspaces whose seats were behind their members at the last look. */
+  const behind = new Set<string>()
+  let seatTimer: unknown = null
+  let seatTries = 0
+  const stopSeatFollow = () => {
+    if (seatTimer !== null) clock.clearTimeout(seatTimer)
+    seatTimer = null
+  }
+  /**
+   * Asks for the account again while a plan's seats are behind its members (the Plan row and the
+   * storage limit follow), a few times at most; a workspace that caught up gets its detail again.
+   */
+  const followSeats = (list: readonly WorkspaceSummary[]) => {
+    const now = new Set(list.filter(seatsBehind).map((w) => w.id))
+    for (const id of behind)
+      if (!now.has(id)) {
+        behind.delete(id)
+        if (list.some((w) => w.id === id && w.deletedAt === null))
+          void refreshWorkspace(id).catch(() => undefined)
+      }
+    for (const id of now) behind.add(id)
+    if (behind.size === 0) {
+      seatTries = 0
+      stopSeatFollow()
+      return
+    }
+    const wait = SEAT_FOLLOW_MS[seatTries]
+    if (seatTimer !== null || wait === undefined) return
+    seatTries++
+    seatTimer = clock.setTimeout(() => {
+      seatTimer = null
+      void cloud.refresh()
+    }, wait)
   }
 
   const refresh = async () => {
@@ -1046,6 +1100,8 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     },
     async approveRequest(workspaceId, requestId) {
       await workspaceAction(workspaceId, () => client.approveRequest(workspaceId, requestId))
+      // A new seat: follow its billing again even if an earlier follow gave up.
+      seatTries = 0
       await cloud.refresh()
     },
     async declineRequest(workspaceId, requestId) {
@@ -1242,6 +1298,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
       disposed = true
       offCloud()
       stopTransferPoll()
+      stopSeatFollow()
       for (const o of [...opened.values()]) {
         if (o.timer !== null) clock.clearTimeout(o.timer)
         for (const off of o.offs.splice(0)) off()

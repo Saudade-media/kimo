@@ -1852,6 +1852,12 @@ export class CanvasKitRenderer implements Renderer {
     this.requestFrame()
   }
 
+  /** Asks again for images and shader sources that were missing; those that load now redraw. */
+  retryAssets(): void {
+    this.images?.retryMissing()
+    this.shaderCache?.retryMissing()
+  }
+
   async ensureFonts(nodeId: string): Promise<void> {
     const { fonts } = this.need()
     const ctx = this.context()

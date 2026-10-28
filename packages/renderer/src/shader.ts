@@ -23,10 +23,14 @@ export type ShaderState =
   | { status: "ready"; shader: CompiledShader }
   | { status: "failed"; reason: string }
 
+const NOT_FOUND = "source not found"
+
 /** Shader sources and compiled effects, per renderer. */
 export class ShaderCache {
   private readonly states = new Map<string, ShaderState>()
   private readonly waiting = new Map<string, Promise<void>>()
+  /** Loading when a retry came: asked again if not found (the source may be newer). */
+  private readonly again = new Set<string>()
   /** Compiled effects per source text (two paths with the same text share one). */
   private readonly effects = new Map<string, CompiledShader | string>()
   private readonly warned = new Set<string>()
@@ -48,11 +52,16 @@ export class ShaderCache {
     return this.states.get(src) ?? { status: "loading" }
   }
 
-  load(src: string): Promise<void> {
+  /**
+   * Loads `src`. A `retry` of a source that was not found keeps it failed while it asks again
+   * and calls `onLoad` only when the source is there now.
+   */
+  load(src: string, retry = false): Promise<void> {
     const w = this.waiting.get(src)
     if (w) return w
-    if (this.states.has(src) && this.states.get(src)?.status !== "loading") return Promise.resolve()
-    this.states.set(src, { status: "loading" })
+    if (!retry && this.states.has(src) && this.states.get(src)?.status !== "loading")
+      return Promise.resolve()
+    if (!retry) this.states.set(src, { status: "loading" })
     const gen = this.generation
     const p = (async () => {
       let text: string | null = null
@@ -63,12 +72,18 @@ export class ShaderCache {
         text = null
       }
       if (gen !== this.generation) return
+      if (retry && text === null) {
+        this.waiting.delete(src)
+        if (this.again.delete(src)) void this.load(src, true)
+        return
+      }
       const state: ShaderState =
-        text === null ? { status: "failed", reason: "source not found" } : this.compile(text)
+        text === null ? { status: "failed", reason: NOT_FOUND } : this.compile(text)
       if (state.status === "failed") this.report(src, state.reason)
       this.states.set(src, state)
       this.waiting.delete(src)
       this.onLoad(src)
+      if (this.again.delete(src) && text === null) void this.load(src, true)
     })()
     this.waiting.set(src, p)
     return p
@@ -122,11 +137,19 @@ export class ShaderCache {
     this.warn(`kimo renderer: shader ${src} is not drawn (${reason})`)
   }
 
+  /** Asks again for every source that was not found (it may have arrived since). */
+  retryMissing(): void {
+    for (const [src, s] of this.states)
+      if (this.waiting.has(src)) this.again.add(src)
+      else if (s.status === "failed" && s.reason === NOT_FOUND) void this.load(src, true)
+  }
+
   /** Forgets loaded sources (another document: the same relative path may be another file). */
   forgetSources(): void {
     this.generation++
     this.states.clear()
     this.waiting.clear()
+    this.again.clear()
   }
 
   clear(): void {
@@ -135,5 +158,6 @@ export class ShaderCache {
     this.effects.clear()
     this.states.clear()
     this.waiting.clear()
+    this.again.clear()
   }
 }

@@ -226,6 +226,40 @@ describe("frames, caching, culling", () => {
     expect(red).toBeGreaterThan(200)
     r.dispose()
   })
+
+  test("an image missing at first draw appears after retryAssets once its bytes arrive", async () => {
+    // A guest opening a share link: the canvas draws before the relay fetch stores the image.
+    const ck = await loadCanvasKit()
+    const r = new CanvasKitRenderer()
+    await r.init({ offlineFonts: true })
+    const src = "./assets/0123456789abcdef.png"
+    const assets: Record<string, Uint8Array> = {}
+    setup(
+      r,
+      {
+        img0000001: {
+          type: "rect",
+          parent: null,
+          order: "a",
+          w: 40,
+          h: 20,
+          fill: { kind: "image", src, fit: "stretch" },
+        },
+      },
+      assets,
+    )
+    r.attachRaster(40, 20)
+    r.snapshot()
+    await tick()
+    expect(pixelAt(ck, r.snapshot(), 5, 5)[1]).toBeGreaterThan(150) // gray checkerboard
+    assets[src] = quadrantPng(ck)
+    r.retryAssets()
+    await tick()
+    const [red, green] = pixelAt(ck, r.snapshot(), 5, 5)
+    expect(red).toBeGreaterThan(200)
+    expect(green).toBeLessThan(100)
+    r.dispose()
+  })
 })
 
 describe("wasm handles and lifecycle races", () => {

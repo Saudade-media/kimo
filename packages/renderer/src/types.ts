@@ -1153,6 +1153,11 @@ export interface Renderer {
    * Optional for fakes.
    */
   retryFonts?(): void
+  /**
+   * Assets may resolve now (a shared file's images fetched from the relay): asks again for the
+   * images and shader sources that were missing, and redraws what loads. Optional for fakes.
+   */
+  retryAssets?(): void
 
   /**
    * PNG bytes of one node's subtree at `scale`, rendered on a CPU raster surface (works

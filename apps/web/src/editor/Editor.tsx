@@ -375,6 +375,9 @@ function EditorShell({
   // Fonts that resolve differently now (document fonts loaded, the offline pack downloaded):
   // families the canvas gave up on are asked again.
   useEffect(() => fonts.subscribe(() => canvas.current?.renderer?.retryFonts?.()), [fonts])
+  // Assets stored after the canvas drew them as missing (a shared file's images fetched from the
+  // relay as a guest opens it): the canvas asks again instead of keeping the placeholder.
+  useEffect(() => assets.subscribe(() => canvas.current?.renderer?.retryAssets?.()), [assets])
   const offlineFonts = useSyncExternalStore(fonts.subscribe, fonts.offline)
   useEffect(() => {
     let live = true

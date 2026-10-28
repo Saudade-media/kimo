@@ -1135,7 +1135,9 @@ export class CanvasKitRenderer implements Renderer {
         const c = rec.beginRecording(ck.LTRBRect(-1e7, -1e7, 1e7, 1e7), true)
         // Local space: the instance's own transform is applied where the picture is drawn.
         c.concat(toCk(inv))
-        painter.drawNode(c, ctx, id, c2)
+        // Board 35 motion is drawn around the picture, never into it: the picture is kept by
+        // content, so an entrance frame recorded here would outlive the entrance.
+        painter.drawNode(c, ctx.motion ? { ...ctx, motion: undefined } : ctx, id, c2)
         picture = rec.finishRecordingAsPicture()
       } finally {
         rec.delete()

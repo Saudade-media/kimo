@@ -14,6 +14,12 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+### Fixed
+
+- Component instances an agent adds draw in full. Before, some stayed nearly invisible after
+  their grow-in animation, until the file was reopened.
+- Layers an agent adds while the Kimo window is in the background appear without the grow-in.
+
 ## [1.2.1-beta.0] - 2026-10-28
 
 The first beta: the fixes below, for installs on the Beta channel.

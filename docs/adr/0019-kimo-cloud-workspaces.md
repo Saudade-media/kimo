@@ -1,7 +1,7 @@
 # 0019. Kimo Cloud workspaces: a subscription belongs to a workspace, editors take paid seats, Kimo Cloud holds the keys
 
 - **Status:** Proposed
-- **Date:** 2026-10-28
+- **Date:** 2026-10-28 (transfer, delete and leave added the same day for 1.3.0, decision 10)
 - **Deciders:** project owner
 - **Teardown refs:** 12 (v2 multiplayer)
 - **Amends:** [0018](0018-kimo-cloud.md) decisions 2 (who pays), 3 (accounts) and 5 ("Kimo Cloud
@@ -137,9 +137,10 @@ Removing someone must not break the links everyone else shared:
    keys of files they opened, but cannot get a token, so cannot fetch new edits. Someone holding an
    old room key and a copy of the relay's ciphertext could read later edits; for a file where that
    matters, an Admin runs **Re-key file**: a fresh room with new keys gets the current state and
-   blobs, the old room is closed, and that file's view links end.
+   blobs, the old room is closed, and that file's view links end. **Re-key file is later: it is
+   not in 1.3.0.**
 
-Leaving a workspace voluntarily runs the same steps.
+Leaving a workspace voluntarily runs the same steps (decision 10).
 
 ### 6. Lapse
 
@@ -162,8 +163,12 @@ The owner's existing account becomes a one-person workspace in a kimo-cloud migr
 rooms' root and link keys cannot be uploaded: they are non-extractable `CryptoKey`s in the local
 registry (`OwnedRoom`, `apps/web/src/multiplayer/registry.ts`). So on first open the app re-shares
 each Cloud room in its registry through Kimo Cloud (a new room from the current state, created and
-registered by Kimo Cloud) and closes the old room itself with its root key, which also ends the old
-room's edit links.
+registered by Kimo Cloud, which records the room it replaces) and closes the old room itself with
+its root key, which also ends the old room's edit links.
+
+Deploy order: kimo-cloud first ships still accepting the old device-key registers, behind a setting
+that is on by default; app 1.3.0 then re-shares the rooms; then the setting is turned off and only
+Kimo Cloud's service key registers rooms.
 
 ### 9. What lives where
 
@@ -174,6 +179,20 @@ room's edit links.
   tokens from Kimo Cloud, refresh before expiry, workspace UI as with board 43), behind the
   existing Cloud API base URL config. The relay, its protocol and `packages/sync` do not change.
   No paywall or license check enters the open repo.
+
+### 10. Transfer, delete, leave (1.3.0)
+
+- **Transfer ownership** goes only to an Admin. The Owner sends a request; the Admin gets it by
+  email and accepts in the app. Accepting opens a checkout for the same seats, locked. Once it is
+  paid, the roles swap (the old Owner becomes an Admin), and Kimo Cloud revokes the old
+  subscription and refunds the unused part of its last paid order through Polar. Until the payment
+  nothing changes.
+- **Delete workspace** is for the Owner, who types the workspace's name to confirm. Its rooms
+  close and every token and view link ends at once. Members keep read-only local copies. The
+  subscription is cancelled at the end of the period, with no refund.
+- **Leave** is for Admins and Editors and runs the removal steps of decision 5. The seat ends with
+  the period. The Owner transfers or deletes instead.
+- **Re-key file** (decision 5) is not in 1.3.0.
 
 ## Consequences
 
@@ -191,8 +210,10 @@ room's edit links.
   end-to-end encrypted and "we cannot read them"; they, the pricing page and the wizard copy must
   change before workspaces ship.
 - Removal is immediate through revocation, and ends only the links the removed member created.
-  Content keys do not rotate on their own; Re-key file covers a sensitive file, at the cost of that
-  file's links.
+  Content keys do not rotate on their own; Re-key file will cover a sensitive file, at the cost of
+  that file's links, but it is not in 1.3.0.
+- A team keeps its files when its Owner moves on: ownership moves to an Admin who pays, and the
+  old Owner gets the unused time back. Deleting a workspace ends sharing for everyone at once.
 - Tests in kimo-cloud cover token issuing only to seated members, revocation on removal, key
   encryption at rest and the policy decisions, per CLAUDE.md "What to test" (security and
   protocol).
@@ -232,7 +253,6 @@ room's edit links.
 - Invite and access request expiry (7 days suggested), and how Admins are notified (email plus an
   in-app badge suggested).
 - Desktop workspace folder location (for example `~/Kimo/<workspace>`).
-- Owner transfer and deleting a workspace.
 - The new privacy wording for the site and the wizard.
 
 ## Revisit when

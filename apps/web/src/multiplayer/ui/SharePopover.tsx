@@ -117,6 +117,8 @@ export interface SharePopoverProps {
   onResetAll(): void
   /** Set up a relay: the relay setup wizard (it lives outside the popover), at `start`. */
   onSetUpRelay?(start?: WizardStart): void
+  /** Invite people to a workspace (board 46 2B): the dialog lives outside the popover. */
+  onInvite?(workspaceId: string): void
 }
 
 export function SharePopover({
@@ -126,6 +128,7 @@ export function SharePopover({
   onClose,
   onResetAll,
   onSetUpRelay,
+  onInvite,
 }: SharePopoverProps) {
   const share = useShareState(model, docKey)
   const settings = useMultiplayerSettings(model)
@@ -163,6 +166,7 @@ export function SharePopover({
           docKey={docKey}
           kind={cloudKind}
           {...(onSetUpRelay ? { onSetUpRelay } : {})}
+          {...(onInvite ? { onInvite } : {})}
         />
       ) : stage === "live" ? (
         <LiveBody model={model} docKey={docKey} onResetAll={onResetAll} />
@@ -185,11 +189,13 @@ function CloudRoomBody({
   docKey,
   kind,
   onSetUpRelay,
+  onInvite,
 }: {
   model: MultiplayerModel
   docKey: string
   kind: NonNullable<ReturnType<typeof useCloudShareKind>>
   onSetUpRelay?(start?: WizardStart): void
+  onInvite?(workspaceId: string): void
 }) {
   const runtime = useOptionalRuntime()
   const cloud = useRelaySetupServices(runtime?.platform ?? null)?.cloud ?? null
@@ -210,7 +216,7 @@ function CloudRoomBody({
         docKey={docKey}
         room={kind.room}
         workspaceId={kind.workspaceId}
-        plans={cloudState?.plans.plans ?? []}
+        {...(onInvite ? { onInvite: () => onInvite(kind.workspaceId) } : {})}
       />
     )
   return (

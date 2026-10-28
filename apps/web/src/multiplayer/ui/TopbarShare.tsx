@@ -12,7 +12,7 @@
  *   right edge on the button's). Both sit after Theme, before Preview.
  */
 import { Button, SaveStatus, Tooltip } from "@kimo/ui"
-import { type ReactNode, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { shareableWorkspaces } from "../cloud/workspaces"
@@ -24,14 +24,16 @@ import {
   useShareState,
 } from "../hooks"
 import type { MultiplayerModel } from "../model"
-import { useRelaySetupServices } from "../relay-setup/services"
+import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
 import { stackDimmed, stackOf, topbarSyncStatus } from "./copy"
 import { PeoplePopover } from "./PeoplePopover"
 import { RelayWizard, type WizardStart } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
 import { PresenceAvatar } from "./shared"
+import { InviteDialog } from "./WorkspaceDialogs"
 import { useCloudShareKind, useShareableSession } from "./WorkspaceShare"
+import { useWorkspaceStore, useWorkspacesState } from "./workspace-parts"
 import "./share-ui.css"
 
 export interface TopbarSyncStatusProps {
@@ -132,10 +134,16 @@ function ShareCluster({
   const share = useShareState(model, docKey)
   const people = useCollaborators(model, docKey)
   const caps = useCapabilities(model, docKey)
-  const [open, setOpen] = useState<"share" | "people" | "reset" | "relay" | null>(null)
+  const [open, setOpen] = useState<"share" | "people" | "reset" | "relay" | "invite" | null>(null)
   const [wizardStart, setWizardStart] = useState<WizardStart>("choose")
   const runtime = useOptionalRuntime()
   const relaySetup = useRelaySetupServices(runtime?.platform ?? null)
+  const cloudState = useCloudState(relaySetup?.cloud ?? null)
+  const workspaceStore = useWorkspaceStore()
+  const workspacesState = useWorkspacesState(workspaceStore)
+  /** The workspace Invite people (board 46 2B) is for. */
+  const [inviteTo, setInviteTo] = useState<string | null>(null)
+  const inviteWorkspace = workspacesState?.workspaces.find((w) => w.id === inviteTo) ?? null
   const shareButton = useRef<HTMLButtonElement>(null)
   const stackButton = useRef<HTMLButtonElement>(null)
   const others = people.filter((p) => !p.isYou)
@@ -147,6 +155,13 @@ function ShareCluster({
   const live = shared && share.status !== "error" && (caps.canShare || cloudKind?.kind === "member")
   const { shown, more } = stackOf(others)
   const close = () => setOpen(null)
+  // A view-link guest who signed in from Request edit access (board 46 1D) goes back to the
+  // popover, which can now send the request, rather than on to the wizard's plan step.
+  const signedIn = cloudState?.session === "signed-in"
+  useEffect(() => {
+    if (open === "relay" && wizardStart === "sign-in" && cloudKind?.kind === "guest" && signedIn)
+      setOpen("share")
+  }, [open, wizardStart, cloudKind?.kind, signedIn])
   return (
     <>
       {shared && others.length > 0 && (
@@ -194,6 +209,10 @@ function ShareCluster({
             shareButton.current?.focus({ preventScroll: true })
           }}
           onResetAll={() => setOpen("reset")}
+          onInvite={(workspaceId) => {
+            setInviteTo(workspaceId)
+            setOpen("invite")
+          }}
           {...(relaySetup
             ? {
                 onSetUpRelay: (start: WizardStart = "choose") => {
@@ -226,6 +245,15 @@ function ShareCluster({
             setOpen((o) => (o === "relay" ? null : o))
             shareButton.current?.focus({ preventScroll: true })
           }}
+        />
+      )}
+      {open === "invite" && workspaceStore && inviteWorkspace && (
+        <InviteDialog
+          store={workspaceStore}
+          workspace={inviteWorkspace}
+          plans={cloudState?.plans.plans ?? []}
+          // Cancel and Send invite both go back to the popover, like Reset all links.
+          onClose={() => setOpen("share")}
         />
       )}
       {open === "reset" && (

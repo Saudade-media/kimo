@@ -9,10 +9,13 @@
  *   Revoke) · Copy view link · Invite people · footnote "Editing is for Studio's members" · Stop
  *   sharing (Admins). There are no edit links on Kimo Cloud.
  * - D (opened from a view link, signed in, not a member): Intro (eye) · Request edit access ·
- *   "Studio pays for its editors" · "Signed in as …". Signed out, Request opens the sign-in.
+ *   "Studio pays for its editors" · "Signed in as …". Signed out, Request opens the sign-in: the
+ *   relay's `/version` (`owner: "external"`, api.md §8.1) stands in for `GET /v1/relay`, which
+ *   needs a signed-in device.
  * - E (request sent): Requested pill and when.
  * - F (no workspace yet) is the relay wizard's Subscribe step (`CloudWizardSteps`).
  */
+import { RelayHttpClient, type RelayInfo } from "@kimo/sync/mp"
 import { IconButton, StatusPill } from "@kimo/ui"
 import { useEffect, useMemo, useState } from "react"
 import { failureText } from "../../editor/errors"
@@ -36,7 +39,6 @@ import type { MultiplayerModel } from "../model"
 import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
 import { linkCopiedText, linkRevokedText } from "./copy"
 import { copyText } from "./shared"
-import { InviteDialog } from "./WorkspaceDialogs"
 import {
   MemberAvatar,
   useWorkspaceStore,
@@ -52,6 +54,23 @@ const hostOf = (url: string | null | undefined) => {
   } catch {
     return null
   }
+}
+
+/** The owner mode of each relay a signed-out view-link guest asked (`/version`), once per window. */
+const relayOwners = new Map<string, Promise<RelayInfo["owner"] | null>>()
+function relayOwner(relayUrl: string): Promise<RelayInfo["owner"] | null> {
+  let known = relayOwners.get(relayUrl)
+  if (!known) {
+    known = new RelayHttpClient({ relayUrl })
+      .probe()
+      .then((info) => info.owner)
+      .catch(() => {
+        relayOwners.delete(relayUrl)
+        return null
+      })
+    relayOwners.set(relayUrl, known)
+  }
+  return known
 }
 
 export type CloudShareKind =
@@ -79,12 +98,28 @@ export function useCloudShareKind(model: MultiplayerModel, docKey: string): Clou
   useEffect(() => {
     if (cloud && signedIn && !knowsRelay && maybeGuest) void cloud.relay().catch(() => undefined)
   }, [cloud, signedIn, knowsRelay, maybeGuest])
+  // Until Kimo Cloud says which relay is its own (signed out, it cannot), a relay whose owner
+  // policy is external (the hosted relay's mode) counts, so a signed-out guest gets Share and
+  // signs in from Request edit access.
+  const cloudHost = hostOf(cloudState?.relay?.relayUrl)
+  const [external, setExternal] = useState<string | null>(null)
+  const guestRelay = cloud && maybeGuest && !cloudHost ? share.relayUrl : null
+  useEffect(() => {
+    if (!guestRelay) return
+    let live = true
+    void relayOwner(guestRelay).then((owner) => {
+      if (live && owner === "external") setExternal(guestRelay)
+    })
+    return () => {
+      live = false
+    }
+  }, [guestRelay])
   const room = share.room
   if (!room || !state) return null
   const workspaceId = state.open[room]?.workspaceId ?? fileOf(state, room)?.workspaceId
   if (workspaceId) return { kind: "member", room, workspaceId }
-  const cloudHost = hostOf(cloudState?.relay?.relayUrl)
-  if (!share.owner && share.role === "view" && cloudHost && share.relayHost === cloudHost)
+  if (!maybeGuest) return null
+  if (cloudHost ? share.relayHost === cloudHost : guestRelay !== null && external === guestRelay)
     return { kind: "guest", room }
   return null
 }
@@ -285,7 +320,7 @@ export function WorkspaceLiveBody({
   docKey,
   room,
   workspaceId,
-  plans,
+  onInvite,
 }: {
   store: WorkspaceStore
   state: WorkspacesState
@@ -293,7 +328,11 @@ export function WorkspaceLiveBody({
   docKey: string
   room: string
   workspaceId: string
-  plans: CloudState["plans"]["plans"]
+  /**
+   * Invite people (2B). The dialog lives outside the popover, like Reset all links: a press in a
+   * dialog on `body` is outside the popover, which would close and unmount it.
+   */
+  onInvite?(): void
 }) {
   const runtime = useOptionalRuntime()
   const platform = runtime?.platform ?? null
@@ -301,7 +340,6 @@ export function WorkspaceLiveBody({
   const people = useCollaborators(model, docKey)
   const [links, setLinks] = useState<ViewLink[]>([])
   const [busy, setBusy] = useState(false)
-  const [inviting, setInviting] = useState(false)
   const w = state.workspaces.find((x) => x.id === workspaceId) ?? null
   const detail = state.details[workspaceId] ?? null
   const self = detail?.members.find((m) => m.self) ?? null
@@ -422,8 +460,8 @@ export function WorkspaceLiveBody({
           <WsButton variant="secondary" icon="link" disabled={busy} onClick={() => void copyNew()}>
             Copy view link
           </WsButton>
-          {admin && (
-            <WsButton variant="ghost" icon="user-plus" onClick={() => setInviting(true)}>
+          {admin && onInvite && (
+            <WsButton variant="ghost" icon="user-plus" onClick={onInvite}>
               Invite people
             </WsButton>
           )}
@@ -437,14 +475,6 @@ export function WorkspaceLiveBody({
           </WsButton>
         )}
       </div>
-      {inviting && (
-        <InviteDialog
-          store={store}
-          workspace={w}
-          plans={plans}
-          onClose={() => setInviting(false)}
-        />
-      )}
     </>
   )
 }

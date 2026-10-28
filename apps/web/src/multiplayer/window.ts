@@ -13,7 +13,9 @@ import { onFileDeleted } from "../lib/file-events"
 import type { FileSessionManager } from "../platform/session"
 import { createPlatformShare, type PlatformShare } from "../platform/share"
 import { createLocalShareBackend, type ShareBackend, switchingShareBackend } from "./backend"
-import { ownershipFor } from "./device"
+import { desktopManagedCopies } from "./cloud/managed"
+import { createWorkspaceStore, type WorkspaceStore } from "./cloud/workspaces"
+import { deviceNameFor, ownershipFor } from "./device"
 import { createLibraryShare, type LibraryShare } from "./library"
 import { createMultiplayerModel, type MultiplayerModel } from "./model"
 import { relaySetupFor } from "./relay-setup/services"
@@ -25,6 +27,8 @@ export interface WindowMultiplayer {
   model: MultiplayerModel
   /** Browser library files: the editor registers them here (Share, reconnect on open). */
   library: LibraryShare
+  /** Kimo Cloud workspaces (ADR 0019, `cloud/README.md`); null when Kimo Cloud is hidden. */
+  workspaces: WorkspaceStore | null
 }
 
 export interface WindowMultiplayerOptions {
@@ -78,7 +82,25 @@ export function createWindowMultiplayer(options: WindowMultiplayerOptions): Wind
     ownership: async (url) => (await ownershipFor(platform).relayOwnership(url)).state,
   })
   if (platform.kind === "desktop") guardLocalRelay(platform, manager, model)
-  return { share, backend, model, library }
+  return { share, backend, model, library, workspaces: workspacesFor(platform, share) }
+}
+
+/** The window's workspace store over the Kimo Cloud store of board 43 (null when it is hidden). */
+function workspacesFor(platform: KimoPlatform, share: PlatformShare): WorkspaceStore | null {
+  const services = relaySetupFor(platform)
+  const cloud = services.cloud
+  if (!cloud) return null
+  return createWorkspaceStore({
+    client: cloud.client,
+    cloud,
+    registry: share.service.registry,
+    share,
+    deviceName: () => deviceNameFor(platform),
+    clientKind: platform.kind === "desktop" ? "desktop" : "web",
+    openUrl: services.openUrl,
+    clock: services.clock,
+    managedCopies: platform.kind === "desktop" ? desktopManagedCopies(platform) : null,
+  })
 }
 
 /**

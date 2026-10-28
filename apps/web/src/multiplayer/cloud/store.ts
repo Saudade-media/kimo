@@ -97,6 +97,8 @@ export interface CloudStoreDeps {
 }
 
 export interface CloudStore {
+  /** The signed client this store calls (the workspace store shares it). */
+  readonly client: CloudClient
   subscribe(listener: () => void): () => void
   getState(): CloudState
   /** `GET /v1/account`: signed in or out, the plan, usage and devices; offline keeps the last. */
@@ -433,6 +435,7 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
   })
 
   return {
+    client,
     subscribe(listener) {
       listeners.add(listener)
       return () => listeners.delete(listener)

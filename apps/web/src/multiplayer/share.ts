@@ -317,6 +317,8 @@ export interface ShareService extends Omit<OwnershipClient, "registerBody" | "pr
   closeOwnedRoom(room: string): Promise<"closed" | "unreachable">
   /** Local files bound to Kimo Cloud rooms (their saves are recorded like an owned file's). */
   setBoundFiles(bound: BoundFiles | null): void
+  /** The registry this service keeps rooms in (Kimo Cloud keeps its records there too). */
+  readonly registry: Registry
   listJoinedRooms(): Promise<JoinedRoomSummary[]>
   forgetJoinedRoom(room: string): Promise<void>
   /** Fires with family names that were not shared (§16.5). */
@@ -1512,6 +1514,8 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     setBoundFiles(next) {
       bound = next
     },
+
+    registry,
 
     async listJoinedRooms() {
       return (await registry.listJoined()).map(({ room, relayUrl, role, joinedAt }) => ({

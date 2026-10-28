@@ -1,8 +1,9 @@
 /**
  * The Kimo web app on the relay (board 45): share links are `https://<relay>/join#...`, so the
  * relay serves the app's static build from `KIMO_WEB_DIR` (the relay image and the desktop
- * bundle ship it). `/`, `/join` and `/pair` get `index.html`; other paths get the build's files.
- * Without a build, `/join` and `/pair` get a small page that hands the link to the Kimo app.
+ * bundle ship it). `/`, `/join`, `/pair` and `/invite` (a Kimo Cloud workspace invite, kimo-cloud
+ * api.md §8.2) get `index.html`; other paths get the build's files. Without a build, `/join` and
+ * `/pair` get a small page that hands the link to the Kimo app.
  *
  * The fragment carries the token and the room key and never reaches the relay: browsers do not
  * send it, and nothing here reads or logs it.
@@ -11,7 +12,7 @@ import { existsSync, statSync } from "node:fs"
 import { join, normalize, sep } from "node:path"
 
 /** Paths that open the app itself. */
-const APP_PAGES = new Set(["/", "/join", "/join/", "/pair", "/pair/"])
+const APP_PAGES = new Set(["/", "/join", "/join/", "/pair", "/pair/", "/invite", "/invite/"])
 
 const HTML_HEADERS = {
   "content-type": "text/html; charset=utf-8",

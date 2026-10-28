@@ -78,7 +78,9 @@ describe("clientIp (x-forwarded-for)", () => {
 
 describe("request bodies are read as a stream", () => {
   test("an oversized chunked admin body is refused without reading all of it", async () => {
-    const owner = await registered(h)
+    // Its own relay: the refused upload leaves the client connection half sent.
+    const big = startRelay()
+    const owner = await registered(big)
     const chunk = new Uint8Array(64 * 1024)
     const total = 40 * 1024 * 1024
     let pulled = 0
@@ -89,13 +91,14 @@ describe("request bodies are read as a stream", () => {
         controller.enqueue(chunk)
       },
     })
-    const res = await fetch(`${h.base}/room/${owner.room.id}/admin`, {
+    const res = await fetch(`${big.base}/room/${owner.room.id}/admin`, {
       method: "POST",
       body,
       duplex: "half",
     } as RequestInit)
     expect(res.status).toBe(413)
     expect(pulled).toBeLessThan(total / 2)
+    await big.stop()
   })
 })
 
@@ -141,11 +144,13 @@ describe("web app", () => {
   })
 
   test("without a build, /join and /pair hand the link to the desktop app", async () => {
+    const bare = startRelay()
     for (const route of ["join", "pair"]) {
-      const res = await fetch(`${h.base}/${route}`)
+      const res = await fetch(`${bare.base}/${route}`)
       expect(res.status).toBe(200)
       expect(await res.text()).toContain(`"kimo://${route}"+location.hash`)
     }
-    expect((await fetch(`${h.base}/`)).status).toBe(404)
+    expect((await fetch(`${bare.base}/`)).status).toBe(404)
+    await bare.stop()
   })
 })

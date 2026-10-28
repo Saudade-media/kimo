@@ -70,7 +70,7 @@ function missingFontsTitle(n: number): string {
 }
 
 function missingFontsDescription(fileName: string): string {
-  return `${fileName} uses fonts that aren't installed or embedded. Affected layers render in Inter until you replace or install them. The file keeps the original names.`
+  return `${fileName} uses fonts that aren't installed or embedded. Affected layers render in Inter until you replace or install them.`
 }
 
 /** "Replace 2 fonts" / "Replace 1 font". */

@@ -41,7 +41,7 @@ function RecoveryDialogView({
       className="kimo-files-recovery"
       icon={<LifeBuoy />}
       title="Recover unsaved changes?"
-      description={`Kimo quit unexpectedly while ${n} file${n === 1 ? "" : "s"} had edits newer than their last save. The recovery files stay in ${dir} until you choose.`}
+      description={`Kimo quit unexpectedly while ${n} file${n === 1 ? "" : "s"} had unsaved edits. The recovery files stay in ${dir} until you choose.`}
       footnote="Kept for 30 days"
       tertiary={{ label: "Discard all", onClick: onDiscardAll }}
       cancelLabel="Decide later"

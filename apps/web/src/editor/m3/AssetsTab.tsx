@@ -346,11 +346,9 @@ export function AssetsTab({ session, m3 }: { session: FileSession; m3: M3Control
 /** Missing-library banner description (board 15 `jmgI8`). */
 function missingCopy(path: string, instances: number, cached: boolean): string {
   const n = `${instances} ${instances === 1 ? "instance draws" : "instances draw"}`
-  return `${path} was moved or deleted. ${n} as missing-component placeholders${
-    cached
-      ? " (Kimo shows a cached preview only on this machine; a fresh clone shows placeholders)"
-      : ""
-  }. Locate the file to restore them.`
+  return cached
+    ? `${path} was moved or deleted. Its previews are cached on this machine only; locate the file to restore them.`
+    : `${path} was moved or deleted, so ${n} as placeholders. Locate the file to restore them.`
 }
 
 function pairs<T>(items: readonly T[]): T[][] {

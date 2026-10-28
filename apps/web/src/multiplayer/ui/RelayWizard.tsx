@@ -1676,7 +1676,7 @@ export function RelayWizard(props: RelayWizardProps) {
                 {outcome === "not-a-relay"
                   ? "Check the path; Kimo relays usually end in /kimo or have none."
                   : outcome === "too-old"
-                    ? `It speaks ${t?.protocol ?? "an older protocol"} and this Kimo needs kimo-mp/1. Update it: redeploy on Fly or Railway, docker pull for Docker. Kimo updates its own local relay.`
+                    ? `It speaks ${t?.protocol ?? "an older protocol"} and this Kimo needs kimo-mp/1. Redeploy it on Fly or Railway, or docker pull for Docker.`
                     : outcome === "invalid"
                       ? "Check the URL: use wss://, https://, or ws:// on a local network."
                       : "Check the URL and that it is running. A new Fly or Railway deploy can take a minute."}

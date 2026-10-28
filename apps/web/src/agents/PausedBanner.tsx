@@ -26,7 +26,7 @@ export function AgentPausedBanner({ controller, onShowOps, onSaveCopy }: AgentPa
   const reason = store?.readOnly?.reason
   const body = locked
     ? `${chip.paused.summary || "The file is locked by another app."} ${chip.label}’s last call returned DOCUMENT_LOCKED; its ops were not applied. Agents can still read.`
-    : `This file is read-only${reason ? ` (${reason})` : ""}. ${chip.label}’s last call returned READ_ONLY; its ops were not applied. Agents can still read.`
+    : `This file is read-only${reason ? ` (${reason})` : ""}: ${chip.label}’s last call returned READ_ONLY and was not applied. Agents can still read.`
   const actions: BannerActionItem[] = [
     { id: "show-ops", label: "Show ops", variant: "ghost" },
     lockCleared

@@ -10,7 +10,9 @@
  *
  * It also enforces Length (docs/style/writing.md#length) on the same app strings and on the text of
  * design boards in desing.kimo, from FIRST_CHECKED_BOARD on: at most 2 sentences and 20 words.
- * JSX text that wraps over several source lines is checked line by line.
+ * JSX text that wraps over several source lines is checked line by line. A template literal is
+ * checked by its static text, each `${}` counted as one word, when that text reads as prose; one
+ * that wraps over several lines counts as a whole, and the strings inside its `${}` are checked too.
  */
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
@@ -84,6 +86,18 @@ const sentences = (t: string) => t.trim().match(/[.!?](?=\s|$)/g)?.length ?? 0
 /** A sentence-shaped string: a capitalised first word, a space, and no code syntax. */
 const isProse = (t: string) =>
   /^[A-Z][a-z']*\s/.test(t) && !/[{}<>=;]|=>|\$\{/.test(t) && words(t) >= 3
+/** Where each `${}` was in a template literal's static text (scanCode). */
+const HOLE = "\uE000"
+/** A template literal's static text, each `${}` read as one word. */
+const holesAsWords = (statics: string) => statics.replaceAll(HOLE, "X").replace(/\s+/g, " ").trim()
+/**
+ * A template literal's static text that reads as prose: sentence-shaped once each `${}` is a word
+ * (a semicolon may join two clauses), with at least three words of letters of its own (not a path,
+ * a class list or SVG data).
+ */
+const isTemplateProse = (statics: string) =>
+  isProse(holesAsWords(statics).replace(/;(?=\s)/g, ",")) &&
+  (statics.replaceAll(HOLE, " ").match(/[\p{L}'’]{2,}/gu)?.length ?? 0) >= 3
 const tooLong = (t: string) => words(t) > MAX_WORDS || sentences(t) > MAX_SENTENCES
 const listed = (list: [RegExp, string][], file: string, t: string) =>
   list.some(([f, start]) => f.test(file) && t.startsWith(start))
@@ -111,40 +125,145 @@ function check(file: string, line: number, text: string, out: Hit[]) {
     if (!allowed(file, t, tell)) out.push({ where: `${file}:${line}`, tell, text: t })
 }
 
-const STRING = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g
+type CodeKind = "string" | "template" | "code"
+
+/** Characters after which a `/` starts a regular expression, not a division. */
+const BEFORE_REGEX = new Set([..."(,=:[!&|?{;+-*%~^"])
+const REGEX_WORDS = new Set([
+  "return",
+  "typeof",
+  "case",
+  "in",
+  "of",
+  "new",
+  "delete",
+  "void",
+  "throw",
+])
 
 /**
- * Calls `visit` with the string literals and the leftover (JSX text, code) of every non-comment
- * line.
+ * Calls `visit` with each string literal (quotes stay on one line, as in the source), each
+ * template literal (its raw text, from the line it opens on, plus its static text with each `${}`
+ * as {@link HOLE}; the literals inside a `${}` are visited too), and the leftover of every line
+ * (JSX text, code). Comments and regular expressions are skipped.
  */
 function scanCode(
   src: string,
-  visit: (line: number, text: string, kind: "string" | "code") => void,
+  visit: (line: number, text: string, kind: CodeKind, statics?: string) => void,
 ) {
-  let inBlock = false
-  src.split("\n").forEach((raw, i) => {
-    let line = raw
-    if (inBlock) {
-      const end = line.indexOf("*/")
-      if (end < 0) return
-      line = line.slice(end + 2)
-      inBlock = false
+  const n = src.length
+  const skip = new Uint8Array(n)
+  const starts = [0]
+  for (let k = 0; k < n; k++) if (src[k] === "\n") starts.push(k + 1)
+  const lineOf = (pos: number) => {
+    let lo = 0
+    let hi = starts.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1
+      if ((starts[mid] ?? 0) <= pos) lo = mid
+      else hi = mid - 1
     }
-    // Block comments that open on this line (JSX `{/* … */}` included).
-    line = line.replace(/\{?\/\*.*?\*\/\}?/g, " ")
-    const open = line.indexOf("/*")
-    if (open >= 0) {
-      inBlock = true
-      line = line.slice(0, open)
+    return lo + 1
+  }
+  const mark = (from: number, to: number) => skip.fill(1, from, to)
+  /** The index of the quote that closes the one at `at` on the same line, or -1. */
+  const quoteEnd = (at: number) => {
+    const q = src[at]
+    for (let k = at + 1; k < n; k++) {
+      const c = src[k]
+      if (c === "\\") k++
+      else if (c === "\n") return -1
+      else if (c === q) return k
     }
-    const trimmed = line.trim()
-    if (trimmed.startsWith("//") || trimmed.startsWith("*")) return
-    const rest = line.replace(STRING, (m) => {
-      visit(i + 1, m.slice(1, -1), "string")
-      return " "
-    })
-    // Trailing line comment, once strings are out of the way (URLs live in strings).
-    visit(i + 1, rest.replace(/\/\/.*$/, ""), "code")
+    return -1
+  }
+  /** Whether a `/` at `at` opens a regular expression (by the code just before it). */
+  const regexAllowed = (at: number) => {
+    let k = at - 1
+    while (k >= 0 && /\s/.test(src[k] ?? "")) k--
+    if (k < 0) return true
+    const c = src[k] ?? ""
+    if (!/[\w$]/.test(c)) return BEFORE_REGEX.has(c)
+    let w = k
+    while (w > 0 && /[\w$]/.test(src[w - 1] ?? "")) w--
+    return REGEX_WORDS.has(src.slice(w, k + 1))
+  }
+  /** The index of the `/` that closes a regular expression opened at `at` on its line, or -1. */
+  const regexEnd = (at: number) => {
+    let inClass = false
+    for (let k = at + 1; k < n; k++) {
+      const c = src[k]
+      if (c === "\\") k++
+      else if (c === "\n") return -1
+      else if (c === "[") inClass = true
+      else if (c === "]") inClass = false
+      else if (c === "/" && !inClass) return k
+    }
+    return -1
+  }
+  let i = 0
+  /** Code up to the end, or, inside a `${}`, up to its closing brace (left at `i`). */
+  const code = (hole: boolean) => {
+    let depth = 0
+    while (i < n) {
+      const c = src[i]
+      if (hole && c === "}" && depth === 0) return
+      if (c === "{") depth++
+      else if (c === "}") depth--
+      if (c === "/" && src[i + 1] === "/") {
+        const e = src.indexOf("\n", i)
+        const to = e < 0 ? n : e
+        mark(i, to)
+        i = to
+      } else if (c === "/" && src[i + 1] === "*") {
+        const e = src.indexOf("*/", i + 2)
+        const to = e < 0 ? n : e + 2
+        mark(i, to)
+        i = to
+      } else if ((c === '"' || c === "'") && quoteEnd(i) > 0) {
+        const to = quoteEnd(i)
+        visit(lineOf(i), src.slice(i + 1, to), "string")
+        mark(i, to + 1)
+        i = to + 1
+      } else if (c === "`") template()
+      else if (c === "/" && regexAllowed(i) && regexEnd(i) > 0) {
+        const to = regexEnd(i)
+        mark(i, to + 1)
+        i = to + 1
+      } else i++
+    }
+  }
+  const template = () => {
+    const open = i
+    const statics: string[] = []
+    let piece = ""
+    i++
+    while (i < n && src[i] !== "`") {
+      if (src[i] === "\\") {
+        piece += src.slice(i, i + 2)
+        i += 2
+      } else if (src[i] === "$" && src[i + 1] === "{") {
+        statics.push(piece)
+        piece = ""
+        i += 2
+        code(true)
+        i++
+      } else piece += src[i++]
+    }
+    statics.push(piece)
+    const close = Math.min(i, n)
+    i = close + 1
+    mark(open, i)
+    visit(lineOf(open), src.slice(open + 1, close), "template", statics.join(HOLE))
+  }
+  code(false)
+  const left = src
+    .split("")
+    .map((c, k) => (skip[k] && c !== "\n" ? " " : c))
+    .join("")
+  left.split("\n").forEach((line, k) => {
+    // `{/* … */}` in JSX leaves empty braces.
+    visit(k + 1, line.replace(/\{\s*\}/g, " "), "code")
   })
 }
 
@@ -155,9 +274,19 @@ function codeFiles(): string[] {
   )
 }
 
-/** Over-long prose in one source file: string literals, JSX text between tags, wrapped JSX text. */
+/**
+ * Over-long prose in one source file: string literals, the static text of template literals, JSX
+ * text between tags, wrapped JSX text.
+ */
 function scanLength(file: string, src: string, out: string[]) {
-  scanCode(src, (line, text, kind) => {
+  scanCode(src, (line, text, kind, statics) => {
+    if (kind === "template") {
+      const t = holesAsWords(statics ?? "")
+      if (!isTemplateProse(statics ?? "") || !tooLong(t)) return
+      if (listed(LONG_LEGACY, file, t) || listed(PROMPTS, file, t)) return
+      out.push(`${file}:${line}  ${words(t)} words, ${sentences(t)} sentences: ${t.slice(0, 120)}`)
+      return
+    }
     const pieces =
       kind === "string"
         ? [text]

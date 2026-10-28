@@ -59,7 +59,7 @@ function searchPlaceholder(n: number): string {
 
 /** The offline note (wYmyJ) copy. */
 function offlineNote(cachedGoogle: number): string {
-  return `You're offline. Google shows the ${cachedGoogle} font${cachedGoogle === 1 ? "" : "s"} already cached. Others download when you're back online.`
+  return `You're offline, so Google shows the ${cachedGoogle} cached font${cachedGoogle === 1 ? "" : "s"}. Others download when you're back online.`
 }
 
 const BLOCKED_NOTE =

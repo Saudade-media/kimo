@@ -857,7 +857,7 @@ function EmptyTrashButton({
           if (n === 0) throw new Error("It's already empty.")
           onConfirm({
             title: "Empty the Trash?",
-            description: `Kimo deletes the ${countLabel(n)} it moved to ${osTrashName(platform.os)}. You can't restore them after this. Other items in the Trash stay.`,
+            description: `Kimo deletes the ${countLabel(n)} it moved to ${osTrashName(platform.os)}, and you can't restore them. Other items in the Trash stay.`,
             confirmLabel: "Empty trash",
             failTitle: "Couldn't empty the Trash",
             run: async () => {

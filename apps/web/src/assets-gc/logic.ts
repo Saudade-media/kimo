@@ -32,7 +32,7 @@ export function gcTitle(n: number): string {
 }
 
 export function gcDescription(fileName: string, bytes: number): string {
-  return `No node, fill, component or variable in ${fileName} references these files. Removing them frees ${formatBytes(bytes)} in assets/. Git history keeps old versions.`
+  return `Nothing in ${fileName} uses these files. Removing them frees ${formatBytes(bytes)}; Git history keeps old versions.`
 }
 
 export function gcConfirmLabel(n: number): string {

@@ -174,3 +174,39 @@ function TimedWsToast({ toast }: { toast: ToastEntry }) {
     </Toast>
   )
 }
+
+// --- Workspace names after leaving ---------------------------------------------------------------
+
+const NAMES_KEY = "kimo.cloud.workspaceNames"
+
+/**
+ * Remembers each workspace's name on this device, so a copy left after a removal (5D) can still
+ * say "You're no longer in Studio" once the workspace is gone from the account.
+ */
+export function rememberWorkspaceNames(list: readonly { id: string; name: string }[]) {
+  if (!list.length) return
+  try {
+    const kept = JSON.parse(localStorage.getItem(NAMES_KEY) ?? "{}") as Record<string, string>
+    let changed = false
+    for (const w of list)
+      if (kept[w.id] !== w.name) {
+        kept[w.id] = w.name
+        changed = true
+      }
+    if (changed) localStorage.setItem(NAMES_KEY, JSON.stringify(kept))
+  } catch {
+    // Private mode: names are known only while the account lists them.
+  }
+}
+
+/** A workspace's name: the account's list, else what this device remembered. */
+export function workspaceNameOf(state: WorkspacesState, id: string): string | null {
+  const listed = state.workspaces.find((w) => w.id === id)?.name
+  if (listed) return listed
+  try {
+    const kept = JSON.parse(localStorage.getItem(NAMES_KEY) ?? "{}") as Record<string, string>
+    return typeof kept[id] === "string" ? kept[id] : null
+  } catch {
+    return null
+  }
+}

@@ -17,6 +17,7 @@ import { EditorChromeContext } from "./editor/CardHeaders"
 import { DiskEditor, Editor } from "./editor/Editor"
 import { RecoveryDialog, RestoredToasts } from "./files"
 import { Home } from "./home/Home"
+import { CloudFileRoute } from "./home/WorkspaceHome"
 import { HandoffGate } from "./join/Handoff"
 import { JoinRoute } from "./join/JoinRoute"
 import { useJoinRoute } from "./join/useJoinRoute"
@@ -164,6 +165,8 @@ function Routed({ route, theme }: { route: ReturnType<typeof parseRoute>; theme:
       return <Editor key={route.id} fileId={route.id} />
     case "disk":
       return <DiskEditor key={route.ref} fileRef={route.ref} node={route.node} />
+    case "cloud":
+      return <CloudFileRoute key={route.room} room={route.room} />
     case "join":
       // Board 41 section 5: `key` restarts the join for another link. Board 45: a browser
       // opened at the link offers it to the Kimo app first.

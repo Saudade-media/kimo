@@ -14,12 +14,19 @@
  */
 import { useEffect, useRef, useState } from "react"
 import { failureText } from "../../editor/errors"
+import { takeReadyShares } from "../../home/WorkspaceHome"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { roomKeyOf } from "../backend"
 import { fileOf, incomingTransfers } from "../cloud/workspaces"
 import { useRelaySetupServices } from "../relay-setup/services"
 import { AcceptTransferDialog } from "./WorkspaceDialogs"
-import { useWorkspaceStore, useWorkspacesState, useWsToast, WsToastStack } from "./workspace-parts"
+import {
+  rememberWorkspaceNames,
+  useWorkspaceStore,
+  useWorkspacesState,
+  useWsToast,
+  WsToastStack,
+} from "./workspace-parts"
 
 export function WorkspaceHost() {
   const store = useWorkspaceStore()
@@ -29,6 +36,11 @@ export function WorkspaceHost() {
   const toast = useWsToast()
   /** Transfers hidden with Escape, by transfer id (shown again on the next app start). */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
+
+  const workspaces = state?.workspaces ?? null
+  useEffect(() => {
+    if (workspaces) rememberWorkspaceNames(workspaces)
+  }, [workspaces])
 
   // --- Invites (3B) -------------------------------------------------------------------------
   const invite = state?.invite ?? null
@@ -103,6 +115,20 @@ export function WorkspaceHost() {
       if (doc?.getState().share.room) void store.openFile(r.room).catch(() => undefined)
     }
   }, [store, state, requests, runtime, toast])
+
+  // Home's New file on web: the new library file joins its workspace once its editor opens it.
+  useEffect(() => {
+    const lib = runtime?.libraryShare
+    if (!store || !lib) return
+    const check = () => {
+      for (const { target, workspaceId } of takeReadyShares((key) => lib.get(key)))
+        void store
+          .shareFile(target, { workspaceId })
+          .catch((e: unknown) => toast({ tone: "danger", text: failureText("start sharing", e) }))
+    }
+    check()
+    return lib.subscribe(check)
+  }, [store, runtime, toast])
 
   useEffect(() => {
     if (!store) return

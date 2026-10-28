@@ -25,17 +25,19 @@ pub const SETTINGS_PANES: &[&str] = &[
     "ai-providers",
     // Board 41 section 4: right after AI providers.
     "multiplayer",
+    // Board 46 2A: Settings › Workspace, right after Multiplayer.
+    "workspace",
     "updates",
     "about",
 ];
-/// `settings/<pane>[/<focus>]`: `focus` (an MCP client to expand, `usage`) is kept only when it
-/// is 1–64 chars of `[a-z0-9._-]`, so the route can be inlined into a script.
+/// `settings/<pane>[/<focus>]`: `focus` (an MCP client to expand, `usage`, a workspace id) is kept
+/// only when it is 1–64 chars of `[A-Za-z0-9._-]`, so the route can be inlined into a script.
 pub fn settings_route(pane: &str, focus: Option<&str>) -> String {
     match focus.filter(|f| {
         !f.is_empty()
             && f.len() <= 64
             && f.chars()
-                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || "._-".contains(c))
+                .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
     }) {
         Some(f) => format!("settings/{pane}/{f}"),
         None => format!("settings/{pane}"),
@@ -238,7 +240,7 @@ pub fn open_settings<Rt: Runtime>(
         .unwrap_or("general");
     let route = settings_route(pane, focus);
     if let Some(w) = app.get_webview_window(SETTINGS_LABEL) {
-        // `route` is a fixed pane plus a focus of [a-z0-9._-] only, so it is safe to inline.
+        // `route` is a fixed pane plus a focus of [A-Za-z0-9._-] only, so it is safe to inline.
         let _ = w.eval(format!("window.location.hash = '#/{route}'"));
         let _ = w.unminimize();
         let _ = w.show();

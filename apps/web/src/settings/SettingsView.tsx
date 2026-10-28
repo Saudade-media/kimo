@@ -29,6 +29,8 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { AiProvidersPane } from "../ai-settings/AiProvidersPane"
 import { causeOf } from "../editor/errors"
 import { MultiplayerPane } from "../multiplayer/ui/MultiplayerPane"
+import { WorkspacePane } from "../multiplayer/ui/WorkspacePane"
+import { useOptionalRuntime } from "../platform/runtime"
 import { AboutPane } from "./AboutPane"
 import { AgentsPane } from "./AgentsPane"
 import { useSetSetting, useSettings } from "./hooks"
@@ -131,6 +133,12 @@ export function SettingsView({
     )
   }, [failure])
   const nav = useRef<(HTMLButtonElement | null)[]>([])
+  // Board 46: Workspace is listed only while Kimo Cloud is on (the window has a workspace store).
+  const cloudOn = !!useOptionalRuntime()?.workspaces
+  const panes = useMemo(
+    () => SETTINGS_PANES.filter((p) => p.id !== "workspace" || cloudOn),
+    [cloudOn],
+  )
   const props: PaneProps = {
     platform,
     settings,
@@ -142,15 +150,15 @@ export function SettingsView({
 
   const onNavKey = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-      const n = SETTINGS_PANES.length
+      const n = panes.length
       const to = e.key === "ArrowDown" ? (i + 1) % n : e.key === "ArrowUp" ? (i - 1 + n) % n : -1
       if (to < 0) return
       e.preventDefault()
       nav.current[to]?.focus()
-      const p = SETTINGS_PANES[to]
+      const p = panes[to]
       if (p) onPaneChange(p.id)
     },
-    [onPaneChange],
+    [onPaneChange, panes],
   )
 
   return (
@@ -178,7 +186,7 @@ export function SettingsView({
           )}
         </div>
         <div role="tablist" aria-orientation="vertical" className="settings-nav">
-          {SETTINGS_PANES.map((p, i) => {
+          {panes.map((p, i) => {
             const Icon = ICONS[p.icon]
             const active = p.id === pane
             return (
@@ -222,6 +230,7 @@ export function SettingsView({
               />
             )}
             {pane === "multiplayer" && <MultiplayerPane platform={platform} />}
+            {pane === "workspace" && cloudOn && <WorkspacePane key={focus ?? ""} focus={focus} />}
             {pane === "updates" && <UpdatesPane {...props} />}
             {pane === "about" && <AboutPane platform={platform} />}
           </SettingsBannerContext.Provider>

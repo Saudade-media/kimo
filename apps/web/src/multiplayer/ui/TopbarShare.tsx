@@ -15,6 +15,7 @@ import { Button, SaveStatus, Tooltip } from "@kimo/ui"
 import { type ReactNode, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
+import { shareableWorkspaces } from "../cloud/workspaces"
 import {
   useAssetTransfers,
   useCapabilities,
@@ -30,6 +31,7 @@ import { RelayWizard, type WizardStart } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
 import { PresenceAvatar } from "./shared"
+import { useCloudShareKind, useShareableSession } from "./WorkspaceShare"
 import "./share-ui.css"
 
 export interface TopbarSyncStatusProps {
@@ -138,7 +140,11 @@ function ShareCluster({
   const stackButton = useRef<HTMLButtonElement>(null)
   const others = people.filter((p) => !p.isYou)
   const shared = share.room !== null
-  const live = shared && share.status !== "error"
+  // Board 46: a workspace file's members and a view link's guest on Kimo Cloud get Share too.
+  const cloudKind = useCloudShareKind(model, docKey)
+  const sessionOf = useShareableSession(docKey)
+  const canShare = caps.canShare || cloudKind !== null
+  const live = shared && share.status !== "error" && (caps.canShare || cloudKind?.kind === "member")
   const { shown, more } = stackOf(others)
   const close = () => setOpen(null)
   return (
@@ -164,7 +170,7 @@ function ShareCluster({
           )}
         </button>
       )}
-      {caps.canShare && (
+      {canShare && (
         <Button
           ref={shareButton}
           variant={live ? "soft" : card ? "primary" : "secondary"}
@@ -178,7 +184,7 @@ function ShareCluster({
           {live ? "Sharing" : "Share"}
         </Button>
       )}
-      {open === "share" && caps.canShare && (
+      {open === "share" && canShare && (
         <SharePopover
           model={model}
           docKey={docKey}
@@ -206,7 +212,14 @@ function ShareCluster({
           displayName={model.settings.getState().displayName}
           saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
           onStartSharing={async (relayUrl) => {
-            await model.document(docKey).startSharing({ relayUrl })
+            // Board 46: on Kimo Cloud a file goes into a workspace (the popover picks one when
+            // there are several); a relay of your own still starts its own room.
+            const ws = runtime?.workspaces ?? null
+            const session = sessionOf()
+            const cloudPath = relaySetup?.store.getState().path === "cloud"
+            if (ws && session && cloudPath && shareableWorkspaces(ws.getState()).length > 0)
+              await ws.shareFile(session)
+            else await model.document(docKey).startSharing({ relayUrl })
             setOpen("share")
           }}
           onClose={() => {

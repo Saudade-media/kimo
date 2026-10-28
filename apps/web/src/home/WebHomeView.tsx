@@ -64,6 +64,7 @@ import {
 } from "./parts"
 import { HomeSidebar } from "./Sidebar"
 import { createTemplateInBrowser, TEMPLATES, type Template } from "./templates"
+import { useWorkspaceTitle, WorkspaceFiles, WorkspaceHeaderButtons } from "./WorkspaceHome"
 
 const VIEWS = [
   { value: "grid", label: "Grid view", icon: <Icon name="layout-grid" size={14} /> },
@@ -308,8 +309,13 @@ export function WebHomeView({
         .filter(({ f, usedBy }) => f.library || (f.components ?? 0) > 0 || (usedBy ?? 0) > 0),
     [all, uses],
   )
+  const workspaceTitle = useWorkspaceTitle(section.kind === "workspace" ? section.id : "")
   const title =
-    section.kind === "folder" ? (folder?.label ?? "Folder") : SECTION_TITLE[section.kind]
+    section.kind === "folder"
+      ? (folder?.label ?? "Folder")
+      : section.kind === "workspace"
+        ? (workspaceTitle ?? "")
+        : SECTION_TITLE[section.kind]
   const placeholder =
     section.kind === "templates"
       ? "Search templates"
@@ -374,7 +380,11 @@ export function WebHomeView({
   const viewToggle = <Segmented label="View" options={VIEWS} value={view} onChange={setView} />
 
   let body: React.ReactNode
-  if (section.kind === "templates") {
+  if (section.kind === "workspace") {
+    body = (
+      <WorkspaceFiles platform={platform} workspaceId={section.id} query={query} now={Date.now()} />
+    )
+  } else if (section.kind === "templates") {
     body = (
       <TemplatesGrid
         templates={searchFiles(TEMPLATES, query)}
@@ -586,7 +596,9 @@ export function WebHomeView({
             onChange={(e) => setQuery(e.currentTarget.value)}
             frameProps={{ className: "home-header__search" }}
           />
-          {section.kind === "trash" ? (
+          {section.kind === "workspace" ? (
+            <WorkspaceHeaderButtons platform={platform} workspaceId={section.id} />
+          ) : section.kind === "trash" ? (
             <Button
               variant="secondary"
               icon={<Trash2 size={16} />}

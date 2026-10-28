@@ -9,14 +9,8 @@ import { type ReactNode, useEffect, useId, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { type CloudState, type CloudStore, looksLikeEmail } from "../cloud/store"
 import type { BillingInterval } from "../cloud/types"
-import {
-  cloudErrorText,
-  INTERVAL_LABEL,
-  priceFor,
-  priceLine,
-  resendLabel,
-  yearlySaving,
-} from "../cloud/view"
+import { cloudErrorText, INTERVAL_LABEL, priceFor, resendLabel, yearlySaving } from "../cloud/view"
+import { memberPriceLine, storageIncludes } from "../cloud/workspace-view"
 import type { Clock } from "../relay-setup/runner"
 import { CloudDeviceRow, CloudNotice } from "./cloud-parts"
 import { Note, RadioRow, radioKeys, Spacer } from "./relay-parts"
@@ -36,6 +30,9 @@ interface StepArgs {
   /** 2 C without a plan: on to Subscribe (3 A). */
   onSubscribe(): void
   saving: boolean
+  /** Board 46 1F: the first workspace's name (shown while the account owns none). */
+  workspaceName: string
+  onWorkspaceName(name: string): void
 }
 
 export interface CloudStepView {
@@ -257,7 +254,10 @@ function Billing({
           >
             <span className="rw-text">
               <span className="rw-option__title">{INTERVAL_LABEL[value]}</span>
-              <span className="rw-option__desc rw-price">{price ? priceLine(price) : ""}</span>
+              <span className="rw-option__desc rw-price">
+                {/* Board 46 1F: "$8/mo + $4/member" once the service names the seat price. */}
+                {price ? memberPriceLine(price) : ""}
+              </span>
             </span>
             {value === "year" && saving && <Badge className="rw-badge">{saving}</Badge>}
           </RadioRow>
@@ -454,22 +454,26 @@ export function cloudStepView(args: StepArgs): CloudStepView {
   // 3 A (and `ready`, which the wizard turns into 3 C).
   const interval = c.phase === "choose" ? c.interval : "month"
   const busy = c.phase === "choose" && c.busy
-  const cap = state.plans.storageLimitBytes
+  // Board 46 1F: one plan per workspace; it starts with one seat (you).
   const includes = [
-    "Unlimited shared files and guests",
-    `${capText(cap)} of storage for shared files and images`,
-    "End-to-end encrypted. We never see your designs",
+    "Unlimited files and viewers",
+    storageIncludes(state.plans.storageLimitBytes, state.plans.seatStorageBytes),
+    "Invite people any time",
     "Cancel any time. Your files stay on your devices",
   ]
+  const ownsWorkspace = !!state.account?.workspaces.some(
+    (w) => w.role === "owner" && w.deletedAt === null,
+  )
+  const checkout = () =>
+    void cloud.startCheckout(ownsWorkspace ? {} : { workspaceName: args.workspaceName })
   return {
     bodyGap: 16,
     body: (
       <>
-        <Intro
-          icon="cloud"
-          title="Kimo Cloud"
-          desc="One plan for everything you share. Guests never pay and never need an account."
-        />
+        <Intro icon="cloud" title="Kimo Cloud" desc="One plan for your team. Viewers are free." />
+        {!ownsWorkspace && (
+          <WorkspaceNameField value={args.workspaceName} onChange={args.onWorkspaceName} />
+        )}
         <Billing state={state} interval={interval} onChange={(v) => cloud.chooseInterval(v)} />
         <ul className="rw-includes" aria-label="Included">
           {includes.map((text) => (
@@ -481,9 +485,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
             </li>
           ))}
         </ul>
-        {c.phase === "choose" && (
-          <ErrorLine code={c.error} state={state} onRetry={() => void cloud.startCheckout()} />
-        )}
+        {c.phase === "choose" && <ErrorLine code={c.error} state={state} onRetry={checkout} />}
       </>
     ),
     footer: (
@@ -494,19 +496,32 @@ export function cloudStepView(args: StepArgs): CloudStepView {
             : "Prices in USD. Tax is added at checkout."}
         </span>
         <Spacer />
-        {primary(
-          busy ? "Opening…" : "Continue to checkout",
-          "external-link",
-          () => void cloud.startCheckout(),
-          { disabled: busy, name: "checkout" },
-        )}
+        {primary(busy ? "Opening…" : "Continue to checkout", "external-link", checkout, {
+          disabled: busy || (!ownsWorkspace && args.workspaceName.trim() === ""),
+          name: "checkout",
+        })}
       </>
     ),
   }
 }
 
-/** "10 GB" from the cap in bytes (decimal). */
-function capText(bytes: number): string {
-  const gb = bytes / 1e9
-  return gb >= 1 ? `${Math.round(gb * 10) / 10} GB` : `${Math.round(bytes / 1e6)} MB`
+/** Field · Workspace name (cNbYcKZXHp): column, gap 6 › Label sans 11 / 500 secondary · Input (users). */
+function WorkspaceNameField({ value, onChange }: { value: string; onChange(v: string): void }) {
+  const id = useId()
+  return (
+    <div className="mp-field rw-workspace-name">
+      <label className="mp-field-label" htmlFor={id}>
+        Workspace name
+      </label>
+      <Input
+        id={id}
+        icon={<Icon name="users" size={16} />}
+        maxLength={64}
+        spellCheck={false}
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
+      />
+    </div>
+  )
 }

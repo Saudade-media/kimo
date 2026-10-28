@@ -26,6 +26,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { Icon } from "../../lib/icons"
 import { priceFor, priceLine, readyMeta } from "../cloud/view"
+import { defaultWorkspaceName } from "../cloud/workspace-view"
 import type { RelayOwnerState } from "../ownership"
 import {
   autoOrigins,
@@ -423,6 +424,8 @@ export function RelayWizard(props: RelayWizardProps) {
   }
 
   const [saving, setSaving] = useState(false)
+  /** Board 46 1F: the first workspace's name as typed (null: the default from the email). */
+  const [workspaceName, setWorkspaceName] = useState<string | null>(null)
   const [savedUrl, setSavedUrl] = useState<string | null>(null)
   const save = async () => {
     if (test?.outcome !== "ok") return
@@ -857,6 +860,8 @@ export function RelayWizard(props: RelayWizardProps) {
       state: cloudState,
       clock: services.clock,
       saving,
+      workspaceName: workspaceName ?? defaultWorkspaceName(cloudState.account?.account.email ?? ""),
+      onWorkspaceName: setWorkspaceName,
       onChoose: () => setStep("choose"),
       onUseCloud: () => void saveCloud(),
       onSubscribe: () => {

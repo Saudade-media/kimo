@@ -109,6 +109,9 @@ import "./m3/m3.css"
 import "./m3/m3-panels.css"
 import "./m3/component-dialogs.css"
 import "./workspace.css"
+import { CLOUD_DELETED_REASON, CLOUD_REMOVED_REASON } from "../multiplayer/cloud/workspaces"
+import { WorkspaceBanner } from "../multiplayer/ui/WorkspaceBanner"
+import { useIsWorkspaceRoom } from "../multiplayer/ui/workspace-parts"
 import { type Combo, matchCombo, matches, SHORTCUTS, shortcut } from "../shortcuts/shortcuts"
 import { useThumbnailWriter } from "../thumbnails/writer"
 import { ComponentDialogs } from "./m3/ComponentDialogs"
@@ -307,6 +310,7 @@ function EditorShell({
   const room = session.shared ?? null
   const caps = useEditorCapabilities(room ? roomKeyOf(room.room) : null)
   const viewOnly = caps.viewOnly
+  const workspaceRoom = useIsWorkspaceRoom(room?.room ?? null)
   const [name, setName] = useState(session.meta.name)
   // Layout passes go to a bus, not React state: only panels that show a changed box re-render.
   const layout = useMemo(() => createBus<LayoutResult | null>(null), [])
@@ -334,6 +338,21 @@ function EditorShell({
   useEffect(() => () => (room ? undefined : assets.dispose()), [assets, room])
   /** The share key of this document: a joined room, a file on disk, a browser library file. */
   const shareKey = room ? roomKeyOf(room.room) : doc ? doc.ref : libraryKeyOf(session.id)
+  // Board 46 5D, 6E "Save a copy": an editable copy of a read-only workspace copy. On disk, Save as
+  // (the copy is a plain local file, so the cloud read-only reason goes); else a library file.
+  const saveCopy = useCallback(async () => {
+    if (doc) {
+      const ref = await doc.saveAs()
+      if (!ref) return
+      const reason = session.store.readOnly?.reason
+      if (reason === CLOUD_DELETED_REASON || reason === CLOUD_REMOVED_REASON)
+        session.store.setReadOnly(null)
+      navigate(diskPath(ref))
+      return
+    }
+    const id = await createFile(name || "Untitled", { document: session.store.toDocument() })
+    navigate(`/file/${id}`)
+  }, [doc, session.store, name])
   // Board 41: a browser library file shares like a file on disk; one this device shared
   // reconnects to its room while the editor shows it.
   useEffect(() => {
@@ -1126,7 +1145,10 @@ function EditorShell({
     <M3Context.Provider value={m3}>
       <ViewOnlyContext.Provider value={viewOnly}>
         <div className={viewOnly ? "editor editor--view-only" : "editor"}>
-          {viewOnly && <ViewOnlyBanner shared={room} />}
+          {/* A workspace file's view-only state is board 46's banner below, not board 41's. */}
+          {viewOnly && !workspaceRoom && <ViewOnlyBanner shared={room} />}
+          {/* Board 46 5A to 5D, 6E: a workspace file's plan, or a copy left after leaving. */}
+          <WorkspaceBanner docKey={shareKey} room={room?.room ?? null} onSaveCopy={saveCopy} />
           {doc && (
             <BannerHost
               session={doc}

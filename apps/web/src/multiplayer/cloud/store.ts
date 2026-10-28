@@ -120,7 +120,12 @@ export interface CloudStore {
   signOutDevice(pub: string): Promise<void>
   /** Section 3. */
   chooseInterval(interval: BillingInterval): void
-  startCheckout(): Promise<void>
+  /**
+   * Section 3 (board 46 1F): checks out the oldest workspace the account owns, or, owning none,
+   * creates one named `workspaceName` first (api.md §13.1, §13.4). Without either, the
+   * compatibility route (§6.1) creates "Workspace".
+   */
+  startCheckout(options?: { workspaceName?: string }): Promise<void>
   reopenCheckout(): Promise<void>
   backToChoose(): void
   /** Manage billing, Update payment: the provider's customer portal. */
@@ -358,13 +363,23 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
     pollCheckout(checkoutId)
   }
 
-  const startCheckout = async () => {
+  /** A workspace this store created for a checkout that did not open: the next try reuses it. */
+  let madeWorkspace: string | null = null
+  const startCheckout = async (options: { workspaceName?: string } = {}) => {
     const c = state.checkout
     if (c.phase === "waiting" || c.phase === "ready") return
     const interval = c.interval
     set({ checkout: { ...c, busy: true, error: null } })
     try {
-      const created = await client.checkout(interval)
+      const owned = state.account?.workspaces.find(
+        (w) => w.role === "owner" && w.deletedAt === null,
+      )
+      const name = options.workspaceName?.trim()
+      if (!owned && !madeWorkspace && name) madeWorkspace = (await client.createWorkspace(name)).id
+      const workspaceId = owned?.id ?? madeWorkspace
+      const created = workspaceId
+        ? await client.workspaceCheckout(workspaceId, interval)
+        : await client.checkout(interval)
       reached()
       set({
         checkout: {

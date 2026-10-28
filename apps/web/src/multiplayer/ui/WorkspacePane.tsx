@@ -79,9 +79,11 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
   const w: WorkspaceSummary | null = list.find((x) => x.id === picked) ?? list[0] ?? null
   const wsId = w?.id ?? null
 
+  // The pane is Kimo Cloud's: opening it asks for the account's workspaces and the prices.
   useEffect(() => {
     if (cloud) void cloud.loadPlans()
-  }, [cloud])
+    if (store) void store.refresh().catch(() => undefined)
+  }, [cloud, store])
   useEffect(() => {
     if (store && wsId) void store.refreshWorkspace(wsId).catch(() => undefined)
   }, [store, wsId])

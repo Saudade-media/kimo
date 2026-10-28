@@ -37,6 +37,22 @@ export function WorkspaceHost() {
   /** Transfers hidden with Escape, by transfer id (shown again on the next app start). */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
 
+  // On start, a device that uses Kimo Cloud (an account in the cache, or Kimo Cloud as its relay)
+  // refreshes its workspaces; any other device sends nothing to Kimo Cloud.
+  const setupStore = useRelaySetupServices(runtime?.platform ?? null)?.store ?? null
+  useEffect(() => {
+    if (!store) return
+    let live = true
+    void store.ready().then(() => {
+      if (!live) return
+      const uses = store.getState().accountId !== null || setupStore?.getState().path === "cloud"
+      if (uses) void store.refresh().catch(() => undefined)
+    })
+    return () => {
+      live = false
+    }
+  }, [store, setupStore])
+
   const workspaces = state?.workspaces ?? null
   useEffect(() => {
     if (workspaces) rememberWorkspaceNames(workspaces)

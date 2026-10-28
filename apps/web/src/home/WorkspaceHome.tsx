@@ -12,7 +12,7 @@
  * device cache first, so they show offline.
  */
 import type { KimoPlatform } from "@kimo/platform"
-import { Button, FileRow, FileRowHeader } from "@kimo/ui"
+import { Button, FileCard, FileRow, FileRowHeader } from "@kimo/ui"
 import { useEffect, useMemo, useState } from "react"
 import { RoomEditor } from "../editor/Editor"
 import { failureText } from "../editor/errors"
@@ -155,17 +155,15 @@ export function WorkspaceFiles({
   platform,
   workspaceId,
   query,
-  view,
-  onViewChange,
   now,
 }: {
   platform: KimoPlatform
   workspaceId: string
   query: string
-  view: RecentView
-  onViewChange(view: RecentView): void
   now: number
 }) {
+  // Board 46 4A shows the list; the toggle keeps its own choice for workspaces.
+  const [view, setView] = useState<RecentView>("list")
   const store = useWorkspaceStore()
   const state = useWorkspacesState(store)
   const runtime = useOptionalRuntime()
@@ -221,29 +219,57 @@ export function WorkspaceFiles({
         title={countLabel(files?.length ?? 0)}
         note={`Everyone in ${w.name} can edit these`}
         view={view}
-        onViewChange={onViewChange}
+        onViewChange={setView}
       />
-      <div className="kimo-files-list home-workspace-list" data-pen="Y5LYxVnagL">
-        <FileRowHeader pathLabel="LAST EDITED BY" gitLabel="STATUS" />
-        {shown.map((f) => {
-          const status = statusOf(f)
-          return (
-            <FileRow
-              key={f.room}
-              data-room={f.room}
-              name={fileName(f)}
-              path={editedBy(f)}
-              pathKind="person"
-              modified={modifiedLabel(f.updatedAt, now)}
-              gitLabel={status.label}
-              gitTone={status.tone}
-              onOpen={() => void open(f)}
-            />
-          )
-        })}
-      </div>
+      {view === "grid" ? (
+        <div className="kimo-files-grid">
+          {rows(shown).map((row) => (
+            <div key={row[0]?.room} className="kimo-files-grid__row">
+              {row.map((f) => (
+                <FileCard
+                  key={f.room}
+                  data-room={f.room}
+                  className="kimo-files-grid__card"
+                  name={fileName(f)}
+                  info={[editedBy(f), modifiedLabel(f.updatedAt, now)].filter(Boolean).join(" · ")}
+                  onClick={() => void open(f)}
+                />
+              ))}
+              {["pad-a", "pad-b", "pad-c"].slice(0, 4 - row.length).map((k) => (
+                <span key={k} className="kimo-files-grid__card" aria-hidden="true" />
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="kimo-files-list home-workspace-list" data-pen="Y5LYxVnagL">
+          <FileRowHeader pathLabel="LAST EDITED BY" gitLabel="STATUS" />
+          {shown.map((f) => {
+            const status = statusOf(f)
+            return (
+              <FileRow
+                key={f.room}
+                data-room={f.room}
+                name={fileName(f)}
+                path={editedBy(f)}
+                pathKind="person"
+                modified={modifiedLabel(f.updatedAt, now)}
+                gitLabel={status.label}
+                gitTone={status.tone}
+                onOpen={() => void open(f)}
+              />
+            )
+          })}
+        </div>
+      )}
     </>
   )
+}
+
+const rows = <T,>(list: readonly T[]): T[][] => {
+  const out: T[][] = []
+  for (let i = 0; i < list.length; i += 4) out.push(list.slice(i, i + 4))
+  return out
 }
 
 // --- Web: a workspace file's room replica ------------------------------------------------------

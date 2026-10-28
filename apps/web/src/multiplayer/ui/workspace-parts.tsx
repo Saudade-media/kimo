@@ -210,3 +210,13 @@ export function workspaceNameOf(state: WorkspacesState, id: string): string | nu
     return null
   }
 }
+
+/** True when `room` is a file of one of this account's workspaces (board 46 banners own it). */
+export function useIsWorkspaceRoom(room: string | null): boolean {
+  const state = useWorkspacesState(useWorkspaceStore())
+  if (!room || !state) return false
+  return (
+    !!state.open[room] ||
+    Object.values(state.files).some((l) => l.files.some((f) => f.room === room))
+  )
+}

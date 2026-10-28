@@ -544,16 +544,7 @@ export function DesktopHomeView({
 
   let body: React.ReactNode
   if (section.kind === "workspace") {
-    body = (
-      <WorkspaceFiles
-        platform={platform}
-        workspaceId={section.id}
-        query={query}
-        view={view}
-        onViewChange={setView}
-        now={now}
-      />
-    )
+    body = <WorkspaceFiles platform={platform} workspaceId={section.id} query={query} now={now} />
   } else if (section.kind === "templates") {
     body = (
       <TemplatesGrid

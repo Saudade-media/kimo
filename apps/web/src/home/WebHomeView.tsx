@@ -382,14 +382,7 @@ export function WebHomeView({
   let body: React.ReactNode
   if (section.kind === "workspace") {
     body = (
-      <WorkspaceFiles
-        platform={platform}
-        workspaceId={section.id}
-        query={query}
-        view={view}
-        onViewChange={setView}
-        now={Date.now()}
-      />
+      <WorkspaceFiles platform={platform} workspaceId={section.id} query={query} now={Date.now()} />
     )
   } else if (section.kind === "templates") {
     body = (

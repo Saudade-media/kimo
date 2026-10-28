@@ -7,13 +7,17 @@
  * - Desktop editor windows: shared files belong to the document host (it owns their stores and
  *   the file-backed registry); the window's backend switches to the host's `mp.*` RPC once the
  *   host answers. Rooms joined from a link (no file) stay in the window, kept in IndexedDB.
+ *   Kimo Cloud workspace files are the host's too (`cloud/hosted.ts`).
  */
 import type { KimoPlatform } from "@kimo/platform"
 import { onFileDeleted } from "../lib/file-events"
 import type { FileSessionManager } from "../platform/session"
 import { createPlatformShare, type PlatformShare } from "../platform/share"
 import { createLocalShareBackend, type ShareBackend, switchingShareBackend } from "./backend"
-import { ownershipFor } from "./device"
+import { type HostedWorkspaceFiles, withHostedFiles } from "./cloud/hosted"
+import { desktopManagedCopies } from "./cloud/managed"
+import { createWorkspaceStore, type WorkspaceStore } from "./cloud/workspaces"
+import { deviceNameFor, ownershipFor } from "./device"
 import { createLibraryShare, type LibraryShare } from "./library"
 import { createMultiplayerModel, type MultiplayerModel } from "./model"
 import { relaySetupFor } from "./relay-setup/services"
@@ -25,6 +29,8 @@ export interface WindowMultiplayer {
   model: MultiplayerModel
   /** Browser library files: the editor registers them here (Share, reconnect on open). */
   library: LibraryShare
+  /** Kimo Cloud workspaces (ADR 0019, `cloud/README.md`); null when Kimo Cloud is hidden. */
+  workspaces: WorkspaceStore | null
 }
 
 export interface WindowMultiplayerOptions {
@@ -35,6 +41,11 @@ export interface WindowMultiplayerOptions {
    * one for joined rooms), or null when no host answered (sessions stay local, shared here).
    */
   hostBackend?: (local: ShareBackend) => Promise<ShareBackend | null>
+  /**
+   * Desktop windows: resolves with the document host's workspace files, or null when no host
+   * answered (this window then reopens bound files and runs the re-share itself).
+   */
+  hostWorkspaces?: () => Promise<HostedWorkspaceFiles | null>
 }
 
 export function createWindowMultiplayer(options: WindowMultiplayerOptions): WindowMultiplayer {
@@ -78,7 +89,34 @@ export function createWindowMultiplayer(options: WindowMultiplayerOptions): Wind
     ownership: async (url) => (await ownershipFor(platform).relayOwnership(url)).state,
   })
   if (platform.kind === "desktop") guardLocalRelay(platform, manager, model)
-  return { share, backend, model, library }
+  const workspaces = workspacesFor(platform, share, options.hostWorkspaces)
+  return { share, backend, model, library, workspaces }
+}
+
+/** The window's workspace store over the Kimo Cloud store of board 43 (null when it is hidden). */
+function workspacesFor(
+  platform: KimoPlatform,
+  share: PlatformShare,
+  hostWorkspaces?: () => Promise<HostedWorkspaceFiles | null>,
+): WorkspaceStore | null {
+  const services = relaySetupFor(platform)
+  const cloud = services.cloud
+  if (!cloud) return null
+  const attach = hostWorkspaces?.().catch(() => null) ?? null
+  const store = createWorkspaceStore({
+    client: cloud.client,
+    cloud,
+    registry: share.service.registry,
+    share,
+    deviceName: () => deviceNameFor(platform),
+    clientKind: platform.kind === "desktop" ? "desktop" : "web",
+    openUrl: services.openUrl,
+    clock: services.clock,
+    managedCopies: platform.kind === "desktop" ? desktopManagedCopies(platform) : null,
+    // With a document host, the re-share runs there, over the owner's registry.
+    ...(attach ? { migrate: attach.then((host) => host === null) } : {}),
+  })
+  return attach ? withHostedFiles(store, attach) : store
 }
 
 /**

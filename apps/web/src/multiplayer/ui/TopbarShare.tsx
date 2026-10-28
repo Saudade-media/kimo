@@ -12,9 +12,10 @@
  *   right edge on the button's). Both sit after Theme, before Preview.
  */
 import { Button, SaveStatus, Tooltip } from "@kimo/ui"
-import { type ReactNode, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
+import { shareableWorkspaces } from "../cloud/workspaces"
 import {
   useAssetTransfers,
   useCapabilities,
@@ -23,13 +24,17 @@ import {
   useShareState,
 } from "../hooks"
 import type { MultiplayerModel } from "../model"
-import { useRelaySetupServices } from "../relay-setup/services"
+import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
 import { stackDimmed, stackOf, topbarSyncStatus } from "./copy"
+import { NewWorkspaceWizard } from "./NewWorkspace"
 import { PeoplePopover } from "./PeoplePopover"
 import { RelayWizard, type WizardStart } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
 import { PresenceAvatar } from "./shared"
+import { InviteDialog } from "./WorkspaceDialogs"
+import { useCloudShareKind, useShareableSession } from "./WorkspaceShare"
+import { useWorkspaceStore, useWorkspacesState } from "./workspace-parts"
 import "./share-ui.css"
 
 export interface TopbarSyncStatusProps {
@@ -130,17 +135,38 @@ function ShareCluster({
   const share = useShareState(model, docKey)
   const people = useCollaborators(model, docKey)
   const caps = useCapabilities(model, docKey)
-  const [open, setOpen] = useState<"share" | "people" | "reset" | "relay" | null>(null)
+  const [open, setOpen] = useState<
+    "share" | "people" | "reset" | "relay" | "invite" | "new-workspace" | null
+  >(null)
   const [wizardStart, setWizardStart] = useState<WizardStart>("choose")
   const runtime = useOptionalRuntime()
   const relaySetup = useRelaySetupServices(runtime?.platform ?? null)
+  const cloudState = useCloudState(relaySetup?.cloud ?? null)
+  const workspaceStore = useWorkspaceStore()
+  const workspacesState = useWorkspacesState(workspaceStore)
+  /** The workspace Invite people (board 46 2B) is for. */
+  const [inviteTo, setInviteTo] = useState<string | null>(null)
+  const inviteWorkspace = workspacesState?.workspaces.find((w) => w.id === inviteTo) ?? null
+  /** The workspace New workspace (board 46 1F) made: 1B's picker starts on it. */
+  const [madeWorkspace, setMadeWorkspace] = useState<string | null>(null)
   const shareButton = useRef<HTMLButtonElement>(null)
   const stackButton = useRef<HTMLButtonElement>(null)
   const others = people.filter((p) => !p.isYou)
   const shared = share.room !== null
-  const live = shared && share.status !== "error"
+  // Board 46: a workspace file's members and a view link's guest on Kimo Cloud get Share too.
+  const cloudKind = useCloudShareKind(model, docKey)
+  const sessionOf = useShareableSession(docKey)
+  const canShare = caps.canShare || cloudKind !== null
+  const live = shared && share.status !== "error" && (caps.canShare || cloudKind?.kind === "member")
   const { shown, more } = stackOf(others)
   const close = () => setOpen(null)
+  // A view-link guest who signed in from Request edit access (board 46 1D) goes back to the
+  // popover, which can now send the request, rather than on to the wizard's plan step.
+  const signedIn = cloudState?.session === "signed-in"
+  useEffect(() => {
+    if (open === "relay" && wizardStart === "sign-in" && cloudKind?.kind === "guest" && signedIn)
+      setOpen("share")
+  }, [open, wizardStart, cloudKind?.kind, signedIn])
   return (
     <>
       {shared && others.length > 0 && (
@@ -164,7 +190,7 @@ function ShareCluster({
           )}
         </button>
       )}
-      {caps.canShare && (
+      {canShare && (
         <Button
           ref={shareButton}
           variant={live ? "soft" : card ? "primary" : "secondary"}
@@ -178,7 +204,7 @@ function ShareCluster({
           {live ? "Sharing" : "Share"}
         </Button>
       )}
-      {open === "share" && caps.canShare && (
+      {open === "share" && canShare && (
         <SharePopover
           model={model}
           docKey={docKey}
@@ -188,6 +214,14 @@ function ShareCluster({
             shareButton.current?.focus({ preventScroll: true })
           }}
           onResetAll={() => setOpen("reset")}
+          onInvite={(workspaceId) => {
+            setInviteTo(workspaceId)
+            setOpen("invite")
+          }}
+          {...(relaySetup?.cloud && workspaceStore
+            ? { onNewWorkspace: () => setOpen("new-workspace") }
+            : {})}
+          pickedWorkspace={madeWorkspace}
           {...(relaySetup
             ? {
                 onSetUpRelay: (start: WizardStart = "choose") => {
@@ -206,13 +240,39 @@ function ShareCluster({
           displayName={model.settings.getState().displayName}
           saveRelayUrl={(u) => model.settings.setRelayUrl(u)}
           onStartSharing={async (relayUrl) => {
-            await model.document(docKey).startSharing({ relayUrl })
+            // Board 46: on Kimo Cloud a file goes into a workspace (the popover picks one when
+            // there are several); a relay of your own still starts its own room.
+            const ws = runtime?.workspaces ?? null
+            const session = sessionOf()
+            const cloudPath = relaySetup?.store.getState().path === "cloud"
+            if (ws && session && cloudPath && shareableWorkspaces(ws.getState()).length > 0)
+              await ws.shareFile(session)
+            else await model.document(docKey).startSharing({ relayUrl })
             setOpen("share")
           }}
           onClose={() => {
             setOpen((o) => (o === "relay" ? null : o))
             shareButton.current?.focus({ preventScroll: true })
           }}
+        />
+      )}
+      {open === "new-workspace" && (
+        <NewWorkspaceWizard
+          // Close goes back to the popover; a paid checkout too, with the new workspace picked.
+          onClose={() => setOpen("share")}
+          onCreated={(id) => {
+            setMadeWorkspace(id)
+            setOpen("share")
+          }}
+        />
+      )}
+      {open === "invite" && workspaceStore && inviteWorkspace && (
+        <InviteDialog
+          store={workspaceStore}
+          workspace={inviteWorkspace}
+          plans={cloudState?.plans.plans ?? []}
+          // Cancel and Send invite both go back to the popover, like Reset all links.
+          onClose={() => setOpen("share")}
         />
       )}
       {open === "reset" && (

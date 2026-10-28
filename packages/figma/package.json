@@ -1,6 +1,6 @@
 {
   "name": "@kimo/figma",
-  "version": "1.2.1-beta.0",
+  "version": "1.2.1-beta.1",
   "private": true,
   "description": "Figma clipboard import: decodes a Figma copy (fig-kiwi) and converts it to Kimo nodes",
   "license": "MIT",

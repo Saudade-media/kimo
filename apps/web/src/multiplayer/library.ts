@@ -86,9 +86,9 @@ export function createLibraryShare(
       changed()
       let released = false
       void (async () => {
-        // Cheap check first: most files were never shared.
-        const summary = await share.service.roomForFile(key).catch(() => null)
-        if (!summary || released) return
+        // Cheap check first: most files were never shared (nor bound to a workspace room).
+        const shared = await share.isShared(key).catch(() => false)
+        if (!shared || released) return
         try {
           await share.reconnectReplica(target, doc.assets)
         } catch (error) {

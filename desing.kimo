@@ -1954,7 +1954,7 @@
 
 , "BAv0t0": {"type":"text","parent":"GVOfK0","order":"a2","name":"Note","w":{"mode":"fill"},"content":"The relay refuses blob writes over the cap. The storage bar in Settings turns warning at 90 % and danger at 100 %. A toast names the image that did not sync.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
-, "BB1xEFQnA0": {"type":"text","parent":"vCt6PNTu7K","order":"a2rbk","name":"Note","w":{"mode":"fill"},"content":"Signed in as someone else, it asks you to switch first.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
+, "BB1xEFQnA0": {"type":"text","parent":"vCt6PNTu7K","order":"a2rbk","name":"Note","w":{"mode":"fill"},"content":"Not now keeps the invite open.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
 , "BBDz30": {"type":"text","parent":"blQtq0","order":"a8","name":"Token","content":"Product","style":{"font":{"$ref":"font-mono"},"size":{"$ref":"text-xs"},"weight":400},"fill":{"$ref":"text-primary"}}
 
@@ -16796,6 +16796,8 @@
 
 , "QeWNH0": {"type":"icon","parent":"yPcEV0","order":"a0","name":"Icon","w":14,"h":14,"set":"lucide","icon":"wifi-off","color":{"$ref":"danger"}}
 
+, "QehQ9dM1EA": {"type":"instance","parent":"lpme2t5Lbg","order":"a1Lg4","name":"Dialog · Join, other account","of":"bDVhS0","overrides":{"POSht0":{"set":{"content":""}},"QTzCg0":{"set":{"content":"This invite is for ana@studio.design. You're signed in as sam@acme.co."}},"j79140":{"set":{"content":"Join Studio?"}},"k0VaD0/e5j2wK":{"set":{"content":"Not now"}},"qqpfr0/bzZjb0":{"set":{"content":"Sign out","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-sm"},"weight":500}}},"rhvD90":{"set":{"icon":"users"}},"z3U950":{"set":{"visible":false}}}}
+
 , "QeuKc0": {"type":"icon","parent":"hDgto0","order":"a0","name":"Icon","w":14,"h":14,"set":"lucide","icon":"circle-dashed","color":{"$ref":"text-tertiary"}}
 
 , "QfSAK0": {"type":"frame","parent":"jV9kh0","order":"a1","name":"Vignette · (k) Font missing-weight warning","w":{"mode":"fill"},"radius":{"$ref":"radius-lg"},"fill":{"$ref":"bg-app"},"stroke":{"paint":{"$ref":"border"}},"layout":{"dir":"column","gap":12,"pad":20}}
@@ -28518,6 +28520,8 @@
 
 , "cn6RE0": {"type":"text","parent":"pxZFa0","order":"a1","name":"Value","content":"true","style":{"font":{"$ref":"font-mono"},"size":{"$ref":"text-xs"},"weight":400},"fill":{"$ref":"text-secondary"}}
 
+, "cnN4TPR74W": {"type":"text","parent":"lpme2t5Lbg","order":"a0Dp2","name":"Caption","content":"E · Invite for another account","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":600},"fill":{"$ref":"text-tertiary"}}
+
 , "cnNkZ0": {"type":"instance","parent":"G3cC6t","order":"a0","name":"Inner ratio","of":"A9DDs0","overrides":{"jXquz0":{"set":{"content":"Ratio"}},"vpMpD0":{"set":{"content":"38 %"}}}}
 
 , "cnamv0": {"type":"frame","parent":"rbnJS0","order":"a2","name":"Stop 55% (selected)","x":115,"y":18,"w":16,"h":16,"radius":{"$ref":"radius-xs"},"fill":"#FFFFFF","stroke":{"paint":{"$ref":"selection"},"width":2},"effects":[{"kind":"shadow","x":0,"y":1,"blur":3,"color":{"$ref":"shadow-strong"}}],"layout":{"dir":"row","pad":3}}
@@ -37425,6 +37429,8 @@
 , "loG5y0": {"type":"text","parent":"G0AWh7","order":"a0","name":"Label","content":"Italic","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-sm"},"weight":400},"fill":{"$ref":"text-secondary"}}
 
 , "lpDom0": {"type":"icon","parent":"JGoSS0","order":"a0","name":"Icon","w":24,"h":24,"set":"lucide","icon":"image","color":"#8C847A"}
+
+, "lpme2t5Lbg": {"type":"frame","parent":"ehK5yBlwIm","order":"a3lzx","name":"Vignette · E · Invite for another account","w":480,"layout":{"dir":"column","gap":8}}
 
 , "lpuct0": {"type":"frame","parent":"lBw4v0","order":"a0","name":"Text Box","w":300,"stroke":{"paint":{"$ref":"selection"},"width":1.5},"layout":{"dir":"column"}}
 
@@ -49793,6 +49799,8 @@
 , "yZOQO0": {"type":"instance","parent":"Iz1Gt0","order":"a1","name":"Number","of":"EAGNC0","overrides":{"BRxvS0":{"set":{"content":"Number"}},"RmOTH0":{"set":{"icon":"hash","color":{"$ref":"text-secondary"},"visible":true}},"T4CD10":{"set":{"content":"N","visible":true}}}}
 
 , "yZcJO0": {"type":"text","parent":"ELR9C0","order":"a0","name":"Title","content":"6 files","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-lg"},"weight":600},"fill":{"$ref":"text-primary"}}
+
+, "yZczX7MHtD": {"type":"text","parent":"lpme2t5Lbg","order":"a2TTx","name":"Note","w":{"mode":"fill"},"content":"After signing out, the same dialog offers Join.","grow":"fixed-width","style":{"font":{"$ref":"font-sans"},"size":{"$ref":"text-xs"},"weight":400,"lineHeight":1.45},"fill":{"$ref":"text-tertiary"}}
 
 , "yZjBX0": {"type":"instance","parent":"je8J60","order":"a2","name":"Setting · Channel","of":"MuoTX0","overrides":{"J4s830":{"replace":true},"LMxOY0":{"set":{"content":"Beta gets builds about a week earlier."}},"NcrOC0":{"set":{"content":"Channel"}}}}
 

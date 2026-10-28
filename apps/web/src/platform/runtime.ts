@@ -15,6 +15,13 @@ import webPackage from "../../package.json"
 import { conflictSessionFactory } from "../conflicts"
 import type { HostClient } from "../host/client"
 import { joinPath } from "../join/link"
+import {
+  type CloudLink,
+  cloudLinkFromLocation,
+  isCloudDeepLink,
+  parseCloudDeepLink,
+} from "../multiplayer/cloud/links"
+import type { WorkspaceStore } from "../multiplayer/cloud/workspaces"
 import type { LibraryShare } from "../multiplayer/library"
 import type { MultiplayerModel } from "../multiplayer/model"
 import { createWindowMultiplayer } from "../multiplayer/window"
@@ -41,6 +48,8 @@ export interface AppRuntime {
   multiplayer?: MultiplayerModel
   /** Sharing of browser library files (`#/file/:id`): the editor registers the open file. */
   libraryShare?: LibraryShare
+  /** Kimo Cloud workspaces (ADR 0019); null or absent when Kimo Cloud is hidden. */
+  workspaces?: WorkspaceStore | null
 }
 
 /** True inside the Tauri webview (same test as `@kimo/desktop` `isTauri`). */
@@ -100,8 +109,11 @@ export async function createAppRuntime(
   // older shell, the browser) sessions stay local to the window as in M4.
   if (!inTauri()) {
     const manager = createAppSessionManager(platform)
-    const { model, library } = createWindowMultiplayer({ platform, manager })
-    return finishRuntime({ platform, manager, multiplayer: model, libraryShare: library }, onOpened)
+    const { model, library, workspaces } = createWindowMultiplayer({ platform, manager })
+    return finishRuntime(
+      { platform, manager, multiplayer: model, libraryShare: library, workspaces },
+      onOpened,
+    )
   }
   const host = await import("../host")
   // M5: the window's `platform.mcp` (Rust relay + document host).
@@ -121,13 +133,16 @@ export async function createAppRuntime(
     await attach(hostClient)
     const manager = createAppSessionManager(platform)
     // Settings › Multiplayer only reads settings and tests relays: no share backend is needed.
-    const { model } = createWindowMultiplayer({
+    // Settings › Workspace (board 46 2A) runs on the window's workspace store.
+    const { model, workspaces } = createWindowMultiplayer({
       platform,
       manager,
       hostBackend: async (local) =>
         hostClient ? host.createHostShareBackend(hostClient, { local }) : null,
+      hostWorkspaces: async () =>
+        hostClient ? host.createHostedWorkspaceFiles(hostClient, manager) : null,
     })
-    return { platform, manager, hostClient, multiplayer: model }
+    return { platform, manager, hostClient, multiplayer: model, workspaces }
   }
   // Editor windows render right away (the host webview starts in parallel and may still be
   // loading). Opens wait for the host's answer, so files go to the host-backed session whenever
@@ -141,13 +156,19 @@ export async function createAppRuntime(
       return client ? host.hostedSessionFactory(client) : undefined
     })
   const manager = createAppSessionManager(platform, undefined, factory)
-  const { model, library } = createWindowMultiplayer({
+  const { model, library, workspaces } = createWindowMultiplayer({
     platform,
     manager,
     hostBackend: async (local) => {
       await factory
       const client = runtime.hostClient
       return client ? host.createHostShareBackend(client, { local }) : null
+    },
+    // Workspace files are files on disk: the host holds them and their rooms.
+    hostWorkspaces: async () => {
+      await factory
+      const client = runtime.hostClient
+      return client ? host.createHostedWorkspaceFiles(client, manager) : null
     },
   })
   const runtime: AppRuntime = {
@@ -156,8 +177,20 @@ export async function createAppRuntime(
     hostClient: null,
     multiplayer: model,
     libraryShare: library,
+    workspaces,
   }
   return finishRuntime(runtime, onOpened)
+}
+
+/**
+ * A Kimo Cloud link reached the app: an invite opens its "Join <workspace>?" state, a transfer or
+ * the sign-in page's Open Kimo refreshes the account (the workspace summary names a transfer).
+ * The workspace store holds the result for the UI (`multiplayer/cloud/README.md`).
+ */
+function openCloudLink(workspaces: WorkspaceStore | null | undefined, link: CloudLink | null) {
+  if (!workspaces || !link) return
+  if (link.action === "invite") void workspaces.openInviteLink(link.token)
+  else void workspaces.openTransferLink().catch(() => undefined)
 }
 
 function settingsRoute(): boolean {
@@ -176,9 +209,21 @@ function finishRuntime(
   // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route, and a
   // `kimo://pair#...` link the pairing route (ADR 0017).
   const linkRoute = (link: string) => (isPairDeepLink(link) ? pairPath(link) : joinPath(link))
+  const openLink = (link: string) => {
+    if (isCloudDeepLink(link)) openCloudLink(runtime.workspaces, parseCloudDeepLink(link))
+    else location.hash = `#${linkRoute(link)}`
+  }
   platform.launch.onOpenRequest((request) => {
-    if (request.join) location.hash = `#${linkRoute(request.join)}`
+    if (request.join) openLink(request.join)
   })
+  // Web: an invite opened at `<app>/invite#<token>`. The token leaves the address bar at once.
+  if (platform.kind === "browser") {
+    const link = cloudLinkFromLocation(location)
+    if (link) {
+      history.replaceState(null, "", `${new URL(".", location.href).href}#/`)
+      openCloudLink(runtime.workspaces, link)
+    }
+  }
   void (async () => {
     const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
     // General › On launch: with nothing else to open, the main window reopens the tabs that were
@@ -199,7 +244,7 @@ function finishRuntime(
     }
     for (const request of requests) {
       if (request.join) {
-        location.hash = `#${linkRoute(request.join)}`
+        openLink(request.join)
         continue
       }
       await manager.handleOpenRequest(request).catch((e: unknown) => {

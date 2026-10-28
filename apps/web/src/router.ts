@@ -19,6 +19,8 @@ export type HomeSection =
   | { kind: "templates" }
   | { kind: "libraries" }
   | { kind: "trash" }
+  /** Board 46 4A: a Kimo Cloud workspace's files (`#/workspace/<id>`). */
+  | { kind: "workspace"; id: string }
 
 export type Route =
   | { name: "home"; section: HomeSection }
@@ -30,6 +32,8 @@ export type Route =
   | { name: "join"; link: string }
   /** ADR 0017: a pairing link (`#/pair/<encoded link>`; the web form is `/pair#...`). */
   | { name: "pair"; link: string }
+  /** Board 46 4A on web: a workspace file's room replica (`#/cloud/<room>`). */
+  | { name: "cloud"; room: string }
   | { name: "not-found"; path: string }
 
 const SIMPLE_SECTIONS: Record<string, "all" | "templates" | "libraries" | "trash"> = {
@@ -53,6 +57,10 @@ export function parseRoute(hash: string): Route {
       return { name: "not-found", path }
     }
   }
+  const ws = /^\/workspace\/([A-Za-z0-9_-]{1,64})$/.exec(path)
+  if (ws?.[1]) return { name: "home", section: { kind: "workspace", id: ws[1] } }
+  const cloud = /^\/cloud\/([A-Za-z0-9]{1,128})$/.exec(path)
+  if (cloud?.[1]) return { name: "cloud", room: cloud[1] }
   if (path === "/gallery") return { name: "gallery" }
   const joinLink = parseJoinPath(path)
   if (joinLink !== null) return { name: "join", link: joinLink }
@@ -105,6 +113,8 @@ export function homeSectionPath(section: HomeSection): string {
       return homeFolderPath(section.ref)
     case "libraries":
       return "/libraries"
+    case "workspace":
+      return `/workspace/${section.id}`
     default:
       return `/${section.kind}`
   }

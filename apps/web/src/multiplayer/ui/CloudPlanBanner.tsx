@@ -18,6 +18,7 @@ import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import type { CloudState, CloudStore } from "../cloud/store"
 import { type PlanBannerKind, planBannerKind, shortDate } from "../cloud/view"
+import { fileOf } from "../cloud/workspaces"
 import { useShareState } from "../hooks"
 import type { MultiplayerModel } from "../model"
 import {
@@ -26,6 +27,7 @@ import {
   useRelaySetupStateOrNull,
 } from "../relay-setup/services"
 import { useShareToast } from "./shared"
+import { useWorkspaceStore, useWorkspacesState } from "./workspace-parts"
 
 /** "2026-10-21" in the person's time zone: the banner comes back the next day. */
 const today = (now: number) => {
@@ -172,12 +174,15 @@ export function EditorCloudBanner({ model, docKey }: { model: MultiplayerModel; 
   const state = useCloudState(cloud)
   const share = useShareState(model, docKey)
   const setup = useRelaySetupStateOrNull(services?.store ?? null)
+  const workspaces = useWorkspacesState(useWorkspaceStore())
   // Only a device that chose Kimo Cloud asks for its account here.
   const ask = cloud !== null && share.owner && setup?.path === "cloud"
   useEffect(() => {
     if (ask && cloud?.getState().session === "unknown") void cloud.refresh()
   }, [ask, cloud])
   if (!cloud || !state || share.room === null) return null
+  // A workspace file has board 46's banner (`WorkspaceBanner`), from its workspace's plan.
+  if (workspaces && (workspaces.open[share.room] || fileOf(workspaces, share.room))) return null
   return (
     <CloudPlanBanner
       cloud={cloud}

@@ -860,6 +860,7 @@ export class FileDocumentSession implements DocumentSession {
         ? { open: this.conflictCounts.open, total: this.conflictCounts.total }
         : null,
       unsavedEdits: this.provider?.edits ?? 0,
+      readOnlyReason: this.store.readOnly?.reason ?? null,
       closePrompt: this.closeAsk?.request ?? null,
     }
   }

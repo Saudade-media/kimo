@@ -39,6 +39,7 @@ import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react"
 import { failureText } from "../../editor/errors"
 import { Icon } from "../../lib/icons"
 import { useOpenSettings, useOptionalRuntime } from "../../platform/runtime"
+import { shareableWorkspaces } from "../cloud/workspaces"
 import {
   useDocumentShare,
   useMultiplayerSettings,
@@ -76,6 +77,13 @@ import { AddThisDeviceDialog, NOT_YOURS_SHORT, NotYoursFix, RESET_OWNERSHIP_URL 
 import type { WizardStart } from "./RelayWizard"
 import { Pill } from "./relay-parts"
 import { copyText, GuideLink, openRelayGuide, useShareToast } from "./shared"
+import {
+  useCloudShareKind,
+  WorkspaceGuestBody,
+  WorkspaceLiveBody,
+  WorkspaceSetupBody,
+} from "./WorkspaceShare"
+import { useWorkspaceStore, useWorkspacesState } from "./workspace-parts"
 import "./share-ui.css"
 
 const selectExpiry = (v: DocumentShareView) => v.expiry
@@ -109,6 +117,12 @@ export interface SharePopoverProps {
   onResetAll(): void
   /** Set up a relay: the relay setup wizard (it lives outside the popover), at `start`. */
   onSetUpRelay?(start?: WizardStart): void
+  /** Invite people to a workspace (board 46 2B): the dialog lives outside the popover. */
+  onInvite?(workspaceId: string): void
+  /** 1B's New workspace (board 46 1F): the sheet lives outside the popover. */
+  onNewWorkspace?(): void
+  /** The workspace 1B's picker starts on (one New workspace just made). */
+  pickedWorkspace?: string | null
 }
 
 export function SharePopover({
@@ -118,19 +132,25 @@ export function SharePopover({
   onClose,
   onResetAll,
   onSetUpRelay,
+  onInvite,
+  onNewWorkspace,
+  pickedWorkspace,
 }: SharePopoverProps) {
   const share = useShareState(model, docKey)
   const settings = useMultiplayerSettings(model)
+  const cloudKind = useCloudShareKind(model, docKey)
   const stage = sharePopoverStage(share, settings.relayUrl)
   return (
     <Popover
       className="mp-popover"
       label="Share"
-      data-stage={stage}
+      data-stage={cloudKind ? `workspace-${cloudKind.kind}` : stage}
       headerLeading={
         <div className="kimo-popover__leading">
           <span className="kimo-popover__title">Share</span>
-          {stage === "live" && <StatusPill status="linked" label="Live" className="mp-live" />}
+          {!cloudKind && stage === "live" && (
+            <StatusPill status="linked" label="Live" className="mp-live" />
+          )}
         </div>
       }
       actions={
@@ -146,7 +166,15 @@ export function SharePopover({
       {...(anchor ? { anchor, placement: { side: "bottom", align: "end", offset: 4 } } : {})}
       onClose={onClose}
     >
-      {stage === "live" ? (
+      {cloudKind ? (
+        <CloudRoomBody
+          model={model}
+          docKey={docKey}
+          kind={cloudKind}
+          {...(onSetUpRelay ? { onSetUpRelay } : {})}
+          {...(onInvite ? { onInvite } : {})}
+        />
+      ) : stage === "live" ? (
         <LiveBody model={model} docKey={docKey} onResetAll={onResetAll} />
       ) : (
         <SetupBody
@@ -154,9 +182,60 @@ export function SharePopover({
           docKey={docKey}
           firstRun={stage === "first-run"}
           {...(onSetUpRelay ? { onSetUpRelay } : {})}
+          {...(onNewWorkspace ? { onNewWorkspace } : {})}
+          pickedWorkspace={pickedWorkspace ?? null}
         />
       )}
     </Popover>
+  )
+}
+
+// --- Board 46 C, D, E: a room on Kimo Cloud -------------------------------------------------------
+
+function CloudRoomBody({
+  model,
+  docKey,
+  kind,
+  onSetUpRelay,
+  onInvite,
+}: {
+  model: MultiplayerModel
+  docKey: string
+  kind: NonNullable<ReturnType<typeof useCloudShareKind>>
+  onSetUpRelay?(start?: WizardStart): void
+  onInvite?(workspaceId: string): void
+}) {
+  const runtime = useOptionalRuntime()
+  const cloud = useRelaySetupServices(runtime?.platform ?? null)?.cloud ?? null
+  const cloudState = useCloudState(cloud)
+  const store = useWorkspaceStore()
+  const state = useWorkspacesState(store)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
+  useEffect(() => {
+    if (cloud) void cloud.loadPlans()
+  }, [])
+  if (!store || !state) return null
+  if (kind.kind === "member")
+    return (
+      <WorkspaceLiveBody
+        store={store}
+        state={state}
+        model={model}
+        docKey={docKey}
+        room={kind.room}
+        workspaceId={kind.workspaceId}
+        {...(onInvite ? { onInvite: () => onInvite(kind.workspaceId) } : {})}
+      />
+    )
+  return (
+    <WorkspaceGuestBody
+      store={store}
+      state={state}
+      cloud={cloud}
+      cloudState={cloudState}
+      room={kind.room}
+      onSignIn={() => onSetUpRelay?.("sign-in")}
+    />
   )
 }
 
@@ -167,11 +246,15 @@ function SetupBody({
   docKey,
   firstRun,
   onSetUpRelay,
+  onNewWorkspace,
+  pickedWorkspace,
 }: {
   model: MultiplayerModel
   docKey: string
   firstRun: boolean
   onSetUpRelay?(start?: WizardStart): void
+  onNewWorkspace?(): void
+  pickedWorkspace: string | null
 }) {
   const runtime = useOptionalRuntime()
   const platform = runtime?.platform ?? null
@@ -179,6 +262,8 @@ function SetupBody({
   const cloud = relaySetup?.cloud ?? null
   const cloudState = useCloudState(cloud)
   const setup = useRelaySetupStateOrNull(relaySetup?.store ?? null)
+  const workspaceStore = useWorkspaceStore()
+  const workspacesState = useWorkspacesState(workspaceStore)
   const [addThisDevice, setAddThisDevice] = useState(false)
   const openSettings = useOpenSettings()
   const toast = useShareToast()
@@ -297,6 +382,23 @@ function SetupBody({
       )}
     </div>
   )
+
+  // Board 46 A and B: a workspace that can take the file shares it on Kimo Cloud (ADR 0019).
+  const canTake =
+    workspacesState && cloudState?.session === "signed-in"
+      ? shareableWorkspaces(workspacesState)
+      : []
+  if (cloudView && workspaceStore && workspacesState && canTake.length > 0)
+    return (
+      <WorkspaceSetupBody
+        store={workspaceStore}
+        state={workspacesState}
+        docKey={docKey}
+        workspaces={canTake}
+        picked={pickedWorkspace}
+        {...(onNewWorkspace ? { onNewWorkspace } : {})}
+      />
+    )
 
   if (cloudView && cloud && cloudState) {
     const startCloud = async () => {

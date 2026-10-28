@@ -47,7 +47,19 @@ export interface JoinedRoom {
   joinedAt: number
 }
 
-export type RegistryStore = "owned" | "joined" | "cursors"
+/**
+ * `cloud` holds what Kimo Cloud handed this device for workspace files (ADR 0019): file lists with
+ * their room keys, tokens and which local file each room is bound to (`cloud/cache.ts`).
+ */
+export type RegistryStore = "owned" | "joined" | "cursors" | "cloud"
+
+/** A plain key-value view of one registry store (JSON values). */
+export interface RegistryRecords {
+  get(key: string): Promise<unknown | undefined>
+  put(key: string, value: unknown): Promise<void>
+  delete(key: string): Promise<void>
+  list(): Promise<unknown[]>
+}
 
 /** Where records are kept. Values are plain JSON, or structured-cloneable when `structuredKeys`. */
 export interface RegistryBackend {
@@ -77,6 +89,8 @@ export interface Registry {
   readonly cursors: RoomStateStore
   /** What the owner's file held when it was last written (see {@link SavedState}). */
   readonly saves: SaveStore
+  /** Kimo Cloud's records for workspace files (see {@link RegistryStore}). */
+  readonly cloud: RegistryRecords
   /** Whether room keys must be generated extractable (the backend cannot store CryptoKeys). */
   readonly keysExtractable: boolean
 }
@@ -256,6 +270,12 @@ export function createRegistry(backend: RegistryBackend): Registry {
     },
     cursors,
     saves,
+    cloud: {
+      get: (key) => backend.get("cloud", key),
+      put: (key, value) => backend.put("cloud", key, value),
+      delete: (key) => backend.delete("cloud", key),
+      list: () => backend.list("cloud"),
+    },
     keysExtractable: !structured,
   }
 }
@@ -272,6 +292,7 @@ export function memoryRegistryBackend(options: { structured?: boolean } = {}): R
     owned: new Map(),
     joined: new Map(),
     cursors: new Map(),
+    cloud: new Map(),
   }
   // Round-trip through JSON (or structured clone) so a test sees what a persistent backend returns.
   const copy = <T>(value: T): T =>
@@ -297,18 +318,24 @@ export function memoryRegistryBackend(options: { structured?: boolean } = {}): R
 export const REGISTRY_DB = "kimo-multiplayer"
 
 /**
- * Opens database `kimo-multiplayer` v2: the three registry stores of §16.2 and `device`, the
- * install's device key (§16.9, `device-key.ts`). Every opener goes through here, so the version
- * and its stores are declared once.
+ * Opens database `kimo-multiplayer` v3: the three registry stores of §16.2, `device`, the
+ * install's device key (§16.9, `device-key.ts`), and `cloud` (v3, Kimo Cloud workspace files).
+ * Every opener goes through here, so the version and its stores are declared once. An upgrade
+ * only adds missing stores: nothing kept in an older version is touched.
  */
 export function openMultiplayerDb(name = REGISTRY_DB): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(name, 2)
+    const req = indexedDB.open(name, 3)
     req.onupgradeneeded = () => {
-      for (const store of ["owned", "joined", "cursors", "device"] as const)
+      for (const store of ["owned", "joined", "cursors", "device", "cloud"] as const)
         if (!req.result.objectStoreNames.contains(store)) req.result.createObjectStore(store)
     }
-    req.onsuccess = () => resolve(req.result)
+    req.onsuccess = () => {
+      // A newer version opening in another window waits for this connection: let it go (the
+      // next call here opens the new version).
+      req.result.onversionchange = () => req.result.close()
+      resolve(req.result)
+    }
     req.onerror = () => reject(req.error)
   })
 }
@@ -321,21 +348,34 @@ export function openMultiplayerDb(name = REGISTRY_DB): Promise<IDBDatabase> {
 export function indexedDbRegistryBackend(name = REGISTRY_DB): RegistryBackend {
   let dbp: Promise<IDBDatabase> | null = null
   const db = () => (dbp ??= openMultiplayerDb(name))
-  const run = <T>(
+  const once = <T>(
+    d: IDBDatabase,
     store: RegistryStore,
     mode: IDBTransactionMode,
     f: (s: IDBObjectStore) => IDBRequest<T>,
   ) =>
-    db().then(
-      (d) =>
-        new Promise<T>((resolve, reject) => {
-          const t = d.transaction(store, mode)
-          const req = f(t.objectStore(store))
-          t.oncomplete = () => resolve(req.result)
-          t.onerror = () => reject(t.error)
-          t.onabort = () => reject(t.error)
-        }),
-    )
+    new Promise<T>((resolve, reject) => {
+      const t = d.transaction(store, mode)
+      const req = f(t.objectStore(store))
+      t.oncomplete = () => resolve(req.result)
+      t.onerror = () => reject(t.error)
+      t.onabort = () => reject(t.error)
+    })
+  const run = async <T>(
+    store: RegistryStore,
+    mode: IDBTransactionMode,
+    f: (s: IDBObjectStore) => IDBRequest<T>,
+  ): Promise<T> => {
+    const d = await db()
+    try {
+      return await once(d, store, mode, f)
+    } catch (error) {
+      // The connection was closed for a newer version in another window: open again, once.
+      if (!(error instanceof DOMException && error.name === "InvalidStateError")) throw error
+      dbp = null
+      return once(await db(), store, mode, f)
+    }
+  }
   return {
     structuredKeys: true,
     get: (store, key) => run<unknown>(store, "readonly", (s) => s.get(key)),
@@ -374,11 +414,12 @@ export function fileRegistryBackend(files: RegistryFiles, ref: string): Registry
           owned: parsed.owned ?? {},
           joined: parsed.joined ?? {},
           cursors: parsed.cursors ?? {},
+          cloud: parsed.cloud ?? {},
         }
       })
       .catch((error: unknown): Data => {
         if (isPlatformError(error) && error.code === "NOT_FOUND")
-          return { owned: {}, joined: {}, cursors: {} }
+          return { owned: {}, joined: {}, cursors: {}, cloud: {} }
         cache = null
         throw error
       }))

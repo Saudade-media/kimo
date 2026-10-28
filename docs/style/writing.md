@@ -29,8 +29,9 @@ rules and edge cases; they belong in the guide, an ADR or the contract.
   the note under each state (one line a builder needs). A board's intro is at most 40 words.
 
 `scripts/writing-style.test.ts` fails CI on longer UI strings and on long text in design boards 46
-and later. Its `LONG_LEGACY` list holds the UI strings that were already longer when the rule
-landed: shorten one and drop its entry, never add one.
+and later. A template literal counts by its static text, each `${}` as one word. Its `LONG_LEGACY`
+list holds the UI strings that were already longer when the rule landed: shorten one and drop its
+entry, never add one.
 
 ## Banned words and patterns
 

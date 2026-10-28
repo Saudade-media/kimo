@@ -83,6 +83,7 @@ import {
   TEMPLATES,
   type Template,
 } from "./templates"
+import { useWorkspaceTitle, WorkspaceFiles, WorkspaceHeaderButtons } from "./WorkspaceHome"
 
 type MenuFrom = { button: HTMLElement } | { event: React.MouseEvent }
 const at = (from: MenuFrom): MenuAt =>
@@ -469,10 +470,13 @@ export function DesktopHomeView({
   }
 
   // --- render ---
+  const workspaceTitle = useWorkspaceTitle(section.kind === "workspace" ? section.id : "")
   const title =
     section.kind === "folder"
       ? (folder?.label ?? basenameOf(section.ref))
-      : SECTION_TITLE[section.kind]
+      : section.kind === "workspace"
+        ? (workspaceTitle ?? "")
+        : SECTION_TITLE[section.kind]
   const sectionFiles: RecentFile[] | null = !lists
     ? null
     : section.kind === "recents"
@@ -539,7 +543,9 @@ export function DesktopHomeView({
       : null
 
   let body: React.ReactNode
-  if (section.kind === "templates") {
+  if (section.kind === "workspace") {
+    body = <WorkspaceFiles platform={platform} workspaceId={section.id} query={query} now={now} />
+  } else if (section.kind === "templates") {
     body = (
       <TemplatesGrid
         templates={searchFiles(TEMPLATES, query)}
@@ -732,7 +738,9 @@ export function DesktopHomeView({
             onChange={(e) => setQuery(e.currentTarget.value)}
             frameProps={{ className: "home-header__search" }}
           />
-          {section.kind === "trash" ? (
+          {section.kind === "workspace" ? (
+            <WorkspaceHeaderButtons platform={platform} workspaceId={section.id} />
+          ) : section.kind === "trash" ? (
             <EmptyTrashButton
               platform={platform}
               onConfirm={setConfirm}
@@ -849,7 +857,7 @@ function EmptyTrashButton({
           if (n === 0) throw new Error("It's already empty.")
           onConfirm({
             title: "Empty the Trash?",
-            description: `Kimo deletes the ${countLabel(n)} it moved to ${osTrashName(platform.os)}. You can't restore them after this. Other items in the Trash stay.`,
+            description: `Kimo deletes the ${countLabel(n)} it moved to ${osTrashName(platform.os)}, and you can't restore them. Other items in the Trash stay.`,
             confirmLabel: "Empty trash",
             failTitle: "Couldn't empty the Trash",
             run: async () => {

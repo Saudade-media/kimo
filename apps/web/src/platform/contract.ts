@@ -627,7 +627,7 @@ export function bannerCopy(
 
 /** Failed-load explanation when git conflict markers are found (board 17). */
 export const GIT_MARKERS_EXPLANATION =
-  "It still contains git conflict markers from a merge that didn't use the kimo driver. Resolve them in a text editor, or run kimo merge again."
+  "It still contains git conflict markers from a merge without the kimo driver. Resolve them, or run kimo merge again."
 
 // ===============================================================================================
 // Toasts (bottom-center, board 15 placement)
@@ -868,6 +868,12 @@ export interface SessionState {
   conflicts: { open: number; total: number } | null
   /** Edits newer than the last write (git banner "Your 6 unsaved edits"). */
   unsavedEdits: number
+  /**
+   * Why the store refuses edits, null when it takes them: also a reason the phase does not show
+   * (a view-only room, a workspace copy after its workspace was deleted or its member removed).
+   * A desktop window's replica of a document host file takes it.
+   */
+  readOnlyReason?: string | null
   /**
    * Board 24 (i): closing a never-saved document asks first (Save… / Don't save / Cancel).
    * Absent or null while no close is pending.

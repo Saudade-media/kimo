@@ -1,0 +1,598 @@
+/*
+ * Board 46 "Cloud workspaces" (jEgoWRYhsl): the Share popover pieces (section 1), the dialogs
+ * (2B, 2C, 6A, 6B, 6D, 6F), Settings › Workspace (2A) and the toasts outside an editor.
+ * Values are the nodes' own; tokens where the node binds one.
+ */
+
+/* --- Buttons (W2lra / kv3Fk / sqJv4 instances): h 28, padding [0, 12], gap 6, label text-sm 500,
+   icon 14. Request edit access (1D7RzYTxcM): fill width, h 32, padding [0, 14], centred. ------- */
+.ws-button.kimo-button {
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
+.ws-button.kimo-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ws-button--wide.kimo-button {
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+  padding: 0 14px;
+}
+
+/* Delete workspace (GUv0sLr0HL): Button/Ghost, label and icon danger. */
+.ws-button--danger.kimo-button {
+  color: var(--kimo-danger);
+}
+
+.ws-button.kimo-button:disabled {
+  opacity: 0.4;
+}
+
+/* Copy (5VekS4OY0t) / Revoke (jEI5MUrqFW): IconButton 24, transparent; Revoke's icon danger. */
+.ws-icon-button.kimo-icon-button {
+  width: 24px;
+  height: 24px;
+  color: var(--kimo-text-secondary);
+}
+
+.ws-icon-button--danger.kimo-icon-button {
+  color: var(--kimo-danger);
+}
+
+/* StatusPill instances keep the component (SVobH). */
+.ws-pill {
+  flex: none;
+}
+
+/* Footnote (77o3QWaXa1 …): fill, sans 11 text-tertiary. */
+.mp-footnote.ws-footnote {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Share popover ------------------------------------------------------------------------------ */
+
+/* Members (FX2Fa20MMq): row, gap 8, center › Stack (row, gap 4) · Names (fill, sans 11
+   text-secondary) · StatusPill. */
+.ws-members {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ws-members__stack {
+  display: flex;
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.ws-members__names {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Workspaces (I87qY3nL0G): column, radius-md, stroke 1 border. Row (4aMyYRaauh): row, gap 10,
+   padding [8, 10], center, bottom stroke between rows; picked: bg-subtle. Radio 14:
+   circle-dot text-primary / circle text-tertiary. Text (column, gap 2): Name sans 12 / 500
+   primary, Meta sans 11 tertiary. */
+.ws-picker {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-md);
+}
+
+.ws-picker__row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--kimo-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.ws-picker__row:last-child {
+  border-bottom: 0;
+}
+
+.ws-picker__row[aria-checked="true"] {
+  background: var(--kimo-bg-subtle);
+}
+
+.ws-picker__row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--kimo-accent);
+}
+
+.ws-picker__radio {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.ws-picker__row[aria-checked="true"] .ws-picker__radio {
+  color: var(--kimo-text-primary);
+}
+
+.ws-picker__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ws-picker__name {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+.ws-picker__meta {
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Workspace · New (cEPVjf6Qa3): the row's layout, no fill, last (no bottom stroke). Icon `plus` 14
+   text-secondary · Name sans 12 / 500 text-secondary. */
+.ws-picker__new-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.ws-picker__new-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* Label (bjzfIFNzvI, JXYjxtvkkC): sans 11 / 500 text-secondary. */
+.ws-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* View links (V4uOM2kQ2o): column, gap 6 › List (radius-md, stroke 1 border) › Link (row, gap 8,
+   padding [6, 6, 6, 10], center): link 14 tertiary · Meta (fill, sans 11 secondary) · Copy ·
+   Revoke. */
+.ws-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.ws-list {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-md);
+}
+
+.ws-link {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 6px 6px 10px;
+}
+
+.ws-link + .ws-link {
+  border-top: 1px solid var(--kimo-border);
+}
+
+.ws-link__icon,
+.ws-ended-link__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.ws-link__meta {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Actions (TQhbnQASmA): row, gap 8, center. */
+.ws-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Request (vIQHPTO9iO): row, gap 8, center › Requested pill · Meta (fill, sans 11 tertiary). */
+.ws-request {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ws-request__meta {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* --- Dialogs ------------------------------------------------------------------------------------- */
+
+/* Body (z3U95): column, gap 8. */
+.ws-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Row · Role / New owner (pH3qVX9c66): row, gap 8, center › Label (fill, sans 12 / 500 primary). */
+.ws-dialog__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ws-dialog__row-label {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
+/* Select instances: fixed widths (gP276 w 180 / 160 / 140 / 96). */
+.ws-select.kimo-select {
+  flex: none;
+}
+
+.ws-select--180.kimo-select {
+  width: 180px;
+}
+
+.ws-select--160.kimo-select {
+  width: 160px;
+}
+
+.ws-select--140.kimo-select {
+  width: 140px;
+}
+
+.ws-select--96.kimo-select {
+  width: 96px;
+}
+
+.ws-select--96 .kimo-select__trigger {
+  height: 24px;
+}
+
+/* Price (AJuhC1bvYl): row, gap 8, padding [8, 10], radius-md, bg-subtle › receipt 14 secondary ·
+   Text sans 11 secondary. */
+.ws-price {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--kimo-radius-md);
+  background: var(--kimo-bg-subtle);
+}
+
+.ws-price__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.ws-price__text {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Links (NSG7uIpzC8) › Link (row, gap 8, padding [8, 10], center): link 14 tertiary · Label sans
+   12 primary; bottom stroke between rows. */
+.ws-ended-link {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+}
+
+.ws-ended-link + .ws-ended-link {
+  border-top: 1px solid var(--kimo-border);
+}
+
+.ws-ended-link__label {
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* 6B is held by its own scrim (an outside press only hides it). */
+.ws-dialog-hold {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* --- Toasts outside an editor (XB33E): bottom centre ----------------------------------------- */
+.ws-toasts {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.ws-toasts > * {
+  pointer-events: auto;
+}
+
+/* --- Settings › Workspace (Xa3nAmnduu) ------------------------------------------------------- */
+
+/* Title Bar (vgBKRck9u7): 56 tall, row, center › Title (fill, sans 16 / 600) · Select 180 × 28. */
+.ws-title-bar .ws-title {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.ws-title-bar .kimo-select,
+.ws-title-bar .ws-rename-field {
+  -webkit-app-region: no-drag;
+}
+
+.ws-rename-field.kimo-input {
+  flex: none;
+  width: 180px;
+  height: 28px;
+}
+
+.ws-empty {
+  padding: 12px 0;
+}
+
+/* Sign out › Rename (Tasy2jNeoB): Button/Ghost h 28, padding [0, 10], pencil. */
+.ws-rename.kimo-button {
+  height: 28px;
+  padding: 0 10px;
+}
+
+/* List (JW8duOI4dE): column, radius-md, stroke 1 border. Member (89HGhK6qSO): row, gap 10,
+   padding [8, 8, 8, 10], center, bottom stroke between rows; hover bg-subtle. */
+.ws-member {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px 8px 10px;
+}
+
+.ws-member + .ws-member {
+  border-top: 1px solid var(--kimo-border);
+}
+
+.ws-member:hover,
+.ws-member:focus-within {
+  background: var(--kimo-bg-subtle);
+}
+
+/* Text (K6hzUaYMJb): fill, column, gap 2 › Name Row (row, gap 6, center): Name sans 12 / 500
+   primary · Badge "You" › Meta sans 11 tertiary. */
+.ws-member__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ws-member__name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ws-member__name {
+  overflow: hidden;
+  color: var(--kimo-text-primary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ws-member__meta {
+  overflow: hidden;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Role (zvZzfh9LMz): sans 11 text-secondary. */
+.ws-member__role {
+  flex: none;
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Remove (dqiz0ArzrD): shown on the hovered row. */
+.ws-member__remove.kimo-icon-button {
+  visibility: hidden;
+}
+
+.ws-member:hover .ws-member__remove,
+.ws-member:focus-within .ws-member__remove {
+  visibility: visible;
+}
+
+/* Invite Icon Wrap (JsqlQtUthG): 28, bg-muted, pill › mail 14 text-secondary. */
+.ws-member__icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--kimo-radius-pill);
+  background: var(--kimo-bg-muted);
+  color: var(--kimo-text-secondary);
+}
+
+/* Footer (eXpxZSWtd1): row, gap 8, center › info 14 tertiary · Hint (fill, sans 11 tertiary) ·
+   Invite people. */
+.ws-members-footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ws-members-footer__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-tertiary);
+}
+
+.ws-members-footer__hint {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--kimo-text-tertiary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-regular);
+  line-height: normal;
+}
+
+/* Setting · Edit requests (clA7hZrx1r): no bottom stroke. Request (SKHOlLEf2z): row, gap 10,
+   padding [8, 8, 8, 10], center, radius-md, stroke 1 border. */
+.mp-setting.ws-setting--requests {
+  box-shadow: none;
+}
+
+.ws-request-row {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid var(--kimo-border);
+  border-radius: var(--kimo-radius-md);
+}
+
+/* Setting · Ownership (p3SxIKqjjx): row, gap 8, padding [12, 0, 0, 0], center, top stroke (the
+   section above draws it when it has its own bottom stroke). */
+.mp-setting.ws-ownership {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 0 0;
+  box-shadow: none;
+}
+
+.ws-setting--requests + .mp-setting.ws-ownership {
+  box-shadow: inset 0 1px 0 0 var(--kimo-border);
+}

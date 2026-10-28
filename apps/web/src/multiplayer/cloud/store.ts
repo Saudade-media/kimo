@@ -26,10 +26,11 @@ export const CHECKOUT_POLL_MS = 3000
 /** The plans until `GET /v1/plans` answers (placeholders until launch, like the board's copy). */
 export const FALLBACK_PLANS: CloudPlans = {
   plans: [
-    { interval: "month", amountCents: 800, currency: "usd" },
-    { interval: "year", amountCents: 8000, currency: "usd" },
+    { interval: "month", amountCents: 800, seatAmountCents: 400, currency: "usd" },
+    { interval: "year", amountCents: 8000, seatAmountCents: 4000, currency: "usd" },
   ],
   storageLimitBytes: 10_000_000_000,
+  seatStorageBytes: 5_000_000_000,
   taxIncluded: false,
 }
 
@@ -96,6 +97,8 @@ export interface CloudStoreDeps {
 }
 
 export interface CloudStore {
+  /** The signed client this store calls (the workspace store shares it). */
+  readonly client: CloudClient
   subscribe(listener: () => void): () => void
   getState(): CloudState
   /** `GET /v1/account`: signed in or out, the plan, usage and devices; offline keeps the last. */
@@ -117,7 +120,13 @@ export interface CloudStore {
   signOutDevice(pub: string): Promise<void>
   /** Section 3. */
   chooseInterval(interval: BillingInterval): void
-  startCheckout(): Promise<void>
+  /**
+   * Section 3 (board 46 1F): checks out `workspaceId` when given (a workspace New workspace just
+   * made), else the oldest workspace the account owns, or, owning none, creates one named
+   * `workspaceName` first (api.md §13.1, §13.4). Without any, the compatibility route (§6.1)
+   * creates "Workspace".
+   */
+  startCheckout(options?: { workspaceName?: string; workspaceId?: string }): Promise<void>
   reopenCheckout(): Promise<void>
   backToChoose(): void
   /** Manage billing, Update payment: the provider's customer portal. */
@@ -355,13 +364,25 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
     pollCheckout(checkoutId)
   }
 
-  const startCheckout = async () => {
+  /** A workspace this store created for a checkout that did not open: the next try reuses it. */
+  let madeWorkspace: string | null = null
+  const startCheckout = async (options: { workspaceName?: string; workspaceId?: string } = {}) => {
     const c = state.checkout
-    if (c.phase === "waiting" || c.phase === "ready") return
+    // One checkout at a time: a second press while one is being opened does nothing.
+    if (c.phase === "waiting" || c.phase === "ready" || c.busy) return
     const interval = c.interval
     set({ checkout: { ...c, busy: true, error: null } })
     try {
-      const created = await client.checkout(interval)
+      const owned = state.account?.workspaces.find(
+        (w) => w.role === "owner" && w.deletedAt === null,
+      )
+      const name = options.workspaceName?.trim()
+      if (!options.workspaceId && !owned && !madeWorkspace && name)
+        madeWorkspace = (await client.createWorkspace(name)).id
+      const workspaceId = options.workspaceId ?? owned?.id ?? madeWorkspace
+      const created = workspaceId
+        ? await client.workspaceCheckout(workspaceId, interval)
+        : await client.checkout(interval)
       reached()
       set({
         checkout: {
@@ -382,7 +403,10 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
         (error.code === "ALREADY_SUBSCRIBED" || error.code === "PAST_DUE")
       ) {
         const after = await refresh()
-        if (after.account?.plan.canShare) {
+        const plan = options.workspaceId
+          ? after.account?.workspaces.find((w) => w.id === options.workspaceId)?.plan
+          : after.account?.plan
+        if (plan?.canShare) {
           set({ checkout: { phase: "ready" } })
           return
         }
@@ -432,6 +456,7 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
   })
 
   return {
+    client,
     subscribe(listener) {
       listeners.add(listener)
       return () => listeners.delete(listener)

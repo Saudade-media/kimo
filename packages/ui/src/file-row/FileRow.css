@@ -111,6 +111,14 @@
   white-space: nowrap;
 }
 
+/* Board 46 4A (wUUcz override): who last edited, sans 12 text-secondary. */
+.kimo-file-row__path--person {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  line-height: 15px;
+}
+
 .kimo-file-row__modified {
   color: var(--kimo-text-secondary);
   font-family: var(--kimo-font-sans);

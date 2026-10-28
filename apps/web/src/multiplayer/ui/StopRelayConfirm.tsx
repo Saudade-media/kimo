@@ -23,7 +23,7 @@ function stopRelayDescription(impact: DisconnectImpact): string {
         : (impact.people[0] ?? "")
   return `The relay on this computer stops with Kimo. ${names} ${
     count === 1 ? "is" : "are"
-  } disconnected and can't reach the shared files until you open Kimo again.`
+  } disconnected until you open Kimo again.`
 }
 
 /** Resolves true to quit (and stop the relay), false to keep Kimo open. */

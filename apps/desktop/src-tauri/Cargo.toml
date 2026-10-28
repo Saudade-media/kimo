@@ -1,6 +1,6 @@
 [package]
 name = "kimo-desktop"
-version = "1.2.1-beta.0"
+version = "1.2.1-beta.1"
 description = "Kimo desktop shell"
 license = "MIT"
 edition = "2021"

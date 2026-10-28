@@ -1,6 +1,6 @@
 {
   "name": "@kimo/renderer",
-  "version": "1.2.1-beta.0",
+  "version": "1.2.1-beta.1",
   "private": true,
   "description": "Renderer interface + CanvasKit (Skia WASM) implementation: interactive WebGL and headless raster",
   "license": "MIT",

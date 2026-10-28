@@ -110,6 +110,8 @@ const MAX_RETRY_HINT_MS = 120_000
 /** Ciphertext overhead of a blob envelope (spec §10). */
 const ENVELOPE_OVERHEAD = 30
 const DEFAULT_MAX = 20 * 1024 * 1024
+/** The largest blob envelope a client reads back (the relay's 20 MiB limit plus the envelope). */
+export const MAX_BLOB_ENVELOPE_BYTES = DEFAULT_MAX + ENVELOPE_OVERHEAD
 
 const sleepMs = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 

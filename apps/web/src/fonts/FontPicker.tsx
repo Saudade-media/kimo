@@ -59,13 +59,13 @@ function searchPlaceholder(n: number): string {
 
 /** The offline note (wYmyJ) copy. */
 function offlineNote(cachedGoogle: number): string {
-  return `You're offline. Google shows the ${cachedGoogle} font${cachedGoogle === 1 ? "" : "s"} already cached. Others download when you're back online.`
+  return `You're offline, so Google shows the ${cachedGoogle} cached font${cachedGoogle === 1 ? "" : "s"}. Others download when you're back online.`
 }
 
 const BLOCKED_NOTE =
-  "Google fonts are off (No third-party fetch). Cached fonts still work. Change in Settings › Fonts & privacy."
+  "Google fonts are off (No third-party fetch), but cached fonts still work. Change in Settings › Fonts & privacy."
 const GOOGLE_OFF_NOTE =
-  "Google fonts are off. Cached fonts still work. Change in Settings › Fonts & privacy."
+  "Google fonts are off, but cached fonts still work. Change in Settings › Fonts & privacy."
 
 /** Entries filtered by tab and query; offers the typed family from Google when allowed. */
 function filterFontEntries(

@@ -104,7 +104,7 @@ export function HelpHost({
         size="sm"
         icon={<Bug size={16} />}
         title="Report an issue on GitHub?"
-        description="Opens a new issue in your browser with Kimo's version, OS and renderer filled in. No file content, paths or keys are sent."
+        description="Opens a new issue with Kimo's version, OS and renderer filled in. No file content, paths or keys are sent."
         confirmLabel="Open GitHub"
         onCancel={() => setReport(null)}
         onConfirm={() => {

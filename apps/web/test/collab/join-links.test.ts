@@ -7,6 +7,7 @@ import { parseJoinDeepLink } from "@kimo/platform"
 import { detailsText } from "../../src/join/copy"
 import { appLinkOf, startupLinkOf } from "../../src/join/handoff-link"
 import { isJoinPath, joinLinkFromLocation, joinPath, parseJoinPath } from "../../src/join/link"
+import { cloudLinkFromLocation, parseCloudDeepLink } from "../../src/multiplayer/cloud/links"
 import type { JoinState } from "../../src/multiplayer/model"
 import { isPairDeepLink, pairLinkFromLocation, pairPath } from "../../src/pair/link"
 import { parseRoute } from "../../src/router"
@@ -63,6 +64,34 @@ describe("pairing link routes", () => {
     expect(parseJoinDeepLink(deep)).toBe(deep)
     expect(isPairDeepLink(deep)).toBe(true)
     expect(isPairDeepLink("kimo://join#https://r/room/token/key")).toBe(false)
+  })
+})
+
+describe("Kimo Cloud links", () => {
+  test("only an invite with its token, a transfer or the sign-in hand-off reach the app", () => {
+    const token = "A".repeat(43)
+    for (const link of [
+      `kimo://cloud/invite#${token}`,
+      "kimo://cloud/transfer",
+      "kimo://cloud/signed-in",
+    ])
+      expect(parseJoinDeepLink(link)).toBe(link)
+    expect(parseCloudDeepLink(`kimo://cloud/invite#${token}`)).toEqual({ action: "invite", token })
+    for (const bad of [
+      "kimo://cloud/invite",
+      "kimo://cloud/invite#",
+      "kimo://cloud/delete#x",
+      "kimo://cloud/transfer?ws=ws_1",
+    ])
+      expect(parseJoinDeepLink(bad)).toBeNull()
+    // A token that is not 32 bytes of base64url is no invite.
+    expect(parseCloudDeepLink("kimo://cloud/invite#abc")).toBeNull()
+    expect(parseCloudDeepLink(`kimo://cloud/invite#${token}/../x`)).toBeNull()
+    expect(cloudLinkFromLocation({ pathname: "/invite", hash: `#${token}` })).toEqual({
+      action: "invite",
+      token,
+    })
+    expect(cloudLinkFromLocation({ pathname: "/join", hash: `#${token}` })).toBeNull()
   })
 })
 

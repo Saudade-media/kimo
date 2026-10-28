@@ -36,6 +36,11 @@ export interface FileRowProps extends Omit<ComponentPropsWithRef<"div">, "childr
   missing?: boolean
   /** Replaces the name text (board 37 zucQA inline rename field). */
   nameSlot?: ReactNode
+  /**
+   * The middle cell's text: `path` (mono 11 text-tertiary, middle-truncated) or `person` (board 46
+   * 4A wUUcz override "LAST EDITED BY": sans 12 text-secondary).
+   */
+  pathKind?: "path" | "person"
 }
 
 /**
@@ -59,6 +64,7 @@ export function FileRow({
   menuOpen = false,
   missing = false,
   nameSlot,
+  pathKind = "path",
   className,
   onClick,
   onKeyDown,
@@ -97,7 +103,13 @@ export function FileRow({
         {nameSlot ?? <span className="kimo-file-row__name">{name}</span>}
       </span>
       <span className="kimo-file-row__path-cell" title={path}>
-        <span ref={pathRef} className="kimo-file-row__path">
+        <span
+          ref={pathRef}
+          className={cx(
+            "kimo-file-row__path",
+            pathKind === "person" && "kimo-file-row__path--person",
+          )}
+        >
           {shownPath}
         </span>
       </span>
@@ -135,14 +147,24 @@ export function FileRow({
 }
 
 /** Props for {@link FileRowHeader}. */
-export type FileRowHeaderProps = ComponentPropsWithRef<"div">
+export interface FileRowHeaderProps extends ComponentPropsWithRef<"div"> {
+  /** The middle column's label (board 46 4A SkH4E override: "LAST EDITED BY"). */
+  pathLabel?: string
+  /** The last column's label (board 46 4A NH9Rp override: "STATUS"). */
+  gitLabel?: string
+}
 
 /**
  * Column headers. Mirrors `FileRow/Header` (ZyDkD): height 32, row, gap 12, padding [0, 12],
  * center, stroke bottom 1 border; Icon Cell 28 · NAME 200 · LOCATION fill · MODIFIED 112 · GIT
  * 168 · Menu Cell 28; labels sans 11 / 600 text-tertiary, letter-spacing 0.6.
  */
-export function FileRowHeader({ className, ...rest }: FileRowHeaderProps) {
+export function FileRowHeader({
+  pathLabel = "LOCATION",
+  gitLabel = "GIT",
+  className,
+  ...rest
+}: FileRowHeaderProps) {
   return (
     <div aria-hidden="true" {...rest} className={cx("kimo-file-row-header", className)}>
       <span className="kimo-file-row-header__icon-cell" aria-hidden="true" />
@@ -150,13 +172,13 @@ export function FileRowHeader({ className, ...rest }: FileRowHeaderProps) {
         <span className="kimo-file-row-header__label">NAME</span>
       </span>
       <span className="kimo-file-row-header__cell kimo-file-row-header__cell--path">
-        <span className="kimo-file-row-header__label">LOCATION</span>
+        <span className="kimo-file-row-header__label">{pathLabel}</span>
       </span>
       <span className="kimo-file-row-header__cell kimo-file-row-header__cell--modified">
         <span className="kimo-file-row-header__label">MODIFIED</span>
       </span>
       <span className="kimo-file-row-header__cell kimo-file-row-header__cell--git">
-        <span className="kimo-file-row-header__label">GIT</span>
+        <span className="kimo-file-row-header__label">{gitLabel}</span>
       </span>
       <span className="kimo-file-row-header__menu-cell" aria-hidden="true" />
     </div>

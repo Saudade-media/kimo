@@ -37,10 +37,12 @@ import {
   generateRoomKey,
   generateSigningKeyPair,
   isRetryable,
+  MAX_BLOB_ENVELOPE_BYTES,
   type MpOrigin,
   MultiplayerError,
   mintToken,
   normalizeRelayUrl,
+  openBlob,
   parseJoinLink,
   parseRoomId,
   parseToken,
@@ -49,6 +51,7 @@ import {
   type Role,
   randomBytes,
   relayLink,
+  sealBlob,
   sealSnapshot,
   shippedFontSource,
   signAdminCommand,
@@ -111,6 +114,20 @@ export interface JoinedRoomSummary {
   relayUrl: string
   role: Role
   joinedAt: number
+}
+
+/** A room reached with a token handed in from outside (Kimo Cloud). */
+export interface TokenRoom {
+  room: string
+  relayUrl: string
+  roomKey: Uint8Array
+  token: string
+}
+
+/** Local files bound to rooms that this device does not own (workspace files, ADR 0019). */
+export interface BoundFiles {
+  /** The room `fileKey` is bound to, or null. */
+  roomForFile(fileKey: string): Promise<string | null>
 }
 
 export interface MintLinkOptions {
@@ -272,6 +289,51 @@ export interface ShareService extends Omit<OwnershipClient, "registerBody" | "pr
    */
   moveFile(from: string, to: string): Promise<boolean>
   join(link: string): Promise<SharedSession>
+  /**
+   * Opens a room this device reaches through Kimo Cloud (ADR 0019): the room key and the token come
+   * from the caller, never from the registry, and the caller keeps the token fresh with
+   * {@link ShareService.swapToken}. With `target` the session lives in that document (a local file
+   * bound to the room), and `file` contributes only what it changed since its last recorded save,
+   * as in {@link ShareService.reopenShared}. Without one it opens in a guest document (the
+   * Kimo-managed replica of a file that is not on disk).
+   */
+  openWithToken(
+    options: TokenRoom & { target?: ShareTarget; file?: KimoDocument | null },
+  ): Promise<SharedSession>
+  /**
+   * Hands the open session of `room` a new token. `refresh` presents it on the live connection
+   * (spec §11.2: same role and origin); `reconnect` opens a new connection with it, for a token
+   * whose role differs (the relay refuses a refresh that changes the role). A room that is not
+   * open here is a no-op.
+   */
+  swapToken(room: string, token: string, mode: "refresh" | "reconnect"): Promise<void>
+  /**
+   * Uploads the open document as the first state of a room Kimo Cloud created (spec §16.1 from the
+   * upload step), and records what the file holds for later reopens. A room that already has state
+   * (a repeated run) is left to the session's sync, which merges instead of replacing.
+   */
+  seedRoom(target: ShareTarget, room: TokenRoom, options?: { recordSave?: boolean }): Promise<void>
+  /**
+   * Closes an owned room at the relay with its root key (admin op 4) and keeps the local record:
+   * `closed` when the relay closed it (or had already), `unreachable` when it could not be told.
+   */
+  closeOwnedRoom(room: string): Promise<"closed" | "unreachable">
+  /**
+   * Copies blobs of a room this device owns into another room (the 1.3.0 re-share): each one the
+   * new room lacks is read from `from`, checked against its SHA-256 and sealed again for `into`.
+   * Blob ids are per room, so nothing is copied by id. `shas` are full lowercase hex digests
+   * (manifest `sha256`); `absent` counts the ones `from` never held. Any other failure throws, so
+   * the caller keeps `from` open.
+   */
+  copyOwnedBlobs(
+    from: string,
+    into: TokenRoom,
+    shas: readonly string[],
+  ): Promise<{ copied: number; absent: number }>
+  /** Local files bound to Kimo Cloud rooms (their saves are recorded like an owned file's). */
+  setBoundFiles(bound: BoundFiles | null): void
+  /** The registry this service keeps rooms in (Kimo Cloud keeps its records there too). */
+  readonly registry: Registry
   listJoinedRooms(): Promise<JoinedRoomSummary[]>
   forgetJoinedRoom(room: string): Promise<void>
   /** Fires with family names that were not shared (§16.5). */
@@ -433,6 +495,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
   }
   const fontListeners = new Set<(event: { room: string; families: string[] }) => void>()
   const guards = new Map<string, ReturnType<typeof createFontGuard>>()
+  let bound: BoundFiles | null = null
 
   const client = (relayUrl: string) =>
     new RelayHttpClient({ relayUrl, ...(deps.fetch ? { fetch: deps.fetch } : {}) })
@@ -1043,7 +1106,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
    * others did since.
    */
   async function fileDelta(
-    owned: OwnedRoom,
+    owned: { room: string; fileKey: string },
     file: KimoDocument,
   ): Promise<{ update: Uint8Array; record: () => Promise<void> } | null> {
     const { room } = owned
@@ -1083,9 +1146,39 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
     return () =>
       locked(`file:${target.fileKey}`, async () => {
         const owned = await registry.ownedForFile(target.fileKey)
-        if (!owned) return
-        await registry.saves.save(owned.room, { state, fileHash: await documentHash(doc) })
+        const room = owned?.room ?? (await bound?.roomForFile(target.fileKey)) ?? null
+        if (!room) return
+        await registry.saves.save(room, { state, fileHash: await documentHash(doc) })
       })
+  }
+
+  /** The session hooks of a reopened file: room state first, then the file's own delta. */
+  function reopenHooks(
+    target: ShareTarget,
+    delta: Awaited<ReturnType<typeof fileDelta>>,
+  ): Pick<OpenOptions, "beforeNetwork" | "afterNetwork"> {
+    const applyFile = () => {
+      if (!delta) return
+      target.store.applyUpdate(delta.update, "remote:file")
+      void delta.record()
+    }
+    return {
+      // With a replica the room state is already here.
+      beforeNetwork: (hadState) => {
+        if (hadState) applyFile()
+      },
+      // Without one, wait for the catch-up: the delta refers to items the room has to supply,
+      // and a relay that is down must not make the file look newer than the room.
+      afterNetwork: (hadState, provider) => {
+        if (hadState) return
+        if (provider.connected) return applyFile()
+        const off = provider.onEvent((event) => {
+          if (event.type !== "caught-up") return
+          off()
+          applyFile()
+        })
+      },
+    }
   }
 
   /** Ends the room's sessions here and deletes everything this device kept about it. */
@@ -1190,28 +1283,7 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       // What the file changed since the owner saved it; the rest of the file is the room's
       // already. Computed before the store changes, applied once the room state is in the store.
       const delta = await fileDelta(owned, file)
-      const applyFile = () => {
-        if (!delta) return
-        target.store.applyUpdate(delta.update, "remote:file")
-        void delta.record()
-      }
-      return connectOwned(target, owned, {
-        // With a replica the room state is already here.
-        beforeNetwork: (hadState) => {
-          if (hadState) applyFile()
-        },
-        // Without one, wait for the catch-up: the delta refers to items the room has to supply,
-        // and a relay that is down must not make the file look newer than the room.
-        afterNetwork: (hadState, provider) => {
-          if (hadState) return
-          if (provider.connected) return applyFile()
-          const off = provider.onEvent((event) => {
-            if (event.type !== "caught-up") return
-            off()
-            applyFile()
-          })
-        },
-      })
+      return connectOwned(target, owned, reopenHooks(target, delta))
     },
 
     noteSaved: (target, doc) => captureSaved(target, doc)(),
@@ -1358,6 +1430,145 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
       await registry.putJoined(joined)
       return session
     },
+
+    async openWithToken(options) {
+      const { target } = options
+      const base = {
+        room: options.room,
+        relayUrl: normalizeRelayUrl(options.relayUrl),
+        roomKey: options.roomKey,
+        token: options.token,
+        isOwner: false,
+      }
+      if (!target)
+        return open({
+          ...base,
+          openDocument: (binding) => deps.openGuestDocument(options.room, binding),
+        })
+      const delta = options.file
+        ? await fileDelta({ room: options.room, fileKey: target.fileKey }, options.file)
+        : null
+      return open({
+        ...base,
+        store: target.store,
+        assets: target.assets,
+        ...reopenHooks(target, delta),
+      })
+    },
+
+    async swapToken(room, token, mode) {
+      const entry = open_.get(room)
+      if (!entry || entry.owned) return
+      if (
+        !(await entry.promise.then(
+          () => true,
+          () => false,
+        ))
+      )
+        return
+      if (open_.get(room) !== entry) return
+      const provider = entry.provider
+      entry.token = token
+      if (!provider) return
+      if (mode === "refresh") {
+        provider.setToken(token)
+        return
+      }
+      // A role change: the relay takes the new role only in a new `hello`.
+      provider.disconnect()
+      provider.setToken(token)
+      provider.connect()
+    },
+
+    seedRoom(target, room, options) {
+      return locked(`file:${target.fileKey}`, async () => {
+        const relayUrl = normalizeRelayUrl(room.relayUrl)
+        // What the file holds: the document before preparation (as `startSharing` records it).
+        const fileState = target.store.encodeStateAsUpdate()
+        await prepareDocument(target, room.room)
+        const http = client(relayUrl)
+        const info = await http.roomInfo(room.room, room.token)
+        if (info.head === 0 && info.snapshot === null) {
+          // State and vector in one synchronous step: the cursor never claims more than the
+          // snapshot holds.
+          const state = target.store.encodeStateAsUpdate()
+          const sv = target.store.encodeStateVector()
+          const roomId = parseRoomId(room.room)
+          const keys = await deriveRoomKeys(room.roomKey, roomId)
+          try {
+            await http.putSnapshot(room.room, room.token, 0, await sealSnapshot(keys, 0, state))
+            const binding = await roomBinding(relayUrl, room.roomKey)
+            await registry.cursors.save(cursorKey(room.room, binding), { ackedSv: sv })
+          } catch (error) {
+            // Another run seeded it first: the session's sync merges this state instead.
+            if (!(error instanceof MultiplayerError && error.code === "SNAPSHOT_STALE")) throw error
+          }
+        }
+        if (options?.recordSave !== false && !(await registry.saves.load(room.room)))
+          await registry.saves.save(room.room, { state: fileState, fileHash: null })
+      })
+    },
+
+    async closeOwnedRoom(room) {
+      return withOwned(room, async (owned) => {
+        try {
+          await admin(owned, { op: "close" })
+          return "closed" as const
+        } catch (error) {
+          if (
+            error instanceof MultiplayerError &&
+            (error.code === "ROOM_CLOSED" || error.code === "ROOM_NOT_FOUND")
+          )
+            return "closed" as const
+          if (error instanceof MultiplayerError && isRetryable(error)) return "unreachable" as const
+          throw error
+        }
+      })
+    },
+
+    async copyOwnedBlobs(from, into, shas) {
+      const result = { copied: 0, absent: 0 }
+      const wanted = [...new Set(shas)].filter((sha) => /^[0-9a-f]{64}$/.test(sha))
+      if (wanted.length === 0) return result
+      const { owned, token } = await withOwned(from, async (owned) => ({
+        owned,
+        token: await selfToken(owned),
+      }))
+      const fromKeys = await deriveRoomKeys(owned.roomKey, parseRoomId(owned.room))
+      const intoKeys = await deriveRoomKeys(into.roomKey, parseRoomId(into.room))
+      const fromHttp = client(owned.relayUrl)
+      const intoHttp = client(normalizeRelayUrl(into.relayUrl))
+      const intoIds = new Map<string, string>()
+      for (const sha of wanted) intoIds.set(await blobIdFor(intoKeys, fromHex(sha)), sha)
+      const missing = await intoHttp.missingBlobs(into.room, into.token, [...intoIds.keys()])
+      // One blob at a time: at most one plaintext is held in memory.
+      for (const id of missing) {
+        const sha = intoIds.get(id)
+        if (sha === undefined) continue
+        const digest = fromHex(sha)
+        const envelope = await fromHttp.getBlob(
+          owned.room,
+          token,
+          await blobIdFor(fromKeys, digest),
+          MAX_BLOB_ENVELOPE_BYTES,
+        )
+        if (envelope === null) {
+          result.absent++
+          continue
+        }
+        const sealed = await sealBlob(intoKeys, await openBlob(fromKeys, digest, envelope))
+        if (sealed.id !== id) throw new MultiplayerError("BLOB_INTEGRITY", "blob id mismatch")
+        await intoHttp.putBlob(into.room, into.token, sealed.id, sealed.envelope)
+        result.copied++
+      }
+      return result
+    },
+
+    setBoundFiles(next) {
+      bound = next
+    },
+
+    registry,
 
     async listJoinedRooms() {
       return (await registry.listJoined()).map(({ room, relayUrl, role, joinedAt }) => ({

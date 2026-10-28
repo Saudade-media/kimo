@@ -749,6 +749,8 @@ export type SettingsPane =
   | "ai-providers"
   /** Board 41 section 4: relay URL and Test, your name, other cursors, fetching assets. */
   | "multiplayer"
+  /** Board 46 2A: a Kimo Cloud workspace's plan, members, edit requests and ownership. */
+  | "workspace"
   | "updates"
   | "about"
 
@@ -838,8 +840,10 @@ export interface OpenRequest {
   /** From a deep link's `page` (board 27 §1 "Copy link to page"). */
   page?: string
   /**
-   * A multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`, board 41 section 5): the
-   * whole link. `refs` is empty; the app opens its join route.
+   * A multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`, board 41 section 5), a
+   * pairing link (`kimo://pair#...`) or a Kimo Cloud link (`kimo://cloud/invite#<token>`,
+   * `kimo://cloud/transfer`, `kimo://cloud/signed-in`): the whole link. `refs` is empty; the app
+   * tells them apart and opens the matching route or flow.
    */
   join?: string
 }

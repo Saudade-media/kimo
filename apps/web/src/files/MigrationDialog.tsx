@@ -45,7 +45,7 @@ function MigrationDialogView({
       className="kimo-files-migration"
       icon={<FileUp />}
       title={`Upgrade ${r.fileName} to format ${r.toFormat}?`}
-      description={`It was saved by an older Kimo (format ${r.fromFormat}) and opened migrated in memory. Nothing has been written to it yet.`}
+      description={`It was saved by an older Kimo (format ${r.fromFormat}) and opened migrated in memory. Nothing is written yet.`}
       footnote={`${os === "macos" ? "⌘S" : "Ctrl+S"} also counts as consent`}
       cancelLabel="Open read-only"
       confirmLabel="Upgrade and save"

@@ -53,6 +53,12 @@ export const HOST_EVENTS = {
    * after it paused inside its claim: the window ends the agent's turn.
    */
   agentStop: "kimo://host-agent-stop",
+  /**
+   * Host → every window: `HostedFilesView` (`multiplayer/cloud/hosted.ts`), the Kimo Cloud
+   * workspace bindings, open rooms and re-share progress the host holds. Windows ask for it with
+   * the RPC `mp.cloud.view`.
+   */
+  cloud: "kimo://host-cloud",
 } as const
 
 interface TauriInternals {

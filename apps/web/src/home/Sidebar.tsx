@@ -11,6 +11,7 @@ import { Icon } from "../lib/icons"
 import { type HomeSection, homeSectionPath } from "../router"
 import { SECTION_TITLE } from "./model"
 import { NavRow } from "./parts"
+import { CloudGroup } from "./WorkspaceHome"
 
 export interface HomeSidebarProps {
   platform: KimoPlatform
@@ -43,7 +44,7 @@ export function HomeSidebar({
   onOpenSettings,
 }: HomeSidebarProps) {
   const row = (
-    kind: Exclude<HomeSection["kind"], "folder">,
+    kind: Exclude<HomeSection["kind"], "folder" | "workspace">,
     icon: ReactNode,
     count?: number | null,
   ) => (
@@ -66,6 +67,8 @@ export function HomeSidebar({
       {row("templates", <Icon name="layout-template" size={16} />)}
       {row("libraries", <Icon name="swatch-book" size={16} />, libraryCount)}
       {row("trash", <Icon name="trash-2" size={16} />)}
+      {/* Board 46 4A: KIMO CLOUD and its workspaces, above LOCAL FOLDERS. */}
+      <CloudGroup section={section} />
       {folders ? (
         <LocalFolders
           folders={folders.list}

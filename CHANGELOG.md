@@ -20,6 +20,27 @@ the dates are those of the milestone commits.
   their grow-in animation, until the file was reopened.
 - Layers an agent adds while the Kimo window is in the background appear without the grow-in.
 
+## [1.2.1-beta.1] - 2026-10-29
+
+Kimo Cloud workspaces, for installs on the Beta channel.
+
+### Added
+
+- Kimo Cloud workspaces. A plan belongs to a workspace, and its members open and edit every file
+  in it. Each member is a seat: $8 a month for the first, then $4 for each extra member. Viewers
+  stay free and need no account.
+- Invite people by email, and approve edit requests from people who opened a view link.
+- Several workspaces per account, with a picker when you share and a Kimo Cloud group on Home.
+- Transfer a workspace to an Admin, delete a workspace, or leave one.
+- Files shared on Kimo Cloud before workspaces move into your workspace on their own.
+
+### Changed
+
+- Kimo Cloud keeps each workspace file's keys, so opening is instant on any signed-in device and
+  removing someone takes effect at once. Kimo Cloud is no longer described as end-to-end
+  encrypted; self-hosted relays still are.
+- Shorter wording across the app.
+
 ## [1.2.1-beta.0] - 2026-10-28
 
 The first beta: the fixes below, for installs on the Beta channel.

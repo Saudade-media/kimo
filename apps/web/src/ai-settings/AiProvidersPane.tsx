@@ -105,7 +105,7 @@ const CLI_ICONS: Record<string, ReactNode> = {
   "gemini-cli": <SquareChevronRight />,
 }
 
-/** Board 23 copy (L56aX), with the machine / store names of this host. */
+/** Board 23 copy (L56aX), shortened, with the key store of this host. */
 /**
  * Audit A5: a failed action shows "Couldn't <what>." with the cause in the pane banner (board 37
  * CT1wv) instead of a silent rejection.
@@ -122,15 +122,14 @@ async function copyToClipboard(text: string): Promise<void> {
 
 function introCopy(s: AiSettingsState): string {
   if (s.platform === "web")
-    return "Bring your own API key. The provider bills the usage, not Kimo. Keys stay in this browser (localStorage, this origin only) and are never written to .kimo files, settings JSON or logs. Local agent CLIs run in the desktop app."
-  const machine = s.os === "macos" ? "this Mac" : "this computer"
+    return "Bring your own API key, billed by the provider and kept in this browser. Agent CLIs need the desktop app."
   const store =
     s.os === "windows"
       ? "the Windows Credential Manager"
       : s.os === "linux"
         ? "the Secret Service"
         : "the macOS Keychain"
-  return `Use a coding-agent CLI you are already signed in to, or bring your own API key. Your subscription or the provider bills the usage, not Kimo. Keys stay on ${machine}, in ${store}, and are never written to .kimo files, settings JSON or logs.`
+  return `Use a signed-in coding-agent CLI or your own API key. Keys stay in ${store}, never in files or logs.`
 }
 
 export interface AiProvidersPaneProps {
@@ -431,7 +430,7 @@ function WebAccessRow({ platform }: { platform: KimoPlatform }) {
       description={
         blocked
           ? "Off while No third-party fetch is on in Settings › Fonts & privacy."
-          : "The agent can search the web and read pages when a task needs outside facts. Each search and page shows in the thread. New sessions start with this setting."
+          : "Lets the agent search and read the web for outside facts, shown in the thread. New sessions use this setting."
       }
       dimmed={blocked}
       control={(ids) => (
@@ -874,7 +873,7 @@ function ProviderDetail({
           className="ai-detail__banner"
           tone="warning"
           title="Stored in this browser only"
-          body="Not synced, not encrypted at rest. Anyone with access to this browser profile can read it. Use the desktop app for Keychain storage."
+          body="Not synced or encrypted at rest. Anyone with this browser profile can read it; the desktop app uses the Keychain."
           onDismiss={() => setBannerHidden(true)}
         />
       )}

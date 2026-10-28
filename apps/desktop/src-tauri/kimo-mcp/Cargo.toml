@@ -1,6 +1,6 @@
 [package]
 name = "kimo-mcp"
-version = "1.2.0"
+version = "1.2.1-beta.0"
 description = "Kimo MCP stdio shim: relays an agent host's stdio to the running Kimo app over kimo-socket/1 (ADR 0008, 0013 §7)"
 license = "MIT"
 edition = "2021"

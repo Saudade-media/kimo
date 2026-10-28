@@ -37,3 +37,12 @@ that way:
 - Keep the unit suite under 60 s in CI: no real waits when a clock or delay can be injected.
 - e2e (`apps/web/e2e`) is a small Linux smoke set that runs on every PR. Extend it only for a
   core flow (canvas, text and pen, share and join), never for a measured design check.
+
+## Writing
+
+- UI copy, docs and design-board text follow `docs/style/writing.md`. Keep copy short, at a normal
+  human length. A UI string or a design-board text is at most 2 sentences and 20 words, and a
+  board intro at most 40. Say the outcome ("Your edit request was sent"), not every rule behind
+  it. Edge cases go in the guide, ADRs or contracts, never on the canvas or in the UI.
+- `scripts/writing-style.test.ts` enforces this in CI on app UI strings and on design boards 46
+  and later. Never add to its `LONG_LEGACY` list: shorten the copy instead.

@@ -37,7 +37,7 @@ export interface AgentPresenceProps {
 }
 
 /** AgentMark state of a chip (board 24 mapping eqlcN; presence chip rule BXTD5). */
-export function chipMarkState(c: AgentChipView): AgentMarkState {
+function chipMarkState(c: AgentChipView): AgentMarkState {
   if (c.presence === "waiting") return "listening"
   if (c.presence === "paused") return "paused"
   switch (c.state) {
@@ -54,7 +54,7 @@ export function chipMarkState(c: AgentChipView): AgentMarkState {
 const PRESENCE_ORDER = { waiting: 0, editing: 1, paused: 2 } as const
 
 /** Sorted waiting → working → idle (board 24 yeF1Z rule), lead first among equals. */
-export function sortChips(chips: readonly AgentChipView[]): AgentChipView[] {
+function sortChips(chips: readonly AgentChipView[]): AgentChipView[] {
   const rank = (c: AgentChipView) =>
     PRESENCE_ORDER[c.presence] * 2 + (chipMarkState(c) === "working" ? 0 : 1)
   return [...chips].sort((a, b) => rank(a) - rank(b))
@@ -65,7 +65,7 @@ export function sortChips(chips: readonly AgentChipView[]): AgentChipView[] {
  * stay Teal outside Split mode; agents spawned inside a session (`agent:` origins) take the next
  * hue in order Iris → Moss.
  */
-export function chipPersonas(chips: readonly AgentChipView[]): Map<string, Persona> {
+function chipPersonas(chips: readonly AgentChipView[]): Map<string, Persona> {
   const slots = assignPersonas(
     chips.map((c, i) => ({
       id: c.origin,
@@ -238,7 +238,7 @@ function AgentsPopoverFrame({
  * h 24) when waiting / Pause (Button/Ghost h 24) when working › Footer (PwFn6) gap 6, padding
  * [8, 12, 4, 12], top stroke: Agents & MCP… · Spacer · Stop all (≥ 2 active, danger label).
  */
-export function AgentsPopover({
+function AgentsPopover({
   controller,
   chips,
   personas,
@@ -372,7 +372,7 @@ export function AgentsPopover({
  * sans 12 / 500 · Detail sans 11 text-tertiary) · Deny (ghost h 24) · Approve (primary h 24).
  * Oldest first; ⌘↩ approves the top item.
  */
-export function QueuePopover({
+function QueuePopover({
   controller,
   anchor,
   onClose,
@@ -435,7 +435,7 @@ export function QueuePopover({
   )
 }
 
-export interface SessionPopoverProps {
+interface SessionPopoverProps {
   controller: AgentsControllerExt
   chips: AgentChipView[]
   /** Positioned under this element (fixed); omitted: in flow (gallery, harness). */
@@ -446,7 +446,7 @@ export interface SessionPopoverProps {
 }
 
 /** The session popover (hIfmx); one section per client when 2+ are active (not designed). */
-export function SessionPopover({
+function SessionPopover({
   controller,
   chips,
   anchor,

@@ -121,17 +121,6 @@ export function forgetWindowFile(label: string, storage = defaultStorage()): voi
   noteWindowFile(label, null, 0, storage)
 }
 
-/** The remembered files (each window's focused one), most recent first; clears the record. */
-export function takeLastFiles(storage = defaultStorage()): FileRef[] {
-  const r = read(storage)
-  write(storage, {})
-  const seen = new Set<FileRef>()
-  return Object.values(r)
-    .sort((a, b) => b.at - a.at)
-    .map((e) => e.ref ?? e.tabs[0] ?? "")
-    .filter((ref) => !!ref && !seen.has(ref) && !!seen.add(ref))
-}
-
 /**
  * Board 44 §5 "Restore": the most recent window's tabs and focused file; clears the record
  * (each launch reads it once). Null when nothing was remembered.

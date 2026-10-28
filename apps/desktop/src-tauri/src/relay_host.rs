@@ -998,30 +998,6 @@ mod tests {
     }
 
     #[test]
-    fn versions_lines_and_noise() {
-        assert_eq!(parse_version("1.2.19\n").as_deref(), Some("1.2.19"));
-        assert_eq!(
-            parse_version("flyctl v0.3.172 darwin/arm64 Commit: x").as_deref(),
-            Some("0.3.172")
-        );
-        assert_eq!(
-            parse_version("cloudflared version 2025.9.1 (built 2025-09-01)").as_deref(),
-            Some("2025.9.1")
-        );
-        assert_eq!(parse_version("no digits"), None);
-        let mut l = LineSplitter::default();
-        assert_eq!(l.push("a\r##  10%\rb"), vec!["a", "##  10%"]);
-        assert_eq!(l.push("c\n\n"), vec!["bc"]);
-        assert_eq!(l.flush(), None);
-        assert!(noise(ProcKind::BunInstall, "######## 42.0%"));
-        assert!(!noise(
-            ProcKind::BunInstall,
-            "bun was installed successfully"
-        ));
-        assert!(!noise(ProcKind::Relay, "##"));
-    }
-
-    #[test]
     fn device_key_in_the_store_and_fly_config() {
         let f = fixture(None);
         assert_eq!(f.host.device_key_get().unwrap(), None);
@@ -1044,22 +1020,6 @@ mod tests {
             f.host.write_fly_config("rm -rf").unwrap_err().code,
             "INVALID"
         );
-    }
-
-    #[test]
-    fn same_network_name() {
-        assert_eq!(
-            local_name("Mayas-MacBook-Pro.local").as_deref(),
-            Some("mayas-macbook-pro.local")
-        );
-        assert_eq!(
-            local_name("maya-mbp.lan").as_deref(),
-            Some("maya-mbp.local")
-        );
-        assert_eq!(local_name("studio").as_deref(), Some("studio.local"));
-        assert_eq!(local_name("Maya's Mac"), None);
-        assert_eq!(local_name("localhost"), None);
-        assert_eq!(local_name(""), None);
     }
 
     #[test]

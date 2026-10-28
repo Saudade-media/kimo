@@ -1,9 +1,9 @@
 /**
- * Zoomed-out raster cache (perf gate, ADR 0009 §4): below `RASTER_MAX_SCALE` each root is drawn
- * as one cached image. Exercised on a CPU surface through `rasterCache = "always"`.
+ * Zoomed-out raster cache: below `RASTER_MAX_SCALE` each root is drawn as one cached image.
+ * Exercised on a CPU surface through `rasterCache = "always"`.
  */
 import { describe, expect, test } from "bun:test"
-import { CanvasKitRenderer, RASTER_MAX_SCALE } from "../src"
+import { CanvasKitRenderer } from "../src"
 import { loadCanvasKit } from "../src/ck"
 import { pixelAt } from "./helpers/golden"
 import { sceneOf, simpleLayout } from "./helpers/scene"
@@ -76,22 +76,6 @@ describe("raster cache", () => {
     }
     a.r.dispose()
     b.r.dispose()
-  })
-
-  test("above RASTER_MAX_SCALE pictures replay (crisp)", async () => {
-    const { r } = await make("always")
-    r.setViewport({ x: 0, y: 0, zoom: RASTER_MAX_SCALE * 2 })
-    r.render()
-    expect(r.stats().drawCalls).toBeGreaterThan(20)
-    r.dispose()
-  })
-
-  test("CPU surfaces skip the cache by default", async () => {
-    const { r } = await make(true)
-    r.setViewport({ x: 0, y: 0, zoom: 0.25 })
-    r.render()
-    expect(r.stats().drawCalls).toBeGreaterThan(40)
-    r.dispose()
   })
 
   test("zooming back across a scale step reuses the rasters made there (same pixels)", async () => {

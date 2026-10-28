@@ -46,7 +46,7 @@ export interface VersionBody {
   owner: "unclaimed" | "claimed" | "external"
 }
 
-export function versionBody(relay: Relay): VersionBody {
+function versionBody(relay: Relay): VersionBody {
   return {
     name: pkg.name,
     version: pkg.version,

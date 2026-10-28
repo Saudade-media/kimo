@@ -11,7 +11,7 @@ import type { MultiplayerModel } from "../multiplayer/model"
 import type { SharedSession } from "../multiplayer/share"
 
 /** The body copy; `owner` is the owner's display name (null until they are seen). */
-export function viewOnlyBody(owner: string | null): string {
+function viewOnlyBody(owner: string | null): string {
   const who = owner ?? "The owner"
   return `${who} shared this file with view access. You can look around, inspect, follow people and export. Ask ${owner ? "them" : "the owner"} for an edit link to make changes.`
 }

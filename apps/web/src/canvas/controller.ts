@@ -1724,9 +1724,9 @@ export class CanvasController {
   }
 
   /**
-   * Click policy (board 11, contract `InstanceHitPolicy`): like groups, a click selects the
-   * top-level instance; once something inside it is selected (double-click / ⌘-click entered
-   * it), clicks keep that depth among its expanded children (composite ids).
+   * Click policy (board 11): like groups, a click selects the top-level instance; once something
+   * inside it is selected (double-click / ⌘-click entered it), clicks keep that depth among its
+   * expanded children (composite ids).
    */
   private pick(hit: string, selection: readonly string[], deep: boolean): string {
     const target = pickTarget(this.vdoc, hit, selection, deep)

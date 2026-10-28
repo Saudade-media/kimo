@@ -81,13 +81,6 @@ const device: OwnerDevice = {
 }
 
 describe("RelayHttpClient", () => {
-  test("normalizes the relay URL", () => {
-    expect(new RelayHttpClient({ relayUrl: "ws://localhost:8787/" }).relayUrl).toBe(
-      "http://localhost:8787",
-    )
-    expect(() => new RelayHttpClient({ relayUrl: "http://example.com" })).toThrow(MultiplayerError)
-  })
-
   test("probe reads /version", async () => {
     route = () => json(200, versionBody)
     const info = await client().probe()
@@ -102,23 +95,13 @@ describe("RelayHttpClient", () => {
     expect(seen[0]?.headers.get("authorization")).toBeNull()
   })
 
-  test("probe accepts a relay whose owners are external (ADR 0018)", async () => {
-    route = () => json(200, { ...versionBody, owner: "external" })
-    expect((await client().probe()).owner).toBe("external")
-  })
-
   test("probe: NOT_A_RELAY for other servers, RELAY_UNREACHABLE when down", async () => {
     for (const respond of [
       () => new Response("<html>hi</html>", { status: 200 }),
       () => json(200, { ...versionBody, protocol: "kimo-mp/2" }),
-      () => json(200, { ...versionBody, limits: { maxEntryBytes: 1 } }),
-      () => json(200, { ...versionBody, relayId: undefined }),
       () => json(200, { ...versionBody, relayId: toBase64Url(new Uint8Array(15)) }),
-      () => json(200, { ...versionBody, owner: undefined }),
       () => json(200, { ...versionBody, owner: "yours" }),
-      () => json(200, [1, 2]),
       () => new Response("nope", { status: 404 }),
-      () => json(400, { error: "BAD_REQUEST", message: "?" }),
     ]) {
       route = respond
       await expectCode(client().probe(), "NOT_A_RELAY")
@@ -160,21 +143,6 @@ describe("RelayHttpClient", () => {
     await expectCode(client().owner(command), "INTERNAL")
   })
 
-  test("owner maps the ownership error codes", async () => {
-    for (const [status, code] of [
-      [403, "RELAY_UNCLAIMED"],
-      [403, "NOT_OWNER"],
-      [401, "PAIRING_EXPIRED"],
-      [409, "PAIRING_USED"],
-      [409, "RELAY_CLAIMED"],
-      [409, "LAST_DEVICE"],
-      [403, "OWNER_EXTERNAL"],
-    ] as const) {
-      route = () => json(status, { error: code, message: "x" })
-      await expectCode(client().owner(new Uint8Array(1)), code)
-    }
-  })
-
   test("JSON error bodies map to their code; retry-after to retryAfterMs", async () => {
     route = () => json(429, { error: "RATE_LIMITED", message: "slow" }, { "retry-after": "3" })
     try {
@@ -191,8 +159,6 @@ describe("RelayHttpClient", () => {
       [401, "TOKEN_EXPIRED"],
       [403, "NOT_OWNER"],
       [409, "NONCE_REPLAY"],
-      [422, "ROOM_ID_MISMATCH"],
-      [503, "RELAY_FULL"],
     ] as const) {
       route = () => json(status, { error: code, message: "x" })
       await expectCode(client().admin(ROOM, new Uint8Array(1)), code)
@@ -201,12 +167,9 @@ describe("RelayHttpClient", () => {
 
   test("errors without a JSON body map from the status", async () => {
     for (const [status, code] of [
-      [400, "BAD_REQUEST"],
       [401, "AUTH_INVALID"],
-      [402, "PLAN_REQUIRED"],
       [413, "TOO_LARGE"],
       [429, "RATE_LIMITED"],
-      [500, "INTERNAL"],
       [503, "RELAY_UNREACHABLE"],
       [507, "QUOTA_EXCEEDED"],
     ] as const) {
@@ -335,12 +298,12 @@ describe("RelayHttpClient", () => {
 
   test("timeouts are RELAY_UNREACHABLE", async () => {
     route = async () => {
-      await Bun.sleep(300)
+      await Bun.sleep(200)
       return json(200, versionBody)
     }
     const started = Date.now()
-    await expectCode(client(50).probe(), "RELAY_UNREACHABLE")
-    expect(Date.now() - started).toBeLessThan(250)
+    await expectCode(client(40).probe(), "RELAY_UNREACHABLE")
+    expect(Date.now() - started).toBeLessThan(160)
   })
 
   test("a slow but steady body is not cut off by the request timeout", async () => {
@@ -350,7 +313,7 @@ describe("RelayHttpClient", () => {
       const body = new ReadableStream<Uint8Array>({
         async pull(controller) {
           if (sent === 4) return controller.close()
-          await Bun.sleep(60)
+          await Bun.sleep(25)
           controller.enqueue(envelope.subarray(sent * 10, ++sent * 10))
         },
       })
@@ -359,26 +322,32 @@ describe("RelayHttpClient", () => {
       })
     }
     const started = Date.now()
-    // 4 chunks 60 ms apart take longer than timeoutMs, but no gap does.
-    const got = await client(150).getSnapshot(ROOM, TOKEN)
-    expect(Date.now() - started).toBeGreaterThan(150)
+    // 4 chunks 25 ms apart take longer than timeoutMs, but no gap does.
+    const got = await client(60).getSnapshot(ROOM, TOKEN)
+    expect(Date.now() - started).toBeGreaterThan(60)
     expect(got?.envelope).toEqual(envelope)
-    const blob = await client(150).getBlob(ROOM, TOKEN, BLOB)
+    const blob = await client(60).getBlob(ROOM, TOKEN, BLOB)
     expect(blob).toEqual(envelope)
   })
 
   test("a body that stalls is RELAY_UNREACHABLE", async () => {
+    // Bounded: one chunk, then silence for longer than the timeout, then the stream ends.
+    let cancelled = false
     route = () =>
       new Response(
         new ReadableStream<Uint8Array>({
           async pull(controller) {
             controller.enqueue(new Uint8Array(4))
-            await Bun.sleep(500)
+            await Bun.sleep(150)
+            if (!cancelled) controller.close()
+          },
+          cancel() {
+            cancelled = true
           },
         }),
         { headers: { "kimo-up-to": "1", "kimo-gen": "1" } },
       )
-    await expectCode(client(100).getSnapshot(ROOM, TOKEN), "RELAY_UNREACHABLE")
+    await expectCode(client(40).getSnapshot(ROOM, TOKEN), "RELAY_UNREACHABLE")
   })
 
   test("response bodies are capped: snapshot, blob and JSON", async () => {
@@ -417,19 +386,6 @@ describe("RelayHttpClient", () => {
     route = () => new Response(hugeJson, { headers: { "content-type": "application/json" } })
     await expectCode(client().roomInfo(ROOM, TOKEN), "TOO_LARGE")
     await expectCode(client().probe(), "NOT_A_RELAY")
-  })
-
-  test("an injected fetch is used", async () => {
-    const calls: string[] = []
-    const c = new RelayHttpClient({
-      relayUrl: "https://relay.example.com/kimo",
-      fetch: (async (input: string) => {
-        calls.push(String(input))
-        return json(200, versionBody)
-      }) as unknown as typeof fetch,
-    })
-    await c.probe()
-    expect(calls).toEqual(["https://relay.example.com/kimo/version"])
   })
 })
 

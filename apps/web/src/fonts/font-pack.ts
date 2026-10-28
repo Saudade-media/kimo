@@ -44,16 +44,16 @@ export const FONT_PACK_WEIGHTS: readonly number[] = [400, 500, 600, 700]
  * Measured pack size before downloading (2026-10, all 62 faces): desktop TTFs 8.3 MB, browser
  * latin WOFF2 subsets 2.1 MB. Shown as the row's value until the pack exists.
  */
-export const FONT_PACK_ESTIMATE_BYTES = { desktop: 8_300_000, web: 2_100_000 } as const
+const FONT_PACK_ESTIMATE_BYTES = { desktop: 8_300_000, web: 2_100_000 } as const
 
-export type FontPackState =
+type FontPackState =
   | { status: "loading" }
   | { status: "empty" }
   | { status: "downloading"; done: number; total: number; bytes: number }
   | { status: "ready"; faces: number; families: number; bytes: number; dir: string | null }
   | { status: "error"; message: string; faces: number; bytes: number }
 
-export interface FontPackController {
+interface FontPackController {
   state(): FontPackState
   subscribe(listener: (s: FontPackState) => void): () => void
   /** Estimated full size on this host (bytes). */
@@ -68,7 +68,7 @@ export interface FontPackController {
 }
 
 /** One face of the pack plan. */
-export interface PackFace {
+interface PackFace {
   family: string
   weight: number
   url: string

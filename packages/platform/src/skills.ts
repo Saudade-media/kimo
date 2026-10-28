@@ -67,10 +67,6 @@ export interface TauriSkillsEventMap {
   "kimo://skills-changed": { watchId: string }
 }
 
-export const TAURI_SKILLS_EVENTS = [
-  "kimo://skills-changed",
-] as const satisfies readonly (keyof TauriSkillsEventMap)[]
-
 let watchSeq = 0
 
 /** Desktop implementation over the commands above. */

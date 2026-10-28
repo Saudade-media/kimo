@@ -25,7 +25,7 @@ export interface CropRect {
 export type CropAffine = [number, number, number, number, number, number]
 
 /** Smallest crop edge in source px. */
-export const MIN_CROP = 1
+const MIN_CROP = 1
 
 /** `crop` affine of a source-px rect (`[w, 0, 0, h, x, y]` normalized to the image). */
 export function cropToAffine(r: CropRect, iw: number, ih: number): CropAffine {
@@ -43,7 +43,7 @@ export function affineToCrop(m: unknown, iw: number, ih: number): CropRect | nul
 }
 
 /** The source region a `cover` fit shows in a `bw × bh` box (centered). */
-export function coverRect(iw: number, ih: number, bw: number, bh: number): CropRect {
+function coverRect(iw: number, ih: number, bw: number, bh: number): CropRect {
   if (bw <= 0 || bh <= 0) return { x: 0, y: 0, w: iw, h: ih }
   const s = Math.max(bw / iw, bh / ih)
   const w = bw / s
@@ -199,7 +199,7 @@ export interface CropSession {
 }
 
 /** What the controller does for the panel (registered while a canvas is mounted). */
-export interface CropActions {
+interface CropActions {
   /** Enters crop mode on an image fill (no-op when it is not an image paint). */
   start(nodeId: string, paint: number): void
   setRect(rect: CropRect): void

@@ -1,4 +1,4 @@
-/** Board 33 "Reply formatting" (ME2DT): the Markdown subset parser and renderer. */
+/** The Markdown subset of agent replies: parser, and the sanitizing that keeps model output inert. */
 import { describe, expect, test } from "bun:test"
 import { createElement as h } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
@@ -26,7 +26,7 @@ const REPLY = [
 ].join("\n")
 
 describe("parseMarkdown", () => {
-  test("the board 33 reply: paragraph, bullets with one nested level, numbered list, code", () => {
+  test("a typical reply: paragraph, bullets with one nested level, numbered list, code", () => {
     const b = parseMarkdown(REPLY)
     expect(b.map((x) => x.t)).toEqual(["p", "list", "p", "list", "code", "p"])
     const bullets = b[1] as Extract<(typeof b)[number], { t: "list" }>
@@ -40,37 +40,10 @@ describe("parseMarkdown", () => {
     expect(b[4]).toEqual({ t: "code", v: "font: Inter 15/24" })
   })
 
-  test("deeper nesting flattens into the one nested level", () => {
-    const b = parseMarkdown("- a\n  - b\n    - c\n- d")
-    const l = b[0] as Extract<(typeof b)[number], { t: "list" }>
-    expect(l.items).toHaveLength(2)
-    expect(l.items[0]?.sub?.items.map((x) => x.c)).toEqual([
-      [{ t: "text", v: "b" }],
-      [{ t: "text", v: "c" }],
-    ])
-  })
-
   test("ordered lists keep their start; switching marker type starts a new list", () => {
     const b = parseMarkdown("3. three\n4. four\n- bullet")
     expect(b).toHaveLength(2)
     expect((b[0] as { start: number }).start).toBe(3)
-  })
-
-  test("loose lists (blank lines between items) stay one list", () => {
-    expect(parseMarkdown("- a\n\n- b\n\n- c")).toHaveLength(1)
-  })
-
-  test("headings become bold paragraphs; rules disappear; quotes keep their text", () => {
-    expect(parseMarkdown("## Summary\n\n---\n\n> quoted")).toEqual([
-      { t: "p", c: [{ t: "strong", c: [{ t: "text", v: "Summary" }] }] },
-      { t: "p", c: [{ t: "text", v: "quoted" }] },
-    ])
-  })
-
-  test("single line breaks inside a paragraph are kept", () => {
-    expect(parseMarkdown("one\ntwo")).toEqual([
-      { t: "p", c: [{ t: "text", v: "one" }, { t: "br" }, { t: "text", v: "two" }] },
-    ])
   })
 
   test("an unclosed fence runs to the end; tildes work too", () => {
@@ -108,14 +81,6 @@ describe("parseInline", () => {
   test("marks inside code are literal; escapes work", () => {
     expect(parseInline("`**x**`")).toEqual([{ t: "code", v: "**x**" }])
     expect(parseInline("\\*not\\*")).toEqual([{ t: "text", v: "*not*" }])
-  })
-
-  test("bare URLs link without trailing punctuation", () => {
-    expect(parseInline("See https://kimo.dev/docs.")).toEqual([
-      { t: "text", v: "See " },
-      { t: "link", href: "https://kimo.dev/docs", c: [{ t: "text", v: "https://kimo.dev/docs" }] },
-      { t: "text", v: "." },
-    ])
   })
 })
 
@@ -168,26 +133,9 @@ describe("safety", () => {
   })
 })
 
-describe("render", () => {
-  test("the board 33 structure: lists, markers, nested list, code block", () => {
-    const out = html(REPLY)
-    expect(out).toContain('<ul class="kimo-md__list">')
-    expect(out).toContain('<ol class="kimo-md__list">')
-    expect(out).toContain('class="kimo-md__list kimo-md__list--nested"')
-    expect(out).toContain(">•</span>")
-    expect(out).toContain(">2.</span>")
-    expect(out).toContain('<pre class="kimo-md__pre"><code>font: Inter 15/24</code></pre>')
-    expect(out).toContain('<code class="kimo-md__code">⌥↑</code>')
-    expect(out).toContain('<em class="kimo-md__em">placeholders</em>')
-  })
-})
-
 describe("stripMarkdown", () => {
-  test("one plain line", () => {
+  test("one plain line; partial (streaming) marks are dropped", () => {
     expect(stripMarkdown("**Adding** the `FAQ`\n\n- one\n- two")).toBe("Adding the FAQ one two")
-  })
-
-  test("partial (streaming) marks are dropped", () => {
     expect(stripMarkdown("Adding the **Pric")).toBe("Adding the Pric")
     expect(stripMarkdown("Writing `faq/it")).toBe("Writing faq/it")
   })

@@ -64,7 +64,7 @@ export interface CodeExportPreset {
   ids: readonly string[]
 }
 
-export interface CodeTabProps {
+interface CodeTabProps {
   session: FileSession
   m3: M3Controller
   /** Icon glyphs (the renderer's provider): icons export as inline SVG. */

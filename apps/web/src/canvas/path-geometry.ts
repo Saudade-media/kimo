@@ -312,7 +312,7 @@ export function contoursToD(contours: readonly PathContour[], o: Point = { x: 0,
 // --- Transforms and bounds -------------------------------------------------------------------
 
 /** Maps every anchor and handle through `m`. */
-export function transformContours(contours: readonly PathContour[], m: Mat): PathContour[] {
+function transformContours(contours: readonly PathContour[], m: Mat): PathContour[] {
   return contours.map((c) => ({
     closed: c.closed,
     anchors: c.anchors.map((a) => {

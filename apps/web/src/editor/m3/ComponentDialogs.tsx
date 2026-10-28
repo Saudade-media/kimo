@@ -37,7 +37,7 @@ const isObj = (v: unknown): v is Rec => typeof v === "object" && v !== null && !
 const ctxOf = (m3: M3Controller) => ({ doc: m3.doc(), libraries: m3.libraries() })
 
 /** The other selected node when the selection is exactly one main + one replaceable node. */
-export function replaceSource(m3: M3Controller, main: string): string | null {
+function replaceSource(m3: M3Controller, main: string): string | null {
   const sel = m3.session.ui.getState().selection.filter((id) => id !== main)
   const all = m3.session.ui.getState().selection
   if (all.length !== 2 || !all.includes(main) || sel.length !== 1) return null
@@ -207,7 +207,7 @@ function ReplaceMainDialog({
 // --- (c) Fix broken overrides ----------------------------------------------------------------------
 
 /** "content: “New”", "fill: $brand:cta", "visible: false", "slot". */
-export function overrideText(b: BrokenOverride): string {
+function overrideText(b: BrokenOverride): string {
   if (b.kind === "variable") return `${b.field}: $${b.variable}`
   const ov = b.override
   if (ov.slot === true) return "slot"
@@ -225,7 +225,7 @@ export function overrideText(b: BrokenOverride): string {
 }
 
 /** "Layer removed" · "Variable missing" · "Library variable renamed". */
-export function reasonText(b: BrokenOverride): string {
+function reasonText(b: BrokenOverride): string {
   if (b.kind === "layer") return "Layer removed"
   return b.variable?.includes(":") ? "Library variable renamed" : "Variable missing"
 }
@@ -369,7 +369,7 @@ function FixOverridesDialog({
 }
 
 /** Broken overrides of one instance (the strip's count). */
-export function brokenOf(m3: M3Controller, instance: string): BrokenOverride[] {
+function brokenOf(m3: M3Controller, instance: string): BrokenOverride[] {
   const comp = componentOfFamily(ctxOf(m3), instance)
   if (!comp) return []
   return brokenOverrides(ctxOf(m3), comp).filter((b) => b.instance === instance)

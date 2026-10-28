@@ -27,7 +27,7 @@ export type PathEditCommand =
   | "done"
 
 /** Bar bottom → path bounds top (rule aKwqB: "12 px above the path's bounds"). */
-export const PATH_EDIT_BAR_GAP = 12
+const PATH_EDIT_BAR_GAP = 12
 
 const MODES = [
   { mode: "select", label: "Select anchors", icon: "mouse-pointer-2", pen: "K4tXoR" },

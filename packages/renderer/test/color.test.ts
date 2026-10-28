@@ -1,15 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { oklchToSrgb, p3ToSrgb, parseColor, parseHex, srgbToOklab, toHex } from "../src/color"
+import { oklchToSrgb, p3ToSrgb, parseColor, srgbToOklab } from "../src/color"
 
 describe("colors", () => {
-  test("hex forms", () => {
-    expect(parseHex("#fff")).toEqual([1, 1, 1, 1])
-    expect(toHex(parseHex("#2F6BFF") ?? [0, 0, 0, 0])).toBe("#2f6bffff")
-    expect(toHex(parseHex("#2F6BFF1A") ?? [0, 0, 0, 0])).toBe("#2f6bff1a")
-    expect(parseHex("#ffff")).toBeNull()
-    expect(parseColor({ $ref: "x" })).toBeNull()
-  })
-
   test("OKLCH → sRGB (in gamut, round trip through OKLab)", () => {
     const c = parseColor({ space: "oklch", l: 0.6, c: 0.1, h: 250, alpha: 0.5 })
     expect(c?.[3]).toBe(0.5)

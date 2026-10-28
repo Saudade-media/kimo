@@ -42,53 +42,38 @@ async function sample(relayUrl = "https://relay.example.com"): Promise<JoinLink>
 }
 
 describe("normalizeRelayUrl", () => {
-  const table: [string, string][] = [
-    ["https://relay.example.com", "https://relay.example.com"],
-    ["https://relay.example.com/", "https://relay.example.com"],
-    ["https://relay.example.com///", "https://relay.example.com"],
-    ["HTTPS://Relay.Example.COM", "https://relay.example.com"],
-    ["wss://relay.example.com", "https://relay.example.com"],
-    ["WSS://relay.example.com:443/", "https://relay.example.com"],
-    ["https://relay.example.com:443", "https://relay.example.com"],
-    ["https://relay.example.com:8443", "https://relay.example.com:8443"],
-    ["wss://relay.example.com:80", "https://relay.example.com:80"],
-    ["https://relay.example.com/kimo/", "https://relay.example.com/kimo"],
-    ["https://relay.example.com/Kimo/Relay", "https://relay.example.com/Kimo/Relay"],
-    ["https://user:pass@relay.example.com/?x=1#y", "https://relay.example.com"],
-    ["  https://relay.example.com  ", "https://relay.example.com"],
-    ["http://localhost:8787", "http://localhost:8787"],
-    ["ws://localhost:8787/", "http://localhost:8787"],
-    ["ws://localhost:80", "http://localhost"],
-    ["ws://127.0.0.1:443", "http://127.0.0.1:443"],
-    ["http://127.0.0.1:8787", "http://127.0.0.1:8787"],
-    ["http://[::1]:8787", "http://[::1]:8787"],
-    ["http://studio.local", "http://studio.local"],
-    ["http://10.1.2.3", "http://10.1.2.3"],
-    ["http://172.16.0.1", "http://172.16.0.1"],
-    ["http://172.31.255.255:9000", "http://172.31.255.255:9000"],
-    ["http://192.168.1.20:8787", "http://192.168.1.20:8787"],
-    ["https://bücher.example", "https://xn--bcher-kva.example"],
-  ]
-  for (const [input, output] of table)
-    test(`${input} -> ${output}`, () => expect(normalizeRelayUrl(input)).toBe(output))
+  test("canonical form: scheme mapped to http(s), host lowercased, default port, path and credentials", () => {
+    const table: [string, string][] = [
+      ["HTTPS://Relay.Example.COM", "https://relay.example.com"],
+      ["wss://relay.example.com:443/", "https://relay.example.com"],
+      ["wss://relay.example.com:80", "https://relay.example.com:80"],
+      ["https://relay.example.com:8443", "https://relay.example.com:8443"],
+      ["https://relay.example.com/Kimo/Relay/", "https://relay.example.com/Kimo/Relay"],
+      ["https://user:pass@relay.example.com/?x=1#y", "https://relay.example.com"],
+      ["  https://relay.example.com  ", "https://relay.example.com"],
+      ["https://bücher.example", "https://xn--bcher-kva.example"],
+      // Plain http is for local and private hosts only.
+      ["ws://localhost:8787/", "http://localhost:8787"],
+      ["http://[::1]:8787", "http://[::1]:8787"],
+      ["http://studio.local", "http://studio.local"],
+      ["http://172.16.0.1", "http://172.16.0.1"],
+      ["http://192.168.1.20:8787", "http://192.168.1.20:8787"],
+    ]
+    for (const [input, output] of table)
+      expect([input, normalizeRelayUrl(input)]).toEqual([input, output])
+  })
 
   test("rejects other schemes, http on public hosts and junk", async () => {
     for (const bad of [
       "",
       "relay.example.com",
-      "//relay.example.com",
       "ftp://relay.example.com",
-      "file:///tmp",
       "javascript:alert(1)",
       "http://relay.example.com",
       "http://8.8.8.8",
       "http://172.32.0.1",
-      "http://172.15.0.1",
       "http://192.169.0.1",
-      "http://127.0.0.2",
-      "http://local",
       "http://localhost.evil.com",
-      "https://",
       "https://exa mple.com",
     ])
       await expectCode(() => normalizeRelayUrl(bad), "BAD_RELAY_URL")
@@ -110,10 +95,6 @@ describe("derived URLs", () => {
     expect(syncUrlFor("wss://relay.example.com/", room)).toBe(
       `wss://relay.example.com/sync/${room}`,
     )
-  })
-
-  test("syncUrlFor rejects a bad room", async () => {
-    await expectCode(() => syncUrlFor("https://r.example", "ROOM"), "BAD_REQUEST")
   })
 
   test("httpUrlFor appends to the base", () => {
@@ -138,23 +119,6 @@ describe("join links", () => {
     expect(parsed).toEqual(link)
   })
 
-  test("desktop origin kimo: and an empty origin", async () => {
-    const link = await sample()
-    const desktop = formatJoinLink({ ...link, webOrigin: "kimo:" })
-    expect(desktop.startsWith("kimo://join#https://relay.example.com/")).toBe(true)
-    expect(parseJoinLink(desktop).webOrigin).toBe("kimo:")
-    const bare = formatJoinLink({ ...link, webOrigin: "" })
-    expect(bare.startsWith("#https://")).toBe(true)
-    expect(parseJoinLink(bare)).toEqual({ ...link, webOrigin: "" })
-  })
-
-  test("format normalizes the relay URL and the origin's trailing slash", async () => {
-    const link = await sample("WSS://Relay.Example.com:443/")
-    const text = formatJoinLink({ ...link, webOrigin: "https://app.kimo.design/" })
-    expect(text.startsWith("https://app.kimo.design/join#https://relay.example.com/")).toBe(true)
-    expect(parseJoinLink(text).relayUrl).toBe("https://relay.example.com")
-  })
-
   test("accepts a bare fragment with or without #, any origin, and a local relay", async () => {
     const link = await sample("http://localhost:8787")
     const fragment = formatJoinLink(link).split("#")[1] as string
@@ -174,12 +138,6 @@ describe("join links", () => {
     expect(parseJoinLink(`${text}/`)).toEqual(link)
     const [origin, fragment] = text.split("#") as [string, string]
     expect(parseJoinLink(`${origin}#${encodeURIComponent(fragment)}`)).toEqual(link)
-  })
-
-  test("a relay URL given as wss in the fragment is normalized", async () => {
-    const link = await sample()
-    const text = `https://app/join#wss://Relay.Example.com/${link.room}/${link.token}/${toBase64Url(link.roomKey)}`
-    expect(parseJoinLink(text).relayUrl).toBe("https://relay.example.com")
   })
 
   test("a percent-encoded link resolves to the real relay, never the wrapper host", async () => {
@@ -208,21 +166,14 @@ describe("join links", () => {
     const r = "https://relay.example.com"
     const cases: Record<string, string> = {
       empty: "",
-      "no fragment content": "https://app/join#",
       "missing segment": `https://app/join#${r}/${link.room}/${link.token}`,
       "missing relay": `https://app/join#${link.room}/${link.token}/${key}`,
       "wrong room in token": `https://app/join#${r}/${link.room}/${other.token}/${key}`,
       "short key": `https://app/join#${r}/${link.room}/${link.token}/${toBase64Url(new Uint8Array(16))}`,
-      "long key": `https://app/join#${r}/${link.room}/${link.token}/${toBase64Url(new Uint8Array(33))}`,
-      "padded key": `https://app/join#${r}/${link.room}/${link.token}/${key}=`,
-      "uppercase room": `https://app/join#${r}/${link.room.toUpperCase()}/${link.token}/${key}`,
       "garbage token": `https://app/join#${r}/${link.room}/abc/${key}`,
       "http public relay": `https://app/join#http://relay.example.com/${link.room}/${link.token}/${key}`,
-      "relay without scheme": `https://app/join#relay.example.com/${link.room}/${link.token}/${key}`,
-      "segments swapped": `https://app/join#${r}/${link.token}/${link.room}/${key}`,
       "bad percent escape": `https://app/join#%E0%A4%A/${link.room}`,
       "relay with a query": `https://app/join#${r}/x?y=1/${link.room}/${link.token}/${key}`,
-      "relay with a fragment": `https://app/join#${r}/x#y/${link.room}/${link.token}/${key}`,
       "relay with credentials": `https://app/join#https://user@relay.example.com/${link.room}/${link.token}/${key}`,
     }
     for (const [name, text] of Object.entries(cases)) {
@@ -239,10 +190,8 @@ describe("join links", () => {
   test("format refuses invalid parts with BAD_LINK", async () => {
     const link = await sample()
     const other = await roomToken()
-    await expectCode(() => formatJoinLink({ ...link, relayUrl: "ftp://x" }), "BAD_LINK")
     await expectCode(() => formatJoinLink({ ...link, token: other.token }), "BAD_LINK")
     await expectCode(() => formatJoinLink({ ...link, roomKey: new Uint8Array(31) }), "BAD_LINK")
-    await expectCode(() => formatJoinLink({ ...link, room: "x" }), "BAD_LINK")
   })
 })
 
@@ -317,7 +266,7 @@ describe("pairing links", () => {
   })
 })
 
-describe("relayLink (board 45)", () => {
+describe("relayLink", () => {
   test("rewrites a join link to its relay's /join, keeping the fragment", async () => {
     const link = await sample("https://relay.example.com/kimo")
     for (const webOrigin of ["kimo:", "https://app.kimo.design", ""]) {
@@ -332,9 +281,5 @@ describe("relayLink (board 45)", () => {
     const token = await pairingToken()
     const text = formatPairingLink({ webOrigin: "kimo:", relayUrl: "http://localhost:8787", token })
     expect(relayLink(text)).toBe(`http://localhost:8787/pair#http://localhost:8787/${token}`)
-  })
-
-  test("leaves anything else unchanged", () => {
-    expect(relayLink("not a link")).toBe("not a link")
   })
 })

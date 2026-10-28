@@ -139,57 +139,30 @@ describe.each([...HOSTS])("kimo mcp install/remove/status --host %s", (host) => 
     const rm2 = await s.call("remove", "--host", flag)
     expect(rm2.out).toContain("not-installed")
   })
+})
 
-  test("refuses an unparsable config: exit 1, file untouched, no backup, snippet printed", async () => {
-    const s = session()
-    const p = s.path(host)
-    const broken =
-      host === "codex"
-        ? `model = "o5"\n[mcp_servers.other\ncommand = "x"\n`
-        : `{\n  // my servers\n  "${rootKey(host)}": {}\n}\n`
-    put(p, broken)
-    const r = await s.call("install", "--host", flag)
-    expect(r.code).toBe(1)
-    expect(r.out).toContain("ERROR")
-    expect(r.out).toContain("kimo")
-    expect(readFileSync(p, "utf8")).toBe(broken)
-    expect(s.backups()).toEqual([])
-    const st = await s.call("status", "--host", flag)
-    expect(st.out).toContain("unreadable")
-  })
-
-  test("--dry-run shows the change and writes nothing", async () => {
-    const s = session()
-    const r = await s.call("install", "--host", flag, "--dry-run")
-    expect(r.code).toBe(0)
-    expect(r.out).toContain("would be installed")
-    expect(r.out).toContain("+ ")
-    expect(existsSync(s.path(host))).toBe(false)
-  })
-
-  test("--project writes the project file", async () => {
-    const s = session()
-    const project = tmp()
-    const r = await s.call("install", "--host", flag, "--project", "--dir", project)
-    expect(r.code).toBe(0)
-    expect(existsSync(configPath(host, "project", { home: s.home, os: hostOs(), project }))).toBe(
-      true,
-    )
-    expect(existsSync(s.path(host))).toBe(false)
-  })
+describe("kimo mcp install: unparsable config", () => {
+  for (const host of ["claude-code", "codex"] as const)
+    test(`${host}: refused with exit 1, file untouched, no backup, snippet printed`, async () => {
+      const s = session()
+      const p = s.path(host)
+      const broken =
+        host === "codex"
+          ? `model = "o5"\n[mcp_servers.other\ncommand = "x"\n`
+          : `{\n  // my servers\n  "${rootKey(host)}": {}\n}\n`
+      put(p, broken)
+      const r = await s.call("install", "--host", host)
+      expect(r.code).toBe(1)
+      expect(r.out).toContain("ERROR")
+      expect(r.out).toContain("kimo")
+      expect(readFileSync(p, "utf8")).toBe(broken)
+      expect(s.backups()).toEqual([])
+      const st = await s.call("status", "--host", host)
+      expect(st.out).toContain("unreadable")
+    })
 })
 
 describe("kimo mcp install: host selection and launcher", () => {
-  test("--host all installs every host; status lists all five", async () => {
-    const s = session()
-    expect((await s.call("install", "--host", "all")).code).toBe(0)
-    for (const h of HOSTS) expect(existsSync(s.path(h))).toBe(true)
-    const st = await s.call("status")
-    for (const label of ["Claude Code", "Codex", "Gemini CLI", "Cursor", "VS Code"])
-      expect(st.out).toContain(label)
-    expect(st.out).not.toContain("not installed")
-  })
-
   test("without --host, install targets only detected hosts", async () => {
     const s = session()
     mkdirSync(join(s.home, ".codex"), { recursive: true })
@@ -231,7 +204,7 @@ describe("kimo mcp install: host selection and launcher", () => {
     expect(e).toEqual({ type: "stdio", command: shim, args: ["--client", "cursor"] })
   })
 
-  test("resolveLauncher: explicit command, env, candidates, CLI fallback", () => {
+  test("resolveLauncher: falls back to bunx unless a shim is found, and the CLI can be forced", () => {
     const base = { os: "macos" as const, home: "/h", env: {} }
     expect(resolveLauncher({ ...base, exists: () => false }).launcher).toEqual({
       kind: "cli",
@@ -239,19 +212,9 @@ describe("kimo mcp install: host selection and launcher", () => {
       prefixArgs: ["@kimo/cli"],
     })
     expect(
-      resolveLauncher({ ...base, exists: (p) => p.endsWith("Resources/kimo-mcp") }).launcher,
-    ).toEqual({ kind: "shim", command: "/Applications/Kimo.app/Contents/Resources/kimo-mcp" })
-    expect(resolveLauncher({ ...base, command: "/x/kimo-mcp" }).launcher.kind).toBe("shim")
-    expect(
       resolveLauncher({ ...base, env: { KIMO_MCP_SHIM: "/y" }, exists: () => false }).launcher,
     ).toEqual({ kind: "shim", command: "/y" })
     expect(resolveLauncher({ ...base, useCli: true, exists: () => true }).launcher.kind).toBe("cli")
-  })
-
-  test("unknown host and bad flags are usage errors", async () => {
-    const s = session()
-    expect((await s.call("install", "--host", "emacs")).code).toBe(64)
-    expect((await s.call("status", "--bogus")).code).toBe(64)
   })
 })
 

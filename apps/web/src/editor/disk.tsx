@@ -33,7 +33,7 @@ export function useConflicts(doc: FileDocumentSession | null): EditorConflictSes
 }
 
 /** The file name and save status kind of `doc` (the left card header's). */
-export function useDiskHeaderState(doc: FileDocumentSession): {
+function useDiskHeaderState(doc: FileDocumentSession): {
   fileName: string
   saveStatus: string
 } {
@@ -45,7 +45,7 @@ export function useDiskHeaderState(doc: FileDocumentSession): {
  * Board 44: the Save Status pill (XDqrb > Oxn3z, with its tooltip and Locked popover) in the
  * left card header, only while it needs attention: nothing while the file is saved to disk.
  */
-export function DiskSaveStatus({ doc }: { doc: FileDocumentSession }) {
+function DiskSaveStatus({ doc }: { doc: FileDocumentSession }) {
   const { saveStatus } = useDiskHeaderState(doc)
   return saveStatus === "saved" ? null : <SaveStatusPill session={doc} />
 }
@@ -111,7 +111,7 @@ export function useFocusNode(
 }
 
 /** The folder named in the window title: the repository's, else the containing folder's. */
-export function titleFolder(state: SessionState): string {
+function titleFolder(state: SessionState): string {
   return state.git?.repoRoot ? basenameOf(state.git.repoRoot) : basenameOf(dirnameOf(state.ref))
 }
 

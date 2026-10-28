@@ -25,7 +25,7 @@ export function isNextConflictKey(
 }
 
 /** Runs one Next / Previous conflict step: selects the node, reveals it, focuses its row. */
-export function stepConflict(session: EditorConflictSession, backwards = false): string | null {
+function stepConflict(session: EditorConflictSession, backwards = false): string | null {
   const id = backwards ? session.previous() : session.next()
   if (id) session.focus(id)
   return id

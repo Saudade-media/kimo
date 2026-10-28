@@ -10,7 +10,7 @@ import type { LayoutResult } from "@kimo/layout"
 import type { Point } from "@kimo/renderer"
 import type { CanvasHandle, UiStore } from "../../canvas/contract"
 
-export interface PasteTarget {
+interface PasteTarget {
   /** Parent id (null = the active page's root). */
   parent: string | null
   /** World point the pasted block is centred on (unused when `parent` lays its children out). */
@@ -19,7 +19,7 @@ export interface PasteTarget {
   via: "selection" | "pointer" | "viewport"
 }
 
-export interface TargetReader {
+interface TargetReader {
   getNode(id: string): NodeData | undefined
 }
 

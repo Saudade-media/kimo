@@ -30,7 +30,7 @@ export interface MarkupHooks {
 }
 
 /** Theme attributes of a node (`data-kimo-theme`, `data-<axis>`), sorted by axis. */
-export function themeAttrs(node: IRNode, attrOf: (axis: string) => string): [string, string][] {
+function themeAttrs(node: IRNode, attrOf: (axis: string) => string): [string, string][] {
   if (!node.themeAttrs) return []
   const out: [string, string][] = [[THEME_MARKER, ""]]
   for (const k of Object.keys(node.themeAttrs).sort())

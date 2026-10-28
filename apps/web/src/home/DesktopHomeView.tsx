@@ -15,7 +15,7 @@ import {
   type TrashedFile,
   type WatchedFolder,
 } from "@kimo/platform"
-import { Button, FileCard, Input } from "@kimo/ui"
+import { Button, Input } from "@kimo/ui"
 import {
   FilePlus,
   Folder,
@@ -89,7 +89,7 @@ const at = (from: MenuFrom): MenuAt =>
   "button" in from ? menuFromButton(from.button) : menuAtCursor(from.event)
 
 /** The OS trash's name in copy ("the macOS Trash"). */
-export function osTrashName(os: KimoPlatform["os"]): string {
+function osTrashName(os: KimoPlatform["os"]): string {
   return os === "macos" ? "the macOS Trash" : "the Trash"
 }
 
@@ -993,6 +993,3 @@ function DesktopTrash({
     </>
   )
 }
-
-/** Grid card used by Design systems on the web (shared FileCard). */
-export const LibraryCard = FileCard

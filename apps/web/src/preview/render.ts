@@ -30,9 +30,6 @@ import type {
 } from "@kimo/renderer"
 import type { Box, View } from "./model"
 
-/** Stage color (decision Co3jD: #0E0E10, fixed in both app themes). */
-export const PREVIEW_STAGE = "#0E0E10"
-
 export interface PreviewRenderDeps {
   store: DocStore
   libraries: () => Libraries

@@ -11,12 +11,12 @@ import { panelPlacement, usePanel } from "../panel-context"
 
 const RECENT_KEY = "kimo.recent-icons"
 
-export interface RecentIcon {
+interface RecentIcon {
   set: string
   name: string
 }
 
-export function readRecentIcons(): RecentIcon[] {
+function readRecentIcons(): RecentIcon[] {
   try {
     const v = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]")
     return Array.isArray(v)
@@ -29,7 +29,7 @@ export function readRecentIcons(): RecentIcon[] {
   }
 }
 
-export function pushRecentIcon(r: RecentIcon) {
+function pushRecentIcon(r: RecentIcon) {
   try {
     const list = [r, ...readRecentIcons().filter((x) => x.set !== r.set || x.name !== r.name)]
     localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 32)))

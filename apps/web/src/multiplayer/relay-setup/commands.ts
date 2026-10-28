@@ -19,7 +19,7 @@ export const RELAY_PORT = 8787
 export const FLY_CONFIG_PATH = "apps/server/deploy/fly.toml"
 
 /** Deploy on Railway: the Kimo Relay template (the published relay image, a volume at /data). */
-export const RAILWAY_TEMPLATE_URL = "https://railway.com/deploy/Q_WYo8"
+const RAILWAY_TEMPLATE_URL = "https://railway.com/deploy/Q_WYo8"
 
 /**
  * Whether Railway prefills template variables from the deploy link's query (ADR 0017 point 9: a
@@ -75,7 +75,7 @@ export function originsValue(origins: readonly string[]): string | null {
 }
 
 /** A value as one shell word: bare when it is safe, else single-quoted. */
-export function shellWord(value: string): string {
+function shellWord(value: string): string {
   if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
@@ -90,7 +90,7 @@ export interface RelayEnvInput {
 const SHOWN_KEY_CHARS = 13
 
 /** The key as shown on screen (`ed25519:Hq7mK2vX9pLw4…`) or, unmasked, as copied. */
-export function ownerKeyText(key: string, masked: boolean): string {
+function ownerKeyText(key: string, masked: boolean): string {
   return masked ? `ed25519:${key.slice(0, SHOWN_KEY_CHARS)}…` : key
 }
 
@@ -268,10 +268,4 @@ primary_region = "${input.region}"
 export function parseFlyWhoami(output: string): string | null {
   const m = /[^\s@]+@[^\s@]+\.[^\s@]+/.exec(output)
   return m ? m[0] : null
-}
-
-/** A version number out of `<tool> --version` output (`1.2.19`, `flyctl v0.3.172 …`). */
-export function parseVersion(output: string): string | null {
-  const m = /(\d+\.\d+(?:\.\d+)?)/.exec(output)
-  return m ? (m[1] as string) : null
 }

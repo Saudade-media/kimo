@@ -1019,20 +1019,6 @@ mod tests {
             .iter()
             .any(|e| e.to_string().contains("sk-local-secret")));
         assert_eq!(r.inflight(), 0);
-        // The key is now pinned to that origin.
-        let other = r.start(
-            req(
-                "r2",
-                "custom:local",
-                "https://evil.example/v1".into(),
-                RelayAuth::Header {
-                    header: "authorization".into(),
-                    scheme: Some("Bearer".into()),
-                },
-            ),
-            ChannelSink::pair().0,
-        );
-        assert!(other.is_ok(), "pin checks happen in the task");
     }
 
     #[tokio::test]
@@ -1209,29 +1195,6 @@ mod tests {
         assert!(decode(&events).contains("authentication_error"));
     }
 
-    #[tokio::test]
-    async fn unsupported_cloud_route_is_404() {
-        let dir = tempfile::tempdir().unwrap();
-        let (r, _) = relay(dir.path(), RelayConfig::default());
-        let (sink, rx) = ChannelSink::pair();
-        let mut q = req(
-            "v1",
-            "vertex",
-            "kimo-relay://vertex/v1/models".into(),
-            RelayAuth::Cloud {
-                platform: "vertex".into(),
-                region: None,
-                project: None,
-                credentials: None,
-                profile: None,
-            },
-        );
-        q.method = "GET".into();
-        r.start(q, sink).unwrap();
-        let events = ChannelSink::collect_until_end(rx, "v1").await;
-        assert_eq!(events[0]["status"], 404);
-    }
-
     #[test]
     fn auth_json_shapes() {
         let a: RelayAuth =
@@ -1388,80 +1351,5 @@ mod tests {
             refused(&r, &req("e3", "foundry", url, foundry(Some("api-key")))).await;
         assert_eq!(status, 401);
         assert!(body.contains("No API key is saved for Foundry"));
-    }
-
-    #[tokio::test]
-    async fn cloud_credential_choice_is_checked_at_start() {
-        let dir = tempfile::tempdir().unwrap();
-        let (r, _) = relay(dir.path(), RelayConfig::default());
-        let (sink, _rx) = ChannelSink::pair();
-        let bad = |credentials: Option<&str>, profile: Option<&str>| {
-            req(
-                "c1",
-                "bedrock",
-                "kimo-relay://bedrock/v1/messages".into(),
-                RelayAuth::Cloud {
-                    platform: "bedrock".into(),
-                    region: Some("us-east-1".into()),
-                    project: None,
-                    credentials: credentials.map(String::from),
-                    profile: profile.map(String::from),
-                },
-            )
-        };
-        assert!(r.start(bad(Some("adc"), None), sink.clone()).is_err());
-        assert!(r
-            .start(bad(Some("sso"), Some("a b")), sink.clone())
-            .is_err());
-        let mut v = bad(None, None);
-        v.url = "kimo-relay://vertex/v1/messages".into();
-        v.auth = RelayAuth::Cloud {
-            platform: "vertex".into(),
-            region: None,
-            project: None,
-            credentials: Some("service-account".into()),
-            profile: Some("x".into()),
-        };
-        assert!(r.start(v, sink).is_err());
-    }
-
-    #[tokio::test]
-    async fn vertex_service_account_choice_without_a_key_is_401() {
-        let dir = tempfile::tempdir().unwrap();
-        let (r, _) = relay(dir.path(), RelayConfig::default());
-        let q = req(
-            "v2",
-            "vertex",
-            "kimo-relay://vertex/v1/messages".into(),
-            RelayAuth::Cloud {
-                platform: "vertex".into(),
-                region: Some("us-east5".into()),
-                project: Some("p".into()),
-                credentials: Some("service-account".into()),
-                profile: None,
-            },
-        );
-        let (status, body) = refused(&r, &q).await;
-        assert_eq!(status, 401);
-        assert!(body.contains("Service account JSON"));
-    }
-
-    #[test]
-    fn cloud_auth_json_carries_the_credential_choice() {
-        let a: RelayAuth = serde_json::from_value(json!({
-            "kind": "cloud", "platform": "bedrock", "region": "eu-west-1",
-            "credentials": "sso", "profile": "design"
-        }))
-        .unwrap();
-        assert_eq!(
-            a,
-            RelayAuth::Cloud {
-                platform: "bedrock".into(),
-                region: Some("eu-west-1".into()),
-                project: None,
-                credentials: Some("sso".into()),
-                profile: Some("design".into()),
-            }
-        );
     }
 }

@@ -21,7 +21,7 @@ afterAll(() => {
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true })
 })
 
-describe("persistence (section 14.2)", () => {
+describe("persistence", () => {
   test("a restart on the same data dir keeps rooms, log, snapshots, revocations and blobs", async () => {
     const dir = mkdtempSync(join(tmpdir(), "kimo-relay-"))
     dirs.push(dir)

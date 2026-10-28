@@ -503,4 +503,4 @@ export function createFallbackHandlers(host: DocumentHost): ToolHandlers {
 }
 
 /** sha256 hex (kept here so callers need no crypto import). */
-export const sha256Hex = (s: string) => createHash("sha256").update(s).digest("hex")
+const sha256Hex = (s: string) => createHash("sha256").update(s).digest("hex")

@@ -117,19 +117,3 @@ fn spawn_detached(p: &Path) -> std::io::Result<String> {
     cmd.spawn()?;
     Ok(p.display().to_string())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn finds_the_enclosing_bundle() {
-        let b = mac_bundle_of(Path::new("/Applications/Kimo.app/Contents/MacOS"));
-        if cfg!(target_os = "macos") {
-            assert_eq!(b, Some(PathBuf::from("/Applications/Kimo.app")));
-        } else {
-            assert_eq!(b, None);
-        }
-        assert_eq!(mac_bundle_of(Path::new("/usr/local/bin")), None);
-    }
-}

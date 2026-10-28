@@ -8,7 +8,7 @@ Design: `desing.pen` board 23 `g6AqH` (supersedes board 22 `S1cdx`), web variant
 
 - **Settings pane** `"ai-providers"` (new `SettingsPane` id in `@kimo/platform` types, sidebar
   item right after Agents & MCP, `key-round` in `$agent`): `SettingsView` renders
-  `<AiProvidersPane platform={platform} />`. Desktop: Rust `SETTINGS_PANES`
+  `<AiProvidersPane platform={platform} />` (from `ai-settings/AiProvidersPane`). Desktop: Rust `SETTINGS_PANES`
   (`apps/desktop/src-tauri/src/window.rs`) must list `"agents-mcp"` and `"ai-providers"` so
   `openSettings("ai-providers")` lands on it (owned by the desktop builder).
 - **Home** (`home/Home.tsx`, web and desktop): `<HomeComposer platform={platform} />` replaces the
@@ -17,7 +17,8 @@ Design: `desing.pen` board 23 `g6AqH` (supersedes board 22 `S1cdx`), web variant
 ## The controller (one per window)
 
 ```ts
-import { getAiProviders, useAiProviders, useAiSettingsState } from "../ai-settings"
+import { useAiProviders } from "../ai-settings"
+import { getAiProviders, useAiSettingsState } from "../ai-settings/runtime"
 const ai = getAiProviders(platform)          // AiSettingsController ⊇ contract AiProvidersController
 ai.state.defaultSelection                    // {provider, model} | null (precedence below)
 ai.state.noProvider                          // first-run card / Agent tab first run
@@ -110,10 +111,8 @@ file; the card stays dismissed until a provider is added.
 
 ## Tests
 
-- Unit: `apps/web/test/board25-ai-agent.test.ts` (board 25 §4/§5) and
-  `apps/web/test/m6-ai-settings.test.ts` (copy, precedence, controller over memory secrets
-  + fake CLI host + mocked fetch, persistence, Home submit/never-overwrite, hand-off).
-- E2E: `apps/web/e2e/board25-ai-agent.e2e.ts` (board 25, measured) and `apps/web/e2e/m6-ai.e2e.ts` on `e2e/m6-ai-harness` (desktop + web pane, Home submit, first
-  run, wrong key / design by hand), one measured pass per surface.
+- Unit: `apps/web/test/agent/ai-providers.test.ts` (keys stay out of config and off the web
+  without opt-in, failed-test traces mask keys) and `apps/web/test/agent/home-prompt.test.ts`
+  (Home submit never overwrites a file).
 - Test doubles: `ai-settings/testing.ts` (`createFakeCliHost`, `createMockFetch`,
   `createTestAiSettings`).

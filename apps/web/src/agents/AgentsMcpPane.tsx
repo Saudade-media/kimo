@@ -911,15 +911,3 @@ function Permissions({
     </div>
   )
 }
-
-/** Minimal line diff for the preview (removed "- ", added "+ "). */
-export function diffLines(before: string | null, after: string | null): string {
-  const a = (before ?? "").split("\n")
-  const b = (after ?? "").split("\n")
-  const out: string[] = []
-  const inA = new Set(a)
-  const inB = new Set(b)
-  for (const line of a) if (!inB.has(line) && line) out.push(`- ${line}`)
-  for (const line of b) out.push(`${inA.has(line) ? "  " : "+ "}${line}`)
-  return out.join("\n").trimEnd()
-}

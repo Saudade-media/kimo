@@ -12,9 +12,6 @@ useEffect(() => { updater.start(); return () => updater.dispose() }, [updater])
 <UpdateToastHost controller={updater} />
 ```
 
-Or render `UpdateToastView` inside the session toast stack (builder 2) with
-`toast={updater.toast()}` and `onAction={() => updater.restart()}`.
-
 Guarantees (tested): background download only while `updates.download` is on; one "ready"
 toast per session; `platform.updater.restart()` is called only after `flushAll()` resolved
 `ok: true`; a failed or throwing flush shows "Restart after saving N files? · Save & restart"

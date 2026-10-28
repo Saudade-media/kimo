@@ -4,8 +4,7 @@
  * - `#/host` (hidden `document-host` webview): {@link startHostRoute} — holds every open
  *   document, serves relayed MCP connections; renders no UI.
  * - Editor windows: {@link connectWindowToHost} (called by `createAppRuntime` in Tauri), then
- *   sessions are {@link HostedDocumentSession}s; {@link getHostClient} gives the editor
- *   `onFocus` (kimo_focus) and `reportSelection`. See INTEGRATION.md.
+ *   sessions are {@link HostedDocumentSession}s. See INTEGRATION.md.
  */
 import type { KimoPlatform } from "@kimo/platform"
 import type { FontSource } from "@kimo/renderer"
@@ -23,13 +22,8 @@ export * from "./mcp-api"
 export * from "./multiplayer-host"
 export * from "./share-backend"
 
-/** True for the hidden document host's route. */
-export function isHostRoute(hash: string): boolean {
-  return /^#\/host\/?$/.test(hash)
-}
-
 /** The browser CanvasKit raster (bundled wasm URL) for renders in the host webview. */
-export const browserScene = {
+const browserScene = {
   createRenderer: async () => {
     const { createRenderer } = await import("@kimo/renderer/browser")
     const r = createRenderer()
@@ -39,7 +33,7 @@ export const browserScene = {
 }
 
 /** SVG vector import for `kimo_import kind=svg` (the editor's svg-import, board 19). */
-export const svgImporter = (
+const svgImporter = (
   text: string,
   t: {
     parent: string | null
@@ -100,11 +94,6 @@ export async function startHostRoute(
 
 let stopFlushServer: (() => void) | null = null
 
-/** The running host service in this webview (host route only). */
-export function getHostService(): DocumentHostService | null {
-  return service
-}
-
 let client: HostClient | null = null
 
 /** Connects an editor window to the document host; null when none answers (falls back to local sessions). */
@@ -113,10 +102,5 @@ export async function connectWindowToHost(
   timeoutMs?: number,
 ): Promise<HostClient | null> {
   client ??= await HostClient.connect(bridge, timeoutMs ?? 10_000)
-  return client
-}
-
-/** This window's host client, when the window is a host client. */
-export function getHostClient(): HostClient | null {
   return client
 }

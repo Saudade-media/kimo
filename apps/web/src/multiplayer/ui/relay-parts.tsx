@@ -4,7 +4,7 @@
  * the progress track.
  */
 import { Badge, Button, IconButton, Input, StatusPill } from "@kimo/ui"
-import { type ReactNode, useId, useRef, useState } from "react"
+import { type ReactNode, useId, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { originOf } from "../relay-setup/commands"
 import type { RelayCheck } from "../relay-setup/relay-test"
@@ -445,11 +445,4 @@ export function OriginsGroup({
       </p>
     </div>
   )
-}
-
-/** Keeps the latest value in a ref (for handlers in effects). */
-export function useLatest<T>(value: T) {
-  const ref = useRef(value)
-  ref.current = value
-  return ref
 }

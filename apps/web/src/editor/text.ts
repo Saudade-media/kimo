@@ -13,7 +13,7 @@
  * `content` keeps what was typed).
  */
 import type { NodeData, Op } from "@kimo/editor-state"
-import { formatNumber, MIXED, type Mixed, parseNumber, shared } from "./props"
+import { formatNumber, type Mixed, parseNumber, shared } from "./props"
 
 type Obj = Record<string, unknown>
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v)
@@ -120,7 +120,7 @@ export function caseOf(node: NodeData): TextCase {
   return c === "upper" || c === "lower" || c === "title" ? c : "none"
 }
 
-/** Common value over the selection, or {@link MIXED}. */
+/** Common value over the selection, or `MIXED` (props.ts). */
 export const sharedText = <T>(nodes: readonly NodeData[], pick: (n: NodeData) => T): T | Mixed =>
   shared(nodes, pick)
 
@@ -231,5 +231,3 @@ export function growOps(
     }
   })
 }
-
-export { MIXED }

@@ -181,7 +181,7 @@ pub fn requests_from_args(
 mod tests {
     use super::*;
 
-    // Same cases as packages/platform/test/platform.test.ts "deep links".
+    // Same cases as packages/platform/test/links.test.ts "deep links".
     #[test]
     fn parses_like_links_ts() {
         assert_eq!(

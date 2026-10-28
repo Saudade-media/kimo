@@ -34,7 +34,7 @@ export interface PreparedSvg {
 }
 
 /** Why a whole SVG is refused (board 20 M4Pij9 / fW1JW). */
-export type SvgRejectReason = "script" | "external" | "embedded-html"
+type SvgRejectReason = "script" | "external" | "embedded-html"
 
 /** "it contains a script", "it loads an external file" (board 20 toasts M4Pij9 / fW1JW). */
 const REASON_TEXT: Record<SvgRejectReason, string> = {
@@ -48,7 +48,7 @@ const REASON_TEXT: Record<SvgRejectReason, string> = {
  * One construct the sanitizer removed, as board 24 (j) "SVG rejection · details" (nx2kl) lists
  * it: `L4 <script> scripts are never imported`.
  */
-export interface SvgRemovedItem {
+interface SvgRemovedItem {
   /** 1-based source line, or null when it could not be located. */
   line: number | null
   /** `<script>`, `href="https://cdn…/x.svg"`, `<foreignObject>`, `onload="…"`. */
@@ -99,7 +99,7 @@ function lineOf(text: string, needle: string, nth = 0): number | null {
 }
 
 /** "https://cdn.example/assets/x.svg" → "https://cdn…/x.svg" (board 24 j). */
-export function shortRef(value: string): string {
+function shortRef(value: string): string {
   if (value.length <= 24) return value
   const slash = value.lastIndexOf("/")
   const tail = slash > 11 ? value.slice(slash) : value.slice(-8)
@@ -264,7 +264,7 @@ export function rememberSvgChoice(choice: SvgImportChoice): void {
   }
 }
 
-export interface SvgImportTarget extends Omit<ConvertContext, "name"> {
+interface SvgImportTarget extends Omit<ConvertContext, "name"> {
   /** Stores bytes as a document asset (`./assets/<key>`); resolves its manifest entry. */
   putAsset: (
     key: string,

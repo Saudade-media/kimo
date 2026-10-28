@@ -78,7 +78,7 @@ const RECENTS_LIMIT = 50
  * `sourceId`), the ids of the files that import it. Snapshots without a known origin (a file
  * picked from disk) count for nobody: the name of a library is never used to guess.
  */
-export async function librarySnapshotUses(): Promise<Map<string, Set<string>>> {
+async function librarySnapshotUses(): Promise<Map<string, Set<string>>> {
   const out = new Map<string, Set<string>>()
   const db = await new Promise<IDBDatabase | null>((resolve) => {
     const req = indexedDB.open("kimo-libraries", 1)

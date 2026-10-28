@@ -6,7 +6,7 @@ export {
 } from "./activity-row/ActivityRow"
 export { AgentClientRow, type AgentClientRowProps } from "./agent-client-row/AgentClientRow"
 export { AgentHostRow, type AgentHostRowProps } from "./agent-host-row/AgentHostRow"
-export { AGENT_LAYER_ROW_CLASS, AgentLayerMark } from "./agent-layer-mark/AgentLayerMark"
+export { AGENT_LAYER_ROW_CLASS } from "./agent-layer-mark/AgentLayerMark"
 export { AgentOpRow, type AgentOpRowProps } from "./agent-op-row/AgentOpRow"
 export { AgentOrb, type AgentOrbProps } from "./agent-orb/AgentOrb"
 export {

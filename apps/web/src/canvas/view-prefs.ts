@@ -19,7 +19,7 @@ export interface CanvasViewPrefs {
 }
 
 /** The view prefs of a settings snapshot. */
-export function viewPrefsOf(s: Settings): CanvasViewPrefs {
+function viewPrefsOf(s: Settings): CanvasViewPrefs {
   return {
     snapToObjects: s["canvas.snapToObjects"],
     snapToPixelGrid: s["canvas.snapToPixelGrid"],

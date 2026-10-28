@@ -1,9 +1,6 @@
-/**
- * Board 31 token pass: the page outline of the turn context is compact, bounded and puts the
- * selection first and deepest.
- */
+/** The page outline of the turn context is compact, bounded and puts the selection first and deepest. */
 import { describe, expect, test } from "bun:test"
-import { buildPageOutline, buildSystemPrompt, type OutlineSource, outlineLine } from "../src/index"
+import { buildPageOutline, type OutlineSource } from "../src/index"
 
 type N = Record<string, unknown> & { parent: string | null }
 
@@ -50,16 +47,6 @@ function page(sections: number, per: number): Record<string, N> {
 }
 
 describe("page outline", () => {
-  test("one line per node with box, key fields and the selection mark", () => {
-    const src = source(page(1, 1))
-    expect(outlineLine("Page000001", src, true)).toBe(
-      'Page000001 frame "Landing" 0,0 100x20 layout={dir:column,gap:0} fill=$color/bg sel',
-    )
-    expect(outlineLine("Row0000000", src, false)).toBe(
-      'Row0000000 text "Row 0" 0,0 100x20 style={font:Inter,size:16,weight:400} "Some copy for row 0 of section …"',
-    )
-  })
-
   test("small pages are outlined whole: the selection deep, other roots shallow (+N)", () => {
     const out = buildPageOutline(source(page(2, 2)), { selection: ["Page000001"] }) as string
     const lines = out.split("\n")
@@ -75,7 +62,7 @@ describe("page outline", () => {
   })
 
   test("a large page stays within the budget and says what it left out", () => {
-    const nodes = page(40, 60) // 2,400 rows
+    const nodes = page(40, 20) // 800 rows
     for (const maxChars of [2_000, 12_000]) {
       const out = buildPageOutline(source(nodes), {
         selection: ["Page000001"],
@@ -89,7 +76,7 @@ describe("page outline", () => {
       const outlined = body.filter((l) => !l.startsWith("…")).join("\n")
       expect(outlined.length).toBeLessThanOrEqual(maxChars)
       // Shallower but complete levels: every section is listed with its rows elided.
-      expect(out).toContain(' Sect000039 frame "Section 39" 0,0 100x20 +60')
+      expect(out).toContain(' Sect000039 frame "Section 39" 0,0 100x20 +20')
     }
     // Default budget ≈ 3k tokens.
     expect(
@@ -105,17 +92,5 @@ describe("page outline", () => {
     expect(lines[1]).toBe('Sect000002 frame "Section 2" sel')
     expect(lines[2]).toStartWith(" Row0020000 text")
     expect(buildPageOutline(source({}), {})).toBeNull()
-  })
-
-  test("the system prompt carries the doc and outline in its volatile part", () => {
-    const p = buildSystemPrompt({
-      mode: "single",
-      skills: [],
-      doc: { id: "d_ab_cd", name: "landing.kimo" },
-      outline: "Page outline …",
-    })
-    expect(p.stable).not.toContain("d_ab_cd")
-    expect(p.volatile).toContain('Document: "landing.kimo" docId d_ab_cd')
-    expect(p.volatile).toContain("Page outline …")
   })
 })

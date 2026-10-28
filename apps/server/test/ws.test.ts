@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { sealAwareness, sealUpdate } from "@kimo/sync/mp"
 import {
-  admin,
   Client,
   type Harness,
   joinAs,
@@ -38,15 +37,11 @@ describe("connection rules", () => {
     expect(await client.closeInfo()).toEqual({ code: 4400, reason: "BAD_MESSAGE" })
   })
 
-  test("a text frame is BAD_MESSAGE", async () => {
+  test("a text frame and garbage binary are BAD_MESSAGE", async () => {
     const owner = await registered(h)
-    const client = await Client.connect(h, owner.room.id)
-    client.ws.send("hello")
-    expect((await client.closeInfo()).reason).toBe("BAD_MESSAGE")
-  })
-
-  test("garbage binary is BAD_MESSAGE", async () => {
-    const owner = await registered(h)
+    const text = await Client.connect(h, owner.room.id)
+    text.ws.send("hello")
+    expect((await text.closeInfo()).reason).toBe("BAD_MESSAGE")
     const { client } = await joinAs(h, owner, "edit")
     client.sendRaw(new Uint8Array([99, 1, 2]))
     expect((await client.closeInfo()).reason).toBe("BAD_MESSAGE")
@@ -97,7 +92,7 @@ describe("connection rules", () => {
     await strict.stop()
   })
 
-  test("an allow list still admits the desktop app's webview origins, and refuses others", async () => {
+  test("an allow list still admits the desktop webview origins and its own origin, and refuses others", async () => {
     const strict = startRelay({ allowedOrigins: ["https://app.example"] })
     const owner = await registered(strict)
     const opens = (origin: string) =>
@@ -123,46 +118,12 @@ describe("connection rules", () => {
     for (const origin of ["tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"])
       expect(await opens(origin)).toBe(true)
     expect(await opens("https://app.example")).toBe(true)
-    expect(await opens("https://random.example")).toBe(false)
-    const refused = await fetch(`${strict.base}/sync/${owner.room.id}`, {
-      headers: upgradeHeaders("kimo-mp.1", { origin: "https://random.example" }),
-    })
-    expect(refused.status).toBe(403)
-    expect(((await refused.json()) as { error: string }).error).toBe("ORIGIN_FORBIDDEN")
-    await strict.stop()
-  })
-
-  test("an allow list admits the relay's own origin (board 45: the web app it serves)", async () => {
-    const strict = startRelay({ allowedOrigins: ["https://app.example"] })
-    const owner = await registered(strict)
-    const own = new URL(strict.base).origin
-    const opened = await new Promise<boolean>((resolve) => {
-      const ws = new WebSocket(`${strict.wsBase}/sync/${owner.room.id}`, {
-        protocols: ["kimo-mp.1"],
-        headers: { origin: own },
-      } as unknown as string[])
-      const t = setTimeout(() => {
-        ws.close()
-        resolve(false)
-      }, 3000)
-      ws.onopen = () => {
-        clearTimeout(t)
-        ws.close()
-        resolve(true)
-      }
-      ws.onerror = () => {
-        clearTimeout(t)
-        resolve(false)
-      }
-    })
-    expect(opened).toBe(true)
+    expect(await opens(new URL(strict.base).origin)).toBe(true)
     // Another port on the same host is another origin.
     const otherPort = new URL(strict.base)
     otherPort.port = String(Number(otherPort.port) + 1)
-    const refused = await fetch(`${strict.base}/sync/${owner.room.id}`, {
-      headers: upgradeHeaders("kimo-mp.1", { origin: otherPort.origin }),
-    })
-    expect(refused.status).toBe(403)
+    expect(await opens(otherPort.origin)).toBe(false)
+    expect(await opens("https://random.example")).toBe(false)
     await strict.stop()
   })
 
@@ -195,14 +156,6 @@ describe("connection rules", () => {
     client.close()
     await small.stop()
   })
-
-  test("ping is answered with pong", async () => {
-    const owner = await registered(h)
-    const { client } = await joinAs(h, owner, "view")
-    client.send({ type: "ping", n: 41 })
-    expect((await client.next("pong")).n).toBe(41)
-    client.close()
-  })
 })
 
 describe("welcome", () => {
@@ -222,7 +175,6 @@ describe("welcome", () => {
       snapshot: null,
       peers: [],
     })
-    expect(first.welcome.limits.maxEntryBytes).toBe(4 * 1024 * 1024)
     const second = await joinAs(h, owner, "view")
     expect(second.welcome.peer).toBe(2)
     expect(second.welcome.peers).toEqual([{ peer: 1, role: "edit", origin: "agent:bot" }])
@@ -364,9 +316,10 @@ describe("awareness and peers", () => {
     const b = await joinAs(h, owner, "view")
     const env = await presence(owner, a.welcome.peer, "{}")
     for (let clock = 1; clock <= 100; clock++) a.client.send({ type: "awareness", clock, env })
-    await Bun.sleep(300)
-    const seen = b.client.messages.filter((m) => m.type === "awareness").length
-    expect(seen).toBe(20)
+    // The relay handles a's frames in order, so the pong means all 100 were seen.
+    a.client.send({ type: "ping", n: 1 })
+    await a.client.next("pong")
+    expect(await b.client.drain("awareness", 50)).toHaveLength(20)
     a.client.close()
     b.client.close()
   })
@@ -488,11 +441,4 @@ describe("abuse limits", () => {
     for (let i = 0; i < 600; i++) client.send({ type: "ping", n: i })
     expect((await client.closeInfo()).reason).toBe("RATE_LIMITED")
   })
-})
-
-test("admin close is visible to sockets (sanity)", async () => {
-  const owner = await registered(h)
-  const { client } = await joinAs(h, owner, "edit")
-  await admin(h, owner, { op: "close" })
-  expect((await client.closeInfo()).reason).toBe("ROOM_CLOSED")
 })

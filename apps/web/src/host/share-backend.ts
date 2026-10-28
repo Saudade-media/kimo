@@ -16,7 +16,7 @@ import type { LocalPresence } from "../platform/share"
 import type { HostClient } from "./client"
 
 /** Presence updates (pointer moves) are sent to the host at most this often per document. */
-export const PRESENCE_SEND_MS = 50
+const PRESENCE_SEND_MS = 50
 
 export function createHostShareBackend(
   client: HostClient,

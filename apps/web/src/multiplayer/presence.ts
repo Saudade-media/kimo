@@ -12,7 +12,7 @@
  */
 
 /** The six presence color tokens, in assignment order. */
-export const PRESENCE_COLORS = [
+const PRESENCE_COLORS = [
   "presence-clay",
   "presence-pine",
   "presence-ochre",

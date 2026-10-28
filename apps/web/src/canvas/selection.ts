@@ -6,9 +6,6 @@
  */
 import { type DocReader, pathOf } from "./commands"
 
-/** Maps an expanded (synthetic) id to the real node that owns it (its top-level instance). */
-export type RealId = (id: string) => string
-
 /** The node a click on `hit` (deepest hit) selects. */
 export function pickTarget(
   doc: DocReader,

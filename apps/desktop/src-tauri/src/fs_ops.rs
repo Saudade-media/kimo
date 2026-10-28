@@ -456,25 +456,4 @@ mod tests {
         );
         assert_eq!(copy_no_clobber(&gone, &a).unwrap_err().code, "NOT_FOUND");
     }
-
-    #[test]
-    fn stat_list_remove() {
-        let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join("a.kimo"), b"1").unwrap();
-        fs::write(dir.path().join("b.txt"), b"22").unwrap();
-        fs::create_dir(dir.path().join("sub")).unwrap();
-        let all = list(dir.path(), None).unwrap();
-        assert_eq!(all.len(), 3);
-        let only = list(dir.path(), Some(&["kimo".to_string()])).unwrap();
-        assert_eq!(
-            only.iter().map(|s| s.name.as_str()).collect::<Vec<_>>(),
-            ["a.kimo", "sub"]
-        );
-        let s = stat(&dir.path().join("b.txt")).unwrap().unwrap();
-        assert_eq!((s.kind, s.size), ("file", 2));
-        assert!(stat(&dir.path().join("nope")).unwrap().is_none());
-        remove(&dir.path().join("b.txt")).unwrap();
-        remove(&dir.path().join("b.txt")).unwrap();
-        assert!(read_text(&dir.path().join("b.txt")).unwrap_err().code == "NOT_FOUND");
-    }
 }

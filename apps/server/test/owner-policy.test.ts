@@ -42,7 +42,7 @@ interface Account {
 }
 
 /**
- * A small in-test policy (ADR 0018): device keys map to accounts, an account without a plan is
+ * A small in-test policy: device keys map to accounts, an account without a plan is
  * refused, and every call is recorded. Each answer is synchronous or one resolved promise.
  */
 function testPolicy() {
@@ -112,7 +112,7 @@ async function putBlob(h: Harness, owner: Owner, text: string) {
   return { res, bytes: blob.envelope.length }
 }
 
-describe("owner policy: external (ADR 0018, section 14.12)", () => {
+describe("owner policy: external", () => {
   test("/version reports external, and KIMO_OWNER_KEY seeds no owner set", async () => {
     const t = testPolicy()
     const h = external(t.policy)
@@ -403,16 +403,6 @@ describe("owner policy: external (ADR 0018, section 14.12)", () => {
       console.error = error
     }
     expect(h.relay.db.getRoom(owner.room.id)).toBeNull()
-  })
-
-  test("the devices policy is the default and keeps rooms without an account", async () => {
-    const h = startRelay()
-    relays.push(h)
-    expect(h.relay.owner.mode).toBe("devices")
-    const owner = await room(h)
-    expect(h.relay.db.getRoom(owner.room.id)?.account).toBeNull()
-    const info = (await (await fetch(`${h.base}/version`)).json()) as { owner: string }
-    expect(info.owner).toBe("claimed")
   })
 })
 

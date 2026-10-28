@@ -15,7 +15,7 @@ import { clampEffort, type EffortLevel, type ModelSelection } from "@kimo/ai-age
 import type { ModelPickerGroup, ModelPickerModel } from "../platform/contract"
 
 /** Board 39 rule "Search": the field shows once one provider lists this many models. */
-export const SEARCH_THRESHOLD = 9
+const SEARCH_THRESHOLD = 9
 
 export interface ChooserChip {
   provider: string
@@ -62,7 +62,7 @@ export interface ChooserState {
   zone: "list" | "effort"
 }
 
-export const TAG_LABEL: Readonly<Record<NonNullable<ModelPickerModel["tag"]>, string>> = {
+const TAG_LABEL: Readonly<Record<NonNullable<ModelPickerModel["tag"]>, string>> = {
   best: "Best",
   fast: "Fast",
   local: "Local",
@@ -89,7 +89,7 @@ const rowOf = (
 }
 
 /** True when `m` matches the search text (label or id, case-insensitive). */
-export function matches(m: Pick<ModelPickerModel, "id" | "label">, query: string): boolean {
+function matches(m: Pick<ModelPickerModel, "id" | "label">, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
   return m.label.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)

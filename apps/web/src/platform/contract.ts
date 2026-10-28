@@ -10,41 +10,31 @@
  * the design's; components are named by their `desing.pen` component (and node id).
  */
 
-import {
-  type CliDetection as AgentCliDetection,
-  type CliProcessHost as AgentCliProcessHost,
-  type ConnectionTest as AgentConnectionTest,
-  type EffortLevel as AgentEffortLevel,
-  type ErrorCard as AgentErrorCard,
-  type ErrorCardAction as AgentErrorCardAction,
-  type GenericCliConfig as AgentGenericCliConfig,
-  type Mode as AgentMode,
-  type ModeConfig as AgentModeConfig,
-  type ModelSelection as AgentModelSelection,
-  type PromptRunState as AgentPromptRunState,
-  type ProviderKind as AgentProviderKind,
-  type Reach as AgentReach,
-  type ReachRow as AgentReachRow,
-  type ReviewDecision as AgentReviewDecision,
-  type SessionMeta as AgentSessionMeta,
-  type Skill as AgentSkill,
-  type ThinkingMode as AgentThinkingMode,
-  type TurnRecord as AgentTurnRecord,
-  IN_APP_APPROVAL_TIMEOUT_MS,
-  MAX_AGENTS,
-} from "@kimo/ai-agent"
 import type {
-  AppliedState,
-  ConflictKind,
-  ConflictSide,
-  MergeInfo,
-  ThreeWayMerge,
-} from "@kimo/core-schema"
+  CliDetection as AgentCliDetection,
+  CliProcessHost as AgentCliProcessHost,
+  ConnectionTest as AgentConnectionTest,
+  EffortLevel as AgentEffortLevel,
+  ErrorCard as AgentErrorCard,
+  ErrorCardAction as AgentErrorCardAction,
+  GenericCliConfig as AgentGenericCliConfig,
+  Mode as AgentMode,
+  ModeConfig as AgentModeConfig,
+  ModelSelection as AgentModelSelection,
+  ProviderKind as AgentProviderKind,
+  Reach as AgentReach,
+  ReachRow as AgentReachRow,
+  ReviewDecision as AgentReviewDecision,
+  SessionMeta as AgentSessionMeta,
+  Skill as AgentSkill,
+  ThinkingMode as AgentThinkingMode,
+  TurnRecord as AgentTurnRecord,
+} from "@kimo/ai-agent"
+import type { AppliedState, ConflictKind, ConflictSide, MergeInfo } from "@kimo/core-schema"
 import type { DocStore } from "@kimo/editor-state"
 import {
   ACTIVITY_LIMIT,
   type ActivityEntry,
-  APPROVAL_TIMEOUT_MS,
   type ApprovalOutcome,
   type ApprovalRequest,
   type ClientIdentity,
@@ -66,7 +56,6 @@ import type {
   McpClientIdentity,
   McpClientPolicy,
   McpConnectionInfo,
-  McpHostApi,
   McpHostConfigStatus,
   McpHostId,
   McpServerStatus,
@@ -97,7 +86,6 @@ export type FilesAreAtomicStore = Assert<
 >
 /** Recovery reasons are the same set in `@kimo/sync` and `@kimo/platform`. */
 export type RecoveryReasonsMatch = Assert<Same<SyncRecoveryReason, PlatformRecoveryReason>>
-export type RecoveryReason = SyncRecoveryReason
 
 // ===============================================================================================
 // Save status (02d "SaveStatus · 7 states"; topbar pill, one state at a time)
@@ -140,17 +128,6 @@ export type SaveStatus =
   | { kind: "locked"; holder: LeaseHolder }
   /** The write or the read-back failed; paired with a `save-failed` banner. */
   | { kind: "failed"; failure: SaveFailure }
-
-/** The `desing.pen` component (and node id) rendering each status. */
-export const SAVE_STATUS_COMPONENT = {
-  saved: { component: "SaveStatus", node: "EdNXU" },
-  saving: { component: "SaveStatus/Saving", node: "hbDxo" },
-  unsaved: { component: "SaveStatus/Unsaved", node: "O8d1r" },
-  paused: { component: "SaveStatus/Paused", node: "LvZiH" },
-  "read-only": { component: "SaveStatus/ReadOnly", node: "ChFsm" },
-  locked: { component: "SaveStatus/Locked", node: "Nn6l8" },
-  failed: { component: "SaveStatus/Failed", node: "qPGUY" },
-} as const satisfies Record<SaveStatus["kind"], { component: string; node: string }>
 
 /** The pill label, exactly as designed (boards 02d, 16, 17, 18). */
 export function saveStatusLabel(s: SaveStatus): string {
@@ -251,7 +228,7 @@ export function windowTitle(t: WindowTitleInput): string {
 }
 
 /** Board 24 (m): a web tab title is at most this long; the file name truncates, never the suffix. */
-export const TAB_TITLE_MAX = 60
+const TAB_TITLE_MAX = 60
 
 export interface TabTitleInput {
   /** null on Home: "Kimo". A trailing ".kimo" is dropped. */
@@ -310,15 +287,6 @@ export function isEdited(s: SaveStatus): boolean {
 // ===============================================================================================
 // Banners (full width under the topbar, never floating; one at a time, highest severity wins)
 // ===============================================================================================
-
-export type BannerSeverity = "info" | "warning" | "danger"
-
-/** Banner component per severity (02d). */
-export const BANNER_COMPONENT = {
-  info: { component: "Banner", node: "R6VHG" },
-  warning: { component: "Banner/Warning", node: "KPgcF" },
-  danger: { component: "Banner/Danger", node: "Gq3Fs" },
-} as const satisfies Record<BannerSeverity, { component: string; node: string }>
 
 /** Detail of a terminal load failure (board 17 "Failed load"). */
 export interface FailedLoadDetail {
@@ -406,7 +374,7 @@ export type BannerKind = Banner["kind"]
  * terminal for the window and stays first. "Ready to commit" also REPLACES the git banner in the
  * same slot (see `FileDocumentSession.banners`), never stacks under it.
  */
-export const BANNER_PRIORITY: readonly BannerKind[] = [
+const BANNER_PRIORITY: readonly BannerKind[] = [
   "failed-load",
   "locked",
   "newer-format",
@@ -869,9 +837,6 @@ export interface ConflictSession {
   subscribe(listener: () => void): Unsubscribe
 }
 
-/** ⌘' — board 18 "Next conflict". */
-export const NEXT_CONFLICT_SHORTCUT = "Mod+'"
-
 // ===============================================================================================
 // The document session
 // ===============================================================================================
@@ -986,10 +951,6 @@ export interface SessionManager {
   handleOpenRequest(request: OpenRequest): Promise<void>
 }
 
-/** The semantic three-way merge used for external changes and git "Keep my edits"
- * (core-schema; `kimo merge` uses the same function). */
-export type SessionMerge = ThreeWayMerge
-
 // ===============================================================================================
 // M5 agents (ADR 0013 §11): presence, approvals and the activity log as the editor shows them.
 // The document host produces this state from `@kimo/mcp-server`; windows read it through
@@ -1005,8 +966,6 @@ export type McpActivityMatches = Assert<Same<McpActivityEntry, ActivityEntry>>
 export type McpOutcomeMatches = Assert<Same<McpApprovalOutcome, ApprovalOutcome>>
 export type McpHostRowMatches = Assert<Same<McpHostConfigStatus, InstallerHostStatus>>
 
-/** Approval timeout shown as a countdown on the prompt (lead decision: 2 minutes → deny). */
-export const AGENT_APPROVAL_TIMEOUT_MS = APPROVAL_TIMEOUT_MS
 /** Activity entries kept per file (lead decision). */
 export const AGENT_ACTIVITY_LIMIT = ACTIVITY_LIMIT
 
@@ -1070,9 +1029,6 @@ export interface AgentsController {
   removeHost(host: McpHostId, scope: "user" | "project"): Promise<McpHostConfigStatus>
 }
 
-/** Host API the controller needs (re-exported for builders). */
-export type AgentsHost = McpHostApi
-
 // ===============================================================================================
 // M6 built-in agent (ADR 0014): the agent panel, sessions, model picker, modes, error cards,
 // Settings › AI providers (API keys + local CLIs) and prompt-node run state, as designed on board
@@ -1083,11 +1039,6 @@ export type AgentsHost = McpHostApi
 
 /** The platform's CLI host mirror stays identical to the agent's interface. */
 export type CliHostMirrorMatches = Assert<Same<CliProcessHostLike, AgentCliProcessHost>>
-
-/** In-app approvals wait indefinitely (external MCP keeps AGENT_APPROVAL_TIMEOUT_MS). */
-export const AGENT_IN_APP_APPROVAL_TIMEOUT_MS = IN_APP_APPROVAL_TIMEOUT_MS
-/** Lead decision: ≤ 6 parallel agents in side by side / split. */
-export const AGENT_MAX_PARALLEL = MAX_AGENTS
 
 /** Settings › AI providers › Usage & limits (stored in settings, not in the keychain). */
 export interface AgentUsageSettings {
@@ -1409,14 +1360,3 @@ export interface HomeAgentHandoff {
   /** Session origin "home"; mode Single, scope page; first root frame placeholder: true. */
   sessionId: string
 }
-
-export interface HomeAgentCardState {
-  /** providers.length = 0 and no signed-in CLI → card replaces the chips, send disabled. */
-  noProvider: boolean
-  /** "Design by hand instead" dismissed until a provider is added. */
-  dismissed: boolean
-  platform: "desktop" | "web"
-}
-
-/** Prompt-node run state, keyed by `promptRunKey(fileId, nodeId)` (app data, not the file). */
-export type PromptRunStates = Record<string, AgentPromptRunState>

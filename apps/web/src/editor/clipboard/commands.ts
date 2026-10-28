@@ -52,7 +52,7 @@ let lastCopy: ClipboardPayload | null = null
 /** ⌥⌘C properties (app-wide, like Figma). */
 let copiedProps: CopiedProperties | null = null
 
-export interface CommandDeps {
+interface CommandDeps {
   session: FileSession
   m3: M3Controller
   canvas: () => CanvasHandle | null

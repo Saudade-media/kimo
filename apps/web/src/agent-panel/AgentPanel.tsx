@@ -124,9 +124,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const
 
 /** png / jpeg / webp ≤ 5 MB → base64 (board 22 rule "Attachments"). */
-export async function readImage(
-  file: File,
-): Promise<NonNullable<AttachmentChipView["image"]> | null> {
+async function readImage(file: File): Promise<NonNullable<AttachmentChipView["image"]> | null> {
   if (!IMAGE_TYPES.includes(file.type as (typeof IMAGE_TYPES)[number])) return null
   if (file.size > MAX_IMAGE_BYTES) return null
   const buf = new Uint8Array(await file.arrayBuffer())

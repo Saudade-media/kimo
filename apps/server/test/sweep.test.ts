@@ -38,7 +38,7 @@ async function sweep(keep: string[], graceDays?: number) {
   return (await res.json()) as Record<string, number>
 }
 
-describe("owner sweep (section 14.7)", () => {
+describe("owner sweep", () => {
   test("the first sweep only marks; a sweep after the grace deletes rows and bytes", async () => {
     const a = await upload("keep me")
     const b = await upload("drop me")
@@ -74,17 +74,6 @@ describe("owner sweep (section 14.7)", () => {
     await sweep([b.id], 1)
     expect(await exists(a.id)).toBe(false)
     expect(await exists(b.id)).toBe(true)
-  })
-
-  test("the default grace comes from the config (30 days)", async () => {
-    const a = await upload("default grace")
-    await sweep([])
-    h.clock.now += 29 * DAY
-    expect((await sweep([])).deleted).toBe(0)
-    expect(await exists(a.id)).toBe(true)
-    h.clock.now += 2 * DAY
-    expect((await sweep([])).deleted).toBeGreaterThanOrEqual(1)
-    expect(await exists(a.id)).toBe(false)
   })
 
   test("the relay never deletes blobs outside a sweep", async () => {

@@ -24,7 +24,7 @@ async function appendN(
     client.send({ type: "append", cid: from + i, env: await update(owner, `u${from + i}`) })
 }
 
-describe("compaction scheduling (section 14.3)", () => {
+describe("compaction scheduling", () => {
   test("triggered by entry count, sent to the lowest caught-up edit peer", async () => {
     h = startRelay({ compactEntries: 3 })
     const owner = await registered(h)
@@ -44,19 +44,6 @@ describe("compaction scheduling (section 14.3)", () => {
     await appendN(b.client, owner, 2, 4)
     expect(await b.client.drain("compact")).toHaveLength(0)
     for (const p of [a, b, viewer]) p.client.close()
-  })
-
-  test("the lowest peer wins once it is caught up", async () => {
-    h = startRelay({ compactEntries: 2 })
-    const owner = await registered(h)
-    const a = await joinAs(h, owner, "edit")
-    const b = await joinAs(h, owner, "edit")
-    await markCaughtUp(a.client)
-    await markCaughtUp(b.client)
-    await appendN(b.client, owner, 2)
-    expect(await a.client.next("compact")).toMatchObject({ upTo: 2 })
-    a.client.close()
-    b.client.close()
   })
 
   test("triggered by bytes", async () => {

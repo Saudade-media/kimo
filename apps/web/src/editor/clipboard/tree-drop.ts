@@ -7,13 +7,13 @@
  */
 import type { NodeData, Op } from "@kimo/editor-state"
 
-export interface TreeRow {
+interface TreeRow {
   id: string
   depth: number
   parent: string | null
 }
 
-export interface TreeDropReader {
+interface TreeDropReader {
   getNode(id: string): NodeData | undefined
   children(parent: string | null, at?: string | null): readonly string[]
   /** Ids of the expanded instance view (rows inside an instance). */

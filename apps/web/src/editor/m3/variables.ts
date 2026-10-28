@@ -59,14 +59,14 @@ export const isPlain = (value: unknown) => !isThemedValue(value)
 
 // --- Colors -------------------------------------------------------------------------------------
 
-export interface Oklch {
+interface Oklch {
   space: "oklch"
   l: number
   c: number
   h: number
   alpha?: number
 }
-export interface P3 {
+interface P3 {
   space: "display-p3"
   r: number
   g: number
@@ -103,7 +103,7 @@ const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 
 const gam = (c: number) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055)
 
 /** OKLCH → linear sRGB (Björn Ottosson's OKLab matrices). */
-export function oklchToLinearSrgb(l: number, c: number, h: number): [number, number, number] {
+function oklchToLinearSrgb(l: number, c: number, h: number): [number, number, number] {
   const hr = (h * Math.PI) / 180
   const a = c * Math.cos(hr)
   const b = c * Math.sin(hr)
@@ -118,7 +118,7 @@ export function oklchToLinearSrgb(l: number, c: number, h: number): [number, num
 }
 
 /** Display-P3 (gamma-encoded) → linear sRGB. */
-export function p3ToLinearSrgb(r: number, g: number, b: number): [number, number, number] {
+function p3ToLinearSrgb(r: number, g: number, b: number): [number, number, number] {
   const R = lin(r)
   const G = lin(g)
   const B = lin(b)
@@ -154,7 +154,7 @@ export function toHexApprox(v: unknown): string | null {
 }
 
 /** sRGB hex → OKLCH (to keep an OKLCH variable in its space when edited with the M2 picker). */
-export function hexToOklch(hex: string): Oklch | null {
+function hexToOklch(hex: string): Oklch | null {
   const m = /^#?([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(hex)
   if (!m) return null
   const n = Number.parseInt(m[1] as string, 16)
@@ -181,7 +181,7 @@ export function hexToOklch(hex: string): Oklch | null {
 }
 
 /** sRGB hex → Display-P3 (to keep a P3 variable in its space when edited with the M2 picker). */
-export function hexToP3(hex: string): P3 | null {
+function hexToP3(hex: string): P3 | null {
   const m = /^#?([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(hex)
   if (!m) return null
   const n = Number.parseInt(m[1] as string, 16)
@@ -203,21 +203,6 @@ export function inSpaceOf(stored: unknown, hex: string): unknown {
   if (isObj(stored) && stored.space === "oklch") return hexToOklch(hex) ?? hex
   if (isObj(stored) && stored.space === "display-p3") return hexToP3(hex) ?? hex
   return hex
-}
-
-/** Parses "0.70 0.17 45" (OKLCH L C H) or "oklch(…)". */
-export function parseOklch(text: string): Oklch | null {
-  const nums = text
-    .replace(/oklch\(|\)/gi, "")
-    .split(/[\s,/]+/)
-    .filter(Boolean)
-    .map(Number)
-  if (nums.length < 3 || nums.some((n) => !Number.isFinite(n))) return null
-  const [l, c, h, a] = nums as [number, number, number, number | undefined]
-  if (l < 0 || l > 1 || c < 0) return null
-  const out: Oklch = { space: "oklch", l, c, h: ((h % 360) + 360) % 360 }
-  if (a !== undefined && a >= 0 && a <= 1 && a !== 1) out.alpha = a
-  return out
 }
 
 // --- Values -------------------------------------------------------------------------------------

@@ -16,7 +16,7 @@ import type { M3Controller } from "../m3/controller"
 import type { FileSession } from "../session"
 import { activePageId, activeRoots, pageLayerCount, rootsPerPage } from "./model"
 
-export interface PageCommandContext {
+interface PageCommandContext {
   session: FileSession
   m3: M3Controller
 }

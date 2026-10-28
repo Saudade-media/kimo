@@ -34,7 +34,7 @@ let nodeModule: Promise<QuickJSWASMModule> | null = null
 /** The Bun / Node build of QuickJS; a variable so browser bundles leave it out (they use the worker). */
 const NODE_VARIANT = "@jitl/quickjs-singlefile-mjs-release-sync"
 /** QuickJS for Bun / Node (wasm embedded in the module). */
-export function loadNodeQuickJS(): Promise<QuickJSWASMModule> {
+function loadNodeQuickJS(): Promise<QuickJSWASMModule> {
   nodeModule ??= Promise.all([
     import("quickjs-emscripten-core"),
     import(/* @vite-ignore */ NODE_VARIANT) as Promise<{

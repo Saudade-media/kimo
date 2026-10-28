@@ -35,9 +35,3 @@ export function parseJoinPath(path: string): string | null {
     return ""
   }
 }
-
-/** Home as seen from the join page: the app root (`/`), hash route Recents. */
-export function homeUrlFromJoin(loc: Pick<Location, "href" | "pathname">): string {
-  const url = new URL(".", loc.href)
-  return `${url.href}#/`
-}

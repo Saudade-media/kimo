@@ -82,7 +82,7 @@ function parseFrontMatter(src: string): Record<string, string> {
 let builtinCache: Skill[] | undefined
 
 /** The shipped skills (kimo-design, kimo-layout, kimo-tokens). */
-export function builtinSkills(): Skill[] {
+function builtinSkills(): Skill[] {
   builtinCache ??= BUILTIN_SKILL_SOURCES.map((t) => {
     const r = parseSkill(t, "builtin")
     if (!r.ok) throw new Error(`Built-in skill invalid: ${r.error.message}`)

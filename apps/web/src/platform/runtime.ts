@@ -65,7 +65,7 @@ const onConflictReject = (message: string) => console.warn("Kimo: conflict pick 
  * The window's session manager over `platform` (call once per window). With `createSession`
  * (M5 desktop: the document host's factory), sessions are replicas of the host's documents.
  */
-export function createAppSessionManager(
+function createAppSessionManager(
   platform: KimoPlatform,
   createSession?: SessionManagerOptions["createSession"],
   sessionFactory?: SessionManagerOptions["sessionFactory"],

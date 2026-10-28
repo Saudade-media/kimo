@@ -6,7 +6,7 @@
  */
 import { useSyncExternalStore } from "react"
 
-export interface PanelsState {
+interface PanelsState {
   /** The left card (Layers) is collapsed to its header. */
   left: boolean
   /** The right card (Design / Code / Agent) is collapsed to its header. */
@@ -36,7 +36,7 @@ function current(): PanelsState {
 }
 
 /** Replaces the collapsed state (and stores it for this window). */
-export function setPanels(next: PanelsState): void {
+function setPanels(next: PanelsState): void {
   const prev = current()
   if (prev.left === next.left && prev.right === next.right) return
   state = { left: next.left, right: next.right }
@@ -69,9 +69,4 @@ function subscribe(cb: () => void): () => void {
 /** The collapsed state of this window's cards, kept current. */
 export function usePanels(): PanelsState {
   return useSyncExternalStore(subscribe, current, current)
-}
-
-/** Test seam: forget the in-memory state (the next read comes from storage). */
-export function resetPanelsForTest(): void {
-  state = null
 }

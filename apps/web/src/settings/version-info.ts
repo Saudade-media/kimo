@@ -22,7 +22,7 @@ const OS_LABEL: Record<Exclude<HostOS, "web">, string> = {
 }
 
 /** Rust `std::env::consts::ARCH` → the names people know (`aarch64` → `arm64`). */
-export function archLabel(arch: string | undefined | null): string | null {
+function archLabel(arch: string | undefined | null): string | null {
   if (!arch) return null
   if (arch === "aarch64") return "arm64"
   if (arch === "x86_64") return "x64"
@@ -31,7 +31,7 @@ export function archLabel(arch: string | undefined | null): string | null {
 }
 
 /** The OS a browser runs on, from its user agent (web builds only). */
-export function webOsLabel(ua: string): string {
+function webOsLabel(ua: string): string {
   if (/Mac OS X|Macintosh/i.test(ua)) return "macOS"
   if (/Windows/i.test(ua)) return "Windows"
   if (/CrOS/i.test(ua)) return "ChromeOS"

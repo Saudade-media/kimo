@@ -1,4 +1,4 @@
-/** Window ↔ document-host sync provider (ADR 0002 §2): convergence, origins, per-origin undo. */
+/** Window ↔ document-host sync provider: convergence, origins, per-origin undo. */
 import { describe, expect, test } from "bun:test"
 import { createDocStore, createEmptyDocument, type Origin } from "@kimo/editor-state"
 import { createTransportPair, HostSyncHub, WindowSyncProvider } from "../src"

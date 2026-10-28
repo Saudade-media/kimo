@@ -103,7 +103,7 @@ const CHIP_BOX = { w: 160, h: 64 }
 const CHIP_MIN_SCALE = 0.4
 
 /** Chip scale for a `w` × `h` box (screen px). */
-export function chipScale(w: number, h: number): number {
+function chipScale(w: number, h: number): number {
   const s = Math.min(1, w / CHIP_BOX.w, h / CHIP_BOX.h)
   return s < CHIP_MIN_SCALE ? 0 : s
 }

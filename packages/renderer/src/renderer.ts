@@ -5,7 +5,7 @@
  * of the subtree changes identity (frozen `NodeData`), moves (`LayoutResult.changed`), or is
  * invalidated, and when fonts or images arrive.
  *
- * Perf gate (M1, 5k nodes at 60 fps; apps/web/e2e/perf): zoomed out on WebGL, each root is drawn
+ * Perf gate (M1, 5k nodes at 60 fps; test/bench/perf-5k.ts): zoomed out on WebGL, each root is drawn
  * from a cached raster of its picture (one textured quad instead of thousands of replayed ops),
  * and once something is on screen, picture recording and rasterizing are time-budgeted per
  * frame so never-drawn roots fill in over a few frames instead of blocking one.

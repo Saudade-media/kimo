@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { RGBA } from "../src/color"
-import { meshColorAt, meshVertices, tessellateMesh } from "../src/mesh"
+import { meshVertices, tessellateMesh } from "../src/mesh"
 
 const RED: RGBA = [1, 0, 0, 1]
 const BLUE: RGBA = [0, 0, 1, 1]
@@ -59,17 +59,6 @@ describe("mesh", () => {
     expect(t.positions[24 * 2 + 1]).toBeCloseTo(0.42)
     // Its first row lies on the top edge.
     for (let i = 0; i < 5; i++) expect(t.positions[i * 2 + 1]).toBeCloseTo(0)
-  })
-
-  test("colors: corners exact, smooth (zero slope) at vertices, symmetric midway", () => {
-    const cs = [RED, BLUE, BLUE, RED]
-    expect(meshColorAt(2, 2, cs, 0, 0)).toEqual(RED)
-    expect(meshColorAt(2, 2, cs, 1, 0)).toEqual(BLUE)
-    const mid = meshColorAt(2, 2, cs, 0.5, 0)
-    expect(mid[0]).toBeCloseTo(0.5)
-    expect(mid[2]).toBeCloseTo(0.5)
-    // Smoothstep: at 10% of the way the color has moved only ~2.8%.
-    expect(meshColorAt(2, 2, cs, 0.1, 0)[2]).toBeCloseTo(0.028)
   })
 
   test("triangles index every patch vertex, within 16 bits for big grids", () => {

@@ -31,7 +31,7 @@ import { M3Button } from "./ui"
 /** Drag payload type for components (Assets → canvas / slot / replace). */
 export const COMPONENT_MIME = "application/x-kimo-component"
 
-export function setComponentDrag(e: React.DragEvent, item: ComponentItem) {
+function setComponentDrag(e: React.DragEvent, item: ComponentItem) {
   e.dataTransfer.setData(COMPONENT_MIME, JSON.stringify({ of: item.qid, name: item.name }))
   e.dataTransfer.setData("text/plain", item.name)
   e.dataTransfer.effectAllowed = "copy"

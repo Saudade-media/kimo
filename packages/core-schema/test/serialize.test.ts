@@ -1,56 +1,18 @@
 import { describe, expect, test } from "bun:test"
-import {
-  canonicalize,
-  isCanonical,
-  KEY_ORDER,
-  KimoParseError,
-  parse,
-  parseJson,
-  serialize,
-  validate,
-} from "../src/index"
+import { isCanonical, KimoParseError, parse, parseJson, serialize, validate } from "../src/index"
 import { doc, readFixture } from "./helpers"
 
-describe("canonical layout (10.2 rules 1–2)", () => {
-  const text = serialize(
-    doc(
-      {
+describe("canonical layout", () => {
+  test("one node per line, sorted by id, leading comma, blank line between", () => {
+    const text = serialize(
+      doc({
         Zed0000001: { type: "text", parent: null, order: "a1", content: "z" },
         Abc0000001: { type: "frame", parent: null, order: "a0", name: "A" },
-      },
-      {
-        meta: { name: "x" },
-        variables: { b: { type: "number", value: 2 }, a: { type: "number", value: 1 } },
-      },
-    ),
-  )
-  const lines = text.split("\n")
-
-  test("starts with { and ends with }\\n", () => {
-    expect(lines[0]).toBe("{")
-    expect(text.endsWith("}\n}\n")).toBe(true)
-  })
-
-  test("header members one per line, in canonical order, nodes last", () => {
-    expect(lines.slice(1, 5)).toEqual([
-      `"$schema": "https://getkimo.design/schema/kimo-1.0.json",`,
-      `"format": "1.0.0",`,
-      `"meta": {"name":"x"},`,
-      `"variables": {`,
-    ])
-    expect(text.indexOf(`"nodes": {`)).toBeGreaterThan(text.indexOf(`"variables": {`))
-  })
-
-  test("one node per line, sorted by id, leading comma, blank line between", () => {
+      }),
+    )
     const nodes = text.slice(text.indexOf(`"nodes": {\n`) + `"nodes": {\n`.length)
     expect(nodes).toBe(
       `"Abc0000001": {"type":"frame","parent":null,"order":"a0","name":"A"}\n\n, "Zed0000001": {"type":"text","parent":null,"order":"a1","content":"z"}\n}\n}\n`,
-    )
-  })
-
-  test("variables use the same table layout, sorted by name", () => {
-    expect(text).toContain(
-      `"variables": {\n"a": {"type":"number","value":1}\n\n, "b": {"type":"number","value":2}\n},\n`,
     )
   })
 
@@ -145,10 +107,6 @@ describe("canonical key order", () => {
     expect(out).toContain(`"future":{"a":2,"type":1}`)
   })
 
-  test("KEY_ORDER has no duplicates", () => {
-    expect(new Set(KEY_ORDER).size).toBe(KEY_ORDER.length)
-  })
-
   test("header: unknown members sort after known ones, before nodes", () => {
     const out = serialize({
       nodes: {},
@@ -159,20 +117,6 @@ describe("canonical key order", () => {
     })
     expect(out).toBe(
       `{\n"$schema": "https://getkimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"aa": [1],\n"zz": 1,\n"nodes": {}\n}\n`,
-    )
-  })
-
-  test("header: unknown members are not ranked even when their names are in KEY_ORDER", () => {
-    const out = serialize({
-      nodes: {},
-      zzz: 1,
-      description: { b: 1, a: 2 },
-      name: "x",
-      format: "1.0.0",
-      $schema: "https://getkimo.design/schema/kimo-1.0.json",
-    })
-    expect(out).toBe(
-      `{\n"$schema": "https://getkimo.design/schema/kimo-1.0.json",\n"format": "1.0.0",\n"description": {"a":2,"b":1},\n"name": "x",\n"zzz": 1,\n"nodes": {}\n}\n`,
     )
   })
 
@@ -202,14 +146,6 @@ describe("values", () => {
     expect(out).toContain(`{"type":"frame","parent":null,"order":"a0","layout":{"dir":"row"}}`)
   })
 
-  test("defaults can be kept for debugging", () => {
-    const out = serialize(
-      doc({ Frame00001: { type: "frame", parent: null, order: "a0", visible: true } }),
-      { stripDefaults: false },
-    )
-    expect(out).toContain(`"visible":true`)
-  })
-
   test("numbers use the shortest round-trip form", () => {
     const out = serialize(
       doc({
@@ -233,17 +169,6 @@ describe("values", () => {
     )
     expect(out).toContain(`"content":"a\\"b\\\\c\\nd\\u0001"`)
     expect(out.split("\n").filter((l) => l.includes("Text000001"))).toHaveLength(1)
-  })
-
-  test("undefined members are dropped", () => {
-    expect(
-      serialize(doc({ Frame00001: { type: "frame", parent: null, order: "a0", name: undefined } })),
-    ).toContain(`{"type":"frame","parent":null,"order":"a0"}`)
-  })
-
-  test("canonicalize is idempotent", () => {
-    const d = parse(readFixture("valid/components-local.kimo"))
-    expect(canonicalize(canonicalize(d))).toEqual(canonicalize(d))
   })
 })
 

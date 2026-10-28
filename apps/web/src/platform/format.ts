@@ -41,7 +41,7 @@ export function formatClock(ms: number): string {
 }
 
 /** "0 B", "12 KB", "3.4 MB". */
-export function formatBytes(n: number): string {
+function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`
   const units = ["KB", "MB", "GB", "TB"]
   let v = n / 1024

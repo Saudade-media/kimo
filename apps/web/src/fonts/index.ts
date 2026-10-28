@@ -1,53 +1,6 @@
 /** Board 19 fonts: font system, missing-font detection + dialog, font picker. See INTEGRATION.md. */
-export {
-  type DocumentFontAsset,
-  FONT_MIME,
-  isFontAsset,
-  loadDocumentFontFaces,
-  parseFontFileName,
-} from "./document-fonts"
-export {
-  BLOCKED_NOTE,
-  FontPicker,
-  type FontPickerEntry,
-  type FontPickerProps,
-  type FontSourceGroup,
-  filterFontEntries,
-  GOOGLE_OFF_NOTE,
-  type GoogleFontsState,
-  offlineNote,
-  searchPlaceholder,
-} from "./FontPicker"
-export {
-  fontPickerEntries,
-  googleState,
-  MissingFontsHost,
-  type MissingFontsHostProps,
-  type PickedFont,
-  pickFontFile,
-  REPLACE_CHOICES_MAX,
-  replaceChoices,
-  useFontPickerEntries,
-} from "./FontsHost"
-export {
-  createFontSystem,
-  FONT_SETTING_KEYS,
-  type FontSystem,
-  type FontSystemOptions,
-} from "./font-system"
-export {
-  MissingFontsDialog,
-  type MissingFontsDialogProps,
-  missingFontsDescription,
-  missingFontsTitle,
-  replaceLabel,
-} from "./MissingFontsDialog"
-export { type MissingWeight, missingWeight, renderedWeight } from "./missing-weight"
-export {
-  FontReplaceSelect,
-  type ReplaceChoice,
-  ReplaceWithMenu,
-  type ReplaceWithMenuProps,
-} from "./ReplaceWithMenu"
-export { replaceFontOps, suggestReplacement } from "./replace-fonts"
-export { claimMissingFontsDialog, resetMissingFontsSession } from "./session-once"
+export { type DocumentFontAsset, isFontAsset, loadDocumentFontFaces } from "./document-fonts"
+export { FontPicker } from "./FontPicker"
+export { MissingFontsHost, useFontPickerEntries } from "./FontsHost"
+export { createFontSystem } from "./font-system"
+export { missingWeight } from "./missing-weight"

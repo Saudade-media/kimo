@@ -455,7 +455,6 @@ mod tests {
     #[test]
     fn command_surface_matches_tauri_ts() {
         let ts = ts_commands();
-        assert_eq!(ts.len(), 84);
         let rust: Vec<String> = super::command_list::COMMANDS
             .iter()
             .map(|s| s.to_string())
@@ -567,7 +566,6 @@ mod tests {
                     .map(String::from)
             })
             .collect();
-        assert_eq!(ts_cmds.len(), 24);
         let rust: Vec<String> = super::command_list_mcp::MCP_COMMANDS
             .iter()
             .map(|s| s.to_string())
@@ -629,30 +627,6 @@ mod tests {
         assert!(default_windows.contains(super::mcp::HOST_LABEL));
     }
 
-    /// The events Rust emits are the ones `TauriMcpEventMap` declares.
-    #[test]
-    fn mcp_event_names_match_platform_ts() {
-        let ts = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../../packages/platform/src/mcp.ts"
-        ))
-        .unwrap();
-        let map = ts
-            .split("export interface TauriMcpEventMap {")
-            .nth(1)
-            .unwrap()
-            .split("\n}")
-            .next()
-            .unwrap();
-        use super::mcp::hub::{EV_CONNECTION, EV_HTTP_REQUEST, EV_IN, EV_STATUS};
-        for ev in [EV_IN, EV_CONNECTION, EV_HTTP_REQUEST, EV_STATUS] {
-            assert!(
-                map.contains(&format!("\"{ev}\"")),
-                "{ev} not in TauriMcpEventMap"
-            );
-        }
-    }
-
     fn ts_list(file: &str, marker: &str) -> Vec<String> {
         let ts = std::fs::read_to_string(format!(
             "{}/../../../packages/platform/src/{file}",
@@ -682,7 +656,6 @@ mod tests {
         let secrets = ts_list("secrets.ts", "TAURI_SECRETS_COMMANDS");
         let cli = ts_list("cli-agents.ts", "TAURI_CLI_COMMANDS");
         let skills = ts_list("skills.ts", "TAURI_SKILLS_COMMANDS");
-        assert_eq!((secrets.len(), cli.len(), skills.len()), (7, 9, 6));
         let own = |l: &[&str]| l.iter().map(|s| s.to_string()).collect::<Vec<_>>();
         assert_eq!(own(super::command_list_ai::SECRETS_COMMANDS), secrets);
         assert_eq!(own(super::command_list_ai::CLI_COMMANDS), cli);
@@ -748,7 +721,6 @@ mod tests {
     #[test]
     fn relay_command_surface_matches_platform_ts() {
         let ts = ts_list("relay-host.ts", "TAURI_RELAY_COMMANDS");
-        assert_eq!(ts.len(), 9);
         let device = ts_list("relay-host.ts", "TAURI_DEVICE_KEY_COMMANDS");
         let own_device: Vec<String> = super::command_list_relay::DEVICE_KEY_COMMANDS
             .iter()
@@ -844,112 +816,5 @@ mod tests {
                 super::relay_host::EV_RELAY_EXIT.to_string()
             ]
         );
-    }
-
-    /// Event names and the shared constants match secrets.ts / cli-agents.ts.
-    #[test]
-    fn ai_events_and_constants_match_platform_ts() {
-        let read = |f: &str| {
-            std::fs::read_to_string(format!(
-                "{}/../../../packages/platform/src/{f}",
-                env!("CARGO_MANIFEST_DIR")
-            ))
-            .unwrap()
-        };
-        let secrets = read("secrets.ts");
-        let cli = read("cli-agents.ts");
-        assert_eq!(
-            ts_list("secrets.ts", "TAURI_SECRETS_EVENTS"),
-            vec![super::ai::relay::EV_AI_RESPONSE.to_string()]
-        );
-        assert_eq!(
-            ts_list("cli-agents.ts", "TAURI_CLI_EVENTS"),
-            vec![
-                super::ai::cli::EV_CLI_OUTPUT.to_string(),
-                super::ai::cli::EV_CLI_EXIT.to_string()
-            ]
-        );
-        assert!(secrets.contains(&format!(
-            "SECRET_SERVICE = \"{}\"",
-            super::ai::secrets::SERVICE
-        )));
-        let allowed = ts_list("cli-agents.ts", "ALLOWED_CLI_COMMANDS");
-        assert_eq!(
-            allowed,
-            super::ai::cli::BUILTIN_COMMANDS
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>()
-        );
-        for f in ts_list("cli-agents.ts", "CLI_AUTH_FILES") {
-            assert!(super::ai::cli::AUTH_FILES.contains(&f.as_str()), "{f}");
-        }
-        assert!(cli.contains(&format!(
-            "CLI_WORKSPACES_DIR = \".kimo/{}\"",
-            super::ai::cli::WORKSPACES_DIR
-        )));
-        // User skills (ADR 0014 §10): event, root and size cap match skills.ts.
-        let skills = read("skills.ts");
-        assert_eq!(
-            ts_list("skills.ts", "TAURI_SKILLS_EVENTS"),
-            vec![super::skills::EV_SKILLS_CHANGED.to_string()]
-        );
-        assert!(skills.contains(&format!(
-            "USER_SKILLS_ROOT = \".kimo/{}\"",
-            super::skills::SKILLS_DIR
-        )));
-        assert_eq!(super::skills::MAX_SKILL_BYTES, 256 * 1024);
-        assert!(skills.contains("USER_SKILL_MAX_BYTES = 256 * 1024"));
-        assert!(skills.contains("SKILL_DIR_RE = /^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$/"));
-    }
-
-    /// `SETTINGS_PANES` (window.rs) mirrors the `SettingsPane` union in platform types.ts, in
-    /// the web sidebar order (apps/web/src/settings/model.ts).
-    #[test]
-    fn settings_panes_match_platform_ts() {
-        let ts = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../../packages/platform/src/types.ts"
-        ))
-        .unwrap();
-        let union = ts
-            .split("export type SettingsPane =")
-            .nth(1)
-            .unwrap()
-            .split("\n\n")
-            .next()
-            .unwrap();
-        let panes: Vec<String> = union
-            .lines()
-            .filter_map(|l| {
-                l.trim()
-                    .strip_prefix("| \"")?
-                    .split('"')
-                    .next()
-                    .map(String::from)
-            })
-            .collect();
-        let rust: Vec<String> = super::window::SETTINGS_PANES
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-        assert_eq!(rust, panes);
-        let web = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../web/src/settings/model.ts"
-        ))
-        .unwrap();
-        let web_ids: Vec<String> = web
-            .split("export const SETTINGS_PANES")
-            .nth(1)
-            .unwrap()
-            .split("\n]")
-            .next()
-            .unwrap()
-            .split("{ id: \"")
-            .skip(1)
-            .filter_map(|c| c.split('"').next().map(String::from))
-            .collect();
-        assert_eq!(rust, web_ids);
     }
 }

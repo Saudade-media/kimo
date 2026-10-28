@@ -38,7 +38,7 @@ import {
 } from "./model"
 
 /** Why an agent's edits are paused (rule "Paused"). */
-export interface PausedInfo {
+interface PausedInfo {
   code: "READ_ONLY" | "DOCUMENT_LOCKED" | "USER"
   summary: string
   time: number
@@ -86,7 +86,7 @@ export interface AgentsViewState extends AgentsState {
 }
 
 /** Per-origin undo for agent groups (the document host's `kimo_history`; default: the store). */
-export interface AgentHistory {
+interface AgentHistory {
   undo(origin: string, undoToken?: string): Promise<McpHistoryResult>
   /**
    * Redo the origin's last undone group (board 24 h "Redo"); absent: no Redo action. With

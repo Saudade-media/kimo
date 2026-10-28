@@ -13,27 +13,6 @@ import { tessellateMesh } from "./mesh"
 import type { ShaderCache } from "./shader"
 import type { AssetSource } from "./types"
 
-export const BLEND_NAMES = [
-  "normal",
-  "darken",
-  "multiply",
-  "color-burn",
-  "linear-burn",
-  "lighten",
-  "screen",
-  "color-dodge",
-  "linear-dodge",
-  "overlay",
-  "soft-light",
-  "hard-light",
-  "difference",
-  "exclusion",
-  "hue",
-  "saturation",
-  "color",
-  "luminosity",
-] as const
-
 /**
  * Spec blend mode → Skia. Skia has no linear-burn mode: {@link applyBlend} draws it with an
  * SkSL blender; this mapping (multiply) is only the fallback when runtime effects are absent.

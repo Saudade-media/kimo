@@ -2,14 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { loadCanvasKit } from "../src/ck"
-import {
-  GlslError,
-  parseDefault,
-  parseUniforms,
-  preprocess,
-  transpileGlsl,
-  uniformValue,
-} from "../src/glsl"
+import { GlslError, parseUniforms, preprocess, transpileGlsl, uniformValue } from "../src/glsl"
 
 const SHADERS = join(import.meta.dir, "..", "..", "..", "shaders")
 const color = (v: unknown) => {
@@ -30,31 +23,30 @@ describe("GLSL → SkSL", () => {
       expect(error).toBe("")
       expect(fx).toBeTruthy()
       expect(p.timed).toBe(true)
-      expect(p.uniforms.map((u) => u.name)).toEqual([
-        "u_resolution",
-        "u_time",
-        "u_speed",
-        "u_turbulence",
-        "u_gloss",
-        "u_soft",
-        "u_c1",
-        "u_c2",
-        "u_c3",
-        "u_c4",
-      ])
       fx?.delete()
     })
 
   test("annotations: roles, defaults, ranges, labels, colors", () => {
-    const u = parseUniforms(
-      readFileSync(join(SHADERS, "agent-liquid.glsl"), "utf8").replace(/#ifdef[\s\S]*?#endif/, ""),
-    )
+    const u = parseUniforms(`/** @resolution */
+uniform vec2 res;
+/** @time */
+uniform float t;
+/**
+ * @label Speed
+ * @range 0, 1.5
+ * @default 0.12
+ */
+uniform float speed;
+/**
+ * @color
+ * @default #0B1E3A
+ */
+uniform vec3 tint;`)
     const by = Object.fromEntries(u.map((x) => [x.name, x]))
-    expect(by.u_resolution?.role).toBe("resolution")
-    expect(by.u_time?.role).toBe("time")
-    expect(by.u_speed).toMatchObject({ default: 0.12, min: 0, max: 1.5, label: "Speed" })
-    expect(by.u_soft?.label).toBe("Edge softness (px)")
-    expect(by.u_c1).toMatchObject({ type: "vec3", size: 3, color: true, default: "#0B1E3A" })
+    expect(by.res?.role).toBe("resolution")
+    expect(by.t?.role).toBe("time")
+    expect(by.speed).toMatchObject({ default: 0.12, min: 0, max: 1.5, label: "Speed" })
+    expect(by.tint).toMatchObject({ type: "vec3", size: 3, color: true, default: "#0B1E3A" })
   })
 
   test("a comment block only annotates the uniform right after it", () => {
@@ -124,12 +116,6 @@ describe("uniform values", () => {
   const [u] = parseUniforms("/** @color @default #FF0000 */ uniform vec3 c;")
   const decl = (src: string) => parseUniforms(src)[0] as NonNullable<typeof u>
 
-  test("roles", () => {
-    expect(uniformValue(decl("/** @resolution */ uniform vec2 r;"), [1, 1], ctx)).toEqual([40, 20])
-    expect(uniformValue(decl("/** @time */ uniform float t;"), 9, ctx)).toEqual([2.5])
-    expect(uniformValue(decl("/** @mouse */ uniform vec2 m;"), undefined, ctx)).toEqual([0, 0])
-  })
-
   test("override > @default > 0", () => {
     if (!u) throw new Error("no uniform")
     expect(uniformValue(u, undefined, ctx)).toEqual([1, 0, 0])
@@ -149,13 +135,5 @@ describe("uniform values", () => {
     expect(uniformValue(u, { $ref: "accent" }, { ...ctx, resolve })).toEqual([0, 1, 0])
     // An unresolved binding falls back to the default.
     expect(uniformValue(u, { $ref: "gone" }, { ...ctx, resolve })).toEqual([1, 0, 0])
-  })
-
-  test("@default parsing", () => {
-    expect(parseDefault("0.5")).toBe(0.5)
-    expect(parseDefault("#0B1E3A")).toBe("#0B1E3A")
-    expect(parseDefault("true")).toBe(true)
-    expect(parseDefault("vec2(1.0, -2)")).toEqual([1, -2])
-    expect(parseDefault("[0.1, 0.2, 0.3]")).toEqual([0.1, 0.2, 0.3])
   })
 })

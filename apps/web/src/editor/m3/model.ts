@@ -80,11 +80,7 @@ export function isOverridden(view: ExpandedView, id: string): boolean {
 }
 
 /** The component node an instance (view id) instantiates, with its namespace. */
-export function mainOf(
-  doc: Pick<KimoDocument, "nodes" | "imports">,
-  libraries: Libraries,
-  of: string,
-) {
+function mainOf(doc: Pick<KimoDocument, "nodes" | "imports">, libraries: Libraries, of: string) {
   const r = locate({ doc, libraries }, of)
   return isLocated(r) ? r : null
 }
@@ -109,10 +105,10 @@ export function propsOfInstance(
   return m ? declaredProps({ doc, libraries }, m) : []
 }
 
-export type OverrideKindTag = "props" | "args" | "set" | "slot" | "replace"
+type OverrideKindTag = "props" | "args" | "set" | "slot" | "replace"
 
 /** One row of the Overrides popover (board 11 `P7Nxi`). */
-export interface OverrideEntry {
+interface OverrideEntry {
   kind: OverrideKindTag
   /** `props` key, arg name or override IdPath. */
   path: string
@@ -127,7 +123,7 @@ export interface OverrideEntry {
     | { cmd: "override"; path: string }
 }
 
-export function preview(v: unknown): string {
+function preview(v: unknown): string {
   if (typeof v === "string") return v
   if (typeof v === "number" || typeof v === "boolean") return String(v)
   if (isObj(v) && typeof v.$ref === "string") return v.$ref

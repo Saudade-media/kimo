@@ -181,7 +181,7 @@ export function folderDisplay(folder: string | null): { prefix: string; value: s
   return { prefix: "/", value: folder.replace(/^\//, "") }
 }
 
-export const joinPath = (dir: string, rel: string) =>
+const joinPath = (dir: string, rel: string) =>
   dir.endsWith("/") || dir.endsWith("\\") ? `${dir}${rel}` : `${dir}/${rel}`
 
 // --- Code preview tokens (board 07 Code `t1smNB`) --------------------------------------------
@@ -191,8 +191,8 @@ export const joinPath = (dir: string, rel: string) =>
  * `$agent-2`, attribute / property name `$warning`, string `$success`, the rest
  * `$text-primary`.
  */
-export type TokenKind = "plain" | "keyword" | "attr" | "string"
-export interface CodeToken {
+type TokenKind = "plain" | "keyword" | "attr" | "string"
+interface CodeToken {
   kind: TokenKind
   text: string
 }
@@ -289,7 +289,7 @@ export function codeLines(contents: string): string[] {
 
 // --- Writing on desktop: never overwrite silently ---------------------------------------------
 
-export interface PlannedFile {
+interface PlannedFile {
   path: string
   contents: string | Uint8Array
 }
@@ -344,34 +344,6 @@ export interface WriteResult {
   unchanged: string[]
   /** Changed files left untouched (never overwritten silently). */
   kept: string[]
-}
-
-/**
- * Writes a plan: new files are created, identical files are skipped and changed files are left
- * untouched unless their path is in `overwrite`.
- */
-export async function writePlan(
-  plan: readonly PlanEntry[],
-  folder: FileRef,
-  platform: Pick<KimoPlatform, "files">,
-  overwrite: ReadonlySet<string> = new Set(),
-): Promise<WriteResult> {
-  const result: WriteResult = { folder, written: [], unchanged: [], kept: [] }
-  for (const e of plan) {
-    if (e.status === "same") {
-      result.unchanged.push(e.path)
-      continue
-    }
-    if (e.status === "changed" && !overwrite.has(e.path)) {
-      result.kept.push(e.path)
-      continue
-    }
-    if (typeof e.contents === "string")
-      await platform.files.writeTextAtomic(e.ref, e.contents, { mkdirs: true })
-    else await platform.files.writeBytesAtomic(e.ref, e.contents, { mkdirs: true })
-    result.written.push(e.path)
-  }
-  return result
 }
 
 // --- Browser: a store-only zip ---------------------------------------------------------------
@@ -471,17 +443,17 @@ export function defaultZipName(name: string): string {
 
 // --- Review step (board 25 § 2 (g) P8d2o, rule "Review") -----------------------------------
 
-export type DiffKind = "context" | "add" | "remove"
-export interface DiffRow {
+type DiffKind = "context" | "add" | "remove"
+interface DiffRow {
   kind: DiffKind
   /** New-side number for context / added rows, old-side number for removed rows. */
   number: number
   text: string
 }
-export interface DiffHunk {
+interface DiffHunk {
   rows: DiffRow[]
 }
-export interface FileDiff {
+interface FileDiff {
   hunks: DiffHunk[]
   added: number
   removed: number
@@ -583,7 +555,7 @@ export const contentHash = (c: string | Uint8Array) => {
 }
 
 /** Hashes of the files Kimo wrote last time into a folder (`kimo.export.written.<folder>`). */
-export type WrittenRecord = Record<string, string>
+type WrittenRecord = Record<string, string>
 
 export function readWritten(
   folder: string,
@@ -702,7 +674,7 @@ const list = (xs: readonly string[]) =>
 
 // --- Toasts (board 25 § 2 (f) pQlt5, rule "Toast") -----------------------------------------
 
-export interface ExportToastSpec {
+interface ExportToastSpec {
   tone: "success" | "warning"
   /** Lucide icon (`d82EN`): circle-check success · circle-alert warning. */
   icon: "circle-check" | "circle-alert"

@@ -24,7 +24,7 @@ import { type AssetStore, contentHash, MAX_ASSET_BYTES, type ManifestEntry } fro
 import { FONT_MIME } from "./document-fonts"
 
 /** A font file of the asset store with the face it holds. */
-export interface FontAssetFile {
+interface FontAssetFile {
   /** `<hash>.<ext>` in `assets/`. */
   key: string
   family: string

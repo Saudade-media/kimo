@@ -4,8 +4,6 @@
 import type { LayoutNodeData, Matrix, Resolver } from "@kimo/layout"
 import type { Point, Rect } from "./types"
 
-export const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
-
 /** `m · n` (apply `n` first, then `m`). */
 export function multiply(m: Matrix, n: Matrix): Matrix {
   return [

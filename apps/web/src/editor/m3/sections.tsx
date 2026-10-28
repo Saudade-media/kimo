@@ -13,10 +13,8 @@ import {
   COMPONENT_DESCRIPTION_META_KEY,
   type DeclaredProp,
   declaredProps,
-  isRef,
   type KimoDocument,
   splitQualified,
-  type Variable,
 } from "@kimo/core-schema"
 import {
   EnumTargets,
@@ -935,25 +933,6 @@ function freePropName(base: string, taken: readonly string[]): string {
   for (let i = 2; ; i++) if (!taken.includes(`${base}${i}`)) return `${base}${i}`
 }
 
-/** Enum option values display: arrays joined with spaces ("8 16"). */
-export function optionText(v: unknown): string {
-  if (Array.isArray(v)) return v.join(" ")
-  if (isRef(v)) return `{${v.$ref}}`
-  return typeof v === "string" ? v : JSON.stringify(v)
-}
-
-/** Parses an option value: "8 16" → [8, 16], "12" → 12, JSON, else the text. */
-export function parseOption(text: string): unknown {
-  const t = text.trim()
-  if (/^-?\d+(\.\d+)?(\s+-?\d+(\.\d+)?)+$/.test(t)) return t.split(/\s+/).map(Number)
-  if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t)
-  try {
-    return JSON.parse(t)
-  } catch {
-    return t
-  }
-}
-
 // --- Slot -----------------------------------------------------------------------------------------
 
 export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
@@ -1101,6 +1080,3 @@ export function SlotSection({ m3, id }: { m3: M3Controller; id: string }) {
     </PropSection>
   )
 }
-
-/** Variables for `Variable` import (keeps the type import used). */
-export type { Variable }

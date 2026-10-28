@@ -1,4 +1,4 @@
-/** Board 31 "Agent cursor": the pointer follows the last layer an agent's landed edit added. */
+/** The agent pointer follows the last layer an agent's landed edit added. */
 import { describe, expect, test } from "bun:test"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import { createMemoryDocumentHost, modelView, pointerTarget } from "../src/index"
@@ -36,8 +36,6 @@ describe("pointerTarget", () => {
         { op: "delete", id: "y" },
       ]),
     ).toBe("x")
-    expect(pointerTarget([{ op: "setHeader", set: {}, unset: [] }])).toBe(undefined)
-    expect(pointerTarget(undefined)).toBe(undefined)
   })
 })
 

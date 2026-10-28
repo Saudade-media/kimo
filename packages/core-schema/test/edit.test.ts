@@ -39,7 +39,7 @@ import {
   serialize,
   validate,
 } from "../src/index"
-import { doc, loadFixture, uiLibrary } from "./helpers"
+import { codes, doc, loadFixture, uiLibrary } from "./helpers"
 
 let seq = 0
 const ctxOf = (d: KimoDocument, libraries = {}): PlanContext => ({
@@ -78,7 +78,7 @@ const base = () =>
     { themes: { mode: ["light", "dark"], density: ["comfortable", "compact"] } },
   )
 
-describe("components: create, instance, overrides (boards 11/12)", () => {
+describe("components: create, instance, overrides", () => {
   test("create component in place, then instances with overrides of every kind", () => {
     let d = base()
     d = apply(d, planCreateComponent(ctxOf(d), ["card000001"]))
@@ -208,7 +208,7 @@ describe("components: create, instance, overrides (boards 11/12)", () => {
   })
 })
 
-describe("detach (one level, provenance-preserving)", () => {
+describe("detach and library links", () => {
   test("a local instance becomes plain layers; owned nodes are moved, not copied", () => {
     let d = base()
     d = apply(d, planCreateComponent(ctxOf(d), ["card000001"]))
@@ -246,7 +246,7 @@ describe("detach (one level, provenance-preserving)", () => {
     expect(before.getNode("inst000003/title00001")?.content).toBe("Team")
   })
 
-  test("library instances (10.5 example) detach into the consumer's namespace", () => {
+  test("library instances detach into the consumer's namespace", () => {
     const libraries = { ui: uiLibrary() }
     let d = loadFixture("valid/example-10-5.kimo")
     const v = createExpandedView(documentLookup(d), { header: () => d, libraries })
@@ -272,6 +272,32 @@ describe("detach (one level, provenance-preserving)", () => {
     expect(refused.ok === false && refused.error.code).toBe("LIBRARY_NOT_LOADED")
   })
 
+  test("unlinking many instances gives each its own copy of the layers", () => {
+    const lib = doc(
+      {
+        button0001: { type: "frame", parent: null, order: "a0", component: true, w: 80, h: 32 },
+        label00001: { type: "text", parent: "button0001", order: "a0", content: "OK" },
+        glyph00001: { type: "rect", parent: "button0001", order: "a1", w: 8, h: 8 },
+      },
+      { meta: { library: true } },
+    )
+    const table: Record<string, unknown> = {}
+    for (let i = 0; i < 25; i++)
+      table[`i${String(i).padStart(9, "0")}`] = {
+        type: "instance",
+        parent: null,
+        order: `b${String(i).padStart(5, "0")}`,
+        of: "ui:button0001",
+      }
+    const libraries = { ui: lib }
+    const d = doc(table, { imports: { ui: "./ui.kimo" } })
+    const out = apply(d, planUnlinkLibrary(ctxOf(d, libraries), "ui"), libraries)
+    const types = Object.values(out.nodes).map((n) => n.type)
+    expect(types.filter((t) => t === "instance")).toEqual([])
+    expect(types.filter((t) => t === "text")).toHaveLength(25)
+    expect(types.filter((t) => t === "rect")).toHaveLength(25)
+  })
+
   test("link / relink validate the alias and path", () => {
     const d = base()
     const out = apply(d, planLinkLibrary(ctxOf(d), "mkt", "../brand/marketing.kimo"))
@@ -281,7 +307,123 @@ describe("detach (one level, provenance-preserving)", () => {
   })
 })
 
-describe("variables and themes (board 14)", () => {
+/** Star / Heart icons, a Card main nesting a Star icon, and one card instance. */
+const cardFixture = () =>
+  doc({
+    starmain01: { type: "frame", parent: null, order: "a0", w: 24, h: 24, component: true },
+    starglyph1: { type: "rect", parent: "starmain01", order: "a0", w: 16, h: 16 },
+    heartmain1: { type: "frame", parent: null, order: "a1", w: 24, h: 24, component: true },
+    main000001: {
+      type: "frame",
+      parent: null,
+      order: "a2",
+      name: "Card/Pricing",
+      component: { props: { icon: { type: "instance", target: "icon000001", order: "a0" } } },
+    },
+    title00001: { type: "text", parent: "main000001", order: "a0", content: "Plan" },
+    icon000001: { type: "instance", parent: "main000001", order: "a1", of: "starmain01" },
+    inst000001: { type: "instance", parent: null, order: "a3", of: "main000001" },
+  })
+
+describe("cycles through nested swaps and instance props", () => {
+  test("a nested swap to the card's own main is refused, and the validator reports it", () => {
+    const d = cardFixture()
+    const p = planSwapInstance(ctxOf(d), "inst000001", "main000001", "icon000001")
+    expect(p.ok === false && p.error.code).toBe("CYCLE")
+    const bad = applyPlan(d, [
+      {
+        op: "update",
+        id: "inst000001",
+        set: { overrides: { icon000001: { set: { of: "main000001" } } } },
+      },
+    ])
+    expect(codes(validate(bad).errors)).toContain("INSTANCE_CYCLE")
+  })
+
+  test("an instance arg nesting the card in itself is refused, and the validator reports it", () => {
+    const d = cardFixture()
+    const p = planSetArgs(ctxOf(d), "inst000001", { icon: "main000001" })
+    expect(p.ok === false && p.error.code).toBe("CYCLE")
+    const bad = applyPlan(d, [
+      { op: "update", id: "inst000001", set: { args: { icon: "main000001" } } },
+    ])
+    expect(codes(validate(bad).errors)).toContain("INSTANCE_CYCLE")
+    // A harmless swap stays valid.
+    apply(d, planSetArgs(ctxOf(d), "inst000001", { icon: "heartmain1" }))
+  })
+})
+
+describe("nested swap drops deep overrides that no longer resolve", () => {
+  test("swap gives an OVERRIDE_DROPPED note, a valid document, and detach still works", () => {
+    let d = cardFixture()
+    d = apply(
+      d,
+      planSetOverride(ctxOf(d), "inst000001", "icon000001/starglyph1", {
+        kind: "set",
+        set: { fill: "#FF0000" },
+      }),
+    )
+    const swap = planSwapInstance(ctxOf(d), "inst000001", "heartmain1", "icon000001")
+    if (!swap.ok) throw new Error(swap.error.message)
+    expect(swap.notes.map((n) => [n.code, n.key])).toEqual([
+      ["OVERRIDE_DROPPED", "icon000001/starglyph1"],
+    ])
+    d = apply(d, swap)
+    const ov = (d.nodes as Record<string, { overrides?: object }>).inst000001?.overrides
+    expect(Object.keys(ov ?? {})).toEqual(["icon000001"])
+    apply(d, planDetachInstance(ctxOf(d), "inst000001"))
+  })
+
+  test("a stale deep override is reported by the validator and dropped by detach", () => {
+    const stale = applyPlan(cardFixture(), [
+      {
+        op: "update",
+        id: "inst000001",
+        set: {
+          overrides: {
+            icon000001: { set: { of: "heartmain1" } },
+            "icon000001/starglyph1": { set: { fill: "#FF0000" } },
+          },
+        },
+      },
+    ])
+    expect(codes(validate(stale).errors)).toContain("OVERRIDE_PATH_UNRESOLVED")
+    const p = planDetachInstance(ctxOf(stale), "inst000001")
+    if (!p.ok) throw new Error(p.error.message)
+    expect(validate(applyPlan(stale, p.ops)).errors).toEqual([])
+    expect(p.notes.some((n) => n.code === "OVERRIDE_DROPPED")).toBe(true)
+  })
+
+  test("deep overrides into the swapped component resolve (planner and validator)", () => {
+    let d = cardFixture()
+    d = applyPlan(d, [
+      { op: "insert", id: "heartglyp1", parent: "heartmain1", node: { type: "rect", w: 8, h: 8 } },
+    ])
+    d = apply(d, planSwapInstance(ctxOf(d), "inst000001", "heartmain1", "icon000001"))
+    d = apply(
+      d,
+      planSetOverride(ctxOf(d), "inst000001", "icon000001/heartglyp1", {
+        kind: "set",
+        set: { fill: "#00FF00" },
+      }),
+    )
+    const view = createExpandedView(documentLookup(d))
+    expect(view.getNode("inst000001/icon000001/heartglyp1")?.fill).toBe("#00FF00")
+    expect(view.issues("inst000001")).toEqual([])
+  })
+})
+
+test("linked-library components are read-only", () => {
+  const ctx = ctxOf(cardFixture())
+  const plans = [
+    planDeclareProp(ctx, "ui:button01", "x", { type: "text", target: "t", field: "content" }),
+    planSetSlot(ctx, "ui:frame0001", { suggested: [] }),
+    planSetComponentDescription(ctx, "ui:button01", "x"),
+  ]
+  for (const p of plans) expect(p.ok === false && p.error.code).toBe("LIBRARY_READ_ONLY")
+})
+
+describe("variables and themes", () => {
   const withVars = () => {
     let d = base()
     d = apply(d, planCreateVariable(ctxOf(d), "ink-900", { type: "color", value: "#2A1E14" }))

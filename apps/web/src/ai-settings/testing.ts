@@ -22,29 +22,6 @@ export interface FakeCli {
   auth?: { stdout: string; code: number }
 }
 
-/** Board 23 state: Claude Code signed in (Max), Codex installed not signed in, Gemini missing. */
-export const BOARD_23_CLIS: Record<string, FakeCli> = {
-  claude: {
-    path: "/Users/me/.local/bin/claude",
-    version: "2.1.4 (Claude Code)",
-    auth: {
-      code: 0,
-      stdout: JSON.stringify({
-        loggedIn: true,
-        authMethod: "claude.ai",
-        email: "me@example.com",
-        subscriptionType: "max",
-      }),
-    },
-  },
-  codex: {
-    path: "/opt/homebrew/bin/codex",
-    version: "codex-cli 0.46.0",
-    auth: { code: 1, stdout: "Not logged in" },
-  },
-  gemini: { path: null },
-}
-
 export function createFakeCliHost(
   clis: Record<string, FakeCli>,
   calls: string[] = [],
@@ -275,7 +252,7 @@ export function createTestAiSettings(
     secrets,
     cliHost:
       platform === "desktop" && options.clis !== null
-        ? createFakeCliHost(options.clis ?? BOARD_23_CLIS)
+        ? createFakeCliHost(options.clis ?? {})
         : null,
     storage: options.storage ?? memoryStorage(),
     fetchFor: (p) => (platform === "desktop" ? relay(p) : f),

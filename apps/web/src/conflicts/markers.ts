@@ -10,8 +10,8 @@
 import type { ConflictRowView } from "../platform/contract"
 
 /** Marker height (ar36v) and its gap above the node. */
-export const MARKER_HEIGHT = 20
-export const MARKER_GAP = 4
+const MARKER_HEIGHT = 20
+const MARKER_GAP = 4
 
 export interface MarkerRect {
   left: number
@@ -20,7 +20,7 @@ export interface MarkerRect {
   height: number
 }
 
-export interface CanvasConflictMarkerSpec {
+interface CanvasConflictMarkerSpec {
   nodeId: string
   /** First open conflict of the node (clicking the marker focuses it). */
   conflictId: string
@@ -58,7 +58,7 @@ export interface CanvasConflictMarkerLayout {
 }
 
 /** The subset of a layout pass the markers read. */
-export interface MarkerLayout {
+interface MarkerLayout {
   readonly nodes: ReadonlyMap<
     string,
     { readonly world: { x: number; y: number; w: number; h: number }; readonly visible: boolean }
@@ -78,17 +78,17 @@ export interface MarkerViewport {
 export type MarkerMeasure = (label: string, variant: "default" | "more") => number
 
 /** Gap between stacked pills and between a pill and its "+N" (board 20 note BIO8v). */
-export const STACK_GAP = 4
+const STACK_GAP = 4
 
 /** Marker label for a node's open rows (ar36v default copy: "2 conflicts"). */
-export function markerLabel(rows: readonly ConflictRowView[]): string {
+function markerLabel(rows: readonly ConflictRowView[]): string {
   const [first] = rows
   if (rows.length === 1 && first) return `${first.group} · ${first.property}`
   return `${rows.length} conflicts`
 }
 
 /** Label of the "+N" pill. */
-export const moreLabel = (n: number) => `+${n}`
+const moreLabel = (n: number) => `+${n}`
 
 const overlaps = (a: MarkerRect, b: MarkerRect) =>
   a.left < b.left + b.width &&
@@ -110,9 +110,7 @@ const pillRect = (m: { left: number; top: number; width: number }): MarkerRect =
  * `CanvasMarker/Conflict/More` "+N" pill 4px to its right. Screen-space: recomputed on zoom,
  * never scaled.
  */
-export function stackMarkers(
-  markers: readonly CanvasConflictMarkerSpec[],
-): CanvasConflictMarkerLayout {
+function stackMarkers(markers: readonly CanvasConflictMarkerSpec[]): CanvasConflictMarkerLayout {
   const n = markers.length
   const parent = markers.map((_, i) => i)
   const find = (i: number): number => {

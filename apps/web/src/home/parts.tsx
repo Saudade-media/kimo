@@ -418,7 +418,7 @@ export function RenameField({
 
 // --- Menus (Menu/Dense G7A3Aj) -----------------------------------------------------------------
 
-export type MenuAnchor = HTMLElement | { x: number; y: number; width: number; height: number }
+type MenuAnchor = HTMLElement | { x: number; y: number; width: number; height: number }
 
 /** Where a menu opened: from the ⋯ (right edge on it, 4px under the row) or at the cursor. */
 export interface MenuAt {
@@ -440,7 +440,7 @@ export function menuAtCursor(e: MouseEvent): MenuAt {
   return { anchor: { x: e.clientX, y: e.clientY, width: 0, height: 0 }, align: "start", offset: 0 }
 }
 
-export interface FileMenuItem {
+interface FileMenuItem {
   id: string
   label: string
   icon: ReactNode

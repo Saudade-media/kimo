@@ -75,19 +75,6 @@ export function featureListTags(table: Uint8Array, into: Set<string> = new Set()
   return into
 }
 
-/** Synchronous variant for uncompressed sfnt / TTC (null for WOFF / WOFF 2 / unknown data). */
-export function sfntFeatureTags(bytes: Uint8Array): Set<string> | null {
-  try {
-    const tables = layoutTables(bytes)
-    if (!tables || tables.some((t) => t.compressed)) return null
-    const out = new Set<string>()
-    for (const t of tables) featureListTags(t.bytes, out)
-    return out
-  } catch {
-    return null
-  }
-}
-
 async function inflate(data: Uint8Array): Promise<Uint8Array | null> {
   if (typeof DecompressionStream === "undefined") return null
   try {

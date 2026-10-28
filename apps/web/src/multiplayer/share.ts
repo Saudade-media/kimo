@@ -81,9 +81,6 @@ import {
   type Registry,
 } from "./registry"
 
-export type { AssetSync, AssetSyncState } from "./asset-sync"
-export type { IssuedLink, JoinedRoom, OwnedRoom } from "./registry"
-
 export interface ShareTarget {
   /** Stable local key of the document: the file path on desktop, the file id on web. */
   fileKey: string
@@ -132,7 +129,7 @@ export interface SweepResult {
 }
 
 /** What preparing the document for a room changed (spec §16.1 step 3). */
-export interface PrepareResult {
+interface PrepareResult {
   /** Manifest entries that gained a `sha256`. */
   hashed: number
   /** Shader sources rewritten to hash-named assets. */
@@ -212,7 +209,7 @@ export interface ShareServiceDeps {
 }
 
 /** The timer functions the share service schedules with. */
-export interface ShareTimers {
+interface ShareTimers {
   setTimeout(fn: () => void, ms: number): unknown
   clearTimeout(handle: unknown): void
 }
@@ -351,7 +348,7 @@ function fontFamilies(doc: KimoDocument): string[] {
  * cursor and a guest's asset store are named with it, so a link that carries the same room id
  * with another relay or key can never read or push a replica that belongs to the real room.
  */
-export async function roomBinding(relayUrl: string, roomKey: Uint8Array): Promise<string> {
+async function roomBinding(relayUrl: string, roomKey: Uint8Array): Promise<string> {
   const text = new TextEncoder().encode(`${relayUrl}\0`)
   const joined = new Uint8Array(text.length + roomKey.length)
   joined.set(text)
@@ -361,7 +358,7 @@ export async function roomBinding(relayUrl: string, roomKey: Uint8Array): Promis
 }
 
 /** The sync-cursor key of a room under a binding. */
-export const cursorKey = (room: string, binding: string) => `${room}.${binding}`
+const cursorKey = (room: string, binding: string) => `${room}.${binding}`
 
 /** `JSON.stringify` with object keys sorted, so equal documents hash equally. */
 function stableJson(value: unknown): string {
@@ -377,7 +374,7 @@ function stableJson(value: unknown): string {
 }
 
 /** Hash of a document's content, for telling whether the file changed since it was saved. */
-export async function documentHash(doc: KimoDocument): Promise<string> {
+async function documentHash(doc: KimoDocument): Promise<string> {
   const bytes = new TextEncoder().encode(stableJson(doc))
   return toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)))
 }

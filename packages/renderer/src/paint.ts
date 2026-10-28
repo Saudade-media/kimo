@@ -165,6 +165,8 @@ type ImageState = { status: "loading" } | { status: "ready"; image: Image } | { 
 export class ImageCache {
   private readonly images = new Map<string, ImageState>()
   private readonly waiting = new Map<string, Promise<void>>()
+  /** Loading when a retry came: asked again if they end missing (the bytes may be newer). */
+  private readonly again = new Set<string>()
   private checker: Shader | null = null
   /** Bumped by `clear()`: loads started before it drop their result. */
   private generation = 0
@@ -183,11 +185,15 @@ export class ImageCache {
     return this.images.get(src) ?? { status: "loading" }
   }
 
-  load(src: string): Promise<void> {
+  /**
+   * Loads `src`. A `retry` of a missing image keeps the checkerboard while it asks again and
+   * calls `onLoad` only when the image loads now.
+   */
+  load(src: string, retry = false): Promise<void> {
     const w = this.waiting.get(src)
     if (w) return w
     if (this.images.get(src)?.status === "ready") return Promise.resolve()
-    this.images.set(src, { status: "loading" })
+    if (!retry) this.images.set(src, { status: "loading" })
     const gen = this.generation
     const p = (async () => {
       let state: ImageState = { status: "missing" }
@@ -206,10 +212,18 @@ export class ImageCache {
       }
       this.images.set(src, state)
       this.waiting.delete(src)
-      this.onLoad(src)
+      if (!retry || state.status === "ready") this.onLoad(src)
+      if (this.again.delete(src) && state.status === "missing") void this.load(src, true)
     })()
     this.waiting.set(src, p)
     return p
+  }
+
+  /** Asks again for every image drawn as missing (its bytes may have arrived since). */
+  retryMissing(): void {
+    for (const [src, s] of this.images)
+      if (this.waiting.has(src)) this.again.add(src)
+      else if (s.status === "missing") void this.load(src, true)
   }
 
   /** Checkerboard shader for missing assets (spec: drawn as a checkerboard). */
@@ -242,6 +256,7 @@ export class ImageCache {
     for (const s of this.images.values()) if (s.status === "ready") s.image.delete()
     this.images.clear()
     this.waiting.clear()
+    this.again.clear()
     this.checker?.delete()
     this.checker = null
   }

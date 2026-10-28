@@ -65,7 +65,7 @@ export function CloudNotice({
             label: account ? storageText(account.usage) : "Storage",
             pill: { tone: "danger" as const, label: "Full" },
             title: "Kimo Cloud storage is full",
-            desc: "New images and fonts in shared files will not sync. Edits still do. Stop sharing files you no longer need to free space.",
+            desc: "New images and fonts will not sync, but edits still do. Stop sharing files you don't need to free space.",
             action: { icon: "external-link", label: "Manage billing" },
           }
   return (

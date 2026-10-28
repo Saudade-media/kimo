@@ -136,7 +136,7 @@ export function errorCard(state: JoinState): JoinErrorCard {
         icon: "server-off",
         tone: "danger",
         title: "This is not a Kimo relay",
-        desc: "The link points to a server that does not speak Kimo. Check the link is complete, or ask for a new one.",
+        desc: "The link's server does not speak Kimo. Check the link is complete, or ask for a new one.",
         meta: [host, message].filter((p) => p && p !== "the relay").join(" · ") || null,
         actions: ["copy-details"],
       }

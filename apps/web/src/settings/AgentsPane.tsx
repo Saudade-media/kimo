@@ -185,7 +185,7 @@ export function AgentsPane({
         <EmptyState
           icon={<Bot size={18} aria-hidden="true" />}
           title="Agents connect to the desktop app"
-          description="Run Kimo on your computer, or use `kimo mcp` from a terminal, to let Claude Code, Codex or Gemini CLI edit your files."
+          description="Use the desktop app, or `kimo mcp` in a terminal, so Claude Code, Codex or Gemini CLI can edit files."
         />
       </div>
     )

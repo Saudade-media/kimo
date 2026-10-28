@@ -362,7 +362,7 @@ function PersonalRows({
     <>
       <SettingRow
         label="Your name"
-        description="Shown on your cursor and in the list, kept on this device. Leave it empty to appear as Guest 1, Guest 2 and so on."
+        description="Shown on your cursor and in the list, kept on this device. Leave it empty to appear as a guest."
         control={(ids) => (
           <Input
             frameProps={{ className: "mp-name-input" }}

@@ -627,7 +627,7 @@ export function bannerCopy(
 
 /** Failed-load explanation when git conflict markers are found (board 17). */
 export const GIT_MARKERS_EXPLANATION =
-  "It still contains git conflict markers from a merge that didn't use the kimo driver. Resolve them in a text editor, or run kimo merge again."
+  "It still contains git conflict markers from a merge without the kimo driver. Resolve them, or run kimo merge again."
 
 // ===============================================================================================
 // Toasts (bottom-center, board 15 placement)

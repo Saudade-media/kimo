@@ -155,10 +155,10 @@ export function planBannerKind(plan: CloudPlan | null, now: number): PlanBannerK
   return null
 }
 
-/** 6D: "We could not charge your card. Update it by Nov 28 to keep sharing new files. ..." */
+/** 6D: "We could not charge your card. Nothing has stopped, but update it by Nov 28 to keep ..." */
 export function paymentFailedDesc(plan: CloudPlan): string {
   const by = plan.paymentDueBy ? ` by ${shortDate(plan.paymentDueBy)}` : ""
-  return `We could not charge your card. Update it${by} to keep sharing new files. Nothing has stopped yet.`
+  return `We could not charge your card. Nothing has stopped, but update it${by} to keep sharing new files.`
 }
 
 /** Resend countdown (2B): "Resend in 0:42", or "Resend" once unlocked. */

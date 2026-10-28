@@ -75,26 +75,7 @@ const FIRST_CHECKED_BOARD = 46
  * UI strings that were longer than the limit when the rule landed (2026-10-28), by file and
  * opening words. Shorten them and drop the entry; never add one.
  */
-const LONG_LEGACY: [RegExp, string][] = [
-  [/pair\/PairRoute\.tsx$/, "The link points to a server that does not speak Kimo."],
-  [/join\/copy\.ts$/, "The link points to a server that does not speak Kimo."],
-  [/multiplayer\/cloud\/view\.ts$/, "We could not charge your card."],
-  [/multiplayer\/ui\/MultiplayerPane\.tsx$/, "Shown on your cursor and in the list"],
-  [/multiplayer\/ui\/ownership\.tsx$/, "Another Kimo set up this relay first."],
-  [/multiplayer\/ui\/RelayWizard\.tsx$/, "Check the URL and that it is running."],
-  [/multiplayer\/ui\/RelayWizard\.tsx$/, "Kimo runs the official installer from bun.sh"],
-  [/multiplayer\/ui\/cloud-parts\.tsx$/, "New images and fonts in shared files will not sync."],
-  [/fonts\/FontPicker\.tsx$/, "Google fonts are off"],
-  [/agents\/AgentsMcpPane\.tsx$/, "Connect Claude Code, Codex or another MCP client"],
-  [/agents\/AgentsMcpPane\.tsx$/, "For clients with Ask before changes on"],
-  [/platform\/contract\.ts$/, "It still contains git conflict markers"],
-  [/ai-settings\/AiProvidersPane\.tsx$/, "Bring your own API key."],
-  [/ai-settings\/AiProvidersPane\.tsx$/, "The agent can search the web and read pages"],
-  [/ai-settings\/AiProvidersPane\.tsx$/, "Not synced, not encrypted at rest."],
-  [/home\/HomeComposer\.tsx$/, "Kimo doesn't sell models."],
-  [/settings\/HelpHost\.tsx$/, "Opens a new issue in your browser"],
-  [/settings\/AgentsPane\.tsx$/, "Run Kimo on your computer, or use `kimo mcp`"],
-]
+const LONG_LEGACY: [RegExp, string][] = []
 /** Model prompts are instructions to a model, not UI copy. */
 const PROMPTS: [RegExp, string][] = [[/ai-settings\/controller\.ts$/, "You name design files."]]
 

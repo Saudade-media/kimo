@@ -1679,7 +1679,7 @@ export function RelayWizard(props: RelayWizardProps) {
                     ? `It speaks ${t?.protocol ?? "an older protocol"} and this Kimo needs kimo-mp/1. Update it: redeploy on Fly or Railway, docker pull for Docker. Kimo updates its own local relay.`
                     : outcome === "invalid"
                       ? "Check the URL: use wss://, https://, or ws:// on a local network."
-                      : "Check the URL and that it is running. A new Fly or Railway deploy can take a minute to come up."}
+                      : "Check the URL and that it is running. A new Fly or Railway deploy can take a minute."}
               </p>
             </div>
             <div className="rw-actions">
@@ -1938,7 +1938,7 @@ export function RelayWizard(props: RelayWizardProps) {
               className="rw-install-dialog"
               icon={<Icon name="download" size={16} />}
               title="Install Bun?"
-              description="Kimo runs the official installer from bun.sh in a hidden terminal. It installs Bun for your user only, in ~/.bun, and needs network access. No admin password."
+              description="Kimo runs the official bun.sh installer, which needs network access. Bun goes in ~/.bun for you only, no admin password."
               footnote="About 30 MB, under a minute."
               confirmLabel="Install Bun"
               onCancel={() => setConfirmInstall(false)}

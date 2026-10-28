@@ -20,7 +20,7 @@ export const NOT_YOURS_SHORT =
   "Another Kimo set up this relay first. Add this device from one that manages it, or reset ownership."
 /** Settings and the wizard (X00Qb, Yy3BN). */
 export const NOT_YOURS_DESC =
-  "Another Kimo set up this relay first. Add this device from one that manages it, or reset ownership if you no longer have any of them."
+  "Another Kimo set up this relay. Add this device from one that manages it, or reset ownership if none remain."
 
 /** Add this device (Button/Secondary, laptop) · Reset ownership (Button/Ghost, external-link). */
 export function NotYoursActions({

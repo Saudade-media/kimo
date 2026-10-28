@@ -401,7 +401,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
             className="agents-pane__empty"
             icon={<AgentIcon name="bot" />}
             title="No agents connected"
-            description="Connect Claude Code, Codex or another MCP client and it can read and edit your .kimo files. Its edits stay teal and undoable until you keep them."
+            description="Connect Claude Code, Codex or any MCP client to edit .kimo files. Its edits stay teal and undoable until kept."
           />
           <div className="agents-pane__howto">
             <span className="agents-pane__group-title">How to connect</span>
@@ -505,7 +505,7 @@ export function AgentsMcpPane(props: AgentsMcpPaneProps) {
         {server.askBeforeDestructive && (
           <SettingRow
             label="Ask before destructive or out-of-scope ops"
-            description="For clients with Ask before changes on: deletes of 2+ frames, edits outside a client’s files, and global changes (variables, themes) wait for approval."
+            description="With Ask before changes on, deleting 2+ frames, edits outside the client’s files and variable or theme changes need approval."
             control={
               <Toggle
                 checked={server.askBeforeDestructive.value}

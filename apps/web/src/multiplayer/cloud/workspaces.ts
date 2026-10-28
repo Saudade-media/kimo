@@ -46,6 +46,7 @@ import {
   type WorkspaceDetail,
   type WorkspaceSummary,
 } from "./types"
+import { workspaceFileName } from "./workspace-view"
 
 /** The read-only reason of a copy whose workspace was deleted (board 46 6E). */
 export const CLOUD_DELETED_REASON = "cloud: workspace deleted"
@@ -314,14 +315,8 @@ function endOf(code: string): BindingEnd | null {
 }
 
 /** A file's name in the workspace: the document's own name, else the file's base name. */
-function fileNameOf(session: ShareableSession): string {
-  const meta = (session.store.toHeader() as { meta?: { name?: unknown } }).meta
-  if (typeof meta?.name === "string" && meta.name.trim()) return meta.name.trim().slice(0, 64)
-  // A browser library file's key is an id, never a name.
-  if (session.ref.startsWith("kimo-lib:")) return "Untitled"
-  const last = session.ref.split(/[\\/]/).pop() ?? session.ref
-  return (last.replace(/\.(kimo|kimoz|pen)$/i, "") || "Untitled").slice(0, 64)
-}
+const fileNameOf = (session: ShareableSession): string =>
+  workspaceFileName(session.ref, session.store.toHeader() as { meta?: { name?: unknown } })
 
 const initialMigration: MigrationState = { phase: "idle", moved: 0, left: 0, error: null }
 

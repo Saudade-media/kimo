@@ -27,7 +27,7 @@ import {
 } from "../../src/multiplayer/device-key"
 import type { Clock } from "../../src/multiplayer/relay-setup/runner"
 import { createPlatformShare } from "../../src/platform/share"
-import { insertRect, makeTarget, startRelay, until } from "./helpers"
+import { addAsset, insertRect, makeTarget, startRelay, until } from "./helpers"
 
 const HOUR = 3_600_000
 const EMAIL = "maya@studio.design"
@@ -328,6 +328,91 @@ describe("re-sharing pre-workspace rooms (1.3.0 migration)", () => {
     // The file stays this device's, as it was.
     expect((await app.registry.listOwned()).map((o) => o.fileKey)).toEqual([target.fileKey])
   }, 20_000)
+
+  test("an image only a guest's device held reaches the new room before the old one closes", async () => {
+    const clock = fakeClock()
+    const relay = startRelay()
+    cleanups.push(() => relay.stop())
+    const keys = createMemoryDeviceKeyStore()
+    const cloud = createFakeCloud({
+      now: clock.now,
+      relayUrl: relay.url,
+      relay: relayRegistrar({ deviceKeys: keys }),
+    })
+    const ws = cloud.addWorkspace(EMAIL, "Workspace", "active")
+    const app = await makeApp(cloud, clock, { keys })
+    await app.cloudStore.refresh()
+
+    // A browser library file: its key is an id, and its document has no name.
+    const target = makeTarget("kimo-lib:QIs0n69gZ2.kimo", ["Rect000001"])
+    const { meta: _meta, ...unnamed } = target.store.toDocument()
+    target.store.loadDocument(unnamed)
+    const old = await app.share.service.startSharing(target, { relayUrl: relay.url })
+    const editLink = await app.share.service.mintLink(old.room, { role: "edit", ttlSeconds: null })
+    const guest = await makeApp(cloud, clock, { email: "leo@studio.design" })
+    const guestSession = await guest.share.joinLink(editLink.link)
+    await until(() => guestSession.provider.connected)
+    // The guest pastes an image: its bytes reach the relay, never this device's asset store.
+    const image = await addAsset(guestSession.assets, new TextEncoder().encode("guest image"))
+    let uploaded = false
+    guestSession.assetSync.onProgress((e) => {
+      if (e.kind === "upload" && e.key === image.key && e.status === "done") uploaded = true
+    })
+    const manifest = (guestSession.store.toHeader() as { assets?: Record<string, unknown> }).assets
+    const pasted = guestSession.store.apply(
+      [
+        {
+          op: "insert",
+          id: "Img0000001",
+          node: { type: "rect", w: 4, h: 4, fill: { kind: "image", src: image.src } },
+        },
+        {
+          op: "setHeader",
+          set: {
+            assets: { ...manifest, [image.key]: { mime: "image/png", sha256: image.sha256 } },
+          },
+        },
+      ] as never,
+      { origin: "user" },
+    )
+    expect(pasted.ok).toBe(true)
+    await until(() => guestSession.status === "synced")
+    void guestSession.assetSync.uploadMissing()
+    await until(() => uploaded)
+    await guestSession.leave()
+    await app.share.leave(old.room)
+
+    const cache = createCloudCache(app.registry.cloud)
+    const outcome = await migrateLegacyRooms({
+      client: app.client,
+      share: app.share,
+      registry: app.registry,
+      cache,
+      relayUrl: relay.url,
+      workspaceId: ws,
+      now: clock.now,
+      bind: async (binding) => cache.saveBinding(binding),
+    })
+    expect(outcome).toEqual({ moved: 1, left: 0, error: null })
+    const moved = cloud.files()[0] as NonNullable<ReturnType<typeof cloud.files>[0]>
+    // Named like any other library file shared to a workspace, never by its key.
+    expect(moved.name).toBe("Untitled")
+
+    // The old room is closed (its blobs are gone); the new room serves the image.
+    const token = await app.client.roomToken(moved.room)
+    const reader = await makeApp(cloud, clock, { email: "kai@studio.design", signIn: false })
+    const check = await reader.share.service.openWithToken({
+      room: moved.room,
+      relayUrl: moved.relayUrl,
+      roomKey: moved.roomKey,
+      token: token.token,
+    })
+    await until(() => hasNode(check.store, "Img0000001"))
+    expect(await check.assetSync.ensure(image.key)).toBe(true)
+    const bytes = (await check.assets.bytes(image.key)) as Uint8Array
+    expect(new TextDecoder().decode(bytes)).toBe("guest image")
+    await check.leave()
+  }, 30_000)
 })
 
 describe("the workspace cache", () => {

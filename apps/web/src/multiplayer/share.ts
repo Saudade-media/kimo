@@ -37,10 +37,12 @@ import {
   generateRoomKey,
   generateSigningKeyPair,
   isRetryable,
+  MAX_BLOB_ENVELOPE_BYTES,
   type MpOrigin,
   MultiplayerError,
   mintToken,
   normalizeRelayUrl,
+  openBlob,
   parseJoinLink,
   parseRoomId,
   parseToken,
@@ -49,6 +51,7 @@ import {
   type Role,
   randomBytes,
   relayLink,
+  sealBlob,
   sealSnapshot,
   shippedFontSource,
   signAdminCommand,
@@ -315,6 +318,18 @@ export interface ShareService extends Omit<OwnershipClient, "registerBody" | "pr
    * `closed` when the relay closed it (or had already), `unreachable` when it could not be told.
    */
   closeOwnedRoom(room: string): Promise<"closed" | "unreachable">
+  /**
+   * Copies blobs of a room this device owns into another room (the 1.3.0 re-share): each one the
+   * new room lacks is read from `from`, checked against its SHA-256 and sealed again for `into`.
+   * Blob ids are per room, so nothing is copied by id. `shas` are full lowercase hex digests
+   * (manifest `sha256`); `absent` counts the ones `from` never held. Any other failure throws, so
+   * the caller keeps `from` open.
+   */
+  copyOwnedBlobs(
+    from: string,
+    into: TokenRoom,
+    shas: readonly string[],
+  ): Promise<{ copied: number; absent: number }>
   /** Local files bound to Kimo Cloud rooms (their saves are recorded like an owned file's). */
   setBoundFiles(bound: BoundFiles | null): void
   /** The registry this service keeps rooms in (Kimo Cloud keeps its records there too). */
@@ -1509,6 +1524,44 @@ export function createShareService(deps: ShareServiceDeps): ShareService {
           throw error
         }
       })
+    },
+
+    async copyOwnedBlobs(from, into, shas) {
+      const result = { copied: 0, absent: 0 }
+      const wanted = [...new Set(shas)].filter((sha) => /^[0-9a-f]{64}$/.test(sha))
+      if (wanted.length === 0) return result
+      const { owned, token } = await withOwned(from, async (owned) => ({
+        owned,
+        token: await selfToken(owned),
+      }))
+      const fromKeys = await deriveRoomKeys(owned.roomKey, parseRoomId(owned.room))
+      const intoKeys = await deriveRoomKeys(into.roomKey, parseRoomId(into.room))
+      const fromHttp = client(owned.relayUrl)
+      const intoHttp = client(normalizeRelayUrl(into.relayUrl))
+      const intoIds = new Map<string, string>()
+      for (const sha of wanted) intoIds.set(await blobIdFor(intoKeys, fromHex(sha)), sha)
+      const missing = await intoHttp.missingBlobs(into.room, into.token, [...intoIds.keys()])
+      // One blob at a time: at most one plaintext is held in memory.
+      for (const id of missing) {
+        const sha = intoIds.get(id)
+        if (sha === undefined) continue
+        const digest = fromHex(sha)
+        const envelope = await fromHttp.getBlob(
+          owned.room,
+          token,
+          await blobIdFor(fromKeys, digest),
+          MAX_BLOB_ENVELOPE_BYTES,
+        )
+        if (envelope === null) {
+          result.absent++
+          continue
+        }
+        const sealed = await sealBlob(intoKeys, await openBlob(fromKeys, digest, envelope))
+        if (sealed.id !== id) throw new MultiplayerError("BLOB_INTEGRITY", "blob id mismatch")
+        await intoHttp.putBlob(into.room, into.token, sealed.id, sealed.envelope)
+        result.copied++
+      }
+      return result
     },
 
     setBoundFiles(next) {

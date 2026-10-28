@@ -22,6 +22,18 @@ import type { WorkspacesState } from "./workspaces"
 
 const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w)
 
+/**
+ * A file's name in a workspace: the document's own name, else the file's base name. A browser
+ * library file's key is an id, never a name, so it is "Untitled".
+ */
+export function workspaceFileName(ref: string, header: { meta?: { name?: unknown } }): string {
+  const name = header.meta?.name
+  if (typeof name === "string" && name.trim()) return name.trim().slice(0, 64)
+  if (ref.startsWith("kimo-lib:")) return "Untitled"
+  const last = ref.split(/[\\/]/).pop() ?? ref
+  return (last.replace(/\.(kimo|kimoz|pen)$/i, "") || "Untitled").slice(0, 64)
+}
+
 /** "maya.rossi@studio.design" → "Maya Rossi"; "sam@acme.co" → "Sam". */
 export function personName(email: string): string {
   const local = email.split("@")[0] ?? email

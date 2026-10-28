@@ -8,14 +8,17 @@
  *    store);
  * 2. `POST /v1/workspaces/<ws>/files` with `replaces` = the old room: Kimo Cloud creates and
  *    registers the new room (a repeat answers the same new room with a fresh token);
- * 3. the state goes into the new room, then the blobs the file has locally, and the file's last
- *    recorded save carries over so a later reopen still adds only the file's own changes;
+ * 3. the state goes into the new room, then the blobs: the ones this device holds, and every one
+ *    the old room holds that the new room still lacks, copied relay to relay (a guest's image this
+ *    device never fetched included). The file's last recorded save carries over so a later reopen
+ *    still adds only the file's own changes;
  * 4. the local file is bound to the new room, and the old room's record stops claiming the file;
  * 5. the old room is closed with its root key (admin op 4), which ends its links, and forgotten.
  *
  * Every step is safe to repeat: an interrupted run resumes on the next sign-in. Nothing is closed
- * before the new room holds the state, and a relay that cannot be told keeps the old record (under
- * a tombstone file key) so the close is tried again later.
+ * before the new room holds the state and the old room's blobs (closing deletes them), and a relay
+ * that cannot be told keeps the old record (under a tombstone file key) so the close is tried
+ * again later.
  */
 import { createDocStore } from "@kimo/editor-state"
 import { fromBase64Url, MultiplayerError, normalizeRelayUrl } from "@kimo/sync/mp"
@@ -25,6 +28,7 @@ import type { SharedSession, ShareTarget } from "../share"
 import type { CloudBinding, CloudCache } from "./cache"
 import type { CloudClient } from "./client"
 import { CloudError, type CloudToken } from "./types"
+import { workspaceFileName } from "./workspace-view"
 
 /** The file key an owned room keeps once its file moved to a workspace room (until it is closed). */
 export const MIGRATED_PREFIX = "kimo-cloud-migrated:"
@@ -60,9 +64,12 @@ export interface MigrationOutcome {
   error: string | null
 }
 
-const baseName = (fileKey: string) => {
-  const last = fileKey.split(/[\\/]/).pop() ?? fileKey
-  return (last.replace(/\.(kimo|kimoz|pen)$/i, "") || "Untitled").slice(0, 64)
+/** The full SHA-256 of every manifest entry: the blobs the room can hold for this document. */
+function manifestShas(store: SharedSession["store"]): string[] {
+  const assets = (store.toHeader() as { assets?: Record<string, { sha256?: unknown }> }).assets
+  return Object.values(assets ?? {})
+    .map((entry) => entry?.sha256)
+    .filter((sha): sha is string => typeof sha === "string")
 }
 
 /** Resolves once the session is caught up and every local change is on the relay. */
@@ -142,9 +149,13 @@ export async function migrateLegacyRooms(ctx: MigrationContext): Promise<Migrati
           continue
         }
 
-        // 2. The new room (a repeat answers the one an earlier run made).
+        // 2. The new room (a repeat answers the one an earlier run made), named like any file
+        // shared to a workspace.
         const { file, token } = await ctx.client.addFile(ctx.workspaceId, {
-          name: baseName(fileKey),
+          name: workspaceFileName(
+            fileKey,
+            target.store.toHeader() as { meta?: { name?: unknown } },
+          ),
           origin: "user",
           replaces: o.room,
         })
@@ -162,7 +173,9 @@ export async function migrateLegacyRooms(ctx: MigrationContext): Promise<Migrati
         }
 
         // 3. The state into the new room, then the blobs. An editor's old connection stops
-        // first, so one store never feeds two rooms.
+        // first, so one store never feeds two rooms. Blobs are fetched on demand, so this device
+        // may lack some the old room holds: those are copied relay to relay, since closing the
+        // old room deletes them. The journal records "uploaded" only once all of them are in.
         if (!oldClosed) {
           if (live) await ctx.share.leave(o.room).catch(() => undefined)
           await service.seedRoom(target, newRoom, { recordSave: false })
@@ -171,6 +184,7 @@ export async function migrateLegacyRooms(ctx: MigrationContext): Promise<Migrati
             await settled(into, timeoutMs)
             await into.assetSync.uploadMissing()
             await settled(into, timeoutMs)
+            await service.copyOwnedBlobs(o.room, newRoom, manifestShas(target.store))
           } finally {
             // An editor keeps the new session; a scratch copy ends here.
             if (!live) await into.leave().catch(() => undefined)

@@ -21,21 +21,35 @@ pub struct OpenRequest {
     pub node: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<String>,
-    /// Board 41 section 5: a multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`)
-    /// or pairing link (`kimo://pair#<relay>/<token>`, ADR 0017), whole. `refs` is empty; the web
-    /// app tells them apart, parses and validates them.
+    /// Board 41 section 5: a multiplayer join link (`kimo://join#<relay>/<room>/<token>/<key>`),
+    /// a pairing link (`kimo://pair#<relay>/<token>`, ADR 0017) or a Kimo Cloud link
+    /// (`kimo://cloud/invite#<token>`, `kimo://cloud/transfer`, `kimo://cloud/signed-in`), whole.
+    /// `refs` is empty; the web app tells them apart, parses and validates them.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub join: Option<String>,
 }
 
 /// `parseJoinDeepLink` in `packages/platform/src/links.ts`: the whole `kimo://join#...` or
-/// `kimo://pair#...` (or `kimo:join#...`) link, or None for any other URL or an empty fragment.
+/// `kimo://pair#...` (or `kimo:join#...`) link, or a Kimo Cloud link (`kimo://cloud/invite#<token>`,
+/// `kimo://cloud/transfer`, `kimo://cloud/signed-in`), or None for any other URL or an empty
+/// fragment where one is needed.
 pub fn parse_join_link(raw: &str) -> Option<String> {
     let u = url::Url::parse(raw).ok()?;
     if u.scheme() != "kimo" {
         return None;
     }
     let host = u.host_str().unwrap_or("");
+    if host == "cloud" {
+        let needs_fragment = match u.path() {
+            "/invite" => true,
+            "/transfer" | "/signed-in" => false,
+            _ => return None,
+        };
+        if u.query().is_some() || (needs_fragment && u.fragment().map_or(true, |f| f.is_empty())) {
+            return None;
+        }
+        return Some(raw.trim().to_string());
+    }
     let action = if !host.is_empty() {
         host.to_string()
     } else {
@@ -318,8 +332,19 @@ mod tests {
             "kimo://open?path=%2Fa.kimo",
             "https://kimo.app/join#x",
             "not a url",
+            "kimo://cloud/invite",
+            "kimo://cloud/invite#",
+            "kimo://cloud/delete#x",
+            "kimo://cloud/transfer?ws=x",
         ] {
             assert_eq!(parse_join_link(bad), None, "{bad}");
+        }
+        for cloud in [
+            "kimo://cloud/invite#t0k3n",
+            "kimo://cloud/transfer",
+            "kimo://cloud/signed-in",
+        ] {
+            assert_eq!(parse_join_link(cloud), Some(cloud.to_string()), "{cloud}");
         }
         let link = format!("kimo://join#{frag}");
         let r = requests_from_args(

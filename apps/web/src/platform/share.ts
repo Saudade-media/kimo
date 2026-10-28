@@ -34,6 +34,7 @@ import {
 import { deviceKeysFor, deviceNameFor } from "../multiplayer/device"
 import { libraryFileOfKey } from "../multiplayer/library"
 import { pickPresenceColor } from "../multiplayer/presence"
+import type { ShareTarget, TokenRoom } from "../multiplayer/share"
 
 /** What sharing needs of an open document: the file it came from and its store. */
 export interface ShareableSession {
@@ -46,6 +47,26 @@ export interface ShareOptions {
   ttlSeconds?: number | null
   /** The asset store of this document. Default: the `assets/` folder beside the file. */
   assets?: AssetStore
+}
+
+/**
+ * Local files bound to Kimo Cloud workspace rooms (ADR 0019): the workspace store installs these so
+ * a bound file reopens in its room like a file this device shares (`cloud/workspaces.ts`).
+ */
+export interface CloudFileHooks {
+  /** Whether `ref` is bound to a workspace room (open or not). */
+  isBound(ref: FileRef): Promise<boolean>
+  /**
+   * Reopens a bound file: its room session, or null to load the file as usual (the workspace store
+   * may have made the store read-only first: a deleted workspace, a member removed).
+   */
+  reopen(
+    session: ShareableSession,
+    target: ShareTarget,
+    file: KimoDocument | null,
+  ): Promise<SharedSession | null>
+  /** The bound file `from` now lives at `to` (Save As). */
+  moved(from: FileRef, to: FileRef): Promise<void>
 }
 
 export interface SharedRoomLinks {
@@ -181,6 +202,21 @@ export interface PlatformShare {
   fileMoved(from: FileRef, to: FileRef): Promise<void>
   /** Joins from a link (the fragment of `https://<web-origin>/join#...`). */
   joinLink(link: string): Promise<SharedSession>
+  /**
+   * Opens a Kimo Cloud workspace room with a token from Kimo Cloud: in `session`'s document (a
+   * local file bound to the room, `file` adding what it changed since its last save), or without
+   * one in a Kimo-managed replica. The session is tracked like any other (presence, status).
+   */
+  openCloudRoom(
+    room: TokenRoom,
+    options?: { session?: ShareableSession; file?: KimoDocument | null; assets?: AssetStore },
+  ): Promise<SharedSession>
+  /** The upload target of an open document (its store and asset store), for seeding a room. */
+  targetOf(session: ShareableSession, assets?: AssetStore): ShareTarget
+  /** Installs the workspace store's hooks for bound files (null removes them). */
+  setCloudFiles(hooks: CloudFileHooks | null): void
+  /** Whether `ref` reopens in a room: shared by this device or bound to a workspace room. */
+  isShared(ref: FileRef): Promise<boolean>
   /** Mints a link for `role` that expires at `exp` (unix seconds; 0 or null never). */
   createInvite(role: Role, exp: number | null, options?: InviteOptions): Promise<IssuedLink>
   links(room?: string): Promise<IssuedLink[]>
@@ -279,6 +315,7 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
     for (const l of [...sessionListeners]) l()
   }
   let active: string | null = null
+  let cloudFiles: CloudFileHooks | null = null
 
   const track = (session: SharedSession, owner = false): SharedSession => {
     const previous = sessions.get(session.room)
@@ -437,15 +474,26 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
       service.captureSaved({ fileKey: session.ref, store: session.store }, doc),
 
     async reopenShared(session, file, assets) {
-      const shared = await service.reopenShared(targetFor(session, assets), file)
-      if (!shared) return null
+      const target = targetFor(session, assets)
+      const shared = await service.reopenShared(target, file)
+      if (!shared) {
+        const bound = await cloudFiles?.reopen(session, target, file)
+        if (!bound) return null
+        targets.set(bound.room, session)
+        return track(bound)
+      }
       targets.set(shared.room, session)
       return track(shared, true)
     },
 
     async reconnectReplica(session, assets) {
       const owned = await service.roomForFile(session.ref)
-      if (!owned) return null
+      if (!owned) {
+        const bound = await cloudFiles?.reopen(session, targetFor(session, assets), null)
+        if (!bound) return null
+        targets.set(bound.room, session)
+        return track(bound)
+      }
       const shared = await service.connect(targetFor(session, assets), owned.room)
       targets.set(shared.room, session)
       return track(shared, true)
@@ -457,7 +505,31 @@ export function createPlatformShare(deps: PlatformShareDeps): PlatformShare {
       for (const [room, target] of targets)
         if (target.ref === from) targets.set(room, { ref: to, store: target.store })
       await service.moveFile(from, to)
+      await cloudFiles?.moved(from, to)
       sessionsChanged()
+    },
+
+    async openCloudRoom(room, options = {}) {
+      assertRelayReachable(platform, room.relayUrl)
+      const { session } = options
+      const shared = await service.openWithToken({
+        ...room,
+        ...(session ? { target: targetFor(session, options.assets) } : {}),
+        file: options.file ?? null,
+      })
+      if (session) targets.set(shared.room, session)
+      return track(shared)
+    },
+
+    targetOf: (session, assets) => targetFor(session, assets),
+
+    setCloudFiles(hooks) {
+      cloudFiles = hooks
+    },
+
+    async isShared(ref) {
+      if (await service.roomForFile(ref).catch(() => null)) return true
+      return (await cloudFiles?.isBound(ref).catch(() => false)) ?? false
     },
 
     async joinLink(link) {

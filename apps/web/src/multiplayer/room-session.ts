@@ -32,9 +32,8 @@ export function createSharedFileHooks(
   const rooms = new WeakMap<FileDocumentSession, string>()
   return {
     async open(session, doc: KimoDocument) {
-      // Cheap check first: most files were never shared.
-      const summary = await share.service.roomForFile(session.ref).catch(() => null)
-      if (!summary) return false
+      // Cheap check first: most files were never shared (nor bound to a workspace room).
+      if (!(await share.isShared(session.ref).catch(() => false))) return false
       try {
         const assets = options.assetsFor?.(session)
         const shared = await share.reopenShared(session, doc, assets)

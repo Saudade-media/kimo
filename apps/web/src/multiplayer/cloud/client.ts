@@ -354,7 +354,7 @@ export function createCloudClient(deps: CloudClientDeps): CloudClient {
       const a = obj(answer.json, "file answer")
       return {
         file: parseFile(a.file),
-        token: localToken(parseToken(a.token)),
+        token: localToken(parseCloudToken(a.token)),
         created: answer.status === 201,
       }
     },
@@ -363,14 +363,14 @@ export function createCloudClient(deps: CloudClientDeps): CloudClient {
     closeFile: (id) => post(`${room(id)}/close`, {}, done),
 
     roomToken: (id, origin = "user") =>
-      post(`${room(id)}/token`, { origin }, parseToken).then(localToken),
+      post(`${room(id)}/token`, { origin }, parseCloudToken).then(localToken),
     createLink: (id, input) =>
       post(
         `${room(id)}/links`,
         { expiresAt: input.expiresAt, label: input.label },
         (v) => {
           const a = obj(v, "link answer")
-          return { link: parseLink(a.link), token: parseToken(a.token) }
+          return { link: parseLink(a.link), token: parseCloudToken(a.token) }
         },
       ),
     links: (id) =>
@@ -673,7 +673,7 @@ function parseAccessRequest(v: unknown): AccessRequest {
   }
 }
 
-function parseWorkspaceDetail(v: unknown): WorkspaceDetail {
+export function parseWorkspaceDetail(v: unknown): WorkspaceDetail {
   const d = obj(v, "workspace")
   const list = <T>(x: unknown, parse: (y: unknown) => T) => (Array.isArray(x) ? x.map(parse) : [])
   return {
@@ -738,7 +738,7 @@ function parseClosed(v: unknown): ClosedFile {
   }
 }
 
-function parseFileList(v: unknown): FileList {
+export function parseFileList(v: unknown): FileList {
   const l = obj(v, "file list")
   return {
     files: Array.isArray(l.files) ? l.files.map(parseFile) : bad("file list"),
@@ -746,7 +746,7 @@ function parseFileList(v: unknown): FileList {
   }
 }
 
-function parseToken(v: unknown): CloudToken {
+export function parseCloudToken(v: unknown): CloudToken {
   const t = obj(v, "token")
   return {
     token: str(t.token, "token"),

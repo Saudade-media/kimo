@@ -88,7 +88,7 @@ export function useCloudShareKind(model: MultiplayerModel, docKey: string): Clou
 }
 
 /** The open document's session, for `shareFile` (a file on disk, or a browser library file). */
-function useShareableSession(docKey: string) {
+export function useShareableSession(docKey: string) {
   const runtime = useOptionalRuntime()
   return () => {
     const s = runtime?.manager.get(docKey)

@@ -28,6 +28,9 @@ import {
   WsToastStack,
 } from "./workspace-parts"
 
+/** How long an approved request's toast waits for the file's name. */
+const APPROVED_WAIT_MS = 5000
+
 export function WorkspaceHost() {
   const store = useWorkspaceStore()
   const state = useWorkspacesState(store)
@@ -115,22 +118,33 @@ export function WorkspaceHost() {
   }, [store, state, transfer, toast])
 
   // --- Edit requests (3C) -------------------------------------------------------------------
+  // An approved request waits (a few seconds at most) for the workspace's file list, so the toast
+  // names the file and the open view session can reopen with an edit token.
   const requests = state?.accessRequests ?? null
   const seen = useRef<Map<string, string> | null>(null)
+  const approved = useRef(new Map<string, { workspaceName: string; at: number }>())
+  const [tick, setTick] = useState(0)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `tick` re-checks a request still waiting
   useEffect(() => {
     if (!store || !state || !requests) return
     const before = seen.current
     seen.current = new Map(requests.map((r) => [r.id, r.status]))
-    if (!before) return
-    for (const r of requests) {
-      if (r.status !== "approved" || before.get(r.id) !== "pending") continue
-      const name = fileOf(state, r.room)?.file.name ?? r.workspaceName
-      toast({ tone: "success", text: `You can now edit ${name}` })
+    if (before)
+      for (const r of requests)
+        if (r.status === "approved" && before.get(r.id) === "pending") {
+          approved.current.set(r.room, { workspaceName: r.workspaceName, at: Date.now() })
+          setTimeout(() => setTick((t) => t + 1), APPROVED_WAIT_MS)
+        }
+    for (const [room, a] of [...approved.current]) {
+      const file = fileOf(state, room)?.file ?? null
+      if (!file && Date.now() - a.at < APPROVED_WAIT_MS) continue
+      approved.current.delete(room)
+      toast({ tone: "success", text: `You can now edit ${file?.name ?? a.workspaceName}` })
       // An open view session of the room reopens with an edit token.
-      const doc = runtime?.multiplayer?.document(roomKeyOf(r.room))
-      if (doc?.getState().share.room) void store.openFile(r.room).catch(() => undefined)
+      const doc = runtime?.multiplayer?.document(roomKeyOf(room))
+      if (file && doc?.getState().share.room) void store.openFile(room).catch(() => undefined)
     }
-  }, [store, state, requests, runtime, toast])
+  }, [store, state, requests, runtime, toast, tick])
 
   // Home's New file on web: the new library file joins its workspace once its editor opens it.
   useEffect(() => {

@@ -26,10 +26,11 @@ export const CHECKOUT_POLL_MS = 3000
 /** The plans until `GET /v1/plans` answers (placeholders until launch, like the board's copy). */
 export const FALLBACK_PLANS: CloudPlans = {
   plans: [
-    { interval: "month", amountCents: 800, currency: "usd" },
-    { interval: "year", amountCents: 8000, currency: "usd" },
+    { interval: "month", amountCents: 800, seatAmountCents: 400, currency: "usd" },
+    { interval: "year", amountCents: 8000, seatAmountCents: 4000, currency: "usd" },
   ],
   storageLimitBytes: 10_000_000_000,
+  seatStorageBytes: 5_000_000_000,
   taxIncluded: false,
 }
 

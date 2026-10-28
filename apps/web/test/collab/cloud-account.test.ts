@@ -440,6 +440,8 @@ describe("what a signed-in account may do", () => {
       plan: planIn(status, now),
       usage: { bytes: 0, rooms: 0, limitBytes: 1e10, reportedAt: null },
       devices: [],
+      workspaces: [],
+      accessRequests: [],
     },
     offline: false,
   })

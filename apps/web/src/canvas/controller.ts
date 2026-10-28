@@ -4603,7 +4603,9 @@ export class CanvasController {
   /** Board 35: entrance / reflow motion of layers agents add (render only). */
   readonly buildMotion = new BuildMotion(
     { getNode: (id) => this.store.getNode(id) as Record<string, unknown> | undefined },
-    () => this.agent.reducedMotion,
+    // A hidden window (another app in front, minimized) gets no display frames to animate in,
+    // and nobody is watching: agent layers land in their final state.
+    () => this.agent.reducedMotion || globalThis.document?.visibilityState === "hidden",
   )
   private motionRaf = 0
   /** Scene labels read the live props (no setDocument per prop change). */

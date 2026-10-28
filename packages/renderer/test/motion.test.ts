@@ -4,6 +4,12 @@
  * exports always show the final state.
  */
 import { beforeAll, describe, expect, test } from "bun:test"
+import {
+  createInstanceView,
+  createLayoutEngine,
+  createResolver,
+  nodeSourceFromDocument,
+} from "@kimo/layout"
 import type { CanvasKit, Surface } from "canvaskit-wasm"
 import { CanvasKitRenderer, type NodeMotion } from "../src"
 import { loadCanvasKit } from "../src/ck"
@@ -113,6 +119,52 @@ describe("renderer motion", () => {
     // Motion cleared: the next frame draws the card at its final size again.
     r.setMotion(null)
     expect(pixelAt(ck, frame(), 37, 84).slice(0, 3)).toEqual([0x25, 0x63, 0xeb])
+    r.detach()
+  })
+
+  test("an instance first drawn during its entrance draws in full once it ends", async () => {
+    // A white pill instance on a black stage; its component sits off-screen.
+    const nodes: TestDoc["nodes"] = {
+      stage0001: { type: "frame", parent: null, order: "a", w: 120, h: 60, fill: "#000000" },
+      pill00001: {
+        type: "instance",
+        parent: "stage0001",
+        order: "a",
+        x: 20,
+        y: 12,
+        of: "comp00001",
+      },
+      comp00001: {
+        type: "frame",
+        parent: null,
+        order: "b",
+        x: 200,
+        w: 80,
+        h: 36,
+        fill: "#FFFFFF",
+        component: {},
+      },
+      dot000001: { type: "rect", parent: "comp00001", order: "a", x: 30, y: 8, w: 20, h: 20 },
+    }
+    const engine = createLayoutEngine()
+    await engine.init()
+    const src = nodeSourceFromDocument({ nodes } as never)
+    const header = {}
+    const view = createInstanceView(src, { header: () => header as never })
+    const resolve = createResolver(header, view)
+    r.setDocument({ nodes: view, header, resolve, assets: { load: async () => null } })
+    r.setLayout(
+      engine.compute({ nodes: src, expanded: view, resolve, measureText: r.textMeasurer() }),
+    )
+    r.attachRaster(120, 60, 1)
+    r.setViewport({ x: 0, y: 0, zoom: 1 })
+    r.setOverlay({ selection: [], hovered: null, marquee: null })
+    // The entrance's first visible frame is the first time the instance is drawn.
+    r.setMotion(new Map([["pill00001", { opacity: 0.1 }]]))
+    frame()
+    r.setMotion(null)
+    // Its cached picture holds the pill itself, not that 10 % frame.
+    expect(pixelAt(ck, frame(), 30, 30).slice(0, 3)).toEqual([255, 255, 255])
     r.detach()
   })
 })

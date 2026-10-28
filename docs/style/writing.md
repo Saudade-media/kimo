@@ -1,8 +1,9 @@
 # Writing style
 
-How Kimo's text should read: UI copy, docs, the site, error messages, and the replies the
-built-in agent writes. The goal is text that sounds like a careful person wrote it. A scan in
-`scripts/writing-style.test.ts` checks UI copy and docs against the banned list below.
+How Kimo's text should read: UI copy, docs, the site, error messages, design boards, and the
+replies the built-in agent writes. The goal is text that sounds like a careful person wrote it. A
+scan in `scripts/writing-style.test.ts` checks UI copy and docs against the banned list below, and
+UI copy and design boards against the length limits.
 
 ## Voice
 
@@ -14,6 +15,22 @@ built-in agent writes. The goal is text that sounds like a careful person wrote 
   never paraphrased.
 - No filler openers or closers ("Great question", "Let's dive in", "I hope this helps", "In
   summary"), no self-congratulation ("Done! Everything works perfectly").
+
+## Length
+
+Write UI copy at a normal human length. Say what happened or what to do. Leave out the reasons,
+rules and edge cases; they belong in the guide, an ADR or the contract.
+
+- A UI string is at most 2 sentences and 20 words. A dialog is a short title plus one sentence. A
+  toast or a status line is one short line.
+- Write "Your edit request was sent", not "We emailed Studio's admins. When one approves, this file
+  turns editable on its own."
+- On design boards (`desing.kimo`), every text follows the same limit: mock UI copy, captions and
+  the note under each state (one line a builder needs). A board's intro is at most 40 words.
+
+`scripts/writing-style.test.ts` fails CI on longer UI strings and on long text in design boards 46
+and later. Its `LONG_LEGACY` list holds the UI strings that were already longer when the rule
+landed: shorten one and drop its entry, never add one.
 
 ## Banned words and patterns
 

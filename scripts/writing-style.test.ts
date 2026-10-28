@@ -7,10 +7,14 @@
  *   examples README (fenced code skipped).
  * A hit fails with file:line and the phrase. Add an ALLOW entry only when the phrase is right in
  * context (a command name, a placeholder glyph, a separator), never to silence real copy.
+ *
+ * It also enforces Length (docs/style/writing.md#length) on the same app strings and on the text of
+ * design boards in desing.kimo, from FIRST_CHECKED_BOARD on: at most 2 sentences and 20 words.
+ * JSX text that wraps over several source lines is checked line by line.
  */
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { join, relative } from "node:path"
+import { join } from "node:path"
 import { Glob } from "bun"
 import { type AiTell, aiTellPhrases } from "../packages/ai-agent/src/style"
 
@@ -60,6 +64,49 @@ const ALLOW: Allow[] = [
   { file: /agent-tab\.md$/, text: /show `—`/, kind: "em-dash" },
 ]
 
+/** Length limits (docs/style/writing.md#length). */
+const MAX_WORDS = 20
+const MAX_SENTENCES = 2
+const MAX_INTRO_WORDS = 40
+/** Design boards are checked from this number on; older boards predate the rule. */
+const FIRST_CHECKED_BOARD = 46
+
+/**
+ * UI strings that were longer than the limit when the rule landed (2026-10-28), by file and
+ * opening words. Shorten them and drop the entry; never add one.
+ */
+const LONG_LEGACY: [RegExp, string][] = [
+  [/pair\/PairRoute\.tsx$/, "The link points to a server that does not speak Kimo."],
+  [/join\/copy\.ts$/, "The link points to a server that does not speak Kimo."],
+  [/multiplayer\/cloud\/view\.ts$/, "We could not charge your card."],
+  [/multiplayer\/ui\/MultiplayerPane\.tsx$/, "Shown on your cursor and in the list"],
+  [/multiplayer\/ui\/ownership\.tsx$/, "Another Kimo set up this relay first."],
+  [/multiplayer\/ui\/RelayWizard\.tsx$/, "Check the URL and that it is running."],
+  [/multiplayer\/ui\/RelayWizard\.tsx$/, "Kimo runs the official installer from bun.sh"],
+  [/multiplayer\/ui\/cloud-parts\.tsx$/, "New images and fonts in shared files will not sync."],
+  [/fonts\/FontPicker\.tsx$/, "Google fonts are off"],
+  [/agents\/AgentsMcpPane\.tsx$/, "Connect Claude Code, Codex or another MCP client"],
+  [/agents\/AgentsMcpPane\.tsx$/, "For clients with Ask before changes on"],
+  [/platform\/contract\.ts$/, "It still contains git conflict markers"],
+  [/ai-settings\/AiProvidersPane\.tsx$/, "Bring your own API key."],
+  [/ai-settings\/AiProvidersPane\.tsx$/, "The agent can search the web and read pages"],
+  [/ai-settings\/AiProvidersPane\.tsx$/, "Not synced, not encrypted at rest."],
+  [/home\/HomeComposer\.tsx$/, "Kimo doesn't sell models."],
+  [/settings\/HelpHost\.tsx$/, "Opens a new issue in your browser"],
+  [/settings\/AgentsPane\.tsx$/, "Run Kimo on your computer, or use `kimo mcp`"],
+]
+/** Model prompts are instructions to a model, not UI copy. */
+const PROMPTS: [RegExp, string][] = [[/ai-settings\/controller\.ts$/, "You name design files."]]
+
+const words = (t: string) => t.match(/[\p{L}\p{N}$][^\s]*/gu)?.length ?? 0
+const sentences = (t: string) => t.trim().match(/[.!?](?=\s|$)/g)?.length ?? 0
+/** A sentence-shaped string: a capitalised first word, a space, and no code syntax. */
+const isProse = (t: string) =>
+  /^[A-Z][a-z']*\s/.test(t) && !/[{}<>=;]|=>|\$\{/.test(t) && words(t) >= 3
+const tooLong = (t: string) => words(t) > MAX_WORDS || sentences(t) > MAX_SENTENCES
+const listed = (list: [RegExp, string][], file: string, t: string) =>
+  list.some(([f, start]) => f.test(file) && t.startsWith(start))
+
 interface Hit {
   where: string
   tell: AiTell
@@ -85,8 +132,14 @@ function check(file: string, line: number, text: string, out: Hit[]) {
 
 const STRING = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g
 
-/** String literals and the leftover (JSX text, code) of every non-comment line. */
-function scanCode(file: string, src: string, out: Hit[]) {
+/**
+ * Calls `visit` with the string literals and the leftover (JSX text, code) of every non-comment
+ * line.
+ */
+function scanCode(
+  src: string,
+  visit: (line: number, text: string, kind: "string" | "code") => void,
+) {
   let inBlock = false
   src.split("\n").forEach((raw, i) => {
     let line = raw
@@ -106,12 +159,81 @@ function scanCode(file: string, src: string, out: Hit[]) {
     const trimmed = line.trim()
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) return
     const rest = line.replace(STRING, (m) => {
-      check(file, i + 1, m.slice(1, -1), out)
+      visit(i + 1, m.slice(1, -1), "string")
       return " "
     })
     // Trailing line comment, once strings are out of the way (URLs live in strings).
-    check(file, i + 1, rest.replace(/\/\/.*$/, ""), out)
+    visit(i + 1, rest.replace(/\/\/.*$/, ""), "code")
   })
+}
+
+/** The app's UI source files, repo-relative. */
+function codeFiles(): string[] {
+  return CODE_ROOTS.flatMap((root) => files([`${root}/**/*.{ts,tsx}`])).filter(
+    (f) => !CODE_SKIP.test(f),
+  )
+}
+
+/** Over-long prose in one source file: string literals, JSX text between tags, wrapped JSX text. */
+function scanLength(file: string, src: string, out: string[]) {
+  scanCode(src, (line, text, kind) => {
+    const pieces =
+      kind === "string"
+        ? [text]
+        : [...text.matchAll(/>([^<>{}]+)</g)].map((m) => m[1] ?? "").concat(text)
+    for (const raw of pieces) {
+      const t = raw.trim()
+      if (!isProse(t) || !tooLong(t)) continue
+      if (listed(LONG_LEGACY, file, t) || listed(PROMPTS, file, t)) continue
+      out.push(`${file}:${line}  ${words(t)} words, ${sentences(t)} sentences: ${t.slice(0, 120)}`)
+    }
+  })
+}
+
+interface DesignNode {
+  type?: string
+  name?: string
+  parent?: string
+  content?: unknown
+  overrides?: Record<string, { set?: { content?: unknown } }>
+}
+
+function plain(content: unknown): string | null {
+  if (typeof content === "string") return content
+  if (Array.isArray(content))
+    return content.map((run) => (run as { text?: unknown }).text ?? "").join("")
+  return null
+}
+
+/** Long text on the design boards numbered FIRST_CHECKED_BOARD and up, in desing.kimo. */
+function scanDesign(out: string[]) {
+  const doc = JSON.parse(readFileSync(join(ROOT, "desing.kimo"), "utf8")) as {
+    nodes: Record<string, DesignNode>
+  }
+  const nodes = doc.nodes
+  const boardOf = (id: string): string => {
+    let at = id
+    for (let parent = nodes[at]?.parent; parent; parent = nodes[at]?.parent) at = parent
+    return at
+  }
+  for (const [id, node] of Object.entries(nodes)) {
+    const board = boardOf(id)
+    const number = Number(/^(\d+)\b/.exec(nodes[board]?.name ?? "")?.[1] ?? Number.NaN)
+    if (!(number >= FIRST_CHECKED_BOARD)) continue
+    // The board's own intro, in its header frame, may run longer.
+    const intro = node.name === "Intro" && nodes[node.parent ?? ""]?.parent === board
+    const texts: string[] = []
+    if (node.type === "text") texts.push(plain(node.content) ?? "")
+    for (const o of Object.values(node.overrides ?? {})) texts.push(plain(o.set?.content) ?? "")
+    for (const raw of texts) {
+      const t = raw.trim()
+      const long = intro ? words(t) > MAX_INTRO_WORDS : tooLong(t)
+      if (long)
+        out.push(
+          `${nodes[board]?.name} › ${node.name ?? id} (${id})  ${words(t)} words, ${sentences(t)} sentences: ${t.slice(0, 120)}`,
+        )
+    }
+  }
 }
 
 /** Markdown prose, line by line, skipping fenced code. */
@@ -139,12 +261,21 @@ function report(hits: Hit[]): string {
 describe("writing style (docs/style/writing.md)", () => {
   test("UI copy has no AI-tell phrasing", () => {
     const hits: Hit[] = []
-    for (const root of CODE_ROOTS)
-      for (const f of files([`${root}/**/*.{ts,tsx}`])) {
-        const rel = relative(ROOT, join(ROOT, f))
-        if (!CODE_SKIP.test(rel)) scanCode(rel, readFileSync(join(ROOT, f), "utf8"), hits)
-      }
+    for (const f of codeFiles())
+      scanCode(readFileSync(join(ROOT, f), "utf8"), (line, text) => check(f, line, text, hits))
     expect(report(hits)).toBe("")
+  })
+
+  test("UI copy is at most 2 sentences and 20 words per string", () => {
+    const long: string[] = []
+    for (const f of codeFiles()) scanLength(f, readFileSync(join(ROOT, f), "utf8"), long)
+    expect(long.join("\n")).toBe("")
+  })
+
+  test("design boards keep their text short", () => {
+    const long: string[] = []
+    scanDesign(long)
+    expect(long.join("\n")).toBe("")
   })
 
   test("docs have no AI-tell phrasing", () => {

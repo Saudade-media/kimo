@@ -26,6 +26,7 @@ import {
 import type { MultiplayerModel } from "../model"
 import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
 import { stackDimmed, stackOf, topbarSyncStatus } from "./copy"
+import { NewWorkspaceWizard } from "./NewWorkspace"
 import { PeoplePopover } from "./PeoplePopover"
 import { RelayWizard, type WizardStart } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
@@ -134,7 +135,9 @@ function ShareCluster({
   const share = useShareState(model, docKey)
   const people = useCollaborators(model, docKey)
   const caps = useCapabilities(model, docKey)
-  const [open, setOpen] = useState<"share" | "people" | "reset" | "relay" | "invite" | null>(null)
+  const [open, setOpen] = useState<
+    "share" | "people" | "reset" | "relay" | "invite" | "new-workspace" | null
+  >(null)
   const [wizardStart, setWizardStart] = useState<WizardStart>("choose")
   const runtime = useOptionalRuntime()
   const relaySetup = useRelaySetupServices(runtime?.platform ?? null)
@@ -144,6 +147,8 @@ function ShareCluster({
   /** The workspace Invite people (board 46 2B) is for. */
   const [inviteTo, setInviteTo] = useState<string | null>(null)
   const inviteWorkspace = workspacesState?.workspaces.find((w) => w.id === inviteTo) ?? null
+  /** The workspace New workspace (board 46 1F) made: 1B's picker starts on it. */
+  const [madeWorkspace, setMadeWorkspace] = useState<string | null>(null)
   const shareButton = useRef<HTMLButtonElement>(null)
   const stackButton = useRef<HTMLButtonElement>(null)
   const others = people.filter((p) => !p.isYou)
@@ -213,6 +218,10 @@ function ShareCluster({
             setInviteTo(workspaceId)
             setOpen("invite")
           }}
+          {...(relaySetup?.cloud && workspaceStore
+            ? { onNewWorkspace: () => setOpen("new-workspace") }
+            : {})}
+          pickedWorkspace={madeWorkspace}
           {...(relaySetup
             ? {
                 onSetUpRelay: (start: WizardStart = "choose") => {
@@ -244,6 +253,16 @@ function ShareCluster({
           onClose={() => {
             setOpen((o) => (o === "relay" ? null : o))
             shareButton.current?.focus({ preventScroll: true })
+          }}
+        />
+      )}
+      {open === "new-workspace" && (
+        <NewWorkspaceWizard
+          // Close goes back to the popover; a paid checkout too, with the new workspace picked.
+          onClose={() => setOpen("share")}
+          onCreated={(id) => {
+            setMadeWorkspace(id)
+            setOpen("share")
           }}
         />
       )}

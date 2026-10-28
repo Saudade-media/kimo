@@ -119,6 +119,10 @@ export interface SharePopoverProps {
   onSetUpRelay?(start?: WizardStart): void
   /** Invite people to a workspace (board 46 2B): the dialog lives outside the popover. */
   onInvite?(workspaceId: string): void
+  /** 1B's New workspace (board 46 1F): the sheet lives outside the popover. */
+  onNewWorkspace?(): void
+  /** The workspace 1B's picker starts on (one New workspace just made). */
+  pickedWorkspace?: string | null
 }
 
 export function SharePopover({
@@ -129,6 +133,8 @@ export function SharePopover({
   onResetAll,
   onSetUpRelay,
   onInvite,
+  onNewWorkspace,
+  pickedWorkspace,
 }: SharePopoverProps) {
   const share = useShareState(model, docKey)
   const settings = useMultiplayerSettings(model)
@@ -176,6 +182,8 @@ export function SharePopover({
           docKey={docKey}
           firstRun={stage === "first-run"}
           {...(onSetUpRelay ? { onSetUpRelay } : {})}
+          {...(onNewWorkspace ? { onNewWorkspace } : {})}
+          pickedWorkspace={pickedWorkspace ?? null}
         />
       )}
     </Popover>
@@ -238,11 +246,15 @@ function SetupBody({
   docKey,
   firstRun,
   onSetUpRelay,
+  onNewWorkspace,
+  pickedWorkspace,
 }: {
   model: MultiplayerModel
   docKey: string
   firstRun: boolean
   onSetUpRelay?(start?: WizardStart): void
+  onNewWorkspace?(): void
+  pickedWorkspace: string | null
 }) {
   const runtime = useOptionalRuntime()
   const platform = runtime?.platform ?? null
@@ -383,6 +395,8 @@ function SetupBody({
         state={workspacesState}
         docKey={docKey}
         workspaces={canTake}
+        picked={pickedWorkspace}
+        {...(onNewWorkspace ? { onNewWorkspace } : {})}
       />
     )
 

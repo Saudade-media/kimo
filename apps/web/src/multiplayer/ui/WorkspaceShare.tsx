@@ -4,7 +4,8 @@
  * - A (one workspace that can take the file): Intro (users) "Share to Studio" · Members (avatar
  *   stack, names, Active) · footnote "Monthly · 3 seats · 2.1 GB of 20 GB" · Start sharing.
  * - B (two or more): Intro "Share to a workspace" · the picker (radio rows, name, "Owner · 3
- *   members") · footnote "Studio · Monthly · 3 seats" · Start sharing.
+ *   members", then New workspace, which opens F) · footnote "Studio · Monthly · 3 seats" · Start
+ *   sharing.
  * - C (a workspace file): Intro "In Studio" · Members (who is here, Live) · View links (Copy,
  *   Revoke) · Copy view link · Invite people · footnote "Editing is for Studio's members" · Stop
  *   sharing (Admins). There are no edit links on Kimo Cloud.
@@ -13,7 +14,8 @@
  *   relay's `/version` (`owner: "external"`, api.md §8.1) stands in for `GET /v1/relay`, which
  *   needs a signed-in device.
  * - E (request sent): Requested pill and when.
- * - F (no workspace yet) is the relay wizard's Subscribe step (`CloudWizardSteps`).
+ * - F (no workspace yet, or New workspace) is the relay wizard's Subscribe step
+ *   (`CloudWizardSteps`, `NewWorkspaceWizard`).
  */
 import { RelayHttpClient, type RelayInfo } from "@kimo/sync/mp"
 import { IconButton, StatusPill } from "@kimo/ui"
@@ -187,6 +189,8 @@ export function WorkspaceSetupBody({
   state,
   docKey,
   workspaces,
+  picked: initial = null,
+  onNewWorkspace,
   onStarted,
 }: {
   store: WorkspaceStore
@@ -194,11 +198,15 @@ export function WorkspaceSetupBody({
   docKey: string
   /** The workspaces that can take a new file (`shareableWorkspaces`), at least one. */
   workspaces: readonly WorkspaceSummary[]
+  /** The workspace to start on (one New workspace just made); default the first. */
+  picked?: string | null
+  /** B's New workspace row (cEPVjf6Qa3): opens F outside the popover. */
+  onNewWorkspace?(): void
   onStarted?(): void
 }) {
   const toast = useWsToast()
   const sessionOf = useShareableSession(docKey)
-  const [picked, setPicked] = useState<string | null>(workspaces[0]?.id ?? null)
+  const [picked, setPicked] = useState<string | null>(initial ?? workspaces[0]?.id ?? null)
   const [starting, setStarting] = useState(false)
   const chosen = workspaces.find((w) => w.id === picked) ?? workspaces[0] ?? null
   const one = workspaces.length === 1
@@ -286,6 +294,19 @@ export function WorkspaceSetupBody({
                   </button>
                 )
               })}
+              {onNewWorkspace && (
+                <button
+                  type="button"
+                  className="ws-picker__row ws-picker__new"
+                  data-action="new-workspace"
+                  onClick={onNewWorkspace}
+                >
+                  <span className="ws-picker__new-icon" aria-hidden="true">
+                    <Icon name="plus" size={14} />
+                  </span>
+                  <span className="ws-picker__new-label">New workspace</span>
+                </button>
+              )}
             </div>
           </>
         )}

@@ -3,6 +3,7 @@
  * card and the Host your own disclosure on Choose, then Sign in (2 A enter email, 2 B check your
  * inbox, 2 C signed in, 2 E link expired or used) and Subscribe (3 A choose billing, 3 B waiting for
  * checkout, 3 D checkout not finished). Each step is a Body and a Footer for the wizard's shell.
+ * Board 46 1F is Subscribe with the workspace's name, for the first workspace and for New workspace.
  */
 import { Badge, Button, Input } from "@kimo/ui"
 import { type ReactNode, useEffect, useId, useState } from "react"
@@ -33,6 +34,11 @@ interface StepArgs {
   /** Board 46 1F: the first workspace's name (shown while the account owns none). */
   workspaceName: string
   onWorkspaceName(name: string): void
+  /**
+   * Board 46 1F from New workspace: the name always shows, and `checkout` (Continue to checkout,
+   * Try checkout again) makes and checks out the new workspace; `busy` while it is being made.
+   */
+  newWorkspace?: { checkout(): void; busy: boolean } | null
 }
 
 export interface CloudStepView {
@@ -399,6 +405,8 @@ export function cloudStepView(args: StepArgs): CloudStepView {
 
   // Subscribe.
   const c = state.checkout
+  const fresh = args.newWorkspace ?? null
+  const retry = () => (fresh ? fresh.checkout() : void cloud.startCheckout())
   if (c.phase === "waiting")
     return {
       bodyGap: 16,
@@ -437,15 +445,15 @@ export function cloudStepView(args: StepArgs): CloudStepView {
             title="Payment did not go through"
             desc="Nothing was charged. Try again, or pick another way to pay in checkout."
           />
-          <ErrorLine code={c.error} state={state} onRetry={() => void cloud.startCheckout()} />
+          <ErrorLine code={c.error} state={state} onRetry={retry} />
         </>
       ),
       footer: (
         <>
           {ghost("Back", "arrow-left", () => cloud.backToChoose(), "back")}
           <Spacer />
-          {primary("Try checkout again", "external-link", () => void cloud.startCheckout(), {
-            disabled: c.busy,
+          {primary("Try checkout again", "external-link", retry, {
+            disabled: c.busy || !!args.newWorkspace?.busy,
             name: "checkout",
           })}
         </>
@@ -453,7 +461,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
     }
   // 3 A (and `ready`, which the wizard turns into 3 C).
   const interval = c.phase === "choose" ? c.interval : "month"
-  const busy = c.phase === "choose" && c.busy
+  const busy = (c.phase === "choose" && c.busy) || !!fresh?.busy
   // Board 46 1F: one plan per workspace; it starts with one seat (you).
   const includes = [
     "Unlimited files and viewers",
@@ -461,18 +469,24 @@ export function cloudStepView(args: StepArgs): CloudStepView {
     "Invite people any time",
     "Cancel any time. Your files stay on your devices",
   ]
-  const ownsWorkspace = !!state.account?.workspaces.some(
-    (w) => w.role === "owner" && w.deletedAt === null,
-  )
+  // New workspace names the one it makes; else the name shows while the account owns none.
+  const named =
+    !!fresh || !state.account?.workspaces.some((w) => w.role === "owner" && w.deletedAt === null)
   const checkout = () =>
-    void cloud.startCheckout(ownsWorkspace ? {} : { workspaceName: args.workspaceName })
+    fresh
+      ? fresh.checkout()
+      : void cloud.startCheckout(named ? { workspaceName: args.workspaceName } : {})
   return {
     bodyGap: 16,
     body: (
       <>
         <Intro icon="cloud" title="Kimo Cloud" desc="One plan for your team. Viewers are free." />
-        {!ownsWorkspace && (
-          <WorkspaceNameField value={args.workspaceName} onChange={args.onWorkspaceName} />
+        {named && (
+          <WorkspaceNameField
+            value={args.workspaceName}
+            onChange={args.onWorkspaceName}
+            autoFocus={!!fresh}
+          />
         )}
         <Billing state={state} interval={interval} onChange={(v) => cloud.chooseInterval(v)} />
         <ul className="rw-includes" aria-label="Included">
@@ -497,7 +511,7 @@ export function cloudStepView(args: StepArgs): CloudStepView {
         </span>
         <Spacer />
         {primary(busy ? "Opening…" : "Continue to checkout", "external-link", checkout, {
-          disabled: busy || (!ownsWorkspace && args.workspaceName.trim() === ""),
+          disabled: busy || (named && args.workspaceName.trim() === ""),
           name: "checkout",
         })}
       </>
@@ -506,7 +520,15 @@ export function cloudStepView(args: StepArgs): CloudStepView {
 }
 
 /** Field · Workspace name (cNbYcKZXHp): column, gap 6 › Label sans 11 / 500 secondary · Input (users). */
-function WorkspaceNameField({ value, onChange }: { value: string; onChange(v: string): void }) {
+function WorkspaceNameField({
+  value,
+  onChange,
+  autoFocus = false,
+}: {
+  value: string
+  onChange(v: string): void
+  autoFocus?: boolean
+}) {
   const id = useId()
   return (
     <div className="mp-field rw-workspace-name">
@@ -519,6 +541,7 @@ function WorkspaceNameField({ value, onChange }: { value: string; onChange(v: st
         maxLength={64}
         spellCheck={false}
         autoComplete="off"
+        autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
       />

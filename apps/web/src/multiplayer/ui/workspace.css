@@ -172,6 +172,22 @@
   line-height: normal;
 }
 
+/* Workspace · New (cEPVjf6Qa3): the row's layout, no fill, last (no bottom stroke). Icon `plus` 14
+   text-secondary · Name sans 12 / 500 text-secondary. */
+.ws-picker__new-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--kimo-text-secondary);
+}
+
+.ws-picker__new-label {
+  color: var(--kimo-text-secondary);
+  font-family: var(--kimo-font-sans);
+  font-size: var(--kimo-text-sm);
+  font-weight: var(--kimo-font-weight-medium);
+  line-height: normal;
+}
+
 /* Label (bjzfIFNzvI, JXYjxtvkkC): sans 11 / 500 text-secondary. */
 .ws-label {
   color: var(--kimo-text-secondary);

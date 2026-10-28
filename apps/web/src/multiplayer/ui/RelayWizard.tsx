@@ -20,6 +20,10 @@
  * stays open once one of them is chosen. The Kimo Cloud path is Choose · Sign in · Subscribe
  * (`CloudWizardSteps`), then Kimo Cloud is ready (3 C). A device already signed in with a plan
  * skips both (1 B, Use Kimo Cloud).
+ *
+ * Board 46 1F from New workspace (`newWorkspace`): the same sheet opens at Subscribe with an empty
+ * name; Continue to checkout makes the workspace (once) and checks it out with one seat, and the
+ * paid checkout ends the sheet with that workspace instead of saving a relay.
  */
 import { Button, Dialog, DialogScrim, IconButton, Input, useFocusTrap } from "@kimo/ui"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
@@ -130,6 +134,19 @@ export interface RelayWizardProps {
   inline?: boolean
   /** Board 43: open at a Kimo Cloud step (Use Kimo Cloud, Subscribe, Renew plan). */
   start?: WizardStart
+  /** Board 46 1F from New workspace (1B, Home, Settings): opens at Subscribe. */
+  newWorkspace?: NewWorkspaceFlow
+}
+
+/** What New workspace gives the wizard (board 46 1F). */
+export interface NewWorkspaceFlow {
+  /**
+   * Makes the workspace named `name` (or renames the one this sheet made) and resolves its id;
+   * rejects to stay on the step (the caller says why).
+   */
+  create(name: string): Promise<string>
+  /** Its checkout went through: the sheet is done. */
+  onDone(workspaceId: string): void
 }
 
 type LocalView =
@@ -146,6 +163,8 @@ type FlyView = "checking" | "login" | "deploying" | "manual"
 
 export function RelayWizard(props: RelayWizardProps) {
   const { services, from } = props
+  const fresh = props.newWorkspace ?? null
+  const start: WizardStart | undefined = fresh ? "subscribe" : props.start
   const { store, local } = services
   const setup = useRelaySetupState(store)
   const localState = useLocalRelay(local)
@@ -167,9 +186,9 @@ export function RelayWizard(props: RelayWizardProps) {
   const cloud = services.cloud
   const cloudState = useCloudState(cloud)
   const [step, setStep] = useState<Step>(
-    !cloud || !props.start || props.start === "choose"
+    !cloud || !start || start === "choose"
       ? "choose"
-      : props.start === "sign-in"
+      : start === "sign-in"
         ? "sign-in"
         : "subscribe",
   )
@@ -479,15 +498,15 @@ export function RelayWizard(props: RelayWizardProps) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per open
   useEffect(() => {
     if (!cloud) return
-    const chose = setup.path === "cloud" || (props.start !== undefined && props.start !== "choose")
-    if (props.start === "subscribe" || props.start === "renew") cloud.backToChoose()
-    if (props.start === "renew") void cloud.startCheckout()
+    const chose = setup.path === "cloud" || (start !== undefined && start !== "choose")
+    if (start === "subscribe" || start === "renew") cloud.backToChoose()
+    if (start === "renew") void cloud.startCheckout()
     if (!chose) return
     void cloud.refresh().then((s) => {
       if (s.session !== "signed-in" && cloud.getState().signIn.phase === "signed-in")
         cloud.changeEmail()
       // Opened at Sign in on a device that is signed in already: on to the plan.
-      if (s.session === "signed-in" && props.start === "sign-in") {
+      if (s.session === "signed-in" && start === "sign-in") {
         if (s.account?.plan.canShare) void saveCloud()
         else {
           cloud.backToChoose()
@@ -525,6 +544,22 @@ export function RelayWizard(props: RelayWizardProps) {
     }
   }, [cloud, props.saveRelayUrl, store, toast])
 
+  // Board 46 1F from New workspace: the workspace is made once, then checked out.
+  const made = useRef<string | null>(null)
+  const [making, setMaking] = useState(false)
+  const checkoutNew = async (name: string) => {
+    if (!cloud || !fresh || making || !name.trim()) return
+    setMaking(true)
+    try {
+      made.current = await fresh.create(name.trim())
+    } catch {
+      return
+    } finally {
+      setMaking(false)
+    }
+    await cloud.startCheckout({ workspaceId: made.current })
+  }
+
   // 2 C → 3 C when the plan already allows sharing; 3 B → 3 C once the payment went through.
   // The store's state now, not this render's: on the first commit the mount effect has just reset
   // a checkout left "ready" by an earlier one (Renew after a lapse), which this render still shows.
@@ -541,7 +576,14 @@ export function RelayWizard(props: RelayWizardProps) {
       now.account?.plan.canShare === true
     )
       void saveCloud()
-    if (step === "subscribe" && now.checkout.phase === "ready") void saveCloud()
+    if (step === "subscribe" && now.checkout.phase === "ready") {
+      if (!fresh) void saveCloud()
+      else if (made.current) {
+        const id = made.current
+        made.current = null
+        fresh.onDone(id)
+      }
+    }
   }, [cloud, step, signInPhase, checkoutPhase, canShare, saveCloud])
 
   /** Choose › Continue on Kimo Cloud: signed in with a plan saves it; else Sign in or Subscribe. */
@@ -860,8 +902,16 @@ export function RelayWizard(props: RelayWizardProps) {
       state: cloudState,
       clock: services.clock,
       saving,
-      workspaceName: workspaceName ?? defaultWorkspaceName(cloudState.account?.account.email ?? ""),
+      workspaceName:
+        workspaceName ??
+        (fresh ? "" : defaultWorkspaceName(cloudState.account?.account.email ?? "")),
       onWorkspaceName: setWorkspaceName,
+      newWorkspace: fresh
+        ? {
+            busy: making,
+            checkout: () => void checkoutNew(workspaceName ?? ""),
+          }
+        : null,
       onChoose: () => setStep("choose"),
       onUseCloud: () => void saveCloud(),
       onSubscribe: () => {

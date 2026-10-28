@@ -1,6 +1,7 @@
 /**
  * Board 46 2A: Settings › Workspace (Xa3nAmnduu). Title Bar: "Workspace" · Select (180 × 28) of the
- * account's workspaces. Then, as `mp-setting` sections (column, gap 8, padding [12, 0]):
+ * account's workspaces, then "New workspace…" (1F, `NewWorkspaceWizard`; the new one is selected
+ * once paid). Then, as `mp-setting` sections (column, gap 8, padding [12, 0]):
  *
  * - Plan: "You pay for Studio's plan." · Owner, Plan ("Monthly · 3 seats · $16", "renews Nov 28"),
  *   Storage (bar, mono value) · Manage billing (Owner) and Rename (Admins).
@@ -34,6 +35,7 @@ import {
 } from "../cloud/workspace-view"
 import { fileOf } from "../cloud/workspaces"
 import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
+import { NewWorkspaceWizard } from "./NewWorkspace"
 import {
   DeleteWorkspaceDialog,
   InviteDialog,
@@ -56,12 +58,16 @@ const ROLE_OPTIONS = [
   { value: "admin" as const, label: "Admin" },
 ]
 
+/** The Select's last entry, which opens New workspace (1F) instead of picking. */
+const NEW_WORKSPACE = "new-workspace"
+
 type Open =
   | { kind: "invite" }
   | { kind: "remove"; member: Member }
   | { kind: "transfer" }
   | { kind: "delete" }
   | { kind: "leave" }
+  | { kind: "new" }
   | null
 
 export function WorkspacePane({ focus }: { focus?: string | null }) {
@@ -123,9 +129,12 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
           <Select
             className="ws-select ws-select--180"
             label="Workspace"
-            options={list.map((x) => ({ value: x.id, label: x.name }))}
+            options={[
+              ...list.map((x) => ({ value: x.id, label: x.name })),
+              { value: NEW_WORKSPACE, label: "New workspace…" },
+            ]}
             value={w.id}
-            onChange={setPicked}
+            onChange={(v) => (v === NEW_WORKSPACE ? setOpen({ kind: "new" }) : setPicked(v))}
           />
         )
       )}
@@ -443,6 +452,15 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
           workspace={w}
           onClose={() => setOpen(null)}
           onLeft={() => setPicked(null)}
+        />
+      )}
+      {open?.kind === "new" && (
+        <NewWorkspaceWizard
+          onClose={() => setOpen(null)}
+          onCreated={(id) => {
+            setOpen(null)
+            setPicked(id)
+          }}
         />
       )}
     </div>

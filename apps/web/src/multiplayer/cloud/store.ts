@@ -121,11 +121,12 @@ export interface CloudStore {
   /** Section 3. */
   chooseInterval(interval: BillingInterval): void
   /**
-   * Section 3 (board 46 1F): checks out the oldest workspace the account owns, or, owning none,
-   * creates one named `workspaceName` first (api.md §13.1, §13.4). Without either, the
-   * compatibility route (§6.1) creates "Workspace".
+   * Section 3 (board 46 1F): checks out `workspaceId` when given (a workspace New workspace just
+   * made), else the oldest workspace the account owns, or, owning none, creates one named
+   * `workspaceName` first (api.md §13.1, §13.4). Without any, the compatibility route (§6.1)
+   * creates "Workspace".
    */
-  startCheckout(options?: { workspaceName?: string }): Promise<void>
+  startCheckout(options?: { workspaceName?: string; workspaceId?: string }): Promise<void>
   reopenCheckout(): Promise<void>
   backToChoose(): void
   /** Manage billing, Update payment: the provider's customer portal. */
@@ -365,7 +366,7 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
 
   /** A workspace this store created for a checkout that did not open: the next try reuses it. */
   let madeWorkspace: string | null = null
-  const startCheckout = async (options: { workspaceName?: string } = {}) => {
+  const startCheckout = async (options: { workspaceName?: string; workspaceId?: string } = {}) => {
     const c = state.checkout
     if (c.phase === "waiting" || c.phase === "ready") return
     const interval = c.interval
@@ -375,8 +376,9 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
         (w) => w.role === "owner" && w.deletedAt === null,
       )
       const name = options.workspaceName?.trim()
-      if (!owned && !madeWorkspace && name) madeWorkspace = (await client.createWorkspace(name)).id
-      const workspaceId = owned?.id ?? madeWorkspace
+      if (!options.workspaceId && !owned && !madeWorkspace && name)
+        madeWorkspace = (await client.createWorkspace(name)).id
+      const workspaceId = options.workspaceId ?? owned?.id ?? madeWorkspace
       const created = workspaceId
         ? await client.workspaceCheckout(workspaceId, interval)
         : await client.checkout(interval)
@@ -400,7 +402,10 @@ export function createCloudStore(deps: CloudStoreDeps): CloudStore {
         (error.code === "ALREADY_SUBSCRIBED" || error.code === "PAST_DUE")
       ) {
         const after = await refresh()
-        if (after.account?.plan.canShare) {
+        const plan = options.workspaceId
+          ? after.account?.workspaces.find((w) => w.id === options.workspaceId)?.plan
+          : after.account?.plan
+        if (plan?.canShare) {
           set({ checkout: { phase: "ready" } })
           return
         }

@@ -1,8 +1,9 @@
 /**
  * Board 46 4A "Studio on Home" (board 37 Home): workspaces sit above local folders.
  *
- * - Sidebar: Cloud Header "KIMO CLOUD" (the folders header) · one NavRow per workspace (users,
- *   name, file count; the active row is board 37's pill row).
+ * - Sidebar: Cloud Header "KIMO CLOUD" (the folders header) with its plus (uUoM1jPXvt, New
+ *   workspace: 1F, then the new workspace opens) · one NavRow per workspace (users, name, file
+ *   count; the active row is board 37's pill row).
  * - Main (`#/workspace/<id>`): the workspace's name as the title, Search files, Members (Settings ›
  *   Workspace) and New file (a new file shared into the workspace); "4 files" · "Everyone in Studio
  *   can edit these" · the view toggle; the list: NAME, LAST EDITED BY, MODIFIED, STATUS.
@@ -12,7 +13,7 @@
  * device cache first, so they show offline.
  */
 import type { KimoPlatform } from "@kimo/platform"
-import { Button, FileCard, FileRow, FileRowHeader } from "@kimo/ui"
+import { Button, FileCard, FileRow, FileRowHeader, IconButton } from "@kimo/ui"
 import { useEffect, useMemo, useState } from "react"
 import { RoomEditor } from "../editor/Editor"
 import { failureText } from "../editor/errors"
@@ -24,6 +25,7 @@ import type { CloudFile } from "../multiplayer/cloud/types"
 import { fileStatus, liveWorkspaces, personName } from "../multiplayer/cloud/workspace-view"
 import { libraryKeyOf } from "../multiplayer/library"
 import type { SharedSession } from "../multiplayer/share"
+import { NewWorkspaceWizard } from "../multiplayer/ui/NewWorkspace"
 import {
   useWorkspaceStore,
   useWorkspacesState,
@@ -41,6 +43,7 @@ import { NavRow } from "./parts"
 export function CloudGroup({ section }: { section: HomeSection }) {
   const store = useWorkspaceStore()
   const state = useWorkspacesState(store)
+  const [making, setMaking] = useState(false)
   const list = state ? liveWorkspaces(state) : []
   if (!state || !list.length) return null
   return (
@@ -48,7 +51,25 @@ export function CloudGroup({ section }: { section: HomeSection }) {
       {/* Cloud Header (FsfqvtpYQ1): the Folders Header's layout, padding [20, 4, 6, 10]. */}
       <div className="kimo-files-folders-header home-cloud-header" data-pen="FsfqvtpYQ1">
         <span className="kimo-files-folders-header__label">KIMO CLOUD</span>
+        {/* Add (uUoM1jPXvt): Add Folder's 20 × 20, transparent, `plus` 14 text-tertiary. */}
+        <IconButton
+          className="kimo-files-folders-header__add"
+          label="New workspace"
+          icon={<Icon name="plus" size={14} />}
+          tone="quiet"
+          data-action="new-workspace"
+          onClick={() => setMaking(true)}
+        />
       </div>
+      {making && (
+        <NewWorkspaceWizard
+          onClose={() => setMaking(false)}
+          onCreated={(id) => {
+            setMaking(false)
+            navigate(homeSectionPath({ kind: "workspace", id }))
+          }}
+        />
+      )}
       {list.map((w) => (
         <NavRow
           key={w.id}

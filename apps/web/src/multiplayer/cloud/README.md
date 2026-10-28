@@ -126,13 +126,17 @@ uploaded is left as it is (its file stays a local file of this device).
 | `../ui/WorkspacePane.tsx` | Settings › Workspace (2A): plan, members, invites, edit requests, ownership |
 | `../ui/WorkspaceDialogs.tsx` | 2B invite, 2C remove (toast 2D), 3D Join, 6A transfer, 6B accept, 6D delete, 6F leave |
 | `../ui/WorkspaceHost.tsx` | Mounted once per window: 3D Join, 6B, toasts 6C, 3B, 3C, the start refresh |
+| `../ui/NewWorkspace.tsx` | New workspace: 1F as the relay wizard's Subscribe step, for a new workspace |
 | `../ui/WorkspaceBanner.tsx` | Editor banners 5A to 5D and 6E, with Save a copy |
 | `../ui/workspace-parts.tsx` | Store hooks, member avatar, 28-tall buttons, the toast stack outside an editor |
 | `workspace-view.ts` | Copy and picks (names from emails, footnotes, prices, banner kind) |
 | `../../home/WorkspaceHome.tsx` | Home 4A: KIMO CLOUD group, `#/workspace/<id>`, and the web `#/cloud/<room>` route |
 
 1F is the relay wizard's Subscribe step (`../ui/CloudWizardSteps.tsx`): it names the first workspace,
-and `CloudStore.startCheckout({ workspaceName })` creates it before the workspace checkout.
+and `CloudStore.startCheckout({ workspaceName })` creates it before the workspace checkout. New
+workspace (1B's row, Home's KIMO CLOUD plus, Settings › Workspace's "New workspace…") opens the same
+step through `../ui/NewWorkspace.tsx`: `createWorkspace(name)` makes it (one seat), then
+`CloudStore.startCheckout({ workspaceId })` checks it out, and the caller selects it once paid.
 
 Names: Kimo Cloud knows people by email only, so names and initials come from the email's local
 part (`personName`).

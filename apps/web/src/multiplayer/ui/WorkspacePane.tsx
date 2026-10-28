@@ -91,7 +91,8 @@ export function WorkspacePane({ focus }: { focus?: string | null }) {
     if (store) void store.refresh().catch(() => undefined)
   }, [cloud, store])
   useEffect(() => {
-    if (store && wsId) void store.refreshWorkspace(wsId).catch(() => undefined)
+    if (store && wsId)
+      void store.refreshWorkspace(wsId, { background: true }).catch(() => undefined)
   }, [store, wsId])
 
   const now = Date.now()

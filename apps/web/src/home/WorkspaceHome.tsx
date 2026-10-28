@@ -190,11 +190,13 @@ export function WorkspaceFiles({
   const runtime = useOptionalRuntime()
   const toast = useWsToast()
   const w = state?.workspaces.find((x) => x.id === workspaceId) ?? null
-  // The list and its members, fresh on open (the cached list shows first).
+  // The list and its members, fresh on open (the cached list shows first). Once per workspace
+  // shown, not on every account answer (each one is a new summary).
+  const live = !!w && w.deletedAt === null
   useEffect(() => {
-    if (store && w && w.deletedAt === null)
-      void store.refreshWorkspace(workspaceId).catch(() => undefined)
-  }, [store, workspaceId, w])
+    if (store && live)
+      void store.refreshWorkspace(workspaceId, { background: true }).catch(() => undefined)
+  }, [store, workspaceId, live])
   const files = state?.files[workspaceId]?.files ?? null
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()

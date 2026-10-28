@@ -72,6 +72,12 @@ export const WORKSPACE_REFRESH_MS = 30_000
  * until a refresh shows the seats caught up or another member is approved here.
  */
 export const SEAT_FOLLOW_MS = [2000, 4000, 8000, 16_000] as const
+/**
+ * A call refused as too many requests is tried once more when Kimo Cloud asks to wait at most this
+ * many seconds (a device's 10 signed requests a second); a longer wait (invites, edit requests per
+ * hour) reaches the caller.
+ */
+export const RATE_RETRY_MAX_S = 5
 
 export type InviteFlow =
   /** Reading the invite (§14.3). */
@@ -173,9 +179,17 @@ export interface WorkspaceStore {
   getState(): WorkspacesState
   /** Resolves once the cache was read. */
   ready(): Promise<void>
-  /** The account (through the Cloud store), then each workspace's members and files. */
+  /**
+   * The account (through the Cloud store), then each workspace's members and files, one workspace
+   * at a time. Calls while one runs share it, and a workspace asked for since it started is not
+   * asked for again.
+   */
   refresh(): Promise<void>
-  refreshWorkspace(workspaceId: string): Promise<void>
+  /**
+   * A workspace's members and files, asked for after this call (after an action of your own). With
+   * `background` (a list shown on open), a request already under way is enough.
+   */
+  refreshWorkspace(workspaceId: string, options?: { background?: boolean }): Promise<void>
 
   createWorkspace(name: string): Promise<WorkspaceSummary>
   renameWorkspace(workspaceId: string, name: string): Promise<void>
@@ -388,10 +402,19 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     if (isUnreachable(error)) set({ offline: true })
     else reached()
   }
-  /** Runs a call: the offline flag follows its outcome, errors still reach the caller. */
+  /**
+   * Runs a call: the offline flag follows its outcome, errors still reach the caller. Too many
+   * requests from this device (`RATE_LIMITED`, refused before anything happened) is tried once
+   * more after the short wait Kimo Cloud names.
+   */
   const call = async <T>(fn: () => Promise<T>): Promise<T> => {
     try {
-      const value = await fn()
+      const value = await fn().catch(async (error: unknown) => {
+        const wait = error instanceof CloudError ? (error.retryAfter ?? 1) : 0
+        if (codeOf(error) !== "RATE_LIMITED" || wait > RATE_RETRY_MAX_S || disposed) throw error
+        await new Promise<void>((resolve) => clock.setTimeout(resolve, wait * 1000))
+        return fn()
+      })
       reached()
       return value
     } catch (error) {
@@ -404,6 +427,11 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
 
   let lastAccount: CloudAccount | null = null
   const refreshedAt = new Map<string, number>()
+  /** Workspace loads under way, and the one asked for after each (see `refreshWorkspace`). */
+  const loads = new Map<string, Promise<void>>()
+  const reloads = new Map<string, Promise<void>>()
+  /** Background loads waiting their turn (one workspace at a time), by workspace. */
+  const turns = new Map<string, Promise<void>>()
   let migrated = false
 
   const hydrated = (async () => {
@@ -431,6 +459,9 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     lastAccount = null
     migrated = false
     refreshedAt.clear()
+    loads.clear()
+    reloads.clear()
+    turns.clear()
     void cache.clearAccount().catch(() => undefined)
     set({
       accountId: null,
@@ -447,6 +478,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     if (!state.hydrated) return
     if (cs.session === "signed-out") {
       if (state.accountId !== null) forgetAccount()
+      checkInviteEmail()
       return
     }
     if (cs.session !== "signed-in" || !cs.account || cs.account === lastAccount) return
@@ -461,6 +493,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     })
     void cache.saveAccount(account).catch(() => undefined)
     afterWorkspaces(before, account.workspaces)
+    checkInviteEmail()
     const inv = state.invite
     if (inv?.phase === "sign-in") void acceptInvite()
     if (deps.migrate !== false && !migrated) {
@@ -498,7 +531,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
         w.deletedAt === null &&
         clock.now() - (refreshedAt.get(w.id) ?? 0) >= WORKSPACE_REFRESH_MS
       )
-        void refreshWorkspace(w.id).catch(() => undefined)
+        void inTurn(w.id, loadSeq)
     followSeats(after)
   }
 
@@ -539,11 +572,79 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     }, wait)
   }
 
-  const refresh = async () => {
-    await hydrated
-    await cloud.refresh()
-    for (const w of state.workspaces)
-      if (w.deletedAt === null) await refreshWorkspace(w.id).catch(() => undefined)
+  // --- Workspace lists ---------------------------------------------------------------------------
+  // Kimo Cloud allows a device 10 signed requests a second, and several surfaces ask on open (the
+  // app start, Settings, Home, the Share popover): each workspace has at most one load under way,
+  // background loads run one workspace at a time, and a load asked for meanwhile is shared.
+
+  /** Counts load starts, so a queued load can tell whether one started after it was asked for. */
+  let loadSeq = 0
+  const startedSeq = new Map<string, number>()
+
+  const load = (workspaceId: string): Promise<void> => {
+    startedSeq.set(workspaceId, ++loadSeq)
+    const run: Promise<void> = loadWorkspace(workspaceId).finally(() => {
+      if (loads.get(workspaceId) === run) loads.delete(workspaceId)
+    })
+    loads.set(workspaceId, run)
+    return run
+  }
+
+  const refreshWorkspace = (
+    workspaceId: string,
+    options: { background?: boolean } = {},
+  ): Promise<void> => {
+    const running = loads.get(workspaceId)
+    if (!running) return load(workspaceId)
+    if (options.background) return running
+    // Under way since before this call: one more after it, shared by everyone who asks meanwhile.
+    let next = reloads.get(workspaceId)
+    if (!next) {
+      next = running
+        .catch(() => undefined)
+        .then(() => {
+          reloads.delete(workspaceId)
+          return loads.get(workspaceId) ?? load(workspaceId)
+        })
+      reloads.set(workspaceId, next)
+    }
+    return next
+  }
+
+  /** The last background load queued: the next one starts once it settles. */
+  let turn: Promise<void> = Promise.resolve()
+  /**
+   * A background load, after the ones queued before it; none when a load of the workspace started
+   * after `since` (a `loadSeq`). Never rejects.
+   */
+  const inTurn = (workspaceId: string, since: number): Promise<void> => {
+    const pending = loads.get(workspaceId) ?? reloads.get(workspaceId) ?? turns.get(workspaceId)
+    if (pending) return pending.catch(() => undefined)
+    const accountId = state.accountId
+    const settled: Promise<void> = turn
+      .then(async () => {
+        if (turns.get(workspaceId) === settled) turns.delete(workspaceId)
+        if (disposed || state.accountId !== accountId) return
+        if ((startedSeq.get(workspaceId) ?? 0) > since) return loads.get(workspaceId)
+        await load(workspaceId)
+      })
+      .catch(() => undefined)
+    turns.set(workspaceId, settled)
+    turn = settled
+    return settled
+  }
+
+  let refreshing: Promise<void> | null = null
+  const refresh = (): Promise<void> => {
+    refreshing ??= (async () => {
+      const since = loadSeq
+      await hydrated
+      await cloud.refresh()
+      for (const w of state.workspaces) if (w.deletedAt === null) await inTurn(w.id, since)
+    })().finally(() => {
+      refreshing = null
+    })
+    return refreshing
   }
 
   /** A route answered that the workspace is gone (deleted, or this account is no member). */
@@ -552,7 +653,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     if (code === "WORKSPACE_DELETED" || code === "NOT_FOUND") await cloud.refresh()
   }
 
-  const refreshWorkspace = async (workspaceId: string) => {
+  const loadWorkspace = async (workspaceId: string) => {
     await hydrated
     const accountId = state.accountId
     if (!accountId) return
@@ -595,7 +696,7 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     const known = fileOf(state, room)
     if (known) return known
     const bound = state.bindings[room]
-    if (bound && bound.ended === null)
+    if (bound && bound.ended === null && mine(bound))
       return {
         workspaceId: bound.workspaceId,
         file: {
@@ -624,6 +725,33 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
   const saveBinding = async (binding: CloudBinding) => {
     set({ bindings: { ...state.bindings, [binding.room]: binding } })
     await cache.saveBinding(binding).catch(() => undefined)
+  }
+
+  /** A binding this account made (one from before accounts were recorded counts as its own). */
+  const mine = (b: CloudBinding) => (b.accountId ?? state.accountId) === state.accountId
+
+  /**
+   * The same local copy syncs again, for this account: its binding ended (a member removed, then
+   * invited again) or another account bound it on this device. Only while this account's
+   * workspace lists the file; null otherwise (a deleted workspace, a closed file, not a member).
+   */
+  const rebind = async (b: CloudBinding): Promise<CloudBinding | null> => {
+    const accountId = state.accountId
+    const w = state.workspaces.find((x) => x.id === b.workspaceId)
+    const listed = fileOf(state, b.room)
+    if (!accountId || !w || w.deletedAt !== null || listed?.workspaceId !== b.workspaceId)
+      return null
+    const next: CloudBinding = {
+      ...b,
+      relayUrl: listed.file.relayUrl,
+      roomKey: listed.file.roomKey,
+      name: listed.file.name,
+      boundAt: clock.now(),
+      ended: null,
+      accountId,
+    }
+    await saveBinding(next)
+    return next
   }
 
   /** The local copy stops syncing; it stays, read-only for a deleted workspace or a removal. */
@@ -861,7 +989,13 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     )
     const bound = state.bindings[room]
     const fileKey = options.session?.ref ?? bound?.fileKey ?? null
-    if (!bound || bound.ended !== null || bound.fileKey !== fileKey || bound.name !== file.name)
+    if (
+      !bound ||
+      bound.ended !== null ||
+      !mine(bound) ||
+      bound.fileKey !== fileKey ||
+      bound.name !== file.name
+    )
       await saveBinding({
         room,
         workspaceId,
@@ -888,8 +1022,10 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     },
     async reopen(session, _target, file) {
       await hydrated
-      const b = bindingForFile(state, session.ref)
+      let b = bindingForFile(state, session.ref)
       if (!b) return null
+      // Removed, then invited again: the copy syncs again rather than staying read-only.
+      if (b.ended === "removed") b = (await rebind(b)) ?? b
       const w = state.workspaces.find((x) => x.id === b.workspaceId)
       const end = b.ended ?? (w?.deletedAt != null ? "deleted" : null)
       if (end === "deleted") session.store.setReadOnly(CLOUD_DELETED_REASON)
@@ -930,6 +1066,26 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
   })
 
   // --- Invites ------------------------------------------------------------------------------------
+
+  /**
+   * Board 46 3D signed in as someone else: `ready` with `INVITE_EMAIL_MISMATCH` before any accept
+   * is sent, so the dialog asks to sign out first; Join comes back once this device is signed out
+   * or signed in as the invited email.
+   */
+  function checkInviteEmail() {
+    const inv = state.invite
+    if (inv?.phase !== "ready" || inv.busy) return
+    const cs = cloud.getState()
+    const email = cs.session === "signed-in" ? (cs.account?.account.email ?? null) : null
+    const other = email !== null && email.toLowerCase() !== inv.peek.email.toLowerCase()
+    if (other && inv.error === null) set({ invite: { ...inv, error: "INVITE_EMAIL_MISMATCH" } })
+    else if (
+      !other &&
+      inv.error === "INVITE_EMAIL_MISMATCH" &&
+      (email !== null || cs.session === "signed-out")
+    )
+      set({ invite: { ...inv, error: null } })
+  }
 
   const acceptInvite = async () => {
     const inv = state.invite
@@ -1138,8 +1294,10 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
       set({ invite: { phase: "checking", token } })
       try {
         const peek = await call(() => client.peekInvite(token))
-        if (state.invite?.phase === "checking" && state.invite.token === token)
+        if (state.invite?.phase === "checking" && state.invite.token === token) {
           set({ invite: { phase: "ready", token, peek, busy: false, error: null } })
+          checkInviteEmail()
+        }
       } catch (error) {
         if (state.invite?.token === token)
           set({ invite: { phase: "failed", token, error: codeOf(error) } })
@@ -1253,7 +1411,13 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
     async localCopy(room) {
       const { workspaceId, file } = await fileFor(room)
       const bound = state.bindings[room]
-      if (bound?.fileKey) return bound.fileKey
+      if (bound?.fileKey) {
+        if (bound.ended === null && mine(bound)) return bound.fileKey
+        // Its binding ended (removed, then invited again) or another account here made it: the
+        // same copy is bound again while this workspace lists the file; else it opens as it is
+        // (read-only after a deletion).
+        return (await rebind(bound))?.fileKey ?? bound.fileKey
+      }
       const managed = deps.managedCopies
       if (!managed) return null
       const name = state.workspaces.find((w) => w.id === workspaceId)?.name ?? "Workspace"

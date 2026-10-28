@@ -7,7 +7,8 @@
  * - 3D: "Join Studio?" when an invite link opens in the app. Join is the person's yes
  *   (architecture §5.2 step 4): the link alone accepts nothing and starts no sign-in, since it may
  *   be someone else's. Not now closes it and leaves the invite open. An invite for an account that
- *   exists signs in first (api.md §14.4), and is accepted once that sign-in is done.
+ *   exists signs in first (api.md §14.4), and is accepted once that sign-in is done. Signed in as
+ *   someone else, the dialog asks to sign out first (3D's note), then offers Join.
  * - 3B: Toast "You joined Studio" once joined.
  * - 3C: Toast "You can now edit Landing" when an edit request turns approved; an open view
  *   session of that room reopens with an edit token.
@@ -21,7 +22,7 @@ import { takeReadyShares } from "../../home/WorkspaceHome"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { roomKeyOf } from "../backend"
 import { fileOf, incomingTransfers } from "../cloud/workspaces"
-import { useRelaySetupServices } from "../relay-setup/services"
+import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
 import { AcceptTransferDialog, JoinWorkspaceDialog } from "./WorkspaceDialogs"
 import {
   rememberWorkspaceNames,
@@ -39,7 +40,9 @@ export function WorkspaceHost() {
   const state = useWorkspacesState(store)
   const runtime = useOptionalRuntime()
   const cloud = useRelaySetupServices(runtime?.platform ?? null)?.cloud ?? null
+  const cloudState = useCloudState(cloud)
   const toast = useWsToast()
+  const [signingOut, setSigningOut] = useState(false)
   /** Transfers hidden with Escape, by transfer id (shown again on the next app start). */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
 
@@ -70,14 +73,10 @@ export function WorkspaceHost() {
   const accepting = useRef<string | null>(null)
   useEffect(() => {
     if (!store || !invite) return
+    // Signed in as someone else: the dialog below asks to sign out first.
+    if (invite.phase === "ready" && invite.error === "INVITE_EMAIL_MISMATCH") return
     if (invite.phase === "ready" && invite.error !== null) {
-      toast({
-        tone: "danger",
-        text:
-          invite.error === "INVITE_EMAIL_MISMATCH"
-            ? `This invite is for ${invite.peek.email}.`
-            : failureText(`join ${invite.peek.workspaceName}`),
-      })
+      toast({ tone: "danger", text: failureText(`join ${invite.peek.workspaceName}`) })
       store.dismissInvite()
     } else if (invite.phase === "sign-in") {
       if (accepting.current === `sign-in:${invite.token}`) return
@@ -181,18 +180,36 @@ export function WorkspaceHost() {
         )
       : []
   const first = incoming[0] ?? null
+  const signedInAs =
+    cloudState?.session === "signed-in" ? (cloudState.account?.account.email ?? "") : ""
+  const signOut = async () => {
+    if (!cloud || signingOut) return
+    setSigningOut(true)
+    try {
+      // The store then clears the mismatch, and the same dialog offers Join.
+      await cloud.signOut()
+    } catch (e) {
+      toast({ tone: "danger", text: failureText("sign out", e) })
+    } finally {
+      setSigningOut(false)
+    }
+  }
 
   return (
     <>
-      {store && invite?.phase === "ready" && invite.error === null && (
-        <JoinWorkspaceDialog
-          peek={invite.peek}
-          busy={invite.busy}
-          onJoin={() => void store.acceptInvite().catch(() => undefined)}
-          // Only this window's dialog closes: nothing is sent, so the invite stays open.
-          onNotNow={() => store.dismissInvite()}
-        />
-      )}
+      {store &&
+        invite?.phase === "ready" &&
+        (invite.error === null || invite.error === "INVITE_EMAIL_MISMATCH") && (
+          <JoinWorkspaceDialog
+            peek={invite.peek}
+            busy={invite.busy || signingOut}
+            switchFrom={invite.error === "INVITE_EMAIL_MISMATCH" ? signedInAs : null}
+            onJoin={() => void store.acceptInvite().catch(() => undefined)}
+            onSignOut={() => void signOut()}
+            // Only this window's dialog closes: nothing is sent, so the invite stays open.
+            onNotNow={() => store.dismissInvite()}
+          />
+        )}
       {store && first?.transfer && (
         <AcceptTransferDialog
           key={first.transfer.id}

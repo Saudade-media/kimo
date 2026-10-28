@@ -58,7 +58,10 @@ Picks: `shareableWorkspaces(state)` (where a new file can go), `incomingTransfer
 **Lists.** `refresh()` on focus (the Cloud store already refreshes the account on focus, and the
 workspace store refreshes each workspace's members and files in the background, at most every
 30 s). `refreshWorkspace(ws)` after an action of your own if you need it at once; the actions below
-already do.
+already do. A list shown on open passes `{ background: true }`, which joins a request already under
+way. Kimo Cloud allows a device 10 signed requests a second, so the store asks for each list once:
+`refresh()` calls share one run, background loads go one workspace at a time, and a `RATE_LIMITED`
+answer that asks to wait a few seconds at most is tried once more after the wait.
 
 **Share a file** (Share popover on Kimo Cloud). `shareFile(session)` where `session` is the editor's
 `{ ref, store }`; the file's name in the workspace is the document's name, else the file's base name
@@ -72,6 +75,10 @@ relay refuses device registers once the legacy flag is off.
 **Open a file** from the Kimo Cloud group on Home. `localCopy(room)` first: on desktop it answers a
 path (creating the managed copy in `<Kimo home>/workspaces/<ws>/` when the file is not on disk yet);
 open that path through the session manager like any file, and it reconnects to its room on its own.
+A copy whose binding ended (removed, then invited again) or that another account on this device
+bound is bound again to this account while its workspace lists the file, so it syncs instead of
+opening read-only or as a plain local file. Bindings are kept per room, so the other account's
+binding is replaced; that account binds it back the next time it opens the file from Home.
 On web it answers null: call `openFile(room)`, which opens the room's replica (a guest document)
 and resolves the `SharedSession`. A file already bound on disk reopens in its room whenever it
 opens, with nothing to call.
@@ -99,7 +106,9 @@ opening it accepts nothing and starts no sign-in. `sign-in` (after Join): that e
 account; run the Cloud store's sign-in for `peek.email`, and the invite is accepted when it
 completes. `failed` with `INVITE_EXPIRED` or `INVITE_USED`:
 "This invite no longer works." `ready` with `error` `INVITE_EMAIL_MISMATCH`: "This invite is for
-<email>" with Sign out. `dismissInvite()` closes it (3D Not now): nothing is sent, so the invite
+<email>" with Sign out. The store sets it before any accept when this device is signed in as
+another email (and on the service's `403`), and clears it once the device is signed out or signed
+in as the invited email, so the same dialog offers Join again. `dismissInvite()` closes it (3D Not now): nothing is sent, so the invite
 stays open and the same link works later.
 
 **Transfer ownership.** Owner: `requestTransfer(ws, adminAccountId)` (6A; only Admins, else
@@ -155,7 +164,9 @@ from a view link and untitled files. It sends `shareFile` for a file the host ho
 `localCopy` to the host (`mp.cloud.*`), and shows the host's `bindings`, `open` and `migration`,
 pushed on every change (`kimo://host-cloud`), merged into its state. Kimo Cloud answers each store
 separately: when the window's account changes (sign-in, sign-out, a workspace deleted or left, a
-plan change) the host asks again. A window with no host (an older shell) does all of it itself.
+plan change) the host asks again. That asks for the account only (the host's lists follow every
+30 s), since every window asks as it attaches and the device shares one request budget. A window
+with no host (an older shell) does all of it itself.
 
 The host's store keeps a copy's read-only reason (6E, 6F, a view-only plan) on its store; windows
 take it from the session state (`readOnlyReason`). Save a copy (Save As) leaves the binding with
@@ -168,3 +179,6 @@ the read-only copy, and the new file is a plain local file.
   its room (read from the code, not tried in the app).
 - After sign-out, a deleted workspace's copy opens editable until its account signs in again
   (bindings are per account).
+- A read-only copy that is still open when its member is invited back stays read-only until it is
+  closed and opened again (Home binds it again, but an open session does not reopen; read from the
+  code, not tried in the app).

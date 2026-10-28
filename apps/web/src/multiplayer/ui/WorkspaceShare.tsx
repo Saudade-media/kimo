@@ -213,7 +213,8 @@ export function WorkspaceSetupBody({
   // The members and usage of each workspace the popover can show.
   useEffect(() => {
     for (const w of workspaces)
-      if (!state.details[w.id]) void store.refreshWorkspace(w.id).catch(() => undefined)
+      if (!state.details[w.id])
+        void store.refreshWorkspace(w.id, { background: true }).catch(() => undefined)
   }, [store, workspaces, state.details])
 
   const start = async () => {
@@ -373,7 +374,8 @@ export function WorkspaceLiveBody({
       .listLinks(workspaceId)
       .then((all) => live && setLinks(all.filter((l) => l.room === room)))
       .catch(() => undefined)
-    if (!detail) void store.refreshWorkspace(workspaceId).catch(() => undefined)
+    if (!detail)
+      void store.refreshWorkspace(workspaceId, { background: true }).catch(() => undefined)
     return () => {
       live = false
     }

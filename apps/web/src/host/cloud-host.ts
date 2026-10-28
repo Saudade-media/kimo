@@ -137,12 +137,14 @@ export function createHostWorkspaces(options: HostWorkspacesOptions): HostWorksp
           : { status: "shared", file: r.file, workspaceId: r.workspaceId }
       }),
     "mp.cloud.localCopy": (args) => wire(() => store.localCopy(String(args.room))),
+    // The account only: the store follows it (bindings, rooms, re-share) and asks for the lists
+    // that are due. Every window asks as it attaches, and the device shares one request budget.
     "mp.cloud.refresh": (args) =>
-      wire(() =>
-        typeof args.workspaceId === "string"
-          ? store.refreshWorkspace(args.workspaceId)
-          : store.refresh(),
-      ),
+      wire(async () => {
+        if (typeof args.workspaceId === "string") return store.refreshWorkspace(args.workspaceId)
+        await store.ready()
+        await cloud.refresh()
+      }),
     "mp.cloud.migrate": () => wire(() => store.migrate()),
   }
 

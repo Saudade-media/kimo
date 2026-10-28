@@ -126,30 +126,46 @@ export function InviteDialog({
  * §14.4). Nothing is accepted, and no sign-in starts, until Join: the link may be someone else's,
  * and joining signs this device in as the invited email. Not now (and Escape) only close it: the
  * invite stays open, so the same link works later.
+ *
+ * Signed in as someone else (3D's note "it asks you to switch first", api.md
+ * `INVITE_EMAIL_MISMATCH`: "This invite is for <email>" with Sign out), `switchFrom` is set: the
+ * same dialog asks to sign out, and offers Join again once this device is signed out.
  */
 export function JoinWorkspaceDialog({
   peek,
   busy,
+  switchFrom,
   onJoin,
+  onSignOut,
   onNotNow,
 }: {
   peek: InvitePeek
   busy: boolean
+  /** Signed in as another account: its email, or "" when this window does not know it. */
+  switchFrom?: string | null
   onJoin(): void
+  onSignOut?(): void
   onNotNow(): void
 }) {
+  const switching = switchFrom != null
   return onBody(
     <Dialog
       className="ws-dialog"
       data-dialog="join-workspace"
       icon={<Icon name="users" size={16} />}
       title={`Join ${peek.workspaceName}?`}
-      description={`${firstName(peek.invitedBy)} invited ${peek.email} to edit ${peek.workspaceName}'s files.`}
+      description={
+        !switching
+          ? `${firstName(peek.invitedBy)} invited ${peek.email} to edit ${peek.workspaceName}'s files.`
+          : switchFrom
+            ? `This invite is for ${peek.email}. You're signed in as ${switchFrom}.`
+            : `This invite is for ${peek.email}.`
+      }
       cancelLabel="Not now"
-      confirmLabel="Join"
+      confirmLabel={switching ? "Sign out" : "Join"}
       confirmDisabled={busy}
       onCancel={onNotNow}
-      onConfirm={onJoin}
+      onConfirm={switching ? (onSignOut ?? onNotNow) : onJoin}
     />,
   )
 }

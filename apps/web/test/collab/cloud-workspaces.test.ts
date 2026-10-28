@@ -3,7 +3,10 @@
  * on the live connection and reconnects when the plan changes the role (protocol); the 1.3.0
  * re-share of pre-workspace rooms is safe to interrupt and repeat (data integrity); the
  * workspace cache never drops what a local copy needs (data integrity); the plan's seats catch up
- * with a member who joined (a bug: Settings showed the seats from before the approval).
+ * with a member who joined (a bug: Settings showed the seats from before the approval); a copy
+ * opened from Home syncs again after its member was removed and invited back, or when another
+ * account on the device opens it (a bug: read-only, or a plain local file); and opening Settings
+ * asks for each workspace once (a bug: the same lists several times over, answered 429).
  */
 import { afterEach, describe, expect, test } from "bun:test"
 import { type DocStore, YjsDocStore } from "@kimo/editor-state"
@@ -18,6 +21,7 @@ import { MIGRATED_PREFIX, migrateLegacyRooms } from "../../src/multiplayer/cloud
 import { createCloudStore } from "../../src/multiplayer/cloud/store"
 import {
   CLOUD_DELETED_REASON,
+  CLOUD_REMOVED_REASON,
   createWorkspaceStore,
   TOKEN_CHECK_MS,
 } from "../../src/multiplayer/cloud/workspaces"
@@ -539,5 +543,121 @@ describe("plan seats", () => {
     clock.advance(30_000)
     await until(() => plan()?.seats === 3)
     expect(plan()?.amountCents).toBe(1600)
+  })
+})
+
+describe("local copies opened from Home", () => {
+  test("a member removed and invited again, or another account on this device, syncs the same copy", async () => {
+    const clock = fakeClock()
+    const relay = startRelay()
+    cleanups.push(() => relay.stop())
+    const cloud = createFakeCloud({
+      now: clock.now,
+      relayUrl: relay.url,
+      relay: relayRegistrar({ deviceKeys: createMemoryDeviceKeyStore() }),
+    })
+    const SAM = "sam@studio.design"
+    const KAI = "kai@studio.design"
+    const ws = cloud.addWorkspace(EMAIL, "Acme", "active")
+    cloud.addMember(ws, SAM)
+    const owner = await makeApp(cloud, clock)
+    await owner.cloudStore.refresh()
+    const pitch = makeTarget("/work/pitch.kimo", ["Rect000001"])
+    const shared = await owner.workspaces.shareFile({ ref: pitch.fileKey, store: pitch.store })
+    if (shared.status !== "shared") throw new Error("expected one workspace")
+    const room = shared.file.room
+    await shared.session?.leave()
+    /** Whether the room holds `id`, read by someone else with a token of their own. */
+    const reader = await makeApp(cloud, clock, { email: "lee@studio.design", signIn: false })
+    const inRoom = async (id: string) => {
+      const file = cloud.file(room)
+      if (!file) throw new Error("expected the file")
+      const check = await reader.share.service.openWithToken({
+        room,
+        relayUrl: file.relayUrl,
+        roomKey: file.roomKey,
+        token: (await owner.client.roomToken(room)).token,
+      })
+      await until(() => hasNode(check.store, id))
+      await check.leave()
+    }
+
+    // Sam's Mac: one device key and registry, whichever account is signed in.
+    const keys = createMemoryDeviceKeyStore()
+    const registry = createMemoryRegistry()
+    const sam = await makeApp(cloud, clock, { keys, registry, email: SAM })
+    await sam.cloudStore.refresh()
+    /** Home's open: the copy's path, opened as a file session does (an empty store, then the room). */
+    const openFromHome = async (app: Awaited<ReturnType<typeof makeApp>>) => {
+      const path = (await app.workspaces.localCopy(room)) as string
+      const copy = { ref: path, store: new YjsDocStore() }
+      const session = await app.share.reopenShared(copy, copy.store.toDocument())
+      return { path, copy, session }
+    }
+    const first = await openFromHome(sam)
+    if (!first.session) throw new Error("expected the copy in its room")
+    await until(() => hasNode(first.copy.store, "Rect000001"))
+    await first.session.leave()
+
+    // Removed: the copy stays, read-only (board 46 5D).
+    await cloud.removeMember(ws, SAM)
+    await sam.cloudStore.refresh()
+    await until(() => sam.workspaces.getState().bindings[room]?.ended === "removed")
+    const removed = { ref: first.path, store: new YjsDocStore() }
+    expect(await sam.share.reopenShared(removed, removed.store.toDocument())).toBeNull()
+    expect(removed.store.readOnly?.reason).toBe(CLOUD_REMOVED_REASON)
+
+    // Invited again: Home opens the same copy, in its room and editable.
+    cloud.addMember(ws, SAM)
+    await sam.cloudStore.refresh()
+    const again = await openFromHome(sam)
+    expect(again.path).toBe(first.path)
+    if (!again.session) throw new Error("expected the copy in its room again")
+    expect(again.copy.store.readOnly).toBeNull()
+    insertRect(again.copy.store, "Rect000002")
+    await until(() => again.session?.status === "synced")
+    await inRoom("Rect000002")
+    await again.session.leave()
+
+    // Another account signs in on this Mac and opens the file from its own Home.
+    cloud.addMember(ws, KAI)
+    cloud.signIn(await devicePubOf(await keys.get()), KAI)
+    const kai = await makeApp(cloud, clock, { keys, registry, signIn: false })
+    await kai.cloudStore.refresh()
+    await until(() => kai.workspaces.getState().accountId === cloud.accountId(KAI))
+    const theirs = await openFromHome(kai)
+    expect(theirs.path).toBe(first.path)
+    if (!theirs.session) throw new Error("expected the copy in its room for the new account")
+    insertRect(theirs.copy.store, "Rect000003")
+    await until(() => theirs.session?.status === "synced")
+    await inRoom("Rect000003")
+    await theirs.session.leave()
+  }, 30_000)
+})
+
+describe("requests to Kimo Cloud", () => {
+  test("opening Settings with three workspaces asks for each list once", async () => {
+    const clock = fakeClock()
+    const cloud = createFakeCloud({ now: clock.now })
+    const ids = ["Studio", "Acme", "Orbit"].map((name) => cloud.addWorkspace(EMAIL, name, "active"))
+    const app = await makeApp(cloud, clock)
+    const from = cloud.log.length
+    // The app start's refresh, then Settings › Workspace: its refresh and its selected workspace.
+    await Promise.all([
+      app.workspaces.refresh(),
+      app.workspaces.refresh(),
+      app.workspaces.refreshWorkspace(ids[0] as string),
+    ])
+    await until(() => ids.every((id) => app.workspaces.getState().files[id]))
+    await new Promise((r) => setTimeout(r, 50))
+    const asked = cloud.log.slice(from).map((l) => `${l.method} ${l.path}`)
+    const count = (line: string) => asked.filter((a) => a === line).length
+    expect(count("GET /v1/account")).toBe(1)
+    for (const id of ids) {
+      expect(count(`GET /v1/workspaces/${id}`)).toBe(1)
+      expect(count(`GET /v1/workspaces/${id}/files`)).toBe(1)
+    }
+    // Kimo Cloud allows a device 10 signed requests a second.
+    expect(asked.length).toBeLessThanOrEqual(10)
   })
 })

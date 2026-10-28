@@ -609,7 +609,9 @@ export function createWorkspaceStore(deps: WorkspaceStoreDeps): WorkspaceStore {
           replacedBy: null,
         },
       }
-    // Not cached: ask each workspace for its list.
+    // Not cached: the account first (a workspace joined since, maybe in another window), then
+    // each workspace's list.
+    await cloud.refresh().catch(() => undefined)
     for (const w of state.workspaces)
       if (w.deletedAt === null) await refreshWorkspace(w.id).catch(() => undefined)
     const found = fileOf(state, room)

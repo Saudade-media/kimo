@@ -163,5 +163,8 @@ the read-only copy, and the new file is a plain local file.
 
 ## Not done yet
 
+- Home's New file on desktop shares an untitled document from the window, not the host. After its
+  first save the binding stays in the window's store, so the host may not reopen the saved file in
+  its room (read from the code, not tried in the app).
 - After sign-out, a deleted workspace's copy opens editable until its account signs in again
   (bindings are per account).

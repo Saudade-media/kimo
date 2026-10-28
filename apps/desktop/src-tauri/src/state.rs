@@ -112,7 +112,8 @@ impl AppState {
     /// Widens the scope for the files of a request, then queues it (cold start) or emits it
     /// to the main editor window.
     pub fn open_request<Rt: Runtime>(&self, app: &AppHandle<Rt>, req: OpenRequest) {
-        if req.refs.is_empty() {
+        // A join, pair or Kimo Cloud link has no file but is a request all the same.
+        if req.is_empty() {
             return;
         }
         for r in &req.refs {

@@ -29,6 +29,13 @@ pub struct OpenRequest {
     pub join: Option<String>,
 }
 
+impl OpenRequest {
+    /// Nothing to open: no file and no link. A link alone (join, pair, Kimo Cloud) is a request.
+    pub fn is_empty(&self) -> bool {
+        self.refs.is_empty() && self.join.is_none()
+    }
+}
+
 /// `parseJoinDeepLink` in `packages/platform/src/links.ts`: the whole `kimo://join#...` or
 /// `kimo://pair#...` (or `kimo:join#...`) link, or a Kimo Cloud link (`kimo://cloud/invite#<token>`,
 /// `kimo://cloud/transfer`, `kimo://cloud/signed-in`), or None for any other URL or an empty
@@ -357,5 +364,9 @@ mod tests {
             serde_json::to_value(&r[0]).unwrap(),
             serde_json::json!({"source":"deep-link","refs":[],"join":link})
         );
+        // A link has no file, yet it is a request: it reaches the window (it was dropped).
+        let invite = "kimo://cloud/invite#t0k3n".to_string();
+        let r = requests_from_args(&[invite], std::path::Path::new("/work"), "argv");
+        assert!(!r[0].is_empty());
     }
 }

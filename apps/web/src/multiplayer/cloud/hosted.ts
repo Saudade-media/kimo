@@ -94,6 +94,9 @@ export function withHostedFiles(
     if (!h || disposed) return
     hosted = h
     offs.push(h.subscribe(changed), () => h.dispose())
+    // The host may have last asked Kimo Cloud before this window's account changed.
+    account = accountKey(base.getState())
+    if (base.getState().accountId !== null) void h.refresh().catch(() => undefined)
     changed()
   })
   const files = async () => (disposed ? null : await attach)

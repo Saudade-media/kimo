@@ -4,10 +4,10 @@
  * - 6B: "Maya wants you to own Studio" while a workspace summary names this account for a
  *   transfer (`incomingTransfers`). Escape or a press outside hides it until the next refresh.
  * - 6C: Toast "You're now the Owner of Studio" once the transfer's checkout went through.
- * - 3A in the app: "Join Studio as leo@studio.design?" when an invite link opens. Join is the
- *   person's yes (architecture §5.2 step 4): the link alone accepts nothing and starts no sign-in,
- *   since it may be someone else's. An invite for an account that exists signs in first (api.md
- *   §14.4), and is accepted once that sign-in is done.
+ * - 3D: "Join Studio?" when an invite link opens in the app. Join is the person's yes
+ *   (architecture §5.2 step 4): the link alone accepts nothing and starts no sign-in, since it may
+ *   be someone else's. Not now closes it and leaves the invite open. An invite for an account that
+ *   exists signs in first (api.md §14.4), and is accepted once that sign-in is done.
  * - 3B: Toast "You joined Studio" once joined.
  * - 3C: Toast "You can now edit Landing" when an edit request turns approved; an open view
  *   session of that room reopens with an edit token.
@@ -21,7 +21,7 @@ import { takeReadyShares } from "../../home/WorkspaceHome"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { roomKeyOf } from "../backend"
 import { fileOf, incomingTransfers } from "../cloud/workspaces"
-import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
+import { useRelaySetupServices } from "../relay-setup/services"
 import { AcceptTransferDialog, JoinWorkspaceDialog } from "./WorkspaceDialogs"
 import {
   rememberWorkspaceNames,
@@ -39,7 +39,6 @@ export function WorkspaceHost() {
   const state = useWorkspacesState(store)
   const runtime = useOptionalRuntime()
   const cloud = useRelaySetupServices(runtime?.platform ?? null)?.cloud ?? null
-  const cloudState = useCloudState(cloud)
   const toast = useWsToast()
   /** Transfers hidden with Escape, by transfer id (shown again on the next app start). */
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
@@ -183,16 +182,15 @@ export function WorkspaceHost() {
       : []
   const first = incoming[0] ?? null
 
-  const signedIn = cloudState?.session === "signed-in"
   return (
     <>
       {store && invite?.phase === "ready" && invite.error === null && (
         <JoinWorkspaceDialog
           peek={invite.peek}
-          signedIn={signedIn}
           busy={invite.busy}
           onJoin={() => void store.acceptInvite().catch(() => undefined)}
-          onCancel={() => store.dismissInvite()}
+          // Only this window's dialog closes: nothing is sent, so the invite stays open.
+          onNotNow={() => store.dismissInvite()}
         />
       )}
       {store && first?.transfer && (

@@ -4,9 +4,9 @@
  * - 2B Invite (user-plus): Input · Email (mail), Row · Role (Select 140 × 28), Price (receipt,
  *   "+$4 a month once they join"); Cancel · Send invite.
  * - 2C Remove a member (user-minus): the view links they made, when there are any; Remove (danger).
- * - Join (users), the app's side of 3A: "Join Studio as leo@studio.design?" before an invite link
- *   is accepted. Board 46 draws only the browser page; this reuses its copy in the no-body shape.
  *   Done: Toast "Sam Kim removed" (2D).
+ * - 3D Join (users, 06fTZmjNx1): "Join Studio?" · "Maya invited ana@studio.design to edit Studio's
+ *   files." · no body · Not now · Join. Not now only closes it: the invite stays open.
  * - 6A Transfer (crown): Row · New owner with a Select (160 × 28) of the Admins; Send request.
  * - 6B Accept ownership (crown): no body; Decline · Subscribe (opens checkout, seats locked).
  * - 6D Delete workspace (trash-2): Input · Confirm name (type), "Type Studio to confirm"; Delete
@@ -119,38 +119,36 @@ export function InviteDialog({
   )
 }
 
-// --- Join (3A in the app) -------------------------------------------------------------------------
+// --- 3D Join ------------------------------------------------------------------------------------
 
 /**
- * An invite link opened in the app (architecture §5.2 step 4, api.md §14.4). Nothing is accepted,
- * and no sign-in starts, until Join: the link may be someone else's, and joining signs this device
- * in as the invited email.
+ * Board 46 3D (06fTZmjNx1), an invite link opened in the app (architecture §5.2 step 4, api.md
+ * §14.4). Nothing is accepted, and no sign-in starts, until Join: the link may be someone else's,
+ * and joining signs this device in as the invited email. Not now (and Escape) only close it: the
+ * invite stays open, so the same link works later.
  */
 export function JoinWorkspaceDialog({
   peek,
-  signedIn,
   busy,
   onJoin,
-  onCancel,
+  onNotNow,
 }: {
   peek: InvitePeek
-  /** This device is signed in to Kimo Cloud already. */
-  signedIn: boolean
   busy: boolean
   onJoin(): void
-  onCancel(): void
+  onNotNow(): void
 }) {
-  const invited = `${firstName(peek.invitedBy)} invited you to edit ${peek.workspaceName}'s files.`
   return onBody(
     <Dialog
       className="ws-dialog"
       data-dialog="join-workspace"
       icon={<Icon name="users" size={16} />}
-      title={`Join ${peek.workspaceName} as ${peek.email}?`}
-      description={signedIn ? invited : `${invited} Joining signs this device in with this email.`}
+      title={`Join ${peek.workspaceName}?`}
+      description={`${firstName(peek.invitedBy)} invited ${peek.email} to edit ${peek.workspaceName}'s files.`}
+      cancelLabel="Not now"
       confirmLabel="Join"
       confirmDisabled={busy}
-      onCancel={onCancel}
+      onCancel={onNotNow}
       onConfirm={onJoin}
     />,
   )

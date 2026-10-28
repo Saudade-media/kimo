@@ -67,7 +67,7 @@ export const WORKSPACE_REFRESH_MS = 30_000
 export type InviteFlow =
   /** Reading the invite (§14.3). */
   | { phase: "checking"; token: string }
-  /** "Join <workspace> as <email>?" */
+  /** Board 46 3D "Join <workspace>?" */
   | { phase: "ready"; token: string; peek: InvitePeek; busy: boolean; error: CloudErrorCode | null }
   /** The invite's email has an account: sign in as `peek.email` first; it is accepted after. */
   | { phase: "sign-in"; token: string; peek: InvitePeek }

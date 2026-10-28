@@ -92,13 +92,14 @@ focus; once one is `approved`, `openFile(room)` upgrades the open view session t
 
 **Invites.** A link sets `state.invite` by itself (desktop `kimo://cloud/invite#<token>`, web
 `/invite#<token>`; see `platform/runtime.ts`). Phases:
-`checking` → `ready` ("Join <peek.workspaceName> as <peek.email>?", `acceptInvite()`) →
+`checking` → `ready` (board 46 3D "Join <peek.workspaceName>?", `acceptInvite()`) →
 `joined`. Only the person's Join calls `acceptInvite()`: the link may be someone else's, so
 opening it accepts nothing and starts no sign-in. `sign-in` (after Join): that email has an
 account; run the Cloud store's sign-in for `peek.email`, and the invite is accepted when it
 completes. `failed` with `INVITE_EXPIRED` or `INVITE_USED`:
 "This invite no longer works." `ready` with `error` `INVITE_EMAIL_MISMATCH`: "This invite is for
-<email>" with Sign out. `dismissInvite()` closes it.
+<email>" with Sign out. `dismissInvite()` closes it (3D Not now): nothing is sent, so the invite
+stays open and the same link works later.
 
 **Transfer ownership.** Owner: `requestTransfer(ws, adminAccountId)` (6A; only Admins, else
 `NOT_ADMIN`), `cancelTransfer(ws)`. The named Admin: show 6B while `incomingTransfers(state)` lists
@@ -123,8 +124,8 @@ uploaded is left as it is (its file stays a local file of this device).
 |---|---|
 | `../ui/WorkspaceShare.tsx` | Share popover 1A to 1E (`useCloudShareKind` routes a room to 1C or 1D/1E) |
 | `../ui/WorkspacePane.tsx` | Settings › Workspace (2A): plan, members, invites, edit requests, ownership |
-| `../ui/WorkspaceDialogs.tsx` | 2B invite, 2C remove (toast 2D), Join (3A in the app), 6A transfer, 6B accept, 6D delete, 6F leave |
-| `../ui/WorkspaceHost.tsx` | Mounted once per window: Join, 6B, toasts 6C, 3B, 3C, the start refresh |
+| `../ui/WorkspaceDialogs.tsx` | 2B invite, 2C remove (toast 2D), 3D Join, 6A transfer, 6B accept, 6D delete, 6F leave |
+| `../ui/WorkspaceHost.tsx` | Mounted once per window: 3D Join, 6B, toasts 6C, 3B, 3C, the start refresh |
 | `../ui/WorkspaceBanner.tsx` | Editor banners 5A to 5D and 6E, with Save a copy |
 | `../ui/workspace-parts.tsx` | Store hooks, member avatar, 28-tall buttons, the toast stack outside an editor |
 | `workspace-view.ts` | Copy and picks (names from emails, footnotes, prices, banner kind) |

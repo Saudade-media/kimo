@@ -1,6 +1,9 @@
 /** Tabs: the tab model (open, focus, close, retarget, restore) and the window controller over a session manager. */
 import { afterEach, describe, expect, test } from "bun:test"
+import type { OpenRequest } from "@kimo/platform"
 import { noteWindowFile, noteWindowTabs, takeLastWindow } from "../../src/platform/last-files"
+import { openLaunchRequests } from "../../src/platform/runtime"
+import { diskPath, parseRoute } from "../../src/router"
 import { TabsController } from "../../src/tabs/controller"
 import {
   addHomeTab,
@@ -161,6 +164,50 @@ describe("TabsController over a session manager", () => {
     expect(await tabs.close(tabs.getState().active ?? "")).toBe(true)
     expect(paths.at(-1)).toBe("/")
     await waitFor(() => manager.sessions().length === 0, 1000, "all closed")
+  })
+
+  test("a cold start with a file and a link, or two links, gives each its tab in order, the last in front (a bug: only the last got one)", async () => {
+    const A = "kimo://join#relay.example/room-a/token/key"
+    const Z = "kimo://join#relay.example/room-z/token/key"
+    const cases: [OpenRequest[], string[]][] = [
+      [
+        [
+          { source: "argv", refs: [FILE] },
+          { source: "argv", refs: [], join: A },
+        ],
+        [FILE, A],
+      ],
+      [
+        [
+          { source: "deep-link", refs: [], join: A },
+          { source: "deep-link", refs: [], join: Z },
+        ],
+        [A, Z],
+      ],
+    ]
+    for (const [requests, want] of cases) {
+      const { platform, manager } = await setup()
+      for (const r of requests) platform.control.open(r)
+      const tabs = new TabsController({ navigate: () => {}, homePath: () => "/" })
+      live.push(tabs)
+      // The window's hash route: hash changes in a row reach the route as the newest hash.
+      let hash = "#/"
+      const navigate = (path: string) => {
+        hash = `#${path}`
+        setTimeout(() => {
+          const target = routeTarget(parseRoute(hash), platform)
+          if (target !== undefined) tabs.route(target)
+        }, 0)
+      }
+      await openLaunchRequests({ platform, manager, tabs, navigate }, (s, r) =>
+        navigate(diskPath(s.ref, r.node, r.page)),
+      )
+      await sleep(5)
+      const state = tabs.getState()
+      expect(refs(state)).toEqual(want)
+      // The last request is in front.
+      expect(state.active).toBe(state.tabs.at(-1)?.id ?? "none")
+    }
   })
 
   test("an untitled file with edits asks first; Cancel keeps the tab", async () => {

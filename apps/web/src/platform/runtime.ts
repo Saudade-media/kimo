@@ -26,7 +26,9 @@ import type { LibraryShare } from "../multiplayer/library"
 import type { MultiplayerModel } from "../multiplayer/model"
 import { createWindowMultiplayer } from "../multiplayer/window"
 import { isPairDeepLink, pairPath } from "../pair/link"
-import { windowTabs } from "../tabs/controller"
+import { navigate, parseRoute } from "../router"
+import { type TabsController, windowTabs } from "../tabs/controller"
+import { routeTarget } from "../tabs/useWindowTabs"
 import { takeLastWindow } from "./last-files"
 import {
   createSessionManager,
@@ -212,17 +214,10 @@ function finishRuntime(
   const { platform, manager } = runtime
   // The desktop Settings window (`#/settings/<pane>`) edits settings only: it never opens files.
   if (settingsRoute()) return runtime
-  manager.install(onOpened)
-  // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route, and a
-  // `kimo://pair#...` link the pairing route (ADR 0017).
-  const linkRoute = (link: string) => (isPairDeepLink(link) ? pairPath(link) : joinPath(link))
-  const openLink = (link: string) => {
-    if (isCloudDeepLink(link)) openCloudLink(runtime.workspaces, parseCloudDeepLink(link))
-    else location.hash = `#${linkRoute(link)}`
-  }
-  platform.launch.onOpenRequest((request) => {
-    if (request.join) openLink(request.join)
-  })
+  void openLaunchRequests(
+    { platform, manager, tabs: windowTabs(), navigate, workspaces: runtime.workspaces },
+    onOpened,
+  )
   // Web: an invite opened at `<app>/invite#<token>`. The token leaves the address bar at once.
   if (platform.kind === "browser") {
     const link = cloudLinkFromLocation(location)
@@ -231,38 +226,82 @@ function finishRuntime(
       openCloudLink(runtime.workspaces, link)
     }
   }
-  void (async () => {
-    const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
-    // General › On launch: with nothing else to open, the main window reopens the tabs that were
-    // open when Kimo quit, in order, the focused one in front (board 44 §5 "Restore"; desktop,
-    // the web keeps the open file in the URL). Only the focused file opens now; the others open
-    // when their tab is shown.
-    const last =
-      platform.kind !== "browser" && platform.window.label === "main" ? takeLastWindow() : null
-    if (
-      !requests.length &&
-      platform.window.label === "main" &&
-      platform.settings.get("general.onLaunch") === "last-files" &&
-      last &&
-      /^#?\/?$/.test(location.hash)
-    ) {
-      windowTabs().seed(last.tabs)
-      if (last.active) requests.push({ source: "argv", refs: [last.active] })
-    }
-    for (const request of requests) {
-      if (request.join) {
-        openLink(request.join)
-        continue
-      }
-      await manager.handleOpenRequest(request).catch((e: unknown) => {
-        console.warn("Kimo: could not open", request.refs, e)
-      })
-      const first = request.refs[0]
-      const session = first ? manager.get(first) : undefined
-      if (session) onOpened(session, request)
-    }
-  })()
   return runtime
+}
+
+/** What {@link openLaunchRequests} works with (the runtime's; tests pass their own). */
+export interface LaunchDeps {
+  platform: KimoPlatform
+  manager: FileSessionManager
+  /** The window's tabs. */
+  tabs: Pick<TabsController, "route" | "seed">
+  /** Goes to a hash route path. */
+  navigate(path: string): void
+  workspaces?: WorkspaceStore | null
+}
+
+/**
+ * Installs launch requests (files, join, pairing and Kimo Cloud links) and opens the ones the
+ * window was started with, in order. Resolves when those are open.
+ *
+ * Each request gets its tab as it opens, so the last one ends in front. The hash route alone
+ * is not enough: hash changes in a row reach it as one, the newest (a bug: a cold start with a
+ * file and a link, or two links, kept only the last tab).
+ */
+export async function openLaunchRequests(
+  deps: LaunchDeps,
+  onOpened: (session: FileDocumentSession, request: OpenRequest) => void,
+): Promise<void> {
+  const { platform, manager, tabs } = deps
+  const navigate = (path: string) => {
+    const target = routeTarget(parseRoute(`#${path}`), platform)
+    if (target !== undefined) tabs.route(target)
+    deps.navigate(path)
+  }
+  const opened = (session: FileDocumentSession, request: OpenRequest) => {
+    tabs.route({ kind: "disk", ref: session.ref })
+    onOpened(session, request)
+  }
+  manager.install(opened)
+  // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route, and a
+  // `kimo://pair#...` link the pairing route (ADR 0017).
+  const linkRoute = (link: string) => (isPairDeepLink(link) ? pairPath(link) : joinPath(link))
+  const openLink = (link: string) => {
+    if (isCloudDeepLink(link)) openCloudLink(deps.workspaces, parseCloudDeepLink(link))
+    else navigate(linkRoute(link))
+  }
+  platform.launch.onOpenRequest((request) => {
+    if (request.join) openLink(request.join)
+  })
+  const requests = await platform.launch.takeInitialRequests().catch(() => [] as OpenRequest[])
+  // General › On launch: with nothing else to open, the main window reopens the tabs that were
+  // open when Kimo quit, in order, the focused one in front (board 44 §5 "Restore"; desktop,
+  // the web keeps the open file in the URL). Only the focused file opens now; the others open
+  // when their tab is shown.
+  const last =
+    platform.kind !== "browser" && platform.window.label === "main" ? takeLastWindow() : null
+  if (
+    !requests.length &&
+    platform.window.label === "main" &&
+    platform.settings.get("general.onLaunch") === "last-files" &&
+    last &&
+    /^#?\/?$/.test(location.hash)
+  ) {
+    tabs.seed(last.tabs)
+    if (last.active) requests.push({ source: "argv", refs: [last.active] })
+  }
+  for (const request of requests) {
+    if (request.join) {
+      openLink(request.join)
+      continue
+    }
+    await manager.handleOpenRequest(request).catch((e: unknown) => {
+      console.warn("Kimo: could not open", request.refs, e)
+    })
+    const first = request.refs[0]
+    const session = first ? manager.get(first) : undefined
+    if (session) opened(session, request)
+  }
 }
 
 export const RuntimeContext = createContext<AppRuntime | null>(null)

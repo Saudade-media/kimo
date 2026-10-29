@@ -12,7 +12,8 @@ import {
   AgentActivityPanel,
   AgentCanvasLayer,
   AgentPausedBanner,
-  AgentPresence,
+  AgentStack,
+  type AgentStackSlot,
   type AgentsControllerExt,
   type AgentsNotice,
   createAgentsController,
@@ -42,8 +43,11 @@ export function useFileId(path: string | null): string | null {
 
 interface EditorAgents {
   controller: AgentsControllerExt | null
-  /** Topbar drag region (before Save Status). */
-  presence: ReactNode
+  /**
+   * Board 48: the right card's avatar stack with this window's agents; `render` draws the stack
+   * and Share given them (no agents without an MCP host).
+   */
+  stack(render: (slot: AgentStackSlot) => ReactNode): ReactNode
   /** Under the topbar, with the other file banners. */
   banner: ReactNode
   /** Inside the canvas host, above the canvas, below the selection UI. */
@@ -141,7 +145,7 @@ export function useEditorAgents({
   if (!controller || !fileId)
     return {
       controller: null,
-      presence: null,
+      stack: (render) => <AgentStack controller={null}>{render}</AgentStack>,
       banner: null,
       canvasLayer: null,
       activity: null,
@@ -149,14 +153,14 @@ export function useEditorAgents({
     }
   return {
     controller,
-    presence: (
-      <AgentPresence
+    stack: (render) => (
+      <AgentStack
         controller={controller}
         onShowOnCanvas={focus}
         onOpenClientSettings={(client) => openSettings(client)}
-        onOpenAgentsSettings={() => openSettings()}
-        {...(doc ? { fileName: doc.fileName } : {})}
-      />
+      >
+        {render}
+      </AgentStack>
     ),
     banner: (
       <AgentPausedBanner
@@ -199,6 +203,44 @@ export function useConnectedOrigins(controller: AgentsControllerExt | null): Rea
     if (next.length === prev.size && next.every((o) => prev.has(o))) return prev
     cache.current = next.length ? new Set(next) : NONE
     return cache.current
+  })
+}
+
+/** Board 48 §5: the Agent tab's dot. */
+export type AgentTabActivity = "working" | "waiting" | null
+
+/** The part of the Agent tab controller {@link useAgentTabActivity} reads. */
+interface AgentMarkSource {
+  readonly state: { mark: string }
+  subscribe(listener: () => void): () => void
+}
+
+/**
+ * Board 48 §5: "waiting" while an agent waits for you (the built-in agent's approval, or an MCP
+ * client's), else "working" while one works, else null.
+ */
+export function useAgentTabActivity(
+  panel: AgentMarkSource | null,
+  mcp: AgentsControllerExt | null,
+): AgentTabActivity {
+  const subscribe = useMemo(
+    () => (listener: () => void) => {
+      const offPanel = panel?.subscribe(listener)
+      const offMcp = mcp?.subscribe(listener)
+      return () => {
+        offPanel?.()
+        offMcp?.()
+      }
+    },
+    [panel, mcp],
+  )
+  return useSyncExternalStore(subscribe, () => {
+    const mark = panel?.state.mark
+    const chips = mcp?.state.chips ?? []
+    if (mark === "waiting" || chips.some((c) => c.presence === "waiting")) return "waiting"
+    if (mark === "working" || chips.some((c) => c.presence === "editing" && c.state === "editing"))
+      return "working"
+    return null
   })
 }
 

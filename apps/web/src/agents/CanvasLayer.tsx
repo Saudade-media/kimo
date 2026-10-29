@@ -234,9 +234,10 @@ function Ghost({ kind, name, box }: { kind: GhostKind; name: string; box: Projec
 /**
  * Dry-run bar (board 24 › 5 · (g) joR0E › jMSYI): pinned top-centre of the canvas; row, h 32, gap
  * 8, padding [0, 4], center, bg-overlay, 1 px border, pill, shadow 0 4 12 › AgentMark 12 ·
- * Label "Dry run · 7 ops" sans 12 / 500 · Meta "nothing applied" sans 11 text-tertiary · Discard
- * (Button/Ghost h 24, padding [0, 8], 11) · Apply (Button/Primary h 24, padding [0, 10], 11).
- * Apply = ⌘↩, Discard = Esc. It replaces the presence chip while active.
+ * Label "Dry run · 7 changes" sans 12 / 500 · Meta "nothing applied" sans 11 text-tertiary ·
+ * Discard (Button/Ghost h 24, padding [0, 8], 11) · Apply (Button/Primary h 24, padding [0, 10],
+ * 11).
+ * Apply = ⌘↩, Discard = Esc. It stands in for the agent's avatar in the stack while active.
  */
 function DryRunBar({ controller }: { controller: AgentsControllerExt }) {
   const state = useAgentsState(controller)
@@ -264,7 +265,7 @@ function DryRunBar({ controller }: { controller: AgentsControllerExt }) {
     <div className="agents-dry-bar" role="status" data-testid="agent-dry-run-bar">
       <AgentMark size={12} state="working" />
       <span className="agents-dry-bar__title">
-        Dry run · {ops} {ops === 1 ? "op" : "ops"}
+        Dry run · {ops} {ops === 1 ? "change" : "changes"}
       </span>
       <span className="agents-dry-bar__meta">nothing applied</span>
       <CompactButton

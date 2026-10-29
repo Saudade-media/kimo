@@ -350,7 +350,10 @@ export function agentPersona(agent: Pick<AgentView, "holder" | "isYours">, index
 export const agentLabel = (a: Pick<AgentView, "label" | "ownerLabel">) =>
   a.ownerLabel ? `${a.label} · ${a.ownerLabel}'s agent` : a.label
 
-/** "editing Hero Image" (the first claimed node by name), or null while it claims nothing. */
+/**
+ * Board 48 §6 "Agent row": "Editing Hero Image" (the first claimed node by name), "Editing Hero
+ * and 2 more", or null while it claims nothing.
+ */
 export function agentMeta(
   a: Pick<AgentView, "editing">,
   nodeName: (id: string) => string | null,
@@ -359,6 +362,6 @@ export function agentMeta(
   if (first === undefined) return null
   const name = nodeName(first) ?? "a layer"
   return a.editing.length > 1
-    ? `editing ${name} and ${a.editing.length - 1} more`
-    : `editing ${name}`
+    ? `Editing ${name} and ${a.editing.length - 1} more`
+    : `Editing ${name}`
 }

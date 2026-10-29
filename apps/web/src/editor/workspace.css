@@ -159,7 +159,9 @@
   display: none;
 }
 
-/* Presence (y1yBt6VlGj): row gap -6 (each avatar overlaps the previous one by 6), no padding. */
+/* Presence (y1yBt6VlGj, board 48 BiY5XvRIYI): row gap -6 (each avatar overlaps the previous one
+   by 6), no padding. Agents (AgentMark 24, no stroke) lead; people and "+N" have a 2 bg-app
+   stroke, inside (the schema default: board 48 sets no align). */
 /* Three avatars, Sharing and View fill the 262 inside the header exactly; with less room the
    stack gives way (its last avatars are cut) instead of running under Share and Zoom. */
 .card-header .mp-stack {
@@ -167,7 +169,6 @@
   min-width: 0;
   padding: 0;
   overflow: clip;
-  overflow-clip-margin: 2px;
 }
 
 .card-header .mp-stack > *,
@@ -179,8 +180,19 @@
   margin-left: -6px;
 }
 
+.card-header .mp-stack .mp-avatar,
+.card-header .mp-stack__more {
+  box-shadow: inset 0 0 0 2px var(--kimo-bg-app);
+}
+
+/* More · +N (3VHyEegJ3P): 24, bg-muted, radius-pill › Count text-xs 500 text-secondary. */
+.card-header .mp-stack__more {
+  font-size: var(--kimo-text-xs);
+  font-weight: var(--kimo-font-weight-medium);
+}
+
 /* Share (1NtIQbmrdA): h 28, radius-sm, fill accent, row gap 6, padding [0, 10], center; label
-   text-sm 500 on-accent. Live sharing keeps Button/Soft (board 41) at the same size. */
+   text-sm 500 on-accent, also while live (board 48). */
 .kimo-button.mp-share-button--card {
   gap: 6px;
   height: 28px;
@@ -188,11 +200,6 @@
   border-radius: var(--kimo-radius-sm);
   font-size: var(--kimo-text-sm);
   font-weight: var(--kimo-font-weight-medium);
-}
-
-.kimo-button.mp-share-button--card .kimo-button__icon {
-  width: 14px;
-  height: 14px;
 }
 
 /* View (iXGvkzDzGN): row gap 2, center. */

@@ -1,6 +1,6 @@
 /**
- * Board 21 "Agents & MCP" (KGdvA): pure view-model helpers for the agent surfaces (presence chip,
- * session popover, approval prompt, dry run, activity tab, Settings › Agents & MCP). Everything
+ * Board 21 "Agents & MCP" (KGdvA): pure view-model helpers for the agent surfaces (stack avatars,
+ * changes popover, approval prompt, dry run, activity tab, Settings › Agents & MCP). Everything
  * here is data in → strings / rows out, so the rules tables of each board section are unit
  * tested without a DOM.
  */
@@ -140,18 +140,14 @@ export function scopeLabel(policy: McpClientPolicy, cwd?: string): string {
   return `${LEVEL_LABEL[policy.level]} · ${FILES_LABEL[filesScopeOf(policy, cwd)]}`
 }
 
-/** "Can edit · ~/repo/design/" (session popover header). */
-export function canLabel(policy: McpClientPolicy, cwd?: string): string {
-  const verb =
-    policy.level === "read"
-      ? "Can read"
-      : policy.level === "edit"
-        ? "Can edit"
-        : "Can edit + delete"
-  const scope = filesScopeOf(policy, cwd)
-  const where =
-    scope === "folder" && cwd ? `${tildePath(cwd)}/` : scope === "any" ? "any file" : "this file"
-  return `${verb} · ${where}`
+/**
+ * Board 48 §3 / §6 "Can edit this file" (changes popover Scope): what the agent may do here,
+ * without paths (the popover is about this file).
+ */
+export function canLabel(policy: McpClientPolicy): string {
+  if (policy.level === "read") return "Can read this file"
+  if (policy.level === "edit") return "Can edit this file"
+  return "Can edit and delete in this file"
 }
 
 // --- Connections ---------------------------------------------------------------------------------
@@ -618,7 +614,7 @@ export function hostedSessionOps(
       op === "edit" && label && target !== label
         ? label
         : count > 0
-          ? `${count} ${count === 1 ? "op" : "ops"}`
+          ? plural(count, "change")
           : e.summary
     return {
       op,
@@ -646,10 +642,9 @@ export function hostedSessionOps(
   }
 }
 
-/** "6 changes · 4 nodes" (session popover List Header). */
+/** Board 48 §6 "6 changes to 4 layers" (changes popover List Header). */
 export function changesLabel(s: Pick<SessionOps, "rows" | "nodes">): string {
-  const c = s.rows.length
-  return `${c} ${c === 1 ? "change" : "changes"} · ${s.nodes} ${s.nodes === 1 ? "node" : "nodes"}`
+  return `${plural(s.rows.length, "change")} to ${plural(s.nodes, "layer")}`
 }
 
 // --- Approval prompt (rule "Approval") --------------------------------------------------------------
@@ -981,7 +976,7 @@ function activityRowView(
     // Op count when the host reports it (M5 addendum), else the node count.
     tool =
       e.kind === "edit" && e.opCount
-        ? `${t} · ${plural(e.opCount, "op")}`
+        ? `${t} · ${plural(e.opCount, "change")}`
         : e.kind === "edit" && n > 0
           ? `${t} · ${plural(n, "node")}`
           : t
@@ -1027,7 +1022,7 @@ function pendingRowView(r: McpApprovalRequest): ActivityRowView {
     time: clock(r.requestedAt),
     label: r.summary,
     tool: `${r.tool} · waiting for approval`,
-    target: count > 0 ? `${plural(count, "op")} · not applied yet` : "not applied yet",
+    target: count > 0 ? `${plural(count, "change")} · not applied yet` : "not applied yet",
     tone: "agent",
     pending: true,
     undoable: false,
@@ -1142,19 +1137,55 @@ export function exportActivityJson(fileId: string, entries: readonly McpActivity
   return `${JSON.stringify({ version: 1, fileId, exportedAt: new Date().toISOString(), entries }, null, 2)}\n`
 }
 
-// --- Presence (rule "Presence chip") ----------------------------------------------------------------
+// --- Presence (board 48: the avatars in the stack and the people popover rows) -------------------
 
-/** Chip label: "Claude Code is editing" / "· edits paused" / "needs approval". */
+/**
+ * Board 48 §1 E / §6 "Agent, hover": the agent's status line in its avatar's Tooltip ("Claude Code
+ * is editing Hero", "Codex is waiting for you").
+ */
 export function presenceLabel(
   label: string,
   state: "editing" | "paused" | "waiting",
   conn?: Pick<McpConnectionInfo, "state"> | null,
+  focus?: string | null,
 ): string {
-  if (state === "waiting") return `${label} needs approval`
-  if (state === "paused") return `${label} · edits paused`
-  const verb =
-    conn?.state === "reading" ? "reading" : conn?.state === "rendering" ? "rendering" : "editing"
-  return `${label} is ${verb}`
+  if (state === "waiting") return `${label} is waiting for you`
+  if (state === "paused") return `${label} is paused`
+  switch (conn?.state) {
+    case "reading":
+      return `${label} is reading`
+    case "rendering":
+      return `${label} is rendering`
+    case "editing":
+      return focus ? `${label} is editing ${focus}` : `${label} is editing`
+    default:
+      return `${label} is idle`
+  }
+}
+
+/**
+ * Board 48 §2 / §6 "Agent row": the status under an agent's name in the people popover
+ * ("Editing Hero · 3 changes", "Waiting for you").
+ */
+export function presenceMeta(
+  state: "editing" | "paused" | "waiting",
+  conn: Pick<McpConnectionInfo, "state"> | null | undefined,
+  focus: string | null | undefined,
+  changes: number,
+): string {
+  if (state === "waiting") return "Waiting for you"
+  if (state === "paused") return "Paused"
+  const doing =
+    conn?.state === "reading"
+      ? "Reading"
+      : conn?.state === "rendering"
+        ? "Rendering"
+        : conn?.state === "editing"
+          ? focus
+            ? `Editing ${focus}`
+            : "Editing"
+          : "Idle"
+  return changes > 0 ? `${doing} · ${plural(changes, "change")}` : doing
 }
 
 /** Now-row copy: the running call when the host reports it, else per connection state. */
@@ -1167,7 +1198,7 @@ export function nowCopy(c: McpConnectionInfo): { label: string; tool: string } |
 const NOW_COPY: Record<McpConnectionInfo["state"], { label: string; tool: string } | null> = {
   idle: null,
   reading: { label: "Reading the document", tool: "kimo_query" },
-  editing: { label: "Applying ops", tool: "kimo_apply_ops" },
+  editing: { label: "Applying changes", tool: "kimo_apply_ops" },
   rendering: { label: "Rendering", tool: "kimo_render" },
   "waiting-approval": { label: "Waiting for your approval", tool: "kimo_apply_ops" },
 }

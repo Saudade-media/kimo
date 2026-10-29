@@ -33,6 +33,7 @@ import {
   dryRunFromApproval,
   hostedSessionOps,
   presenceLabel,
+  presenceMeta,
   type SessionOps,
   sessionOps,
 } from "./model"
@@ -48,8 +49,10 @@ interface PausedInfo {
 export interface AgentChipView extends AgentChip {
   client: string
   presence: "editing" | "paused" | "waiting"
+  /** Board 48 §1 E: the avatar's Tooltip, "Claude Code is editing Hero". */
   text: string
-  meta?: string
+  /** Board 48 §2: the people popover row's status, "Editing Hero · 3 changes". */
+  meta: string
   connection: McpConnectionInfo
   session: SessionOps
   policy: McpClientPolicy
@@ -283,6 +286,13 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
     )
   }
 
+  /** A layer's name for the status lines ("editing Hero"); null when unnamed or gone. */
+  function nameOf(id: string | undefined): string | null {
+    if (id === undefined || !store) return null
+    const name = (store.getNode(id) as { name?: unknown } | undefined)?.name
+    return typeof name === "string" && name.trim() ? name : null
+  }
+
   function lastFocus(origin: string): string[] {
     for (let i = activity.length - 1; i >= 0; i--) {
       const e = activity[i] as McpActivityEntry
@@ -328,33 +338,25 @@ export function createAgentsController(opts: AgentsOptions): AgentsControllerExt
       for (const id of session.touched) touched.add(id)
       if (seen) for (const id of seen.nodes) if (!store || store.hasNode(id)) touched.add(id)
       const presence = pending.length > 0 ? "waiting" : pause ? "paused" : "editing"
-      const meta =
-        presence === "waiting"
-          ? String(pending.length)
-          : presence === "paused"
-            ? pause?.code === "DOCUMENT_LOCKED"
-              ? "locked"
-              : "read-only"
-            : session.rows.length > 0
-              ? `${session.rows.length} ${session.rows.length === 1 ? "op" : "ops"}`
-              : undefined
+      // The work area: a resized page frame never wins over the section inside it.
+      const focus = areaOf(
+        c.focus?.length ? c.focus : seen?.last.length ? seen.last : lastFocus(c.origin),
+      )
+      const focusName = nameOf(focus[0])
       chips.push({
         connectionId: c.connectionId,
         origin: c.origin,
         label: c.identity.label,
         icon: chipIcon(c),
         state: c.state,
-        // The work area: a resized page frame never wins over the section inside it.
-        focus: areaOf(
-          c.focus?.length ? c.focus : seen?.last.length ? seen.last : lastFocus(c.origin),
-        ),
+        focus,
         // Board 31 "Agent cursor": the last layer its latest landed edit added.
         ...(c.pointer && (!store || store.hasNode(c.pointer)) ? { pointer: c.pointer } : {}),
         lastActivityAt: Math.max(c.lastActivityAt, wrote === -Infinity ? 0 : wrote),
         client,
         presence,
-        text: presenceLabel(c.identity.label, presence, c),
-        meta,
+        text: presenceLabel(c.identity.label, presence, c, focusName),
+        meta: presenceMeta(presence, c, focusName, session.rows.length),
         connection: c,
         session,
         policy: policyOf(client),

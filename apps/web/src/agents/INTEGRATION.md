@@ -27,25 +27,28 @@ useEffect(() => () => agents.dispose(), [agents])
 which is right only when the window's store is the document-host replica that owns the
 `mcp:*` undo stacks (in-process host / tests).
 
-## 2. Topbar (Topbar.tsx / DesktopTopbar drag region)
+## 2. Right card header (board 48: the avatar stack)
 
-Rule "Presence chip": inside the drag region (`justify-content: flex-end; align-items: center`),
-right-aligned, immediately before Save status.
+Agents are avatars in the right card's stack (`multiplayer/ui/PresenceStack`), ahead of the
+people, a waiting agent first. `AgentStack` hands them to the stack and draws what hangs from
+them: the changes popover (an agent row in the people popover opens it; the approval queue while
+requests wait), the approval prompt (weJXw, under the waiting agent's avatar) and ⌘↩.
 
 ```tsx
-<div className="…drag-region">
-  <AgentPresence
-    controller={agents}
-    onShowOnCanvas={(ids) => { ui.select(ids); viewport.zoomTo(ids) }}
-    onOpenClientSettings={(client) => openSettings(platform, "agents-mcp", { client })}
-  />
-</div>
-<SaveStatus … />
+<AgentStack
+  controller={agents}
+  onShowOnCanvas={(ids) => { ui.select(ids); viewport.zoomTo(ids) }}
+  onOpenClientSettings={(client) => openSettings(platform, "agents-mcp", { client })}
+>
+  {(stack) => (
+    <TopbarShare docKey={key} card agents={stack.agents} onPeopleOpenChange={stack.onPeopleOpenChange} />
+  )}
+</AgentStack>
 ```
 
-The chip opens the session popover (hIfmx) 16 px under it and the approval prompt (weJXw) 18 px
-under it by itself (Esc = Deny anywhere outside text fields / menus / dialogs). With no chip the
-prompt anchors top-right under the topbar.
+The changes popover fits the window (at most its height minus 24) and flips above its anchor when
+there is no room below. The prompt waits while a popover of the stack is open. With no agent in
+the stack the prompt anchors top right.
 
 ## 3. Banner (under the topbar, with the other file banners)
 
@@ -168,15 +171,11 @@ window's "Open activity" has no cross-window channel to the editor's Activity ta
 - **AgentMark** replaces AgentOrb on every surface (chip 24, session popover 28, approval prompt
   32, canvas tag 12, cursor pill 12, Activity group 16, client row 28). Marks follow presence
   (editing → Working, reading → Thinking, waiting → Listening, paused → Idle frozen).
-- **Presence chip** (BXTD5 / yeF1Z / I7jut): 2+ agents show the lead (waiting → working → idle)
-  with meta "+N"; while approvals wait, a neutral queue badge (hand + N, "9+") replaces the meta
-  and the chip opens the queue popover (XCENV; oldest first, ⌘↩ approves the top). With 2+
-  agents the chip opens the agents popover (N4cx0). New optional props:
-  `onOpenAgentsSettings` ("Agents & MCP…") and `fileName` ("Session · <file>").
-- **Dry-run bar** (joR0E jMSYI): top-centre of the canvas, AgentMark 12, "Dry run · N ops ·
+- **Presence chip** (BXTD5 / yeF1Z / I7jut): replaced by board 48's avatar stack (section 2).
+- **Dry-run bar** (joR0E jMSYI): top-centre of the canvas, AgentMark 12, "Dry run · N changes ·
   nothing applied", Discard (Esc) / Apply (⌘↩, approval-backed dry runs). For an agent's
-  dry-run *call* it replaces the presence chip; an approval's dry run keeps the chip (the prompt
-  hangs from it).
+  dry-run *call* it stands in for that agent's avatar in the stack; an approval's dry run keeps
+  the avatar (the prompt hangs from it).
 - **Agent cursor placement** (board 36 XDVdg, supersedes joR0E rules 1, 3, 5): pointer tip on
   the section center, pill flips near edges, stacked 26 px apart, glides 600 ms ease-in-out
   cubic in world space, floats 3 px every 2.4 s, gone 2 s after the last write; nothing is

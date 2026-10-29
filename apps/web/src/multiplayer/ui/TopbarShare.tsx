@@ -5,33 +5,26 @@
  *   prop `topbar-sync`): Synced, Syncing… (after 600 ms), Reconnecting… (Paused), Offline · edits
  *   kept (ReadOnly), View only (ReadOnly, eye), and while assets move (section 8 E, edits first)
  *   Sharing N images (Saving, arrow-up) or Fetching N images (arrow-down). Not shared: `fallback`.
- * - {@link TopbarShare}: the avatar stack (`presence-stack`: Avatar 24, overlap 4, 2 px bg-app
- *   ring, max 3 then +N, join order, you excluded, 0.5 while the relay is gone; opens the people
- *   list) and the Share button (`topbar-share`: Button/Secondary "Share" with users, live
- *   Button/Soft "Sharing" with radio, hidden for viewers and guests; opens the Share popover,
- *   right edge on the button's). Both sit after Theme, before Preview.
+ * - {@link TopbarShare}: the avatar stack (board 48 {@link PresenceStack}: agents, then people,
+ *   you first; max 3 then +N; opens the people popover) and the Share button (`topbar-share`:
+ *   Button/Secondary "Share" with users, live Button/Soft "Sharing" with radio, hidden for viewers
+ *   and guests; opens the Share popover, right edge on the button's). The card header keeps the
+ *   accent "Share" while live too (board 48).
  */
 import { Button, SaveStatus, Tooltip } from "@kimo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { Icon } from "../../lib/icons"
 import { useOptionalRuntime } from "../../platform/runtime"
 import { shareableWorkspaces } from "../cloud/workspaces"
-import {
-  useAssetTransfers,
-  useCapabilities,
-  useCollaborators,
-  useMultiplayer,
-  useShareState,
-} from "../hooks"
+import { useAssetTransfers, useCapabilities, useMultiplayer, useShareState } from "../hooks"
 import type { MultiplayerModel } from "../model"
 import { useCloudState, useRelaySetupServices } from "../relay-setup/services"
-import { stackDimmed, stackOf, topbarSyncStatus } from "./copy"
+import { topbarSyncStatus } from "./copy"
 import { NewWorkspaceWizard } from "./NewWorkspace"
-import { PeoplePopover } from "./PeoplePopover"
+import { PresenceStack, type StackAgent } from "./PresenceStack"
 import { RelayWizard, type WizardStart } from "./RelayWizard"
 import { ResetLinksDialog } from "./ResetLinksDialog"
 import { SharePopover } from "./SharePopover"
-import { PresenceAvatar } from "./shared"
 import { InviteDialog } from "./WorkspaceDialogs"
 import { useCloudShareKind, useShareableSession } from "./WorkspaceShare"
 import { useWorkspaceStore, useWorkspacesState } from "./workspace-parts"
@@ -107,13 +100,17 @@ function SyncStatusFor({
 export interface TopbarShareProps {
   docKey: string
   model?: MultiplayerModel | null
-  /** Layer names for "editing Hero Image" in the people list. */
+  /** Layer names for "Editing Hero Image" in the people list. */
   nodeName?: (id: string) => string | null
-  /** An agent row's eye: shows the layers it claims. */
+  /** A room agent row's eye: shows the layers it claims. */
   onRevealNodes?: (ids: readonly string[]) => void
+  /** Board 48: this window's agents, ahead of the people in the stack (waiting first). */
+  agents?: readonly StackAgent[]
+  /** The people popover opened or closed (the approval prompt waits while it is open). */
+  onPeopleOpenChange?: (open: boolean) => void
   /**
    * Board 44 Right Card header (People): the idle Share is the accent "Share" without an icon
-   * (1NtIQbmrdA); live sharing keeps Button/Soft "Sharing" with radio (board 41).
+   * (1NtIQbmrdA), live too: board 48 keeps it in every shared state, so a crowd's stack fits.
    */
   card?: boolean
 }
@@ -130,14 +127,15 @@ function ShareCluster({
   docKey,
   nodeName,
   onRevealNodes,
+  agents,
+  onPeopleOpenChange,
   card = false,
 }: TopbarShareProps & { model: MultiplayerModel }) {
   const share = useShareState(model, docKey)
-  const people = useCollaborators(model, docKey)
   const caps = useCapabilities(model, docKey)
-  const [open, setOpen] = useState<
-    "share" | "people" | "reset" | "relay" | "invite" | "new-workspace" | null
-  >(null)
+  const [open, setOpen] = useState<"share" | "reset" | "relay" | "invite" | "new-workspace" | null>(
+    null,
+  )
   const [wizardStart, setWizardStart] = useState<WizardStart>("choose")
   const runtime = useOptionalRuntime()
   const relaySetup = useRelaySetupServices(runtime?.platform ?? null)
@@ -150,15 +148,12 @@ function ShareCluster({
   /** The workspace New workspace (board 46 1F) made: 1B's picker starts on it. */
   const [madeWorkspace, setMadeWorkspace] = useState<string | null>(null)
   const shareButton = useRef<HTMLButtonElement>(null)
-  const stackButton = useRef<HTMLButtonElement>(null)
-  const others = people.filter((p) => !p.isYou)
   const shared = share.room !== null
   // Board 46: a workspace file's members and a view link's guest on Kimo Cloud get Share too.
   const cloudKind = useCloudShareKind(model, docKey)
   const sessionOf = useShareableSession(docKey)
   const canShare = caps.canShare || cloudKind !== null
   const live = shared && share.status !== "error" && (caps.canShare || cloudKind?.kind === "member")
-  const { shown, more } = stackOf(others)
   const close = () => setOpen(null)
   // A view-link guest who signed in from Request edit access (board 46 1D) goes back to the
   // popover, which can now send the request, rather than on to the wizard's plan step.
@@ -169,39 +164,26 @@ function ShareCluster({
   }, [open, wizardStart, cloudKind?.kind, signedIn])
   return (
     <>
-      {shared && others.length > 0 && (
-        <button
-          ref={stackButton}
-          type="button"
-          className={`mp-stack${stackDimmed(share.relay) ? " mp-stack--dim" : ""}`}
-          aria-label={`${others.length} ${others.length === 1 ? "person" : "people"} in this file`}
-          aria-haspopup="dialog"
-          aria-expanded={open === "people"}
-          data-pen="Pxomg"
-          onClick={() => setOpen((o) => (o === "people" ? null : "people"))}
-        >
-          {shown.map((p) => (
-            <PresenceAvatar key={p.id} label={p.label} color={p.color} />
-          ))}
-          {more > 0 && (
-            <span className="mp-stack__more" aria-hidden="true">
-              +{more}
-            </span>
-          )}
-        </button>
-      )}
+      <PresenceStack
+        model={model}
+        docKey={docKey}
+        {...(agents ? { agents } : {})}
+        {...(nodeName ? { nodeName } : {})}
+        {...(onRevealNodes ? { onRevealNodes } : {})}
+        {...(onPeopleOpenChange ? { onOpenChange: onPeopleOpenChange } : {})}
+      />
       {canShare && (
         <Button
           ref={shareButton}
-          variant={live ? "soft" : card ? "primary" : "secondary"}
+          variant={card ? "primary" : live ? "soft" : "secondary"}
           className={card ? "mp-share-button mp-share-button--card" : "mp-share-button"}
-          {...(live || !card ? { icon: <Icon name={live ? "radio" : "users"} size={16} /> } : {})}
+          {...(card ? {} : { icon: <Icon name={live ? "radio" : "users"} size={16} /> })}
           aria-haspopup="dialog"
           aria-expanded={open === "share"}
           data-shared={live || undefined}
           onClick={() => setOpen((o) => (o === "share" ? null : "share"))}
         >
-          {live ? "Sharing" : "Share"}
+          {live && !card ? "Sharing" : "Share"}
         </Button>
       )}
       {open === "share" && canShare && (
@@ -282,19 +264,6 @@ function ShareCluster({
           // Escape and Cancel keep everything: back to the popover.
           onCancel={() => setOpen("share")}
           onDone={() => setOpen("share")}
-        />
-      )}
-      {open === "people" && others.length > 0 && (
-        <PeoplePopover
-          model={model}
-          docKey={docKey}
-          anchor={stackButton.current}
-          {...(nodeName ? { nodeName } : {})}
-          {...(onRevealNodes ? { onRevealNodes } : {})}
-          onClose={() => {
-            close()
-            stackButton.current?.focus({ preventScroll: true })
-          }}
         />
       )}
     </>

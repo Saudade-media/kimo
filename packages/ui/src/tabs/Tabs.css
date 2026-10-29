@@ -3,6 +3,7 @@
  * frame: hug, radius-pill, padding [5, 12]
  *   └ Label font-sans, text-sm (12), weight 500, text-secondary
  * Active: fill bg-muted, label weight 600, text-primary.
+ * Board 48 §5 Tab · Agent (4dafLeX6R7): row gap 6, center › Label, Dot ellipse 6 × 6.
  *
  * Tabs: board 03 "Tabs" frames (Qlofe, f4IxO): fill_container, horizontal, gap 2,
  * padding [8, 8, 4, 8], alignItems center.
@@ -21,6 +22,8 @@
   box-sizing: border-box;
   display: inline-flex;
   flex: none;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   padding: 5px 12px;
   border: 0;
@@ -55,4 +58,11 @@
 
 .kimo-tab--active .kimo-tab__label {
   font-weight: var(--kimo-font-weight-semibold);
+}
+
+.kimo-tab__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }

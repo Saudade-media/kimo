@@ -90,18 +90,10 @@
 }
 
 /* ---------------------------------------------------------------------------------------------
- * Presence (topbar drag region, Agent Presence cIMyI). The region is justify end / center.
- */
-.agents-presence {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  -webkit-app-region: no-drag;
-}
-
-/* ---------------------------------------------------------------------------------------------
- * Session Popover (hIfmx): column, w 380, bg-overlay, stroke 1 border, radius-lg,
- * shadow 0 8 24 shadow-strong, clip.
+ * Board 48 §3 Changes Popover (AjVX67YAR9, board 21 hIfmx): column, w 380, bg-overlay, stroke 1
+ * border, radius-lg, shadow 0 8 24 shadow-strong, clip. It fits the window (12 from each edge:
+ * at most the window height minus 24; the script caps it to the room on its side): Header, Now
+ * and List Header stay, Ops scrolls, Actions stays pinned at the bottom.
  */
 .agents-session {
   box-sizing: border-box;
@@ -109,26 +101,20 @@
   display: flex;
   flex-direction: column;
   width: 380px;
-  max-height: calc(100vh - 80px);
-  overflow: hidden auto;
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
   border-radius: var(--kimo-radius-lg);
   background: var(--kimo-bg-overlay);
   box-shadow:
     inset 0 0 0 1px var(--kimo-border),
     0 8px 24px 0 var(--kimo-shadow-strong);
 }
-.agents-session__section {
-  display: flex;
-  flex-direction: column;
-}
-.agents-session__section + .agents-session__section {
-  box-shadow: inset 0 1px 0 0 var(--kimo-border);
-}
 
-/* Header (eLfuF): row, gap 10, padding [12, 12, 10, 12], center. */
+/* Header (HywGC2kJSP): row, gap 10, padding [12, 12, 10, 12], center. */
 .agents-session__header {
   box-sizing: border-box;
   display: flex;
+  flex: none;
   flex-direction: row;
   align-items: center;
   gap: 10px;
@@ -143,7 +129,7 @@
   gap: 2px;
   min-width: 0;
 }
-/* Name Row (PPHrc): row, gap 6, center. */
+/* Name Row (8P8D03WPy0): row, gap 6, center › Name text-base 600. */
 .agents-session__name-row {
   display: flex;
   flex-direction: row;
@@ -158,13 +144,6 @@
   line-height: 16px;
   white-space: nowrap;
 }
-.agents-session__version {
-  color: var(--kimo-text-tertiary);
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
-  line-height: 15px;
-  white-space: nowrap;
-}
 .agents-session__scope {
   overflow: hidden;
   color: var(--kimo-text-secondary);
@@ -175,10 +154,11 @@
   text-overflow: ellipsis;
 }
 
-/* Now (esKwa): row, gap 8, padding [8, 12], center, fill agent-soft. */
+/* Now (xq6PYm2V1w): row, gap 8, padding [8, 12], center, fill agent-soft › Spinner, Label. */
 .agents-session__now {
   box-sizing: border-box;
   display: flex;
+  flex: none;
   flex-direction: row;
   align-items: center;
   gap: 8px;
@@ -209,17 +189,13 @@
   line-height: 15px;
   white-space: nowrap;
 }
-.agents-session__now-tool {
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
-  line-height: 15px;
-  white-space: nowrap;
-}
 
-/* List Header (l7Meg6): row, gap 8, padding [10, 12, 4, 12], center. */
+/* List Header (GFYNEUyh4X): row, gap 8, padding [10, 12, 4, 12], center › Icon, Label (fill),
+   Link. */
 .agents-session__list-header {
   box-sizing: border-box;
   display: flex;
+  flex: none;
   flex-direction: row;
   align-items: center;
   gap: 8px;
@@ -232,6 +208,10 @@
   color: var(--kimo-accent-text);
 }
 .agents-session__list-label {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--kimo-text-primary);
   font-family: var(--kimo-font-sans);
   font-size: var(--kimo-text-sm);
@@ -240,32 +220,33 @@
   white-space: nowrap;
 }
 
-/* Ops (fM9DY): column, padding [2, 0, 8, 0]. */
+/* Ops (wxfmQxBUJ5): column, padding [2, 0, 8, 0], clip; scrolls between List Header and Actions. */
 .agents-session__ops {
   box-sizing: border-box;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   width: 100%;
+  min-height: 0;
   padding: 2px 0 8px 0;
+  overflow: hidden auto;
+}
+.agents-session__ops > * {
+  flex: none;
 }
 
-/* Actions (Z9p0c): row, gap 8, padding [10, 12], center, top stroke 1 border. */
+/* Actions (XxNDbDO8jZ): row, gap 8, padding [10, 12], justify end, center, top stroke 1 border. */
 .agents-session__actions {
   box-sizing: border-box;
   display: flex;
+  flex: none;
   flex-direction: row;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
   width: 100%;
   padding: 10px 12px;
   box-shadow: inset 0 1px 0 0 var(--kimo-border);
-}
-.agents-session__revision {
-  color: var(--kimo-text-tertiary);
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
-  line-height: 15px;
-  white-space: nowrap;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -634,24 +615,19 @@
   box-sizing: border-box;
   width: 100%;
 }
-/* Footer (ng9cE): row, gap 8, padding [10, 12], center, top stroke 1 border. */
+/* Footer (ng9cE): row, gap 8, padding [10, 12], center, top stroke 1 border. Board 48 §6 removed
+   the retention line ("last 500 calls · this file"): Export JSON keeps its place on the right. */
 .agents-activity__footer {
   box-sizing: border-box;
   display: flex;
   flex: none;
   flex-direction: row;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
   width: 100%;
   padding: 10px 12px;
   box-shadow: inset 0 1px 0 0 var(--kimo-border);
-}
-.agents-activity__retention {
-  color: var(--kimo-text-tertiary);
-  font-family: var(--kimo-font-mono);
-  font-size: var(--kimo-text-xs);
-  line-height: 15px;
-  white-space: nowrap;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -1230,8 +1206,8 @@
   line-height: 13px;
 }
 
-/* Popovers (board 24 › 5 · (d) N4cx0, (e) XCENV): column, bg-overlay, stroke 1 border,
-   radius-lg, shadow 0 8 24 shadow-strong. */
+/* Popover (board 24 › 5 · (e) XCENV): column, bg-overlay, stroke 1 border, radius-lg, shadow
+   0 8 24 shadow-strong. Board 48 §2's people popover replaced (d) N4cx0. */
 .agents-pop {
   box-sizing: border-box;
   z-index: 70;
@@ -1287,15 +1263,6 @@
   flex-direction: column;
   padding: 4px 0;
 }
-/* Agent row (OGJkT): row, gap 10, padding [8, 12], center. */
-.agents-pop__agent {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
 /* Request row (mywhw): row, gap 8, padding [8, 12], center, bottom stroke. */
 .agents-pop__request {
   box-sizing: border-box;
@@ -1331,16 +1298,6 @@
   line-height: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-/* Footer (PwFn6): row, gap 6, padding [8, 12, 4, 12], center, top stroke. */
-.agents-pop__footer {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px 4px;
-  border-top: 1px solid var(--kimo-border);
 }
 
 /* Board 37 F7 Banner · Error (DwSsz): Banner/Danger above the footer, padding [8, 12],

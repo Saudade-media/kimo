@@ -14,9 +14,9 @@
  *   panel-right / panel-right-open).
  *
  * Not in board 44's headers, kept so no behavior is lost: the save / sync status shows in the
- * left header only while it needs attention (anything but saved / synced), and the agent
- * presence chip (board 21) leads the People group. The window chrome (traffic-light inset and
- * drag region) lives in the left header until the tab strip owns it.
+ * left header only while it needs attention (anything but saved / synced). Board 48: agents join
+ * the People group's avatar stack instead of a presence chip. The window chrome (traffic-light
+ * inset and drag region) lives in the left header until the tab strip owns it.
  */
 import type { RecentFile } from "@kimo/platform"
 import type { SyncStatus } from "@kimo/sync"
@@ -250,7 +250,7 @@ interface RightCardHeaderProps {
    * page has no top-level frame (button at 40 %, "Page has no frames"); undefined = unknown.
    */
   previewTarget?: string | null
-  /** People: the agent presence chip (board 21) and the avatar stack + Share (board 41). */
+  /** People: the avatar stack with agents and people + Share (boards 41 and 48). */
   people?: ReactNode
   collapsed: boolean
 }

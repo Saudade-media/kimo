@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@kimo/design-tokens": "workspace:*",
-    "lucide-react": "^1.59.0",
+    "lucide-react": "^1.61.0",
     "react": "^19.3.1"
   },
   "devDependencies": {

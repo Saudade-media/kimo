@@ -400,8 +400,14 @@ export async function startDocumentHostService(
         .map((v) =>
           v.ref === null || viewers.get(v.ref)?.has(v.window) ? v : { ...v, ref: null },
         ),
+    // A selection in a served file or a joined room (#79) answers "I'll select it in Kimo".
     waitForSelection: (path, ms, signal) =>
-      windowViews.waitForSelection(path, ms, signal, (ref) => usable(manager.get(ref))),
+      windowViews.waitForSelection(
+        path,
+        ms,
+        signal,
+        (ref) => usable(manager.get(ref)) || rooms.list().some((d) => d.path === ref),
+      ),
   }
   const scene =
     options.scene && "render" in options.scene

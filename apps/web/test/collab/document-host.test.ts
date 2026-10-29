@@ -338,6 +338,8 @@ describe("rooms joined from a share link (#79)", () => {
       /** Opens the window's local files (the host holds them). */
       manager,
       conn,
+      /** The MCP document host (what the tools call). */
+      host: service.runtime.host,
       /** Another MCP client of the host. */
       connect: (client: string) =>
         service.runtime.connect({ client, label: client, transport: "socket" }),
@@ -500,7 +502,10 @@ describe("rooms joined from a share link (#79)", () => {
     expect(local.store.getNode("Frame00001")?.name).toBe("Home")
 
     // The person moves to the local file's tab: the agent that picked the room is asked, and the
-    // choices name the local file and the room apart.
+    // choices name the local file and the room apart. (The switch comes after the pick: the host
+    // stamps both in milliseconds.)
+    const pickedAt = Date.now()
+    await until(() => Date.now() > pickedAt)
     w.client.reportView(LOCAL, { ...ROOM_TAB, kind: "disk" })
     await until(async () => (await docOf(LOCAL))?.front === true)
     const asked = await pick()
@@ -514,6 +519,12 @@ describe("rooms joined from a share link (#79)", () => {
     // A new agent follows the front tab: the local file.
     const fresh = await pick(w.connect("cursor"))
     expect(fresh.ok && fresh.data.target).toMatchObject({ docId: localId, via: "window" })
+
+    // "I'll select it in Kimo" takes a selection the person makes in the room's tab.
+    const waiting = w.host.waitForSelection?.(null, 5000, new AbortController().signal)
+    w.client.reportView(roomKeyOf(room), ROOM_TAB)
+    w.client.reportView(roomKeyOf(room), { ...ROOM_TAB, selection: ["Frame00001"] })
+    expect(await waiting).toEqual({ docId: roomId, ids: ["Frame00001"] })
 
     await local.close()
     w.model.join.leave(edit)

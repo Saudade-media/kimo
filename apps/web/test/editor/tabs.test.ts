@@ -12,6 +12,7 @@ import {
   syncRoute,
   type TabsState,
 } from "../../src/tabs/model"
+import { routeTarget } from "../../src/tabs/useWindowTabs"
 import { docText, FILE, ROOT, setup, sleep, waitFor } from "../session-helpers"
 
 const disk = (ref: string) => ({ kind: "disk" as const, ref })
@@ -20,7 +21,11 @@ const ids = () => {
   return () => `t${++n}`
 }
 const refs = (s: TabsState) =>
-  s.tabs.map((t) => (t.target?.kind === "disk" ? t.target.ref : t.target ? t.target.id : "home"))
+  s.tabs.map((t) => {
+    const target = t.target
+    if (!target) return "home"
+    return target.kind === "disk" ? target.ref : target.kind === "file" ? target.id : target.link
+  })
 
 function open(...files: string[]): TabsState {
   const id = ids()
@@ -82,6 +87,20 @@ describe("tab model", () => {
     const restored = restoredTabs(["/a.kimo", "/b.kimo", "/a.kimo"], ids())
     expect(refs(restored)).toEqual(["/a.kimo", "/b.kimo"])
     expect(restored.active).toBeNull()
+  })
+
+  test("#76: a join link opens the room in a new tab next to the open files (desktop), never saved", () => {
+    const link = "kimo://join#relay.example/room/token/key"
+    const route = { name: "join" as const, link }
+    const target = routeTarget(route, { kind: "desktop" })
+    if (!target) throw new Error("a joined room is a tab on desktop")
+    const s = syncRoute(open("/a.kimo"), target, () => "t9")
+    expect(refs(s)).toEqual(["/a.kimo", link])
+    expect(s.active).toBe("t9")
+    // The link holds the room key: Last files never keeps it.
+    expect(savedTabs(s, () => true)).toEqual({ tabs: ["/a.kimo"], active: null })
+    // The web keeps its own join page.
+    expect(routeTarget(route, { kind: "browser" })).toBeUndefined()
   })
 
   test("the last-window record keeps the tabs of the most recent window, and old one-file records still restore", () => {

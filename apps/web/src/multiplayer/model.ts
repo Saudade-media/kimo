@@ -1154,7 +1154,12 @@ function createJoinModel(
         set({ steps: { reachedRelay: true, linkValid: false, decrypted: false } })
         if (!deps.join) throw new MultiplayerError("INTERNAL", "joining is not available here")
         const session = await deps.join(link)
-        if (!live()) return state
+        // Another join (a room's tab) took over: this room is left, not kept connected.
+        const superseded = () => {
+          void session.leave().catch(() => undefined)
+          return state
+        }
+        if (!live()) return superseded()
         const welcomed = session.provider.role !== null
         set({
           phase: "decrypting",
@@ -1184,7 +1189,7 @@ function createJoinModel(
           })
         }
         timers.clearTimeout(card)
-        if (!live()) return state
+        if (!live()) return superseded()
         set({
           phase: "joined",
           role: session.role,

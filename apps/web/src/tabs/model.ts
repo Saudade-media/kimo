@@ -6,10 +6,18 @@
  * The hash route stays the source of truth for what the window shows: {@link syncRoute} folds a
  * route change into the tabs (focus the file's tab, turn a new tab into the file, or add a tab).
  */
+import { joinPath } from "../join/link"
 import { matches } from "../shortcuts/shortcuts"
 
-/** What a tab shows: a `.kimo` on disk (`#/disk/<ref>`) or a browser library file (`#/file/:id`). */
-export type TabTarget = { kind: "disk"; ref: string } | { kind: "file"; id: string }
+/**
+ * What a tab shows: a `.kimo` on disk (`#/disk/<ref>`), a browser library file (`#/file/:id`) or,
+ * on desktop, a room joined from a link (`#/join/<link>`; the link holds the room key, so it is
+ * never saved).
+ */
+export type TabTarget =
+  | { kind: "disk"; ref: string }
+  | { kind: "file"; id: string }
+  | { kind: "join"; link: string }
 
 export interface Tab {
   /** Stable for the tab's life (React key, drag state). */
@@ -28,6 +36,7 @@ export const EMPTY_TABS: TabsState = { tabs: [], active: null }
 
 /** Identity of a target (two tabs never share one). */
 export function targetKey(t: TabTarget): string {
+  if (t.kind === "join") return `join:${t.link}`
   return t.kind === "disk" ? `disk:${t.ref}` : `file:${t.id}`
 }
 
@@ -38,6 +47,7 @@ export function sameTarget(a: TabTarget | null, b: TabTarget | null): boolean {
 /** The route path a tab shows (`home` is the Home section path for new tabs). */
 export function tabPath(t: TabTarget | null, home: string): string {
   if (!t) return home
+  if (t.kind === "join") return joinPath(t.link)
   return t.kind === "disk" ? `/disk/${encodeURIComponent(t.ref)}` : `/file/${t.id}`
 }
 

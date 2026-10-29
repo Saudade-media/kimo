@@ -14,6 +14,13 @@
   background: var(--kimo-bg-canvas);
 }
 
+/* Desktop: a joined room is a tab, so the stage fills the space below the tab strip. */
+.workspace__body > .join-stage {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
 .join-card {
   box-sizing: border-box;
   display: flex;

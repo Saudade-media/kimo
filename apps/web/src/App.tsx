@@ -108,7 +108,7 @@ export function App() {
 
   return (
     <SettingsOpenerContext.Provider value={opener}>
-      {routeTarget(route) !== undefined ? (
+      {routeTarget(route, platform) !== undefined ? (
         <div className="workspace">
           <TabStrip tabs={tabs} manager={manager} platform={platform} />
           <div className="workspace__body">

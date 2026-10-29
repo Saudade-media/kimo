@@ -12,13 +12,22 @@ import type { Route } from "../router"
 import type { TabsController } from "./controller"
 import { savedTabs, type TabTarget, tabCommandFor } from "./model"
 
-/** What a route shows as a tab: a file, Home (null), or nothing tabbed (undefined). */
-export function routeTarget(route: Route): TabTarget | null | undefined {
+/**
+ * What a route shows as a tab: a file, Home (null), or nothing tabbed (undefined). A joined room
+ * is a tab on desktop (a `kimo://join` link opens next to the open files); the web keeps its
+ * own join page.
+ */
+export function routeTarget(
+  route: Route,
+  platform: Pick<KimoPlatform, "kind">,
+): TabTarget | null | undefined {
   switch (route.name) {
     case "disk":
       return { kind: "disk", ref: route.ref }
     case "file":
       return { kind: "file", id: route.id }
+    case "join":
+      return platform.kind === "browser" ? undefined : { kind: "join", link: route.link }
     case "home":
       return null
     default:
@@ -45,7 +54,7 @@ export function useWindowTabs({
     [enabled, tabs, manager, platform],
   )
 
-  const target = routeTarget(route)
+  const target = routeTarget(route, platform)
   const key = target === undefined ? "" : target === null ? "home" : JSON.stringify(target)
   // biome-ignore lint/correctness/useExhaustiveDependencies: `key` identifies `target`.
   useEffect(() => {

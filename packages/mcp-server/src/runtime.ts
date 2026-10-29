@@ -83,6 +83,21 @@ export interface HostDocument {
    * window that joined it). Absent: assets are read beside the file.
    */
   readAsset?(src: string): Promise<Uint8Array | null>
+  /**
+   * Stores an image as `./assets/<key>` for a document with no folder on disk (a room's window
+   * keeps it and syncs it to the people in the room). Absent: assets are written beside the file.
+   */
+  writeAsset?(key: string, bytes: Uint8Array, entry: AssetEntry): Promise<HostResult<void>>
+}
+
+/** The manifest entry of an asset (`assets` header member, spec §12). */
+export interface AssetEntry {
+  mime: string
+  bytes: number
+  width?: number
+  height?: number
+  /** Full lowercase hex SHA-256 (a room syncs only entries that carry it). */
+  sha256?: string
 }
 
 export type HostResult<T> = { ok: true; value: T } | { ok: false; error: ToolError }

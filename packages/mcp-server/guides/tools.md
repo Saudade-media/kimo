@@ -44,7 +44,9 @@ Tool descriptions stay short (every model call carries them); the details are he
   problems in the changed layers: fix them next.
 - `kimo_import`: `svg` (editable vector layers), `image` (hashed into `assets/`, placed as an
   image-filled rect), `tokens-dtcg` / `tokens-css` (variables, merged). Exactly one of `path`
-  (absolute, allow-list applies) or `text`. Supports `dryRun` and `baseRevision`.
+  (absolute, allow-list applies) or `text`. Supports `dryRun` and `baseRevision`. What an SVG
+  import drops (an embedded `<image>`, `<text>`, a filter) is listed in `warnings`. In a shared
+  room an image syncs to everyone in it.
 - `kimo_assets`: `import` hashes an image or font into `assets/` and returns its `./assets/`
   reference for fills or fonts (no node is created; `kimo_import kind=image` places one).
   `fonts`: document, cached, local and (when allowed) Google families. Use `check_font` before

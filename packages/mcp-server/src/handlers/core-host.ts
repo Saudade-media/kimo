@@ -13,6 +13,7 @@ import type { DocStore, Revision } from "@kimo/editor-state"
 import { resolveAgainstFile } from "@kimo/platform"
 import type { DocRef, RevisionToken, ToolImage } from "../envelope"
 import {
+  type AssetEntry,
   type DocumentHost,
   type HostDocument,
   type HostResult,
@@ -59,6 +60,8 @@ export interface BackendDocument {
   shared?(): SharedRoomInfo | null
   /** `./assets/<key>` of a document with no folder on disk (see {@link HostDocument.readAsset}). */
   readAsset?(src: string): Promise<Uint8Array | null>
+  /** Stores `./assets/<key>` of a document with no folder on disk (see {@link HostDocument.writeAsset}). */
+  writeAsset?(key: string, bytes: Uint8Array, entry: AssetEntry): Promise<HostResult<void>>
 }
 
 /** The file operations the core needs (`@kimo/platform` `FilesApi` is assignable). */
@@ -142,6 +145,7 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
       shownInWindow: d.shownInWindow(),
       ...(shared ? { shared } : {}),
       ...(d.readAsset ? { readAsset: d.readAsset.bind(d) } : {}),
+      ...(d.writeAsset ? { writeAsset: d.writeAsset.bind(d) } : {}),
     }
   }
   const byHash = (h: string) => backend.list().find((d) => pathHash(d.path) === h)

@@ -7,7 +7,7 @@
  */
 import { referencedAssets, usedFontFamilies } from "@kimo/core-schema"
 import { type DocStore, isLocalOrigin } from "@kimo/editor-state"
-import type { NetworkProvider } from "@kimo/sync"
+import { type NetworkProvider, originalOrigin } from "@kimo/sync"
 import {
   type BlobManifestEntry,
   type BlobProgress,
@@ -139,27 +139,31 @@ export function createAssetSync(options: AssetSyncOptions): AssetSync {
     }
     const run = async () => {
       let total: AssetSyncUploadResult = { uploaded: 0, skipped: 0 }
-      do {
-        again = false
-        const allowed = await shareable()
-        const held = new Set(await assets.keys().catch(() => [] as string[]))
-        blocked = new Set(
-          [...Object.keys(manifestOf(store))].filter((k) => held.has(k) && !allowed.has(k)),
-        )
-        const result = await blobs.uploadMissing().catch((error: unknown) => {
-          options.onError?.("", error)
-          return { uploaded: 0, skipped: 0, failed: 0 }
-        })
-        total = {
-          uploaded: total.uploaded + result.uploaded,
-          skipped: total.skipped + result.skipped,
-        }
-      } while (again)
+      try {
+        do {
+          again = false
+          const allowed = await shareable()
+          const held = new Set(await assets.keys().catch(() => [] as string[]))
+          blocked = new Set(
+            [...Object.keys(manifestOf(store))].filter((k) => held.has(k) && !allowed.has(k)),
+          )
+          const result = await blobs.uploadMissing().catch((error: unknown) => {
+            options.onError?.("", error)
+            return { uploaded: 0, skipped: 0, failed: 0 }
+          })
+          total = {
+            uploaded: total.uploaded + result.uploaded,
+            skipped: total.skipped + result.skipped,
+          }
+        } while (again)
+      } finally {
+        // Cleared right at the last `again` check, not a tick later: a call after it starts a
+        // new run instead of joining one that is over (#89: an agent's room image never uploaded).
+        uploading = null
+      }
       return total
     }
-    uploading = run().finally(() => {
-      uploading = null
-    })
+    uploading = run()
     return uploading
   }
 
@@ -213,46 +217,49 @@ export function createAssetSync(options: AssetSyncOptions): AssetSync {
       return backfilling
     }
     const run = async () => {
-      do {
-        backfillAgain = false
-        const fills = new Map<string, string>()
-        const allowed = await shareable()
-        for (const [key, entry] of Object.entries(manifestOf(store))) {
-          if (entry.sha256 || !allowed.has(key)) continue
-          const bytes = await assets.bytes(key).catch(() => null)
-          if (!bytes) continue
-          const sha256 = await contentDigest(bytes)
-          if (sha256.slice(0, 16) === key.slice(0, 16)) fills.set(key, sha256)
-        }
-        const fonts = await fontEntries(manifestOf(store))
-        if (fills.size === 0 && Object.keys(fonts).length === 0) continue
-        // The manifest may have changed while hashing: merge into what it is now.
-        const current = manifestOf(store)
-        const next: Record<string, BlobManifestEntry> = { ...current }
-        let changed = false
-        for (const [key, sha256] of fills) {
-          const entry = current[key]
-          if (!entry || entry.sha256) continue
-          next[key] = { ...entry, sha256 }
-          changed = true
-        }
-        for (const [key, entry] of Object.entries(fonts)) {
-          if (current[key]?.sha256) continue
-          next[key] = { ...entry, ...current[key], sha256: entry.sha256 as string }
-          changed = true
-        }
-        if (changed)
-          store.loadDocument(
-            { ...store.toDocument(), assets: next } as ReturnType<DocStore["toDocument"]>,
-            { origin: "system", newEpoch: false, validate: false },
-          )
-      } while (backfillAgain)
+      try {
+        do {
+          backfillAgain = false
+          const fills = new Map<string, string>()
+          const allowed = await shareable()
+          for (const [key, entry] of Object.entries(manifestOf(store))) {
+            if (entry.sha256 || !allowed.has(key)) continue
+            const bytes = await assets.bytes(key).catch(() => null)
+            if (!bytes) continue
+            const sha256 = await contentDigest(bytes)
+            if (sha256.slice(0, 16) === key.slice(0, 16)) fills.set(key, sha256)
+          }
+          const fonts = await fontEntries(manifestOf(store))
+          if (fills.size === 0 && Object.keys(fonts).length === 0) continue
+          // The manifest may have changed while hashing: merge into what it is now.
+          const current = manifestOf(store)
+          const next: Record<string, BlobManifestEntry> = { ...current }
+          let changed = false
+          for (const [key, sha256] of fills) {
+            const entry = current[key]
+            if (!entry || entry.sha256) continue
+            next[key] = { ...entry, sha256 }
+            changed = true
+          }
+          for (const [key, entry] of Object.entries(fonts)) {
+            if (current[key]?.sha256) continue
+            next[key] = { ...entry, ...current[key], sha256: entry.sha256 as string }
+            changed = true
+          }
+          if (changed)
+            store.loadDocument(
+              { ...store.toDocument(), assets: next } as ReturnType<DocStore["toDocument"]>,
+              { origin: "system", newEpoch: false, validate: false },
+            )
+        } while (backfillAgain)
+      } catch (error) {
+        options.onError?.("", error)
+      } finally {
+        // Cleared right at the last check, like `uploading`.
+        backfilling = null
+      }
     }
     backfilling = run()
-      .catch((error: unknown) => options.onError?.("", error))
-      .finally(() => {
-        backfilling = null
-      })
     return backfilling
   }
 
@@ -301,9 +308,14 @@ export function createAssetSync(options: AssetSyncOptions): AssetSync {
           retryWanted()
         }),
         store.onChange((change) => {
+          const owned = own.size
           // Only edits made here (or the owner's file delta) make a key this replica's to share.
+          // That includes this device's agents and windows, whose edits the document host relays
+          // as `remote:mcp:…` (#89: an agent's image in a room never uploaded); a relay peer's
+          // edit arrives as `remote:mp:<room>`.
           if (
             isLocalOrigin(change.origin) ||
+            isLocalOrigin(originalOrigin(change.origin)) ||
             change.origin === "file" ||
             change.origin === "remote:file"
           ) {
@@ -315,10 +327,11 @@ export function createAssetSync(options: AssetSyncOptions): AssetSync {
               for (const key of referencedAssets(store.toHeader() as Record<string, unknown>))
                 own.add(key)
           }
-          if (change.header) {
-            retryWanted()
-            if (provider.connected) void backfill().then(uploadMissing)
-          }
+          if (change.header) retryWanted()
+          // A key first used here may upload too: its manifest entry can come in an earlier
+          // edit (`kimo_assets import`, then a fill that references it).
+          if ((change.header || own.size > owned) && provider.connected)
+            void backfill().then(uploadMissing)
         }),
       )
       // A face stored while shared (a Google fetch) joins the manifest and uploads.

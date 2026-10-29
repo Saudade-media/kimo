@@ -66,6 +66,11 @@ export const HOST_EVENTS = {
   roomSync: "kimo://room-sync",
   /** Host → the window holding a room: `{id, ref, src}`, answered with the RPC `room.asset`. */
   roomAsset: "kimo://room-asset",
+  /**
+   * Host → the window holding a room: `{id, ref, key, data, entry}`, an image an agent adds;
+   * answered with the RPC `room.assetStored`.
+   */
+  roomAssetPut: "kimo://room-asset-put",
 } as const
 
 interface TauriInternals {

@@ -166,7 +166,7 @@ describe("TabsController over a session manager", () => {
     await waitFor(() => manager.sessions().length === 0, 1000, "all closed")
   })
 
-  test("a cold start with a file and a link, or two links, gives each its tab in order, the last in front (a bug: only the last got one)", async () => {
+  test("a cold start with a file and a link, two links or two files gives each its tab in order, the last in front (a bug: only one got a tab)", async () => {
     const A = "kimo://join#relay.example/room-a/token/key"
     const Z = "kimo://join#relay.example/room-z/token/key"
     const cases: [OpenRequest[], string[]][] = [
@@ -184,9 +184,11 @@ describe("TabsController over a session manager", () => {
         ],
         [A, Z],
       ],
+      // `kimo-desktop a.kimo b.kimo`: the files arrive as one request.
+      [[{ source: "argv", refs: [FILE, B] }], [FILE, B]],
     ]
     for (const [requests, want] of cases) {
-      const { platform, manager } = await setup()
+      const { platform, manager } = await setup({ [FILE]: docText(), [B]: docText("Pricing") })
       for (const r of requests) platform.control.open(r)
       const tabs = new TabsController({ navigate: () => {}, homePath: () => "/" })
       live.push(tabs)

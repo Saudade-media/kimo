@@ -258,9 +258,17 @@ export async function openLaunchRequests(
     if (target !== undefined) tabs.route(target)
     deps.navigate(path)
   }
-  const opened = (session: FileDocumentSession, request: OpenRequest) => {
-    tabs.route({ kind: "disk", ref: session.ref })
-    onOpened(session, request)
+  // Every file of a request gets its tab too (`kimo-desktop a.kimo b.kimo` is one request), the
+  // last one in front.
+  const opened = (first: FileDocumentSession, request: OpenRequest) => {
+    const sessions = request.refs.flatMap((ref) => {
+      const s = manager.get(ref)
+      return s ? [s] : []
+    })
+    for (const s of sessions) tabs.route({ kind: "disk", ref: s.ref })
+    const front = sessions.at(-1) ?? first
+    tabs.route({ kind: "disk", ref: front.ref })
+    onOpened(front, request)
   }
   manager.install(opened)
   // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route, and a

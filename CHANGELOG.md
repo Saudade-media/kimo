@@ -14,6 +14,23 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1-beta.4] - 2026-10-29
+
+Rename files from Home and the editor, and reload a window with ⌘R. For installs on the Beta
+channel.
+
+### Added
+
+- ⌘R reloads the window. Your open tabs come back.
+- Kimo Cloud files on Home have a menu with Open and Rename. A rename shows for everyone in the
+  workspace.
+
+### Fixed
+
+- Renaming a file from Home works while it is open in a tab or used by an agent. Before, the old
+  name came back and a shared file stopped being shared.
+- Double-click the file name in the editor to rename the file.
+
 ## [1.2.1-beta.3] - 2026-10-29
 
 Agents can add images to shared files. For installs on the Beta channel.

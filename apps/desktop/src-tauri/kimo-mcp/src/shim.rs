@@ -71,6 +71,8 @@ enum Mode {
 }
 
 const MAX_HELD: usize = 1_000;
+/// Queued events handled per loop turn before `tick()`, so a flood never starves the parent check.
+const MAX_BATCH: usize = 256;
 
 struct Shim {
     opts: Options,
@@ -104,10 +106,11 @@ impl Shim {
     }
 
     fn try_connect(&mut self) -> Result<(), ConnectError> {
-        self.last_try = Instant::now();
         self.gen += 1;
-        let conn = connect(&self.paths, &self.hello, self.events.clone(), self.gen)?;
-        self.attach(conn);
+        let conn = connect(&self.paths, &self.hello, self.events.clone(), self.gen);
+        // Counted from the end: an app that never answers holds each try for the hello timeout.
+        self.last_try = Instant::now();
+        self.attach(conn?);
         Ok(())
     }
 
@@ -295,6 +298,8 @@ impl Shim {
         if let Mode::Connected(conn) = &mut self.mode {
             let _ = conn.send(&notification(BYE_METHOD));
         }
+        // Dropping the connection gives the bye a moment to go out, then closes it.
+        self.mode = Mode::Offline;
     }
 }
 
@@ -371,21 +376,28 @@ pub fn run(opts: Options) -> i32 {
 
     let mut last_parent_check = Instant::now();
     loop {
-        match rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(Event::Stdin(line)) => shim.on_agent_line(line),
-            Ok(Event::StdinEof) => {
-                shim.bye();
-                return 0;
-            }
-            Ok(Event::Socket(gen, line)) if gen == shim.gen => shim.on_app_line(line),
-            Ok(Event::SocketClosed(gen)) if gen == shim.gen => {
-                if matches!(shim.mode, Mode::Connected(_)) {
-                    shim.lost();
-                }
-            }
-            Ok(_) => {} // stale connection
-            Err(RecvTimeoutError::Timeout) => {}
+        let first = match rx.recv_timeout(Duration::from_millis(100)) {
+            Ok(ev) => Some(ev),
+            Err(RecvTimeoutError::Timeout) => None,
             Err(RecvTimeoutError::Disconnected) => return 0,
+        };
+        // Handle what is already queued before tick(): a reconnect try can block for the hello
+        // timeout, and a queued stdin EOF must not wait behind one try per earlier event.
+        for ev in first.into_iter().chain(rx.try_iter().take(MAX_BATCH)) {
+            match ev {
+                Event::Stdin(line) => shim.on_agent_line(line),
+                Event::StdinEof => {
+                    shim.bye();
+                    return 0;
+                }
+                Event::Socket(gen, line) if gen == shim.gen => shim.on_app_line(line),
+                Event::SocketClosed(gen) if gen == shim.gen => {
+                    if matches!(shim.mode, Mode::Connected(_)) {
+                        shim.lost();
+                    }
+                }
+                _ => {} // stale connection
+            }
         }
         shim.tick();
         if last_parent_check.elapsed() >= Duration::from_millis(PARENT_POLL_MS) {

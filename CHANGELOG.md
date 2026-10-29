@@ -19,6 +19,8 @@ the dates are those of the milestone commits.
 - Component instances an agent adds draw in full. Before, some stayed nearly invisible after
   their grow-in animation, until the file was reopened.
 - Layers an agent adds while the Kimo window is in the background appear without the grow-in.
+- The `kimo-mcp` shim exits when its agent session ends, even while the Kimo app is not
+  responding. Before, it waited until the app read from it again.
 
 ## [1.2.1-beta.1] - 2026-10-29
 

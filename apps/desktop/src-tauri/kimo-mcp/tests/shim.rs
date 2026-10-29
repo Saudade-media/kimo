@@ -239,6 +239,26 @@ mod unix {
     }
 
     #[test]
+    fn exits_on_eof_while_the_app_stops_reading() {
+        let home = tempfile::tempdir().unwrap();
+        let l = setup_home(home.path());
+        let (tx, app) = channel();
+        // A wedged app: it answers the hello, keeps the connection open and never reads again.
+        std::thread::spawn(move || {
+            let _ = tx.send(accept(&l, TOKEN));
+        });
+        let mut shim = Shim::spawn(home.path(), &[]);
+        let _app = app.recv_timeout(Duration::from_secs(5)).unwrap();
+        // 2 MiB, far past any socket buffer, so the shim's writes to the app stall.
+        let pad = "x".repeat(256 * 1024);
+        for id in 0..8 {
+            shim.send(json!({"jsonrpc":"2.0","id":id,"method":"tools/call",
+                "params":{"name":"kimo_apply_ops","arguments":{"pad":pad}}}));
+        }
+        assert_eq!(shim.close_and_wait(), 0);
+    }
+
+    #[test]
     fn reconnects_fails_inflight_and_replays_initialize() {
         let home = tempfile::tempdir().unwrap();
         let l = setup_home(home.path());

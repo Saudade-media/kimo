@@ -1002,6 +1002,7 @@ function EditorShell({
     runPrompt: agentPanel.runPrompt,
     openAgentTab,
     viewOnly,
+    ...(caps.canExport ? { onExport: openExport } : {}),
   })
   // Board 20 / 24 (m): window title ("<Agent> editing" while the built-in agent works); the
   // browser library's tab title.

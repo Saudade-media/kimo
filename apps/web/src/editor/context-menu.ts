@@ -64,6 +64,11 @@ interface CanvasMenuInput {
    * Duplicate, structure, lock or Delete.
    */
   viewOnly?: boolean
+  /**
+   * Board 47 §2: the Export dialog can open. Adds "Export…" (the dialog's shortcut) as its own
+   * group before Delete; the dialog exports the selection.
+   */
+  canExport?: boolean
 }
 
 /** What the board 27 §7 variable items can do for the current selection. */
@@ -114,6 +119,7 @@ export type CanvasMenuAction =
   | { kind: "delete" }
   | { kind: "bindVariable"; field: "visible" | "content" }
   | { kind: "detachVariables"; ids: string[] }
+  | { kind: "export" }
 
 export interface CanvasMenuRow {
   id: string
@@ -277,6 +283,10 @@ function fullCanvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
     },
   ]
   const vars = variableRows(i.variables, real)
+  // Board 47 §2: Export… as its own group before Delete.
+  const exportGroup: CanvasMenuRow[][] = i.canExport
+    ? [[{ id: "export", label: "Export…", meta: kbd("exportDialog"), action: { kind: "export" } }]]
+    : []
   const st = i.structure
   if (st) {
     const row = (
@@ -351,6 +361,7 @@ function fullCanvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
           lock,
         ],
         ...(vars.length ? [vars] : []),
+        ...exportGroup,
       ],
       danger,
     }
@@ -363,7 +374,7 @@ function fullCanvasMenuModel(i: CanvasMenuInput): CanvasMenuModel | null {
   return {
     agent: agentRows({ ...i, selection: sel }),
     standard,
-    structure: vars.length ? [vars] : [],
+    structure: [...(vars.length ? [vars] : []), ...exportGroup],
     danger,
   }
 }
@@ -407,4 +418,5 @@ const DEFAULT_KBD: Record<string, string> = {
   createComponent: "⌥⌘K",
   bringToFront: "⌘]",
   sendToBack: "⌘[",
+  exportDialog: "⇧⌘E",
 }

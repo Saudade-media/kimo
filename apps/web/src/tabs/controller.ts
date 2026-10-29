@@ -291,6 +291,8 @@ export class TabsController {
     if (!manager) return
     const open = new Set(manager.sessions())
     let state = this.state
+    /** The front tab's file moved (Save as, a rename from Home or another window). */
+    let frontMoved = false
     for (const tab of state.tabs) {
       const ref = diskRef(tab)
       if (!ref) continue
@@ -303,6 +305,7 @@ export class TabsController {
       }
       if (known && known.session.ref !== ref) {
         state = retarget(state, { kind: "disk", ref }, { kind: "disk", ref: known.session.ref })
+        if (tab.id === state.active) frontMoved = true
         continue
       }
       const s = manager.get(ref)
@@ -318,7 +321,7 @@ export class TabsController {
     if (state !== this.state) {
       const wasActive = this.state.active
       this.set(state)
-      if (wasActive !== state.active) {
+      if (wasActive !== state.active || frontMoved) {
         const tab = activeTab(state)
         this.deps.navigate(tabPath(tab?.target ?? null, this.deps.homePath()))
       }

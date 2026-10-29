@@ -11,6 +11,7 @@
  * - Save As: the room follows the session to its new file (the registry's file key moves), so
  *   the new file reopens shared; the file it came from is no longer the shared one. A read-only
  *   workspace copy (deleted workspace, removed member) saved elsewhere is a plain file: editable.
+ * - Rename: the room follows the file to its new name, open or not.
  * - Close: the room connection of the session ends with it.
  */
 import type { KimoDocument } from "@kimo/core-schema"
@@ -65,6 +66,13 @@ export function createSharedFileHooks(
       const reason = session.store.readOnly?.reason
       if (reason === CLOUD_DELETED_REASON || reason === CLOUD_REMOVED_REASON)
         session.store.setReadOnly(null)
+    },
+    async renamed(from, to) {
+      try {
+        await share.fileMoved(from, to)
+      } catch (error) {
+        options.onError?.(to, error)
+      }
     },
     closed(session) {
       const room = rooms.get(session) ?? share.roomOfFile(session.ref)

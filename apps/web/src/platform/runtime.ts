@@ -27,7 +27,7 @@ import type { MultiplayerModel } from "../multiplayer/model"
 import { createWindowMultiplayer } from "../multiplayer/window"
 import { isPairDeepLink, pairPath } from "../pair/link"
 import { windowTabs } from "../tabs/controller"
-import { takeLastWindow } from "./last-files"
+import { takeLastWindow, takeReloadTabs } from "./last-files"
 import {
   createSessionManager,
   type FileDocumentSession,
@@ -153,6 +153,8 @@ export async function createAppRuntime(
     .then(async (client) => {
       runtime.hostClient = client
       await attach(client)
+      // Renames go to the host, which may hold the file for another window or an agent.
+      if (client) manager.renameFile = (ref, name) => client.renameFile(ref, name)
       return client ? host.hostedSessionFactory(client) : undefined
     })
   const manager = createAppSessionManager(platform, undefined, factory)
@@ -213,6 +215,9 @@ function finishRuntime(
   // The desktop Settings window (`#/settings/<pane>`) edits settings only: it never opens files.
   if (settingsRoute()) return runtime
   manager.install(onOpened)
+  // ⌘R reloaded this window (desktop): its tabs come back before the route shows the front one.
+  const reloaded = platform.kind !== "browser" ? takeReloadTabs() : null
+  if (reloaded?.tabs.length) windowTabs().seed(reloaded.tabs)
   // Board 41 section 5: a `kimo://join#...` link (running app) opens the join route, and a
   // `kimo://pair#...` link the pairing route (ADR 0017).
   const linkRoute = (link: string) => (isPairDeepLink(link) ? pairPath(link) : joinPath(link))
@@ -238,7 +243,9 @@ function finishRuntime(
     // the web keeps the open file in the URL). Only the focused file opens now; the others open
     // when their tab is shown.
     const last =
-      platform.kind !== "browser" && platform.window.label === "main" ? takeLastWindow() : null
+      platform.kind !== "browser" && platform.window.label === "main" && !reloaded
+        ? takeLastWindow()
+        : null
     if (
       !requests.length &&
       platform.window.label === "main" &&

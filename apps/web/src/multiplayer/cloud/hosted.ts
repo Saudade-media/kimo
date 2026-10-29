@@ -121,6 +121,12 @@ export function withHostedFiles(
       const h = await files()
       return h ? h.localCopy(room) : base.localCopy(room)
     },
+    async renameFile(room, name) {
+      const workspaceId = fileOf(base.getState(), room)?.workspaceId ?? null
+      await base.renameFile(room, name)
+      // The host lists the new name too.
+      if (hosted) await hosted.refresh(workspaceId ?? undefined).catch(() => undefined)
+    },
     async closeFile(room) {
       const workspaceId = fileOf(base.getState(), room)?.workspaceId ?? null
       await base.closeFile(room)

@@ -575,6 +575,15 @@ export const SHORTCUT_LIST: readonly Shortcut[] = [
     group: "view",
     combos: [{ codes: ["Backslash"], mod: true, alt: false, shift: false, label: "\\" }],
   },
+  {
+    // Desktop (tabs/useWindowTabs.ts): reloads the window; its tabs come back. The web build
+    // leaves ⌘R to the browser.
+    id: "reloadWindow",
+    label: "Reload window",
+    scope: "global",
+    group: "view",
+    combos: [{ keys: ["r"], codes: ["KeyR"], mod: true, alt: false, shift: false, label: "R" }],
+  },
 
   // --- Agent & text ------------------------------------------------------------------------------
   {

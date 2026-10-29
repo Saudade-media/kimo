@@ -49,6 +49,7 @@ export class HostClient {
   private readonly syncListeners = new Set<(m: HostSyncMessage) => void>()
   private readonly shareListeners = new Map<string, Set<(snapshot: unknown) => void>>()
   private readonly agentStopListeners = new Set<(origin: string) => void>()
+  private readonly renamedListeners = new Set<(r: { from: string; to: string }) => void>()
   private readonly offs: (() => void)[] = []
 
   private constructor(readonly bridge: HostBridge) {}
@@ -117,6 +118,9 @@ export class HostClient {
       }),
       await b.listen<{ origin: string }>(HOST_EVENTS.agentStop, ({ origin }) => {
         for (const l of [...this.agentStopListeners]) l(origin)
+      }),
+      await b.listen<{ from: string; to: string }>(HOST_EVENTS.renamed, (r) => {
+        for (const l of [...this.renamedListeners]) l(r)
       }),
       await b.listen<{ from: string; msg: HostSyncMessage }>(HOST_EVENTS.sync, ({ msg }) => {
         for (const l of [...this.syncListeners]) l(msg)
@@ -214,6 +218,17 @@ export class HostClient {
     return () => this.agentStopListeners.delete(l)
   }
 
+  /** The host renamed a file (`renameFile`, from any window). */
+  onRenamed(l: (r: { from: string; to: string }) => void): () => void {
+    this.renamedListeners.add(l)
+    return () => this.renamedListeners.delete(l)
+  }
+
+  /** Renames a file in the host: a document it holds moves with it. Resolves with the new ref. */
+  async renameFile(ref: string, name: string): Promise<string> {
+    return (await this.call<{ ref: string }>("renameFile", { ref, name })).ref
+  }
+
   /** `kimo_focus` requests for documents this window shows (the editor selects / zooms). */
   onFocus(l: (f: HostFocusRequest) => void): () => void {
     this.focusListeners.add(l)
@@ -272,6 +287,7 @@ export class HostedDocumentSession extends FileDocumentSession {
   private mirrored: SessionState | null = null
   private readonly hostListeners = new Set<Listener>()
   private hostOffs: (() => void)[] = []
+  private stateOff: (() => void) | null = null
   private local = false
 
   constructor(
@@ -295,9 +311,13 @@ export class HostedDocumentSession extends FileDocumentSession {
     }
     try {
       const r = await this.client.call<{ state: SessionState }>("open", { ref: this.ref, options })
+      this.stateOff = this.client.onSessionState(this.ref, (s) => this.mirror(s))
       this.hostOffs.push(
-        this.client.onSessionState(this.ref, (s) => this.mirror(s)),
+        () => this.stateOff?.(),
         this.client.onReady(() => void this.reattach()),
+        this.client.onRenamed(({ from, to }) => {
+          if (from === this.ref) void this.follow(to)
+        }),
       )
       this.mirror(r.state, false)
       if (r.state.phase !== "failed-load") await this.attachSync()
@@ -327,6 +347,15 @@ export class HostedDocumentSession extends FileDocumentSession {
     await p.attach(this.store)
     // The initial state is not an undoable edit of this window.
     this.store.clearHistory("user")
+  }
+
+  /** The host renamed this file (here, from Home or another window): the replica follows it. */
+  private async follow(to: FileRef): Promise<void> {
+    if (this.local || to === this.ref) return
+    this.stateOff?.()
+    this.moveRef(to)
+    this.stateOff = this.client.onSessionState(to, (s) => this.mirror(s))
+    await this.reattach()
   }
 
   /** After a host reload: open again and resync (the replica keeps unsent edits). */
@@ -388,6 +417,12 @@ export class HostedDocumentSession extends FileDocumentSession {
   override async save(): Promise<void> {
     if (this.local) return super.save()
     await this.command("save")
+  }
+  override async rename(name: string): Promise<FileRef> {
+    if (this.local) return super.rename(name)
+    const to = await this.client.renameFile(this.ref, name)
+    await this.follow(to)
+    return to
   }
   override async saveAs(): Promise<FileRef | null> {
     if (this.local) return super.saveAs()

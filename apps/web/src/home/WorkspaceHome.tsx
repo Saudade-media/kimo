@@ -22,7 +22,12 @@ import { createFile } from "../lib/files"
 import { Icon } from "../lib/icons"
 import { roomKeyOf } from "../multiplayer/backend"
 import type { CloudFile } from "../multiplayer/cloud/types"
-import { fileStatus, liveWorkspaces, personName } from "../multiplayer/cloud/workspace-view"
+import {
+  fileStatus,
+  liveWorkspaces,
+  personName,
+  renameWorkspaceFile,
+} from "../multiplayer/cloud/workspace-view"
 import { libraryKeyOf } from "../multiplayer/library"
 import type { SharedSession } from "../multiplayer/share"
 import { NewWorkspaceWizard } from "../multiplayer/ui/NewWorkspace"
@@ -35,7 +40,15 @@ import { modifiedLabel } from "../platform/format"
 import { useOpenSettings, useOptionalRuntime } from "../platform/runtime"
 import { diskPath, type HomeSection, homeSectionPath, navigate } from "../router"
 import { countLabel } from "./model"
-import { NavRow } from "./parts"
+import {
+  HomeMenu,
+  MENU_ICONS,
+  type MenuAt,
+  menuAtCursor,
+  menuFromButton,
+  NavRow,
+  RenameField,
+} from "./parts"
 
 // --- Sidebar -------------------------------------------------------------------------------------
 
@@ -185,6 +198,8 @@ export function WorkspaceFiles({
 }) {
   // Board 46 4A shows the list; the toggle keeps its own choice for workspaces.
   const [view, setView] = useState<RecentView>("list")
+  const [menu, setMenu] = useState<{ file: CloudFile; at: MenuAt } | null>(null)
+  const [renaming, setRenaming] = useState<string | null>(null)
   const store = useWorkspaceStore()
   const state = useWorkspacesState(store)
   const runtime = useOptionalRuntime()
@@ -197,6 +212,11 @@ export function WorkspaceFiles({
     if (store && live)
       void store.refreshWorkspace(workspaceId, { background: true }).catch(() => undefined)
   }, [store, workspaceId, live])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset when another workspace shows
+  useEffect(() => {
+    setMenu(null)
+    setRenaming(null)
+  }, [workspaceId])
   const files = state?.files[workspaceId]?.files ?? null
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -234,6 +254,35 @@ export function WorkspaceFiles({
       toast({ tone: "danger", text: failureText(`open ${f.name}`, e) })
     }
   }
+  // For everyone in the workspace, and this device's copy so the editor shows it too.
+  const rename = async (f: CloudFile, next: string) => {
+    try {
+      await renameWorkspaceFile(
+        store,
+        (ref, name) => runtime?.manager.rename(ref, name) ?? Promise.resolve(ref),
+        f.room,
+        next,
+      )
+    } catch (e) {
+      toast({ tone: "danger", text: failureText(`rename ${fileName(f)}`, e) })
+    }
+  }
+  const onMenu = (f: CloudFile, at: MenuAt) => setMenu({ file: f, at })
+  const nameSlot = (f: CloudFile) =>
+    renaming === f.room
+      ? {
+          nameSlot: (
+            <RenameField
+              name={fileName(f)}
+              onCommit={(next) => {
+                setRenaming(null)
+                void rename(f, next)
+              }}
+              onCancel={() => setRenaming(null)}
+            />
+          ),
+        }
+      : {}
 
   return (
     <>
@@ -256,6 +305,10 @@ export function WorkspaceFiles({
                   name={fileName(f)}
                   info={[editedBy(f), modifiedLabel(f.updatedAt, now)].filter(Boolean).join(" · ")}
                   onClick={() => void open(f)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    onMenu(f, menuAtCursor(e))
+                  }}
                 />
               ))}
               {["pad-a", "pad-b", "pad-c"].slice(0, 4 - row.length).map((k) => (
@@ -279,11 +332,48 @@ export function WorkspaceFiles({
                 modified={modifiedLabel(f.updatedAt, now)}
                 gitLabel={status.label}
                 gitTone={status.tone}
-                onOpen={() => void open(f)}
+                menuOpen={menu?.file.room === f.room}
+                {...nameSlot(f)}
+                onOpen={() => {
+                  if (renaming !== f.room) void open(f)
+                }}
+                onMenu={(e) => onMenu(f, menuFromButton(e.currentTarget))}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  onMenu(f, menuAtCursor(e))
+                }}
               />
             )
           })}
         </div>
+      )}
+      {menu && (
+        <HomeMenu
+          at={menu.at}
+          width={232}
+          label={`${fileName(menu.file)} actions`}
+          items={[
+            {
+              id: "open",
+              label: "Open",
+              icon: MENU_ICONS.open,
+              meta: "↵",
+              run: () => void open(menu.file),
+            },
+            "divider",
+            {
+              id: "rename",
+              label: "Rename",
+              icon: MENU_ICONS.rename,
+              run: () => {
+                // Rename happens in a list row.
+                setView("list")
+                setRenaming(menu.file.room)
+              },
+            },
+          ]}
+          onClose={() => setMenu(null)}
+        />
       )}
     </>
   )

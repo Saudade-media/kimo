@@ -176,6 +176,72 @@ describe("document host mp.* RPC", () => {
   })
 })
 
+describe("renaming a file the document host holds", () => {
+  test("another window renames it: the host's document and the open window follow, edits land in the new file, the old name never comes back, and its room follows (a bug: Home renamed behind the host)", async () => {
+    const platform = createMemoryPlatform({
+      pid: 7106,
+      files: { [REF]: fileText() },
+      settings: { "files.autosave": false, "multiplayer.relayUrl": relay.url },
+    })
+    const net = createMemoryBridgeNetwork()
+    net.commands.set("kimo_mcp_policies_get", () => ({}))
+    const service = await startDocumentHostService({
+      platform,
+      bridge: net.bridge(HOST_LABEL),
+      version: "0.0.0-test",
+      relay: false,
+      validate: validateInput as never,
+    })
+    // Window 1 shows the file; window 2 is Home, where the rename starts.
+    const windows = await Promise.all(
+      ["editor-1", "editor-2"].map(async (label) => {
+        const client = await HostClient.connect(net.bridge(label), 1000)
+        if (!client) throw new Error("no host")
+        const manager = createSessionManager({
+          platform,
+          createSession: hostedSessionFactory(client),
+          renameFile: (ref, name) => client.renameFile(ref, name),
+        })
+        return { client, manager }
+      }),
+    )
+    const [editor, home] = windows as [(typeof windows)[0], (typeof windows)[0]]
+    const session = (await editor.manager.open(REF)) as HostedDocumentSession
+    const backend = createHostShareBackend(editor.client)
+    const model = createMultiplayerModel({ backend, settings: platform.settings })
+    const doc = model.document(REF)
+    doc.subscribe(() => {})
+    await until(() => doc.getState().share.status === "not-shared")
+    await doc.startSharing()
+    await until(() => doc.getState().share.status === "live")
+    const room = doc.getState().share.room as string
+
+    const to = await home.manager.rename(REF, "About")
+    const moved = "/Users/me/site/About.kimo"
+    expect(to).toBe(moved)
+    expect(await platform.files.stat(REF)).toBeNull()
+    await until(() => session.ref === moved)
+    expect(editor.manager.get(moved)).toBe(session)
+    expect(service.multiplayer?.share.roomOfFile(moved)).toBe(room)
+
+    session.store.apply(
+      { op: "update", id: "Frame00001", set: { name: "After the rename" } },
+      { origin: "user" },
+    )
+    await until(
+      () => service.manager.get(moved)?.store.getNode("Frame00001")?.name === "After the rename",
+    )
+    await session.flush()
+    expect((await platform.files.readText(moved)).text).toContain("After the rename")
+    expect(await platform.files.stat(REF)).toBeNull()
+
+    await service.multiplayer?.share.stopSharing(room)
+    await session.close()
+    await service.dispose()
+    for (const w of windows) w.client.dispose()
+  }, 30_000)
+})
+
 describe("Kimo Cloud workspace files in the document host", () => {
   test("a bound file reopens in its room in any window, old rooms re-share, and a deleted workspace's copy is read-only until Save a copy", async () => {
     const OLD = "/Users/me/site/old.kimo"

@@ -1,14 +1,16 @@
 /**
  * Board 44 §5: wires this window's tabs to the App root: the runtime (sessions), the route,
- * ⌘T / ⌘W / ⌘⇧] / ⌘⇧[ / ⌘1…⌘9 (keys, and File › New tab / Close tab from the native menu) and
- * the Last files record (General › On launch, desktop).
+ * ⌘T / ⌘W / ⌘⇧] / ⌘⇧[ / ⌘1…⌘9 (keys, and File › New tab / Close tab from the native menu), ⌘R
+ * (desktop: reload the window, tabs kept) and the Last files record (General › On launch,
+ * desktop).
  */
 import type { KimoPlatform } from "@kimo/platform"
 import { useEffect } from "react"
 import { isUntitledRef } from "../platform/contract"
-import { noteWindowTabs } from "../platform/last-files"
+import { noteReloadTabs, noteWindowTabs } from "../platform/last-files"
 import type { FileSessionManager } from "../platform/session"
 import type { Route } from "../router"
+import { matches } from "../shortcuts/shortcuts"
 import type { TabRooms, TabsController } from "./controller"
 import { savedTabs, type TabTarget, tabCommandFor } from "./model"
 
@@ -85,6 +87,23 @@ export function useWindowTabs({
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
   }, [enabled, tabs])
+
+  // ⌘R (desktop): reloads the window. Pending edits are written first; the tabs come back.
+  useEffect(() => {
+    if (!enabled || platform.kind === "browser") return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat || !matches("reloadWindow", e)) return
+      e.preventDefault()
+      e.stopPropagation()
+      noteReloadTabs(savedTabs(tabs.getState(), (r) => !isUntitledRef(r)))
+      void manager
+        .flushAll()
+        .catch(() => undefined)
+        .finally(() => location.reload())
+    }
+    window.addEventListener("keydown", onKey, true)
+    return () => window.removeEventListener("keydown", onKey, true)
+  }, [enabled, tabs, manager, platform])
 
   // macOS menu bar: File › New tab ⌘T / Close tab ⌘W.
   useEffect(() => {

@@ -18,7 +18,7 @@ import type {
   WorkspaceSummary,
 } from "./types"
 import { INTERVAL_LABEL, money, shortDate, storageText } from "./view"
-import type { WorkspacesState } from "./workspaces"
+import type { WorkspaceStore, WorkspacesState } from "./workspaces"
 
 const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w)
 
@@ -32,6 +32,32 @@ export function workspaceFileName(ref: string, header: { meta?: { name?: unknown
   if (ref.startsWith("kimo-lib:")) return "Untitled"
   const last = ref.split(/[\\/]/).pop() ?? ref
   return (last.replace(/\.(kimo|kimoz|pen)$/i, "") || "Untitled").slice(0, 64)
+}
+
+/** The workspace room `ref` (a file on this device) is bound to, else null. */
+export function boundRoomOf(state: WorkspacesState | null, ref: string): string | null {
+  for (const b of Object.values(state?.bindings ?? {}))
+    if (b.fileKey === ref && b.ended === null) return b.room
+  return null
+}
+
+/**
+ * Renames a workspace file for everyone in the workspace, then this device's copy of it, so the
+ * editor shows the new name (its room follows the copy). Resolves with the copy's new path, or
+ * null when this device has no copy on disk.
+ */
+export async function renameWorkspaceFile(
+  store: WorkspaceStore,
+  renameCopy: (ref: string, name: string) => Promise<string>,
+  room: string,
+  name: string,
+): Promise<string | null> {
+  const stem = name.trim().replace(/\.kimoz?$/i, "")
+  await store.renameFile(room, stem)
+  const copy = store.getState().bindings[room]
+  if (!copy?.fileKey || copy.ended !== null || !/^(\/|[A-Za-z]:[\\/])/.test(copy.fileKey))
+    return null
+  return renameCopy(copy.fileKey, stem)
 }
 
 /** "maya.rossi@studio.design" → "Maya Rossi"; "sam@acme.co" → "Sam". */

@@ -146,6 +146,11 @@ export interface SessionManagerOptions {
   sessionFactory?: Promise<SessionManagerOptions["createSession"]>
   /** Multiplayer hooks (docs/spec/multiplayer.md §16.3). Settable later: `manager.shared`. */
   shared?: SharedFileHooks | null
+  /**
+   * M5 desktop editor windows: the document host renames files (it may hold one for another
+   * window or an agent). Settable later: `manager.renameFile`. Default: this manager renames.
+   */
+  renameFile?: ((ref: FileRef, name: string) => Promise<FileRef>) | null
 }
 
 /**
@@ -173,6 +178,24 @@ export interface SharedFileHooks {
    * reads `to`.
    */
   moved?(session: FileDocumentSession, from: FileRef, to: FileRef): Promise<void>
+  /**
+   * The file at `from` was renamed to `to` (open or not): a shared file's room follows it, so it
+   * reopens shared under its new name.
+   */
+  renamed?(from: FileRef, to: FileRef): Promise<void>
+}
+
+/**
+ * `ref` renamed to `name` in its folder. The extension stays when `name` has none (the rename
+ * field selects only the stem). Throws for an empty name or one with a path separator.
+ */
+export function renamedRef(ref: FileRef, name: string): FileRef {
+  const next = name.trim()
+  if (!next || /[\\/]/.test(next)) throw new Error("A name can't be empty or contain / or \\.")
+  const ext = fileNameOf(ref).match(/\.kimoz?$/i)?.[0] ?? ".kimo"
+  const dir = dirnameOf(ref)
+  const sep = dir.includes("\\") && !dir.includes("/") ? "\\" : "/"
+  return `${dir.replace(/[\\/]+$/, "")}${sep}${/\.kimoz?$/i.test(next) ? next : `${next}${ext}`}`
 }
 
 const READER_FORMAT = majorMinor(FORMAT_VERSION)
@@ -1010,6 +1033,58 @@ export class FileDocumentSession implements DocumentSession {
     return target
   }
 
+  /**
+   * Renames the file in its folder and keeps the session on it (Home › Rename, the editor's file
+   * name). Pending edits are written first, the file moves without overwriting (`EXISTS` when the
+   * name is taken), and the lease, a shared file's room and Recents follow.
+   */
+  async rename(name: string): Promise<FileRef> {
+    const oldRef = this._ref
+    if (this.untitled) throw new Error("Save the file before renaming it.")
+    if (this.holder) throw new Error(`${this.fileName} is open in ${this.holder.appLabel}.`)
+    const target = renamedRef(oldRef, name)
+    if (target === oldRef) return oldRef
+    const { platform } = this
+    await this.flush()
+    let lease: Lease | null = null
+    if (platform.capabilities.leases !== "none") {
+      const r = await platform.leases.acquire(target).catch(() => null)
+      if (r && !r.ok) throw new Error(`${fileNameOf(target)} is locked by ${r.holder.appLabel}`)
+      if (r?.ok) lease = r.lease
+    }
+    // Nothing may write the old name once the file moved (an autosave would bring it back).
+    await this.teardownProvider()
+    try {
+      await platform.files.rename(oldRef, target)
+    } catch (e) {
+      if (lease) await platform.leases.release(lease).catch(() => {})
+      await this.attachProvider()
+      this.emit()
+      throw e
+    }
+    if (lease) {
+      if (this.lease) await platform.leases.release(this.lease).catch(() => {})
+      this.lease = lease
+    }
+    // A shared file's room follows before the session reads the file again.
+    await this.manager.shared?.renamed?.(oldRef, target).catch(() => undefined)
+    this._ref = target
+    this.toasts = []
+    await this.attachProvider()
+    void platform.recents.removeFile(oldRef).catch(() => {})
+    void platform.recents.noteOpened(target).catch(() => {})
+    this.manager.rekey(this, oldRef)
+    this.emit()
+    return target
+  }
+
+  /** @internal The file moved to `to` without this session writing it (a hosted replica). */
+  protected moveRef(to: FileRef): void {
+    const from = this._ref
+    this._ref = to
+    this.manager.rekey(this, from)
+  }
+
   async flush(): Promise<void> {
     if (this.untitled) {
       await this.writeUntitledSnapshot()
@@ -1328,6 +1403,8 @@ export class FileSessionManager implements SessionManager {
   lastFolder: FileRef | null = null
   /** Multiplayer hooks (set by the share layer once it exists). */
   shared: SharedFileHooks | null
+  /** See {@link SessionManagerOptions.renameFile}. */
+  renameFile: ((ref: FileRef, name: string) => Promise<FileRef>) | null
 
   constructor(options: SessionManagerOptions) {
     this.platform = options.platform
@@ -1352,6 +1429,7 @@ export class FileSessionManager implements SessionManager {
     this.hideOwn = options.hideOwnRecovery ?? true
     this.saveRetryMs = options.saveRetryMs
     this.shared = options.shared ?? null
+    this.renameFile = options.renameFile ?? null
   }
 
   /** Flush-before-close and launch requests (call once per window). */
@@ -1459,6 +1537,23 @@ export class FileSessionManager implements SessionManager {
 
   private changed(): void {
     for (const l of [...this.listeners]) l()
+  }
+
+  /**
+   * Renames file `ref` in its folder (Home › Rename, the editor's file name): an open session
+   * moves with it and a shared file's room follows. Resolves with the new ref.
+   */
+  async rename(ref: FileRef, name: string): Promise<FileRef> {
+    // A desktop window knows whether the document host renames once it answered.
+    if (this.sessionFactory) await this.sessionFactory
+    if (this.renameFile) return this.renameFile(ref, name)
+    const open = this.get(ref)
+    if (open) return open.rename(name)
+    const target = renamedRef(ref, name)
+    if (target === ref) return ref
+    await this.platform.files.rename(ref, target)
+    await this.shared?.renamed?.(ref, target).catch(() => undefined)
+    return target
   }
 
   /** @internal Session moved to a new ref (Save as). */

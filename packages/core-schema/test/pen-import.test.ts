@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
+  createExpandedView,
+  documentLookup,
   importPen,
   isPenDocument,
   type PenDocument,
@@ -325,6 +327,131 @@ describe(".pen import", () => {
     expect(vars.x?.value).toBe(4)
     expect(vars["x-2"]?.value).toBe(3)
     expect(validate(r.doc).errors).toEqual([])
+  })
+
+  test("a ref with its own children keeps them, and instances of it reach into them", () => {
+    // pen.dev: a ref's `children` replace its component's, and live in the ref's own scope, so
+    // an instance of a reusable ref addresses them with plain ids (no instance boundary).
+    const r = importPen({
+      version: "2.19",
+      children: [
+        { type: "frame", id: "Pnl01", reusable: true, layout: "vertical", fill: "#111111" },
+        {
+          type: "frame",
+          id: "Btn01",
+          reusable: true,
+          children: [{ type: "text", id: "Lbl01", content: "Click", fill: "#FFFFFF" }],
+        },
+        {
+          type: "ref",
+          id: "Ins01",
+          ref: "Pnl01",
+          reusable: true,
+          width: 300,
+          children: [
+            {
+              type: "ref",
+              id: "Crd01",
+              ref: "Pnl01",
+              children: [{ type: "text", id: "Txt01", content: "Inside", fill: "#FFFFFF" }],
+            },
+            {
+              type: "ref",
+              id: "Chk01",
+              ref: "Btn01",
+              children: [{ type: "text", id: "Lbl02", content: "Checking", fill: "#999999" }],
+            },
+          ],
+        },
+        { type: "ref", id: "Use01", ref: "Ins01", descendants: { Txt01: { content: "Changed" } } },
+      ],
+    } as PenDocument)
+    const n = nodes(r)
+    const id = (p: string) => r.ids.get(p) as string
+    expect(validate(r.doc).errors).toEqual([])
+    expect(n[id("Ins01")]).toMatchObject({
+      type: "frame",
+      component: true,
+      w: 300,
+      fill: "#111111",
+    })
+    expect(n[id("Crd01")]).toMatchObject({ type: "frame", parent: id("Ins01") })
+    expect(n[id("Txt01")]).toMatchObject({ parent: id("Crd01"), content: "Inside" })
+    // The component's own label is replaced, not kept next to the ref's.
+    expect(n[id("Lbl02")]).toMatchObject({ parent: id("Chk01"), content: "Checking" })
+    const view = createExpandedView(documentLookup(r.doc))
+    const kids = (v: string): string[] => [...view.children(v)].flatMap((c) => [c, ...kids(c)])
+    const texts = kids(id("Use01")).map((c) => view.getNode(c)?.content)
+    expect(texts.filter(Boolean)).toEqual(["Changed", "Checking"])
+    expect(view.issues()).toEqual([])
+  })
+
+  test("children given to a nested instance, and paths into a nested ref's replacement", () => {
+    const r = importPen({
+      version: "2.19",
+      children: [
+        {
+          type: "frame",
+          id: "Btn01",
+          reusable: true,
+          children: [{ type: "text", id: "Lbl01", content: "Click", fill: "#FFFFFF" }],
+        },
+        {
+          type: "frame",
+          id: "Row01",
+          reusable: true,
+          children: [
+            { type: "ref", id: "Nst01", ref: "Btn01" },
+            { type: "text", id: "Val01", content: "Value", fill: "#FFFFFF" },
+          ],
+        },
+        {
+          type: "frame",
+          id: "Crd01",
+          reusable: true,
+          children: [
+            {
+              type: "ref",
+              id: "Row02",
+              ref: "Row01",
+              descendants: {
+                Val01: {
+                  type: "frame",
+                  id: "Rep01",
+                  children: [{ type: "text", id: "Txt02", content: "A", fill: "#FFFFFF" }],
+                },
+              },
+            },
+          ],
+        },
+        // pen.dev crosses the ref that authored the replacement; Kimo's key does not.
+        {
+          type: "ref",
+          id: "Use02",
+          ref: "Crd01",
+          descendants: { "Row02/Txt02": { content: "B" } },
+        },
+        {
+          type: "ref",
+          id: "Use03",
+          ref: "Row01",
+          descendants: {
+            Nst01: { children: [{ type: "text", id: "Txt03", content: "Own", fill: "#FFFFFF" }] },
+          },
+        },
+      ],
+    } as PenDocument)
+    const id = (p: string) => r.ids.get(p) as string
+    expect(validate(r.doc).errors).toEqual([])
+    expect(nodes(r)[id("Use02")]?.overrides).toEqual({
+      [id("Txt02")]: { set: { content: "B" } },
+    })
+    const view = createExpandedView(documentLookup(r.doc))
+    const texts = (v: string): unknown[] =>
+      [...view.children(v)].flatMap((c) => [view.getNode(c)?.content, ...texts(c)])
+    expect(texts(id("Use02")).filter(Boolean)).toEqual(["Click", "B"])
+    expect(texts(id("Use03")).filter(Boolean)).toEqual(["Own", "Value"])
+    expect(view.issues()).toEqual([])
   })
 
   test("order keys are increasing fractional-index heads", () => {

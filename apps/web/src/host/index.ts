@@ -36,7 +36,7 @@ const browserScene = {
 }
 
 /** SVG vector import for `kimo_import kind=svg` (the editor's svg-import, board 19). */
-const svgImporter = (
+export const svgImporter = (
   text: string,
   t: {
     parent: string | null
@@ -54,7 +54,9 @@ const svgImporter = (
     at: { x: t.x, y: t.y },
     parent: t.parent,
   })
-  return { ops: r.ops, rootId: r.rootId }
+  // What it left out (an embedded <image>, a <text>, a script) reaches the agent as warnings.
+  const dropped = { unsupported: r.stats.unsupported, blocked: r.stats.blocked }
+  return { ops: r.ops, rootId: r.rootId, dropped }
 }
 
 /** The platform font sources (local → cache → Google per settings) for the host's scene. */

@@ -39,6 +39,7 @@ import { readGuide as builtinGuide } from "../guides"
 import type { WireOp } from "../ops"
 import { toolByName } from "../registry"
 import {
+  type AssetEntry,
   authorize,
   type HandlerOutput,
   type HostDocument,
@@ -135,7 +136,15 @@ export type SvgImporter = (
     newId: () => string
     colorVariables: Record<string, string>
   },
-) => { ops: Op[]; rootId: string }
+) => {
+  ops: Op[]
+  rootId: string
+  /**
+   * What the import left out: elements it cannot convert, by name (`image`: 1), and removals
+   * for safety (scripts, handlers, external refs).
+   */
+  dropped?: { unsupported: Record<string, number>; blocked: readonly string[] }
+}
 
 export interface StylePreset {
   name: string
@@ -197,6 +206,38 @@ interface UndoRecord {
 }
 
 const asLocal = (o: ToolContext["origin"]) => o as LocalOrigin
+
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`
+
+/**
+ * What an SVG import left out, as warnings and a summary line (the editor's import popover says
+ * "Unsupported: 1 image (dropped)"). Without them an import that kept nothing reads as a success.
+ */
+function svgDropped(dropped: ReturnType<SvgImporter>["dropped"]): {
+  warnings: ToolWarning[]
+  line: string
+} {
+  const warnings: ToolWarning[] = []
+  const parts: string[] = []
+  for (const [name, n] of Object.entries(dropped?.unsupported ?? {})) {
+    if (!(n > 0)) continue
+    parts.push(plural(n, name))
+    warnings.push({
+      code: "SVG_UNSUPPORTED",
+      message: `Dropped ${plural(n, `<${name}> element`)}: SVG import can't convert ${n === 1 ? "it" : "them"}.`,
+      ...(name === "image" ? { fix: "Import the image file itself with kind=image." } : {}),
+    })
+  }
+  const blocked = dropped?.blocked ?? []
+  if (blocked.length) {
+    parts.push(plural(blocked.length, "unsafe part"))
+    warnings.push({
+      code: "SVG_BLOCKED",
+      message: `Removed ${plural(blocked.length, "unsafe part")} (scripts, handlers, external refs): ${blocked.slice(0, 5).join(", ")}${blocked.length > 5 ? ", ..." : ""}.`,
+    })
+  }
+  return { warnings, line: parts.length ? ` Dropped ${parts.join(", ")} (see warnings).` : "" }
+}
 
 /** `Name (d_…)`, and for a room joined from a share link where it syncs and the role. */
 function docLine(x: {
@@ -293,6 +334,8 @@ interface CommitMeta {
   render?: boolean
   /** Board 31 "Check": list problems in the layers this edit changed (`data.problems`). */
   check?: boolean
+  /** Added to the result's warnings. */
+  warnings?: ToolWarning[]
 }
 
 export function createToolHandlerMap(
@@ -397,7 +440,7 @@ export function createToolHandlerMap(
     ).size
     const counts = { inserted, updated, deleted }
     const undoToken = dryRun ? undefined : recordUndo(d.store, asLocal(ctx.origin))
-    const warnings: ToolWarning[] = toWarnings(r.warnings)
+    const warnings: ToolWarning[] = [...toWarnings(r.warnings), ...(meta.warnings ?? [])]
     const changed = touchedIds(r.ops)
     const extra: Parameters<typeof success>[2] = {
       doc: refreshRef(ctx, d.ref.id, d.ref),
@@ -1201,7 +1244,7 @@ export function createToolHandlerMap(
         (d.store.toHeader().variables ?? {}) as Record<string, Record<string, unknown>>,
       ))
         if (v.type === "color" && typeof v.value === "string") colors[n] = v.value
-      let r: { ops: Op[]; rootId: string }
+      let r: ReturnType<SvgImporter>
       try {
         r = options.svgImport(text, {
           parent,
@@ -1215,13 +1258,15 @@ export function createToolHandlerMap(
       } catch (e) {
         return fail({ code: "INVALID_INPUT", message: `SVG rejected: ${errorMessage(e)}` })
       }
+      const dropped = svgDropped(r.dropped)
       return commit(ctx, d, input, r.ops, {
         label,
         created: [{ key: typeof input.name === "string" ? input.name : r.rootId, id: r.rootId }],
         render: false,
+        warnings: dropped.warnings,
         data: () => ({ rootId: r.rootId }),
         summary: (c) =>
-          `${c.dryRun ? "Dry run: would import" : "Imported"} SVG (${c.inserted} layers).`,
+          `${c.dryRun ? "Dry run: would import" : "Imported"} SVG (${c.inserted} layers).${dropped.line}`,
       })
     }
     // image
@@ -1229,6 +1274,8 @@ export function createToolHandlerMap(
     const mime = sniffImage(bytes)
     if (!mime)
       return fail({ code: "INVALID_INPUT", message: "Not a PNG, JPEG, GIF, WebP or AVIF image." })
+    // Refused before the asset is stored, not only at commit.
+    if (d.store.readOnly) return fail(readOnlyError(d))
     const asset = await putAsset(ctx, d, bytes, mime, input.dryRun === true)
     if (!asset.ok) return fail(asset.error)
     const size = imageSize(bytes, mime) ?? { w: 100, h: 100 }
@@ -1279,7 +1326,10 @@ export function createToolHandlerMap(
     return any ? { x: Math.round(maxX + 80), y: Math.round(minY) } : { x: 0, y: 0 }
   }
 
-  /** Writes a content-addressed asset next to the document and returns its manifest op. */
+  /**
+   * Stores a content-addressed asset (next to the document, or through the window of a room)
+   * and returns its manifest op.
+   */
   async function putAsset(
     ctx: ToolContext,
     d: HostDocument,
@@ -1290,23 +1340,41 @@ export function createToolHandlerMap(
     { ok: true; ref: string; key: string; headerOps: Op[] } | { ok: false; error: ToolError }
   > {
     const ext = EXTENSION[mime] ?? "bin"
-    const key = `${sha256Hex(bytes).slice(0, 16)}.${ext}`
+    const digest = sha256Hex(bytes)
+    const key = `${digest.slice(0, 16)}.${ext}`
     const ref = `./assets/${key}`
     if (d.ref.path.startsWith("untitled:"))
       return {
         ok: false,
         error: { code: "UNSUPPORTED", message: "Save the document before importing assets." },
       }
-    if (isRoomPath(d.ref.path))
+    const entry: AssetEntry = { mime, bytes: bytes.length }
+    if (mime.startsWith("image/")) {
+      const s = imageSize(bytes, mime)
+      if (s) Object.assign(entry, { width: s.w, height: s.h })
+    }
+    if (d.writeAsset) {
+      // Only images reach the people in a room: a font someone adds stays on their device.
+      if (!mime.startsWith("image/"))
+        return {
+          ok: false,
+          error: { code: "UNSUPPORTED", message: "Only images can be added to a shared room." },
+        }
+      entry.sha256 = digest
+      if (!dryRun) {
+        const w = await d.writeAsset(key, bytes, entry)
+        if (!w.ok) return w
+      }
+    } else if (isRoomPath(d.ref.path))
       return {
         ok: false,
         error: {
           code: "UNSUPPORTED",
-          message: "Images can't be imported into a shared room yet.",
+          message: "Images can't be imported into a shared room in this host.",
           suggestion: "Ask the person to add it in Kimo.",
         },
       }
-    if (!dryRun) {
+    else if (!dryRun) {
       const w = await ctx.host.writeFile(
         joinPath(joinPath(dirname(d.ref.path), "assets"), key),
         bytes,
@@ -1316,14 +1384,8 @@ export function createToolHandlerMap(
     }
     const manifest = (d.store.toHeader().assets ?? {}) as Record<string, unknown>
     const headerOps: Op[] = []
-    if (!Object.hasOwn(manifest, key)) {
-      const entry: Record<string, unknown> = { mime, bytes: bytes.length }
-      if (mime.startsWith("image/")) {
-        const s = imageSize(bytes, mime)
-        if (s) Object.assign(entry, { width: s.w, height: s.h })
-      }
+    if (!Object.hasOwn(manifest, key))
       headerOps.push({ op: "setHeader", set: { assets: { ...manifest, [key]: entry } } })
-    }
     return { ok: true, ref, key, headerOps }
   }
 

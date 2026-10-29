@@ -6,16 +6,23 @@
  * `kimo-room:<room>`): an agent's edit lands on the replica, reaches the window's store and goes
  * to the relay from there. Only the room id, the relay host and the role cross the bridge.
  *
- * - Host ({@link createHostRooms}): `room.attach`, `room.detach`, `room.claims` and `room.asset`;
- *   the replicas as backend documents. A view link's replica is read-only, so edits fail with
- *   READ_ONLY. The agent area claims the window's store sees (its peers', its own agents') gate
- *   MCP edits on the replica (spec §15.11).
+ * - Host ({@link createHostRooms}): `room.attach`, `room.detach`, `room.claims`, `room.asset` and
+ *   `room.assetStored`; the replicas as backend documents. A view link's replica is read-only, so
+ *   edits fail with READ_ONLY. The agent area claims the window's store sees (its peers', its own
+ *   agents') gate MCP edits on the replica (spec §15.11).
  * - Window ({@link serveRoomsToHost}): attaches each room the window keeps joined (again after a
- *   host restart), detaches it when the room is left, sends its claims and answers asset reads
- *   for renders. It never takes an update from the host while the room is read-only.
+ *   host restart), detaches it when the room is left, sends its claims, answers asset reads for
+ *   renders and stores the images agents add (#89). It never takes an update or an image from
+ *   the host while the room is read-only.
  */
 import { type ClaimRecord, claimsFor, createDocStore, type DocStore } from "@kimo/editor-state"
-import { type BackendDocument, isRoomPath } from "@kimo/mcp-server"
+import {
+  type AssetEntry,
+  type BackendDocument,
+  type HostResult,
+  isRoomPath,
+  type ToolError,
+} from "@kimo/mcp-server"
 import {
   base64ToBytes,
   bytesToBase64,
@@ -26,6 +33,7 @@ import {
   WindowSyncProvider,
 } from "@kimo/sync"
 import { isRoomId } from "@kimo/sync/mp"
+import { MAX_ASSET_BYTES, sniffImage } from "../lib/assets"
 import { roomKeyOf } from "../multiplayer/backend"
 import type { JoinedRoom } from "../multiplayer/model"
 import { HOST_EVENTS, HOST_LABEL, type HostBridge } from "./bridge"
@@ -50,6 +58,9 @@ const ENDED_REASON = "the room's connection ended"
 /** A room asset read waits this long for the window, then the render goes without it. */
 const ASSET_TIMEOUT_MS = 5000
 const ASSET_SRC = /^\.\/assets\/([^\\/]+)$/
+/** An image an agent adds waits this long for the window to store it (up to 20 MB, hashed). */
+const ASSET_PUT_TIMEOUT_MS = 30_000
+const ASSET_KEY = /^[0-9a-f]{16}\.[a-z0-9]{1,8}$/
 
 /** Most claim records a window sends per room, and ids per record (a bridge payload guard). */
 const MAX_CLAIM_RECORDS = 256
@@ -74,6 +85,31 @@ function claimRecordsOf(value: unknown): ClaimRecord[] {
     })
   }
   return out
+}
+
+/** Why the window did not store an image an agent added (the `room.assetStored` error). */
+type AssetPutFailure = "gone" | "read-only" | "too-large" | "rejected" | "timeout" | "failed"
+
+/** The tool error for an {@link AssetPutFailure} (an unknown one reads as `failed`). */
+function assetPutError(reason: unknown): HostResult<never> {
+  const error = (code: ToolError["code"], message: string) => ({
+    ok: false as const,
+    error: { code, message },
+  })
+  switch (reason as AssetPutFailure) {
+    case "read-only":
+      return error("READ_ONLY", "This room is read-only.")
+    case "too-large":
+      return error("INVALID_INPUT", `Images over ${MAX_ASSET_BYTES / 2 ** 20} MB can't be added.`)
+    case "rejected":
+      return error("INVALID_INPUT", "The room refused the image: it is too large or unreadable.")
+    case "gone":
+      return error("DOCUMENT_NOT_OPEN", "No window holds this room anymore.")
+    case "timeout":
+      return error("TIMEOUT", "The room's window did not store the image in time.")
+    default:
+      return error("INTERNAL", "The room's window could not store the image.")
+  }
 }
 
 /** The attach payload, checked: a room ref, a host name, a role (a bad role reads as view). */
@@ -172,6 +208,35 @@ export function createHostRooms(options: HostRoomsOptions): HostRooms {
       bridge.emitTo(from, HOST_EVENTS.roomAsset, { id, ref: e.ref, src }).catch(() => finish(null))
     })
 
+  // Images an agent adds (#89): the window that holds the room stores them in the room's asset
+  // store, whose asset sync uploads them, and answers with `room.assetStored`.
+  const storing = new Map<string, { from: string; resolve(error: unknown): void }>()
+  const writeAsset = (e: RoomEntry, key: string, bytes: Uint8Array, entry: AssetEntry) =>
+    new Promise<HostResult<void>>((resolve) => {
+      const from = e.holders[0]?.from
+      if (!from) return resolve(assetPutError("gone"))
+      if (!ASSET_KEY.test(key)) return resolve(assetPutError("rejected"))
+      if (bytes.length > MAX_ASSET_BYTES) return resolve(assetPutError("too-large"))
+      const id = `rp${(++seq).toString(36)}`
+      const timer = setTimeout(() => finish("timeout"), ASSET_PUT_TIMEOUT_MS)
+      const finish = (error: unknown) => {
+        clearTimeout(timer)
+        storing.delete(id)
+        resolve(error === null ? { ok: true, value: undefined } : assetPutError(error))
+      }
+      storing.set(id, { from, resolve: finish })
+      const { width, height } = entry
+      bridge
+        .emitTo(from, HOST_EVENTS.roomAssetPut, {
+          id,
+          ref: e.ref,
+          key,
+          data: bytesToBase64(bytes),
+          ...(width && height ? { width, height } : {}),
+        })
+        .catch(() => finish("gone"))
+    })
+
   /** Per room, one change at a time (an attach and a detach may arrive together). */
   const queues = new Map<string, Promise<unknown>>()
   const serial = <T>(ref: string, fn: () => Promise<T>): Promise<T> => {
@@ -231,6 +296,7 @@ export function createHostRooms(options: HostRoomsOptions): HostRooms {
       return info ? { relay: info.relay, role: info.role } : null
     },
     readAsset: (src) => readAsset(e, src),
+    writeAsset: (key, bytes, entry) => writeAsset(e, key, bytes, entry),
   })
 
   const addViewer = (ref: string, from: string) => {
@@ -322,6 +388,13 @@ export function createHostRooms(options: HostRoomsOptions): HostRooms {
       p.resolve(typeof args.data === "string" ? base64ToBytes(args.data) : null)
       return { ok: true }
     },
+    /** The window stored an image an agent added (`error` null), or why it did not. */
+    async "room.assetStored"(args, from) {
+      const p = storing.get(String(args.id ?? ""))
+      if (!p || p.from !== from) return { ok: false }
+      p.resolve(args.error ?? null)
+      return { ok: true }
+    },
   }
 
   return {
@@ -334,6 +407,7 @@ export function createHostRooms(options: HostRoomsOptions): HostRooms {
     async dispose() {
       for (const off of offs) void off.then((o) => o())
       for (const p of [...pending.values()]) p.resolve(null)
+      for (const p of [...storing.values()]) p.resolve("gone")
       for (const e of [...rooms.values()]) {
         await e.provider?.detach()
         e.store.destroy()
@@ -394,6 +468,31 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
           .catch(() => undefined),
       )
     }),
+    listen<{ id: string; ref: string; key: string; data: string; width?: number; height?: number }>(
+      HOST_EVENTS.roomAssetPut,
+      ({ id, ref, key, data, width, height }) => {
+        const store = async (): Promise<AssetPutFailure | null> => {
+          const room = served.get(ref)?.room
+          if (!room) return "gone"
+          // Like an edit from the host: a read-only room (a view link) takes no image.
+          if (room.session.store.readOnly) return "read-only"
+          if (!ASSET_KEY.test(key) || typeof data !== "string") return "rejected"
+          const bytes = base64ToBytes(data)
+          if (bytes.length > MAX_ASSET_BYTES) return "too-large"
+          if (!sniffImage(bytes)) return "rejected"
+          // The header's size, so the store skips a decode (it checks the pixel cap itself).
+          const size =
+            typeof width === "number" && typeof height === "number" ? { width, height } : {}
+          // The room's asset sync uploads it once the agent's edit references it.
+          const info = await room.session.assets.putKey(key, bytes, size)
+          return info ? null : "rejected"
+        }
+        void store()
+          .catch((): AssetPutFailure => "failed")
+          .then((error) => client.call("room.assetStored", { id, error }))
+          .catch(() => undefined)
+      },
+    ),
   ])
   const hub = new HostSyncHub({
     send: (msg) =>

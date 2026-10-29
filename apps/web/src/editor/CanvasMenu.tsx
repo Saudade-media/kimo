@@ -47,6 +47,8 @@ interface CanvasMenuDeps {
   openAgentTab(): void
   /** Board 41 section 9: a View link; the menu only offers Copy. */
   viewOnly?: boolean
+  /** Board 47 §2: opens the Export dialog with the selection (absent: no Export… row). */
+  onExport?: () => void
 }
 
 interface Open {
@@ -86,6 +88,7 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
       structure: structureState(session),
       variables: variableState(session, m3),
       viewOnly: deps.current.viewOnly === true,
+      canExport: deps.current.onExport !== undefined,
     })
     const host = container.current?.getBoundingClientRect()
     if (model && host)
@@ -110,6 +113,7 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
           structure: structureState(session),
           variables: variableState(session, m3),
           viewOnly: deps.current.viewOnly === true,
+          canExport: deps.current.onExport !== undefined,
         })
         if (model) setOpen({ at: { x, y }, model })
       }),
@@ -243,6 +247,10 @@ export function useCanvasMenu(d: CanvasMenuDeps): {
         if (ops.length && session.apply(ops, "Delete")) ui.select([])
         return
       }
+      case "export":
+        // Board 47 §2: the Export dialog exports the canvas selection.
+        deps.current.onExport?.()
+        return
     }
   }, [])
 

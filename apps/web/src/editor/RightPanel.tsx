@@ -11,7 +11,7 @@
 import type { NodeData } from "@kimo/editor-state"
 import type { LayoutResult } from "@kimo/layout"
 import type { IconProvider } from "@kimo/renderer"
-import { Badge, EmptyState, Tabs } from "@kimo/ui"
+import { Badge, EmptyState, PropSection, Tabs } from "@kimo/ui"
 import { type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useCropSession } from "../canvas/crop"
 import { type CodeExportPreset, CodeTab } from "../code-tab"
@@ -425,6 +425,14 @@ function DesignTab({
               <ThemeSection m3={m3} id={single} />
             )}
           </InertSections>
+          {/* Board 47 §1: the selection's Export, the last section; outside the inert wrapper so
+            a view link that may export still can. */}
+          {onExport && (
+            <PropSection
+              title="Export"
+              action={{ label: "Export…", icon: <Icon name="plus" size={14} />, onClick: onExport }}
+            />
+          )}
         </OverrideFieldsContext.Provider>
       </div>
     </PanelContext.Provider>

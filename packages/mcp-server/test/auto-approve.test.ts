@@ -263,6 +263,31 @@ describe("auto-approve in the host runtime", () => {
     await host.dispose()
   })
 
+  test("a write to a read-only document (a view link's room) fails READ_ONLY before anyone is asked", async () => {
+    const { host } = setup()
+    // The person's file, saved, then open read-only.
+    const person = host.runtime.connect(
+      { client: "kimo", label: "Kimo", transport: "in-process" },
+      { policy: policy({ level: "edit+delete", files: ["/w/**"], autoApprove: true }) },
+    )
+    const created = await person.call("kimo_create", { path: "/w/a.kimo", template: "web" })
+    const made = created.result as { ok: boolean; data: { doc: { id: string } } }
+    expect(made.ok).toBe(true)
+    expect((await person.call("kimo_save", { docId: made.data.doc.id })).result.ok).toBe(true)
+    expect((await person.call("kimo_close", { docId: made.data.doc.id })).result.ok).toBe(true)
+    const conn = host.runtime.connect({ client: "codex", label: "Codex", transport: "socket" })
+    const opened = await conn.call("kimo_open", { path: "/w/a.kimo", readOnly: true })
+    const docId = (opened.result as { data: { doc: { id: string } } }).data.doc.id
+    // A delete asks (confirmDestructive); on a read-only document it is refused anyway.
+    const call = conn.call("kimo_apply_ops", { docId, ops: [{ op: "delete", id: "DesktopFrm1" }] })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(host.runtime.approvals.pending()).toHaveLength(0)
+    const out = await call
+    expect(out.result.ok).toBe(false)
+    if (!out.result.ok) expect(out.result.errors[0]?.code).toBe("READ_ONLY")
+    await host.dispose()
+  })
+
   test("hard limits still apply: batch size and path checks are errors, not prompts", async () => {
     const { host } = setup()
     const conn = host.runtime.connect(

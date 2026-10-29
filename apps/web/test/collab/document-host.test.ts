@@ -8,10 +8,15 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { claimsFor, createEmptyDocument, serialize, YjsDocStore } from "@kimo/editor-state"
-import type { ToolResult } from "@kimo/mcp-server"
+import { ASK_POLICY, type ClientPolicy, type ToolResult } from "@kimo/mcp-server"
 import { validateInput } from "@kimo/mcp-server/server"
+import { sha256Hex } from "@kimo/platform"
 import { createMemoryPlatform } from "@kimo/platform/memory"
+import { createAgentsController } from "../../src/agents"
+import { hostRefOf } from "../../src/editor/agents"
+import { createRoomSession } from "../../src/editor/session"
 import {
+  createDesktopMcpHost,
   createHostedWorkspaceFiles,
   createHostShareBackend,
   createMemoryBridgeNetwork,
@@ -274,10 +279,10 @@ describe("rooms joined from a share link (#79)", () => {
   }
 
   /** A desktop window that joins links, its document host and an MCP client of the host. */
-  async function roomWindow(pid: number) {
+  async function roomWindow(pid: number, policies: Record<string, ClientPolicy> = {}) {
     const platform = createMemoryPlatform({ pid, settings: { "files.autosave": false } })
     const net = createMemoryBridgeNetwork()
-    net.commands.set("kimo_mcp_policies_get", () => ({}))
+    net.commands.set("kimo_mcp_policies_get", () => policies)
     const service = await startDocumentHostService({
       platform,
       bridge: net.bridge(HOST_LABEL),
@@ -322,6 +327,7 @@ describe("rooms joined from a share link (#79)", () => {
         .result
     return {
       client,
+      conn,
       model,
       state,
       docOf,
@@ -413,6 +419,60 @@ describe("rooms joined from a share link (#79)", () => {
     await w.dispose()
     await owner.service.stopSharing(room)
     await owner.service.stopSharing(viewRoom)
+  }, 30_000)
+
+  test("with Ask before changes on, an agent's edit in a room asks in the room's tab and shows who made it (#86: it timed out)", async () => {
+    const owner = makePeer()
+    const shared = makeTarget("/Users/owner/site.kimo", ["Rect000001", "Rect000002"])
+    const { room } = await owner.service.startSharing(shared, { relayUrl: relay.url })
+    const edit = (await owner.service.mintLink(room, { role: "edit", ttlSeconds: null })).link
+    await owner.service.connect(shared, room)
+
+    // Settings › Ask before changes is on for Claude Code.
+    const w = await roomWindow(7106, { "claude-code": ASK_POLICY })
+    expect((await w.model.join.join(edit)).phase).toBe("joined")
+    await until(async () => (await w.docOf(roomKeyOf(room))) !== undefined)
+    const docId = (await w.docOf(roomKeyOf(room)))?.doc.id as string
+
+    // The room's tab gets the Agents UI of a file, keyed on the room.
+    const joined = w.model.join.roomFor(edit)
+    if (!joined) throw new Error("no room")
+    const tab = createRoomSession(joined, "site")
+    const ref = hostRefOf(null, tab)
+    if (!ref) throw new Error("a room tab has no Agents UI")
+    const mcp = await createDesktopMcpHost({
+      bridge: w.client.bridge,
+      client: w.client,
+      os: "macos",
+    })
+    const agents = createAgentsController({
+      host: mcp,
+      fileId: (await sha256Hex(ref)).slice(0, 16),
+      filePath: ref,
+      store: tab.store,
+    })
+
+    // A delete asks: the prompt shows in the room's tab, and approving it lands the edit.
+    const call = w.conn.call("kimo_apply_ops", {
+      docId,
+      ops: [{ op: "delete", id: "Rect000002" }],
+    })
+    await until(() => agents.state.prompt !== null)
+    await agents.answer(agents.state.prompt?.request.id as string, "once")
+    expect((await call).result.ok).toBe(true)
+    await until(() => shared.store.getNode("Rect000002") === undefined)
+
+    // The room's Activity and avatar stack name the agent that made it.
+    await until(() =>
+      agents.state.activity.some((e) => e.kind === "edit" && e.origin === w.conn.origin),
+    )
+    expect(agents.state.chips.map((c) => c.label)).toContain("Claude Code")
+
+    agents.dispose()
+    mcp.dispose()
+    w.model.join.leave(edit)
+    await w.dispose()
+    await owner.service.stopSharing(room)
   }, 30_000)
 
   test("a view and an edit link to one room share its session: closing one tab keeps the other live (a bug: it detached the room)", async () => {

@@ -247,7 +247,8 @@ function refreshRef(ctx: ToolContext, docId: string, fallback: DocRef): DocRef {
   return r.ok ? r.value.ref : fallback
 }
 
-function readOnlyError(d: HostDocument): ToolError {
+/** READ_ONLY for an edit to `d` (a view link's room points to an edit link). */
+export function readOnlyError(d: HostDocument): ToolError {
   return {
     code: "READ_ONLY",
     message: `This document is read-only (${d.store.readOnly?.reason ?? "read-only"}).`,

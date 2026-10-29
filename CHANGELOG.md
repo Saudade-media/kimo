@@ -14,11 +14,28 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1-beta.2] - 2026-10-29
+
+Shared files open as tabs, agents can work in them, and a new right card. For installs on the
+Beta channel.
+
+### Added
+
+- Export any layer: the right panel has an Export section for the selection, and the layer menu
+  has Export… (⇧⌘E).
+- Agents connected over MCP see files opened from a share link, each with its own id, role and
+  selection. A view link stays read-only for agents.
+
+### Changed
+
+- The right card shows agents and people in one avatar stack, with one popover for everyone. The
+  changes popover keeps Undo all and Keep in reach and fits the window.
+- A share link opens the file in a new tab of the open window, next to your files. It stays
+  connected while its tab is open.
+- The web app lives at relay.getkimo.design. app.getkimo.design redirects there.
+
 ### Fixed
 
-- Component instances an agent adds draw in full. Before, some stayed nearly invisible after
-  their grow-in animation, until the file was reopened.
-- Layers an agent adds while the Kimo window is in the background appear without the grow-in.
 - The `kimo-mcp` shim exits when its agent session ends, even while the Kimo app is not
   responding. Before, it waited until the app read from it again.
 
@@ -42,6 +59,12 @@ Kimo Cloud workspaces, for installs on the Beta channel.
   removing someone takes effect at once. Kimo Cloud is no longer described as end-to-end
   encrypted; self-hosted relays still are.
 - Shorter wording across the app.
+
+### Fixed
+
+- Component instances an agent adds draw in full. Before, some stayed nearly invisible after
+  their grow-in animation, until the file was reopened.
+- Layers an agent adds while the Kimo window is in the background appear without the grow-in.
 
 ## [1.2.1-beta.0] - 2026-10-28
 

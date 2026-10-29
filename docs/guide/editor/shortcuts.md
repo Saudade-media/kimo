@@ -108,6 +108,7 @@ Every binding in Kimo, from the same table the app's **Keyboard shortcuts** shee
 | Pan | `Space drag` | `Space drag` |
 | Preview | `⇧Space` | `Shift+Space` |
 | Show / hide panels | `⌘\` | `Ctrl+\` |
+| Reload window | `⌘R` | `Ctrl+R` |
 
 ## Agent & text
 

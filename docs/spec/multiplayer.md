@@ -1347,8 +1347,12 @@ Secrets never leave this database except inside links the owner mints.
 - **Save As of a shared file**: the session records the state the new file holds (as for any
   write of a shared file), then the room follows it (`moveFile`: the registry's `fileKey` becomes
   the new path) before the session reads the new file, so the new file reopens shared with no
-  delta and the old file is no longer the shared one. The session manager has no rename or move
-  of its own; a file moved outside Kimo is a new path and opens unshared.
+  delta and the old file is no longer the shared one.
+- **Rename** (Home › Rename, the editor's file name; `FileSessionManager.rename`): the file moves
+  in its folder, an open session moves with it (on desktop the document host renames, so a
+  document it holds for another window or an agent follows), and the room follows the file
+  (`renamed` hook, the registry's `fileKey` and a workspace binding become the new path). A file
+  moved outside Kimo is a new path and opens unshared.
 - **Browser library files** (`#/file/<id>`, `multiplayer/library.ts`): the document key and the
   registry's `fileKey` are `kimo-lib:<fileId>`, stable across reloads; the owner's keys stay in the
   IndexedDB registry. The library's own persistence (`kimo-doc-<id>`) stores the CRDT updates

@@ -837,6 +837,25 @@ export async function startDocumentHostService(
       multiplayer?.watch(ref)
       return { ok: true }
     },
+    /**
+     * Home › Rename and the editor's file name: the host renames, so a document it holds (for a
+     * window or an agent) moves with its file and nothing writes the old name again. Windows
+     * showing it follow (`kimo://host-renamed`).
+     */
+    async renameFile(args) {
+      const from = String(args.ref)
+      const to = await manager.rename(from, String(args.name))
+      if (to !== from) {
+        for (const map of [viewers, selections] as Map<string, unknown>[]) {
+          const v = map.get(from)
+          if (v === undefined) continue
+          map.delete(from)
+          map.set(to, v)
+        }
+        await bridge.emit(HOST_EVENTS.renamed, { from, to })
+      }
+      return { ref: to }
+    },
     async command(args) {
       const s = manager.get(String(args.ref))
       if (!s) throw new Error(`${String(args.ref)} is not open in the document host`)

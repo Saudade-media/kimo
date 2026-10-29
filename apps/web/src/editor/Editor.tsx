@@ -114,6 +114,7 @@ import "./m3/m3.css"
 import "./m3/m3-panels.css"
 import "./m3/component-dialogs.css"
 import "./workspace.css"
+import { boundRoomOf, renameWorkspaceFile } from "../multiplayer/cloud/workspace-view"
 import { CLOUD_DELETED_REASON, CLOUD_REMOVED_REASON } from "../multiplayer/cloud/workspaces"
 import { WorkspaceBanner } from "../multiplayer/ui/WorkspaceBanner"
 import { useIsWorkspaceRoom } from "../multiplayer/ui/workspace-parts"
@@ -297,7 +298,13 @@ function EditorShell({
   /** A joined room: the role the "You joined" Toast names. */
   joinedRole?: "edit" | "view" | null
 }) {
-  const { platform, manager, hostClient = null, libraryShare = null } = useRuntime()
+  const {
+    platform,
+    manager,
+    hostClient = null,
+    libraryShare = null,
+    workspaces = null,
+  } = useRuntime()
   const openSettings = useOpenSettings()
   const windowChrome = useWindowChrome(platform)
   /** Board 44: this window's collapsed cards (header button, ⌘\, View menu). */
@@ -626,6 +633,25 @@ function EditorShell({
         return saveFile(file)
       }),
     [session.store, name, assets, prepareWrite, platform.settings],
+  )
+  // Double-click on the file name (board 44 card header): the file on disk is renamed, a workspace
+  // copy renames the workspace file for everyone too, and the route follows the new name.
+  const renameDisk = useCallback(
+    async (next: string) => {
+      if (!doc) return
+      const was = doc.fileName
+      try {
+        const room = workspaces ? boundRoomOf(workspaces.getState(), doc.ref) : null
+        const to =
+          room && workspaces
+            ? await renameWorkspaceFile(workspaces, (ref, n) => manager.rename(ref, n), room, next)
+            : await manager.rename(doc.ref, next)
+        if (to) navigate(diskPath(to))
+      } catch (e) {
+        m3.toast({ tone: "danger", text: failureText(`rename ${was}`, e) })
+      }
+    },
+    [doc, workspaces, manager, m3],
   )
   const saveAs = useCallback(async () => {
     // Browser library: Save as… writes through the File System Access picker when granted,
@@ -1096,6 +1122,7 @@ function EditorShell({
     <DiskLeftCardHeader
       doc={doc}
       {...fileMenu}
+      {...(doc.untitled ? {} : { onRename: (n: string) => void renameDisk(n) })}
       onHome={() => goHome()}
       lightsInset={lightsInset}
       collapsed={cards.left}

@@ -306,8 +306,9 @@ export function DesktopHomeView({
     const to = joinPath(dirnameOf(f.ref), name)
     if (to === f.ref) return
     try {
-      await release(f.ref)
-      await platform.files.rename(f.ref, to)
+      // Not a plain move: a file open in a tab, another window or for an agent moves with its
+      // document (the host renames on desktop), and a shared file's room follows it.
+      await manager.rename(f.ref, name)
       await thumbnails?.move(f.ref, to).catch(() => {})
       if (f.openedAt !== null) {
         await platform.recents.removeFile(f.ref).catch(() => {})

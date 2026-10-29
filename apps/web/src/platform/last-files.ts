@@ -131,3 +131,31 @@ export function takeLastWindow(storage = defaultStorage()): WindowFiles | null {
   const last = Object.values(r).sort((a, b) => b.at - a.at)[0]
   return last ? { tabs: [...last.tabs], active: last.ref } : null
 }
+
+const RELOAD_KEY = "kimo.reloadTabs"
+
+/**
+ * ⌘R (desktop): the window's tabs, kept across the reload that follows. The page's own
+ * sessionStorage, so only this window reads them back.
+ */
+export function noteReloadTabs(files: WindowFiles): void {
+  try {
+    globalThis.sessionStorage?.setItem(RELOAD_KEY, JSON.stringify(files))
+  } catch {
+    // Blocked storage: the window reloads with the file in front only.
+  }
+}
+
+/** The tabs a window had before ⌘R reloaded it (read once), else null. */
+export function takeReloadTabs(): WindowFiles | null {
+  try {
+    const raw = globalThis.sessionStorage?.getItem(RELOAD_KEY)
+    globalThis.sessionStorage?.removeItem(RELOAD_KEY)
+    const v = raw ? (JSON.parse(raw) as Partial<WindowFiles>) : null
+    if (!v || !Array.isArray(v.tabs)) return null
+    const tabs = v.tabs.filter((t): t is string => typeof t === "string")
+    return { tabs, active: typeof v.active === "string" ? v.active : null }
+  } catch {
+    return null
+  }
+}

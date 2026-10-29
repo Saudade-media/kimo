@@ -55,6 +55,7 @@ import {
 } from "../platform/session"
 import { HOST_EVENTS, HOST_LABEL, type HostBridge } from "./bridge"
 import { createHostMultiplayer, type HostMultiplayer } from "./multiplayer-host"
+import { createHostRooms } from "./room-docs"
 
 /** Display names of the known agent hosts (generic labels; never logos). */
 const CLIENT_LABELS: Record<string, string> = {
@@ -323,10 +324,16 @@ export async function startDocumentHostService(
       return pf.stat(p)
     },
   }
+  // Rooms joined from a share link live in their windows: the host holds replicas (#79).
+  const rooms = createHostRooms({
+    bridge,
+    viewers,
+    onDetach: (ref, from) => selections.get(ref)?.delete(from),
+  })
   const backend: DocumentBackend = {
     kind: "desktop",
     files,
-    list: () => manager.sessions().filter(usable).map(adapt),
+    list: () => [...manager.sessions().filter(usable).map(adapt), ...rooms.list()],
     async open(path, { readOnly }) {
       await allowPath(path)
       const s = await manager.open(path, { readOnly })
@@ -797,7 +804,11 @@ export async function startDocumentHostService(
   // --- Window RPC -------------------------------------------------------------------------------
   type Rpc = { from: string; id: string; method: string; args: Record<string, unknown> }
   const rpc: Record<string, (args: Record<string, unknown>, from: string) => Promise<unknown>> = {
-    ping: async () => ({ version: options.version }),
+    // A window pings as its page loads: rooms its previous page held are gone.
+    async ping(_args, from) {
+      await rooms.dropWindow(from)
+      return { version: options.version }
+    },
     async open(args, from) {
       const ref = String(args.ref)
       const s = await manager.open(ref, (args.options as never) ?? {})
@@ -995,6 +1006,7 @@ export async function startDocumentHostService(
     },
   }
   if (multiplayer) Object.assign(rpc, multiplayer.rpc)
+  Object.assign(rpc, rooms.rpc)
   await listen<Rpc>(HOST_EVENTS.rpc, async ({ from, id, method, args }) => {
     try {
       const h = rpc[method]
@@ -1037,6 +1049,7 @@ export async function startDocumentHostService(
     multiplayer,
     async dispose() {
       multiplayer?.dispose()
+      await rooms.dispose()
       for (const key of [...agentConns.keys()]) closeAgent(key)
       for (const r of [...relays.values()]) await r.close()
       runtime.dispose()

@@ -179,6 +179,13 @@ export async function createAppRuntime(
     libraryShare: library,
     workspaces,
   }
+  // Rooms joined from a share link stay in this window; the host lists them for MCP (#79).
+  void factory.then(() => {
+    const client = runtime.hostClient
+    if (!client) return
+    const served = host.serveRoomsToHost(client, model.join)
+    manager.addCloseHook(() => served.detachAll())
+  })
   return finishRuntime(runtime, onOpened)
 }
 

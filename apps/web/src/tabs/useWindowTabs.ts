@@ -9,7 +9,7 @@ import { isUntitledRef } from "../platform/contract"
 import { noteWindowTabs } from "../platform/last-files"
 import type { FileSessionManager } from "../platform/session"
 import type { Route } from "../router"
-import type { TabsController } from "./controller"
+import type { TabRooms, TabsController } from "./controller"
 import { savedTabs, type TabTarget, tabCommandFor } from "./model"
 
 /**
@@ -40,18 +40,27 @@ export function useWindowTabs({
   route,
   manager,
   platform,
+  rooms = null,
   enabled,
 }: {
   tabs: TabsController
   route: Route
   manager: FileSessionManager
   platform: KimoPlatform
+  /** The window's joined rooms (multiplayer join model): closing a room's tab leaves it. */
+  rooms?: TabRooms | null
   /** False in the Settings window (no tabs there). */
   enabled: boolean
 }): void {
   useEffect(
     () => (enabled ? tabs.attach(manager, platform) : undefined),
     [enabled, tabs, manager, platform],
+  )
+
+  // Desktop: a room joined from a link stays joined while its tab is open (#79).
+  useEffect(
+    () => (enabled && rooms && platform.kind !== "browser" ? tabs.attachRooms(rooms) : undefined),
+    [enabled, tabs, rooms, platform],
   )
 
   const target = routeTarget(route, platform)

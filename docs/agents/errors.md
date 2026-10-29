@@ -9,7 +9,7 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | `DOCUMENT_NOT_OPEN` | Unknown or stale `docId` (the file was reloaded or closed) | Use `detail.currentDocId` if present, else `kimo_get_state` / `kimo_open` |
 | `DOCUMENT_LOCKED` | Another process holds the file's write lease (`detail.holder`) | Connect through the holder (the Kimo app), or open with `readOnly: true` |
 | `LOAD_FAILED` | The file is not valid `.kimo` (left untouched) | Don't retry. Tell the user |
-| `READ_ONLY` | Read-only open, newer format, library, or locked | Open writable, or edit the library file itself |
+| `READ_ONLY` | Read-only open, newer format, library, locked, or a room joined with a view link | Open writable, or edit the library file itself. A view link stays read only |
 | `REVISION_CONFLICT` | `baseRevision` is behind (`detail.changed`), or a person edited your area (`human-edit`) | Re-query the changed nodes, retry. Keep their edits |
 | `AREA_BUSY` | Another agent works there (`detail.holderLabel`) | Work elsewhere, or wait |
 | `NODE_EXISTS` | An insert reused an existing id | Use `key`; Kimo mints ids |
@@ -29,7 +29,7 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | `RATE_LIMITED` | Too many calls too fast | Retryable after a short wait |
 | `APP_NOT_RUNNING` | The relay cannot reach the Kimo app | Retryable: ask the user to start Kimo, or use `kimo mcp` (headless) |
 | `PROTOCOL_MISMATCH` | Relay and app versions differ | Update Kimo or the CLI |
-| `UNSUPPORTED` | Not available in this host (raster render without CanvasKit, headless SVG import) | Use the alternative in `suggestion` |
+| `UNSUPPORTED` | Not available in this host (raster render without CanvasKit, headless SVG import), or a shared room has no file (save, image import) | Use the alternative in `suggestion` |
 | `INTERNAL` | Bug | Report it with the input. Re-read state first |
 
 ## Common validator issues inside SCHEMA_VIOLATION

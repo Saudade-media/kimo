@@ -6,7 +6,8 @@
  * Last files record (General › On launch).
  *
  * One controller per window ({@link windowTabs}); the App root attaches the runtime and feeds
- * route changes, the TabStrip renders {@link TabsController.getState}.
+ * route changes, the TabStrip renders {@link TabsController.getState}. A room joined from a link
+ * (desktop) stays joined while its tab is open and is left when the tab closes (#79).
  */
 import type { FileRef, KimoPlatform } from "@kimo/platform"
 import { retainDiskFile } from "../editor/session"
@@ -42,8 +43,18 @@ export interface TabsDeps {
   homePath(): string
 }
 
+/** The rooms a window joined from links (the multiplayer join model). */
+export interface TabRooms {
+  /** Leaves the room joined from `link` (or stops its join). */
+  leave(link: string): void
+}
+
 const diskRef = (t: Tab | null | undefined): FileRef | null =>
   t?.target?.kind === "disk" ? t.target.ref : null
+
+/** Links of the window's room tabs. */
+const joinLinks = (s: TabsState): Set<string> =>
+  new Set(s.tabs.flatMap((t) => (t.target?.kind === "join" ? [t.target.link] : [])))
 
 export class TabsController {
   private state: TabsState = EMPTY_TABS
@@ -51,6 +62,7 @@ export class TabsController {
   private seq = 0
   private manager: FileSessionManager | null = null
   private platform: KimoPlatform | null = null
+  private rooms: TabRooms | null = null
   private offManager: (() => void) | null = null
   /** Disk tabs hold their file open (tab id → ref + release). */
   private readonly holds = new Map<string, { ref: FileRef; release: () => void }>()
@@ -72,7 +84,13 @@ export class TabsController {
 
   private set(next: TabsState): void {
     if (next === this.state) return
+    const before = joinLinks(this.state)
     this.state = next
+    // A room tab that closed (or now shows something else) leaves its room.
+    if (this.rooms && before.size) {
+      const after = joinLinks(next)
+      for (const link of before) if (!after.has(link)) this.rooms.leave(link)
+    }
     this.syncHolds()
     for (const l of [...this.listeners]) l()
     // A tab that now shows an open file starts following its session.
@@ -91,6 +109,14 @@ export class TabsController {
     return () => {
       off()
       if (this.offManager === off) this.offManager = null
+    }
+  }
+
+  /** The window's joined rooms (desktop): a room tab holds its room. Returns the detach function. */
+  attachRooms(rooms: TabRooms): () => void {
+    this.rooms = rooms
+    return () => {
+      if (this.rooms === rooms) this.rooms = null
     }
   }
 

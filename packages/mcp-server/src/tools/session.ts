@@ -45,6 +45,20 @@ const OpenDoc = Obj({
   doc: DocRefSchema,
   revision: RevisionSchema,
   name: Opt(Str({ description: "meta.name or file name." })),
+  shared: Opt(
+    Obj(
+      {
+        relay: Opt(Str({ description: "Host of the relay the room syncs through." })),
+        role: Enum(["edit", "view"], {
+          description: "Your link's role. view: edits fail with READ_ONLY.",
+        }),
+      },
+      {
+        description:
+          "A room joined from a share link (kimo-room:<room>). Edits sync live; it has no file.",
+      },
+    ),
+  ),
   selection: Arr(Str({ description: "Node id." }), {
     description: "Selected ids in the frontmost window showing it (empty headless).",
   }),

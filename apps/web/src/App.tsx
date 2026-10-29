@@ -54,7 +54,7 @@ export function App() {
   const hash = useHash()
   const route = usePairRoute(useJoinRoute(parseRoute(hash), hash), hash)
   const theme = useTheme()
-  const { platform, manager } = useRuntime()
+  const { platform, manager, multiplayer } = useRuntime()
   const [settingsPane, setSettingsPane] = useState<{
     pane: SettingsPane
     focus: string | null
@@ -96,7 +96,14 @@ export function App() {
 
   // Board 44 §5: this window's tabs follow the route; General › On launch remembers them.
   const tabs = windowTabs()
-  useWindowTabs({ tabs, route, manager, platform, enabled: !settingsWindow })
+  useWindowTabs({
+    tabs,
+    route,
+    manager,
+    platform,
+    rooms: multiplayer?.join ?? null,
+    enabled: !settingsWindow,
+  })
 
   if (route.name === "settings")
     return (

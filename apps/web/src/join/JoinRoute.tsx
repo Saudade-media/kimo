@@ -4,18 +4,24 @@
  * Toast names the role, a View link adds the banner and the read-only chrome, section 9).
  * Errors say what happened and what to do next; Try again backs off, Copy details copies the
  * relay, time and error code (never the link: its fragment holds the key).
+ *
+ * On desktop the room is a tab and stays joined while the tab is open, in front or not (#79):
+ * the tab strip leaves it when the tab closes. The web join page leaves the room with the page.
  */
 import { useCallback, useEffect, useRef, useState } from "react"
 import { RoomEditor } from "../editor/Editor"
-import { useJoin, useMultiplayer } from "../multiplayer/hooks"
+import { useJoin, useJoinedRoom, useMultiplayer } from "../multiplayer/hooks"
 import type { MultiplayerModel } from "../multiplayer/model"
+import { useOptionalRuntime } from "../platform/runtime"
 import { navigate } from "../router"
+import { routeTarget } from "../tabs/useWindowTabs"
 import { detailsText, errorCard, type JoinActionId, retryDelay } from "./copy"
 import { JoinErrorCardView, JoinProgressCard, JoinStage } from "./JoinCard"
 import { joinPath } from "./link"
 
-/** Mounted join routes: an unmount that is a StrictMode remount must not leave the room. */
+/** Mounted join routes, all and by link: a StrictMode remount must not leave the room. */
 let active = 0
+const mounted = new Map<string, number>()
 
 export function JoinRoute({ link }: { link: string }) {
   const model = useMultiplayer()
@@ -30,7 +36,14 @@ export function JoinRoute({ link }: { link: string }) {
 
 function JoinFlow({ model, initialLink }: { model: MultiplayerModel; initialLink: string }) {
   const [link, setLink] = useState(initialLink)
+  const platform = useOptionalRuntime()?.platform ?? null
+  // A room tab holds its room (desktop). A link pasted here is not the tab's: it leaves with the page.
+  const heldByTab =
+    link === initialLink &&
+    platform !== null &&
+    routeTarget({ name: "join", link }, platform) !== undefined
   const state = useJoin(model)
+  const joined = useJoinedRoom(model, link)
   const startedFor = useRef<string | null>(null)
   const attempts = useRef(0)
   const [waiting, setWaiting] = useState(false)
@@ -43,20 +56,22 @@ function JoinFlow({ model, initialLink }: { model: MultiplayerModel; initialLink
     void model.join.join(link)
   }, [model, link])
 
-  // Leaving the route (Home, another file or room tab) leaves the room, unless this is a remount
-  // (the same room is still the joined one). Another room's tab starts its own join.
+  // Leaving the route: the web page leaves the room; a room tab keeps it joined in the back.
+  // A remount of the same link (StrictMode) leaves nothing.
   useEffect(() => {
     active++
+    mounted.set(link, (mounted.get(link) ?? 0) + 1)
     return () => {
       active--
-      const session = model.join.getState().session
+      mounted.set(link, (mounted.get(link) ?? 1) - 1)
       setTimeout(() => {
-        if (active > 0 && model.join.getState().session === session) return
+        if ((mounted.get(link) ?? 0) > 0) return
+        mounted.delete(link)
+        if (!heldByTab) model.join.leave(link)
         if (active === 0) model.join.reset()
-        if (session) void session.leave().catch(() => undefined)
       }, 0)
     }
-  }, [model])
+  }, [model, link, heldByTab])
 
   const onAction = useCallback(
     (id: JoinActionId) => {
@@ -93,7 +108,7 @@ function JoinFlow({ model, initialLink }: { model: MultiplayerModel; initialLink
     [model, link],
   )
 
-  if (state.phase === "joined" && state.session) return <RoomEditor shared={state.session} />
+  if (joined) return <RoomEditor shared={joined} />
   if (state.phase === "error")
     return (
       <JoinStage>

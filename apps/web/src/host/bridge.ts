@@ -59,6 +59,13 @@ export const HOST_EVENTS = {
    * the RPC `mp.cloud.view`.
    */
   cloud: "kimo://host-cloud",
+  /**
+   * Both directions: `{from, msg: HostSyncMessage}` for rooms joined from a share link (#79,
+   * `room-docs.ts`). The window that joined the room is the hub; the host keeps a replica for MCP.
+   */
+  roomSync: "kimo://room-sync",
+  /** Host → the window holding a room: `{id, ref, src}`, answered with the RPC `room.asset`. */
+  roomAsset: "kimo://room-asset",
 } as const
 
 interface TauriInternals {

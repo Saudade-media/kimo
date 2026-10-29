@@ -3,7 +3,8 @@
  * `AgentsController` per window over `platform.mcp`, plus the document host hooks
  * (host/INTEGRATION.md): kimo_focus → select / zoom, selection reports for
  * `kimo_get_state.selection`. Only files on disk with an MCP host get agents (desktop, memory
- * harnesses); untitled documents have no path, so no agent can target them.
+ * harnesses); untitled documents have no path, so no agent can target them. A room joined from a
+ * share link is an MCP document too (#79): focus and selection work there under its room key.
  */
 import type { LayoutResult } from "@kimo/layout"
 import { isPlatformError, type KimoPlatform, sha256Hex } from "@kimo/platform"
@@ -21,6 +22,7 @@ import {
 import type { CanvasHandle } from "../canvas/contract"
 import type { HostClient } from "../host/client"
 import { type Bus, createBus } from "../lib/hooks"
+import { roomKeyOf } from "../multiplayer/backend"
 import type { FileDocumentSession } from "../platform/session"
 import { failureText } from "./errors"
 import type { FileSession } from "./session"
@@ -83,6 +85,8 @@ export function useEditorAgents({
   onError: (notice: AgentsNotice) => void
 }): EditorAgents {
   const path = doc && !doc.untitled ? doc.ref : null
+  /** The document's ref in the host: a file's path, or a joined room's key. */
+  const hostRef = path ?? (session.shared ? roomKeyOf(session.shared.room) : null)
   const fileId = useFileId(path)
   const mcp = platform.mcp ?? null
   const openActivity = useMemo(() => createBus(0), [])
@@ -115,32 +119,32 @@ export function useEditorAgents({
 
   // kimo_focus: select and/or zoom in the window that shows the file.
   useEffect(() => {
-    if (!hostClient || !path) return
+    if (!hostClient || !hostRef) return
     return hostClient.onFocus(({ ref, ids, select, zoom }) => {
-      if (ref !== path) return
+      if (ref !== hostRef) return
       if (select) session.ui.getState().select(ids)
       if (zoom === "fit") canvas.current?.zoomToFit(ids, 96)
       else if (zoom === "100") canvas.current?.zoomTo(1)
     })
-  }, [hostClient, path, session, canvas])
+  }, [hostClient, hostRef, session, canvas])
 
   // kimo_get_state.selection: report the selection (debounced) while it changes.
   useEffect(() => {
-    if (!hostClient || !path) return
+    if (!hostClient || !hostRef) return
     let timer: ReturnType<typeof setTimeout> | undefined
     let last = session.ui.getState().selection
-    hostClient.reportSelection(path, last)
+    hostClient.reportSelection(hostRef, last)
     const off = session.ui.subscribe((s) => {
       if (s.selection === last) return
       last = s.selection
       clearTimeout(timer)
-      timer = setTimeout(() => hostClient.reportSelection(path, last), 150)
+      timer = setTimeout(() => hostClient.reportSelection(hostRef, last), 150)
     })
     return () => {
       clearTimeout(timer)
       off()
     }
-  }, [hostClient, path, session])
+  }, [hostClient, hostRef, session])
 
   if (!controller || !fileId)
     return {

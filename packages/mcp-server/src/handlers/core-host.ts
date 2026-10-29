@@ -12,7 +12,14 @@ import { FORMAT_VERSION, type KimoDocument, SCHEMA_URL, serialize } from "@kimo/
 import type { DocStore, Revision } from "@kimo/editor-state"
 import { resolveAgainstFile } from "@kimo/platform"
 import type { DocRef, RevisionToken, ToolImage } from "../envelope"
-import type { DocumentHost, HostDocument, HostResult } from "../runtime"
+import {
+  type DocumentHost,
+  type HostDocument,
+  type HostResult,
+  isRoomPath,
+  type SharedRoomInfo,
+  VIEW_ROOM_SUGGESTION,
+} from "../runtime"
 import { formatDocId, parseDocId } from "../topology"
 import { journalFor } from "./journal"
 import { createSceneService, type SceneService } from "./scene"
@@ -48,6 +55,10 @@ export interface BackendDocument {
   save(): Promise<HostResult<{ bytes: number; sha256: string; revision: Revision }>>
   /** Closes it in the backend (flushes unless `discard`). */
   close(options: { discard: boolean }): Promise<void>
+  /** A room joined from a share link (path `kimo-room:<room>`); null or absent for a file. */
+  shared?(): SharedRoomInfo | null
+  /** `./assets/<key>` of a document with no folder on disk (see {@link HostDocument.readAsset}). */
+  readAsset?(src: string): Promise<Uint8Array | null>
 }
 
 /** The file operations the core needs (`@kimo/platform` `FilesApi` is assignable). */
@@ -124,7 +135,14 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
 
   const toHost = (d: BackendDocument): HostDocument => {
     journalFor(d.store)
-    return { ref: docRefFor(d), store: d.store, shownInWindow: d.shownInWindow() }
+    const shared = d.shared?.() ?? null
+    return {
+      ref: docRefFor(d),
+      store: d.store,
+      shownInWindow: d.shownInWindow(),
+      ...(shared ? { shared } : {}),
+      ...(d.readAsset ? { readAsset: d.readAsset.bind(d) } : {}),
+    }
   }
   const byHash = (h: string) => backend.list().find((d) => pathHash(d.path) === h)
   const find = (docId: string): HostResult<BackendDocument> => {
@@ -225,7 +243,10 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
       const reason = d.readOnlyReason() ?? d.store.readOnly?.reason ?? null
       if (reason !== null)
         return err("READ_ONLY", `This document is read-only (${reason}); it is never saved.`, {
-          suggestion: "Save a copy with kimo_export target=kimo instead.",
+          suggestion:
+            d.shared?.()?.role === "view"
+              ? VIEW_ROOM_SUGGESTION
+              : "Save a copy with kimo_export target=kimo instead.",
         })
       const cur = d.store.revision
       if (baseRevision && (baseRevision.epoch !== cur.epoch || baseRevision.seq !== cur.seq))
@@ -272,6 +293,9 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
       const d = f.value
       const dir = dirname(d.path)
       const r = await scene.render(d.store, ids, opts, async (src) => {
+        // A room has no folder: its assets come from the window that joined it.
+        if (isRoomPath(d.path))
+          return d.readAsset && /^\.\/assets\/[^\\/]+$/.test(src) ? d.readAsset(src) : null
         // Assets, and shader paint sources relative to the document (spec §7.1).
         const shader = SHADER_SOURCE.test(src)
         if (!/^\.\/assets\//.test(src) && !shader) return null

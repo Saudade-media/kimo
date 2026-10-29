@@ -42,8 +42,10 @@ import {
   authorize,
   type HandlerOutput,
   type HostDocument,
+  isRoomPath,
   type ToolContext,
   type ToolHandler,
+  VIEW_ROOM_SUGGESTION,
 } from "../runtime"
 import {
   SCRIPT_COMPILER,
@@ -196,9 +198,23 @@ interface UndoRecord {
 
 const asLocal = (o: ToolContext["origin"]) => o as LocalOrigin
 
+/** `Name (d_…)`, and for a room joined from a share link where it syncs and the role. */
+function docLine(x: {
+  name: string
+  doc: { id: string }
+  shared?: { relay?: string; role: string }
+}): string {
+  if (!x.shared) return `${x.name} (${x.doc.id})`
+  const via = x.shared.relay ? ` via ${x.shared.relay}` : ""
+  return `${x.name} (${x.doc.id}, shared room${via}, ${x.shared.role === "view" ? "view only" : "can edit"})`
+}
+
 function nameOf(d: HostDocument): string {
   const meta = d.store.toHeader().meta as Record<string, unknown> | undefined
-  return typeof meta?.name === "string" ? meta.name : basename(d.ref.path).replace(/\.kimo$/i, "")
+  const name = typeof meta?.name === "string" ? meta.name : null
+  // A room's path is `kimo-room:<room>`: like its tab, it is "Shared file" until named.
+  if (isRoomPath(d.ref.path)) return name?.trim() || "Shared file"
+  return name ?? basename(d.ref.path).replace(/\.kimo$/i, "")
 }
 
 function numberOr(v: unknown, d: number): number {
@@ -235,7 +251,10 @@ function readOnlyError(d: HostDocument): ToolError {
   return {
     code: "READ_ONLY",
     message: `This document is read-only (${d.store.readOnly?.reason ?? "read-only"}).`,
-    suggestion: "Export a copy with kimo_export target=kimo, or open a writable document.",
+    suggestion:
+      d.shared?.role === "view"
+        ? VIEW_ROOM_SUGGESTION
+        : "Export a copy with kimo_export target=kimo, or open a writable document.",
   }
 }
 
@@ -476,6 +495,14 @@ export function createToolHandlerMap(
           doc: d.ref,
           revision: toToken(d.store.revision),
           name: nameOf(d),
+          ...(d.shared
+            ? {
+                shared: {
+                  ...(d.shared.relay ? { relay: d.shared.relay } : {}),
+                  role: d.shared.role,
+                },
+              }
+            : {}),
           selection: ctx.host.selection(d.ref.id),
           topLevel: top.slice(0, 50).map((id) => {
             const n = d.store.getNode(id) as NodeData
@@ -530,7 +557,7 @@ export function createToolHandlerMap(
       success(
         data,
         n
-          ? `${n} open document${n === 1 ? "" : "s"}: ${documents.map((x) => `${x.name} (${x.doc.id})`).join(", ")}.`
+          ? `${n} open document${n === 1 ? "" : "s"}: ${documents.map(docLine).join(", ")}.`
           : "No documents are open. Open a .kimo file with kimo_open or create one with kimo_create.",
       ),
     )
@@ -1270,6 +1297,15 @@ export function createToolHandlerMap(
         ok: false,
         error: { code: "UNSUPPORTED", message: "Save the document before importing assets." },
       }
+    if (isRoomPath(d.ref.path))
+      return {
+        ok: false,
+        error: {
+          code: "UNSUPPORTED",
+          message: "Images can't be imported into a shared room yet.",
+          suggestion: "Ask the person to add it in Kimo.",
+        },
+      }
     if (!dryRun) {
       const w = await ctx.host.writeFile(
         joinPath(joinPath(dirname(d.ref.path), "assets"), key),
@@ -1486,7 +1522,10 @@ export function createToolHandlerMap(
   const assetLoader =
     (d: HostDocument, ctx: ToolContext) =>
     async (src: string): Promise<Uint8Array | null> => {
-      if (!/^\.\/assets\/[^\\/]+$/.test(src) || !/^[\\/]|^[A-Za-z]:/.test(d.ref.path)) return null
+      if (!/^\.\/assets\/[^\\/]+$/.test(src)) return null
+      // A room has no folder: the window that joined it holds its assets.
+      if (d.readAsset) return d.readAsset(src)
+      if (!/^[\\/]|^[A-Za-z]:/.test(d.ref.path)) return null
       const r = await ctx.host.readFile(joinPath(dirname(d.ref.path), src.slice(2)))
       return r.ok ? r.value : null
     }
@@ -1592,6 +1631,13 @@ export function createToolHandlerMap(
     const code = (CODE_EXPORT_TARGETS as readonly string[]).includes(target)
     if (!code && !(M5_EXPORT_TARGETS as readonly string[]).includes(target))
       return fail({ code: "UNSUPPORTED", message: `Unknown export target ${target}.` })
+    // A viewer may export but not duplicate the file (board 41).
+    if (target === "kimo" && d.shared?.role === "view")
+      return fail({
+        code: "UNSUPPORTED",
+        message: "A room joined with a view link can't be copied to a .kimo file.",
+        suggestion: VIEW_ROOM_SUGGESTION,
+      })
     const outDir = typeof input.outDir === "string" ? normalizePath(input.outDir) : null
     if (!outDir && !code)
       return fail({
@@ -1702,8 +1748,14 @@ export function createToolHandlerMap(
           },
         })
     } else {
-      const name =
-        ids.length === 1 ? ids[0] : `${basename(d.ref.path).replace(/\.kimo$/i, "")}-export`
+      // A room's path is `kimo-room:<room>`: its file takes the room's name instead.
+      const base = isRoomPath(d.ref.path)
+        ? nameOf(d)
+            .replace(/[\\/:*?"<>|]/g, "-")
+            .replace(/\p{Cc}/gu, "")
+            .trim() || "Shared file"
+        : basename(d.ref.path).replace(/\.kimo$/i, "")
+      const name = ids.length === 1 ? ids[0] : `${base}-export`
       planned.push({
         name: `${name}.kimo`,
         bytes: async () => new TextEncoder().encode(serialize(subtreeDocument(d.store, ids))),

@@ -6,6 +6,7 @@
  * connection per relayed socket/HTTP client) and by headless `kimo mcp` (one stdio client).
  */
 import { type DocStore, type NodeData, releaseClaims } from "@kimo/editor-state"
+import type { ToolError, ToolResult } from "../envelope"
 import type { WireOp } from "../ops"
 import {
   type ActivityEntry,
@@ -22,21 +23,24 @@ import {
   originOf,
   type SessionAllowances,
 } from "../policy"
+import { toolByName } from "../registry"
 import {
   type CallTargets,
   type DispatchOptions,
   type DocumentHost,
   dispatch,
   type HandlerOutput,
+  isRoomPath,
   type ToolContext,
   type ToolHandlers,
 } from "../runtime"
 import { ScriptStream } from "../script/stream"
 import type { ApplyStream } from "../stream"
+import { type DocSignal, fileLabel, frontView, type LastTarget, normalizeName } from "../target"
 import type { ToolDef } from "../tools/define"
 import { ActivityLog, type ActivityStore, ApprovalBroker, PresenceTracker } from "./activity"
 import { createToolHandlers } from "./create"
-import { streamEngineOf, type ToolHandlerOptions } from "./tools"
+import { nameOf, streamEngineOf, type ToolHandlerOptions, topLevelOf } from "./tools"
 import { fileIdOf, randomId } from "./util"
 
 export interface McpHostRuntimeOptions {
@@ -287,10 +291,64 @@ const STATE_OF: Record<string, AgentPresence["state"]> = {
   kimo_export: "rendering",
 }
 
+/** The calls the #78 twin guard checks: ones that change a document (not dry runs). */
+function writes(def: ToolDef, input: Record<string, unknown>): boolean {
+  if (!def.mutating || input.dryRun === true) return false
+  return (def.scopeFor ? def.scopeFor(input as never) : def.scope) !== "read"
+}
+
 export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRuntime {
   const { host } = options
   const now = options.now ?? Date.now
   const presence = new PresenceTracker()
+  /**
+   * #78: each connection's last target (landed edit, kimo_open / kimo_create, resolved pick)
+   * and every docId it ever targeted (the twin guard lets those through).
+   */
+  const lastTargets = new Map<string, LastTarget>()
+  const targetedDocs = new Map<string, Set<string>>()
+  const setTarget = (origin: string, t: LastTarget) => {
+    lastTargets.set(origin, t)
+    let set = targetedDocs.get(origin)
+    if (!set) {
+      set = new Set()
+      targetedDocs.set(origin, set)
+    }
+    set.add(t.docId)
+  }
+  /** Reads never set the last target; a landed write, an open or a resolved pick does. */
+  const rememberTarget = (
+    origin: string,
+    name: string,
+    input: Record<string, unknown>,
+    r: ToolResult<unknown>,
+  ) => {
+    if (!r.ok) return
+    if ((name === "kimo_open" || name === "kimo_create") && r.doc) {
+      setTarget(origin, { docId: r.doc.id, frameIds: [], at: now() })
+      return
+    }
+    if (name === "kimo_get_state") {
+      if (typeof input.pick !== "string") return
+      const t = (r.data as { target?: { status?: string; docId?: string; frameIds?: string[] } })
+        ?.target
+      if (t?.status !== "clear" || typeof t.docId !== "string") return
+      const prev = lastTargets.get(origin)
+      // A file pick keeps the frames this connection already works on in that file.
+      const frameIds = t.frameIds ?? (prev?.docId === t.docId ? prev.frameIds : [])
+      setTarget(origin, { docId: t.docId, frameIds, at: now() })
+      return
+    }
+    if (!toolByName(name)?.mutating || !r.doc || !r.changed?.length || r.dryRun === true) return
+    const d = host.get(r.doc.id)
+    if (!d.ok) return
+    const frameIds = [
+      ...new Set(
+        r.changed.map((id) => topLevelOf(d.value.store, id)).filter((x): x is string => !!x),
+      ),
+    ]
+    setTarget(origin, { docId: r.doc.id, frameIds, at: now() })
+  }
   const approvals = new ApprovalBroker(
     options.approvals ?? (host.kind === "headless" ? "deny" : "ask"),
     options.approvalTimeoutMs,
@@ -307,6 +365,7 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
           state: p.state,
           docs: p.docs,
         })),
+      recent: (origin) => lastTargets.get(origin),
       ...(options.validate ? { validate: options.validate } : {}),
       ...options.handlerOptions,
     })
@@ -422,6 +481,10 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
               : outOfScope(def, input, r.value.store, policy.nodes)
             if (out.length) t.outOfScope = out
           }
+          if (origin.startsWith("mcp:") && writes(def, input)) {
+            const unclear = twinGuard(r.value, targetedDocs.get(origin))
+            if (unclear) t.unclear = unclear
+          }
         }
       }
       const fileField =
@@ -467,6 +530,8 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
           try {
             const out = await h(input, ctx)
             const r = out.result
+            // A round that asks the person (#78) changes nothing and sets no target.
+            if (!out.ask) rememberTarget(origin, name, input, r)
             const patch: Partial<AgentPresence> = {
               state: "idle",
               call: undefined,
@@ -631,6 +696,8 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
         abort.abort()
         approvals.cancelSession(identity.session)
         releaseClaims(origin)
+        lastTargets.delete(origin)
+        targetedDocs.delete(origin)
         presence.remove(origin)
         conns.delete(conn)
         activity.record("global", {
@@ -647,6 +714,50 @@ export function createMcpHostRuntime(options: McpHostRuntimeOptions): McpHostRun
     ;(conn as McpConnection & { runWith: typeof runWith }).runWith = runWith
     conns.add(conn)
     return conn
+  }
+
+  /**
+   * #78 twin guard: a first write to a file while the front tab shows another open file with
+   * the same name is refused (no dialog). A pick without docId resolves it (the front tab, or
+   * the person picks); a pick with docId or kimo_open is for a request that names the file.
+   */
+  function twinGuard(
+    d: { ref: { id: string; path: string }; store: DocStore; shared?: unknown },
+    targeted: ReadonlySet<string> | undefined,
+  ): ToolError | undefined {
+    if (targeted?.has(d.ref.id)) return undefined
+    const front = frontView(host.views?.() ?? [])
+    if (!front?.docId || front.docId === d.ref.id) return undefined
+    const twin = host.get(front.docId)
+    if (!twin.ok) return undefined
+    const name = nameOf(d)
+    if (normalizeName(nameOf(twin.value)) !== normalizeName(name)) return undefined
+    const signal = (x: typeof d): DocSignal => ({
+      docId: x.ref.id,
+      name: nameOf(x),
+      path: x.ref.path,
+      shared: x.shared !== undefined || isRoomPath(x.ref.path),
+      pages: [],
+      frames: [],
+      top: () => null,
+    })
+    const docs = [signal(d), signal(twin.value)]
+    // A local file and a room joined from a share link (#79) can share a name too.
+    const rooms = docs.filter((x) => x.shared).length
+    return {
+      code: "TARGET_UNCLEAR",
+      message:
+        rooms === 1
+          ? `A local file and a shared room are both named ${name}.`
+          : `Two open ${rooms ? "shared rooms" : "files"} are named ${name}.`,
+      suggestion: "Call kimo_get_state with pick and no docId, then edit the file it returns.",
+      detail: {
+        kind: "target",
+        reason: "twin",
+        level: "file",
+        choices: docs.map((x) => ({ docId: x.docId, label: fileLabel(x, docs) })),
+      },
+    }
   }
 
   return {

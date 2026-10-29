@@ -38,6 +38,8 @@ Beta channel.
 
 - The `kimo-mcp` shim exits when its agent session ends, even while the Kimo app is not
   responding. Before, it waited until the app read from it again.
+- Starting Kimo with several files or share links opens each in its own tab, the last one in
+  front. Before, only the last one got a tab.
 
 ## [1.2.1-beta.1] - 2026-10-29
 

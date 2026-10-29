@@ -365,6 +365,8 @@ class Stream implements ApplyStream {
       { docId: this.docId, ops: [...this.appliedWire, ...ready] },
       ctx,
     )
+    // #78 twin guard: the call itself reports it; nothing lands provisionally first.
+    if (targets.unclear) return this.hold(targets.unclear.message)
     const auth = authorize(def, { docId: this.docId, ops: ready }, ctx, targets)
     if (auth.kind !== "allow")
       return this.hold(

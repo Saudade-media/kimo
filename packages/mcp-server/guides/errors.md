@@ -26,6 +26,8 @@ Every failure carries `errors[].code`. Nothing was committed (`rolledBack: true`
 | `FILE_NOT_FOUND` | No such path | Check the absolute path |
 | `TIMEOUT` | Too slow, or the app restarted mid-call | Retryable: re-read, retry once |
 | `RATE_LIMITED` | Too many calls too fast | Retryable after a short wait |
+| `TARGET_UNCLEAR` | Kimo can't tell which file or frame you mean (`detail.reason`: `no-elicitation`, `not-visible`, `twin`, `no-documents`; `detail.choices`) | Change nothing. Ask one short question in chat and wait; for `twin`, pick without `docId` and edit the file it returns |
+| `CANCELLED` | The person closed the picker, or selected nothing in Kimo in time (`detail.reason`) | Change nothing. Say so in one line and wait |
 | `APP_NOT_RUNNING` | The relay cannot reach the Kimo app | Retryable: ask the user to start Kimo, or use `kimo mcp` (headless) |
 | `PROTOCOL_MISMATCH` | Relay and app versions differ | Update Kimo or the CLI |
 | `UNSUPPORTED` | Not available in this host (raster render without CanvasKit, headless SVG import), or a shared room has no file (save, image import) | Use the alternative in `suggestion` |

@@ -31,6 +31,7 @@ import { journalFor } from "./journal"
 import { createSceneService, type SceneService, type SceneServiceOptions } from "./scene"
 import type { ToolHandlerOptions } from "./tools"
 import { err, errorMessage, normalizePath, ok } from "./util"
+import type { BackendView } from "./views"
 
 export interface MemoryDocumentHostOptions {
   /** Files, leases and recovery (`createMemoryPlatform()` in tests; the CLI's Node platform). */
@@ -62,6 +63,8 @@ export interface MemoryDocumentHostOptions {
 export interface MemoryDocumentHost extends CoreDocumentHost {
   /** Connections, approvals (denied), activity, presence. */
   readonly runtime: McpHostRuntime
+  /** Test hook (#78): the editor windows' records, as the desktop host keeps them. */
+  setViews(views: BackendView[]): void
   /** Saves every dirty document; failures write a recovery file instead. */
   flushAll(): Promise<{ saved: string[]; recovered: string[]; failed: string[] }>
   /** Flushes, closes every document and releases leases (stdin EOF / SIGTERM). */
@@ -143,10 +146,12 @@ export function createMemoryDocumentHost(options: MemoryDocumentHostOptions): Me
     return entry
   }
 
+  let views: BackendView[] = []
   const backend: DocumentBackend = {
     kind,
     files,
     list: () => [...docs.values()],
+    views: () => views,
     canonicalPath: async (p) =>
       normalizePath(options.canonicalPath ? await options.canonicalPath(p) : p),
     async open(path, { readOnly }): Promise<HostResult<BackendDocument>> {
@@ -309,6 +314,9 @@ export function createMemoryDocumentHost(options: MemoryDocumentHostOptions): Me
   return Object.assign(core, {
     runtime,
     flushAll,
+    setViews(next: BackendView[]) {
+      views = next.map((v) => ({ ...v, selection: [...v.selection] }))
+    },
     async dispose() {
       runtime.dispose()
       await flushAll()

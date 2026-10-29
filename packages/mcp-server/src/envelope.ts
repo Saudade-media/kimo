@@ -65,6 +65,8 @@ export const ERROR_CODES = [
   "PROTOCOL_MISMATCH",
   "UNSUPPORTED",
   "RATE_LIMITED",
+  "TARGET_UNCLEAR",
+  "CANCELLED",
   "INTERNAL",
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
@@ -92,7 +94,7 @@ export const ToolErrorSchema = Obj({
       { kind: Str({ description: "Detail discriminator (revision, lock, plan, schema)." }) },
       {
         description:
-          "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}.",
+          "Code-specific detail: REVISION_CONFLICT {current, changed[]} or {kind: human-edit, ids[], by}; AREA_BUSY {kind: area, holder, holderLabel?, ids[], touched[], since}; DOCUMENT_NOT_OPEN {currentDocId?}; DOCUMENT_LOCKED {holder}; SCHEMA_VIOLATION {issue}; BATCH_TOO_LARGE {limit, newLayers}; TARGET_UNCLEAR {reason, level?, choices[]}; CANCELLED {reason}.",
       },
     ),
   ),

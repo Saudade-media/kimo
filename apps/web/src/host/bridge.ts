@@ -33,7 +33,11 @@ export const HOST_EVENTS = {
   sessionState: "kimo://host-session-state",
   /** Host → windows showing a file: `{ref, ids, select, zoom}` (kimo_focus). */
   focus: "kimo://host-focus",
-  /** Window → host: `{from, ref, selection}`. */
+  /**
+   * Window → host: `{from, ...WindowViewReport}`, what the window's editor tab shows (#78
+   * target resolution, kimo_get_state `selection`). `ref`: a file's path or a room's
+   * `kimo-room:<room>` key; null for a library or untitled file.
+   */
   windowState: "kimo://host-window-state",
   /** Host → every window: the host (re)started; windows re-attach. */
   ready: "kimo://host-ready",

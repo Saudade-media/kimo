@@ -63,6 +63,8 @@ export interface ConnectionServerOptions {
   version: string
   host: "desktop" | "headless" | "web"
   includeStubs?: boolean
+  /** #78: the transport carries a picker (elicitation) mid-call. Default false. */
+  canAsk?: boolean | (() => boolean)
 }
 
 const json = (uri: URL, value: unknown) => ({
@@ -78,6 +80,7 @@ export function createConnectionServer(
     host: options.host,
     version: options.version,
     ...(options.includeStubs ? { includeStubs: true } : {}),
+    ...(options.canAsk !== undefined ? { canAsk: options.canAsk } : {}),
     handlers: connectionHandlers(conn),
     context: conn.context,
     targets: conn.targets,

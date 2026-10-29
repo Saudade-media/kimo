@@ -34,6 +34,7 @@ import {
   sha256Hex,
   toToken,
 } from "./util"
+import type { BackendView } from "./views"
 
 /** Shader sources a `shader` paint may reference (a path relative to the `.kimo`). */
 const SHADER_SOURCE = /^\.{1,2}\/(?:[^\\/\s]+\/)*[^\\/\s]+\.(?:glsl|frag|fs|fsh)$/i
@@ -94,6 +95,14 @@ export interface DocumentBackend {
     options: { select: boolean; zoom: "fit" | "keep" | "100" },
   ): Promise<boolean>
   selection?(path: string): string[]
+  /** #78: what each editor window shows, keyed by ref (null: a file the host does not serve). */
+  views?(): BackendView[]
+  /** #78: the next person selection in a served file (`path` when given), settled. */
+  waitForSelection?(
+    path: string | null,
+    ms: number,
+    signal: AbortSignal,
+  ): Promise<{ ref: string; ids: string[] } | null>
 }
 
 export interface CoreHostOptions {
@@ -323,6 +332,22 @@ export function createDocumentHost(options: CoreHostOptions): CoreDocumentHost {
     selection(docId) {
       const d = host.backendDocument(docId)
       return d && backend.selection ? backend.selection(d.path) : []
+    },
+
+    views() {
+      return (backend.views?.() ?? []).map(({ ref, ...v }) => ({
+        ...v,
+        docId: ref === null ? null : (host.docIdForPath(ref) ?? null),
+      }))
+    },
+
+    async waitForSelection(docId, ms, signal) {
+      if (!backend.waitForSelection) return null
+      const path = docId === null ? null : (host.backendDocument(docId)?.path ?? null)
+      if (docId !== null && path === null) return null
+      const got = await backend.waitForSelection(path, ms, signal)
+      const id = got ? host.docIdForPath(got.ref) : undefined
+      return got && id ? { docId: id, ids: got.ids } : null
     },
 
     async readFile(path) {

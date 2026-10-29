@@ -1,10 +1,12 @@
 /**
  * Board 21 "Agents & MCP" in the editor window (apps/web/src/agents/INTEGRATION.md): one
  * `AgentsController` per window over `platform.mcp`, plus the document host hooks
- * (host/INTEGRATION.md): kimo_focus → select / zoom, selection reports for
- * `kimo_get_state.selection`. Only files on disk with an MCP host get agents (desktop, memory
- * harnesses); untitled documents have no path, so no agent can target them. A room joined from a
- * share link is an MCP document too (#79): focus and selection work there under its room key.
+ * (host/INTEGRATION.md): kimo_focus → select / zoom, view reports for kimo_get_state
+ * `selection` and `target` (#78). Only files on disk with an MCP host get agents (desktop,
+ * memory harnesses); untitled documents have no path, so no agent can target them. A room joined
+ * from a share link is an MCP document too (#79): focus and view reports use its room key. Every
+ * editor still reports what it shows (library files with no ref), so the host never mistakes
+ * another tab for the one in front.
  */
 import type { LayoutResult } from "@kimo/layout"
 import { isPlatformError, type KimoPlatform, sha256Hex } from "@kimo/platform"
@@ -23,7 +25,7 @@ import type { CanvasHandle } from "../canvas/contract"
 import type { HostClient } from "../host/client"
 import { type Bus, createBus } from "../lib/hooks"
 import { roomKeyOf } from "../multiplayer/backend"
-import type { FileDocumentSession } from "../platform/session"
+import type { FileDocumentSession, FileSessionManager } from "../platform/session"
 import { failureText } from "./errors"
 import type { FileSession } from "./session"
 
@@ -65,9 +67,11 @@ const NONE: ReadonlySet<string> = new Set()
 export function useEditorAgents({
   platform,
   hostClient,
+  manager,
   session,
   doc,
   canvas,
+  container,
   layout,
   openSettings,
   onSaveCopy,
@@ -75,9 +79,13 @@ export function useEditorAgents({
 }: {
   platform: KimoPlatform
   hostClient: HostClient | null
+  /** A closing window reports its tab gone (React cleanup does not run when it closes). */
+  manager: Pick<FileSessionManager, "addCloseHook">
   session: FileSession
   doc: FileDocumentSession | null
   canvas: { current: CanvasHandle | null }
+  /** The canvas element: its size gives the view rectangle the host reports (#78). */
+  container: { current: HTMLElement | null }
   layout: Bus<LayoutResult | null>
   openSettings: (client?: string) => void
   onSaveCopy?: () => void
@@ -117,34 +125,82 @@ export function useEditorAgents({
   )
   useEffect(() => () => controller?.dispose(), [controller])
 
-  // kimo_focus: select and/or zoom in the window that shows the file.
+  // kimo_focus: select and/or zoom in the window that shows the file. Its selection is the
+  // agent's, never the person pointing at a frame (#78).
+  const agentSelecting = useRef(false)
   useEffect(() => {
     if (!hostClient || !hostRef) return
     return hostClient.onFocus(({ ref, ids, select, zoom }) => {
       if (ref !== hostRef) return
-      if (select) session.ui.getState().select(ids)
+      if (select) {
+        agentSelecting.current = true
+        try {
+          session.ui.getState().select(ids)
+        } finally {
+          agentSelecting.current = false
+        }
+      }
       if (zoom === "fit") canvas.current?.zoomToFit(ids, 96)
       else if (zoom === "100") canvas.current?.zoomTo(1)
     })
   }, [hostClient, hostRef, session, canvas])
 
-  // kimo_get_state.selection: report the selection (debounced) while it changes.
+  // #78: what this tab shows (kimo_get_state `selection` and `target`). Reported on mount
+  // (the tab is active), on a selection change (150 ms), on a page change or when a pan or
+  // zoom ends (300 ms), on window focus gain, and `active: false` on unmount or window close.
+  const kind = session.shared ? "room" : doc ? "disk" : "library"
   useEffect(() => {
-    if (!hostClient || !hostRef) return
-    let timer: ReturnType<typeof setTimeout> | undefined
-    let last = session.ui.getState().selection
-    hostClient.reportSelection(hostRef, last)
-    const off = session.ui.subscribe((s) => {
-      if (s.selection === last) return
-      last = s.selection
-      clearTimeout(timer)
-      timer = setTimeout(() => hostClient.reportSelection(hostRef, last), 150)
-    })
-    return () => {
-      clearTimeout(timer)
-      off()
+    if (!hostClient) return
+    let by: "person" | "agent" = "person"
+    let focused = typeof document !== "undefined" && document.hasFocus()
+    const rect = () => {
+      const v = session.ui.getState().viewport
+      const el = container.current
+      // Before the first layout the canvas has no size: no view yet, not an empty one.
+      if (!el || !(v.zoom > 0) || el.clientWidth <= 0 || el.clientHeight <= 0) return null
+      return { x: v.x, y: v.y, w: el.clientWidth / v.zoom, h: el.clientHeight / v.zoom }
     }
-  }, [hostClient, hostRef, session])
+    const send = (active = true) => {
+      const s = session.ui.getState()
+      hostClient.reportView(hostRef, {
+        kind,
+        active,
+        focused,
+        selection: s.selection,
+        selectionBy: by,
+        page: s.page,
+        view: rect(),
+      })
+    }
+    send()
+    let selectionTimer: ReturnType<typeof setTimeout> | undefined
+    let viewTimer: ReturnType<typeof setTimeout> | undefined
+    const off = session.ui.subscribe((s, prev) => {
+      if (s.selection !== prev.selection) {
+        by = agentSelecting.current ? "agent" : "person"
+        clearTimeout(selectionTimer)
+        selectionTimer = setTimeout(send, 150)
+      }
+      if (s.page !== prev.page || s.viewport !== prev.viewport) {
+        clearTimeout(viewTimer)
+        viewTimer = setTimeout(send, 300)
+      }
+    })
+    const offFocus = platform.window.onFocusChange((f) => {
+      focused = f
+      send()
+    })
+    // A window that stays open after all (a save failed) reports again on its next change.
+    const offClose = manager.addCloseHook(() => send(false))
+    return () => {
+      clearTimeout(selectionTimer)
+      clearTimeout(viewTimer)
+      off()
+      offFocus()
+      offClose()
+      send(false)
+    }
+  }, [hostClient, hostRef, kind, session, platform, container, manager])
 
   if (!controller || !fileId)
     return {

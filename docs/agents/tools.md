@@ -6,8 +6,25 @@ Tool descriptions stay short (every model call carries them); the details are he
 
 ## Session
 
-- `kimo_get_state`: when the context gives no `docId`. Top-level nodes (first 50), components
-  (first 100), other agents, your permissions (`data.you`).
+- `kimo_get_state`: when the context gives no `docId`. Top-level nodes (first 50, `inViewport`
+  when a window shows the file), components (first 100), other agents, your permissions
+  (`data.you`), and `data.target`: the file and frames to edit, or `unclear`. `documents[].front`
+  marks the file in the tab the person used last.
+  - Kimo resolves the target from the person's selection in the front tab, your own last edit,
+    open or pick, the front tab and its view, or the only candidate (`target.via` says which).
+    Plain `kimo_get_state` never asks; when only the frame is unclear, `target.docId` is the file.
+  - `target.page` is the page Kimo shows for that file (else the first): set it as `page` on a
+    new top-level frame. An empty page gives `frameIds: []`.
+  - `pick: "frame"` (or `"file"`) before the first edit of each request that does not name the
+    file and frame: your recent work comes back at once when nothing changed; when two or more
+    candidates are left, a client that supports elicitation shows the person a picker (up to 20
+    choices, plus "I'll select it in Kimo" when a window is open). Pass `docId` only when the
+    request names the file. A closed picker is `CANCELLED`; a client without elicitation gets
+    `TARGET_UNCLEAR` with `detail.choices` to ask about in chat. A failed or timed-out pick
+    counts as cancelled.
+  - Twin guard: your first write to a file while the front tab shows another open file with the
+    same name fails `TARGET_UNCLEAR` (`reason: "twin"`). Call `kimo_get_state {pick: "file"}`
+    without `docId` and edit the file it returns.
 - `kimo_open`: a file that fails to load gives `LOAD_FAILED` (untouched); a newer format opens
   read-only; another process's write lease gives `DOCUMENT_LOCKED`; files outside your
   allow-list ask the user.

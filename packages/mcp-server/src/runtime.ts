@@ -88,6 +88,32 @@ export interface HostDocument {
 export type HostResult<T> = { ok: true; value: T } | { ok: false; error: ToolError }
 
 /**
+ * One window's editor tab as the host last heard it (#78 target resolution). Times are host
+ * clock stamps: `selectionAt` a person selection change, `viewAt` a pan, zoom or page change,
+ * `attentionAt` a mount, a tab activation or a window focus gain.
+ */
+export interface WindowView {
+  /** Window label. */
+  window: string
+  /** The served document it shows (a file or a joined room); null when the host does not serve it. */
+  docId: string | null
+  kind: "disk" | "room" | "library" | "none"
+  /** The window's current tab (its editor is mounted). */
+  active: boolean
+  focused: boolean
+  selection: string[]
+  /** `agent` when kimo_focus made the selection: it never counts as the person pointing. */
+  selectionBy: "person" | "agent"
+  /** Page shown; null for the first page. */
+  page: string | null
+  /** World rectangle of the view. */
+  view: { x: number; y: number; w: number; h: number } | null
+  selectionAt: number
+  viewAt: number
+  attentionAt: number
+}
+
+/**
  * What the desktop document host and the headless host implement. Every method that targets a
  * document takes a docId and returns DOCUMENT_NOT_OPEN (with `detail.currentDocId` when the
  * path is open under a newer epoch) for unknown or stale ids. No method ever falls back to an
@@ -142,8 +168,19 @@ export interface DocumentHost {
     ids: string[],
     options: { select: boolean; zoom: "fit" | "keep" | "100" },
   ): Promise<HostResult<{ shown: boolean }>>
-  /** Selection of the frontmost window showing the document (empty headless). */
+  /** Newest person selection among the windows showing the document (empty headless). */
   selection(docId: string): string[]
+  /** Editor tabs of the windows (#78); absent or [] headless. */
+  views?(): WindowView[]
+  /**
+   * The next person selection in a served document (`docId` when given), non-empty, once it
+   * settled for 500 ms. Null after `ms` or when `signal` aborts.
+   */
+  waitForSelection?(
+    docId: string | null,
+    ms: number,
+    signal: AbortSignal,
+  ): Promise<{ docId: string; ids: string[] } | null>
   /** Reads a file the policy allowed (imports). */
   readFile(path: string): Promise<HostResult<Uint8Array>>
   /** Writes a file atomically with read-back (exports); FILE_EXISTS unless overwrite. */
@@ -184,6 +221,11 @@ export interface ToolContext {
   streamed?: boolean
   /** The agent's current turn (claims taken during it carry it; ADR 0016 item 16). */
   turn?: string
+  /**
+   * MCP elicitation (#78): `can` when this client may be shown a picker. A re-entered round
+   * carries the client's `responses` and the verified `state`; `signal` aborts with the request.
+   */
+  ask?: { can: boolean; responses?: Record<string, unknown>; state?: unknown; signal: AbortSignal }
 }
 
 export interface HandlerOutput<T = unknown> {
@@ -191,6 +233,16 @@ export interface HandlerOutput<T = unknown> {
   images?: ToolImage[]
   /** Op group label of an edit (activity log only; never sent to the client). */
   label?: string
+  /**
+   * Ask the person to pick (#78): the MCP server sends it as an elicitation and runs the call
+   * again with the answer. `result` stays the answer for a caller that cannot ask.
+   */
+  ask?: {
+    message: string
+    title: string
+    options: { value: string; label: string }[]
+    state: unknown
+  }
 }
 
 export type ToolHandler = (
@@ -222,6 +274,8 @@ export interface CallTargets {
   pathAlreadyOpen?: boolean
   /** Out-of-scope node ids (only when policy.nodes is non-empty). */
   outOfScope?: string[]
+  /** The call is refused before authorization (#78 twin guard: TARGET_UNCLEAR). */
+  unclear?: ToolError
 }
 
 /**
@@ -357,6 +411,8 @@ const NOT_RETRYABLE = new Set([
   "TIMEOUT",
   "INTERNAL",
   "UNSUPPORTED",
+  "TARGET_UNCLEAR",
+  "CANCELLED",
 ])
 
 /** Runs one tool call end to end. Never throws: everything becomes an envelope. */
@@ -468,6 +524,8 @@ async function authorizeAndRun(
   options: DispatchOptions,
 ): Promise<HandlerOutput> {
   const targets = await options.targets(authDef, authInput, ctx)
+  // A write to an unclear target (#78 twin guard) is refused before anyone is asked to approve.
+  if (targets.unclear) return { result: failure(targets.unclear) }
   const auth = authorize(authDef, authInput, ctx, targets)
   const denied = (error: ToolError): HandlerOutput => {
     ctx.recordActivity({

@@ -45,8 +45,8 @@ afterEach(async () => {
 
 const REF = "/Users/me/site/home.kimo"
 
-function fileText() {
-  const d = createEmptyDocument("Home") as ReturnType<typeof createEmptyDocument> & {
+function fileText(name = "Home") {
+  const d = createEmptyDocument(name) as ReturnType<typeof createEmptyDocument> & {
     nodes: Record<string, unknown>
   }
   d.nodes.Frame00001 = { type: "frame", parent: null, order: "a0", name: "Home", w: 400, h: 300 }
@@ -271,11 +271,23 @@ describe("rooms joined from a share link (#79)", () => {
     doc: { id: string; path: string; readOnly: boolean }
     shared?: { relay?: string; role: string }
     selection: string[]
+    front?: boolean
   }
 
+  /** What a room's editor tab reports to the host while it is in front (#78). */
+  const ROOM_TAB = {
+    kind: "room",
+    active: true,
+    focused: true,
+    selection: [],
+    selectionBy: "person",
+    page: null,
+    view: null,
+  } as const
+
   /** A desktop window that joins links, its document host and an MCP client of the host. */
-  async function roomWindow(pid: number) {
-    const platform = createMemoryPlatform({ pid, settings: { "files.autosave": false } })
+  async function roomWindow(pid: number, files: Record<string, string> = {}) {
+    const platform = createMemoryPlatform({ pid, files, settings: { "files.autosave": false } })
     const net = createMemoryBridgeNetwork()
     net.commands.set("kimo_mcp_policies_get", () => ({}))
     const service = await startDocumentHostService({
@@ -320,8 +332,15 @@ describe("rooms joined from a share link (#79)", () => {
     const rename = async (docId: string, id: string, name: string) =>
       (await conn.call("kimo_apply_ops", { docId, ops: [{ op: "update", id, set: { name } }] }))
         .result
+    const manager = createSessionManager({ platform, createSession: hostedSessionFactory(client) })
     return {
       client,
+      /** Opens the window's local files (the host holds them). */
+      manager,
+      conn,
+      /** Another MCP client of the host. */
+      connect: (client: string) =>
+        service.runtime.connect({ client, label: client, transport: "socket" }),
       model,
       state,
       docOf,
@@ -401,7 +420,10 @@ describe("rooms joined from a share link (#79)", () => {
     expect(busy).toMatchObject({ errors: [{ detail: { holder: "agent:kimo.owner.1" } }] })
 
     // The window's selection in a room is the room document's selection.
-    w.client.reportSelection(roomKeyOf(room), ["Frame00001"])
+    w.client.reportView(roomKeyOf(room), {
+      ...ROOM_TAB,
+      selection: ["Frame00001"],
+    })
     await until(async () => (await docOf(roomKeyOf(room)))?.selection[0] === "Frame00001")
 
     // Leaving the room (its tab closed) takes it off the list.
@@ -413,6 +435,90 @@ describe("rooms joined from a share link (#79)", () => {
     await w.dispose()
     await owner.service.stopSharing(room)
     await owner.service.stopSharing(viewRoom)
+  }, 30_000)
+
+  test("a local file and a room with the same name: the room's tab in front resolves to the room, labels tell them apart, the twin guard covers them (#78)", async () => {
+    // The owner shares "Homepage"; this device has its own "Homepage" open too.
+    const owner = makePeer()
+    const doc = createEmptyDocument("Homepage") as ReturnType<typeof createEmptyDocument> & {
+      nodes: Record<string, unknown>
+    }
+    doc.nodes.Frame00001 = { type: "frame", parent: null, order: "a0", name: "Hero", w: 40, h: 40 }
+    const store = new YjsDocStore()
+    store.loadDocument(doc as never)
+    const target = {
+      fileKey: "/Users/owner/Homepage.kimo",
+      store,
+      assets: createMemoryAssetStore(),
+    }
+    const { room } = await owner.service.startSharing(target, { relayUrl: relay.url })
+    const edit = (await owner.service.mintLink(room, { role: "edit", ttlSeconds: null })).link
+    await owner.service.connect(target, room)
+
+    const LOCAL = "/Users/me/Homepage.kimo"
+    const w = await roomWindow(7105, { [LOCAL]: fileText("Homepage") })
+    const { conn, docOf } = w
+    const local = await w.manager.open(LOCAL)
+    expect((await w.model.join.join(edit)).phase).toBe("joined")
+    await until(async () => (await w.state()).data.documents.length === 2)
+    const roomId = (await docOf(roomKeyOf(room)))?.doc.id as string
+    const localId = (await docOf(LOCAL))?.doc.id as string
+    type Target = { status: string; docId?: string; via?: string }
+    const pick = async (c = conn) => {
+      const r = (await c.call("kimo_get_state", { pick: "file" })).result as ToolResult<{
+        target: Target
+      }>
+      return r
+    }
+    const choicesOf = (r: ToolResult<unknown>) =>
+      r.ok
+        ? []
+        : ((r.errors[0]?.detail as { choices?: { docId: string; label: string }[] } | undefined)
+            ?.choices ?? [])
+
+    // The room's tab is in front: it reports under the room key, so the room is the target.
+    w.client.reportView(roomKeyOf(room), ROOM_TAB)
+    await until(async () => (await docOf(roomKeyOf(room)))?.front === true)
+    const picked = await pick()
+    expect(picked.ok && picked.data.target).toMatchObject({ docId: roomId, via: "window" })
+
+    // A first write to the local file while the room is in front waits for a pick (twin guard).
+    const rename = { docId: localId, ops: [{ op: "update", id: "Frame00001", set: { name: "X" } }] }
+    const guard = await w.connect("codex").call("kimo_apply_ops", rename)
+    expect(guard.result.ok).toBe(false)
+    if (!guard.result.ok) {
+      expect(guard.result.errors[0]).toMatchObject({
+        code: "TARGET_UNCLEAR",
+        detail: { reason: "twin" },
+      })
+      expect(
+        choicesOf(guard.result)
+          .map((c) => c.label)
+          .sort(),
+      ).toEqual(["Homepage (local)", "Homepage (shared)"])
+    }
+    expect(local.store.getNode("Frame00001")?.name).toBe("Home")
+
+    // The person moves to the local file's tab: the agent that picked the room is asked, and the
+    // choices name the local file and the room apart.
+    w.client.reportView(LOCAL, { ...ROOM_TAB, kind: "disk" })
+    await until(async () => (await docOf(LOCAL))?.front === true)
+    const asked = await pick()
+    expect(asked).toMatchObject({
+      errors: [{ code: "TARGET_UNCLEAR", detail: { reason: "no-elicitation" } }],
+    })
+    expect(choicesOf(asked)).toEqual([
+      { docId: localId, label: "Homepage (local)" },
+      { docId: roomId, label: "Homepage (shared)" },
+    ])
+    // A new agent follows the front tab: the local file.
+    const fresh = await pick(w.connect("cursor"))
+    expect(fresh.ok && fresh.data.target).toMatchObject({ docId: localId, via: "window" })
+
+    await local.close()
+    w.model.join.leave(edit)
+    await w.dispose()
+    await owner.service.stopSharing(room)
   }, 30_000)
 
   test("a view and an edit link to one room share its session: closing one tab keeps the other live (a bug: it detached the room)", async () => {

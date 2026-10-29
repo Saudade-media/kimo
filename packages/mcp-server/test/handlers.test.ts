@@ -792,7 +792,7 @@ describe("target resolution (#78)", () => {
   const view = (ref: string | null, at: number) => ({
     window: "main",
     ref,
-    kind: ref ? ("disk" as const) : ("room" as const),
+    kind: ref ? ("disk" as const) : ("library" as const),
     active: true,
     focused: true,
     selection: [],
@@ -870,7 +870,8 @@ describe("target resolution (#78)", () => {
     }
     expect(st.data.target).toMatchObject({ status: "clear", docId: shared, via: "window" })
     expect(st.data.documents.find((d) => d.front)?.doc.id).toBe(shared)
-    // The front tab shows a room the host does not serve: never the local file of that name.
+    // The front tab shows a file the host does not serve (a library file, or a room before it
+    // attached): never the local file of that name.
     const other = host.runtime.connect({ client: "codex", label: "Codex", transport: "socket" })
     host.setViews([view(null, 20)])
     const r = expectFail(

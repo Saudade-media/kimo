@@ -75,7 +75,7 @@ export const scenarios: Scenario[] = [
         await openEditor(page, url)
         await clearStage(page)
         const { view, edit } = await startSharing(page, relay.url)
-        await page.getByRole("button", { name: "Sharing" }).waitFor()
+        await page.locator(".mp-share-button[data-shared]").waitFor()
 
         // The viewer sees the owner's document, read only.
         const viewer = await newPage()

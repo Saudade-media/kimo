@@ -192,7 +192,7 @@
 }
 
 /* Share (1NtIQbmrdA): h 28, radius-sm, fill accent, row gap 6, padding [0, 10], center; label
-   text-sm 500 on-accent. Live sharing keeps Button/Soft (board 41) at the same size. */
+   text-sm 500 on-accent, also while live (board 48). */
 .kimo-button.mp-share-button--card {
   gap: 6px;
   height: 28px;
@@ -200,11 +200,6 @@
   border-radius: var(--kimo-radius-sm);
   font-size: var(--kimo-text-sm);
   font-weight: var(--kimo-font-weight-medium);
-}
-
-.kimo-button.mp-share-button--card .kimo-button__icon {
-  width: 14px;
-  height: 14px;
 }
 
 /* View (iXGvkzDzGN): row gap 2, center. */

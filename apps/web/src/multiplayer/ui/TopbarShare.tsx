@@ -8,7 +8,8 @@
  * - {@link TopbarShare}: the avatar stack (board 48 {@link PresenceStack}: agents, then people,
  *   you first; max 3 then +N; opens the people popover) and the Share button (`topbar-share`:
  *   Button/Secondary "Share" with users, live Button/Soft "Sharing" with radio, hidden for viewers
- *   and guests; opens the Share popover, right edge on the button's).
+ *   and guests; opens the Share popover, right edge on the button's). The card header keeps the
+ *   accent "Share" while live too (board 48).
  */
 import { Button, SaveStatus, Tooltip } from "@kimo/ui"
 import { type ReactNode, useEffect, useRef, useState } from "react"
@@ -109,7 +110,7 @@ export interface TopbarShareProps {
   onPeopleOpenChange?: (open: boolean) => void
   /**
    * Board 44 Right Card header (People): the idle Share is the accent "Share" without an icon
-   * (1NtIQbmrdA); live sharing keeps Button/Soft "Sharing" with radio (board 41).
+   * (1NtIQbmrdA), live too: board 48 keeps it in every shared state, so a crowd's stack fits.
    */
   card?: boolean
 }
@@ -174,15 +175,15 @@ function ShareCluster({
       {canShare && (
         <Button
           ref={shareButton}
-          variant={live ? "soft" : card ? "primary" : "secondary"}
+          variant={card ? "primary" : live ? "soft" : "secondary"}
           className={card ? "mp-share-button mp-share-button--card" : "mp-share-button"}
-          {...(live || !card ? { icon: <Icon name={live ? "radio" : "users"} size={16} /> } : {})}
+          {...(card ? {} : { icon: <Icon name={live ? "radio" : "users"} size={16} /> })}
           aria-haspopup="dialog"
           aria-expanded={open === "share"}
           data-shared={live || undefined}
           onClick={() => setOpen((o) => (o === "share" ? null : "share"))}
         >
-          {live ? "Sharing" : "Share"}
+          {live && !card ? "Sharing" : "Share"}
         </Button>
       )}
       {open === "share" && canShare && (

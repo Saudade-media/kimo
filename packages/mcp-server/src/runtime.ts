@@ -222,6 +222,11 @@ export interface CallTargets {
   pathAlreadyOpen?: boolean
   /** Out-of-scope node ids (only when policy.nodes is non-empty). */
   outOfScope?: string[]
+  /**
+   * A write to a read-only document (a view link's room, a read-only file): it would fail with
+   * this READ_ONLY anyway, so nobody is asked to approve it.
+   */
+  readOnly?: ToolError
 }
 
 /**
@@ -489,6 +494,7 @@ async function authorizeAndRun(
     gate.told(early)
     return denied(early)
   }
+  if (auth.kind === "ask" && targets.readOnly) return denied(targets.readOnly)
   if (auth.kind === "ask") {
     const now = ctx.now()
     // Auto-approve (board 34): no prompt, no dry run; the approval is still logged. It never

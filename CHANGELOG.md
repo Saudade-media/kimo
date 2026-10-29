@@ -38,6 +38,10 @@ Beta channel.
 
 - The `kimo-mcp` shim exits when its agent session ends, even while the Kimo app is not
   responding. Before, it waited until the app read from it again.
+- In a room joined from a share link, an agent's edits show who made them, and with Ask before
+  changes on its requests wait in the room's tab. Before, they failed after 2 minutes.
+- An agent's edit to a read-only file or a view link's room fails at once. Before, it asked for
+  approval first.
 
 ## [1.2.1-beta.1] - 2026-10-29
 

@@ -114,6 +114,12 @@ room store is read-only. The holder window is a viewer of the ref, so
 `kimo_focus` and the selection report (`kimo://host-window-state` with the room key) work as for
 files. A window that pings again (its page reloaded) loses the rooms its old page held.
 
+The room's tab gets the Agents UI of a file (`editor/agents.tsx`, #86): its controller keys on the
+room key, so the activity log is `sha256("kimo-room:<room>")[:16]` (the host's `fileIdOf`), undo
+goes through `agentUndo {ref: "kimo-room:<room>"}`, and approval prompts show there. A view link's
+room shows no paused banner (its view-only banner says edits are off) and offers no copy; the host
+refuses a write to a read-only document with READ_ONLY before asking anyone to approve it.
+
 On desktop a room stays joined while its tab is open, in front or not; closing the tab leaves it.
 
 ## In-app agents (`agentCall`, ADR 0014 §5)

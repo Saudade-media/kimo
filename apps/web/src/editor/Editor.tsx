@@ -917,7 +917,9 @@ function EditorShell({
     layout,
     // D17: the session popover's client settings open Agents & MCP on that client.
     openSettings: (client) => openSettings("agents-mcp", client ?? null),
-    onSaveCopy: () => void saveAs(),
+    // A view link's room makes no copy (board 41).
+    ...(caps.canDuplicate ? { onSaveCopy: () => void saveAs() } : {}),
+    viewOnly,
     onError: (n) =>
       m3.toast({ tone: "danger", text: n.text, ...(n.action ? { action: n.action } : {}) }),
   })

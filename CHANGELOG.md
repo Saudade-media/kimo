@@ -14,6 +14,19 @@ the dates are those of the milestone commits.
 
 ## [Unreleased]
 
+## [1.2.1-beta.3] - 2026-10-29
+
+Agents can add images to shared files. For installs on the Beta channel.
+
+### Fixed
+
+- Agents can add images to a file opened from a share link, and everyone in it gets them. Before,
+  the import was refused.
+- An image added to a shared file reaches the others right away. Some waited until the next
+  reconnect.
+- An agent's SVG import says what it left out, such as an embedded image. Before, an import that
+  kept nothing looked like a success.
+
 ## [1.2.1-beta.2] - 2026-10-29
 
 Shared files open as tabs, agents can work in them, and a new right card. For installs on the

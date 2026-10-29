@@ -1,6 +1,6 @@
 {
   "name": "@kimo/server",
-  "version": "1.2.1-beta.2",
+  "version": "1.2.1-beta.3",
   "private": true,
   "description": "Kimo blind multiplayer relay: encrypted log, snapshots and blobs per room.",
   "license": "MIT",

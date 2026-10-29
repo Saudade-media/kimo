@@ -19,7 +19,6 @@
  * the top of the page with no traffic lights.
  */
 import type { KimoPlatform } from "@kimo/platform"
-import { parseJoinLink } from "@kimo/sync/mp"
 import { TrafficLights } from "@kimo/ui"
 import {
   type CSSProperties,
@@ -28,7 +27,6 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -37,8 +35,7 @@ import { roomFileName } from "../editor/session"
 import { useSessionState, useSessions, useWindowChrome } from "../files/hooks"
 import { getFile } from "../lib/files"
 import { Icon } from "../lib/icons"
-import { useJoin, useMultiplayer } from "../multiplayer/hooks"
-import type { MultiplayerModel } from "../multiplayer/model"
+import { useJoinedRoom, useMultiplayer } from "../multiplayer/hooks"
 import { isUntitledRef, UNTITLED_NAME } from "../platform/contract"
 import { fileNameOf } from "../platform/format"
 import type { FileDocumentSession, FileSessionManager } from "../platform/session"
@@ -426,7 +423,7 @@ function LibraryTab({
   return render(name ?? "Untitled", false)
 }
 
-/** Joined rooms' file names by link: a room's tab keeps its name while another tab is in front. */
+/** Joined rooms' file names by link: a room's tab keeps its name after the room was left. */
 const roomNames = new Map<string, string>()
 
 /** A room joined from a link (desktop): the owner's file name once joined, else "Shared file". */
@@ -437,32 +434,8 @@ function JoinTab({
   link: string
   render: (name: string, unsaved: boolean) => ReactElement
 }) {
-  const model = useMultiplayer()
-  if (!model) return render(roomNames.get(link) ?? "Shared file", false)
-  return <JoinedRoomTab model={model} link={link} render={render} />
-}
-
-function JoinedRoomTab({
-  model,
-  link,
-  render,
-}: {
-  model: MultiplayerModel
-  link: string
-  render: (name: string, unsaved: boolean) => ReactElement
-}) {
-  const state = useJoin(model)
-  const room = useMemo(() => {
-    try {
-      return parseJoinLink(link).room
-    } catch {
-      return null
-    }
-  }, [link])
-  // The window joins one room at a time: only this link's room names this tab.
-  if (state.phase === "joined" && state.session && room !== null && state.room === room) {
-    const name = roomFileName(state.session.store)
-    if (name) roomNames.set(link, name)
-  }
+  const session = useJoinedRoom(useMultiplayer(), link)
+  const name = session ? roomFileName(session.store) : null
+  if (name) roomNames.set(link, name)
   return render(roomNames.get(link) ?? "Shared file", false)
 }

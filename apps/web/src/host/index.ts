@@ -22,6 +22,7 @@ export * from "./cloud-host"
 export * from "./document-host"
 export * from "./mcp-api"
 export * from "./multiplayer-host"
+export * from "./room-docs"
 export * from "./share-backend"
 
 /** The browser CanvasKit raster (bundled wasm URL) for renders in the host webview. */

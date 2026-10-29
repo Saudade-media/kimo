@@ -45,6 +45,26 @@ import type { ToolDef } from "./tools/define"
 
 // --- Document host -----------------------------------------------------------------------------
 
+/**
+ * Path prefix of a room joined from a share link (`kimo-room:<room>`): a document with no file
+ * that syncs live with the people in the room (desktop document host, #79).
+ */
+export const ROOM_PATH_PREFIX = "kimo-room:"
+
+/** True for the path of a room joined from a share link. */
+export const isRoomPath = (path: string): boolean => path.startsWith(ROOM_PATH_PREFIX)
+
+/**
+ * What an agent learns about a room joined from a share link. Never the link, its token or the
+ * room key: those stay in the window that joined it.
+ */
+export interface SharedRoomInfo {
+  /** Host of the relay the room syncs through (`relay.getkimo.design`), null when unknown. */
+  relay: string | null
+  /** The link's role: `view` refuses edits (READ_ONLY). */
+  role: "edit" | "view"
+}
+
 /** One open document as the tool layer sees it. */
 export interface HostDocument {
   ref: DocRef
@@ -52,6 +72,13 @@ export interface HostDocument {
   store: DocStore
   /** True when a UI window shows it (focus works). */
   shownInWindow: boolean
+  /** Set for a room joined from a share link (path `kimo-room:<room>`). */
+  shared?: SharedRoomInfo
+  /**
+   * Bytes of `./assets/<key>` for a document with no folder on disk (a room's assets live in the
+   * window that joined it). Absent: assets are read beside the file.
+   */
+  readAsset?(src: string): Promise<Uint8Array | null>
 }
 
 export type HostResult<T> = { ok: true; value: T } | { ok: false; error: ToolError }

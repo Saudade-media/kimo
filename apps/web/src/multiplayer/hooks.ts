@@ -7,6 +7,7 @@ import type {
   MultiplayerSettingsView,
   RelayTestState,
 } from "./model"
+import type { SharedSession } from "./share"
 
 /** A multiplayer model for a subtree (harnesses, tests); the app uses the runtime's. */
 const MultiplayerContext = createContext<MultiplayerModel | null>(null)
@@ -77,5 +78,13 @@ export function useJoin(model: MultiplayerModel): JoinState {
   const j = model.join
   const subscribe = useCallback((l: () => void) => j.subscribe(l), [j])
   const get = useCallback(() => j.getState(), [j])
+  return useSyncExternalStore(subscribe, get, get)
+}
+
+/** The room this window keeps joined from `link` (#79: a room tab stays joined while open). */
+export function useJoinedRoom(model: MultiplayerModel | null, link: string): SharedSession | null {
+  const j = model?.join ?? null
+  const subscribe = useCallback((l: () => void) => (j ? j.subscribe(l) : () => {}), [j])
+  const get = useCallback(() => j?.roomFor(link) ?? null, [j, link])
   return useSyncExternalStore(subscribe, get, get)
 }

@@ -46,7 +46,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -320,7 +320,7 @@
                         },
                         "path": {
                           "type": "string",
-                          "description": "Canonical absolute path, or untitled:<id>."
+                          "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
                         },
                         "dirty": {
                           "type": "boolean",
@@ -379,6 +379,28 @@
                     "name": {
                       "type": "string",
                       "description": "meta.name or file name."
+                    },
+                    "shared": {
+                      "type": "object",
+                      "required": [
+                        "role"
+                      ],
+                      "properties": {
+                        "relay": {
+                          "type": "string",
+                          "description": "Host of the relay the room syncs through."
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "edit",
+                            "view"
+                          ],
+                          "description": "Your link's role. view: edits fail with READ_ONLY."
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "Set for a room joined from a share link (path kimo-room:<room>). It has no file: edits sync live to everyone in it."
                     },
                     "selection": {
                       "type": "array",
@@ -699,7 +721,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -995,7 +1017,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -1224,7 +1246,7 @@
                   },
                   "path": {
                     "type": "string",
-                    "description": "Canonical absolute path, or untitled:<id>."
+                    "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
                   },
                   "dirty": {
                     "type": "boolean",
@@ -1472,7 +1494,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -1949,7 +1971,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -2419,7 +2441,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -2777,7 +2799,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -3147,7 +3169,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -3554,7 +3576,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -3858,7 +3880,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -4226,7 +4248,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -4690,7 +4712,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -5028,7 +5050,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -5374,7 +5396,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -5780,7 +5802,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -6259,7 +6281,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -6621,7 +6643,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -6850,7 +6872,7 @@
                   },
                   "path": {
                     "type": "string",
-                    "description": "Canonical absolute path, or untitled:<id>."
+                    "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
                   },
                   "dirty": {
                     "type": "boolean",
@@ -6986,7 +7008,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -7305,7 +7327,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",
@@ -7786,7 +7808,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "Canonical absolute path, or untitled:<id>."
+                "description": "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link."
               },
               "dirty": {
                 "type": "boolean",

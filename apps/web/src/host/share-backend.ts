@@ -2,7 +2,8 @@
  * The share backend of a desktop editor window (docs/spec/multiplayer.md §16.8): files are shared
  * by the document host, which owns their stores, so file keys go to its `mp.*` RPC and its pushed
  * snapshots (`kimo://host-share`). Rooms joined from a link and browser library files live in the
- * window (they have no file the host holds) and go to the window's own backend.
+ * window (they have no file the host holds) and go to the window's own backend. The host keeps
+ * only a replica of each joined room, for MCP (`room-docs.ts`).
  */
 import {
   emptySnapshot,

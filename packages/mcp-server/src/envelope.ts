@@ -120,7 +120,10 @@ export type ToolWarning = Static<typeof WarningSchema>
 export const DocRefSchema = Obj(
   {
     id: Str({ description: "docId: d_<hash(path)>_<epoch>. Changes when the file is reloaded." }),
-    path: Str({ description: "Canonical absolute path, or untitled:<id>." }),
+    path: Str({
+      description:
+        "Canonical absolute path, untitled:<id>, or kimo-room:<room> for a room joined from a share link.",
+    }),
     dirty: Bool({ description: "Unsaved edits exist." }),
     readOnly: Bool({ description: "Edits are refused (READ_ONLY)." }),
     lastSavedRevision: Opt(RevisionSchema),

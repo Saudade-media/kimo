@@ -3,10 +3,12 @@
  * the host's `mp.*` RPC, reads pushed snapshots through its share backend and the view model,
  * and a paused agent's calls wait in the host until it resumes. Kimo Cloud workspace files live
  * in the host too (a bug: they reopened in their rooms, and pre-workspace rooms re-shared, only
- * in windows that held their own sessions).
+ * in windows that held their own sessions). Rooms a window joined from a share link are MCP
+ * documents (#79: MCP could not see them and read a stale local copy instead).
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { claimsFor, createEmptyDocument, serialize, YjsDocStore } from "@kimo/editor-state"
+import type { ToolResult } from "@kimo/mcp-server"
 import { validateInput } from "@kimo/mcp-server/server"
 import { createMemoryPlatform } from "@kimo/platform/memory"
 import {
@@ -17,9 +19,11 @@ import {
   HostClient,
   type HostedDocumentSession,
   hostedSessionFactory,
+  serveRoomsToHost,
   startDocumentHostService,
 } from "../../src/host"
 import { createMemoryAssetStore } from "../../src/lib/assets"
+import { roomKeyOf } from "../../src/multiplayer/backend"
 import { createCloudClient } from "../../src/multiplayer/cloud/client"
 import { createFakeCloud, relayRegistrar } from "../../src/multiplayer/cloud/fake"
 import { createCloudStore } from "../../src/multiplayer/cloud/store"
@@ -29,7 +33,7 @@ import { devicePubOf } from "../../src/multiplayer/device-key"
 import { createMultiplayerModel } from "../../src/multiplayer/model"
 import { createSessionManager } from "../../src/platform/session"
 import { createPlatformShare } from "../../src/platform/share"
-import { type Relay, startRelay, until } from "./helpers"
+import { makePeer, makeTarget, type Relay, startRelay, until } from "./helpers"
 
 let relay: Relay
 beforeEach(() => {
@@ -259,5 +263,130 @@ describe("Kimo Cloud workspace files in the document host", () => {
     hosted.dispose()
     await service.dispose()
     client.dispose()
+  }, 30_000)
+})
+
+describe("rooms joined from a share link (#79)", () => {
+  test("MCP lists a window's rooms with their role, edits one through the window, a view link refuses edits, and no link secret reaches a result", async () => {
+    // The owner shares two files from another device: one edit link, one view link.
+    const owner = makePeer()
+    const shared = makeTarget("/Users/owner/site.kimo", ["Frame00001"])
+    const viewed = makeTarget("/Users/owner/brand.kimo", ["Logo000001"])
+    const { room } = await owner.service.startSharing(shared, { relayUrl: relay.url })
+    const { room: viewRoom } = await owner.service.startSharing(viewed, { relayUrl: relay.url })
+    const edit = (await owner.service.mintLink(room, { role: "edit", ttlSeconds: null })).link
+    const view = (await owner.service.mintLink(viewRoom, { role: "view", ttlSeconds: null })).link
+    await owner.service.connect(shared, room)
+
+    // A desktop window joins both links; its document host serves MCP.
+    const platform = createMemoryPlatform({ pid: 7103, settings: { "files.autosave": false } })
+    const net = createMemoryBridgeNetwork()
+    net.commands.set("kimo_mcp_policies_get", () => ({}))
+    const service = await startDocumentHostService({
+      platform,
+      bridge: net.bridge(HOST_LABEL),
+      version: "0.0.0-test",
+      relay: false,
+      validate: validateInput as never,
+    })
+    const client = await HostClient.connect(net.bridge("editor-1"), 1000)
+    if (!client) throw new Error("no host")
+    const guest = createPlatformShare({
+      platform: createMemoryPlatform(),
+      serviceDeps: {
+        webOrigin: "https://kimo.test",
+        backoff: [5, 40],
+        replica: () => null,
+        openGuestDocument: async () => ({
+          store: new YjsDocStore(),
+          assets: createMemoryAssetStore(),
+        }),
+      },
+    })
+    const model = createMultiplayerModel({
+      backend: createHostShareBackend(client),
+      settings: platform.settings,
+      join: (link) => guest.joinLink(link),
+    })
+    const served = serveRoomsToHost(client, model.join)
+    expect((await model.join.join(edit)).phase).toBe("joined")
+    expect((await model.join.join(view)).phase).toBe("joined")
+    // Joining the second room kept the first one joined (a room tab in the back).
+    expect(model.join.rooms()).toHaveLength(2)
+
+    const conn = service.runtime.connect({
+      client: "claude-code",
+      label: "Claude Code",
+      transport: "socket",
+    })
+    type Doc = {
+      doc: { id: string; path: string; readOnly: boolean }
+      shared?: { relay?: string; role: string }
+      selection: string[]
+    }
+    const state = async () => {
+      const r = (await conn.call("kimo_get_state", {})).result as ToolResult<{ documents: Doc[] }>
+      if (!r.ok) throw new Error(r.summary)
+      return r
+    }
+    const docOf = async (key: string) =>
+      (await state()).data.documents.find((d) => d.doc.path === key)
+    await until(async () => (await state()).data.documents.length === 2)
+    const listed = await state()
+    const relayHost = new URL(relay.url).host
+    expect(await docOf(roomKeyOf(room))).toMatchObject({
+      doc: { readOnly: false },
+      shared: { relay: relayHost, role: "edit" },
+    })
+    expect(await docOf(roomKeyOf(viewRoom))).toMatchObject({
+      doc: { readOnly: true },
+      shared: { relay: relayHost, role: "view" },
+    })
+    // Neither link, its capability token nor its room key reaches an agent.
+    const text = JSON.stringify(listed)
+    for (const link of [edit, view]) {
+      const parts = link.slice(link.indexOf("#") + 1).split("/")
+      const [token, key] = parts.slice(-2)
+      for (const secret of [link, token, key]) expect(text).not.toContain(secret as string)
+    }
+
+    // An agent's edit reaches the owner through the window's room connection.
+    const editId = (await docOf(roomKeyOf(room)))?.doc.id as string
+    const applied = (
+      await conn.call("kimo_apply_ops", {
+        docId: editId,
+        ops: [{ op: "update", id: "Frame00001", set: { name: "From the agent" } }],
+      })
+    ).result
+    if (!applied.ok) throw new Error(applied.summary)
+    await until(() => shared.store.getNode("Frame00001")?.name === "From the agent")
+
+    // A view link stays read only: the agent's edit is refused and nothing changes.
+    const viewId = (await docOf(roomKeyOf(viewRoom)))?.doc.id as string
+    const refused = (
+      await conn.call("kimo_apply_ops", {
+        docId: viewId,
+        ops: [{ op: "update", id: "Logo000001", set: { name: "Changed" } }],
+      })
+    ).result
+    expect(refused.ok).toBe(false)
+    if (!refused.ok) expect(refused.errors[0]?.code).toBe("READ_ONLY")
+    expect(viewed.store.getNode("Logo000001")?.name).toBe("Logo000001")
+
+    // The window's selection in a room is the room document's selection.
+    client.reportSelection(roomKeyOf(room), ["Frame00001"])
+    await until(async () => (await docOf(roomKeyOf(room)))?.selection[0] === "Frame00001")
+
+    // Leaving the room (its tab closed) takes it off the list.
+    model.join.leave(edit)
+    await until(async () => (await docOf(roomKeyOf(room))) === undefined)
+    expect(await docOf(roomKeyOf(viewRoom))).toBeDefined()
+
+    model.join.leave(view)
+    served.dispose()
+    await service.dispose()
+    client.dispose()
+    await owner.service.stopSharing(room)
+    await owner.service.stopSharing(viewRoom)
   }, 30_000)
 })

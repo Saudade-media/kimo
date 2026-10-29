@@ -337,12 +337,33 @@ export interface JoinState {
   error: { kind: JoinErrorKind; code: string; message: string } | null
 }
 
+/** A room this window joined from a link and keeps connected (#79). */
+export interface JoinedRoom {
+  readonly session: SharedSession
+  /** The relay's host: what may be shown or told to an agent (never the link, its token or key). */
+  readonly relayHost: string | null
+}
+
 export interface JoinModel {
+  /** Join state and joined rooms changes. */
   subscribe(listener: () => void): () => void
   getState(): JoinState
-  /** Joins from a link; resolves with the final state (`joined` or `error`). */
+  /**
+   * Joins from a link; resolves with the final state (`joined` or `error`). A room this window
+   * already keeps for `link` opens at once.
+   */
   join(link: string): Promise<JoinState>
+  /** Clears the join card state (the rooms stay joined). */
   reset(): void
+  /**
+   * The rooms this window keeps joined, in join order (stable until one joins or leaves). On
+   * desktop a room stays joined while its tab is open, in front or not (#79).
+   */
+  rooms(): readonly JoinedRoom[]
+  /** The room joined from `link`, or null. */
+  roomFor(link: string): SharedSession | null
+  /** Leaves the room of `link` (its tab closed, the web join page left), or stops its join. */
+  leave(link: string): void
 }
 
 export interface ModelTimers {
@@ -1083,6 +1104,16 @@ export function joinErrorKind(error: unknown): JoinErrorKind {
   }
 }
 
+/** A join under way (see {@link createJoinModel}). */
+interface Flight {
+  /** The link was left before its room opened: the room is left as it opens. */
+  left: boolean
+  /** Its card, shown while its link is in front. */
+  state: JoinState
+  /** Resolves with the final state (`joined` or `error`). */
+  done: Promise<JoinState>
+}
+
 function createJoinModel(
   deps: Pick<MultiplayerModelDeps, "join"> & {
     probe(url: string): Promise<RelayInfo>
@@ -1092,50 +1123,64 @@ function createJoinModel(
   const { timers } = deps
   const listeners = new Set<() => void>()
   let state: JoinState = JOIN_IDLE
-  let run = 0
-  const set = (patch: Partial<JoinState>) => {
-    state = { ...state, ...patch, steps: { ...state.steps, ...patch.steps } }
+  /** The link whose join the state shows (the route in front), null after a reset. */
+  let showing: string | null = null
+  /** Joined rooms by link, kept until left. */
+  const kept = new Map<string, JoinedRoom>()
+  let keptList: readonly JoinedRoom[] = []
+  /** Joins under way, one per link. */
+  const flights = new Map<string, Flight>()
+  const notify = () => {
     for (const l of [...listeners]) l()
   }
-  return {
-    subscribe(listener) {
-      listeners.add(listener)
-      return () => listeners.delete(listener)
-    },
-    getState: () => state,
-    reset() {
-      run++
-      state = JOIN_IDLE
-      for (const l of [...listeners]) l()
-    },
-    async join(link) {
-      const mine = ++run
-      const live = () => mine === run
-      state = { ...JOIN_IDLE, phase: "parsing" }
-      for (const l of [...listeners]) l()
-      const card = timers.setTimeout(() => {
-        if (live() && state.phase !== "joined" && state.phase !== "idle") set({ showCard: true })
-      }, JOIN_CARD_DELAY_MS)
-      const fail = (error: unknown): JoinState => {
-        timers.clearTimeout(card)
-        if (!live()) return state
-        set({
-          phase: "error",
-          showCard: true,
-          error: {
-            kind: joinErrorKind(error),
-            code: error instanceof MultiplayerError ? error.code : "INTERNAL",
-            message: error instanceof Error ? error.message : String(error),
-          },
-        })
-        return state
+  const show = (link: string, next: JoinState) => {
+    if (showing !== link) return
+    state = next
+    notify()
+  }
+  const keep = (link: string, room: JoinedRoom | null) => {
+    if (room) kept.set(link, room)
+    else kept.delete(link)
+    keptList = [...kept.values()]
+  }
+  const joinedState = (room: JoinedRoom): JoinState => ({
+    ...JOIN_IDLE,
+    phase: "joined",
+    relayHost: room.relayHost,
+    role: room.session.role,
+    progress: 1,
+    room: room.session.room,
+    key: roomKeyOf(room.session.room),
+    session: room.session,
+    steps: { reachedRelay: true, linkValid: true, decrypted: true },
+  })
+
+  /** Joins `link` once; its card follows the link while it is in front. */
+  const fly = (link: string): Flight => {
+    const flight: Flight = {
+      left: false,
+      state: { ...JOIN_IDLE, phase: "parsing" },
+      done: Promise.resolve(JOIN_IDLE),
+    }
+    const set = (patch: Partial<JoinState>) => {
+      flight.state = {
+        ...flight.state,
+        ...patch,
+        steps: { ...flight.state.steps, ...patch.steps },
       }
+      show(link, flight.state)
+    }
+    const card = timers.setTimeout(() => {
+      if (flight.state.phase !== "joined") set({ showCard: true })
+    }, JOIN_CARD_DELAY_MS)
+    const run = async (): Promise<JoinState> => {
       try {
         const parsed = parseJoinLink(link)
         const token = parseToken(parsed.token)
         const role: Role = token.role === "edit" ? "edit" : "view"
         const expiresAt = token.exp === 0 ? null : token.exp * 1000
-        set({ phase: "connecting", relayHost: hostOf(parsed.relayUrl), role, expiresAt })
+        const relayHost = hostOf(parsed.relayUrl)
+        set({ phase: "connecting", relayHost, role, expiresAt })
         if (expiresAt !== null && expiresAt <= timers.now())
           throw new MultiplayerError("TOKEN_EXPIRED", "the link has expired")
         let handle: unknown = null
@@ -1150,16 +1195,10 @@ function createJoinModel(
         } finally {
           timers.clearTimeout(handle)
         }
-        if (!live()) return state
+        if (flight.left) return flight.state
         set({ steps: { reachedRelay: true, linkValid: false, decrypted: false } })
         if (!deps.join) throw new MultiplayerError("INTERNAL", "joining is not available here")
         const session = await deps.join(link)
-        // Another join (a room's tab) took over: this room is left, not kept connected.
-        const superseded = () => {
-          void session.leave().catch(() => undefined)
-          return state
-        }
-        if (!live()) return superseded()
         const welcomed = session.provider.role !== null
         set({
           phase: "decrypting",
@@ -1167,7 +1206,7 @@ function createJoinModel(
           steps: { reachedRelay: true, linkValid: welcomed, decrypted: false },
         })
         // Decrypting: the first catch-up applies the snapshot and the log.
-        if (!session.provider.connected) {
+        if (!session.provider.connected && !flight.left) {
           await new Promise<void>((resolve, reject) => {
             const off = session.onEvent((event) => {
               if (event.type === "welcome")
@@ -1188,21 +1227,77 @@ function createJoinModel(
             })
           })
         }
-        timers.clearTimeout(card)
-        if (!live()) return superseded()
-        set({
-          phase: "joined",
-          role: session.role,
-          progress: 1,
-          room: session.room,
-          key: roomKeyOf(session.room),
-          session,
-          steps: { reachedRelay: true, linkValid: true, decrypted: true },
-        })
-        return state
+        // The link was left meanwhile (its tab closed, the page went): its room is not kept.
+        if (flight.left) {
+          void session.leave().catch(() => undefined)
+          return flight.state
+        }
+        const room: JoinedRoom = { session, relayHost }
+        keep(link, room)
+        flight.state = joinedState(room)
+        if (showing === link) state = flight.state
+        notify()
+        return flight.state
       } catch (error) {
-        return fail(error)
+        set({
+          phase: "error",
+          showCard: true,
+          error: {
+            kind: joinErrorKind(error),
+            code: error instanceof MultiplayerError ? error.code : "INTERNAL",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        })
+        return flight.state
+      } finally {
+        timers.clearTimeout(card)
+        if (flights.get(link) === flight) flights.delete(link)
       }
+    }
+    flights.set(link, flight)
+    flight.done = run()
+    return flight
+  }
+
+  return {
+    subscribe(listener) {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+    getState: () => state,
+    reset() {
+      showing = null
+      state = JOIN_IDLE
+      notify()
+    },
+    rooms: () => keptList,
+    roomFor: (link) => kept.get(link)?.session ?? null,
+    leave(link) {
+      const flight = flights.get(link)
+      if (flight) flight.left = true
+      const room = kept.get(link)
+      if (showing === link) {
+        showing = null
+        state = JOIN_IDLE
+      }
+      if (room) keep(link, null)
+      notify()
+      if (room) void room.session.leave().catch(() => undefined)
+    },
+    join(link) {
+      showing = link
+      const open = kept.get(link)
+      if (open) {
+        state = joinedState(open)
+        notify()
+        return Promise.resolve(state)
+      }
+      // A join of this link is under way (its tab came back to the front): follow it.
+      const under = flights.get(link) ?? fly(link)
+      under.left = false
+      state = under.state
+      notify()
+      return under.done
     },
   }
 }

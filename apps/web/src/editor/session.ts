@@ -146,15 +146,28 @@ function makeSession(
 /** The editor session of a joined room: its guest store, named `name` (the owner's file name). */
 export function createRoomSession(shared: SharedSession, name: string): FileSession {
   const now = Date.now()
-  const session = makeSession(shared.room, shared.store, null, {
-    id: shared.room,
-    name,
-    createdAt: now,
-    updatedAt: now,
-    frames: 0,
-  })
+  const session = makeSession(
+    shared.room,
+    shared.store,
+    null,
+    { id: shared.room, name, createdAt: now, updatedAt: now, frames: 0 },
+    null,
+    roomUi(shared),
+  )
   session.shared = shared
   return session
+}
+
+const roomUis = new WeakMap<SharedSession, UiStore>()
+
+/** A room's selection and view outlive its editor while it stays joined (its tab in the back). */
+function roomUi(shared: SharedSession): UiStore {
+  let ui = roomUis.get(shared)
+  if (!ui) {
+    ui = createUiStore()
+    roomUis.set(shared, ui)
+  }
+  return ui
 }
 
 /** The owner's file name of a joined room (`meta.name` of the document), or null. */

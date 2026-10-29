@@ -97,6 +97,23 @@ Window ↔ host events are JS only; Rust just routes them, and both sides need
 | `kimo://host-window-state` | window → host | `{from, ref, selection}` |
 | `kimo://host-agent-approval` | host → the agent's window | `{id, origin, request: ApprovalRequest}`: an in-app agent's approval, shown as its in-thread card; answered with `agentApproval`. |
 | `kimo://host-ready` | host → all | Emitted when the host (re)starts; windows reopen and resync, and the replica keeps edits it has not sent yet. |
+| `kimo://room-sync` | both | `{from, msg: HostSyncMessage}` for rooms joined from a share link: the window's room store is the hub, the host holds a replica (`room-docs.ts`). |
+| `kimo://room-asset` | host → the room's window | `{id, ref, src}`: an asset a render of the room needs; answered with the RPC `room.asset {id, data}` (base64, or null). |
+
+## Rooms joined from a share link (#79)
+
+A room joined from a link lives in its window: the link, the room key, the relay connection and
+the assets never leave it. `serveRoomsToHost` (window) attaches each room the window keeps joined
+with `room.attach {ref: "kimo-room:<room>", relay, role, readOnly}`, again after `host-ready`,
+updates it with `room.info` and ends it with `room.detach {ref}` (the room was left, its tab
+closed, or the window is closing). `createHostRooms` (host) keeps a replica per room, synced over
+`kimo://room-sync`, and lists it as an MCP document with `shared: {relay, role}` in
+`kimo_get_state`. A view link's replica is read-only (READ_ONLY), and the window drops any update
+from the host while its room store is read-only. The holder window is a viewer of the ref, so
+`kimo_focus` and the selection report (`kimo://host-window-state` with the room key) work as for
+files. A window that pings again (its page reloaded) loses the rooms its old page held.
+
+On desktop a room stays joined while its tab is open, in front or not; closing the tab leaves it.
 
 ## In-app agents (`agentCall`, ADR 0014 §5)
 

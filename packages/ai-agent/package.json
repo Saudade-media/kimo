@@ -1,6 +1,6 @@
 {
   "name": "@kimo/ai-agent",
-  "version": "1.2.1-beta.1",
+  "version": "1.2.1-beta.2",
   "private": true,
   "description": "Kimo built-in agent (M6): provider interface + adapters, agent loop over the M5 tool registry, skills, sessions, modes, placeholder and prompt-node semantics",
   "license": "MIT",

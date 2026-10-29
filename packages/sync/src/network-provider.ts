@@ -59,7 +59,7 @@ const EMPTY_UPDATE_BYTES = 2
 /** `DocStore.readOnly` reason set for `view` links. */
 export const VIEW_ONLY_REASON = "multiplayer: view-only link"
 /** `@kimo/sync` version, sent in `hello` (kept equal to package.json by a test). */
-export const CLIENT_VERSION = "1.2.1-beta.1"
+export const CLIENT_VERSION = "1.2.1-beta.2"
 /** Client-side close code (liveness, protocol errors, resync). */
 const CLIENT_CLOSE = 4000
 const WS_OPEN = 1

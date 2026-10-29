@@ -42,6 +42,9 @@ export interface RoomAttach {
   readOnly: string | null
 }
 
+/** Why a room whose connection ended for good takes no edits (READ_ONLY). */
+const ENDED_REASON = "the room's connection ended"
+
 /** A room asset read waits this long for the window, then the render goes without it. */
 const ASSET_TIMEOUT_MS = 5000
 const ASSET_SRC = /^\.\/assets\/([^\\/]+)$/
@@ -316,7 +319,11 @@ export interface ServedRooms {
 export function serveRoomsToHost(client: HostClient, source: WindowRooms): ServedRooms {
   const bridge = client.bridge
   const listeners = new Set<(m: HostSyncMessage) => void>()
-  const served = new Map<string, { room: JoinedRoom; info: string; off: () => void }>()
+  /** `ended`: the room's connection ended for good (a revoked link, a closed room). */
+  const served = new Map<
+    string,
+    { room: JoinedRoom; info: string; ended: boolean; off: () => void }
+  >()
   const offs: (() => void)[] = []
   let disposed = false
   const listen = <T>(event: string, h: (p: T) => void) =>
@@ -351,25 +358,26 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
     },
   })
 
-  const infoOf = (room: JoinedRoom): RoomAttach => ({
+  const infoOf = (room: JoinedRoom, ended = false): RoomAttach => ({
     ref: roomKeyOf(room.session.room),
     relay: room.relayHost,
     role: room.session.role,
-    readOnly: room.session.store.readOnly?.reason ?? null,
+    // Edits to a room whose connection ended would never reach anyone.
+    readOnly: ended ? ENDED_REASON : (room.session.store.readOnly?.reason ?? null),
   })
   const attach = async (ref: string) => {
     await installed
     const s = served.get(ref)
     if (!disposed && s)
       await client
-        .call("room.attach", { ...infoOf(s.room) })
+        .call("room.attach", { ...infoOf(s.room, s.ended) })
         .catch((e: unknown) => console.warn("Kimo: agents cannot see a shared room", e))
   }
   /** The role or the read-only reason changed (a view link, a revoked link). */
   const recheck = (ref: string) => {
     const s = served.get(ref)
     if (!s) return
-    const info = infoOf(s.room)
+    const info = infoOf(s.room, s.ended)
     const key = JSON.stringify(info)
     if (key === s.info) return
     s.info = key
@@ -391,11 +399,18 @@ export function serveRoomsToHost(client: HostClient, source: WindowRooms): Serve
       hub.register(ref, room.session.store)
       const offs = [
         room.session.onStatus(() => recheck(ref)),
-        room.session.onEvent(() => recheck(ref)),
+        room.session.onEvent((event) => {
+          const entry = served.get(ref)
+          if (!entry) return
+          if (event.type === "denied" || (event.type === "closed" && !event.willRetry))
+            entry.ended = true
+          recheck(ref)
+        }),
       ]
       served.set(ref, {
         room,
         info: JSON.stringify(infoOf(room)),
+        ended: false,
         off: () => {
           for (const o of offs) o()
         },
